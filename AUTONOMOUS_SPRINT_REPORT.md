@@ -15,6 +15,24 @@ balance changes, no backend migrations or deploys, no IAP, nothing outward-facin
   below as a **prioritized backlog** — each needs your environment, on-device
   testing, or a product decision.
 
+## Update — 2026-06-17 (shipped & deployed, owner-run)
+The autonomous sprint (W376–W382) plus two backend follow-ups were taken to
+production in a guided, stop-between-phases runway — **the owner ran every build
+and deploy command**; nothing here was auto-deployed.
+- **Track A — frontend:** W382 prepped via `prep-local-build.sh` (all 12 gates green,
+  incl. canonical AppIcon + HealthKit/Apple entitlements); **build #325 / `2.2.7-w382`**
+  archived + uploaded to **TestFlight** (processing on Apple's side; on-device version
+  gate is the owner's first check).
+- **Track B — co-op backend:** migrations `0019`+`0020` verified **already-applied**
+  (verify-before-apply; the non-idempotent `0020` ALTER was never blind-applied), worker
+  **deployed** (version `7cb4cfda`). The Twin Maw summons is now **reachable in prod**.
+- **Track C — account-delete fix (W383):** built defensively, committed `de001a2`, worker
+  **deployed** (version **`7a666921`**, supersedes B — carries co-op + W383). Resolves the
+  App-Store-deadline item in the backlog.
+
+> The "no backend deploys" line at the very top describes the *autonomous* sprint. These
+> three tracks were executed afterward with the owner driving each deploy.
+
 ## Commits (all on `main`, pushed)
 | Hash | What |
 |------|------|
@@ -27,9 +45,11 @@ balance changes, no backend migrations or deploys, no IAP, nothing outward-facin
 | `e3ae8e4` | **W380** — fix a W378 regression caught by self-review (see below) |
 | `4b7f189` | **W381** — hunt #2: backup JWT-leak (SECURITY) + notification digest re-arm |
 | `c6f9b2c` | **W382** — hunt #3: Hall finish self-heals (recover an F100 ordinal recorded offline) |
+| `de001a2` | **W383 (backend)** — account deletion purges non-cascading user tables (Apple 5.1.1(v)) |
 
 Cache knobs advanced `v5.711 → v5.718` (app.js?v=820 → 827, auth.js?v=30 → 31, build w375 → w382).
-`APP_VERSION` (2.2.7) left untouched — that's your release knob.
+`APP_VERSION` (2.2.7) left untouched — that's your release knob. **W383 is backend-only**
+(Cloudflare Worker) — no frontend cache/version bump, deployed via `wrangler deploy`.
 
 > **Self-review caught my own bug.** I ran an adversarial regression review over my
 > own W377–W379 diff before it could reach your build. W377 and W379 came back
@@ -139,15 +159,11 @@ Each is real; I left it because it needs your build/deploy environment, on-devic
 testing, conflicts with another finding, or is a product decision.
 
 ### Deploy & release
-- **[HIGH] Co-op backend deploy order** — `wrangler deploy` runs no migrations, and
-  the verified-events INSERT unconditionally references `boss_instance_id` (0020).
-  Deploying the worker before applying **0019 then 0020** would 500 the *entire*
-  `/v1/verified-events` path (breaks the legacy duel-outbox drain too), not just
-  co-op. You already know this (it's in BACKEND.md + my notes); flagging because
-  it's the highest-impact launch hazard. *Did not* change the deploy script to
-  `migrations apply` because your own note warns the D1 migrations bookkeeping is
-  empty — auto-applying could re-run old migrations. **Apply 0019/0020 by hand
-  (remote), in order, then deploy.**
+- ✅ **RESOLVED 2026-06-17 — [HIGH] Co-op backend deploy order.** Migrations `0019`+`0020`
+  verified **already-applied** via a verify-before-apply block (the non-idempotent `0020` ALTER
+  was never blind-applied), so deploying the worker (`wrangler deploy`, version `7cb4cfda` →
+  `7a666921`) was safe — the hazard (worker before `0020` → entire `/v1/verified-events` path
+  500s, breaking the legacy outbox drain) never materialized. Co-op + summons now live in prod.
 - **[MED] `auth.js` excluded from the iOS freshness gate** —
   `verify-ios-public-assets.sh` REQUIRED-lists + hash-checks app.js/sw.js/
   simulated-leaderboard.js but **not** `auth.js` (Sign in with Apple, JWT,
@@ -165,20 +181,17 @@ testing, conflicts with another finding, or is a product decision.
 - **[LOW] `verify-ios-public-assets.sh` freshness gate silently passes offline** —
   consider requiring `SKIP_FRESHNESS=1` to make an offline build deliberate.
 
-### Backend correctness (hunt #3 — needs your deploy + a D1 check; I did NOT touch backend code)
-- **[MEDIUM — App Store] Account deletion orphans real-money IAP rows.** `handleAccountDelete`
-  (backend `account-delete.ts`) deletes only `users` (+6 cascading tables) and
-  `user_state_snapshots`; `skin_entitlements` (migration 0017, no FK) is never removed, so a
-  buyer's purchase records (`product_id`, `store_txn_id`, `acquired_at`) survive forever. Apple
-  guideline **5.1.1(v)** requires deleting purchase data on account deletion. The handler's
-  comment ("no need to clean up other tables") is stale/wrong. Fix:
-  `DELETE FROM skin_entitlements WHERE user_id = ?` (or CASCADE FKs long-term).
-  **⚠️ deploy-order:** the skin/co-op tables may not be applied in prod yet — a `DELETE FROM`
-  a not-yet-created table would *break* account deletion until its migration lands. Sequence
-  carefully. (Exactly why I didn't auto-fix it.)
-- **[LOW] Other user rows orphaned on deletion** — `friends`, `verified_events`,
-  `user_souls_ledger`, `coop_boss_instances` likewise lack cascade and aren't deleted. Same
-  remediation. (Friends-list reads degrade gracefully, so it's residue/privacy, not a crash.)
+### Backend correctness (hunt #3)
+- ✅ **RESOLVED 2026-06-17 (W383 `de001a2`, deployed `7a666921`) — [MEDIUM — App Store] Account
+  deletion orphaned real-money IAP rows.** `handleAccountDelete` deleted only `users` (+6 cascade
+  tables) and `user_state_snapshots`, orphaning `skin_entitlements` (migration 0017, no FK) —
+  purchase records (`product_id`, `store_txn_id`, `acquired_at`) survived forever, violating Apple
+  **5.1.1(v)**. Fixed: a guarded `DELETE FROM skin_entitlements …` was added. The deploy-order trap
+  was **defanged** by per-statement `try/catch` (a not-yet-migrated table can't break the
+  Apple-required deletion), and the stale "no need to clean up other tables" comment was corrected.
+- ✅ **RESOLVED 2026-06-17 (same W383) — [LOW] Other user rows orphaned on deletion.** `friends`,
+  `verified_events`, `user_souls_ledger`, `coop_boss_instances`, and `duels` are now purged too
+  (all best-effort / guarded).
 - **[LOW] Reciprocal friend-request race** — two users sending requests to each other at the
   same moment can create two accepted edges; removing one leaves a dangling edge. Fix: a
   canonical-pair UNIQUE index, or check both directions inside a transaction before INSERT.
