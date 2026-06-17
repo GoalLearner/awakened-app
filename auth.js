@@ -913,6 +913,12 @@
 
   const BACKUP_VERSION = 1;
   const BACKUP_KEY_PREFIX = 'hb_';
+  // W381 (security) — identity/session keys are NEVER exported or restored. A
+  // backup file is shareable (iCloud/AirDrop/Mail); carrying hb_user would ship a
+  // live backend JWT, letting whoever restores the file act as the exporter's
+  // account — and would also defeat the documented force-re-auth on restore.
+  // Mirrors the CloudSync allowlist, which already omits hb_user.
+  const BACKUP_EXCLUDE_KEYS = [STORAGE_KEY, PENDING_LS_KEY];
 
   /**
    * Build the backup payload from the current localStorage state.
@@ -923,7 +929,7 @@
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith(BACKUP_KEY_PREFIX)) {
+        if (k && k.startsWith(BACKUP_KEY_PREFIX) && BACKUP_EXCLUDE_KEYS.indexOf(k) === -1) {
           keys[k] = localStorage.getItem(k);
         }
       }
@@ -1095,6 +1101,9 @@
     // 3. Write the backup's keys
     const keys = (data && data.keys) || {};
     for (const k of Object.keys(keys)) {
+      // W381 (security) — never restore identity/session keys, even from older
+      // backup files already in the wild, so a restore can't re-inject a foreign JWT.
+      if (BACKUP_EXCLUDE_KEYS.indexOf(k) !== -1) continue;
       const v = keys[k];
       if (typeof v === 'string') {
         try { localStorage.setItem(k, v); } catch (_) {}

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w380'; // W380
+  const APP_BUILD_TAG = '2.2.7-w381'; // W381
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20788,6 +20788,8 @@
       // Rebuild today's notification schedule under the new date —
       // honors paused/disabled/daily-limit/quiet-hours.
       try { Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
+      // W382 — re-arm the digest too; rescheduleAll's cancelAll wipes it (ID 1).
+      try { Notif.reapplyDigest(); } catch (_) {}
     }
   }
 
@@ -40769,6 +40771,11 @@
   // change takes effect immediately.
   async function rescheduleNow() {
     try { await Notif.rescheduleAll(habits, today, completions[today] || []); } catch (_) {}
+    // W382 — rescheduleAll → cancelAll wipes EVERY pending notification incl. the
+    // Morning Briefing digest (ID 1), but only re-arms per-habit + checkin reminders.
+    // Re-arm the digest too (mirrors the app-open / recovery / class-change paths),
+    // else a Settings quiet-hours / pause / un-pause / master-toggle change silently kills it.
+    try { await Notif.reapplyDigest(); } catch (_) {}
     refreshRemindersPanel();
   }
 
