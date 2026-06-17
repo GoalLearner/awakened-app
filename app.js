@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w382'; // W382
+  const APP_BUILD_TAG = '2.2.7-w384'; // W384
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -36941,6 +36941,11 @@
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
+    // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
+    if (action === 'cancel' && inst.status === 'active') {
+      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for both hunters and the steps so far are lost.'); } catch (_) {}
+      if (!ok) return;
+    }
     _coopSheet.busy = true; renderCoopSheet();
     let res = null;
     try {
@@ -37028,7 +37033,8 @@
     const cfg = _coopSheet.cfg;
     let note = '';
     if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The Twin Maw slipped back into the mist last time. The miles fell short.</div>';
-    else if (inst && (inst.status === 'declined' || inst.status === 'cancelled')) note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
+    else if (inst && inst.status === 'declined') note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
+    else if (inst && inst.status === 'cancelled') note = '<div class="coop-note">That hunt was called off. Send a new call to go again.</div>';
     const dis = _coopSheet.busy ? ' disabled' : '';
     return (
       note +
@@ -37141,6 +37147,7 @@
         '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + themSteps.toLocaleString('en-US') + '</span></div>' +
       '</div>' +
       '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : 'SYNC MY STEPS') + '</button>' +
+      '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
       '<p class="coop-foot">Steps sync on their own while this is open. Tap to push yours now.</p>'
     );
   }
