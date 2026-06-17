@@ -29221,6 +29221,20 @@ button.guildhall-summary-tile:active {
 .lb-rank-class--iron   { --gem-c: #c8c6d8; --gem-hi: #f0effa; --gem-glow: rgba(200,198,216,0.36); }
 .lb-rank-class--gold   { --gem-c: #f5b842; --gem-hi: #ffe9b0; --gem-glow: rgba(245,184,66,0.40); }
 
+/* W387 — 100K Step Club stamp: compact gold hexagon that sits right after the
+   class title (ClaudeDesign "Global Leaderboard - Redesign" → Club100k atom).
+   Only rendered for hunters who genuinely joined the 100K Step Club. */
+.lb-rank-club100k {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  box-sizing: border-box; width: 22px; height: 15px; margin-left: 1px; padding-bottom: 0.5px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(180deg, #f7c558, #f5b842 55%, #c08418);
+  box-shadow: 0 0 6px rgba(245,184,66,0.45);
+  font-family: "JetBrains Mono", monospace; font-style: normal;
+  font-size: 7px; font-weight: 800; letter-spacing: 0.1px; line-height: 1;
+  text-transform: none; color: #241a05;
+}
+
 /* #1 leader — enthroned hero card */
 .lb-rank-leader {
   position: relative; overflow: hidden;

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w386'; // W386
+  const APP_BUILD_TAG = '2.2.7-w387'; // W387
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33819,6 +33819,7 @@
           const _lbTier = tdef.tier || 'gold';
           classLabel = '<span class="lb-rank-class lb-rank-class--' + _lbTier + '">' +
             '<i class="lb-rank-gem" aria-hidden="true"></i>' + esc(tdef.name) +
+            (row.club_100k ? '<i class="lb-rank-club100k" title="100K Step Club" aria-label="100K Step Club member">100K</i>' : '') +
           '</span>';
         }
       }
@@ -34443,6 +34444,43 @@
   // Commit the This-Week list: cap to a focused top-N, render the rows + a
   // quiet disclaimer footer (steps only — Apple Health is the source), pin
   // the user's row when they fall below the cut, then fold in last week.
+  // W387 — 100K Step Club membership, for the gold stamp on the global Steps
+  // board. Sourced from the REAL accolades roster (Auth.fetchStep100kClub →
+  // user_accolades), cached for the session. We never fake it: a hunter gets the
+  // stamp only if they genuinely joined the club. Also honors a backend
+  // row.club_100k flag, so if the leaderboard payload ever ships one it wins.
+  let _lb100kMemberSet = null;   // Set<string> of lowercased aliases, or null until loaded
+  let _lb100kFetchPromise = null;
+  function _lbEnsure100kMembers() {
+    if (_lb100kMemberSet) return Promise.resolve(_lb100kMemberSet);
+    if (_lb100kFetchPromise) return _lb100kFetchPromise;
+    _lb100kFetchPromise = (async () => {
+      try {
+        if (window.Auth && typeof Auth.fetchStep100kClub === 'function') {
+          const res = await Auth.fetchStep100kClub(200);
+          if (res && res.ok && Array.isArray(res.members)) {
+            const set = new Set();
+            for (const m of res.members) { if (m && m.alias) set.add(String(m.alias).toLowerCase()); }
+            _lb100kMemberSet = set;   // cache only on a clean success
+          }
+        }
+      } catch (_) { /* membership is cosmetic — never block the board */ }
+      _lb100kFetchPromise = null;
+      return _lb100kMemberSet;
+    })();
+    return _lb100kFetchPromise;
+  }
+  function _lbAnnotateClub100k(rows) {
+    if (!Array.isArray(rows)) return rows;
+    const set = _lb100kMemberSet;
+    for (const r of rows) {
+      if (!r || r.club_100k) continue;   // honor a backend-provided flag
+      if (r._sim) continue;              // sims are never real club members
+      r.club_100k = !!(set && set.has(String(r.alias || '').toLowerCase()));
+    }
+    return rows;
+  }
+
   function _lbCommitWeekList(metric, top, me, staleNote) {
     const listEl = document.getElementById('lb-rank-list');
     if (!listEl) return;
@@ -34461,6 +34499,10 @@
     // When pinning, drop the user from the inline list so they show once.
     if (pinSelf) renderTop = renderTop.filter((r) => !(r && r.alias === myAlias));
     renderTop = renderTop.slice(0, _LB_VISIBLE_CAP);
+
+    // W387 — flag genuine 100K Step Club members so the gold stamp renders next
+    // to their class title (Steps board only; real data, sims excluded).
+    if (metric === 'step_total') { try { _lbAnnotateClub100k(renderTop); } catch (_) {} }
 
     // Pass pinData as `me` when pinning so the builder emits an out-of-top
     // row (which we strip below) rather than a "submitting…" placeholder.
@@ -34502,6 +34544,9 @@
 
     const meta = LB_METRIC_META[metric];
     const _isWeekly = LB_WEEKLY_METRICS.has(metric);
+    // W387 — warm the 100K Step Club roster concurrently with the board fetch so
+    // the gold member-stamp is ready by the time the canonical list renders.
+    const _club100kP = (metric === 'step_total') ? _lbEnsure100kMembers() : null;
     // W386 — Steps board: the date range + reset collapse into the
     // consolidated context line below; the long paragraph blurb is retired
     // (its "Apple Health" detail reappears as a quiet footer under the
@@ -34698,6 +34743,7 @@
           backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
         });
       } catch (_) {}
+      if (_club100kP) { try { await _club100kP; } catch (_) {} }
       _lbCommitWeekList(metric, sim2.top, sim2.me);
       if (metric === 'step_total') {
         try { updateStepsCard(); } catch (_) {}
