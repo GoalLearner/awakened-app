@@ -29210,6 +29210,9 @@ button.guildhall-summary-tile:active {
   text-transform: uppercase; color: var(--gem-c);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* W388 — let the title text shrink/ellipsize so the flex:none prestige stamps
+   (100K, boss-100) stay pinned + fully visible instead of being clipped. */
+.lb-rank-class-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-rank-gem {
   width: 7px; height: 7px; flex: none;
   transform: rotate(45deg); border-radius: 1.5px;
@@ -29234,6 +29237,20 @@ button.guildhall-summary-tile:active {
   font-size: 7px; font-weight: 800; letter-spacing: 0.1px; line-height: 1;
   text-transform: none; color: #241a05;
 }
+
+/* W388 — 100-boss-kills stamp. Crimson sibling of the gold 100K stamp; the
+   crossed-blades mark + crimson read as combat, distinct from the step badge. */
+.lb-rank-boss100 {
+  display: inline-flex; align-items: center; justify-content: center; gap: 1px; flex: none;
+  box-sizing: border-box; width: 28px; height: 15px; margin-left: 2px; padding-bottom: 0.5px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(180deg, #e2675c, #c0392b 55%, #87241a);
+  box-shadow: 0 0 6px rgba(214,69,48,0.5);
+  font-family: "JetBrains Mono", monospace; font-style: normal;
+  font-size: 7px; font-weight: 800; letter-spacing: 0.1px; line-height: 1;
+  text-transform: none; color: #fff1ec;
+}
+.lb-rank-boss100 svg { flex: none; margin-right: 0.5px; }
 
 /* #1 leader — enthroned hero card */
 .lb-rank-leader {

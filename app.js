@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w387'; // W387
+  const APP_BUILD_TAG = '2.2.7-w388'; // W388
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33817,9 +33817,17 @@
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);
         if (tdef) {
           const _lbTier = tdef.tier || 'gold';
+          // W388 — crimson "100" stamp for the 100-boss-kills club, beside the
+          // gold 100K stamp. Real backend data only (bosses_slain from pps);
+          // sims are excluded so it's never faked. Dark until the backend ships
+          // the field (older payloads omit it → no stamp).
+          const _boss100 = !row._sim && (Number(row.bosses_slain) || 0) >= 100;
           classLabel = '<span class="lb-rank-class lb-rank-class--' + _lbTier + '">' +
-            '<i class="lb-rank-gem" aria-hidden="true"></i>' + esc(tdef.name) +
+            '<i class="lb-rank-gem" aria-hidden="true"></i>' +
+            '<span class="lb-rank-class-name">' + esc(tdef.name) + '</span>' +
             (row.club_100k ? '<i class="lb-rank-club100k" title="100K Step Club" aria-label="100K Step Club member">100K</i>' : '') +
+            (_boss100 ? '<i class="lb-rank-boss100" title="100 boss kills slain" aria-label="100 boss kills">' +
+              '<svg viewBox="0 0 24 24" width="8" height="10" aria-hidden="true"><g fill="#fff1ec"><path d="M12 1.5 14 6 14 13.6 10 13.6 10 6Z"/><rect x="6.6" y="13" width="10.8" height="2.1" rx="1"/><rect x="10.7" y="15" width="2.6" height="3.8" rx="1"/><circle cx="12" cy="19.6" r="1.4"/></g></svg>100</i>' : '') +
           '</span>';
         }
       }

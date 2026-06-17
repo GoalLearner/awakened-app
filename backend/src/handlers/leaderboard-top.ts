@@ -32,6 +32,9 @@ interface TopRow {
   current_value: number;
   // W257 — equipped Arena title ID (nullable; cosmetic chip on the client)
   arena_title: string | null;
+  // W388 — lifetime boss kills (from public_profile_summary; the client shows a
+  // crimson "100" stamp at >= 100). Nullable: LEFT JOIN, no pps row yet → null.
+  bosses_slain: number | null;
 }
 
 interface MyRow {
@@ -87,7 +90,8 @@ export async function handleLeaderboardTop(
   const topResult = weekly
     ? await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
-                pps.arena_title AS arena_title
+                pps.arena_title AS arena_title,
+                pps.bosses_slain_total AS bosses_slain
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -99,7 +103,8 @@ export async function handleLeaderboardTop(
         .all<TopRow>()
     : await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
-                pps.arena_title AS arena_title
+                pps.arena_title AS arena_title,
+                pps.bosses_slain_total AS bosses_slain
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -116,6 +121,8 @@ export async function handleLeaderboardTop(
     current_value: row.current_value,
     // W257 — null/undefined → client renders no chip (back/forward compatible)
     arena_title: row.arena_title ?? null,
+    // W388 — lifetime boss kills (null when the hunter has no pps row yet)
+    bosses_slain: row.bosses_slain ?? null,
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,
