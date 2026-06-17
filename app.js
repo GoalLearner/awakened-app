@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w377'; // W377
+  const APP_BUILD_TAG = '2.2.7-w378'; // W378
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9636,6 +9636,17 @@
       _arSess.won = false; _arSess.done = true;   // forfeit = loss
       try { _arFight = arenaFinalizeBattle(_arSess); } catch (_) {}
       _arSess = null; _arClearTimers(); _arRevealing = false; _arRenderTower(); return;
+    }
+    // W378 — a RATED fight already DECIDED (done) but not yet committed (the beat
+    // animation is mid-drain, so the single arenaFinalizeBattle at the KO/timeout
+    // beat hasn't run) must still finalize on exit. Otherwise leaving during the
+    // final-blow animation discards the result and refunds the daily life —
+    // dodging a rated loss. No confirm: the outcome is already determined; we only
+    // commit it. _arClearTimers() then cancels the pending drain (all beat timers
+    // route through _arTimers), so arenaFinalizeBattle runs exactly once.
+    if (_arSess && _arSess.done && !_arSess._finalized && _arMatchup && _arMatchup.advances) {
+      try { _arFight = arenaFinalizeBattle(_arSess); _arSess._finalized = true; } catch (_) {}
+      _arClearTimers(); _arSess = null; _arRevealing = false; _arRenderTower(); return;
     }
     if (_arView && _arView !== 'tower') { _arClearTimers(); _arRevealing = false; _arSess = null; _arRenderTower(); return; }
     closeArena();
