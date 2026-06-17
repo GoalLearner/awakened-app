@@ -29270,6 +29270,190 @@ button.guildhall-summary-tile:active {
   box-shadow: 0 0 0 1px rgba(245,184,66,0.18), 0 14px 34px rgba(0,0,0,0.5);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   W386 · Global Leaderboard — "Redesign" (ClaudeDesign handoff
+   "Global Leaderboard - Redesign"). Calmer hierarchy, the list is the
+   hero. EVERY rule below is scoped to #lb-rank-sheet on purpose: the
+   shared shell (.vn-sheet / .lb-rank-header / .lb-rank-title /
+   .vn-close-btn / .lb-rank-tabs / .lb-metric-switch / .lb-rank-eyebrow /
+   .lb-rank-row / .lb-rank-value …) also skins the souls ledger, guild
+   roster, feats and kill-log sheets — none of those may shift.
+   ══════════════════════════════════════════════════════════════════ */
+/* sheet shell — deep radial gradient + neutral hairline */
+#lb-rank-sheet {
+  background: radial-gradient(135% 58% at 50% 0%, #12122c 0%, #07070f 58%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-bottom: none;
+}
+#lb-rank-sheet .vn-drag-handle {
+  width: 38px; height: 5px; border-radius: 3px;
+  background: rgba(255,255,255,0.16); margin: 12px auto 16px;
+}
+/* header → flex title row, close button inline at top-right */
+#lb-rank-sheet .lb-rank-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 2px 18px 14px; border-bottom: none;
+}
+#lb-rank-sheet .lb-rank-head-id { min-width: 0; }
+#lb-rank-sheet .lb-rank-eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 800; letter-spacing: 2.4px;
+  color: #a78bfa; margin-bottom: 0;
+}
+#lb-rank-sheet .lb-rank-title {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 30px; font-weight: 700; letter-spacing: 0.6px;
+  color: #f5f3fb; margin: 4px 0 0; padding-right: 0;
+}
+#lb-rank-sheet .lb-rank-header .vn-close-btn {
+  position: static; flex: none;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: #9090a8; font-size: 0.95rem;
+}
+#lb-rank-sheet .lb-rank-header .vn-close-btn:hover {
+  background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.12);
+}
+/* body — controls sit just under the header; only paddings change */
+#lb-rank-sheet .lb-rank-body { padding: 0 18px 16px; }
+/* metric segmented control → translucent panel, gold-text active */
+#lb-rank-sheet .lb-metric-switch {
+  gap: 4px; padding: 4px; margin: 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 13px;
+}
+#lb-rank-sheet .lb-metric-btn {
+  padding: 9px 0; border-radius: 9px; text-align: center;
+  font-size: 14px; font-weight: 600; letter-spacing: 0; color: #9090a8;
+}
+#lb-rank-sheet .lb-metric-btn.is-active {
+  font-weight: 700; color: #f5b842;
+  background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.05));
+  box-shadow: inset 0 0 0 1px rgba(245,184,66,0.4);
+}
+/* scope tabs: boxed pills → underline tab bar */
+#lb-rank-sheet .lb-rank-tabs {
+  gap: 20px; padding: 0; margin: 12px 0 0; font-size: inherit;
+  background: none; border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07); border-radius: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+#lb-rank-sheet .lb-rank-tabs::-webkit-scrollbar { width: 0; height: 0; }
+#lb-rank-sheet .lb-rank-tab {
+  flex: 0 0 auto; position: relative; padding: 10px 0; border-radius: 0;
+  font-size: 13.5px; font-weight: 600; letter-spacing: 0.2px;
+  color: #9090a8; white-space: nowrap;
+}
+#lb-rank-sheet .lb-rank-tab.is-active {
+  font-weight: 700; color: #f5f3fb; background: none; box-shadow: none;
+}
+#lb-rank-sheet .lb-rank-tab.is-active::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; border-radius: 2px; background: #f5b842;
+  box-shadow: 0 0 8px rgba(245,184,66,0.45);
+}
+/* consolidated context line: date range (left) · RESETS SUNDAY + Nd LEFT (right) */
+#lb-rank-sheet .lb-week-reset {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; width: auto; margin: 12px 0 0; padding: 0;
+  background: none; border: 0; border-radius: 0; text-transform: none;
+}
+#lb-rank-sheet .lb-week-reset::before { content: none; }
+#lb-rank-sheet .lb-ctx-date {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.4px; color: #9090a8;
+}
+#lb-rank-sheet .lb-ctx-right { display: inline-flex; align-items: center; gap: 8px; }
+#lb-rank-sheet .lb-ctx-reset {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px; color: #5c5c74;
+}
+#lb-rank-sheet .lb-ctx-left {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #f5b842;
+  border: 1px solid rgba(245,184,66,0.4); border-radius: 999px;
+  padding: 3px 9px 2px; background: rgba(245,184,66,0.06);
+}
+/* list — the hero */
+#lb-rank-sheet .lb-rank-list { gap: 9px; margin-top: 13px; }
+/* leader hero card — numeric polish (gradient/border/glow already match) */
+#lb-rank-sheet .lb-rank-leader {
+  border-radius: 18px; padding: 15px 18px 16px; margin-bottom: 0;
+  box-shadow: 0 0 0 1px rgba(245,184,66,0.10), 0 18px 40px rgba(0,0,0,0.5);
+}
+#lb-rank-sheet .lb-rank-leader-eyebrow { letter-spacing: 2.2px; }
+#lb-rank-sheet .lb-rank-leader-name { font-size: 23px; margin-top: 6px; }
+#lb-rank-sheet .lb-rank-leader-value { font-size: 29px; }
+#lb-rank-sheet .lb-rank-leader-unit { letter-spacing: 1.8px; margin-top: 7px; color: #9090a8; }
+/* leader "🏆 Also won last week · N" fold-in divider (real returning champ only) */
+#lb-rank-sheet .lb-leader-lastweek {
+  position: relative; margin-top: 13px; padding-top: 11px;
+  border-top: 1px solid rgba(245,184,66,0.18);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic; font-size: 14.5px; color: #9090a8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#lb-rank-sheet .lb-leader-lastweek > span { font-style: normal; }
+#lb-rank-sheet .lb-leader-lastweek b {
+  font-style: normal; font-family: "JetBrains Mono", monospace;
+  font-size: 12px; font-weight: 700; color: #f7c558;
+}
+/* list rows — translucent panel, roomier, mono numerals */
+#lb-rank-sheet .lb-rank-row {
+  gap: 14px; padding: 13px 15px 14px; min-height: 30px; border-radius: 14px;
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+  font-size: 16px;
+}
+#lb-rank-sheet .lb-rank-fill {
+  background: linear-gradient(90deg, rgba(245,184,66,0.055), rgba(245,184,66,0));
+}
+#lb-rank-sheet .lb-rank-pos {
+  font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700;
+  width: 24px; text-align: center; letter-spacing: 0; color: #5c5c74;
+}
+/* re-assert medal-tinted #2/#3 — the scoped .lb-rank-pos color must not win over them */
+#lb-rank-sheet .lb-rank-row--medal2 .lb-rank-pos { color: #c8c6d8; }
+#lb-rank-sheet .lb-rank-row--medal3 .lb-rank-pos { color: #d59a52; }
+#lb-rank-sheet .lb-rank-id > .lb-rank-name-row > .lb-rank-name {
+  font-size: 16px; font-weight: 600; line-height: 1.05; color: #f5f3fb;
+}
+#lb-rank-sheet .lb-rank-value {
+  font-family: "JetBrains Mono", monospace; font-size: 16px; font-weight: 800;
+  letter-spacing: 0.2px; color: #f5f3fb;
+}
+#lb-rank-sheet .lb-rank-class { letter-spacing: 1.6px; }
+/* iron tier label dimmer per the design (#9a98b0 vs the brighter #c8c6d8) */
+#lb-rank-sheet .lb-rank-class--iron { --gem-c: #9a98b0; --gem-hi: #c8c6d8; }
+#lb-rank-sheet .lb-you-pill { letter-spacing: 1.6px; padding: 2px 7px 1px; }
+/* quiet list-end disclaimer (scrolls at the end of the list) */
+#lb-rank-sheet .lb-list-foot {
+  text-align: center; padding: 8px 8px 2px;
+  font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.6px; line-height: 1.6; color: #5c5c74;
+}
+/* pinned YOU footer (when the user is outside the visible top-N) */
+#lb-rank-sheet .lb-you-footer {
+  flex: none; padding: 10px 18px 12px;
+  background: linear-gradient(0deg, rgba(7,7,15,0.96), rgba(7,7,15,0));
+}
+#lb-rank-sheet .lb-you-footer.hidden { display: none; }
+#lb-rank-sheet .lb-you-foot-row {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  padding: 12px 15px; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(245,184,66,0.14), rgba(245,184,66,0.05));
+  border: 1px solid rgba(245,184,66,0.5);
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(245,184,66,0.08);
+}
+#lb-rank-sheet .lb-you-foot-row .lb-rank-name { font-weight: 700; }
+#lb-rank-sheet .lb-you-foot-row .lb-rank-pos { color: #f5b842; font-weight: 800; }
+#lb-rank-sheet .lb-you-foot-row .lb-rank-value {
+  color: #f5b842; text-shadow: 0 0 12px rgba(245,184,66,0.45);
+}
+/* shrink the scroll region so the pinned footer is never clipped */
+#lb-rank-sheet.lb-has-youfoot .lb-rank-body { max-height: calc(85vh - 168px); }
+
 /* ──────────────────────────────
    W334 · ClaudeDesign "Souls Sheet" redesign
    Two parallel rank tables (kill reward / engage cost) merged into ONE

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w385'; // W385
+  const APP_BUILD_TAG = '2.2.7-w386'; // W386
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33739,7 +33739,7 @@
       if (!inTopN) {
         yourRankLine =
           '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top" data-profile-alias="' + esc(myAlias || '') + '">' +
-            '<span class="lb-rank-pos">#' + me.rank + '</span>' +
+            '<span class="lb-rank-pos">' + me.rank + '</span>' +
             '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + '</span>' +
             '<span class="lb-rank-value">' + meta.formatValue(me.current_value) + '</span>' +
           '</div>' +
@@ -33788,6 +33788,16 @@
     // W333 — ClaudeDesign redesign: the top value sets the 100% baseline
     // for each row's gold progress fill.
     const _lbLeaderVal = (top[0] && Number(top[0].current_value)) || 0;
+    // W386 — the leader eyebrow names the active board context
+    // ("★ LEADER · THIS WEEK" in the redesign mock). Derived from the
+    // open tab so Friends / Hall-of-Fame leaders read correctly too.
+    let _lbLeaderCtx = '';
+    try {
+      const _t = (typeof _lbCurrentTab === 'string') ? _lbCurrentTab : 'this-week';
+      if      (_t === 'this-week') _lbLeaderCtx = ' · THIS WEEK';
+      else if (_t === 'friends')   _lbLeaderCtx = ' · FRIENDS';
+      else if (_t === 'hof')       _lbLeaderCtx = ' · ALL-TIME';
+    } catch (_) {}
     const topRows = top.map((row, i) => {
       const isMe = myAlias && row.alias === myAlias;
       const rankClass = isMe ? 'lb-rank-row lb-rank-row--me' : 'lb-rank-row';
@@ -33834,7 +33844,7 @@
           '<span class="lb-rank-leader-glow" aria-hidden="true"></span>' +
           '<span class="lb-rank-leader-row">' +
             '<span class="lb-rank-leader-info">' +
-              '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER') + '</span>' +
+              '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
               '<span class="lb-rank-leader-name">' + _nameDisp + crown + '</span>' +
               classLabel +
             '</span>' +
@@ -33850,7 +33860,7 @@
         ' style="--lb-fill:' + _pct + '%"' +
         ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
         '<span class="lb-rank-fill" aria-hidden="true"></span>' +
-        '<span class="lb-rank-pos">#' + (row.rank || '?') + '</span>' +
+        '<span class="lb-rank-pos">' + (row.rank || '?') + '</span>' +
         '<span class="lb-rank-id">' +
           '<span class="lb-rank-name-row">' +
             '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + _youPill +
@@ -34284,32 +34294,239 @@
     } catch (_) { return ''; }
   }
 
+  // ── W386 · Global Leaderboard "Redesign" (ClaudeDesign handoff) ──────
+  // Calmer hierarchy: the meta-clutter (countdown pill + reset paragraph)
+  // collapses into one context line; the disclaimer drops to a quiet list
+  // footer; the user's row pins at the bottom when out of the visible top.
+  // The last-week champion threads into the leader card when (and only
+  // when) THIS week's real #1 is the same hunter who won last week.
+
+  // Last-week champion payload (from fetchLastWeekSteps), cached so the
+  // leader-card fold-in survives the list re-render race.
+  let _lbLastWeekData = null;
+
+  // Bare integer days left in the Pacific week (1–7) or null — same week
+  // math as _lbWeekResetCountdownText, just the number for the "Nd LEFT" pill.
+  function _lbWeekDaysLeftNum() {
+    try {
+      const wk = lbGetCurrentWeekStartPT();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(wk)) return null;
+      const fmt = _getPTDateParts();
+      let ty = 0, tm = 0, td = 0;
+      if (fmt) {
+        const parts = fmt.formatToParts(new Date());
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
+          if      (p.type === 'year')  ty = parseInt(p.value, 10);
+          else if (p.type === 'month') tm = parseInt(p.value, 10);
+          else if (p.type === 'day')   td = parseInt(p.value, 10);
+        }
+      }
+      if (!ty) return null;
+      const wkMs    = Date.UTC(parseInt(wk.slice(0, 4), 10), parseInt(wk.slice(5, 7), 10) - 1, parseInt(wk.slice(8, 10), 10));
+      const todayMs = Date.UTC(ty, tm - 1, td);
+      let elapsed = Math.round((todayMs - wkMs) / 86400000);
+      if (elapsed < 0) elapsed = 0;
+      if (elapsed > 6) elapsed = 6;
+      return 7 - elapsed;
+    } catch (_) { return null; }
+  }
+
+  // The consolidated context line: date range (left) + "↻ RESETS SUNDAY"
+  // and a "Nd LEFT" pill (right). Replaces the old standalone pill.
+  function _lbContextLineHtml() {
+    let dateLabel = '';
+    try {
+      const range = lbFormatWeekRange(lbGetCurrentWeekStartPT()); // "Jun 14–Jun 20"
+      if (range) {
+        const parts = range.split('–');
+        if (parts.length === 2) {
+          const a = parts[0].trim(), b = parts[1].trim();
+          const mA = a.split(' ')[0], pB = b.split(' ');
+          // collapse the repeated month for a same-month week ("Jun 14 – 20")
+          dateLabel = a + ' – ' + ((pB[0] === mA && pB[1]) ? pB[1] : b);
+        } else {
+          dateLabel = range.replace('–', ' – ');
+        }
+      }
+    } catch (_) {}
+    const days = _lbWeekDaysLeftNum();
+    const pill = (typeof days === 'number') ? (days <= 1 ? 'FINAL DAY' : (days + 'D LEFT')) : '';
+    return '<span class="lb-ctx-date">' + esc(dateLabel) + '</span>' +
+      '<span class="lb-ctx-right">' +
+        '<span class="lb-ctx-reset">↻ RESETS SUNDAY</span>' +
+        (pill ? '<span class="lb-ctx-left">' + esc(pill) + '</span>' : '') +
+      '</span>';
+  }
+
+  // The pinned YOU row (shown only when the signed-in user is OUTSIDE the
+  // visible top-N). Mirrors the redesign's gold footer: rank · name · YOU
+  // pill · equipped class label · value.
+  function _lbYouFooterHtml(metric, me) {
+    const meta = LB_METRIC_META[metric];
+    const myAlias = lbGetMyAlias();
+    const myAliasDisplay = lbNormalizeAliasForDisplay(myAlias) || 'You';
+    let classLabel = '';
+    try {
+      const t = getEquippedArenaTitle();
+      let titleId = (t && t.id) || null;
+      if (titleId && typeof _ARENA_TITLE_LEGACY !== 'undefined' && _ARENA_TITLE_LEGACY[titleId]) titleId = _ARENA_TITLE_LEGACY[titleId];
+      if (titleId && typeof ARENA_TITLES !== 'undefined') {
+        const tdef = ARENA_TITLES.find((x) => x.id === titleId);
+        if (tdef) {
+          const tier = tdef.tier || 'gold';
+          classLabel = '<span class="lb-rank-class lb-rank-class--' + tier + '">' +
+            '<i class="lb-rank-gem" aria-hidden="true"></i>' + esc(tdef.name) + '</span>';
+        }
+      }
+    } catch (_) {}
+    const rankTxt = (me && typeof me.rank === 'number' && me.rank > 0) ? String(me.rank) : '—';
+    const valTxt  = me ? meta.formatValue(me.current_value) : '—';
+    return '<div class="lb-you-foot-row" data-profile-alias="' + esc(myAlias || '') + '">' +
+        '<span class="lb-rank-pos">' + rankTxt + '</span>' +
+        '<span class="lb-rank-id">' +
+          '<span class="lb-rank-name-row">' +
+            '<span class="lb-rank-name">' + esc(myAliasDisplay) + '</span>' +
+            '<span class="lb-you-pill">YOU</span>' +
+          '</span>' + classLabel +
+        '</span>' +
+        '<span class="lb-rank-value">' + valTxt + '</span>' +
+      '</div>';
+  }
+
+  // The redesign board shows a focused TOP-N list with the signed-in
+  // user's row PINNED at the bottom when they fall outside it (matches the
+  // mock: leader + #2–10, then a pinned YOU row at #12). The sim always
+  // injects an out-of-top user inline, so a cap is what surfaces the pin.
+  const _LB_VISIBLE_CAP = 10;
+
+  // Show / hide the pinned YOU footer from a {rank, current_value} payload.
+  function _lbSetYouFooter(metric, pinData) {
+    const sheet = document.getElementById('lb-rank-sheet');
+    const foot  = document.getElementById('lb-you-footer');
+    if (!sheet || !foot) return;
+    if (pinData && typeof pinData.rank === 'number' && pinData.rank > 0) {
+      foot.innerHTML = _lbYouFooterHtml(metric, pinData);
+      foot.classList.remove('hidden');
+      sheet.classList.add('lb-has-youfoot');
+    } else {
+      foot.innerHTML = '';
+      foot.classList.add('hidden');
+      sheet.classList.remove('lb-has-youfoot');
+    }
+  }
+
+  // If THIS week's #1 is the SAME (real, non-sim) hunter who won last
+  // week, fold the recap into the leader card as the "🏆 Also won last
+  // week · N" divider. Idempotent; safe to call after every render.
+  function _lbApplyLeaderLastWeek() {
+    try {
+      const leaderEl = document.querySelector('#lb-rank-list .lb-rank-leader');
+      if (!leaderEl) return;
+      const old = leaderEl.querySelector('.lb-leader-lastweek');
+      if (old) old.remove();
+      if (_lbCurrentTab !== 'this-week' || _lbCurrentOpenMetric !== 'step_total') return;
+      const d = _lbLastWeekData;
+      const champAlias = d && d.champion && d.champion.alias;
+      if (d && champAlias &&
+          leaderEl.getAttribute('data-profile-alias') === champAlias &&
+          !leaderEl.hasAttribute('data-profile-sim')) {
+        const n = (Number(d.champion.steps) || 0).toLocaleString('en-US');
+        const div = document.createElement('div');
+        div.className = 'lb-leader-lastweek';
+        div.innerHTML = '<span aria-hidden="true">🏆</span> Also won last week · <b>' + esc(n) + '</b>';
+        leaderEl.appendChild(div);
+      }
+    } catch (_) {}
+  }
+
+  // Commit the This-Week list: cap to a focused top-N, render the rows + a
+  // quiet disclaimer footer (steps only — Apple Health is the source), pin
+  // the user's row when they fall below the cut, then fold in last week.
+  function _lbCommitWeekList(metric, top, me, staleNote) {
+    const listEl = document.getElementById('lb-rank-list');
+    if (!listEl) return;
+    const myAlias = lbGetMyAlias();
+    let renderTop = Array.isArray(top) ? top.slice() : [];
+    // Locate the user's own row in the merged list (the sim injects an
+    // out-of-top self; the backend returns it as `me`).
+    const selfRow = myAlias ? (renderTop.find((r) => r && r.alias === myAlias) || null) : null;
+    const selfRank = (selfRow && typeof selfRow.rank === 'number') ? selfRow.rank
+                   : (me && typeof me.rank === 'number' ? me.rank : 0);
+    const pinSelf = selfRank > _LB_VISIBLE_CAP;
+    const pinData = pinSelf ? {
+      rank: selfRank,
+      current_value: selfRow ? selfRow.current_value : (me ? me.current_value : null),
+    } : null;
+    // When pinning, drop the user from the inline list so they show once.
+    if (pinSelf) renderTop = renderTop.filter((r) => !(r && r.alias === myAlias));
+    renderTop = renderTop.slice(0, _LB_VISIBLE_CAP);
+
+    // Pass pinData as `me` when pinning so the builder emits an out-of-top
+    // row (which we strip below) rather than a "submitting…" placeholder.
+    let html = lbBuildRankList(metric, renderTop, (pinSelf ? pinData : me), staleNote);
+    if (metric === 'step_total') {
+      html += '<div class="lb-list-foot">Resets Sunday 12:00 AM Pacific · Apple Health is the only source</div>';
+    }
+    listEl.innerHTML = html;
+    // Strip the inline out-of-top row ONLY when we're pinning a replacement —
+    // never remove the user's row without putting it back in the footer.
+    try {
+      if (pinSelf) {
+        const oot = listEl.querySelector('.lb-rank-row--out-of-top');
+        if (oot) {
+          const nx = oot.nextElementSibling;
+          if (nx && nx.classList && nx.classList.contains('lb-rank-divider')) nx.remove();
+          oot.remove();
+        }
+      }
+    } catch (_) {}
+    try { _lbSetYouFooter(metric, pinData); } catch (_) {}
+    try { _lbApplyLeaderLastWeek(); } catch (_) {}
+  }
+
   async function _lbRenderThisWeekTab(metric) {
     const listEl   = document.getElementById('lb-rank-list');
     const meBestEl = document.getElementById('lb-rank-mebest');
     const blurbEl  = document.getElementById('lb-rank-blurb');
     if (!listEl) return;
     if (meBestEl) meBestEl.classList.add('hidden');
+    // W386 — reset the pinned YOU footer; _lbCommitWeekList re-shows it
+    // only when the signed-in user is out of the visible top-N.
+    try {
+      const _yf = document.getElementById('lb-you-footer');
+      if (_yf) { _yf.innerHTML = ''; _yf.classList.add('hidden'); }
+      const _sh = document.getElementById('lb-rank-sheet');
+      if (_sh) _sh.classList.remove('lb-has-youfoot');
+    } catch (_) {}
 
-    // Blurb: weekly metrics get the visible date range; non-weekly
-    // keep the static meta.blurb.
     const meta = LB_METRIC_META[metric];
-    let blurbText = meta.blurb;
-    if (LB_WEEKLY_METRICS.has(metric)) {
-      // v3 Phase 1z.219 — Pacific anchor + Pacific-Time copy. The
-      // visible reset moment is "Sunday 12:00 AM Pacific Time"
-      // — independent of DST since we avoid PST/PDT shorthand.
-      const wk = lbGetCurrentWeekStartPT();
-      const range = lbFormatWeekRange(wk);
-      if (range) blurbText = range + ' · resets Sunday 12:00 AM Pacific Time. Apple Health is the only source.';
+    const _isWeekly = LB_WEEKLY_METRICS.has(metric);
+    // W386 — Steps board: the date range + reset collapse into the
+    // consolidated context line below; the long paragraph blurb is retired
+    // (its "Apple Health" detail reappears as a quiet footer under the
+    // list). Other metrics keep their descriptive blurb.
+    if (blurbEl) {
+      if (metric === 'step_total') {
+        blurbEl.textContent = '';
+        blurbEl.classList.add('hidden');
+      } else {
+        let blurbText = meta.blurb;
+        if (_isWeekly) {
+          // v3 Phase 1z.219 — Pacific-Time copy, DST-independent.
+          const range = lbFormatWeekRange(lbGetCurrentWeekStartPT());
+          if (range) blurbText = range + ' · resets Sunday 12:00 AM Pacific Time. Apple Health is the only source.';
+        }
+        blurbEl.textContent = blurbText;
+        blurbEl.classList.remove('hidden');
+      }
     }
-    if (blurbEl) blurbEl.textContent = blurbText;
-    // W318 — visible reset countdown badge (urgency). Weekly metrics only.
+    // W386 — consolidated context line (date range · ↻ RESETS SUNDAY · Nd LEFT).
+    // Weekly metrics only; replaces the old standalone countdown pill.
     const _resetEl = document.getElementById('lb-week-reset');
     if (_resetEl) {
-      const _cd = LB_WEEKLY_METRICS.has(metric) ? _lbWeekResetCountdownText() : '';
-      if (_cd) { _resetEl.textContent = _cd; _resetEl.classList.remove('hidden'); }
-      else { _resetEl.textContent = ''; _resetEl.classList.add('hidden'); }
+      if (_isWeekly) { _resetEl.innerHTML = _lbContextLineHtml(); _resetEl.classList.remove('hidden'); }
+      else { _resetEl.innerHTML = ''; _resetEl.classList.add('hidden'); }
     }
     // W321 — last-week recap (step_total only; non-blocking fire-and-forget).
     try { _lbPopulateLastWeekRecap(metric); } catch (_) {}
@@ -34356,14 +34573,14 @@
           backendEnabled: false,
         });
       } catch (_) {}
-      listEl.innerHTML = lbBuildRankList(metric, sim.top, sim.me);
+      _lbCommitWeekList(metric, sim.top, sim.me);
       return;
     }
 
     if (cached) {
       const staleNote = 'Last updated ' + lbFormatRelativeTime(cached.fetched_at);
       const sim1 = _lbMaybeSimulate(metric, cached.top, cached.me);
-      listEl.innerHTML = lbBuildRankList(metric, sim1.top, sim1.me, staleNote);
+      _lbCommitWeekList(metric, sim1.top, sim1.me, staleNote);
     } else {
       listEl.innerHTML = lbBuildLoadingSkeleton();
     }
@@ -34481,7 +34698,7 @@
           backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
         });
       } catch (_) {}
-      listEl.innerHTML = lbBuildRankList(metric, sim2.top, sim2.me);
+      _lbCommitWeekList(metric, sim2.top, sim2.me);
       if (metric === 'step_total') {
         try { updateStepsCard(); } catch (_) {}
       }
@@ -34522,7 +34739,7 @@
             backendEnabled: metric === 'workout_streak' ? flagWorkoutBackend : true,
           });
         } catch (_) {}
-        listEl.innerHTML = lbBuildRankList(metric, simFallback.top, simFallback.me);
+        _lbCommitWeekList(metric, simFallback.top, simFallback.me);
       } else {
         listEl.innerHTML = lbBuildErrorState(result && result.code);
       }
@@ -34932,20 +35149,28 @@
   async function _lbPopulateLastWeekRecap(metric) {
     const el = document.getElementById('lb-lastweek-recap');
     if (!el) return;
-    if (metric !== 'step_total') { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    if (metric !== 'step_total') { _lbLastWeekData = null; el.classList.add('hidden'); el.innerHTML = ''; return; }
     let result;
     try { result = await window.Auth.fetchLastWeekSteps(); }
     catch (_) { result = { ok: false }; }
     // Guard: the user may have switched metric/tab while the fetch was inflight.
     if (_lbCurrentOpenMetric !== 'step_total' || _lbCurrentTab !== 'this-week') return;
     if (!result || !result.ok || !result.champion) {
+      _lbLastWeekData = null;
+      try { _lbApplyLeaderLastWeek(); } catch (_) {}
       el.classList.add('hidden'); el.innerHTML = '';
       return;
     }
     // W323 — cache the weekly Step Crown count for the Hunter Report card.
     try { if (result.myTitle && result.myTitle.count > 0) localStorage.setItem('hb_step_crowns', String(result.myTitle.count)); } catch (_) {}
-    el.innerHTML = _lbLastWeekRecapHtml(result);
-    el.classList.remove('hidden');
+    // W386 — thread the champion into the leader card when THIS week's #1
+    // IS last week's winner (real hunters only — never a sim); otherwise
+    // keep the standalone recap card (same info, different surface).
+    _lbLastWeekData = result;
+    try { _lbApplyLeaderLastWeek(); } catch (_) {}
+    const _folded = !!document.querySelector('#lb-rank-list .lb-rank-leader .lb-leader-lastweek');
+    if (_folded) { el.classList.add('hidden'); el.innerHTML = ''; }
+    else { el.innerHTML = _lbLastWeekRecapHtml(result); el.classList.remove('hidden'); }
   }
 
   // W331 — "Sign in to join" block shown to guests on social surfaces.
@@ -34983,9 +35208,12 @@
     // empty board. Show the sheet with the join prompt and skip the fetch.
     if (window.Auth && typeof Auth.isGuest === 'function' && Auth.isGuest()) {
       const _t = document.getElementById('lb-rank-title'); if (_t) _t.textContent = (meta.title || 'Leaderboard');
-      ['lb-rank-tabs','lb-rank-metric-switch','lb-rank-mebest','lb-week-reset'].forEach(function (id) {
+      ['lb-rank-tabs','lb-rank-metric-switch','lb-rank-mebest','lb-week-reset','lb-you-footer'].forEach(function (id) {
         const el = document.getElementById(id); if (el) el.classList.add('hidden');
       });
+      // W386 — clear any pinned YOU-footer state left over from a prior signed-in session.
+      const _yfG = document.getElementById('lb-you-footer'); if (_yfG) _yfG.innerHTML = '';
+      sheet.classList.remove('lb-has-youfoot');
       const _bl = document.getElementById('lb-rank-blurb'); if (_bl) _bl.textContent = '';
       listEl.innerHTML = _guestJoinHtml('Join the leaderboard', 'Sign in to post your scores and climb against real hunters.');
       overlay.classList.remove('hidden');
@@ -35071,6 +35299,10 @@
     // W321 — the last-week recap is This-Week-only; hide on every switch
     // (the This Week render re-populates it). Keeps it off HoF/100K/Friends.
     var _lwHide = document.getElementById('lb-lastweek-recap'); if (_lwHide) _lwHide.classList.add('hidden');
+    // W386 — the pinned YOU footer is This-Week-only; hide it on every switch
+    // (the This Week render re-populates it). Keeps it off HoF/100K/Friends.
+    var _yfHide = document.getElementById('lb-you-footer'); if (_yfHide) { _yfHide.innerHTML = ''; _yfHide.classList.add('hidden'); }
+    var _shYf = document.getElementById('lb-rank-sheet'); if (_shYf) _shYf.classList.remove('lb-has-youfoot');
     const tabsEl = document.getElementById('lb-rank-tabs');
     if (tabsEl) {
       const buttons = tabsEl.querySelectorAll('.lb-rank-tab');
