@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w376'; // W376
+  const APP_BUILD_TAG = '2.2.7-w377'; // W377
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17596,6 +17596,12 @@
       // cloud-restore boot-crash class without a nuclear full reset.
       const _isObj = v => (v && typeof v === 'object' && !Array.isArray(v));
       if (!_isObj(completions))            completions = {};
+      // W377 — inner-array guard. The W201 coercion above only fixes the OUTER
+      // shape; a corrupted/restored snapshot with a non-array per-date value
+      // (e.g. {"2026-06-15":null}) still crashed completions[d].length on hot
+      // render paths (renderStatus, showRankUpScreen, checkAchievements). Drop
+      // any non-array date entry so every reader sees an array.
+      else { for (const _d in completions) if (!Array.isArray(completions[_d])) delete completions[_d]; }
       if (!_isObj(streaks))                streaks = {};
       if (!_isObj(stats))                  stats = initStats();
       if (!_isObj(achievementUnlockDates)) achievementUnlockDates = {};
@@ -19945,7 +19951,7 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(mon);
       d.setDate(mon.getDate() + i);
-      out.push(d.toISOString().slice(0, 10));
+      out.push(_localDateKey(d));   // W377 — local-tz key (was toISOString/UTC, which shifted the weekly grid one column for users at UTC+12:45 and beyond)
     }
     return out;
   }
@@ -26913,6 +26919,7 @@
       'system-full-overlay',  // 25-cap modal
       'reveal-overlay',       // boss / card reveal
       'wn-overlay',      // W362 - post-update What’s New sheet must defer day-beats
+      'welcome-back-overlay', // W377 - day-2 welcome-back screen
     ];
     for (let i = 0; i < ids.length; i++) {
       const el = document.getElementById(ids[i]);
@@ -36696,6 +36703,7 @@
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
   let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
   let _coopPollTimer = null;
+  let _coopResolving = false;   // W377 — re-entrancy guard for _coopResolve
 
   function _loadCoopAwarded() {
     try { return JSON.parse(localStorage.getItem('hb_coop_awarded') || '{}') || {}; }
@@ -36792,10 +36800,24 @@
   }
 
   async function _coopResolve(id) {
+    // W377 — re-entrancy + failure guard. Previously this unconditionally called
+    // _coopAfterInstanceUpdate() afterwards; on a FAILED resolve (offline / 429 /
+    // network) the instance is still active+goal-met, so that re-invoked
+    // _coopResolve immediately — an unthrottled retry storm draining battery and
+    // self-amplifying the shared-bucket rate limit. Now: re-evaluate only on a
+    // SUCCESSFUL resolve; on failure, let the 60s poll / background sync retry.
+    if (_coopResolving) return;
+    _coopResolving = true;
     let res;
     try { res = await Auth.coopBossResolve(id); } catch (_) { res = { ok: false }; }
-    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; }
-    _coopAfterInstanceUpdate();
+    _coopResolving = false;
+    if (res && res.ok && res.instance) {
+      _coopSheet.instance = res.instance;
+      _coopAfterInstanceUpdate();
+    } else {
+      _coopStartPolling();
+      renderCoopSheet();
+    }
   }
 
   async function _coopPollTick() {
@@ -48020,7 +48042,10 @@
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
       // shown today, modal-stack conflict).
-      try { if (shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
+      // W377 — on resume, defer Daily Insight under an open coachmark / welcome-back
+      // (the cold-launch dispatcher guards this via _isAnyHigherPriorityModalActive;
+      // this resume path bypassed it and pre-mounted the insight behind the beat).
+      try { if (!(typeof _isAnyHigherPriorityModalActive === 'function' && _isAnyHigherPriorityModalActive()) && shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} }, 60_000);
     registerSW();
