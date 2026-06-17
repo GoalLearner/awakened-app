@@ -25,8 +25,9 @@ balance changes, no backend migrations or deploys, no IAP, nothing outward-facin
 | `6fcfeab` | **W378** — Arena: exit mid-final-blow now commits the rated result |
 | `0f6e2c7` | **W379** — a11y: active-tab `aria-current` + dialog semantics |
 | `e3ae8e4` | **W380** — fix a W378 regression caught by self-review (see below) |
+| `4b7f189` | **W381** — hunt #2: backup JWT-leak (SECURITY) + notification digest re-arm |
 
-Cache knobs advanced `v5.711 → v5.716` (app.js?v=820 → 825, build w375 → w380).
+Cache knobs advanced `v5.711 → v5.717` (app.js?v=820 → 826, auth.js?v=30 → 31, build w375 → w381).
 `APP_VERSION` (2.2.7) left untouched — that's your release knob.
 
 > **Self-review caught my own bug.** I ran an adversarial regression review over my
@@ -91,6 +92,31 @@ Cache knobs advanced `v5.711 → v5.716` (app.js?v=820 → 825, build w375 → w
 - **`checkAchievements` reduce at 18837** — was flagged but is now **covered by
   fix #1**: the load-time normalization guarantees every `completions[d]` is an
   array before that reduce runs.
+
+## Bugs fixed — hunt #2 (highest-stakes subsystems)
+
+A second adversarial hunt (inventory, marketplace, auth/restore, notifications,
+stats, rewards, duels). Two confirmed, both fixed in **W381** (`4b7f189`):
+
+6. **SECURITY — backup leaked the session JWT.** The file backup exported every
+   `hb_*` key including `hb_user` (the live backend JWT + Apple sub), and restore
+   re-wrote it verbatim. Since a backup file is shareable (iCloud/AirDrop/Mail) and
+   the backend derives the user purely from the JWT, restoring someone's backup made
+   you act as *their* account — and it silently defeated the documented force-re-auth
+   (the restore modal promises "you'll be signed out"). Fixed: exclude
+   `[hb_user, hb_apple_pending_v1]` from both build and restore (matching the
+   CloudSync allowlist, which already omits the JWT). **Verified in-app**: a foreign
+   `hb_user` is no longer injected on restore; normal data still restores.
+7. **DATA-LOSS — Settings / day-change killed the Morning Briefing.** `rescheduleAll`
+   starts with `cancelAll` (wipes the digest, ID 1) but only re-armed habit/checkin
+   reminders. The 4 correct call sites pair it with `reapplyDigest`; `rescheduleNow`
+   (Settings quiet-hours / pause / un-pause / master toggle) and `checkDayChange`
+   (midnight rollover) did not — so any of those silently dropped the digest. Fixed:
+   add `reapplyDigest` to both, matching the established pattern.
+
+Two more candidates were correctly **refuted** by the verifiers (a streak-shield
+"never re-earns shields" claim — the milestone counter is intentionally monotonic;
+and an uncertain partial-restore-corruption case with no constructible trigger).
 
 ---
 
