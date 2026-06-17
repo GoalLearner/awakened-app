@@ -196,6 +196,46 @@ function isParticipant(row: CoopBossRow, userId: string): boolean {
   return row.challenger_user_id === userId || row.partner_user_id === userId;
 }
 
+// W371 — validate a verified-event step submission that is tagged with a
+// co-op boss_instance_id. The submit endpoint (handleVerifiedEventsSubmit,
+// duels.ts) calls this before inserting any boss-tagged row. Rejects
+// anything but a REAL PARTICIPANT submitting to an ACTIVE instance INSIDE
+// its [starts_at, ends_at] window. This is what makes the server-side win
+// decision trustworthy: without it any client could POST a fabricated
+// value for any instance, or bank post-deadline steps to win after the
+// 24h window. (v1 still trusts the step VALUE itself per duels.ts; this
+// caps abuse to in-window participant submissions — the cheap, high-value
+// guard.) A 60s grace on each bound tolerates device/server clock skew.
+export async function validateBossInstanceForUser(
+  env: Env,
+  userId: string,
+  instanceId: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const row = await env.DB.prepare(
+    `SELECT challenger_user_id, partner_user_id, status, starts_at, ends_at
+       FROM coop_boss_instances WHERE id = ?`,
+  )
+    .bind(instanceId)
+    .first<{
+      challenger_user_id: string;
+      partner_user_id: string;
+      status: string;
+      starts_at: string | null;
+      ends_at: string | null;
+    }>();
+  if (!row) return { ok: false, reason: 'BOSS_INSTANCE_NOT_FOUND' };
+  if (row.challenger_user_id !== userId && row.partner_user_id !== userId) {
+    return { ok: false, reason: 'NOT_PARTICIPANT' };
+  }
+  if (row.status !== 'active') return { ok: false, reason: 'BOSS_NOT_ACTIVE' };
+  const now = Date.now();
+  const startMs = row.starts_at ? Date.parse(row.starts_at) : NaN;
+  const endMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
+  if (Number.isFinite(startMs) && now < startMs - 60000) return { ok: false, reason: 'BEFORE_WINDOW' };
+  if (Number.isFinite(endMs) && now > endMs + 60000) return { ok: false, reason: 'AFTER_WINDOW' };
+  return { ok: true };
+}
+
 // ── POST /v1/coop-boss — create (invite a friend) ───────────────────
 export async function handleCoopBossCreate(
   request: Request,

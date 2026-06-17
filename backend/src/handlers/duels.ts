@@ -16,6 +16,10 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+// Co-op Dungeon Bosses v1 (W371) — a boss_instance_id-tagged step event is
+// validated (participant + active + in-window) before insert so the
+// server-authoritative co-op win can't be forged or won past the window.
+import { validateBossInstanceForUser } from './coop-boss';
 // v3 Phase 1z.279 — Duels permanently retired. This file is now
 // the residual carrier for two endpoints only:
 //   - POST /v1/verified-events     (handleVerifiedEventsSubmit)
@@ -754,6 +758,9 @@ export async function handleVerifiedEventsSubmit(
   let inserted = 0;
   let duplicates = 0;
   const errors: Array<{ index: number; reason: string }> = [];
+  // W371 — cache co-op instance validations within the batch so a batch of
+  // N step events for the same instance costs one lookup, not N.
+  const bossCache = new Map<string, { ok: boolean; reason?: string }>();
 
   for (let i = 0; i < events.length; i++) {
     const e = events[i] || {};
@@ -792,6 +799,18 @@ export async function handleVerifiedEventsSubmit(
       errors.push({ index: i, reason: 'INVALID_SOURCE' }); continue;
     }
     if (!occurredAt) { errors.push({ index: i, reason: 'MISSING_OCCURRED_AT' }); continue; }
+
+    // W371 — co-op step events must come from a participant of an ACTIVE
+    // instance, inside its window. Legacy duel/outbox events (no
+    // boss_instance_id) skip this entirely and insert as before.
+    if (bossInstanceId) {
+      let v = bossCache.get(bossInstanceId);
+      if (v === undefined) {
+        v = await validateBossInstanceForUser(env, session.userId, bossInstanceId);
+        bossCache.set(bossInstanceId, v);
+      }
+      if (!v.ok) { errors.push({ index: i, reason: v.reason || 'BOSS_INSTANCE_INVALID' }); continue; }
+    }
 
     try {
       const result = await env.DB.prepare(
