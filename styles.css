@@ -30031,3 +30031,55 @@ button.guildhall-summary-tile:active {
   .coopsm-join { animation: none !important; }
 }
 
+
+/* ── W393 — Co-op invite TOP BANNER (ClaudeDesign "Co-op Summons Banner") ──
+   Namespaced csb-* (the design's .msg/.txt/.ally/.answer would collide). Fixed at
+   the top, slides in; .arriving = entrance pulse peak, .resting = breathing glow. */
+@property --csb-glow { syntax:'<number>'; inherits:false; initial-value:.32; }
+.csb-banner{
+  position:fixed; top:calc(env(safe-area-inset-top, 0px) + 8px); left:10px; right:10px; z-index:9000;
+  display:flex; align-items:center; gap:13px; padding:13px 14px; border-radius:16px;
+  background:linear-gradient(157deg,#12122c 0%,#0a0a1c 55%,#07070f 100%);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  overflow:hidden; cursor:pointer; --csb-glow:.32;
+  transform:translateY(-140%); opacity:0;
+  transition:transform .5s cubic-bezier(.16,1,.3,1), opacity .45s ease;
+}
+.csb-banner.csb-in{ transform:translateY(0); opacity:1; }
+.csb-banner::before{ content:""; position:absolute; top:-40%; right:-10%; width:150px; height:180%;
+  background:radial-gradient(closest-side,rgba(255,122,60,.22),rgba(255,122,60,0) 75%); pointer-events:none; }
+.csb-banner::after{ content:""; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(90,214,200,calc(var(--csb-glow) * .9)), 0 0 26px rgba(90,214,200,calc(var(--csb-glow) * .8)); }
+.csb-banner > *{ position:relative; z-index:1; }
+.csb-ally{ width:46px; height:46px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:19px; color:#5ad6c8; letter-spacing:1px;
+  background:radial-gradient(circle at 50% 35%,rgba(43,182,166,.30),rgba(8,8,26,.6) 72%);
+  box-shadow:0 0 0 1.6px #5ad6c8, 0 0 16px rgba(90,214,200,.45), inset 0 0 10px rgba(90,214,200,.18); }
+.csb-txt{ flex:1; min-width:0; }
+.csb-eyebrow{ font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:800; letter-spacing:2.4px;
+  color:#5ad6c8; text-transform:uppercase; margin-bottom:5px; display:flex; align-items:center; gap:7px; }
+.csb-spark{ width:5px; height:5px; border-radius:50%; background:#5ad6c8; box-shadow:0 0 8px #5ad6c8; }
+.csb-msg{ font-family:"Cinzel",Georgia,serif; font-weight:600; font-size:15.5px; line-height:1.14; color:#f5f3fb; letter-spacing:.1px; }
+.csb-who{ color:#f5b842; font-weight:700; }
+.csb-sub{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:13px; line-height:1.2; color:#9090a8; margin-top:3px; letter-spacing:.2px; }
+.csb-rank{ font-family:"JetBrains Mono",monospace; font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:1px; color:#f5b842;
+  border:1px solid rgba(245,184,66,.4); border-radius:4px; padding:1px 4px; margin-left:5px; vertical-align:1px; }
+.csb-answer{ flex:none; align-self:center; font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:800; letter-spacing:1.6px;
+  text-transform:uppercase; color:#ffd574; padding:10px 13px; border-radius:11px; border:none; cursor:pointer;
+  background:linear-gradient(120deg,#2bb6a6 0%,#3a8f8a 40%,#ff7a3c 100%); text-shadow:0 1px 1px rgba(60,20,0,.55);
+  box-shadow:0 0 18px rgba(255,122,60,.30), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 5px rgba(40,10,0,.35);
+  white-space:nowrap; animation:csbCtaPulse 2.6s ease-in-out infinite; }
+@keyframes csbCtaPulse{ 0%,100%{ box-shadow:0 0 14px rgba(255,122,60,.24), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 5px rgba(40,10,0,.35); }
+  50%{ box-shadow:0 0 26px rgba(255,122,60,.5), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 5px rgba(40,10,0,.35); } }
+.csb-answer:active{ transform:translateY(1px); }
+.csb-dismiss{ position:absolute; top:7px; right:9px; z-index:2; width:20px; height:20px; border-radius:50%; border:none; cursor:pointer;
+  background:rgba(255,255,255,.04); color:#6a6a82; display:flex; align-items:center; justify-content:center; padding:0; }
+.csb-dismiss:hover{ color:#a0a0bc; background:rgba(255,255,255,.08); }
+.csb-dismiss svg{ display:block; }
+.csb-banner.resting{ animation:csbRestPulse 3.4s ease-in-out infinite; }
+@keyframes csbRestPulse{ 0%,100%{ --csb-glow:.26; } 50%{ --csb-glow:.42; } }
+.csb-banner.arriving{ --csb-glow:.95; }
+.csb-banner.arriving .csb-answer{ box-shadow:0 0 34px rgba(255,122,60,.7), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(40,10,0,.35); animation:none; }
+.csb-banner.arriving .csb-ally{ box-shadow:0 0 0 1.8px #5ad6c8, 0 0 26px rgba(90,214,200,.8), inset 0 0 12px rgba(90,214,200,.3); }
+@media (prefers-reduced-motion:reduce){ .csb-banner{ transform:none!important; animation:none!important; transition:opacity .25s ease; } .csb-answer{ animation:none!important; } }

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w392'; // W392
+  const APP_BUILD_TAG = '2.2.7-w393'; // W393
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -37637,7 +37637,80 @@
     if (invite || active) _coopSetEngaged(true);
     _coopLastBadge = invite ? 'invite' : (active ? 'active' : null);
     _coopApplyBadge();
+    // W393 — surface a pending invite as a top banner ANYWHERE in the app (the
+    // "INVITE" badge alone was buried in the Dungeon tab). Same detection, no extra fetch.
+    try { if (invite) _coopShowInviteBanner(invite); else _coopHideInviteBanner(); } catch (_) {}
   }
+
+  // ── W393 — co-op invite TOP BANNER (ClaudeDesign "Co-op Summons Banner") ───
+  // A slim teaser for the cinematic summons. Built in JS (csb-* CSS in styles.css);
+  // tap / Answer opens the summons, ✕ dismisses. Shown once per session per invite;
+  // dismiss or answer remembers the instance so it never re-nags.
+  const _coopBannerSessionShown = {};
+  function _coopBannerDismissed() {
+    try { const a = JSON.parse(localStorage.getItem('hb_coop_invite_dismissed') || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; }
+  }
+  function _coopBannerMarkDismissed(id) {
+    if (!id) return;
+    try { const a = _coopBannerDismissed(); if (a.indexOf(id) < 0) { a.push(id); localStorage.setItem('hb_coop_invite_dismissed', JSON.stringify(a.slice(-50))); } } catch (_) {}
+  }
+  function _coopHideInviteBanner() {
+    const el = document.getElementById('coop-invite-banner');
+    if (!el) return;
+    el.classList.remove('csb-in');
+    setTimeout(function () { try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (_) {} }, 480);
+  }
+  function _coopShowInviteBanner(inst) {
+    try {
+      if (!inst || !inst.id) return;
+      const id = inst.id;
+      if (_coopBannerSessionShown[id]) return;
+      if (_coopBannerDismissed().indexOf(id) >= 0) return;
+      const existing = document.getElementById('coop-invite-banner');
+      if (existing && existing.getAttribute('data-coop-id') === id) return;
+      if (existing) _coopHideInviteBanner();
+      _coopBannerSessionShown[id] = true;
+
+      const v = (typeof _coopView === 'function') ? _coopView(inst) : null;
+      const allyRaw = (v && v.them && v.them.alias) || (inst.challenger && inst.challenger.alias) || 'Your ally';
+      const ally = (typeof _coopAlias === 'function') ? _coopAlias(allyRaw) : allyRaw;
+      const bossId = inst.boss_id || COOP_PRIMARY_BOSS_ID;
+      const cfg = COOP_BOSSES[bossId] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID] || { name: 'a co-op boss', rank: 'E' };
+      const bossName = cfg.name || 'a co-op boss';
+      const rank = String(inst.boss_rank || cfg.rank || 'E').toUpperCase();
+      const mono = (String(ally).trim().charAt(0) || 'A').toUpperCase();
+
+      const el = document.createElement('div');
+      el.id = 'coop-invite-banner';
+      el.className = 'csb-banner arriving';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('data-coop-id', id);
+      el.setAttribute('aria-label', ally + ' calls you to a co-op hunt against ' + bossName + '. Tap to answer.');
+      el.innerHTML =
+        '<div class="csb-ally" aria-hidden="true">' + esc(mono) + '</div>' +
+        '<div class="csb-txt">' +
+          '<div class="csb-eyebrow"><span class="csb-spark"></span>Co-op Summons</div>' +
+          '<div class="csb-msg"><span class="csb-who">' + esc(ally) + '</span> calls you to the hunt</div>' +
+          '<div class="csb-sub">' + esc(bossName) + '<span class="csb-rank">' + esc(rank) + '-RANK</span></div>' +
+        '</div>' +
+        '<button type="button" class="csb-answer">Answer</button>' +
+        '<button type="button" class="csb-dismiss" aria-label="Dismiss"><svg width="9" height="9" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+      document.body.appendChild(el);
+
+      function answer(ev) { if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {} } _coopBannerMarkDismissed(id); _coopHideInviteBanner(); try { openCoopSheet(bossId); } catch (_) {} }
+      function dismiss(ev) { if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {} } _coopBannerMarkDismissed(id); _coopHideInviteBanner(); }
+      el.addEventListener('click', answer);
+      const ansBtn = el.querySelector('.csb-answer'); if (ansBtn) ansBtn.addEventListener('click', answer);
+      const disBtn = el.querySelector('.csb-dismiss'); if (disBtn) disBtn.addEventListener('click', dismiss);
+      el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') answer(ev); else if (ev.key === 'Escape') dismiss(ev); });
+
+      // entrance: slide in at the arrival pulse peak, then settle to the resting breath
+      requestAnimationFrame(function () { requestAnimationFrame(function () { try { el.classList.add('csb-in'); } catch (_) {} }); });
+      setTimeout(function () { try { el.classList.remove('arriving'); el.classList.add('resting'); } catch (_) {} }, 1100);
+    } catch (_) {}
+  }
+  try { window.__coopShowInviteBanner = _coopShowInviteBanner; window.__coopHideInviteBanner = _coopHideInviteBanner; } catch (_) {}
 
   let questsGateExpanded = false;
   let currentDungeonRank = 'E'; // which rank tier the dungeon-view shows
@@ -48428,6 +48501,7 @@
       // W371 — co-op background sync: push this hunter's in-window steps,
       // resolve, and collect rewards even when the sheet was never opened.
       try { _coopBackgroundSync(); } catch (_) {}
+      try { _coopRefreshBadge(); } catch (_) {}
       // Daily Insight retry — if user backgrounded across midnight and
       // resumed in the morning, this is the natural moment to fire.
       // shouldShowDailyInsight() handles all gating (Day 1, already
@@ -48464,6 +48538,7 @@
       try { _drainVerifiedEventOutbox(); } catch (_) {}
       // W371 — co-op reconcile on cold launch (collect any won reward / push steps).
       try { _coopBackgroundSync(); } catch (_) {}
+      try { _coopRefreshBadge(); } catch (_) {}
       // v3 Phase 1w — Cloud Sync. Pull on init (offers restore on
       // fresh installs with a cloud backup; otherwise schedules a
       // baseline upload). Visibility-hidden flush keeps cloud
