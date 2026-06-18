@@ -30083,3 +30083,69 @@ button.guildhall-summary-tile:active {
 .csb-banner.arriving .csb-answer{ box-shadow:0 0 34px rgba(255,122,60,.7), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(40,10,0,.35); animation:none; }
 .csb-banner.arriving .csb-ally{ box-shadow:0 0 0 1.8px #5ad6c8, 0 0 26px rgba(90,214,200,.8), inset 0 0 12px rgba(90,214,200,.3); }
 @media (prefers-reduced-motion:reduce){ .csb-banner{ transform:none!important; animation:none!important; transition:opacity .25s ease; } .csb-answer{ animation:none!important; } }
+
+/* ── W394 — Co-op Hunts Dashboard "The Pacts" (ClaudeDesign) ───────────────
+   Multi-hunt roster: every active/pending duo hunt with its own progress.
+   Namespaced cph-* (design's .hunt/.list/.bar/.you/.name/.close would collide).
+   Shell reuses .bfs-overlay (fixed/inset/z200/.hidden). */
+.coop-dash-overlay{ display:flex; flex-direction:column; overflow:hidden; padding-bottom:0; background:#07070f; color:#f5f3fb; }
+.cph-head{ flex:none; padding:calc(env(safe-area-inset-top,0px) + 12px) 20px 16px; position:relative; }
+.cph-close{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 8px); right:18px; width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); color:#9090a8; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+.cph-close:hover{ color:#f5f3fb; }
+.cph-eyebrow{ font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:800; letter-spacing:2.4px; color:#5ad6c8; text-transform:uppercase; }
+.cph-title{ font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:28px; letter-spacing:1px; color:#f5f3fb; margin:8px 0 0; line-height:1; }
+.cph-count{ font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; letter-spacing:1.4px; color:#9090a8; text-transform:uppercase; margin-top:9px; display:flex; align-items:center; gap:7px; }
+.cph-pip{ width:6px; height:6px; border-radius:50%; background:#5ad6c8; box-shadow:0 0 8px #5ad6c8; }
+.cph-count b{ color:#f5f3fb; font-weight:800; }
+.cph-list{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px 16px 8px; display:flex; flex-direction:column; gap:13px; }
+.cph-hunt{ position:relative; display:block; width:100%; text-align:left; cursor:pointer; padding:15px 16px 16px; border-radius:16px; background:linear-gradient(157deg,#12122c 0%,#0c0c20 55%,#07070f 100%); border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); overflow:hidden; font-family:inherit; color:inherit; }
+.cph-hunt.cph-active::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg,#5ad6c8,#2bb6a6); box-shadow:0 0 14px rgba(90,214,200,.6); animation:cphEdgeBreath 3.4s ease-in-out infinite; }
+@keyframes cphEdgeBreath{ 0%,100%{ opacity:.7; } 50%{ opacity:1; } }
+.cph-hunt.cph-active::after{ content:""; position:absolute; right:-12%; top:-30%; width:130px; height:160%; pointer-events:none; background:radial-gradient(closest-side,rgba(255,122,60,.12),transparent 75%); }
+.cph-hunt > *{ position:relative; z-index:1; }
+.cph-top{ display:flex; align-items:center; gap:12px; }
+.cph-ally{ width:44px; height:44px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:18px; color:#5ad6c8; letter-spacing:1px; background:radial-gradient(circle at 50% 35%,rgba(43,182,166,.28),rgba(8,8,26,.6) 72%); box-shadow:0 0 0 1.6px #5ad6c8,0 0 14px rgba(90,214,200,.4),inset 0 0 9px rgba(90,214,200,.16); }
+.cph-hunt.cph-pending .cph-ally{ color:#7fd8cd; box-shadow:0 0 0 1.4px rgba(90,214,200,.55),inset 0 0 8px rgba(90,214,200,.1); opacity:.92; }
+.cph-who{ flex:1; min-width:0; }
+.cph-name{ font-family:"Cinzel",Georgia,serif; font-weight:600; font-size:17px; color:#f5f3fb; letter-spacing:.3px; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cph-boss{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+.cph-bname{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:14px; color:#9090a8; letter-spacing:.2px; white-space:nowrap; }
+.cph-rank{ font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:800; letter-spacing:1px; color:#f5b842; border:1px solid rgba(245,184,66,.4); border-radius:5px; padding:2px 5px; background:rgba(245,184,66,.06); }
+.cph-chev{ flex:none; color:#5a5a78; display:flex; align-items:center; }
+.cph-prog{ margin-top:14px; }
+.cph-prog-top{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+.cph-prog-num{ font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:800; letter-spacing:.4px; color:#f5f3fb; }
+.cph-prog-num span{ color:#9090a8; font-weight:500; }
+.cph-prog-label{ font-family:"JetBrains Mono",monospace; font-size:8.5px; font-weight:700; letter-spacing:1.6px; color:#5a5a78; text-transform:uppercase; }
+.cph-bar{ height:8px; border-radius:5px; overflow:hidden; background:rgba(255,255,255,.05); display:flex; box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
+.cph-bar .cph-you{ background:linear-gradient(90deg,#2bb6a6,#5ad6c8); box-shadow:0 0 12px rgba(90,214,200,.5); }
+.cph-bar .cph-them{ background:linear-gradient(90deg,#ff7a3c,#f5b842); box-shadow:0 0 12px rgba(255,122,60,.4); }
+.cph-legend{ display:flex; align-items:center; gap:16px; margin-top:10px; }
+.cph-leg{ display:flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.6px; color:#9090a8; }
+.cph-leg .cph-sw{ width:8px; height:8px; border-radius:3px; }
+.cph-leg.cph-you .cph-sw{ background:#5ad6c8; box-shadow:0 0 7px #5ad6c8; }
+.cph-leg.cph-them .cph-sw{ background:#ff7a3c; box-shadow:0 0 7px #ff7a3c; }
+.cph-leg b{ color:#f5f3fb; font-weight:800; }
+.cph-time{ margin-left:auto; display:flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:800; letter-spacing:.8px; color:#f5b842; }
+.cph-time .cph-lab{ color:#5a5a78; font-weight:700; letter-spacing:1.4px; }
+.cph-pend{ margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.06); display:flex; align-items:center; gap:9px; }
+.cph-pend .cph-ind{ width:7px; height:7px; border-radius:50%; flex:none; }
+.cph-pend.cph-wait .cph-ind{ background:#9090a8; box-shadow:0 0 8px rgba(144,144,168,.6); animation:cphWaitPulse 1.8s ease-in-out infinite; }
+@keyframes cphWaitPulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.35; transform:scale(.7); } }
+.cph-pend-txt{ font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; letter-spacing:.5px; color:#9090a8; }
+.cph-pend-txt b{ color:#f5f3fb; font-weight:800; }
+.cph-pend .cph-hint{ margin-left:auto; font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:#5a5a78; }
+.cph-foot{ flex:none; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); background:linear-gradient(0deg,#07070f 60%,transparent); }
+.cph-recruit{ width:100%; height:54px; border-radius:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:11px; font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; color:#5ad6c8; background:linear-gradient(180deg,rgba(43,182,166,.16),rgba(43,182,166,.05)); border:1px solid rgba(90,214,200,.4); box-shadow:0 0 22px rgba(90,214,200,.14),inset 0 1px 0 rgba(255,255,255,.05); }
+.cph-recruit:active{ transform:translateY(1px); }
+.cph-plus{ width:18px; height:18px; border-radius:50%; border:1.5px solid #5ad6c8; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:0; }
+.cph-empty{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 40px 40px; }
+.cph-empty.hidden{ display:none !important; }
+.cph-sigil{ width:120px; height:120px; border-radius:50%; position:relative; margin-bottom:30px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(90,214,200,.28); box-shadow:0 0 40px rgba(90,214,200,.12),inset 0 0 30px rgba(90,214,200,.06); animation:cphSigilBreath 4.5s ease-in-out infinite; }
+@keyframes cphSigilBreath{ 0%,100%{ box-shadow:0 0 36px rgba(90,214,200,.1),inset 0 0 26px rgba(90,214,200,.05); } 50%{ box-shadow:0 0 52px rgba(90,214,200,.2),inset 0 0 34px rgba(90,214,200,.1); } }
+.cph-sigil::before{ content:""; position:absolute; inset:14px; border-radius:50%; border:1px solid rgba(90,214,200,.14); }
+.cph-rune{ font-family:"Cinzel",Georgia,serif; font-size:34px; font-weight:700; color:#5ad6c8; text-shadow:0 0 18px rgba(90,214,200,.5); }
+.cph-empty .cph-eyebrow{ margin-bottom:12px; }
+.cph-empty h2{ font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:25px; letter-spacing:.6px; color:#f5f3fb; margin:0; }
+.cph-empty p{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:16px; line-height:1.45; color:#9090a8; margin:14px 0 0; max-width:260px; }
+@media (prefers-reduced-motion:reduce){ .cph-hunt.cph-active::before, .cph-pend.cph-wait .cph-ind, .cph-sigil{ animation:none !important; } }

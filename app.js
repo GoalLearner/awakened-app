@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w393'; // W393
+  const APP_BUILD_TAG = '2.2.7-w394'; // W394
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -36970,7 +36970,7 @@
       list.addEventListener('click', (e) => {
         // W370 — co-op card opens its own sheet (data-coop-boss, separate path).
         const coopCard = e.target.closest('.bcard[data-coop-boss]');
-        if (coopCard) { const cid = coopCard.getAttribute('data-coop-boss'); if (cid) { try { openCoopSheet(cid); } catch (_) {} } return; }
+        if (coopCard) { try { _coopOpenDashboard(); } catch (_) {} return; }   // W394 — open the multi-hunt dashboard
         const card = e.target.closest('.bcard[data-boss]');
         if (!card) return;
         const id = card.getAttribute('data-boss');
@@ -37142,6 +37142,8 @@
     document.body.classList.remove('bfs-locked');
     overlay.scrollTop = 0;
     _coopStopPolling();
+    // W394 — if this detail was opened from the dashboard, return there.
+    if (_coopDashReturn) { _coopDashReturn = false; try { _coopOpenDashboard(); } catch (_) {} }
   }
   try { window.openCoopSheet = openCoopSheet; } catch (_) {}
   try { window.closeCoopSheet = closeCoopSheet; } catch (_) {}
@@ -37158,8 +37160,12 @@
     if (!res || !res.ok) { _coopSheet.error = (res && res.code) || 'ERROR'; renderCoopSheet(); return; }
     const list = Array.isArray(res.instances) ? res.instances : [];
     const forBoss = list.filter(function (x) { return x && x.boss_id === cfg.id; });
-    const live = forBoss.find(function (x) { return x.status === 'pending' || x.status === 'active'; });
-    _coopSheet.instance = live || forBoss[0] || null;
+    // W394 — honor a pinned hunt (opened from the dashboard) so the detail stays
+    // on the hunt the user tapped, not just the first live one for the boss.
+    let chosen = null;
+    if (_coopSheet.pinnedId) chosen = list.find(function (x) { return x && x.id === _coopSheet.pinnedId; }) || null;
+    if (!chosen) { const live = forBoss.find(function (x) { return x.status === 'pending' || x.status === 'active'; }); chosen = live || forBoss[0] || null; }
+    _coopSheet.instance = chosen;
     _coopAfterInstanceUpdate();
   }
 
@@ -37698,7 +37704,7 @@
         '<button type="button" class="csb-dismiss" aria-label="Dismiss"><svg width="9" height="9" viewBox="0 0 9 9"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
       document.body.appendChild(el);
 
-      function answer(ev) { if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {} } _coopBannerMarkDismissed(id); _coopHideInviteBanner(); try { openCoopSheet(bossId); } catch (_) {} }
+      function answer(ev) { if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {} } _coopBannerMarkDismissed(id); _coopHideInviteBanner(); try { _coopOpenHuntDetail(inst); } catch (_) { try { openCoopSheet(bossId); } catch (__) {} } }
       function dismiss(ev) { if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {} } _coopBannerMarkDismissed(id); _coopHideInviteBanner(); }
       el.addEventListener('click', answer);
       const ansBtn = el.querySelector('.csb-answer'); if (ansBtn) ansBtn.addEventListener('click', answer);
@@ -37711,6 +37717,143 @@
     } catch (_) {}
   }
   try { window.__coopShowInviteBanner = _coopShowInviteBanner; window.__coopHideInviteBanner = _coopHideInviteBanner; } catch (_) {}
+
+  // ── W394 — Co-op Hunts Dashboard "The Pacts" (ClaudeDesign) ────────────────
+  // The backend already supports concurrent duo hunts (one per pair+boss); the
+  // old single-hunt UI just hid all but the first. This roster shows EVERY live
+  // hunt with its own progress. The Dungeon co-op card opens this; a card opens
+  // its detail (pinned), Recruit adds a new hunt without disturbing the others.
+  let _coopDashInstances = [];
+  let _coopDashWired = false;
+  let _coopDashReturn = false;   // detail opened from the dashboard → Back returns here
+
+  function _coopHuntCardHtml(inst) {
+    const v = _coopView(inst);
+    const ally = _coopAlias((v.them && v.them.alias) || 'ally');
+    const cfg = COOP_BOSSES[inst.boss_id] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID] || { name: 'Co-op Boss', rank: 'E' };
+    const bossName = cfg.name || 'Co-op Boss';
+    const rank = String(inst.boss_rank || cfg.rank || 'E').toUpperCase();
+    const mono = (String(ally).trim().charAt(0) || 'A').toUpperCase();
+    const N = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
+    let cls = 'cph-hunt', body = '';
+    if (inst.status === 'active') {
+      cls += ' cph-active';
+      const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
+      const combined = Math.max(0, inst.combined_steps || 0);
+      const mine = Math.max(0, (v.me && v.me.steps) || 0);
+      const theirs = Math.max(0, (v.them && v.them.steps) || 0);
+      const youPct = goal > 0 ? Math.min(100, mine / goal * 100) : 0;
+      const themPct = goal > 0 ? Math.min(Math.max(0, 100 - youPct), theirs / goal * 100) : 0;
+      const tleft = _coopFmtRemaining(inst.time_remaining_ms).replace(/ left$/, '');
+      body =
+        '<div class="cph-prog">' +
+          '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span></span><span class="cph-prog-label">Combined Steps</span></div>' +
+          '<div class="cph-bar"><div class="cph-you" style="width:' + youPct.toFixed(1) + '%"></div><div class="cph-them" style="width:' + themPct.toFixed(1) + '%"></div></div>' +
+          '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span>You <b>' + N(mine) + '</b></span><span class="cph-leg cph-them"><span class="cph-sw"></span>' + esc(ally) + ' <b>' + N(theirs) + '</b></span>' + (tleft ? '<span class="cph-time"><span class="cph-lab">Time Left</span>' + esc(tleft) + '</span>' : '') + '</div>' +
+        '</div>';
+    } else {
+      cls += ' cph-pending';
+      if (inst.role === 'partner') {
+        body = '<div class="cph-pend"><span class="cph-ind" style="background:#5ad6c8;box-shadow:0 0 8px #5ad6c8"></span><span class="cph-pend-txt"><b>' + esc(ally) + '</b> summoned you</span><span class="cph-hint" style="color:#5ad6c8">Answer ›</span></div>';
+      } else {
+        body = '<div class="cph-pend cph-wait"><span class="cph-ind"></span><span class="cph-pend-txt">Waiting for <b>' + esc(ally) + '</b> to accept</span><span class="cph-hint">Pact Sent</span></div>';
+      }
+    }
+    return '<a class="' + cls + '" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc(ally + ', ' + inst.status + ' co-op hunt against ' + bossName) + '. Tap to open.">' +
+      '<div class="cph-top"><div class="cph-ally" aria-hidden="true">' + esc(mono) + '</div>' +
+        '<div class="cph-who"><div class="cph-name">' + esc(ally) + '</div><div class="cph-boss"><span class="cph-bname">' + esc(bossName) + '</span><span class="cph-rank">' + esc(rank) + '-RANK</span></div></div>' +
+        '<span class="cph-chev"><svg width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span>' +
+      '</div>' + body +
+    '</a>';
+  }
+
+  function _coopRenderDashboard(instances) {
+    const listEl = document.getElementById('coop-dash-list');
+    const emptyEl = document.getElementById('coop-dash-empty');
+    const countEl = document.getElementById('coop-dash-count');
+    if (!listEl) return;
+    const live = (Array.isArray(instances) ? instances : []).filter(function (x) { return x && (x.status === 'pending' || x.status === 'active'); });
+    live.sort(function (a, b) { return (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1); });
+    _coopDashInstances = live;
+    if (!live.length) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.classList.remove('hidden');
+      if (countEl) countEl.innerHTML = '<span class="cph-pip" style="background:#5a5a78;box-shadow:none"></span>No active pacts';
+      return;
+    }
+    if (emptyEl) emptyEl.classList.add('hidden');
+    listEl.innerHTML = live.map(_coopHuntCardHtml).join('');
+    const nA = live.filter(function (x) { return x.status === 'active'; }).length;
+    const nP = live.length - nA;
+    let txt;
+    if (nA && nP) txt = '<b>' + nA + ' Active</b> · ' + nP + ' Pending';
+    else if (nA) txt = '<b>' + nA + ' Active</b>';
+    else txt = '<b>' + nP + ' Pending</b>';
+    if (countEl) countEl.innerHTML = '<span class="cph-pip"></span>' + txt;
+  }
+
+  function _coopDashWireOnce() {
+    if (_coopDashWired) return; _coopDashWired = true;
+    const closeBtn = document.getElementById('coop-dash-close');
+    if (closeBtn) closeBtn.addEventListener('click', _coopCloseDashboard);
+    const recruitBtn = document.getElementById('coop-dash-recruit');
+    if (recruitBtn) recruitBtn.addEventListener('click', _coopDashRecruit);
+    const listEl = document.getElementById('coop-dash-list');
+    if (listEl) listEl.addEventListener('click', function (e) {
+      const card = (e.target && e.target.closest) ? e.target.closest('.cph-hunt[data-coop-hunt]') : null;
+      if (!card) return;
+      const id = card.getAttribute('data-coop-hunt');
+      const inst = (_coopDashInstances || []).find(function (x) { return x && x.id === id; });
+      if (inst) _coopOpenHuntDetail(inst, true);
+    });
+  }
+
+  async function _coopOpenDashboard() {
+    const overlay = document.getElementById('coop-dash-overlay');
+    if (!overlay) return;
+    _coopDashWireOnce();
+    overlay.classList.remove('hidden');
+    document.body.classList.add('bfs-locked');
+    let res;
+    try { res = (window.Auth && typeof Auth.coopBossList === 'function') ? await Auth.coopBossList() : null; } catch (_) { res = null; }
+    const instances = (res && res.ok && Array.isArray(res.instances)) ? res.instances : [];
+    if (instances.some(function (x) { return x && (x.status === 'pending' || x.status === 'active'); })) _coopSetEngaged(true);
+    _coopRenderDashboard(instances);
+  }
+  function _coopCloseDashboard() {
+    const overlay = document.getElementById('coop-dash-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    document.body.classList.remove('bfs-locked');
+  }
+  function _coopOpenHuntDetail(inst, fromDash) {
+    const cfg = COOP_BOSSES[inst.boss_id] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID];
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!cfg || !overlay) return;
+    // W394 — only return to the dashboard if we CAME from it (a card tap). The
+    // invite banner can fire on any tab; answering it should fall back to the
+    // prior screen, not the full-screen Pacts hub.
+    _coopDashReturn = !!fromDash;
+    _coopCloseDashboard();
+    _coopSheet = { instance: inst, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: inst.id };
+    overlay.classList.remove('hidden');
+    document.body.classList.add('bfs-locked');
+    renderCoopSheet();
+    _coopRefresh();
+  }
+  function _coopDashRecruit() {
+    const cfg = COOP_BOSSES[COOP_PRIMARY_BOSS_ID];
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (!cfg || !overlay) return;
+    _coopDashReturn = true;
+    _coopCloseDashboard();
+    _coopSheet = { instance: null, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: null };
+    overlay.classList.remove('hidden');
+    document.body.classList.add('bfs-locked');
+    renderCoopSheet();
+    openCoopPartnerPicker();
+  }
+  try { window.__coopOpenDashboard = _coopOpenDashboard; } catch (_) {}
 
   let questsGateExpanded = false;
   let currentDungeonRank = 'E'; // which rank tier the dungeon-view shows

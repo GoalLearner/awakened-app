@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=445">
+  <link rel="stylesheet" href="styles.css?v=446">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1246,6 +1246,28 @@
       <div class="bfs-rank-label">CO-OP HUNT</div>
     </div>
     <div id="coop-fs-body" class="coop-body"></div>
+  </div>
+  <!-- W394 — Co-op Hunts Dashboard ("The Pacts"). Multi-hunt roster; reuses the
+       .bfs-overlay shell. Count + cards populated by _coopRenderDashboard(). -->
+  <div id="coop-dash-overlay" class="bfs-overlay coop-dash-overlay hidden" role="dialog" aria-label="Co-op hunts">
+    <div class="cph-head">
+      <button id="coop-dash-close" type="button" class="cph-close" aria-label="Close">
+        <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><path d="M1 1l9 9M10 1l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <div class="cph-eyebrow">Co-op Hunts</div>
+      <h1 class="cph-title">The Pacts</h1>
+      <div id="coop-dash-count" class="cph-count"><span class="cph-pip"></span>—</div>
+    </div>
+    <div id="coop-dash-list" class="cph-list"></div>
+    <div id="coop-dash-empty" class="cph-empty hidden">
+      <div class="cph-sigil"><span class="cph-rune">✦</span></div>
+      <div class="cph-eyebrow">No Active Hunts</div>
+      <h2>Summon an ally</h2>
+      <p>No bond binds you to a hunt yet. Call a hunter to your side and walk down a boss together.</p>
+    </div>
+    <div class="cph-foot">
+      <button id="coop-dash-recruit" type="button" class="cph-recruit"><span class="cph-plus">+</span>Recruit a Hunter</button>
+    </div>
   </div>
   <div id="boss-fs-overlay" class="bfs-overlay hidden" role="dialog" aria-labelledby="bfs-name">
     <header class="bfs-header">
@@ -2971,7 +2993,7 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=835"></script>
+  <script src="app.js?v=836"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
