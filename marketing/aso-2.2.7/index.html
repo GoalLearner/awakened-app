@@ -1742,10 +1742,14 @@ Object.assign(window, { LeaderboardScreen5, ReportShareScreen3, BossShareScreen4
 </script>
 <script type="text/babel" data-presets="react">
 (function(){
-// export-canvas.jsx — renders the 5 App Store shots at TRUE 1320×2868 for
-// node-capture (replaces the 0.3-scale review canvas in as227-canvas.jsx).
-// Screen components are resolved from window at render time, so script
-// execution order can't matter.
+// export-canvas.jsx — renders the 5 App Store shots at TRUE device size for
+// node-capture. iPhone 6.9" (1320×2868) by default; iPad 13" (2064×2752) when
+// the page is loaded with ?device=ipad. Screen components resolve from window
+// at render time, so script execution order can't matter.
+
+const IS_IPAD = (function () { try { return new URLSearchParams(location.search).get('device') === 'ipad'; } catch (e) { return false; } })();
+const CW = IS_IPAD ? 2064 : 1320;
+const CH = IS_IPAD ? 2752 : 2868;
 
 const _VIOLET = 'rgba(167,139,250,0.32)';
 const _RED    = 'rgba(239,68,68,0.30)';
@@ -1770,15 +1774,41 @@ const ASO_SHOTS = [
     hue: _VIOLET, hue2: _GOLD, glowHue: 'rgba(167,139,250,0.45)', screen: 'LeaderboardScreen5' },
 ];
 
+// iPad 13" shot — same chrome (bloom + Cinzel headline + titanium device frame),
+// laid out for the 2064×2752 canvas (the device is centred on the wider stage).
+function ASShotIPad({ kicker, headline, hue, hue2, glowHue, children }) {
+  const AS = window.AS, ASBackground = window.ASBackground, ASPhone = window.ASPhone;
+  return (
+    <div style={{ width: 2064, height: 2752, position: 'relative', overflow: 'hidden', fontFamily: AS.sans }}>
+      <ASBackground hue={hue} hue2={hue2} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '212px 220px 0', textAlign: 'center', zIndex: 2 }}>
+        {kicker && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 40 }}>
+            <span style={{ width: 86, height: 2, background: `linear-gradient(90deg, transparent, ${AS.gold})` }} />
+            <span style={{ fontFamily: AS.mono, fontSize: 40, fontWeight: 800, letterSpacing: 9, color: AS.gold, textTransform: 'uppercase' }}>{kicker}</span>
+            <span style={{ width: 86, height: 2, background: `linear-gradient(90deg, ${AS.gold}, transparent)` }} />
+          </div>
+        )}
+        <div style={{ fontFamily: AS.serif, fontWeight: 700, fontSize: 130, lineHeight: 1.08, color: AS.ivory, letterSpacing: 1, textShadow: '0 4px 40px rgba(0,0,0,0.6)' }}>
+          {headline}
+        </div>
+      </div>
+      <div style={{ position: 'absolute', top: 690, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 1 }}>
+        <ASPhone screenW={952} glowHue={glowHue || hue}>{children}</ASPhone>
+      </div>
+    </div>
+  );
+}
+
 function ASOExport() {
   const ASShot = window.ASShot;
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a12', padding: '48px 0 100px' }}>
       <div style={{ textAlign: 'center', color: '#9090a8', fontFamily: '"JetBrains Mono", monospace', fontSize: 13, letterSpacing: 2, marginBottom: 8 }}>
-        AWAKENED · APP STORE iPhone 6.9″ · 1320 × 2868
+        AWAKENED · APP STORE {IS_IPAD ? 'iPad 13″ · 2064 × 2752' : 'iPhone 6.9″ · 1320 × 2868'}
       </div>
       <div style={{ textAlign: 'center', color: '#5c5c78', fontFamily: '"JetBrains Mono", monospace', fontSize: 11, letterSpacing: 1, marginBottom: 44 }}>
-        DevTools → right-click each <code style={{ color: '#f5b842' }}>.aso-shot</code> node → “Capture node screenshot” → 1320×2868 PNG
+        DevTools → right-click each <code style={{ color: '#f5b842' }}>.aso-shot</code> node → “Capture node screenshot”
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 64 }}>
         {ASO_SHOTS.map((s) => {
@@ -1786,10 +1816,10 @@ function ASOExport() {
           return (
             <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
               <div style={{ color: '#f5b842', fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>{s.label}</div>
-              <div className="aso-shot" id={'aso-' + s.id} style={{ width: 1320, height: 2868, boxShadow: '0 24px 90px rgba(0,0,0,0.65)' }}>
-                <ASShot kicker={s.kicker} headline={s.headline} hue={s.hue} hue2={s.hue2} glowHue={s.glowHue} scale={1}>
-                  {Screen ? <Screen/> : null}
-                </ASShot>
+              <div className="aso-shot" id={'aso-' + s.id} style={{ width: CW, height: CH, boxShadow: '0 24px 90px rgba(0,0,0,0.65)' }}>
+                {IS_IPAD
+                  ? <ASShotIPad kicker={s.kicker} headline={s.headline} hue={s.hue} hue2={s.hue2} glowHue={s.glowHue}>{Screen ? <Screen/> : null}</ASShotIPad>
+                  : <ASShot kicker={s.kicker} headline={s.headline} hue={s.hue} hue2={s.hue2} glowHue={s.glowHue} scale={1}>{Screen ? <Screen/> : null}</ASShot>}
               </div>
             </div>
           );
@@ -1800,7 +1830,7 @@ function ASOExport() {
 }
 
 (function _boot() {
-  const need = ['ASShot', 'ProfileScreen1', 'BattleScreen2', 'ReportShareScreen3', 'BossShareScreen4', 'LeaderboardScreen5'];
+  const need = ['ASShot', 'ASPhone', 'ASBackground', 'ProfileScreen1', 'BattleScreen2', 'ReportShareScreen3', 'BossShareScreen4', 'LeaderboardScreen5'];
   if (need.every((n) => typeof window[n] !== 'undefined')) {
     // Shot 2 — owner wants the REAL Ascent battle capture (the design's recreation
     // used a geometric boss). Drop the real screenshot into the device screen and
