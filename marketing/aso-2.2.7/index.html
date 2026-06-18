@@ -1802,6 +1802,21 @@ function ASOExport() {
 (function _boot() {
   const need = ['ASShot', 'ProfileScreen1', 'BattleScreen2', 'ReportShareScreen3', 'BossShareScreen4', 'LeaderboardScreen5'];
   if (need.every((n) => typeof window[n] !== 'undefined')) {
+    // Shot 2 — owner wants the REAL Ascent battle capture (the design's recreation
+    // used a geometric boss). Drop the real screenshot into the device screen and
+    // mask its status bar (14:27 / SOS / recording dot) with a clean 9:41 bar.
+    const StatusBar = window.ASStatusBar;
+    window.BattleScreen2 = function BattleScreen2Real() {
+      return (
+        <div style={{ width: 390, height: 844, position: 'relative', overflow: 'hidden', background: '#07070f' }}>
+          <img src="assets/02-ascent.jpeg" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}
+            onError={function (e) { e.currentTarget.style.display = 'none'; }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5, background: 'linear-gradient(180deg, #0a0a1a 0%, #0a0a1a 60%, rgba(10,10,26,0) 100%)' }}>
+            {StatusBar ? <StatusBar /> : null}
+          </div>
+        </div>
+      );
+    };
     ReactDOM.createRoot(document.getElementById('root')).render(<ASOExport/>);
   } else {
     setTimeout(_boot, 80);
