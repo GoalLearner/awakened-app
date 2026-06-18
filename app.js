@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w391'; // W391
+  const APP_BUILD_TAG = '2.2.7-w392'; // W392
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11882,7 +11882,7 @@
   const BOSS_DEFEAT_CONDITIONS = {
     the_insomniac:     'Sleep goal achieved: 7+ hours',
     the_carouser:      '5 verified flights climbed',
-    the_steel_wolf:    'Strength session sealed',
+    the_steel_wolf:    '6,000 verified steps',
     the_iron_warden:   'Workout verified (10+ min)',
     the_glass_strider: '7,500 verified steps',
     the_dream_tyrant:  '7.5 hours of sleep',
