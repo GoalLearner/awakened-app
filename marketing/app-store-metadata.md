@@ -199,3 +199,64 @@ Draft for 2.2.6:
 | iPad 12.9" | Derived | 2048 × 2732 |
 
 Capture once at 6.9", let Apple derive the smaller iPhone sizes.
+
+---
+
+## 2.2.7 — SUBMITTED COPY (drafted 2026-06-17, paste-ready)
+
+⚠️ The previously-live description opened with "Solo Leveling inspired" — protected
+IP, an App Review 2.3.1 risk. This copy REMOVES it. Replace the live description.
+
+### Promotional text (170 max)
+> Turn your habits into an RPG. Real vows, verified by Apple Health, earn XP — rank up your hunter and fell bosses with pure discipline. The grind, witnessed.
+
+### Description (4,000 max)
+```
+AWAKENED — TURN YOUR HABITS INTO AN RPG
+
+You already know what to do. Awakened makes you want to do it.
+
+Every habit you keep in real life levels up a hunter inside the game. Walk your steps, sleep enough, finish a workout — Apple Health verifies it, and you earn XP, grow your stats, and climb from E-rank to Sovereign. No fake check-ins. No logging you can game. Only real discipline counts.
+
+HOW IT WORKS
+• Set your vows — your real habits. Keep them daily.
+• Apple Health verifies steps, sleep, workouts and more, automatically.
+• Earn XP, level up your stats, and rank up your hunter.
+• Build streaks. The system remembers every one.
+
+FIGHT BOSSES WITH REAL DISCIPLINE
+Each boss falls only when you hit a real-world goal — 10,000 verified steps, a logged workout, a flight of stairs. Slay it, claim relics and souls, grow stronger.
+
+CLIMB THE ASCENT
+One hundred floors, each harder than the last. The summit — the First Awakened — is the endgame. Only a fully built hunter reaches it.
+
+HUNT TOGETHER
+Summon a friend and bring down a co-op boss together. Walk your steps side by side, and when the beast falls, you're both credited.
+
+COMPETE & SHARE
+• A weekly Steps leaderboard that resets every Sunday — climb against real hunters and your friends.
+• Hunters in your rank — a board you can actually win.
+• Share your boss kills and your Hunter Report card straight to your story.
+
+FREE AND FAIR
+The core — habits, bosses, the Ascent, the leaderboard, co-op — is free and stays fair. Nothing is pay-to-win. Cosmetics only.
+
+The system is watching. Keep what you swore.
+```
+
+### What's new in 2.2.7 (4,000 max)
+```
+Hunter — the system opens to allies.
+
+CO-OP HUNTS
+Summon a friend and bring down The Twin Maw together — combine your steps, share the kill, both of you credited. When an ally calls you in, the summons arrives as a full cinematic.
+
+A SHARPER ARENA
+• The global Steps leaderboard, redesigned — cleaner, with your rank pinned in view.
+• New prestige marks beside your name: the 100K Step Club seal and the 100-boss-kills stamp.
+• Leave an active co-op hunt any time, with no penalty.
+
+Plus polish and fixes throughout.
+
+Keep what you swore.
+```
