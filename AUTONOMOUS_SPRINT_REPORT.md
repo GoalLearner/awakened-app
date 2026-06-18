@@ -275,3 +275,61 @@ today, both need a worker deploy — fix before enabling IAP):
 
 *Generated autonomously. Nothing here changed game balance, the economy, or the
 backend. All six commits are reversible and individually shippable.*
+
+---
+
+# Sprint 2026-06-17 — Rendell's two bugs + a share-surface hunt
+
+Triggered by two reports from the tester **Rendell**, then a green-lit autonomous
+pass for more safe work. Method: multi-agent root-cause + adversarial verify before
+any change; everything verified in the web preview; Arena.selfTest() kept green (37);
+no economy / IAP / Arena changes; version-bumped per commit.
+
+## Shipped (committed + pushed; rides the next iOS build)
+
+**W391 (`8c48b49`) — fixes both of Rendell's bugs**
+1. **"Rank showing E on the Share card."** The Hunter Report share card showed RANK E
+   for *every* hunter opened from the profile (e.g. a Floor-59 / 5,960-pt hunter shared
+   as "RANK E"). Root cause: `_hrCollectData` read `sum.id` off `_publicRankSummary()`,
+   which returns `rankTier` and has **no `id` field** → always undefined → fell back to
+   `'E'`. The rank-up celebration path passes the rank explicitly, which is why it only
+   showed on profile shares. Fix: read `sum.rankTier`. Verified live:
+   `_publicRankSummary(5960).rankTier === 'B'` (was 'E'); a real 50-pt hunter still
+   correctly returns 'E' (no blanket override).
+2. **"Quotes disappeared too quickly… tap to see all."** Lengthened the header quote
+   rotation (4/6/8s → 6/9/12s) and made `#daily-quote` tappable → opens a self-contained
+   bottom sheet listing all 60 quotes ("WORDS TO LIVE BY"). Inline-styled, no shared
+   markup/CSS; closes on backdrop / ✕ / Escape; never touches rotation state.
+   Adversarially reviewed (rank blast-radius + sheet edge cases) — clean.
+
+**W392 (`81f2133`) — Steel Wolf condition text**
+The boss-defeat overlay labelled `the_steel_wolf` as "Strength session sealed", but the
+Steel Wolf is a **steps** boss (config: "Walk 6,000+ steps", stepThreshold 6000, VIT,
+"A wolf forged from miles"). A hunter who beat it by walking saw a strength explanation.
+Fixed to "6,000 verified steps". Cross-checked the other 5 entries vs their configs — all
+correct; only this one was wrong. Display-only (game logic uses stepThreshold). Found via
+an adversarial share-surface hunt.
+
+## NEEDS YOUR DECISION (not changed — it alters a user-facing number)
+
+**Hunter Report "DAY STREAK" is inconsistent with the home screen.**
+- Home/Status shows **Perfect Day Streak** (`perfectStreak.count`, app.js:38620) = consecutive
+  days you completed *every* scheduled habit.
+- The share card's "DAY STREAK" shows the **longest single-habit streak** (app.js:27150-27160,
+  commented "Longest active-vow streak"; drawn at 27607).
+- Same label, different number. A hunter with a 30-day streak on one habit but few perfect days
+  sees "30" on the card and a much smaller number at home.
+- **Recommendation:** change the card to `perfectStreak.count` so "DAY STREAK" means the same
+  thing everywhere (1-line, display-only). I did NOT do it because (a) the code comment shows the
+  current behavior is deliberate, and (b) it changes the number on every already-shared card — your
+  product call. **Say the word and I'll apply it (W393).**
+
+## Skipped on purpose (low/no value)
+- Onboarding "stat name" + "Plate vs ARMOR" copy mismatches: the onboarding flow is **retired /
+  unreachable** (returns early), so no user ever sees them — not worth a version bump.
+- `aria-label="Sort vows"` → "Sort habits" (index.html): a real but trivial a11y nit; can fold into
+  a future frontend commit rather than spend a build on it.
+
+## State
+selfTest green (37 passed), no console errors, frontend-only. Next: cut an iOS build so Rendell
+gets the fixes on TestFlight (MacBook command in chat).
