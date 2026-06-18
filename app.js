@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.7';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.7-w388'; // W388
+  const APP_BUILD_TAG = '2.2.7-w391'; // W391
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -23965,10 +23965,12 @@
   }
 
   function _quoteDisplayMs(text) {
+    // W391 — tester flagged quotes vanishing too fast to read. Lengthened each
+    // window; tapping the quote opens the full list (_openQuotesSheet).
     const len = (text || '').length;
-    if (len < 40) return 4000;   // short
-    if (len < 80) return 6000;   // medium
-    return 8000;                 // long
+    if (len < 40) return 6000;    // short
+    if (len < 80) return 9000;    // medium
+    return 12000;                 // long
   }
 
   function _quoteScheduleNext() {
@@ -23998,10 +24000,69 @@
     _quoteScheduleNext();
   }
 
+  // W391 — tap the rotating header quote to read the whole collection at your
+  // own pace (tester couldn't catch them before they rotated away). A
+  // self-contained, inline-styled bottom sheet — no shared markup/CSS.
+  function _openQuotesSheet() {
+    try {
+      const _e = (typeof esc === 'function') ? esc : function (s) { return String(s == null ? '' : s); };
+      const old = document.getElementById('dq-sheet-overlay');
+      if (old) old.remove();
+      const ov = document.createElement('div');
+      ov.id = 'dq-sheet-overlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(4,4,12,0.74);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;';
+      const sheet = document.createElement('div');
+      sheet.style.cssText = 'width:100%;max-width:560px;max-height:84vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#14132f 0%,#0b0a20 100%);border-top-left-radius:22px;border-top-right-radius:22px;border:1px solid rgba(245,184,66,0.22);border-bottom:none;box-shadow:0 -20px 60px rgba(0,0,0,0.6);';
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'flex:none;padding:14px 22px 12px;text-align:center;position:relative;';
+      hdr.innerHTML =
+        '<div style="width:40px;height:4px;border-radius:3px;background:rgba(255,255,255,0.18);margin:0 auto 14px;"></div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:800;letter-spacing:2.4px;color:#a78bfa;">WORDS TO LIVE BY</div>' +
+        '<div style="font-family:\'Cinzel\',Georgia,serif;font-size:24px;font-weight:700;color:#f5f3fb;letter-spacing:0.5px;margin-top:5px;">' + QUOTES.length + ' Quotes</div>';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.setAttribute('aria-label', 'Close');
+      closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.06);color:#9090a8;font-size:15px;line-height:1;cursor:pointer;';
+      closeBtn.textContent = '✕';
+      hdr.appendChild(closeBtn);
+      const list = document.createElement('div');
+      list.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 30px;';
+      list.innerHTML = QUOTES.map(function (q) {
+        return '<div style="padding:15px 2px;border-top:1px solid rgba(255,255,255,0.06);">' +
+          '<div style="font-family:\'Cormorant Garamond\',Georgia,serif;font-style:italic;font-size:18px;line-height:1.4;color:#f3f1fb;">“' + _e(q.text) + '”</div>' +
+          '<div style="margin-top:6px;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;letter-spacing:0.8px;color:#8e8ca8;">' + _e(q.attr) + '</div>' +
+          '</div>';
+      }).join('');
+      sheet.appendChild(hdr);
+      sheet.appendChild(list);
+      ov.appendChild(sheet);
+      document.body.appendChild(ov);
+      const onKey = function (ev) { if (ev.key === 'Escape') done(); };
+      function done() { try { ov.remove(); } catch (_) {} document.removeEventListener('keydown', onKey); }
+      closeBtn.addEventListener('click', done);
+      ov.addEventListener('click', function (ev) { if (ev.target === ov) done(); });
+      document.addEventListener('keydown', onKey);
+    } catch (_) {}
+  }
+  try { window.__openQuotesSheet = _openQuotesSheet; } catch (_) {}
+
   function renderDailyQuote() {
     const el = document.getElementById('daily-quote');
     if (!el) return;
     el.classList.remove('hidden');
+    // W391 — make the header quote tappable to open the full list. Per-element
+    // flag so a re-rendered header re-wires cleanly without double-binding.
+    if (!el.dataset.dqTap) {
+      el.dataset.dqTap = '1';
+      try {
+        el.style.cursor = 'pointer';
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-label', 'View all quotes');
+        el.addEventListener('click', _openQuotesSheet);
+        el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); _openQuotesSheet(); } });
+      } catch (_) {}
+    }
 
     // First call this session: show today's deterministic daily quote.
     // Subsequent calls (e.g., after habit toggles re-render the screen) keep
@@ -27063,8 +27124,13 @@
     // Rank from ctx or from current totalPoints
     let rankId = rankCtx.rank || (function () {
       try {
+        // W391 — _publicRankSummary returns { rankTier, ... }, never `id`.
+        // Reading sum.id (undefined) made the Hunter Report share card fall
+        // back to 'E' for EVERY hunter opened from the profile (the W315
+        // on-demand path passes no rankCtx), e.g. a Floor-59/5,960-pt hunter
+        // shared as "RANK E". rankTier is the real major-rank letter.
         const sum = _publicRankSummary(totalPoints);
-        return sum && sum.id ? sum.id : 'E';
+        return sum && sum.rankTier ? sum.rankTier : 'E';
       } catch (_) { return 'E'; }
     })();
     // S+ / S+ normalization — context may pass 'splus' or 'S+'
