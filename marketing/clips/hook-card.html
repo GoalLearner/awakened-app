@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Hook Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#f5b842; --gold2:#ffd574; --ivory:#f5f3fb; --mute:#9a9ab8;
+         --crimson:#e0564f; --violet:#a78bfa; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+  /* 9:16 stage — same navy radial bg + gold floor glow as outro-card */
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 18%, rgba(167,139,250,0.10), transparent 60%),
+      radial-gradient(140% 60% at 50% 112%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#0b0b20 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  /* drifting embers (copied from outro-card) */
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 12px 2px rgba(245,184,66,0.7); opacity:0;
+    animation:rise linear infinite; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; }
+    12%{ opacity:0.9; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .wrap{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;
+    width:920px; }
+
+  /* tiny gold mark at top (optional brand cue) */
+  .mark{ position:absolute; top:150px; left:0; right:0; margin:auto; width:78px; height:78px;
+    filter:drop-shadow(0 0 22px rgba(245,184,66,0.55));
+    opacity:0; animation:markIn 0.5s cubic-bezier(.16,1,.3,1) 0.05s forwards,
+                         glow 3.2s ease-in-out 0.6s infinite; }
+  @keyframes markIn{ to{ opacity:0.92; } }
+  @keyframes glow{ 0%,100%{ filter:drop-shadow(0 0 18px rgba(245,184,66,0.45)); }
+    50%{ filter:drop-shadow(0 0 34px rgba(245,184,66,0.85)); } }
+
+  /* the hook line — slams in fast with overshoot */
+  .hook{ font-weight:900; font-size:130px; line-height:1.04; letter-spacing:1px;
+    text-align:center; text-transform:uppercase;
+    text-shadow:0 6px 50px rgba(0,0,0,0.65);
+    opacity:0; transform:scale(0.6); transform-origin:center;
+    animation:slam 0.42s cubic-bezier(.18,1.5,.3,1) 0.12s forwards; }
+  .hook .lead{ display:block; }
+  /* "VIDEO GAME" in gold, sits on its own line, gets the glint + underline */
+  .game{ position:relative; display:inline-block; color:var(--gold);
+    text-shadow:0 0 38px rgba(245,184,66,0.45), 0 6px 50px rgba(0,0,0,0.6); }
+  /* gold glint sweep across the gold words */
+  .game::before{ content:""; position:absolute; inset:-6% -4%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 38%,
+      rgba(255,245,210,0.0) 44%, rgba(255,245,210,0.85) 50%, rgba(255,245,210,0.0) 56%, transparent 62%);
+    mix-blend-mode:screen; transform:translateX(-120%);
+    animation:glint 2.6s cubic-bezier(.16,1,.3,1) 0.62s infinite; }
+  @keyframes glint{ 0%{ transform:translateX(-120%); }
+    26%{ transform:translateX(120%); } 100%{ transform:translateX(120%); } }
+  /* underline wipe under the gold words */
+  .game::after{ content:""; position:absolute; left:0; right:0; bottom:-26px; height:9px;
+    border-radius:6px; transform:scaleX(0); transform-origin:left center;
+    background:linear-gradient(90deg, var(--gold2), var(--gold) 60%, #c8901f);
+    box-shadow:0 0 26px rgba(245,184,66,0.8);
+    animation:wipe 0.5s cubic-bezier(.16,1,.3,1) 0.5s forwards; }
+  @keyframes slam{
+    0%{ opacity:0; transform:scale(0.6); }
+    70%{ opacity:1; transform:scale(1.06); }
+    100%{ opacity:1; transform:scale(1); } }
+  @keyframes wipe{ to{ transform:scaleX(1); } }
+
+  /* SHORT hook loop (~2.8s): reveal -> hold -> quick fade -> restart */
+  .stage{ animation:loop 2.8s linear infinite; }
+  @keyframes loop{ 0%{ opacity:1; } 86%{ opacity:1; } 95%{ opacity:0; } 100%{ opacity:0; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .hook{ animation:none; opacity:1; transform:none; }
+    .game::before{ animation:none; }
+    .game::after{ animation:none; transform:scaleX(1); }
+    .mark{ animation:markIn 0.5s ease forwards; }
+    .stage{ animation:none; opacity:1; }
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="vig"></div>
+
+  <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
+    <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="9" stroke-linejoin="round"/>
+    <circle cx="100" cy="46" r="8" fill="#f5b842"/>
+    <circle cx="159" cy="158" r="8" fill="#f5b842"/>
+    <circle cx="41" cy="158" r="8" fill="#f5b842"/>
+    <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+  </svg>
+
+  <div class="wrap">
+    <div class="hook">
+      <span class="lead">I Turned My Habits Into A</span>
+      <span class="game">Video Game</span>
+    </div>
+  </div>
+</div>
+<script>
+  // scatter embers (same JS as outro-card)
+  var stage = document.getElementById('stage');
+  for (var i=0;i<14;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+  // fit the 1080x1920 stage to the window for previewing
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

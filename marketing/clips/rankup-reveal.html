@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Rank Up Reveal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#f5b842; --gold2:#ffd574; --ivory:#f5f3fb; --mute:#9a9ab8;
+         --crimson:#e0564f; --violet:#a78bfa; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+
+  /* 9:16 stage — same brand background as outro-card */
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 18%, rgba(167,139,250,0.12), transparent 60%),
+      radial-gradient(140% 60% at 50% 112%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#0b0b20 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+
+  /* drifting embers (copied) */
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 12px 2px rgba(245,184,66,0.7); opacity:0;
+    animation:rise linear infinite; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; }
+    12%{ opacity:0.9; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .wrap{ position:relative; z-index:2; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; width:100%; height:100%; }
+
+  /* ---- eyebrow ---- */
+  .eyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800;
+    font-size:46px; letter-spacing:14px; text-transform:uppercase;
+    color:var(--gold); text-shadow:0 0 30px rgba(245,184,66,0.6);
+    margin-bottom:96px; padding-left:14px;
+    opacity:0; transform:translateY(28px);
+    animation:ebIn 0.7s cubic-bezier(.16,1,.3,1) 0.15s forwards,
+              ebGlow 2.2s ease-in-out 1.0s infinite; }
+  @keyframes ebIn{ to{ opacity:1; transform:translateY(0); } }
+  @keyframes ebGlow{ 0%,100%{ text-shadow:0 0 22px rgba(245,184,66,0.45); }
+    50%{ text-shadow:0 0 44px rgba(245,184,66,0.9); } }
+
+  /* ---- crest stack ---- */
+  .crest{ position:relative; width:760px; height:760px;
+    display:flex; align-items:center; justify-content:center; }
+
+  /* radial gold burst behind crest */
+  .burst{ position:absolute; width:980px; height:980px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,213,116,0.55) 0%,
+      rgba(245,184,66,0.30) 22%, rgba(167,139,250,0.12) 42%, transparent 64%);
+    opacity:0; transform:scale(0.4); filter:blur(2px);
+    animation:burst 1.0s cubic-bezier(.12,.9,.25,1) 1.05s forwards; }
+  @keyframes burst{ 0%{ opacity:0; transform:scale(0.4); }
+    34%{ opacity:1; } 100%{ opacity:0.55; transform:scale(1.05); } }
+
+  /* exploding light rays */
+  .rays{ position:absolute; width:1280px; height:1280px;
+    opacity:0; transform:scale(0.55) rotate(-8deg);
+    animation:raysIn 1.1s cubic-bezier(.12,.9,.25,1) 1.05s forwards,
+              raysSpin 26s linear 1.6s infinite; }
+  @keyframes raysIn{ 0%{ opacity:0; transform:scale(0.55) rotate(-8deg); }
+    40%{ opacity:0.9; } 100%{ opacity:0.5; transform:scale(1) rotate(0deg); } }
+  @keyframes raysSpin{ to{ transform:scale(1) rotate(360deg); } }
+  .ray{ position:absolute; left:50%; top:50%; width:7px; height:560px;
+    transform-origin:50% 0; border-radius:7px;
+    background:linear-gradient(180deg, rgba(255,213,116,0.9), rgba(245,184,66,0.0) 80%); }
+
+  /* hexagon crest frame */
+  .hex{ position:absolute; width:520px; height:520px;
+    opacity:0; transform:scale(0.6) rotate(-18deg);
+    filter:drop-shadow(0 0 40px rgba(245,184,66,0.5));
+    animation:hexIn 0.95s cubic-bezier(.18,1.4,.3,1) 0.95s forwards,
+              hexGlow 2.6s ease-in-out 2.0s infinite; }
+  @keyframes hexIn{ to{ opacity:1; transform:scale(1) rotate(0deg); } }
+  @keyframes hexGlow{ 0%,100%{ filter:drop-shadow(0 0 30px rgba(245,184,66,0.45)); }
+    50%{ filter:drop-shadow(0 0 60px rgba(167,139,250,0.55)) drop-shadow(0 0 44px rgba(245,184,66,0.7)); } }
+
+  /* the rank letter */
+  .letter{ position:absolute; font-family:"Cinzel",Georgia,serif; font-weight:900;
+    font-size:340px; line-height:1; text-align:center;
+    backface-visibility:hidden; }
+
+  /* E -> fades/flips out */
+  .rank-e{ color:var(--ivory);
+    text-shadow:0 0 30px rgba(154,154,184,0.5), 0 6px 30px rgba(0,0,0,0.6);
+    opacity:0; transform:translateY(20px) scale(0.9);
+    animation:eIn 0.5s cubic-bezier(.16,1,.3,1) 1.05s forwards,
+              eOut 0.45s cubic-bezier(.6,0,.7,0) 1.95s forwards; }
+  @keyframes eIn{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes eOut{ to{ opacity:0; transform:rotateX(90deg) scale(1.1); filter:blur(6px); } }
+
+  /* S -> flips in, lands glowing gold */
+  .rank-s{
+    background:linear-gradient(180deg,var(--gold2) 0%,var(--gold) 48%,#c8901f 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 38px rgba(245,184,66,0.85));
+    opacity:0; transform:rotateX(-90deg) scale(1.15);
+    animation:sIn 0.6s cubic-bezier(.18,1.5,.3,1) 2.18s forwards,
+              sGlow 2.4s ease-in-out 3.0s infinite; }
+  @keyframes sIn{ 0%{ opacity:0; transform:rotateX(-90deg) scale(1.15); filter:blur(8px) drop-shadow(0 0 38px rgba(245,184,66,0.85)); }
+    60%{ opacity:1; }
+    100%{ opacity:1; transform:rotateX(0deg) scale(1); filter:blur(0) drop-shadow(0 0 38px rgba(245,184,66,0.85)); } }
+  @keyframes sGlow{ 0%,100%{ filter:drop-shadow(0 0 30px rgba(245,184,66,0.6)); }
+    50%{ filter:drop-shadow(0 0 58px rgba(245,184,66,1)) drop-shadow(0 0 30px rgba(167,139,250,0.5)); } }
+
+  /* shimmer sweep over the S */
+  .shimmer{ position:absolute; width:520px; height:520px; border-radius:50%;
+    overflow:hidden; pointer-events:none; opacity:0;
+    animation:shimShow 0.1s linear 2.6s forwards; }
+  .shimmer::before{ content:""; position:absolute; top:-30%; left:-60%;
+    width:50%; height:160%;
+    background:linear-gradient(105deg, transparent, rgba(255,255,255,0.85), transparent);
+    transform:rotate(18deg);
+    animation:sweep 2.6s ease-in-out 2.8s infinite; }
+  @keyframes shimShow{ to{ opacity:1; } }
+  @keyframes sweep{ 0%{ left:-60%; } 30%{ left:130%; } 100%{ left:130%; } }
+
+  /* arrow + label under crest */
+  .promo{ position:absolute; bottom:300px; left:0; right:0; text-align:center;
+    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:40px;
+    letter-spacing:8px; text-transform:uppercase; color:var(--mute);
+    opacity:0; transform:translateY(24px);
+    animation:promoIn 0.7s cubic-bezier(.16,1,.3,1) 2.55s forwards; }
+  .promo .from{ color:var(--mute); }
+  .promo .to{ color:var(--gold); text-shadow:0 0 24px rgba(245,184,66,0.7); }
+  .promo .arr{ color:var(--violet); margin:0 18px;
+    text-shadow:0 0 22px rgba(167,139,250,0.8); }
+  @keyframes promoIn{ to{ opacity:0.95; transform:translateY(0); } }
+
+  /* shockwave ring on reveal */
+  .ring{ position:absolute; width:520px; height:520px; border-radius:50%;
+    border:4px solid rgba(255,213,116,0.8); opacity:0;
+    animation:ring 0.9s cubic-bezier(.12,.7,.3,1) 2.2s forwards; }
+  .ring.violet{ border-color:rgba(167,139,250,0.7);
+    animation-delay:2.32s; }
+  @keyframes ring{ 0%{ opacity:0.9; transform:scale(0.5); }
+    100%{ opacity:0; transform:scale(2.0); } }
+
+  /* ---- one reveal -> hold -> quick fade -> restart loop (~3.4s) ---- */
+  .stage{ animation:loop 3.4s linear infinite; }
+  @keyframes loop{ 0%{ opacity:1; } 90%{ opacity:1; } 96%{ opacity:0; } 100%{ opacity:1; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .stage,.eyebrow,.burst,.rays,.hex,.rank-e,.rank-s,.shimmer,.shimmer::before,
+    .promo,.ring{ animation:none !important; }
+    .stage{ opacity:1; }
+    .eyebrow,.hex,.rank-s,.promo,.burst,.rays{ opacity:1 !important; transform:none !important; }
+    .rank-e,.shimmer,.ring{ opacity:0 !important; }
+    .rank-s{ -webkit-text-fill-color:transparent; }
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="vig"></div>
+  <div class="wrap">
+    <div class="eyebrow">Rank Up</div>
+
+    <div class="crest">
+      <div class="burst"></div>
+      <div class="rays" id="rays"></div>
+
+      <!-- hexagon crest frame -->
+      <svg class="hex" viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <linearGradient id="hexg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffd574"/>
+            <stop offset="0.5" stop-color="#f5b842"/>
+            <stop offset="1" stop-color="#c8901f"/>
+          </linearGradient>
+        </defs>
+        <polygon points="100,8 170,48 170,152 100,192 30,152 30,48"
+          fill="rgba(8,8,22,0.55)" stroke="url(#hexg)" stroke-width="5" stroke-linejoin="round"/>
+        <polygon points="100,22 157,55 157,145 100,178 43,145 43,55"
+          fill="none" stroke="rgba(167,139,250,0.55)" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="100" cy="8" r="5" fill="#ffd574"/>
+        <circle cx="170" cy="48" r="4" fill="#f5b842"/>
+        <circle cx="170" cy="152" r="4" fill="#f5b842"/>
+        <circle cx="100" cy="192" r="5" fill="#ffd574"/>
+        <circle cx="30" cy="152" r="4" fill="#f5b842"/>
+        <circle cx="30" cy="48" r="4" fill="#f5b842"/>
+      </svg>
+
+      <div class="ring"></div>
+      <div class="ring violet"></div>
+
+      <div class="letter rank-e">E</div>
+      <div class="letter rank-s">S</div>
+      <div class="shimmer"></div>
+    </div>
+
+    <div class="promo"><span class="from">E</span><span class="arr">&#9654;</span><span class="to">S</span></div>
+  </div>
+</div>
+<script>
+  var stage = document.getElementById('stage');
+
+  // scatter embers (copied from outro-card)
+  for (var i=0;i<14;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+
+  // build exploding light rays
+  var rays = document.getElementById('rays');
+  var N = 16;
+  for (var r=0;r<N;r++){
+    var ray = document.createElement('div'); ray.className='ray';
+    ray.style.transform = 'rotate(' + (r*(360/N)) + 'deg)';
+    if (r % 2) ray.style.background = 'linear-gradient(180deg, rgba(167,139,250,0.7), rgba(167,139,250,0.0) 80%)';
+    rays.appendChild(ray);
+  }
+
+  // fit the 1080x1920 stage to the window for previewing
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

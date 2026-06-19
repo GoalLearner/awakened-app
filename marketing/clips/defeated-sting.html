@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Defeated Sting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#f5b842; --gold2:#ffd574; --ivory:#f5f3fb; --mute:#9a9ab8;
+         --crimson:#e0564f; --violet:#a78bfa; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+
+  /* 9:16 stage — full cycle ~3.3s, looped for easy screen-recording */
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 18%, rgba(167,139,250,0.10), transparent 60%),
+      radial-gradient(140% 60% at 50% 112%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#0b0b20 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    animation:loop 3.3s linear infinite;
+  }
+  @keyframes loop{ 0%{ opacity:1; } 88%{ opacity:1; } 96%{ opacity:0; } 100%{ opacity:1; } }
+
+  /* a crimson wash that floods on impact then drains away */
+  .stage::before{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:radial-gradient(120% 80% at 50% 44%, rgba(224,86,79,0.42), transparent 62%);
+    opacity:0; animation:wash 3.3s ease-out infinite;
+  }
+  @keyframes wash{ 0%{ opacity:0; } 9%{ opacity:1; } 26%{ opacity:0.28; } 88%{ opacity:0.28; } 100%{ opacity:0; } }
+
+  .vig{ position:absolute; inset:0; pointer-events:none; z-index:3;
+    box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+
+  /* white/crimson screen flash, single pop on impact */
+  .flash{ position:absolute; inset:0; pointer-events:none; z-index:6;
+    background:linear-gradient(180deg, #ffffff 0%, #ffe2df 45%, var(--crimson) 100%);
+    mix-blend-mode:screen; opacity:0; animation:flash 3.3s linear infinite; }
+  @keyframes flash{ 0%{ opacity:0; } 4.5%{ opacity:0; } 6%{ opacity:0.92; }
+    8%{ opacity:0.18; } 12%{ opacity:0; } 100%{ opacity:0; } }
+
+  /* drifting embers (copied from outro-card) */
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 12px 2px rgba(245,184,66,0.7); opacity:0;
+    animation:rise linear infinite; z-index:2; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; }
+    12%{ opacity:0.9; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  /* whole composition gets a quick shake on impact */
+  .wrap{ position:relative; z-index:4; display:flex; flex-direction:column; align-items:center;
+    animation:shake 3.3s linear infinite; }
+  @keyframes shake{
+    0%,5%{ transform:translate(0,0); }
+    6%{ transform:translate(-16px,10px); }
+    7%{ transform:translate(14px,-8px); }
+    8%{ transform:translate(-10px,6px); }
+    9%{ transform:translate(7px,-4px); }
+    10%{ transform:translate(-4px,2px); }
+    11%,100%{ transform:translate(0,0); }
+  }
+
+  /* DEFEATED — slams in big with heavy overshoot */
+  .defeated{ font-weight:900; font-size:226px; line-height:0.9; letter-spacing:4px;
+    color:var(--crimson); text-transform:uppercase; text-align:center;
+    text-shadow:0 0 60px rgba(224,86,79,0.65), 0 10px 50px rgba(0,0,0,0.7),
+                0 2px 0 #7a201c, 0 4px 0 #4d1310;
+    opacity:0; transform:scale(2.7) rotate(-3deg);
+    animation:slam 3.3s cubic-bezier(.15,1.3,.3,1) infinite, beat 3.3s ease-in-out infinite; }
+  @keyframes slam{
+    0%{ opacity:0; transform:scale(2.7) rotate(-3deg); }
+    5%{ opacity:0; transform:scale(2.7) rotate(-3deg); }
+    7%{ opacity:1; transform:scale(0.9) rotate(0deg); }   /* impact + overshoot */
+    10%{ transform:scale(1.07) rotate(0deg); }
+    13%{ transform:scale(0.99); }
+    16%{ transform:scale(1); }
+    88%{ opacity:1; transform:scale(1); }
+    100%{ opacity:1; transform:scale(1); }
+  }
+  @keyframes beat{ 0%,16%,100%{ filter:none; }
+    52%{ filter:drop-shadow(0 0 34px rgba(224,86,79,0.55)); } }
+
+  /* boss-name row: name + rank pill — keyframed across the full loop so it replays each cycle */
+  .bossrow{ margin-top:34px; display:flex; align-items:center; gap:24px;
+    opacity:0; transform:translateY(28px);
+    animation:rowIn 3.3s cubic-bezier(.16,1,.3,1) infinite; }
+  @keyframes rowIn{
+    0%,14%{ opacity:0; transform:translateY(28px); }
+    24%{ opacity:1; transform:translateY(0); }
+    88%{ opacity:1; transform:translateY(0); }
+    100%{ opacity:1; transform:translateY(0); }
+  }
+  .bossname{ font-weight:800; font-size:74px; letter-spacing:3px; color:var(--ivory);
+    text-shadow:0 4px 30px rgba(0,0,0,0.6); }
+  .pill{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px;
+    letter-spacing:3px; color:var(--gold); text-transform:uppercase;
+    padding:12px 22px; border-radius:999px; border:2px solid var(--gold);
+    box-shadow:0 0 26px rgba(245,184,66,0.32), inset 0 0 18px rgba(245,184,66,0.12);
+    text-shadow:0 0 16px rgba(245,184,66,0.55); white-space:nowrap; }
+
+  /* KILL #2 tag — keyframed across the full loop so it replays each cycle */
+  .killtag{ margin-top:30px; font-family:"JetBrains Mono",monospace; font-weight:800;
+    font-size:42px; letter-spacing:6px; color:#241a05; text-transform:uppercase;
+    padding:18px 42px; border-radius:16px;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,#c8901f);
+    opacity:0; transform:translateY(28px) scale(0.96);
+    animation:tagIn 3.3s cubic-bezier(.16,1,.3,1) infinite,
+              pulse 1.8s ease-in-out infinite; }
+  @keyframes tagIn{
+    0%,20%{ opacity:0; transform:translateY(28px) scale(0.96); }
+    30%{ opacity:1; transform:translateY(0) scale(1); }
+    88%{ opacity:1; transform:translateY(0) scale(1); }
+    100%{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 40px rgba(245,184,66,0.3), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4); }
+    50%{ box-shadow:0 0 68px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4); } }
+
+  /* spark / ember burst on the impact frame, radiating from center */
+  .burst{ position:absolute; left:50%; top:42%; z-index:5; pointer-events:none; }
+  .spark{ position:absolute; left:0; top:0; width:14px; height:14px; border-radius:50%;
+    background:var(--gold2); box-shadow:0 0 18px 4px rgba(245,184,66,0.85);
+    opacity:0; transform:translate(-50%,-50%);
+    animation:spark 3.3s ease-out infinite; }
+  .spark.c{ background:#fff; box-shadow:0 0 18px 5px rgba(224,86,79,0.9); }
+  @keyframes spark{
+    0%,5%{ opacity:0; transform:translate(-50%,-50%) scale(0.4); }
+    7%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    /* fly outward — direction supplied per-spark via --tx/--ty */
+    20%{ opacity:0.9; }
+    32%{ opacity:0; transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3); }
+    100%{ opacity:0; transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .wrap{ animation:none; }
+    .defeated{ animation:slam 3.3s steps(1,end) infinite; }
+    .flash, .spark, .stage::before{ animation-duration:3.3s; }
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="vig"></div>
+  <div class="flash"></div>
+  <div class="burst" id="burst"></div>
+  <div class="wrap">
+    <div class="defeated">DEFEATED</div>
+    <div class="bossrow">
+      <span class="bossname">THE TWIN MAW</span>
+      <span class="pill">E-Rank</span>
+    </div>
+    <div class="killtag">Kill #2</div>
+  </div>
+</div>
+<script>
+  var stage = document.getElementById('stage');
+
+  // scatter embers (same approach as outro-card)
+  for (var i=0;i<14;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+
+  // radial spark burst on the impact frame
+  var burst = document.getElementById('burst');
+  var N = 22;
+  for (var j=0;j<N;j++){
+    var sp = document.createElement('div');
+    sp.className = 'spark' + (j % 3 === 0 ? ' c' : '');
+    var ang = (j / N) * Math.PI * 2 + (j % 2 ? 0.18 : 0);
+    var dist = 360 + (j % 4) * 90;            // px outward
+    sp.style.setProperty('--tx', (Math.cos(ang) * dist).toFixed(0) + 'px');
+    sp.style.setProperty('--ty', (Math.sin(ang) * dist).toFixed(0) + 'px');
+    sp.style.animationDelay = ((j % 3) * 0.012) + 's';
+    burst.appendChild(sp);
+  }
+
+  // fit the 1080x1920 stage to the window for previewing
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

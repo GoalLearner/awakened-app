@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Outro Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#f5b842; --gold2:#ffd574; --ivory:#f5f3fb; --mute:#9a9ab8; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+  /* 9:16 stage */
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 18%, rgba(167,139,250,0.10), transparent 60%),
+      radial-gradient(140% 60% at 50% 112%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#0b0b20 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  /* drifting embers */
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 12px 2px rgba(245,184,66,0.7); opacity:0;
+    animation:rise linear infinite; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; }
+    12%{ opacity:0.9; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .wrap{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
+
+  /* logo */
+  .logo{ width:300px; height:300px; opacity:0; transform:scale(0.78);
+    filter:drop-shadow(0 0 36px rgba(245,184,66,0.55));
+    animation:logoIn 0.9s cubic-bezier(.16,1,.3,1) 0.2s forwards, glow 3.2s ease-in-out 1.2s infinite; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes glow{ 0%,100%{ filter:drop-shadow(0 0 30px rgba(245,184,66,0.45)); }
+    50%{ filter:drop-shadow(0 0 52px rgba(245,184,66,0.8)); } }
+
+  .tagline{ margin-top:54px; font-weight:700; font-size:62px; letter-spacing:2px;
+    line-height:1.18; text-align:center; max-width:880px;
+    text-shadow:0 4px 40px rgba(0,0,0,0.6);
+    opacity:0; transform:translateY(26px); animation:up 0.8s cubic-bezier(.16,1,.3,1) 1.05s forwards; }
+  .tagline .g{ color:var(--gold); }
+
+  .cta{ margin-top:64px; font-family:"JetBrains Mono",monospace; font-weight:800;
+    font-size:36px; letter-spacing:3px; color:#241a05; text-transform:uppercase;
+    padding:30px 56px; border-radius:20px;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,#c8901f);
+    box-shadow:0 0 50px rgba(245,184,66,0.34), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);
+    opacity:0; transform:translateY(26px) scale(0.96);
+    animation:up 0.7s cubic-bezier(.16,1,.3,1) 1.75s forwards, pulse 2.4s ease-in-out 2.6s infinite; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 44px rgba(245,184,66,0.30), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4); }
+    50%{ box-shadow:0 0 74px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4); } }
+
+  @keyframes up{ to{ opacity:1; transform:translateY(0) scale(1); } }
+
+  .handle{ position:absolute; bottom:120px; left:0; right:0; text-align:center;
+    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:30px; letter-spacing:5px;
+    color:var(--mute); opacity:0; animation:fade 0.8s ease 2.2s forwards; }
+  @keyframes fade{ to{ opacity:0.85; } }
+
+  /* one full reveal-and-hold loop for easy screen recording (~7s) */
+  .stage{ animation:loop 7s linear infinite; }
+  @keyframes loop{ 0%{ opacity:1; } 92%{ opacity:1; } 98%{ opacity:0; } 100%{ opacity:1; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="vig"></div>
+  <div class="wrap">
+    <svg class="logo" viewBox="0 0 200 200" aria-hidden="true">
+      <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="6.5" stroke-linejoin="round"/>
+      <circle cx="100" cy="46" r="5.5" fill="#f5b842"/>
+      <circle cx="159" cy="158" r="5.5" fill="#f5b842"/>
+      <circle cx="41" cy="158" r="5.5" fill="#f5b842"/>
+      <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+    </svg>
+    <div class="tagline">TURN YOUR HABITS<br>INTO AN <span class="g">RPG</span></div>
+    <div class="cta">Download free on iOS</div>
+  </div>
+  <div class="handle">@AWAKENEDRPG</div>
+</div>
+<script>
+  // scatter embers
+  var stage = document.getElementById('stage');
+  for (var i=0;i<14;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+  // fit the 1080x1920 stage to the window for previewing
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
