@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w403'; // W403
+  const APP_BUILD_TAG = '2.2.8-w404'; // W404 — realtime PvP duels
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8241,7 +8241,7 @@
     const hint = st.highestCleared >= 1
       ? '<div class="al-hint">TAP A FALLEN FOE TO REMATCH</div>'
       : '';
-    _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll al-scroll">' + hero + ledger + hint + '</div>');
+    _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll al-scroll">' + hero + _pvpTowerEntryHtml() + ledger + hint + '</div>');
   }
 
   // ── fight reveal ──────────────────────────────────────────────────  // ── fight reveal ──────────────────────────────────────────────────
@@ -9377,6 +9377,14 @@
       try { _audCue('ko'); _audDuck(_pkbHoldMs(_PKB_T.koHold) + _PKB_T.ko); } catch (_) {}
       // KO resolution: crossfade the loop out, sting in (slot absent → silent)
       try { _audStopMusic(0.5); setTimeout(() => _audPlayMusic(s.won ? 'victory_sting' : 'defeat_sting', false), 350); } catch (_) {}
+      // W404 — PvP KO: this is a duel, NOT the Ascent. Skip arenaFinalizeBattle
+      // (no floor climb / titles / daily lives); present the duel result instead.
+      if (s._pvp) {
+        _pkbSay(s.won ? esc((_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'Your foe') + ' is down!' : 'You fall…', _PKB_T.koHold, function () {
+          _pkbAfter(_PKB_T.ko, function () { try { _pvpRenderResult(); } catch (_) {} });
+        });
+        return;
+      }
       if (_pkbFightT0) { try { console.log('[pkb] fight real-time: ' + ((Date.now() - _pkbFightT0) / 1000).toFixed(1) + 's, turns: ' + (s.turn - 1)); } catch (_) {} }
       // W249 Patch 4 — the ONE arenaFinalizeBattle call, moved from the SEE
       // RESULT tap to the KO so the victory floats can READ the committed
@@ -9759,6 +9767,7 @@
     const ov = document.getElementById('arena-overlay');
     if (!ov) return;
     _arClearTimers();
+    try { _pvpTeardown(); } catch (_) {}   // W404 — a live duel never outlives the Arena overlay
     _arSess = null;
     try { _AUD.want = null; _audStopMusic(0.25); } catch (_) {}   // W243/W248 — music never outlives the Arena
     ov.classList.add('hidden');
@@ -9769,6 +9778,8 @@
   // it returns to the tower (the Arena's main page); it only leaves the Arena
   // entirely when you're already on the tower.
   function _arExit() {
+    // W404 — duel views own their own exit (forfeit a live duel, then to the tower).
+    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
     // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
     // abandon any fight you're losing for free and dodge the daily-lives gate.
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
@@ -9836,6 +9847,7 @@
       else if (a === 'introgo') { _arCommitFight(); }
       else if (a === 'move')    {                                          // W238 — pick a move; the director plays the turn
         if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
+        if (_arSess._pvp) { _pvpOnMoveTap(act.getAttribute('data-move')); return; }   // W404 — duel: submit intent to the server
         const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
         if (!ev) return;                                                   // invalid / on cooldown
         try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}              // W243 — gesture + tap click
@@ -9870,6 +9882,10 @@
       else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
+      else if (a === 'duel')      { try { _pvpOpenLobby(); } catch (_) {} }          // W404 — enter the PvP duel lobby
+      else if (a === 'pvpcreate') { try { _pvpCreate(); } catch (_) {} }
+      else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
+      else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
         const cur = getEquippedArenaTitle();
@@ -9882,6 +9898,548 @@
     });
     try { window.openArena = openArena; } catch (_) {}
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // W404 — REALTIME PvP DUELS (server-authoritative).
+  //
+  // The client is a PURE RENDERER: it submits move INTENTS and renders the
+  // broadcast from the MatchRoom Durable Object (backend/src/pvp/). The combat
+  // math runs ONLY on the server (combat-core.js — proven byte-identical to this
+  // client engine by the parity cross-check). The client NEVER decides an outcome.
+  //
+  // It reuses the SHIPPED Arena battle UI — the .pkb stage + the _pkbPlay beat
+  // director + _pkbSetHP/_pkbChips/_pkbRefreshMoves — by synthesizing a minimal
+  // _arSess (tagged _pvp:true) from each server view. The ONE divergence from the
+  // Ascent path is the KO: _pkbDrained branches on _pvp to skip arenaFinalizeBattle
+  // (no floors/titles/lives) and shows the duel result instead.
+  //
+  // Transport: WebSocket (primary, realtime push) with an HTTP-poll fallback.
+  // Both hit the same DO + the same authoritative logic.
+  //
+  // Perspective: the server's per-slot view already labels me/opp from the
+  // recipient's side, so HP/status/eff need NO flip. Only the turn `events` array
+  // is server-oriented (p=p1, b=p2); for the joiner (you==='b') each event's side
+  // is flipped so "you" always renders at the bottom of the SAME stage.
+  // ═══════════════════════════════════════════════════════════════
+  const PvP = (function () {
+    let ws = null, code = null, you = null;
+    let pollTimer = null, pingTimer = null, reconnectTimer = null;
+    let onMsg = null, closed = true, wsReady = false, lastPhase = null;
+
+    function base() {
+      // localhost override is for GENUINE browser dev ONLY. The Capacitor iOS
+      // WebView ALSO reports location.hostname === 'localhost' (it serves from
+      // capacitor://localhost), so guard on !native + an http(s) origin — else the
+      // SHIPPED app would route PvP to a nonexistent localhost:8787 on-device.
+      try {
+        const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+        const h = location.hostname, proto = location.protocol;
+        if (!native && (proto === 'http:' || proto === 'https:') && (h === 'localhost' || h === '127.0.0.1')) return 'http://localhost:8787';
+      } catch (_) {}
+      try { if (window.Auth && Auth.getBackendBase) return Auth.getBackendBase(); } catch (_) {}
+      return 'https://awakened-backend.richmondcampano93.workers.dev';
+    }
+    function wsBase() { return base().replace(/^http/, 'ws'); }
+    function jwt() { try { return (window.Auth && Auth.getJwt && Auth.getJwt()) || ''; } catch (_) { return ''; } }
+
+    async function http(method, path, body) {
+      const res = await fetch(base() + path, {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + jwt(), 'content-type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      let j = {}; try { j = await res.json(); } catch (_) {}
+      return j;
+    }
+    function emit(msg) { try { if (onMsg) onMsg(msg); } catch (e) { try { console.error('[pvp] handler', e); } catch (_) {} } }
+
+    function connect() {
+      if (closed || !code) return;
+      let url;
+      try { url = wsBase() + '/v1/pvp/ws?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(jwt()); }
+      catch (_) { startPoll(); return; }
+      let sock;
+      try { sock = new WebSocket(url); } catch (_) { startPoll(); return; }
+      ws = sock;
+      const failTimer = setTimeout(function () { if (!wsReady) { try { sock.close(); } catch (_) {} startPoll(); } }, 4000);
+      sock.addEventListener('open', function () { wsReady = true; clearTimeout(failTimer); stopPoll(); startPing(); });
+      sock.addEventListener('message', function (ev) { let m; try { m = JSON.parse(ev.data); } catch (_) { return; } emit(m); });
+      sock.addEventListener('close', function () { wsReady = false; stopPing(); if (!closed) { startPoll(); scheduleReconnect(); } });
+      sock.addEventListener('error', function () { if (!wsReady) { clearTimeout(failTimer); startPoll(); } });
+    }
+    function scheduleReconnect() {
+      if (closed || reconnectTimer) return;
+      reconnectTimer = setTimeout(function () { reconnectTimer = null; if (!closed && (!ws || ws.readyState > 1)) connect(); }, 2500);
+    }
+    function startPing() { stopPing(); pingTimer = setInterval(function () { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ping' })); } catch (_) {} }, 20000); }
+    function stopPing() { if (pingTimer) { clearInterval(pingTimer); pingTimer = null; } }
+
+    // HTTP fallback: poll state; emit synthetic 'state'/'match_end' (no per-turn
+    // events over poll — the stage snaps HP from the view instead of animating).
+    function startPoll() {
+      if (closed || pollTimer) return;
+      const tick = async function () {
+        if (closed) return;
+        try {
+          const r = await http('GET', '/v1/pvp/state?code=' + encodeURIComponent(code));
+          if (r && r.ok && r.state) {
+            const s = r.state;
+            if (s.phase === 'ended' && lastPhase !== 'ended') emit(Object.assign({ type: 'match_end', result: s.result, youWon: !!(s.result && s.result.winnerSide === s.you) }, s));
+            else emit(Object.assign({ type: 'state' }, s));
+            lastPhase = s.phase;
+          }
+        } catch (_) {}
+        if (!closed) pollTimer = setTimeout(tick, 1500);
+      };
+      tick();
+    }
+    function stopPoll() { if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; } }
+
+    return {
+      async create(combatant, rankedFlag) {
+        this.close(); closed = false; lastPhase = null;
+        const r = await http('POST', '/v1/pvp/create', { combatant: combatant, ranked: !!rankedFlag });
+        if (r && r.ok && r.code) { code = r.code; you = (r.state && r.state.you) || 'p'; connect(); }
+        else closed = true;
+        return r;
+      },
+      async join(joinCode, combatant) {
+        this.close(); closed = false; lastPhase = null;
+        code = String(joinCode || '').toUpperCase();
+        const r = await http('POST', '/v1/pvp/join', { code: code, combatant: combatant });
+        if (r && r.ok) { you = (r.state && r.state.you) || 'b'; connect(); }
+        else closed = true;
+        return r;
+      },
+      submit(turn, moveId) {
+        if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'submit_move', turn: turn, moveId: moveId })); return; } catch (_) {} }
+        http('POST', '/v1/pvp/submit', { code: code, turn: turn, moveId: moveId }).then(function (r) { if (r && r.ok && r.state) emit(Object.assign({ type: 'state' }, r.state)); }).catch(function () {});
+      },
+      forfeit() {
+        if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'forfeit' })); } catch (_) {} }
+        if (code) http('POST', '/v1/pvp/forfeit', { code: code }).catch(function () {});
+      },
+      resync() { if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'resync' })); } catch (_) {} } else startPoll(); },
+      onMessage(fn) { onMsg = fn; },
+      close() {
+        closed = true; stopPoll(); stopPing();
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        try { if (ws) { ws.onclose = null; ws.close(); } } catch (_) {}
+        ws = null; wsReady = false;
+      },
+      get code() { return code; },
+      get you() { return you; },
+      get connected() { return !!(ws && ws.readyState === 1); },
+    };
+  })();
+  try { window.PvP = PvP; } catch (_) {}
+
+  // ── duel controller state ──
+  let _pvpView = null;       // last server view (the shape from viewBySlot)
+  let _pvpYou = 'p';         // my slot ('p' = creator, 'b' = joiner)
+  let _pvpCode = '';
+  let _pvpStarted = false;   // battle stage rendered?
+  let _pvpTimerId = null;
+
+  function _pvpNum(v, d) { const n = Number(v); return Number.isFinite(n) ? n : (d != null ? d : 0); }
+  function _pvpOppShort() { try { return (_pvpView && _pvpView.opp && (_pvpView.opp.alias || _pvpView.opp.name)) || 'your opponent'; } catch (_) { return 'your opponent'; } }
+  function _pvpErr(r) {
+    const c = (r && (r.code || r.error)) || '';
+    const M = {
+      NO_MATCH: "That duel code wasn't found.", MATCH_FULL: 'That duel is already full.',
+      ENDED: 'That duel has already ended.', CANNOT_JOIN_SELF: "You can't duel yourself.",
+      NO_AUTH: 'Sign in to duel.', INVALID_SESSION: 'Sign in to duel.',
+      RATE_LIMITED: 'Slow down a moment, then try again.', CODE_TAKEN: 'Try creating again.',
+    };
+    return M[c] || 'Could not reach the duel. Check your connection and try again.';
+  }
+  function _pvpRequireAuth() {
+    let u = null; try { u = window.Auth && Auth.getCurrentUser && Auth.getCurrentUser(); } catch (_) {}
+    if (!u) { _pvpRenderLobby('home', { err: 'Sign in to duel a friend.' }); return false; }
+    return true;
+  }
+  // The combatant the server builds my fighter from: 6 core stats + weapon.
+  function _pvpBuildMyCombatant() {
+    let stats = { STR: 0, VIT: 0, INT: 0, FOCUS: 0, WILL: 0, WLT: 0 };
+    try { const sl = _arenaPlayerStatline(); if (sl) stats = sl; } catch (_) {}
+    let weaponId = 'unarmed', weaponName = 'Bare Fists';
+    try { const b = getHunterBuild(); if (b && Array.isArray(b.slots) && b.slots[3]) { weaponId = b.slots[3]; weaponName = _arenaWeaponName(); } } catch (_) {}
+    let name = 'Hunter';
+    try { if (typeof playerName === 'string' && playerName) name = playerName; } catch (_) {}
+    return { name: name, weaponId: weaponId, weaponName: weaponName, stats: stats };
+  }
+
+  // ── lobby ──
+  function _pvpOpenLobby() {
+    _pvpTeardown();
+    _arClearTimers();
+    _arSess = null;
+    _arBodyMode(false);
+    _arView = 'pvp-lobby';
+    _pvpRenderLobby('home');
+  }
+  function _pvpRenderLobby(mode, x) {
+    _arView = 'pvp-lobby';
+    x = x || {};
+    let body;
+    if (mode === 'creating' || mode === 'joining') {
+      body = '<div class="pvp-wait"><div class="pvp-spinner"></div>' +
+        '<div class="pvp-wait-t">' + (mode === 'creating' ? 'Opening the arena…' : 'Joining the duel…') + '</div></div>';
+    } else if (mode === 'hosting') {
+      const cc = esc(x.code || _pvpCode || '');
+      body = '<div class="pvp-host">' +
+        '<div class="pvp-host-k">SHARE THIS CODE</div>' +
+        '<div class="pvp-code-display" data-ar="pvpcopy" title="Tap to copy">' + cc + '</div>' +
+        '<button type="button" class="pvp-copy" data-ar="pvpcopy">Copy code</button>' +
+        '<div class="pvp-wait pvp-wait--inline"><div class="pvp-spinner"></div>' +
+        '<div class="pvp-wait-t">Waiting for your challenger to join…</div></div></div>';
+    } else {
+      const err = x.err ? '<div class="pvp-err">' + esc(x.err) + '</div>' : '';
+      body = '<div class="pvp-home">' +
+        '<button type="button" class="pvp-big" data-ar="pvpcreate">' +
+          '<span class="pvp-big-t">Create a duel</span>' +
+          '<span class="pvp-big-s">Get a code to share with a friend</span></button>' +
+        '<div class="pvp-or"><span></span>OR<span></span></div>' +
+        '<div class="pvp-join">' +
+          '<input id="pvp-code-input" class="pvp-code-input" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ENTER CODE" />' +
+          '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
+        '</div>' + err + '</div>';
+    }
+    _arSet(
+      '<div class="pvp-lobby">' +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>PvP<i></i></span>' +
+          '<div class="pvp-lobby-title">Duel a Friend</div>' +
+          '<div class="pvp-lobby-sub">Real-time, server-judged. Your equipped build + weapon fight for you.</div></div>' +
+        body +
+        '<div class="ar-spacer"></div>' +
+        '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>' +
+      '</div>'
+    );
+  }
+  async function _pvpCreate() {
+    if (!_pvpRequireAuth()) return;
+    _pvpRenderLobby('creating');
+    PvP.onMessage(_pvpOnMessage);
+    let r; try { r = await PvP.create(_pvpBuildMyCombatant(), false); } catch (_) { r = null; }
+    if (_arView !== 'pvp-lobby') return;           // user navigated away mid-request
+    if (!(r && r.ok && r.code)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
+    _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
+    if (r.state && r.state.phase === 'active') { _pvpEnsureBattle(r.state); return; }   // opponent already waiting
+    _pvpRenderLobby('hosting', { code: r.code });
+  }
+  async function _pvpJoin(joinCode) {
+    if (!_pvpRequireAuth()) return;
+    const c = String(joinCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length < 4) { _pvpRenderLobby('home', { err: 'Enter the code your friend shared.' }); return; }
+    _pvpRenderLobby('joining');
+    PvP.onMessage(_pvpOnMessage);
+    let r; try { r = await PvP.join(c, _pvpBuildMyCombatant()); } catch (_) { r = null; }
+    if (_arView !== 'pvp-lobby') return;
+    if (!(r && r.ok)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
+    _pvpYou = PvP.you || 'b'; _pvpCode = c; _pvpView = r.state || null;
+    if (r.state) _pvpEnsureBattle(r.state);
+  }
+  function _pvpCopyCode() {
+    const cc = _pvpCode || '';
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cc); } catch (_) {}
+    try { _audCue('ui_tap'); } catch (_) {}
+    const el = document.querySelector('.pvp-copy'); if (el) { el.textContent = 'Copied!'; setTimeout(function () { try { el.textContent = 'Copy code'; } catch (_) {} }, 1400); }
+  }
+
+  // ── message dispatch ──
+  function _pvpOnMessage(msg) {
+    if (!msg || !msg.type) return;
+    if (_arView !== 'pvp-lobby' && _arView !== 'battle' && _arView !== 'pvp-result') return;   // left the duel
+    switch (msg.type) {
+      case 'match_start':
+      case 'state':
+        _pvpView = msg;
+        if (msg.phase === 'ended') { _pvpHandleEnd(msg); break; }
+        if (msg.phase === 'active') { if (!_pvpStarted) _pvpEnsureBattle(msg); else _pvpSyncTurnUI(msg); }
+        else if (_arView === 'pvp-lobby') { _pvpRenderLobby('hosting', { code: msg.code }); }
+        break;
+      case 'turn_result':
+        _pvpView = msg;
+        _pvpEnsureBattle(msg);
+        _pvpAnimateTurn(msg);
+        break;
+      case 'match_end':
+        _pvpHandleEnd(msg);
+        break;
+      case 'opp_status':
+        _pvpSetOppConnected(!!msg.connected);
+        break;
+      case 'error':
+        try { _audCue('ui_denied'); } catch (_) {}
+        break;
+    }
+  }
+
+  // ── battle stage (reuses the .pkb markup + the _pkb* beat director) ──
+  function _pvpEnsureBattle(view) { if (_pvpStarted && _arSess && _arSess._pvp) return; _pvpStartBattle(view); }
+  function _pvpSynthSession(view) {
+    const me = (view && view.me) || {}, opp = (view && view.opp) || {};
+    let wn = ''; try { wn = _arenaWeaponName(); } catch (_) {}
+    return {
+      _pvp: true,
+      pHP: _pvpNum(me.hp), pMax: _pvpNum(me.maxHP, 1) || 1,
+      bHP: _pvpNum(opp.hp), bMax: _pvpNum(opp.maxHP, 1) || 1,
+      pEff: _pvpNum(me.eff, 1), bEff: _pvpNum(opp.eff, 1),
+      pS: me.status || _arBlankStatus(), bS: opp.status || _arBlankStatus(),
+      pMoves: (me.kit || []), cd: me.cd || {},
+      bMoves: [], bcd: {},
+      weaponName: wn, foeArch: 'balanced',
+      turn: (view && view.turn) || 1, done: false, won: false, untouched: true,
+    };
+  }
+  function _pvpStartBattle(view) {
+    _pvpStarted = true; _pvpView = view;
+    const opp = (view && view.opp) || {};
+    _arMatchup = { floor: 0, advances: false, _pvp: true, bot: { name: opp.alias || opp.name || 'Challenger', isBoss: false } };
+    _arSess = _pvpSynthSession(view);
+    try { _audUnlock(); _audLoadMusic && _audLoadMusic(); } catch (_) {}
+    _pvpRenderBattle(view);
+  }
+  function _pvpRenderBattle(view) {
+    _arView = 'battle';
+    _arBodyMode(false);
+    _pkbBusy = false; _pkbFF = false;
+    const s = _arSess;
+    _pkbHPm = { p: s.pHP, b: s.bHP };
+    _pkbEffShown = { p: false, b: false };
+    _pkbClutch = false; _pkbLastStand = { p: false, b: false }; _pkbHeartStop();
+    _pkbFightT0 = Date.now();
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const oppName = (view && view.opp && (view.opp.alias || view.opp.name)) || 'Challenger';
+    const mono = esc(((oppName[0] || '?')).toUpperCase());
+    let motes = ''; for (let i = 0; i < 6; i++) motes += '<i></i>';
+    _arSet(
+      '<div class="pkb pkb--pvp">' +
+        '<div class="pkb-top">' + (view && view.ranked ? 'RANKED DUEL' : 'DUEL') + (_pvpCode ? ' &middot; ' + esc(_pvpCode) : '') + '</div>' +
+        '<div class="pkb-stage settle" id="pkb-stage">' +
+          '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
+          '<div class="pkb-bg-scrim" aria-hidden="true"></div>' +
+          '<div class="pkb-ground" style="background:linear-gradient(196deg,transparent 26%,rgba(124,138,255,0.10) 44%,rgba(245,184,66,0.05) 66%,transparent 86%)"></div>' +
+          '<div class="pkb-motes" aria-hidden="true">' + motes + '</div>' +
+          '<div class="pkb-row foe">' +
+            '<div class="pkb-plate" id="pkb-plate-b">' +
+              '<div class="nm">' + esc(oppName) + '</div>' +
+              '<div class="hp"><i id="pkb-bar-b" class="ok"></i></div>' +
+              '<div class="num" id="pkb-num-b"></div>' +
+              '<div class="chips" id="pkb-chips-b"></div></div>' +
+            '<div class="pkb-spot foe" id="pkb-spot-b">' +
+              '<span class="plat" style="background:radial-gradient(closest-side,rgba(124,138,255,0.28),transparent 78%);border-color:rgba(124,138,255,0.36)"></span>' +
+              '<div class="spr"><div class="pvp-mono">' + mono + '</div></div></div>' +
+          '</div>' +
+          '<div class="pkb-row you">' +
+            '<div class="pkb-spot you" id="pkb-spot-p">' +
+              '<span class="plat" style="background:radial-gradient(closest-side,#f5b84230,transparent 78%);border-color:#f5b8423d"></span>' +
+              '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>') + '</div></div>' +
+            '<div class="pkb-plate you" id="pkb-plate-p">' +
+              '<div class="nm">YOU <span class="wpn">&middot; ' + esc(s.weaponName || '') + '</span></div>' +
+              '<div class="hp"><i id="pkb-bar-p" class="ok"></i></div>' +
+              '<div class="num" id="pkb-num-p"></div>' +
+              '<div class="chips" id="pkb-chips-p"></div></div>' +
+          '</div>' +
+          '<div class="pkb-fx" id="pkb-fx"></div>' +
+        '</div>' +
+        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line"></span></div>' +
+        '<div class="pvp-status" id="pvp-status"></div>' +
+        '<div class="pkb-moves" id="pkb-moves"></div>' +
+      '</div>'
+    );
+    _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
+    _pkbChips('p'); _pkbChips('b');
+    _pkbRefreshMoves();
+    try { _pkbMountBg(20); } catch (_) {}
+    try { _AUD.want = null; _audPlayMusic('battle_loop', true); } catch (_) {}
+    _pkbSay('The duel begins. Choose your move.', 0, function () {});
+    _pvpSyncTurnUI(view);
+  }
+  // my move tap: submit the INTENT; the server resolves when both have submitted.
+  function _pvpOnMoveTap(moveId) {
+    const s = _arSess; if (!s || !s._pvp || s.done) return;
+    if (_pvpView && _pvpView.youSubmitted) return;
+    if (s.cd && s.cd[moveId] > 0) { try { _audCue('ui_denied'); } catch (_) {} return; }
+    try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}
+    PvP.submit(_pvpView ? _pvpView.turn : s.turn, moveId);
+    if (_pvpView) _pvpView.youSubmitted = true;
+    _pkbLock(true);
+    _pvpSetStatus('waiting', 'Locked in &mdash; waiting for ' + esc(_pvpOppShort()) + '&hellip;');
+  }
+  // a resolved turn arrived: update my kit/cd/eff/status + SERVER HP truth, then
+  // animate the SAME beat director over the (perspective-corrected) events.
+  function _pvpAnimateTurn(msg) {
+    const s = _arSess; if (!s || !s._pvp) return;
+    const me = msg.me || {}, opp = msg.opp || {};
+    s.pMoves = me.kit || s.pMoves; s.cd = me.cd || {};
+    s.pEff = _pvpNum(me.eff, s.pEff); s.bEff = _pvpNum(opp.eff, s.bEff);
+    s.pS = me.status || s.pS; s.bS = opp.status || s.bS;
+    s.turn = (msg.turn != null) ? msg.turn : s.turn;
+    s.pHP = _pvpNum(me.hp, s.pHP); s.bHP = _pvpNum(opp.hp, s.bHP);     // post-turn truth (me/opp = my perspective)
+    s.done = !!msg.done || msg.phase === 'ended';
+    if (s.done) {
+      let youWon = (typeof msg.youWon === 'boolean') ? msg.youWon
+        : msg.result ? msg.result.winnerSide === _pvpYou
+        : msg.winnerSide ? msg.winnerSide === _pvpYou : false;
+      s.won = youWon;
+    }
+    _pvpClearStatus();
+    _pkbPlay(_pvpFlipEvents(msg.events, _pvpYou));
+  }
+  // events use server orientation (p=p1, b=p2). The joiner renders itself at the
+  // bottom (visual 'p'), so flip every event's side for you==='b'.
+  function _pvpFlipEvents(events, youSlot) {
+    const evs = events || [];
+    if (youSlot !== 'b') return evs;
+    return evs.map(function (e) {
+      const f = {}; for (const k in e) f[k] = e[k];
+      f.side = e.side === 'p' ? 'b' : (e.side === 'b' ? 'p' : e.side);
+      return f;
+    });
+  }
+
+  // ── turn / connection status line + timer ──
+  function _pvpSetStatus(kind, html) {
+    const el = document.getElementById('pvp-status'); if (!el) return;
+    el.className = 'pvp-status pvp-status--' + kind;
+    el.innerHTML = '<span class="pvp-status-txt">' + html + '</span><span class="pvp-timer"></span>';
+  }
+  function _pvpClearStatus() { const el = document.getElementById('pvp-status'); if (el) { el.className = 'pvp-status'; el.innerHTML = ''; } }
+  function _pvpClearTimer() { if (_pvpTimerId) { try { clearInterval(_pvpTimerId); } catch (_) {} _pvpTimerId = null; } }
+  function _pvpStartTimer(deadlineMs) {
+    _pvpClearTimer();
+    const tick = function () {
+      if (_arView !== 'battle') { _pvpClearTimer(); return; }
+      const chip = document.querySelector('#pvp-status .pvp-timer');
+      if (!chip) { _pvpClearTimer(); return; }
+      const remain = Math.max(0, deadlineMs - Date.now());
+      chip.textContent = Math.ceil(remain / 1000) + 's';
+      chip.className = 'pvp-timer' + (remain <= 10000 ? ' low' : '');
+      if (remain <= 0) _pvpClearTimer();
+    };
+    _pvpTimerId = setInterval(tick, 250); tick();
+  }
+  function _pvpSyncTurnUI(view) {
+    if (!view || _arView !== 'battle' || _pkbBusy) return;
+    _pvpClearTimer();
+    if (view.phase !== 'active') { _pvpClearStatus(); return; }
+    if (view.oppConnected === false) { _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting&hellip;'); return; }
+    if (view.youSubmitted) _pvpSetStatus('waiting', 'Locked in &mdash; waiting for ' + esc(_pvpOppShort()) + '&hellip;');
+    else _pvpSetStatus('your-turn', 'Your move');
+    if (view.deadlineMs) _pvpStartTimer(view.deadlineMs);
+  }
+  function _pvpSetOppConnected(connected) {
+    if (_arView !== 'battle') return;
+    if (connected) { _pvpSyncTurnUI(_pvpView); }
+    else if (!_pkbBusy) { _pvpClearTimer(); _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting to reconnect&hellip;'); }
+  }
+
+  // ── end / result ──
+  function _pvpHandleEnd(msg) {
+    if (_arView === 'pvp-result') return;
+    _pvpView = msg || _pvpView;
+    const youWon = (typeof msg.youWon === 'boolean') ? msg.youWon : (msg.result ? msg.result.winnerSide === _pvpYou : false);
+    const s = _arSess;
+    if (s && s._pvp && s.done && _arView === 'battle') return;   // an animated KO is mid-flight; _pkbDrained renders it
+    if (!s || !s._pvp) _arSess = { _pvp: true };
+    _arSess.done = true; _arSess.won = youWon;
+    if (msg.me) _arSess.pHP = _pvpNum(msg.me.hp, _arSess.pHP || 0);
+    if (msg.opp) _arSess.bHP = _pvpNum(msg.opp.hp, _arSess.bHP || 0);
+    _pvpRenderResult();
+  }
+  function _pvpRenderResult() {
+    _arClearTimers(); _pvpClearTimer();
+    _arView = 'pvp-result';
+    _arBodyMode(false);
+    try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}
+    const s = _arSess || {}, view = _pvpView || {};
+    const won = !!s.won;
+    const reason = (view.result && view.result.reason) || view.reason || 'ko';
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const oppName = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'your challenger';
+    const narr = reason === 'forfeit' ? (won ? esc(oppName) + ' forfeited the duel.' : 'You forfeited the duel.')
+      : reason === 'disconnect' ? (won ? esc(oppName) + ' lost connection.' : 'You lost connection.')
+      : reason === 'turn_cap' ? (won ? 'You out-fought ' + esc(oppName) + ' to the wire.' : esc(oppName) + ' edged you out at the wire.')
+      : (won ? 'You bested ' + esc(oppName) + '. Earned, not given.' : esc(oppName) + ' bested you. Return sharper.');
+    _arSet(
+      '<div class="ar-result-hero">' +
+        '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+        '<div class="ar-kicker" style="margin-top:14px">Duel &middot; Result</div>' +
+        '<div class="ar-result-word ' + (won ? 'win' : 'loss') + '">' + (won ? 'VICTORY' : 'DEFEAT') + '</div>' +
+        '<div class="ar-result-rule"></div>' +
+        '<div class="ar-result-narr' + (won ? '' : ' loss') + '">' + narr + '</div>' +
+      '</div>' +
+      '<div class="ar-spacer"></div>' +
+      '<button class="ar-cta" data-ar="duel">DUEL AGAIN</button>' +
+      '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>'
+    );
+    try { playSfx(won ? 'ar_win' : 'ar_lose'); } catch (_) {}
+    try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+    _pvpTeardown(true);   // close the transport; the result stays on screen
+  }
+
+  // ── teardown / exit ──
+  function _pvpTeardown(keepResult) {
+    try { PvP.close(); } catch (_) {}
+    _pvpClearTimer();
+    _pvpStarted = false;
+    if (!keepResult) { _pvpView = null; _pvpCode = ''; }
+  }
+  function _pvpExit() {
+    if (_arSess && _arSess._pvp && !_arSess.done) {
+      let ok = true; try { ok = window.confirm('Leave the duel? It counts as a forfeit.'); } catch (_) {}
+      if (!ok) return;
+      try { PvP.forfeit(); } catch (_) {}
+    }
+    _pvpTeardown();
+    _arClearTimers(); _arSess = null; _arRevealing = false;
+    _arRenderTower();
+  }
+  function _pvpTowerEntryHtml() {
+    return '<button type="button" class="pvp-tower-cta" data-ar="duel">' +
+      '<span class="pvp-tower-ic">' + _arGlyph('dagger', '#7c8aff', 16) + '</span>' +
+      '<span class="pvp-tower-tx"><span class="t">Duel a Friend</span>' +
+      '<span class="s">Real-time PvP &middot; invite by code</span></span>' +
+      '<span class="pvp-tower-go">&rsaquo;</span></button>';
+  }
+
+  // Dev-only rendering harness: drives the duel UI through a SCRIPTED local match
+  // (no backend) so the synthetic-session -> _pkbPlay -> KO -> result seam can be
+  // verified in the web preview without two phones + real Apple JWTs. Inert unless
+  // explicitly called. The networked path is proven by match-room.itest.mjs (9/9).
+  try {
+    window.__pvpDemo = function (opts) {
+      opts = opts || {};
+      _pvpCode = 'DEMOXY'; _pvpYou = opts.you || 'p';
+      let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = [{ id: 'slash', name: 'Slash', gl: 'sword', power: 1, acc: 0.95, cd: 0, desc: 'A clean cut.' }]; }
+      const view = {
+        type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: !!opts.ranked, deadlineMs: Date.now() + 45000,
+        youSubmitted: false, oppSubmitted: false, oppConnected: true,
+        me:  { alias: 'You', name: 'You', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
+        opp: { alias: opts.opp || 'Rival', name: opts.opp || 'Rival', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus() },
+      };
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpStarted = false; _pvpStartBattle(view);
+      return 'duel demo started (call __pvpDemoTurn() to play a turn, __pvpDemoTurn(true) for a finishing blow)';
+    };
+    window.__pvpDemoTurn = function (finish) {
+      if (!(_arSess && _arSess._pvp)) return 'no demo battle active';
+      const evs = [
+        { t: 'hit', side: 'p', dmg: finish ? 60 : 14, crit: false, gl: 'sword', text: 'You used SLASH for ' + (finish ? 60 : 14) },
+        { t: 'hit', side: 'b', dmg: 10, crit: false, gl: 'sword', text: 'Rival used SLASH for 10' },
+      ];
+      const kit = (_pvpView && _pvpView.me && _pvpView.me.kit) || [];
+      _pvpAnimateTurn({
+        type: 'turn_result', turn: 2, events: evs, done: !!finish, winnerSide: finish ? _pvpYou : null,
+        me:  { alias: 'You', name: 'You', hp: 50, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
+        opp: { alias: 'Rival', name: 'Rival', hp: finish ? 0 : 46, maxHP: 60, eff: 1, status: _arBlankStatus() },
+        you: _pvpYou, phase: finish ? 'ended' : 'active', deadlineMs: Date.now() + 45000,
+        youSubmitted: false, oppSubmitted: false, oppConnected: true, ranked: false,
+      });
+      return finish ? 'finishing blow played' : 'turn played';
+    };
+  } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════
   // HUNTER BUILD — v3 Phase 1d pivot from body-slot equipment to

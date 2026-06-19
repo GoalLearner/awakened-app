@@ -206,13 +206,17 @@ export class MatchRoom {
     m.moveHistory.push({ p: m.pending.p, b: m.pending.b });
     m.pending = {};
     m.turn = sess.turn;
-    this.broadcastTurn(m, r.events || [], sess);
     if (sess.done) {
+      this.broadcastTurn(m, r.events || [], sess);
       const res = pvpResult(sess);
       await this.endMatch(m, res.winnerSide as Slot, res.timedOut ? 'turn_cap' : 'ko');
     } else {
+      // arm the NEXT turn's deadline BEFORE broadcasting so the turn_result the
+      // clients animate already carries the fresh deadlineMs (drives the client
+      // turn timer). The persisted record + alarm are set here too.
       this.armDeadline(m);
       await this.state.storage.put('match', m);
+      this.broadcastTurn(m, r.events || [], sess);
     }
   }
 
@@ -360,6 +364,10 @@ export class MatchRoom {
     const meP = you === 'p' ? m.p1 : m.p2, oppP = you === 'p' ? m.p2 : m.p1;
     const hp = (slot: Slot) => sess ? (slot === 'p' ? sess.pHP : sess.bHP) : null;
     const maxhp = (slot: Slot) => sess ? (slot === 'p' ? sess.pMax : sess.bMax) : null;
+    // per-side presentation state so the client renders the SAME battle UI
+    // (status chips + super/weak effectiveness toast) without re-running the engine.
+    const eff = (slot: Slot) => sess ? (slot === 'p' ? sess.pEff : sess.bEff) : 1;
+    const status = (slot: Slot) => sess ? (slot === 'p' ? sess.pS : sess.bS) : null;
     const myKit = sess ? (you === 'p' ? sess.pMoves : sess.bMoves) : (meP ? buildCombatant(meP.combatant).kit : []);
     const myCd = sess ? (you === 'p' ? sess.cd : sess.bcd) : {};
     return {
@@ -367,8 +375,8 @@ export class MatchRoom {
       deadlineMs: m.deadlineMs,
       youSubmitted: !!m.pending[meSlot], oppSubmitted: !!m.pending[oppSlot],
       oppConnected: m.connected[oppSlot],
-      me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), kit: myKit, cd: myCd } : null,
-      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot) } : null,
+      me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd } : null,
+      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot) } : null,
       result: m.result,
     };
   }

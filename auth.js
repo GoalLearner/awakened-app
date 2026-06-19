@@ -124,6 +124,12 @@
     return (u && u.jwt) ? u.jwt : null;
   }
 
+  // The backend origin (https://…workers.dev). PvP (app.js) needs it to build
+  // its own fetch() URLs and the wss:// WebSocket URL for realtime duels.
+  function getBackendBase() {
+    return BACKEND_URL;
+  }
+
   function clearUser() {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -1475,6 +1481,9 @@
     // W297 — skins IAP (RevenueCat) + entitlements
     iapAvailable,
     getBackendUserId,
+    // PvP (W404) — realtime duel transport needs the API origin for its own
+    // fetch() + WebSocket calls (app.js owns no networking otherwise).
+    getBackendBase,
     configurePurchases,
     purchaseSkin,
     restorePurchases,

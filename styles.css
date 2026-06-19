@@ -30179,3 +30179,61 @@ button.guildhall-summary-tile:active {
   #coop-fs-overlay .bfs-hero img,
   #coop-fs-overlay .bfs-hero.art-loaded { animation: none; }
 }
+
+/* ═══ W404 — REALTIME PvP DUELS ═══════════════════════════════════ */
+/* Tower entry CTA */
+.pvp-tower-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 14px; padding: 14px 14px; border-radius: 15px; cursor: pointer; text-align: left;
+  background: linear-gradient(180deg, rgba(124,138,255,0.12), rgba(124,138,255,0.05)); border: 1px solid rgba(124,138,255,0.30);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.30); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
+.pvp-tower-cta:active { transform: scale(0.985); filter: brightness(1.12); }
+.pvp-tower-cta .pvp-tower-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(124,138,255,0.16); border: 1px solid rgba(124,138,255,0.40); }
+.pvp-tower-cta .pvp-tower-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pvp-tower-cta .pvp-tower-tx .t { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px; color: #f5f3fb; }
+.pvp-tower-cta .pvp-tower-tx .s { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.10em; color: #9aa3e8; text-transform: uppercase; }
+.pvp-tower-cta .pvp-tower-go { flex: none; font-size: 22px; color: #7c8aff; opacity: 0.8; }
+
+/* Lobby */
+.pvp-lobby { display: flex; flex-direction: column; min-height: 100%; padding: 8px 4px 4px; }
+.pvp-lobby-head { text-align: center; padding: 18px 12px 16px; }
+.pvp-lobby-head .k { display: inline-flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.22em; color: #7c8aff; }
+.pvp-lobby-head .k i { width: 16px; height: 1px; background: rgba(124,138,255,0.5); display: inline-block; }
+.pvp-lobby-title { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 26px; color: #f5f3fb; margin-top: 8px; }
+.pvp-lobby-sub { font-size: 11.5px; color: #9090a8; line-height: 1.4; margin-top: 6px; max-width: 280px; margin-left: auto; margin-right: auto; }
+.pvp-home { display: flex; flex-direction: column; gap: 14px; padding: 8px 12px; }
+.pvp-big { display: flex; flex-direction: column; gap: 3px; padding: 16px; border-radius: 15px; cursor: pointer; text-align: center; align-items: center;
+  background: linear-gradient(180deg, #7c8aff, #5b67d8); border: none; box-shadow: 0 8px 22px rgba(91,103,216,0.40); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
+.pvp-big:active { transform: scale(0.98); filter: brightness(1.08); }
+.pvp-big-t { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 17px; color: #fff; }
+.pvp-big-s { font-size: 10.5px; color: rgba(255,255,255,0.82); }
+.pvp-or { display: flex; align-items: center; gap: 12px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.16em; color: #6b6b86; }
+.pvp-or span { flex: 1; height: 1px; background: rgba(255,255,255,0.10); }
+.pvp-join { display: flex; gap: 9px; }
+.pvp-code-input { flex: 1; min-width: 0; padding: 13px 14px; border-radius: 12px; background: #0e0e24; border: 1px solid rgba(255,255,255,0.12); color: #f5f3fb;
+  font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 17px; letter-spacing: 0.18em; text-align: center; text-transform: uppercase; }
+.pvp-code-input::placeholder { color: #54546c; letter-spacing: 0.10em; }
+.pvp-code-input:focus { outline: none; border-color: rgba(124,138,255,0.6); box-shadow: 0 0 0 3px rgba(124,138,255,0.16); }
+.pvp-join-btn { flex: none; padding: 0 20px; border-radius: 12px; cursor: pointer; background: rgba(124,138,255,0.16); border: 1px solid rgba(124,138,255,0.42); color: #cdd3ff;
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; -webkit-tap-highlight-color: transparent; }
+.pvp-join-btn:active { filter: brightness(1.15); }
+.pvp-err { text-align: center; font-size: 11.5px; color: #ff8a8a; padding: 4px 12px; }
+.pvp-host { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 12px; }
+.pvp-host-k { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.18em; color: #9090a8; }
+.pvp-code-display { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 40px; letter-spacing: 0.20em; color: #f5b842; cursor: pointer;
+  padding: 14px 22px; border-radius: 14px; background: rgba(245,184,66,0.07); border: 1px dashed rgba(245,184,66,0.40); }
+.pvp-copy { padding: 9px 16px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #cdd1e8;
+  font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; -webkit-tap-highlight-color: transparent; }
+.pvp-wait { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 12px; }
+.pvp-wait--inline { padding: 10px 12px 0; }
+.pvp-wait-t { font-size: 12px; color: #9090a8; text-align: center; }
+.pvp-spinner { width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(124,138,255,0.20); border-top-color: #7c8aff; animation: pvp-spin 0.8s linear infinite; }
+@keyframes pvp-spin { to { transform: rotate(360deg); } }
+
+/* Battle stage tweaks */
+.pvp-mono { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 38px; color: rgba(205,211,255,0.85); text-shadow: 0 2px 12px rgba(124,138,255,0.5); }
+.pvp-status { min-height: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 12px 2px; }
+.pvp-status-txt { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; color: #9aa3e8; }
+.pvp-status--your-turn .pvp-status-txt { color: #f5b842; }
+.pvp-status--disconnected .pvp-status-txt { color: #ff8a8a; }
+.pvp-timer { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; color: #cdd1e8; min-width: 26px; text-align: right; }
+.pvp-timer.low { color: #ff8a8a; }
