@@ -43,7 +43,7 @@ const COOP_BOSS_CFG: Record<
 > = {
   the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 50,  windowHours: 24, metric: 'steps' },
   the_coursing_dread:   { rank: 'C', goalSteps: 18000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
-  the_hollow_sovereign: { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
+  the_hollow_monarch:   { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
 };
 
 const STEPS_EVENT_TYPE = 'steps_total';

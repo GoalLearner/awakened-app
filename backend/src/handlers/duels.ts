@@ -55,7 +55,7 @@ const DEFAULT_DUEL_TYPE = 'verified_objectives';
 // ─────────────────────────────────────────────────────────────
 const ALLOWED_EVENT_TYPES = new Set([
   'steps_total',
-  'flights_total', // W397 — stairs-climbed co-op (The Hollow Sovereign, B-rank)
+  'flights_total', // W397 — stairs-climbed co-op (The Hollow Monarch, B-rank)
   'sleep_7h_night',
   'bedtime_before_midnight',
   'strength_workout',

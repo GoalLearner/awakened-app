@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w398'; // W398
+  const APP_BUILD_TAG = '2.2.8-w399'; // W399
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -472,10 +472,10 @@
       statDomain: 'STR',
       dropTable:  { ultra_rare: 0.25, rare: 0.55 },
     },
-    // W397 — B-rank co-op DROP SOURCE (The Hollow Sovereign, flights hunt).
-    the_hollow_sovereign: {
-      id:         'the_hollow_sovereign',
-      name:       'The Hollow Sovereign',
+    // W397 — B-rank co-op DROP SOURCE (The Hollow Monarch, flights hunt; renamed W399).
+    the_hollow_monarch: {
+      id:         'the_hollow_monarch',
+      name:       'The Hollow Monarch',
       rank:       'B',
       coopOnly:   true,
       archetype:  'caster',
@@ -2042,22 +2042,24 @@
       on_equip: null, cooldown_seconds: null,
     },
 
-    // ── The Coursing Dread (C, STR) co-op pool — W397 ──────────
-    // 2 rare + 1 ultra, C-tier. Stronger than the E-rank Twin Maw pool
-    // (Rendell asked for more power to close the floor-60 gap). Art ships
-    // later; cards fall back to a rarity gradient + slot emoji until then.
-    dread_runners_edge: {
-      id: 'dread_runners_edge',
-      name: "The Runner's Edge",
+    // ── The Coursing Dread (C) co-op pool — W397/W399 ──────────
+    // 2 rare + 1 ultra, C-tier, all MAGE / RANGER (W399 — owner wants these
+    // bosses to drop caster + ranger gear, so the old STR cleaver is gone).
+    // Stronger than the E-rank Twin Maw pool (Rendell asked for more power to
+    // close the floor-60 gap). Art ships later; cards fall back to a rarity
+    // gradient + slot emoji until then.
+    houndsfang_recurve: {
+      id: 'houndsfang_recurve',
+      name: 'Houndsfang Recurve',
       slot: 'weapon',
       source_boss: 'the_coursing_dread',
       rarity: 'rare',
       tier: 'C',
-      flavor: 'Taken from the thing that never stopped coming. Now the chase runs the other way.',
-      art_path: 'assets/items/dread_runners_edge.png',
-      bonuses: { str: 8, vit: 3, int: 0, focus: 2, will: 1, wlt: 0 },
-      bonus_ranges: { str: [7,10], vit: [2,4], int: [0,0], focus: [1,3], will: [0,2], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
+      flavor: 'Cut from the beast that never broke stride. Looses fast on the move — the shot that finally outran the chase.',
+      art_path: 'assets/items/houndsfang_recurve.png',
+      bonuses: { str: 1, vit: 3, int: 0, focus: 8, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,2], vit: [2,4], int: [0,0], focus: [7,10], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
     },
     coursing_houndcall: {
@@ -2089,47 +2091,48 @@
       on_equip: null, cooldown_seconds: null,
     },
 
-    // ── The Hollow Sovereign (B, WILL) co-op pool — W397 ───────
-    // 2 rare + 1 ultra, B-tier — the richest co-op pool yet.
-    throne_breakers_maul: {
-      id: 'throne_breakers_maul',
-      name: "Throne-Breaker's Maul",
+    // ── The Hollow Monarch (B) co-op pool — W397/W399 ──────────
+    // 2 mage + 1 ranger, B-tier — the richest co-op pool yet (W399 reworked off
+    // the old STR maul + WILL crown to caster + ranger gear).
+    the_monarchs_writ: {
+      id: 'the_monarchs_writ',
+      name: "The Monarch's Writ",
       slot: 'weapon',
-      source_boss: 'the_hollow_sovereign',
-      rarity: 'rare',
-      tier: 'B',
-      flavor: 'Forged to bring down what will not bow. Every swing is one more stair climbed toward the crown.',
-      art_path: 'assets/items/throne_breakers_maul.png',
-      bonuses: { str: 11, vit: 6, int: 0, focus: 2, will: 3, wlt: 0 },
-      bonus_ranges: { str: [10,14], vit: [4,8], int: [0,0], focus: [1,3], will: [2,4], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
-      on_equip: null, cooldown_seconds: null,
-    },
-    sovereigns_writ: {
-      id: 'sovereigns_writ',
-      name: "The Sovereign's Writ",
-      slot: 'weapon',
-      source_boss: 'the_hollow_sovereign',
+      source_boss: 'the_hollow_monarch',
       rarity: 'rare',
       tier: 'B',
       flavor: 'A decree the hollow king never rescinded. Speak it, and the air itself answers to the throne.',
-      art_path: 'assets/items/sovereigns_writ.png',
+      art_path: 'assets/items/the_monarchs_writ.png',
       bonuses: { str: 0, vit: 3, int: 11, focus: 5, will: 4, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [2,4], int: [10,14], focus: [4,8], will: [3,5], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      on_equip: null, cooldown_seconds: null,
+    },
+    crownpiercer: {
+      id: 'crownpiercer',
+      name: 'Crownpiercer',
+      slot: 'weapon',
+      source_boss: 'the_hollow_monarch',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'A long crossbow that fells what will not kneel. One bolt, one throne — it has unmade kings from the foot of the stair.',
+      art_path: 'assets/items/crownpiercer.png',
+      bonuses: { str: 2, vit: 6, int: 3, focus: 11, will: 2, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [4,8], int: [2,4], focus: [10,14], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
     },
     the_hollow_crown: {
       id: 'the_hollow_crown',
       name: 'The Hollow Crown',
       slot: 'weapon',
-      source_boss: 'the_hollow_sovereign',
+      source_boss: 'the_hollow_monarch',
       rarity: 'ultra_rare',
       tier: 'B',
-      flavor: 'The crown comes away cold and weightless — all the will that once filled it now fills you. Best in slot, until an A-rank throne falls.',
+      flavor: 'The crown comes away cold and weightless — all the cold thought that once filled it now sharpens yours. Best in slot, until an A-rank throne falls.',
       art_path: 'assets/items/the_hollow_crown.png',
-      bonuses: { str: 2, vit: 5, int: 6, focus: 4, will: 15, wlt: 0 },
-      bonus_ranges: { str: [1,3], vit: [4,8], int: [4,8], focus: [3,6], will: [13,17], wlt: [0,0] },
+      bonuses: { str: 0, vit: 5, int: 15, focus: 6, will: 2, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [4,8], int: [13,17], focus: [4,8], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
       on_equip: null, cooldown_seconds: null,
     },
@@ -37218,13 +37221,14 @@
       coopVictoryTitle:'THE DREAD IS RUN DOWN',
     },
     // W397 — B-rank duo hunt. FLIGHTS of stairs, not steps: the first co-op
-    // boss that scores a different verified metric (flights_total).
-    the_hollow_sovereign: {
-      id:              'the_hollow_sovereign',
-      name:            'The Hollow Sovereign',
+    // boss that scores a different verified metric (flights_total). Renamed
+    // W399 (was 'The Hollow Sovereign') to clear the S-rank apex Erebus.
+    the_hollow_monarch: {
+      id:              'the_hollow_monarch',
+      name:            'The Hollow Monarch',
       rank:            'B',
-      artId:           'the_hollow_sovereign',
-      dropSourceBoss:  'the_hollow_sovereign',
+      artId:           'the_hollow_monarch',
+      dropSourceBoss:  'the_hollow_monarch',
       coopGoalSteps:   20,                 // metric-generic goal column: 20 FLIGHTS
       coopMetric:      'flights',
       coopUnit:        'flights',
@@ -37232,7 +37236,7 @@
       coopWindowHours: 24,
       statDomain:      'WILL',
       flavorShort:     'A crown waits at the top of the last stair. Climb to take it.',
-      flavorLong:      'It does not descend. It has never once come down. The Hollow Sovereign keeps its throne at the head of an endless stair and lets the climb cull everyone who would reach it. Ascend together — flight after flight — until you stand level with the crown, and pull it down.',
+      flavorLong:      'It does not descend. It has never once come down. The Hollow Monarch keeps its throne at the head of an endless stair and lets the climb cull everyone who would reach it. Ascend together — flight after flight — until you stand level with the crown, and pull it down.',
       killCondShort:   'Two hunters: 20 combined flights of stairs in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 20 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
       coopVictoryTitle:'THE THRONE IS TAKEN',
