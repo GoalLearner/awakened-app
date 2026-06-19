@@ -79,6 +79,7 @@ import {
   handlePvpRating,
   handlePvpLeaderboard,
   handlePvpFind,
+  handlePvpHistory,
   handlePvpWs,
 } from './handlers/pvp';
 import { handlePreflight, withCors } from './lib/cors';
@@ -314,6 +315,8 @@ export default {
             response = await handlePvpRating(request, env, session);
           } else if (path === '/v1/pvp/leaderboard' && method === 'GET') {
             response = await handlePvpLeaderboard(request, env, session);
+          } else if (path === '/v1/pvp/history' && method === 'GET') {
+            response = await handlePvpHistory(request, env, session);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }

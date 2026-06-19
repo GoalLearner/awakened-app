@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.0-w411'; // W411 — Find Match (AI-bot queue) + VS screen
+  const APP_BUILD_TAG = '2.3.0-w412'; // W412 — rank-up moment + match history + win streak
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9795,7 +9795,7 @@
   // entirely when you're already on the tower.
   function _arExit() {
     // W404 — duel views own their own exit (forfeit a live duel, then to the tower).
-    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || _arView === 'pvp-ladder' || _arView === 'pvp-vs' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
+    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || _arView === 'pvp-ladder' || _arView === 'pvp-history' || _arView === 'pvp-vs' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
     // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
     // abandon any fight you're losing for free and dodge the daily-lives gate.
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
@@ -9905,6 +9905,7 @@
       else if (a === 'pvpfind')   { try { _pvpFindMatch(); } catch (_) {} }
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
+      else if (a === 'pvphistory'){ try { _pvpOpenHistory(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
@@ -10061,6 +10062,7 @@
       resync() { if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'resync' })); } catch (_) {} } else startPoll(); },
       async rating() { try { return await http('GET', '/v1/pvp/rating'); } catch (_) { return null; } },
       async leaderboard(limit) { try { return await http('GET', '/v1/pvp/leaderboard?limit=' + (limit || 50)); } catch (_) { return null; } },
+      async history(limit) { try { return await http('GET', '/v1/pvp/history?limit=' + (limit || 12)); } catch (_) { return null; } },
       onMessage(fn) { onMsg = fn; },
       close() {
         closed = true; stopPoll(); stopPing();
@@ -10088,6 +10090,8 @@
   let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
   let _pvpOpponentMeta = null;     // { alias, elo, tier, weaponName } from Find Match (VS screen)
   let _pvpVsTimer = null;          // pre-match VS auto-advance
+  let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
+  let _pvpStreak = 0;              // current win streak (derived from match history)
 
   // ELO -> tier (mirrors backend pvp/elo.ts §12.2) + an accent color per tier.
   function _pvpTier(elo) {
@@ -10168,7 +10172,10 @@
           '<input id="pvp-code-input" class="pvp-code-input" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ENTER CODE" />' +
           '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
         '</div>' + err +
-        '<button type="button" class="pvp-ladder-link" data-ar="pvpladder">View the ranked ladder &rsaquo;</button>' +
+        '<div class="pvp-links">' +
+          '<button type="button" class="pvp-ladder-link" data-ar="pvpladder">Ladder &rsaquo;</button>' +
+          '<button type="button" class="pvp-ladder-link" data-ar="pvphistory">History &rsaquo;</button>' +
+        '</div>' +
         '</div>';
     }
     const showBand = mode !== 'creating' && mode !== 'joining';
@@ -10192,10 +10199,11 @@
     const t = _pvpTier(r.elo);
     const placed = !!r.placed;
     const rec = _pvpNum(r.wins) + 'W &middot; ' + _pvpNum(r.losses) + 'L' + (_pvpNum(r.draws) ? ' &middot; ' + _pvpNum(r.draws) + 'D' : '');
+    const streakChip = (placed && _pvpStreak >= 2) ? '<span class="pvp-streak pvp-rb-streak">&#128293; ' + _pvpStreak + ' streak</span>' : '';
     return '<div class="pvp-rankband">' +
       '<div class="pvp-rb-badge" style="--rb:' + t.color + '"><span class="pvp-rb-tier">' + esc(t.name) + '</span></div>' +
       '<div class="pvp-rb-mid"><span class="pvp-rb-elo">' + (placed ? _pvpNum(r.elo) : '—') + '<i>ELO</i></span>' +
-        '<span class="pvp-rb-rec">' + (placed ? rec : 'Unranked &middot; play your first ranked duel') + '</span></div>' +
+        '<span class="pvp-rb-rec">' + (placed ? rec : 'Unranked &middot; play your first ranked duel') + '</span>' + streakChip + '</div>' +
       (placed && r.rank ? '<div class="pvp-rb-rank"><b>#' + _pvpNum(r.rank) + '</b><i>GLOBAL</i></div>' : '') +
       '</div>';
   }
@@ -10207,6 +10215,13 @@
         if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); }
       }
     }).catch(function () {});
+    // also derive the current win streak from recent history (shown on the band)
+    if (window.PvP && PvP.history) {
+      Promise.resolve(PvP.history(12)).then(function (h) {
+        if (h && h.items) { _pvpStreak = _pvpDeriveStreak(h.items);
+          if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); } }
+      }).catch(function () {});
+    }
   }
   // ── ranked ladder (§12.4) — read-only top-N view ──
   function _pvpOpenLeaderboard() {
@@ -10244,6 +10259,59 @@
           '<div class="pvp-lobby-sub">Top hunters by rating. Win ranked duels to climb.</div></div>' +
         body +
         '<div class="ar-spacer"></div>' +
+        '<button class="ar-ghost" data-ar="pvplobby">&lsaquo; Back to the Arena</button>' +
+      '</div>'
+    );
+  }
+  // ── match history (recent duels) + win-streak derivation ──
+  function _pvpDeriveStreak(items) {
+    let s = 0;
+    for (let i = 0; i < (items || []).length; i++) { if (items[i].outcome === 'win') s++; else break; }
+    return s;
+  }
+  function _pvpAgo(iso) {
+    try {
+      const d = Date.now() - Date.parse(iso); const m = Math.floor(d / 60000);
+      if (m < 1) return 'just now'; if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60); if (h < 24) return h + 'h ago'; return Math.floor(h / 24) + 'd ago';
+    } catch (_) { return ''; }
+  }
+  function _pvpOpenHistory() {
+    _arView = 'pvp-history'; _arBodyMode(false);
+    _pvpRenderHistory(null);
+    if (!(window.PvP && PvP.history)) { _pvpRenderHistory([]); return; }
+    Promise.resolve(PvP.history(12)).then(function (res) {
+      if (_arView !== 'pvp-history') return;
+      const items = (res && res.items) || [];
+      _pvpStreak = _pvpDeriveStreak(items);
+      _pvpRenderHistory(items);
+    }).catch(function () { if (_arView === 'pvp-history') _pvpRenderHistory([]); });
+  }
+  function _pvpRenderHistory(items) {
+    _arView = 'pvp-history';
+    let body;
+    if (items == null) {
+      body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading your duels&hellip;</div></div>';
+    } else if (!items.length) {
+      body = '<div class="pvp-ladder-empty">No duels yet. Find a match to begin your record.</div>';
+    } else {
+      const streak = _pvpDeriveStreak(items);
+      const streakHtml = streak >= 2 ? '<div class="pvp-hist-streak"><span class="pvp-streak">&#128293; ' + streak + ' win streak</span></div>' : '';
+      body = streakHtml + '<div class="pvp-hist-list">' + items.map(function (it) {
+        const oc = it.outcome, badge = oc === 'win' ? 'W' : oc === 'draw' ? 'D' : 'L';
+        return '<div class="pvp-hist-row pvp-hist-row--' + oc + '">' +
+          '<span class="pvp-hist-oc">' + badge + '</span>' +
+          '<span class="pvp-hist-opp"><span class="nm">' + esc(it.opponent) + (it.vsBot ? '<i class="pvp-bot-tag">BOT</i>' : '') + '</span>' +
+            '<span class="sub">' + (it.ranked ? 'Ranked' : 'Friendly') + ' &middot; ' + _pvpAgo(it.when) + '</span></span>' +
+          '<span class="pvp-hist-res">' + (oc === 'win' ? 'Victory' : oc === 'draw' ? 'Draw' : 'Defeat') + '</span></div>';
+      }).join('') + '</div>';
+    }
+    _arSet(
+      '<div class="pvp-lobby">' +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>YOUR RECORD<i></i></span>' +
+          '<div class="pvp-lobby-title">Match History</div>' +
+          '<div class="pvp-lobby-sub">Your recent duels.</div></div>' +
+        body + '<div class="ar-spacer"></div>' +
         '<button class="ar-ghost" data-ar="pvplobby">&lsaquo; Back to the Arena</button>' +
       '</div>'
     );
@@ -10346,6 +10414,9 @@
   }
   function _pvpStartVs(view) {
     _arView = 'pvp-vs'; _pvpView = view;
+    // capture my pre-match ELO for the rank-up/down moment (survives _pvpRating mutations)
+    _pvpPreElo = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo
+      : (view.me && view.me.elo != null ? view.me.elo : null);
     _arBodyMode(false); _arClearTimers();
     const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
     const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo);
@@ -10620,7 +10691,19 @@
     const d = (typeof er.delta === 'number') ? er.delta : null;
     const dstr = d == null ? '' : (d > 0 ? '+' + d : '' + d);
     const dcls = d == null ? '' : d > 0 ? ' up' : d < 0 ? ' down' : '';
-    return '<div class="pvp-mmr-row">' +
+    // rank-up / rank-down moment: did this match cross a tier boundary?
+    let rc = '';
+    if (_pvpPreElo != null) {
+      const preName = _pvpTier(_pvpPreElo).name;
+      if (preName !== t.name) {
+        const up = er.elo > _pvpPreElo;
+        rc = '<div class="pvp-rankchange ' + (up ? 'up' : 'down') + '" style="--rb:' + t.color + '">' +
+          '<span class="pvp-rc-arrow">' + (up ? '&#9650;' : '&#9660;') + '</span>' +
+          '<span class="pvp-rc-tx">' + (up ? 'RANK UP' : 'RANK DOWN') + '</span>' +
+          '<span class="pvp-rc-tier">' + esc(t.name) + '</span></div>';
+      }
+    }
+    return rc + '<div class="pvp-mmr-row">' +
       '<div class="pvp-mmr-badge" style="--rb:' + t.color + '">' + esc(t.name) + '</div>' +
       '<div class="pvp-mmr-elo">' + _pvpNum(er.elo) + '<i>ELO</i></div>' +
       (d == null ? '' : '<div class="pvp-mmr-delta' + dcls + '">' + dstr + '</div>') +
@@ -10682,7 +10765,8 @@
     window.__pvpDemo = function (opts) {
       opts = opts || {};
       _pvpCode = 'DEMOXY'; _pvpYou = opts.you || 'p';
-      _pvpRating = { elo: 1500, tier: 'Silver', wins: 3, losses: 2, draws: 0, rank: 42, placed: true };  // demo rank band
+      _pvpRating = { elo: 1490, tier: 'Bronze', wins: 3, losses: 2, draws: 0, rank: 42, placed: true };  // demo rank band
+      _pvpPreElo = 1490;   // Bronze -> a demo win (1517) crosses into Silver = RANK UP moment
       let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = [{ id: 'slash', name: 'Slash', gl: 'sword', power: 1, acc: 0.95, cd: 0, desc: 'A clean cut.' }]; }
       const view = {
         type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: opts.ranked !== false, deadlineMs: Date.now() + 45000,
@@ -10757,6 +10841,17 @@
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
       _pvpStartVs(view);
       return 'VS demo (auto-advances to the battle)';
+    };
+    window.__pvpHistory = function () {
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpRenderHistory([
+        { outcome: 'win', opponent: 'Rendiesel', vsBot: false, ranked: true, when: new Date(Date.now() - 3 * 60000).toISOString() },
+        { outcome: 'win', opponent: 'Stormcaller', vsBot: true, ranked: true, when: new Date(Date.now() - 40 * 60000).toISOString() },
+        { outcome: 'win', opponent: 'Galilea', vsBot: false, ranked: true, when: new Date(Date.now() - 3 * 3600000).toISOString() },
+        { outcome: 'loss', opponent: 'Quickstep', vsBot: true, ranked: true, when: new Date(Date.now() - 26 * 3600000).toISOString() },
+        { outcome: 'draw', opponent: 'Anthony', vsBot: false, ranked: true, when: new Date(Date.now() - 50 * 3600000).toISOString() },
+      ]);
+      return 'history demo';
     };
   } catch (_) {}
 

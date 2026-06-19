@@ -133,6 +133,33 @@ export async function handlePvpLeaderboard(request: Request, env: Env, session: 
   return jsonOk({ ok: true, top });
 }
 
+// GET /v1/pvp/history?limit=12 — the caller's recent finished duels (newest first):
+// outcome (win/loss/draw), opponent alias, vs-bot, ranked, when. The client derives the
+// current win streak from these.
+export async function handlePvpHistory(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_HALL_READ.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const limit = Math.min(25, Math.max(1, parseInt(new URL(request.url).searchParams.get('limit') || '12', 10) || 12));
+  const uid = session.userId;
+  let rows: any[] = [];
+  try {
+    const res = await env.DB.prepare(
+      `SELECT p1_user_id, p2_user_id, p1_alias, p2_alias, winner_user_id, result, ranked, ended_at
+         FROM pvp_matches WHERE status='ended' AND (p1_user_id=? OR p2_user_id=?)
+         ORDER BY ended_at DESC LIMIT ?`,
+    ).bind(uid, uid, limit).all<any>();
+    rows = res.results || [];
+  } catch { /* table may predate deploy */ }
+  const items = rows.map((r) => {
+    const meIsP1 = r.p1_user_id === uid;
+    const oppAlias = meIsP1 ? r.p2_alias : r.p1_alias;
+    const oppId = (meIsP1 ? r.p2_user_id : r.p1_user_id) || '';
+    const outcome = r.result === 'draw' ? 'draw' : (r.winner_user_id === uid ? 'win' : 'loss');
+    return { outcome, opponent: String(oppAlias || (oppId.indexOf('bot:') === 0 ? 'Bot' : 'Hunter')), vsBot: oppId.indexOf('bot:') === 0, ranked: !!r.ranked, when: r.ended_at };
+  });
+  return jsonOk({ ok: true, items });
+}
+
 // GET /v1/pvp/ws?code=XXX&token=JWT  (Upgrade: websocket) — auth via query token,
 // validated here at the edge; the resolved userId is forwarded to the DO.
 export async function handlePvpWs(request: Request, env: Env): Promise<Response> {

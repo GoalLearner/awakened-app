@@ -30270,6 +30270,42 @@ button.guildhall-summary-tile:active {
 /* DRAW result word */
 .ar-result-word.draw { color: #7dd3fc; }
 
+/* Rank-up / rank-down moment on the result */
+.pvp-rankchange { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 auto 8px; padding: 7px 16px; max-width: 280px; border-radius: 10px;
+  background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent);
+  animation: pvp-rc-pop 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
+.pvp-rc-arrow { font-size: 12px; color: var(--rb); }
+.pvp-rankchange.down .pvp-rc-arrow { color: #ff8a8a; }
+.pvp-rc-tx { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; color: #cdd1e8; }
+.pvp-rc-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 14px; color: var(--rb); }
+@keyframes pvp-rc-pop { from { opacity: 0; transform: translateY(8px) scale(0.9); } to { opacity: 1; transform: none; } }
+
+/* Win-streak chip (rank band + result) */
+.pvp-streak { display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800;
+  color: #ff9d4d; padding: 2px 7px; border-radius: 7px; background: rgba(255,157,77,0.12); border: 1px solid rgba(255,157,77,0.32); }
+.pvp-rb-streak { margin-top: 3px; }
+
+/* lobby footer links (ladder + history) */
+.pvp-links { display: flex; gap: 9px; margin-top: 12px; }
+.pvp-links .pvp-ladder-link { margin: 0; flex: 1; }
+
+/* match history view */
+.pvp-hist-streak { text-align: center; margin: 0 0 10px; }
+.pvp-hist-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px; }
+.pvp-hist-row { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 11px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.pvp-hist-oc { flex: none; width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 12px; }
+.pvp-hist-row--win .pvp-hist-oc { color: #34d399; background: rgba(52,211,153,0.13); border: 1px solid rgba(52,211,153,0.4); }
+.pvp-hist-row--loss .pvp-hist-oc { color: #ff8a8a; background: rgba(255,138,138,0.12); border: 1px solid rgba(255,138,138,0.38); }
+.pvp-hist-row--draw .pvp-hist-oc { color: #7dd3fc; background: rgba(125,211,252,0.12); border: 1px solid rgba(125,211,252,0.38); }
+.pvp-hist-opp { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pvp-hist-opp .nm { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 13.5px; color: #f5f3fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-hist-opp .sub { font-family: "JetBrains Mono", monospace; font-size: 9px; color: #9090a8; }
+.pvp-bot-tag { font-style: normal; font-size: 7.5px; font-weight: 800; letter-spacing: 0.08em; color: #7c8aff; background: rgba(124,138,255,0.16); padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+.pvp-hist-res { flex: none; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; color: #9090a8; }
+.pvp-hist-row--win .pvp-hist-res { color: #34d399; }
+
 /* Ranked ladder view */
 .pvp-ladder-link { display: block; width: 100%; margin: 12px 0 0; padding: 11px; border-radius: 11px; cursor: pointer; text-align: center;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: #9aa3e8;
