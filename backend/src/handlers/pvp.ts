@@ -29,14 +29,18 @@ function forwardToDo(env: Env, code: string, action: string, userId: string, ali
   return stub.fetch(req);
 }
 
-// POST /v1/pvp/create { combatant, ranked? } -> { ok, code, state }
+// POST /v1/pvp/create { combatant } -> { ok, code, state }
+// Invite-by-code duels are ALWAYS unranked (friendly). You pick your opponent here, so a
+// ranked one would let you farm a weak friend for free ELO. Rating moves ONLY through
+// matchmade duels (POST /v1/pvp/find), where the opponent is server-chosen near your rank.
+// Enforced here server-side — the client's `ranked` flag is intentionally ignored.
 export async function handlePvpCreate(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }
   const code = genCode();
-  return forwardToDo(env, code, 'create', session.userId, session.alias, { code, combatant: body.combatant, ranked: !!body.ranked });
+  return forwardToDo(env, code, 'create', session.userId, session.alias, { code, combatant: body.combatant, ranked: false });
 }
 
 // POST /v1/pvp/join { code, combatant }

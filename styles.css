@@ -30266,6 +30266,8 @@ button.guildhall-summary-tile:active {
 .pvp-mmr-delta { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #9090a8; }
 .pvp-mmr-delta.up { color: #34d399; }
 .pvp-mmr-delta.down { color: #ff8a8a; }
+/* friendly (invite-by-code) duel — no rating change; shown in place of the MMR row */
+.pvp-friendly-note { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.08em; color: #6b6b86; margin: 6px auto 2px; padding: 7px 14px; max-width: 280px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
 
 /* DRAW result word */
 .ar-result-word.draw { color: #7dd3fc; }

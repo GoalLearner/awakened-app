@@ -150,17 +150,20 @@ async function reconnectTest() {
   } catch (e) { ok('reconnect test (transport)', false, String(e && e.message)); }
 }
 
-// ── 6. Ranked match -> MMR moves symmetrically + match_end carries the delta. ──
-async function rankedTest() {
-  console.log('\n[6] Ranked match -> MMR update');
-  const t1 = await mint('pvp-rank-1', 'RankA'), t2 = await mint('pvp-rank-2', 'RankB');
+// ── 6. Friend (invite-by-code) duels are UNRANKED — playing one must NOT move ELO.
+//       You pick the opponent here, so a ranked one would let you farm a weak friend.
+//       Rating moves ONLY via Find Match (test 7). The server forces ranked=false here,
+//       ignoring the client's flag — this guards the ladder against friend-farming. ──
+async function friendlyUnrankedTest() {
+  console.log('\n[6] Friend (invite) duel -> UNRANKED (no ELO change)');
+  const t1 = await mint('pvp-fr-1', 'FriendA'), t2 = await mint('pvp-fr-2', 'FriendB');
   const before1 = (await api(t1, 'GET', '/v1/pvp/rating')).elo;
   const before2 = (await api(t2, 'GET', '/v1/pvp/rating')).elo;
-  const created = await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true });
+  const created = await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true }); // client ASKS for ranked...
   const code = created.code;
-  ok('ranked create returns a code', !!(created.ok && code), created);
+  ok('invite create returns a code', !!(created.ok && code), created);
   const joined = await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
-  ok('ranked join -> active', !!(joined.ok && joined.state && joined.state.ranked === true), joined && joined.state);
+  ok('...but the server forces the invite duel UNRANKED', !!(joined.ok && joined.state && joined.state.ranked === false), joined && joined.state && { ranked: joined.state.ranked });
   let guard = 0, result = null, endView = null;
   while (guard++ < 80) {
     const s1 = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
@@ -172,18 +175,13 @@ async function rankedTest() {
     await api(t2, 'POST', '/v1/pvp/submit', { code, turn, moveId: firstMove(s2.me) });
     await sleep(25);
   }
-  ok('ranked match ended with a winner', !!(result && (result.winnerSide === 'p' || result.winnerSide === 'b')), result);
-  await sleep(150); // let the post-end D1 write settle
-  const after1 = await api(t1, 'GET', '/v1/pvp/rating');
-  const after2 = await api(t2, 'GET', '/v1/pvp/rating');
-  const winP = result && result.winnerSide === 'p';
-  const winBefore = winP ? before1 : before2, winAfter = (winP ? after1 : after2).elo;
-  const loseBefore = winP ? before2 : before1, loseAfter = (winP ? after2 : after1).elo;
-  ok('winner gained ELO', winAfter > winBefore, { winBefore, winAfter });
-  ok('loser lost ELO', loseAfter < loseBefore, { loseBefore, loseAfter });
-  ok('movement is symmetric (same K-bracket)', (winAfter - winBefore) === (loseBefore - loseAfter), { gain: winAfter - winBefore, loss: loseBefore - loseAfter });
-  ok('winner has a tier label', !!((winP ? after1 : after2).tier), winP ? after1.tier : after2.tier);
-  ok('match_end view carried the per-player rating delta', !!(endView && endView.rating && typeof endView.rating.delta === 'number'), endView && endView.rating);
+  ok('friendly match ended with a winner', !!(result && (result.winnerSide === 'p' || result.winnerSide === 'b')), result);
+  await sleep(150); // let any (non-)write settle
+  const after1 = (await api(t1, 'GET', '/v1/pvp/rating')).elo;
+  const after2 = (await api(t2, 'GET', '/v1/pvp/rating')).elo;
+  ok('winner ELO UNCHANGED (no friend-farming)', after1 === before1, { before1, after1 });
+  ok('loser ELO UNCHANGED', after2 === before2, { before2, after2 });
+  ok('match_end carries NO rating delta for a friendly', !(endView && endView.rating), endView && endView.rating);
 }
 
 // ── 7. Find Match -> instant AI-bot ranked duel; the bot auto-moves server-side and
@@ -324,7 +322,7 @@ async function rematchDeclineTest() {
   await forfeitTest();
   await timeoutTest();
   await reconnectTest();
-  await rankedTest();
+  await friendlyUnrankedTest();
   await botMatchTest();
   await botWsDeterminismTest();
   await rematchTest();

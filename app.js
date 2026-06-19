@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w419'; // W419 — background music OFF by default (opt-in via hb_music='on'); SFX unaffected
+  const APP_BUILD_TAG = '2.3.1-w420'; // W420 — invite-by-code duels are UNRANKED (friendly); only Find Match moves rating. Server-enforced anti-farm.
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10386,7 +10386,7 @@
     if (!_pvpRequireAuth()) return;
     _pvpRenderLobby('creating');
     PvP.onMessage(_pvpOnMessage);
-    let r; try { r = await PvP.create(_pvpBuildMyCombatant(), true); } catch (_) { r = null; }   // ranked duel
+    let r; try { r = await PvP.create(_pvpBuildMyCombatant(), false); } catch (_) { r = null; }   // friendly duel — invite-by-code is UNRANKED (rating moves only via Find Match); server enforces too
     if (_arView !== 'pvp-lobby') return;           // user navigated away mid-request
     if (!(r && r.ok && r.code)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
     _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
@@ -10747,7 +10747,8 @@
         '<div class="ar-result-narr' + (won || draw ? '' : ' loss') + '">' + narr + '</div>' +
       '</div>' +
       _pvpStreakMilestoneHtml(won) +
-      (ranked ? '<div id="pvp-mmr">' + _pvpRatingResultHtml() + '</div>' : '') +
+      (ranked ? '<div id="pvp-mmr">' + _pvpRatingResultHtml() + '</div>'
+              : '<div class="pvp-friendly-note">Friendly duel &middot; rating unaffected</div>') +
       (won && ranked ? _pvpShareCtaHtml() : '') +
       '<div class="ar-spacer"></div>' +
       '<div id="pvp-rematch">' + _pvpRematchBtnsHtml() + '</div>' +
