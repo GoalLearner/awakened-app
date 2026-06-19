@@ -1249,7 +1249,7 @@ Simultaneous **blind** selection (matches the engine + v1.0 §9): each turn both
 
 ### 21.13 Build phases (this session)
 
-P0 spec+architecture (this section) → P1 backend DO match engine (invite-code) → P2 matchmaking+lobby+D1 → P3 client integration → P4 two-client integration test → P5 ship-ready (version bump, two-gate build check, `PVP_BUILD_REPORT.md`). **DO requires the Workers Paid plan** (verify in the Cloudflare dashboard; ~$5/mo). Logic is validated locally via `wrangler dev` (miniflare simulates DO + D1 + WebSockets) with two browser sessions; the owner runs the remote `wrangler deploy` + D1 migration + the final two-phone test.
+P0 spec+architecture (this section) → P1 backend DO match engine (invite-code) → P2 matchmaking+lobby+D1 → P3 client integration → P4 two-client integration test → P5 ship-ready (version bump, two-gate build check, `PVP_BUILD_REPORT.md`). The DO is **SQLite-backed (`new_sqlite_classes`) → it runs on the Workers FREE plan** (since April 2025; no plan upgrade needed). Logic is validated locally via `wrangler dev` (miniflare simulates DO + D1 + WebSockets); the owner runs the remote `wrangler deploy` + D1 migration + the final two-phone test.
 
 ---
 

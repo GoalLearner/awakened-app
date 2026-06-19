@@ -43,8 +43,9 @@ database_id = "b9c67e10-c88c-4b71-b1e0-413d1e84a5fa"
 # One MatchRoom instance per match, addressed by idFromName(matchCode); it owns
 # the authoritative battle + both players' WebSocket sessions. SQLite-backed
 # (new_sqlite_classes). WebSocket Hibernation is supported by the
-# compatibility_date above. NOTE: Durable Objects require the Workers PAID plan —
-# verify the account is on Workers Paid before `wrangler deploy`.
+# compatibility_date above. NOTE: SQLite-backed Durable Objects (new_sqlite_classes,
+# used here) run on the Workers FREE plan (since April 2025) — no plan upgrade
+# needed. KV-style storage.get/put map transparently to a hidden SQLite table.
 [[durable_objects.bindings]]
 name = "MATCH"
 class_name = "MatchRoom"
