@@ -39,6 +39,20 @@ binding = "DB"
 database_name = "awakened-db"
 database_id = "b9c67e10-c88c-4b71-b1e0-413d1e84a5fa"
 
+# ── Durable Objects — realtime human PvP (PVP.md §21) ────────────
+# One MatchRoom instance per match, addressed by idFromName(matchCode); it owns
+# the authoritative battle + both players' WebSocket sessions. SQLite-backed
+# (new_sqlite_classes). WebSocket Hibernation is supported by the
+# compatibility_date above. NOTE: Durable Objects require the Workers PAID plan —
+# verify the account is on Workers Paid before `wrangler deploy`.
+[[durable_objects.bindings]]
+name = "MATCH"
+class_name = "MatchRoom"
+
+[[migrations]]
+tag = "v1-pvp"
+new_sqlite_classes = ["MatchRoom"]
+
 # ── Secrets (set via `wrangler secret put NAME`) ─────────────────
 # Not declared here — secret values never appear in this file.
 # Set via Wrangler CLI prior to first deploy:

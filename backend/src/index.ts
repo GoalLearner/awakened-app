@@ -68,7 +68,21 @@ import {
   handleCoopBossCancel,
   handleCoopBossResolve,
 } from './handlers/coop-boss';
+import {
+  // Realtime human PvP (PVP.md §21) — invite-by-code duels over a MatchRoom
+  // Durable Object (WebSocket primary + HTTP fallback).
+  handlePvpCreate,
+  handlePvpJoin,
+  handlePvpSubmit,
+  handlePvpForfeit,
+  handlePvpState,
+  handlePvpWs,
+} from './handlers/pvp';
 import { handlePreflight, withCors } from './lib/cors';
+
+// The MatchRoom Durable Object must be a named export of the worker module so the
+// runtime can instantiate it (matches class_name in wrangler.toml).
+export { MatchRoom } from './pvp/match-room';
 import { jsonError } from './lib/responses';
 
 // Regex matchers for parameterized routes.
@@ -124,6 +138,13 @@ export default {
           service: 'awakened-backend',
           time: new Date().toISOString(),
         });
+      }
+      // ── Realtime PvP WebSocket upgrade (PVP.md §21) ──
+      // Browsers cannot set an Authorization header on a WS handshake, so this
+      // route authenticates via the ?token= query param (validated inside the
+      // handler) and lives BEFORE the Bearer gate below.
+      else if (path === '/v1/pvp/ws' && request.headers.get('Upgrade') === 'websocket') {
+        response = await handlePvpWs(request, env);
       }
       // ── Authenticated routes ──
       else {
@@ -270,6 +291,20 @@ export default {
           } else if (COOP_BOSS_ID_RE.test(path) && method === 'GET') {
             const match = path.match(COOP_BOSS_ID_RE)!;
             response = await handleCoopBossGet(request, env, session, match[1]);
+          }
+          // ── Realtime human PvP (PVP.md §21) — invite-by-code duels. The WS
+          //    upgrade is handled above (pre-auth, ?token=); these are the HTTP
+          //    create/join + the HTTP fallback for state/move submission. ──
+          else if (path === '/v1/pvp/create' && method === 'POST') {
+            response = await handlePvpCreate(request, env, session);
+          } else if (path === '/v1/pvp/join' && method === 'POST') {
+            response = await handlePvpJoin(request, env, session);
+          } else if (path === '/v1/pvp/submit' && method === 'POST') {
+            response = await handlePvpSubmit(request, env, session);
+          } else if (path === '/v1/pvp/forfeit' && method === 'POST') {
+            response = await handlePvpForfeit(request, env, session);
+          } else if (path === '/v1/pvp/state' && method === 'GET') {
+            response = await handlePvpState(request, env, session);
           } else {
             response = jsonError(404, 'NOT_FOUND', `No route for ${method} ${path}.`);
           }

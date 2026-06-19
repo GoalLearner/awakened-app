@@ -28,6 +28,12 @@ export interface Env {
   /** D1 database binding. Maps to wrangler.toml's [[d1_databases]] block. */
   DB: D1Database;
 
+  /** Realtime PvP (PVP.md §21) — the MatchRoom Durable Object namespace. One DO
+   *  instance per match, addressed by idFromName(matchCode); it owns the
+   *  authoritative battle + WebSocket sessions. Declared in wrangler.toml
+   *  [[durable_objects.bindings]] (binding="MATCH", class_name="MatchRoom"). */
+  MATCH: DurableObjectNamespace;
+
   /** HMAC key for HS256-signing backend session JWTs. 32-byte hex string.
    * Generate via `openssl rand -hex 32`. Set with `wrangler secret put
    * JWT_SIGNING_KEY`. Never log or echo. */
