@@ -213,10 +213,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
+  const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.0-w414'; // W414 — v3.0 review fixes (VS-timer/ended-during-VS/orphan-match/find-503)
+  const APP_BUILD_TAG = '2.3.1-w415'; // W415 (S2) — rematch UI + pvp share card + streak milestones
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9904,6 +9904,8 @@
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
       else if (a === 'pvpfind')   { try { _pvpFindMatch(); } catch (_) {} }
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
+      else if (a === 'pvprematch'){ try { _pvpRequestRematch(); } catch (_) {} }
+      else if (a === 'pvprematchno'){ try { _pvpDeclineRematch(); } catch (_) {} }
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
       else if (a === 'pvphistory'){ try { _pvpOpenHistory(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
@@ -10059,6 +10061,8 @@
         if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'forfeit' })); } catch (_) {} }
         if (code) http('POST', '/v1/pvp/forfeit', { code: code }).catch(function () {});
       },
+      async rematch() { if (!code) return null; try { return await http('POST', '/v1/pvp/rematch', { code: code }); } catch (_) { return null; } },
+      rematchDecline() { if (code) http('POST', '/v1/pvp/rematch/decline', { code: code }).catch(function () {}); },
       resync() { if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'resync' })); } catch (_) {} } else startPoll(); },
       async rating() { try { return await http('GET', '/v1/pvp/rating'); } catch (_) { return null; } },
       async leaderboard(limit) { try { return await http('GET', '/v1/pvp/leaderboard?limit=' + (limit || 50)); } catch (_) { return null; } },
@@ -10092,6 +10096,8 @@
   let _pvpVsTimer = null;          // pre-match VS auto-advance
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
   let _pvpStreak = 0;              // current win streak (derived from match history)
+  let _pvpWasBot = false;          // was the just-played opponent an AI bot? (rematch = re-find)
+  let _pvpRematchState = 'idle';   // 'idle' | 'waiting' (I requested) | 'offered' (they did) | 'declined'
 
   // ELO -> tier (mirrors backend pvp/elo.ts §12.2) + an accent color per tier.
   function _pvpTier(elo) {
@@ -10377,8 +10383,22 @@
       case 'state':
         _pvpView = msg;
         if (msg.phase === 'ended') { _pvpHandleEnd(msg); break; }
-        if (msg.phase === 'active') { if (!_pvpStarted) _pvpEnsureBattle(msg); else _pvpSyncTurnUI(msg); }
+        if (msg.phase === 'active') {
+          if (_arView === 'pvp-result') { _pvpBeginRematch(msg); }    // a rematch reset us into a new battle
+          else if (!_pvpStarted) _pvpEnsureBattle(msg);
+          else _pvpSyncTurnUI(msg);
+        }
         else if (_arView === 'pvp-lobby') { _pvpRenderLobby('hosting', { code: msg.code }); }
+        break;
+      case 'rematch_offer':
+        if (_arView === 'pvp-result') { _pvpRematchState = 'offered'; _pvpSetResultRematchUI('offer', msg.from); try { _audCue('ui_tap'); } catch (_) {} }
+        break;
+      case 'rematch_declined':
+        if (_arView === 'pvp-result') {
+          const wasWaiting = _pvpRematchState === 'waiting';
+          _pvpRematchState = 'idle';
+          _pvpSetResultRematchUI(wasWaiting ? 'declined' : 'idle', null, msg.reason);
+        }
         break;
       case 'turn_result':
         _pvpView = msg;
@@ -10424,6 +10444,7 @@
   }
   function _pvpStartVs(view) {
     _arView = 'pvp-vs'; _pvpView = view;
+    _pvpWasBot = !!(view.opp && view.opp.isBot);   // bots: rematch re-runs Find Match (no handshake)
     // capture my pre-match ELO for the rank-up/down moment (survives _pvpRating mutations)
     _pvpPreElo = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo
       : (view.me && view.me.elo != null ? view.me.elo : null);
@@ -10673,14 +10694,19 @@
         '<div class="ar-result-rule"></div>' +
         '<div class="ar-result-narr' + (won || draw ? '' : ' loss') + '">' + narr + '</div>' +
       '</div>' +
+      _pvpStreakMilestoneHtml(won) +
       (ranked ? '<div id="pvp-mmr">' + _pvpRatingResultHtml() + '</div>' : '') +
+      (won && ranked ? _pvpShareCtaHtml() : '') +
       '<div class="ar-spacer"></div>' +
-      '<button class="ar-cta" data-ar="duel">DUEL AGAIN</button>' +
+      '<div id="pvp-rematch">' + _pvpRematchBtnsHtml() + '</div>' +
       '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>'
     );
+    _pvpRematchState = 'idle';
     try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-    _pvpTeardown(true);   // close the socket; the rating is fetched over http if not yet in
+    // NOTE: the WS stays OPEN on the result so a rematch offer can arrive; it's closed on
+    // leave (_pvpExit / tower / find / lobby). The rating fetch works over http regardless.
+    _pvpClearTimer();
     if (ranked) {
       if (_pvpEndRating) {
         // W409 (R6) — refresh the baseline cache so a back-to-back duel's fallback delta
@@ -10738,6 +10764,59 @@
     if (host) host.innerHTML = '<div class="pvp-mmr-row pvp-mmr-row--load"><span class="pvp-mmr-load">Rank updated &mdash; reopen the Arena to see it.</span></div>';
   }
 
+  // ── rematch (result screen) ──
+  function _pvpRematchBtnsHtml() {
+    return '<button class="ar-cta" data-ar="pvprematch">' + (_pvpWasBot ? 'NEW MATCH &#9656;' : 'REMATCH &#9656;') + '</button>';
+  }
+  function _pvpSetResultRematchUI(mode, from, reason) {
+    const host = document.getElementById('pvp-rematch'); if (!host) return;
+    if (mode === 'waiting') {
+      host.innerHTML = '<div class="pvp-rm-wait"><div class="pvp-spinner"></div><span>Waiting for ' + esc(_pvpOppShort()) + '&hellip;</span></div>' +
+        '<button class="ar-ghost" data-ar="pvprematchno">Cancel</button>';
+    } else if (mode === 'offer') {
+      host.innerHTML = '<div class="pvp-rm-offer">' + esc(from || _pvpOppShort()) + ' wants a rematch!</div>' +
+        '<button class="ar-cta" data-ar="pvprematch">Accept &#9656;</button>' +
+        '<button class="ar-ghost" data-ar="pvprematchno">Decline</button>';
+    } else if (mode === 'declined') {
+      host.innerHTML = '<div class="pvp-rm-declined">' + (reason === 'expired' ? 'Rematch offer expired.' : esc(_pvpOppShort()) + ' declined.') + '</div>' + _pvpRematchBtnsHtml();
+    } else { host.innerHTML = _pvpRematchBtnsHtml(); }
+  }
+  function _pvpRequestRematch() {
+    if (_pvpWasBot) { _pvpFindMatch(); return; }   // bots: instantly find a new match (no handshake)
+    _pvpRematchState = 'waiting';
+    try { _audCue('ui_tap'); } catch (_) {}
+    _pvpSetResultRematchUI('waiting');
+    Promise.resolve(PvP.rematch()).then(function (r) {
+      if (_arView !== 'pvp-result') return;
+      // started=true -> both already agreed; the match_start broadcast drives the transition.
+      if (!r || !r.ok) { _pvpRematchState = 'idle'; _pvpSetResultRematchUI('declined', null, 'declined'); }
+    }).catch(function () { if (_arView === 'pvp-result') { _pvpRematchState = 'idle'; _pvpSetResultRematchUI('idle'); } });
+  }
+  function _pvpDeclineRematch() {
+    try { PvP.rematchDecline(); } catch (_) {}
+    _pvpRematchState = 'idle';
+    _pvpSetResultRematchUI('idle');
+  }
+  function _pvpBeginRematch(view) {
+    // a rematch reset us into a fresh battle — clear all per-match client state.
+    _pvpStarted = false; _arSess = null;
+    _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle';
+    _pvpEnsureBattle(view);
+  }
+  // share CTA — reuses the boss-kill share-card pipeline via data-bk-source="pvp".
+  function _pvpShareCtaHtml() {
+    return '<button type="button" class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="pvp">' + _bksShareIconSvg() + 'Share this win</button>';
+  }
+  // streak-milestone moment: this win pushes the streak (pre-match _pvpStreak + 1) to 3/5/10/15...
+  function _pvpStreakMilestoneHtml(won) {
+    if (!won) return '';
+    const s = (_pvpStreak || 0) + 1;
+    if (s === 3 || s === 5 || s === 10 || (s > 10 && s % 5 === 0)) {
+      return '<div class="pvp-streak-moment">&#128293; ' + s + ' WIN STREAK</div>';
+    }
+    return '';
+  }
+
   // ── teardown / exit ──
   function _pvpTeardown(keepResult) {
     try { PvP.close(); } catch (_) {}
@@ -10778,6 +10857,8 @@
       _pvpCode = 'DEMOXY'; _pvpYou = opts.you || 'p';
       _pvpRating = { elo: 1490, tier: 'Bronze', wins: 3, losses: 2, draws: 0, rank: 42, placed: true };  // demo rank band
       _pvpPreElo = 1490;   // Bronze -> a demo win (1517) crosses into Silver = RANK UP moment
+      _pvpStreak = 2;      // a demo win pushes the streak to 3 = milestone moment
+      _pvpWasBot = (opts.bot === true);   // default human (REMATCH); opts.bot=true -> NEW MATCH
       let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = [{ id: 'slash', name: 'Slash', gl: 'sword', power: 1, acc: 0.95, cd: 0, desc: 'A clean cut.' }]; }
       const view = {
         type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: opts.ranked !== false, deadlineMs: Date.now() + 45000,
@@ -29486,6 +29567,44 @@
     }
   }
 
+  // W411 (S2) — share a ranked PvP win. Reuses the boss-kill card pipeline; the numbers
+  // (tier, ELO + delta, opponent) come from the server-broadcast result state.
+  function _pvpTierRank(tier) {
+    switch (tier) {
+      case 'Awakened': case 'Master': case 'Diamond': return 'S';
+      case 'Platinum': return 'A';
+      case 'Gold': return 'B';
+      case 'Silver': return 'C';
+      default: return 'D';
+    }
+  }
+  async function sharePvpResult() {
+    let d = null;
+    try {
+      let alias = 'Hunter';
+      try { const u = (typeof Auth !== 'undefined' && Auth.getCurrentUser) ? Auth.getCurrentUser() : null; if (u && u.alias) alias = u.alias; } catch (_) {}
+      const opp = (_pvpView && _pvpView.opp) || {};
+      const oppName = opp.alias || opp.name || (_pvpOpponentMeta && _pvpOpponentMeta.alias) || 'a rival';
+      const er = _pvpEndRating;
+      const tierName = (er && er.tier) || (_pvpRating && _pvpRating.tier) || 'Silver';
+      const elo = er ? er.elo : (_pvpRating && _pvpRating.elo);
+      const delta = (er && typeof er.delta === 'number') ? er.delta : null;
+      let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+      const feat = 'Bested ' + oppName + (delta != null && delta > 0 ? ' · +' + delta + ' ELO' : '') + (elo != null ? ' → ' + _pvpNum(elo) : '');
+      d = {
+        source: 'pvp', alias: alias, bossName: 'vs ' + oppName,
+        artPath: avatar || null, rankId: _pvpTierRank(tierName),
+        context: 'RANKED DUEL · ' + String(tierName).toUpperCase(),
+        feat: feat, killNo: 0, stamp: 'VICTORY',
+      };
+      const canvas = await _bksRenderCanvas(d, null);
+      await _bksShareCanvas(canvas, d);
+    } catch (_) {
+      try { await _bksShareText(d || { source: 'pvp' }); } catch (_) {}
+    }
+  }
+  try { window.__sharePvpResult = sharePvpResult; } catch (_) {}
+
   // One delegated, capture-phase listener for every [data-bkshare]
   // trigger (result/summit buttons, the defeated CTA, kill-log rows).
   function _bksSetupOnce() {
@@ -29513,6 +29632,8 @@
         const name = btn.getAttribute('data-boss-name') || '';
         const id = btn.getAttribute('data-boss-id') || '';
         Promise.resolve(shareAscentClear(floor, name, id)).then(release, release);
+      } else if (src === 'pvp') {
+        Promise.resolve(sharePvpResult()).then(release, release);
       } else {
         const id = btn.getAttribute('data-boss-id') || '';
         Promise.resolve(shareBossKill(id)).then(release, release);

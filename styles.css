@@ -30270,6 +30270,18 @@ button.guildhall-summary-tile:active {
 /* DRAW result word */
 .ar-result-word.draw { color: #7dd3fc; }
 
+/* Rematch UI on the result */
+#pvp-rematch { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.pvp-rm-wait { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; font-family: "JetBrains Mono", monospace; font-size: 12px; color: #9aa3e8; }
+.pvp-rm-wait .pvp-spinner { width: 20px; height: 20px; border-width: 2px; }
+.pvp-rm-offer { text-align: center; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px; color: #f5b842; padding: 6px 0 2px; animation: pvp-rc-pop 0.4s both; }
+.pvp-rm-declined { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; color: #9090a8; padding: 4px 0; }
+
+/* Streak-milestone moment */
+.pvp-streak-moment { text-align: center; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 13px; letter-spacing: 0.1em; color: #ff9d4d;
+  margin: 2px auto 8px; padding: 6px 16px; max-width: 280px; border-radius: 9px; background: rgba(255,157,77,0.1); border: 1px solid rgba(255,157,77,0.34);
+  animation: pvp-rc-pop 0.5s 0.1s both; }
+
 /* Rank-up / rank-down moment on the result */
 .pvp-rankchange { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 auto 8px; padding: 7px 16px; max-width: 280px; border-radius: 10px;
   background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent);
