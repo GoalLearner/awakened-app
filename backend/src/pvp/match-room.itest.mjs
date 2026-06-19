@@ -213,6 +213,40 @@ async function botMatchTest() {
   ok('human ELO moved vs the bot', after.elo !== beforeR.elo, { before: beforeR.elo, after: after.elo });
 }
 
+// ── 8. Bot match over WS — the live session HP (top-level pHP/bHP) must equal the
+//       viewBySlot REBUILD HP (me/opp) every turn. They diverge if the rebuild doesn't
+//       re-pick the bot move (rng drift). Regression for that determinism fix. ──
+async function botWsDeterminismTest() {
+  console.log('\n[8] Bot match over WS — live vs rebuild HP consistency');
+  const t = await mint('pvp-botws-1', 'BotWs');
+  const found = await api(t, 'POST', '/v1/pvp/find', { combatant: COMB_A });
+  if (!(found && found.code)) { ok('bot WS: find', false, found); return; }
+  const code = found.code;
+  await new Promise((resolve) => {
+    let ws; try { ws = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t); }
+    catch (e) { ok('bot WS (transport)', false, String(e)); return resolve(); }
+    let mismatches = 0, turns = 0, done = false;
+    const to = setTimeout(() => { if (!done) { ok('bot WS match resolved', false, { turns }); } try { ws.close(); } catch {} resolve(); }, 18000);
+    const maybeSubmit = (m) => { if (m.phase === 'active' && m.me && !m.youSubmitted && !m.done) { try { ws.send(JSON.stringify({ type: 'submit_move', turn: m.turn, moveId: firstMove(m.me) })); } catch {} } };
+    ws.addEventListener('message', (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === 'turn_result') {
+        turns++;
+        if (m.me && Math.abs((m.pHP || 0) - (m.me.hp || 0)) > 1e-6) mismatches++;
+        if (m.opp && Math.abs((m.bHP || 0) - (m.opp.hp || 0)) > 1e-6) mismatches++;
+      }
+      if (m.type === 'state' || m.type === 'turn_result') maybeSubmit(m);
+      if (m.type === 'match_end') {
+        done = true;
+        ok('bot WS match resolved with a winner', !!(m.result && m.result.winnerSide), m.result);
+        ok('live sess HP === rebuild HP every turn (no rng drift in bot replay)', mismatches === 0, { mismatches, turns });
+        clearTimeout(to); try { ws.close(); } catch {} resolve();
+      }
+    });
+    ws.addEventListener('error', () => { ok('bot WS (transport)', false); clearTimeout(to); resolve(); });
+  });
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -229,6 +263,7 @@ async function botMatchTest() {
   await reconnectTest();
   await rankedTest();
   await botMatchTest();
+  await botWsDeterminismTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

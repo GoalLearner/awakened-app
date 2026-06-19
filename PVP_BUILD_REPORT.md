@@ -1,12 +1,25 @@
-# PvP — Realtime Ranked Duels: Build Report (W404–W409)
+# PvP — Realtime Ranked Duels: Build Report (W404–W412, v3.0)
 
-**Status: BUILT, verified, and the backend is DEPLOYED LIVE.** The worker (with the
-`MatchRoom` Durable Object) and the D1 migration are in production. The client ships
-behind `PVP_ENABLED`; flipping it on + an iOS build is the last step. Server-authoritative,
-two real players on two different phones anywhere, over Durable Objects + WebSockets,
-with a **ranked ELO ladder**.
+**Status: BUILT, DEPLOYED LIVE, and ENABLED.** The worker (with the `MatchRoom` Durable
+Object) + D1 migration are in production; `PVP_ENABLED = true`; APP_VERSION `2.3.0`. The
+only remaining owner step is an iOS build (web is live on the next deploy).
+Server-authoritative, over Durable Objects + WebSockets, with a **ranked ELO ladder**,
+**instant Find-Match vs ELO-tuned AI bots**, a **pre-match VS screen**, **rank-up moments**,
+**match history**, and **win streaks**.
 
 Date: 2026-06-19 · Marketing version at launch: **2.3.0**
+
+## 0. v3.0 feature set (the "finest PvP" pass, W411–W412)
+- **Find Match** — one tap → instant ranked duel at your rating, backed by an ELO-matched
+  AI bot (PVP.md §11.1; the DO resolves the bot's moves with the shipped Ascent AI). Invite-
+  by-code stays the real-human path. A 10-bot roster (Bronze→Diamond) in `pvp/bots.ts`.
+- **Pre-match VS screen** — YOU vs OPPONENT, tier badge + ELO + weapon, slide-in, FIGHT +
+  auto-advance. For all match types.
+- **Rank-up / rank-down moment** — a tier-crossing flourish on the result.
+- **Match history** — recent duels (outcome, opponent, vs-bot, ranked, when) via
+  `GET /v1/pvp/history`; a History view off the Arena.
+- **Win streak** — derived from history; a 🔥 chip on the rank band + history header.
+- **Ranked ladder view** — top-N by ELO (`GET /v1/pvp/leaderboard`).
 
 ---
 

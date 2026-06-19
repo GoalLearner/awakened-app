@@ -1,6 +1,6 @@
 # PVP.md — Awakened v3 PvP Combat Design Spec
 
-**Status:** v1.2 — REALTIME RANKED PvP BUILT, VERIFIED, and **BACKEND DEPLOYED LIVE** (worker + DO + D1 migration in prod, June 19 2026). Ranked ELO ladder + draw shipped (W407/W408). Client gated by `PVP_ENABLED`; flip + iOS build is the last step. See §21.13 + `PVP_BUILD_REPORT.md`. §1–20 are the v1.0 design baseline. **§21 is the implementation truth** for realtime human PvP; where they conflict, §21 wins. §21 supersedes §1.7 (async/bots-first) and the §4–9 / §6 bespoke combat model — the shipped **Arena engine** (OSRS-style Melee/Magic/Ranged) is the combat (see §21.1).
+**Status:** v1.3 — REALTIME RANKED PvP **LIVE** (backend deployed, `PVP_ENABLED=true`, APP_VERSION 2.3.0, June 19 2026). Shipped: ranked ELO ladder + draw (W407/8), **Find Match vs ELO-tuned AI bots (§11.1, W411)**, pre-match VS screen, rank-up moments, match history, win streaks (W412). Invite-by-code = real-human path. Only an iOS build remains. See §21.13 + `PVP_BUILD_REPORT.md`. §1–20 are the v1.0 design baseline. **§21 is the implementation truth** for realtime human PvP; where they conflict, §21 wins. §21 supersedes §1.7 (async/bots-first) and the §4–9 / §6 bespoke combat model — the shipped **Arena engine** (OSRS-style Melee/Magic/Ranged) is the combat (see §21.1).
 **Last updated:** June 19, 2026 (§21 added)
 **Authored:** May 12, 2026 (v1.0); §21 June 19, 2026
 **Designer:** Richie (with Claude as design partner)

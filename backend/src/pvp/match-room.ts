@@ -109,9 +109,16 @@ export class MatchRoom {
     const a = buildCombatant(m.p1.combatant);
     const b = buildCombatant(m.p2.combatant);
     const sess = pvpStartBattle(a, b, m.seed);
+    const vsBot = this.isBot(m.p2);
     for (const h of m.moveHistory) {
       if (sess.done) break;
-      pvpResolveTurn(sess, h.p, h.b);
+      // vs-bot: RE-PICK the bot move on replay so the rebuilt session consumes the SAME
+      // rng the live pick did (pvpBotMove draws from sess.rng). Using the recorded h.b
+      // directly would skip the pick's draws -> the rng drifts out of lockstep with the
+      // live broadcast after turn 1 (HP would diverge between turn_result and /state).
+      // The re-pick is deterministic, so it reproduces the recorded move exactly.
+      const bMove = vsBot ? pvpBotMove(sess) : h.b;
+      pvpResolveTurn(sess, h.p, bMove);
     }
     return sess;
   }
