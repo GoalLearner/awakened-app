@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w420'; // W420 — invite-by-code duels are UNRANKED (friendly); only Find Match moves rating. Server-enforced anti-farm.
+  const APP_BUILD_TAG = '2.3.1-w421'; // W421 — "The Arena" ranked hub (ClaudeDesign): tier crest + climb-to-next-tier, form/streak, placement, Awakened peak, Find Match primary
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9906,6 +9906,7 @@
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
       else if (a === 'pvpfind')   { try { _pvpFindMatch(); } catch (_) {} }
+      else if (a === 'pvpfriend') { try { _pvpRenderLobby('friend'); } catch (_) {} }
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvprematch'){ try { _pvpRequestRematch(); } catch (_) {} }
       else if (a === 'pvprematchno'){ try { _pvpDeclineRematch(); } catch (_) {} }
@@ -10192,15 +10193,117 @@
     _pvpRenderLobby('home');
     _pvpFetchRating();   // paints into the rank band when it lands
   }
+  // ── W421 · "The Arena" ranked hub (ClaudeDesign handoff) — the pre-match home: tier
+  // crest + climb-to-next-tier, your standing, one clear FIND MATCH. Reuses the tier
+  // emblems + a season/placement frame. Placement is derived client-side from the ranked
+  // match count (rank hidden until placed); the season strip is minimal until the backend
+  // lands seasons.
+  let _pvpForm = [];   // recent ranked outcomes, newest-first (['win','loss',...]) for the form pips
+  const _PVP_TIER_PAL = {
+    bronze:   { c: '#b08d57', deep: '#6a4f27', rim: '#e9c089' },
+    silver:   { c: '#cbd5e1', deep: '#5b6675', rim: '#f4f8fc' },
+    gold:     { c: '#fbbf24', deep: '#8a5e06', rim: '#ffe39a' },
+    platinum: { c: '#7dd3fc', deep: '#2f6f97', rim: '#dff2ff' },
+    diamond:  { c: '#5eead4', deep: '#1c7d6d', rim: '#c5f7ee' },
+    master:   { c: '#c084fc', deep: '#5f2b9c', rim: '#ead0ff' },
+    awakened: { c: '#f5b842', deep: '#b9791a', rim: '#ffe9b0' },
+  };
+  const _PVP_TIER_BR = { bronze: [0, 1499], silver: [1500, 1699], gold: [1700, 1999], platinum: [2000, 2299], diamond: [2300, 2599], master: [2600, 2999], awakened: [3000, null] };
+  const _PVP_TIER_NEXT = { bronze: 'Silver', silver: 'Gold', gold: 'Platinum', platinum: 'Diamond', diamond: 'Master', master: 'Awakened' };
+  const _PVP_TIER_ORD = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6, awakened: 7 };
+  const PVP_PLACEMENT_MATCHES = 5;   // first N ranked matches = placement (rank hidden until placed)
+
+  function _pvpHubStatsHtml(r, firstVal, firstKey) {
+    const rec = _pvpNum(r.wins) + '&ndash;' + _pvpNum(r.losses) + (_pvpNum(r.draws) ? '&ndash;' + _pvpNum(r.draws) : '');
+    const ordered = (_pvpForm || []).slice(0, 5).reverse();   // oldest -> newest, left -> right
+    let pips = ordered.map(function (f) {
+      const c = f === 'win' ? 'w' : f === 'loss' ? 'l' : 'd';
+      return '<span class="pvp-hub-pip ' + c + '">' + (f === 'win' ? 'W' : f === 'loss' ? 'L' : 'D') + '</span>';
+    }).join('');
+    if (!pips) pips = '<span class="pvp-hub-pip none">&middot;</span>';
+    const formLbl = (_pvpStreak >= 2) ? '<span class="pvp-hub-streak"><span class="fl">&#9650;</span>' + _pvpStreak + ' Streak</span>' : 'Recent Form';
+    return '<div class="pvp-hub-stats">' +
+      '<div class="pvp-hub-stat"><div class="v">' + firstVal + '</div><div class="k">' + firstKey + '</div></div>' +
+      '<div class="pvp-hub-stat"><div class="v rec">' + rec + '</div><div class="k">Record</div></div>' +
+      '<div class="pvp-hub-stat"><div class="pvp-hub-pips">' + pips + '</div><div class="k">' + formLbl + '</div></div>' +
+      '</div>';
+  }
+  function _pvpHubActionsHtml() {
+    return '<div class="pvp-hub-actions">' +
+      '<button type="button" class="pvp-hub-find" data-ar="pvpfind"><span class="glint"></span>Find Match<small>Ranked Queue</small></button>' +
+      '<button type="button" class="pvp-hub-friend" data-ar="pvpfriend">' +
+        '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><rect x="1" y="3.5" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 6.5h2M3.5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+        'Duel a Friend &middot; share a code</button>' +
+      '<div class="pvp-hub-tertiary"><a data-ar="pvpladder">Ladder</a><span class="div"></span><a data-ar="pvphistory">Match History</a></div>' +
+      '</div>';
+  }
+  function _pvpHubHtml() {
+    const r = _pvpRating;
+    const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div></div>';
+    const season = '<div class="pvp-hub-season"><span class="live"></span><span class="s">Season 1</span></div>';
+    if (!r) {
+      return '<div class="pvp-hub">' + top + season +
+        '<div class="pvp-hub-loading"><div class="pvp-spinner"></div><span>Loading your standing&hellip;</span></div>' +
+        _pvpHubActionsHtml() + '</div>';
+    }
+    const total = _pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws);
+    const placed = total >= PVP_PLACEMENT_MATCHES;
+    const tier = _pvpTier(r.elo);
+    const key = String(tier.name).toLowerCase();
+    const pal = _PVP_TIER_PAL[key] || _PVP_TIER_PAL.silver;
+    const chrome = ' style="--tier:' + pal.c + ';--tier-deep:' + pal.deep + ';--tier-rim:' + pal.rim + '"';
+    let hero, mid;
+    if (!placed) {
+      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
+      const ordered = (_pvpForm || []).slice(0, PVP_PLACEMENT_MATCHES).reverse();
+      let slots = '';
+      for (let i = 0; i < PVP_PLACEMENT_MATCHES; i++) {
+        const f = ordered[i];
+        slots += '<span class="pvp-hub-pslot' + (f ? (f === 'loss' ? ' loss' : ' win') : '') + '"></span>';
+      }
+      hero = '<div class="pvp-hub-hero">' + _pvpTierEmblem(tier.name, 120, true) +
+        '<div class="pvp-hub-tier locked">Unranked</div><div class="pvp-hub-sub">Prove your standing</div></div>';
+      mid = '<div class="pvp-hub-place"><div class="pvp-hub-meter">' + slots + '</div>' +
+        '<div class="pvp-hub-place-label">Placement ' + played + ' / ' + PVP_PLACEMENT_MATCHES + '</div>' +
+        '<div class="pvp-hub-place-copy">Win your placements to earn a rank.<br>Your rank stays hidden until you\'re placed.</div></div>';
+    } else if (key === 'awakened') {
+      hero = '<div class="pvp-hub-hero">' + _pvpTierEmblem(tier.name, 120) +
+        '<div class="pvp-hub-tier">Awakened</div><div class="pvp-hub-sub">The apex &middot; Tier 7</div></div>';
+      mid = '<div class="pvp-hub-peak">' +
+        '<div class="box hi"><div class="v">' + _pvpNum(r.peakElo || r.elo).toLocaleString() + '</div><div class="k">Peak ELO</div></div>' +
+        '<div class="box"><div class="v ivory">' + (r.rank ? '#' + _pvpNum(r.rank) : '&mdash;') + '</div><div class="k">Global Rank</div></div></div>' +
+        _pvpHubStatsHtml(r, _pvpNum(r.elo).toLocaleString(), 'Current ELO');
+    } else {
+      const br = _PVP_TIER_BR[key], lo = br[0], hi = br[1];
+      const pct = Math.max(4, Math.min(100, ((r.elo - lo) / (hi - lo)) * 100));
+      const remain = hi + 1 - r.elo, next = _PVP_TIER_NEXT[key];
+      const promo = remain <= 25 || pct >= 90;
+      hero = '<div class="pvp-hub-hero">' + _pvpTierEmblem(tier.name, 120) +
+        '<div class="pvp-hub-tier">' + esc(tier.name) + '</div>' +
+        '<div class="pvp-hub-sub">Tier ' + (_PVP_TIER_ORD[key] || 1) + ' &middot; The Ascent</div></div>';
+      mid = '<div class="pvp-hub-elo">' +
+        '<div class="pvp-hub-elo-top"><span class="val">' + _pvpNum(r.elo).toLocaleString() + '<span class="u">ELO</span></span>' +
+          '<span class="next">' + remain + ' to <b>' + esc(next) + '</b></span></div>' +
+        '<div class="pvp-hub-track"><div class="pvp-hub-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+        '<div class="pvp-hub-bracket"><span>' + lo + '</span><span>' + (hi + 1) + ' &middot; ' + esc(next) + '</span></div>' +
+        (promo ? '<div class="pvp-hub-promo">&#9733; One win from ' + esc(next) + '</div>' : '') + '</div>' +
+        _pvpHubStatsHtml(r, r.rank ? '#' + _pvpNum(r.rank) : '&mdash;', 'Global');
+    }
+    return '<div class="pvp-hub"' + chrome + '><div class="pvp-hub-aura"></div>' +
+      top + season + hero + mid + _pvpHubActionsHtml() + '</div>';
+  }
   function _pvpRenderLobby(mode, x) {
     _arView = 'pvp-lobby';
     x = x || {};
-    let body;
+    // HOME = the full Arena hub (it owns its own chrome). Transient + friend sub-modes
+    // keep the simpler header + a back affordance.
+    if (!mode || mode === 'home') { _arSet(_pvpHubHtml()); return; }
+    let body, headK = 'RANKED PvP', headT = 'The Arena', headS = 'Real-time, server-judged.';
     if (mode === 'creating' || mode === 'joining' || mode === 'searching') {
       const wt = mode === 'creating' ? 'Opening the arena&hellip;' : mode === 'searching' ? 'Finding an opponent&hellip;' : 'Joining the duel&hellip;';
-      body = '<div class="pvp-wait"><div class="pvp-spinner"></div>' +
-        '<div class="pvp-wait-t">' + wt + '</div></div>';
+      body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">' + wt + '</div></div>';
     } else if (mode === 'hosting') {
+      headK = 'DUEL A FRIEND'; headT = 'Friendly Duel'; headS = '';
       const cc = esc(x.code || _pvpCode || '');
       body = '<div class="pvp-host">' +
         '<div class="pvp-host-k">SHARE THIS CODE</div>' +
@@ -10208,35 +10311,29 @@
         '<button type="button" class="pvp-copy" data-ar="pvpcopy">Copy code</button>' +
         '<div class="pvp-wait pvp-wait--inline"><div class="pvp-spinner"></div>' +
         '<div class="pvp-wait-t">Waiting for your challenger to join…</div></div></div>';
-    } else {
+    } else { // 'friend' — create or enter a code (friendly, unranked)
+      headK = 'DUEL A FRIEND'; headT = 'Friendly Duel'; headS = '';
       const err = x.err ? '<div class="pvp-err">' + esc(x.err) + '</div>' : '';
       body = '<div class="pvp-home">' +
-        '<button type="button" class="pvp-big" data-ar="pvpfind">' +
-          '<span class="pvp-big-t">Find Match</span>' +
-          '<span class="pvp-big-s">Instant ranked duel at your rating</span></button>' +
         '<button type="button" class="pvp-mid" data-ar="pvpcreate">' +
-          '<span class="pvp-mid-t">Duel a friend</span><span class="pvp-mid-s">Create a shareable code</span></button>' +
+          '<span class="pvp-mid-t">Create a code</span><span class="pvp-mid-s">Share it — first to join is your challenger</span></button>' +
         '<div class="pvp-or"><span></span>OR ENTER A CODE<span></span></div>' +
         '<div class="pvp-join">' +
           '<input id="pvp-code-input" class="pvp-code-input" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ENTER CODE" />' +
           '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
         '</div>' + err +
-        '<div class="pvp-links">' +
-          '<button type="button" class="pvp-ladder-link" data-ar="pvpladder">Ladder &rsaquo;</button>' +
-          '<button type="button" class="pvp-ladder-link" data-ar="pvphistory">History &rsaquo;</button>' +
-        '</div>' +
+        '<div class="pvp-friendly-hint">Friendly duels are for bragging rights &mdash; rating only moves in Find Match.</div>' +
         '</div>';
     }
-    const showBand = mode !== 'creating' && mode !== 'joining';
+    const backToArena = (mode === 'hosting' || mode === 'friend');
     _arSet(
       '<div class="pvp-lobby">' +
-        '<div class="pvp-lobby-head"><span class="k"><i></i>RANKED PvP<i></i></span>' +
-          '<div class="pvp-lobby-title">The Arena</div>' +
-          '<div class="pvp-lobby-sub">Real-time, server-judged. Every duel moves your rating.</div></div>' +
-        (showBand ? _pvpRankBandHtml() : '') +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>' + headK + '<i></i></span>' +
+          '<div class="pvp-lobby-title">' + headT + '</div>' +
+          (headS ? '<div class="pvp-lobby-sub">' + headS + '</div>' : '') + '</div>' +
         body +
         '<div class="ar-spacer"></div>' +
-        '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>' +
+        '<button class="ar-ghost" data-ar="' + (backToArena ? 'pvplobby' : 'tower') + '">&lsaquo; ' + (backToArena ? 'Back to the Arena' : 'Back to the Tower') + '</button>' +
       '</div>'
     );
   }
@@ -10256,19 +10353,20 @@
       (placed && r.rank ? '<div class="pvp-rb-rank"><b>#' + _pvpNum(r.rank) + '</b><i>GLOBAL</i></div>' : '') +
       '</div>';
   }
+  function _pvpRepaintHub() { if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-hub'); if (el) el.outerHTML = _pvpHubHtml(); } }
   function _pvpFetchRating() {
     if (!(window.PvP && PvP.rating)) return;
     Promise.resolve(PvP.rating()).then(function (res) {
-      if (res && typeof res.elo === 'number') {
-        _pvpRating = res;
-        if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); }
-      }
+      if (res && typeof res.elo === 'number') { _pvpRating = res; _pvpRepaintHub(); }
     }).catch(function () {});
-    // also derive the current win streak from recent history (shown on the band)
+    // recent history -> current win streak + the last-5 form pips on the hub
     if (window.PvP && PvP.history) {
       Promise.resolve(PvP.history(12)).then(function (h) {
-        if (h && h.items) { _pvpStreak = _pvpDeriveStreak(h.items);
-          if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); } }
+        if (h && h.items) {
+          _pvpStreak = _pvpDeriveStreak(h.items);
+          _pvpForm = h.items.map(function (it) { return it.outcome; });   // newest-first
+          _pvpRepaintHub();
+        }
       }).catch(function () {});
     }
   }
@@ -10963,12 +11061,20 @@
     // YOUR RANK band can be previewed without the live backend.
     window.__pvpLobby = function (opts) {
       opts = opts || {};
-      _pvpRating = opts.unplaced
-        ? { elo: 1500, tier: 'Silver', wins: 0, losses: 0, draws: 0, rank: null, placed: false }
-        : { elo: 1742, tier: 'Gold', wins: 12, losses: 7, draws: 1, rank: 8, placed: true };
+      const st = (typeof opts === 'string') ? opts : (opts.state || 'placed');
+      const presets = {
+        placed:    { elo: 1631, wins: 18, losses: 11, draws: 2, rank: 42 },
+        placement: { elo: 1500, wins: 2, losses: 0, draws: 0, rank: null },
+        promo:     { elo: 1688, wins: 21, losses: 11, draws: 2, rank: 31 },
+        awakened:  { elo: 3180, peakElo: 3284, wins: 63, losses: 20, draws: 4, rank: 3 },
+      };
+      _pvpRating = Object.assign({ tier: '', placed: true }, presets[st] || presets.placed);
+      _pvpStreak = (opts.streak != null) ? opts.streak : (st === 'awakened' ? 3 : 4);
+      _pvpForm = opts.form || ['win', 'win', 'loss', 'win', 'win'];
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
-      _pvpOpenLobby();
-      return 'lobby opened (sample rank)';
+      _arBodyMode(false); _arView = 'pvp-lobby';
+      _pvpRenderLobby('home');   // render the hub directly (skip the live fetch that would clobber the preset)
+      return 'hub: ' + st + ' — states: placed | placement | promo | awakened';
     };
     // preview the populated ranked ladder with sample rows (the live view fetches
     // /v1/pvp/leaderboard).

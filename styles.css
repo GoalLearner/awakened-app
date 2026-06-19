@@ -30193,6 +30193,76 @@ button.guildhall-summary-tile:active {
 .pvp-tower-cta .pvp-tower-go { flex: none; font-size: 22px; color: #7c8aff; opacity: 0.8; }
 
 /* Lobby */
+/* ── W421 · "The Arena" ranked hub (ClaudeDesign handoff) — the pre-match home.
+   --tier/--tier-deep/--tier-rim are set inline per render; no color-mix (iOS 14 floor). */
+.pvp-hub { position: relative; display: flex; flex-direction: column; min-height: 100%; padding: 2px 4px 4px; --tier: #cbd5e1; --tier-deep: #5b6675; --tier-rim: #f4f8fc; }
+.pvp-hub-aura { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); width: 320px; height: 320px; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0.16; background: radial-gradient(circle, var(--tier), transparent 62%); }
+.pvp-hub > *:not(.pvp-hub-aura) { position: relative; z-index: 1; }
+.pvp-hub-top { display: flex; align-items: center; }
+.pvp-hub-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; letter-spacing: 2px; color: #f5f3fb; }
+.pvp-hub-name span { color: #f5b842; }
+.pvp-hub-season { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; height: 28px; border-radius: 9px; background: #101019; border: 1px solid rgba(255,255,255,0.07); font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; color: #8a8aa2; text-transform: uppercase; }
+.pvp-hub-season .s { color: #f5f3fb; }
+.pvp-hub-season .live { width: 6px; height: 6px; border-radius: 50%; background: #f5b842; box-shadow: 0 0 8px #f5b842; animation: pvpHubPulse 2.4s ease-in-out infinite; }
+@keyframes pvpHubPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.pvp-hub-hero { display: flex; flex-direction: column; align-items: center; margin-top: 12px; }
+.pvp-hub-hero .pvp-emblem { filter: drop-shadow(0 8px 22px rgba(0,0,0,0.5)); }
+.pvp-hub-hero .pvp-emblem--awk { animation: pvpHubIgnite 3.8s ease-in-out infinite; }
+@keyframes pvpHubIgnite { 0%,100% { filter: drop-shadow(0 0 8px rgba(245,184,66,0.45)) brightness(1); } 50% { filter: drop-shadow(0 0 22px rgba(245,184,66,0.85)) brightness(1.18); } }
+.pvp-hub-tier { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 26px; letter-spacing: 2px; margin-top: 6px; color: var(--tier); text-shadow: 0 0 20px var(--tier); }
+.pvp-hub-tier.locked { color: #8a8aa2; text-shadow: none; }
+.pvp-hub-sub { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.24em; color: #54546c; text-transform: uppercase; margin-top: 5px; }
+.pvp-hub-elo { margin-top: 16px; }
+.pvp-hub-elo-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.pvp-hub-elo-top .val { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 19px; color: #f5f3fb; }
+.pvp-hub-elo-top .val .u { font-size: 9px; color: #8a8aa2; font-weight: 700; letter-spacing: 0.12em; margin-left: 4px; }
+.pvp-hub-elo-top .next { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; color: #8a8aa2; text-transform: uppercase; }
+.pvp-hub-elo-top .next b { color: var(--tier); }
+.pvp-hub-track { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.05); overflow: hidden; position: relative; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); }
+.pvp-hub-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--tier-deep), var(--tier)); box-shadow: 0 0 12px var(--tier); position: relative; }
+.pvp-hub-fill::after { content: ""; position: absolute; top: 0; right: 0; width: 12px; height: 100%; background: linear-gradient(90deg, transparent, var(--tier-rim)); opacity: 0.7; }
+.pvp-hub-bracket { display: flex; justify-content: space-between; margin-top: 6px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; color: #54546c; text-transform: uppercase; }
+.pvp-hub-promo { margin-top: 9px; display: flex; align-items: center; justify-content: center; gap: 7px; height: 30px; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #f5b842; background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.25); border-radius: 8px; animation: pvpHubPromo 2.2s ease-in-out infinite; }
+@keyframes pvpHubPromo { 0%,100% { box-shadow: 0 0 0 rgba(245,184,66,0); } 50% { box-shadow: 0 0 16px rgba(245,184,66,0.25); } }
+.pvp-hub-place { margin-top: 18px; text-align: center; }
+.pvp-hub-meter { display: flex; gap: 7px; justify-content: center; margin-bottom: 12px; }
+.pvp-hub-pslot { width: 38px; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
+.pvp-hub-pslot.win { background: linear-gradient(90deg, var(--tier-deep), var(--tier)); box-shadow: 0 0 8px var(--tier); }
+.pvp-hub-pslot.loss { background: #14141f; box-shadow: inset 0 0 0 1px rgba(240,96,122,0.4); }
+.pvp-hub-place-label { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; color: #f5f3fb; text-transform: uppercase; }
+.pvp-hub-place-copy { font-size: 11px; color: #8a8aa2; margin-top: 8px; line-height: 1.5; }
+.pvp-hub-stats { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.pvp-hub-stat { background: #101019; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 11px 6px; text-align: center; }
+.pvp-hub-stat .v { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #f5f3fb; }
+.pvp-hub-stat .v.rec { font-size: 13px; }
+.pvp-hub-stat .k { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.14em; color: #54546c; text-transform: uppercase; margin-top: 5px; }
+.pvp-hub-pips { display: flex; gap: 4px; justify-content: center; align-items: center; min-height: 13px; }
+.pvp-hub-pip { width: 13px; height: 13px; border-radius: 4px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #0a0a12; }
+.pvp-hub-pip.w { background: #5eead4; } .pvp-hub-pip.l { background: #f0607a; } .pvp-hub-pip.d { background: #8a8aa2; }
+.pvp-hub-pip.none { background: transparent; color: #54546c; }
+.pvp-hub-streak { display: inline-flex; align-items: center; gap: 3px; color: #f5f3fb; }
+.pvp-hub-streak .fl { color: #f5b842; font-size: 8px; }
+.pvp-hub-peak { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pvp-hub-peak .box { background: #101019; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 15px 12px; text-align: center; }
+.pvp-hub-peak .box.hi { border-color: rgba(245,184,66,0.3); background: linear-gradient(170deg, rgba(245,184,66,0.07), #101019); }
+.pvp-hub-peak .v { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 23px; color: #f5b842; }
+.pvp-hub-peak .v.ivory { color: #f5f3fb; }
+.pvp-hub-peak .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em; color: #54546c; text-transform: uppercase; margin-top: 5px; }
+.pvp-hub-actions { margin-top: auto; padding-top: 16px; }
+.pvp-hub-find { width: 100%; height: 60px; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: #1a1205; background: linear-gradient(180deg, #ffd574, #f5b842 55%, #d8951f); box-shadow: 0 10px 30px rgba(245,184,66,0.32), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -3px 8px rgba(120,70,0,0.35); }
+.pvp-hub-find:active { transform: translateY(1px); }
+.pvp-hub-find small { display: block; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.2em; color: rgba(26,18,5,0.7); margin-top: 2px; }
+.pvp-hub-find .glint { position: absolute; top: 0; left: -40%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); transform: skewX(-20deg); animation: pvpHubGlint 3.4s ease-in-out infinite; }
+@keyframes pvpHubGlint { 0%,60% { left: -40%; } 80%,100% { left: 130%; } }
+.pvp-hub-friend { width: 100%; height: 44px; margin-top: 11px; border-radius: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #f5f3fb; background: #101019; border: 1px solid rgba(255,255,255,0.07); }
+.pvp-hub-friend svg { opacity: 0.7; }
+.pvp-hub-tertiary { display: flex; align-items: center; justify-content: center; margin-top: 14px; }
+.pvp-hub-tertiary a { flex: 1; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8aa2; cursor: pointer; }
+.pvp-hub-tertiary .div { width: 1px; height: 12px; background: rgba(255,255,255,0.07); }
+.pvp-hub-loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #8a8aa2; font-family: "JetBrains Mono", monospace; font-size: 11px; }
+.pvp-friendly-hint { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; line-height: 1.5; color: #6b6b86; margin-top: 14px; padding: 0 10px; }
+@media (prefers-reduced-motion: reduce) { .pvp-hub-find .glint, .pvp-hub-promo, .pvp-hub-season .live { animation: none !important; } }
+
 .pvp-lobby { display: flex; flex-direction: column; min-height: 100%; padding: 8px 4px 4px; }
 .pvp-lobby-head { text-align: center; padding: 18px 12px 16px; }
 .pvp-lobby-head .k { display: inline-flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.22em; color: #7c8aff; }
