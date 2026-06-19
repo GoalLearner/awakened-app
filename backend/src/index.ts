@@ -75,6 +75,8 @@ import {
   handlePvpJoin,
   handlePvpSubmit,
   handlePvpForfeit,
+  handlePvpRematch,
+  handlePvpRematchDecline,
   handlePvpState,
   handlePvpRating,
   handlePvpLeaderboard,
@@ -309,6 +311,10 @@ export default {
             response = await handlePvpSubmit(request, env, session);
           } else if (path === '/v1/pvp/forfeit' && method === 'POST') {
             response = await handlePvpForfeit(request, env, session);
+          } else if (path === '/v1/pvp/rematch' && method === 'POST') {
+            response = await handlePvpRematch(request, env, session);
+          } else if (path === '/v1/pvp/rematch/decline' && method === 'POST') {
+            response = await handlePvpRematchDecline(request, env, session);
           } else if (path === '/v1/pvp/state' && method === 'GET') {
             response = await handlePvpState(request, env, session);
           } else if (path === '/v1/pvp/rating' && method === 'GET') {

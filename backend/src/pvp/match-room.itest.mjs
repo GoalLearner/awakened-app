@@ -247,6 +247,69 @@ async function botWsDeterminismTest() {
   });
 }
 
+const openWs = (ws) => new Promise((res, rej) => { const to = setTimeout(() => rej(new Error('open timeout')), 8000); ws.addEventListener('open', () => { clearTimeout(to); res(); }); ws.addEventListener('error', () => { clearTimeout(to); rej(new Error('ws error')); }); });
+
+// ── 9. Rematch (human): play -> end -> p1 offers -> p2 accepts -> fresh active match. ──
+async function rematchTest() {
+  console.log('\n[9] Rematch (human) — offer -> accept -> fresh match');
+  const t1 = await mint('pvp-rm-1', 'RmA'), t2 = await mint('pvp-rm-2', 'RmB');
+  const created = await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true });
+  const code = created.code;
+  await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
+  let guard = 0, ended = false;
+  while (guard++ < 80) {
+    const s1 = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+    if (!s1) break;
+    if (s1.phase === 'ended') { ended = true; break; }
+    const s2 = (await api(t2, 'GET', '/v1/pvp/state?code=' + code)).state;
+    await api(t1, 'POST', '/v1/pvp/submit', { code, turn: s1.turn, moveId: firstMove(s1.me) });
+    await api(t2, 'POST', '/v1/pvp/submit', { code, turn: s2.turn, moveId: firstMove(s2.me) });
+    await sleep(18);
+  }
+  ok('first match ended', ended);
+  try {
+    const ws1 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t1);
+    const ws2 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t2);
+    let offer = false, p1Start = false, p2Start = false;
+    ws2.addEventListener('message', (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } if (m.type === 'rematch_offer') offer = true; if (m.type === 'match_start' && m.phase === 'active' && m.turn === 1) p2Start = true; });
+    ws1.addEventListener('message', (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } if (m.type === 'match_start' && m.phase === 'active' && m.turn === 1) p1Start = true; });
+    await Promise.all([openWs(ws1), openWs(ws2)]);
+    await sleep(200);
+    await api(t1, 'POST', '/v1/pvp/rematch', { code });
+    await sleep(450);
+    ok('opponent receives a rematch_offer', offer);
+    const acc = await api(t2, 'POST', '/v1/pvp/rematch', { code });
+    await sleep(500);
+    ok('mutual rematch resets into a fresh active match', !!(acc.ok && acc.started), acc);
+    ok('both clients get the fresh match_start (turn 1, active)', p1Start && p2Start, { p1Start, p2Start });
+    const ns = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+    ok('rematch match is active, turn 1, no result', !!(ns && ns.phase === 'active' && ns.turn === 1 && !ns.result), ns && { phase: ns.phase, turn: ns.turn });
+    try { ws1.close(); ws2.close(); } catch {}
+  } catch (e) { ok('rematch (transport)', false, String(e && e.message)); }
+}
+
+// ── 10. Rematch decline: p1 offers, p2 declines -> requester sees rematch_declined. ──
+async function rematchDeclineTest() {
+  console.log('\n[10] Rematch decline');
+  const t1 = await mint('pvp-rmd-1', 'A'), t2 = await mint('pvp-rmd-2', 'B');
+  const code = (await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true })).code;
+  await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
+  await api(t1, 'POST', '/v1/pvp/forfeit', { code });   // end fast
+  try {
+    const ws1 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t1);
+    let declined = false;
+    ws1.addEventListener('message', (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } if (m.type === 'rematch_declined') declined = true; });
+    await openWs(ws1);
+    await sleep(150);
+    await api(t1, 'POST', '/v1/pvp/rematch', { code });
+    await sleep(200);
+    await api(t2, 'POST', '/v1/pvp/rematch/decline', { code });
+    await sleep(400);
+    ok('requester sees rematch_declined', declined);
+    try { ws1.close(); } catch {}
+  } catch (e) { ok('rematch decline (transport)', false, String(e && e.message)); }
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -264,6 +327,8 @@ async function botWsDeterminismTest() {
   await rankedTest();
   await botMatchTest();
   await botWsDeterminismTest();
+  await rematchTest();
+  await rematchDeclineTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

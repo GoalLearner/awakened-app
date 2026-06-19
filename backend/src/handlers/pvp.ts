@@ -95,6 +95,26 @@ export async function handlePvpForfeit(request: Request, env: Env, session: Sess
   return forwardToDo(env, code, 'forfeit', session.userId, session.alias, {});
 }
 
+// POST /v1/pvp/rematch { code } — request/accept a rematch on an ended human match.
+export async function handlePvpRematch(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  let body: any = {};
+  try { body = await request.json(); } catch { /* */ }
+  const code = String(body.code || '').toUpperCase();
+  if (!code) return jsonError(400, 'NO_CODE', 'code required');
+  return forwardToDo(env, code, 'rematch', session.userId, session.alias, {});
+}
+
+// POST /v1/pvp/rematch/decline { code } — decline an outstanding rematch offer.
+export async function handlePvpRematchDecline(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  let body: any = {};
+  try { body = await request.json(); } catch { /* */ }
+  const code = String(body.code || '').toUpperCase();
+  if (!code) return jsonError(400, 'NO_CODE', 'code required');
+  return forwardToDo(env, code, 'rematchNo', session.userId, session.alias, {});
+}
+
 // GET /v1/pvp/state?code=XXX
 export async function handlePvpState(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const code = String(new URL(request.url).searchParams.get('code') || '').toUpperCase();

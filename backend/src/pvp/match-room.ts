@@ -27,12 +27,14 @@ import { eloTier, kFactor } from './elo';
 const TURN_DEADLINE_MS = 45_000;      // a player has 45s to submit each turn
 const DISCONNECT_GRACE_MS = 120_000;  // sustained disconnect past this -> forfeit
 const MAX_STAT = 200;                 // anti-cheat sanity bound per stat
+const REMATCH_OFFER_MS = 25_000;      // a rematch offer expires if unanswered in 25s
 
 type Slot = 'p' | 'b';
 interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; }
 interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; elo?: number; }
 interface MatchState {
   code: string;
+  matchId: string;                    // unique D1 id per match; regenerated on a rematch reset (code is reused for routing)
   ranked: boolean;
   phase: 'lobby' | 'active' | 'ended';
   seed: number;
@@ -51,6 +53,16 @@ interface MatchState {
   // per-slot ranked rating outcome (filled by updateElo on a ranked match end), so
   // each client's match_end can show its own delta + new rating + tier.
   ratingResult?: { p: { delta: number; elo: number }; b: { delta: number; elo: number } } | null;
+  // rematch handshake (only between two humans, only while phase==='ended'): which side
+  // has requested + when an outstanding offer expires.
+  rematch?: { p?: boolean; b?: boolean; offerExpiresMs?: number | null };
+}
+
+function genMatchId(): string {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  let s = '';
+  for (let i = 0; i < 16; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
 }
 
 function sanitizeCombatant(raw: any): RawCombatant {
@@ -140,6 +152,8 @@ export class MatchRoom {
       case 'state':      return json(await this.doState(userId));
       case 'submit':     return json(await this.doSubmit(userId, body));
       case 'forfeit':    return json(await this.doForfeit(userId));
+      case 'rematch':    return json(await this.doRematch(userId));
+      case 'rematchNo':  return json(await this.doRematchDecline(userId));
       default:           return json({ ok: false, code: 'BAD_ACTION' }, 400);
     }
   }
@@ -152,6 +166,7 @@ export class MatchRoom {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
     m = {
       code: String(body.code || ''),
+      matchId: genMatchId(),
       ranked: !!body.ranked,
       phase: 'lobby', seed,
       p1: { userId, alias, combatant: sanitizeCombatant(body.combatant), elo },
@@ -176,6 +191,7 @@ export class MatchRoom {
     const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
     const nm: MatchState = {
       code: String(body.code || ''),
+      matchId: genMatchId(),
       ranked: true,
       phase: 'active', seed,
       p1: { userId, alias, combatant: sanitizeCombatant(body.combatant), elo },
@@ -263,6 +279,56 @@ export class MatchRoom {
     return { ok: true, state: this.view(m, userId) };
   }
 
+  // ── rematch (human-vs-human only) ──
+  // A player requests a rematch on an ENDED match. When BOTH have requested, the same DO
+  // RESETS into a fresh battle (new matchId + seed, cleared history). A lone request sends
+  // the opponent a rematch_offer that expires via the alarm if unanswered.
+  async doRematch(userId: string): Promise<any> {
+    const m = await this.load();
+    if (!m) return { ok: false, code: 'NO_MATCH' };
+    const slot = this.slotFor(m, userId);
+    if (!slot) return { ok: false, code: 'NOT_PARTICIPANT' };
+    if (m.phase !== 'ended') return { ok: false, code: 'NOT_ENDED' };
+    if (this.isBot(m.p2)) return { ok: false, code: 'BOT_REMATCH' };   // bots: the client re-runs Find Match
+    m.rematch = m.rematch || {};
+    m.rematch[slot] = true;
+    if (m.rematch.p && m.rematch.b) {
+      this.resetForRematch(m);
+      await this.save(m);
+      await this.persistStart(m);   // a NEW D1 row (new matchId) -> a separate history entry
+      this.broadcastStart(m);
+      return { ok: true, started: true, state: this.view(m, userId) };
+    }
+    m.rematch.offerExpiresMs = Date.now() + REMATCH_OFFER_MS;
+    this.state.storage.setAlarm(m.rematch.offerExpiresMs);
+    await this.save(m);
+    const fromAlias = (slot === 'p' ? m.p1 : m.p2)!.alias;
+    this.sendToSlot(m, slot === 'p' ? 'b' : 'p', { type: 'rematch_offer', from: fromAlias });
+    return { ok: true, pending: true, state: this.view(m, userId) };
+  }
+  async doRematchDecline(userId: string): Promise<any> {
+    const m = await this.load();
+    if (!m) return { ok: false, code: 'NO_MATCH' };
+    if (!this.slotFor(m, userId)) return { ok: false, code: 'NOT_PARTICIPANT' };
+    if (m.phase !== 'ended' || !m.rematch || !(m.rematch.p || m.rematch.b)) return { ok: true };
+    m.rematch = {};
+    this.state.storage.deleteAlarm();
+    await this.save(m);
+    this.broadcastBoth(m, () => ({ type: 'rematch_declined', reason: 'declined' }));
+    return { ok: true };
+  }
+  resetForRematch(m: MatchState): void {
+    m.matchId = genMatchId();
+    m.seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+    m.phase = 'active';
+    m.turn = 1; m.moveHistory = []; m.pending = {};
+    m.result = null; m.persisted = false; m.ratingResult = null;
+    m.rematch = {};
+    m.startedAtMs = Date.now();
+    this.state.storage.deleteAlarm();
+    this.armDeadline(m);
+  }
+
   // ── turn resolution ──
   async resolveIfReady(m: MatchState, sess: any): Promise<void> {
     // vs-bot: the moment the human has submitted, the server picks the bot's move via
@@ -307,7 +373,17 @@ export class MatchRoom {
 
   async alarm(): Promise<void> {
     const m = await this.load();
-    if (!m || m.phase !== 'active') return;
+    if (!m) return;
+    // rematch-offer expiry (the match is 'ended' while an offer is outstanding).
+    if (m.phase === 'ended') {
+      if (m.rematch && m.rematch.offerExpiresMs && Date.now() >= m.rematch.offerExpiresMs - 500) {
+        m.rematch = {};
+        await this.save(m);
+        this.broadcastBoth(m, () => ({ type: 'rematch_declined', reason: 'expired' }));
+      }
+      return;
+    }
+    if (m.phase !== 'active') return;
     const now = Date.now();
     // disconnect forfeit: if a player has been gone past the grace window, the
     // present player wins.
@@ -482,7 +558,7 @@ export class MatchRoom {
            (id, code, p1_user_id, p2_user_id, p1_alias, p2_alias, p1_combatant_json, p2_combatant_json, ranked, status, started_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       ).bind(
-        m.code, m.code, m.p1!.userId, m.p2!.userId, m.p1!.alias, m.p2!.alias,
+        m.matchId, m.code, m.p1!.userId, m.p2!.userId, m.p1!.alias, m.p2!.alias,
         JSON.stringify(m.p1!.combatant), JSON.stringify(m.p2!.combatant),
         m.ranked ? 1 : 0, new Date(m.startedAtMs || Date.now()).toISOString(),
       ).run();
@@ -499,7 +575,7 @@ export class MatchRoom {
         : result.winnerSide === 'p' ? 'p1_win' : 'p2_win';
       await this.env.DB.prepare(
         `UPDATE pvp_matches SET status='ended', result=?, winner_user_id=?, turns=?, ended_at=? WHERE id=?`,
-      ).bind(resStr, result ? result.winnerUserId : null, m.moveHistory.length, new Date().toISOString(), m.code).run();
+      ).bind(resStr, result ? result.winnerUserId : null, m.moveHistory.length, new Date().toISOString(), m.matchId).run();
     } catch { /* best-effort */ }
     // ranked rating update (PVP.md §11.3) — runs for win/loss AND draw. Stashes the
     // per-slot delta + new rating on m so broadcastEnd can show each player their own
@@ -515,6 +591,8 @@ export class MatchRoom {
         } else {
           m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias);
         }
+        // carry the post-match ELO into the seats so a REMATCH shows the up-to-date ratings.
+        if (m.ratingResult && m.p1 && m.p2) { m.p1.elo = m.ratingResult.p.elo; m.p2.elo = m.ratingResult.b.elo; }
         await this.save(m);
       } catch { /* best-effort — never block the match end */ }
     }
