@@ -1,10 +1,12 @@
-# PvP — Realtime Duels: Build Report (W404/W405)
+# PvP — Realtime Ranked Duels: Build Report (W404–W409)
 
-**Status: BUILT, verified, and shipping DORMANT behind a flag. Ready to go live the
-moment the backend is deployed.** Server-authoritative, two real players on two
-different phones anywhere in the world, over Durable Objects + WebSockets.
+**Status: BUILT, verified, and the backend is DEPLOYED LIVE.** The worker (with the
+`MatchRoom` Durable Object) and the D1 migration are in production. The client ships
+behind `PVP_ENABLED`; flipping it on + an iOS build is the last step. Server-authoritative,
+two real players on two different phones anywhere, over Durable Objects + WebSockets,
+with a **ranked ELO ladder**.
 
-Date: 2026-06-19 · Marketing target version when enabled: **2.3.0**
+Date: 2026-06-19 · Marketing version at launch: **2.3.0**
 
 ---
 
@@ -26,8 +28,14 @@ server and proven byte-identical, never re-derived.
 - **Turn model:** simultaneous move selection, server-ordered resolution (the shipped
   priority/edge rules), **45 s turn timer** with auto-resolve on timeout, **reconnect**
   (deterministic replay), and **disconnect/forfeit** resolution (120 s grace).
-- **Economy hooks:** ranked ELO (K=32/24/16/12 by bracket) + a durable D1 match record.
-  Invite duels are unranked in v1.
+- **Ranked ELO ladder (W407/W408):** duels are **ranked by default** — every completed
+  match moves both players' rating (win = +K·(1−E), loss symmetric, **draw = 0.5**),
+  K=32/24/16/12 by bracket (PVP.md §11.3). 7 tiers Bronze→Awakened (§12.2). The Arena
+  lobby shows your tier + ELO + W/L/D + global rank; the result shows the +/- MMR delta.
+  `GET /v1/pvp/rating` (own) and `GET /v1/pvp/leaderboard` (top-N) back it; ratings live
+  in D1 `pvp_ratings`.
+- **Draw (§18.6):** mutual KO (both fall the same turn) and an exact turn-cap tie resolve
+  to a DRAW — detected in `pvpResult` only, so the shared engine stays byte-identical.
 
 ### The hard problem, solved
 Running the **same** combat math server-side without forking it. Approach: lift the
@@ -74,57 +82,74 @@ and **prove parity** — identical combatant + seed + move sequence yields byte-
 | `Arena.selfTest()` (shipped combat engine untouched) | **37 / 37 pass** |
 | `combat-core.smoke.mjs` | 12 / 12 |
 | `combat-core.parity.mjs` (client↔server) | 3 / 3 byte-identical |
-| `match-room.itest.mjs` (HTTP match, WS match, forfeit, turn-timeout) | **9 / 9** |
+| `combat-core.draw.mjs` (mutual-KO + cap-tie draw logic) | **9 / 9** |
+| `combat-core.pvp-attune.mjs` (P2 bAttuned human-foe path) | **6 / 6** |
+| `match-room.itest.mjs` (HTTP, WS, forfeit, timeout, reconnect, **ranked MMR**) | **19 / 19** |
 | Backend `tsc --noEmit` (non-test) | 0 errors |
-| Client duel flow in web preview (lobby → battle → turn drain → KO → result) | clean, 0 console errors |
+| **Deployed worker smoke** (prod): `/health` 200; PvP routes 401-gated; WS rejects bad token | pass |
+| Client flow in preview (lobby rank band, win/loss/**draw**, MMR delta) | clean, 0 console errors |
 
 The integration test drives full matches against the live `MatchRoom` DO under
 `wrangler dev`: create → join → poll/submit → KO over **HTTP**; two WebSocket clients
-auto-play and **both receive `match_end` and agree on the winner**; forfeit; and a
-silent side triggering the turn-timeout alarm. The client rendering seam (synthetic
-session → the shipped `_pkbPlay` → KO → result, **without** firing the Ascent
-`arenaFinalizeBattle`) was verified visually in the preview via `__pvpDemo()`.
+auto-play and **both receive `match_end` and agree on the winner**; forfeit; turn-timeout;
+a disconnect→reconnect that proves the turn deadline still fires on schedule; and a
+**ranked match** asserting symmetric MMR movement + the match_end rating delta against a
+real (local) D1. The `bAttuned` test covers the one PvP generalization the Ascent parity
+could not: a real weapon-wielding P2 deals the +15% attune (proven by an isolated
+same-seed comparison). The client rendering seam (synthetic session → the shipped
+`_pkbPlay` → KO/draw → result, **without** firing the Ascent `arenaFinalizeBattle`) was
+verified visually in the preview.
 
 ---
 
-## 4. GO-LIVE CHECKLIST (run on the MacBook, from the repo root)
+## 4. GO-LIVE — backend DONE; client flip remains
 
-PvP currently ships **dormant** (`PVP_ENABLED = false` in app.js) so the iOS build is
-safe to ship before the backend exists. To turn it on:
+The worker + D1 migration are **already deployed to production** (this session):
 
-1. **Deploy the worker** (registers the `MatchRoom` Durable Object + the SQLite
-   migration — free tier, no plan upgrade needed):
-   ```
-   cd backend && npx wrangler deploy
-   ```
-2. **Apply the D1 migration** (NOT `migrations apply` — use the file form):
-   ```
-   npx wrangler d1 execute awakened-db --remote --file=migrations/0021_pvp.sql
-   ```
-3. **Smoke the deployed endpoint** (optional): a `GET /v1/pvp/state?code=ZZZZZZ` with a
-   real Bearer token should return `{"ok":false,"code":"NO_MATCH"}` (not a 500).
-4. **Flip the flag:** set `const PVP_ENABLED = false;` → `true` in `app.js`, then bump
-   the frontend version markers (sw `CACHE_VERSION`, `app.js?v=`, `APP_BUILD_TAG`).
-5. **Bump the marketing version** to `2.3.0`: `const APP_VERSION = '2.3.0';` in app.js.
-6. **Build + ship iOS** with the usual `prep-local-build.sh` one-liner.
+| Step | Status |
+|---|---|
+| `cd backend && npx wrangler deploy` (registers the `MatchRoom` DO, free-tier SQLite) | ✅ done — Version `1b44e3f9…` |
+| `npx wrangler d1 execute awakened-db --remote --file=migrations/0021_pvp.sql` | ✅ done — `pvp_matches`/`pvp_ratings`/`pvp_queue` live |
+| Prod smoke (`/health` 200, PvP routes 401-gated, WS rejects bad token) | ✅ done |
+| Flip `const PVP_ENABLED = false → true` in app.js + bump version markers | see below |
+| Bump `APP_VERSION` to `2.3.0` | see below |
+| Build + ship iOS via `prep-local-build.sh` (web auto-deploys on push) | owner |
 
-> Order matters: steps 1–2 (backend) MUST precede step 4 (flip). The flag exists
-> precisely so an auto-triggered iOS build can never ship a Duel button whose backend
-> isn't live yet.
+The dormant flag existed so the frontend could ship before the backend. The backend is
+now live, so the flip is safe. If this session flipped it (W409), the only remaining
+owner step is the iOS build (web is live on the next deploy).
 
 ---
 
-## 5. Two-phone manual test (after go-live)
+## 5. Two-phone manual test — a real RANKED match (after the flag is on)
 
-1. Phone A: sign in → **The Ascent** → **Duel a Friend** → **Create a duel**. A 6-char
-   code appears.
-2. Phone B (different account, anywhere): **Duel a Friend** → type the code → **Join**.
-3. Both phones drop into the battle screen. Each picks a move; when both have locked in,
-   the exchange animates **identically on both phones** and HP agrees.
-4. Play to a KO → both see the mirror result (VICTORY / DEFEAT).
-5. Re-test the edge paths: one player taps **EXIT** (forfeit → other wins); one player
-   backgrounds the app for >2 min (disconnect → other wins); one player sits idle a full
-   turn (45 s timeout auto-resolves, no stall).
+This is the one test only you can run (it needs two real Apple-signed accounts). The
+function is already proven by `match-room.itest.mjs` (19/19 on identical code), so this
+is a confidence check on real devices + real network.
+
+1. Phone A: sign in → **The Ascent** → **Duel a Friend** (now **The Arena**). The
+   **YOUR RANK** band shows your tier + ELO (a brand-new account reads **Silver · 1500 ·
+   Unranked** until its first match). Tap **Create a duel** → a 6-char code appears.
+2. Phone B (a *different* account, anywhere in the world): **Duel a Friend** → type the
+   code → **Join**.
+3. Both phones drop into the **same battle screen** (identical to an Ascent fight). Each
+   picks a move; when both lock in, the exchange animates **identically on both phones**
+   and the HP bars agree. The turn timer counts down (45 s); a missed turn auto-resolves.
+4. Play to a KO → the winner sees **VICTORY**, the loser **DEFEAT**, each with a
+   **Ranked Duel · Result** MMR row: the winner **+~16 ELO** (→ ~1516, still Silver), the
+   loser **−~16** (→ ~1484, drops to Bronze under 1500). Reopen the Arena on each phone —
+   the rank band reflects the new ELO + W/L record. Run it again and the numbers move
+   symmetrically each time.
+5. Edge paths to spot-check:
+   - **Forfeit:** one player taps **EXIT** → confirms → the other gets **VICTORY** (their
+     ELO still rises; the quitter's falls).
+   - **Disconnect:** one player backgrounds the app >2 min → the present player wins.
+   - **Timeout:** one player sits idle a full turn → it auto-resolves, no stall.
+   - **Draw (rare, hard to force):** if both fighters fall on the same turn (e.g. mutual
+     burn/bleed death) you'll see a cyan **DRAW** on both phones, ELO barely moves (0 when
+     evenly rated).
+6. Check the ladder: the global rank in the band + `GET /v1/pvp/leaderboard` reflect both
+   accounts.
 
 ---
 
@@ -140,6 +165,16 @@ safe to ship before the backend exists. To turn it on:
   the shipped UI.
 - **Free tier:** the `MatchRoom` DO uses `new_sqlite_classes` (SQLite-backed storage), so
   it runs on the Workers **free** plan. No paid plan required.
+- **Draw without forking the engine:** the shared engine only ever yields a p/b winner
+  (it favors p on simultaneous death, coin-flips an exact cap tie). `pvpResult` re-reads
+  the final HP state to label a DRAW (mutual KO / exact cap tie); `broadcastTurn` uses
+  `pvpResult` so the KO animation never shows a false winner. The engine bytes are
+  untouched → parity holds.
+- **ELO applied exactly once:** `persistEnd` is guarded by `m.persisted`, and the
+  concurrency invariant (load → sync mutate → decisive save before any `env.DB` await)
+  means the DO input gate serializes the end paths — no double-apply. Ratings denormalize
+  the alias so the leaderboard needs no join. `ranked` is fixed at create time (the joiner
+  can't change it).
 
 ---
 
@@ -196,3 +231,27 @@ refactor applied — it would risk regressing a 9/9-passing engine for no gain.
 
 Post-fix: `Arena.selfTest()` 37/37, backend `tsc` 0 errors, `match-room.itest` 9/9, client
 flow re-verified in preview (multi-turn timer restore + KO + result, 0 console errors).
+
+## 9. Adversarial review of the ranked-meta (W409) — done
+
+A second 3-reviewer workflow swept the new draw / ELO / rating-endpoint / client-MMR code.
+It **re-confirmed** the draw classification, the ELO math, the unranked/lobby paths, the
+SQL parameterization, and — importantly — that **double-applying ELO is structurally
+impossible** under the DO input gate (so no defensive dedup was added). It found **6 real
+issues (0 high, none rating-integrity)**, all fixed in W409:
+
+- **R1 (med):** a mutual-KO draw played the *defeat* sting + loss haptics to both players
+  (cue chosen from `s.won` before the draw branch) → now branches on `drawn` (neutral cue).
+- **R2 (med):** the two new reads (`/rating`, `/leaderboard`) had no rate-limit (every
+  sibling read does) → both now gated by `RL_HALL_READ` (30/min).
+- **R3 (low):** the denormalized alias could be NULL-clobbered by a later empty-alias match
+  → `alias = COALESCE(NULLIF(excluded.alias,''), pvp_ratings.alias)`.
+- **R4 (low):** "Updating your rank…" could stick forever on a single fetch failure → a
+  terminal fallback line now always replaces the spinner.
+- **R5 (low):** a draw dimmed only your nameplate → both plates now KO on a draw.
+- **R6 (low):** a back-to-back duel's fallback delta could span two matches → the
+  `_pvpRating` baseline is refreshed from each result.
+
+Post-fix: backend `tsc` 0, `match-room.itest` **19/19** (stable across runs), draw 9/9,
+attune 6/6, client draw/win/lobby re-verified in preview, worker redeployed (Version
+`1f5ed79e`). **`PVP_ENABLED` is now `true`; APP_VERSION `2.3.0`.**

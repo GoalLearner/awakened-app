@@ -76,6 +76,8 @@ export async function handlePvpState(request: Request, env: Env, session: Sessio
 
 // GET /v1/pvp/rating — the caller's own ELO + tier + W/L/D + global rank (PVP.md §12.4).
 export async function handlePvpRating(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_HALL_READ.limit({ key: session.userId });   // mirror sibling reads (30/min)
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let row: any = null;
   try { row = await env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); } catch { /* table may predate deploy */ }
   const elo = row ? Number(row.elo) : 1500;
@@ -90,6 +92,8 @@ export async function handlePvpRating(request: Request, env: Env, session: Sessi
 
 // GET /v1/pvp/leaderboard?limit=50 — global top-N by ELO (PVP.md §12.4).
 export async function handlePvpLeaderboard(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_HALL_READ.limit({ key: session.userId });   // mirror sibling reads (30/min)
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const limit = Math.min(100, Math.max(1, parseInt(new URL(request.url).searchParams.get('limit') || '50', 10) || 50));
   let rows: any[] = [];
   try {

@@ -213,10 +213,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.2.8';
+  const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w408'; // W408 — PvP ranked meta (rating/tier/draw UI)
+  const APP_BUILD_TAG = '2.3.0-w409'; // W409 — Ranked PvP go-live + review fixes
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9369,19 +9369,25 @@
     _pkbChips('p'); _pkbChips('b');
     if (s.done) {
       _pkbHeartStop();   // W260 — the KO beat owns the soundscape from here
-      const loser = s.won ? 'b' : 'p';
-      const spot = _pkbEl('pkb-spot-' + loser), plate = _pkbEl('pkb-plate-' + loser);
-      if (spot) spot.classList.add('ko');
-      if (plate) plate.classList.add('ko');
-      try { if (navigator.vibrate) navigator.vibrate(s.won ? 22 : [30, 40, 60]); } catch (_) {}
+      // W409 — a PvP mutual-KO is a DRAW: both fighters fall, and the cue/haptics must
+      // NOT be the defeat sting (s.won is false in a draw). Compute it BEFORE the cues.
+      const drawn = !!(s._pvp && (_pvpResultOutcome === 'draw' || s._pvpDraw));
+      if (drawn) {
+        ['p', 'b'].forEach(function (side) { const sp = _pkbEl('pkb-spot-' + side), pl = _pkbEl('pkb-plate-' + side); if (sp) sp.classList.add('ko'); if (pl) pl.classList.add('ko'); });
+      } else {
+        const loser = s.won ? 'b' : 'p';
+        const spot = _pkbEl('pkb-spot-' + loser), plate = _pkbEl('pkb-plate-' + loser);
+        if (spot) spot.classList.add('ko');
+        if (plate) plate.classList.add('ko');
+      }
+      try { if (navigator.vibrate) navigator.vibrate(drawn ? 18 : s.won ? 22 : [30, 40, 60]); } catch (_) {}
       try { _audCue('ko'); _audDuck(_pkbHoldMs(_PKB_T.koHold) + _PKB_T.ko); } catch (_) {}
-      // KO resolution: crossfade the loop out, sting in (slot absent → silent)
-      try { _audStopMusic(0.5); setTimeout(() => _audPlayMusic(s.won ? 'victory_sting' : 'defeat_sting', false), 350); } catch (_) {}
+      // KO resolution: crossfade the loop out, sting in (slot absent → silent). A draw
+      // gets the neutral engage cue, not victory/defeat.
+      try { _audStopMusic(0.5); setTimeout(() => _audPlayMusic(drawn ? 'ar_engage' : s.won ? 'victory_sting' : 'defeat_sting', false), 350); } catch (_) {}
       // W404 — PvP KO: this is a duel, NOT the Ascent. Skip arenaFinalizeBattle
       // (no floor climb / titles / daily lives); present the duel result instead.
       if (s._pvp) {
-        const drawn = _pvpResultOutcome === 'draw' || s._pvpDraw;
-        if (drawn) { try { const sp = _pkbEl('pkb-spot-p'), spb = _pkbEl('pkb-spot-b'); if (sp) sp.classList.add('ko'); if (spb) spb.classList.add('ko'); } catch (_) {} }
         const koLine = drawn ? 'Both fighters fall — a draw.'
           : s.won ? esc((_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'Your foe') + ' is down!' : 'You fall…';
         _pkbSay(koLine, _PKB_T.koHold, function () {
@@ -9937,7 +9943,7 @@
   // FLIP TO true ONLY AFTER: (1) wrangler deploy, (2) d1 execute --remote
   // migrations/0021_pvp.sql. See PVP_BUILD_REPORT.md for the go-live checklist.
   // ═══════════════════════════════════════════════════════════════
-  const PVP_ENABLED = false;
+  const PVP_ENABLED = true;   // W409 — go-live: backend deployed (worker + DO + D1 migration) + ranked meta shipped
   const PvP = (function () {
     let ws = null, code = null, you = null;
     let pollTimer = null, pingTimer = null, reconnectTimer = null;
@@ -10476,7 +10482,15 @@
     try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
     _pvpTeardown(true);   // close the socket; the rating is fetched over http if not yet in
-    if (ranked && !_pvpEndRating) _pvpFetchEndRating();
+    if (ranked) {
+      if (_pvpEndRating) {
+        // W409 (R6) — refresh the baseline cache so a back-to-back duel's fallback delta
+        // isn't computed across two matches (the match_end delta path skips the fetch).
+        _pvpRating = Object.assign({}, _pvpRating || {}, { elo: _pvpEndRating.elo, tier: _pvpEndRating.tier, placed: true });
+      } else {
+        _pvpFetchEndRating();
+      }
+    }
   }
   // The MMR block on the result: tier badge + new ELO + the +/- delta. Renders from
   // _pvpEndRating (the match_end delta) if present, else a placeholder that
@@ -10496,15 +10510,21 @@
   }
   function _pvpPatchResultRating() { const host = document.getElementById('pvp-mmr'); if (host) host.innerHTML = _pvpRatingResultHtml(); }
   function _pvpFetchEndRating() {
-    if (!(window.PvP && PvP.rating)) return;
+    if (!(window.PvP && PvP.rating)) { _pvpEndRatingFallback(); return; }
     Promise.resolve(PvP.rating()).then(function (res) {
       if (res && typeof res.elo === 'number') {
         const before = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo : null;
         _pvpEndRating = { elo: res.elo, tier: res.tier, delta: before != null ? res.elo - before : null };
         _pvpRating = res;
         if (_arView === 'pvp-result') _pvpPatchResultRating();
-      }
-    }).catch(function () {});
+      } else { _pvpEndRatingFallback(); }
+    }).catch(function () { _pvpEndRatingFallback(); });
+  }
+  // W409 (R4) — never leave the "Updating your rank…" spinner stuck on a fetch failure.
+  function _pvpEndRatingFallback() {
+    if (_arView !== 'pvp-result' || _pvpEndRating) return;
+    const host = document.getElementById('pvp-mmr');
+    if (host) host.innerHTML = '<div class="pvp-mmr-row pvp-mmr-row--load"><span class="pvp-mmr-load">Rank updated &mdash; reopen the Arena to see it.</span></div>';
   }
 
   // ── teardown / exit ──

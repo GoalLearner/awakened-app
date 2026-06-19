@@ -482,12 +482,14 @@ export class MatchRoom {
       await this.env.DB.prepare(
         `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, last_match_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET alias=excluded.alias, elo=excluded.elo,
+         ON CONFLICT(user_id) DO UPDATE SET
+           alias=COALESCE(NULLIF(excluded.alias, ''), pvp_ratings.alias),
+           elo=excluded.elo,
            peak_elo=MAX(pvp_ratings.peak_elo, excluded.elo),
            wins=pvp_ratings.wins+excluded.wins, losses=pvp_ratings.losses+excluded.losses,
            draws=pvp_ratings.draws+excluded.draws,
            last_match_at=excluded.last_match_at`,
-      ).bind(uid, alias || null, elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], now).run();
+      ).bind(uid, alias || '', elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], now).run();
     };
     await upsert(p1, a1, r1, e1, wld(s1));
     await upsert(p2, a2, r2, e2, wld(s2));
