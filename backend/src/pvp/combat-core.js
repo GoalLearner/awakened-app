@@ -504,6 +504,15 @@ function defaultMoveForTimeout(moves, cdMap) {
   return off[0].id;
 }
 
+// PvP-vs-bot: the server picks the b-side (bot) move via the SHIPPED Ascent AI
+// (the same v2 picker the tower uses). Returns the move id so the DO records it in
+// moveHistory and rebuild stays uniform with the human-vs-human path. PVP.md §11.1.
+function pvpBotMove(sess) {
+  if (!sess || sess.done) return 'struggle';
+  const mv = _arenaFoePick(sess);
+  return (mv && mv.id) ? mv.id : 'struggle';
+}
+
 // Final result of a finished session (mirrors the win/loss decision).
 // DRAW is a PvP-ONLY interpretation layered on top of the shared engine (which only
 // ever yields a p/b winner — it favors p on simultaneous death and coin-flips an exact
@@ -536,5 +545,5 @@ export {
   _arExecMove, _arApplyFx, _arEndTurn, _arResolveTurn, _arenaPickMove, arenaTakeTurn,
   kitForWeapon, attuneForWeapon,
   // PvP API
-  buildCombatant, pvpStartBattle, pvpResolveTurn, defaultMoveForTimeout, pvpResult,
+  buildCombatant, pvpStartBattle, pvpResolveTurn, defaultMoveForTimeout, pvpResult, pvpBotMove,
 };

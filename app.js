@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.0-w410'; // W410 — ranked ladder view
+  const APP_BUILD_TAG = '2.3.0-w411'; // W411 — Find Match (AI-bot queue) + VS screen
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9795,7 +9795,7 @@
   // entirely when you're already on the tower.
   function _arExit() {
     // W404 — duel views own their own exit (forfeit a live duel, then to the tower).
-    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || _arView === 'pvp-ladder' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
+    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || _arView === 'pvp-ladder' || _arView === 'pvp-vs' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
     // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
     // abandon any fight you're losing for free and dodge the daily-lives gate.
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
@@ -9902,6 +9902,8 @@
       else if (a === 'pvpcreate') { try { _pvpCreate(); } catch (_) {} }
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
+      else if (a === 'pvpfind')   { try { _pvpFindMatch(); } catch (_) {} }
+      else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
       else if (a === 'equip')   {
@@ -10041,6 +10043,13 @@
         else closed = true;
         return r;
       },
+      async findMatch(combatant) {
+        this.close(); closed = false; lastPhase = null;
+        const r = await http('POST', '/v1/pvp/find', { combatant: combatant });
+        if (r && r.ok && r.code) { code = r.code; you = (r.state && r.state.you) || 'p'; connect(); }
+        else closed = true;
+        return r;
+      },
       submit(turn, moveId) {
         if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'submit_move', turn: turn, moveId: moveId })); return; } catch (_) {} }
         http('POST', '/v1/pvp/submit', { code: code, turn: turn, moveId: moveId }).then(function (r) { if (r && r.ok && r.state) emit(Object.assign({ type: 'state' }, r.state)); }).catch(function () {});
@@ -10077,6 +10086,8 @@
   let _pvpRating = null;           // cached { elo, tier, wins, losses, draws, rank, placed }
   let _pvpEndRating = null;        // { delta, elo, tier } from the just-finished ranked match
   let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
+  let _pvpOpponentMeta = null;     // { alias, elo, tier, weaponName } from Find Match (VS screen)
+  let _pvpVsTimer = null;          // pre-match VS auto-advance
 
   // ELO -> tier (mirrors backend pvp/elo.ts §12.2) + an accent color per tier.
   function _pvpTier(elo) {
@@ -10132,9 +10143,10 @@
     _arView = 'pvp-lobby';
     x = x || {};
     let body;
-    if (mode === 'creating' || mode === 'joining') {
+    if (mode === 'creating' || mode === 'joining' || mode === 'searching') {
+      const wt = mode === 'creating' ? 'Opening the arena&hellip;' : mode === 'searching' ? 'Finding an opponent&hellip;' : 'Joining the duel&hellip;';
       body = '<div class="pvp-wait"><div class="pvp-spinner"></div>' +
-        '<div class="pvp-wait-t">' + (mode === 'creating' ? 'Opening the arena…' : 'Joining the duel…') + '</div></div>';
+        '<div class="pvp-wait-t">' + wt + '</div></div>';
     } else if (mode === 'hosting') {
       const cc = esc(x.code || _pvpCode || '');
       body = '<div class="pvp-host">' +
@@ -10146,10 +10158,12 @@
     } else {
       const err = x.err ? '<div class="pvp-err">' + esc(x.err) + '</div>' : '';
       body = '<div class="pvp-home">' +
-        '<button type="button" class="pvp-big" data-ar="pvpcreate">' +
-          '<span class="pvp-big-t">Create a duel</span>' +
-          '<span class="pvp-big-s">Get a code to share with a friend</span></button>' +
-        '<div class="pvp-or"><span></span>OR<span></span></div>' +
+        '<button type="button" class="pvp-big" data-ar="pvpfind">' +
+          '<span class="pvp-big-t">Find Match</span>' +
+          '<span class="pvp-big-s">Instant ranked duel at your rating</span></button>' +
+        '<button type="button" class="pvp-mid" data-ar="pvpcreate">' +
+          '<span class="pvp-mid-t">Duel a friend</span><span class="pvp-mid-s">Create a shareable code</span></button>' +
+        '<div class="pvp-or"><span></span>OR ENTER A CODE<span></span></div>' +
         '<div class="pvp-join">' +
           '<input id="pvp-code-input" class="pvp-code-input" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ENTER CODE" />' +
           '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
@@ -10234,6 +10248,18 @@
       '</div>'
     );
   }
+  async function _pvpFindMatch() {
+    if (!_pvpRequireAuth()) return;
+    _pvpOpponentMeta = null;
+    _pvpRenderLobby('searching');
+    PvP.onMessage(_pvpOnMessage);
+    let r; try { r = await PvP.findMatch(_pvpBuildMyCombatant()); } catch (_) { r = null; }
+    if (_arView !== 'pvp-lobby') return;
+    if (!(r && r.ok && r.code)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
+    _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
+    _pvpOpponentMeta = r.opponent || null;   // bot meta for the VS screen
+    if (r.state) _pvpStartVs(r.state);        // VS screen -> battle
+  }
   async function _pvpCreate() {
     if (!_pvpRequireAuth()) return;
     _pvpRenderLobby('creating');
@@ -10304,8 +10330,56 @@
     }
   }
 
+  // ── pre-match VS screen (tier/ELO/weapon reveal) ──
+  function _pvpEnsureBattle(view) {
+    if (_pvpStarted && _arSess && _arSess._pvp) return;   // battle already running
+    if (_arView === 'pvp-vs') return;                      // VS screen up -> it starts the battle
+    _pvpStartVs(view);
+  }
+  function _pvpVsCard(side, sprite, name, tier, elo, weapon) {
+    return '<div class="pvp-vs-card pvp-vs-card--' + side + '">' +
+      '<div class="pvp-vs-spr" style="--rb:' + tier.color + '">' + sprite + '</div>' +
+      '<div class="pvp-vs-nm">' + esc(name) + '</div>' +
+      '<div class="pvp-vs-tier" style="color:' + tier.color + '">' + esc(tier.name) + (elo != null ? ' &middot; ' + _pvpNum(elo) : '') + '</div>' +
+      (weapon ? '<div class="pvp-vs-wpn">' + esc(weapon) + '</div>' : '') +
+      '</div>';
+  }
+  function _pvpStartVs(view) {
+    _arView = 'pvp-vs'; _pvpView = view;
+    _arBodyMode(false); _arClearTimers();
+    const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
+    const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo);
+    const oppElo = opp.elo != null ? opp.elo : oppMeta.elo;
+    const myTier = _pvpTier(myElo), oppTier = _pvpTier(oppElo);
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const oppName = opp.alias || opp.name || oppMeta.alias || 'Challenger';
+    const mono = esc(((oppName[0] || '?')).toUpperCase());
+    let myWeapon = me.weaponName || ''; try { if (!myWeapon) myWeapon = _arenaWeaponName(); } catch (_) {}
+    const oppWeapon = opp.weaponName || oppMeta.weaponName || '';
+    const ranked = view.ranked !== false;
+    _arSet(
+      '<div class="pvp-vs">' +
+        '<div class="pvp-vs-kick">' + (ranked ? 'RANKED DUEL' : 'DUEL') + (oppMeta.alias ? ' &middot; MATCHED' : '') + '</div>' +
+        '<div class="pvp-vs-fighters">' +
+          _pvpVsCard('you', avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>', 'You', myTier, myElo, myWeapon) +
+          '<div class="pvp-vs-x">VS</div>' +
+          _pvpVsCard('foe', '<div class="pvp-mono">' + mono + '</div>', oppName, oppTier, oppElo, oppWeapon) +
+        '</div>' +
+        '<button type="button" class="ar-cta pvp-vs-go" data-ar="pvpfight">FIGHT &#9656;</button>' +
+        '<div class="pvp-vs-hint">tap to begin</div>' +
+      '</div>'
+    );
+    try { _audUnlock(); playSfx('ar_engage'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+    if (_pvpVsTimer) clearTimeout(_pvpVsTimer);
+    _pvpVsTimer = setTimeout(function () { _pvpVsToBattle(); }, 3200);
+  }
+  function _pvpVsToBattle() {
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
+    if (_arView !== 'pvp-vs') return;
+    _pvpStartBattle(_pvpView);
+  }
   // ── battle stage (reuses the .pkb markup + the _pkb* beat director) ──
-  function _pvpEnsureBattle(view) { if (_pvpStarted && _arSess && _arSess._pvp) return; _pvpStartBattle(view); }
   function _pvpSynthSession(view) {
     const me = (view && view.me) || {}, opp = (view && view.opp) || {};
     let wn = ''; try { wn = _arenaWeaponName(); } catch (_) {}
@@ -10579,11 +10653,14 @@
     if (!keepResult) { _pvpView = null; _pvpCode = ''; }
   }
   function _pvpExit() {
-    if (_arSess && _arSess._pvp && !_arSess.done) {
-      let ok = true; try { ok = window.confirm('Leave the duel? It counts as a forfeit.'); } catch (_) {}
+    // a live match = an active battle OR the VS screen of one already created server-side.
+    const live = (_arView === 'pvp-vs' && _pvpCode) || (_arSess && _arSess._pvp && !_arSess.done);
+    if (live) {
+      let ok = true; try { ok = window.confirm('Leave the match? It counts as a forfeit.'); } catch (_) {}
       if (!ok) return;
       try { PvP.forfeit(); } catch (_) {}
     }
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
     _pvpTeardown();
     _arClearTimers(); _arSess = null; _arRevealing = false;
     _arRenderTower();
@@ -10663,6 +10740,23 @@
         { rank: 5, alias: 'Kovah', elo: 1492, wins: 3, losses: 7, draws: 1, you: false },
       ]);
       return 'ladder demo';
+    };
+    // preview the pre-match VS screen (the live flow needs a real JWT for Find Match).
+    window.__pvpVs = function (opts) {
+      opts = opts || {};
+      _pvpYou = 'p'; _pvpCode = 'DEMOXY'; _pvpStarted = false;
+      _pvpRating = { elo: 1631, tier: 'Silver', placed: true };
+      _pvpOpponentMeta = { alias: opts.opp || 'Stormcaller', elo: 1730, tier: 'Gold', weaponName: 'Aetherspire Staff' };
+      let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = []; }
+      const view = {
+        ranked: true, phase: 'active', turn: 1, you: 'p', deadlineMs: Date.now() + 45000,
+        youSubmitted: false, oppSubmitted: false, oppConnected: true,
+        me: { alias: 'You', name: 'You', elo: 1631, weaponName: 'Nightfall', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
+        opp: { alias: opts.opp || 'Stormcaller', name: opts.opp || 'Stormcaller', elo: 1730, weaponName: 'Aetherspire Staff', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), isBot: true },
+      };
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpStartVs(view);
+      return 'VS demo (auto-advances to the battle)';
     };
   } catch (_) {}
 

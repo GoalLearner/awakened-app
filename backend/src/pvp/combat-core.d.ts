@@ -54,6 +54,7 @@ export function buildCombatant(input: any): Combatant;
 export function pvpStartBattle(a: Combatant, b: Combatant, seed: number): BattleSession;
 export function pvpResolveTurn(sess: BattleSession, moveP: string, moveB: string): { ok: boolean; code?: string; events?: any[] };
 export function pvpResult(sess: BattleSession): PvpResult;
+export function pvpBotMove(sess: BattleSession): string;
 export function defaultMoveForTimeout(moves: Array<Record<string, any>>, cd: Record<string, number>): string;
 export function arenaTakeTurn(sess: BattleSession, moveId: string): any[] | null;
 export function kitForWeapon(weaponId: string): Array<Record<string, any>>;

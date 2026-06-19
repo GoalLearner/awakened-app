@@ -8,6 +8,7 @@ import type { SessionPayload } from '../session-jwt';
 import { verifySessionJwt } from '../session-jwt';
 import { jsonError, jsonOk } from '../lib/responses';
 import { eloTier } from '../pvp/elo';
+import { pickBot, botMeta } from '../pvp/bots';
 
 // Unambiguous 6-char invite code (no 0/O/1/I).
 function genCode(): string {
@@ -47,6 +48,29 @@ export async function handlePvpJoin(request: Request, env: Env, session: Session
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'join', session.userId, session.alias, { combatant: body.combatant });
+}
+
+// POST /v1/pvp/find { combatant } — instant ranked match vs an ELO-matched AI bot
+// (PVP.md §11.1). The bot is chosen from the SERVER roster (never client input); the
+// MatchRoom resolves its moves with the shipped Ascent AI. Returns { ok, code, vsBot,
+// opponent } so the client can show the VS screen and connect.
+export async function handlePvpFind(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  let body: any = {};
+  try { body = await request.json(); } catch { /* */ }
+  let elo = 1500;
+  try { const row = await env.DB.prepare('SELECT elo FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); if (row) elo = Number(row.elo); } catch { /* */ }
+  const bot = pickBot(elo);
+  const meta = botMeta(bot);
+  const code = genCode();
+  const res = await forwardToDo(env, code, 'createVsBot', session.userId, session.alias, {
+    code, combatant: body.combatant, bot: { id: bot.id, alias: bot.name, elo: bot.elo, combatant: bot.combatant },
+  });
+  let j: any = {};
+  try { j = await res.json(); } catch { /* */ }
+  if (j && j.ok) { j.vsBot = true; j.opponent = meta; }
+  return jsonOk(j);
 }
 
 // POST /v1/pvp/submit { code, turn, moveId }

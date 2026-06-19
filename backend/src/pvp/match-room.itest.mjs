@@ -186,6 +186,33 @@ async function rankedTest() {
   ok('match_end view carried the per-player rating delta', !!(endView && endView.rating && typeof endView.rating.delta === 'number'), endView && endView.rating);
 }
 
+// ── 7. Find Match -> instant AI-bot ranked duel; the bot auto-moves server-side and
+//       only the human's ELO updates (vs the bot's nominal rating). ──
+async function botMatchTest() {
+  console.log('\n[7] Find Match -> AI bot duel');
+  const t = await mint('pvp-bot-1', 'BotChallenger');
+  const beforeR = await api(t, 'GET', '/v1/pvp/rating');
+  const found = await api(t, 'POST', '/v1/pvp/find', { combatant: COMB_A });
+  ok('find returns a code + bot opponent meta', !!(found.ok && found.code && found.vsBot && found.opponent && found.opponent.alias && typeof found.opponent.elo === 'number'), found);
+  ok('match starts active vs the bot', !!(found.state && found.state.phase === 'active' && found.state.opp && found.state.opp.isBot === true), found.state && found.state.opp);
+  const code = found.code;
+  let guard = 0, result = null;
+  while (guard++ < 90) {
+    const s = (await api(t, 'GET', '/v1/pvp/state?code=' + code)).state;
+    if (!s) break;
+    if (s.phase === 'ended') { result = s.result; break; }
+    await api(t, 'POST', '/v1/pvp/submit', { code, turn: s.turn, moveId: firstMove(s.me) });
+    await sleep(20);
+  }
+  ok('bot match ends with a result', !!(result && (result.winnerSide === 'p' || result.winnerSide === 'b' || result.winnerSide === 'draw')), result);
+  await sleep(150);
+  const after = await api(t, 'GET', '/v1/pvp/rating');
+  const beforeN = (beforeR.wins || 0) + (beforeR.losses || 0) + (beforeR.draws || 0);
+  const afterN = (after.wins || 0) + (after.losses || 0) + (after.draws || 0);
+  ok('exactly one ranked match recorded for the human', afterN === beforeN + 1, { beforeN, afterN });
+  ok('human ELO moved vs the bot', after.elo !== beforeR.elo, { before: beforeR.elo, after: after.elo });
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -201,6 +228,7 @@ async function rankedTest() {
   await timeoutTest();
   await reconnectTest();
   await rankedTest();
+  await botMatchTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

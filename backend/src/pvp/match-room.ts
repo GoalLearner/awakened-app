@@ -19,7 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import type { Env } from '../env';
 import {
-  buildCombatant, pvpStartBattle, pvpResolveTurn, pvpResult,
+  buildCombatant, pvpStartBattle, pvpResolveTurn, pvpResult, pvpBotMove,
   defaultMoveForTimeout, WEAPON_MOVES,
 } from './combat-core.js';
 import { eloTier, kFactor } from './elo';
@@ -30,7 +30,7 @@ const MAX_STAT = 200;                 // anti-cheat sanity bound per stat
 
 type Slot = 'p' | 'b';
 interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; }
-interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; }
+interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; elo?: number; }
 interface MatchState {
   code: string;
   ranked: boolean;
@@ -47,6 +47,7 @@ interface MatchState {
   result: { winnerSide: Slot | 'draw'; winnerUserId: string | null; reason: string } | null;
   startedAtMs: number | null;
   persisted: boolean;                 // wrote the D1 record yet?
+  botElo?: number;                    // for a vs-bot match: the bot's nominal rating (drives the human's ELO calc)
   // per-slot ranked rating outcome (filled by updateElo on a ranked match end), so
   // each client's match_end can show its own delta + new rating + tier.
   ratingResult?: { p: { delta: number; elo: number }; b: { delta: number; elo: number } } | null;
@@ -94,6 +95,13 @@ export class MatchRoom {
   async save(m: MatchState): Promise<void> {
     await this.state.storage.put('match', m);
   }
+  // A player's current rating (default 1500). Read BEFORE load() in the seat methods so
+  // the concurrency invariant (no non-storage await between load and the decisive save)
+  // is preserved.
+  async eloOf(userId: string): Promise<number> {
+    try { const r = await this.env.DB.prepare('SELECT elo FROM pvp_ratings WHERE user_id=?').bind(userId).first<any>(); if (r) return Number(r.elo); } catch { /* */ }
+    return 1500;
+  }
 
   // Rebuild the live combat-core session from the persisted record (replay).
   rebuild(m: MatchState): any | null {
@@ -119,16 +127,18 @@ export class MatchRoom {
     let body: any = {};
     try { body = await request.json(); } catch { /* GET */ }
     switch (action) {
-      case 'create':  return json(await this.doCreate(userId, alias, body));
-      case 'join':    return json(await this.doJoin(userId, alias, body));
-      case 'state':   return json(await this.doState(userId));
-      case 'submit':  return json(await this.doSubmit(userId, body));
-      case 'forfeit': return json(await this.doForfeit(userId));
-      default:        return json({ ok: false, code: 'BAD_ACTION' }, 400);
+      case 'create':     return json(await this.doCreate(userId, alias, body));
+      case 'createVsBot':return json(await this.doCreateVsBot(userId, alias, body));
+      case 'join':       return json(await this.doJoin(userId, alias, body));
+      case 'state':      return json(await this.doState(userId));
+      case 'submit':     return json(await this.doSubmit(userId, body));
+      case 'forfeit':    return json(await this.doForfeit(userId));
+      default:           return json({ ok: false, code: 'BAD_ACTION' }, 400);
     }
   }
 
   async doCreate(userId: string, alias: string, body: any): Promise<any> {
+    const elo = await this.eloOf(userId);   // D1 read BEFORE load (input-gate invariant)
     let m = await this.load();
     if (m && m.p1 && m.p1.userId !== userId) return { ok: false, code: 'CODE_TAKEN' };
     if (m && m.p1) return { ok: true, code: m.code, state: this.view(m, userId) }; // idempotent re-create by owner
@@ -137,7 +147,7 @@ export class MatchRoom {
       code: String(body.code || ''),
       ranked: !!body.ranked,
       phase: 'lobby', seed,
-      p1: { userId, alias, combatant: sanitizeCombatant(body.combatant) },
+      p1: { userId, alias, combatant: sanitizeCombatant(body.combatant), elo },
       p2: null,
       turn: 1, moveHistory: [], pending: {}, deadlineMs: null,
       connected: { p: false, b: false }, lastSeen: { p: 0, b: 0 },
@@ -147,14 +157,45 @@ export class MatchRoom {
     return { ok: true, code: m.code, state: this.view(m, userId) };
   }
 
+  // Ranked vs an AI bot (PVP.md §11.1). The worker's matchmaker builds the bot from
+  // the SERVER roster (never client input) and seeds p1=human + p2=bot active in one
+  // shot. The bot has no socket; the DO resolves its moves via the shipped Ascent AI.
+  async doCreateVsBot(userId: string, alias: string, body: any): Promise<any> {
+    const elo = await this.eloOf(userId);   // D1 read BEFORE load (input-gate invariant)
+    const m = await this.load();
+    if (m && m.p1) return { ok: true, code: m.code, state: this.view(m, userId) }; // idempotent
+    const bot = body.bot || {};
+    const botElo = Math.max(0, Math.round(Number(bot.elo) || 1500));
+    const seed = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+    const nm: MatchState = {
+      code: String(body.code || ''),
+      ranked: true,
+      phase: 'active', seed,
+      p1: { userId, alias, combatant: sanitizeCombatant(body.combatant), elo },
+      p2: { userId: 'bot:' + String(bot.id || 'x'), alias: String(bot.alias || 'Bot'), combatant: sanitizeCombatant(bot.combatant), elo: botElo },
+      botElo,
+      turn: 1, moveHistory: [], pending: {}, deadlineMs: null,
+      connected: { p: false, b: false }, lastSeen: { p: 0, b: 0 },
+      result: null, startedAtMs: Date.now(), persisted: false,
+    };
+    this.armDeadline(nm);
+    await this.save(nm);
+    await this.persistStart(nm);
+    return { ok: true, code: nm.code, state: this.view(nm, userId) };
+  }
+
+  // True when a slot is an AI bot (server-seeded; bots have no socket + don't persist a rating).
+  isBot(slot: PlayerSlot | null): boolean { return !!(slot && slot.userId && slot.userId.indexOf('bot:') === 0); }
+
   async doJoin(userId: string, alias: string, body: any): Promise<any> {
+    const elo = await this.eloOf(userId);   // D1 read BEFORE load (input-gate invariant)
     const m = await this.load();
     if (!m || !m.p1) return { ok: false, code: 'NO_MATCH' };
     if (m.p1.userId === userId) return { ok: false, code: 'CANNOT_JOIN_SELF' };
     if (m.p2 && m.p2.userId !== userId) return { ok: false, code: 'MATCH_FULL' };
     if (m.phase === 'ended') return { ok: false, code: 'ENDED' };
     if (!m.p2) {
-      m.p2 = { userId, alias, combatant: sanitizeCombatant(body.combatant) };
+      m.p2 = { userId, alias, combatant: sanitizeCombatant(body.combatant), elo };
       m.phase = 'active';
       m.startedAtMs = Date.now();
       this.armDeadline(m);
@@ -217,6 +258,11 @@ export class MatchRoom {
 
   // ── turn resolution ──
   async resolveIfReady(m: MatchState, sess: any): Promise<void> {
+    // vs-bot: the moment the human has submitted, the server picks the bot's move via
+    // the shipped Ascent AI (recorded in moveHistory like a human move -> uniform replay).
+    if (this.isBot(m.p2) && m.pending.p && !m.pending.b && sess && !sess.done) {
+      m.pending.b = pvpBotMove(sess);
+    }
     if (!m.pending.p || !m.pending.b) return;
     const r = pvpResolveTurn(sess, m.pending.p, m.pending.b);
     if (!r.ok) {
@@ -269,7 +315,8 @@ export class MatchRoom {
     const sess = this.rebuild(m);
     if (!sess || sess.done) return;
     if (!m.pending.p) m.pending.p = defaultMoveForTimeout(sess.pMoves, sess.cd);
-    if (!m.pending.b) m.pending.b = defaultMoveForTimeout(sess.bMoves, sess.bcd);
+    // a bot's move is the AI pick (computed in resolveIfReady), not a timeout default.
+    if (!m.pending.b && !this.isBot(m.p2)) m.pending.b = defaultMoveForTimeout(sess.bMoves, sess.bcd);
     await this.resolveIfReady(m, sess);
     await this.save(m);
     this.broadcastState(m);
@@ -413,8 +460,8 @@ export class MatchRoom {
       deadlineMs: m.deadlineMs,
       youSubmitted: !!m.pending[meSlot], oppSubmitted: !!m.pending[oppSlot],
       oppConnected: m.connected[oppSlot],
-      me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd } : null,
-      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot) } : null,
+      me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd, elo: meP.elo != null ? meP.elo : null, tier: meP.elo != null ? eloTier(meP.elo) : null, weaponName: meP.combatant.weaponName } : null,
+      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot), elo: oppP.elo != null ? oppP.elo : null, tier: oppP.elo != null ? eloTier(oppP.elo) : null, weaponName: oppP.combatant.weaponName, isBot: this.isBot(oppP) } : null,
       result: m.result,
       rating: m.ratingResult ? { delta: m.ratingResult[meSlot].delta, elo: m.ratingResult[meSlot].elo, tier: eloTier(m.ratingResult[meSlot].elo) } : null,
     };
@@ -454,10 +501,38 @@ export class MatchRoom {
       try {
         const outcome: 'p1' | 'p2' | 'draw' =
           m.result.winnerSide === 'draw' ? 'draw' : m.result.winnerSide === 'p' ? 'p1' : 'p2';
-        m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias);
+        if (this.isBot(m.p2)) {
+          // vs-bot: only the human (p1) moves; the bot has no persisted rating.
+          const r: 'win' | 'loss' | 'draw' = outcome === 'draw' ? 'draw' : outcome === 'p1' ? 'win' : 'loss';
+          m.ratingResult = await this.updateEloVsBot(m.p1.userId, m.p1.alias, m.botElo || 1500, r);
+        } else {
+          m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias);
+        }
         await this.save(m);
       } catch { /* best-effort — never block the match end */ }
     }
+  }
+  // ELO update for a human vs an AI bot: only the human's row moves, against the bot's
+  // nominal rating. Returns the per-slot result for the match_end broadcast.
+  async updateEloVsBot(uid: string, alias: string, oppElo: number, outcome: 'win' | 'loss' | 'draw'):
+    Promise<{ p: { delta: number; elo: number }; b: { delta: number; elo: number } }> {
+    const row = await this.env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(uid).first<any>();
+    const r = row || { elo: 1500, peak_elo: 1500, wins: 0, losses: 0, draws: 0 };
+    const exp = 1 / (1 + Math.pow(10, (oppElo - r.elo) / 400));
+    const s = outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0;
+    const d = Math.round(kFactor(r.elo) * (s - exp));
+    const elo = Math.max(0, r.elo + d);
+    const t = s === 1 ? [1, 0, 0] : s === 0 ? [0, 1, 0] : [0, 0, 1];
+    await this.env.DB.prepare(
+      `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, last_match_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         alias=COALESCE(NULLIF(excluded.alias, ''), pvp_ratings.alias),
+         elo=excluded.elo, peak_elo=MAX(pvp_ratings.peak_elo, excluded.elo),
+         wins=pvp_ratings.wins+excluded.wins, losses=pvp_ratings.losses+excluded.losses,
+         draws=pvp_ratings.draws+excluded.draws, last_match_at=excluded.last_match_at`,
+    ).bind(uid, alias || '', elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], new Date().toISOString()).run();
+    return { p: { delta: d, elo }, b: { delta: 0, elo: oppElo } };
   }
   // ELO with draw support (actual score 1 / 0.5 / 0). Returns the per-slot delta + new
   // rating so the DO can surface the MMR change to both clients. Fixes the prior

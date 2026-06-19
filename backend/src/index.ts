@@ -78,6 +78,7 @@ import {
   handlePvpState,
   handlePvpRating,
   handlePvpLeaderboard,
+  handlePvpFind,
   handlePvpWs,
 } from './handlers/pvp';
 import { handlePreflight, withCors } from './lib/cors';
@@ -301,6 +302,8 @@ export default {
             response = await handlePvpCreate(request, env, session);
           } else if (path === '/v1/pvp/join' && method === 'POST') {
             response = await handlePvpJoin(request, env, session);
+          } else if (path === '/v1/pvp/find' && method === 'POST') {
+            response = await handlePvpFind(request, env, session);
           } else if (path === '/v1/pvp/submit' && method === 'POST') {
             response = await handlePvpSubmit(request, env, session);
           } else if (path === '/v1/pvp/forfeit' && method === 'POST') {
