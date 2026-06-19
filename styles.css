@@ -30237,3 +30237,35 @@ button.guildhall-summary-tile:active {
 .pvp-status--disconnected .pvp-status-txt { color: #ff8a8a; }
 .pvp-timer { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; color: #cdd1e8; min-width: 26px; text-align: right; }
 .pvp-timer.low { color: #ff8a8a; }
+
+/* YOUR RANK band (lobby) */
+.pvp-rankband { display: flex; align-items: center; gap: 12px; margin: 0 12px 14px; padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.10); }
+.pvp-rankband--loading { justify-content: center; }
+.pvp-rb-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.08em; color: #6b6b86; }
+.pvp-rb-badge { flex: none; padding: 6px 12px; border-radius: 9px; background: color-mix(in srgb, var(--rb) 16%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 55%, transparent); }
+.pvp-rb-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 13px; color: var(--rb); }
+.pvp-rb-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pvp-rb-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 19px; color: #f5f3fb; }
+.pvp-rb-elo i { font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 5px; }
+.pvp-rb-rec { font-family: "JetBrains Mono", monospace; font-size: 9.5px; color: #9090a8; }
+.pvp-rb-rank { flex: none; text-align: right; display: flex; flex-direction: column; }
+.pvp-rb-rank b { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #f5b842; }
+.pvp-rb-rank i { font-style: normal; font-size: 7.5px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; }
+
+/* MMR change on the result */
+#pvp-mmr { margin: 4px 0 2px; }
+.pvp-mmr-row { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 14px; margin: 0 auto; max-width: 280px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); }
+.pvp-mmr-row--load { justify-content: center; }
+.pvp-mmr-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.06em; color: #6b6b86; }
+.pvp-mmr-badge { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); padding: 4px 10px; border-radius: 8px;
+  background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent); }
+.pvp-mmr-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 18px; color: #f5f3fb; }
+.pvp-mmr-elo i { font-style: normal; font-size: 8px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 4px; }
+.pvp-mmr-delta { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #9090a8; }
+.pvp-mmr-delta.up { color: #34d399; }
+.pvp-mmr-delta.down { color: #ff8a8a; }
+
+/* DRAW result word */
+.ar-result-word.draw { color: #7dd3fc; }

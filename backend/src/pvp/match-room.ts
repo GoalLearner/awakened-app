@@ -371,9 +371,12 @@ export class MatchRoom {
     this.broadcastBoth(m, (slot) => ({ type: 'state', ...this.viewBySlot(m, slot) }));
   }
   broadcastTurn(m: MatchState, events: any[], sess: any): void {
+    // draw-aware: the raw engine `won` favors p on simultaneous death, so a mutual KO
+    // must be read through pvpResult (else the KO animation would show a false winner).
+    const res = sess.done ? pvpResult(sess) : null;
     this.broadcastBoth(m, (slot) => ({
       type: 'turn_result', turn: m.turn, events, pHP: sess.pHP, bHP: sess.bHP,
-      done: sess.done, winnerSide: sess.done ? (sess.won ? 'p' : 'b') : null,
+      done: sess.done, winnerSide: res ? res.winnerSide : null, draw: res ? res.draw : false,
       ...this.viewBySlot(m, slot),
     }));
   }

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w406'; // W406 — PvP adversarial-review fixes
+  const APP_BUILD_TAG = '2.2.8-w408'; // W408 — PvP ranked meta (rating/tier/draw UI)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9380,7 +9380,11 @@
       // W404 — PvP KO: this is a duel, NOT the Ascent. Skip arenaFinalizeBattle
       // (no floor climb / titles / daily lives); present the duel result instead.
       if (s._pvp) {
-        _pkbSay(s.won ? esc((_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'Your foe') + ' is down!' : 'You fall…', _PKB_T.koHold, function () {
+        const drawn = _pvpResultOutcome === 'draw' || s._pvpDraw;
+        if (drawn) { try { const sp = _pkbEl('pkb-spot-p'), spb = _pkbEl('pkb-spot-b'); if (sp) sp.classList.add('ko'); if (spb) spb.classList.add('ko'); } catch (_) {} }
+        const koLine = drawn ? 'Both fighters fall — a draw.'
+          : s.won ? esc((_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'Your foe') + ' is down!' : 'You fall…';
+        _pkbSay(koLine, _PKB_T.koHold, function () {
           _pkbAfter(_PKB_T.ko, function () { try { _pvpRenderResult(); } catch (_) {} });
         });
         return;
@@ -10038,6 +10042,8 @@
         if (code) http('POST', '/v1/pvp/forfeit', { code: code }).catch(function () {});
       },
       resync() { if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'resync' })); } catch (_) {} } else startPoll(); },
+      async rating() { try { return await http('GET', '/v1/pvp/rating'); } catch (_) { return null; } },
+      async leaderboard(limit) { try { return await http('GET', '/v1/pvp/leaderboard?limit=' + (limit || 50)); } catch (_) { return null; } },
       onMessage(fn) { onMsg = fn; },
       close() {
         closed = true; stopPoll(); stopPing();
@@ -10060,6 +10066,21 @@
   let _pvpTimerId = null;
   let _pvpSubmitPending = false;   // I submitted + am waiting for the ack/resolve
   let _pvpSeenTurn = -1;           // last turn_result animated (dedup resync/poll redelivery)
+  let _pvpRating = null;           // cached { elo, tier, wins, losses, draws, rank, placed }
+  let _pvpEndRating = null;        // { delta, elo, tier } from the just-finished ranked match
+  let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
+
+  // ELO -> tier (mirrors backend pvp/elo.ts §12.2) + an accent color per tier.
+  function _pvpTier(elo) {
+    elo = _pvpNum(elo, 1500);
+    if (elo >= 3000) return { name: 'Awakened', color: '#f5b842' };
+    if (elo >= 2600) return { name: 'Master', color: '#c084fc' };
+    if (elo >= 2300) return { name: 'Diamond', color: '#5eead4' };
+    if (elo >= 2000) return { name: 'Platinum', color: '#7dd3fc' };
+    if (elo >= 1700) return { name: 'Gold', color: '#fbbf24' };
+    if (elo >= 1500) return { name: 'Silver', color: '#cbd5e1' };
+    return { name: 'Bronze', color: '#b08d57' };
+  }
 
   function _pvpNum(v, d) { const n = Number(v); return Number.isFinite(n) ? n : (d != null ? d : 0); }
   function _pvpOppShort() { try { return (_pvpView && _pvpView.opp && (_pvpView.opp.alias || _pvpView.opp.name)) || 'your opponent'; } catch (_) { return 'your opponent'; } }
@@ -10097,6 +10118,7 @@
     _arBodyMode(false);
     _arView = 'pvp-lobby';
     _pvpRenderLobby('home');
+    _pvpFetchRating();   // paints into the rank band when it lands
   }
   function _pvpRenderLobby(mode, x) {
     _arView = 'pvp-lobby';
@@ -10125,22 +10147,48 @@
           '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
         '</div>' + err + '</div>';
     }
+    const showBand = mode !== 'creating' && mode !== 'joining';
     _arSet(
       '<div class="pvp-lobby">' +
-        '<div class="pvp-lobby-head"><span class="k"><i></i>PvP<i></i></span>' +
-          '<div class="pvp-lobby-title">Duel a Friend</div>' +
-          '<div class="pvp-lobby-sub">Real-time, server-judged. Your equipped build + weapon fight for you.</div></div>' +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>RANKED PvP<i></i></span>' +
+          '<div class="pvp-lobby-title">The Arena</div>' +
+          '<div class="pvp-lobby-sub">Real-time, server-judged. Every duel moves your rating.</div></div>' +
+        (showBand ? _pvpRankBandHtml() : '') +
         body +
         '<div class="ar-spacer"></div>' +
         '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>' +
       '</div>'
     );
   }
+  // YOUR RANK band — tier badge + ELO + W/L(/D) record + global rank. Painted from the
+  // cache, refreshed async (the server is the source of truth).
+  function _pvpRankBandHtml() {
+    const r = _pvpRating;
+    if (!r) return '<div class="pvp-rankband pvp-rankband--loading"><span class="pvp-rb-load">Loading your rank…</span></div>';
+    const t = _pvpTier(r.elo);
+    const placed = !!r.placed;
+    const rec = _pvpNum(r.wins) + 'W &middot; ' + _pvpNum(r.losses) + 'L' + (_pvpNum(r.draws) ? ' &middot; ' + _pvpNum(r.draws) + 'D' : '');
+    return '<div class="pvp-rankband">' +
+      '<div class="pvp-rb-badge" style="--rb:' + t.color + '"><span class="pvp-rb-tier">' + esc(t.name) + '</span></div>' +
+      '<div class="pvp-rb-mid"><span class="pvp-rb-elo">' + (placed ? _pvpNum(r.elo) : '—') + '<i>ELO</i></span>' +
+        '<span class="pvp-rb-rec">' + (placed ? rec : 'Unranked &middot; play your first ranked duel') + '</span></div>' +
+      (placed && r.rank ? '<div class="pvp-rb-rank"><b>#' + _pvpNum(r.rank) + '</b><i>GLOBAL</i></div>' : '') +
+      '</div>';
+  }
+  function _pvpFetchRating() {
+    if (!(window.PvP && PvP.rating)) return;
+    Promise.resolve(PvP.rating()).then(function (res) {
+      if (res && typeof res.elo === 'number') {
+        _pvpRating = res;
+        if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); }
+      }
+    }).catch(function () {});
+  }
   async function _pvpCreate() {
     if (!_pvpRequireAuth()) return;
     _pvpRenderLobby('creating');
     PvP.onMessage(_pvpOnMessage);
-    let r; try { r = await PvP.create(_pvpBuildMyCombatant(), false); } catch (_) { r = null; }
+    let r; try { r = await PvP.create(_pvpBuildMyCombatant(), true); } catch (_) { r = null; }   // ranked duel
     if (_arView !== 'pvp-lobby') return;           // user navigated away mid-request
     if (!(r && r.ok && r.code)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
     _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
@@ -10226,6 +10274,7 @@
   function _pvpStartBattle(view) {
     _pvpStarted = true; _pvpView = view;
     _pvpSeenTurn = -1; _pvpSubmitPending = false;
+    _pvpEndRating = null; _pvpResultOutcome = null;
     const opp = (view && view.opp) || {};
     _arMatchup = { floor: 0, advances: false, _pvp: true, bot: { name: opp.alias || opp.name || 'Challenger', isBoss: false } };
     _arSess = _pvpSynthSession(view);
@@ -10316,11 +10365,13 @@
     s.turn = (msg.turn != null) ? msg.turn : s.turn;
     s.pHP = _pvpNum(me.hp, s.pHP); s.bHP = _pvpNum(opp.hp, s.bHP);     // post-turn truth (me/opp = my perspective)
     s.done = !!msg.done || msg.phase === 'ended';
+    if (msg.rating) _pvpEndRating = msg.rating;        // (carried by match_end, not turn_result)
     if (s.done) {
-      let youWon = (typeof msg.youWon === 'boolean') ? msg.youWon
-        : msg.result ? msg.result.winnerSide === _pvpYou
-        : msg.winnerSide ? msg.winnerSide === _pvpYou : false;
-      s.won = youWon;
+      const draw = msg.winnerSide === 'draw' || msg.draw === true || (msg.result && msg.result.winnerSide === 'draw');
+      const youWon = !draw && ((typeof msg.youWon === 'boolean') ? msg.youWon
+        : msg.winnerSide ? msg.winnerSide === _pvpYou : false);
+      s.won = youWon; s._pvpDraw = draw;
+      _pvpResultOutcome = draw ? 'draw' : youWon ? 'win' : 'loss';
     }
     _pvpClearStatus();
     _pkbPlay(_pvpFlipEvents(msg.events, _pvpYou));
@@ -10375,13 +10426,16 @@
 
   // ── end / result ──
   function _pvpHandleEnd(msg) {
-    if (_arView === 'pvp-result') return;
+    if (msg && msg.rating) _pvpEndRating = msg.rating;               // authoritative MMR delta
+    const draw = !!(msg && msg.result && msg.result.winnerSide === 'draw');
+    if (_arView === 'pvp-result') { if (draw) _pvpResultOutcome = 'draw'; _pvpPatchResultRating(); return; }  // already shown -> fill the MMR line
     _pvpView = msg || _pvpView;
-    const youWon = (typeof msg.youWon === 'boolean') ? msg.youWon : (msg.result ? msg.result.winnerSide === _pvpYou : false);
+    const youWon = !draw && ((typeof msg.youWon === 'boolean') ? msg.youWon : (msg.result ? msg.result.winnerSide === _pvpYou : false));
     const s = _arSess;
     if (s && s._pvp && s.done && _arView === 'battle') return;   // an animated KO is mid-flight; _pkbDrained renders it
     if (!s || !s._pvp) _arSess = { _pvp: true };
-    _arSess.done = true; _arSess.won = youWon;
+    _arSess.done = true; _arSess.won = youWon; _arSess._pvpDraw = draw;
+    _pvpResultOutcome = draw ? 'draw' : youWon ? 'win' : 'loss';
     if (msg.me) _arSess.pHP = _pvpNum(msg.me.hp, _arSess.pHP || 0);
     if (msg.opp) _arSess.bHP = _pvpNum(msg.opp.hp, _arSess.bHP || 0);
     _pvpRenderResult();
@@ -10392,29 +10446,65 @@
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}
     const s = _arSess || {}, view = _pvpView || {};
-    const won = !!s.won;
+    const outcome = _pvpResultOutcome || (s.won ? 'win' : 'loss');
+    const won = outcome === 'win', draw = outcome === 'draw';
     const reason = (view.result && view.result.reason) || view.reason || 'ko';
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const oppName = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'your challenger';
-    const narr = reason === 'forfeit' ? (won ? esc(oppName) + ' forfeited the duel.' : 'You forfeited the duel.')
+    const word = draw ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
+    const wcls = draw ? 'draw' : won ? 'win' : 'loss';
+    const narr = draw
+        ? (reason === 'mutual_ko' ? 'You fall together &mdash; a true trade.' : reason === 'draw_timeout' ? 'Dead even when the bell rang.' : 'An even match &mdash; neither yields.')
+      : reason === 'forfeit' ? (won ? esc(oppName) + ' forfeited the duel.' : 'You forfeited the duel.')
       : reason === 'disconnect' ? (won ? esc(oppName) + ' lost connection.' : 'You lost connection.')
       : reason === 'turn_cap' ? (won ? 'You out-fought ' + esc(oppName) + ' to the wire.' : esc(oppName) + ' edged you out at the wire.')
       : (won ? 'You bested ' + esc(oppName) + '. Earned, not given.' : esc(oppName) + ' bested you. Return sharper.');
+    const ranked = view.ranked !== false;
     _arSet(
       '<div class="ar-result-hero">' +
         '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
-        '<div class="ar-kicker" style="margin-top:14px">Duel &middot; Result</div>' +
-        '<div class="ar-result-word ' + (won ? 'win' : 'loss') + '">' + (won ? 'VICTORY' : 'DEFEAT') + '</div>' +
+        '<div class="ar-kicker" style="margin-top:14px">' + (ranked ? 'Ranked Duel' : 'Duel') + ' &middot; Result</div>' +
+        '<div class="ar-result-word ' + wcls + '">' + word + '</div>' +
         '<div class="ar-result-rule"></div>' +
-        '<div class="ar-result-narr' + (won ? '' : ' loss') + '">' + narr + '</div>' +
+        '<div class="ar-result-narr' + (won || draw ? '' : ' loss') + '">' + narr + '</div>' +
       '</div>' +
+      (ranked ? '<div id="pvp-mmr">' + _pvpRatingResultHtml() + '</div>' : '') +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="duel">DUEL AGAIN</button>' +
       '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>'
     );
-    try { playSfx(won ? 'ar_win' : 'ar_lose'); } catch (_) {}
+    try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-    _pvpTeardown(true);   // close the transport; the result stays on screen
+    _pvpTeardown(true);   // close the socket; the rating is fetched over http if not yet in
+    if (ranked && !_pvpEndRating) _pvpFetchEndRating();
+  }
+  // The MMR block on the result: tier badge + new ELO + the +/- delta. Renders from
+  // _pvpEndRating (the match_end delta) if present, else a placeholder that
+  // _pvpFetchEndRating fills (fetch the new rating + derive the delta vs the pre-match cache).
+  function _pvpRatingResultHtml() {
+    const er = _pvpEndRating;
+    if (!er) return '<div class="pvp-mmr-row pvp-mmr-row--load"><span class="pvp-mmr-load">Updating your rank&hellip;</span></div>';
+    const t = _pvpTier(er.elo);
+    const d = (typeof er.delta === 'number') ? er.delta : null;
+    const dstr = d == null ? '' : (d > 0 ? '+' + d : '' + d);
+    const dcls = d == null ? '' : d > 0 ? ' up' : d < 0 ? ' down' : '';
+    return '<div class="pvp-mmr-row">' +
+      '<div class="pvp-mmr-badge" style="--rb:' + t.color + '">' + esc(t.name) + '</div>' +
+      '<div class="pvp-mmr-elo">' + _pvpNum(er.elo) + '<i>ELO</i></div>' +
+      (d == null ? '' : '<div class="pvp-mmr-delta' + dcls + '">' + dstr + '</div>') +
+      '</div>';
+  }
+  function _pvpPatchResultRating() { const host = document.getElementById('pvp-mmr'); if (host) host.innerHTML = _pvpRatingResultHtml(); }
+  function _pvpFetchEndRating() {
+    if (!(window.PvP && PvP.rating)) return;
+    Promise.resolve(PvP.rating()).then(function (res) {
+      if (res && typeof res.elo === 'number') {
+        const before = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo : null;
+        _pvpEndRating = { elo: res.elo, tier: res.tier, delta: before != null ? res.elo - before : null };
+        _pvpRating = res;
+        if (_arView === 'pvp-result') _pvpPatchResultRating();
+      }
+    }).catch(function () {});
   }
 
   // ── teardown / exit ──
@@ -10451,32 +10541,51 @@
     window.__pvpDemo = function (opts) {
       opts = opts || {};
       _pvpCode = 'DEMOXY'; _pvpYou = opts.you || 'p';
+      _pvpRating = { elo: 1500, tier: 'Silver', wins: 3, losses: 2, draws: 0, rank: 42, placed: true };  // demo rank band
       let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = [{ id: 'slash', name: 'Slash', gl: 'sword', power: 1, acc: 0.95, cd: 0, desc: 'A clean cut.' }]; }
       const view = {
-        type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: !!opts.ranked, deadlineMs: Date.now() + 45000,
+        type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: opts.ranked !== false, deadlineMs: Date.now() + 45000,
         youSubmitted: false, oppSubmitted: false, oppConnected: true,
         me:  { alias: 'You', name: 'You', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
         opp: { alias: opts.opp || 'Rival', name: opts.opp || 'Rival', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus() },
       };
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
       _pvpStarted = false; _pvpStartBattle(view);
-      return 'duel demo started (call __pvpDemoTurn() to play a turn, __pvpDemoTurn(true) for a finishing blow)';
+      return 'duel demo started — __pvpDemoTurn() = a turn; __pvpDemoTurn(true) = win, ("draw")/("loss") for those endings';
     };
     window.__pvpDemoTurn = function (finish) {
       if (!(_arSess && _arSess._pvp)) return 'no demo battle active';
+      const draw = finish === 'draw', loss = finish === 'loss', ending = !!finish;
+      const myDmg = ending ? (loss ? 12 : 60) : 14, oppDmg = ending ? (draw || loss ? 60 : 10) : 10;
       const evs = [
-        { t: 'hit', side: 'p', dmg: finish ? 60 : 14, crit: false, gl: 'sword', text: 'You used SLASH for ' + (finish ? 60 : 14) },
-        { t: 'hit', side: 'b', dmg: 10, crit: false, gl: 'sword', text: 'Rival used SLASH for 10' },
+        { t: 'hit', side: 'p', dmg: myDmg, crit: false, gl: 'sword', text: 'You used SLASH for ' + myDmg },
+        { t: 'hit', side: 'b', dmg: oppDmg, crit: false, gl: 'sword', text: 'Rival used SLASH for ' + oppDmg },
       ];
       const kit = (_pvpView && _pvpView.me && _pvpView.me.kit) || [];
+      const winnerSide = !ending ? null : draw ? 'draw' : loss ? (_pvpYou === 'p' ? 'b' : 'p') : _pvpYou;
+      if (ending) {
+        const youWon = winnerSide === _pvpYou;
+        _pvpEndRating = { delta: draw ? 0 : youWon ? 17 : -17, elo: draw ? 1500 : youWon ? 1517 : 1483, tier: 'Silver' };
+      }
       _pvpAnimateTurn({
-        type: 'turn_result', turn: 2, events: evs, done: !!finish, winnerSide: finish ? _pvpYou : null,
-        me:  { alias: 'You', name: 'You', hp: 50, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
-        opp: { alias: 'Rival', name: 'Rival', hp: finish ? 0 : 46, maxHP: 60, eff: 1, status: _arBlankStatus() },
-        you: _pvpYou, phase: finish ? 'ended' : 'active', deadlineMs: Date.now() + 45000,
-        youSubmitted: false, oppSubmitted: false, oppConnected: true, ranked: false,
+        type: 'turn_result', turn: 2, events: evs, done: ending, winnerSide,
+        me:  { alias: 'You', name: 'You', hp: draw || loss ? 0 : 50, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
+        opp: { alias: 'Rival', name: 'Rival', hp: draw || (!loss && ending) ? (draw ? 0 : 0) : 46, maxHP: 60, eff: 1, status: _arBlankStatus() },
+        you: _pvpYou, phase: ending ? 'ended' : 'active', deadlineMs: Date.now() + 45000,
+        youSubmitted: false, oppSubmitted: false, oppConnected: true, ranked: true,
       });
-      return finish ? 'finishing blow played' : 'turn played';
+      return ending ? ('ending played: ' + (draw ? 'draw' : loss ? 'loss' : 'win')) : 'turn played';
+    };
+    // open the Arena lobby directly (bypasses PVP_ENABLED) with a sample rank so the
+    // YOUR RANK band can be previewed without the live backend.
+    window.__pvpLobby = function (opts) {
+      opts = opts || {};
+      _pvpRating = opts.unplaced
+        ? { elo: 1500, tier: 'Silver', wins: 0, losses: 0, draws: 0, rank: null, placed: false }
+        : { elo: 1742, tier: 'Gold', wins: 12, losses: 7, draws: 1, rank: 8, placed: true };
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpOpenLobby();
+      return 'lobby opened (sample rank)';
     };
   } catch (_) {}
 
