@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Diamond rank emblem" style="--tier:initial">
+<defs><radialGradient id="g_diamond" cx="50%" cy="46%" r="52%">
+    <stop offset="0%" stop-color="#5eead4" stop-opacity=".30"></stop>
+    <stop offset="55%" stop-color="#5eead4" stop-opacity=".07"></stop>
+    <stop offset="100%" stop-color="#5eead4" stop-opacity="0"></stop>
+  </radialGradient></defs>
+  <circle cx="32" cy="31" r="29" fill="url(#g_diamond)"></circle>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="var(--tier, #5eead4)" stroke="#c5f7ee" stroke-width="1.1" stroke-linejoin="round"></path>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="none" stroke="#1c7d6d" stroke-width=".6" opacity=".5" transform="translate(0 .5)"></path>
+  <g stroke="#c5f7ee" stroke-width=".7" opacity=".55" fill="none" stroke-linejoin="round">
+      <path d="M32 12 20 26 32 40 44 26Z"></path>
+      <path d="M20 26 17 33M44 26 47 33M32 40 32 53"></path>
+      <path d="M18 14 20 26M46 14 44 26"></path>
+    </g>
+  
+    <path d="M32 17L38 46H26Z" fill="#1c7d6d" stroke="#1c7d6d" stroke-width=".6" stroke-linejoin="round"></path>
+    <g stroke="#c5f7ee" stroke-width="1.1" stroke-linecap="round" opacity=".92">
+      <line x1="29.1" y1="32" x2="34.9" y2="32"></line>
+      <line x1="30.5" y1="39.5" x2="33.5" y2="39.5"></line>
+    </g>
+    <line x1="25" y1="46" x2="39" y2="46" stroke="#1c7d6d" stroke-width="1.6" stroke-linecap="round"></line>
+    <path d="M32 10.4L33.15 12.85L35.6 14L33.15 15.15L32 17.6L30.85 15.15L28.4 14L30.85 12.85Z" fill="#c5f7ee" stroke="#1c7d6d" stroke-width=".5"></path>
+  <path d="M45 12.4L45.8 14.2L47.6 15L45.8 15.8L45 17.6L44.2 15.8L42.4 15L44.2 14.2Z" fill="#c5f7ee" stroke="#1c7d6d" stroke-width=".5"></path>
+</svg>

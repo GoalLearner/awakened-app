@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Master rank emblem" style="--tier:initial">
+<defs><radialGradient id="g_master" cx="50%" cy="46%" r="52%">
+    <stop offset="0%" stop-color="#c084fc" stop-opacity=".30"></stop>
+    <stop offset="55%" stop-color="#c084fc" stop-opacity=".07"></stop>
+    <stop offset="100%" stop-color="#c084fc" stop-opacity="0"></stop>
+  </radialGradient></defs>
+  <circle cx="32" cy="31" r="29.5" fill="url(#g_master)"></circle>
+  <g><line x1="62.0" y1="31.0" x2="65.5" y2="31.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="58.0" y1="46.0" x2="61.0" y2="47.8" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="47.0" y1="57.0" x2="48.8" y2="60.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="32.0" y1="61.0" x2="32.0" y2="64.5" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="17.0" y1="57.0" x2="15.3" y2="60.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="6.0" y1="46.0" x2="3.0" y2="47.8" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="2.0" y1="31.0" x2="-1.5" y2="31.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="6.0" y1="16.0" x2="3.0" y2="14.2" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="17.0" y1="5.0" x2="15.2" y2="2.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="32.0" y1="1.0" x2="32.0" y2="-2.5" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="47.0" y1="5.0" x2="48.8" y2="2.0" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line><line x1="58.0" y1="16.0" x2="61.0" y2="14.2" stroke="#c084fc" stroke-width="1.4" stroke-linecap="round" opacity=".7"></line></g>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="var(--tier, #c084fc)" stroke="#ead0ff" stroke-width="1.1" stroke-linejoin="round"></path>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="none" stroke="#5f2b9c" stroke-width=".6" opacity=".5" transform="translate(0 .5)"></path>
+  <g stroke="#ead0ff" stroke-width=".7" opacity=".5" fill="none" stroke-linejoin="round">
+      <path d="M32 12 20 26 32 40 44 26Z"></path>
+      <path d="M20 26 17 33M44 26 47 33"></path>
+    </g>
+  
+    <path d="M32 17L38 46H26Z" fill="#5f2b9c" stroke="#5f2b9c" stroke-width=".6" stroke-linejoin="round"></path>
+    <g stroke="#ead0ff" stroke-width="1.1" stroke-linecap="round" opacity=".92">
+      <line x1="29.1" y1="32" x2="34.9" y2="32"></line>
+      <line x1="30.5" y1="39.5" x2="33.5" y2="39.5"></line>
+    </g>
+    <line x1="25" y1="46" x2="39" y2="46" stroke="#5f2b9c" stroke-width="1.6" stroke-linecap="round"></line>
+    <path d="M32 10.4L33.15 12.85L35.6 14L33.15 15.15L32 17.6L30.85 15.15L28.4 14L30.85 12.85Z" fill="#ead0ff" stroke="#5f2b9c" stroke-width=".5"></path>
+  <path d="M45 10L46 12L48 13L46 14L45 16L44 14L42 13L44 12Z" fill="#ead0ff" stroke="#5f2b9c" stroke-width=".5"></path>
+  <circle cx="45" cy="13" r="5" fill="none" stroke="#c084fc" stroke-width=".7" opacity=".5"></circle>
+</svg>

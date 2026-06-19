@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Bronze rank emblem" style="--tier:initial">
+<defs><radialGradient id="g_bronze" cx="50%" cy="46%" r="52%">
+    <stop offset="0%" stop-color="#b08d57" stop-opacity=".30"></stop>
+    <stop offset="55%" stop-color="#b08d57" stop-opacity=".07"></stop>
+    <stop offset="100%" stop-color="#b08d57" stop-opacity="0"></stop>
+  </radialGradient></defs>
+  <circle cx="32" cy="31" r="29" fill="url(#g_bronze)"></circle>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="var(--tier, #b08d57)" stroke="#e9c089" stroke-width="1.1" stroke-linejoin="round"></path>
+  <path d="M18 11H46l3 3v18c0 12-7.5 20-17 25-9.5-5-17-13-17-25V14z" fill="none" stroke="#6a4f27" stroke-width=".6" opacity=".5" transform="translate(0 .5)"></path>
+  
+    <path d="M32 17L38 46H26Z" fill="#6a4f27" stroke="#6a4f27" stroke-width=".6" stroke-linejoin="round"></path>
+    <g stroke="#e9c089" stroke-width="1.1" stroke-linecap="round" opacity=".92">
+      <line x1="29.1" y1="32" x2="34.9" y2="32"></line>
+      <line x1="30.5" y1="39.5" x2="33.5" y2="39.5"></line>
+    </g>
+    <line x1="25" y1="46" x2="39" y2="46" stroke="#6a4f27" stroke-width="1.6" stroke-linecap="round"></line>
+    <path d="M32 10.4L33.15 12.85L35.6 14L33.15 15.15L32 17.6L30.85 15.15L28.4 14L30.85 12.85Z" fill="#e9c089" stroke="#6a4f27" stroke-width=".5"></path>
+  <circle cx="22" cy="22" r=".7" fill="#6a4f27" opacity=".6"></circle>
+  <circle cx="42" cy="38" r=".7" fill="#6a4f27" opacity=".5"></circle>
+</svg>

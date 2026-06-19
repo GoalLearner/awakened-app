@@ -30243,8 +30243,8 @@ button.guildhall-summary-tile:active {
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.10); }
 .pvp-rankband--loading { justify-content: center; }
 .pvp-rb-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.08em; color: #6b6b86; }
-.pvp-rb-badge { flex: none; padding: 6px 12px; border-radius: 9px; background: color-mix(in srgb, var(--rb) 16%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 55%, transparent); }
-.pvp-rb-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 13px; color: var(--rb); }
+.pvp-rb-badge { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 9px 4px; border-radius: 12px; background: color-mix(in srgb, var(--rb) 13%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 42%, transparent); }
+.pvp-rb-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); letter-spacing: 0.3px; }
 .pvp-rb-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .pvp-rb-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 19px; color: #f5f3fb; }
 .pvp-rb-elo i { font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 5px; }
@@ -30259,7 +30259,7 @@ button.guildhall-summary-tile:active {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); }
 .pvp-mmr-row--load { justify-content: center; }
 .pvp-mmr-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.06em; color: #6b6b86; }
-.pvp-mmr-badge { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); padding: 4px 10px; border-radius: 8px;
+.pvp-mmr-badge { display: inline-flex; align-items: center; gap: 6px; font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); padding: 4px 10px 4px 6px; border-radius: 9px;
   background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent); }
 .pvp-mmr-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 18px; color: #f5f3fb; }
 .pvp-mmr-elo i { font-style: normal; font-size: 8px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 4px; }
@@ -30283,14 +30283,34 @@ button.guildhall-summary-tile:active {
   animation: pvp-rc-pop 0.5s 0.1s both; }
 
 /* Rank-up / rank-down moment on the result */
-.pvp-rankchange { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 auto 8px; padding: 7px 16px; max-width: 280px; border-radius: 10px;
+.pvp-rankchange { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin: 0 auto 8px; padding: 10px 16px; max-width: 300px; border-radius: 12px;
   background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent);
   animation: pvp-rc-pop 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
+.pvp-rc-emblem { flex-basis: 100%; display: flex; justify-content: center; margin-bottom: 2px; }
 .pvp-rc-arrow { font-size: 12px; color: var(--rb); }
 .pvp-rankchange.down .pvp-rc-arrow { color: #ff8a8a; }
 .pvp-rc-tx { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; color: #cdd1e8; }
 .pvp-rc-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 14px; color: var(--rb); }
 @keyframes pvp-rc-pop { from { opacity: 0; transform: translateY(8px) scale(0.9); } to { opacity: 1; transform: none; } }
+
+/* W417 — ClaudeDesign rank-tier emblems ("The Seven Ascents"). Sizing is inline on
+   each instance; this carries display, the locked/unranked state, the apex glow, and
+   the Awakened ignite on a rank-up promotion. */
+.pvp-emblem { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 0; vertical-align: middle; }
+.pvp-emblem svg { display: block; width: 100%; height: 100%; }
+.pvp-emblem--locked { filter: grayscale(1) brightness(0.5) contrast(0.92); opacity: 0.45; }
+.pvp-emblem--awk { filter: drop-shadow(0 0 4px rgba(245,184,66,0.45)); }
+.pvp-vs-emblem { display: flex; justify-content: center; margin: 7px 0 4px; }
+/* Awakened promotion: the emblem ignites once — scales past 100%, the aura blooms,
+   then settles to its resting glow (handoff "Apex moment · Awakened ignite"). */
+.pvp-rankchange.up .pvp-emblem--awk { animation: pvpIgnite 1.5s cubic-bezier(0.2,0.8,0.3,1) both; }
+@keyframes pvpIgnite {
+  0%   { transform: scale(0.7); filter: drop-shadow(0 0 0 rgba(245,184,66,0)) brightness(0.7) saturate(0.8); }
+  35%  { transform: scale(1.18); filter: drop-shadow(0 0 16px rgba(245,184,66,0.95)) brightness(1.4) saturate(1.2); }
+  60%  { transform: scale(0.98); filter: drop-shadow(0 0 9px rgba(245,184,66,0.6)) brightness(1.08) saturate(1); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(245,184,66,0.45)) brightness(1) saturate(1); }
+}
+@media (prefers-reduced-motion: reduce) { .pvp-rankchange.up .pvp-emblem--awk { animation: none; } }
 
 /* Win-streak chip (rank band + result) */
 .pvp-streak { display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800;
