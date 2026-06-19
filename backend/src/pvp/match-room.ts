@@ -217,7 +217,10 @@ export class MatchRoom {
   }
 
   armDeadline(m: MatchState): void {
-    m.deadlineMs = Date.now() + TURN_DEADLINE_MS;
+    // PVP_TURN_DEADLINE_MS (a wrangler var) overrides the default — lets the
+    // integration test exercise the turn-timeout path in seconds, not 45s.
+    const dl = Number((this.env as any).PVP_TURN_DEADLINE_MS) || TURN_DEADLINE_MS;
+    m.deadlineMs = Date.now() + dl;
     this.state.storage.setAlarm(m.deadlineMs);
   }
 

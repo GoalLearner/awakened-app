@@ -36,6 +36,12 @@ export function handlePreflight(): Response {
 /** Wraps an existing Response with CORS headers (additive — preserves
  * the original body, status, and any existing headers). */
 export function withCors(response: Response): Response {
+  // A WebSocket upgrade (101) carries a `webSocket` handle that a reconstructed
+  // Response would silently drop — return it untouched (the handshake isn't
+  // subject to fetch() CORS anyway). Without this, /v1/pvp/ws upgrades fail.
+  if (response.status === 101 || (response as unknown as { webSocket?: unknown }).webSocket) {
+    return response;
+  }
   const headers = new Headers(response.headers);
   for (const [k, v] of Object.entries(CORS_HEADERS)) {
     headers.set(k, v);
