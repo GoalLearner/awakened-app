@@ -55,6 +55,7 @@ const DEFAULT_DUEL_TYPE = 'verified_objectives';
 // ─────────────────────────────────────────────────────────────
 const ALLOWED_EVENT_TYPES = new Set([
   'steps_total',
+  'flights_total', // W397 — stairs-climbed co-op (The Hollow Sovereign, B-rank)
   'sleep_7h_night',
   'bedtime_before_midnight',
   'strength_workout',
@@ -804,10 +805,14 @@ export async function handleVerifiedEventsSubmit(
     // instance, inside its window. Legacy duel/outbox events (no
     // boss_instance_id) skip this entirely and insert as before.
     if (bossInstanceId) {
-      let v = bossCache.get(bossInstanceId);
+      // W397 — cache key includes eventType so a wrong-metric submission to the
+      // same instance is validated (and rejected) on its own, not masked by a
+      // cached steps result.
+      const bossCacheKey = bossInstanceId + ':' + eventType;
+      let v = bossCache.get(bossCacheKey);
       if (v === undefined) {
-        v = await validateBossInstanceForUser(env, session.userId, bossInstanceId);
-        bossCache.set(bossInstanceId, v);
+        v = await validateBossInstanceForUser(env, session.userId, bossInstanceId, eventType);
+        bossCache.set(bossCacheKey, v);
       }
       if (!v.ok) { errors.push({ index: i, reason: v.reason || 'BOSS_INSTANCE_INVALID' }); continue; }
     }

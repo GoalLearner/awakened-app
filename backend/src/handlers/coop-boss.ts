@@ -31,17 +31,33 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
 // ── Server-authoritative co-op boss roster ──────────────────────────
-// One E-rank boss for v1. goalSteps is the COMBINED target across both
-// hunters; rewardSouls is the per-hunter payout the client grants on the
-// kill; windowHours is the hunt length, stamped on join.
+// goalSteps is the COMBINED target across both hunters (for flights bosses it
+// is a flight count, not a step count — the column is metric-generic);
+// rewardSouls is the per-hunter payout the client grants on the kill;
+// windowHours is the hunt length, stamped on join. metric selects which
+// verified-event stream the hunt aggregates: 'steps' (steps_total) or
+// 'flights' (flights_total, W397 — stairs-climbed co-op).
 const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; rewardSouls: number; windowHours: number }
+  { rank: string; goalSteps: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' }
 > = {
-  the_twin_maw: { rank: 'E', goalSteps: 16000, rewardSouls: 50, windowHours: 24 },
+  the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 50,  windowHours: 24, metric: 'steps' },
+  the_coursing_dread:   { rank: 'C', goalSteps: 18000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
+  the_hollow_sovereign: { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
 };
 
 const STEPS_EVENT_TYPE = 'steps_total';
+const FLIGHTS_EVENT_TYPE = 'flights_total';
+// Each co-op instance is HOMOGENEOUS: only its boss's metric is ever tagged to
+// it (enforced at submit by validateBossInstanceForUser), so a per-instance
+// MAX(value) over the matching event_type is that hunter's true window total.
+function eventTypeForMetric(metric: string): string {
+  return metric === 'flights' ? FLIGHTS_EVENT_TYPE : STEPS_EVENT_TYPE;
+}
+function eventTypeForBoss(bossId: string): string {
+  const cfg = COOP_BOSS_CFG[bossId];
+  return eventTypeForMetric(cfg ? cfg.metric : 'steps');
+}
 const MAX_LIST = 20;
 
 interface CoopBossRow {
@@ -92,15 +108,20 @@ async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, str
   return map;
 }
 
-/** Per-user step contribution for ONE instance: MAX(value) per user. */
-async function getCoopStepsByUser(env: Env, instanceId: string): Promise<Map<string, number>> {
+/** Per-user metric contribution for ONE instance: MAX(value) per user, over
+ *  the boss's event_type (steps_total or flights_total). */
+async function getCoopStepsByUser(
+  env: Env,
+  instanceId: string,
+  eventType: string,
+): Promise<Map<string, number>> {
   const rows = await env.DB.prepare(
     `SELECT user_id, COALESCE(MAX(value), 0) AS s
        FROM verified_events
       WHERE boss_instance_id = ? AND event_type = ?
       GROUP BY user_id`,
   )
-    .bind(instanceId, STEPS_EVENT_TYPE)
+    .bind(instanceId, eventType)
     .all<{ user_id: string; s: number }>();
   const m = new Map<string, number>();
   for (const r of rows.results ?? []) m.set(r.user_id, Number(r.s) || 0);
@@ -115,13 +136,15 @@ async function getCoopStepsForInstances(
   const out = new Map<string, Map<string, number>>();
   if (ids.length === 0) return out;
   const placeholders = ids.map(() => '?').join(',');
+  // Both event_types in one pass — safe because each instance is homogeneous,
+  // so its rows carry exactly one metric and the per-instance MAX is unambiguous.
   const rows = await env.DB.prepare(
     `SELECT boss_instance_id AS bid, user_id, COALESCE(MAX(value), 0) AS s
        FROM verified_events
-      WHERE boss_instance_id IN (${placeholders}) AND event_type = ?
+      WHERE boss_instance_id IN (${placeholders}) AND event_type IN (?, ?)
       GROUP BY boss_instance_id, user_id`,
   )
-    .bind(...ids, STEPS_EVENT_TYPE)
+    .bind(...ids, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE)
     .all<{ bid: string; user_id: string; s: number }>();
   for (const r of rows.results ?? []) {
     if (!out.has(r.bid)) out.set(r.bid, new Map());
@@ -160,6 +183,7 @@ function serializeCoop(
     id: row.id,
     boss_id: row.boss_id,
     boss_rank: row.boss_rank,
+    metric: COOP_BOSS_CFG[row.boss_id]?.metric ?? 'steps',
     status: row.status,
     result: row.result ?? null,
     role,
@@ -210,13 +234,15 @@ export async function validateBossInstanceForUser(
   env: Env,
   userId: string,
   instanceId: string,
+  eventType?: string,
 ): Promise<{ ok: boolean; reason?: string }> {
   const row = await env.DB.prepare(
-    `SELECT challenger_user_id, partner_user_id, status, starts_at, ends_at
+    `SELECT boss_id, challenger_user_id, partner_user_id, status, starts_at, ends_at
        FROM coop_boss_instances WHERE id = ?`,
   )
     .bind(instanceId)
     .first<{
+      boss_id: string;
       challenger_user_id: string;
       partner_user_id: string;
       status: string;
@@ -228,6 +254,12 @@ export async function validateBossInstanceForUser(
     return { ok: false, reason: 'NOT_PARTICIPANT' };
   }
   if (row.status !== 'active') return { ok: false, reason: 'BOSS_NOT_ACTIVE' };
+  // W397 — the event must carry THIS boss's metric (a flights boss only counts
+  // flights_total; a steps boss only steps_total). Enforced here so every
+  // instance stays homogeneous and the resolver's per-metric MAX is exact.
+  if (eventType && eventType !== eventTypeForBoss(row.boss_id)) {
+    return { ok: false, reason: 'WRONG_METRIC' };
+  }
   const now = Date.now();
   const startMs = row.starts_at ? Date.parse(row.starts_at) : NaN;
   const endMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
@@ -346,7 +378,7 @@ export async function handleCoopBossGet(
   if (!isParticipant(row, session.userId)) {
     return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
   }
-  const byUser = await getCoopStepsByUser(env, row.id);
+  const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
   return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, byUser) });
 }
@@ -436,7 +468,7 @@ export async function handleCoopBossCancel(
     // Don't let a leave throw away an already-earned win: if the combined goal
     // is met it must resolve as a WIN, not vanish. (The client also auto-resolves
     // on goal-met; this guards the small race where a leave races the resolve.)
-    const byUser = await getCoopStepsByUser(env, row.id);
+    const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
     if (combinedFrom(row, byUser) >= row.goal_steps) {
       return jsonError(409, 'ALREADY_WON', 'This hunt already hit its goal — claim the win instead.');
     }
@@ -460,7 +492,9 @@ export async function handleCoopBossCancel(
   // committed a terminal status first), return the REAL current row with REAL
   // steps so the client can still award a won hunt and show correct totals.
   // When it DID cancel, the steps are irrelevant (empty map is fine).
-  const byUser = cancelled ? new Map<string, number>() : await getCoopStepsByUser(env, refreshed.id);
+  const byUser = cancelled
+    ? new Map<string, number>()
+    : await getCoopStepsByUser(env, refreshed.id, eventTypeForBoss(refreshed.boss_id));
   return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, byUser) });
 }
 
@@ -515,7 +549,7 @@ export async function handleCoopBossResolve(
     return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
   }
 
-  const byUser = await getCoopStepsByUser(env, row.id);
+  const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
   const combined = combinedFrom(row, byUser);
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
 

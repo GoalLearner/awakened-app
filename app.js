@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w397'; // W397
+  const APP_BUILD_TAG = '2.2.8-w398'; // W398
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -459,6 +459,28 @@
       archetype:  'sustainer',
       statDomain: 'VIT',
       dropTable:  { ultra_rare: 0.22, rare: 0.55 },
+    },
+    // W397 — C-rank co-op DROP SOURCE (The Coursing Dread). coopOnly keeps it
+    // out of the dungeon grid; exists only so rollBossDrop resolves its
+    // dedicated 2-rare + 1-ultra pool. Slightly richer rates than E-rank.
+    the_coursing_dread: {
+      id:         'the_coursing_dread',
+      name:       'The Coursing Dread',
+      rank:       'C',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'STR',
+      dropTable:  { ultra_rare: 0.25, rare: 0.55 },
+    },
+    // W397 — B-rank co-op DROP SOURCE (The Hollow Sovereign, flights hunt).
+    the_hollow_sovereign: {
+      id:         'the_hollow_sovereign',
+      name:       'The Hollow Sovereign',
+      rank:       'B',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'WILL',
+      dropTable:  { ultra_rare: 0.30, rare: 0.55 },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -2017,6 +2039,98 @@
       bonuses: { str: 2, vit: 3, int: 0, focus: 8, will: 2, wlt: 0 },
       bonus_ranges: { str: [1,3], vit: [2,4], int: [0,0], focus: [6,10], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Coursing Dread (C, STR) co-op pool — W397 ──────────
+    // 2 rare + 1 ultra, C-tier. Stronger than the E-rank Twin Maw pool
+    // (Rendell asked for more power to close the floor-60 gap). Art ships
+    // later; cards fall back to a rarity gradient + slot emoji until then.
+    dread_runners_edge: {
+      id: 'dread_runners_edge',
+      name: "The Runner's Edge",
+      slot: 'weapon',
+      source_boss: 'the_coursing_dread',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'Taken from the thing that never stopped coming. Now the chase runs the other way.',
+      art_path: 'assets/items/dread_runners_edge.png',
+      bonuses: { str: 8, vit: 3, int: 0, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [7,10], vit: [2,4], int: [0,0], focus: [1,3], will: [0,2], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+    coursing_houndcall: {
+      id: 'coursing_houndcall',
+      name: 'Coursing Houndcall',
+      slot: 'weapon',
+      source_boss: 'the_coursing_dread',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'A focus that hums with the pack-cry of the hunt. Whatever you name as quarry, it will not let go.',
+      art_path: 'assets/items/coursing_houndcall.png',
+      bonuses: { str: 0, vit: 2, int: 8, focus: 3, will: 2, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [2,4], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_long_pursuit: {
+      id: 'the_long_pursuit',
+      name: 'The Long Pursuit',
+      slot: 'weapon',
+      source_boss: 'the_coursing_dread',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'Strung for the hunt that has no end. It does not loose faster — it simply never tires, and neither will you.',
+      art_path: 'assets/items/the_long_pursuit.png',
+      bonuses: { str: 3, vit: 4, int: 0, focus: 12, will: 2, wlt: 0 },
+      bonus_ranges: { str: [2,4], vit: [3,5], int: [0,0], focus: [10,14], will: [1,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Hollow Sovereign (B, WILL) co-op pool — W397 ───────
+    // 2 rare + 1 ultra, B-tier — the richest co-op pool yet.
+    throne_breakers_maul: {
+      id: 'throne_breakers_maul',
+      name: "Throne-Breaker's Maul",
+      slot: 'weapon',
+      source_boss: 'the_hollow_sovereign',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'Forged to bring down what will not bow. Every swing is one more stair climbed toward the crown.',
+      art_path: 'assets/items/throne_breakers_maul.png',
+      bonuses: { str: 11, vit: 6, int: 0, focus: 2, will: 3, wlt: 0 },
+      bonus_ranges: { str: [10,14], vit: [4,8], int: [0,0], focus: [1,3], will: [2,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+    sovereigns_writ: {
+      id: 'sovereigns_writ',
+      name: "The Sovereign's Writ",
+      slot: 'weapon',
+      source_boss: 'the_hollow_sovereign',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'A decree the hollow king never rescinded. Speak it, and the air itself answers to the throne.',
+      art_path: 'assets/items/sovereigns_writ.png',
+      bonuses: { str: 0, vit: 3, int: 11, focus: 5, will: 4, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [2,4], int: [10,14], focus: [4,8], will: [3,5], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_hollow_crown: {
+      id: 'the_hollow_crown',
+      name: 'The Hollow Crown',
+      slot: 'weapon',
+      source_boss: 'the_hollow_sovereign',
+      rarity: 'ultra_rare',
+      tier: 'B',
+      flavor: 'The crown comes away cold and weightless — all the will that once filled it now fills you. Best in slot, until an A-rank throne falls.',
+      art_path: 'assets/items/the_hollow_crown.png',
+      bonuses: { str: 2, vit: 5, int: 6, focus: 4, will: 15, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [4,8], int: [4,8], focus: [3,6], will: [13,17], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
       on_equip: null, cooldown_seconds: null,
     },
 
@@ -36357,7 +36471,11 @@
         });
       }
     } catch (_) {}
-    if (bossIds.length === 0) {
+    // W396/W397 — co-op bosses for THIS rank (each renders in the gate matching
+    // its own rank). Computed before the empty guard so a rank that has a co-op
+    // boss but no solo boss still renders the co-op card instead of "No bosses".
+    const _coopForRank = Object.keys(COOP_BOSSES).filter(function (cid) { return COOP_BOSSES[cid].rank === effectiveRank; });
+    if (bossIds.length === 0 && _coopForRank.length === 0) {
       list.innerHTML = '<p class="dungeon-empty">No bosses await yet. Check back as more dungeons fill.</p>';
       list.classList.remove('bosses-list--cards');
       return;
@@ -36365,11 +36483,8 @@
     list.classList.add('bosses-list--cards');
     list.innerHTML = bossIds.map(buildBossCardHTML).join('');
     // W370 — co-op boss card(s) appended before the setBossImage loop so their
-    // art wires too. W396 — each co-op boss renders in the gate matching its OWN
-    // rank (was hardcoded to E-rank only), so a C/B-rank co-op boss shows up in
-    // the C/B dungeon.
+    // art wires too.
     try {
-      const _coopForRank = Object.keys(COOP_BOSSES).filter(function (cid) { return COOP_BOSSES[cid].rank === effectiveRank; });
       if (_coopForRank.length) {
         const _coopHtml = _coopForRank.map(buildCoopBossCardHTML).join('');
         if (_coopHtml) list.insertAdjacentHTML('beforeend', _coopHtml);
@@ -37072,6 +37187,8 @@
       artId:           'the_twin_maw',     // its own dedicated art (assets/bosses/the-twin-maw.png)
       dropSourceBoss:  'the_twin_maw',     // W375 — its own co-op-exclusive weapon pool
       coopGoalSteps:   16000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',            // unit label shown in the hunt UI
       coopRewardSouls: 50,
       coopWindowHours: 24,
       statDomain:      'VIT',
@@ -37079,6 +37196,46 @@
       flavorLong:      'It coils across the old border road, one head watching the way ahead, the other the way behind. No lone traveler slips past both. Hunt it with an ally, and split its gaze between you.',
       killCondShort:   'Two hunters: 16,000 combined steps in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
+      coopVictoryTitle:'BOTH HEADS FALL',
+    },
+    // W397 — C-rank duo hunt. Steps, but a far longer road than the E-rank.
+    the_coursing_dread: {
+      id:              'the_coursing_dread',
+      name:            'The Coursing Dread',
+      rank:            'C',
+      artId:           'the_coursing_dread',
+      dropSourceBoss:  'the_coursing_dread',
+      coopGoalSteps:   18000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 100,
+      coopWindowHours: 24,
+      statDomain:      'STR',
+      flavorShort:     'It runs down whatever runs. So stop running — and outpace it together.',
+      flavorLong:      'A long, low thing that lives for the chase: it never sprints, it never tires, it simply keeps coming until the quarry falls. One hunter it wears down to nothing. Two, trading the lead and never breaking stride, run it into the ground instead.',
+      killCondShort:   'Two hunters: 18,000 combined steps in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 18,000 verified steps between you — keep moving, keep ahead of it, and run the Dread down. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE DREAD IS RUN DOWN',
+    },
+    // W397 — B-rank duo hunt. FLIGHTS of stairs, not steps: the first co-op
+    // boss that scores a different verified metric (flights_total).
+    the_hollow_sovereign: {
+      id:              'the_hollow_sovereign',
+      name:            'The Hollow Sovereign',
+      rank:            'B',
+      artId:           'the_hollow_sovereign',
+      dropSourceBoss:  'the_hollow_sovereign',
+      coopGoalSteps:   20,                 // metric-generic goal column: 20 FLIGHTS
+      coopMetric:      'flights',
+      coopUnit:        'flights',
+      coopRewardSouls: 200,
+      coopWindowHours: 24,
+      statDomain:      'WILL',
+      flavorShort:     'A crown waits at the top of the last stair. Climb to take it.',
+      flavorLong:      'It does not descend. It has never once come down. The Hollow Sovereign keeps its throne at the head of an endless stair and lets the climb cull everyone who would reach it. Ascend together — flight after flight — until you stand level with the crown, and pull it down.',
+      killCondShort:   'Two hunters: 20 combined flights of stairs in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 20 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
+      coopVictoryTitle:'THE THRONE IS TAKEN',
     },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
@@ -37216,35 +37373,55 @@
     if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
   }
 
-  // Query my verified steps inside the hunt window. HealthKit on device;
-  // falls back to today's local verified steps (preview / no HealthKit).
+  // W397 — the verified metric a hunt scores: 'steps' or 'flights'. Prefer the
+  // server-serialized inst.metric; fall back to the local boss config (covers a
+  // pre-deploy backend that doesn't serialize metric yet).
+  function _coopMetric(inst) {
+    if (inst && (inst.metric === 'flights' || inst.metric === 'steps')) return inst.metric;
+    // Fall back to the OPEN sheet's boss cfg — the recruit view renders with a
+    // null instance, so we must read the metric off the boss being viewed.
+    const cfg = (inst && COOP_BOSSES[inst.boss_id]) || (_coopSheet && _coopSheet.cfg);
+    return (cfg && cfg.coopMetric) || 'steps';
+  }
+  // Unit noun for the hunt UI ("steps" / "flights"). Singularized by callers.
+  function _coopUnit(inst) {
+    const cfg = (inst && COOP_BOSSES[inst.boss_id]) || (_coopSheet && _coopSheet.cfg);
+    if (cfg && cfg.coopUnit) return cfg.coopUnit;
+    return _coopMetric(inst) === 'flights' ? 'flights' : 'steps';
+  }
+
+  // Query my verified progress (steps OR flights) inside the hunt window.
+  // HealthKit on device; falls back to 0 (preview / no HealthKit) so pre-hunt
+  // totals never inflate the shared goal.
   async function _coopQueryWindowSteps(inst) {
+    const fn = _coopMetric(inst) === 'flights' ? 'getFlightsClimbedBetween' : 'getStepsBetween';
     try {
-      if (typeof Health !== 'undefined' && Health && typeof Health.getStepsBetween === 'function' && inst.starts_at) {
-        // W371 — clamp the upper bound to the hunt end so post-window steps
-        // never inflate the value (the backend also rejects out-of-window
+      if (typeof Health !== 'undefined' && Health && typeof Health[fn] === 'function' && inst.starts_at) {
+        // W371 — clamp the upper bound to the hunt end so post-window progress
+        // never inflates the value (the backend also rejects out-of-window
         // submits; this keeps the client honest at the boundary).
         let endIso = new Date().toISOString();
         if (inst.ends_at && Date.parse(inst.ends_at) < Date.now()) endIso = inst.ends_at;
-        const n = await Health.getStepsBetween(inst.starts_at, endIso);
+        const n = await Health[fn](inst.starts_at, endIso);
         if (typeof n === 'number' && n >= 0) return Math.round(n);
       }
     } catch (_) {}
     // W371 — no real windowed HealthKit data (preview / permission error):
-    // contribute 0 rather than today's whole-day total, which would count
-    // pre-hunt steps and inflate the shared goal.
+    // contribute 0 rather than a whole-day total that would count pre-hunt
+    // progress and inflate the shared goal.
     return 0;
   }
 
   async function _coopSubmitMySteps(inst) {
     if (!inst || inst.status !== 'active') return;
-    const steps = await _coopQueryWindowSteps(inst);
-    if (!(steps > 0)) return;
+    const value = await _coopQueryWindowSteps(inst);
+    if (!(value > 0)) return;
+    const metric = _coopMetric(inst);
     const ev = {
       client_event_id: 'coop_' + inst.id + '_' + Date.now(),
-      event_type: 'steps_total',
-      metric: 'steps',
-      value: steps,
+      event_type: metric === 'flights' ? 'flights_total' : 'steps_total',
+      metric: metric,
+      value: value,
       source: 'apple_health',
       occurred_at: new Date().toISOString(),
       boss_instance_id: inst.id,
@@ -37304,7 +37481,7 @@
     if (!inst) return;
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
     if (action === 'cancel' && inst.status === 'active') {
-      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for both hunters and the steps so far are lost.'); } catch (_) {}
+      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for both hunters and the progress so far is lost.'); } catch (_) {}
       if (!ok) return;
     }
     _coopSheet.busy = true; renderCoopSheet();
@@ -37359,6 +37536,18 @@
       if (tEl && cfg) tEl.textContent = cfg.name;
       const rEl = document.getElementById('coopsm-threat-rank');
       if (rEl && cfg && cfg.rank) rEl.textContent = String(cfg.rank) + '-RANK';
+      // W397 — per-boss summons hero art. Layer the boss's own -summons.png on
+      // top of the Twin Maw's as a fallback: if the boss art hasn't shipped yet
+      // the fallback shows through (never a blank hero); when assets/bosses/
+      // <slug>-summons.png lands it takes over automatically. The CSS sets
+      // center/cover; we override only the image layer here.
+      const artEl = overlay.querySelector('.coopsm-art');
+      if (artEl && cfg) {
+        const slug = String(cfg.artId || cfg.id || '').replace(/_/g, '-');
+        artEl.style.backgroundImage = slug
+          ? 'url("assets/bosses/' + slug + '-summons.png"), url("assets/bosses/the-twin-maw-summons.png")'
+          : '';
+      }
     } else {
       if (overlay.classList.contains('coop-overlay--summons')) _coopSheet._summonsShown = false;
       overlay.classList.remove('coop-overlay--summons');
@@ -37373,6 +37562,9 @@
     if (heroImg) { try { setBossImage(heroImg, cfg.artId || cfg.id); } catch (_) {} }
     const nameEl = document.getElementById('coop-fs-name');
     if (nameEl) nameEl.textContent = cfg.name;
+    // W397 — detail header rank pill is per-boss (was hardcoded 'E' in index.html).
+    const rankEl = document.getElementById('coop-fs-rank');
+    if (rankEl && cfg.rank) { rankEl.textContent = String(cfg.rank); rankEl.setAttribute('data-rank', String(cfg.rank)); }
 
     const inst = _coopSheet.instance;
     const isSummons = !_coopSheet.picking && !!inst && inst.status === 'pending' && inst.role === 'partner';
@@ -37393,7 +37585,7 @@
   function _coopRecruitHtml(inst) {
     const cfg = _coopSheet.cfg;
     let note = '';
-    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The Twin Maw slipped back into the mist last time. The miles fell short.</div>';
+    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The hunt fell short last time \u2014 the goal went unmet before the window closed. Call again.</div>';
     else if (inst && inst.status === 'declined') note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
     else if (inst && inst.status === 'cancelled') note = '<div class="coop-note">That hunt was called off. Send a new call to go again.</div>';
     const dis = _coopSheet.busy ? ' disabled' : '';
@@ -37402,7 +37594,7 @@
       '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
       '<div class="coop-goal-card">' +
         '<div class="coop-goal-big">' + cfg.coopGoalSteps.toLocaleString('en-US') + '</div>' +
-        '<div class="coop-goal-sub">combined steps \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters</div>' +
+        '<div class="coop-goal-sub">combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters</div>' +
       '</div>' +
       _coopErrBlock() +
       '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
@@ -37467,7 +37659,7 @@
       '<div class="coopsm-pact' + r3 + '">' +
         '<div class="coopsm-pact-label">The Pact</div>' +
         '<div class="coopsm-pact-num">' + goal + '</div>' +
-        '<div class="coopsm-pact-sub"><b>combined steps</b> · ' + hrs + 'h from when you join</div>' +
+        '<div class="coopsm-pact-sub"><b>combined ' + esc(_coopUnit(inst)) + '</b> · ' + hrs + 'h from when you join</div>' +
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
@@ -37496,20 +37688,21 @@
     const themSteps = (v.them && v.them.steps) || 0;
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
     const dis = _coopSheet.busy ? ' disabled' : '';
+    const unit = _coopUnit(inst);   // W397 — 'steps' | 'flights'
     return (
       '<div class="coop-timer">' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</div>' +
       '<div class="coop-combined">' +
         '<div class="coop-combined-num">' + combined.toLocaleString('en-US') + ' <span>/ ' + goal.toLocaleString('en-US') + '</span></div>' +
         '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="coop-combined-label">combined steps</div>' +
+        '<div class="coop-combined-label">combined ' + esc(unit) + '</div>' +
       '</div>' +
       '<div class="coop-split">' +
         '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + meSteps.toLocaleString('en-US') + '</span></div>' +
         '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + themSteps.toLocaleString('en-US') + '</span></div>' +
       '</div>' +
-      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : 'SYNC MY STEPS') + '</button>' +
+      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : 'SYNC MY ' + esc(unit.toUpperCase())) + '</button>' +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
-      '<p class="coop-foot">Steps sync on their own while this is open. Tap to push yours now.</p>'
+      '<p class="coop-foot">Your ' + esc(unit) + ' sync on their own while this is open. Tap to push yours now.</p>'
     );
   }
 
@@ -37518,9 +37711,13 @@
     const v = _coopView(inst);
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
     const combined = (inst.combined_steps || 0).toLocaleString('en-US');
+    const unit = _coopUnit(inst);                                       // W397
+    const verb = _coopMetric(inst) === 'flights' ? 'climbed' : 'walked';
+    const title = cfg.coopVictoryTitle || 'THE HUNT IS WON';
     return (
-      '<div class="coop-victory">BOTH HEADS FALL</div>' +
-      '<p class="coop-lead">You and ' + themAlias + ' walked ' + combined + ' steps together, enough to fell both heads of the Twin Maw.</p>' +
+      '<div class="coop-victory">' + esc(title) + '</div>' +
+      '<p class="coop-lead">You and ' + themAlias + ' ' + verb + ' ' + combined + ' ' + esc(unit) +
+        ' together, enough to bring down ' + esc(cfg.name) + '.</p>' +
       '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
       '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
     );
@@ -37749,9 +37946,10 @@
       const youPct = goal > 0 ? Math.min(100, mine / goal * 100) : 0;
       const themPct = goal > 0 ? Math.min(Math.max(0, 100 - youPct), theirs / goal * 100) : 0;
       const tleft = _coopFmtRemaining(inst.time_remaining_ms).replace(/ left$/, '');
+      const unitLabel = _coopUnit(inst) === 'flights' ? 'Flights' : 'Steps';   // W397
       body =
         '<div class="cph-prog">' +
-          '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span></span><span class="cph-prog-label">Combined Steps</span></div>' +
+          '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span></span><span class="cph-prog-label">Combined ' + esc(unitLabel) + '</span></div>' +
           '<div class="cph-bar"><div class="cph-you" style="width:' + youPct.toFixed(1) + '%"></div><div class="cph-them" style="width:' + themPct.toFixed(1) + '%"></div></div>' +
           '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span>You <b>' + N(mine) + '</b></span><span class="cph-leg cph-them"><span class="cph-sw"></span>' + esc(ally) + ' <b>' + N(theirs) + '</b></span>' + (tleft ? '<span class="cph-time"><span class="cph-lab">Time Left</span>' + esc(tleft) + '</span>' : '') + '</div>' +
         '</div>';
