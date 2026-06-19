@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.0-w412'; // W412 — rank-up moment + match history + win streak
+  const APP_BUILD_TAG = '2.3.0-w414'; // W414 — v3.0 review fixes (VS-timer/ended-during-VS/orphan-match/find-503)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9893,7 +9893,7 @@
         } catch (_) {}
       }
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
-      else if (a === 'tower')   _arRenderTower();
+      else if (a === 'tower')   { if (typeof _arView === 'string' && _arView.indexOf('pvp') === 0) { try { _pvpTeardown(); } catch (_) {} } _arRenderTower(); }   // W414 — leaving a PvP sub-view to the tower tears down its socket/timers
       else if (a === 'hall')    _arRenderHall();
       else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
       else if (a === 'titles')  _arRenderTitles();
@@ -10322,7 +10322,11 @@
     _pvpRenderLobby('searching');
     PvP.onMessage(_pvpOnMessage);
     let r; try { r = await PvP.findMatch(_pvpBuildMyCombatant()); } catch (_) { r = null; }
-    if (_arView !== 'pvp-lobby') return;
+    if (_arView !== 'pvp-lobby') {   // user left while we were finding — don't orphan the just-created match
+      if (r && r.ok && r.code) { try { PvP.forfeit(); } catch (_) {} }
+      try { _pvpTeardown(); } catch (_) {}
+      return;
+    }
     if (!(r && r.ok && r.code)) { _pvpRenderLobby('home', { err: _pvpErr(r) }); return; }
     _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
     _pvpOpponentMeta = r.opponent || null;   // bot meta for the VS screen
@@ -10361,7 +10365,13 @@
   // ── message dispatch ──
   function _pvpOnMessage(msg) {
     if (!msg || !msg.type) return;
-    if (_arView !== 'pvp-lobby' && _arView !== 'battle' && _arView !== 'pvp-result') return;   // left the duel
+    if (_arView !== 'pvp-lobby' && _arView !== 'pvp-vs' && _arView !== 'battle' && _arView !== 'pvp-result') return;   // left the duel
+    // a match that ENDS during the 3.2s VS pre-roll (opponent forfeits/disconnects) must
+    // cancel the auto-advance and jump straight to the result, not start a dead battle.
+    if (_arView === 'pvp-vs' && (msg.type === 'match_end' || (msg.phase === 'ended'))) {
+      if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
+      _pvpHandleEnd(msg); return;
+    }
     switch (msg.type) {
       case 'match_start':
       case 'state':
@@ -10732,6 +10742,7 @@
   function _pvpTeardown(keepResult) {
     try { PvP.close(); } catch (_) {}
     _pvpClearTimer();
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }   // never let a VS auto-advance outlive teardown
     _pvpStarted = false;
     if (!keepResult) { _pvpView = null; _pvpCode = ''; }
   }

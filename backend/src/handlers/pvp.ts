@@ -64,12 +64,16 @@ export async function handlePvpFind(request: Request, env: Env, session: Session
   const bot = pickBot(elo);
   const meta = botMeta(bot);
   const code = genCode();
-  const res = await forwardToDo(env, code, 'createVsBot', session.userId, session.alias, {
-    code, combatant: body.combatant, bot: { id: bot.id, alias: bot.name, elo: bot.elo, combatant: bot.combatant },
-  });
+  let res: Response;
+  try {
+    res = await forwardToDo(env, code, 'createVsBot', session.userId, session.alias, {
+      code, combatant: body.combatant, bot: { id: bot.id, alias: bot.name, elo: bot.elo, combatant: bot.combatant },
+    });
+  } catch { return jsonError(503, 'PVP_UNAVAILABLE', 'Matchmaking is busy. Try again in a moment.'); }
   let j: any = {};
   try { j = await res.json(); } catch { /* */ }
-  if (j && j.ok) { j.vsBot = true; j.opponent = meta; }
+  if (!j || !j.ok) return jsonError(503, 'PVP_UNAVAILABLE', 'Could not start the match. Try again.');
+  j.vsBot = true; j.opponent = meta;
   return jsonOk(j);
 }
 
