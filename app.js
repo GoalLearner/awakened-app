@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w404'; // W404 — realtime PvP duels
+  const APP_BUILD_TAG = '2.2.8-w405'; // W405 — PvP ship gate (dormant behind PVP_ENABLED)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9882,7 +9882,7 @@
       else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
-      else if (a === 'duel')      { try { _pvpOpenLobby(); } catch (_) {} }          // W404 — enter the PvP duel lobby
+      else if (a === 'duel')      { if (PVP_ENABLED) { try { _pvpOpenLobby(); } catch (_) {} } }   // W404 — enter the PvP duel lobby (gated)
       else if (a === 'pvpcreate') { try { _pvpCreate(); } catch (_) {} }
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
@@ -9920,7 +9920,14 @@
   // recipient's side, so HP/status/eff need NO flip. Only the turn `events` array
   // is server-oriented (p=p1, b=p2); for the joiner (you==='b') each event's side
   // is flipped so "you" always renders at the bottom of the SAME stage.
+  //
+  // SHIP GATE — PvP ships DORMANT until the backend is live (mirrors the skins/
+  // IAP dormant-ship pattern). The Duel entry is hidden + the action is a no-op
+  // while this is false, so the frontend can ship safely BEFORE the worker deploy.
+  // FLIP TO true ONLY AFTER: (1) wrangler deploy, (2) d1 execute --remote
+  // migrations/0021_pvp.sql. See PVP_BUILD_REPORT.md for the go-live checklist.
   // ═══════════════════════════════════════════════════════════════
+  const PVP_ENABLED = false;
   const PvP = (function () {
     let ws = null, code = null, you = null;
     let pollTimer = null, pingTimer = null, reconnectTimer = null;
@@ -10397,6 +10404,7 @@
     _arRenderTower();
   }
   function _pvpTowerEntryHtml() {
+    if (!PVP_ENABLED) return '';   // dormant until the backend is live (see PVP_ENABLED)
     return '<button type="button" class="pvp-tower-cta" data-ar="duel">' +
       '<span class="pvp-tower-ic">' + _arGlyph('dagger', '#7c8aff', 16) + '</span>' +
       '<span class="pvp-tower-tx"><span class="t">Duel a Friend</span>' +

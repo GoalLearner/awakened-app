@@ -1,6 +1,6 @@
 # PVP.md — Awakened v3 PvP Combat Design Spec
 
-**Status:** v1.1 — REALTIME HUMAN PvP IMPLEMENTATION IN PROGRESS (June 19, 2026). §1–20 are the v1.0 design baseline. **§21 is the implementation truth** for realtime human PvP; where they conflict, §21 wins. §21 supersedes §1.7 (async/bots-first) and the §4–9 / §6 bespoke combat model — the shipped **Arena engine** (OSRS-style Melee/Magic/Ranged) is the combat (see §21.1).
+**Status:** v1.1 — REALTIME HUMAN PvP BUILT & VERIFIED, shipping dormant behind `PVP_ENABLED` pending the owner's backend deploy (June 19, 2026; see §21.13 + `PVP_BUILD_REPORT.md`). §1–20 are the v1.0 design baseline. **§21 is the implementation truth** for realtime human PvP; where they conflict, §21 wins. §21 supersedes §1.7 (async/bots-first) and the §4–9 / §6 bespoke combat model — the shipped **Arena engine** (OSRS-style Melee/Magic/Ranged) is the combat (see §21.1).
 **Last updated:** June 19, 2026 (§21 added)
 **Authored:** May 12, 2026 (v1.0); §21 June 19, 2026
 **Designer:** Richie (with Claude as design partner)
@@ -1247,9 +1247,13 @@ Simultaneous **blind** selection (matches the engine + v1.0 §9): each turn both
 - **Client → Server:** `submit_move {turn, moveId}` · `resync` · `forfeit` · `ping`.
 - **Server → Client:** `match_start {seed, youAre:'p'|'b', combatants}` · `state {phase, turn, deadline, youSubmitted, oppConnected, pHP, bHP}` · `turn_result {turn, events[], pHP, bHP, done, winnerSide}` · `match_end {result, winnerUserId, rewards}` · `opp_status {connected}` · `error {code, detail}`.
 
-### 21.13 Build phases (this session)
+### 21.13 Build phases (this session) — ✅ COMPLETE (dormant behind `PVP_ENABLED`)
 
-P0 spec+architecture (this section) → P1 backend DO match engine (invite-code) → P2 matchmaking+lobby+D1 → P3 client integration → P4 two-client integration test → P5 ship-ready (version bump, two-gate build check, `PVP_BUILD_REPORT.md`). The DO is **SQLite-backed (`new_sqlite_classes`) → it runs on the Workers FREE plan** (since April 2025; no plan upgrade needed). Logic is validated locally via `wrangler dev` (miniflare simulates DO + D1 + WebSockets); the owner runs the remote `wrangler deploy` + D1 migration + the final two-phone test.
+P0 spec+architecture (this section) → **P1** backend DO match engine (invite-code) ✅ → **P2** matchmaking+lobby+D1 ✅ → **P3** client integration ✅ → **P4** two-client integration test ✅ (`match-room.itest.mjs` **9/9**: HTTP match, WS match with both clients agreeing on the winner, forfeit, turn-timeout) → **P5** ship-ready ✅ (versions bumped, two-gate check — `Arena.selfTest()` **37/37** + backend `tsc` 0 errors, `PVP_BUILD_REPORT.md` written).
+
+The DO is **SQLite-backed (`new_sqlite_classes`) → it runs on the Workers FREE plan** (since April 2025; no plan upgrade needed). Logic is validated locally via `wrangler dev` (miniflare simulates DO + D1 + WebSockets); the client rendering seam is verified in the web preview via `window.__pvpDemo()`.
+
+**Go-live is owner-gated** (only the owner can deploy + has real Apple JWTs): `wrangler deploy` → `wrangler d1 execute awakened-db --remote --file=migrations/0021_pvp.sql` → flip `PVP_ENABLED` to `true` → bump `APP_VERSION` to `2.3.0` → build iOS. The flag means the frontend ships safely BEFORE the worker exists (the Duel entry stays hidden). Full checklist + two-phone test in `PVP_BUILD_REPORT.md`.
 
 ---
 
