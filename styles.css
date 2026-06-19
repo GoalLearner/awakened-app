@@ -30149,3 +30149,33 @@ button.guildhall-summary-tile:active {
 .cph-empty h2{ font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:25px; letter-spacing:.6px; color:#f5f3fb; margin:0; }
 .cph-empty p{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:16px; line-height:1.45; color:#9090a8; margin:14px 0 0; max-width:260px; }
 @media (prefers-reduced-motion:reduce){ .cph-hunt.cph-active::before, .cph-pend.cph-wait .cph-ind, .cph-sigil{ animation:none !important; } }
+
+/* ── W400 — co-op boss portrait "breathing" pulse ───────────────────────
+   A slow cinematic zoom + brightness/saturation pulse on the boss art, plus a
+   soft glow halo behind the detail hero — the same living feel as the summons
+   hero. Scoped to co-op bosses only (dungeon card + #coop-fs-overlay detail),
+   so solo bosses stay static. The art <img> starts display:none and its parent
+   only gets .art-loaded once real art decodes (setBossImage), so empty
+   gradient-fallback frames never animate. Honors reduced-motion. */
+.bcard--coop .bcard-art img,
+#coop-fs-overlay .bfs-hero img {
+  animation: coop-art-breathe 4.6s ease-in-out infinite;
+  transform-origin: center 40%;
+  will-change: transform, filter;
+}
+@keyframes coop-art-breathe {
+  0%, 100% { transform: scale(1);     filter: brightness(1)    saturate(1); }
+  50%      { transform: scale(1.045); filter: brightness(1.09) saturate(1.14); }
+}
+#coop-fs-overlay .bfs-hero.art-loaded {
+  animation: coop-hero-glow 4.6s ease-in-out infinite;
+}
+@keyframes coop-hero-glow {
+  0%, 100% { box-shadow: 0 0 16px 1px rgba(245, 184, 66, 0.18); }
+  50%      { box-shadow: 0 0 36px 4px rgba(245, 184, 66, 0.42); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bcard--coop .bcard-art img,
+  #coop-fs-overlay .bfs-hero img,
+  #coop-fs-overlay .bfs-hero.art-loaded { animation: none; }
+}

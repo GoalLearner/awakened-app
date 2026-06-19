@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w399'; // W399
+  const APP_BUILD_TAG = '2.2.8-w400'; // W400
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -908,12 +908,14 @@
   function setBossImage(imgEl, bossId) {
     if (!imgEl) return;
     const path = getBossArtPath(bossId);
-    imgEl.onload  = function () { this.style.display = ''; };
+    imgEl.onload  = function () { this.style.display = ''; const p = this.parentElement; if (p) p.classList.add('art-loaded'); };
     imgEl.onerror = function () {
       this.style.display = 'none';
+      const p = this.parentElement; if (p) p.classList.remove('art-loaded');
       try { console.warn('[boss-art] failed to load', path); } catch (_) {}
     };
     imgEl.style.display = 'none';   // start hidden
+    if (imgEl.parentElement) imgEl.parentElement.classList.remove('art-loaded'); // W400 — reset glow gate for reused img elements
     imgEl.removeAttribute('loading'); // belt-and-braces against stale lazy
     imgEl.decoding = 'async';
     imgEl.src = path;
