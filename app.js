@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w396'; // W396
+  const APP_BUILD_TAG = '2.2.8-w397'; // W397
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6714,9 +6714,9 @@
     quake:      { name: 'Quake',        gl: 'shield', power: 1.2,  acc: 0.85, cd: 2, fx: { t: 'defDown', kind: 'quake', mag: 0.2, dur: 2 }, desc: 'Shreds armor −20% (2t).' },
     willbreak:  { name: 'Willbreak',    gl: 'shield', power: 0.85, acc: 0.9,  cd: 2, fx: { t: 'atkDown', kind: 'willbreak', mag: 0.25, dur: 2 }, desc: 'Foe hits 25% softer.' },
     wardstrike: { name: 'Ward Strike',  gl: 'shield', power: 0.7,  acc: 0.95, cd: 1, fx: { t: 'heal', mag: 0.12 }, desc: 'Strike and mend.' },
-    guard:      { name: 'Guard',        gl: 'shield', power: 0,    acc: 1,    cd: 1, fx: { t: 'guard' }, desc: 'Halve the next hit.' },
+    guard:      { name: 'Guard',        gl: 'shield', power: 0,    acc: 1,    cd: 1, fx: { t: 'defUp', kind: 'guard', mag: -0.40, dur: 3 }, desc: 'Brace — take 40% less for 3 turns.' },
     brace:      { name: 'Brace',        gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'defUp', kind: 'brace', mag: -0.35, dur: 2 }, desc: 'Take 35% less for 2 turns.' },
-    focus:      { name: 'Focus',        gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', kind: 'focus', mag: 0.3, dur: 3 }, desc: 'Your hits land 30% harder.' },
+    focus:      { name: 'Focus',        gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', kind: 'focus', mag: 0.4, dur: 3 }, desc: 'Your hits land 40% harder.' },
     temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', kind: 'temper', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
     evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
     refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
@@ -7460,10 +7460,10 @@
       const wS = _arBlankStatus();
       _arPushMod(wS, 'atk', 'willbreak', -0.25, 3); _arPushMod(wS, 'atk', 'willbreak', -0.25, 5);
       ok('T6 willbreak refresh', wS.mods.length === 1 && wS.mods[0].dur === 5 && Math.abs(_arStatAtkMult(wS) - 0.75) < 1e-9);
-      // T6b different atk kinds multiply, clamped (Focus 1.3 × Temper 1.4 = 1.82 ≤ 2.0)
+      // T6b different atk kinds multiply, clamped (W396 Focus 1.4 × Temper 1.4 = 1.96 ≤ 2.0)
       const fS = _arBlankStatus();
-      _arPushMod(fS, 'atk', 'focus', 0.3, 3); _arPushMod(fS, 'atk', 'temper', 0.4, 3);
-      ok('T6b atk kinds multiply+clamp', Math.abs(_arStatAtkMult(fS) - 1.82) < 1e-9);
+      _arPushMod(fS, 'atk', 'focus', 0.4, 3); _arPushMod(fS, 'atk', 'temper', 0.4, 3);
+      ok('T6b atk kinds multiply+clamp', Math.abs(_arStatAtkMult(fS) - 1.96) < 1e-9);
       // T7 DoT intake cap — burn 16% + bleed 12% on maxHP 100 ticks exactly 20 total, credit = HP lost
       const s7 = arenaStartBattle(M(mk(30, 27.3, 10, null, 'You'), mk(30, 27.3, 10, 'balanced', 'Foe')), 7);
       // (defense 27.3 → maxHP 100)
