@@ -120,6 +120,36 @@ async function timeoutTest() {
   console.log('     turn after timeout:', st && st.turn, 'phase', st && st.phase);
 }
 
+// ── 5. Reconnect: a WS drop mid-turn must NOT delay the turn timeout to the
+//       120s disconnect grace (regression for the single-alarm-slot clobber). ──
+async function reconnectTest() {
+  console.log('\n[5] Reconnect + turn-deadline restore (deadline 3s)');
+  const t1 = await mint('pvp-rc-1', 'A'), t2 = await mint('pvp-rc-2', 'B');
+  const code = (await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A })).code;
+  await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
+  const open = (ws) => new Promise((res, rej) => { const to = setTimeout(() => rej(new Error('open timeout')), 8000); ws.addEventListener('open', () => { clearTimeout(to); res(); }); ws.addEventListener('error', () => { clearTimeout(to); rej(new Error('ws error')); }); });
+  try {
+    const ws1 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t1);
+    const ws2 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t2);
+    await Promise.all([open(ws1), open(ws2)]);
+    // P1's socket drops, then reconnects — handleUpgrade must restore the turn deadline.
+    ws1.close();
+    await sleep(300);
+    const ws1b = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t1);
+    let snapshot = false;
+    ws1b.addEventListener('message', (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } if (m.type === 'state' || m.type === 'match_start') snapshot = true; });
+    await open(ws1b);
+    await sleep(200);
+    ok('reconnect receives a state snapshot', snapshot);
+    // neither side submits — with the fix the 3s turn deadline still fires (alarm
+    // restored), so the turn auto-resolves well before the 120s grace.
+    await sleep(5000);
+    const st = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+    ok('turn timeout fires on schedule after a reconnect (not delayed to grace)', !!(st && (st.turn > 1 || st.phase === 'ended')), st && { turn: st.turn, phase: st.phase });
+    try { ws2.close(); ws1b.close(); } catch {}
+  } catch (e) { ok('reconnect test (transport)', false, String(e && e.message)); }
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -133,6 +163,7 @@ async function timeoutTest() {
   await wsMatch();
   await forfeitTest();
   await timeoutTest();
+  await reconnectTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();
