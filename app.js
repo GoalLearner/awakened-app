@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w405'; // W405 — PvP ship gate (dormant behind PVP_ENABLED)
+  const APP_BUILD_TAG = '2.2.8-w406'; // W406 — PvP adversarial-review fixes
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9402,6 +9402,12 @@
           } else { _pkbLock(false); _pkbRefreshMoves(); }
         });
       });
+    } else if (s._pvp) {
+      // W404 — duel: the Ascent "What will you do?" prompt reads _arMatchup and never
+      // re-arms the PvP turn timer/status. Re-enable moves + restore the duel turn UI
+      // (the next turn_result already carries the fresh deadlineMs).
+      _pkbLock(false); _pkbRefreshMoves();
+      try { _pvpSyncTurnUI(_pvpView); } catch (_) {}
     } else {
       // between full turns — a breath before the prompt hands control back
       _pkbHold(_PKB_T.turnGap, () => _pkbSay('What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); }));
@@ -9962,17 +9968,22 @@
 
     function connect() {
       if (closed || !code) return;
+      // tear down any prior socket first so a reconnect can't leak an orphaned
+      // socket whose listeners keep firing (startPoll/scheduleReconnect) behind us.
+      try { if (ws) { ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null; ws.close(); } } catch (_) {}
+      ws = null; wsReady = false;
       let url;
       try { url = wsBase() + '/v1/pvp/ws?code=' + encodeURIComponent(code) + '&token=' + encodeURIComponent(jwt()); }
       catch (_) { startPoll(); return; }
       let sock;
       try { sock = new WebSocket(url); } catch (_) { startPoll(); return; }
       ws = sock;
-      const failTimer = setTimeout(function () { if (!wsReady) { try { sock.close(); } catch (_) {} startPoll(); } }, 4000);
-      sock.addEventListener('open', function () { wsReady = true; clearTimeout(failTimer); stopPoll(); startPing(); });
-      sock.addEventListener('message', function (ev) { let m; try { m = JSON.parse(ev.data); } catch (_) { return; } emit(m); });
-      sock.addEventListener('close', function () { wsReady = false; stopPing(); if (!closed) { startPoll(); scheduleReconnect(); } });
-      sock.addEventListener('error', function () { if (!wsReady) { clearTimeout(failTimer); startPoll(); } });
+      const failTimer = setTimeout(function () { if (ws === sock && !wsReady) { try { sock.close(); } catch (_) {} startPoll(); } }, 4000);
+      // each handler ignores itself once a newer socket has superseded it (ws !== sock).
+      sock.addEventListener('open', function () { if (ws !== sock) return; wsReady = true; clearTimeout(failTimer); stopPoll(); startPing(); });
+      sock.addEventListener('message', function (ev) { if (ws !== sock) return; let m; try { m = JSON.parse(ev.data); } catch (_) { return; } emit(m); });
+      sock.addEventListener('close', function () { if (ws !== sock) return; wsReady = false; stopPing(); if (!closed) { startPoll(); scheduleReconnect(); } });
+      sock.addEventListener('error', function () { if (ws !== sock) return; if (!wsReady) { clearTimeout(failTimer); startPoll(); } });
     }
     function scheduleReconnect() {
       if (closed || reconnectTimer) return;
@@ -10047,6 +10058,8 @@
   let _pvpCode = '';
   let _pvpStarted = false;   // battle stage rendered?
   let _pvpTimerId = null;
+  let _pvpSubmitPending = false;   // I submitted + am waiting for the ack/resolve
+  let _pvpSeenTurn = -1;           // last turn_result animated (dedup resync/poll redelivery)
 
   function _pvpNum(v, d) { const n = Number(v); return Number.isFinite(n) ? n : (d != null ? d : 0); }
   function _pvpOppShort() { try { return (_pvpView && _pvpView.opp && (_pvpView.opp.alias || _pvpView.opp.name)) || 'your opponent'; } catch (_) { return 'your opponent'; } }
@@ -10178,6 +10191,17 @@
         break;
       case 'error':
         try { _audCue('ui_denied'); } catch (_) {}
+        // a rejected submit (STALE_TURN / ILLEGAL_MOVE / NOT_ACTIVE) must NOT leave
+        // the player soft-locked in "waiting" forever — unwind the optimistic submit
+        // and pull the authoritative turn back. Only while waiting on my own submit
+        // (never mid-animation, where _pvpSubmitPending is already false).
+        if (_pvpSubmitPending && !_arRevealing) {
+          _pvpSubmitPending = false;
+          if (_pvpView) _pvpView.youSubmitted = false;
+          if (_arSess && _arSess._pvp && !_arSess.done) { _pkbLock(false); _pkbRefreshMoves(); }
+          try { PvP.resync(); } catch (_) {}
+          _pvpSyncTurnUI(_pvpView);
+        }
         break;
     }
   }
@@ -10201,6 +10225,7 @@
   }
   function _pvpStartBattle(view) {
     _pvpStarted = true; _pvpView = view;
+    _pvpSeenTurn = -1; _pvpSubmitPending = false;
     const opp = (view && view.opp) || {};
     _arMatchup = { floor: 0, advances: false, _pvp: true, bot: { name: opp.alias || opp.name || 'Challenger', isBoss: false } };
     _arSess = _pvpSynthSession(view);
@@ -10270,6 +10295,7 @@
     if (s.cd && s.cd[moveId] > 0) { try { _audCue('ui_denied'); } catch (_) {} return; }
     try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}
     PvP.submit(_pvpView ? _pvpView.turn : s.turn, moveId);
+    _pvpSubmitPending = true;
     if (_pvpView) _pvpView.youSubmitted = true;
     _pkbLock(true);
     _pvpSetStatus('waiting', 'Locked in &mdash; waiting for ' + esc(_pvpOppShort()) + '&hellip;');
@@ -10278,6 +10304,11 @@
   // animate the SAME beat director over the (perspective-corrected) events.
   function _pvpAnimateTurn(msg) {
     const s = _arSess; if (!s || !s._pvp) return;
+    // dedup a redelivered turn_result (resync / poll) so we never re-enter the beat
+    // director over a turn already animated (would double-drain the shared HP meters).
+    if (msg.turn != null && msg.turn === _pvpSeenTurn && !msg.done) return;
+    _pvpSeenTurn = (msg.turn != null) ? msg.turn : _pvpSeenTurn;
+    _pvpSubmitPending = false;
     const me = msg.me || {}, opp = msg.opp || {};
     s.pMoves = me.kit || s.pMoves; s.cd = me.cd || {};
     s.pEff = _pvpNum(me.eff, s.pEff); s.bEff = _pvpNum(opp.eff, s.bEff);

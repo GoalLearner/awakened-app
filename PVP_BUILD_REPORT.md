@@ -158,3 +158,41 @@ safe to ship before the backend exists. To turn it on:
   the default everywhere modern — gets the full animated experience.
 - **Opponent avatar:** rendered as a monogram (real avatar sync across accounts is a
   separate, larger feature).
+
+---
+
+## 8. Adversarial review (W406) — done
+
+Three independent skeptical reviewers swept the backend DO, the client controller, and
+the combat-core lift. Outcome:
+
+**Combat-core parity:** verdict **faithful lift, no outcome-changing divergence** — every
+resolution-relevant line is logic-identical to the app.js engine; the only deltas are
+comments, display-only event fields, and the expected `bAttuned` generalization (verified
+backward-compatible). (Cosmetic: three move `desc` strings use ASCII `-25%` vs the
+client's Unicode `−25%`; engine never reads `desc`.)
+
+**Fixed real bugs (W406):**
+- **Client (critical):** a rejected submit (`STALE_TURN`/`ILLEGAL_MOVE`) used to soft-lock
+  the player in "waiting" forever — now unwinds the optimistic submit + resyncs.
+- **Client (high):** the turn timer + "Your move" status vanished after turn 1 (the shared
+  `_pkbDrained` non-done branch is the Ascent prompt) — now the `_pvp` branch re-arms the
+  duel turn UI. Verified in preview across multiple turns.
+- **Client (medium/low):** added `_pkbPlay` re-entrancy dedup (by turn number) so a
+  redelivered `turn_result` can't double-drain HP; `connect()` now tears down the prior
+  socket + guards stale-socket listeners so reconnects don't leak.
+- **Backend (real):** the single DO alarm slot was clobbered by the disconnect-grace timer,
+  delaying turn timeouts after a reconnect flicker — now the grace alarm never pushes later
+  than the live turn deadline, and reconnect restores it. Also a clean lobby-abandon path
+  for a creator bailing before anyone joins.
+
+**Assessed NOT a bug (Cloudflare input gates):** the reviewer flagged read-modify-write
+races across `doSubmit`/`doJoin`/`doForfeit`/`alarm`. Verified these are prevented by the
+DO **input gate**: every mutating path does `load → synchronous mutate → decisive save`
+with no non-storage `await` in between, so no second event interleaves before the decision
+is persisted (every `env.DB` call comes *after* the save). Documented this as a hard
+invariant in `match-room.ts` so a future edit can't silently re-open the window. No mutex
+refactor applied — it would risk regressing a 9/9-passing engine for no gain.
+
+Post-fix: `Arena.selfTest()` 37/37, backend `tsc` 0 errors, `match-room.itest` 9/9, client
+flow re-verified in preview (multi-turn timer restore + KO + result, 0 console errors).

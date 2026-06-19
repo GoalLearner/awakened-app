@@ -76,6 +76,14 @@ export class MatchRoom {
   }
 
   // ── persistence ──
+  // CONCURRENCY INVARIANT (do not break): every mutating entry point (doSubmit /
+  // doJoin / doForfeit / alarm) is effectively atomic because of Cloudflare's INPUT
+  // GATE — while a storage op is in flight, no other event is delivered. Each handler
+  // does `load()` (storage) -> synchronous mutate -> the DECISIVE `save()`/`put()`
+  // (storage) with NO non-storage await in between, so a second event cannot interleave
+  // before the decision is persisted. Any external await (env.DB / fetch) MUST come
+  // AFTER the decisive save (as persistStart/persistEnd do). If you ever need an await
+  // on non-storage data BEFORE the save, wrap the section in blockConcurrencyWhile().
   async load(): Promise<MatchState | null> {
     return (await this.state.storage.get<MatchState>('match')) ?? null;
   }
@@ -188,6 +196,17 @@ export class MatchRoom {
     const slot = this.slotFor(m, userId);
     if (!slot) return { ok: false, code: 'NOT_PARTICIPANT' };
     if (m.phase === 'ended') return { ok: true, state: this.view(m, userId) };
+    if (m.phase === 'lobby') {
+      // creator bailing on a not-yet-joined lobby: abandon cleanly. There is no
+      // opponent to award and no D1 'active' row yet (persistStart runs on join), so
+      // nothing to reconcile — skip the forfeit/ELO path entirely.
+      m.phase = 'ended';
+      m.result = { winnerSide: 'draw', winnerUserId: null, reason: 'abandoned' };
+      this.state.storage.deleteAlarm();
+      await this.save(m);
+      this.broadcastEnd(m);
+      return { ok: true, state: this.view(m, userId) };
+    }
     await this.endMatch(m, slot === 'p' ? 'b' : 'p', 'forfeit');
     return { ok: true, state: this.view(m, userId) };
   }
@@ -276,6 +295,10 @@ export class MatchRoom {
     this.state.acceptWebSocket(server, [slot, userId]);
     m.connected[slot] = true; m.lastSeen[slot] = Date.now();
     await this.save(m);
+    // a prior disconnect may have re-pointed the single alarm slot at the grace
+    // window; on reconnect, restore the live turn deadline so the turn timer fires
+    // on schedule (deadlineMs is always sooner than a fresh grace, so this is safe).
+    if (m.phase === 'active' && m.deadlineMs) this.state.storage.setAlarm(m.deadlineMs);
     // send the current snapshot immediately + notify the opponent
     try { server.send(JSON.stringify({ type: 'state', ...this.view(m, userId) })); } catch { /* */ }
     this.sendToSlot(m, slot === 'p' ? 'b' : 'p', { type: 'opp_status', connected: true });
@@ -315,8 +338,15 @@ export class MatchRoom {
       m.connected[slot] = false; m.lastSeen[slot] = Date.now();
       await this.save(m);
       this.sendToSlot(m, slot === 'p' ? 'b' : 'p', { type: 'opp_status', connected: false });
-      // arm a disconnect-grace check so a vanished player eventually forfeits
-      if (m.phase === 'active') this.state.storage.setAlarm(Date.now() + DISCONNECT_GRACE_MS + 1000);
+      // arm a disconnect-grace check so a vanished player eventually forfeits — but
+      // a SINGLE alarm slot serves both the turn timeout and the grace, so never push
+      // it LATER than the live turn deadline (that would silently disable the turn
+      // timer until grace). The periodic turn alarm re-checks lastSeen, so the grace
+      // is still enforced via alarm()'s disconnect branch.
+      if (m.phase === 'active') {
+        const grace = Date.now() + DISCONNECT_GRACE_MS + 1000;
+        this.state.storage.setAlarm(m.deadlineMs ? Math.min(m.deadlineMs, grace) : grace);
+      }
     }
   }
 
