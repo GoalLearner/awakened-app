@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w395'; // W395
+  const APP_BUILD_TAG = '2.2.8-w396'; // W396
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -36364,15 +36364,18 @@
     }
     list.classList.add('bosses-list--cards');
     list.innerHTML = bossIds.map(buildBossCardHTML).join('');
-    // W370 — co-op boss card(s) live in the E-rank dungeon only. Appended
-    // before the setBossImage loop so their art (reused Steel Wolf) wires too.
-    if (effectiveRank === 'E') {
-      try {
-        const _coopHtml = Object.keys(COOP_BOSSES).map(buildCoopBossCardHTML).join('');
+    // W370 — co-op boss card(s) appended before the setBossImage loop so their
+    // art wires too. W396 — each co-op boss renders in the gate matching its OWN
+    // rank (was hardcoded to E-rank only), so a C/B-rank co-op boss shows up in
+    // the C/B dungeon.
+    try {
+      const _coopForRank = Object.keys(COOP_BOSSES).filter(function (cid) { return COOP_BOSSES[cid].rank === effectiveRank; });
+      if (_coopForRank.length) {
+        const _coopHtml = _coopForRank.map(buildCoopBossCardHTML).join('');
         if (_coopHtml) list.insertAdjacentHTML('beforeend', _coopHtml);
         try { _coopApplyBadge(); _coopRefreshBadge(); } catch (_) {}
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
     // v3 Phase 1z.80 — wire boss art via setBossImage post-render so the
     // robust start-hidden / onload-reveals pattern applies to every card.
     try {
@@ -36970,7 +36973,7 @@
       list.addEventListener('click', (e) => {
         // W370 — co-op card opens its own sheet (data-coop-boss, separate path).
         const coopCard = e.target.closest('.bcard[data-coop-boss]');
-        if (coopCard) { try { _coopOpenDashboard(); } catch (_) {} return; }   // W394 — open the multi-hunt dashboard
+        if (coopCard) { const _cid = coopCard.getAttribute('data-coop-boss'); try { _coopOpenDashboard(_cid); } catch (_) {} return; }   // W394/W396 — open the dashboard for the tapped co-op boss
         const card = e.target.closest('.bcard[data-boss]');
         if (!card) return;
         const id = card.getAttribute('data-boss');
@@ -37726,6 +37729,7 @@
   let _coopDashInstances = [];
   let _coopDashWired = false;
   let _coopDashReturn = false;   // detail opened from the dashboard → Back returns here
+  let _coopDashBossId = COOP_PRIMARY_BOSS_ID;   // W396 — which co-op boss the dashboard was opened for (drives Recruit)
 
   function _coopHuntCardHtml(inst) {
     const v = _coopView(inst);
@@ -37808,7 +37812,10 @@
     });
   }
 
-  async function _coopOpenDashboard() {
+  async function _coopOpenDashboard(bossId) {
+    // W396 — remember which co-op boss this dashboard was opened for so Recruit
+    // starts a hunt for THAT boss (C / B / E), not always the Twin Maw.
+    _coopDashBossId = (bossId && COOP_BOSSES[bossId]) ? bossId : COOP_PRIMARY_BOSS_ID;
     const overlay = document.getElementById('coop-dash-overlay');
     if (!overlay) return;
     _coopDashWireOnce();
@@ -37842,7 +37849,7 @@
     _coopRefresh();
   }
   function _coopDashRecruit() {
-    const cfg = COOP_BOSSES[COOP_PRIMARY_BOSS_ID];
+    const cfg = COOP_BOSSES[_coopDashBossId] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID];
     const overlay = document.getElementById('coop-fs-overlay');
     if (!cfg || !overlay) return;
     _coopDashReturn = true;
