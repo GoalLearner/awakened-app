@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w415'; // W415 (S2) — rematch UI + pvp share card + streak milestones
+  const APP_BUILD_TAG = '2.3.1-w416'; // W416 (S2) — rematch review fixes (streak chain, waiting-timeout, turn_result gate)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10098,6 +10098,7 @@
   let _pvpStreak = 0;              // current win streak (derived from match history)
   let _pvpWasBot = false;          // was the just-played opponent an AI bot? (rematch = re-find)
   let _pvpRematchState = 'idle';   // 'idle' | 'waiting' (I requested) | 'offered' (they did) | 'declined'
+  let _pvpRematchTimer = null;     // client fallback: clears a stuck "waiting" if the expiry signal is missed (poll path)
 
   // ELO -> tier (mirrors backend pvp/elo.ts §12.2) + an accent color per tier.
   function _pvpTier(elo) {
@@ -10394,6 +10395,7 @@
         if (_arView === 'pvp-result') { _pvpRematchState = 'offered'; _pvpSetResultRematchUI('offer', msg.from); try { _audCue('ui_tap'); } catch (_) {} }
         break;
       case 'rematch_declined':
+        _pvpClearRematchTimer();
         if (_arView === 'pvp-result') {
           const wasWaiting = _pvpRematchState === 'waiting';
           _pvpRematchState = 'idle';
@@ -10401,6 +10403,7 @@
         }
         break;
       case 'turn_result':
+        if (_arView !== 'battle') break;   // a redelivered final turn must not replay over the result/VS
         _pvpView = msg;
         _pvpEnsureBattle(msg);
         _pvpAnimateTurn(msg);
@@ -10674,6 +10677,11 @@
     const s = _arSess || {}, view = _pvpView || {};
     const outcome = _pvpResultOutcome || (s.won ? 'win' : 'loss');
     const won = outcome === 'win', draw = outcome === 'draw';
+    // advance the client streak exactly once per match (this fn renders once per result).
+    // Corrected by the next history fetch; keeps the milestone + rank-band chip live across
+    // a rematch chain without a round-trip (was re-firing the same milestone every win).
+    if (outcome === 'win') _pvpStreak = (_pvpStreak || 0) + 1;
+    else if (outcome === 'loss') _pvpStreak = 0;
     const reason = (view.result && view.result.reason) || view.reason || 'ko';
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const oppName = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'your challenger';
@@ -10781,24 +10789,34 @@
       host.innerHTML = '<div class="pvp-rm-declined">' + (reason === 'expired' ? 'Rematch offer expired.' : esc(_pvpOppShort()) + ' declined.') + '</div>' + _pvpRematchBtnsHtml();
     } else { host.innerHTML = _pvpRematchBtnsHtml(); }
   }
+  function _pvpClearRematchTimer() { if (_pvpRematchTimer) { clearTimeout(_pvpRematchTimer); _pvpRematchTimer = null; } }
   function _pvpRequestRematch() {
     if (_pvpWasBot) { _pvpFindMatch(); return; }   // bots: instantly find a new match (no handshake)
     _pvpRematchState = 'waiting';
     try { _audCue('ui_tap'); } catch (_) {}
     _pvpSetResultRematchUI('waiting');
+    // client fallback: if the offer expires server-side but the decline signal is missed
+    // (e.g. we dropped to the HTTP poll, whose /state has no rematch field), clear the
+    // stuck "waiting" anyway (server expiry is 25s).
+    _pvpClearRematchTimer();
+    _pvpRematchTimer = setTimeout(function () {
+      if (_arView === 'pvp-result' && _pvpRematchState === 'waiting') { _pvpRematchState = 'idle'; _pvpSetResultRematchUI('declined', null, 'expired'); }
+    }, 28000);
     Promise.resolve(PvP.rematch()).then(function (r) {
       if (_arView !== 'pvp-result') return;
       // started=true -> both already agreed; the match_start broadcast drives the transition.
-      if (!r || !r.ok) { _pvpRematchState = 'idle'; _pvpSetResultRematchUI('declined', null, 'declined'); }
-    }).catch(function () { if (_arView === 'pvp-result') { _pvpRematchState = 'idle'; _pvpSetResultRematchUI('idle'); } });
+      if (!r || !r.ok) { _pvpClearRematchTimer(); _pvpRematchState = 'idle'; _pvpSetResultRematchUI('declined', null, 'declined'); }
+    }).catch(function () { if (_arView === 'pvp-result') { _pvpClearRematchTimer(); _pvpRematchState = 'idle'; _pvpSetResultRematchUI('idle'); } });
   }
   function _pvpDeclineRematch() {
+    _pvpClearRematchTimer();
     try { PvP.rematchDecline(); } catch (_) {}
     _pvpRematchState = 'idle';
     _pvpSetResultRematchUI('idle');
   }
   function _pvpBeginRematch(view) {
     // a rematch reset us into a fresh battle — clear all per-match client state.
+    _pvpClearRematchTimer();
     _pvpStarted = false; _arSess = null;
     _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle';
     _pvpEnsureBattle(view);
@@ -10807,10 +10825,11 @@
   function _pvpShareCtaHtml() {
     return '<button type="button" class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="pvp">' + _bksShareIconSvg() + 'Share this win</button>';
   }
-  // streak-milestone moment: this win pushes the streak (pre-match _pvpStreak + 1) to 3/5/10/15...
+  // streak-milestone moment: _pvpStreak is already advanced for this match in _pvpRenderResult,
+  // so read it directly (advances correctly across a rematch chain: 3, then 5, ...).
   function _pvpStreakMilestoneHtml(won) {
     if (!won) return '';
-    const s = (_pvpStreak || 0) + 1;
+    const s = _pvpStreak || 0;
     if (s === 3 || s === 5 || s === 10 || (s > 10 && s % 5 === 0)) {
       return '<div class="pvp-streak-moment">&#128293; ' + s + ' WIN STREAK</div>';
     }
@@ -10822,6 +10841,7 @@
     try { PvP.close(); } catch (_) {}
     _pvpClearTimer();
     if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }   // never let a VS auto-advance outlive teardown
+    _pvpClearRematchTimer();
     _pvpStarted = false;
     if (!keepResult) { _pvpView = null; _pvpCode = ''; }
   }

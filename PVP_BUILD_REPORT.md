@@ -9,6 +9,22 @@ Server-authoritative, over Durable Objects + WebSockets, with a **ranked ELO lad
 
 Date: 2026-06-19 · Marketing version at launch: **2.3.0**
 
+## 0b. Season-2 additions (2.3.1, W413–W415)
+- **Rematch (human-vs-human)** — the same `MatchRoom` DO (persisted post-match) runs an
+  offer/accept handshake and **resets into a fresh battle** on mutual yes (new matchId +
+  seed, cleared history), no code re-generation. A lone request offers the opponent a 25s
+  window (alarm-expired). Bots → "New Match" = instant Find-Match. Ugly paths covered:
+  decline, expiry, opponent gone, double-request, can't-rematch-a-live-match. The ELO loss
+  is **banked at match end before any rematch is possible** — rematch can't dodge a loss.
+- **Shareable ranked-win card** — a "Share this win" CTA reuses the boss-kill
+  `_bksRenderCanvas` pipeline via `data-bk-source="pvp"`; the numbers (tier, ELO + delta,
+  opponent) come from server-broadcast result state, never invented.
+- **Streak-milestone moment** — a 🔥 "N WIN STREAK" beat on the result at 3/5/10/15…
+- **matchId** — each match (and each rematch) is its own D1 history row.
+- itest **32/32** (adds rematch offer→accept→fresh-match + decline over WS). Combat
+  untouched (smoke 12/12, parity 3/3). Bot-replay determinism fix (W413) confirmed
+  (0/400 divergence). No new migration (rematch is DO state).
+
 ## 0. v3.0 feature set (the "finest PvP" pass, W411–W412)
 - **Find Match** — one tap → instant ranked duel at your rating, backed by an ELO-matched
   AI bot (PVP.md §11.1; the DO resolves the bot's moves with the shipped Ascent AI). Invite-
