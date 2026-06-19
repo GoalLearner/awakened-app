@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w425'; // W425 — Ranked Ladder redesign (ClaudeDesign): podium top-3 + list + pinned YOU row
+  const APP_BUILD_TAG = '2.3.1-w426'; // W426 — Pre-Match VS redesign (ClaudeDesign): vertical face-off, stakes, countdown, scan
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10137,6 +10137,7 @@
   let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
   let _pvpOpponentMeta = null;     // { alias, elo, tier, weaponName } from Find Match (VS screen)
   let _pvpVsTimer = null;          // pre-match VS auto-advance
+  let _pvpVsCountTimer = null;     // pre-match VS 3-2-1 countdown ticker
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
   let _pvpStreak = 0;              // current win streak (derived from match history)
   let _pvpWasBot = false;          // was the just-played opponent an AI bot? (rematch = re-find)
@@ -10338,8 +10339,21 @@
     // keep the simpler header + a back affordance.
     if (!mode || mode === 'home') { _arSet(_pvpHubHtml()); return; }
     let body, headK = 'RANKED PvP', headT = 'The Arena', headS = 'Real-time, server-judged.';
-    if (mode === 'creating' || mode === 'joining' || mode === 'searching') {
-      const wt = mode === 'creating' ? 'Opening the arena&hellip;' : mode === 'searching' ? 'Finding an opponent&hellip;' : 'Joining the duel&hellip;';
+    if (mode === 'searching') {
+      // ranked queue scan (ClaudeDesign "Pre-Match VS · Searching") — your crest pulsing
+      // under scan rings while the ladder is searched near your ELO band.
+      headK = 'RANKED QUEUE'; headT = 'The Arena'; headS = '';
+      let avatar = ''; try { avatar = _pvpSafeAvatar(getAvatarSrc()); } catch (_) {}
+      const r = _pvpRating || {}, t = _pvpTier(r.elo != null ? r.elo : 1500);
+      body = '<div class="pvp-vs2-search">' +
+        '<div class="pvp-vs2-scan"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>' +
+          (avatar ? '<img class="spr" src="' + esc(avatar) + '" alt="">' : '<span class="emb">' + _pvpTierEmblem(t.name, 88) + '</span>') + '</div>' +
+        '<div class="pvp-vs2-search-eb">Ranked Queue &middot; Searching</div>' +
+        '<div class="pvp-vs2-search-h">Finding a worthy opponent&hellip;</div>' +
+        (r.elo != null ? '<div class="pvp-vs2-search-w">Searching near ' + _pvpNum(r.elo).toLocaleString() + ' ELO &middot; ' + esc(t.name) + '</div>' : '') +
+        '</div>';
+    } else if (mode === 'creating' || mode === 'joining') {
+      const wt = mode === 'creating' ? 'Opening the arena&hellip;' : 'Joining the duel&hellip;';
       body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">' + wt + '</div></div>';
     } else if (mode === 'hosting') {
       headK = 'DUEL A FRIEND'; headT = 'Friendly Duel'; headS = '';
@@ -10598,7 +10612,7 @@
     // a match that ENDS during the 3.2s VS pre-roll (opponent forfeits/disconnects) must
     // cancel the auto-advance and jump straight to the result, not start a dead battle.
     if (_arView === 'pvp-vs' && (msg.type === 'match_end' || (msg.phase === 'ended'))) {
-      if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
+      if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; } _pvpVsCountStop();
       _pvpHandleEnd(msg); return;
     }
     switch (msg.type) {
@@ -10659,15 +10673,45 @@
     if (_arView === 'pvp-vs') return;                      // VS screen up -> it starts the battle
     _pvpStartVs(view);
   }
-  function _pvpVsCard(side, sprite, name, tier, elo, weapon) {
-    return '<div class="pvp-vs-card pvp-vs-card--' + side + '">' +
-      '<div class="pvp-vs-spr" style="--rb:' + tier.color + '">' + sprite + '</div>' +
-      '<div class="pvp-vs-nm">' + esc(name) + '</div>' +
-      '<div class="pvp-vs-emblem">' + _pvpTierEmblem(tier.name, 34) + '</div>' +
-      '<div class="pvp-vs-tier" style="color:' + tier.color + '">' + esc(tier.name) + (elo != null ? ' &middot; ' + _pvpNum(elo) : '') + '</div>' +
-      (weapon ? '<div class="pvp-vs-wpn">' + esc(weapon) + '</div>' : '') +
+  // W423 — pre-match VS (ClaudeDesign "The Pre-Match VS"): a vertical face-off — YOU (teal,
+  // top) vs your rival (ember, bottom; gold for a friendly), a diagonal seam + VS medal,
+  // a slam-in, honest pre-match stakes, and a 3-2-1 countdown into the duel. Avatars stay the
+  // heroes (W418) with a tier-emblem badge; ranked is always-vs-bot, so both ELOs are known
+  // and the stakes are exact (same K-factor as the server's updateElo).
+  function _pvpVsHunter(side, o) {
+    const sideLbl = side === 'you' ? 'You' : (o.friend ? 'Challenger' : 'Your Rival');
+    const eloLine = '<div class="pvp-vs2-tier" style="color:' + o.tier.color + '">' + esc(o.tier.name) +
+      (o.elo != null ? ' &middot; ' + _pvpNum(o.elo).toLocaleString() + ' ELO' : '') + '</div>';
+    return '<div class="pvp-vs2-hunter pvp-vs2-hunter--' + side + (o.friend && side === 'foe' ? ' friend' : '') + '">' +
+      '<div class="pvp-vs2-crestwrap">' + o.sprite + '<span class="pvp-vs2-badge">' + _pvpTierEmblem(o.tier.name, 30) + '</span></div>' +
+      '<div class="pvp-vs2-side">' + sideLbl + '</div>' +
+      '<div class="pvp-vs2-alias">' + esc(o.alias) + '</div>' +
+      eloLine +
+      (o.weapon ? '<div class="pvp-vs2-wpn">' + esc(o.weapon) + '</div>' : '') +
       '</div>';
   }
+  function _pvpVsStakesHtml(ranked, myElo, oppElo) {
+    if (!ranked) return '<div class="pvp-vs2-stakes friend">Friendly Duel &middot; <b>No Rank Change</b></div>';
+    if (myElo == null || oppElo == null) return '<div class="pvp-vs2-stakes friend">Ranked Duel &middot; <b>Rating at stake</b></div>';
+    const exp = 1 / (1 + Math.pow(10, (oppElo - myElo) / 400));
+    const k = myElo < 1700 ? 32 : myElo < 2200 ? 24 : myElo < 2600 ? 16 : 12;
+    const win = Math.round(k * (1 - exp)), loss = Math.round(k * exp);
+    return '<div class="pvp-vs2-stakes"><span class="lab">At Stake</span>' +
+      '<span class="chip win">&#9650; Win +' + win + '</span>' +
+      '<span class="chip loss">&#9660; Loss &minus;' + loss + '</span></div>';
+  }
+  function _pvpVsCountStart() {
+    _pvpVsCountStop();
+    let n = 3;
+    _pvpVsCountTimer = setInterval(function () {
+      const el = document.getElementById('pvp-vs-count');
+      if (!el || _arView !== 'pvp-vs') { _pvpVsCountStop(); return; }
+      n -= 1;
+      el.textContent = n <= 0 ? '✦' : String(n);
+      if (n <= 0) _pvpVsCountStop();
+    }, 950);
+  }
+  function _pvpVsCountStop() { if (_pvpVsCountTimer) { clearInterval(_pvpVsCountTimer); _pvpVsCountTimer = null; } }
   function _pvpStartVs(view) {
     _arView = 'pvp-vs'; _pvpView = view;
     _pvpWasBot = !!(view.opp && view.opp.isBot);   // bots: rematch re-runs Find Match (no handshake)
@@ -10677,34 +10721,47 @@
     _pvpCeremonyDone = false;   // a fresh match can fire the ceremony again
     _arBodyMode(false); _arClearTimers();
     const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
-    const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo);
-    const oppElo = opp.elo != null ? opp.elo : oppMeta.elo;
-    const myTier = _pvpTier(myElo), oppTier = _pvpTier(oppElo);
+    const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo != null ? _pvpRating.elo : null);
+    const oppElo = opp.elo != null ? opp.elo : (oppMeta.elo != null ? oppMeta.elo : null);
+    const myTier = _pvpTier(myElo != null ? myElo : 1500), oppTier = _pvpTier(oppElo != null ? oppElo : 1500);
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const oppName = opp.alias || opp.name || oppMeta.alias || 'Challenger';
     const mono = esc(((oppName[0] || '?')).toUpperCase());
     let myWeapon = me.weaponName || ''; try { if (!myWeapon) myWeapon = _arenaWeaponName(); } catch (_) {}
     const oppWeapon = opp.weaponName || oppMeta.weaponName || '';
-    const ranked = view.ranked !== false;
+    const ranked = view.ranked !== false, friend = !ranked;
+    const youSprite = avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>';
+    const foeSprite = _pvpSprite(opp.avatar || oppMeta.avatar, mono);
     _arSet(
-      '<div class="pvp-vs">' +
-        '<div class="pvp-vs-kick">' + (ranked ? 'RANKED DUEL' : 'DUEL') + (oppMeta.alias ? ' &middot; MATCHED' : '') + '</div>' +
-        '<div class="pvp-vs-fighters">' +
-          _pvpVsCard('you', avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>', 'You', myTier, myElo, myWeapon) +
-          '<div class="pvp-vs-x">VS</div>' +
-          _pvpVsCard('foe', _pvpSprite(opp.avatar || oppMeta.avatar, mono), oppName, oppTier, oppElo, oppWeapon) +
+      '<div class="pvp-vs2' + (friend ? ' pvp-vs2--friend' : '') + '">' +
+        '<div class="pvp-vs2-stage">' +
+          '<div class="pvp-vs2-tint you"></div>' +
+          '<div class="pvp-vs2-tint foe' + (friend ? ' friend' : '') + '"></div>' +
+          '<div class="pvp-vs2-seam' + (friend ? ' friend' : '') + '"></div>' +
+          '<div class="pvp-vs2-medal">VS</div>' +
         '</div>' +
-        '<button type="button" class="ar-cta pvp-vs-go" data-ar="pvpfight">FIGHT &#9656;</button>' +
-        '<div class="pvp-vs-hint">tap to begin</div>' +
+        '<div class="pvp-vs2-content">' +
+          '<div class="pvp-vs2-eyebrow">' + (friend ? 'Friendly Duel' : 'Match Found') +
+            '<span class="season">' + (friend ? 'Invite Code &middot; Casual' : 'Season 1 &middot; Ranked Ladder') + '</span></div>' +
+          _pvpVsHunter('you', { sprite: youSprite, alias: 'You', tier: myTier, elo: myElo, weapon: myWeapon, friend: friend }) +
+          _pvpVsHunter('foe', { sprite: foeSprite, alias: oppName, tier: oppTier, elo: oppElo, weapon: oppWeapon, friend: friend }) +
+          '<div class="pvp-vs2-foot">' +
+            _pvpVsStakesHtml(ranked, myElo, oppElo) +
+            '<button type="button" class="pvp-vs2-count" data-ar="pvpfight"><span class="lab">The Duel Begins</span><span class="num" id="pvp-vs-count">3</span></button>' +
+            '<div class="pvp-vs2-hint">tap to begin</div>' +
+          '</div>' +
+        '</div>' +
       '</div>'
     );
+    try { const el = document.querySelector('.pvp-vs2'); if (el) { void el.offsetWidth; el.classList.add('play'); } } catch (_) {}
     try { _audUnlock(); playSfx('ar_engage'); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+    _pvpVsCountStart();
     if (_pvpVsTimer) clearTimeout(_pvpVsTimer);
     _pvpVsTimer = setTimeout(function () { _pvpVsToBattle(); }, 3200);
   }
   function _pvpVsToBattle() {
-    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; } _pvpVsCountStop();
     if (_arView !== 'pvp-vs') return;
     _pvpStartBattle(_pvpView);
   }
@@ -11146,7 +11203,7 @@
   function _pvpTeardown(keepResult) {
     try { PvP.close(); } catch (_) {}
     _pvpClearTimer();
-    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }   // never let a VS auto-advance outlive teardown
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; } _pvpVsCountStop();   // never let a VS auto-advance outlive teardown
     if (_pvpCerTimer) { clearTimeout(_pvpCerTimer); _pvpCerTimer = null; }
     _pvpCerCb = null;
     try { _audStopSting(0.2); } catch (_) {}
@@ -11163,7 +11220,7 @@
       if (!ok) return;
       try { PvP.forfeit(); } catch (_) {}
     }
-    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }
+    if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; } _pvpVsCountStop();
     _pvpTeardown();
     _arClearTimers(); _arSess = null; _arRevealing = false;
     _arRenderTower();
