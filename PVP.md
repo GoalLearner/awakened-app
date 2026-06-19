@@ -1,8 +1,8 @@
 # PVP.md — Awakened v3 PvP Combat Design Spec
 
-**Status:** v1.0 DESIGN — implementation deferred to v3.0 (no firm date).
-**Last updated:** May 12, 2026
-**Authored:** May 12, 2026
+**Status:** v1.1 — REALTIME HUMAN PvP IMPLEMENTATION IN PROGRESS (June 19, 2026). §1–20 are the v1.0 design baseline. **§21 is the implementation truth** for realtime human PvP; where they conflict, §21 wins. §21 supersedes §1.7 (async/bots-first) and the §4–9 / §6 bespoke combat model — the shipped **Arena engine** (OSRS-style Melee/Magic/Ranged) is the combat (see §21.1).
+**Last updated:** June 19, 2026 (§21 added)
+**Authored:** May 12, 2026 (v1.0); §21 June 19, 2026
 **Designer:** Richie (with Claude as design partner)
 
 Companion docs:
@@ -1168,4 +1168,89 @@ Phasing model mirrors BACKEND.md v2.1's phase-train approach. Each phase becomes
 
 ---
 
-*End of v1.0 spec. This is the authoritative source for v3 PvP design. All future Claude Code sessions should reference this doc as the single source of truth; deviations require an explicit version bump (v1.1, v2.0, etc.) and a redline against this document.*
+---
+
+## 21. Realtime Human PvP — Phase 7 Implementation (v1.1, June 19 2026)
+
+> This section is the **implementation truth** for live human-vs-human PvP. It is being built now (ahead of the v1.0 roadmap, which deferred this to §20 Phase 7). Where it conflicts with §1–20, §21 wins.
+
+### 21.1 Reconciliation with v1.0
+
+- **Combat model:** v1.0 §4–9 designed a bespoke combat system (the §6 damage formula + the 5-type "Type Pentagon" + 30 stat-tree moves). **That model was never implemented.** What shipped is the **Arena engine** — OSRS-style Melee/Magic/Ranged with a Pokémon-style turn-based battle UI, powering the Ascent Tower. **Realtime PvP reuses the shipped Arena engine verbatim.** §4–9 / §6 are superseded for this implementation. The combat math is solved and proven (`Arena.selfTest()` = 36 tests; determinism test T1).
+- **Async/bots-first:** v1.0 §1.7 + §17.2 + §20 Phase 7 deferred live human PvP to v3.5+ as "requires real-time match-coordination infrastructure." §21 **is** that infrastructure.
+- **Retained from v1.0:** ELO (§11.3), souls reward (§10.1), tier badges (§12.2), the `pvp_matches`/`pvp_ratings` tables (§15.2, adapted to the Arena model), mutual-KO → draw (§18.6), the ELO leaderboard surface (§12.4).
+
+### 21.2 Authority model
+
+Server-authoritative, always. One **Durable Object** (`MatchRoom`, SQLite-backed) owns each match: the authoritative battle session, the turn state machine, the per-turn move buffer, and the turn deadline. The client sends **intents** and renders **broadcast state**; it never computes an outcome. The DO runs the **same** combat core the client uses (no fork) and re-validates every move.
+
+### 21.3 Transport
+
+- **Primary: WebSocket** (Hibernation API — compat_date `2026-05-12` + `nodejs_compat` supports it).
+- **Fallback: HTTP** request/poll to the same DO (turn-based tolerates polling; the DO answers both WS upgrades and plain HTTP).
+- DO addressed by `idFromName(matchCode)` — no routing table needed.
+- **WS auth:** browser WebSockets can't set headers, so the session JWT rides a `?token=` query param; the Worker validates it at the edge and forwards the upgrade to the DO with the resolved `userId` in an internal header. (Hardening to a short-lived ticket: deferred.)
+- The match **engine** (state machine + resolution) is a pure module independent of transport, so a pure Workers+D1 polling fallback (if DOs are ever unavailable) reuses it unchanged.
+
+### 21.4 The combat core — shared, no fork
+
+Extract `shared/combat-core.js` — the pure deterministic engine lifted from app.js: `_arMulberry32` (seeded RNG), `ARENA_MOVE_LIB`, `WEAPON_MOVES`, `ARCH_MOVES`, the stat/profile math (`_arenaCombatProfile`, `_arenaMaxHP`, `_arenaEffectiveness`, `_arenaSideOdds`, `_arAccBonusOf`), the status system (`_arPushMod` + the `_arStat*` aggregators), move execution (`_arExecMove`, `_arApplyFx`, `_arEndTurn`), `arenaTakeTurn`, and the v2/tiered AI (unused by PvP). New PvP entry points:
+
+- `pvpStartBattle(combatantA, combatantB, seed)` → BattleSession. Replaces the impure browser setup (`getHunterBuild`/`CARDS`/`localStorage`) by accepting two **pre-computed combatants** (`{stats, pMoves, weaponName, arch, attuned, name}`).
+- `pvpResolveTurn(sess, moveIdA, moveIdB)` → events. Reuses `arenaTakeTurn` with the foe-move picker **injected** to return `moveIdB` (P1 = `'p'` side, P2 = `'b'` side). Identical resolution to the Ascent.
+
+The Worker imports `combat-core.js` (ESM). The client loads the same file (browser global) and app.js's Ascent is refactored to consume it — **one copy, no fork**, gated on `Arena.selfTest()` staying 36/36 + `node tools/sim-ascent.js`. (If the client refactor proves too risky on the shipped path, the fallback is: `combat-core.js` is the server module + a Node parity harness runs the 36 self-tests against it — verified-no-drift.)
+
+### 21.5 State machine
+
+`LOBBY` (P1 created, awaiting P2) → `ACTIVE` → loop[ `COLLECTING` (await both moves; deadline armed) → `RESOLVING` (both in → `pvpResolveTurn` → broadcast) ] → `ENDED` (KO | turn-cap | forfeit | mutual-KO = draw).
+
+### 21.6 Turn model
+
+Simultaneous **blind** selection (matches the engine + v1.0 §9): each turn both players submit one move; the DO waits for both, then resolves both in the engine's priority/FOCUS order.
+
+- **Timeout:** DO `alarm` at the turn deadline (45 s default). On fire, an un-submitted player is auto-assigned a default move (first off-cooldown move, else a defensive one); resolve. Prevents stalling.
+- **Double-submit:** first move for turn `T` wins; later submits for `T` are ignored (idempotent).
+- **Stale turn:** a submit for `turn < current` is rejected.
+
+### 21.7 Reconnect / disconnect / forfeit
+
+- **Reconnect:** hibernation persists the DO; a reconnecting client opens a new WS, authenticates, sends `resync`, gets full current state, resumes. The match survives transient drops.
+- **Disconnect:** the DO tracks each player's socket + last-seen. On WS close → mark disconnected; the turn-timeout keeps the match advancing. Sustained disconnect (no reconnect within ~90 s while the match is stalled on that player) → opponent wins by forfeit.
+- **Forfeit:** explicit `forfeit` intent OR sustained disconnect → opponent wins; `ENDED`; result persisted.
+
+### 21.8 Matchmaking
+
+- **Invite-by-code (v1, build first):** `POST /v1/pvp/create` → server generates a 6-char code → `DO.idFromName(code)` initialized (creator = P1). `POST /v1/pvp/join {code}` → DO adds P2 → `ACTIVE`. Both connect WS to `/v1/pvp/ws?code=&token=`.
+- **Open queue (stretch):** a `pvp_queue` D1 table; a matcher pairs two queued players (ELO-banded) into a code and notifies both.
+
+### 21.9 Anti-cheat
+
+- **All resolution is server-side** — the client never decides the outcome.
+- Every move is validated: it is the submitter's current turn, the `moveId` is in their kit, and it is off-cooldown. Illegal intents are rejected.
+- Combatants are submitted at join (stats are **client-authoritative**, consistent with the whole game's trust model — there is no server build authority, per the backend map). The server validates move IDs against the shared move lib and sanity-bounds the stats. Full server-derived stats are deferred (would require a server build authority that does not exist today).
+
+### 21.10 Persistence — D1 migration `0021_pvp.sql`
+
+- `pvp_matches` (id, code, p1_user_id, p2_user_id, p1_combatant_json, p2_combatant_json, winner_user_id, result `'p1_win'|'p2_win'|'draw'|'forfeit'`, turns, ranked, started_at, ended_at). The DO writes this on `ENDED` (DOs can access `env.DB`).
+- `pvp_ratings` (user_id PK, elo DEFAULT 1500, peak_elo, wins, losses, draws, last_match_at). Ranked queue matches update ELO (§11.3). Invite-code duels are recorded but **unranked** in v1.
+- Souls reward is granted client-side on the win beat (§10.1), consistent with co-op.
+- Migrations applied via `wrangler d1 execute --remote --file=migrations/0021_pvp.sql` (NOT `migrations apply`).
+
+### 21.11 Client integration
+
+- New `pvp.js` (`window.PvP`): WS connect + HTTP fallback (reusing `Auth.getJwt()` + `BACKEND_URL` + the `{ok,code,detail}` shape), send intents, and drive the **existing battle UI** via a `BattleStateManager` seam at app.js:9839 — replace the local `arenaTakeTurn(_arSess,moveId)` call with intent-submit, and render server-broadcast events through `_pkbPlay`. Reconnect on app-foreground. UI states: waiting-for-opponent / your-turn / opponent's-turn / opponent-disconnected / turn-timer. The win share-card is reused.
+- New PvP entry point (a "Duel" surface). The Civilian gate (§5.4) is deferred for v1 (any account with a usable battle kit can duel).
+
+### 21.12 Message protocol
+
+- **Client → Server:** `submit_move {turn, moveId}` · `resync` · `forfeit` · `ping`.
+- **Server → Client:** `match_start {seed, youAre:'p'|'b', combatants}` · `state {phase, turn, deadline, youSubmitted, oppConnected, pHP, bHP}` · `turn_result {turn, events[], pHP, bHP, done, winnerSide}` · `match_end {result, winnerUserId, rewards}` · `opp_status {connected}` · `error {code, detail}`.
+
+### 21.13 Build phases (this session)
+
+P0 spec+architecture (this section) → P1 backend DO match engine (invite-code) → P2 matchmaking+lobby+D1 → P3 client integration → P4 two-client integration test → P5 ship-ready (version bump, two-gate build check, `PVP_BUILD_REPORT.md`). **DO requires the Workers Paid plan** (verify in the Cloudflare dashboard; ~$5/mo). Logic is validated locally via `wrangler dev` (miniflare simulates DO + D1 + WebSockets) with two browser sessions; the owner runs the remote `wrangler deploy` + D1 migration + the final two-phone test.
+
+---
+
+*End of spec. v1.0 (§1–20) authored May 12 2026; v1.1 §21 (realtime implementation) added June 19 2026. This doc is the single source of truth for PvP; §21 governs the realtime build. Deviations require a version bump + redline.*
