@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.754';
+const CACHE_VERSION = 'v5.755';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -122,6 +122,9 @@ const PRECACHE_ASSETS = [
   '/assets/audio/arena_menu.m4a',
   '/assets/audio/victory_sting.m4a',
   '/assets/audio/defeat_sting.m4a',
+  '/assets/audio/ascent_promote.mp3',
+  '/assets/audio/ascent_apex.mp3',
+  '/assets/audio/ascent_demote.mp3',
   '/assets/audio/sfx_lunge.m4a',
   '/assets/audio/sfx_hit_normal.m4a',
   '/assets/audio/sfx_hit_crit.m4a',

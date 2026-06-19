@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w422'; // W422 — the Ascent Ceremony (ClaudeDesign): full-screen tier promotion/demotion/apex beat on a ranked tier crossing
+  const APP_BUILD_TAG = '2.3.1-w423'; // W423 — Ascent Ceremony stings (Suno) on the SFX bus: ascent_promote / ascent_apex / ascent_demote
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8583,6 +8583,8 @@
     missing: {}, status: {}, lastPlay: null, voices: 0, loaded: false, duckT: null, log: false,
     musicSlot: null, want: null,   // W248 — want: slot to auto-start once its buffer decodes (menu-music race)
     slots: ['battle_loop', 'boss_loop', 'victory_sting', 'defeat_sting', 'arena_menu',
+            // W423 — PvP tier-ceremony stings (Suno). Played on the SFX bus, not music.
+            'ascent_promote', 'ascent_apex', 'ascent_demote',
             'sfx_lunge', 'sfx_hit_normal', 'sfx_hit_crit', 'sfx_miss_dodge', 'sfx_hp_drain', 'sfx_ko', 'sfx_boss_intro',
             // W301 — per-move-family hit cues (drop-in slots; synth until generated)
             'sfx_hit_slice', 'sfx_hit_burst', 'sfx_hit_heavy', 'sfx_hit_magic', 'sfx_hit_arrow',
@@ -8869,6 +8871,40 @@
       if (_AUD.log) { try { console.log('[aud] file-cue: ' + slot); } catch (_) {} }
       return true;
     } catch (_) { return false; }
+  }
+  // W423 — a deliberate one-shot STING on the SFX bus (PvP tier-ceremony fanfares). Gated
+  // by the SFX `soundEnabled` toggle, NOT _audMusicOn() — a tier promotion is a reward cue,
+  // not background music, so it still plays with the (default-off) music loop silenced. No
+  // voice-limiting: it should never be dropped. Returns true if it played.
+  function _audSting(slot, gain) {
+    if (!soundEnabled) return false;
+    const buf = _AUD.buffers[slot];
+    if (!buf) return false;
+    const c = _audCtx(); if (!c) return false;
+    if (c.state === 'suspended') { try { c.resume(); } catch (_) {} if (c.state === 'suspended') return false; }
+    _audStopSting(0.06);   // never overlap two stings
+    try {
+      const src = c.createBufferSource(); src.buffer = buf;
+      const g = c.createGain(); g.gain.value = gain || 0.85;
+      src.connect(g); g.connect(_AUD.sfx); src.start();
+      _AUD.stingSrc = src; _AUD.stingGain = g;
+      src.onended = function () { if (_AUD.stingSrc === src) { _AUD.stingSrc = null; _AUD.stingGain = null; } };
+      return true;
+    } catch (_) { return false; }
+  }
+  // Fade + stop the active sting — the Suno fanfares are full clips (12-20s); we let them
+  // ring through the ceremony but fade out on dismiss so they don't bleed over the result.
+  function _audStopSting(fade) {
+    const c = _AUD.ctx, src = _AUD.stingSrc, g = _AUD.stingGain;
+    _AUD.stingSrc = null; _AUD.stingGain = null;
+    if (!c || !src) return;
+    try {
+      if (g && fade) {
+        g.gain.setValueAtTime(g.gain.value, c.currentTime);
+        g.gain.linearRampToValueAtTime(0.0001, c.currentTime + fade);
+        src.stop(c.currentTime + fade + 0.03);
+      } else { src.stop(); }
+    } catch (_) {}
   }
   // W250 — the hall acknowledges its hunter: one soft bell on the FIRST app
   // interaction of each local day (gesture-gated for iOS; once daily = zero
@@ -10830,6 +10866,7 @@
   };
   function _pvpCerFinish() {
     if (_pvpCerTimer) { clearTimeout(_pvpCerTimer); _pvpCerTimer = null; }
+    try { _audStopSting(0.5); } catch (_) {}   // fade the fanfare as we move to the result
     try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = ''; } catch (_) {}   // restore the EXIT
     const cb = _pvpCerCb; _pvpCerCb = null;
     if (cb) { try { cb(); } catch (_) {} }
@@ -10873,7 +10910,10 @@
       '</div>'
     );
     try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = 'hidden'; } catch (_) {}   // full takeover — hide the overlay EXIT
-    try { playSfx(demote ? 'ar_lose' : apex ? 'boss_victory' : 'ar_win'); } catch (_) {}
+    try {
+      const stingSlot = demote ? 'ascent_demote' : apex ? 'ascent_apex' : 'ascent_promote';
+      if (!_audSting(stingSlot, 0.9)) playSfx(demote ? 'ar_lose' : apex ? 'boss_victory' : 'ar_win');   // fallback if the file hasn't decoded
+    } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(demote ? 12 : apex ? [30, 40, 60] : 22); } catch (_) {}
     if (_pvpCerTimer) clearTimeout(_pvpCerTimer);
     _pvpCerTimer = setTimeout(_pvpCerFinish, 6500);   // auto-advance if untouched
@@ -11065,6 +11105,7 @@
     if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }   // never let a VS auto-advance outlive teardown
     if (_pvpCerTimer) { clearTimeout(_pvpCerTimer); _pvpCerTimer = null; }
     _pvpCerCb = null;
+    try { _audStopSting(0.2); } catch (_) {}
     try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = ''; } catch (_) {}
     _pvpClearRematchTimer();
     _pvpStarted = false;
