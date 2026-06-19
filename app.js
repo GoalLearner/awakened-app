@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w421'; // W421 — "The Arena" ranked hub (ClaudeDesign): tier crest + climb-to-next-tier, form/streak, placement, Awakened peak, Find Match primary
+  const APP_BUILD_TAG = '2.3.1-w422'; // W422 — the Ascent Ceremony (ClaudeDesign): full-screen tier promotion/demotion/apex beat on a ranked tier crossing
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9913,6 +9913,7 @@
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
       else if (a === 'pvphistory'){ try { _pvpOpenHistory(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
+      else if (a === 'pvpcerdone'){ try { _pvpCerFinish(); } catch (_) {} }
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
         const cur = getEquippedArenaTitle();
@@ -10590,9 +10591,10 @@
   function _pvpStartVs(view) {
     _arView = 'pvp-vs'; _pvpView = view;
     _pvpWasBot = !!(view.opp && view.opp.isBot);   // bots: rematch re-runs Find Match (no handshake)
-    // capture my pre-match ELO for the rank-up/down moment (survives _pvpRating mutations)
+    // capture my pre-match ELO for the rank-up/down moment + ceremony (survives _pvpRating mutations)
     _pvpPreElo = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo
       : (view.me && view.me.elo != null ? view.me.elo : null);
+    _pvpCeremonyDone = false;   // a fresh match can fire the ceremony again
     _arBodyMode(false); _arClearTimers();
     const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
     const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo);
@@ -10811,12 +10813,88 @@
     if (msg.opp) _arSess.bHP = _pvpNum(msg.opp.hp, _arSess.bHP || 0);
     _pvpRenderResult();
   }
+  // ── W422 · the Ascent Ceremony (ClaudeDesign) — the full-screen reward beat fired when
+  // a RANKED match crosses a tier boundary. Plays over the Arena, then continues to the
+  // result. Reuses the tier emblems + their ignite. Baked rgba per tier (no color-mix).
+  let _pvpCeremonyDone = false;   // fired for the current match yet?
+  let _pvpCerCb = null;           // what to run on dismiss (-> render the result)
+  let _pvpCerTimer = null;        // auto-advance timer
+  const _PVP_CER_TINT = {
+    bronze:   { aura: 'rgba(176,141,87,0.20)',  ray: 'rgba(176,141,87,0.06)',  glow: 'rgba(176,141,87,0.5)' },
+    silver:   { aura: 'rgba(203,213,225,0.20)', ray: 'rgba(203,213,225,0.06)', glow: 'rgba(203,213,225,0.5)' },
+    gold:     { aura: 'rgba(251,191,36,0.22)',  ray: 'rgba(251,191,36,0.07)',  glow: 'rgba(251,191,36,0.55)' },
+    platinum: { aura: 'rgba(125,211,252,0.22)', ray: 'rgba(125,211,252,0.07)', glow: 'rgba(125,211,252,0.5)' },
+    diamond:  { aura: 'rgba(94,234,212,0.22)',  ray: 'rgba(94,234,212,0.07)',  glow: 'rgba(94,234,212,0.5)' },
+    master:   { aura: 'rgba(192,132,252,0.22)', ray: 'rgba(192,132,252,0.07)', glow: 'rgba(192,132,252,0.5)' },
+    awakened: { aura: 'rgba(245,184,66,0.28)',  ray: 'rgba(245,184,66,0.09)',  glow: 'rgba(245,184,66,0.6)' },
+  };
+  function _pvpCerFinish() {
+    if (_pvpCerTimer) { clearTimeout(_pvpCerTimer); _pvpCerTimer = null; }
+    try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = ''; } catch (_) {}   // restore the EXIT
+    const cb = _pvpCerCb; _pvpCerCb = null;
+    if (cb) { try { cb(); } catch (_) {} }
+  }
+  function _pvpRenderCeremony(o, cb) {
+    _arView = 'pvp-ceremony';
+    _arBodyMode(false);
+    _pvpCerCb = cb || null;
+    const newKey = String(o.newName).toLowerCase();
+    const tint = _PVP_CER_TINT[newKey] || _PVP_CER_TINT.silver;
+    const tcol = (_PVP_TIER_PAL[newKey] || _PVP_TIER_PAL.silver).c;
+    const apex = !!o.up && newKey === 'awakened';
+    const demote = !o.up;
+    const cls = apex ? 'apex' : demote ? 'demote' : '';
+    const styleVars = '--tierC:' + tcol + ';--auraC:' + tint.aura + ';--rayC:' + tint.ray + ';--glowC:' + tint.glow;
+    const kicker = demote ? 'You slip to' : apex ? 'You join the' : 'You ascend to';
+    const flavor = demote ? '“The ladder tests all who climb. Hold your footing — and climb again.”'
+      : apex ? '“You stand at the summit, where the First Awakened waits. Few hunters are named here.”'
+      : '“The proven climb higher. The ladder bends to your will.”';
+    const climbV = (typeof o.delta === 'number') ? (o.delta > 0 ? '+' + o.delta : '' + o.delta) : '&mdash;';
+    const stats = '<div class="pvp-cer-stats">' +
+      '<div class="s"><div class="v">' + _pvpNum(o.elo).toLocaleString() + '</div><div class="k">New ELO</div></div>' +
+      '<div class="s"><div class="v ' + (demote ? '' : 'up') + '">' + climbV + '</div><div class="k">' + (demote ? 'Slip' : 'Climb') + '</div></div>' +
+      (o.rank ? '<div class="s"><div class="v gold">#' + _pvpNum(o.rank) + '</div><div class="k">Global</div></div>' : '') +
+      '</div>';
+    const oldBlock = '<div class="pvp-cer-old">' + _pvpTierEmblem(o.preName, 40) +
+      '<span class="lbl">' + esc(o.preName) + '</span><span class="arrow">&#9660;</span></div>';
+    const lore = apex ? '<div class="pvp-cer-lore">The Awakened &middot; 3000+</div>' : '';
+    const bested = (!demote && o.bested) ? '<div class="pvp-cer-bested">Bested <b>' + esc(o.bested) + '</b></div>' : '';
+    _arSet(
+      '<div class="pvp-cer ' + cls + ' play" style="' + styleVars + '" data-ar="pvpcerdone">' +
+        '<div class="pvp-cer-scrim"></div><div class="pvp-cer-aura"></div><div class="pvp-cer-burst"></div>' +
+        '<div class="pvp-cer-stage">' + oldBlock +
+          '<div class="pvp-cer-hero' + (apex ? ' ig' : '') + '">' + _pvpTierEmblem(o.newName, 168) + '</div>' +
+          '<div class="pvp-cer-kicker">' + kicker + '</div>' +
+          '<div class="pvp-cer-tier">' + esc(o.newName) + '</div>' +
+          '<div class="pvp-cer-flavor">' + flavor + '</div>' + lore + stats + bested +
+        '</div>' +
+        '<div class="pvp-cer-cont"><button type="button" class="pvp-cer-btn" data-ar="pvpcerdone">' + (apex ? 'Claim your place' : 'Continue') + '</button>' +
+          '<span class="pvp-cer-tap">Tap anywhere to continue</span></div>' +
+      '</div>'
+    );
+    try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = 'hidden'; } catch (_) {}   // full takeover — hide the overlay EXIT
+    try { playSfx(demote ? 'ar_lose' : apex ? 'boss_victory' : 'ar_win'); } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(demote ? 12 : apex ? [30, 40, 60] : 22); } catch (_) {}
+    if (_pvpCerTimer) clearTimeout(_pvpCerTimer);
+    _pvpCerTimer = setTimeout(_pvpCerFinish, 6500);   // auto-advance if untouched
+  }
   function _pvpRenderResult() {
     _arClearTimers(); _pvpClearTimer();
     _arView = 'pvp-result';
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}
     const s = _arSess || {}, view = _pvpView || {};
+    // W422 — a ranked tier-boundary crossing plays the full-screen ceremony FIRST, then
+    // continues back here. Once per match; needs the final rating + the pre-match ELO.
+    if (!_pvpCeremonyDone && view.ranked !== false && _pvpEndRating && _pvpPreElo != null) {
+      const preName = _pvpTier(_pvpPreElo).name, newName = _pvpTier(_pvpEndRating.elo).name;
+      if (preName !== newName) {
+        _pvpCeremonyDone = true;
+        const cerOpp = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || '';
+        _pvpRenderCeremony({ preName: preName, newName: newName, up: _pvpEndRating.elo > _pvpPreElo, elo: _pvpEndRating.elo, delta: _pvpEndRating.delta, rank: (_pvpRating && _pvpRating.rank) || null, bested: cerOpp }, _pvpRenderResult);
+        return;
+      }
+    }
     const outcome = _pvpResultOutcome || (s.won ? 'win' : 'loss');
     const won = outcome === 'win', draw = outcome === 'draw';
     // advance the client streak exactly once per match (this fn renders once per result).
@@ -10962,7 +11040,7 @@
     // a rematch reset us into a fresh battle — clear all per-match client state.
     _pvpClearRematchTimer();
     _pvpStarted = false; _arSess = null;
-    _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle';
+    _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle'; _pvpCeremonyDone = false;
     _pvpEnsureBattle(view);
   }
   // share CTA — reuses the boss-kill share-card pipeline via data-bk-source="pvp".
@@ -10985,6 +11063,9 @@
     try { PvP.close(); } catch (_) {}
     _pvpClearTimer();
     if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; }   // never let a VS auto-advance outlive teardown
+    if (_pvpCerTimer) { clearTimeout(_pvpCerTimer); _pvpCerTimer = null; }
+    _pvpCerCb = null;
+    try { const x = document.getElementById('arena-close'); if (x) x.style.visibility = ''; } catch (_) {}
     _pvpClearRematchTimer();
     _pvpStarted = false;
     if (!keepResult) { _pvpView = null; _pvpCode = ''; }
@@ -11075,6 +11156,18 @@
       _arBodyMode(false); _arView = 'pvp-lobby';
       _pvpRenderLobby('home');   // render the hub directly (skip the live fetch that would clobber the preset)
       return 'hub: ' + st + ' — states: placed | placement | promo | awakened';
+    };
+    // preview the Ascent Ceremony: __pvpCeremony('promo'|'apex'|'demote')
+    window.__pvpCeremony = function (kind) {
+      kind = (typeof kind === 'string') ? kind : 'promo';
+      const presets = {
+        promo:  { preName: 'Silver', newName: 'Gold',     up: true,  elo: 1712, delta: 18, rank: 26, bested: 'Orison' },
+        apex:   { preName: 'Master', newName: 'Awakened', up: true,  elo: 3012, delta: 21, rank: 3,  bested: 'Vesper' },
+        demote: { preName: 'Gold',   newName: 'Silver',   up: false, elo: 1694, delta: -16, rank: 58, bested: '' },
+      };
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpRenderCeremony(presets[kind] || presets.promo, function () { try { _arRenderTower(); } catch (_) {} });
+      return 'ceremony: ' + kind + ' — promo | apex | demote';
     };
     // preview the populated ranked ladder with sample rows (the live view fetches
     // /v1/pvp/leaderboard).
