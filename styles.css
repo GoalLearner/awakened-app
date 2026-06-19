@@ -30269,3 +30269,21 @@ button.guildhall-summary-tile:active {
 
 /* DRAW result word */
 .ar-result-word.draw { color: #7dd3fc; }
+
+/* Ranked ladder view */
+.pvp-ladder-link { display: block; width: 100%; margin: 12px 0 0; padding: 11px; border-radius: 11px; cursor: pointer; text-align: center;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: #9aa3e8;
+  font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; -webkit-tap-highlight-color: transparent; }
+.pvp-ladder-link:active { filter: brightness(1.2); }
+.pvp-ladder-empty { text-align: center; color: #9090a8; font-size: 12.5px; padding: 40px 24px; }
+.pvp-ladder-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px; }
+.pvp-ld-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.pvp-ld-row.you { background: rgba(245,184,66,0.08); border-color: rgba(245,184,66,0.35); }
+.pvp-ld-rank { flex: none; width: 26px; text-align: center; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 14px; color: #6b6b86; }
+.pvp-ld-row.you .pvp-ld-rank { color: #f5b842; }
+.pvp-ld-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pvp-ld-who .nm { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; color: #f5f3fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-ld-who .sub { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; }
+.pvp-ld-elo { flex: none; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #f5f3fb; }
+.pvp-ld-elo i { font-style: normal; font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em; color: #6b6b86; margin-left: 3px; }

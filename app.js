@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.0';   // W409 — Ranked PvP launch
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.0-w409'; // W409 — Ranked PvP go-live + review fixes
+  const APP_BUILD_TAG = '2.3.0-w410'; // W410 — ranked ladder view
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9795,7 +9795,7 @@
   // entirely when you're already on the tower.
   function _arExit() {
     // W404 — duel views own their own exit (forfeit a live duel, then to the tower).
-    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
+    if (_arView === 'pvp-lobby' || _arView === 'pvp-result' || _arView === 'pvp-ladder' || (_arSess && _arSess._pvp)) { _pvpExit(); return; }
     // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
     // abandon any fight you're losing for free and dodge the daily-lives gate.
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
@@ -9902,6 +9902,8 @@
       else if (a === 'pvpcreate') { try { _pvpCreate(); } catch (_) {} }
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
+      else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
+      else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
         const cur = getEquippedArenaTitle();
@@ -10151,7 +10153,9 @@
         '<div class="pvp-join">' +
           '<input id="pvp-code-input" class="pvp-code-input" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" placeholder="ENTER CODE" />' +
           '<button type="button" class="pvp-join-btn" data-ar="pvpjoin">Join</button>' +
-        '</div>' + err + '</div>';
+        '</div>' + err +
+        '<button type="button" class="pvp-ladder-link" data-ar="pvpladder">View the ranked ladder &rsaquo;</button>' +
+        '</div>';
     }
     const showBand = mode !== 'creating' && mode !== 'joining';
     _arSet(
@@ -10189,6 +10193,46 @@
         if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-rankband'); if (el) el.outerHTML = _pvpRankBandHtml(); }
       }
     }).catch(function () {});
+  }
+  // ── ranked ladder (§12.4) — read-only top-N view ──
+  function _pvpOpenLeaderboard() {
+    _arView = 'pvp-ladder';
+    _arBodyMode(false);
+    _pvpRenderLeaderboard(null);   // loading
+    if (!(window.PvP && PvP.leaderboard)) { _pvpRenderLeaderboard([]); return; }
+    Promise.resolve(PvP.leaderboard(50)).then(function (res) {
+      if (_arView !== 'pvp-ladder') return;
+      _pvpRenderLeaderboard((res && res.top) || []);
+    }).catch(function () { if (_arView === 'pvp-ladder') _pvpRenderLeaderboard([]); });
+  }
+  function _pvpRenderLeaderboard(rows) {
+    _arView = 'pvp-ladder';
+    let body;
+    if (rows == null) {
+      body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading the ladder&hellip;</div></div>';
+    } else if (!rows.length) {
+      body = '<div class="pvp-ladder-empty">No ranked duels yet. Be the first to climb.</div>';
+    } else {
+      body = '<div class="pvp-ladder-list">' + rows.map(function (r) {
+        const t = _pvpTier(r.elo);
+        const rec = _pvpNum(r.wins) + 'W &middot; ' + _pvpNum(r.losses) + 'L' + (_pvpNum(r.draws) ? ' &middot; ' + _pvpNum(r.draws) + 'D' : '');
+        return '<div class="pvp-ld-row' + (r.you ? ' you' : '') + '">' +
+          '<span class="pvp-ld-rank">' + _pvpNum(r.rank) + '</span>' +
+          '<span class="pvp-ld-who"><span class="nm">' + (r.you ? 'You' : esc(r.alias || 'Hunter')) + '</span>' +
+            '<span class="sub" style="color:' + t.color + '">' + esc(t.name) + ' &middot; ' + rec + '</span></span>' +
+          '<span class="pvp-ld-elo">' + _pvpNum(r.elo) + '<i>ELO</i></span></div>';
+      }).join('') + '</div>';
+    }
+    _arSet(
+      '<div class="pvp-lobby">' +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>RANKED LADDER<i></i></span>' +
+          '<div class="pvp-lobby-title">The Ladder</div>' +
+          '<div class="pvp-lobby-sub">Top hunters by rating. Win ranked duels to climb.</div></div>' +
+        body +
+        '<div class="ar-spacer"></div>' +
+        '<button class="ar-ghost" data-ar="pvplobby">&lsaquo; Back to the Arena</button>' +
+      '</div>'
+    );
   }
   async function _pvpCreate() {
     if (!_pvpRequireAuth()) return;
@@ -10606,6 +10650,19 @@
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
       _pvpOpenLobby();
       return 'lobby opened (sample rank)';
+    };
+    // preview the populated ranked ladder with sample rows (the live view fetches
+    // /v1/pvp/leaderboard).
+    window.__pvpLadder = function () {
+      try { if (typeof openArena === 'function') openArena(); } catch (_) {}
+      _pvpRenderLeaderboard([
+        { rank: 1, alias: 'Galilea', elo: 1788, wins: 21, losses: 9, draws: 1, you: false },
+        { rank: 2, alias: 'Rendiesel', elo: 1742, wins: 18, losses: 11, draws: 0, you: false },
+        { rank: 3, alias: 'You', elo: 1631, wins: 12, losses: 8, draws: 2, you: true },
+        { rank: 4, alias: 'Anthony', elo: 1577, wins: 9, losses: 10, draws: 0, you: false },
+        { rank: 5, alias: 'Kovah', elo: 1492, wins: 3, losses: 7, draws: 1, you: false },
+      ]);
+      return 'ladder demo';
     };
   } catch (_) {}
 
