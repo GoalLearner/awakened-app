@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w401'; // W401
+  const APP_BUILD_TAG = '2.2.8-w402'; // W402
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2026,7 +2026,7 @@
       art_path: 'assets/items/twofold_gaze.png',
       bonuses: { str: 0, vit: 1, int: 5, focus: 2, will: 0, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [0,2], int: [4,6], focus: [1,3], will: [0,0], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
     bothsight_longbow: {
@@ -2075,7 +2075,7 @@
       art_path: 'assets/items/coursing_houndcall.png',
       bonuses: { str: 0, vit: 2, int: 8, focus: 3, will: 2, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [2,4], will: [1,3], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
     the_long_pursuit: {
@@ -2107,7 +2107,7 @@
       art_path: 'assets/items/the_monarchs_writ.png',
       bonuses: { str: 0, vit: 3, int: 11, focus: 5, will: 4, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [2,4], int: [10,14], focus: [4,8], will: [3,5], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
     crownpiercer: {
@@ -2135,7 +2135,7 @@
       art_path: 'assets/items/the_hollow_crown.png',
       bonuses: { str: 0, vit: 5, int: 15, focus: 6, will: 2, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [4,8], int: [13,17], focus: [4,8], will: [1,3], wlt: [0,0] },
-      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Force Wave / Siphon / Manaward kit.',
+      set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
 
@@ -6880,14 +6880,14 @@
     // melee=duelist. No _WEAPON_ATTUNE entry, so they take no attune multiplier —
     // a notch below the canonical Nightfall/Duskforge, as intended for C/B/E tier.
     twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],              // Twin Maw (E)
-    twofold_gaze:          ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
+    twofold_gaze:          ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
     bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
     houndsfang_recurve:    ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'], // The Coursing Dread (C)
-    coursing_houndcall:    ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
+    coursing_houndcall:    ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
     the_long_pursuit:      ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
-    the_monarchs_writ:     ['arcanebolt', 'forcewave', 'siphon', 'manaward'],   // The Hollow Monarch (B)
+    the_monarchs_writ:     ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],   // The Hollow Monarch (B)
     crownpiercer:          ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
-    the_hollow_crown:      ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
+    the_hollow_crown:      ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
   // W234 rearmament: walls (sentinel/juggernaut) carry a cleanse so they can
