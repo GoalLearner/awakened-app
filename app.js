@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w400'; // W400
+  const APP_BUILD_TAG = '2.2.8-w401'; // W401
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6873,6 +6873,21 @@
     duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'temper'],
     aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
     wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
+    // W401 — co-op DROP weapons get their real kits. Without a WEAPON_MOVES entry
+    // an equipped weapon silently falls back to the 'unarmed' kit (see _arenaPlayerKit),
+    // so these high-stat co-op drops were stat-stick TRAPS in the Ascent. Kits match
+    // each card's own special_effect text + class: mage=arcane, ranger=volley,
+    // melee=duelist. No _WEAPON_ATTUNE entry, so they take no attune multiplier —
+    // a notch below the canonical Nightfall/Duskforge, as intended for C/B/E tier.
+    twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],              // Twin Maw (E)
+    twofold_gaze:          ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
+    bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
+    houndsfang_recurve:    ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'], // The Coursing Dread (C)
+    coursing_houndcall:    ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
+    the_long_pursuit:      ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
+    the_monarchs_writ:     ['arcanebolt', 'forcewave', 'siphon', 'manaward'],   // The Hollow Monarch (B)
+    crownpiercer:          ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
+    the_hollow_crown:      ['arcanebolt', 'forcewave', 'siphon', 'manaward'],
   };
   // Foe kits by archetype (floors/bosses have no weapon).
   // W234 rearmament: walls (sentinel/juggernaut) carry a cleanse so they can
