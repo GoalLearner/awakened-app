@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w417'; // W417 — ClaudeDesign rank-tier emblems (The Seven Ascents) wired into every tier surface
+  const APP_BUILD_TAG = '2.3.1-w418'; // W418 — opponent avatar in duels (flow avatar_id through combatant -> view; bots get class avatars)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10166,7 +10166,17 @@
     try { const b = getHunterBuild(); if (b && Array.isArray(b.slots) && b.slots[3]) { weaponId = b.slots[3]; weaponName = _arenaWeaponName(); } } catch (_) {}
     let name = 'Hunter';
     try { if (typeof playerName === 'string' && playerName) name = playerName; } catch (_) {}
-    return { name: name, weaponId: weaponId, weaponName: weaponName, stats: stats };
+    let avatar = ''; try { avatar = _pvpSafeAvatar(getAvatarSrc()); } catch (_) {}
+    return { name: name, weaponId: weaponId, weaponName: weaponName, stats: stats, avatar: avatar };
+  }
+  // PvP avatars are bare preset filenames (avatar-*.png / avatar-skin-*.png). An
+  // OPPONENT's avatar is peer-supplied, so validate the exact shape before using it as
+  // an <img src> — this is the XSS / path-traversal gate (the server sanitizes too;
+  // defense in depth). Anything else -> '' -> the monogram fallback.
+  function _pvpSafeAvatar(a) { return (typeof a === 'string' && /^avatar[a-z0-9_-]*\.png$/i.test(a)) ? a : ''; }
+  function _pvpSprite(avatarFile, monoText) {
+    const a = _pvpSafeAvatar(avatarFile);
+    return a ? '<img src="' + esc(a) + '" alt="">' : '<div class="pvp-mono">' + esc(monoText) + '</div>';
   }
 
   // ── lobby ──
@@ -10499,7 +10509,7 @@
         '<div class="pvp-vs-fighters">' +
           _pvpVsCard('you', avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>', 'You', myTier, myElo, myWeapon) +
           '<div class="pvp-vs-x">VS</div>' +
-          _pvpVsCard('foe', '<div class="pvp-mono">' + mono + '</div>', oppName, oppTier, oppElo, oppWeapon) +
+          _pvpVsCard('foe', _pvpSprite(opp.avatar || oppMeta.avatar, mono), oppName, oppTier, oppElo, oppWeapon) +
         '</div>' +
         '<button type="button" class="ar-cta pvp-vs-go" data-ar="pvpfight">FIGHT &#9656;</button>' +
         '<div class="pvp-vs-hint">tap to begin</div>' +
@@ -10570,7 +10580,7 @@
               '<div class="chips" id="pkb-chips-b"></div></div>' +
             '<div class="pkb-spot foe" id="pkb-spot-b">' +
               '<span class="plat" style="background:radial-gradient(closest-side,rgba(124,138,255,0.28),transparent 78%);border-color:rgba(124,138,255,0.36)"></span>' +
-              '<div class="spr"><div class="pvp-mono">' + mono + '</div></div></div>' +
+              '<div class="spr">' + _pvpSprite((view && view.opp && view.opp.avatar) || (_pvpOpponentMeta && _pvpOpponentMeta.avatar), mono) + '</div></div>' +
           '</div>' +
           '<div class="pkb-row you">' +
             '<div class="pkb-spot you" id="pkb-spot-p">' +
@@ -10916,7 +10926,7 @@
         type: 'match_start', phase: 'active', turn: 1, you: _pvpYou, ranked: opts.ranked !== false, deadlineMs: Date.now() + 45000,
         youSubmitted: false, oppSubmitted: false, oppConnected: true,
         me:  { alias: 'You', name: 'You', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
-        opp: { alias: opts.opp || 'Rival', name: opts.opp || 'Rival', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus() },
+        opp: { alias: opts.opp || 'Rival', name: opts.opp || 'Rival', avatar: opts.oppAvatar || 'avatar-warrior.png', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus() },
       };
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
       _pvpStarted = false; _pvpStartBattle(view);
@@ -10974,13 +10984,13 @@
       opts = opts || {};
       _pvpYou = 'p'; _pvpCode = 'DEMOXY'; _pvpStarted = false;
       _pvpRating = { elo: 1631, tier: 'Silver', placed: true };
-      _pvpOpponentMeta = { alias: opts.opp || 'Stormcaller', elo: 1730, tier: 'Gold', weaponName: 'Aetherspire Staff' };
+      _pvpOpponentMeta = { alias: opts.opp || 'Stormcaller', elo: 1730, tier: 'Gold', weaponName: 'Aetherspire Staff', avatar: 'avatar-sage.png' };
       let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = []; }
       const view = {
         ranked: true, phase: 'active', turn: 1, you: 'p', deadlineMs: Date.now() + 45000,
         youSubmitted: false, oppSubmitted: false, oppConnected: true,
         me: { alias: 'You', name: 'You', elo: 1631, weaponName: 'Nightfall', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), kit: kit, cd: {} },
-        opp: { alias: opts.opp || 'Stormcaller', name: opts.opp || 'Stormcaller', elo: 1730, weaponName: 'Aetherspire Staff', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), isBot: true },
+        opp: { alias: opts.opp || 'Stormcaller', name: opts.opp || 'Stormcaller', elo: 1730, weaponName: 'Aetherspire Staff', avatar: 'avatar-sage.png', hp: 60, maxHP: 60, eff: 1, status: _arBlankStatus(), isBot: true },
       };
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
       _pvpStartVs(view);

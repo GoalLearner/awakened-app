@@ -30,7 +30,7 @@ const MAX_STAT = 200;                 // anti-cheat sanity bound per stat
 const REMATCH_OFFER_MS = 25_000;      // a rematch offer expires if unanswered in 25s
 
 type Slot = 'p' | 'b';
-interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; }
+interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; avatar: string; }
 interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; elo?: number; }
 interface MatchState {
   code: string;
@@ -76,11 +76,16 @@ function sanitizeCombatant(raw: any): RawCombatant {
   }
   let weaponId = String((raw && raw.weaponId) || 'unarmed');
   if (!(weaponId in WEAPON_MOVES)) weaponId = 'unarmed';
+  // avatar is a bare preset filename (avatar-*.png) that the OTHER client renders as an
+  // <img src>; allowlist the exact shape so a peer can't inject a url / path / markup.
+  let avatar = String((raw && raw.avatar) || '');
+  if (!/^avatar[a-z0-9_-]{0,40}\.png$/i.test(avatar)) avatar = '';
   return {
     name: String((raw && raw.name) || 'Hunter').slice(0, 40),
     weaponId,
     weaponName: String((raw && raw.weaponName) || '').slice(0, 60),
     stats,
+    avatar,
   };
 }
 
@@ -543,8 +548,8 @@ export class MatchRoom {
       deadlineMs: m.deadlineMs,
       youSubmitted: !!m.pending[meSlot], oppSubmitted: !!m.pending[oppSlot],
       oppConnected: m.connected[oppSlot],
-      me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd, elo: meP.elo != null ? meP.elo : null, tier: meP.elo != null ? eloTier(meP.elo) : null, weaponName: meP.combatant.weaponName } : null,
-      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot), elo: oppP.elo != null ? oppP.elo : null, tier: oppP.elo != null ? eloTier(oppP.elo) : null, weaponName: oppP.combatant.weaponName, isBot: this.isBot(oppP) } : null,
+      me: meP ? { alias: meP.alias, name: meP.combatant.name, avatar: meP.combatant.avatar || '', hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd, elo: meP.elo != null ? meP.elo : null, tier: meP.elo != null ? eloTier(meP.elo) : null, weaponName: meP.combatant.weaponName } : null,
+      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, avatar: oppP.combatant.avatar || '', hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot), elo: oppP.elo != null ? oppP.elo : null, tier: oppP.elo != null ? eloTier(oppP.elo) : null, weaponName: oppP.combatant.weaponName, isBot: this.isBot(oppP) } : null,
       result: m.result,
       rating: m.ratingResult ? { delta: m.ratingResult[meSlot].delta, elo: m.ratingResult[meSlot].elo, tier: eloTier(m.ratingResult[meSlot].elo) } : null,
     };
