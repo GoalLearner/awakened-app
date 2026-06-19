@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w423'; // W423 — Ascent Ceremony stings (Suno) on the SFX bus: ascent_promote / ascent_apex / ascent_demote
+  const APP_BUILD_TAG = '2.3.1-w424'; // W424 — Arena Entry banner on the Ascent tower (ClaudeDesign): rank-forward crest + standing, tier-themed, placement state
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8242,6 +8242,8 @@
       ? '<div class="al-hint">TAP A FALLEN FOE TO REMATCH</div>'
       : '';
     _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll al-scroll">' + hero + _pvpTowerEntryHtml() + ledger + hint + '</div>');
+    // W424 — populate the Arena Entry banner's standing on first tower view (cached after).
+    try { if (PVP_ENABLED && !_pvpRating && window.PvP && PvP.rating) _pvpFetchRating(); } catch (_) {}
   }
 
   // ── fight reveal ──────────────────────────────────────────────────  // ── fight reveal ──────────────────────────────────────────────────
@@ -10391,10 +10393,11 @@
       '</div>';
   }
   function _pvpRepaintHub() { if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-hub'); if (el) el.outerHTML = _pvpHubHtml(); } }
+  function _pvpRepaintRank() { _pvpRepaintHub(); _pvpRepaintTowerEntry(); }
   function _pvpFetchRating() {
     if (!(window.PvP && PvP.rating)) return;
     Promise.resolve(PvP.rating()).then(function (res) {
-      if (res && typeof res.elo === 'number') { _pvpRating = res; _pvpRepaintHub(); }
+      if (res && typeof res.elo === 'number') { _pvpRating = res; _pvpRepaintRank(); }
     }).catch(function () {});
     // recent history -> current win streak + the last-5 form pips on the hub
     if (window.PvP && PvP.history) {
@@ -10402,7 +10405,7 @@
         if (h && h.items) {
           _pvpStreak = _pvpDeriveStreak(h.items);
           _pvpForm = h.items.map(function (it) { return it.outcome; });   // newest-first
-          _pvpRepaintHub();
+          _pvpRepaintRank();
         }
       }).catch(function () {});
     }
@@ -11124,13 +11127,41 @@
     _arClearTimers(); _arSess = null; _arRevealing = false;
     _arRenderTower();
   }
+  // W424 — the Arena Entry banner (ClaudeDesign): a rank-forward "Enter the Arena" CTA on
+  // the Ascent tower. The crest + accent retint from the player's tier (_pvpRating, cached;
+  // lazily fetched on tower render). Placement -> a locked grey/unranked state.
   function _pvpTowerEntryHtml() {
     if (!PVP_ENABLED) return '';   // dormant until the backend is live (see PVP_ENABLED)
-    return '<button type="button" class="pvp-tower-cta" data-ar="duel">' +
-      '<span class="pvp-tower-ic">' + _arGlyph('dagger', '#7c8aff', 16) + '</span>' +
-      '<span class="pvp-tower-tx"><span class="t">Duel a Friend</span>' +
-      '<span class="s">Real-time PvP &middot; invite by code</span></span>' +
-      '<span class="pvp-tower-go">&rsaquo;</span></button>';
+    const r = _pvpRating;
+    const total = r ? (_pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws)) : 0;
+    const placed = !!(r && total >= PVP_PLACEMENT_MATCHES);
+    const tierName = r ? _pvpTier(r.elo).name : 'Silver';
+    const key = String(tierName).toLowerCase();
+    const pal = _PVP_TIER_PAL[key] || _PVP_TIER_PAL.silver;
+    const tint = _PVP_CER_TINT[key] || _PVP_CER_TINT.silver;
+    let standing, cls = '';
+    if (placed) {
+      standing = '<span class="ae-dot"></span><b>' + esc(tierName) + '</b><span class="ae-sep">&middot;</span>' +
+        _pvpNum(r.elo).toLocaleString() + ' ELO' + (r.rank ? '<span class="ae-sep">&middot;</span>#' + _pvpNum(r.rank) : '');
+    } else if (r) {
+      cls = ' unranked';
+      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
+      standing = '<span class="ae-dot"></span><b>Placement ' + played + '/' + PVP_PLACEMENT_MATCHES + '</b><span class="ae-sep">&middot;</span>Earn your rank';
+    } else {
+      standing = '<span class="ae-dot"></span>Ranked duels &middot; climb the ladder';
+    }
+    const chrome = ' style="--ae-tier:' + pal.c + ';--ae-glow:' + tint.glow + ';--ae-ring:' + tint.aura + '"';
+    return '<button type="button" class="arena-entry' + cls + '" data-ar="duel"' + chrome + '>' +
+      '<span class="ae-ring">' + _pvpTierEmblem(tierName, 44) + '</span>' +
+      '<span class="ae-txt"><span class="ae-eyebrow">Ranked PvP</span>' +
+      '<span class="ae-title">Enter the Arena</span>' +
+      '<span class="ae-standing">' + standing + '</span></span>' +
+      '<span class="ae-chev"><svg width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>';
+  }
+  function _pvpRepaintTowerEntry() {
+    if (_arView !== 'tower') return;
+    const el = document.querySelector('.arena-entry');
+    if (el) el.outerHTML = _pvpTowerEntryHtml();
   }
 
   // Dev-only rendering harness: drives the duel UI through a SCRIPTED local match
