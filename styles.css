@@ -30499,18 +30499,65 @@ button.guildhall-summary-tile:active {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: #9aa3e8;
   font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; -webkit-tap-highlight-color: transparent; }
 .pvp-ladder-link:active { filter: brightness(1.2); }
-.pvp-ladder-empty { text-align: center; color: #9090a8; font-size: 12.5px; padding: 40px 24px; }
-.pvp-ladder-list { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px; }
-.pvp-ld-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
-.pvp-ld-row.you { background: rgba(245,184,66,0.08); border-color: rgba(245,184,66,0.35); }
-.pvp-ld-rank { flex: none; width: 26px; text-align: center; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 14px; color: #6b6b86; }
-.pvp-ld-row.you .pvp-ld-rank { color: #f5b842; }
-.pvp-ld-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.pvp-ld-who .nm { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; color: #f5f3fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pvp-ld-who .sub { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; }
-.pvp-ld-elo { flex: none; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #f5f3fb; }
-.pvp-ld-elo i { font-style: normal; font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em; color: #6b6b86; margin-left: 3px; }
+/* W425 · the Ranked Ladder (ClaudeDesign) — podium + scrolling list + pinned YOU row. */
+.pvp-ld { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pvp-ld-head { flex: none; padding: 2px 0 6px; }
+.pvp-ld-back { display: flex; align-items: center; gap: 7px; border: none; background: none; cursor: pointer; padding: 0; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8aa2; }
+.pvp-ld-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.24em; color: #f5b842; text-transform: uppercase; margin-top: 12px; }
+.pvp-ld-title { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 24px; letter-spacing: 1px; margin-top: 6px; color: #f5f3fb; }
+.pvp-ld-season { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; color: #8a8aa2; text-transform: uppercase; margin-top: 7px; display: flex; align-items: center; gap: 7px; }
+.pvp-ld-season .pip { width: 5px; height: 5px; border-radius: 50%; background: #f5b842; box-shadow: 0 0 7px #f5b842; }
+.pvp-ld-podium { flex: none; display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 9px; align-items: end; padding: 20px 0 14px; }
+.pvp-ld-seat { position: relative; border-radius: 14px; padding: 14px 6px 12px; text-align: center; background: linear-gradient(170deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.07); }
+.pvp-ld-seat.empty { background: none; border: none; }
+.pvp-ld-seat .pvp-emblem { margin: 4px auto 0; }
+.pvp-ld-seat .pa { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; margin-top: 8px; color: #f5f3fb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvp-ld-seat .pt { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
+.pvp-ld-seat .pe { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 14px; color: #f5f3fb; margin-top: 6px; }
+.pvp-ld-seat .pe small { font-size: 8px; color: #8a8aa2; font-weight: 700; letter-spacing: 0.08em; margin-left: 2px; }
+.pvp-ld-medal { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #0a0a12; }
+.pvp-ld-medal.m1 { background: linear-gradient(180deg, #ffe39a, #f5b842); box-shadow: 0 0 12px rgba(245,184,66,0.5); }
+.pvp-ld-medal.m2 { background: linear-gradient(180deg, #f4f8fc, #cbd5e1); }
+.pvp-ld-medal.m3 { background: linear-gradient(180deg, #e9c089, #b08d57); }
+.pvp-ld-seat.first { padding: 20px 8px 18px; background: linear-gradient(170deg, rgba(245,184,66,0.12), rgba(245,184,66,0.02)); border-color: rgba(245,184,66,0.32); box-shadow: 0 0 30px rgba(245,184,66,0.14), inset 0 1px 0 rgba(255,255,255,0.06); }
+.pvp-ld-seat.first .pa { font-size: 16px; }
+.pvp-ld-seat.first .pvp-ld-medal { width: 26px; height: 26px; font-size: 13px; top: -12px; }
+.pvp-ld-crown { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); color: #f5b842; filter: drop-shadow(0 0 8px rgba(245,184,66,0.6)); }
+.pvp-ld-seat.you { border-color: rgba(245,184,66,0.5); box-shadow: 0 0 16px rgba(245,184,66,0.12); }
+.pvp-ld-seat.you .pa { color: #f5b842; }
+.pvp-ld-listwrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.pvp-ld-list { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0 88px; display: flex; flex-direction: column; gap: 7px; scrollbar-width: none; }
+.pvp-ld-list::-webkit-scrollbar { display: none; }
+.pvp-ld-row { display: flex; align-items: center; gap: 11px; height: 52px; flex: none; border-radius: 12px; background: #0e0e1a; border: 1px solid rgba(255,255,255,0.04); padding: 0 13px; }
+.pvp-ld-row .lr { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 800; color: #54546c; width: 26px; flex: none; }
+.pvp-ld-row .li { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pvp-ld-row .ln { font-family: "Cinzel", Georgia, serif; font-weight: 600; font-size: 15px; letter-spacing: 0.3px; color: #f5f3fb; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvp-ld-row .lt { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+.pvp-ld-row .lstat { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+.pvp-ld-row .le { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 13px; color: #f5f3fb; }
+.pvp-ld-row .lw { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; color: #8a8aa2; margin-top: 4px; }
+.pvp-ld-row.you { background: linear-gradient(170deg, rgba(245,184,66,0.12), rgba(245,184,66,0.03)); border-color: rgba(245,184,66,0.4); box-shadow: 0 0 18px rgba(245,184,66,0.1); }
+.pvp-ld-row.you .lr, .pvp-ld-row.you .ln { color: #f5b842; }
+.pvp-ld-pinned { position: absolute; left: 0; right: 0; bottom: 8px; z-index: 8; display: flex; align-items: center; gap: 11px; height: 58px; border-radius: 14px; padding: 0 14px; background: linear-gradient(170deg, #2a2410, #171206); border: 1px solid rgba(245,184,66,0.45); box-shadow: 0 -2px 30px rgba(0,0,0,0.5), 0 0 22px rgba(245,184,66,0.16); }
+.pvp-ld-pinned .pl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #f5b842; position: absolute; top: -7px; left: 14px; background: #1a1408; padding: 1px 7px; border-radius: 5px; border: 1px solid rgba(245,184,66,0.35); }
+.pvp-ld-pinned .lr { font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 800; color: #f5b842; width: 32px; flex: none; }
+.pvp-ld-pinned .li { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pvp-ld-pinned .ln { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; color: #f5f3fb; line-height: 1; }
+.pvp-ld-pinned .lt { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+.pvp-ld-pinned .lstat { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; }
+.pvp-ld-pinned .le { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 15px; color: #f5b842; }
+.pvp-ld-pinned .lw { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; color: #8a8aa2; margin-top: 3px; }
+.pvp-ld-pinned.locked { background: linear-gradient(170deg, #16161f, #0e0e16); border-color: rgba(255,255,255,0.07); box-shadow: 0 -2px 30px rgba(0,0,0,0.5); }
+.pvp-ld-pinned.locked .pl { background: #14141c; border-color: rgba(255,255,255,0.07); color: #8a8aa2; }
+.pvp-ld-pinned.locked .lr { color: #8a8aa2; }
+.pvp-ld-pinned.locked .pvp-emblem { filter: grayscale(1) brightness(0.55); opacity: 0.6; }
+.pvp-ld-scrim { position: absolute; left: 0; right: 0; bottom: -8px; height: 90px; z-index: -1; pointer-events: none; background: linear-gradient(transparent, #0a0a12 64%); }
+.pvp-ld-sparse { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 30px 80px; }
+.pvp-ld-sparse .sig { width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 22px; border: 1px solid rgba(245,184,66,0.3); box-shadow: 0 0 36px rgba(245,184,66,0.12), inset 0 0 24px rgba(245,184,66,0.06); }
+.pvp-ld-sparse .sig span { font-family: "Cinzel", Georgia, serif; font-size: 28px; color: #f5b842; text-shadow: 0 0 16px rgba(245,184,66,0.5); }
+.pvp-ld-sparse .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.24em; color: #f5b842; text-transform: uppercase; margin-bottom: 12px; }
+.pvp-ld-sparse h3 { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 22px; letter-spacing: 0.5px; margin: 0; color: #f5f3fb; }
+.pvp-ld-sparse p { font-size: 12px; color: #8a8aa2; margin: 14px 0 0; line-height: 1.5; max-width: 250px; }
 
 /* Find Match secondary ("duel a friend") button */
 .pvp-mid { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: 13px; cursor: pointer; text-align: center; align-items: center;

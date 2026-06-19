@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w424'; // W424 — Arena Entry banner on the Ascent tower (ClaudeDesign): rank-forward crest + standing, tier-themed, placement state
+  const APP_BUILD_TAG = '2.3.1-w425'; // W425 — Ranked Ladder redesign (ClaudeDesign): podium top-3 + list + pinned YOU row
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10421,35 +10421,76 @@
       _pvpRenderLeaderboard((res && res.top) || []);
     }).catch(function () { if (_arView === 'pvp-ladder') _pvpRenderLeaderboard([]); });
   }
+  // ── W425 · the Ranked Ladder (ClaudeDesign) — crowning podium for the top 3, the ranked
+  // list beneath, and a pinned gold YOU row sourced from the player's OWN rating (so it
+  // shows even when you're #4,000 / outside the fetched top-N). Reuses the tier emblems.
+  function _pvpLadderRec(e) {
+    return _pvpNum(e.wins) + '&ndash;' + _pvpNum(e.losses) + (_pvpNum(e.draws) ? '&ndash;' + _pvpNum(e.draws) : '');
+  }
+  function _pvpLadderSeat(e, place) {
+    if (!e) return '<div class="pvp-ld-seat empty"></div>';
+    const t = _pvpTier(e.elo), col = (_PVP_TIER_PAL[t.name.toLowerCase()] || _PVP_TIER_PAL.silver).c;
+    const crown = place === 1 ? '<span class="pvp-ld-crown"><svg width="26" height="16" viewBox="0 0 26 16" aria-hidden="true"><path d="M2 14L1 4l6 5 6-8 6 8 6-5-1 10z" fill="currentColor"/></svg></span>' : '';
+    return '<div class="pvp-ld-seat' + (place === 1 ? ' first' : '') + (e.you ? ' you' : '') + '">' + crown +
+      '<span class="pvp-ld-medal m' + place + '">' + place + '</span>' +
+      _pvpTierEmblem(t.name, place === 1 ? 60 : 46) +
+      '<div class="pa">' + esc(e.alias || 'Hunter') + '</div>' +
+      '<div class="pt" style="color:' + col + '">' + esc(t.name) + '</div>' +
+      '<div class="pe">' + _pvpNum(e.elo).toLocaleString() + '<small>ELO</small></div></div>';
+  }
+  function _pvpLadderPodium(top) {
+    const slots = [top[1], top[0], top[2]], places = [2, 1, 3];   // #2 left, #1 center, #3 right
+    return '<div class="pvp-ld-podium">' + slots.map(function (e, i) { return _pvpLadderSeat(e, places[i]); }).join('') + '</div>';
+  }
+  function _pvpLadderListRow(e) {
+    const t = _pvpTier(e.elo), col = (_PVP_TIER_PAL[t.name.toLowerCase()] || _PVP_TIER_PAL.silver).c;
+    return '<div class="pvp-ld-row' + (e.you ? ' you' : '') + '">' +
+      '<span class="lr">' + _pvpNum(e.rank) + '</span>' + _pvpTierEmblem(t.name, 30) +
+      '<span class="li"><span class="ln">' + (e.you ? 'You' : esc(e.alias || 'Hunter')) + '</span>' +
+        '<span class="lt" style="color:' + col + '">' + esc(t.name) + '</span></span>' +
+      '<span class="lstat"><span class="le">' + _pvpNum(e.elo).toLocaleString() + '</span><span class="lw">' + _pvpLadderRec(e) + '</span></span></div>';
+  }
+  function _pvpLadderPinnedHtml() {
+    const r = _pvpRating; if (!r) return '';
+    const total = _pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws);
+    if (total < PVP_PLACEMENT_MATCHES) {   // placements — locked, no rank
+      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
+      return '<div class="pvp-ld-pinned locked"><span class="pl">You</span><span class="lr">&mdash;</span>' +
+        _pvpTierEmblem('Silver', 34) +
+        '<span class="li"><span class="ln">You</span><span class="lt" style="color:#f5b842">Placement ' + played + '/' + PVP_PLACEMENT_MATCHES + '</span></span>' +
+        '<span class="lstat"><span class="le">' + played + '/' + PVP_PLACEMENT_MATCHES + '</span><span class="lw">Earn your rank</span></span>' +
+        '<span class="pvp-ld-scrim"></span></div>';
+    }
+    const t = _pvpTier(r.elo), col = (_PVP_TIER_PAL[t.name.toLowerCase()] || _PVP_TIER_PAL.silver).c;
+    return '<div class="pvp-ld-pinned"><span class="pl">You</span><span class="lr">' + (r.rank ? '#' + _pvpNum(r.rank) : '&mdash;') + '</span>' +
+      _pvpTierEmblem(t.name, 34) +
+      '<span class="li"><span class="ln">You</span><span class="lt" style="color:' + col + '">' + esc(t.name) + '</span></span>' +
+      '<span class="lstat"><span class="le">' + _pvpNum(r.elo).toLocaleString() + '</span><span class="lw">' + _pvpLadderRec(r) + '</span></span>' +
+      '<span class="pvp-ld-scrim"></span></div>';
+  }
   function _pvpRenderLeaderboard(rows) {
     _arView = 'pvp-ladder';
+    const head = '<div class="pvp-ld-head">' +
+      '<button type="button" class="pvp-ld-back" data-ar="pvplobby"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 1L3 6l4.5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to the Arena</button>' +
+      '<div class="pvp-ld-eyebrow">Ranked PvP &middot; Global</div>' +
+      '<div class="pvp-ld-title">The Ladder</div>' +
+      '<div class="pvp-ld-season"><span class="pip"></span>Season 1</div></div>';
     let body;
     if (rows == null) {
-      body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading the ladder&hellip;</div></div>';
+      body = '<div class="pvp-ld-listwrap"><div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading the ladder&hellip;</div></div>' + _pvpLadderPinnedHtml() + '</div>';
     } else if (!rows.length) {
-      body = '<div class="pvp-ladder-empty">No ranked duels yet. Be the first to climb.</div>';
+      body = '<div class="pvp-ld-listwrap"><div class="pvp-ld-sparse">' +
+        '<div class="sig"><span>&#10022;</span></div><div class="eyebrow">The Ladder Awaits</div>' +
+        '<h3>Claim the summit</h3><p>No hunters are ranked yet. Win your placements, and the seats are yours to take.</p></div>' +
+        _pvpLadderPinnedHtml() + '</div>';
     } else {
-      body = '<div class="pvp-ladder-list">' + rows.map(function (r) {
-        const t = _pvpTier(r.elo);
-        const rec = _pvpNum(r.wins) + 'W &middot; ' + _pvpNum(r.losses) + 'L' + (_pvpNum(r.draws) ? ' &middot; ' + _pvpNum(r.draws) + 'D' : '');
-        return '<div class="pvp-ld-row' + (r.you ? ' you' : '') + '">' +
-          '<span class="pvp-ld-rank">' + _pvpNum(r.rank) + '</span>' +
-          _pvpTierEmblem(t.name, 30) +
-          '<span class="pvp-ld-who"><span class="nm">' + (r.you ? 'You' : esc(r.alias || 'Hunter')) + '</span>' +
-            '<span class="sub" style="color:' + t.color + '">' + esc(t.name) + ' &middot; ' + rec + '</span></span>' +
-          '<span class="pvp-ld-elo">' + _pvpNum(r.elo) + '<i>ELO</i></span></div>';
-      }).join('') + '</div>';
+      const top3 = rows.slice(0, 3), rest = rows.slice(3);
+      const youInList = rows.some(function (x) { return x.you; });
+      body = _pvpLadderPodium(top3) +
+        '<div class="pvp-ld-listwrap"><div class="pvp-ld-list">' + rest.map(_pvpLadderListRow).join('') + '</div>' +
+        (youInList ? '' : _pvpLadderPinnedHtml()) + '</div>';
     }
-    _arSet(
-      '<div class="pvp-lobby">' +
-        '<div class="pvp-lobby-head"><span class="k"><i></i>RANKED LADDER<i></i></span>' +
-          '<div class="pvp-lobby-title">The Ladder</div>' +
-          '<div class="pvp-lobby-sub">Top hunters by rating. Win ranked duels to climb.</div></div>' +
-        body +
-        '<div class="ar-spacer"></div>' +
-        '<button class="ar-ghost" data-ar="pvplobby">&lsaquo; Back to the Arena</button>' +
-      '</div>'
-    );
+    _arSet('<div class="pvp-ld">' + head + body + '</div>');
   }
   // ── match history (recent duels) + win-streak derivation ──
   function _pvpDeriveStreak(items) {
@@ -11243,16 +11284,27 @@
     };
     // preview the populated ranked ladder with sample rows (the live view fetches
     // /v1/pvp/leaderboard).
-    window.__pvpLadder = function () {
+    window.__pvpLadder = function (mode) {
+      mode = (typeof mode === 'string') ? mode : 'pinned';   // pinned | inlist | placement | sparse
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
-      _pvpRenderLeaderboard([
-        { rank: 1, alias: 'Galilea', elo: 1788, wins: 21, losses: 9, draws: 1, you: false },
-        { rank: 2, alias: 'Rendiesel', elo: 1742, wins: 18, losses: 11, draws: 0, you: false },
-        { rank: 3, alias: 'You', elo: 1631, wins: 12, losses: 8, draws: 2, you: true },
-        { rank: 4, alias: 'Anthony', elo: 1577, wins: 9, losses: 10, draws: 0, you: false },
-        { rank: 5, alias: 'Kovah', elo: 1492, wins: 3, losses: 7, draws: 1, you: false },
-      ]);
-      return 'ladder demo';
+      const rows = [
+        { rank: 1, alias: 'Vesper', elo: 3284, wins: 71, losses: 12, draws: 3, you: false },
+        { rank: 2, alias: 'Orison', elo: 3102, wins: 64, losses: 19, draws: 2, you: false },
+        { rank: 3, alias: 'Lyric', elo: 2940, wins: 58, losses: 22, draws: 5, you: false },
+        { rank: 4, alias: 'Cinder', elo: 2766, wins: 49, losses: 18, draws: 3, you: false },
+        { rank: 5, alias: 'Wren', elo: 2588, wins: 55, losses: 27, draws: 6, you: false },
+        { rank: 6, alias: 'Quill', elo: 2402, wins: 38, losses: 19, draws: 4, you: false },
+        { rank: 7, alias: 'Marrow', elo: 2153, wins: 36, losses: 24, draws: 3, you: false },
+        { rank: 8, alias: 'Sable', elo: 1968, wins: 33, losses: 26, draws: 4, you: false },
+        { rank: 9, alias: 'Ember', elo: 1842, wins: 27, losses: 22, draws: 3, you: false },
+        { rank: 10, alias: 'Rookmoor', elo: 1701, wins: 22, losses: 20, draws: 2, you: false },
+      ];
+      if (mode === 'sparse') { _pvpRating = { elo: 1500, wins: 1, losses: 0, draws: 0, rank: null }; _pvpRenderLeaderboard([]); return 'ladder: sparse'; }
+      if (mode === 'inlist') { rows[6].you = true; rows[6].alias = 'You'; _pvpRating = { elo: rows[6].elo, wins: 36, losses: 24, draws: 3, rank: 7 }; }
+      else if (mode === 'placement') { _pvpRating = { elo: 1500, wins: 2, losses: 0, draws: 0, rank: null }; }
+      else { _pvpRating = { elo: 1631, wins: 18, losses: 11, draws: 2, rank: 42 }; }   // pinned — you far below the top-N
+      _pvpRenderLeaderboard(rows);
+      return 'ladder: ' + mode + ' — pinned | inlist | placement | sparse';
     };
     // preview the pre-match VS screen (the live flow needs a real JWT for Find Match).
     window.__pvpVs = function (opts) {
