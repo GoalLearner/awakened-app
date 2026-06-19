@@ -216,7 +216,7 @@
   const APP_VERSION = '2.2.8';
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.2.8-w402'; // W402
+  const APP_BUILD_TAG = '2.2.8-w403'; // W403
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -37839,16 +37839,22 @@
   // Live-state badge on the co-op dungeon card so an invited friend
   // DISCOVERS a pending hunt without a push (there is no push infra).
   // Cached so re-renders keep the badge; the network refresh is throttled.
-  let _coopLastBadge = null;
+  // W403 — PER-BOSS badge map (boss_id -> 'invite' | 'active'). Was a single
+  // global flag ("is ANY co-op hunt active"), which wrongly stamped HUNTING on
+  // every co-op card once any one boss (e.g. the Twin Maw) was being hunted —
+  // so the C/B co-op bosses showed HUNTING with no hunt of their own.
+  let _coopBadgeByBoss = {};
   let _coopBadgeLast = 0;
   function _coopApplyBadge() {
-    const card = document.querySelector('#bosses-list .bcard--coop[data-coop-boss]');
-    if (!card) return;
-    const badge = card.querySelector('.bcard-coop-badge');
-    card.classList.remove('bcard--coop-invite', 'bcard--coop-active');
-    if (_coopLastBadge === 'invite') { card.classList.add('bcard--coop-invite'); if (badge) badge.textContent = 'INVITE'; }
-    else if (_coopLastBadge === 'active') { card.classList.add('bcard--coop-active'); if (badge) badge.textContent = 'HUNTING'; }
-    else if (badge) { badge.textContent = 'CO-OP'; }
+    // one co-op card per dungeon view — badge each by ITS OWN boss, not a global flag.
+    document.querySelectorAll('#bosses-list .bcard--coop[data-coop-boss]').forEach(function (card) {
+      const st = _coopBadgeByBoss[card.getAttribute('data-coop-boss')] || null;
+      const badge = card.querySelector('.bcard-coop-badge');
+      card.classList.remove('bcard--coop-invite', 'bcard--coop-active');
+      if (st === 'invite') { card.classList.add('bcard--coop-invite'); if (badge) badge.textContent = 'INVITE'; }
+      else if (st === 'active') { card.classList.add('bcard--coop-active'); if (badge) badge.textContent = 'HUNTING'; }
+      else if (badge) { badge.textContent = 'CO-OP'; }
+    });
   }
   async function _coopRefreshBadge() {
     if (!window.Auth || typeof Auth.coopBossList !== 'function') return;
@@ -37859,14 +37865,20 @@
     try { res = await Auth.coopBossList(); } catch (_) { return; }
     if (!res || !res.ok) return;
     const list = Array.isArray(res.instances) ? res.instances : [];
-    const invite = list.find(function (x) { return x && x.status === 'pending' && x.role === 'partner'; });
-    const active = list.find(function (x) { return x && x.status === 'active'; });
-    if (invite || active) _coopSetEngaged(true);
-    _coopLastBadge = invite ? 'invite' : (active ? 'active' : null);
+    // Per-boss: a pending invite (you're the partner) outranks an active hunt.
+    const byBoss = {};
+    let firstInvite = null, anyEngaged = false;
+    list.forEach(function (x) {
+      if (!x || !x.boss_id) return;
+      if (x.status === 'pending' && x.role === 'partner') { byBoss[x.boss_id] = 'invite'; anyEngaged = true; if (!firstInvite) firstInvite = x; }
+      else if (x.status === 'active' && byBoss[x.boss_id] !== 'invite') { byBoss[x.boss_id] = 'active'; anyEngaged = true; }
+    });
+    _coopBadgeByBoss = byBoss;
+    if (anyEngaged) _coopSetEngaged(true);
     _coopApplyBadge();
     // W393 — surface a pending invite as a top banner ANYWHERE in the app (the
     // "INVITE" badge alone was buried in the Dungeon tab). Same detection, no extra fetch.
-    try { if (invite) _coopShowInviteBanner(invite); else _coopHideInviteBanner(); } catch (_) {}
+    try { if (firstInvite) _coopShowInviteBanner(firstInvite); else _coopHideInviteBanner(); } catch (_) {}
   }
 
   // ── W393 — co-op invite TOP BANNER (ClaudeDesign "Co-op Summons Banner") ───
