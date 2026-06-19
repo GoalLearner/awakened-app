@@ -6,7 +6,8 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { verifySessionJwt } from '../session-jwt';
-import { jsonError } from '../lib/responses';
+import { jsonError, jsonOk } from '../lib/responses';
+import { eloTier } from '../pvp/elo';
 
 // Unambiguous 6-char invite code (no 0/O/1/I).
 function genCode(): string {
@@ -71,6 +72,37 @@ export async function handlePvpState(request: Request, env: Env, session: Sessio
   const code = String(new URL(request.url).searchParams.get('code') || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'state', session.userId, session.alias, {});
+}
+
+// GET /v1/pvp/rating — the caller's own ELO + tier + W/L/D + global rank (PVP.md §12.4).
+export async function handlePvpRating(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  let row: any = null;
+  try { row = await env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); } catch { /* table may predate deploy */ }
+  const elo = row ? Number(row.elo) : 1500;
+  let rank: number | null = null;
+  try { const rk = await env.DB.prepare('SELECT COUNT(*) AS n FROM pvp_ratings WHERE elo > ?').bind(elo).first<any>(); rank = rk ? Number(rk.n) + 1 : null; } catch { /* */ }
+  return jsonOk({
+    ok: true, elo, peakElo: row ? Number(row.peak_elo) : 1500, tier: eloTier(elo),
+    wins: row ? Number(row.wins) : 0, losses: row ? Number(row.losses) : 0, draws: row ? Number(row.draws) : 0,
+    rank, placed: !!row,
+  });
+}
+
+// GET /v1/pvp/leaderboard?limit=50 — global top-N by ELO (PVP.md §12.4).
+export async function handlePvpLeaderboard(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const limit = Math.min(100, Math.max(1, parseInt(new URL(request.url).searchParams.get('limit') || '50', 10) || 50));
+  let rows: any[] = [];
+  try {
+    const res = await env.DB.prepare(
+      'SELECT user_id, alias, elo, wins, losses, draws FROM pvp_ratings ORDER BY elo DESC, last_match_at ASC LIMIT ?',
+    ).bind(limit).all<any>();
+    rows = res.results || [];
+  } catch { /* table may predate deploy */ }
+  const top = rows.map((r, i) => ({
+    rank: i + 1, alias: r.alias || 'Hunter', elo: Number(r.elo), tier: eloTier(Number(r.elo)),
+    wins: Number(r.wins), losses: Number(r.losses), draws: Number(r.draws), you: r.user_id === session.userId,
+  }));
+  return jsonOk({ ok: true, top });
 }
 
 // GET /v1/pvp/ws?code=XXX&token=JWT  (Upgrade: websocket) — auth via query token,

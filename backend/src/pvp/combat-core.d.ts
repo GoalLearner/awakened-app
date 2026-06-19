@@ -36,7 +36,8 @@ export interface BattleSession {
 
 export interface PvpResult {
   done: boolean;
-  winnerSide: 'p' | 'b' | null;
+  winnerSide: 'p' | 'b' | 'draw' | null;
+  draw: boolean;
   pHP: number; bHP: number; pMax: number; bMax: number;
   turns: number;
   timedOut: boolean;

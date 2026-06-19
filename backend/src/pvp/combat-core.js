@@ -505,10 +505,22 @@ function defaultMoveForTimeout(moves, cdMap) {
 }
 
 // Final result of a finished session (mirrors the win/loss decision).
+// DRAW is a PvP-ONLY interpretation layered on top of the shared engine (which only
+// ever yields a p/b winner — it favors p on simultaneous death and coin-flips an exact
+// turn-cap tie). The engine therefore stays byte-identical to app.js; the draw is
+// detected here from the final HP state (PVP.md §18.6 mutual-KO; §9/§18 exact cap-tie):
+//   - mutual KO: both fighters hit 0 the same turn (simultaneous end-of-turn DoT death)
+//   - cap tie:   timed out with EQUAL effective damage AND equal HP fraction
 function pvpResult(sess) {
+  const bothDead = sess.pHP <= 0 && sess.bHP <= 0;
+  const capTie = !!sess.timedOut &&
+    sess.dmgDealt.p === sess.dmgDealt.b &&
+    (sess.pMax ? sess.pHP / sess.pMax : 0) === (sess.bMax ? sess.bHP / sess.bMax : 0);
+  const draw = !!sess.done && (bothDead || capTie);
   return {
     done: !!sess.done,
-    winnerSide: sess.done ? (sess.won ? 'p' : 'b') : null,
+    winnerSide: !sess.done ? null : draw ? 'draw' : (sess.won ? 'p' : 'b'),
+    draw,
     pHP: sess.pHP, bHP: sess.bHP, pMax: sess.pMax, bMax: sess.bMax,
     turns: sess.turn,
     timedOut: !!sess.timedOut,

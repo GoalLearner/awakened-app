@@ -30,10 +30,11 @@ CREATE INDEX IF NOT EXISTS idx_pvp_matches_p1 ON pvp_matches(p1_user_id);
 CREATE INDEX IF NOT EXISTS idx_pvp_matches_p2 ON pvp_matches(p2_user_id);
 CREATE INDEX IF NOT EXISTS idx_pvp_matches_code ON pvp_matches(code);
 
--- ELO ratings (PVP.md §11.3 / §12). Updated on ranked match end; invite duels are
--- recorded in pvp_matches but do not move ELO in v1.
+-- ELO ratings (PVP.md §11.3 / §12). Updated on every ranked match end (win/loss/draw).
+-- alias is denormalized (latest seen at match end) so the ELO leaderboard needs no join.
 CREATE TABLE IF NOT EXISTS pvp_ratings (
   user_id       TEXT PRIMARY KEY,
+  alias         TEXT,
   elo           INTEGER NOT NULL DEFAULT 1500,
   peak_elo      INTEGER NOT NULL DEFAULT 1500,
   wins          INTEGER NOT NULL DEFAULT 0,

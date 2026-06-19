@@ -150,6 +150,42 @@ async function reconnectTest() {
   } catch (e) { ok('reconnect test (transport)', false, String(e && e.message)); }
 }
 
+// ── 6. Ranked match -> MMR moves symmetrically + match_end carries the delta. ──
+async function rankedTest() {
+  console.log('\n[6] Ranked match -> MMR update');
+  const t1 = await mint('pvp-rank-1', 'RankA'), t2 = await mint('pvp-rank-2', 'RankB');
+  const before1 = (await api(t1, 'GET', '/v1/pvp/rating')).elo;
+  const before2 = (await api(t2, 'GET', '/v1/pvp/rating')).elo;
+  const created = await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true });
+  const code = created.code;
+  ok('ranked create returns a code', !!(created.ok && code), created);
+  const joined = await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
+  ok('ranked join -> active', !!(joined.ok && joined.state && joined.state.ranked === true), joined && joined.state);
+  let guard = 0, result = null, endView = null;
+  while (guard++ < 80) {
+    const s1 = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+    if (!s1) break;
+    if (s1.phase === 'ended') { result = s1.result; endView = s1; break; }
+    const turn = s1.turn;
+    const s2 = (await api(t2, 'GET', '/v1/pvp/state?code=' + code)).state;
+    await api(t1, 'POST', '/v1/pvp/submit', { code, turn, moveId: firstMove(s1.me) });
+    await api(t2, 'POST', '/v1/pvp/submit', { code, turn, moveId: firstMove(s2.me) });
+    await sleep(25);
+  }
+  ok('ranked match ended with a winner', !!(result && (result.winnerSide === 'p' || result.winnerSide === 'b')), result);
+  await sleep(150); // let the post-end D1 write settle
+  const after1 = await api(t1, 'GET', '/v1/pvp/rating');
+  const after2 = await api(t2, 'GET', '/v1/pvp/rating');
+  const winP = result && result.winnerSide === 'p';
+  const winBefore = winP ? before1 : before2, winAfter = (winP ? after1 : after2).elo;
+  const loseBefore = winP ? before2 : before1, loseAfter = (winP ? after2 : after1).elo;
+  ok('winner gained ELO', winAfter > winBefore, { winBefore, winAfter });
+  ok('loser lost ELO', loseAfter < loseBefore, { loseBefore, loseAfter });
+  ok('movement is symmetric (same K-bracket)', (winAfter - winBefore) === (loseBefore - loseAfter), { gain: winAfter - winBefore, loss: loseBefore - loseAfter });
+  ok('winner has a tier label', !!((winP ? after1 : after2).tier), winP ? after1.tier : after2.tier);
+  ok('match_end view carried the per-player rating delta', !!(endView && endView.rating && typeof endView.rating.delta === 'number'), endView && endView.rating);
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -164,6 +200,7 @@ async function reconnectTest() {
   await forfeitTest();
   await timeoutTest();
   await reconnectTest();
+  await rankedTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

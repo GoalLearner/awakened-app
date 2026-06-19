@@ -22,6 +22,7 @@ import {
   buildCombatant, pvpStartBattle, pvpResolveTurn, pvpResult,
   defaultMoveForTimeout, WEAPON_MOVES,
 } from './combat-core.js';
+import { eloTier, kFactor } from './elo';
 
 const TURN_DEADLINE_MS = 45_000;      // a player has 45s to submit each turn
 const DISCONNECT_GRACE_MS = 120_000;  // sustained disconnect past this -> forfeit
@@ -46,6 +47,9 @@ interface MatchState {
   result: { winnerSide: Slot | 'draw'; winnerUserId: string | null; reason: string } | null;
   startedAtMs: number | null;
   persisted: boolean;                 // wrote the D1 record yet?
+  // per-slot ranked rating outcome (filled by updateElo on a ranked match end), so
+  // each client's match_end can show its own delta + new rating + tier.
+  ratingResult?: { p: { delta: number; elo: number }; b: { delta: number; elo: number } } | null;
 }
 
 function sanitizeCombatant(raw: any): RawCombatant {
@@ -228,7 +232,8 @@ export class MatchRoom {
     if (sess.done) {
       this.broadcastTurn(m, r.events || [], sess);
       const res = pvpResult(sess);
-      await this.endMatch(m, res.winnerSide as Slot, res.timedOut ? 'turn_cap' : 'ko');
+      const reason = res.draw ? (res.timedOut ? 'draw_timeout' : 'mutual_ko') : (res.timedOut ? 'turn_cap' : 'ko');
+      await this.endMatch(m, res.winnerSide as Slot | 'draw', reason);
     } else {
       // arm the NEXT turn's deadline BEFORE broadcasting so the turn_result the
       // clients animate already carries the fresh deadlineMs (drives the client
@@ -408,6 +413,7 @@ export class MatchRoom {
       me: meP ? { alias: meP.alias, name: meP.combatant.name, hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd } : null,
       opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot) } : null,
       result: m.result,
+      rating: m.ratingResult ? { delta: m.ratingResult[meSlot].delta, elo: m.ratingResult[meSlot].elo, tier: eloTier(m.ratingResult[meSlot].elo) } : null,
     };
   }
 
@@ -438,35 +444,51 @@ export class MatchRoom {
         `UPDATE pvp_matches SET status='ended', result=?, winner_user_id=?, turns=?, ended_at=? WHERE id=?`,
       ).bind(resStr, result ? result.winnerUserId : null, m.moveHistory.length, new Date().toISOString(), m.code).run();
     } catch { /* best-effort */ }
-    // ranked ELO update (PVP.md §11.3) — invite duels are unranked in v1.
-    if (m.ranked && m.result && m.result.winnerSide !== 'draw' && m.p1 && m.p2) {
-      try { await this.updateElo(m.p1.userId, m.p2.userId, m.result.winnerSide === 'p'); } catch { /* */ }
+    // ranked rating update (PVP.md §11.3) — runs for win/loss AND draw. Stashes the
+    // per-slot delta + new rating on m so broadcastEnd can show each player their own
+    // change, then re-saves so a reconnecting client can still read it.
+    if (m.ranked && m.result && m.p1 && m.p2) {
+      try {
+        const outcome: 'p1' | 'p2' | 'draw' =
+          m.result.winnerSide === 'draw' ? 'draw' : m.result.winnerSide === 'p' ? 'p1' : 'p2';
+        m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias);
+        await this.save(m);
+      } catch { /* best-effort — never block the match end */ }
     }
   }
-  async updateElo(p1: string, p2: string, p1Won: boolean): Promise<void> {
+  // ELO with draw support (actual score 1 / 0.5 / 0). Returns the per-slot delta + new
+  // rating so the DO can surface the MMR change to both clients. Fixes the prior
+  // draws-never-incremented bug + the discarded deltas.
+  async updateElo(p1: string, p2: string, outcome: 'p1' | 'p2' | 'draw', a1: string, a2: string):
+    Promise<{ p: { delta: number; elo: number }; b: { delta: number; elo: number } }> {
     const get = async (uid: string) => {
       const row = await this.env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(uid).first<any>();
       return row || { elo: 1500, peak_elo: 1500, wins: 0, losses: 0, draws: 0 };
     };
     const r1 = await get(p1), r2 = await get(p2);
-    const k = (e: number) => e < 1700 ? 32 : e < 2200 ? 24 : e < 2600 ? 16 : 12;
     const exp = (a: number, b: number) => 1 / (1 + Math.pow(10, (b - a) / 400));
-    const d1 = Math.round(k(r1.elo) * ((p1Won ? 1 : 0) - exp(r1.elo, r2.elo)));
-    const d2 = Math.round(k(r2.elo) * ((p1Won ? 0 : 1) - exp(r2.elo, r1.elo)));
+    const s1 = outcome === 'draw' ? 0.5 : outcome === 'p1' ? 1 : 0;
+    const s2 = outcome === 'draw' ? 0.5 : outcome === 'p2' ? 1 : 0;
+    const d1 = Math.round(kFactor(r1.elo) * (s1 - exp(r1.elo, r2.elo)));
+    const d2 = Math.round(kFactor(r2.elo) * (s2 - exp(r2.elo, r1.elo)));
+    const e1 = Math.max(0, r1.elo + d1), e2 = Math.max(0, r2.elo + d2);
     const now = new Date().toISOString();
-    const upsert = async (uid: string, r: any, delta: number, won: boolean) => {
-      const elo = Math.max(0, r.elo + delta);
+    // w/l/d as a one-hot triple per player
+    const wld = (s: number) => (s === 1 ? [1, 0, 0] : s === 0 ? [0, 1, 0] : [0, 0, 1]);
+    const upsert = async (uid: string, alias: string, r: any, elo: number, t: number[]) => {
       await this.env.DB.prepare(
-        `INSERT INTO pvp_ratings (user_id, elo, peak_elo, wins, losses, draws, last_match_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET elo=excluded.elo,
+        `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, last_match_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET alias=excluded.alias, elo=excluded.elo,
            peak_elo=MAX(pvp_ratings.peak_elo, excluded.elo),
            wins=pvp_ratings.wins+excluded.wins, losses=pvp_ratings.losses+excluded.losses,
+           draws=pvp_ratings.draws+excluded.draws,
            last_match_at=excluded.last_match_at`,
-      ).bind(uid, elo, Math.max(elo, r.peak_elo), won ? 1 : 0, won ? 0 : 1, 0, now).run();
+      ).bind(uid, alias || null, elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], now).run();
     };
-    await upsert(p1, r1, d1, p1Won);
-    await upsert(p2, r2, d2, !p1Won);
+    await upsert(p1, a1, r1, e1, wld(s1));
+    await upsert(p2, a2, r2, e2, wld(s2));
+    return { p: { delta: d1, elo: e1 }, b: { delta: d2, elo: e2 } };
   }
 }
 
