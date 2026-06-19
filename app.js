@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w418'; // W418 — opponent avatar in duels (flow avatar_id through combatant -> view; bots get class avatars)
+  const APP_BUILD_TAG = '2.3.1-w419'; // W419 — background music OFF by default (opt-in via hb_music='on'); SFX unaffected
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8603,7 +8603,10 @@
     heal: 0.6, status_burn: 0.5, status_stun: 0.6, cauterize: 0.6,  // W303 — drop-in
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
-  function _audMusicOn() { return _audSet('hb_music', 'on') !== 'off'; }
+  // W419 — music OFF by default (opt-in). Background-music loops autoplayed (Arena menu,
+  // battle/boss loops) with no obvious off switch; default silent and let it be turned on
+  // explicitly via hb_music='on'. SFX stay on their own `soundEnabled` gate.
+  function _audMusicOn() { return _audSet('hb_music', 'off') === 'on'; }
   function _audMusicVol() { const v = parseFloat(_audSet('hb_music_vol', '0.35')); return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.35; }
   function _audSfxVol() { const v = parseFloat(_audSet('hb_sfx_vol', '0.7')); return isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.7; }
   function _audCtx() {
