@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — The Vow (social trailer)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
+<style>
+  /* ───────────────────────────────────────────────────────────────────────
+     vow-trailer.html — a self-contained ~30s vertical (1080x1920) social clip.
+     The DISCIPLINE angle: keep your daily vows → your hunter grows → a boss falls
+     because you kept the streak. ONE master timeline, JS-sequenced scene layers;
+     each scene animates on .active so render.js captures it in one pass:
+         node marketing/clips/render.js vow-trailer.html 31
+     Brand system shared with ascent-trailer / arena-trailer. Accent: violet
+     (discipline / the vow) + gold (power / ascend).
+     ─────────────────────────────────────────────────────────────────────── */
+  :root{ --gold:#f5b842; --gold2:#ffd574; --gold-deep:#c8901f; --ivory:#f5f3fb;
+         --mute:#9a9ab8; --faint:#54546c; --crimson:#e0564f; --teal:#5ad6c8; --violet:#a78bfa; --violet2:#c4b1f7; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 14%, rgba(167,139,250,0.13), transparent 60%),
+      radial-gradient(140% 60% at 50% 114%, rgba(245,184,66,0.15), transparent 60%),
+      linear-gradient(180deg,#0c0a22 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none; z-index:40; box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--violet); box-shadow:0 0 12px 2px rgba(167,139,250,0.7); opacity:0;
+    animation:rise linear infinite; z-index:2; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; } 12%{ opacity:0.8; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .scene{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.45s ease; padding:0 80px; }
+  .scene.active{ opacity:1; }
+  .eyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:8px;
+    text-transform:uppercase; color:var(--violet); margin-bottom:38px; text-shadow:0 0 22px rgba(167,139,250,0.4); }
+  @keyframes popUp{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes slamIn{ 0%{opacity:0;transform:scale(0.55);} 70%{opacity:1;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
+
+  /* ── SCENE 1 · HOOK — YOU vs THE OLD YOU ──────────────────────────── */
+  #sc-hook .big{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+  #sc-hook .l1{ font-weight:900; font-size:210px; line-height:0.94; letter-spacing:2px; color:var(--ivory);
+    text-shadow:0 0 60px rgba(245,184,66,0.4), 0 8px 60px rgba(0,0,0,0.65); opacity:0; transform:scale(0.55); }
+  #sc-hook.active .l1{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 0.2s forwards; }
+  #sc-hook .vs{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-weight:500; font-size:72px;
+    color:var(--gold); margin:6px 0; opacity:0; }
+  #sc-hook.active .vs{ animation:popUp 0.5s ease 0.75s forwards; }
+  #sc-hook .l2{ position:relative; font-weight:900; font-size:92px; line-height:1; letter-spacing:1px; white-space:nowrap;
+    color:var(--faint); opacity:0; transform:scale(0.7); }
+  #sc-hook .l2::after{ content:""; position:absolute; left:-4%; right:-4%; top:52%; height:8px; border-radius:4px;
+    background:var(--crimson); box-shadow:0 0 22px rgba(224,86,79,0.7); transform:scaleX(0); transform-origin:left; }
+  #sc-hook.active .l2{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 1.0s forwards; }
+  #sc-hook.active .l2::after{ animation:strike 0.5s cubic-bezier(.16,1,.3,1) 1.7s forwards; }
+  @keyframes strike{ to{ transform:scaleX(1); } }
+  #sc-hook .sub{ margin-top:54px; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:32px;
+    letter-spacing:5px; text-transform:uppercase; color:var(--mute); opacity:0; }
+  #sc-hook.active .sub{ animation:popUp 0.7s ease 2.2s forwards; }
+
+  /* ── SCENE 2 · THE VOW — seal your vows ───────────────────────────── */
+  #sc-vow .vowlist{ display:flex; flex-direction:column; gap:24px; width:760px; margin-top:6px; }
+  #sc-vow .vow{ display:flex; align-items:center; gap:26px; padding:26px 32px; border-radius:18px;
+    background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.22); opacity:0; transform:translateX(-40px); }
+  #sc-vow.active .vow{ animation:vowIn 0.55s cubic-bezier(.16,1,.3,1) forwards; }
+  #sc-vow.active .vow:nth-child(1){ animation-delay:0.5s; } #sc-vow.active .vow:nth-child(2){ animation-delay:1.4s; } #sc-vow.active .vow:nth-child(3){ animation-delay:2.3s; }
+  @keyframes vowIn{ to{ opacity:1; transform:translateX(0); } }
+  #sc-vow .chk{ width:58px; height:58px; flex:none; border-radius:50%; border:3px solid var(--faint); position:relative;
+    display:flex; align-items:center; justify-content:center; transition:none; }
+  #sc-vow .chk svg{ width:34px; height:34px; }
+  #sc-vow .chk path{ stroke:var(--teal); stroke-width:5; fill:none; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:48; stroke-dashoffset:48; }
+  #sc-vow.active .vow:nth-child(1) .chk{ animation:chkRing 0.4s ease 1.0s forwards; } #sc-vow.active .vow:nth-child(1) .chk path{ animation:chkDraw 0.45s ease 1.05s forwards; }
+  #sc-vow.active .vow:nth-child(2) .chk{ animation:chkRing 0.4s ease 1.9s forwards; } #sc-vow.active .vow:nth-child(2) .chk path{ animation:chkDraw 0.45s ease 1.95s forwards; }
+  #sc-vow.active .vow:nth-child(3) .chk{ animation:chkRing 0.4s ease 2.8s forwards; } #sc-vow.active .vow:nth-child(3) .chk path{ animation:chkDraw 0.45s ease 2.85s forwards; }
+  @keyframes chkRing{ to{ border-color:var(--teal); box-shadow:0 0 22px rgba(90,214,200,0.5); } }
+  @keyframes chkDraw{ to{ stroke-dashoffset:0; } }
+  #sc-vow .vtext{ display:flex; flex-direction:column; gap:6px; }
+  #sc-vow .vname{ font-weight:700; font-size:46px; letter-spacing:0.5px; color:var(--ivory); }
+  #sc-vow .vsub{ font-family:"JetBrains Mono",monospace; font-size:22px; font-weight:700; letter-spacing:2px; color:var(--violet); text-transform:uppercase; }
+  #sc-vow .cap{ margin-top:60px; font-weight:700; font-size:50px; letter-spacing:1px; text-align:center; opacity:0; transform:translateY(20px); }
+  #sc-vow .cap b{ color:var(--violet); }
+  #sc-vow.active .cap{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 3.4s forwards; }
+
+  /* ── SCENE 3 · THE STREAK — discipline becomes power ──────────────── */
+  #sc-streak .flamewrap{ position:relative; display:flex; align-items:center; justify-content:center; }
+  #sc-streak .flame{ font-size:200px; line-height:1; filter:drop-shadow(0 0 40px rgba(245,184,66,0.7)); opacity:0; transform:scale(0.6); }
+  #sc-streak.active .flame{ animation:slamIn 0.6s cubic-bezier(.18,1.5,.3,1) 0.15s forwards, flick 1.6s ease-in-out 0.8s infinite; }
+  @keyframes flick{ 0%,100%{ filter:drop-shadow(0 0 36px rgba(245,184,66,0.6)); transform:scale(1); } 50%{ filter:drop-shadow(0 0 56px rgba(245,184,66,0.95)); transform:scale(1.05); } }
+  #sc-streak .streaknum{ font-weight:900; font-size:150px; line-height:1; letter-spacing:2px; margin-top:8px; color:var(--gold);
+    text-shadow:0 0 50px rgba(245,184,66,0.45); opacity:0; transform:translateY(20px); }
+  #sc-streak.active .streaknum{ animation:popUp 0.5s ease 0.5s forwards; }
+  #sc-streak .streaklbl{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px; letter-spacing:6px;
+    color:var(--mute); text-transform:uppercase; margin-top:12px; opacity:0; }
+  #sc-streak.active .streaklbl{ animation:popUp 0.5s ease 0.7s forwards; }
+  #sc-streak .stats{ display:flex; gap:22px; margin-top:56px; }
+  #sc-streak .chip{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:40px; letter-spacing:2px; color:var(--violet2);
+    padding:18px 30px; border-radius:14px; background:rgba(167,139,250,0.1); border:1px solid rgba(167,139,250,0.45);
+    text-shadow:0 0 16px rgba(167,139,250,0.5); opacity:0; transform:translateY(26px) scale(0.9); }
+  #sc-streak.active .chip{ animation:popUp 0.5s cubic-bezier(.16,1,.3,1) forwards; }
+  #sc-streak.active .chip:nth-child(1){ animation-delay:2.6s; } #sc-streak.active .chip:nth-child(2){ animation-delay:2.85s; } #sc-streak.active .chip:nth-child(3){ animation-delay:3.1s; }
+  #sc-streak .cap{ margin-top:60px; font-weight:700; font-size:54px; letter-spacing:1px; text-align:center; opacity:0; transform:translateY(20px); }
+  #sc-streak .cap b{ color:var(--gold); }
+  #sc-streak.active .cap{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 3.5s forwards; }
+
+  /* ── SCENE 4 · THE RECKONING — a boss falls because you kept it ───── */
+  #sc-boss{ justify-content:flex-start; padding-top:150px; }
+  #sc-boss .portal{ position:relative; width:560px; height:560px; border-radius:28px; overflow:hidden;
+    box-shadow:0 0 0 2px rgba(167,139,250,0.45), 0 0 70px rgba(167,139,250,0.35), inset 0 0 80px rgba(0,0,0,0.6);
+    opacity:0; transform:scale(0.92); }
+  #sc-boss.active .portal{ animation:popUp 0.8s cubic-bezier(.16,1,.3,1) 0.1s forwards, shakeB 0.5s linear 3.9s; }
+  @keyframes shakeB{ 0%,100%{transform:translate(0,0);} 20%{transform:translate(-12px,8px);} 40%{transform:translate(10px,-6px);} 60%{transform:translate(-7px,4px);} 80%{transform:translate(4px,-2px);} }
+  #sc-boss .portal img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-boss.active .portal img{ animation:slowzoom 5s ease-out 0.2s forwards; }
+  @keyframes slowzoom{ from{ transform:scale(1.04); } to{ transform:scale(1.16); } }
+  #sc-boss .portal::after{ content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, transparent 52%, rgba(7,7,19,0.95) 100%); }
+  #sc-boss .hitflash{ position:absolute; inset:0; z-index:18; background:#fff; mix-blend-mode:screen; opacity:0; }
+  #sc-boss.active .hitflash{ animation:hf 0.5s linear 3.9s forwards; }
+  @keyframes hf{ 0%{opacity:0;} 30%{opacity:0.85;} 100%{opacity:0;} }
+  #sc-boss .stamp{ position:absolute; top:300px; left:50%; transform:translate(-50%,-50%) scale(0.6) rotate(-8deg); z-index:20;
+    font-family:"JetBrains Mono",monospace; font-weight:800; font-size:54px; letter-spacing:4px; color:#0c2a10; padding:18px 40px;
+    border-radius:14px; text-transform:uppercase; white-space:nowrap; background:linear-gradient(180deg,#8ef0c0,var(--teal) 60%,#2bb6a6);
+    box-shadow:0 0 50px rgba(90,214,200,0.55); opacity:0; }
+  #sc-boss.active .stamp{ animation:movePop 1.4s cubic-bezier(.16,1,.3,1) 2.3s forwards; }
+  @keyframes movePop{ 0%{opacity:0;transform:translate(-50%,-50%) scale(0.6) rotate(-8deg);} 16%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(-3deg);}
+    28%{transform:translate(-50%,-50%) scale(1) rotate(-3deg);} 82%{opacity:1;} 100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-3deg);} }
+  #sc-boss .bossname{ font-weight:800; font-size:74px; letter-spacing:2px; margin-top:30px; text-align:center;
+    text-shadow:0 4px 30px rgba(0,0,0,0.6); opacity:0; transform:translateY(22px); }
+  #sc-boss.active .bossname{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 0.7s forwards; }
+  #sc-boss .hpwrap{ width:760px; margin-top:44px; display:flex; flex-direction:column; gap:20px; opacity:0; transform:translateY(20px); }
+  #sc-boss.active .hpwrap{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 1.3s forwards; }
+  #sc-boss .hprow{ display:flex; align-items:center; gap:18px; }
+  #sc-boss .hpname{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:26px; letter-spacing:2px; width:130px; flex:none; text-transform:uppercase; }
+  #sc-boss .hpbar{ flex:1; height:28px; border-radius:8px; background:rgba(255,255,255,0.10); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12); overflow:hidden; }
+  #sc-boss .hpfill{ height:100%; border-radius:8px; }
+  #sc-boss .you .hpname{ color:var(--violet); }
+  #sc-boss .you .hpfill{ width:88%; background:linear-gradient(90deg,#9b7af0,#d4c6fb); box-shadow:0 0 22px rgba(167,139,250,0.85), inset 0 1px 0 rgba(255,255,255,0.45); }
+  #sc-boss .foe .hpname{ color:var(--crimson); }
+  #sc-boss .foe .hpfill{ width:100%; background:linear-gradient(90deg,#7a201c,var(--crimson)); box-shadow:0 0 18px rgba(224,86,79,0.6); }
+  #sc-boss.active .foe .hpfill{ animation:drain 1.6s cubic-bezier(.5,0,.4,1) 2.5s forwards; }
+  @keyframes drain{ 0%{ width:100%; } 100%{ width:0%; } }
+
+  /* ── SCENE 5 · BECOME — the ascend payoff ─────────────────────────── */
+  #sc-become::before{ content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:radial-gradient(80% 60% at 50% 42%, rgba(245,184,66,0.34), transparent 64%); opacity:0; }
+  #sc-become.active::before{ animation:wash 4s ease-out forwards; }
+  @keyframes wash{ 0%{opacity:0;} 8%{opacity:1;} 30%{opacity:0.4;} 100%{opacity:0.4;} }
+  #sc-become .rays{ position:absolute; top:38%; left:50%; width:900px; height:900px; transform:translate(-50%,-50%); z-index:2; opacity:0;
+    background:conic-gradient(from 0deg, transparent 0 8deg, rgba(245,184,66,0.16) 8deg 12deg, transparent 12deg 24deg, rgba(245,184,66,0.16) 24deg 28deg, transparent 28deg); border-radius:50%; }
+  #sc-become.active .rays{ animation:raysIn 4s linear forwards; }
+  @keyframes raysIn{ 0%{opacity:0;transform:translate(-50%,-50%) rotate(0) scale(0.6);} 14%{opacity:0.7;} 100%{opacity:0.5;transform:translate(-50%,-50%) rotate(60deg) scale(1);} }
+  #sc-become .hero{ position:relative; z-index:4; width:320px; height:320px; border-radius:50%; overflow:hidden;
+    box-shadow:0 0 0 4px rgba(245,184,66,0.6), 0 0 70px rgba(245,184,66,0.55); opacity:0; transform:scale(0.7);
+    background:radial-gradient(circle at 50% 30%, rgba(245,184,66,0.25), #0a0a16 72%); }
+  #sc-become .hero img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-become.active .hero{ animation:slamIn 0.7s cubic-bezier(.18,1.4,.3,1) 0.2s forwards; }
+  #sc-become .word{ position:relative; z-index:4; font-weight:900; font-size:140px; letter-spacing:4px; margin-top:34px; color:var(--gold);
+    text-transform:uppercase; text-shadow:0 0 60px rgba(245,184,66,0.6), 0 2px 0 var(--gold-deep), 0 4px 0 #7a5410; opacity:0; transform:scale(2.2); }
+  #sc-become.active .word{ animation:vslam 4s cubic-bezier(.15,1.3,.3,1) 0.6s forwards; }
+  @keyframes vslam{ 0%,3%{opacity:0;transform:scale(2.2);} 8%{opacity:1;transform:scale(0.94);} 12%{transform:scale(1.05);} 16%,100%{opacity:1;transform:scale(1);} }
+  #sc-become .sub{ position:relative; z-index:4; margin-top:18px; font-family:"Cormorant Garamond",Georgia,serif; font-style:italic;
+    font-size:46px; color:var(--mute); opacity:0; }
+  #sc-become.active .sub{ animation:popUp 0.8s ease 1.6s forwards; }
+
+  /* ── SCENE 6 · OUTRO ──────────────────────────────────────────────── */
+  #sc-outro .logo{ width:280px; height:280px; opacity:0; transform:scale(0.78); filter:drop-shadow(0 0 36px rgba(245,184,66,0.55)); }
+  #sc-outro.active .logo{ animation:logoIn 0.9s cubic-bezier(.16,1,.3,1) 0.15s forwards, glowL 3.2s ease-in-out 1.1s infinite; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes glowL{ 0%,100%{filter:drop-shadow(0 0 30px rgba(245,184,66,0.45));} 50%{filter:drop-shadow(0 0 52px rgba(245,184,66,0.8));} }
+  #sc-outro .tagline{ margin-top:48px; font-weight:700; font-size:74px; letter-spacing:2px; line-height:1.16; text-align:center; max-width:900px;
+    text-shadow:0 4px 40px rgba(0,0,0,0.6); opacity:0; transform:translateY(26px); }
+  #sc-outro .tagline .v{ color:var(--violet); } #sc-outro .tagline .g{ color:var(--gold); }
+  #sc-outro.active .tagline{ animation:popUp 0.8s cubic-bezier(.16,1,.3,1) 0.9s forwards; }
+  #sc-outro .cta{ margin-top:58px; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:36px; letter-spacing:3px; color:#241a05;
+    text-transform:uppercase; padding:30px 56px; border-radius:20px; background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,var(--gold-deep));
+    box-shadow:0 0 50px rgba(245,184,66,0.34), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4); opacity:0; transform:translateY(26px) scale(0.96); }
+  #sc-outro.active .cta{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 1.5s forwards, pulseC 2.4s ease-in-out 2.3s infinite; }
+  @keyframes pulseC{ 0%,100%{box-shadow:0 0 44px rgba(245,184,66,0.3), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);}
+    50%{box-shadow:0 0 74px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4);} }
+  #sc-outro .handle{ position:absolute; bottom:130px; left:0; right:0; text-align:center; font-family:"JetBrains Mono",monospace;
+    font-weight:700; font-size:30px; letter-spacing:5px; color:var(--mute); opacity:0; }
+  #sc-outro.active .handle{ animation:fadeH 0.8s ease 1.9s forwards; }
+  @keyframes fadeH{ to{ opacity:0.85; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- SCENE 1 · HOOK -->
+  <div class="scene" id="sc-hook">
+    <div class="big">
+      <span class="l1">YOU</span>
+      <span class="vs">vs</span>
+      <span class="l2">THE OLD YOU</span>
+    </div>
+    <div class="sub">Every sunrise, a choice</div>
+  </div>
+
+  <!-- SCENE 2 · THE VOW -->
+  <div class="scene" id="sc-vow">
+    <div class="eyebrow">The Vow</div>
+    <div class="vowlist">
+      <div class="vow"><span class="chk"><svg viewBox="0 0 36 36"><path d="M7 19 L15 27 L29 10"/></svg></span><span class="vtext"><span class="vname">Walk 10,000 steps</span><span class="vsub">Daily · Kept</span></span></div>
+      <div class="vow"><span class="chk"><svg viewBox="0 0 36 36"><path d="M7 19 L15 27 L29 10"/></svg></span><span class="vtext"><span class="vname">Read 20 minutes</span><span class="vsub">Daily · Kept</span></span></div>
+      <div class="vow"><span class="chk"><svg viewBox="0 0 36 36"><path d="M7 19 L15 27 L29 10"/></svg></span><span class="vtext"><span class="vname">No doomscroll</span><span class="vsub">Daily · Kept</span></span></div>
+    </div>
+    <div class="cap">Small promises, <b>kept daily</b>.</div>
+  </div>
+
+  <!-- SCENE 3 · THE STREAK -->
+  <div class="scene" id="sc-streak">
+    <div class="eyebrow">The Streak</div>
+    <div class="flamewrap"><div class="flame">&#128293;</div></div>
+    <div class="streaknum"><span id="streaknum">1</span>-DAY</div>
+    <div class="streaklbl">Vow Streak</div>
+    <div class="stats"><span class="chip">+WILL</span><span class="chip">+FOCUS</span><span class="chip">+STR</span></div>
+    <div class="cap">Discipline becomes <b>power</b>.</div>
+  </div>
+
+  <!-- SCENE 4 · THE RECKONING -->
+  <div class="scene" id="sc-boss">
+    <div class="hitflash"></div>
+    <div class="stamp">Streak Kept</div>
+    <div class="eyebrow">Day 30 · Boss</div>
+    <div class="portal">
+      <img src="../../assets/arena/boss_60.webp" alt="" onerror="this.style.display='none'">
+    </div>
+    <div class="bossname">THE PATIENT FLAME</div>
+    <div class="hpwrap">
+      <div class="hprow you"><span class="hpname">You</span><span class="hpbar"><span class="hpfill"></span></span></div>
+      <div class="hprow foe"><span class="hpname">Boss</span><span class="hpbar"><span class="hpfill"></span></span></div>
+    </div>
+  </div>
+
+  <!-- SCENE 5 · BECOME -->
+  <div class="scene" id="sc-become">
+    <div class="rays"></div>
+    <div class="hero"><img src="../../avatar-paladin.png" alt="" onerror="this.style.display='none'"></div>
+    <div class="word">AWAKENED</div>
+    <div class="sub">The hunter you swore to be</div>
+  </div>
+
+  <!-- SCENE 6 · OUTRO -->
+  <div class="scene" id="sc-outro">
+    <svg class="logo" viewBox="0 0 200 200" aria-hidden="true">
+      <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="6.5" stroke-linejoin="round"/>
+      <circle cx="100" cy="46" r="5.5" fill="#f5b842"/><circle cx="159" cy="158" r="5.5" fill="#f5b842"/><circle cx="41" cy="158" r="5.5" fill="#f5b842"/>
+      <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+    </svg>
+    <div class="tagline">KEEP YOUR <span class="v">VOWS</span>.<br>BECOME <span class="g">AWAKENED</span>.</div>
+    <div class="cta">Download free on iOS</div>
+    <div class="handle">@AWAKENEDRPG</div>
+  </div>
+
+  <div class="vig"></div>
+</div>
+
+<script>
+  var stage = document.getElementById('stage');
+  for (var i=0;i<16;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+
+  // ── the master timeline ── [scene id, duration ms] — sums to 30000ms
+  var T = [['hook',4000],['vow',5500],['streak',5500],['boss',6000],['become',4000],['outro',5000]];
+  var scenes = T.map(function(t){ return document.getElementById('sc-' + t[0]); });
+
+  function activate(idx){
+    scenes.forEach(function(s){ s.classList.remove('active'); });
+    scenes[idx].classList.add('active');
+    if (T[idx][0] === 'streak') runStreakCounter();
+  }
+  // count the vow streak up 1 -> 30 while the stats rise
+  function runStreakCounter(){
+    var el = document.getElementById('streaknum'); if (!el) return;
+    var from = 1, target = 30, t0 = null, DUR = 2000, START = 550;
+    function tick(ts){ if (!t0) t0 = ts; var e = (ts - t0) - START; if (e < 0){ requestAnimationFrame(tick); return; }
+      var p = Math.min(1, e / DUR);
+      el.textContent = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 2)));
+      if (p < 1) requestAnimationFrame(tick); }
+    requestAnimationFrame(tick);
+  }
+
+  function run(){ var acc = 0; T.forEach(function(t, k){ setTimeout(function(){ activate(k); }, acc); acc += t[1]; }); }
+  document.addEventListener('click', function(){ run(); });
+  run();
+
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
