@@ -7,6 +7,7 @@
 // the ugly paths: forfeit + turn-timeout auto-resolve.
 import { SignJWT } from 'jose';
 import { execSync } from 'node:child_process';
+import { writeFileSync, rmSync } from 'node:fs';
 
 const BASE = 'http://localhost:8787';
 const WS_BASE = 'ws://localhost:8787';
@@ -414,6 +415,75 @@ async function rematchDeclineTest() {
   } catch (e) { ok('rematch decline (transport)', false, String(e && e.message)); }
 }
 
+// ── 14. Duel a Friend's Echo (W440) — unranked AI mirror of an accepted friend's published
+//        loadout. Seeds users + public_profile_summary + an accepted friendship into the LOCAL
+//        D1 (file-based so the combatant JSON never hits the shell), then exercises the friendship
+//        gate, the NO_ECHO gate, the unknown-alias gate, and a full unranked bot duel. ──
+async function echoFriendTest() {
+  console.log('\n[14] Duel a Friend\'s Echo (W440)');
+  const CHAL = 'pvp-echo-chal';
+  const FRIEND = 'pvp-echo-friend', FRIEND_ALIAS = 'EchoFriend';
+  const NOCOMB = 'pvp-echo-nocomb', NOCOMB_ALIAS = 'EchoNoComb';
+  const STRANGER = 'pvp-echo-stranger', STRANGER_ALIAS = 'EchoStranger';
+  const combJson = JSON.stringify({ name: FRIEND_ALIAS, weaponId: 'nightfall_blade', weaponName: 'Nightfall', avatar: 'avatar-sage.png', stats: { STR: 12, VIT: 14, INT: 8, FOCUS: 9, WILL: 7, WLT: 3 } }).replace(/'/g, "''");
+  const seedPath = 'backend/.echo-seed.sql';
+  try {
+    const sql = [
+      // the hand-built local D1 may lack `users` — create it to match the prod schema
+      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, apple_sub TEXT UNIQUE NOT NULL, alias TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);",
+      `INSERT OR REPLACE INTO users (id, apple_sub, alias, created_at, updated_at) VALUES ('${FRIEND}','as-${FRIEND}','${FRIEND_ALIAS}',0,0);`,
+      `INSERT OR REPLACE INTO users (id, apple_sub, alias, created_at, updated_at) VALUES ('${NOCOMB}','as-${NOCOMB}','${NOCOMB_ALIAS}',0,0);`,
+      `INSERT OR REPLACE INTO users (id, apple_sub, alias, created_at, updated_at) VALUES ('${STRANGER}','as-${STRANGER}','${STRANGER_ALIAS}',0,0);`,
+      `INSERT OR REPLACE INTO public_profile_summary (user_id, rank_tier, rank_label, client_updated_at, server_updated_at, combatant_json) VALUES ('${FRIEND}','D','D II','2026-01-01T00:00:00.000Z',0,'${combJson}');`,
+      `INSERT OR REPLACE INTO public_profile_summary (user_id, rank_tier, rank_label, client_updated_at, server_updated_at, combatant_json) VALUES ('${NOCOMB}','D','D II','2026-01-01T00:00:00.000Z',0,NULL);`,
+      // STRANGER is in users but has NO friends row -> the friendship gate (403), not 404
+      `INSERT OR REPLACE INTO friends (id, requester_user_id, recipient_user_id, status) VALUES ('echo-fr-1','${CHAL}','${FRIEND}','accepted');`,
+      `INSERT OR REPLACE INTO friends (id, requester_user_id, recipient_user_id, status) VALUES ('echo-fr-2','${CHAL}','${NOCOMB}','accepted');`,
+    ].join('\n');
+    writeFileSync(seedPath, sql);
+    execSync('npx wrangler d1 execute awakened-db --local --file .echo-seed.sql', { cwd: 'backend', stdio: 'ignore' });
+  } catch (e) { ok('echo: seed local D1 (users/ppl/friends)', false, String(e && e.message)); return; }
+  finally { try { rmSync(seedPath, { force: true }); } catch {} }
+
+  const t = await mint(CHAL, 'EchoChal');
+
+  // a) an accepted-friend gate: a non-friend (exists, but no friendship) is refused
+  const stranger = await api(t, 'POST', '/v1/pvp/echo-friend', { friendAlias: STRANGER_ALIAS, combatant: COMB_A });
+  ok('echo a non-friend is refused (NOT_FRIENDS)', stranger && stranger.error === 'NOT_FRIENDS', stranger);
+  // b) a friend who hasn't published a loadout -> NO_ECHO
+  const nocomb = await api(t, 'POST', '/v1/pvp/echo-friend', { friendAlias: NOCOMB_ALIAS, combatant: COMB_A });
+  ok('friend without a published loadout -> NO_ECHO', nocomb && nocomb.error === 'NO_ECHO', nocomb);
+  // c) an unknown alias -> NOT_FOUND
+  const ghost = await api(t, 'POST', '/v1/pvp/echo-friend', { friendAlias: 'NoSuchHunterXYZ', combatant: COMB_A });
+  ok('unknown alias -> NOT_FOUND', ghost && ghost.error === 'NOT_FOUND', ghost);
+
+  // d) the happy path: an accepted friend WITH a loadout -> an UNRANKED Echo duel
+  const before = await api(t, 'GET', '/v1/pvp/rating');
+  const beforeN = (before.wins || 0) + (before.losses || 0) + (before.draws || 0);
+  const echo = await api(t, 'POST', '/v1/pvp/echo-friend', { friendAlias: FRIEND_ALIAS, combatant: COMB_A });
+  ok('friend Echo starts (vsBot + friendEcho + code)', !!(echo.ok && echo.code && echo.vsBot === true && echo.friendEcho === true), echo);
+  ok('Echo opponent is the friend', !!(echo.opponent && echo.opponent.alias === FRIEND_ALIAS), echo.opponent);
+  ok('Echo match is UNRANKED (state.ranked === false)', !!(echo.state && echo.state.ranked === false), echo.state && { ranked: echo.state.ranked });
+  ok('Echo opponent is a bot, reported connected (no d/c wedge)', !!(echo.state && echo.state.opp && echo.state.opp.isBot === true && echo.state.oppConnected === true), echo.state && echo.state.opp);
+  // mirror of the friend's loadout: the bot fights with the friend's weapon
+  ok('Echo bot carries the friend\'s weapon', !!(echo.state && echo.state.opp && echo.state.opp.weaponName === 'Nightfall'), echo.state && echo.state.opp);
+
+  const code = echo.code;
+  let guard = 0, result = null;
+  while (guard++ < 90) {
+    const s = (await api(t, 'GET', '/v1/pvp/state?code=' + code)).state;
+    if (!s) break;
+    if (s.phase === 'ended') { result = s.result; break; }
+    await api(t, 'POST', '/v1/pvp/submit', { code, turn: s.turn, moveId: firstMove(s.me) });
+    await sleep(20);
+  }
+  ok('Echo duel ends with a result', !!(result && (result.winnerSide === 'p' || result.winnerSide === 'b' || result.winnerSide === 'draw')), result);
+  await sleep(150);
+  const after = await api(t, 'GET', '/v1/pvp/rating');
+  const afterN = (after.wins || 0) + (after.losses || 0) + (after.draws || 0);
+  ok('UNRANKED: no ranked match recorded, ELO unchanged', afterN === beforeN && after.elo === before.elo, { beforeN, afterN, beforeElo: before.elo, afterElo: after.elo });
+}
+
 (async () => {
   // wait for the worker to be reachable
   let up = false;
@@ -436,6 +506,7 @@ async function rematchDeclineTest() {
   await rematchTest();
   await rematchStalePresenceTest();
   await rematchDeclineTest();
+  await echoFriendTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

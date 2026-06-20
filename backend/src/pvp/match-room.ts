@@ -198,7 +198,7 @@ export class MatchRoom {
     const nm: MatchState = {
       code: String(body.code || ''),
       matchId: genMatchId(),
-      ranked: true,
+      ranked: body.ranked === false ? false : true,   // Find Match = ranked; a friend's Echo = unranked (you pick it)
       phase: 'active', seed,
       p1: { userId, alias, combatant: sanitizeCombatant(body.combatant), elo },
       p2: { userId: 'bot:' + String(bot.id || 'x'), alias: String(bot.alias || 'Bot'), combatant: sanitizeCombatant(bot.combatant), elo: botElo },

@@ -81,6 +81,7 @@ import {
   handlePvpRating,
   handlePvpLeaderboard,
   handlePvpFind,
+  handlePvpEchoFriend,
   handlePvpHistory,
   handlePvpWs,
 } from './handlers/pvp';
@@ -307,6 +308,8 @@ export default {
             response = await handlePvpJoin(request, env, session);
           } else if (path === '/v1/pvp/find' && method === 'POST') {
             response = await handlePvpFind(request, env, session);
+          } else if (path === '/v1/pvp/echo-friend' && method === 'POST') {
+            response = await handlePvpEchoFriend(request, env, session);   // W440 — spar a friend's Echo (unranked)
           } else if (path === '/v1/pvp/submit' && method === 'POST') {
             response = await handlePvpSubmit(request, env, session);
           } else if (path === '/v1/pvp/forfeit' && method === 'POST') {

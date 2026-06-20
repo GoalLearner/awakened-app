@@ -28797,6 +28797,19 @@ button.guildhall-summary-tile:active {
   background: rgba(94,234,212,0.06); border: 1px solid rgba(94,234,212,0.2); }
 .pc-flavor i { width: 7px; height: 7px; border-radius: 4px; background: #5eead4; box-shadow: 0 0 8px #5eead4; flex: none; }
 .pc-flavor span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 15px; color: #f5f3fb; }
+/* W440 — "Duel a Friend's Echo" action (teal Echo accent, shown for friends who've published a loadout) */
+.pc-echo-btn { width: calc(100% - 44px); margin: 16px 22px 0; display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+  border-radius: 13px; cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent;
+  background: linear-gradient(180deg, rgba(90,214,200,0.13), rgba(90,214,200,0.05));
+  border: 1px solid rgba(90,214,200,0.34); box-shadow: 0 6px 20px -12px rgba(90,214,200,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: transform .12s ease, border-color .12s ease, background .12s ease; }
+.pc-echo-btn:active { transform: scale(0.985); background: linear-gradient(180deg, rgba(90,214,200,0.2), rgba(90,214,200,0.08)); border-color: rgba(90,214,200,0.5); }
+.pc-echo-ic { flex: 0 0 auto; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 6px rgba(90,214,200,0.55)); }
+.pc-echo-ic svg { width: 26px; height: 26px; }
+.pc-echo-tx { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-echo-tx b { font-family: "Cinzel", Georgia, serif; font-size: 15px; font-weight: 700; color: #d8fbf5; letter-spacing: 0.3px; }
+.pc-echo-tx i { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 9.5px; font-weight: 600; letter-spacing: 0.6px; color: #7fd6cb; }
+.pc-echo-go { flex: 0 0 auto; font-size: 22px; line-height: 1; color: #5ad6c8; opacity: 0.85; }
 .pc-prov { margin-top: 16px; padding: 12px 18px 4px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
 .pc-prov span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 13px; color: #9090a8; }
 .pc-skeleton { padding: 60px 22px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 2px; color: #6b6b86; }

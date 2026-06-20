@@ -30,6 +30,7 @@ interface ProfileRow {
   best_floor: number | null;
   club_100k_repeat: number | null;
   club_100k_best: number | null;
+  combatant_json: string | null;
 }
 
 export async function handlePublicProfileGet(
@@ -56,6 +57,7 @@ export async function handlePublicProfileGet(
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
             pps.verified_streak_label AS verified_streak_label,
             pps.avg_steps_per_day AS avg_steps_per_day,
+            pps.combatant_json AS combatant_json,
             (SELECT current_value FROM leaderboard_snapshots
               WHERE user_id = u.id AND metric = 'step_total'
               ORDER BY week_start DESC LIMIT 1) AS step_week,
@@ -78,8 +80,14 @@ export async function handlePublicProfileGet(
   }
 
   const stepWeek = Number(row.step_week || 0);
+  // W440 — the published loadout snapshot powers "Duel a Friend's Echo". Null when unpublished
+  // (older client / not yet synced) → the profile card hides the Spar-Echo button.
+  let combatant: unknown = null;
+  try { if (row.combatant_json) combatant = JSON.parse(row.combatant_json); } catch (_) { /* corrupt → no echo */ }
   return jsonOk({
     alias: row.alias,
+    combatant,
+    canEcho: !!combatant,
     rankLabel: row.rank_label,
     rankTier: row.rank_tier,
     power: row.power ?? 0,

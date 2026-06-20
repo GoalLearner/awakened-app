@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w439'; // W439 — Reclaim the Floor: re-fighting a cleared Ascent floor pays a daily-capped souls bounty
+  const APP_BUILD_TAG = '2.3.1-w440'; // W440 — Duel a Friend's Echo: spar an unranked AI mirror of an accepted friend's published loadout
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10288,6 +10288,15 @@
         else closed = true;
         return r;
       },
+      // W440 — spar an AI Echo built from a FRIEND's published loadout. Server verifies the
+      // accepted friendship + runs it UNRANKED (you pick the opponent → no ELO move).
+      async echoFriend(friendAlias, combatant) {
+        this.close(); closed = false; lastPhase = null;
+        const r = await http('POST', '/v1/pvp/echo-friend', { friendAlias: friendAlias, combatant: combatant });
+        if (r && r.ok && r.code) { code = r.code; you = (r.state && r.state.you) || 'p'; connect(); }
+        else closed = true;
+        return r;
+      },
       submit(turn, moveId) {
         if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ type: 'submit_move', turn: turn, moveId: moveId })); return; } catch (_) {} }
         http('POST', '/v1/pvp/submit', { code: code, turn: turn, moveId: moveId }).then(function (r) { if (r && r.ok && r.state) emit(Object.assign({ type: 'state' }, r.state)); }).catch(function () {});
@@ -10329,6 +10338,9 @@
   let _pvpEndRating = null;        // { delta, elo, tier } from the just-finished ranked match
   let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
   let _pvpOpponentMeta = null;     // { alias, elo, tier, weaponName } from Find Match (VS screen)
+  let _pvpFriendEcho = false;      // W440 — the just-started duel is a FRIEND's Echo (unranked mirror)
+  let _pvpEchoName = '';           // the friend whose Echo we're sparring (for the "Spar again" rematch)
+  let _pvpEchoAvatar = '';         // that friend's avatar (for the summon screen + rematch)
   let _pvpVsTimer = null;          // pre-match VS auto-advance
   let _pvpVsCountTimer = null;     // pre-match VS 3-2-1 countdown ticker
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
@@ -10597,7 +10609,20 @@
     // keep the simpler header + a back affordance.
     if (!mode || mode === 'home') { _arSet(_pvpHubHtml()); return; }
     let body, headK = 'RANKED PvP', headT = 'The Arena', headS = 'Real-time, server-judged.';
-    if (mode === 'searching') {
+    if (mode === 'searching' && x.friend) {
+      // W440 — summoning a FRIEND's Echo: an AI mirror of their real loadout, UNRANKED (you pick
+      // the opponent, so it never moves rank). Same teal scan-ring screen, friend-flavoured copy.
+      headK = 'FRIENDLY ECHO'; headT = 'The Arena'; headS = '';
+      const fav = _pvpSafeAvatar(x.friendAvatar || ''), fname = esc(x.friend);
+      body = '<div class="pvp-vs2-search pvp-echo-summon pvp-echo-summon--friend">' +
+        '<div class="pvp-vs2-scan"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>' +
+          (fav ? '<img class="spr" src="' + esc(fav) + '" alt="">' : '<span class="emb">' + _pvpTierEmblem('bronze', 88) + '</span>') + '</div>' +
+        '<div class="pvp-vs2-search-eb">Friendly Echo &middot; Unrated</div>' +
+        '<div class="pvp-vs2-search-h">Summoning ' + fname + '’s Echo</div>' +
+        '<div class="pvp-vs2-search-w">A construct mirroring ' + fname + '’s real loadout</div>' +
+        '<div class="pvp-echo-tag">AI mirror of a friend &middot; <b>unrated</b> &middot; rank unaffected</div>' +
+        '</div>';
+    } else if (mode === 'searching') {
       // W433 "Echo Mode" (ClaudeDesign) — summoning a RATED AI hunter (Echo) mirrored at your
       // ELO band. Openly an AI; the duel still moves your rank. (Same teal scan-ring screen.)
       headK = 'RATED DUEL'; headT = 'The Arena'; headS = '';
@@ -10806,7 +10831,7 @@
   }
   async function _pvpFindMatch() {
     if (!_pvpRequireAuth()) return;
-    _pvpOpponentMeta = null;
+    _pvpOpponentMeta = null; _pvpFriendEcho = false;
     _pvpRenderLobby('searching');
     PvP.onMessage(_pvpOnMessage);
     let r; try { r = await PvP.findMatch(_pvpBuildMyCombatant()); } catch (_) { r = null; }
@@ -10820,8 +10845,43 @@
     _pvpOpponentMeta = r.opponent || null;   // bot meta for the VS screen
     if (r.state) _pvpStartVs(r.state);        // VS screen -> battle
   }
+  // W440 — "Duel a Friend's Echo": spar an AI mirror of an accepted friend's published loadout.
+  // Always UNRANKED (the server runs it ranked:false), and fully async — the friend needn't be
+  // online; the Echo plays with the shipped Ascent AI. Reached from the friend's profile card.
+  async function _pvpEchoFriend(friendAlias, friendAvatar) {
+    const alias = String(friendAlias || '').trim();
+    if (!alias || !PVP_ENABLED) return;
+    try { _closeProfileCard(); } catch (_) {}
+    try { openArena(); } catch (_) {}          // the duel lives inside the Arena overlay
+    if (!_pvpRequireAuth()) return;
+    _pvpTeardown(); _arClearTimers(); _arSess = null; _arBodyMode(false);
+    _pvpFriendEcho = true; _pvpEchoName = alias; _pvpEchoAvatar = _pvpSafeAvatar(friendAvatar || '');
+    _pvpOpponentMeta = null;
+    _pvpRenderLobby('searching', { friend: alias, friendAvatar: _pvpEchoAvatar });
+    PvP.onMessage(_pvpOnMessage);
+    let r; try { r = await PvP.echoFriend(alias, _pvpBuildMyCombatant()); } catch (_) { r = null; }
+    if (_arView !== 'pvp-lobby') {   // user left mid-summon — don't orphan the match
+      if (r && r.ok && r.code) { try { PvP.forfeit(); } catch (_) {} }
+      try { _pvpTeardown(); } catch (_) {}
+      return;
+    }
+    if (!(r && r.ok && r.code)) { _pvpFriendEcho = false; _pvpRenderLobby('home', { err: _pvpEchoErr(r) }); return; }
+    _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
+    _pvpOpponentMeta = r.opponent || null;
+    if (r.state) _pvpStartVs(r.state);
+  }
+  // Friendly, specific copy for the Echo-summon failure modes (the generic _pvpErr is rank-flavoured).
+  function _pvpEchoErr(r) {
+    const c = (r && (r.code || r.error)) || '';
+    if (c === 'NOT_FRIENDS') return 'You can only spar an accepted friend’s Echo.';
+    if (c === 'NO_ECHO')     return 'They haven’t published a loadout to spar yet.';
+    if (c === 'NOT_FOUND')   return 'That hunter could not be found.';
+    if (c === 'RATE_LIMITED') return 'Slow down a moment, then try again.';
+    return _pvpErr(r);
+  }
   async function _pvpCreate() {
     if (!_pvpRequireAuth()) return;
+    _pvpFriendEcho = false;
     _pvpRenderLobby('creating');
     PvP.onMessage(_pvpOnMessage);
     let r; try { r = await PvP.create(_pvpBuildMyCombatant(), false); } catch (_) { r = null; }   // friendly duel — invite-by-code is UNRANKED (rating moves only via Find Match); server enforces too
@@ -10835,6 +10895,7 @@
     if (!_pvpRequireAuth()) return;
     const c = String(joinCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (c.length < 4) { _pvpRenderLobby('home', { err: 'Enter the code your friend shared.' }); return; }
+    _pvpFriendEcho = false;
     _pvpRenderLobby('joining');
     PvP.onMessage(_pvpOnMessage);
     let r; try { r = await PvP.join(c, _pvpBuildMyCombatant()); } catch (_) { r = null; }
@@ -10989,8 +11050,8 @@
           '<div class="pvp-vs2-medal">VS</div>' +
         '</div>' +
         '<div class="pvp-vs2-content">' +
-          '<div class="pvp-vs2-eyebrow">' + (friend ? 'Friendly Duel' : 'Match Found') +
-            '<span class="season">' + (friend ? 'Invite Code &middot; Casual' : 'Season 1 &middot; Ranked Ladder') + '</span></div>' +
+          '<div class="pvp-vs2-eyebrow">' + (friend ? (_pvpFriendEcho ? 'Friendly Echo' : 'Friendly Duel') : 'Match Found') +
+            '<span class="season">' + (friend ? (_pvpFriendEcho ? (esc(oppName) + ' &middot; Unrated') : 'Invite Code &middot; Casual') : 'Season 1 &middot; Ranked Ladder') + '</span></div>' +
           _pvpVsHunter('you', { sprite: youSprite, alias: 'You', tier: myTier, elo: myElo, weapon: myWeapon, friend: friend }) +
           _pvpVsHunter('foe', { sprite: foeSprite, alias: oppName, tier: oppTier, elo: oppElo, weapon: oppWeapon, friend: friend }) +
           '<div class="pvp-vs2-foot">' +
@@ -11408,13 +11469,13 @@
     _arSet(
       '<div class="pvp-rz-card ' + wcls + '">' +
         '<div class="pvp-rz-outcome"><div class="pvp-rz-rays"></div>' +
-          '<div class="pvp-rz-eyebrow">' + (ranked ? 'Ranked Duel' : 'Friendly Duel') + ' &middot; ' + esc(oppName) + '</div>' +
+          '<div class="pvp-rz-eyebrow">' + (ranked ? 'Ranked Duel' : (_pvpFriendEcho ? 'Friendly Echo' : 'Friendly Duel')) + ' &middot; ' + esc(oppName) + '</div>' +
           '<div class="pvp-rz-word">' + word + '</div>' +
           '<div class="pvp-rz-flavor">' + narr + '</div></div>' +
         _pvpResultRecapHtml(myTier, oppTier, oppName, won, draw, score) +
         (ranked
           ? _pvpResultEloHtml(_pvpPreElo != null ? _pvpPreElo : myElo, myElo, _pvpEndRating ? _pvpEndRating.delta : 0)
-          : '<div class="pvp-friendly-note">Friendly duel &middot; rating unaffected</div>') +
+          : '<div class="pvp-friendly-note">' + (_pvpFriendEcho ? 'Friendly Echo' : 'Friendly duel') + ' &middot; rating unaffected</div>') +
         (ranked && _pvpRating ? _pvpResultMetaHtml(_pvpRating, _pvpStreak) : '') +
         promoHtml +
         ctas +
@@ -11470,7 +11531,7 @@
 
   // ── rematch (result screen) ──
   function _pvpRematchBtnsHtml() {   // the 2-col result CTA row: rematch (ghost) + Back to Arena (primary)
-    return '<button class="ar-ghost pvp-rz-btn" data-ar="pvprematch">&#8635; ' + (_pvpWasBot ? 'New Match' : 'Rematch') + '</button>' +
+    return '<button class="ar-ghost pvp-rz-btn" data-ar="pvprematch">&#8635; ' + (_pvpFriendEcho ? 'Spar Again' : _pvpWasBot ? 'New Match' : 'Rematch') + '</button>' +
       '<button class="ar-cta pvp-rz-btn pvp-rz-btn--primary" data-ar="pvplobby">Back to Arena</button>';
   }
   function _pvpSetResultRematchUI(mode, from, reason) {
@@ -11497,6 +11558,7 @@
   }
   function _pvpClearRematchTimer() { if (_pvpRematchTimer) { clearTimeout(_pvpRematchTimer); _pvpRematchTimer = null; } }
   function _pvpRequestRematch() {
+    if (_pvpFriendEcho && _pvpEchoName) { _pvpEchoFriend(_pvpEchoName, _pvpEchoAvatar); return; }   // W440 — re-spar the same friend's Echo
     if (_pvpWasBot) { _pvpFindMatch(); return; }   // bots: instantly find a new match (no handshake)
     _pvpRematchState = 'waiting';
     try { _audCue('ui_tap'); } catch (_) {}
@@ -20020,8 +20082,20 @@
     // replacing the old weekly-snapshot ÷ 7 derivation.
     let avgStepsLife = 0; try { avgStepsLife = lbGetSnapshot().avg_steps_per_day_lifetime | 0; } catch (_) {}
     payload.avgStepsPerDay = avgStepsLife;
+    // W440 — publish my COMBATANT snapshot (6 stats + weapon) so friends can "Duel my Echo".
+    // Server re-validates it to the sanitizeCombatant shape (clamped stats, allowlisted weapon);
+    // it carries no progression/currency/rank. Fold weapon + a stat-sum into the signature so a
+    // loadout change triggers a fresh heartbeat (harmless no-op against a pre-W440 backend).
+    let combatant = null, combatantSig = '';
+    try {
+      combatant = _pvpBuildMyCombatant();
+      const st = combatant.stats || {};
+      const statSum = (st.STR | 0) + (st.VIT | 0) + (st.INT | 0) + (st.FOCUS | 0) + (st.WILL | 0) + (st.WLT | 0);
+      combatantSig = (combatant.weaponId || '') + ':' + statSum;
+    } catch (_) {}
+    if (combatant) payload.combatant = combatant;
     const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '') +
-      '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife;
+      '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife + '|' + combatantSig;
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
@@ -37689,7 +37763,26 @@
         '<span class="v">' + floor + '<small> / 100</small></span></div>' +
         '<div class="pc-floor-bar"><i style="width:' + Math.min(100, floor) + '%"></i></div></div></div>' +
       flavor +
+      // W440 — "Duel a Friend's Echo": only for an accepted friend who has published a loadout
+      // (canEcho). Unrated AI mirror; the server re-verifies the friendship + runs it ranked:false.
+      ((!isOwn && !data._sim && !!data.canEcho && _pcIsAcceptedFriend(data.alias))
+        ? '<button class="pc-echo-btn" type="button" data-pcecho="1" data-pcecho-alias="' + esc(data.alias || '') + '" data-pcecho-avatar="' + esc(data.avatarId || '') + '">' +
+            '<span class="pc-echo-ic">' + _PVP_ECHO_SIG + '</span>' +
+            '<span class="pc-echo-tx"><b>Spar their Echo</b><i>Unrated · an AI mirror of their loadout</i></span>' +
+            '<span class="pc-echo-go">›</span></button>'
+        : '') +
       '<div class="pc-prov"><span>Tapped from the global leaderboard · standings update in real time</span></div>';
+  }
+  // True iff `alias` is one of my accepted friends (per the warm friends cache). Conservative: an
+  // empty/cold cache returns false, so the Spar-Echo button never shows on a stranger's card. The
+  // server is the real friendship gate; this just keeps the button honest in the UI.
+  function _pcIsAcceptedFriend(alias) {
+    const a = String(alias || '').trim().toLowerCase();
+    if (!a) return false;
+    try {
+      const list = (_friendsCache && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
+      return list.some(function (f) { return f && typeof f.alias === 'string' && f.alias.trim().toLowerCase() === a; });
+    } catch (_) { return false; }
   }
   async function _openProfileCard(alias, simRow) {
     const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet'), body = document.getElementById('pc-body');
@@ -37698,6 +37791,11 @@
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
     let data = null;
     try { data = await _profileCardResolve(alias, simRow); } catch (_) {}
+    // W440 — warm the friends cache (best-effort) so the Spar-Echo gate is reliable even when the
+    // card is opened from the leaderboard before the Guild Hall has loaded the roster.
+    if (!_friendsCache && !_pcIsOwnAlias(alias) && !(data && data._sim) && window.Auth && Auth.fetchFriends) {
+      try { const fr = await Auth.fetchFriends(); if (fr && fr.ok) _friendsCache = fr; } catch (_) {}
+    }
     if (sh.classList.contains('hidden')) return;   // closed before the fetch landed
     _renderProfileCard(data, _pcIsOwnAlias(alias));
   }
@@ -38139,7 +38237,14 @@
     if (pcBodyEl && pcBodyEl.getAttribute('data-wd-wired') !== '1') {
       pcBodyEl.setAttribute('data-wd-wired', '1');
       pcBodyEl.addEventListener('click', (e) => {
-        if (e.target && e.target.closest && e.target.closest('[data-wardrobe]')) { _closeProfileCard(); openWardrobe(); }
+        if (e.target && e.target.closest && e.target.closest('[data-wardrobe]')) { _closeProfileCard(); openWardrobe(); return; }
+        const echo = e.target && e.target.closest && e.target.closest('[data-pcecho]');
+        if (echo) {
+          const al = echo.getAttribute('data-pcecho-alias') || '';
+          const av = echo.getAttribute('data-pcecho-avatar') || '';
+          try { _audCue('ui_tap'); } catch (_) {}
+          _pvpEchoFriend(al, av);
+        }
       });
     }
   }

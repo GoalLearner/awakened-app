@@ -76,6 +76,8 @@ const BOSSES_SLAIN_MAX     = 999_999;
 const ULTRA_RARE_DROPS_MAX = 9_999;
 const POWER_MAX            = 1_000_000;   // display power cap (anti-garbage; well above any real build)
 const AVG_STEPS_MAX        = 1_000_000;   // W304 — lifetime avg steps/day cap (anti-garbage)
+const COMBATANT_STAT_MAX   = 200;         // W440 — per-stat cap (matches the DO's MAX_STAT)
+const COMBATANT_KEYS       = ['STR', 'VIT', 'INT', 'FOCUS', 'WILL', 'WLT'] as const;
 // Streak label allowlist: "<digits>-day <type> streak". Types are
 // the four streak kinds the client tracks (Morning Routine, Locked-
 // In, top stat, top habit). The user's private habit name is NEVER
@@ -116,6 +118,7 @@ interface PutBody {
   avatarId?: unknown;
   power?: unknown;
   avgStepsPerDay?: unknown;
+  combatant?: unknown;   // W440 — loadout snapshot for "Duel a Friend's Echo" (6 stats + weapon)
 }
 
 // Per-field "was this key present in the achievements object?"
@@ -148,6 +151,8 @@ interface Validated {
   avatarId: AchField<string>;
   power: AchField<number>;
   avgStepsPerDay: AchField<number>;
+  // W440 — combatant loadout snapshot (stored as a validated JSON string in combatant_json).
+  combatant: AchField<string>;
 }
 
 function isAllowedTier(v: unknown): v is (typeof ALLOWED_TIERS)[number] {
@@ -397,6 +402,37 @@ function validate(body: PutBody):
     }
   }
 
+  // W440 — combatant loadout snapshot for "Duel a Friend's Echo". Validated to the
+  // sanitizeCombatant shape (6 stats clamped, weapon/name/avatar bounded) and stored as an
+  // opaque JSON string. Carries NO progression/currency/rank; the DO re-sanitizes it
+  // authoritatively when it builds the Echo bot, so this is just an anti-garbage first pass.
+  let combatant: AchField<string> = { set: false, value: null };
+  if ('combatant' in body && body.combatant !== undefined) {
+    if (body.combatant === null) {
+      combatant = { set: true, value: null };
+    } else if (typeof body.combatant === 'object') {
+      const c = body.combatant as Record<string, unknown>;
+      const src = (c.stats && typeof c.stats === 'object') ? c.stats as Record<string, unknown> : {};
+      const stats: Record<string, number> = {};
+      for (const k of COMBATANT_KEYS) {
+        let v = Number(src[k]);
+        if (!Number.isFinite(v) || v < 0) v = 0;
+        stats[k] = Math.min(COMBATANT_STAT_MAX, Math.round(v));
+      }
+      const av = typeof c.avatar === 'string' && /^avatar[a-z0-9_-]{0,40}\.png$/i.test(c.avatar) ? c.avatar : '';
+      const clean = {
+        name: String(c.name || 'Hunter').slice(0, 40),
+        weaponId: String(c.weaponId || 'unarmed').slice(0, 40),
+        weaponName: String(c.weaponName || '').slice(0, 60),
+        avatar: av,
+        stats,
+      };
+      combatant = { set: true, value: JSON.stringify(clean) };
+    } else {
+      return { ok: false, code: 'INVALID_COMBATANT', detail: 'combatant must be an object or null.' };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -411,6 +447,7 @@ function validate(body: PutBody):
       avatarId,
       power,
       avgStepsPerDay,
+      combatant,
     },
   };
 }
@@ -479,6 +516,7 @@ export async function handlePublicProfileSummaryPut(
   const avatarSet = v.avatarId.set ? 1 : 0;
   const powerSet  = v.power.set ? 1 : 0;
   const avgStepsSet = v.avgStepsPerDay.set ? 1 : 0;
+  const combatantSet = v.combatant.set ? 1 : 0;
 
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
@@ -487,9 +525,9 @@ export async function handlePublicProfileSummaryPut(
         client_updated_at, server_updated_at, metadata_json,
         bosses_slain_total, ultra_rare_drops_total,
         verified_streak_label, achievements_updated_at,
-        arena_title, avatar_id, power, avg_steps_per_day
+        arena_title, avatar_id, power, avg_steps_per_day, combatant_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0))
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0), ?)
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -515,7 +553,8 @@ export async function handlePublicProfileSummaryPut(
                                        ELSE public_profile_summary.arena_title END,
         avatar_id               = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avatar_id END,
         power                   = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.power END,
-        avg_steps_per_day       = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avg_steps_per_day END`,
+        avg_steps_per_day       = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avg_steps_per_day END,
+        combatant_json          = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.combatant_json END`,
   )
     .bind(
       // INSERT bindings (positional with the VALUES clause)
@@ -535,6 +574,7 @@ export async function handlePublicProfileSummaryPut(
       v.avatarId.value,
       v.power.value,
       v.avgStepsPerDay.value,
+      v.combatant.value,
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,
@@ -544,6 +584,7 @@ export async function handlePublicProfileSummaryPut(
       avatarSet, v.avatarId.value,
       powerSet,  v.power.value,
       avgStepsSet, v.avgStepsPerDay.value,
+      combatantSet, v.combatant.value,
     )
     .run();
 

@@ -91,6 +91,63 @@ export async function handlePvpFind(request: Request, env: Env, session: Session
   return jsonOk(j);
 }
 
+/** True iff the two users have an accepted friendship (either direction). */
+async function areAcceptedFriends(env: Env, a: string, b: string): Promise<boolean> {
+  const row = await env.DB.prepare(
+    `SELECT 1 AS ok FROM friends
+      WHERE status = 'accepted'
+        AND ( (requester_user_id = ? AND recipient_user_id = ?)
+           OR (requester_user_id = ? AND recipient_user_id = ?) )
+      LIMIT 1`,
+  ).bind(a, b, b, a).first<{ ok: number }>();
+  return !!row;
+}
+
+// POST /v1/pvp/echo-friend { friendAlias, combatant } — spar an AI Echo built from an accepted
+// FRIEND's published loadout (their 6 stats + weapon). Always UNRANKED — you pick the opponent,
+// so it never moves ranked ELO (same anti-farm rule as invite-by-code duels). Fully async: the
+// friend needn't be online; the MatchRoom resolves the Echo's moves with the shipped Ascent AI.
+export async function handlePvpEchoFriend(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  let body: any = {};
+  try { body = await request.json(); } catch { /* */ }
+  const friendAlias = String(body.friendAlias || '').slice(0, 40);
+  if (!friendAlias) return jsonError(400, 'INVALID_ALIAS', 'friendAlias is required.');
+  // resolve the friend by alias + verify an ACCEPTED friendship (you can only echo a real friend)
+  let friend: any = null;
+  try { friend = await env.DB.prepare('SELECT id, alias FROM users WHERE LOWER(alias) = LOWER(?) LIMIT 1').bind(friendAlias).first<any>(); } catch { /* */ }
+  if (!friend) return jsonError(404, 'NOT_FOUND', 'No hunter with that alias.');
+  if (String(friend.id) === session.userId) return jsonError(400, 'SELF_ECHO', "You can't spar your own Echo.");
+  let friends = false;
+  try { friends = await areAcceptedFriends(env, session.userId, String(friend.id)); } catch { /* */ }
+  if (!friends) return jsonError(403, 'NOT_FRIENDS', "You can only spar an accepted friend's Echo.");
+  // read the friend's PUBLISHED loadout snapshot
+  let combatant: any = null;
+  try {
+    const pps = await env.DB.prepare('SELECT combatant_json FROM public_profile_summary WHERE user_id=?').bind(friend.id).first<any>();
+    if (pps && pps.combatant_json) combatant = JSON.parse(pps.combatant_json);
+  } catch { /* */ }
+  if (!combatant) return jsonError(409, 'NO_ECHO', "This hunter hasn't published a loadout to spar yet.");
+  let friendElo = 1500;
+  try { const r = await env.DB.prepare('SELECT elo FROM pvp_ratings WHERE user_id=?').bind(friend.id).first<any>(); if (r) friendElo = Number(r.elo); } catch { /* */ }
+  // build the Echo bot from the friend's loadout; UNRANKED (ranked:false) so no ELO moves
+  const code = genCode();
+  let res: Response;
+  try {
+    res = await forwardToDo(env, code, 'createVsBot', session.userId, session.alias, {
+      code, ranked: false, combatant: body.combatant,
+      bot: { id: 'bot:echo:' + friend.id, alias: friend.alias, elo: friendElo, combatant },
+    });
+  } catch { return jsonError(503, 'PVP_UNAVAILABLE', 'Could not summon the Echo. Try again.'); }
+  let j: any = {};
+  try { j = await res.json(); } catch { /* */ }
+  if (!j || !j.ok) return jsonError(503, 'PVP_UNAVAILABLE', 'Could not start the Echo. Try again.');
+  j.vsBot = true; j.friendEcho = true;
+  j.opponent = { id: 'bot:echo:' + friend.id, alias: friend.alias, elo: friendElo, tier: eloTier(friendElo), weaponName: String(combatant.weaponName || ''), avatar: String(combatant.avatar || '') };
+  return jsonOk(j);
+}
+
 // POST /v1/pvp/submit { code, turn, moveId }
 export async function handlePvpSubmit(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   let body: any = {};
