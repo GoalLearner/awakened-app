@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w426'; // W426 — Pre-Match VS redesign (ClaudeDesign): vertical face-off, stakes, countdown, scan
+  const APP_BUILD_TAG = '2.3.1-w427'; // W427 — Post-Match Result card redesign (ClaudeDesign): outcome banner, recap, animated ELO, claim-to-ceremony
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9948,6 +9948,7 @@
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvprematch'){ try { _pvpRequestRematch(); } catch (_) {} }
       else if (a === 'pvprematchno'){ try { _pvpDeclineRematch(); } catch (_) {} }
+      else if (a === 'pvpclaim')  { try { _pvpClaimRank(); } catch (_) {} }
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
       else if (a === 'pvphistory'){ try { _pvpOpenHistory(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
@@ -10718,7 +10719,7 @@
     // capture my pre-match ELO for the rank-up/down moment + ceremony (survives _pvpRating mutations)
     _pvpPreElo = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo
       : (view.me && view.me.elo != null ? view.me.elo : null);
-    _pvpCeremonyDone = false;   // a fresh match can fire the ceremony again
+    _pvpCeremonyDone = false; _pvpStreakApplied = false;   // a fresh match can fire the ceremony again
     _arBodyMode(false); _arClearTimers();
     const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
     const myElo = me.elo != null ? me.elo : (_pvpRating && _pvpRating.elo != null ? _pvpRating.elo : null);
@@ -10953,7 +10954,8 @@
   // ── W422 · the Ascent Ceremony (ClaudeDesign) — the full-screen reward beat fired when
   // a RANKED match crosses a tier boundary. Plays over the Arena, then continues to the
   // result. Reuses the tier emblems + their ignite. Baked rgba per tier (no color-mix).
-  let _pvpCeremonyDone = false;   // fired for the current match yet?
+  let _pvpCeremonyDone = false;   // promotion claimed/fired for the current match yet?
+  let _pvpStreakApplied = false;  // streak advanced for the current match yet? (result can re-render post-claim)
   let _pvpCerCb = null;           // what to run on dismiss (-> render the result)
   let _pvpCerTimer = null;        // auto-advance timer
   const _PVP_CER_TINT = {
@@ -11019,34 +11021,85 @@
     if (_pvpCerTimer) clearTimeout(_pvpCerTimer);
     _pvpCerTimer = setTimeout(_pvpCerFinish, 6500);   // auto-advance if untouched
   }
+  // ── W427 · post-match result card (ClaudeDesign "The Post-Match Result") ──
+  // VS recap — both fighters' tier crests, victor starred, loser dimmed; the mid shows the
+  // final HP as the "score" (omitted for a forfeit/disconnect).
+  function _pvpResultRecapHtml(youTier, oppTier, oppAlias, won, draw, score) {
+    const yv = won && !draw, fv = !won && !draw;
+    const side = function (cls, tier, alias, victor, dim) {
+      return '<div class="pvp-rz-side' + (victor ? ' victor' : '') + (dim ? ' dim' : '') + '">' +
+        (victor ? '<span class="pvp-rz-badge' + (cls === 'foe' ? ' foe' : '') + '">&#9733;</span>' : '') +
+        '<span class="pvp-rz-crest">' + _pvpTierEmblem(tier.name, 44) + '</span>' +
+        '<span class="pvp-rz-alias">' + esc(alias) + '</span>' +
+        '<span class="pvp-rz-tier" style="color:' + tier.color + '">' + esc(tier.name) + '</span></div>';
+    };
+    return '<div class="pvp-rz-recap">' +
+      side('you', youTier, 'You', yv, fv) +
+      '<div class="pvp-rz-mid"><span class="pvp-rz-score">' + (score || '&#10022;') + '</span><span class="pvp-rz-final">Final</span></div>' +
+      side('foe', oppTier, oppAlias, fv, yv) +
+      '</div>';
+  }
+  // The rating card — counts old -> new while the tier bar fills/drains to the new position.
+  function _pvpResultEloHtml(oldElo, newElo, delta) {
+    const t = _pvpTier(newElo), key = String(t.name).toLowerCase();
+    const br = _PVP_TIER_BR[key] || [0, 9999], lo = br[0], hi = (br[1] != null ? br[1] : Math.max(newElo, oldElo) + 200);
+    const next = _PVP_TIER_NEXT[key];
+    const span = (hi + 1 - lo) || 1;
+    const pctNew = Math.max(2, Math.min(100, ((newElo - lo) / span) * 100));
+    const pctOld = Math.max(0, Math.min(100, ((oldElo - lo) / span) * 100));
+    const d = (typeof delta === 'number') ? delta : (newElo - oldElo);
+    const dcls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero';
+    const dsign = d > 0 ? '+' : d < 0 ? '−' : '±';
+    return '<div class="pvp-rz-elo pvp-rz-elo--' + dcls + '">' +
+      '<div class="pvp-rz-ehead"><span class="lab">Your Rating</span>' +
+        '<span class="pvp-rz-delta">' + (d > 0 ? '▲' : d < 0 ? '▼' : '•') + ' ' + dsign + Math.abs(d) + '</span></div>' +
+      '<div class="pvp-rz-big"><span class="now" id="pvp-rz-elo" data-from="' + oldElo + '" data-to="' + newElo + '">' + _pvpNum(oldElo).toLocaleString() + '</span>' +
+        '<span class="from">from ' + _pvpNum(oldElo).toLocaleString() + '</span></div>' +
+      '<div class="pvp-rz-track"><div class="pvp-rz-fill" id="pvp-rz-fill" data-to="' + pctNew.toFixed(1) + '" style="width:' + pctOld.toFixed(1) + '%"></div></div>' +
+      '<div class="pvp-rz-brow"><span>' + esc(t.name) + ' &middot; ' + lo + '</span><span>' + (next ? ((hi + 1 - newElo) + ' to <b>' + esc(next) + '</b>') : 'Apex reached') + '</span></div>' +
+      '</div>';
+  }
+  function _pvpAnimElo() {
+    const el = document.getElementById('pvp-rz-elo');
+    if (el) {
+      const from = +el.getAttribute('data-from'), to = +el.getAttribute('data-to');
+      const now0 = function () { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); };
+      const t0 = now0(), dur = 1100;
+      const tick = function () {
+        if (!document.getElementById('pvp-rz-elo')) return;
+        const k = Math.min(1, (now0() - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = Math.round(from + (to - from) * e).toLocaleString();
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    const fill = document.getElementById('pvp-rz-fill');
+    if (fill) { const to = fill.getAttribute('data-to'); requestAnimationFrame(function () { requestAnimationFrame(function () { fill.style.width = to + '%'; }); }); }
+  }
+  function _pvpResultMetaHtml(r, streak) {
+    const rec = _pvpNum(r.wins) + ' &ndash; ' + _pvpNum(r.losses) + ' &ndash; ' + _pvpNum(r.draws);
+    const streakTile = (streak >= 2)
+      ? '<div class="pvp-rz-m streak"><div class="mv">&#9650; ' + streak + '</div><div class="mk">Win Streak</div></div>' : '';
+    return '<div class="pvp-rz-meta"><div class="pvp-rz-m"><div class="mv">' + rec + '</div><div class="mk">Record &middot; Season</div></div>' + streakTile + '</div>';
+  }
   function _pvpRenderResult() {
     _arClearTimers(); _pvpClearTimer();
     _arView = 'pvp-result';
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}
     const s = _arSess || {}, view = _pvpView || {};
-    // W422 — a ranked tier-boundary crossing plays the full-screen ceremony FIRST, then
-    // continues back here. Once per match; needs the final rating + the pre-match ELO.
-    if (!_pvpCeremonyDone && view.ranked !== false && _pvpEndRating && _pvpPreElo != null) {
-      const preName = _pvpTier(_pvpPreElo).name, newName = _pvpTier(_pvpEndRating.elo).name;
-      if (preName !== newName) {
-        _pvpCeremonyDone = true;
-        const cerOpp = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || '';
-        _pvpRenderCeremony({ preName: preName, newName: newName, up: _pvpEndRating.elo > _pvpPreElo, elo: _pvpEndRating.elo, delta: _pvpEndRating.delta, rank: (_pvpRating && _pvpRating.rank) || null, bested: cerOpp }, _pvpRenderResult);
-        return;
-      }
-    }
     const outcome = _pvpResultOutcome || (s.won ? 'win' : 'loss');
-    const won = outcome === 'win', draw = outcome === 'draw';
-    // advance the client streak exactly once per match (this fn renders once per result).
-    // Corrected by the next history fetch; keeps the milestone + rank-band chip live across
-    // a rematch chain without a round-trip (was re-firing the same milestone every win).
-    if (outcome === 'win') _pvpStreak = (_pvpStreak || 0) + 1;
-    else if (outcome === 'loss') _pvpStreak = 0;
+    const won = outcome === 'win', draw = outcome === 'draw', ranked = view.ranked !== false;
+    // advance the client streak ONCE per match (the card can re-render after a promotion claim
+    // or a late rating fetch); corrected by the next history fetch.
+    if (!_pvpStreakApplied) {
+      _pvpStreakApplied = true;
+      if (outcome === 'win') _pvpStreak = (_pvpStreak || 0) + 1;
+      else if (outcome === 'loss') _pvpStreak = 0;
+    }
     const reason = (view.result && view.result.reason) || view.reason || 'ko';
-    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const oppName = (view.opp && (view.opp.alias || view.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || 'your challenger';
-    const word = draw ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
+    const word = draw ? 'STALEMATE' : won ? 'VICTORY' : 'DEFEAT';
     const wcls = draw ? 'draw' : won ? 'win' : 'loss';
     const narr = draw
         ? (reason === 'mutual_ko' ? 'You fall together &mdash; a true trade.' : reason === 'draw_timeout' ? 'Dead even when the bell rang.' : 'An even match &mdash; neither yields.')
@@ -11054,36 +11107,56 @@
       : reason === 'disconnect' ? (won ? esc(oppName) + ' lost connection.' : 'You lost connection.')
       : reason === 'turn_cap' ? (won ? 'You out-fought ' + esc(oppName) + ' to the wire.' : esc(oppName) + ' edged you out at the wire.')
       : (won ? 'You bested ' + esc(oppName) + '. Earned, not given.' : esc(oppName) + ' bested you. Return sharper.');
-    const ranked = view.ranked !== false;
+    const myElo = (_pvpEndRating && _pvpEndRating.elo != null) ? _pvpEndRating.elo : (_pvpRating && _pvpRating.elo != null ? _pvpRating.elo : 1500);
+    const myTier = _pvpTier(myElo);
+    const oppElo = (view.opp && view.opp.elo != null) ? view.opp.elo : (_pvpOpponentMeta && _pvpOpponentMeta.elo != null ? _pvpOpponentMeta.elo : null);
+    const oppTier = _pvpTier(oppElo != null ? oppElo : 1500);
+    let score = '';
+    if (reason === 'ko' || reason === 'turn_cap' || reason === 'mutual_ko' || reason === 'draw_timeout') {
+      score = Math.max(0, Math.round(_pvpNum(s.pHP))) + ' &ndash; ' + Math.max(0, Math.round(_pvpNum(s.bHP)));
+    }
+    // up-cross promotion (ranked): show the claim banner + Claim CTA unless already claimed.
+    let promo = false;
+    if (ranked && !_pvpCeremonyDone && _pvpEndRating && _pvpPreElo != null) {
+      if (_pvpTier(_pvpPreElo).name !== myTier.name && _pvpEndRating.elo > _pvpPreElo) promo = true;
+    }
+    const promoHtml = promo
+      ? '<div class="pvp-rz-promo" data-ar="pvpclaim"><span class="pcrest">' + _pvpTierEmblem(myTier.name, 40) + '</span>' +
+          '<span class="ptxt"><span class="pe">You Ascend &middot; New Rank</span><span class="pt">' + esc(myTier.name) + '</span></span>' +
+          '<span class="pgo">Claim &#9656;</span></div>'
+      : '';
+    const ctas = promo
+      ? '<div class="pvp-rz-ctas"><button class="ar-ghost pvp-rz-btn" data-ar="pvplobby">Arena</button>' +
+          '<button class="ar-cta pvp-rz-btn pvp-rz-btn--primary" data-ar="pvpclaim">Claim Your Rank</button></div>'
+      : '<div id="pvp-rematch" class="pvp-rz-ctas">' + _pvpRematchBtnsHtml() + '</div>';
     _arSet(
-      '<div class="ar-result-hero">' +
-        '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
-        '<div class="ar-kicker" style="margin-top:14px">' + (ranked ? 'Ranked Duel' : 'Duel') + ' &middot; Result</div>' +
-        '<div class="ar-result-word ' + wcls + '">' + word + '</div>' +
-        '<div class="ar-result-rule"></div>' +
-        '<div class="ar-result-narr' + (won || draw ? '' : ' loss') + '">' + narr + '</div>' +
-      '</div>' +
-      _pvpStreakMilestoneHtml(won) +
-      (ranked ? '<div id="pvp-mmr">' + _pvpRatingResultHtml() + '</div>'
-              : '<div class="pvp-friendly-note">Friendly duel &middot; rating unaffected</div>') +
-      (won && ranked ? _pvpShareCtaHtml() : '') +
-      '<div class="ar-spacer"></div>' +
-      '<div id="pvp-rematch">' + _pvpRematchBtnsHtml() + '</div>' +
-      '<button class="ar-ghost" data-ar="tower">&lsaquo; Back to the Tower</button>'
+      '<div class="pvp-rz-card ' + wcls + '">' +
+        '<div class="pvp-rz-outcome"><div class="pvp-rz-rays"></div>' +
+          '<div class="pvp-rz-eyebrow">' + (ranked ? 'Ranked Duel' : 'Friendly Duel') + ' &middot; ' + esc(oppName) + '</div>' +
+          '<div class="pvp-rz-word">' + word + '</div>' +
+          '<div class="pvp-rz-flavor">' + narr + '</div></div>' +
+        _pvpResultRecapHtml(myTier, oppTier, oppName, won, draw, score) +
+        (ranked
+          ? _pvpResultEloHtml(_pvpPreElo != null ? _pvpPreElo : myElo, myElo, _pvpEndRating ? _pvpEndRating.delta : 0)
+          : '<div class="pvp-friendly-note">Friendly duel &middot; rating unaffected</div>') +
+        (ranked && _pvpRating ? _pvpResultMetaHtml(_pvpRating, _pvpStreak) : '') +
+        promoHtml +
+        ctas +
+        (won && ranked && !promo ? _pvpShareCtaHtml() : '') +
+      '</div>'
     );
     _pvpRematchState = 'idle';
     try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-    // NOTE: the WS stays OPEN on the result so a rematch offer can arrive; it's closed on
-    // leave (_pvpExit / tower / find / lobby). The rating fetch works over http regardless.
+    try { const c = document.querySelector('.pvp-rz-card'); if (c) { void c.offsetWidth; c.classList.add('play'); } } catch (_) {}
+    if (ranked && _pvpEndRating) _arAfter(420, _pvpAnimElo);
+    // NOTE: the WS stays OPEN on the result so a rematch offer can arrive; closed on leave.
     _pvpClearTimer();
     if (ranked) {
       if (_pvpEndRating) {
-        // W409 (R6) — refresh the baseline cache so a back-to-back duel's fallback delta
-        // isn't computed across two matches (the match_end delta path skips the fetch).
         _pvpRating = Object.assign({}, _pvpRating || {}, { elo: _pvpEndRating.elo, tier: _pvpEndRating.tier, placed: true });
       } else {
-        _pvpFetchEndRating();
+        _pvpFetchEndRating();   // poll path: fetch the new rating, then re-render the card
       }
     }
   }
@@ -11124,33 +11197,40 @@
         const before = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo : null;
         _pvpEndRating = { elo: res.elo, tier: res.tier, delta: before != null ? res.elo - before : null };
         _pvpRating = res;
-        if (_arView === 'pvp-result') _pvpPatchResultRating();
+        if (_arView === 'pvp-result') _pvpRenderResult();   // re-render with the real delta -> the ELO card animates
       } else { _pvpEndRatingFallback(); }
     }).catch(function () { _pvpEndRatingFallback(); });
   }
-  // W409 (R4) — never leave the "Updating your rank…" spinner stuck on a fetch failure.
-  function _pvpEndRatingFallback() {
-    if (_arView !== 'pvp-result' || _pvpEndRating) return;
-    const host = document.getElementById('pvp-mmr');
-    if (host) host.innerHTML = '<div class="pvp-mmr-row pvp-mmr-row--load"><span class="pvp-mmr-load">Rank updated &mdash; reopen the Arena to see it.</span></div>';
-  }
+  // The card already renders the current rating (static) when the delta never arrives; nothing
+  // to unstick — leave it. (No spinner survives now that the ELO card always renders.)
+  function _pvpEndRatingFallback() {}
 
   // ── rematch (result screen) ──
-  function _pvpRematchBtnsHtml() {
-    return '<button class="ar-cta" data-ar="pvprematch">' + (_pvpWasBot ? 'NEW MATCH &#9656;' : 'REMATCH &#9656;') + '</button>';
+  function _pvpRematchBtnsHtml() {   // the 2-col result CTA row: rematch (ghost) + Back to Arena (primary)
+    return '<button class="ar-ghost pvp-rz-btn" data-ar="pvprematch">&#8635; ' + (_pvpWasBot ? 'New Match' : 'Rematch') + '</button>' +
+      '<button class="ar-cta pvp-rz-btn pvp-rz-btn--primary" data-ar="pvplobby">Back to Arena</button>';
   }
   function _pvpSetResultRematchUI(mode, from, reason) {
     const host = document.getElementById('pvp-rematch'); if (!host) return;
+    host.className = 'pvp-rz-ctas';
     if (mode === 'waiting') {
       host.innerHTML = '<div class="pvp-rm-wait"><div class="pvp-spinner"></div><span>Waiting for ' + esc(_pvpOppShort()) + '&hellip;</span></div>' +
-        '<button class="ar-ghost" data-ar="pvprematchno">Cancel</button>';
+        '<button class="ar-ghost pvp-rz-btn" data-ar="pvprematchno">Cancel</button>';
     } else if (mode === 'offer') {
       host.innerHTML = '<div class="pvp-rm-offer">' + esc(from || _pvpOppShort()) + ' wants a rematch!</div>' +
-        '<button class="ar-cta" data-ar="pvprematch">Accept &#9656;</button>' +
-        '<button class="ar-ghost" data-ar="pvprematchno">Decline</button>';
+        '<button class="ar-cta pvp-rz-btn pvp-rz-btn--primary" data-ar="pvprematch">Accept &#9656;</button>' +
+        '<button class="ar-ghost pvp-rz-btn" data-ar="pvprematchno">Decline</button>';
     } else if (mode === 'declined') {
       host.innerHTML = '<div class="pvp-rm-declined">' + (reason === 'expired' ? 'Rematch offer expired.' : esc(_pvpOppShort()) + ' declined.') + '</div>' + _pvpRematchBtnsHtml();
     } else { host.innerHTML = _pvpRematchBtnsHtml(); }
+  }
+  function _pvpClaimRank() {
+    if (_pvpCeremonyDone || !_pvpEndRating || _pvpPreElo == null) { _pvpRenderResult(); return; }
+    const preName = _pvpTier(_pvpPreElo).name, newName = _pvpTier(_pvpEndRating.elo).name;
+    if (preName === newName || _pvpEndRating.elo <= _pvpPreElo) { _pvpRenderResult(); return; }
+    _pvpCeremonyDone = true;
+    const cerOpp = (_pvpView && _pvpView.opp && (_pvpView.opp.alias || _pvpView.opp.name)) || (_arMatchup && _arMatchup.bot && _arMatchup.bot.name) || '';
+    _pvpRenderCeremony({ preName: preName, newName: newName, up: true, elo: _pvpEndRating.elo, delta: _pvpEndRating.delta, rank: (_pvpRating && _pvpRating.rank) || null, bested: cerOpp }, _pvpRenderResult);
   }
   function _pvpClearRematchTimer() { if (_pvpRematchTimer) { clearTimeout(_pvpRematchTimer); _pvpRematchTimer = null; } }
   function _pvpRequestRematch() {
@@ -11181,7 +11261,7 @@
     // a rematch reset us into a fresh battle — clear all per-match client state.
     _pvpClearRematchTimer();
     _pvpStarted = false; _arSess = null;
-    _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle'; _pvpCeremonyDone = false;
+    _pvpEndRating = null; _pvpResultOutcome = null; _pvpSeenTurn = -1; _pvpSubmitPending = false; _pvpRematchState = 'idle'; _pvpCeremonyDone = false; _pvpStreakApplied = false;
     _pvpEnsureBattle(view);
   }
   // share CTA — reuses the boss-kill share-card pipeline via data-bk-source="pvp".
