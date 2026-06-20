@@ -30378,6 +30378,8 @@ button.guildhall-summary-tile:active {
 .pvp-hub-name span { color: #f5b842; }
 .pvp-hub-season { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; height: 28px; border-radius: 9px; background: #101019; border: 1px solid rgba(255,255,255,0.07); font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; color: #8a8aa2; text-transform: uppercase; }
 .pvp-hub-season .s { color: #f5f3fb; }
+.pvp-hub-season .d { color: #8a8aa2; }
+.pvp-hub-season .d::before { content: "\00b7"; margin-right: 8px; color: rgba(255,255,255,0.22); }
 .pvp-hub-season .live { width: 6px; height: 6px; border-radius: 50%; background: #f5b842; box-shadow: 0 0 8px #f5b842; animation: pvpHubPulse 2.4s ease-in-out infinite; }
 @keyframes pvpHubPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 .pvp-hub-hero { display: flex; flex-direction: column; align-items: center; margin-top: 12px; }

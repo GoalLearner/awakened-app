@@ -6,6 +6,7 @@
 // Drives full matches over BOTH transports (HTTP poll + WebSocket) and exercises
 // the ugly paths: forfeit + turn-timeout auto-resolve.
 import { SignJWT } from 'jose';
+import { execSync } from 'node:child_process';
 
 const BASE = 'http://localhost:8787';
 const WS_BASE = 'ws://localhost:8787';
@@ -209,6 +210,61 @@ async function botMatchTest() {
   const afterN = (after.wins || 0) + (after.losses || 0) + (after.draws || 0);
   ok('exactly one ranked match recorded for the human', afterN === beforeN + 1, { beforeN, afterN });
   ok('human ELO moved vs the bot', after.elo !== beforeR.elo, { before: beforeR.elo, after: after.elo });
+  ok('rating carries the current season', !!(after.season && after.season.number >= 1 && typeof after.season.daysLeft === 'number'), after.season);
+  ok('rating carries placement progress', typeof after.placementGames === 'number' && after.placementNeeded === 5, { pg: after.placementGames, pn: after.placementNeeded });
+}
+
+// ── 7b. Placement: a fresh hunter is unranked until 5 ranked matches; placement advances
+//        one per ranked duel and the rank stays hidden until placed. ──
+async function placementTest() {
+  console.log('\n[7b] Season placement (fresh hunter)');
+  const t = await mint('pvp-place-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), 'Placer');
+  const r0 = await api(t, 'GET', '/v1/pvp/rating');
+  ok('fresh hunter starts unplaced at 0/5', r0.placementGames === 0 && r0.placed === false, { pg: r0.placementGames, placed: r0.placed });
+  for (let n = 0; n < 2; n++) {
+    const code = (await api(t, 'POST', '/v1/pvp/find', { combatant: COMB_A })).code;
+    if (!code) { ok('placement: find a bot match', false, 'no code'); return; }
+    let guard = 0;
+    while (guard++ < 90) { const s = (await api(t, 'GET', '/v1/pvp/state?code=' + code)).state; if (!s || s.phase === 'ended') break; await api(t, 'POST', '/v1/pvp/submit', { code, turn: s.turn, moveId: firstMove(s.me) }); await sleep(20); }
+    await sleep(120);
+  }
+  const r2 = await api(t, 'GET', '/v1/pvp/rating');
+  ok('placement advances one per ranked match (2/5)', r2.placementGames === 2, { pg: r2.placementGames });
+  ok('rank stays hidden before placed', r2.placed === false && r2.rank == null, { placed: r2.placed, rank: r2.rank });
+}
+
+// ── 7c. Season roll: when the window expires, a prior-season row is projected as a soft reset
+//        on read (elo halves its distance to 1500, placement re-opens) and committed on the next
+//        ranked match. Forces the roll by ageing the local season window via wrangler d1. ──
+async function playBotToKo(t) {
+  const code = (await api(t, 'POST', '/v1/pvp/find', { combatant: COMB_A })).code;
+  if (!code) return false;
+  let guard = 0;
+  while (guard++ < 90) { const s = (await api(t, 'GET', '/v1/pvp/state?code=' + code)).state; if (!s || s.phase === 'ended') break; await api(t, 'POST', '/v1/pvp/submit', { code, turn: s.turn, moveId: firstMove(s.me) }); await sleep(20); }
+  await sleep(120);
+  return true;
+}
+async function seasonResetTest() {
+  console.log('\n[7c] Season roll soft-reset');
+  const t = await mint('pvp-reset-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), 'Resetter');
+  if (!(await playBotToKo(t))) { ok('reset: play a seeding match', false); return; }
+  const r1 = await api(t, 'GET', '/v1/pvp/rating');
+  const elo1 = r1.elo, seasonN = r1.season && r1.season.number;
+  ok('seeded one ranked match this season (1/5)', r1.placementGames === 1, { pg: r1.placementGames });
+  let rolled = false;
+  try {
+    execSync("npx wrangler d1 execute awakened-db --local --command \"UPDATE pvp_seasons SET ends_at = datetime('now','-1 day') WHERE number = (SELECT MAX(number) FROM pvp_seasons)\"", { cwd: 'backend', stdio: 'ignore' });
+    rolled = true;
+  } catch { rolled = false; }
+  if (!rolled) { ok('reset: roll the local season (wrangler d1)', false); return; }
+  const r2 = await api(t, 'GET', '/v1/pvp/rating');
+  const expected = Math.round(1500 + (elo1 - 1500) * 0.5);
+  ok('a new season rolls in on read', !!(r2.season && r2.season.number === seasonN + 1), { was: seasonN, now: r2.season && r2.season.number });
+  ok('elo soft-resets toward 1500 (read projection)', r2.elo === expected, { elo1, expected, got: r2.elo });
+  ok('placement re-opens, rank hidden (0/5)', r2.placementGames === 0 && r2.placed === false && r2.rank == null, { pg: r2.placementGames, placed: r2.placed, rank: r2.rank });
+  if (!(await playBotToKo(t))) { ok('reset: play a new-season match', false); return; }
+  const r3 = await api(t, 'GET', '/v1/pvp/rating');
+  ok('reset commits on the next match (1/5, new season)', !!(r3.placementGames === 1 && r3.season && r3.season.number === seasonN + 1), { pg: r3.placementGames, season: r3.season && r3.season.number });
 }
 
 // ── 8. Bot match over WS — the live session HP (top-level pHP/bHP) must equal the
@@ -324,6 +380,8 @@ async function rematchDeclineTest() {
   await reconnectTest();
   await friendlyUnrankedTest();
   await botMatchTest();
+  await placementTest();
+  await seasonResetTest();
   await botWsDeterminismTest();
   await rematchTest();
   await rematchDeclineTest();

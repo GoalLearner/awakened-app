@@ -23,6 +23,7 @@ import {
   defaultMoveForTimeout, WEAPON_MOVES,
 } from './combat-core.js';
 import { eloTier, kFactor } from './elo';
+import { currentSeason, softResetElo } from './seasons';
 
 const TURN_DEADLINE_MS = 45_000;      // a player has 45s to submit each turn
 const DISCONNECT_GRACE_MS = 120_000;  // sustained disconnect past this -> forfeit
@@ -587,14 +588,15 @@ export class MatchRoom {
     // change, then re-saves so a reconnecting client can still read it.
     if (m.ranked && m.result && m.p1 && m.p2) {
       try {
+        const seasonId = (await currentSeason(this.env)).id;   // season-scope + lazy soft-reset
         const outcome: 'p1' | 'p2' | 'draw' =
           m.result.winnerSide === 'draw' ? 'draw' : m.result.winnerSide === 'p' ? 'p1' : 'p2';
         if (this.isBot(m.p2)) {
           // vs-bot: only the human (p1) moves; the bot has no persisted rating.
           const r: 'win' | 'loss' | 'draw' = outcome === 'draw' ? 'draw' : outcome === 'p1' ? 'win' : 'loss';
-          m.ratingResult = await this.updateEloVsBot(m.p1.userId, m.p1.alias, m.botElo || 1500, r);
+          m.ratingResult = await this.updateEloVsBot(m.p1.userId, m.p1.alias, m.botElo || 1500, r, seasonId);
         } else {
-          m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias);
+          m.ratingResult = await this.updateElo(m.p1.userId, m.p2.userId, outcome, m.p1.alias, m.p2.alias, seasonId);
         }
         // carry the post-match ELO into the seats so a REMATCH shows the up-to-date ratings.
         if (m.ratingResult && m.p1 && m.p2) { m.p1.elo = m.ratingResult.p.elo; m.p2.elo = m.ratingResult.b.elo; }
@@ -602,62 +604,61 @@ export class MatchRoom {
       } catch { /* best-effort — never block the match end */ }
     }
   }
-  // ELO update for a human vs an AI bot: only the human's row moves, against the bot's
-  // nominal rating. Returns the per-slot result for the match_end broadcast.
-  async updateEloVsBot(uid: string, alias: string, oppElo: number, outcome: 'win' | 'loss' | 'draw'):
-    Promise<{ p: { delta: number; elo: number }; b: { delta: number; elo: number } }> {
-    const row = await this.env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(uid).first<any>();
-    const r = row || { elo: 1500, peak_elo: 1500, wins: 0, losses: 0, draws: 0 };
-    const exp = 1 / (1 + Math.pow(10, (oppElo - r.elo) / 400));
-    const s = outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0;
-    const d = Math.round(kFactor(r.elo) * (s - exp));
-    const elo = Math.max(0, r.elo + d);
-    const t = s === 1 ? [1, 0, 0] : s === 0 ? [0, 1, 0] : [0, 0, 1];
+  // Season-adjusted starting point for a player THIS season: a row from a prior season is
+  // soft-reset (elo halves toward 1500, w/l/d + placement reset, all-time peak kept); a brand
+  // new player starts at 1500. This is where the lazy per-player season reset commits.
+  async seasonBase(uid: string, seasonId: number):
+    Promise<{ elo: number; peak_elo: number; wins: number; losses: number; draws: number; placement_games: number }> {
+    const row = await this.env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws, season_id, placement_games FROM pvp_ratings WHERE user_id=?').bind(uid).first<any>();
+    if (!row) return { elo: 1500, peak_elo: 1500, wins: 0, losses: 0, draws: 0, placement_games: 0 };
+    if (row.season_id !== seasonId) {
+      return { elo: softResetElo(row.elo), peak_elo: row.peak_elo, wins: 0, losses: 0, draws: 0, placement_games: 0 };
+    }
+    return { elo: row.elo, peak_elo: row.peak_elo, wins: row.wins, losses: row.losses, draws: row.draws, placement_games: row.placement_games || 0 };
+  }
+  // Absolute-set upsert of a player's season-scoped totals (the season-reset path needs SET,
+  // not increment). `s` is the actual score: 1 win / 0.5 draw / 0 loss.
+  async seasonUpsert(uid: string, alias: string, seasonId: number, base: any, newElo: number, s: number): Promise<void> {
+    const wins = base.wins + (s === 1 ? 1 : 0);
+    const losses = base.losses + (s === 0 ? 1 : 0);
+    const draws = base.draws + (s === 0.5 ? 1 : 0);
+    const placement = base.placement_games + 1;
     await this.env.DB.prepare(
-      `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, last_match_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, season_id, placement_games, last_match_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
          alias=COALESCE(NULLIF(excluded.alias, ''), pvp_ratings.alias),
          elo=excluded.elo, peak_elo=MAX(pvp_ratings.peak_elo, excluded.elo),
-         wins=pvp_ratings.wins+excluded.wins, losses=pvp_ratings.losses+excluded.losses,
-         draws=pvp_ratings.draws+excluded.draws, last_match_at=excluded.last_match_at`,
-    ).bind(uid, alias || '', elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], new Date().toISOString()).run();
+         wins=excluded.wins, losses=excluded.losses, draws=excluded.draws,
+         season_id=excluded.season_id, placement_games=excluded.placement_games,
+         last_match_at=excluded.last_match_at`,
+    ).bind(uid, alias || '', newElo, Math.max(newElo, base.peak_elo), wins, losses, draws, seasonId, placement, new Date().toISOString()).run();
+  }
+  // ELO update for a human vs an AI bot: only the human's (season-scoped) row moves, against
+  // the bot's nominal rating. Returns the per-slot result for the match_end broadcast.
+  async updateEloVsBot(uid: string, alias: string, oppElo: number, outcome: 'win' | 'loss' | 'draw', seasonId: number):
+    Promise<{ p: { delta: number; elo: number }; b: { delta: number; elo: number } }> {
+    const base = await this.seasonBase(uid, seasonId);
+    const s = outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0;
+    const exp = 1 / (1 + Math.pow(10, (oppElo - base.elo) / 400));
+    const d = Math.round(kFactor(base.elo) * (s - exp));
+    const elo = Math.max(0, base.elo + d);
+    await this.seasonUpsert(uid, alias, seasonId, base, elo, s);
     return { p: { delta: d, elo }, b: { delta: 0, elo: oppElo } };
   }
-  // ELO with draw support (actual score 1 / 0.5 / 0). Returns the per-slot delta + new
-  // rating so the DO can surface the MMR change to both clients. Fixes the prior
-  // draws-never-incremented bug + the discarded deltas.
-  async updateElo(p1: string, p2: string, outcome: 'p1' | 'p2' | 'draw', a1: string, a2: string):
+  // Season-scoped ELO with draw support (actual score 1 / 0.5 / 0). Returns the per-slot delta
+  // + new rating so the DO can surface the MMR change to both clients.
+  async updateElo(p1: string, p2: string, outcome: 'p1' | 'p2' | 'draw', a1: string, a2: string, seasonId: number):
     Promise<{ p: { delta: number; elo: number }; b: { delta: number; elo: number } }> {
-    const get = async (uid: string) => {
-      const row = await this.env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(uid).first<any>();
-      return row || { elo: 1500, peak_elo: 1500, wins: 0, losses: 0, draws: 0 };
-    };
-    const r1 = await get(p1), r2 = await get(p2);
+    const r1 = await this.seasonBase(p1, seasonId), r2 = await this.seasonBase(p2, seasonId);
     const exp = (a: number, b: number) => 1 / (1 + Math.pow(10, (b - a) / 400));
     const s1 = outcome === 'draw' ? 0.5 : outcome === 'p1' ? 1 : 0;
     const s2 = outcome === 'draw' ? 0.5 : outcome === 'p2' ? 1 : 0;
     const d1 = Math.round(kFactor(r1.elo) * (s1 - exp(r1.elo, r2.elo)));
     const d2 = Math.round(kFactor(r2.elo) * (s2 - exp(r2.elo, r1.elo)));
     const e1 = Math.max(0, r1.elo + d1), e2 = Math.max(0, r2.elo + d2);
-    const now = new Date().toISOString();
-    // w/l/d as a one-hot triple per player
-    const wld = (s: number) => (s === 1 ? [1, 0, 0] : s === 0 ? [0, 1, 0] : [0, 0, 1]);
-    const upsert = async (uid: string, alias: string, r: any, elo: number, t: number[]) => {
-      await this.env.DB.prepare(
-        `INSERT INTO pvp_ratings (user_id, alias, elo, peak_elo, wins, losses, draws, last_match_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET
-           alias=COALESCE(NULLIF(excluded.alias, ''), pvp_ratings.alias),
-           elo=excluded.elo,
-           peak_elo=MAX(pvp_ratings.peak_elo, excluded.elo),
-           wins=pvp_ratings.wins+excluded.wins, losses=pvp_ratings.losses+excluded.losses,
-           draws=pvp_ratings.draws+excluded.draws,
-           last_match_at=excluded.last_match_at`,
-      ).bind(uid, alias || '', elo, Math.max(elo, r.peak_elo), t[0], t[1], t[2], now).run();
-    };
-    await upsert(p1, a1, r1, e1, wld(s1));
-    await upsert(p2, a2, r2, e2, wld(s2));
+    await this.seasonUpsert(p1, a1, seasonId, r1, e1, s1);
+    await this.seasonUpsert(p2, a2, seasonId, r2, e2, s2);
     return { p: { delta: d1, elo: e1 }, b: { delta: d2, elo: e2 } };
   }
 }

@@ -8,6 +8,7 @@ import type { SessionPayload } from '../session-jwt';
 import { verifySessionJwt } from '../session-jwt';
 import { jsonError, jsonOk } from '../lib/responses';
 import { eloTier } from '../pvp/elo';
+import { currentSeason, softResetElo, daysLeft, PVP_PLACEMENT_GAMES, type Season } from '../pvp/seasons';
 import { pickBot, botMeta } from '../pvp/bots';
 
 // Unambiguous 6-char invite code (no 0/O/1/I).
@@ -130,15 +131,24 @@ export async function handlePvpState(request: Request, env: Env, session: Sessio
 export async function handlePvpRating(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_HALL_READ.limit({ key: session.userId });   // mirror sibling reads (30/min)
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  let season: Season | null = null;
+  try { season = await currentSeason(env); } catch { /* table may predate deploy */ }
   let row: any = null;
-  try { row = await env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); } catch { /* table may predate deploy */ }
-  const elo = row ? Number(row.elo) : 1500;
+  try { row = await env.DB.prepare('SELECT elo, peak_elo, wins, losses, draws, season_id, placement_games FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); } catch { /* table may predate deploy */ }
+  // a row from a PRIOR season is shown as its projected soft-reset (committed on next match).
+  const inSeason = !!(row && season && row.season_id === season.id);
+  const elo = inSeason ? Number(row.elo) : (row ? softResetElo(Number(row.elo)) : 1500);
+  const placementGames = inSeason ? Number(row.placement_games || 0) : 0;
+  const placed = placementGames >= PVP_PLACEMENT_GAMES;
   let rank: number | null = null;
-  try { const rk = await env.DB.prepare('SELECT COUNT(*) AS n FROM pvp_ratings WHERE elo > ?').bind(elo).first<any>(); rank = rk ? Number(rk.n) + 1 : null; } catch { /* */ }
+  if (placed && season) {
+    try { const rk = await env.DB.prepare('SELECT COUNT(*) AS n FROM pvp_ratings WHERE season_id=? AND placement_games >= ? AND elo > ?').bind(season.id, PVP_PLACEMENT_GAMES, elo).first<any>(); rank = rk ? Number(rk.n) + 1 : null; } catch { /* */ }
+  }
   return jsonOk({
     ok: true, elo, peakElo: row ? Number(row.peak_elo) : 1500, tier: eloTier(elo),
-    wins: row ? Number(row.wins) : 0, losses: row ? Number(row.losses) : 0, draws: row ? Number(row.draws) : 0,
-    rank, placed: !!row,
+    wins: inSeason ? Number(row.wins) : 0, losses: inSeason ? Number(row.losses) : 0, draws: inSeason ? Number(row.draws) : 0,
+    rank, placed, placementGames, placementNeeded: PVP_PLACEMENT_GAMES,
+    season: season ? { number: season.number, endsAt: season.ends_at, daysLeft: daysLeft(season) } : null,
   });
 }
 
@@ -147,18 +157,25 @@ export async function handlePvpLeaderboard(request: Request, env: Env, session: 
   const rl = await env.RL_HALL_READ.limit({ key: session.userId });   // mirror sibling reads (30/min)
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const limit = Math.min(100, Math.max(1, parseInt(new URL(request.url).searchParams.get('limit') || '50', 10) || 50));
+  let season: Season | null = null;
+  try { season = await currentSeason(env); } catch { /* */ }
   let rows: any[] = [];
   try {
-    const res = await env.DB.prepare(
-      'SELECT user_id, alias, elo, wins, losses, draws FROM pvp_ratings ORDER BY elo DESC, last_match_at ASC LIMIT ?',
-    ).bind(limit).all<any>();
-    rows = res.results || [];
+    if (season) {
+      const res = await env.DB.prepare(
+        'SELECT user_id, alias, elo, wins, losses, draws FROM pvp_ratings WHERE season_id=? AND placement_games >= ? ORDER BY elo DESC, last_match_at ASC LIMIT ?',
+      ).bind(season.id, PVP_PLACEMENT_GAMES, limit).all<any>();
+      rows = res.results || [];
+    } else {
+      const res = await env.DB.prepare('SELECT user_id, alias, elo, wins, losses, draws FROM pvp_ratings ORDER BY elo DESC LIMIT ?').bind(limit).all<any>();
+      rows = res.results || [];
+    }
   } catch { /* table may predate deploy */ }
   const top = rows.map((r, i) => ({
     rank: i + 1, alias: r.alias || 'Hunter', elo: Number(r.elo), tier: eloTier(Number(r.elo)),
     wins: Number(r.wins), losses: Number(r.losses), draws: Number(r.draws), you: r.user_id === session.userId,
   }));
-  return jsonOk({ ok: true, top });
+  return jsonOk({ ok: true, top, season: season ? { number: season.number, daysLeft: daysLeft(season) } : null });
 }
 
 // GET /v1/pvp/history?limit=12 — the caller's recent finished duels (newest first):

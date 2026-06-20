@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w431'; // W431 — Focus/Powerup VFX (ClaudeDesign) on self-buff casts (Ascent + PvP)
+  const APP_BUILD_TAG = '2.3.1-w432'; // W432 — Ranked seasons + placement: season-scoped ELO, soft reset, hub season strip wired to live data
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10278,6 +10278,7 @@
   let _pvpVsTimer = null;          // pre-match VS auto-advance
   let _pvpVsCountTimer = null;     // pre-match VS 3-2-1 countdown ticker
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
+  let _pvpPrePlaced = false;       // was I placed at match start? (gates tier ceremonies during placement)
   let _pvpStreak = 0;              // current win streak (derived from match history)
   let _pvpWasBot = false;          // was the just-played opponent an AI bot? (rematch = re-find)
   let _pvpRematchState = 'idle';   // 'idle' | 'waiting' (I requested) | 'offered' (they did) | 'declined'
@@ -10392,6 +10393,29 @@
   const _PVP_TIER_ORD = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5, master: 6, awakened: 7 };
   const PVP_PLACEMENT_MATCHES = 5;   // first N ranked matches = placement (rank hidden until placed)
 
+  // Placement is now SERVER-authoritative (season-scoped placement_games + placed flag). We
+  // prefer the backend values and fall back to the client match-count only for an old cached
+  // rating / a pre-seasons backend, so the UI degrades gracefully.
+  function _pvpPlacement(r) {
+    r = r || _pvpRating || {};
+    const total = _pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws);
+    const need = (typeof r.placementNeeded === 'number') ? r.placementNeeded : PVP_PLACEMENT_MATCHES;
+    const games = (typeof r.placementGames === 'number') ? r.placementGames : total;
+    const placed = (typeof r.placed === 'boolean') ? r.placed : (total >= need);
+    return { games: Math.min(need, games), need: need, placed: placed };
+  }
+  // Season strip — "Season N · X days left" from the live season window (falls back to a bare
+  // "Season 1" before the seasons backend answers).
+  function _pvpSeasonStripHtml(r) {
+    const s = r && r.season;
+    const num = (s && typeof s.number === 'number') ? s.number : 1;
+    let tail = '';
+    if (s && typeof s.daysLeft === 'number') {
+      tail = '<span class="d">' + (s.daysLeft <= 0 ? 'Final day' : _pvpNum(s.daysLeft) + ' day' + (s.daysLeft === 1 ? '' : 's') + ' left') + '</span>';
+    }
+    return '<div class="pvp-hub-season"><span class="live"></span><span class="s">Season ' + _pvpNum(num) + '</span>' + tail + '</div>';
+  }
+
   function _pvpHubStatsHtml(r, firstVal, firstKey) {
     const rec = _pvpNum(r.wins) + '&ndash;' + _pvpNum(r.losses) + (_pvpNum(r.draws) ? '&ndash;' + _pvpNum(r.draws) : '');
     const ordered = (_pvpForm || []).slice(0, 5).reverse();   // oldest -> newest, left -> right
@@ -10419,31 +10443,31 @@
   function _pvpHubHtml() {
     const r = _pvpRating;
     const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div></div>';
-    const season = '<div class="pvp-hub-season"><span class="live"></span><span class="s">Season 1</span></div>';
+    const season = _pvpSeasonStripHtml(r);
     if (!r) {
       return '<div class="pvp-hub">' + top + season +
         '<div class="pvp-hub-loading"><div class="pvp-spinner"></div><span>Loading your standing&hellip;</span></div>' +
         _pvpHubActionsHtml() + '</div>';
     }
-    const total = _pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws);
-    const placed = total >= PVP_PLACEMENT_MATCHES;
+    const pl = _pvpPlacement(r);
+    const placed = pl.placed;
     const tier = _pvpTier(r.elo);
     const key = String(tier.name).toLowerCase();
     const pal = _PVP_TIER_PAL[key] || _PVP_TIER_PAL.silver;
     const chrome = ' style="--tier:' + pal.c + ';--tier-deep:' + pal.deep + ';--tier-rim:' + pal.rim + '"';
     let hero, mid;
     if (!placed) {
-      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
-      const ordered = (_pvpForm || []).slice(0, PVP_PLACEMENT_MATCHES).reverse();
+      const played = pl.games;
+      const ordered = (_pvpForm || []).slice(0, played).reverse();
       let slots = '';
-      for (let i = 0; i < PVP_PLACEMENT_MATCHES; i++) {
-        const f = ordered[i];
-        slots += '<span class="pvp-hub-pslot' + (f ? (f === 'loss' ? ' loss' : ' win') : '') + '"></span>';
+      for (let i = 0; i < pl.need; i++) {
+        const f = i < played ? ordered[i] : null;
+        slots += '<span class="pvp-hub-pslot' + (i < played ? (f === 'loss' ? ' loss' : ' win') : '') + '"></span>';
       }
       hero = '<div class="pvp-hub-hero">' + _pvpTierEmblem(tier.name, 120, true) +
         '<div class="pvp-hub-tier locked">Unranked</div><div class="pvp-hub-sub">Prove your standing</div></div>';
       mid = '<div class="pvp-hub-place"><div class="pvp-hub-meter">' + slots + '</div>' +
-        '<div class="pvp-hub-place-label">Placement ' + played + ' / ' + PVP_PLACEMENT_MATCHES + '</div>' +
+        '<div class="pvp-hub-place-label">Placement ' + played + ' / ' + pl.need + '</div>' +
         '<div class="pvp-hub-place-copy">Win your placements to earn a rank.<br>Your rank stays hidden until you\'re placed.</div></div>';
     } else if (key === 'awakened') {
       hero = '<div class="pvp-hub-hero">' + _pvpTierEmblem(tier.name, 120) +
@@ -10605,13 +10629,13 @@
   }
   function _pvpLadderPinnedHtml() {
     const r = _pvpRating; if (!r) return '';
-    const total = _pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws);
-    if (total < PVP_PLACEMENT_MATCHES) {   // placements — locked, no rank
-      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
+    const pl = _pvpPlacement(r);
+    if (!pl.placed) {   // placements — locked, no rank
+      const played = pl.games;
       return '<div class="pvp-ld-pinned locked"><span class="pl">You</span><span class="lr">&mdash;</span>' +
         _pvpTierEmblem('Silver', 34) +
-        '<span class="li"><span class="ln">You</span><span class="lt" style="color:#f5b842">Placement ' + played + '/' + PVP_PLACEMENT_MATCHES + '</span></span>' +
-        '<span class="lstat"><span class="le">' + played + '/' + PVP_PLACEMENT_MATCHES + '</span><span class="lw">Earn your rank</span></span>' +
+        '<span class="li"><span class="ln">You</span><span class="lt" style="color:#f5b842">Placement ' + played + '/' + pl.need + '</span></span>' +
+        '<span class="lstat"><span class="le">' + played + '/' + pl.need + '</span><span class="lw">Earn your rank</span></span>' +
         '<span class="pvp-ld-scrim"></span></div>';
     }
     const t = _pvpTier(r.elo), col = (_PVP_TIER_PAL[t.name.toLowerCase()] || _PVP_TIER_PAL.silver).c;
@@ -10623,11 +10647,12 @@
   }
   function _pvpRenderLeaderboard(rows) {
     _arView = 'pvp-ladder';
+    const sn = (_pvpRating && _pvpRating.season && typeof _pvpRating.season.number === 'number') ? _pvpRating.season.number : 1;
     const head = '<div class="pvp-ld-head">' +
       '<button type="button" class="pvp-ld-back" data-ar="pvplobby"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.5 1L3 6l4.5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to the Arena</button>' +
       '<div class="pvp-ld-eyebrow">Ranked PvP &middot; Global</div>' +
       '<div class="pvp-ld-title">The Ladder</div>' +
-      '<div class="pvp-ld-season"><span class="pip"></span>Season 1</div></div>';
+      '<div class="pvp-ld-season"><span class="pip"></span>Season ' + _pvpNum(sn) + '</div></div>';
     let body;
     if (rows == null) {
       body = '<div class="pvp-ld-listwrap"><div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading the ladder&hellip;</div></div>' + _pvpLadderPinnedHtml() + '</div>';
@@ -10857,6 +10882,9 @@
     // capture my pre-match ELO for the rank-up/down moment + ceremony (survives _pvpRating mutations)
     _pvpPreElo = (_pvpRating && typeof _pvpRating.elo === 'number') ? _pvpRating.elo
       : (view.me && view.me.elo != null ? view.me.elo : null);
+    // tier ceremonies + the rank-change badge are for PLACED hunters only — during placement the
+    // hub still reads "Unranked", so a "RANK UP" fanfare would contradict it. Capture pre-match.
+    _pvpPrePlaced = _pvpRating ? _pvpPlacement(_pvpRating).placed : false;
     _pvpCeremonyDone = false; _pvpStreakApplied = false;   // a fresh match can fire the ceremony again
     _arBodyMode(false); _arClearTimers();
     const me = view.me || {}, opp = view.opp || {}, oppMeta = _pvpOpponentMeta || {};
@@ -11292,11 +11320,22 @@
     _pvpClearTimer();
     if (ranked) {
       if (_pvpEndRating) {
-        _pvpRating = Object.assign({}, _pvpRating || {}, { elo: _pvpEndRating.elo, tier: _pvpEndRating.tier, placed: true });
+        // instant cached elo/tier from the match_end delta; placement/season/rank are
+        // server-owned now, so pull the fresh rating quietly (keeps _pvpEndRating's delta intact).
+        _pvpRating = Object.assign({}, _pvpRating || {}, { elo: _pvpEndRating.elo, tier: _pvpEndRating.tier });
+        _pvpRefreshRatingQuiet();
       } else {
         _pvpFetchEndRating();   // poll path: fetch the new rating, then re-render the card
       }
     }
+  }
+  // Pull the authoritative rating (season + placement + rank) without touching _pvpEndRating /
+  // the result card; repaints the hub only if it's the visible view.
+  function _pvpRefreshRatingQuiet() {
+    if (!(window.PvP && PvP.rating)) return;
+    Promise.resolve(PvP.rating()).then(function (res) {
+      if (res && typeof res.elo === 'number') { _pvpRating = res; if (_arView === 'pvp-lobby') _pvpRepaintHub(); }
+    }).catch(function () {});
   }
   // The MMR block on the result: tier badge + new ELO + the +/- delta. Renders from
   // _pvpEndRating (the match_end delta) if present, else a placeholder that
@@ -11308,9 +11347,9 @@
     const d = (typeof er.delta === 'number') ? er.delta : null;
     const dstr = d == null ? '' : (d > 0 ? '+' + d : '' + d);
     const dcls = d == null ? '' : d > 0 ? ' up' : d < 0 ? ' down' : '';
-    // rank-up / rank-down moment: did this match cross a tier boundary?
+    // rank-up / rank-down moment: did this match cross a tier boundary? (placed hunters only)
     let rc = '';
-    if (_pvpPreElo != null) {
+    if (_pvpPreElo != null && _pvpPrePlaced) {
       const preName = _pvpTier(_pvpPreElo).name;
       if (preName !== t.name) {
         const up = er.elo > _pvpPreElo;
@@ -11363,7 +11402,7 @@
     } else { host.innerHTML = _pvpRematchBtnsHtml(); }
   }
   function _pvpClaimRank() {
-    if (_pvpCeremonyDone || !_pvpEndRating || _pvpPreElo == null) { _pvpRenderResult(); return; }
+    if (_pvpCeremonyDone || !_pvpEndRating || _pvpPreElo == null || !_pvpPrePlaced) { _pvpRenderResult(); return; }
     const preName = _pvpTier(_pvpPreElo).name, newName = _pvpTier(_pvpEndRating.elo).name;
     if (preName === newName || _pvpEndRating.elo <= _pvpPreElo) { _pvpRenderResult(); return; }
     _pvpCeremonyDone = true;
@@ -11449,8 +11488,8 @@
   function _pvpTowerEntryHtml() {
     if (!PVP_ENABLED) return '';   // dormant until the backend is live (see PVP_ENABLED)
     const r = _pvpRating;
-    const total = r ? (_pvpNum(r.wins) + _pvpNum(r.losses) + _pvpNum(r.draws)) : 0;
-    const placed = !!(r && total >= PVP_PLACEMENT_MATCHES);
+    const pl = r ? _pvpPlacement(r) : null;
+    const placed = !!(r && pl.placed);
     const tierName = r ? _pvpTier(r.elo).name : 'Silver';
     const key = String(tierName).toLowerCase();
     const pal = _PVP_TIER_PAL[key] || _PVP_TIER_PAL.silver;
@@ -11461,8 +11500,8 @@
         _pvpNum(r.elo).toLocaleString() + ' ELO' + (r.rank ? '<span class="ae-sep">&middot;</span>#' + _pvpNum(r.rank) : '');
     } else if (r) {
       cls = ' unranked';
-      const played = Math.min(PVP_PLACEMENT_MATCHES, total);
-      standing = '<span class="ae-dot"></span><b>Placement ' + played + '/' + PVP_PLACEMENT_MATCHES + '</b><span class="ae-sep">&middot;</span>Earn your rank';
+      const played = pl.games;
+      standing = '<span class="ae-dot"></span><b>Placement ' + played + '/' + pl.need + '</b><span class="ae-sep">&middot;</span>Earn your rank';
     } else {
       standing = '<span class="ae-dot"></span>Ranked duels &middot; climb the ladder';
     }
@@ -11490,6 +11529,7 @@
       _pvpCode = 'DEMOXY'; _pvpYou = opts.you || 'p';
       _pvpRating = { elo: 1490, tier: 'Bronze', wins: 3, losses: 2, draws: 0, rank: 42, placed: true };  // demo rank band
       _pvpPreElo = 1490;   // Bronze -> a demo win (1517) crosses into Silver = RANK UP moment
+      _pvpPrePlaced = true;   // demo hunter is placed, so the tier ceremony can fire
       _pvpStreak = 2;      // a demo win pushes the streak to 3 = milestone moment
       _pvpWasBot = (opts.bot === true);   // default human (REMATCH); opts.bot=true -> NEW MATCH
       let kit; try { kit = _arenaPlayerKit(); } catch (_) { kit = [{ id: 'slash', name: 'Slash', gl: 'sword', power: 1, acc: 0.95, cd: 0, desc: 'A clean cut.' }]; }
@@ -11532,12 +11572,12 @@
       opts = opts || {};
       const st = (typeof opts === 'string') ? opts : (opts.state || 'placed');
       const presets = {
-        placed:    { elo: 1631, wins: 18, losses: 11, draws: 2, rank: 42 },
-        placement: { elo: 1500, wins: 2, losses: 0, draws: 0, rank: null },
-        promo:     { elo: 1688, wins: 21, losses: 11, draws: 2, rank: 31 },
-        awakened:  { elo: 3180, peakElo: 3284, wins: 63, losses: 20, draws: 4, rank: 3 },
+        placed:    { elo: 1631, wins: 18, losses: 11, draws: 2, rank: 42, placed: true, placementGames: 5 },
+        placement: { elo: 1500, wins: 2, losses: 0, draws: 0, rank: null, placed: false, placementGames: 2 },
+        promo:     { elo: 1688, wins: 21, losses: 11, draws: 2, rank: 31, placed: true, placementGames: 5 },
+        awakened:  { elo: 3180, peakElo: 3284, wins: 63, losses: 20, draws: 4, rank: 3, placed: true, placementGames: 5 },
       };
-      _pvpRating = Object.assign({ tier: '', placed: true }, presets[st] || presets.placed);
+      _pvpRating = Object.assign({ tier: '', placed: true, placementNeeded: 5, season: { number: 1, daysLeft: 12 } }, presets[st] || presets.placed);
       _pvpStreak = (opts.streak != null) ? opts.streak : (st === 'awakened' ? 3 : 4);
       _pvpForm = opts.form || ['win', 'win', 'loss', 'win', 'win'];
       try { if (typeof openArena === 'function') openArena(); } catch (_) {}
