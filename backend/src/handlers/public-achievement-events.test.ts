@@ -1068,7 +1068,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(binds[5]).toBeNull();             // eventValue stays null
       expect(binds[6]).toBeNull();             // rarity stays null
       // Belt-and-braces: confirm no smuggled value ended up in any bind slot.
-      const allBindsStr = JSON.stringify(binds);
+      // Exclude binds[0] = the server-generated random UUID id: its hex can coincidentally
+      // contain a test digit pattern (e.g. /47/, /82/) and flakily fail the leak scan. The id
+      // is not derived from input, so a smuggled value could never land there.
+      const allBindsStr = JSON.stringify(binds.slice(1));
       expect(allBindsStr).not.toMatch(/running/);
       expect(allBindsStr).not.toMatch(/487/);
       expect(allBindsStr).not.toMatch(/162/);
@@ -1170,7 +1173,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(binds[4]).toBe('slept over 7 hours last night');
       expect(binds[5]).toBeNull();
       expect(binds[6]).toBeNull();
-      const allBindsStr = JSON.stringify(binds);
+      // Exclude binds[0] = the server-generated random UUID id: its hex can coincidentally
+      // contain a test digit pattern (e.g. /47/, /82/) and flakily fail the leak scan. The id
+      // is not derived from input, so a smuggled value could never land there.
+      const allBindsStr = JSON.stringify(binds.slice(1));
       expect(allBindsStr).not.toMatch(/7\.4/);
       expect(allBindsStr).not.toMatch(/26640/);
       expect(allBindsStr).not.toMatch(/82/);
@@ -1305,7 +1311,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(binds[4]).toBe('climbed 10 flights today');
       expect(binds[5]).toBe(10);                  // bucket, NOT 47
       expect(binds[6]).toBeNull();
-      const allBindsStr = JSON.stringify(binds);
+      // Exclude binds[0] = the server-generated random UUID id: its hex can coincidentally
+      // contain a test digit pattern (e.g. /47/, /82/) and flakily fail the leak scan. The id
+      // is not derived from input, so a smuggled value could never land there.
+      const allBindsStr = JSON.stringify(binds.slice(1));
       expect(allBindsStr).not.toMatch(/47/);     // exact flights never leaks
       expect(allBindsStr).not.toMatch(/820/);    // stairs never leaks
       expect(allBindsStr).not.toMatch(/exact/);

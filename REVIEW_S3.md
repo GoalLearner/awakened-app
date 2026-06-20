@@ -100,4 +100,17 @@ adversarial-review pass.
 ---
 
 ## FINDINGS (appended as phases complete)
-_(populated below during the review)_
+
+### Baseline (pre-review) — green established
+smoke 12/12 · parity 3/3 (client↔server byte-identical) · draw 9/9 · attune 6/6 ·
+backend tsc 0 · itest **40/40** · vitest 295/295. This is the regression gate.
+
+**F0 (FIXED, pre-existing, non-PvP) — flaky test.**
+`public-achievement-events.test.ts` smuggle-leak assertions did `JSON.stringify(binds)`
+then `not.toMatch(/47/)` / `/82/` / `/487/` etc. `binds[0]` is a server-generated random
+UUID (`crypto.randomUUID()`) whose 32 hex chars frequently contain a 2–3 digit pattern →
+the suite false-failed ~1 run in 5. `serverAt` (binds[9]) is NOT a factor (mocked via
+`vi.setSystemTime`). Fix: scan `binds.slice(1)` — the random id can't carry smuggled input,
+so excluding it preserves the protective intent and removes the flake. Verified 0/15 runs.
+Out of the PvP surface, but fixed because a flaky baseline makes regression detection
+unreliable for the whole review.
