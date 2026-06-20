@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — The Arena (social trailer)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ───────────────────────────────────────────────────────────────────────
+     arena-trailer.html — a self-contained ~30s vertical (1080x1920) social clip.
+     Leads with THE ARENA: ranked tiers + Echo duels (your real stats fight). ONE
+     master timeline, JS-sequenced scene layers; each scene animates on .active so
+     render.js captures it in one pass:
+         node marketing/clips/render.js arena-trailer.html 31
+     Brand system shared with ascent-trailer / hook-card / outro-card.
+     ─────────────────────────────────────────────────────────────────────── */
+  :root{ --gold:#f5b842; --gold2:#ffd574; --gold-deep:#c8901f; --ivory:#f5f3fb;
+         --mute:#9a9ab8; --faint:#54546c; --crimson:#e0564f; --teal:#5ad6c8; --violet:#a78bfa;
+         --silver:#cbd5e1; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 16%, rgba(90,214,200,0.10), transparent 60%),
+      radial-gradient(140% 60% at 50% 114%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#0b0b20 0%,#06060f 55%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none; z-index:40;
+    box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--teal); box-shadow:0 0 12px 2px rgba(90,214,200,0.7); opacity:0;
+    animation:rise linear infinite; z-index:2; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; }
+    12%{ opacity:0.8; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .scene{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; opacity:0; pointer-events:none;
+    transition:opacity 0.45s ease; padding:0 80px; }
+  .scene.active{ opacity:1; }
+
+  .eyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px;
+    letter-spacing:8px; text-transform:uppercase; color:var(--teal); margin-bottom:38px;
+    text-shadow:0 0 22px rgba(90,214,200,0.4); }
+  @keyframes popUp{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes slamIn{ 0%{opacity:0;transform:scale(0.55);} 70%{opacity:1;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
+
+  /* ── SCENE 1 · HOOK ───────────────────────────────────────────────── */
+  #sc-hook .big{ font-weight:900; font-size:210px; line-height:0.94; letter-spacing:1px;
+    text-align:center; text-shadow:0 8px 60px rgba(0,0,0,0.65); }
+  #sc-hook .l1{ display:block; opacity:0; transform:scale(0.55); }
+  #sc-hook .l2{ display:block; opacity:0; transform:scale(0.55); }
+  #sc-hook .l1 b{ color:var(--teal); text-shadow:0 0 60px rgba(90,214,200,0.5); }
+  #sc-hook .l2 b{ color:var(--gold); text-shadow:0 0 60px rgba(245,184,66,0.5); }
+  #sc-hook.active .l1{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 0.15s forwards; }
+  #sc-hook.active .l2{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 0.85s forwards; }
+  #sc-hook .rule{ width:0; height:10px; border-radius:6px; margin-top:48px;
+    background:linear-gradient(90deg,var(--teal),var(--gold) 70%,var(--gold-deep));
+    box-shadow:0 0 26px rgba(245,184,66,0.6); }
+  #sc-hook.active .rule{ animation:wipeW 0.6s cubic-bezier(.16,1,.3,1) 1.45s forwards; }
+  #sc-hook .sub{ margin-top:40px; font-family:"JetBrains Mono",monospace; font-weight:700;
+    font-size:34px; letter-spacing:5px; text-transform:uppercase; color:var(--mute); opacity:0; }
+  #sc-hook.active .sub{ animation:popUp 0.7s ease 1.8s forwards; }
+  @keyframes wipeW{ to{ width:600px; } }
+
+  /* ── SCENE 2 · THE ARENA (ranked reveal) ──────────────────────────── */
+  #sc-arena .crest{ width:380px; height:380px; opacity:0; transform:scale(0.8) translateY(20px);
+    filter:drop-shadow(0 0 34px rgba(203,213,225,0.45)); }
+  #sc-arena.active .crest{ animation:popUp 0.8s cubic-bezier(.16,1,.3,1) 0.1s forwards, floatC 4s ease-in-out 1s infinite; }
+  @keyframes floatC{ 0%,100%{ filter:drop-shadow(0 0 30px rgba(203,213,225,0.4)); } 50%{ filter:drop-shadow(0 0 50px rgba(203,213,225,0.7)); } }
+  #sc-arena .tier{ font-weight:900; font-size:120px; letter-spacing:8px; line-height:1; margin-top:18px;
+    color:var(--silver); text-shadow:0 0 40px rgba(203,213,225,0.35); opacity:0; transform:translateY(20px); }
+  #sc-arena.active .tier{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 0.5s forwards; }
+  #sc-arena .tlbl{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:28px; letter-spacing:6px;
+    color:var(--mute); text-transform:uppercase; margin-top:14px; opacity:0; }
+  #sc-arena.active .tlbl{ animation:popUp 0.6s ease 0.7s forwards; }
+  #sc-arena .elorow{ display:flex; align-items:baseline; gap:18px; margin-top:46px; opacity:0; transform:translateY(20px); }
+  #sc-arena.active .elorow{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 0.95s forwards; }
+  #sc-arena .elonum{ font-weight:900; font-size:104px; letter-spacing:1px; color:var(--ivory);
+    font-variant-numeric:tabular-nums; text-shadow:0 0 30px rgba(90,214,200,0.3); }
+  #sc-arena .elolbl{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:4px; color:var(--teal); }
+  #sc-arena .track{ width:620px; height:18px; border-radius:10px; margin-top:30px;
+    background:rgba(255,255,255,0.06); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.07); overflow:hidden; opacity:0; }
+  #sc-arena.active .track{ animation:popUp 0.5s ease 1.1s forwards; }
+  #sc-arena .fill{ height:100%; width:18%; border-radius:10px;
+    background:linear-gradient(90deg,var(--silver),var(--gold) 90%); box-shadow:0 0 22px rgba(245,184,66,0.5); }
+  #sc-arena.active .fill{ animation:fillUp 2.6s cubic-bezier(.4,0,.2,1) 1.2s forwards; }
+  @keyframes fillUp{ to{ width:72%; } }
+  #sc-arena .gnext{ width:620px; display:flex; justify-content:space-between; margin-top:12px;
+    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:24px; letter-spacing:2px; color:var(--faint); opacity:0; }
+  #sc-arena.active .gnext{ animation:popUp 0.5s ease 1.3s forwards; }
+  #sc-arena .gnext b{ color:var(--gold); }
+  #sc-arena .chips{ display:flex; gap:20px; margin-top:48px; }
+  #sc-arena .chip{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:2px;
+    color:var(--ivory); padding:18px 32px; border-radius:14px; background:rgba(255,255,255,0.045);
+    border:1px solid rgba(255,255,255,0.12); opacity:0; transform:translateY(24px) scale(0.92); }
+  #sc-arena .chip b{ color:var(--gold); }
+  #sc-arena.active .chip{ animation:popUp 0.5s cubic-bezier(.16,1,.3,1) forwards; }
+  #sc-arena.active .chip:nth-child(1){ animation-delay:1.8s; }
+  #sc-arena.active .chip:nth-child(2){ animation-delay:2.0s; }
+
+  /* ── SCENE 3 · SPAR AN ECHO (the VS) ──────────────────────────────── */
+  #sc-vs{ justify-content:flex-start; padding-top:120px; }
+  #sc-vs .vseyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:32px;
+    letter-spacing:7px; text-transform:uppercase; color:var(--teal); opacity:0; transform:translateY(-14px); }
+  #sc-vs.active .vseyebrow{ animation:popUp 0.6s ease 0.15s forwards; }
+  #sc-vs .vssub{ font-family:Georgia,serif; font-style:italic; font-size:40px; color:var(--mute);
+    margin-top:18px; text-align:center; opacity:0; }
+  #sc-vs.active .vssub{ animation:popUp 0.7s ease 0.45s forwards; }
+  #sc-vs .duelist{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  #sc-vs .port{ width:300px; height:300px; border-radius:50%; overflow:hidden; position:relative;
+    display:flex; align-items:center; justify-content:center; }
+  #sc-vs .port img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-vs .you{ margin-top:42px; opacity:0; transform:translateX(-120px); }
+  #sc-vs.active .you{ animation:slideR 0.7s cubic-bezier(.16,1,.3,1) 0.7s forwards; }
+  #sc-vs .foe{ margin-top:18px; opacity:0; transform:translateX(120px); }
+  #sc-vs.active .foe{ animation:slideR 0.7s cubic-bezier(.16,1,.3,1) 1.0s forwards; }
+  @keyframes slideR{ to{ opacity:1; transform:translateX(0); } }
+  #sc-vs .you .port{ box-shadow:0 0 0 4px rgba(90,214,200,0.6), 0 0 50px rgba(90,214,200,0.4); background:radial-gradient(circle at 50% 35%, rgba(90,214,200,0.25), #0a0a16 72%); }
+  #sc-vs .foe .port{ box-shadow:0 0 0 4px rgba(167,139,250,0.6), 0 0 50px rgba(167,139,250,0.4); background:radial-gradient(circle at 50% 35%, rgba(167,139,250,0.25), #0a0a16 72%); }
+  #sc-vs .nm{ font-weight:800; font-size:60px; letter-spacing:2px; }
+  #sc-vs .you .nm{ color:var(--teal); } #sc-vs .foe .nm{ color:var(--violet); }
+  #sc-vs .meta{ font-family:"JetBrains Mono",monospace; font-weight:700; font-size:28px; letter-spacing:2px; color:var(--mute); }
+  #sc-vs .medal{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.3); z-index:14;
+    width:150px; height:150px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:62px; letter-spacing:1px; color:var(--gold);
+    background:radial-gradient(circle at 50% 40%, #1a1206, #06060f 80%); border:3px solid var(--gold);
+    box-shadow:0 0 50px rgba(245,184,66,0.55), inset 0 0 26px rgba(245,184,66,0.25); opacity:0; }
+  #sc-vs.active .medal{ animation:medalPop 0.7s cubic-bezier(.18,1.5,.3,1) 1.35s forwards; }
+  @keyframes medalPop{ 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3) rotate(-30deg);} 100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0);} }
+  #sc-vs .seam{ position:absolute; top:calc(50% - 0px); left:8%; right:8%; height:3px; z-index:10; opacity:0;
+    background:linear-gradient(90deg,transparent,var(--teal) 22%,var(--gold) 78%,transparent);
+    box-shadow:0 0 20px rgba(245,184,66,0.5); }
+  #sc-vs.active .seam{ animation:popUp 0.5s ease 1.5s forwards; }
+
+  /* ── SCENE 4 · THE DUEL (combat beats) ────────────────────────────── */
+  #sc-duel{ justify-content:flex-start; padding-top:170px; }
+  #sc-duel .arena{ position:relative; width:760px; height:520px; border-radius:28px; overflow:hidden;
+    box-shadow:0 0 0 2px rgba(90,214,200,0.35), 0 0 70px rgba(90,214,200,0.25), inset 0 0 80px rgba(0,0,0,0.6);
+    opacity:0; transform:scale(0.94); }
+  #sc-duel.active .arena{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 0.1s forwards; }
+  #sc-duel .arena img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-duel.active .arena img{ animation:slowzoom 5.5s ease-out 0.2s forwards; }
+  @keyframes slowzoom{ from{ transform:scale(1.04); } to{ transform:scale(1.16); } }
+  #sc-duel .arena::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg, transparent 50%, rgba(7,7,19,0.92) 100%); }
+  #sc-duel.active.kill .arena{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 0.1s forwards, shakeB 0.5s linear 4.0s; }
+  @keyframes shakeB{ 0%,100%{transform:translate(0,0);} 20%{transform:translate(-12px,8px);} 40%{transform:translate(10px,-6px);} 60%{transform:translate(-7px,4px);} 80%{transform:translate(4px,-2px);} }
+  #sc-duel .hitflash{ position:absolute; inset:0; z-index:18; background:#fff; mix-blend-mode:screen; opacity:0; }
+  #sc-duel.active .hitflash{ animation:hf 0.5s linear 4.0s forwards; }
+  @keyframes hf{ 0%{opacity:0;} 30%{opacity:0.85;} 100%{opacity:0;} }
+  #sc-duel .move{ position:absolute; top:330px; left:50%; transform:translate(-50%,-50%) scale(0.6); z-index:20;
+    font-family:"JetBrains Mono",monospace; font-weight:800; font-size:58px; letter-spacing:4px;
+    color:#241a05; padding:20px 46px; border-radius:16px; text-transform:uppercase; white-space:nowrap;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,var(--gold-deep)); opacity:0;
+    box-shadow:0 0 50px rgba(245,184,66,0.5); }
+  #sc-duel.active .move{ animation:movePop 1.5s cubic-bezier(.16,1,.3,1) 2.4s forwards; }
+  @keyframes movePop{ 0%{opacity:0;transform:translate(-50%,-50%) scale(0.6);} 14%{opacity:1;transform:translate(-50%,-50%) scale(1.06);}
+    24%{transform:translate(-50%,-50%) scale(1);} 82%{opacity:1;} 100%{opacity:0;transform:translate(-50%,-50%) scale(1);} }
+  #sc-duel .hpwrap{ width:760px; margin-top:46px; display:flex; flex-direction:column; gap:20px; opacity:0; transform:translateY(20px); }
+  #sc-duel.active .hpwrap{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 0.8s forwards; }
+  #sc-duel .hprow{ display:flex; align-items:center; gap:18px; }
+  #sc-duel .hpname{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:26px; letter-spacing:2px; width:150px; flex:none; text-transform:uppercase; }
+  #sc-duel .hpbar{ flex:1; height:30px; border-radius:8px; background:rgba(255,255,255,0.10); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12); overflow:hidden; }
+  #sc-duel .hpfill{ height:100%; border-radius:8px; }
+  #sc-duel .you .hpname{ color:var(--teal); }
+  #sc-duel .you .hpfill{ width:84%; background:linear-gradient(90deg,#3fe0cd,#7ff0e4); box-shadow:0 0 22px rgba(90,214,200,0.8), inset 0 1px 0 rgba(255,255,255,0.45); }
+  #sc-duel .foe .hpname{ color:var(--violet); }
+  #sc-duel .foe .hpfill{ width:100%; background:linear-gradient(90deg,#9b7af0,#c4b1f7); box-shadow:0 0 22px rgba(167,139,250,0.8), inset 0 1px 0 rgba(255,255,255,0.4); }
+  #sc-duel.active .foe .hpfill{ animation:drain 1.7s cubic-bezier(.5,0,.4,1) 2.5s forwards; }
+  @keyframes drain{ 0%{ width:100%; } 100%{ width:6%; } }
+
+  /* ── SCENE 5 · VICTORY + RANK UP ──────────────────────────────────── */
+  #sc-vic::before{ content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background:radial-gradient(120% 80% at 50% 42%, rgba(245,184,66,0.4), transparent 62%); opacity:0; }
+  #sc-vic.active::before{ animation:wash 4s ease-out forwards; }
+  @keyframes wash{ 0%{opacity:0;} 8%{opacity:1;} 30%{opacity:0.35;} 100%{opacity:0.35;} }
+  #sc-vic .flash{ position:absolute; inset:0; pointer-events:none; z-index:6; opacity:0;
+    background:linear-gradient(180deg,#fff 0%, #fff0cf 45%, var(--gold) 100%); mix-blend-mode:screen; }
+  #sc-vic.active .flash{ animation:vflash 4s linear forwards; }
+  @keyframes vflash{ 0%{opacity:0;} 3%{opacity:0.9;} 8%{opacity:0.15;} 12%{opacity:0;} 100%{opacity:0;} }
+  #sc-vic .victory{ font-weight:900; font-size:184px; line-height:0.9; letter-spacing:2px; color:var(--gold);
+    text-transform:uppercase; text-align:center; opacity:0; transform:scale(2.6);
+    text-shadow:0 0 60px rgba(245,184,66,0.6), 0 10px 50px rgba(0,0,0,0.7), 0 2px 0 var(--gold-deep), 0 4px 0 #7a5410; }
+  #sc-vic.active .victory{ animation:vslam 4s cubic-bezier(.15,1.3,.3,1) forwards; }
+  @keyframes vslam{ 0%,3%{opacity:0;transform:scale(2.6);} 6%{opacity:1;transform:scale(0.92);} 9%{transform:scale(1.06);} 13%,100%{opacity:1;transform:scale(1);} }
+  #sc-vic .elodelta{ margin-top:30px; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:52px;
+    letter-spacing:3px; color:var(--teal); opacity:0; transform:translateY(24px); text-shadow:0 0 22px rgba(90,214,200,0.4); }
+  #sc-vic.active .elodelta{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 0.7s forwards; }
+  #sc-vic .promo{ margin-top:48px; display:flex; flex-direction:column; align-items:center; gap:18px; opacity:0; transform:translateY(26px); }
+  #sc-vic.active .promo{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 1.5s forwards; }
+  #sc-vic .crestswap{ position:relative; width:230px; height:230px; }
+  #sc-vic .crestswap img{ position:absolute; inset:0; width:100%; height:100%; }
+  #sc-vic .crestswap .s{ filter:drop-shadow(0 0 24px rgba(203,213,225,0.4)); }
+  #sc-vic .crestswap .g{ opacity:0; filter:drop-shadow(0 0 36px rgba(245,184,66,0.7)); }
+  #sc-vic.active .crestswap .s{ animation:fadeOutC 0.6s ease 2.3s forwards; }
+  #sc-vic.active .crestswap .g{ animation:fadeInC 0.7s cubic-bezier(.16,1,.3,1) 2.4s forwards, glowG 2.4s ease-in-out 3.2s infinite; }
+  @keyframes fadeOutC{ to{ opacity:0; transform:scale(0.9); } }
+  @keyframes fadeInC{ 0%{opacity:0;transform:scale(0.7) rotate(-12deg);} 100%{opacity:1;transform:scale(1) rotate(0);} }
+  @keyframes glowG{ 0%,100%{filter:drop-shadow(0 0 30px rgba(245,184,66,0.5));} 50%{filter:drop-shadow(0 0 50px rgba(245,184,66,0.85));} }
+  #sc-vic .rankpill{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:4px;
+    color:var(--gold); text-transform:uppercase; padding:14px 30px; border-radius:999px; border:2px solid var(--gold);
+    box-shadow:0 0 28px rgba(245,184,66,0.34), inset 0 0 18px rgba(245,184,66,0.12); white-space:nowrap; opacity:0; }
+  #sc-vic.active .rankpill{ animation:popUp 0.6s ease 2.7s forwards; }
+  #sc-vic .burst{ position:absolute; left:50%; top:46%; z-index:5; pointer-events:none; }
+  #sc-vic .spark{ position:absolute; left:0; top:0; width:14px; height:14px; border-radius:50%;
+    background:var(--gold2); box-shadow:0 0 18px 4px rgba(245,184,66,0.85); opacity:0; transform:translate(-50%,-50%); }
+  #sc-vic.active .spark{ animation:vspark 4s ease-out forwards; }
+  @keyframes vspark{ 0%,3%{opacity:0;transform:translate(-50%,-50%) scale(0.4);} 6%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+    20%{opacity:0.9;} 32%,100%{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0.3);} }
+
+  /* ── SCENE 6 · OUTRO ──────────────────────────────────────────────── */
+  #sc-outro .logo{ width:300px; height:300px; opacity:0; transform:scale(0.78);
+    filter:drop-shadow(0 0 36px rgba(245,184,66,0.55)); }
+  #sc-outro.active .logo{ animation:logoIn 0.9s cubic-bezier(.16,1,.3,1) 0.15s forwards, glowL 3.2s ease-in-out 1.1s infinite; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes glowL{ 0%,100%{filter:drop-shadow(0 0 30px rgba(245,184,66,0.45));} 50%{filter:drop-shadow(0 0 52px rgba(245,184,66,0.8));} }
+  #sc-outro .tagline{ margin-top:54px; font-weight:700; font-size:78px; letter-spacing:3px; line-height:1.16;
+    text-align:center; max-width:900px; text-shadow:0 4px 40px rgba(0,0,0,0.6); opacity:0; transform:translateY(26px); }
+  #sc-outro .tagline .t{ color:var(--teal); } #sc-outro .tagline .g{ color:var(--gold); }
+  #sc-outro.active .tagline{ animation:popUp 0.8s cubic-bezier(.16,1,.3,1) 0.9s forwards; }
+  #sc-outro .cta{ margin-top:60px; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:36px;
+    letter-spacing:3px; color:#241a05; text-transform:uppercase; padding:30px 56px; border-radius:20px;
+    background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,var(--gold-deep));
+    box-shadow:0 0 50px rgba(245,184,66,0.34), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);
+    opacity:0; transform:translateY(26px) scale(0.96); }
+  #sc-outro.active .cta{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 1.5s forwards, pulseC 2.4s ease-in-out 2.3s infinite; }
+  @keyframes pulseC{ 0%,100%{box-shadow:0 0 44px rgba(245,184,66,0.3), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);}
+    50%{box-shadow:0 0 74px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4);} }
+  #sc-outro .handle{ position:absolute; bottom:130px; left:0; right:0; text-align:center;
+    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:30px; letter-spacing:5px; color:var(--mute); opacity:0; }
+  #sc-outro.active .handle{ animation:fadeH 0.8s ease 1.9s forwards; }
+  @keyframes fadeH{ to{ opacity:0.85; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- SCENE 1 · HOOK -->
+  <div class="scene" id="sc-hook">
+    <div class="big">
+      <span class="l1"><b>REAL STEPS.</b></span>
+      <span class="l2"><b>REAL DUELS.</b></span>
+    </div>
+    <div class="rule"></div>
+    <div class="sub">Your fitness is your fighter</div>
+  </div>
+
+  <!-- SCENE 2 · THE ARENA -->
+  <div class="scene" id="sc-arena">
+    <div class="eyebrow">Ranked Ladder</div>
+    <img class="crest" src="../../assets/pvp-tiers/pvp-tier-silver.svg" alt="">
+    <div class="tier">SILVER</div>
+    <div class="tlbl">The Arena · Season 1</div>
+    <div class="elorow"><span class="elonum" id="elonum">1,500</span><span class="elolbl">ELO</span></div>
+    <div class="track"><div class="fill"></div></div>
+    <div class="gnext"><span>SILVER</span><span><b>73 to GOLD</b></span></div>
+    <div class="chips"><span class="chip">#2 <b>GLOBAL</b></span><span class="chip">9&ndash;0 <b>RECORD</b></span></div>
+  </div>
+
+  <!-- SCENE 3 · SPAR AN ECHO (VS) -->
+  <div class="scene" id="sc-vs">
+    <div class="vseyebrow">Spar an Echo</div>
+    <div class="vssub">Duel an AI mirror of any hunter&rsquo;s loadout</div>
+    <div class="duelist you">
+      <div class="port"><img src="../../avatar-assassin.png" alt="" onerror="this.style.display='none'"></div>
+      <div class="nm">YOU</div><div class="meta">GOLD &middot; 1,736 ELO</div>
+    </div>
+    <div class="duelist foe">
+      <div class="port"><img src="../../avatar-sage.png" alt="" onerror="this.style.display='none'"></div>
+      <div class="nm">RENDIESEL</div><div class="meta">DIAMOND &middot; 2,310 ELO</div>
+    </div>
+    <div class="seam"></div>
+    <div class="medal">VS</div>
+  </div>
+
+  <!-- SCENE 4 · THE DUEL -->
+  <div class="scene" id="sc-duel">
+    <div class="eyebrow">Turn-Based · Server-Judged</div>
+    <div class="arena">
+      <div class="hitflash"></div>
+      <div class="move">Titan&rsquo;s Oathblade!</div>
+      <img src="../../assets/arena/foe_glasscannon.webp" alt="" onerror="this.style.display='none'">
+    </div>
+    <div class="hpwrap">
+      <div class="hprow you"><span class="hpname">You</span><span class="hpbar"><span class="hpfill"></span></span></div>
+      <div class="hprow foe"><span class="hpname">Echo</span><span class="hpbar"><span class="hpfill"></span></span></div>
+    </div>
+  </div>
+
+  <!-- SCENE 5 · VICTORY + RANK UP -->
+  <div class="scene" id="sc-vic">
+    <div class="flash"></div>
+    <div class="burst" id="burst"></div>
+    <div class="victory">VICTORY</div>
+    <div class="elodelta">&#9650; +24 ELO</div>
+    <div class="promo">
+      <div class="crestswap">
+        <img class="s" src="../../assets/pvp-tiers/pvp-tier-silver.svg" alt="">
+        <img class="g" src="../../assets/pvp-tiers/pvp-tier-gold.svg" alt="">
+      </div>
+      <div class="rankpill">Rank Up · Gold</div>
+    </div>
+  </div>
+
+  <!-- SCENE 6 · OUTRO -->
+  <div class="scene" id="sc-outro">
+    <svg class="logo" viewBox="0 0 200 200" aria-hidden="true">
+      <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="6.5" stroke-linejoin="round"/>
+      <circle cx="100" cy="46" r="5.5" fill="#f5b842"/><circle cx="159" cy="158" r="5.5" fill="#f5b842"/><circle cx="41" cy="158" r="5.5" fill="#f5b842"/>
+      <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+    </svg>
+    <div class="tagline">WALK. <span class="t">FIGHT.</span><br><span class="g">ASCEND.</span></div>
+    <div class="cta">Download free on iOS</div>
+    <div class="handle">@AWAKENEDRPG</div>
+  </div>
+
+  <div class="vig"></div>
+</div>
+
+<script>
+  var stage = document.getElementById('stage');
+
+  // persistent drifting embers (teal — the Arena palette)
+  for (var i=0;i<16;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+
+  // radial spark burst for the rank-up moment
+  var burst = document.getElementById('burst'); var N = 22;
+  for (var j=0;j<N;j++){
+    var sp = document.createElement('div'); sp.className = 'spark';
+    var ang = (j / N) * Math.PI * 2 + (j % 2 ? 0.18 : 0); var dist = 320 + (j % 4) * 80;
+    sp.style.setProperty('--tx', (Math.cos(ang) * dist).toFixed(0) + 'px');
+    sp.style.setProperty('--ty', (Math.sin(ang) * dist).toFixed(0) + 'px');
+    sp.style.animationDelay = ((j % 3) * 0.012) + 's';
+    burst.appendChild(sp);
+  }
+
+  // ── the master timeline ── [scene id, duration ms] — sums to 30000ms
+  var T = [['hook',3500],['arena',5500],['vs',5500],['duel',6000],['vic',5000],['outro',4500]];
+  var scenes = T.map(function(t){ return document.getElementById('sc-' + t[0]); });
+
+  function activate(idx){
+    scenes.forEach(function(s){ s.classList.remove('active','kill'); });
+    var s = scenes[idx]; s.classList.add('active');
+    if (T[idx][0] === 'duel') s.classList.add('kill');
+    if (T[idx][0] === 'arena') runEloCounter();
+  }
+  // count ELO up 1,500 -> 1,627 while the bar climbs toward GOLD
+  function runEloCounter(){
+    var el = document.getElementById('elonum'); if (!el) return;
+    var from = 1500, target = 1627, t0 = null, DUR = 2400, START = 950;
+    function tick(ts){ if (!t0) t0 = ts; var e = (ts - t0) - START; if (e < 0) { requestAnimationFrame(tick); return; }
+      var p = Math.min(1, e / DUR);
+      var v = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 2)));
+      el.textContent = v.toLocaleString('en-US');
+      if (p < 1) requestAnimationFrame(tick); }
+    requestAnimationFrame(tick);
+  }
+
+  function run(){
+    var acc = 0;
+    T.forEach(function(t, k){ setTimeout(function(){ activate(k); }, acc); acc += t[1]; });
+  }
+  document.addEventListener('click', function(){ run(); });
+  run();
+
+  // fit the 1080x1920 stage to the window for previewing
+  function fit(){
+    var s = Math.min(window.innerWidth/1080, window.innerHeight/1920);
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;';
+  }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
