@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w443'; // W443 — pre-duel VS screen is genuinely tap-to-begin (no 3-2-1 auto-advance; 18s safety fallback)
+  const APP_BUILD_TAG = '2.3.1-w444'; // W444 — Hunter Profile: Arena Rating row (ranked PvP standing, server-authoritative from pvp_ratings)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -37825,6 +37825,10 @@
       '</div><div class="pc-floor"><div class="pc-floor-top"><span class="k">BEST FLOOR · THE ASCENT</span>' +
         '<span class="v">' + floor + '<small> / 100</small></span></div>' +
         '<div class="pc-floor-bar"><i style="width:' + Math.min(100, floor) + '%"></i></div></div></div>' +
+      // W444 — Arena Rating row (ClaudeDesign Hunter Profile refresh): the hunter's ranked PvP
+      // standing, server-authoritative. Present only for PLACED hunters (the backend returns
+      // data.arena = null otherwise → row hidden). Tap → the ranked ladder.
+      ((data.arena && data.arena.elo != null) ? _pcArenaRowHtml(data.arena) : '') +
       flavor +
       // W440 — "Duel a Friend's Echo": only for an accepted friend who has published a loadout
       // (canEcho). Unrated AI mirror; the server re-verifies the friendship + runs it ranked:false.
@@ -37846,6 +37850,38 @@
       const list = (_friendsCache && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
       return list.some(function (f) { return f && typeof f.alias === 'string' && f.alias.trim().toLowerCase() === a; });
     } catch (_) { return false; }
+  }
+  // W444 — the Arena Rating row for the Hunter Profile card. The backend serves only { elo, global }
+  // (server-authoritative from pvp_ratings); everything else — tier name, division, progress, points
+  // to the next tier — is derived here from ELO via the same tables the Arena hub uses, so the row
+  // stays consistent with the live ladder.
+  function _pcArenaRowHtml(arena) {
+    const elo = Math.max(0, arena.elo | 0);
+    const tier = _pvpTier(elo);
+    const key = String(tier.name || 'silver').toLowerCase();
+    const band = _PVP_TIER_BR[key] || [0, null];
+    const min = band[0], max = band[1];
+    const ord = _PVP_TIER_ORD[key] || 1;
+    const nextName = _PVP_TIER_NEXT[key] || null;
+    const pct = (max != null) ? Math.max(6, Math.min(100, ((elo - min) / (max - min)) * 100)) : 100;
+    const toNext = (max != null) ? Math.max(0, (max + 1) - elo) : 0;
+    const tc = tier.color || '#fbbf24';
+    const globalTxt = (arena.global != null && arena.global > 0)
+      ? '<span class="pc-arena-global">#' + (arena.global | 0) + ' <i>GLOBAL</i></span>' : '';
+    const toNextTxt = (nextName && max != null)
+      ? toNext.toLocaleString('en-US') + ' TO ' + esc(nextName.toUpperCase())
+      : 'PEAK TIER';
+    return '<button type="button" class="pc-arena" data-pc-arena="1" style="--at:' + tc + '">' +
+      '<img class="pc-arena-crest" src="assets/pvp-tiers/pvp-tier-' + esc(key) + '.svg" alt="" onerror="this.style.display=\'none\'">' +
+      '<span class="pc-arena-body">' +
+        '<span class="pc-arena-top"><span class="k">ARENA RATING · SEASON 1</span>' + globalTxt + '</span>' +
+        '<span class="pc-arena-mid"><span class="tier">' + esc(tier.name) + '</span><span class="sub">Tier ' + ord + '</span>' +
+          '<span class="elo">' + elo.toLocaleString('en-US') + '<i> ELO</i></span></span>' +
+        '<span class="pc-arena-bar"><i style="width:' + pct.toFixed(0) + '%"></i></span>' +
+        '<span class="pc-arena-tonext">' + toNextTxt + '</span>' +
+      '</span>' +
+      '<span class="pc-arena-chev">›</span>' +
+    '</button>';
   }
   async function _openProfileCard(alias, simRow) {
     const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet'), body = document.getElementById('pc-body');
@@ -38322,6 +38358,14 @@
           const av = echo.getAttribute('data-pcecho-avatar') || '';
           try { _audCue('ui_tap'); } catch (_) {}
           _pvpEchoFriend(al, av);
+          return;
+        }
+        // W444 — the Arena Rating row opens the ranked ladder (where this hunter places).
+        if (e.target && e.target.closest && e.target.closest('[data-pc-arena]')) {
+          try { _audCue('ui_tap'); } catch (_) {}
+          try { _closeProfileCard(); } catch (_) {}
+          try { openArena(); } catch (_) {}
+          try { _pvpOpenLeaderboard(); } catch (_) {}
         }
       });
     }

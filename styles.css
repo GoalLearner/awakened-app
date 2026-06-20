@@ -28810,6 +28810,27 @@ button.guildhall-summary-tile:active {
 .pc-echo-tx b { font-family: "Cinzel", Georgia, serif; font-size: 15px; font-weight: 700; color: #d8fbf5; letter-spacing: 0.3px; }
 .pc-echo-tx i { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 9.5px; font-weight: 600; letter-spacing: 0.6px; color: #7fd6cb; }
 .pc-echo-go { flex: 0 0 auto; font-size: 22px; line-height: 1; color: #5ad6c8; opacity: 0.85; }
+/* W444 — Arena Rating row (ClaudeDesign Hunter Profile refresh); --at = the hunter's tier accent */
+.pc-arena { width: calc(100% - 44px); margin: 9px 22px 0; display: flex; align-items: center; gap: 13px; padding: 12px 13px;
+  border-radius: 12px; cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent;
+  background: rgba(255,255,255,0.035); border: 1px solid color-mix(in srgb, var(--at, #fbbf24) 30%, transparent);
+  box-shadow: inset 0 0 24px color-mix(in srgb, var(--at, #fbbf24) 9%, transparent); transition: transform .12s ease; }
+.pc-arena:active { transform: translateY(1px); }
+.pc-arena-crest { width: 42px; height: 42px; flex: none; filter: drop-shadow(0 0 7px color-mix(in srgb, var(--at,#fbbf24) 45%, transparent)); }
+.pc-arena-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pc-arena-top { display: flex; align-items: baseline; justify-content: space-between; }
+.pc-arena-top .k { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1.4px; color: #9090a8; }
+.pc-arena-global { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.6px; color: #c8c6d8; }
+.pc-arena-global i { font-style: normal; color: #6b6b86; }
+.pc-arena-mid { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.pc-arena-mid .tier { font-family: "Cinzel", Georgia, serif; font-size: 19px; font-weight: 700; color: var(--at, #fbbf24); letter-spacing: 0.4px; }
+.pc-arena-mid .sub { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: #6b6b86; }
+.pc-arena-mid .elo { margin-left: auto; font-family: "Cinzel", Georgia, serif; font-size: 18px; font-weight: 700; color: #f5f3fb; line-height: 1; }
+.pc-arena-mid .elo i { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; font-style: normal; color: #6b6b86; letter-spacing: 1px; }
+.pc-arena-bar { display: block; margin-top: 8px; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.pc-arena-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--at, #fbbf24), #ffe9b0); box-shadow: 0 0 8px color-mix(in srgb, var(--at,#fbbf24) 45%, transparent); }
+.pc-arena-tonext { margin-top: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; color: #6b6b86; }
+.pc-arena-chev { flex: none; font-size: 18px; line-height: 1; color: #6b6b86; }
 .pc-prov { margin-top: 16px; padding: 12px 18px 4px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
 .pc-prov span { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 13px; color: #9090a8; }
 .pc-skeleton { padding: 60px 22px; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 2px; color: #6b6b86; }

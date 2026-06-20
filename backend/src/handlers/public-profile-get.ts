@@ -31,7 +31,12 @@ interface ProfileRow {
   club_100k_repeat: number | null;
   club_100k_best: number | null;
   combatant_json: string | null;
+  arena_elo: number | null;
+  arena_pg: number | null;          // placement_games this season (placed once >= 5)
+  arena_above: number | null;       // # of placed hunters above this ELO → global rank = +1
 }
+
+const PVP_PLACEMENT_GAMES = 5;      // a hunter is "placed" (shows a rank) once placement_games hits this
 
 export async function handlePublicProfileGet(
   request: Request,
@@ -66,9 +71,14 @@ export async function handlePublicProfileGet(
             (SELECT repeat_count FROM user_accolades
               WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_repeat,
             (SELECT best_value FROM user_accolades
-              WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_best
+              WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_best,
+            pr.elo AS arena_elo,
+            pr.placement_games AS arena_pg,
+            (SELECT COUNT(*) FROM pvp_ratings r2
+              WHERE r2.elo > pr.elo AND r2.placement_games >= ${PVP_PLACEMENT_GAMES}) AS arena_above
      FROM users u
      LEFT JOIN public_profile_summary pps ON pps.user_id = u.id
+     LEFT JOIN pvp_ratings pr ON pr.user_id = u.id
      WHERE LOWER(u.alias) = LOWER(?)
      LIMIT 1`,
   )
@@ -84,10 +94,19 @@ export async function handlePublicProfileGet(
   // (older client / not yet synced) → the profile card hides the Spar-Echo button.
   let combatant: unknown = null;
   try { if (row.combatant_json) combatant = JSON.parse(row.combatant_json); } catch (_) { /* corrupt → no echo */ }
+  // W444 — Arena Rating row (ClaudeDesign Hunter Profile refresh). Server-authoritative from
+  // pvp_ratings (no client publish). Only surfaced once the hunter is PLACED this season, so an
+  // unplaced/never-dueled hunter shows no rank line. Client derives tier/progress/to-next from elo.
+  const arenaElo = row.arena_elo != null ? Number(row.arena_elo) : null;
+  const arenaPlaced = arenaElo != null && Number(row.arena_pg || 0) >= PVP_PLACEMENT_GAMES;
+  const arena = arenaPlaced
+    ? { elo: arenaElo, global: Number(row.arena_above || 0) + 1, season: 1 }
+    : null;
   return jsonOk({
     alias: row.alias,
     combatant,
     canEcho: !!combatant,
+    arena,
     rankLabel: row.rank_label,
     rankTier: row.rank_tier,
     power: row.power ?? 0,
