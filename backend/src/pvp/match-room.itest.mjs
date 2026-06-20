@@ -206,6 +206,7 @@ async function botMatchTest() {
   const found = await api(t, 'POST', '/v1/pvp/find', { combatant: COMB_A });
   ok('find returns a code + bot opponent meta', !!(found.ok && found.code && found.vsBot && found.opponent && found.opponent.alias && typeof found.opponent.elo === 'number'), found);
   ok('match starts active vs the bot', !!(found.state && found.state.phase === 'active' && found.state.opp && found.state.opp.isBot === true), found.state && found.state.opp);
+  ok('the bot is reported CONNECTED (never "disconnected" — regression for the Echo d/c wedge)', found.state && found.state.oppConnected === true, found.state && { oppConnected: found.state.oppConnected });
   const code = found.code;
   let guard = 0, result = null;
   while (guard++ < 90) {

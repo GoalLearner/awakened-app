@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w436'; // W436 — fix duplicate EXIT on the Arena hub (remove .pvp-hub-exit; defer to the persistent shell #arena-close)
+  const APP_BUILD_TAG = '2.3.1-w437'; // W437 — Echo (bot) duels: bot is always connected (no false "disconnected" wedge + unfair forfeit loss)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11122,14 +11122,17 @@
     if (!view || _arView !== 'battle' || _pkbBusy) return;
     _pvpClearTimer();
     if (view.phase !== 'active') { _pvpClearStatus(); return; }
-    if (view.oppConnected === false) { _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting&hellip;'); return; }
+    // A bot (Echo) has no socket, so its oppConnected is always false — never render it as
+    // "disconnected" (that wedged the board on Echo duels). Only humans can disconnect.
+    if (view.oppConnected === false && !(view.opp && view.opp.isBot)) { _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting&hellip;'); return; }
     if (view.youSubmitted) _pvpSetStatus('waiting', 'Locked in &mdash; waiting for ' + esc(_pvpOppShort()) + '&hellip;');
     else _pvpSetStatus('your-turn', 'Your move');
     if (view.deadlineMs) _pvpStartTimer(view.deadlineMs);
   }
   function _pvpSetOppConnected(connected) {
     if (_arView !== 'battle') return;
-    if (connected) { _pvpSyncTurnUI(_pvpView); }
+    const isBot = _pvpWasBot || !!(_pvpView && _pvpView.opp && _pvpView.opp.isBot);
+    if (connected || isBot) { _pvpSyncTurnUI(_pvpView); }   // a bot is never "disconnected"
     else if (!_pkbBusy) { _pvpClearTimer(); _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting to reconnect&hellip;'); }
   }
   // HTTP-poll fallback: a resolved turn arrives ONLY as a 'state' (no turn_result to drive the

@@ -204,7 +204,10 @@ export class MatchRoom {
       p2: { userId: 'bot:' + String(bot.id || 'x'), alias: String(bot.alias || 'Bot'), combatant: sanitizeCombatant(bot.combatant), elo: botElo },
       botElo,
       turn: 1, moveHistory: [], pending: {}, deadlineMs: null,
-      connected: { p: false, b: false }, lastSeen: { p: 0, b: 0 },
+      // The bot (slot b) is ALWAYS present — it has no socket, so without this its connected
+      // flag would stay false forever and the client would render "<bot> disconnected — waiting"
+      // (and wedge the board). lastSeen[b]=0 keeps the disconnect-grace disabled for it anyway.
+      connected: { p: false, b: true }, lastSeen: { p: 0, b: 0 },
       result: null, startedAtMs: Date.now(), persisted: false,
     };
     this.armDeadline(nm);
