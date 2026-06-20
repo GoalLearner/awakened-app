@@ -238,9 +238,23 @@ export class MatchRoom {
     return { ok: true, code: m.code, state: this.view(m, userId) };
   }
 
+  // Keep an HTTP-active participant "present". A player on the poll FALLBACK (WS dropped) has no
+  // socket, so without this their lastSeen goes stale and the disconnect-grace alarm force-forfeits
+  // them mid-match despite active play (a spurious ranked loss). Stamps at most once / 10s. Bots
+  // (no slot for a 'bot:' id) are unaffected. Returns true if it changed (caller should save).
+  touchPresence(m: MatchState, userId: string): boolean {
+    const slot = this.slotFor(m, userId);
+    if (!slot) return false;
+    const now = Date.now();
+    if (now - (m.lastSeen[slot] || 0) < 10_000) return false;
+    m.lastSeen[slot] = now;
+    return true;
+  }
+
   async doState(userId: string): Promise<any> {
     const m = await this.load();
     if (!m) return { ok: false, code: 'NO_MATCH' };
+    if (m.phase === 'active' && this.touchPresence(m, userId)) await this.save(m);   // poll = present
     return { ok: true, state: this.view(m, userId) };
   }
 
@@ -260,6 +274,7 @@ export class MatchRoom {
     const cd = slot === 'p' ? sess.cd : sess.bcd;
     const legal = kit.some((x: any) => x.id === moveId) ? !(cd[moveId] > 0) : moveId === 'struggle';
     if (!legal) return { ok: false, code: 'ILLEGAL_MOVE' };
+    m.lastSeen[slot] = Date.now();   // an HTTP submit = present (poll-transport players never have a live WS)
     m.pending[slot] = moveId;
     await this.resolveIfReady(m, sess);
     await this.save(m);
