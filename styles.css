@@ -28143,6 +28143,74 @@ button.guildhall-summary-tile:active {
 .pkb-spot::before { content: ''; position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); width: 70%; height: 16%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent 75%); }
 .pkb-spot .spr { position: relative; width: 78%; height: 90%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.55)); }
 .pkb-spot .spr img, .pkb-spot .spr svg { width: 100%; height: 100%; object-fit: contain; }
+
+/* ── W428 · Combat Attack VFX (ClaudeDesign) — the attacker's signature strike, mounted
+   over the shared .pkb battle stage (Ascent + PvP). All scoped under .pkb-vfx so the inner
+   class names can't collide; keyframes are pkbfx*-prefixed. ── */
+.pkb-vfx { position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.pkb-whitepop { position: absolute; inset: 0; z-index: 7; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.5), transparent 45%); opacity: 0; }
+.pkb-whitepop.go { animation: pkbfxPop .3s ease-out both; }
+@keyframes pkbfxPop { 0% { opacity: 0; } 14% { opacity: .85; } 100% { opacity: 0; } }
+.pkb-strike { position: absolute; --tint: #f5b842; --edge: #fff; }
+.pkb-strike.down-fx { transform: rotate(180deg); }
+/* shared impact burst */
+.pkb-vfx .burst { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+.pkb-vfx .burst .flash { position: absolute; left: 0; top: 0; width: 54px; height: 54px; border-radius: 50%; transform: translate(-50%, -50%) scale(0); background: radial-gradient(circle, #fff, var(--tint) 35%, transparent 70%); }
+.pkb-vfx .burst .ring2 { position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--edge); transform: translate(-50%, -50%) scale(0); }
+.pkb-vfx .burst .sp { position: absolute; left: 0; top: 0; width: 3px; height: 11px; border-radius: 2px; background: linear-gradient(var(--edge), var(--tint)); transform: translate(-50%, -50%) rotate(var(--a)) translateY(0); transform-origin: 50% 50%; opacity: 0; }
+.pkb-strike.go .burst .flash { animation: pkbfxFlash .26s ease-out both var(--bd, 0s); }
+.pkb-strike.go .burst .ring2 { animation: pkbfxRing .32s ease-out both var(--bd, 0s); }
+.pkb-strike.go .burst .sp { animation: pkbfxSpark .34s ease-out both var(--bd, 0s); }
+@keyframes pkbfxFlash { 0% { transform: translate(-50%,-50%) scale(0); opacity: 0; } 25% { opacity: 1; } 55% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.4); opacity: 0; } }
+@keyframes pkbfxRing { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 0; } 30% { opacity: .9; } 100% { transform: translate(-50%,-50%) scale(2.4); opacity: 0; } }
+@keyframes pkbfxSpark { 0% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(-4px) scaleY(.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(-34px) scaleY(1.1); } }
+.pkb-strike.crit .burst { transform: translate(-50%,-50%) scale(1.5); }
+.pkb-strike.crit .burst .flash { background: radial-gradient(circle, #fff, #fff 30%, var(--tint) 55%, transparent 72%); }
+/* melee arcs */
+.pkb-vfx .arc { overflow: visible; }
+.pkb-vfx .arc path { fill: none; stroke: var(--edge); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 220; stroke-dashoffset: 220; filter: drop-shadow(0 0 5px var(--tint)); }
+.pkb-vfx .arc path.glow { stroke: var(--tint); stroke-width: 11; opacity: .5; }
+.pkb-strike.go .arc path { animation: pkbfxDraw .16s cubic-bezier(.4,0,.3,1) both, pkbfxArcFade .22s ease-in .17s forwards; }
+@keyframes pkbfxDraw { to { stroke-dashoffset: 0; } }
+@keyframes pkbfxArcFade { to { opacity: 0; } }
+.pkb-strike.fx-dagger .a2 path { animation-delay: .07s, .24s !important; }
+/* blunt shock */
+.pkb-vfx .shock { position: absolute; left: 0; top: 0; width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--edge); transform: translate(-50%,-50%) scale(0); box-shadow: 0 0 16px var(--tint); }
+.pkb-strike.go .shock { animation: pkbfxShock .4s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes pkbfxShock { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 0; } 22% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(3.2); opacity: 0; } }
+.pkb-strike.fx-blunt .burst { transform: translate(-50%,-50%) scale(1.25); }
+/* ranged projectile + trail */
+.pkb-vfx .proj { position: absolute; left: 0; top: 0; transform: translate(-50%, 220px); }
+.pkb-vfx .proj svg { display: block; filter: drop-shadow(0 0 4px var(--tint)); }
+.pkb-vfx .trail { position: absolute; left: 0; top: 0; width: 2px; height: 160px; transform: translate(-50%, 40px); transform-origin: 50% 100%; background: linear-gradient(var(--tint), transparent); opacity: 0; border-radius: 2px; }
+.pkb-strike.go .proj { animation: pkbfxFly var(--ft, .19s) cubic-bezier(.45,0,.7,.4) both; }
+.pkb-strike.go .trail { animation: pkbfxTrail var(--ft, .19s) ease-in both; }
+.pkb-strike.go.fx-arrow .burst, .pkb-strike.go.fx-bolt .burst { --bd: var(--ft, .19s); }
+@keyframes pkbfxFly { from { transform: translate(-50%, 220px); } to { transform: translate(-50%, 0); } }
+@keyframes pkbfxTrail { 0% { opacity: 0; transform: translate(-50%, 200px) scaleY(.2); } 40% { opacity: .8; } 100% { opacity: 0; transform: translate(-50%, 0) scaleY(1); } }
+.pkb-strike.fx-bolt .proj svg { filter: drop-shadow(0 0 7px var(--tint)) drop-shadow(0 0 3px #fff); }
+.pkb-strike.fx-bolt .trail { width: 3.5px; }
+/* magic cast -> orb -> burst */
+.pkb-vfx .cast { position: absolute; left: 0; top: 220px; transform: translate(-50%,-50%); }
+.pkb-vfx .cast svg { display: block; }
+.pkb-vfx .cast .runes { transform-origin: 50% 50%; opacity: 0; }
+.pkb-strike.go .cast .runes { animation: pkbfxCast .34s ease-out both; }
+@keyframes pkbfxCast { 0% { opacity: 0; transform: scale(.3) rotate(-40deg); } 40% { opacity: 1; transform: scale(1.05) rotate(10deg); } 70% { opacity: .9; transform: scale(1) rotate(0); } 100% { opacity: 0; transform: scale(1.1) rotate(14deg); } }
+.pkb-vfx .orb { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; transform: translate(-50%, 220px) scale(0); background: radial-gradient(circle at 40% 35%, #fff, var(--tint) 55%, transparent 75%); box-shadow: 0 0 16px var(--tint), 0 0 6px #fff; }
+.pkb-strike.go .orb { animation: pkbfxOrb .34s ease-in both .16s; }
+@keyframes pkbfxOrb { 0% { transform: translate(-50%, 220px) scale(0); } 22% { transform: translate(-50%, 200px) scale(1); } 100% { transform: translate(-50%, 4px) scale(1); } }
+.pkb-strike.fx-magic .burst { --bd: .46s; }
+.pkb-strike.fx-frost .burst .sp { width: 4px; height: 9px; border-radius: 1px; background: linear-gradient(#fff, var(--tint)); }
+.pkb-strike.fx-frost .burst .flash { background: radial-gradient(circle, #fff, var(--tint) 45%, transparent 72%); }
+.pkb-strike.fx-fire .burst .sp { width: 5px; height: 5px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--tint) 60%, transparent); }
+.pkb-vfx .ember { position: absolute; left: 0; top: 0; width: 4px; height: 4px; border-radius: 50%; background: var(--tint); opacity: 0; transform: translate(-50%,-50%); }
+.pkb-strike.go .ember { animation: pkbfxEmber .5s ease-out both .42s; }
+@keyframes pkbfxEmber { 0% { opacity: 0; transform: translate(calc(-50% + var(--ex)), 0) scale(1); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--ex)), -40px) scale(.3); } }
+@media (prefers-reduced-motion: reduce) {
+  .pkb-strike.go .arc, .pkb-strike.go .proj, .pkb-strike.go .trail, .pkb-strike.go .cast, .pkb-strike.go .orb, .pkb-strike.go .shock, .pkb-strike.go .ember { display: none !important; }
+  .pkb-strike.go .burst .ring2, .pkb-strike.go .burst .sp { animation: none !important; opacity: 0 !important; }
+  .pkb-strike.go .burst .flash { animation: pkbfxFlash .18s ease-out both !important; }
+}
 /* W254 — visual upscale on the FOE image only: grows upward from the feet
    (bottom origin) into the sky with ZERO layout movement — the box, plate,
    platform, and air gap are untouched. The art is ~35% narrower than its box,

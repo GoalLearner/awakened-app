@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w427'; // W427 — Post-Match Result card redesign (ClaudeDesign): outcome banner, recap, animated ELO, claim-to-ceremony
+  const APP_BUILD_TAG = '2.3.1-w428'; // W428 — Combat Attack VFX (ClaudeDesign) on the shared .pkb battle (Ascent + PvP)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9237,12 +9237,76 @@
       default:       return 'hit_normal';
     }
   }
+  // ── W428 · Combat Attack VFX (ClaudeDesign "Combat Attack VFX") — one signature
+  // strike per combat style mounted over the shared .pkb battle stage, so it plays in
+  // BOTH the Ascent AND PvP (same battle UI). Pure CSS+SVG; mounts on impact, plays once,
+  // self-cleans. Authored attacking UP (impact at the top/foe spot); a foe strike adds
+  // .down-fx (rotate 180deg) onto the player. Glyph family (move.gl) picks the effect.
+  const _PKB_GL_TO_FX = { sword: 'sword', dagger: 'dagger', shield: 'blunt', ranged: 'arrow', burst: 'fire', magic: 'arcane' };
+  function _pkbBurst(n, extra) {
+    let sps = '';
+    for (let i = 0; i < n; i++) sps += '<i class="sp" style="--a:' + Math.round(i * (360 / n)) + 'deg"></i>';
+    return '<div class="burst"><span class="flash"></span><span class="ring2"></span>' + sps + (extra || '') + '</div>';
+  }
+  function _pkbMagicHtml(tint, fire) {
+    let embers = '';
+    if (fire) { for (let i = 0; i < 7; i++) embers += '<span class="ember" style="--ex:' + ((i - 3) * 9) + 'px"></span>'; }
+    return '<div class="cast"><svg class="runes" width="86" height="86" viewBox="0 0 86 86">' +
+      '<circle cx="43" cy="43" r="34" fill="none" stroke="' + tint + '" stroke-width="2" stroke-dasharray="5 7" opacity=".9"/>' +
+      '<circle cx="43" cy="43" r="25" fill="none" stroke="' + tint + '" stroke-width="1.4" stroke-dasharray="2 6" opacity=".7"/>' +
+      '<g stroke="' + tint + '" stroke-width="1.6" opacity=".8"><path d="M43 12 L48 22 L38 22 Z"/><path d="M43 74 L48 64 L38 64 Z"/><path d="M12 43 L22 38 L22 48 Z"/><path d="M74 43 L64 38 L64 48 Z"/></g>' +
+      '</svg></div><span class="orb"></span>' + _pkbBurst(9, embers);
+  }
+  const _PKB_FX = {
+    sword:  { cls: 'fx-melee fx-sword', tint: '#f5b842', edge: '#fffdf5', html: '<svg class="arc" width="150" height="120" viewBox="0 0 150 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path class="glow" d="M14 96 Q70 6 138 40"/><path d="M14 96 Q70 6 138 40"/></svg>' + _pkbBurst(7) },
+    dagger: { cls: 'fx-melee fx-dagger', tint: '#cfe8ff', edge: '#ffffff', html: '<svg class="arc a1" width="130" height="120" viewBox="0 0 130 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path d="M20 98 L112 22"/></svg><svg class="arc a2" width="130" height="120" viewBox="0 0 130 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path d="M112 98 L20 22"/></svg>' + _pkbBurst(6) },
+    blunt:  { cls: 'fx-melee fx-blunt', tint: '#f5b842', edge: '#fffaf0', html: '<span class="shock"></span>' + _pkbBurst(8) },
+    arrow:  { cls: 'fx-ranged fx-arrow', tint: '#aee3ff', edge: '#ffffff', ft: '.2s', html: '<span class="trail"></span><div class="proj"><svg width="14" height="40" viewBox="0 0 14 40"><path d="M7 2 L7 34" stroke="#dfeefc" stroke-width="2"/><path d="M7 2 L3 9 M7 2 L11 9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 30 L3 38 M7 30 L11 38 M7 33 L7 40" stroke="#9fc2dd" stroke-width="1.6" stroke-linecap="round"/></svg></div>' + _pkbBurst(6) },
+    bolt:   { cls: 'fx-ranged fx-bolt', tint: '#7dd3fc', edge: '#ffffff', ft: '.14s', html: '<span class="trail"></span><div class="proj"><svg width="14" height="34" viewBox="0 0 14 34"><path d="M7 1 L7 30" stroke="#cdeeff" stroke-width="3.4"/><path d="M7 1 L2 10 M7 1 L12 10" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg></div>' + _pkbBurst(8) },
+    arcane: { cls: 'fx-magic fx-arcane', tint: '#c084fc', edge: '#efd9ff', html: _pkbMagicHtml('#c084fc') },
+    fire:   { cls: 'fx-magic fx-fire', tint: '#f0904a', edge: '#ffd9ad', html: _pkbMagicHtml('#f0904a', true) },
+    frost:  { cls: 'fx-magic fx-frost', tint: '#7dd3fc', edge: '#e6f6ff', html: _pkbMagicHtml('#7dd3fc') },
+  };
+  // Mount + play the strike effect at the defender's spot. defSide 'b' = foe (top, up);
+  // 'p' = player (bottom -> .down-fx rotates the effect 180deg). Crit amps the burst + a
+  // stage-wide white pop. The shake + damage number are owned by _pkbImpactFx (kept separate).
+  function _pkbStrikeFx(defSide, gl, crit) {
+    const stage = _pkbEl('pkb-stage'); if (!stage) return;
+    let layer = stage.querySelector('.pkb-vfx');
+    if (!layer) { layer = document.createElement('div'); layer.className = 'pkb-vfx'; stage.appendChild(layer); }
+    layer.innerHTML = '';
+    const f = _PKB_FX[_PKB_GL_TO_FX[gl] || 'sword'] || _PKB_FX.sword;
+    const root = document.createElement('div');
+    root.className = 'pkb-strike ' + f.cls + (crit ? ' crit' : '') + (defSide === 'p' ? ' down-fx' : '');
+    root.style.setProperty('--tint', f.tint);
+    root.style.setProperty('--edge', f.edge);
+    if (f.ft) root.style.setProperty('--ft', f.ft);
+    root.innerHTML = f.html;
+    const def = _pkbEl('pkb-spot-' + defSide);
+    if (def) {
+      try {
+        const r = def.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+        root.style.left = (r.left - sr.left + r.width / 2) + 'px';
+        root.style.top = (r.top - sr.top + r.height / 2) + 'px';
+      } catch (_) {}
+    }
+    layer.appendChild(root);
+    void root.offsetWidth;
+    root.classList.add('go');
+    if (crit) {
+      let pop = stage.querySelector('.pkb-whitepop');
+      if (!pop) { pop = document.createElement('div'); pop.className = 'pkb-whitepop'; stage.appendChild(pop); }
+      pop.classList.remove('go'); void pop.offsetWidth; pop.classList.add('go');
+    }
+    _pkbAfter(700, function () { if (layer.firstChild === root) layer.innerHTML = ''; });
+  }
   function _pkbImpactFx(e, defSide, dmgShown) {
     const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
     if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
     else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
     try { _audCue(e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
+    try { _pkbStrikeFx(defSide, e.gl, !!e.crit); } catch (_) {}   // W428 — the attacker's signature strike VFX (Ascent + PvP)
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
   // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
