@@ -30363,11 +30363,9 @@ button.guildhall-summary-tile:active {
 .pvp-hub { position: relative; display: flex; flex-direction: column; min-height: 100%; padding: 2px 4px 4px; --tier: #cbd5e1; --tier-deep: #5b6675; --tier-rim: #f4f8fc; }
 .pvp-hub-aura { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); width: 320px; height: 320px; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0.16; background: radial-gradient(circle, var(--tier), transparent 62%); }
 .pvp-hub > *:not(.pvp-hub-aura) { position: relative; z-index: 1; }
-.pvp-hub-top { display: flex; align-items: center; justify-content: space-between; }
+.pvp-hub-top { display: flex; align-items: center; }
 .pvp-hub-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; letter-spacing: 2px; color: #f5f3fb; }
 .pvp-hub-name span { color: #f5b842; }
-.pvp-hub-exit { display: flex; align-items: center; gap: 7px; border: 1px solid rgba(245,184,66,0.3); background: rgba(245,184,66,0.05); border-radius: 18px; padding: 7px 13px; color: #f5b842; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.15em; cursor: pointer; }
-.pvp-hub-exit:active { transform: translateY(1px); }
 .pvp-hub-season { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; height: 28px; border-radius: 9px; background: #101019; border: 1px solid rgba(255,255,255,0.07); font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.18em; color: #8a8aa2; text-transform: uppercase; }
 .pvp-hub-season .s { color: #f5f3fb; }
 .pvp-hub-season .d { color: #8a8aa2; }

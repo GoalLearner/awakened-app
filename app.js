@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w435'; // W435 — REVIEW_S3 dead-code sweep: removed orphaned _pvpRankBandHtml / _pvpStreakMilestoneHtml / _pvpRatingResultHtml + ~50 orphan CSS rules
+  const APP_BUILD_TAG = '2.3.1-w436'; // W436 — fix duplicate EXIT on the Arena hub (remove .pvp-hub-exit; defer to the persistent shell #arena-close)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10483,8 +10483,11 @@
   }
   function _pvpHubHtml() {
     const r = _pvpRating;
-    const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div>' +
-      '<button type="button" class="pvp-hub-exit" data-ar="tower">EXIT<svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>';
+    // No EXIT here: the persistent Arena shell pill (#arena-close, W208) already sits top-right
+    // and routes through _arExit -> _pvpExit -> the tower — identical to a data-ar="tower" EXIT.
+    // The ClaudeDesign Echo Mode mock was a standalone frame with no shell, so its topbar EXIT
+    // duplicated the shell one (two "EXIT ✕" pills). Defer to the shell affordance.
+    const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div></div>';
     const season = _pvpSeasonStripHtml(r);
     if (!r) {
       const loadingInner = _pvpRatingError
