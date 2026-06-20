@@ -63,12 +63,21 @@ async function httpMatch() {
 function wsClient(code, token) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + token);
-    const out = { end: null, turns: 0, ws };
+    const out = { end: null, turns: 0, mismatches: 0, ws };
     const to = setTimeout(() => { try { ws.close(); } catch {} reject(new Error('ws timeout')); }, 20000);
     ws.addEventListener('message', (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m.type === 'state' || m.type === 'match_start' || m.type === 'turn_result') {
-        if (m.type === 'turn_result') out.turns++;
+        if (m.type === 'turn_result') {
+          out.turns++;
+          // live session HP (ABSOLUTE: pHP=slot p, bHP=slot b) must equal the per-slot REBUILD HP
+          // (me/opp are RELATIVE to m.you) every turn — the determinism guarantee test 8 checks for
+          // bots (always slot p), here for humans where the joiner is slot b so the mapping flips.
+          const myLive = m.you === 'p' ? m.pHP : m.bHP;
+          const oppLive = m.you === 'p' ? m.bHP : m.pHP;
+          if (m.me && Math.abs((myLive || 0) - (m.me.hp || 0)) > 1e-6) out.mismatches++;
+          if (m.opp && Math.abs((oppLive || 0) - (m.opp.hp || 0)) > 1e-6) out.mismatches++;
+        }
         if (m.phase === 'active' && m.me && !m.youSubmitted) {
           try { ws.send(JSON.stringify({ type: 'submit_move', turn: m.turn, moveId: firstMove(m.me) })); } catch {}
         }
@@ -91,6 +100,9 @@ async function wsMatch() {
     ok('both WS clients receive match_end', !!(r1.end && r2.end), { r1: !!r1.end, r2: !!r2.end });
     ok('WS match has a winner', !!(r1.end && r1.end.result && (r1.end.result.winnerSide === 'p' || r1.end.result.winnerSide === 'b')), r1.end && r1.end.result);
     ok('both clients agree on the winner', !!(r1.end && r2.end && r1.end.result.winnerSide === r2.end.result.winnerSide), { a: r1.end && r1.end.result.winnerSide, b: r2.end && r2.end.result.winnerSide });
+    // human-vs-human replay determinism: each client's per-turn REBUILD HP must match the live
+    // broadcast every turn (RNG in lockstep). Bots are covered by test 8; this covers humans.
+    ok('human WS: live HP === rebuild HP every turn (no replay drift)', r1.mismatches === 0 && r2.mismatches === 0, { r1: r1.mismatches, r2: r2.mismatches, turns: r1.turns });
     console.log('     result:', JSON.stringify(r1.end && r1.end.result));
   } catch (e) { ok('WebSocket match (transport)', false, String(e && e.message)); }
 }
