@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w437'; // W437 — Echo (bot) duels: bot is always connected (no false "disconnected" wedge + unfair forfeit loss)
+  const APP_BUILD_TAG = '2.3.1-w438'; // W438 — PvP share card: top-anchor the avatar art so the head isn't cropped
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30134,7 +30134,11 @@
       const ih = art.naturalHeight || art.height || plateH;
       const scale = Math.max(plateW / iw, plateH / ih);
       const dw = iw * scale, dh = ih * scale;
-      ctx.drawImage(art, W / 2 - dw / 2, plateY + plateH / 2 - dh / 2, dw, dh);
+      // PvP cards use the player's AVATAR (a portrait, head at the top); center-cropping a tall
+      // portrait cuts the head off (same as the W430 VS-avatar fix). Anchor its top to the plate
+      // top so the head survives. Boss cards use ~square art -> keep them centered.
+      const dy = (d.source === 'pvp') ? plateY : (plateY + plateH / 2 - dh / 2);
+      ctx.drawImage(art, W / 2 - dw / 2, dy, dw, dh);
       const fade = ctx.createLinearGradient(0, plateY + plateH - 260, 0, plateY + plateH);
       fade.addColorStop(0, 'rgba(7,7,19,0)');
       fade.addColorStop(1, 'rgba(7,7,19,0.92)');
