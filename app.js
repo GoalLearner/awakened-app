@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w438'; // W438 — PvP share card: top-anchor the avatar art so the head isn't cropped
+  const APP_BUILD_TAG = '2.3.1-w439'; // W439 — Reclaim the Floor: re-fighting a cleared Ascent floor pays a daily-capped souls bounty
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3572,6 +3572,11 @@
         ref_id: id || null,
       };
     }
+    // W439 — Reclaim the Floor bounty. Hint shape: 'ascent_reclaim_<floor>' (15-char prefix).
+    if (h.indexOf('ascent_reclaim_') === 0) {
+      const fl = h.slice(15);
+      return { type: 'ascent_reclaim', label: 'Reclaimed Floor ' + fl, detail: 'Ascent bounty', ref_id: fl || null };
+    }
     // v3 Phase 1z.282D — The First Awakened rank-up gift. Hint
     // shape: 'fa_rankup_<rank>' (S+ encoded as 'fa_rankup_splus').
     // Checked early so neither boss-kill prefixes nor any other
@@ -6350,8 +6355,10 @@
   //   • 10 named milestone bosses every 10th floor (each +18% power),
   //     each granting a title. Regular floors are procedurally named.
   //   • Two prestige axes: FLOOR reached (build) + RATING (ELO skill).
-  //   • Daily fight limit paces the climb. Cosmetic only — never
-  //     touches souls / XP / rank / progression.
+  //   • Daily fight limit paces the climb. The RATED climb stays cosmetic — never
+  //     touches souls / XP / rank / progression. (W439: re-fighting a CLEARED floor as
+  //     an EXHIBITION pays a small daily-capped SOULS bounty — "Reclaim the Floor";
+  //     souls only, never XP/loot/relics, so rank + verified-effort purity are untouched.)
   // ═══════════════════════════════════════════════════════════════
   const ARENA_V2_KEY    = 'hb_arena_v2';          // new tower state
   const ARENA_TITLE_KEY = 'hb_arena_title';       // equipped cosmetic title id
@@ -6505,6 +6512,9 @@
       wins: 0, losses: 0,
       streak: 0, bestStreak: 0,
       dailyDate: '', dailyLosses: 0,
+      // W439 — "Reclaim the Floor": re-fighting a CLEARED floor pays a small daily-capped souls
+      // bounty (first win per floor per day). reclaimFloors = floors already paid today.
+      reclaimDate: '', reclaimFloors: [], reclaimSouls: 0,
     };
   }
   // One-time soft reset: discard legacy hb_arena_record, seed fresh v2.
@@ -6537,13 +6547,17 @@
       bestStreak:     num(st.bestStreak, 0),
       dailyDate:      (typeof st.dailyDate === 'string') ? st.dailyDate : '',
       dailyLosses:    num(st.dailyLosses, 0),
+      reclaimDate:    (typeof st.reclaimDate === 'string') ? st.reclaimDate : '',
+      reclaimFloors:  Array.isArray(st.reclaimFloors) ? st.reclaimFloors.filter((n) => typeof n === 'number').slice(0, 120) : [],
+      reclaimSouls:   num(st.reclaimSouls, 0),
     };
     // keep invariants
     if (st.currentFloor <= st.highestCleared) st.currentFloor = Math.min(ASCENT_FLOORS, st.highestCleared + 1);
     if (st.bestRating < st.rating) st.bestRating = st.rating;
-    // daily roll-over
+    // daily roll-over (rated lives + the reclaim bounty both reset together)
     let today = ''; try { today = getDeviceLocalDate(); } catch (_) {}
     if (today && st.dailyDate !== today) { st.dailyDate = today; st.dailyLosses = 0; }
+    if (today && st.reclaimDate !== today) { st.reclaimDate = today; st.reclaimFloors = []; st.reclaimSouls = 0; }
     return st;
   }
   function _persistAscentState(st) {
@@ -6552,6 +6566,15 @@
   function ascentLivesLeft() {
     const st = getAscentState();
     return Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
+  }
+  // W439 — Reclaim bounty: a small SOULS payout for re-clearing an old floor, depth-scaled by the
+  // floor's AI tier (deeper = more), +50% on a milestone-boss floor. Two bounds keep the souls
+  // faucet safe (see ASCENT_RECLAIM_DAILY_CAP): first-win-per-floor-per-day + a hard daily cap.
+  // SOULS only — never XP/loot/relics, so the rated climb + verified-effort purity stay untouched.
+  const ASCENT_RECLAIM_DAILY_CAP = 150;   // souls/day from reclaims (≈ below one C-boss kill = 200) — tune here
+  function _ascentReclaimBounty(floor) {
+    const base = ({ 2: 4, 3: 7, 4: 11, 5: 16 })[aiTierFor(floor)] || 4;
+    return _ascentIsBoss(floor) ? Math.round(base * 1.5) : base;
   }
   // Expected score (ELO) of the player vs a floor's implied rating.
   function _ascentFloorRating(floor) { return 800 + floor * 14; }   // F1≈814 … F100≈2200
@@ -7503,7 +7526,7 @@
     };
     // W280 — arena rating wiped. Outcomes = wins/losses/streak/lives + the
     // floor climb; no rating points computed or stored.
-    let advanced = false, floorCleared = null, bossCleared = null;
+    let advanced = false, floorCleared = null, bossCleared = null, reclaimedSouls = 0;
     if (rated) {
       if (won) { st.wins += 1; st.streak += 1; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
       else     { st.losses += 1; st.streak = 0; st.dailyLosses += 1; }
@@ -7513,8 +7536,17 @@
         advanced = true; floorCleared = m.floor;
         if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
       }
+    } else if (won && m.floor <= st.highestCleared) {
+      // W439 — Reclaim the Floor: the first won re-fight of a CLEARED floor TODAY pays a small
+      // souls bounty (bounded by the per-floor-once-per-day guard + the global daily cap). Souls
+      // only — no XP/loot/relics — so the rated climb + verified-effort purity stay untouched.
+      if (st.reclaimFloors.indexOf(m.floor) === -1 && st.reclaimSouls < ASCENT_RECLAIM_DAILY_CAP) {
+        const amt = Math.min(_ascentReclaimBounty(m.floor), ASCENT_RECLAIM_DAILY_CAP - st.reclaimSouls);
+        if (amt > 0) { st.reclaimFloors.push(m.floor); st.reclaimSouls += amt; reclaimedSouls = amt; }
+      }
     }
     _persistAscentState(st);
+    if (reclaimedSouls > 0) { try { earnSouls(reclaimedSouls, 'ascent_reclaim_' + m.floor); } catch (_) {} }   // after persist; the per-floor guard makes it double-pay-safe
     // W352 (G4/G9) — the title step is the throwable tail AFTER wins/losses are
     // persisted (above). If it threw, callers left _finalized unset and
     // _arFinishSession re-ran finalize -> double-counted records (forfeit: lost
@@ -7525,7 +7557,7 @@
     } catch (_) {}
     return {
       result, state: st, won, rated,
-      advanced, floorCleared, bossCleared, newTitles,
+      advanced, floorCleared, bossCleared, reclaimedSouls, newTitles,
       livesLeft: Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses),
     };
   }
@@ -8197,9 +8229,14 @@
       ? '<span class="al-dia"></span>'
       : '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.3l2.6 2.6L11 4.4" stroke="#6b6b86" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const title = '';   // W266 — boss titles retired (the gold diamond row remains)
+    // W439 — a tiny gold "+N" on floors that still pay a Reclaim bounty today (nothing once
+    // claimed or the daily cap is hit, so the list stays uncluttered).
+    const st = getAscentState();
+    const payable = st.reclaimFloors.indexOf(info.floor) === -1 && st.reclaimSouls < ASCENT_RECLAIM_DAILY_CAP;
+    const bounty = payable ? '<span class="al-bounty">+' + _ascentReclaimBounty(info.floor) + '</span>' : '';
     return '<div class="al-row' + (boss ? ' al-row--milestone' : '') + '" data-ar="rematch" data-floor="' + info.floor + '">' +
       mark + '<span class="fl">' + info.floor + '</span>' +
-      '<span class="nm">' + esc(info.opponent.name) + '</span>' + title +
+      '<span class="nm">' + esc(info.opponent.name) + '</span>' + title + bounty +
       '<svg class="al-redo" width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M11.5 7a4.5 4.5 0 1 1-1.4-3.2M11.5 1.8v2.4H9.1" stroke="#6b6b86" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
   }
 
@@ -8385,10 +8422,19 @@
     // W280 — arena rating wiped. The stakes are the CLIMB: a win ascends a
     // floor, a loss spends one of the day's lives. No points, no rating.
     if (!m.advances) {
+      // W439 — Reclaim the Floor: a won re-fight of a cleared floor pays a daily-capped souls
+      // bounty (first win per floor per day). Surface it in place of "nothing at stake".
+      const cleared = m.floor <= st.highestCleared;
+      const claimed = st.reclaimFloors.indexOf(m.floor) !== -1;
+      const capHit = st.reclaimSouls >= ASCENT_RECLAIM_DAILY_CAP;
+      const payable = cleared && !claimed && !capHit;
+      const txt = payable
+        ? '<b class="exb-bounty">Reclaim &middot; +' + _ascentReclaimBounty(m.floor) + ' souls</b> &mdash; your first win on this floor today.'
+        : 'Nothing at stake' + (claimed ? ' &mdash; reclaimed today.' : capHit ? ' &mdash; daily reclaim cap reached.' : ' &mdash; floor already cleared.') +
+          '<br><span class="dim">Replay for the fight, or to chase a FLAWLESS.</span>';
       return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
-        '<div class="asc-stakes exhibition"><div class="exb"><div class="exb-tag">EXHIBITION</div>' +
-        '<div class="exb-txt">Nothing at stake — floor already cleared.' +
-        '<br><span class="dim">Replay for the fight, or to chase a FLAWLESS.</span></div></div></div></div>';
+        '<div class="asc-stakes exhibition"><div class="exb"><div class="exb-tag">' + (payable ? 'RECLAIM' : 'EXHIBITION') + '</div>' +
+        '<div class="exb-txt">' + txt + '</div></div></div></div>';
     }
     const nextFloor = Math.min(ASCENT_FLOORS, m.floor + 1);
     const winRows = '<div class="row"><span class="v">▲</span><span class="d">' +
@@ -9856,8 +9902,11 @@
       : (f.rated
           ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">HELD AT FLOOR ' + _arMatchup.floor + '</span></div>' +
               '<div class="lbl">' + _livesTxt + '</div></div>'
-          : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
-              '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>');
+          : (f.reclaimedSouls > 0   // W439 — Reclaim the Floor payout
+              ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after" style="color:#f5b842">+' + f.reclaimedSouls + ' SOULS RECLAIMED</span></div>' +
+                  '<div class="lbl">' + Math.max(0, ASCENT_RECLAIM_DAILY_CAP - ((f.state && f.state.reclaimSouls) || 0)) + ' SOULS LEFT TO RECLAIM TODAY</div></div>'
+              : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
+                  '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>'));
     _arSet(
       '<div class="ar-result-hero">' +
         '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +

@@ -28454,6 +28454,9 @@ button.guildhall-summary-tile:active {
 .al-row--milestone .nm { color: #f5f3fb; }
 .al-row svg { flex: none; }
 .al-row .al-redo { margin-left: auto; }
+/* W439 — Reclaim the Floor: gold souls-bounty tag on a reclaimable cleared-floor row + the stakes line */
+.al-row .al-bounty { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; color: #f5b842; letter-spacing: 0.04em; flex: none; }
+.exb-bounty { color: #f5b842; font-weight: 800; font-style: normal; }
 .al-row .al-row-title { margin-left: auto; }
 .al-row .al-row-title + .al-redo { margin-left: 0; }
 .al-dia { width: 16px; display: flex; justify-content: center; flex: none; }
