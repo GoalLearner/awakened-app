@@ -30451,6 +30451,28 @@ button.guildhall-summary-tile:active {
 .pvp-hub-find .soon { position: absolute; top: 8px; right: 10px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #1a1205; background: rgba(255,255,255,0.45); border-radius: 5px; padding: 2px 6px; }
 .pvp-hub-friend { width: 100%; height: 44px; margin-top: 11px; border-radius: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #f5f3fb; background: #101019; border: 1px solid rgba(255,255,255,0.07); }
 .pvp-hub-friend svg { opacity: 0.7; }
+/* W441 — "Spar a Friend's Echo": a quieter sibling of the rated Echo (no pulse, muted teal) */
+.pvp-hub-friendecho { width: 100%; margin-top: 11px; border-radius: 14px; cursor: pointer; position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 15px; text-align: left; background: linear-gradient(160deg, rgba(90,214,200,0.08), rgba(43,182,166,0.025)); border: 1px solid rgba(90,214,200,0.26); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+.pvp-hub-friendecho:active { transform: translateY(1px); }
+.pvp-hub-friendecho .sig { width: 40px; height: 40px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 40%, rgba(90,214,200,0.14), rgba(8,8,26,0.35) 72%); box-shadow: inset 0 0 0 1px rgba(90,214,200,0.28); }
+.pvp-hub-friendecho .sig svg { width: 22px; height: 22px; }
+.pvp-hub-friendecho .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pvp-hub-friendecho .et { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; letter-spacing: 0.6px; color: #eef0f6; line-height: 1; }
+.pvp-hub-friendecho .es { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #7fd6cb; margin-top: 6px; }
+.pvp-hub-friendecho .go { flex: none; display: flex; align-items: center; gap: 7px; color: #5ad6c8; }
+.pvp-hub-friendecho .unratedtag { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #7fd6cb; border: 1px solid rgba(90,214,200,0.4); border-radius: 5px; padding: 2px 6px; }
+/* W441 — friend-Echo picker (list of accepted friends to spar) */
+.pvp-echo-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pvp-echo-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 13px; border-radius: 12px; cursor: pointer; text-align: left; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); }
+.pvp-echo-row:active { transform: translateY(1px); background: rgba(90,214,200,0.08); border-color: rgba(90,214,200,0.3); }
+.pvp-echo-row .av { width: 38px; height: 38px; flex: none; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, rgba(90,214,200,0.18), rgba(8,8,26,0.5) 72%); box-shadow: inset 0 0 0 1px rgba(90,214,200,0.25); }
+.pvp-echo-row .av img { width: 100%; height: 100%; object-fit: cover; }
+.pvp-echo-row .av .mono { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 17px; color: #5ad6c8; }
+.pvp-echo-row .nm { flex: 1; min-width: 0; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; color: #f5f3fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-echo-row .go { flex: none; color: #5ad6c8; opacity: 0.8; display: flex; align-items: center; }
+.pvp-echo-empty { text-align: center; padding: 34px 18px; }
+.pvp-echo-empty-t { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 18px; color: #f5f3fb; }
+.pvp-echo-empty-s { font-family: "JetBrains Mono", monospace; font-size: 10.5px; line-height: 1.6; color: #8a8aa2; margin-top: 8px; }
 .pvp-hub-tertiary { display: flex; align-items: center; justify-content: center; margin-top: 14px; }
 .pvp-hub-tertiary a { flex: 1; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8aa2; cursor: pointer; }
 .pvp-hub-tertiary .div { width: 1px; height: 12px; background: rgba(255,255,255,0.07); }

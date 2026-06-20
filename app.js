@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w440'; // W440 — Duel a Friend's Echo: spar an unranked AI mirror of an accepted friend's published loadout
+  const APP_BUILD_TAG = '2.3.1-w441'; // W441 — Spar a Friend's Echo entry on the Arena hub (friend picker) + inline echo-error surfacing
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10135,6 +10135,8 @@
       else if (a === 'pvpsoonclose') { _pvpHubSheetToggle(false); }
       else if (a === 'pvpsoonecho')  { _pvpHubSheetToggle(false); try { _pvpFindMatch(); } catch (_) {} }
       else if (a === 'pvpfriend') { try { _pvpRenderLobby('friend'); } catch (_) {} }
+      else if (a === 'pvpfriendecho') { try { _pvpOpenFriendEchoPicker(); } catch (_) {} }   // W441 — pick a friend to spar their Echo (unranked)
+      else if (a === 'pvpechopick')   { try { _pvpEchoFriend(act.getAttribute('data-alias'), act.getAttribute('data-avatar')); } catch (_) {} }
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvprematch'){ try { _pvpRequestRematch(); } catch (_) {} }
       else if (a === 'pvprematchno'){ try { _pvpDeclineRematch(); } catch (_) {} }
@@ -10341,6 +10343,7 @@
   let _pvpFriendEcho = false;      // W440 — the just-started duel is a FRIEND's Echo (unranked mirror)
   let _pvpEchoName = '';           // the friend whose Echo we're sparring (for the "Spar again" rematch)
   let _pvpEchoAvatar = '';         // that friend's avatar (for the summon screen + rematch)
+  let _pvpEchoFriends = null;      // W441 — cached accepted-friends list for the Arena "Spar a Friend's Echo" picker
   let _pvpVsTimer = null;          // pre-match VS auto-advance
   let _pvpVsCountTimer = null;     // pre-match VS 3-2-1 countdown ticker
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
@@ -10535,6 +10538,13 @@
       '<button type="button" class="pvp-hub-find pvp-hub-soon" data-ar="pvpsoon">' +
         '<span class="soon">Soon</span>' +
         '<span class="lbl">Find Match<small>Ranked Queue</small></span>' +
+      '</button>' +
+      // W441 — Spar a Friend's Echo: an UNRANKED AI mirror of an accepted friend's published loadout.
+      // Distinct from the rated "Spar an Echo" above (the "Friend's" + the Unrated tag disambiguate).
+      '<button type="button" class="pvp-hub-friendecho" data-ar="pvpfriendecho">' +
+        '<span class="sig">' + _PVP_ECHO_SIG + '</span>' +
+        '<span class="txt"><span class="et">Spar a Friend&rsquo;s Echo</span><span class="es">Unrated &middot; mirror a friend&rsquo;s loadout</span></span>' +
+        '<span class="go"><span class="unratedtag">Unrated</span>' + _PVP_ECHO_CHEV + '</span>' +
       '</button>' +
       '<button type="button" class="pvp-hub-friend" data-ar="pvpfriend">' +
         '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><rect x="1" y="3.5" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 6.5h2M3.5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
@@ -10865,7 +10875,14 @@
       try { _pvpTeardown(); } catch (_) {}
       return;
     }
-    if (!(r && r.ok && r.code)) { _pvpFriendEcho = false; _pvpRenderLobby('home', { err: _pvpEchoErr(r) }); return; }
+    if (!(r && r.ok && r.code)) {
+      // land on the friend-Echo picker with an inline reason (a NO_ECHO friend just hasn't updated
+      // yet) — '_pvpRenderLobby("home")' would swallow the message. Picker = a natural "pick another".
+      _pvpFriendEcho = false;
+      const fl = _pvpEchoFriends || (_friendsCache && Array.isArray(_friendsCache.friends) ? _friendsCache.friends : []);
+      _pvpRenderFriendEchoPicker(fl, { err: alias + ' — ' + _pvpEchoErr(r) });
+      return;
+    }
     _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
     _pvpOpponentMeta = r.opponent || null;
     if (r.state) _pvpStartVs(r.state);
@@ -10873,11 +10890,63 @@
   // Friendly, specific copy for the Echo-summon failure modes (the generic _pvpErr is rank-flavoured).
   function _pvpEchoErr(r) {
     const c = (r && (r.code || r.error)) || '';
-    if (c === 'NOT_FRIENDS') return 'You can only spar an accepted friend’s Echo.';
-    if (c === 'NO_ECHO')     return 'They haven’t published a loadout to spar yet.';
-    if (c === 'NOT_FOUND')   return 'That hunter could not be found.';
-    if (c === 'RATE_LIMITED') return 'Slow down a moment, then try again.';
+    if (c === 'NOT_FRIENDS') return 'you can only spar an accepted friend’s Echo.';
+    if (c === 'NO_ECHO')     return 'they haven’t published a loadout to spar yet (needs the latest app version).';
+    if (c === 'NOT_FOUND')   return 'that hunter could not be found.';
+    if (c === 'RATE_LIMITED') return 'slow down a moment, then try again.';
     return _pvpErr(r);
+  }
+  // W441 — the Arena "Spar a Friend's Echo" picker: list accepted friends; tap one to summon an
+  // unranked AI mirror of their published loadout. (Friends who haven't updated yet surface a clear
+  // "hasn't published" message on tap rather than being hidden — no extra per-friend profile fetch.)
+  async function _pvpOpenFriendEchoPicker() {
+    if (!_pvpRequireAuth()) return;
+    _pvpFriendEcho = false;
+    _arView = 'pvp-lobby'; _arBodyMode(false); _arClearTimers();
+    _pvpRenderFriendEchoPicker(_pvpEchoFriends);   // cached list (or null → loader) for an instant paint
+    let res = null;
+    try { if (window.Auth && Auth.fetchFriends) res = await Auth.fetchFriends(); } catch (_) {}
+    if (_arView !== 'pvp-lobby') return;            // navigated away while fetching
+    if (res && res.ok && Array.isArray(res.friends)) { _friendsCache = res; _pvpEchoFriends = res.friends; }
+    else if (_pvpEchoFriends == null) { _pvpEchoFriends = (_friendsCache && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : []; }
+    _pvpRenderFriendEchoPicker(_pvpEchoFriends);
+  }
+  function _pvpRenderFriendEchoPicker(friends, opts) {
+    _arView = 'pvp-lobby'; opts = opts || {};
+    const err = opts.err ? '<div class="pvp-err">' + esc(opts.err) + '</div>' : '';
+    let body;
+    if (friends === null) {
+      body = '<div class="pvp-wait"><div class="pvp-spinner"></div><div class="pvp-wait-t">Loading your guild&hellip;</div></div>';
+    } else if (!friends.length) {
+      body = '<div class="pvp-echo-empty">' +
+        '<div class="pvp-echo-empty-t">No friends yet</div>' +
+        '<div class="pvp-echo-empty-s">Add hunters from the Guild, then spar an AI mirror of their loadout here &mdash; unrated, anytime, even when they&rsquo;re offline.</div>' +
+        '</div>';
+    } else {
+      const rows = friends.map(function (f) {
+        const al = (f && typeof f.alias === 'string') ? f.alias : '';
+        if (!al) return '';
+        const av = _pvpSafeAvatar((f && (f.avatarId || f.avatar)) || '');
+        const sprite = av ? '<img src="' + esc(av) + '" alt="">' : '<span class="mono">' + esc((al[0] || '?').toUpperCase()) + '</span>';
+        return '<button type="button" class="pvp-echo-row" data-ar="pvpechopick" data-alias="' + esc(al) + '" data-avatar="' + esc(av) + '">' +
+          '<span class="av">' + sprite + '</span>' +
+          '<span class="nm">' + esc(al) + '</span>' +
+          '<span class="go">' + _PVP_ECHO_CHEV + '</span>' +
+        '</button>';
+      }).join('');
+      body = err + '<div class="pvp-echo-list">' + rows + '</div>' +
+        '<div class="pvp-friendly-hint">An Echo is an AI mirror of a friend&rsquo;s real loadout &mdash; <b>unrated</b>, and they needn&rsquo;t be online. A friend must be on the latest app version for their Echo to be summonable.</div>';
+    }
+    _arSet(
+      '<div class="pvp-lobby">' +
+        '<div class="pvp-lobby-head"><span class="k"><i></i>FRIENDLY ECHO<i></i></span>' +
+          '<div class="pvp-lobby-title">Spar a Friend&rsquo;s Echo</div>' +
+          '<div class="pvp-lobby-sub">Unrated &middot; an AI mirror of their loadout</div></div>' +
+        body +
+        '<div class="ar-spacer"></div>' +
+        '<button class="ar-ghost" data-ar="pvplobby">&lsaquo; Back to the Arena</button>' +
+      '</div>'
+    );
   }
   async function _pvpCreate() {
     if (!_pvpRequireAuth()) return;
