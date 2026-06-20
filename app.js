@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w433'; // W433 — Arena "Echo Mode": Spar an Echo (rated AI duel) primary, Find Match coming-soon sheet
+  const APP_BUILD_TAG = '2.3.1-w434'; // W434 — REVIEW_S3 client correctness: poll-fallback re-arm, rematch-UI preserve, late-rating re-render, rating-fetch retry
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10093,6 +10093,7 @@
       else if (a === 'pvpladder') { try { _pvpOpenLeaderboard(); } catch (_) {} }
       else if (a === 'pvphistory'){ try { _pvpOpenHistory(); } catch (_) {} }
       else if (a === 'pvplobby')  { try { _pvpOpenLobby(); } catch (_) {} }
+      else if (a === 'pvpretry')  { _pvpRatingError = false; try { _pvpRepaintRank(); _pvpFetchRating(); } catch (_) {} }   // retry a failed first rating load
       else if (a === 'pvpcerdone'){ try { _pvpCerFinish(); } catch (_) {} }
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
@@ -10275,6 +10276,7 @@
   let _pvpSubmitPending = false;   // I submitted + am waiting for the ack/resolve
   let _pvpSeenTurn = -1;           // last turn_result animated (dedup resync/poll redelivery)
   let _pvpRating = null;           // cached { elo, tier, wins, losses, draws, rank, placed }
+  let _pvpRatingError = false;     // first rating fetch failed + no cache -> hub shows a retry, not a stuck spinner
   let _pvpEndRating = null;        // { delta, elo, tier } from the just-finished ranked match
   let _pvpResultOutcome = null;    // 'win' | 'loss' | 'draw' for the result screen
   let _pvpOpponentMeta = null;     // { alias, elo, tier, weaponName } from Find Match (VS screen)
@@ -10485,9 +10487,10 @@
       '<button type="button" class="pvp-hub-exit" data-ar="tower">EXIT<svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>';
     const season = _pvpSeasonStripHtml(r);
     if (!r) {
-      return '<div class="pvp-hub">' + top + season +
-        '<div class="pvp-hub-loading"><div class="pvp-spinner"></div><span>Loading your standing&hellip;</span></div>' +
-        _pvpHubActionsHtml() + _pvpSoonSheetHtml() + '</div>';
+      const loadingInner = _pvpRatingError
+        ? '<div class="pvp-hub-loading err"><span>Couldn\'t load your standing.</span><button type="button" class="pvp-hub-retry" data-ar="pvpretry">Tap to retry</button></div>'
+        : '<div class="pvp-hub-loading"><div class="pvp-spinner"></div><span>Loading your standing&hellip;</span></div>';
+      return '<div class="pvp-hub">' + top + season + loadingInner + _pvpHubActionsHtml() + _pvpSoonSheetHtml() + '</div>';
     }
     const pl = _pvpPlacement(r);
     const placed = pl.placed;
@@ -10616,8 +10619,8 @@
   function _pvpFetchRating() {
     if (!(window.PvP && PvP.rating)) return;
     Promise.resolve(PvP.rating()).then(function (res) {
-      if (res && typeof res.elo === 'number') { _pvpRating = res; _pvpRepaintRank(); }
-    }).catch(function () {});
+      if (res && typeof res.elo === 'number') { _pvpRating = res; _pvpRatingError = false; _pvpRepaintRank(); }
+    }).catch(function () { if (!_pvpRating) { _pvpRatingError = true; _pvpRepaintRank(); } });   // don't strand the hub on the spinner — offer a retry
     // recent history -> current win streak + the last-5 form pips on the hub
     if (window.PvP && PvP.history) {
       Promise.resolve(PvP.history(12)).then(function (h) {
@@ -10829,7 +10832,7 @@
         if (msg.phase === 'active') {
           if (_arView === 'pvp-result') { _pvpBeginRematch(msg); }    // a rematch reset us into a new battle
           else if (!_pvpStarted) _pvpEnsureBattle(msg);
-          else _pvpSyncTurnUI(msg);
+          else { _pvpPollReconcile(msg); _pvpSyncTurnUI(msg); }   // poll fallback: snap a resolved turn before the status sync
         }
         else if (_arView === 'pvp-lobby') { _pvpRenderLobby('hosting', { code: msg.code }); }
         break;
@@ -11142,12 +11145,35 @@
     if (connected) { _pvpSyncTurnUI(_pvpView); }
     else if (!_pkbBusy) { _pvpClearTimer(); _pvpSetStatus('disconnected', esc(_pvpOppShort()) + ' disconnected &mdash; waiting to reconnect&hellip;'); }
   }
+  // HTTP-poll fallback: a resolved turn arrives ONLY as a 'state' (no turn_result to drive the
+  // beat director + re-arm the board). If we're holding our submit lock and the server shows a
+  // fresh, unsubmitted, ADVANCED turn, snap to it — mirror _pvpAnimateTurn's _arSess sync, but
+  // snap the HP bars instead of animating events the poll frame doesn't carry. Without this the
+  // board stays locked + the bars frozen after a submit on the poll transport (cl-flow#1). On WS
+  // this never fires: _pvpAnimateTurn clears _pvpSubmitPending before any later 'state' arrives.
+  function _pvpPollReconcile(view) {
+    const s = _arSess;
+    if (!s || !s._pvp || _arView !== 'battle' || !view || view.phase !== 'active') return false;
+    const advanced = (view.turn != null) && (view.turn > _pvpSeenTurn);
+    if (!(_pvpSubmitPending && view.youSubmitted === false && advanced)) return false;
+    const me = view.me || {}, opp = view.opp || {};
+    _pvpSeenTurn = view.turn; _pvpSubmitPending = false;
+    s.pMoves = me.kit || s.pMoves; s.cd = me.cd || {};
+    s.pEff = _pvpNum(me.eff, s.pEff); s.bEff = _pvpNum(opp.eff, s.bEff);
+    s.pS = me.status || s.pS; s.bS = opp.status || s.bS;
+    s.turn = view.turn;
+    s.pHP = _pvpNum(me.hp, s.pHP); s.bHP = _pvpNum(opp.hp, s.bHP);
+    try { _pkbSetHP('p', s.pHP, true); _pkbSetHP('b', s.bHP, true); } catch (_) {}
+    try { _pkbChips('p'); _pkbChips('b'); } catch (_) {}
+    _pkbLock(false); _pkbRefreshMoves();
+    return true;
+  }
 
   // ── end / result ──
   function _pvpHandleEnd(msg) {
     if (msg && msg.rating) _pvpEndRating = msg.rating;               // authoritative MMR delta
     const draw = !!(msg && msg.result && msg.result.winnerSide === 'draw');
-    if (_arView === 'pvp-result') { if (draw) _pvpResultOutcome = 'draw'; _pvpPatchResultRating(); return; }  // already shown -> fill the MMR line
+    if (_arView === 'pvp-result') { if (draw) _pvpResultOutcome = 'draw'; _pvpRenderResult(); return; }  // already shown -> re-render the live card with the late rating/draw (rematch-safe)
     _pvpView = msg || _pvpView;
     const youWon = !draw && ((typeof msg.youWon === 'boolean') ? msg.youWon : (msg.result ? msg.result.winnerSide === _pvpYou : false));
     const s = _arSess;
@@ -11291,6 +11317,9 @@
     return '<div class="pvp-rz-meta"><div class="pvp-rz-m"><div class="mv">' + rec + '</div><div class="mk">Record &middot; Season</div></div>' + streakTile + '</div>';
   }
   function _pvpRenderResult() {
+    // a re-render (late rating fetch / late match_end) must not wipe an in-flight rematch
+    // offer/wait — capture it and restore the rematch UI after the rebuild (cl-result-share#1).
+    const priorRematch = _pvpRematchState;
     _arClearTimers(); _pvpClearTimer();
     _arView = 'pvp-result';
     _arBodyMode(false);
@@ -11354,6 +11383,12 @@
       '</div>'
     );
     _pvpRematchState = 'idle';
+    // restore an in-flight rematch the rebuild just overwrote (no-ops in the promo CTA layout,
+    // which has no #pvp-rematch host — _pvpSetResultRematchUI guards on it).
+    if (priorRematch === 'waiting' || priorRematch === 'offered') {
+      _pvpRematchState = priorRematch;
+      try { _pvpSetResultRematchUI(priorRematch === 'offered' ? 'offer' : 'waiting'); } catch (_) {}
+    }
     try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
     try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
     try { const c = document.querySelector('.pvp-rz-card'); if (c) { void c.offsetWidth; c.classList.add('play'); } } catch (_) {}
@@ -11379,36 +11414,6 @@
       if (res && typeof res.elo === 'number') { _pvpRating = res; if (_arView === 'pvp-lobby') _pvpRepaintHub(); }
     }).catch(function () {});
   }
-  // The MMR block on the result: tier badge + new ELO + the +/- delta. Renders from
-  // _pvpEndRating (the match_end delta) if present, else a placeholder that
-  // _pvpFetchEndRating fills (fetch the new rating + derive the delta vs the pre-match cache).
-  function _pvpRatingResultHtml() {
-    const er = _pvpEndRating;
-    if (!er) return '<div class="pvp-mmr-row pvp-mmr-row--load"><span class="pvp-mmr-load">Updating your rank&hellip;</span></div>';
-    const t = _pvpTier(er.elo);
-    const d = (typeof er.delta === 'number') ? er.delta : null;
-    const dstr = d == null ? '' : (d > 0 ? '+' + d : '' + d);
-    const dcls = d == null ? '' : d > 0 ? ' up' : d < 0 ? ' down' : '';
-    // rank-up / rank-down moment: did this match cross a tier boundary? (placed hunters only)
-    let rc = '';
-    if (_pvpPreElo != null && _pvpPrePlaced) {
-      const preName = _pvpTier(_pvpPreElo).name;
-      if (preName !== t.name) {
-        const up = er.elo > _pvpPreElo;
-        rc = '<div class="pvp-rankchange ' + (up ? 'up' : 'down') + '" style="--rb:' + t.color + '">' +
-          (up ? '<div class="pvp-rc-emblem">' + _pvpTierEmblem(t.name, 52) + '</div>' : '') +
-          '<span class="pvp-rc-arrow">' + (up ? '&#9650;' : '&#9660;') + '</span>' +
-          '<span class="pvp-rc-tx">' + (up ? 'RANK UP' : 'RANK DOWN') + '</span>' +
-          '<span class="pvp-rc-tier">' + esc(t.name) + '</span></div>';
-      }
-    }
-    return rc + '<div class="pvp-mmr-row">' +
-      '<div class="pvp-mmr-badge" style="--rb:' + t.color + '">' + _pvpTierEmblem(t.name, 26) + esc(t.name) + '</div>' +
-      '<div class="pvp-mmr-elo">' + _pvpNum(er.elo) + '<i>ELO</i></div>' +
-      (d == null ? '' : '<div class="pvp-mmr-delta' + dcls + '">' + dstr + '</div>') +
-      '</div>';
-  }
-  function _pvpPatchResultRating() { const host = document.getElementById('pvp-mmr'); if (host) host.innerHTML = _pvpRatingResultHtml(); }
   function _pvpFetchEndRating() {
     if (!(window.PvP && PvP.rating)) { _pvpEndRatingFallback(); return; }
     Promise.resolve(PvP.rating()).then(function (res) {

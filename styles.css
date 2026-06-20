@@ -30451,6 +30451,9 @@ button.guildhall-summary-tile:active {
 .pvp-hub-tertiary a { flex: 1; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8a8aa2; cursor: pointer; }
 .pvp-hub-tertiary .div { width: 1px; height: 12px; background: rgba(255,255,255,0.07); }
 .pvp-hub-loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #8a8aa2; font-family: "JetBrains Mono", monospace; font-size: 11px; }
+.pvp-hub-loading.err { color: #b9728a; }
+.pvp-hub-retry { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #f5b842; background: rgba(245,184,66,0.06); border: 1px solid rgba(245,184,66,0.3); border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+.pvp-hub-retry:active { transform: translateY(1px); }
 .pvp-friendly-hint { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; line-height: 1.5; color: #6b6b86; margin-top: 14px; padding: 0 10px; }
 @media (prefers-reduced-motion: reduce) { .pvp-hub-echo::after, .pvp-hub-promo, .pvp-hub-season .live { animation: none !important; } .pvp-hub-echo::after { opacity: 0.6; } }
 /* W433 — Find Match coming-soon sheet + the Echo summon tagline */
