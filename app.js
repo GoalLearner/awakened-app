@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w442'; // W442 — App Store pre-submission: gate the dormant Founder IAP surface (2.1) + honest sign-in copy
+  const APP_BUILD_TAG = '2.3.1-w443'; // W443 — pre-duel VS screen is genuinely tap-to-begin (no 3-2-1 auto-advance; 18s safety fallback)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11075,17 +11075,12 @@
       '<span class="chip win">&#9650; Win +' + win + '</span>' +
       '<span class="chip loss">&#9660; Loss &minus;' + loss + '</span></div>';
   }
-  function _pvpVsCountStart() {
-    _pvpVsCountStop();
-    let n = 3;
-    _pvpVsCountTimer = setInterval(function () {
-      const el = document.getElementById('pvp-vs-count');
-      if (!el || _arView !== 'pvp-vs') { _pvpVsCountStop(); return; }
-      n -= 1;
-      el.textContent = n <= 0 ? '✦' : String(n);
-      if (n <= 0) _pvpVsCountStop();
-    }, 950);
-  }
+  // W443 — the pre-duel VS screen is TAP-TO-BEGIN: it waits for the player to tap "The Duel Begins"
+  // (no 3-2-1 auto-run into the battle). A long SAFETY fallback still auto-advances, purely so a
+  // player who never taps can't run out the server's 45s turn-1 deadline (match-room arms it at
+  // match creation) and forfeit the first turn to a default move. In normal use you tap in ~1-2s,
+  // so the fallback is invisible.
+  const _PVP_VS_AUTOSTART_MS = 18000;
   function _pvpVsCountStop() { if (_pvpVsCountTimer) { clearInterval(_pvpVsCountTimer); _pvpVsCountTimer = null; } }
   function _pvpStartVs(view) {
     _arView = 'pvp-vs'; _pvpView = view;
@@ -11125,7 +11120,7 @@
           _pvpVsHunter('foe', { sprite: foeSprite, alias: oppName, tier: oppTier, elo: oppElo, weapon: oppWeapon, friend: friend }) +
           '<div class="pvp-vs2-foot">' +
             _pvpVsStakesHtml(ranked, myElo, oppElo) +
-            '<button type="button" class="pvp-vs2-count" data-ar="pvpfight"><span class="lab">The Duel Begins</span><span class="num" id="pvp-vs-count">3</span></button>' +
+            '<button type="button" class="pvp-vs2-count" data-ar="pvpfight"><span class="lab">The Duel Begins</span><span class="num" id="pvp-vs-count">✦</span></button>' +
             '<div class="pvp-vs2-hint">tap to begin</div>' +
           '</div>' +
         '</div>' +
@@ -11134,9 +11129,8 @@
     try { const el = document.querySelector('.pvp-vs2'); if (el) { void el.offsetWidth; el.classList.add('play'); } } catch (_) {}
     try { _audUnlock(); playSfx('ar_engage'); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
-    _pvpVsCountStart();
     if (_pvpVsTimer) clearTimeout(_pvpVsTimer);
-    _pvpVsTimer = setTimeout(function () { _pvpVsToBattle(); }, 3200);
+    _pvpVsTimer = setTimeout(function () { _pvpVsToBattle(); }, _PVP_VS_AUTOSTART_MS);   // safety fallback only — the primary start is the tap
   }
   function _pvpVsToBattle() {
     if (_pvpVsTimer) { clearTimeout(_pvpVsTimer); _pvpVsTimer = null; } _pvpVsCountStop();
