@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w432'; // W432 — Ranked seasons + placement: season-scoped ELO, soft reset, hub season strip wired to live data
+  const APP_BUILD_TAG = '2.3.1-w433'; // W433 — Arena "Echo Mode": Spar an Echo (rated AI duel) primary, Find Match coming-soon sheet
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10082,6 +10082,9 @@
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
       else if (a === 'pvpfind')   { try { _pvpFindMatch(); } catch (_) {} }
+      else if (a === 'pvpsoon')      { _pvpHubSheetToggle(true); }    // W433 — Find Match (ranked queue) coming-soon sheet
+      else if (a === 'pvpsoonclose') { _pvpHubSheetToggle(false); }
+      else if (a === 'pvpsoonecho')  { _pvpHubSheetToggle(false); try { _pvpFindMatch(); } catch (_) {} }
       else if (a === 'pvpfriend') { try { _pvpRenderLobby('friend'); } catch (_) {} }
       else if (a === 'pvpfight')  { try { _pvpVsToBattle(); } catch (_) {} }
       else if (a === 'pvprematch'){ try { _pvpRequestRematch(); } catch (_) {} }
@@ -10404,6 +10407,32 @@
     const placed = (typeof r.placed === 'boolean') ? r.placed : (total >= need);
     return { games: Math.min(need, games), need: need, placed: placed };
   }
+  // ── W433 · "Echo Mode" (ClaudeDesign) — ranked has no population yet, so the honest stack:
+  // FIND MATCH (real human queue) is present but coming-soon; the live, RATED, playable mode is
+  // "Spar an Echo" — an ELO-matched AI hunter, openly labelled AI, that moves your real ELO.
+  const _PVP_ECHO_SIG = '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><circle cx="13" cy="13" r="3.4" fill="#5ad6c8"/><path d="M13 4.5a8.5 8.5 0 0 1 0 17" stroke="#5ad6c8" stroke-width="1.8" stroke-linecap="round" opacity=".8"/><path d="M13 1a12 12 0 0 1 0 24" stroke="#5ad6c8" stroke-width="1.6" stroke-linecap="round" opacity=".4"/></svg>';
+  const _PVP_ECHO_CHEV = '<svg width="7" height="12" viewBox="0 0 7 12" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // the coming-soon sheet for FIND MATCH (ranked queue not open yet) — slides up; toggled by class.
+  function _pvpSoonSheetHtml() {
+    return '<div class="pvp-hub-scrim" data-ar="pvpsoonclose"></div>' +
+      '<div class="pvp-hub-sheet">' +
+        '<div class="grip"></div>' +
+        '<div class="sicon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#f5b842" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="#f5b842" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+        '<h3>Ranked awakens soon</h3>' +
+        '<p>Not enough hunters have risen to fill the ranked queue yet. It opens in a future season &mdash; until then, Echo duels keep your climb alive: <b>rated</b> bouts against an AI hunter at your rank, so your ELO still moves.</p>' +
+        '<div class="nudge">' +
+          '<button type="button" class="spar" data-ar="pvpsoonecho">' + _PVP_ECHO_SIG + 'Spar an Echo instead</button>' +
+          '<button type="button" class="got" data-ar="pvpsoonclose">Got it</button>' +
+        '</div>' +
+      '</div>';
+  }
+  function _pvpHubSheetToggle(open) {
+    try {
+      const h = document.querySelector('.pvp-hub'); if (!h) return;
+      const s = h.querySelector('.pvp-hub-scrim'), sh = h.querySelector('.pvp-hub-sheet');
+      if (s) s.classList.toggle('on', open); if (sh) sh.classList.toggle('on', open);
+    } catch (_) {}
+  }
   // Season strip — "Season N · X days left" from the live season window (falls back to a bare
   // "Season 1" before the seasons backend answers).
   function _pvpSeasonStripHtml(r) {
@@ -10433,21 +10462,32 @@
   }
   function _pvpHubActionsHtml() {
     return '<div class="pvp-hub-actions">' +
-      '<button type="button" class="pvp-hub-find" data-ar="pvpfind"><span class="glint"></span>Find Match<small>Ranked Queue</small></button>' +
+      // Echo = the live, RATED, playable mode (primary) — reuses the ELO-matched bot duel (pvpfind).
+      '<button type="button" class="pvp-hub-echo" data-ar="pvpfind">' +
+        '<span class="sig">' + _PVP_ECHO_SIG + '</span>' +
+        '<span class="txt"><span class="et">Spar an Echo</span><span class="es">Rated duel &middot; AI hunter at your rank</span></span>' +
+        '<span class="go"><span class="ratedtag">Rated</span>Enter ' + _PVP_ECHO_CHEV + '</span>' +
+      '</button>' +
+      // Find Match = the real human ranked queue, present but coming-soon (opens an explainer sheet).
+      '<button type="button" class="pvp-hub-find pvp-hub-soon" data-ar="pvpsoon">' +
+        '<span class="soon">Soon</span>' +
+        '<span class="lbl">Find Match<small>Ranked Queue</small></span>' +
+      '</button>' +
       '<button type="button" class="pvp-hub-friend" data-ar="pvpfriend">' +
         '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><rect x="1" y="3.5" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 6.5h2M3.5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
-        'Duel a Friend &middot; share a code</button>' +
+        'Duel a Friend &middot; Share a Code</button>' +
       '<div class="pvp-hub-tertiary"><a data-ar="pvpladder">Ladder</a><span class="div"></span><a data-ar="pvphistory">Match History</a></div>' +
       '</div>';
   }
   function _pvpHubHtml() {
     const r = _pvpRating;
-    const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div></div>';
+    const top = '<div class="pvp-hub-top"><div class="pvp-hub-name">THE <span>ARENA</span></div>' +
+      '<button type="button" class="pvp-hub-exit" data-ar="tower">EXIT<svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>';
     const season = _pvpSeasonStripHtml(r);
     if (!r) {
       return '<div class="pvp-hub">' + top + season +
         '<div class="pvp-hub-loading"><div class="pvp-spinner"></div><span>Loading your standing&hellip;</span></div>' +
-        _pvpHubActionsHtml() + '</div>';
+        _pvpHubActionsHtml() + _pvpSoonSheetHtml() + '</div>';
     }
     const pl = _pvpPlacement(r);
     const placed = pl.placed;
@@ -10493,7 +10533,7 @@
         _pvpHubStatsHtml(r, r.rank ? '#' + _pvpNum(r.rank) : '&mdash;', 'Global');
     }
     return '<div class="pvp-hub"' + chrome + '><div class="pvp-hub-aura"></div>' +
-      top + season + hero + mid + _pvpHubActionsHtml() + '</div>';
+      top + season + hero + mid + _pvpHubActionsHtml() + _pvpSoonSheetHtml() + '</div>';
   }
   function _pvpRenderLobby(mode, x) {
     _arView = 'pvp-lobby';
@@ -10503,17 +10543,19 @@
     if (!mode || mode === 'home') { _arSet(_pvpHubHtml()); return; }
     let body, headK = 'RANKED PvP', headT = 'The Arena', headS = 'Real-time, server-judged.';
     if (mode === 'searching') {
-      // ranked queue scan (ClaudeDesign "Pre-Match VS · Searching") — your crest pulsing
-      // under scan rings while the ladder is searched near your ELO band.
-      headK = 'RANKED QUEUE'; headT = 'The Arena'; headS = '';
+      // W433 "Echo Mode" (ClaudeDesign) — summoning a RATED AI hunter (Echo) mirrored at your
+      // ELO band. Openly an AI; the duel still moves your rank. (Same teal scan-ring screen.)
+      headK = 'RATED DUEL'; headT = 'The Arena'; headS = '';
       let avatar = ''; try { avatar = _pvpSafeAvatar(getAvatarSrc()); } catch (_) {}
       const r = _pvpRating || {}, t = _pvpTier(r.elo != null ? r.elo : 1500);
-      body = '<div class="pvp-vs2-search">' +
+      const eloTxt = (r.elo != null ? _pvpNum(r.elo) : 1500).toLocaleString();
+      body = '<div class="pvp-vs2-search pvp-echo-summon">' +
         '<div class="pvp-vs2-scan"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>' +
           (avatar ? '<img class="spr" src="' + esc(avatar) + '" alt="">' : '<span class="emb">' + _pvpTierEmblem(t.name, 88) + '</span>') + '</div>' +
-        '<div class="pvp-vs2-search-eb">Ranked Queue &middot; Searching</div>' +
-        '<div class="pvp-vs2-search-h">Finding a worthy opponent&hellip;</div>' +
-        (r.elo != null ? '<div class="pvp-vs2-search-w">Searching near ' + _pvpNum(r.elo).toLocaleString() + ' ELO &middot; ' + esc(t.name) + '</div>' : '') +
+        '<div class="pvp-vs2-search-eb">Rated Duel &middot; Echo</div>' +
+        '<div class="pvp-vs2-search-h">Summoning an Echo</div>' +
+        '<div class="pvp-vs2-search-w">A construct mirroring a hunter near ' + eloTxt + ' ELO &middot; ' + esc(t.name) + '</div>' +
+        '<div class="pvp-echo-tag">AI opponent &middot; <b>counts toward your rank</b> &middot; rated duel</div>' +
         '</div>';
     } else if (mode === 'creating' || mode === 'joining') {
       const wt = mode === 'creating' ? 'Opening the arena&hellip;' : 'Joining the duel&hellip;';
