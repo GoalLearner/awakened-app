@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w428'; // W428 — Combat Attack VFX (ClaudeDesign) on the shared .pkb battle (Ascent + PvP)
+  const APP_BUILD_TAG = '2.3.1-w429'; // W429 — Defender Reaction VFX (ClaudeDesign) on the shared .pkb battle (Ascent + PvP)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9300,13 +9300,49 @@
     }
     _pkbAfter(700, function () { if (layer.firstChild === root) layer.innerHTML = ''; });
   }
+  // ── W429 · Defender Reaction VFX (ClaudeDesign "Defender Reactions & Focus") — the other
+  // half of the strike: how the DEFENDER responds, on the shared .pkb stage (Ascent + PvP).
+  // The reaction class rides the defender spot; particles mount in a .pkb-rfx overlay. Pairs
+  // with the attacker's _pkbStrikeFx on the same beat.
+  function _pkbReactRing(n, cls) { let h = ''; for (let i = 0; i < n; i++) h += '<span class="' + cls + '" style="--a:' + Math.round(i * 360 / n) + 'deg"></span>'; return h; }
+  function _pkbReactSpread(n, cls, span) { let h = ''; for (let i = 0; i < n; i++) h += '<span class="' + cls + '" style="--ex:' + Math.round((i - (n - 1) / 2) * (span / n)) + 'px"></span>'; return h; }
+  const _PKB_HEX_SVG = '<svg viewBox="0 0 120 120"><polygon points="60,8 104,34 104,86 60,112 16,86 16,34" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 6" opacity=".9"/><polygon points="60,22 92,40 92,80 60,98 28,80 28,40" fill="none" stroke="#c084fc" stroke-width="1.2" opacity=".5"/></svg>';
+  const _PKB_REACT = {
+    hit:    { html: _pkbReactRing(7, 'spk') },
+    crit:   { html: '<span class="shockring"></span>' + _pkbReactRing(9, 'spk') },
+    dodge:  { html: '<span class="ghost"></span><span class="swoosh"></span>' },   // the engine's DODGED! toast is the label
+    resist: { html: '<span class="ward"></span><span class="hexring">' + _PKB_HEX_SVG + '</span>' },
+    defeat: { html: _pkbReactSpread(7, 'ash', 70) },
+  };
+  function _pkbReactFx(defSide, kind) {
+    const spot = _pkbEl('pkb-spot-' + defSide); if (!spot) return;
+    const r = _PKB_REACT[kind]; if (!r) return;
+    let rfx = spot.querySelector('.pkb-rfx');
+    if (!rfx) { rfx = document.createElement('div'); rfx.className = 'pkb-rfx'; spot.appendChild(rfx); }
+    spot.classList.remove('r-hit', 'r-crit', 'r-dodge', 'r-resist', 'r-defeat', 'pkb-reacting');
+    rfx.className = 'pkb-rfx';
+    rfx.innerHTML = r.html;
+    void spot.offsetWidth;
+    spot.classList.add('r-' + kind, 'pkb-reacting');
+    if (r.label) {
+      const lbl = document.createElement('div'); lbl.className = 'pkb-react-status'; lbl.textContent = r.label;
+      try { lbl.style.color = r.color || '#f5f3fb'; } catch (_) {}
+      spot.appendChild(lbl); void lbl.offsetWidth; lbl.classList.add('go');
+      _pkbAfter(950, function () { try { lbl.remove(); } catch (_) {} });
+    }
+    if (kind === 'defeat') {
+      _pkbAfter(1100, function () { try { rfx.className = 'pkb-rfx'; rfx.innerHTML = ''; } catch (_) {} });   // keep the fallen sprite state; clear particles
+    } else {
+      _pkbAfter(1100, function () { try { spot.classList.remove('r-' + kind, 'pkb-reacting'); rfx.className = 'pkb-rfx'; rfx.innerHTML = ''; } catch (_) {} });
+    }
+  }
   function _pkbImpactFx(e, defSide, dmgShown) {
-    const def = _pkbEl('pkb-spot-' + defSide), stage = _pkbEl('pkb-stage');
-    if (defSide === 'b') { if (def) { def.classList.add('shake'); _pkbAfter(_PKB_T.impact, () => def.classList.remove('shake')); } }
-    else if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); }
+    // crit also gives the whole stage a quick nudge for weight
+    if (e.crit) { const stage = _pkbEl('pkb-stage'); if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); } }
     try { _audCue(e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
-    try { _pkbStrikeFx(defSide, e.gl, !!e.crit); } catch (_) {}   // W428 — the attacker's signature strike VFX (Ascent + PvP)
+    try { _pkbStrikeFx(defSide, e.gl, !!e.crit); } catch (_) {}            // W428 — attacker's signature strike
+    try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_) {}    // W429 — defender's recoil + red flash + sparks
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
   // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
@@ -9403,7 +9439,7 @@
     } else if (e.t === 'miss') {
       _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('MISS', 'miss', 'miss', next); });
     } else if (e.t === 'dodge') {
-      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('DODGED!', 'miss', 'miss', next); });
+      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} try { _pkbReactFx(e.side === 'p' ? 'b' : 'p', 'dodge'); } catch (_) {} _pkbToast('DODGED!', 'miss', 'miss', next); });
     } else if (e.t === 'dot') {
       // drain animates DURING the dwell — start it as the line lands, hold covers it
       const defSide = e.side === 'p' ? 'b' : 'p';
@@ -9484,6 +9520,7 @@
         const spot = _pkbEl('pkb-spot-' + loser), plate = _pkbEl('pkb-plate-' + loser);
         if (spot) spot.classList.add('ko');
         if (plate) plate.classList.add('ko');
+        try { _pkbReactFx(loser, 'defeat'); } catch (_) {}   // W429 — the fall + dissolve-to-ash death
       }
       try { if (navigator.vibrate) navigator.vibrate(drawn ? 18 : s.won ? 22 : [30, 40, 60]); } catch (_) {}
       try { _audCue('ko'); _audDuck(_pkbHoldMs(_PKB_T.koHold) + _PKB_T.ko); } catch (_) {}
