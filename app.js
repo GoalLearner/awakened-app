@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w441'; // W441 — Spar a Friend's Echo entry on the Arena hub (friend picker) + inline echo-error surfacing
+  const APP_BUILD_TAG = '2.3.1-w442'; // W442 — App Store pre-submission: gate the dormant Founder IAP surface (2.1) + honest sign-in copy
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38038,7 +38038,22 @@
       '<div class="founder-cta-wrap">' + cta + '</div>' +
       '<div class="founder-fineprint">' + esc(o.fineprint) + '</div>';
   }
+  // W441 — show/hide the Settings "Become a Founder" entry based on whether IAP is actually live.
+  // While IAP is dormant (IAP_ENABLED=false), the entry stays hidden so no priced/dead purchase
+  // surface is reachable — the canonical App Store Guideline 2.1 rejection. Re-checked on every
+  // Settings open (handles RevenueCat readiness arriving async once IAP is enabled).
+  function _syncFounderEntry() {
+    try {
+      const row = document.getElementById('settings-founder-row');
+      if (row) row.style.display = (_founderIapReady() || _founderOwned()) ? '' : 'none';
+    } catch (_) {}
+  }
   function openFounder() {
+    // App Store 2.1 — never present the priced offer (with buy/restore controls) unless IAP is
+    // actually live; a reachable $price screen that cannot transact is a guaranteed rejection.
+    // Durable chokepoint: re-checked live on every open, for every entry point. Owned Founders keep
+    // their "You're a Founder" receipt.
+    if (!_founderIapReady() && !_founderOwned()) return;
     const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
     if (!ov || !sh) return;
     _renderFounder();
@@ -42670,6 +42685,7 @@
     document.getElementById('settings-overlay').classList.remove('hidden');
     sheet.classList.remove('hidden');
     requestAnimationFrame(() => sheet.classList.add('ss-open'));
+    try { _syncFounderEntry(); } catch (_) {}   // W441 — gate the Founder entry on live IAP (App Store 2.1)
     // v3 Phase 1m — render the notification VOICE PREVIEW with live
     // copy so the user sees what each system ping would say RIGHT NOW.
     try { renderNotifPreviewCards(); } catch (_) {}
