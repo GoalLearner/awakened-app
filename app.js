@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w430'; // W430 — VS avatar object-position: top (was cropping the head with object-fit cover)
+  const APP_BUILD_TAG = '2.3.1-w431'; // W431 — Focus/Powerup VFX (ClaudeDesign) on self-buff casts (Ascent + PvP)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9336,6 +9336,34 @@
       _pkbAfter(1100, function () { try { spot.classList.remove('r-' + kind, 'pkb-reacting'); rfx.className = 'pkb-rfx'; rfx.innerHTML = ''; } catch (_) {} });
     }
   }
+  // ── W431 · Focus / Powerup VFX (ClaudeDesign "Defender Reactions & Focus") — the empower
+  // beat when a fighter buffs themselves. Mounts on the CASTER spot via the same .pkb-rfx
+  // overlay (Ascent + PvP). buff = rune ring + rising up-arrows; charge = motes gather in,
+  // the actor swells, then a release burst (used for heals/cleanse).
+  const _PKB_BUFFRING_SVG = '<svg viewBox="0 0 120 34"><ellipse cx="60" cy="17" rx="56" ry="13" fill="none" stroke="var(--pc,#f5b842)" stroke-width="2" stroke-dasharray="5 7"/><ellipse cx="60" cy="17" rx="42" ry="9" fill="none" stroke="var(--pc,#f5b842)" stroke-width="1.2" opacity=".6"/></svg>';
+  const _PKB_UPARR_SVG = '<svg width="10" height="18" viewBox="0 0 10 18"><path d="M5 1 L9 7 H6 V17 H4 V7 H1 Z" fill="var(--pc,#f5b842)"/></svg>';
+  function _pkbFocusBuffHtml() {
+    let arrows = '';
+    for (let i = 0; i < 5; i++) arrows += '<span class="uparrow" style="--ex:' + Math.round((i - 2) * 12) + 'px;--id:' + (i * 0.07).toFixed(2) + 's">' + _PKB_UPARR_SVG + '</span>';
+    return '<span class="buffring">' + _PKB_BUFFRING_SVG + '</span>' + arrows;
+  }
+  function _pkbFocusChargeHtml() {
+    let intake = '';
+    for (let i = 0; i < 10; i++) intake += '<span class="intake" style="--a:' + Math.round(i * 36) + 'deg;--r:60px;--id:' + (i * 0.03).toFixed(2) + 's"></span>';
+    return '<span class="chargering"></span>' + intake + '<span class="chargeburst"></span>';
+  }
+  function _pkbFocusFx(side, kind, pc, pcg) {
+    const spot = _pkbEl('pkb-spot-' + side); if (!spot) return;
+    let rfx = spot.querySelector('.pkb-rfx');
+    if (!rfx) { rfx = document.createElement('div'); rfx.className = 'pkb-rfx'; spot.appendChild(rfx); }
+    spot.classList.remove('p-charge', 'p-buff');
+    rfx.className = 'pkb-rfx';
+    try { rfx.style.setProperty('--pc', pc || '#f5b842'); rfx.style.setProperty('--pcg', pcg || 'rgba(245,184,66,.5)'); } catch (_) {}
+    rfx.innerHTML = (kind === 'charge') ? _pkbFocusChargeHtml() : _pkbFocusBuffHtml();
+    void spot.offsetWidth;
+    spot.classList.add('p-' + kind);
+    _pkbAfter(1300, function () { try { spot.classList.remove('p-' + kind); rfx.className = 'pkb-rfx'; rfx.innerHTML = ''; rfx.style.removeProperty('--pc'); rfx.style.removeProperty('--pcg'); } catch (_) {} });
+  }
   function _pkbImpactFx(e, defSide, dmgShown) {
     // crit also gives the whole stage a quick nudge for weight
     if (e.crit) { const stage = _pkbEl('pkb-stage'); if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); } }
@@ -9459,10 +9487,19 @@
       const plate = _pkbEl('pkb-plate-' + e.side);
       if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
       try { _audCue('heal'); } catch (_) {}
+      try { _pkbFocusFx(e.side, 'charge', '#f5b842', 'rgba(245,184,66,.5)'); } catch (_) {}   // W431 — channel/restore
       _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'fx') {
       const tx = e.text || '';
       const cau = tx.indexOf('cauterized; the') !== -1;
+      // W431 — focus/powerup beat when a fighter buffs THEMSELVES (the self-buff lines carry
+      // the caster's name + side; debuffs/DoTs name the defender, so they're excluded).
+      try {
+        if (tx.indexOf('attack up') !== -1) _pkbFocusFx(e.side, 'buff', '#f0904a', 'rgba(240,144,74,.5)');           // Focus/Temper — fury
+        else if (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1) _pkbFocusFx(e.side, 'buff', '#7dd3fc', 'rgba(125,211,252,.5)');   // Brace/Guard
+        else if (tx.indexOf('evasive') !== -1) _pkbFocusFx(e.side, 'buff', '#c084fc', 'rgba(192,132,252,.5)');       // Evade
+        else if (tx.indexOf('refuses') !== -1) _pkbFocusFx(e.side, 'charge', '#c084fc', 'rgba(192,132,252,.5)');     // Refuse/cleanse — ward channel
+      } catch (_) {}
       // status cue by engine-authored line content (event log is the truth)
       try {
         if (cau || tx.indexOf('refuses') !== -1) _audCue('cauterize');
