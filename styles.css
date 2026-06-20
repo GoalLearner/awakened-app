@@ -30333,16 +30333,6 @@ button.guildhall-summary-tile:active {
 }
 
 /* ═══ W404 — REALTIME PvP DUELS ═══════════════════════════════════ */
-/* Tower entry CTA */
-.pvp-tower-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin: 4px 0 14px; padding: 14px 14px; border-radius: 15px; cursor: pointer; text-align: left;
-  background: linear-gradient(180deg, rgba(124,138,255,0.12), rgba(124,138,255,0.05)); border: 1px solid rgba(124,138,255,0.30);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px rgba(0,0,0,0.30); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
-.pvp-tower-cta:active { transform: scale(0.985); filter: brightness(1.12); }
-.pvp-tower-cta .pvp-tower-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(124,138,255,0.16); border: 1px solid rgba(124,138,255,0.40); }
-.pvp-tower-cta .pvp-tower-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.pvp-tower-cta .pvp-tower-tx .t { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px; color: #f5f3fb; }
-.pvp-tower-cta .pvp-tower-tx .s { font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.10em; color: #9aa3e8; text-transform: uppercase; }
-.pvp-tower-cta .pvp-tower-go { flex: none; font-size: 22px; color: #7c8aff; opacity: 0.8; }
 
 /* W424 · Arena Entry banner (ClaudeDesign) — rank-forward "Enter the Arena" on the tower.
    Retints from --ae-tier/--ae-glow/--ae-ring (set inline per the player's tier). */
@@ -30540,11 +30530,6 @@ button.guildhall-summary-tile:active {
 .pvp-lobby-title { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 26px; color: #f5f3fb; margin-top: 8px; }
 .pvp-lobby-sub { font-size: 11.5px; color: #9090a8; line-height: 1.4; margin-top: 6px; max-width: 280px; margin-left: auto; margin-right: auto; }
 .pvp-home { display: flex; flex-direction: column; gap: 14px; padding: 8px 12px; }
-.pvp-big { display: flex; flex-direction: column; gap: 3px; padding: 16px; border-radius: 15px; cursor: pointer; text-align: center; align-items: center;
-  background: linear-gradient(180deg, #7c8aff, #5b67d8); border: none; box-shadow: 0 8px 22px rgba(91,103,216,0.40); -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, filter 0.12s ease; }
-.pvp-big:active { transform: scale(0.98); filter: brightness(1.08); }
-.pvp-big-t { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 17px; color: #fff; }
-.pvp-big-s { font-size: 10.5px; color: rgba(255,255,255,0.82); }
 .pvp-or { display: flex; align-items: center; gap: 12px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 0.16em; color: #6b6b86; }
 .pvp-or span { flex: 1; height: 1px; background: rgba(255,255,255,0.10); }
 .pvp-join { display: flex; gap: 9px; }
@@ -30578,34 +30563,6 @@ button.guildhall-summary-tile:active {
 .pvp-timer { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; color: #cdd1e8; min-width: 26px; text-align: right; }
 .pvp-timer.low { color: #ff8a8a; }
 
-/* YOUR RANK band (lobby) */
-.pvp-rankband { display: flex; align-items: center; gap: 12px; margin: 0 12px 14px; padding: 12px 14px; border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.10); }
-.pvp-rankband--loading { justify-content: center; }
-.pvp-rb-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.08em; color: #6b6b86; }
-.pvp-rb-badge { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 9px 4px; border-radius: 12px; background: color-mix(in srgb, var(--rb) 13%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 42%, transparent); }
-.pvp-rb-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); letter-spacing: 0.3px; }
-.pvp-rb-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.pvp-rb-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 19px; color: #f5f3fb; }
-.pvp-rb-elo i { font-style: normal; font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 5px; }
-.pvp-rb-rec { font-family: "JetBrains Mono", monospace; font-size: 9.5px; color: #9090a8; }
-.pvp-rb-rank { flex: none; text-align: right; display: flex; flex-direction: column; }
-.pvp-rb-rank b { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #f5b842; }
-.pvp-rb-rank i { font-style: normal; font-size: 7.5px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; }
-
-/* MMR change on the result */
-#pvp-mmr { margin: 4px 0 2px; }
-.pvp-mmr-row { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 14px; margin: 0 auto; max-width: 280px; border-radius: 12px;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); }
-.pvp-mmr-row--load { justify-content: center; }
-.pvp-mmr-load { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.06em; color: #6b6b86; }
-.pvp-mmr-badge { display: inline-flex; align-items: center; gap: 6px; font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 12px; color: var(--rb); padding: 4px 10px 4px 6px; border-radius: 9px;
-  background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent); }
-.pvp-mmr-elo { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 18px; color: #f5f3fb; }
-.pvp-mmr-elo i { font-style: normal; font-size: 8px; font-weight: 700; letter-spacing: 0.12em; color: #6b6b86; margin-left: 4px; }
-.pvp-mmr-delta { font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px; color: #9090a8; }
-.pvp-mmr-delta.up { color: #34d399; }
-.pvp-mmr-delta.down { color: #ff8a8a; }
 /* friendly (invite-by-code) duel — no rating change; shown in place of the MMR row */
 .pvp-friendly-note { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.08em; color: #6b6b86; margin: 6px auto 2px; padding: 7px 14px; max-width: 280px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
 
@@ -30619,20 +30576,7 @@ button.guildhall-summary-tile:active {
 .pvp-rm-offer { text-align: center; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 15px; color: #f5b842; padding: 6px 0 2px; animation: pvp-rc-pop 0.4s both; }
 .pvp-rm-declined { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 11px; color: #9090a8; padding: 4px 0; }
 
-/* Streak-milestone moment */
-.pvp-streak-moment { text-align: center; font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 13px; letter-spacing: 0.1em; color: #ff9d4d;
-  margin: 2px auto 8px; padding: 6px 16px; max-width: 280px; border-radius: 9px; background: rgba(255,157,77,0.1); border: 1px solid rgba(255,157,77,0.34);
-  animation: pvp-rc-pop 0.5s 0.1s both; }
-
-/* Rank-up / rank-down moment on the result */
-.pvp-rankchange { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin: 0 auto 8px; padding: 10px 16px; max-width: 300px; border-radius: 12px;
-  background: color-mix(in srgb, var(--rb) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rb) 50%, transparent);
-  animation: pvp-rc-pop 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
-.pvp-rc-emblem { flex-basis: 100%; display: flex; justify-content: center; margin-bottom: 2px; }
-.pvp-rc-arrow { font-size: 12px; color: var(--rb); }
-.pvp-rankchange.down .pvp-rc-arrow { color: #ff8a8a; }
-.pvp-rc-tx { font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; color: #cdd1e8; }
-.pvp-rc-tier { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 14px; color: var(--rb); }
+/* shared result pop-in (used by the rematch offer line) */
 @keyframes pvp-rc-pop { from { opacity: 0; transform: translateY(8px) scale(0.9); } to { opacity: 1; transform: none; } }
 
 /* W417 — ClaudeDesign rank-tier emblems ("The Seven Ascents"). Sizing is inline on
@@ -30642,26 +30586,9 @@ button.guildhall-summary-tile:active {
 .pvp-emblem svg { display: block; width: 100%; height: 100%; }
 .pvp-emblem--locked { filter: grayscale(1) brightness(0.5) contrast(0.92); opacity: 0.45; }
 .pvp-emblem--awk { filter: drop-shadow(0 0 4px rgba(245,184,66,0.45)); }
-.pvp-vs-emblem { display: flex; justify-content: center; margin: 7px 0 4px; }
-/* Awakened promotion: the emblem ignites once — scales past 100%, the aura blooms,
-   then settles to its resting glow (handoff "Apex moment · Awakened ignite"). */
-.pvp-rankchange.up .pvp-emblem--awk { animation: pvpIgnite 1.5s cubic-bezier(0.2,0.8,0.3,1) both; }
-@keyframes pvpIgnite {
-  0%   { transform: scale(0.7); filter: drop-shadow(0 0 0 rgba(245,184,66,0)) brightness(0.7) saturate(0.8); }
-  35%  { transform: scale(1.18); filter: drop-shadow(0 0 16px rgba(245,184,66,0.95)) brightness(1.4) saturate(1.2); }
-  60%  { transform: scale(0.98); filter: drop-shadow(0 0 9px rgba(245,184,66,0.6)) brightness(1.08) saturate(1); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(245,184,66,0.45)) brightness(1) saturate(1); }
-}
-@media (prefers-reduced-motion: reduce) { .pvp-rankchange.up .pvp-emblem--awk { animation: none; } }
-
-/* Win-streak chip (rank band + result) */
+/* Win-streak chip (result) */
 .pvp-streak { display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800;
   color: #ff9d4d; padding: 2px 7px; border-radius: 7px; background: rgba(255,157,77,0.12); border: 1px solid rgba(255,157,77,0.32); }
-.pvp-rb-streak { margin-top: 3px; }
-
-/* lobby footer links (ladder + history) */
-.pvp-links { display: flex; gap: 9px; margin-top: 12px; }
-.pvp-links .pvp-ladder-link { margin: 0; flex: 1; }
 
 /* match history view */
 .pvp-hist-streak { text-align: center; margin: 0 0 10px; }
@@ -30680,11 +30607,6 @@ button.guildhall-summary-tile:active {
 .pvp-hist-res { flex: none; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; color: #9090a8; }
 .pvp-hist-row--win .pvp-hist-res { color: #34d399; }
 
-/* Ranked ladder view */
-.pvp-ladder-link { display: block; width: 100%; margin: 12px 0 0; padding: 11px; border-radius: 11px; cursor: pointer; text-align: center;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); color: #9aa3e8;
-  font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; -webkit-tap-highlight-color: transparent; }
-.pvp-ladder-link:active { filter: brightness(1.2); }
 /* W425 · the Ranked Ladder (ClaudeDesign) — podium + scrolling list + pinned YOU row. */
 .pvp-ld { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .pvp-ld-head { flex: none; padding: 2px 0 6px; }
@@ -30751,29 +30673,6 @@ button.guildhall-summary-tile:active {
 .pvp-mid:active { transform: scale(0.985); filter: brightness(1.12); }
 .pvp-mid-t { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; color: #f5f3fb; }
 .pvp-mid-s { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #9090a8; }
-
-/* Pre-match VS screen */
-.pvp-vs { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; padding: 24px 16px; gap: 18px; }
-.pvp-vs-kick { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; color: #7c8aff; }
-.pvp-vs-fighters { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
-.pvp-vs-card { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 10px; border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.10); }
-.pvp-vs-card--you { animation: pvp-vs-inL 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
-.pvp-vs-card--foe { animation: pvp-vs-inR 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
-@keyframes pvp-vs-inL { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
-@keyframes pvp-vs-inR { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
-.pvp-vs-spr { width: 76px; height: 76px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--rb) 22%, transparent), transparent 80%); border: 1px solid color-mix(in srgb, var(--rb) 45%, transparent); }
-.pvp-vs-spr img { width: 100%; height: 100%; object-fit: cover; }
-.pvp-vs-spr .pvp-mono { font-size: 30px; }
-.pvp-vs-nm { font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 16px; color: #f5f3fb; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.pvp-vs-tier { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; }
-.pvp-vs-wpn { font-size: 9.5px; color: #9090a8; text-align: center; }
-.pvp-vs-x { flex: none; font-family: "Cinzel", Georgia, serif; font-weight: 900; font-size: 22px; color: #f5b842; text-shadow: 0 0 18px rgba(245,184,66,0.5);
-  animation: pvp-vs-pop 0.5s 0.25s both; }
-@keyframes pvp-vs-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
-.pvp-vs-go { animation: pvp-vs-pop 0.4s 0.5s both; }
-.pvp-vs-hint { font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.08em; color: #6b6b86; }
 
 /* ── W423 · Pre-Match VS (ClaudeDesign "The Pre-Match VS") — vertical face-off,
    you (teal) over your rival (ember/gold-friendly), seam + medal, slam-in, stakes,

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w434'; // W434 — REVIEW_S3 client correctness: poll-fallback re-arm, rematch-UI preserve, late-rating re-render, rating-fetch retry
+  const APP_BUILD_TAG = '2.3.1-w435'; // W435 — REVIEW_S3 dead-code sweep: removed orphaned _pvpRankBandHtml / _pvpStreakMilestoneHtml / _pvpRatingResultHtml + ~50 orphan CSS rules
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10598,22 +10598,6 @@
       '</div>'
     );
   }
-  // YOUR RANK band — tier badge + ELO + W/L(/D) record + global rank. Painted from the
-  // cache, refreshed async (the server is the source of truth).
-  function _pvpRankBandHtml() {
-    const r = _pvpRating;
-    if (!r) return '<div class="pvp-rankband pvp-rankband--loading"><span class="pvp-rb-load">Loading your rank…</span></div>';
-    const t = _pvpTier(r.elo);
-    const placed = !!r.placed;
-    const rec = _pvpNum(r.wins) + 'W &middot; ' + _pvpNum(r.losses) + 'L' + (_pvpNum(r.draws) ? ' &middot; ' + _pvpNum(r.draws) + 'D' : '');
-    const streakChip = (placed && _pvpStreak >= 2) ? '<span class="pvp-streak pvp-rb-streak">&#128293; ' + _pvpStreak + ' streak</span>' : '';
-    return '<div class="pvp-rankband">' +
-      '<div class="pvp-rb-badge" style="--rb:' + t.color + '">' + _pvpTierEmblem(t.name, 44) + '<span class="pvp-rb-tier">' + esc(t.name) + '</span></div>' +
-      '<div class="pvp-rb-mid"><span class="pvp-rb-elo">' + (placed ? _pvpNum(r.elo) : '—') + '<i>ELO</i></span>' +
-        '<span class="pvp-rb-rec">' + (placed ? rec : 'Unranked &middot; play your first ranked duel') + '</span>' + streakChip + '</div>' +
-      (placed && r.rank ? '<div class="pvp-rb-rank"><b>#' + _pvpNum(r.rank) + '</b><i>GLOBAL</i></div>' : '') +
-      '</div>';
-  }
   function _pvpRepaintHub() { if (_arView === 'pvp-lobby') { const el = document.querySelector('.pvp-hub'); if (el) el.outerHTML = _pvpHubHtml(); } }
   function _pvpRepaintRank() { _pvpRepaintHub(); _pvpRepaintTowerEntry(); }
   function _pvpFetchRating() {
@@ -11492,17 +11476,6 @@
   function _pvpShareCtaHtml() {
     return '<button type="button" class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="pvp">' + _bksShareIconSvg() + 'Share this win</button>';
   }
-  // streak-milestone moment: _pvpStreak is already advanced for this match in _pvpRenderResult,
-  // so read it directly (advances correctly across a rematch chain: 3, then 5, ...).
-  function _pvpStreakMilestoneHtml(won) {
-    if (!won) return '';
-    const s = _pvpStreak || 0;
-    if (s === 3 || s === 5 || s === 10 || (s > 10 && s % 5 === 0)) {
-      return '<div class="pvp-streak-moment">&#128293; ' + s + ' WIN STREAK</div>';
-    }
-    return '';
-  }
-
   // ── teardown / exit ──
   function _pvpTeardown(keepResult) {
     try { PvP.close(); } catch (_) {}
