@@ -354,6 +354,43 @@ async function rematchTest() {
   } catch (e) { ok('rematch (transport)', false, String(e && e.message)); }
 }
 
+// ── 9b. Rematch must NOT inherit a stale disconnect. A player who connected over WS, dropped
+//        >grace ago, then rejoins the rematch with no socket (HTTP) must not be force-forfeited
+//        on the rematch's first turn alarm. Regression for resetForRematch not clearing lastSeen.
+//        Needs PVP_DISCONNECT_GRACE_MS=2000 + PVP_TURN_DEADLINE_MS=3000 in .dev.vars. ──
+async function rematchStalePresenceTest() {
+  console.log('\n[9b] Rematch does not inherit a stale-disconnect forfeit');
+  const t1 = await mint('pvp-rmsp-1', 'Present'), t2 = await mint('pvp-rmsp-2', 'Dropped');
+  const code = (await api(t1, 'POST', '/v1/pvp/create', { combatant: COMB_A, ranked: true })).code;
+  await api(t2, 'POST', '/v1/pvp/join', { code, combatant: COMB_B });
+  let ws1, ws2;
+  try {
+    ws1 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t1);   // present player keeps its socket
+    ws2 = new WebSocket(WS_BASE + '/v1/pvp/ws?code=' + code + '&token=' + t2);   // stamps lastSeen[b] so the drop is "stale", not 0
+    await Promise.all([openWs(ws1), openWs(ws2)]);
+  } catch (e) { ok('rematch stale-presence (transport)', false, String(e && e.message)); return; }
+  let guard = 0, ended = false;
+  while (guard++ < 80) {
+    const s1 = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+    if (!s1) break; if (s1.phase === 'ended') { ended = true; break; }
+    const s2 = (await api(t2, 'GET', '/v1/pvp/state?code=' + code)).state;
+    await api(t1, 'POST', '/v1/pvp/submit', { code, turn: s1.turn, moveId: firstMove(s1.me) });
+    await api(t2, 'POST', '/v1/pvp/submit', { code, turn: s2.turn, moveId: firstMove(s2.me) });
+    await sleep(18);
+  }
+  ok('seed match ended', ended);
+  try { ws2.close(); } catch {}     // P2 drops: connected[b]=false, lastSeen[b]=now
+  await sleep(2600);                // wait PAST the (2s) grace so lastSeen[b] is stale
+  await api(t1, 'POST', '/v1/pvp/rematch', { code });
+  const acc = await api(t2, 'POST', '/v1/pvp/rematch', { code });   // P2 accepts over HTTP (no socket)
+  ok('rematch reset into a fresh active match', !!(acc.ok && acc.started), acc);
+  await sleep(3800);                // let the rematch's FIRST turn alarm fire (deadline 3s)
+  const st = (await api(t1, 'GET', '/v1/pvp/state?code=' + code)).state;
+  const disco = !!(st && st.phase === 'ended' && st.result && st.result.reason === 'disconnect');
+  ok('rematch did NOT force-forfeit the rejoined player on turn 1 (stale lastSeen cleared)', !disco, st && st.result);
+  try { ws1.close(); } catch {}
+}
+
 // ── 10. Rematch decline: p1 offers, p2 declines -> requester sees rematch_declined. ──
 async function rematchDeclineTest() {
   console.log('\n[10] Rematch decline');
@@ -396,6 +433,7 @@ async function rematchDeclineTest() {
   await seasonResetTest();
   await botWsDeterminismTest();
   await rematchTest();
+  await rematchStalePresenceTest();
   await rematchDeclineTest();
   console.log('\nPvP integration: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

@@ -64,8 +64,17 @@ export async function handlePvpFind(request: Request, env: Env, session: Session
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }
+  // Match the Echo to the player's CURRENT season standing: a prior-season row is projected
+  // through the same soft-reset the DO will commit on this match (and that handlePvpRating shows),
+  // so the bot isn't picked off a stale pre-reset ELO. Degrades to raw elo / 1500 pre-seasons.
   let elo = 1500;
-  try { const row = await env.DB.prepare('SELECT elo FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>(); if (row) elo = Number(row.elo); } catch { /* */ }
+  try {
+    const row = await env.DB.prepare('SELECT elo, season_id FROM pvp_ratings WHERE user_id=?').bind(session.userId).first<any>();
+    if (row) {
+      elo = Number(row.elo);
+      try { const season = await currentSeason(env); if (season && row.season_id !== season.id) elo = softResetElo(elo); } catch { /* no seasons table yet — use raw elo */ }
+    }
+  } catch { /* */ }
   const bot = pickBot(elo);
   const meta = botMeta(bot);
   const code = genCode();

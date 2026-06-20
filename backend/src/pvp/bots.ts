@@ -25,7 +25,8 @@ const ROSTER: BotDef[] = [
   // ── Platinum ──
   { id: 'duskwarden', name: 'Dusk Warden', elo: 2060, combatant: { name: 'Dusk Warden', weaponId: 'duskforge_greatblade', weaponName: 'Duskforge Greatblade', avatar: 'avatar-warrior.png', stats: { STR: 26, VIT: 22, INT: 15, FOCUS: 15, WILL: 13, WLT: 5 } } },
   { id: 'wraithshot', name: 'Wraithshot', elo: 2180, combatant: { name: 'Wraithshot', weaponId: 'wraithwind_bow', weaponName: 'Wraithwind Bow', avatar: 'avatar-ranger.png', stats: { STR: 12, VIT: 20, INT: 15, FOCUS: 27, WILL: 22, WLT: 5 } } },
-  // ── Diamond+ ──
+  // ── Diamond ── (roster ceiling = 2560; Master/Awakened Echoes are a deferred content add —
+  //                see REVIEW_S3.md: 2600+ players can't yet climb past Diamond via Echo Mode)
   { id: 'oathbreaker', name: 'The Oathbreaker', elo: 2380, combatant: { name: 'The Oathbreaker', weaponId: 'titan_oathblade', weaponName: 'Titan Oathblade', avatar: 'avatar-paladin.png', stats: { STR: 32, VIT: 28, INT: 19, FOCUS: 19, WILL: 17, WLT: 6 } } },
   { id: 'ladynightfall', name: 'Lady Nightfall', elo: 2560, combatant: { name: 'Lady Nightfall', weaponId: 'nightfall_blade', weaponName: 'Nightfall', avatar: 'avatar-assassin.png', stats: { STR: 30, VIT: 28, INT: 24, FOCUS: 24, WILL: 22, WLT: 6 } } },
 ];

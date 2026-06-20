@@ -260,7 +260,10 @@ export class MatchRoom {
     m.pending[slot] = moveId;
     await this.resolveIfReady(m, sess);
     await this.save(m);
-    this.broadcastState(m);
+    // Only the single-submit NOTIFY (turn still open → flips the opponent's submitted pip). A
+    // resolved turn already broadcast turn_result (+ match_end on a KO); skip the redundant frame
+    // so clients never get a 'state' AFTER the terminal match_end.
+    if (m.phase === 'active') this.broadcastState(m);
     return { ok: true, state: this.view(m, userId) };
   }
 
@@ -331,6 +334,14 @@ export class MatchRoom {
     m.result = null; m.persisted = false; m.ratingResult = null;
     m.rematch = {};
     m.startedAtMs = Date.now();
+    // A new battle gets a fresh presence ledger: clear lastSeen so the disconnect-grace
+    // forfeit is disabled until a socket actually reports in (the alarm guard short-circuits
+    // on lastSeen===0, exactly like a fresh doCreate/doJoin). Without this, a player who
+    // dropped >GRACE ago and rejoins the rematch over HTTP-poll (connected stays false) would
+    // be force-forfeited on turn 1 by their own stale lastSeen. We DON'T touch m.connected:
+    // an open socket should stay connected so the opponent isn't shown a false "disconnected"
+    // banner (client _pvpSyncTurnUI flags oppConnected===false); a real drop re-stamps lastSeen.
+    m.lastSeen = { p: 0, b: 0 };
     this.state.storage.deleteAlarm();
     this.armDeadline(m);
   }
@@ -376,6 +387,9 @@ export class MatchRoom {
     m.deadlineMs = Date.now() + dl;
     this.state.storage.setAlarm(m.deadlineMs);
   }
+  // Disconnect-grace window; PVP_DISCONNECT_GRACE_MS (a wrangler var) overrides the 120s default
+  // so the integration test can exercise the grace/rematch-presence path in seconds.
+  graceMs(): number { return Number((this.env as any).PVP_DISCONNECT_GRACE_MS) || DISCONNECT_GRACE_MS; }
 
   async alarm(): Promise<void> {
     const m = await this.load();
@@ -394,7 +408,7 @@ export class MatchRoom {
     // disconnect forfeit: if a player has been gone past the grace window, the
     // present player wins.
     for (const slot of ['p', 'b'] as Slot[]) {
-      if (!m.connected[slot] && m.lastSeen[slot] && now - m.lastSeen[slot] > DISCONNECT_GRACE_MS) {
+      if (!m.connected[slot] && m.lastSeen[slot] && now - m.lastSeen[slot] > this.graceMs()) {
         await this.endMatch(m, slot === 'p' ? 'b' : 'p', 'disconnect');
         return;
       }
@@ -408,7 +422,7 @@ export class MatchRoom {
     if (!m.pending.b && !this.isBot(m.p2)) m.pending.b = defaultMoveForTimeout(sess.bMoves, sess.bcd);
     await this.resolveIfReady(m, sess);
     await this.save(m);
-    this.broadcastState(m);
+    if (m.phase === 'active') this.broadcastState(m);   // resolveIfReady already broadcast the terminal frame on a KO
   }
 
   async endMatch(m: MatchState, winnerSide: Slot | 'draw', reason: string): Promise<void> {
@@ -485,7 +499,7 @@ export class MatchRoom {
       // timer until grace). The periodic turn alarm re-checks lastSeen, so the grace
       // is still enforced via alarm()'s disconnect branch.
       if (m.phase === 'active') {
-        const grace = Date.now() + DISCONNECT_GRACE_MS + 1000;
+        const grace = Date.now() + this.graceMs() + 1000;
         this.state.storage.setAlarm(m.deadlineMs ? Math.min(m.deadlineMs, grace) : grace);
       }
     }
