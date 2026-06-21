@@ -14029,16 +14029,22 @@ body.bfs-locked { overflow: hidden; }
   position: absolute;
   top: 7px;
   right: 7px;
-  z-index: 2;
+  /* W455 — match the EQUIPPED badge box EXACTLY (same top/right, height,
+     radius, font-size, padding, z-index) so the top-right status pill never
+     shifts shape, size, or position between the NEW and EQUIPPED states. */
+  z-index: 5;
+  height: 16px;
   display: inline-flex;
   align-items: center;
+  line-height: 1;
+  box-sizing: border-box;
   gap: 3px;
-  padding: 2.5px 7px;
-  border-radius: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
   background: linear-gradient(180deg, #f5b842, #c08418);
   color: #1a1232;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 9px;
+  font-size: 0.46rem;
   font-weight: 800;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -14440,6 +14446,11 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-primary);
   letter-spacing: 0.02em;
   line-height: 1.2;
+  /* W455 — reserve exactly two lines so 1-line and 2-line names occupy the
+     SAME height. This keeps the source line, power meter, the EQUIPPED /
+     vs-equipped delta chip, and the SELL/BUY bar on a fixed baseline across
+     every card in the grid (was drifting whenever a name wrapped). */
+  min-height: 2.4em;
   /* Truncate long names cleanly. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -14520,7 +14531,13 @@ body.bfs-locked { overflow: hidden; }
   top: 7px;
   left: 7px;
   z-index: 5;
-  padding: 3px 7px;
+  /* W455 — fixed-height pill so it mirrors the status badge on the right. */
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  box-sizing: border-box;
+  padding: 0 7px;
   border-radius: 999px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.46rem;
@@ -14544,7 +14561,14 @@ body.bfs-locked { overflow: hidden; }
   left: auto;
   bottom: auto;
   z-index: 5;
-  padding: 3px 7px;
+  /* W455 — same fixed box as the slot badge + NEW chip so the top-right
+     status pill sits in one fixed position regardless of EQUIPPED vs NEW. */
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  box-sizing: border-box;
+  padding: 0 7px;
   border-radius: 999px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.46rem;
@@ -14571,6 +14595,12 @@ body.bfs-locked { overflow: hidden; }
   margin-top: 2px;
   line-height: 1.2;
   text-transform: uppercase;
+  /* W455 — keep the drop-source to ONE line (ellipsis the rare long boss
+     name) so it can't wrap and shove the power meter + delta chip out of
+     alignment with the neighbouring cards. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Mystery (undiscovered) card — richer than the old "?" placeholder.

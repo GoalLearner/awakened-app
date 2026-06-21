@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w454'; // W454 — Prestige cross-user display (the "stunting on noobs" payoff): ✦ stars on friend roster + tap-a-name profile card + global leaderboard rows (+ CSS); post-review fixes
+  const APP_BUILD_TAG = '2.3.1-w455'; // W455 — relic Armory alignment: lock card-name to 2 lines + clamp drop-source to 1 line + unify slot/EQUIPPED/NEW badges into one fixed 16px box so the status pill + footer chip never drift
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
