@@ -35,6 +35,9 @@ interface TopRow {
   // W388 — lifetime boss kills (from public_profile_summary; the client shows a
   // crimson "100" stamp at >= 100). Nullable: LEFT JOIN, no pps row yet → null.
   bosses_slain: number | null;
+  // W453 — Prestige star count + tier (for the "S+ ✦N" flex on the board).
+  prestige: number | null;
+  rank_tier: string | null;
 }
 
 interface MyRow {
@@ -91,7 +94,8 @@ export async function handleLeaderboardTop(
     ? await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
                 pps.arena_title AS arena_title,
-                pps.bosses_slain_total AS bosses_slain
+                pps.bosses_slain_total AS bosses_slain,
+                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -104,7 +108,8 @@ export async function handleLeaderboardTop(
     : await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
                 pps.arena_title AS arena_title,
-                pps.bosses_slain_total AS bosses_slain
+                pps.bosses_slain_total AS bosses_slain,
+                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -123,6 +128,9 @@ export async function handleLeaderboardTop(
     arena_title: row.arena_title ?? null,
     // W388 — lifetime boss kills (null when the hunter has no pps row yet)
     bosses_slain: row.bosses_slain ?? null,
+    // W453 — Prestige stars + tier (0 / null when no pps row or below S+)
+    prestige: row.prestige ?? 0,
+    rankTier: row.rank_tier ?? null,
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,
