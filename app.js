@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w453'; // W453 — Prestige (endgame past S+): ascending ✦ stars every 12k XP beyond S+, celebration + live badge progress + leaderboard/profile sync (client; backend prestige_level follows)
+  const APP_BUILD_TAG = '2.3.1-w454'; // W454 — Prestige cross-user display (the "stunting on noobs" payoff): ✦ stars on friend roster + tap-a-name profile card + global leaderboard rows (+ CSS); post-review fixes
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24727,6 +24727,7 @@
   function renderStatus() {
     const rank       = getRank(totalPoints);
     const isSPlus    = rank.id === 'S+';
+    const scPrestige = isSPlus ? getPrestigeLevel(totalPoints) : 0;   // W453 — computed once
     const daysActive = Object.keys(completions).filter(d => completions[d].length > 0).length;
     const maxStreak  = Object.values(streaks).reduce((m, s) => Math.max(m, s.count || 0), 0);
     const todayDone  = (completions[today] || []).length;
@@ -24823,7 +24824,7 @@
             // TOTAL XP" stat cell so the number isn't lost.
             '<div class="sc-identity-strip">' +
               '<span class="sc-identity-rank" data-rank="' + esc(rank.id) + '">' + esc(rank.id) + ' RANK' +
-                (isSPlus && getPrestigeLevel(totalPoints) > 0 ? ' ' + prestigeStars(getPrestigeLevel(totalPoints)) : '') + '</span>' +
+                (scPrestige > 0 ? ' ' + prestigeStars(scPrestige) : '') + '</span>' +
               '<span class="sc-identity-sep">·</span>' +
               '<span class="sc-identity-class sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
                 '<span class="sc-hero-class-name">' + esc((cls.name || '').toUpperCase()) + '</span>' +
@@ -27202,6 +27203,10 @@
       // into a new star. Independent of major rank-up (you're already S+), so
       // it queues AFTER the rank/fa/hunter beats on the (impossible-in-practice
       // but defensive) tick where both happen.
+      // NOTE: reaching S+ itself (36000–47999 XP = prestige level 0) is NOT a
+      // ✦ star — that moment is the normal S→S+ rank-up fanfare. The first ✦
+      // intentionally celebrates at 48000 (level 1). This is by design; don't
+      // "fix" the gap by firing a star at level 0.
       if (oldPrestige != null) {
         const newPrestige = getPrestigeLevel(totalPoints);
         if (newPrestige > oldPrestige) {
@@ -35503,9 +35508,13 @@
     const m = String(rankTxt).match(/^(S\+|S|A|B|C|D|E)(?: (I|II|III))?$/);
     if (m) tier = m[1];
     const tierAttr = ' data-rank-tier="' + esc(tier) + '"';
-    // Defensive 5-char truncation against unexpectedly long
-    // backend strings; real labels all fit.
-    const chipTxt = (rankTxt.length > 5) ? rankTxt.slice(0, 5) : rankTxt;
+    // W453 — Prestige ✦ for S+ friends. The chip is tiny, so use the compact
+    // "S+✦N" numeral form (glyph repetition would overflow the 5-char clamp).
+    // friend.prestige is carried through the roster mapping (0 unless S+).
+    const _fp = (tier === 'S+' && friend) ? (friend.prestige | 0) : 0;
+    const chipTxt = (_fp > 0)
+      ? ('S+✦' + _fp)
+      : ((rankTxt.length > 5) ? rankTxt.slice(0, 5) : rankTxt);
     return (
       '<div class="friend-avatar-stack"' + tierAttr + '>' +
         '<div class="friend-avatar friend-avatar--rank-ring' + variantCls + '">' +
@@ -36387,6 +36396,13 @@
             '<svg viewBox="0 0 16 12" width="13" height="10" aria-hidden="true"><path d="M1 11h14l-1.2-7L10 7.5 8 1 6 7.5 2.2 4z" fill="#f5b842" stroke="#c08418" stroke-width="0.7" stroke-linejoin="round"/></svg>' +
           '</span>'
         : '';
+      // W453 — Prestige ✦ on the board: the long-term S+ player base visibly
+      // "stunts on noobs". Gold stars beside the name; data rides the top-N read
+      // (row.prestige + row.rankTier from public_profile_summary). 0/absent → none.
+      const _pNum = Number(row.prestige) || 0;
+      const pStar = (row.rankTier === 'S+' && _pNum > 0)
+        ? '<span class="lb-rank-prestige" title="Prestige ' + _pNum + '" aria-label="Prestige ' + _pNum + '">' + prestigeStars(_pNum) + '</span>'
+        : '';
       // W333 — progress fill ratio (this value vs the current leader).
       const _pct = _lbLeaderVal > 0
         ? Math.max(5, Math.min(100, Math.round((Number(row.current_value) || 0) / _lbLeaderVal * 100)))
@@ -36403,7 +36419,7 @@
           '<span class="lb-rank-leader-row">' +
             '<span class="lb-rank-leader-info">' +
               '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
-              '<span class="lb-rank-leader-name">' + _nameDisp + crown + '</span>' +
+              '<span class="lb-rank-leader-name">' + _nameDisp + crown + pStar + '</span>' +
               classLabel +
             '</span>' +
             '<span class="lb-rank-leader-stat">' +
@@ -36421,7 +36437,7 @@
         '<span class="lb-rank-pos">' + (row.rank || '?') + '</span>' +
         '<span class="lb-rank-id">' +
           '<span class="lb-rank-name-row">' +
-            '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + _youPill +
+            '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + pStar + _youPill +
           '</span>' +
           classLabel +
         '</span>' +
@@ -38133,6 +38149,13 @@
         '<span class="pc-club100k-txt"><span class="pc-club100k-t1">STEP\u00A0CLUB</span>' +
         '<span class="pc-club100k-t2">ELITE\u00A0MEMBER' + (((data.club100k.repeatCount | 0) > 1) ? '\u2002\u00B7\u2002\u00D7' + (data.club100k.repeatCount | 0) : '') + '</span></span></div>'
       : '';
+    // W453 \u2014 Prestige flex on the tapped-name card (the "stunting on noobs"
+    // payoff). Gold \u2726 stars + count, shown only for S+ hunters who have
+    // prestiged. data.prestige comes straight from the public-profile-get read.
+    const pcPrestige = (data.rankTier === 'S+' && (data.prestige | 0) > 0)
+      ? '<div class="pc-prestige"><span class="pc-prestige-stars" aria-hidden="true">' + prestigeStars(data.prestige | 0) +
+        '</span><span class="pc-prestige-lbl">PRESTIGE\u00A0' + (data.prestige | 0) + '</span></div>'
+      : '';
     body.innerHTML =
       '<div class="pc-hero"><div class="pc-med-wrap">' +
         '<div class="pc-med"><span class="pc-med-ring"></span>' +
@@ -38141,7 +38164,7 @@
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>' + (data._sim ? 'NPC HUNTER' : 'DEFAULT SKIN') + '</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + clubBadge + '</div></div>' +
+      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + clubBadge + pcPrestige + '</div></div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +

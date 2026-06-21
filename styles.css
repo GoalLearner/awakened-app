@@ -28793,6 +28793,16 @@ button.guildhall-summary-tile:active {
 .pc-club100k-t2 { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.4px; color: rgba(40,21,2,0.66); margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) { .pc-club100k-shine { animation: none; opacity: 0; } }
 
+/* W453 — Prestige (the S+ endgame): gold ✦ stars that the long-term player
+   base wears to "stunt on noobs". Profile-card chip + inline leaderboard stars. */
+.pc-prestige { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; padding: 4px 13px;
+  border-radius: 999px; background: linear-gradient(180deg, rgba(245,184,66,0.22), rgba(192,132,24,0.10));
+  border: 1px solid rgba(245,184,66,0.55); box-shadow: 0 0 16px rgba(245,184,66,0.25), inset 0 1px 0 rgba(255,236,180,0.35); }
+.pc-prestige-stars { font-size: 14px; line-height: 1; color: #ffd76a; letter-spacing: 1px; text-shadow: 0 0 8px rgba(245,184,66,0.7); }
+.pc-prestige-lbl { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 2px; color: #f5d99a; }
+.lb-rank-prestige { margin-left: 5px; font-size: 11px; line-height: 1; color: #ffd76a; letter-spacing: 0.5px;
+  text-shadow: 0 0 6px rgba(245,184,66,0.65); vertical-align: middle; white-space: nowrap; }
+
 /* identity */
 .pc-identity { padding: 6px 22px 0; display: flex; flex-direction: column; align-items: center; }
 .pc-alias { font-family: "Cinzel", Georgia, serif; font-size: 27px; font-weight: 700; color: #f5f3fb; letter-spacing: 0.4px; }
