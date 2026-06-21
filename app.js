@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w452'; // W452 — rank-curve compression (faster top end): A 12k→7k, S 40k→12k, S+ 100k→36k; non-demoting (D/C/B unchanged); rank achievements re-synced; tools/sim-rank.js
+  const APP_BUILD_TAG = '2.3.1-w453'; // W453 — Prestige (endgame past S+): ascending ✦ stars every 12k XP beyond S+, celebration + live badge progress + leaderboard/profile sync (client; backend prestige_level follows)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4686,6 +4686,9 @@
         rankSortValue: Number.isFinite(Number(f.rankSortValue)) ? Number(f.rankSortValue) : null,
         rankTier:      (typeof f.rankTier === 'string' && f.rankTier) ? f.rankTier : null,
         rankDivision:  (typeof f.rankDivision === 'string' && f.rankDivision) ? f.rankDivision : null,
+        // W453 — Prestige star count (0 unless S+). Carried through so a tapped
+        // friend's profile can show "S+ ✦N"; lights up once the backend returns it.
+        prestige:      Number.isFinite(Number(f.prestige)) ? Number(f.prestige) : 0,
         // v3 Phase 1z.196 — preserve backend-provided achievement
         // summary fields (1z.195) so the Roster sheet can fill the
         // BOSSES column for friends without faking it from local
@@ -20174,6 +20177,44 @@
   }
   try { window.__getRankDivisionInfo = getRankDivisionInfo; } catch (_) {}
 
+  // ── W453 — PRESTIGE (the endgame past S+) ─────────────────
+  // The owner+Rendell endgame ask: "long-term base stunting on noobs but
+  // still progressing toward something." S+ stops being a dead end — every
+  // PRESTIGE_STEP of XP earned BEYOND the S+ threshold is another ascending
+  // Prestige star (✦1, ✦2, ✦3 …) shown on the rank badge, the rank-info
+  // sheet, and (via _publicRankSummary) the leaderboard + friend profiles.
+  // Purely cumulative-cosmetic: NOTHING resets — totalPoints, stats, streaks,
+  // habits all stay. Derived straight from totalPoints (same source as rank),
+  // so it has zero dependency on the (deliberately un-shipped) soft cap.
+  // Tunable: STEP ≈ one S-tier worth of grind (~1 month for a committed
+  // pack-runner, ~3 months at a median ~130 XP/day) so stars keep arriving.
+  const PRESTIGE_BASE = 36000;   // = RANKS S+ min — keep in lockstep
+  const PRESTIGE_STEP = 12000;   // XP per Prestige star beyond S+
+  function getPrestigeLevel(pts) {
+    const p = (Number.isFinite(pts) && pts > 0) ? pts : 0;
+    if (p < PRESTIGE_BASE) return 0;
+    return Math.floor((p - PRESTIGE_BASE) / PRESTIGE_STEP);
+  }
+  // Progress detail for the badge + sheet: star count, XP into the current
+  // star, XP remaining to the next star, and a 0..1 fill for the bar.
+  function prestigeInfo(pts) {
+    const p = (Number.isFinite(pts) && pts > 0) ? pts : 0;
+    const isPrestige = p >= PRESTIGE_BASE;
+    const level = getPrestigeLevel(p);
+    const intoStar = isPrestige ? ((p - PRESTIGE_BASE) % PRESTIGE_STEP) : 0;
+    const toNext = isPrestige ? (PRESTIGE_STEP - intoStar) : Math.max(0, PRESTIGE_BASE - p);
+    const progress = isPrestige ? (intoStar / PRESTIGE_STEP) : 0;
+    return { level: level, intoStar: intoStar, toNext: toNext, progress: progress, isPrestige: isPrestige };
+  }
+  // Compact star glyph string for a prestige level: ✦✦✦ up to 5, then "✦×N".
+  function prestigeStars(level) {
+    const n = Math.max(0, level | 0);
+    if (n <= 0) return '';
+    if (n <= 5) return '✦'.repeat(n);
+    return '✦×' + n;
+  }
+  try { window.__getPrestigeLevel = getPrestigeLevel; } catch (_) {}
+
   // ── v3 Phase 1z.191 — Public rank summary builder + submit ──
   //
   // Builds the payload for PUT /v1/users/me/public-profile-summary
@@ -20219,6 +20260,10 @@
       rankLabel:       label,
       rankSortValue:   rankSortValue,
       rankPoints:      points,
+      // W453 — Prestige star count for S+ players (0 for everyone below S+).
+      // Display-only: friends/leaderboard already sort by rankSortValue's
+      // clampedPoints term, which separates prestige tiers up to ~999,999 XP.
+      prestige:        (tier === 'S+') ? getPrestigeLevel(points) : 0,
       clientUpdatedAt: new Date().toISOString(),
     };
   }
@@ -20405,7 +20450,10 @@
     } catch (_) {}
     if (combatant) payload.combatant = combatant;
     const achSig = _publicAchievementsSignature(achievements) + '|' + (arenaTitleId || '') +
-      '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife + '|' + combatantSig;
+      '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife + '|' + combatantSig +
+      // W453 — fold prestige into the submit signature so earning a new ✦ star
+      // (which leaves rankLabel "S+" unchanged) still triggers a fresh heartbeat.
+      '|' + (payload.prestige | 0);
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
@@ -21887,14 +21935,18 @@
 
   // ── LEVEL UP SCREENS ─────────────────────────────────────
 
-  function showRankUpScreen(rank) {
+  function showRankUpScreen(rank, prestigeLevel) {
+    // W453 — when prestigeLevel is given (>0) this same fanfare doubles as
+    // the PRESTIGE celebration: force the gold S+ effects + prestige labels,
+    // reusing all of the particle/shockwave/rain/dismiss/founder machinery.
+    const isPrestige = (prestigeLevel != null) && (prestigeLevel > 0);
     // v3 Phase 1z.278B — Rank-up fanfare. Highest-priority SFX (5),
     // so even if a stat-up or achievement chime is queued from the
     // same tap, the priority gate suppresses them within the 800ms
     // window. Fires once per modal open. Respects soundEnabled.
     try { playSfx('rank_fanfare'); } catch (_) {}
     const screen  = document.getElementById('rankup-screen');
-    const fx      = RANK_EFFECTS[rank.id] || RANK_EFFECTS['D'];
+    const fx      = isPrestige ? (RANK_EFFECTS['S+'] || RANK_EFFECTS['D']) : (RANK_EFFECTS[rank.id] || RANK_EFFECTS['D']);
     const daysActive = Object.keys(completions).filter(d => completions[d].length > 0).length;
 
     // Reset, set color vars, apply rank class
@@ -21908,7 +21960,10 @@
 
     // Top label
     const topLabel = document.getElementById('rankup-top-label');
-    if (rank.id === 'S+') {
+    if (isPrestige) {
+      topLabel.textContent = '✦ PRESTIGE';
+      topLabel.classList.add('ru-awakened');
+    } else if (rank.id === 'S+') {
       topLabel.textContent = 'THE AWAKENED ONE';
       topLabel.classList.add('ru-awakened');
     } else {
@@ -21916,9 +21971,10 @@
       topLabel.classList.remove('ru-awakened');
     }
 
-    // Rank name + class
-    document.getElementById('rankup-rank-name').textContent   = rank.label;
-    document.getElementById('rankup-class-unlock').textContent = 'CLASS UNLOCKED: ' + getClass(rank.id);
+    // Rank name + class (prestige reuses these slots: name = "Prestige N",
+    // the class-unlock line = the ascending star glyphs)
+    document.getElementById('rankup-rank-name').textContent   = isPrestige ? ('Prestige ' + prestigeLevel) : rank.label;
+    document.getElementById('rankup-class-unlock').textContent = isPrestige ? prestigeStars(prestigeLevel) : ('CLASS UNLOCKED: ' + getClass(rank.id));
     document.getElementById('rankup-xp-line').textContent     = totalPoints.toLocaleString() + ' Total XP';
     document.getElementById('rankup-days-line').textContent   = daysActive + ' Days Active';
 
@@ -22226,6 +22282,7 @@
       catch (_) { levelUpActive = false; drainLevelUpQueue(); }
     }
     else if (item.type === 'rank')        showRankUpScreen(item.rank);
+    else if (item.type === 'prestige')    showRankUpScreen(getRank(totalPoints), item.level);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
     else if (item.type === 'classChoice') showClassChoiceScreen(item.options);
@@ -24091,9 +24148,16 @@
     bar.className   = 'rank-fill'  + (isSPlus ? ' gold-fill'  : '');
 
     if (isSPlus) {
-      next.textContent = 'MAX RANK';
-      next.className = 'rank-next maxed';
-      bar.style.width = '100%';
+      // W453 — S+ is no longer a dead "MAX RANK" 100% bar. Show Prestige:
+      // the badge gains ✦ stars, the bar fills toward the NEXT star, and the
+      // caption counts XP remaining. (prestigeInfo derives it all from XP.)
+      const pInfo = prestigeInfo(totalPoints);
+      badge.setAttribute('data-prestige-level', String(pInfo.level)); // hook for a future star overlay
+      if (pInfo.level > 0) label.textContent = rank.label + ' · ' + prestigeStars(pInfo.level);
+      next.textContent = (pInfo.level > 0 ? '✦ Prestige ' + pInfo.level + ' · ' : '')
+        + pInfo.toNext.toLocaleString() + ' XP to ✦' + (pInfo.level + 1);
+      next.className = 'rank-next';
+      bar.style.width = Math.min(100, Math.max(2, pInfo.progress * 100)) + '%';
     } else {
       const progress = totalPoints - rank.min;
       const range    = rank.next - rank.min;
@@ -24758,7 +24822,8 @@
             // total-XP value still appears in the bottom "85
             // TOTAL XP" stat cell so the number isn't lost.
             '<div class="sc-identity-strip">' +
-              '<span class="sc-identity-rank" data-rank="' + esc(rank.id) + '">' + esc(rank.id) + ' RANK</span>' +
+              '<span class="sc-identity-rank" data-rank="' + esc(rank.id) + '">' + esc(rank.id) + ' RANK' +
+                (isSPlus && getPrestigeLevel(totalPoints) > 0 ? ' ' + prestigeStars(getPrestigeLevel(totalPoints)) : '') + '</span>' +
               '<span class="sc-identity-sep">·</span>' +
               '<span class="sc-identity-class sc-hero-class" style="color:' + cls.color + '" data-class-key="' + esc(currentClass) + '" role="button" tabindex="0" aria-label="Class details">' +
                 '<span class="sc-hero-class-name">' + esc((cls.name || '').toUpperCase()) + '</span>' +
@@ -26960,6 +27025,7 @@
     const silent  = !!opts.silent;
     const wasDone = isChecked(id);
     const oldRank       = wasDone ? null : getRank(totalPoints);
+    const oldPrestige   = wasDone ? null : getPrestigeLevel(totalPoints);
     const oldStatLevels = wasDone ? null : captureStatLevels();
     // v3 Phase 1z.275C — capture sub-rank division snapshot BEFORE XP gain.
     // Mirrors `oldRank` capture above so the post-gain comparison is
@@ -27129,6 +27195,18 @@
         // unconditional. Drain releases the queue on dismiss whether
         // the user shared or skipped.
         levelUpQueue.splice(2, 0, { type: 'hunter_report', rankId: newRank.id });
+      }
+
+      // W453 — Prestige star. Past S+, each PRESTIGE_STEP of XP beyond the
+      // threshold earns another ascending star. Fires when THIS gain crosses
+      // into a new star. Independent of major rank-up (you're already S+), so
+      // it queues AFTER the rank/fa/hunter beats on the (impossible-in-practice
+      // but defensive) tick where both happen.
+      if (oldPrestige != null) {
+        const newPrestige = getPrestigeLevel(totalPoints);
+        if (newPrestige > oldPrestige) {
+          levelUpQueue.push({ type: 'prestige', level: newPrestige });
+        }
       }
 
       // W328 — first Apple-Health-verified completion: celebrate the "aha"

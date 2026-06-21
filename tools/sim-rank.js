@@ -103,8 +103,16 @@ function capHabitXp(habitXp) {
   return CAP_FULL + (habitXp - CAP_FULL) * CAP_TAIL;
 }
 
+// capMode: 'none'  = no cap
+//          'habit' = cap only the per-habit (volume) portion; compounds full
+//          'all'   = cap TOTAL daily rank XP (compounds included) → rank≈days
+function capAll(totalDayXp) {
+  if (totalDayXp <= CAP_FULL) return totalDayXp;
+  return CAP_FULL + (totalDayXp - CAP_FULL) * CAP_TAIL;
+}
+
 // Simulate until S+ reached or maxDays. Returns { reachDay: {rank: day} }.
-function simulate(profile, curve, useCap, maxDays = 1500) {
+function simulate(profile, curve, capMode, maxDays = 2000) {
   let xp = 0, streak = 0;
   const reach = {};
   // record rank reached at xp=0 (E)
@@ -113,7 +121,10 @@ function simulate(profile, curve, useCap, maxDays = 1500) {
     if (active) {
       streak += 1;
       const { habitXp, compoundXp } = dayXp(profile, day, streak);
-      const credited = (useCap ? capHabitXp(habitXp) : habitXp) + compoundXp;
+      let credited;
+      if (capMode === 'all')        credited = capAll(habitXp + compoundXp);
+      else if (capMode === 'habit') credited = capHabitXp(habitXp) + compoundXp;
+      else                          credited = habitXp + compoundXp;
       xp += credited;
     } else {
       streak = 0; // missed day breaks compound streak
@@ -151,11 +162,12 @@ for (const profile of PROFILES) {
   console.log('  ' + profile.name);
   console.log('────────────────────────────────────────────────────────────────────');
   const variants = [
-    ['OLD curve            ', simulate(profile, CURVES.OLD, false)],
-    ['NEW curve            ', simulate(profile, CURVES.NEW, false)],
-    ['NEW curve + soft cap ', simulate(profile, CURVES.NEW, true)],
+    ['OLD curve              ', simulate(profile, CURVES.OLD, 'none')],
+    ['NEW curve (W452, live) ', simulate(profile, CURVES.NEW, 'none')],
+    ['NEW + cap habits only  ', simulate(profile, CURVES.NEW, 'habit')],
+    ['NEW + cap ALL @' + CAP_FULL + '/day ', simulate(profile, CURVES.NEW, 'all')],
   ];
-  const head = 'days to reach        ' + ['D', 'C', 'B', 'A', 'S', 'S+'].map(r => r.padStart(11)).join('');
+  const head = 'days to reach          ' + ['D', 'C', 'B', 'A', 'S', 'S+'].map(r => r.padStart(11)).join('');
   console.log('  ' + head);
   for (const [label, reach] of variants) {
     const row = ['D', 'C', 'B', 'A', 'S', 'S+'].map(r => fmtDays(reach[r]).padStart(11)).join('');
@@ -171,7 +183,11 @@ for (const profile of PROFILES) {
 }
 
 console.log('\n════════════════════════════════════════════════════════════════════');
-console.log('  Read: NEW makes S reachable in ~3 months for the target user; the');
-console.log('  soft cap stops the power grinder from buying S on raw volume while');
-console.log('  barely touching the consistent 12-habit user (compounds untouched).');
+console.log('  Read: compounds (150-450/day) dominate rank XP — raw habit VOLUME');
+console.log('  barely matters, so "cap habits only" is near-inert. The real lever');
+console.log('  is "cap ALL @' + CAP_FULL + '": it makes rank ≈ DAYS of consistency (S ≈ ' +
+            Math.round(12000 / CAP_FULL) + 'd, S+ ≈ ' + Math.round(36000 / CAP_FULL) +
+            'd) regardless');
+console.log('  of habit count or pack-stacking — at the cost of throttling the');
+console.log('  Compound bonus\'s RANK impact (it still feeds total XP, stats, power).');
 console.log('════════════════════════════════════════════════════════════════════\n');
