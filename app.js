@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w456'; // W456 — Perfect Day redesign (ClaudeDesign seal-stamp): gold-foil PERFECT DAY wordmark + hex seal + tier-escalating FX/Web-Audio fanfare/haptics; single popup (old confetti + legacy milestone modal retired, milestone XP kept)
+  const APP_BUILD_TAG = '2.3.1-w457'; // W457 — Perfect Day is TAP TO CONTINUE only: removed the 3.6s auto-dismiss so the moment holds until the user taps anywhere (never auto-advances)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27132,7 +27132,10 @@
       if (tier >= 2) _pdayT(function () { _pdayHaptic('MEDIUM'); }, 950);
       _pdayT(function () { _pdayHaptic('SUCCESS'); }, 1400);
     }
-    _pdayT(_pdayClose, 3600);
+    // W457 — TAP TO CONTINUE only. No auto-dismiss: the moment holds (the FX
+    // settle ~3.6s, the seal/wordmark/streak/XP stay lit) until the user taps
+    // anywhere — the whole overlay is the tap target via the click→_pdayClose
+    // handler. The owner wants this to never auto-advance.
   }
   window.addEventListener('resize', function () { if (document.getElementById('pday-overlay') && document.getElementById('pday-overlay').classList.contains('on')) _pdaySizeCanvas(); });
 
