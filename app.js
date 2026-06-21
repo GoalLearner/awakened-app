@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w447'; // W447 — 2 dual-condition co-op duo bosses (Gaunt Wardens C, Sundered Choir B): steps AND flights, ranger/mage armor drops
+  const APP_BUILD_TAG = '2.3.1-w448'; // W448 — co-op DEFEAT notification (both hunters told win OR loss); defeat was previously silent
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39672,6 +39672,7 @@
     } else {
       _coopStopPolling();
       if (inst && inst.status === 'completed' && inst.result === 'success') { _awardCoopKill(inst); }
+      else if (inst && inst.status === 'expired' && inst.result === 'defeat') { _awardCoopDefeat(inst); }   // W448 — tell the user they lost
     }
     renderCoopSheet();
   }
@@ -39806,6 +39807,42 @@
       announceKillAndDrop(
         { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
         reward, dropInfo);
+    } catch (_) {}
+    // W448 — also drop a notification-tray record (best-effort) so a win lands even if
+    // the resolution was detected on app-resume rather than while watching the sheet.
+    try { _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls and a relic claimed.' : '.')); } catch (_) {}
+  }
+
+  // W448 — Rendell lost two co-op hunts and was never told: DEFEAT (the window closed
+  // with the goal unmet) had NO notification anywhere — only a "fell short" note shown if
+  // you happened to reopen that boss's recruit sheet. Announce the loss the same way a win
+  // is announced (in-app toast + tray record), once per instance per device, so BOTH hunters
+  // learn the outcome on their own device the next time the app syncs.
+  function _awardCoopDefeat(inst) {
+    if (!inst || !inst.id) return;
+    const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
+    const awarded = _loadCoopAwarded();
+    if (awarded[inst.id]) return;            // this instance's outcome already handled here
+    awarded[inst.id] = true; _saveCoopAwarded(awarded);   // a hunt resolves to ONE outcome — win XOR loss
+    const msg = cfg.name + ' bested you — the co-op hunt fell short before the window closed. Rally your ally and call again.';
+    try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+    try { playSfx('ar_lose'); } catch (_) {}
+    try { _coopLocalNotify('Defeated by ' + cfg.name, 'Your co-op hunt fell short. Rally your ally and call again.'); } catch (_) {}
+  }
+
+  // Best-effort immediate local-notification (native only; no-op on web / when denied /
+  // when the plugin is absent). Leaves a record in the tray + alerts when the resolution
+  // is detected on app-resume. Reuses the @capacitor/local-notifications plugin.
+  function _coopLocalNotify(title, body) {
+    try {
+      const cap = window.Capacitor;
+      const ln = cap && cap.Plugins && cap.Plugins.LocalNotifications;
+      if (!ln || !(cap.isNativePlatform && cap.isNativePlatform())) return;
+      ln.schedule({ notifications: [{
+        id: (Math.abs(Date.now() % 2000000000) | 0) || 1,
+        title: title, body: body,
+        schedule: { at: new Date(Date.now() + 500) },
+      }] });
     } catch (_) {}
   }
 
@@ -40180,10 +40217,13 @@
           try { r = await Auth.coopBossResolve(inst.id); } catch (_) { r = null; }
           const fresh = (r && r.ok && r.instance) ? r.instance : inst;
           if (fresh.status === 'completed' && fresh.result === 'success') { try { _awardCoopKill(fresh); } catch (_) {} }
+          else if (fresh.status === 'expired' && fresh.result === 'defeat') { try { _awardCoopDefeat(fresh); } catch (_) {} }   // W448
         } else if (inst.status === 'pending') {
           liveRemains = true;
         } else if (inst.status === 'completed' && inst.result === 'success') {
           try { _awardCoopKill(inst); } catch (_) {}
+        } else if (inst.status === 'expired' && inst.result === 'defeat') {   // W448 — surface a loss the user never saw
+          try { _awardCoopDefeat(inst); } catch (_) {}
         }
       }
       if (!liveRemains) _coopSetEngaged(false);
