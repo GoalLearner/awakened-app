@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Rise Through the Ranks (social trailer)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
+<style>
+  /* ───────────────────────────────────────────────────────────────────────
+     rise-trailer.html — self-contained ~30s vertical (1080x1920) social clip.
+     The ASCENSION angle: start at E → grind habits into XP → climb the rank
+     ladder to S+ and Prestige → fell a boss. Sibling of daily-trailer.html
+     (same brand + outro, diff hook/middle/accent). Accent: GOLD + crimson.
+         node marketing/clips/render.js rise-trailer.html 31
+     ─────────────────────────────────────────────────────────────────────── */
+  :root{ --gold:#f5b842; --gold2:#ffd574; --goldHi:#ffe9b0; --gold-deep:#c8901f; --ivory:#f5f3fb;
+         --mute:#9a9ab8; --faint:#54546c; --crimson:#e0564f; --teal:#5ad6c8; --violet:#a78bfa; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 12%, rgba(224,86,79,0.13), transparent 60%),
+      radial-gradient(140% 60% at 50% 116%, rgba(245,184,66,0.16), transparent 60%),
+      linear-gradient(180deg,#15090a 0%,#0a0710 54%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none; z-index:40; box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--gold); box-shadow:0 0 12px 2px rgba(245,184,66,0.7); opacity:0; animation:rise linear infinite; z-index:2; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; } 12%{ opacity:0.8; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .scene{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.45s ease; padding:0 80px; }
+  .scene.active{ opacity:1; }
+  .eyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:8px;
+    text-transform:uppercase; color:var(--crimson); margin-bottom:38px; text-shadow:0 0 22px rgba(224,86,79,0.4); }
+  @keyframes popUp{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes popUpC{ from{opacity:0;transform:translateY(20px);} to{ opacity:1; transform:translateY(0); } }
+  @keyframes slamIn{ 0%{opacity:0;transform:scale(0.55);} 70%{opacity:1;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
+
+  /* ── SCENE 1 · HOOK — E-RANK vs S+ ───────────────────────────────── */
+  #sc-hook .big{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+  #sc-hook .l1{ position:relative; font-weight:900; font-size:150px; line-height:0.96; letter-spacing:2px; color:var(--faint);
+    opacity:0; transform:scale(0.7); }
+  #sc-hook .l1::after{ content:""; position:absolute; left:-3%; right:-3%; top:50%; height:9px; border-radius:5px;
+    background:var(--crimson); box-shadow:0 0 22px rgba(224,86,79,0.7); transform:scaleX(0); transform-origin:left; }
+  #sc-hook.active .l1{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 0.2s forwards; }
+  #sc-hook.active .l1::after{ animation:strike 0.45s cubic-bezier(.16,1,.3,1) 0.9s forwards; }
+  @keyframes strike{ to{ transform:scaleX(1); } }
+  #sc-hook .vs{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-weight:500; font-size:64px; color:var(--gold); margin:14px 0; opacity:0; }
+  #sc-hook.active .vs{ animation:popUp 0.5s ease 1.4s forwards; }
+  #sc-hook .l2{ font-weight:900; font-size:200px; line-height:1; letter-spacing:2px; color:var(--gold);
+    text-shadow:0 0 80px rgba(245,184,66,0.6), 0 2px 0 var(--gold-deep); opacity:0; transform:scale(0.6); }
+  #sc-hook.active .l2{ animation:slamIn 0.55s cubic-bezier(.18,1.5,.3,1) 1.7s forwards; }
+  #sc-hook .sub{ margin-top:54px; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:32px; letter-spacing:5px; text-transform:uppercase; color:var(--mute); opacity:0; }
+  #sc-hook.active .sub{ animation:popUpC 0.7s ease 2.5s forwards; }
+
+  /* ── SCENE 2 · THE GRIND — habits become XP ──────────────────────── */
+  #sc-grind .bars{ display:flex; flex-direction:column; gap:26px; width:800px; }
+  #sc-grind .bar{ opacity:0; transform:translateX(-40px); }
+  #sc-grind.active .bar{ animation:popUp 0.5s cubic-bezier(.16,1,.3,1) forwards; }
+  #sc-grind.active .bar:nth-child(1){ animation-delay:0.4s; } #sc-grind.active .bar:nth-child(2){ animation-delay:0.7s; }
+  #sc-grind.active .bar:nth-child(3){ animation-delay:1.0s; } #sc-grind.active .bar:nth-child(4){ animation-delay:1.3s; } #sc-grind.active .bar:nth-child(5){ animation-delay:1.6s; }
+  #sc-grind .blabel{ display:flex; justify-content:space-between; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px; letter-spacing:3px; color:var(--ivory); margin-bottom:10px; }
+  #sc-grind .blabel .v{ color:var(--gold); }
+  #sc-grind .track{ height:30px; border-radius:9px; background:rgba(255,255,255,0.08); overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1); }
+  #sc-grind .fill{ height:100%; border-radius:9px; width:0; background:linear-gradient(90deg,var(--gold-deep),var(--gold) 70%,var(--goldHi)); box-shadow:0 0 18px rgba(245,184,66,0.6); }
+  #sc-grind.active .bar:nth-child(1) .fill{ animation:fill 1.3s cubic-bezier(.3,1,.4,1) 0.6s forwards; --w:86%; }
+  #sc-grind.active .bar:nth-child(2) .fill{ animation:fill 1.3s cubic-bezier(.3,1,.4,1) 0.9s forwards; --w:72%; }
+  #sc-grind.active .bar:nth-child(3) .fill{ animation:fill 1.3s cubic-bezier(.3,1,.4,1) 1.2s forwards; --w:94%; }
+  #sc-grind.active .bar:nth-child(4) .fill{ animation:fill 1.3s cubic-bezier(.3,1,.4,1) 1.5s forwards; --w:64%; }
+  #sc-grind.active .bar:nth-child(5) .fill{ animation:fill 1.3s cubic-bezier(.3,1,.4,1) 1.8s forwards; --w:80%; }
+  @keyframes fill{ to{ width:var(--w); } }
+  #sc-grind .cap{ margin-top:64px; font-weight:700; font-size:54px; letter-spacing:1px; text-align:center; opacity:0; transform:translateY(20px); }
+  #sc-grind .cap b{ color:var(--gold); }
+  #sc-grind.active .cap{ animation:popUpC 0.7s cubic-bezier(.16,1,.3,1) 3.4s forwards; }
+
+  /* ── SCENE 3 · THE LADDER — climb the ranks + Prestige ───────────── */
+  #sc-ladder .ladder{ display:flex; flex-direction:column; gap:14px; width:560px; }
+  #sc-ladder .rung{ display:flex; align-items:center; gap:24px; padding:14px 22px; border-radius:16px;
+    border:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.02); opacity:0.32; }
+  #sc-ladder .rung .rd{ width:74px; height:74px; flex:none; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:46px; color:var(--mute); background:rgba(255,255,255,0.05); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08); }
+  #sc-ladder .rung .rl{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px; letter-spacing:3px; color:var(--mute); text-transform:uppercase; }
+  #sc-ladder .rung .stars{ margin-left:auto; font-size:34px; color:var(--gold); opacity:0; letter-spacing:4px; filter:drop-shadow(0 0 8px rgba(245,184,66,0.7)); }
+  #sc-ladder.active .rung{ animation:rlite 0.5s ease forwards; }
+  #sc-ladder.active .rung:nth-child(7){ animation-delay:0.4s; } /* E (bottom) */
+  #sc-ladder.active .rung:nth-child(6){ animation-delay:0.75s; }
+  #sc-ladder.active .rung:nth-child(5){ animation-delay:1.1s; }
+  #sc-ladder.active .rung:nth-child(4){ animation-delay:1.45s; }
+  #sc-ladder.active .rung:nth-child(3){ animation-delay:1.8s; }
+  #sc-ladder.active .rung:nth-child(2){ animation-delay:2.15s; }
+  #sc-ladder.active .rung:nth-child(1){ animation-delay:2.5s; } /* S+ (top) */
+  @keyframes rlite{ to{ opacity:1; border-color:rgba(245,184,66,0.5); background:rgba(245,184,66,0.07); box-shadow:0 0 26px rgba(245,184,66,0.16); } }
+  #sc-ladder.active .rung.sp{ animation:rliteSp 0.6s ease 2.5s forwards; }
+  @keyframes rliteSp{ to{ opacity:1; border-color:var(--gold); background:rgba(245,184,66,0.16); box-shadow:0 0 40px rgba(245,184,66,0.4); } }
+  #sc-ladder.active .rung.lit .rd{ color:var(--gold); background:rgba(245,184,66,0.18); box-shadow:inset 0 0 0 1px rgba(245,184,66,0.6), 0 0 18px rgba(245,184,66,0.4); }
+  #sc-ladder.active .rung.lit .rl{ color:var(--goldHi); }
+  #sc-ladder.active .rung.sp .stars{ animation:popUpC 0.6s ease 3.1s forwards; }
+  #sc-ladder .eyebrow{ margin-bottom:30px; }
+  #sc-ladder .cap{ margin-top:46px; font-weight:700; font-size:50px; letter-spacing:1px; text-align:center; opacity:0; transform:translateY(20px); }
+  #sc-ladder .cap b{ color:var(--gold); }
+  #sc-ladder.active .cap{ animation:popUpC 0.7s cubic-bezier(.16,1,.3,1) 3.5s forwards; }
+
+  /* ── SCENE 4 · THE RECKONING — fell a boss ───────────────────────── */
+  #sc-boss{ justify-content:flex-start; padding-top:200px; }
+  #sc-boss .portal{ position:relative; width:580px; height:580px; border-radius:28px; overflow:hidden;
+    box-shadow:0 0 0 2px rgba(224,86,79,0.5), 0 0 70px rgba(224,86,79,0.35), inset 0 0 80px rgba(0,0,0,0.6); opacity:0; transform:scale(0.92); }
+  #sc-boss.active .portal{ animation:popUp 0.8s cubic-bezier(.16,1,.3,1) 0.1s forwards, shakeB 0.5s linear 2.9s; }
+  @keyframes shakeB{ 0%,100%{transform:translate(0,0);} 20%{transform:translate(-12px,8px);} 40%{transform:translate(10px,-6px);} 60%{transform:translate(-7px,4px);} 80%{transform:translate(4px,-2px);} }
+  #sc-boss .portal img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-boss.active .portal img{ animation:slowzoom 4.5s ease-out 0.2s forwards; }
+  @keyframes slowzoom{ from{ transform:scale(1.04); } to{ transform:scale(1.16); } }
+  #sc-boss .portal::after{ content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, transparent 52%, rgba(7,7,19,0.95) 100%); }
+  #sc-boss .hitflash{ position:absolute; inset:0; z-index:18; background:#fff; mix-blend-mode:screen; opacity:0; }
+  #sc-boss.active .hitflash{ animation:hf 0.5s linear 2.9s forwards; }
+  @keyframes hf{ 0%{opacity:0;} 30%{opacity:0.85;} 100%{opacity:0;} }
+  #sc-boss .stamp{ position:absolute; top:340px; left:50%; transform:translate(-50%,-50%) scale(0.6) rotate(-8deg); z-index:20;
+    font-family:"JetBrains Mono",monospace; font-weight:800; font-size:50px; letter-spacing:4px; color:#2a0c0c; padding:18px 38px;
+    border-radius:14px; text-transform:uppercase; white-space:nowrap; background:linear-gradient(180deg,#ffd574,var(--gold) 60%,var(--gold-deep));
+    box-shadow:0 0 50px rgba(245,184,66,0.55); opacity:0; }
+  #sc-boss.active .stamp{ animation:movePop 1.5s cubic-bezier(.16,1,.3,1) 1.5s forwards; }
+  @keyframes movePop{ 0%{opacity:0;transform:translate(-50%,-50%) scale(0.6) rotate(-8deg);} 16%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(-3deg);} 28%{transform:translate(-50%,-50%) scale(1) rotate(-3deg);} 86%{opacity:1;} 100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-3deg);} }
+  #sc-boss .bossname{ font-weight:800; font-size:70px; letter-spacing:2px; margin-top:30px; text-align:center; text-shadow:0 4px 30px rgba(0,0,0,0.6); opacity:0; transform:translateY(22px); }
+  #sc-boss.active .bossname{ animation:popUpC 0.6s cubic-bezier(.16,1,.3,1) 0.7s forwards; }
+  #sc-boss .hpwrap{ width:780px; margin-top:40px; display:flex; flex-direction:column; gap:18px; opacity:0; transform:translateY(20px); }
+  #sc-boss.active .hpwrap{ animation:popUpC 0.6s cubic-bezier(.16,1,.3,1) 1.1s forwards; }
+  #sc-boss .hprow{ display:flex; align-items:center; gap:18px; }
+  #sc-boss .hpname{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:26px; letter-spacing:2px; width:120px; flex:none; text-transform:uppercase; }
+  #sc-boss .hpbar{ flex:1; height:26px; border-radius:8px; background:rgba(255,255,255,0.1); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12); overflow:hidden; }
+  #sc-boss .hpfill{ height:100%; border-radius:8px; }
+  #sc-boss .you .hpname{ color:var(--gold); } #sc-boss .you .hpfill{ width:90%; background:linear-gradient(90deg,var(--gold-deep),var(--goldHi)); box-shadow:0 0 22px rgba(245,184,66,0.8); }
+  #sc-boss .foe .hpname{ color:var(--crimson); } #sc-boss .foe .hpfill{ width:100%; background:linear-gradient(90deg,#7a201c,var(--crimson)); box-shadow:0 0 18px rgba(224,86,79,0.6); }
+  #sc-boss.active .foe .hpfill{ animation:drain 1.5s cubic-bezier(.5,0,.4,1) 1.4s forwards; }
+  @keyframes drain{ 0%{ width:100%; } 100%{ width:0%; } }
+
+  /* ── SCENE 5 · BECOME ─────────────────────────────────────────────── */
+  #sc-become .rays{ position:absolute; top:38%; left:50%; width:900px; height:900px; transform:translate(-50%,-50%); z-index:2; opacity:0;
+    background:conic-gradient(from 0deg, transparent 0 8deg, rgba(245,184,66,0.16) 8deg 12deg, transparent 12deg 24deg, rgba(245,184,66,0.16) 24deg 28deg, transparent 28deg); border-radius:50%; }
+  #sc-become.active .rays{ animation:raysIn 4s linear forwards; }
+  @keyframes raysIn{ 0%{opacity:0;transform:translate(-50%,-50%) rotate(0) scale(0.6);} 14%{opacity:0.7;} 100%{opacity:0.5;transform:translate(-50%,-50%) rotate(50deg) scale(1);} }
+  #sc-become .hero{ position:relative; z-index:4; width:340px; height:340px; border-radius:50%; overflow:hidden;
+    box-shadow:0 0 0 4px rgba(245,184,66,0.6), 0 0 70px rgba(245,184,66,0.55); opacity:0; transform:scale(0.7);
+    background:radial-gradient(circle at 50% 30%, rgba(245,184,66,0.3), #0a0a16 72%); }
+  #sc-become .hero img{ width:100%; height:100%; object-fit:cover; object-position:top center; }
+  #sc-become.active .hero{ animation:slamIn 0.7s cubic-bezier(.18,1.4,.3,1) 0.2s forwards; }
+  #sc-become .word{ position:relative; z-index:4; font-weight:900; font-size:140px; letter-spacing:4px; margin-top:34px; color:var(--gold);
+    text-transform:uppercase; text-shadow:0 0 60px rgba(245,184,66,0.6), 0 2px 0 var(--gold-deep); opacity:0; transform:scale(2.2); }
+  #sc-become.active .word{ animation:vslam 3.4s cubic-bezier(.15,1.3,.3,1) 0.6s forwards; }
+  @keyframes vslam{ 0%,3%{opacity:0;transform:scale(2.2);} 9%{opacity:1;transform:scale(0.94);} 14%{transform:scale(1.05);} 18%,100%{opacity:1;transform:scale(1);} }
+  #sc-become .sub{ position:relative; z-index:4; margin-top:18px; font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-size:46px; color:var(--mute); opacity:0; }
+  #sc-become.active .sub{ animation:popUpC 0.8s ease 1.6s forwards; }
+
+  /* ── SCENE 6 · OUTRO ──────────────────────────────────────────────── */
+  #sc-outro .logo{ width:280px; height:280px; opacity:0; transform:scale(0.78); filter:drop-shadow(0 0 36px rgba(245,184,66,0.55)); }
+  #sc-outro.active .logo{ animation:logoIn 0.9s cubic-bezier(.16,1,.3,1) 0.15s forwards, glowL 3.2s ease-in-out 1.1s infinite; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes glowL{ 0%,100%{filter:drop-shadow(0 0 30px rgba(245,184,66,0.45));} 50%{filter:drop-shadow(0 0 52px rgba(245,184,66,0.8));} }
+  #sc-outro .tagline{ margin-top:48px; font-weight:700; font-size:74px; letter-spacing:2px; line-height:1.16; text-align:center; max-width:940px;
+    text-shadow:0 4px 40px rgba(0,0,0,0.6); opacity:0; transform:translateY(26px); }
+  #sc-outro .tagline .g{ color:var(--gold); }
+  #sc-outro.active .tagline{ animation:popUpC 0.8s cubic-bezier(.16,1,.3,1) 0.9s forwards; }
+  #sc-outro .cta{ margin-top:58px; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:36px; letter-spacing:3px; color:#241a05;
+    text-transform:uppercase; padding:30px 56px; border-radius:20px; background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,var(--gold-deep));
+    box-shadow:0 0 50px rgba(245,184,66,0.34), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4); opacity:0; transform:translateY(26px) scale(0.96); }
+  #sc-outro.active .cta{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 1.5s forwards, pulseC 2.4s ease-in-out 2.3s infinite; }
+  @keyframes pulseC{ 0%,100%{box-shadow:0 0 44px rgba(245,184,66,0.3), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);} 50%{box-shadow:0 0 74px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4);} }
+  #sc-outro .handle{ position:absolute; bottom:130px; left:0; right:0; text-align:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:30px; letter-spacing:5px; color:var(--mute); opacity:0; }
+  #sc-outro.active .handle{ animation:fadeH 0.8s ease 1.9s forwards; }
+  @keyframes fadeH{ to{ opacity:0.85; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- SCENE 1 · HOOK -->
+  <div class="scene" id="sc-hook">
+    <div class="big">
+      <span class="l1">E&#8209;RANK</span>
+      <span class="vs">becomes</span>
+      <span class="l2">S+</span>
+    </div>
+    <div class="sub">Everyone starts at the bottom</div>
+  </div>
+
+  <!-- SCENE 2 · THE GRIND -->
+  <div class="scene" id="sc-grind">
+    <div class="eyebrow">Every habit is XP</div>
+    <div class="bars">
+      <div class="bar"><div class="blabel"><span>STRENGTH</span><span class="v">LV 14</span></div><div class="track"><div class="fill"></div></div></div>
+      <div class="bar"><div class="blabel"><span>FOCUS</span><span class="v">LV 11</span></div><div class="track"><div class="fill"></div></div></div>
+      <div class="bar"><div class="blabel"><span>WILL</span><span class="v">LV 17</span></div><div class="track"><div class="fill"></div></div></div>
+      <div class="bar"><div class="blabel"><span>VITALITY</span><span class="v">LV 9</span></div><div class="track"><div class="fill"></div></div></div>
+      <div class="bar"><div class="blabel"><span>MIND</span><span class="v">LV 13</span></div><div class="track"><div class="fill"></div></div></div>
+    </div>
+    <div class="cap">Discipline becomes <b>power</b>.</div>
+  </div>
+
+  <!-- SCENE 3 · THE LADDER -->
+  <div class="scene" id="sc-ladder">
+    <div class="eyebrow">Climb the Ranks</div>
+    <div class="ladder">
+      <div class="rung sp lit"><span class="rd">S+</span><span class="rl">Legendary</span><span class="stars">&#10022;&#10022;&#10022;</span></div>
+      <div class="rung lit"><span class="rd">S</span><span class="rl">Elite</span></div>
+      <div class="rung lit"><span class="rd">A</span><span class="rl">Rare</span></div>
+      <div class="rung lit"><span class="rd">B</span><span class="rl">Above Avg</span></div>
+      <div class="rung lit"><span class="rd">C</span><span class="rl">Forming</span></div>
+      <div class="rung lit"><span class="rd">D</span><span class="rl">Building</span></div>
+      <div class="rung lit"><span class="rd">E</span><span class="rl">Day One</span></div>
+    </div>
+    <div class="cap">Climb to <b>S+ &middot; then Prestige</b>.</div>
+  </div>
+
+  <!-- SCENE 4 · THE RECKONING -->
+  <div class="scene" id="sc-boss">
+    <div class="hitflash"></div>
+    <div class="stamp">B-Rank · Felled</div>
+    <div class="eyebrow">Now you're the threat</div>
+    <div class="portal"><img src="../../assets/arena/boss_80.webp" alt="" onerror="this.style.display='none'"></div>
+    <div class="bossname">THE HOLLOW MONARCH</div>
+    <div class="hpwrap">
+      <div class="hprow you"><span class="hpname">You</span><span class="hpbar"><span class="hpfill"></span></span></div>
+      <div class="hprow foe"><span class="hpname">Boss</span><span class="hpbar"><span class="hpfill"></span></span></div>
+    </div>
+  </div>
+
+  <!-- SCENE 5 · BECOME -->
+  <div class="scene" id="sc-become">
+    <div class="rays"></div>
+    <div class="hero"><img src="../../avatar-skin-bloodmoon.png" alt="" onerror="this.style.display='none'"></div>
+    <div class="word">AWAKENED</div>
+    <div class="sub">The hunter the climb made you</div>
+  </div>
+
+  <!-- SCENE 6 · OUTRO -->
+  <div class="scene" id="sc-outro">
+    <svg class="logo" viewBox="0 0 200 200" aria-hidden="true">
+      <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="6.5" stroke-linejoin="round"/>
+      <circle cx="100" cy="46" r="5.5" fill="#f5b842"/><circle cx="159" cy="158" r="5.5" fill="#f5b842"/><circle cx="41" cy="158" r="5.5" fill="#f5b842"/>
+      <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+    </svg>
+    <div class="tagline">RISE THROUGH THE RANKS.<br>BECOME <span class="g">AWAKENED</span>.</div>
+    <div class="cta">Download free on iOS</div>
+    <div class="handle">@AWAKENEDRPG</div>
+  </div>
+
+  <div class="vig"></div>
+</div>
+
+<script>
+  var stage = document.getElementById('stage');
+  for (var i=0;i<16;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+  // master timeline [scene id, ms] — sums to 30000
+  var T = [['hook',4000],['grind',5500],['ladder',6500],['boss',4500],['become',4000],['outro',5500]];
+  var scenes = T.map(function(t){ return document.getElementById('sc-' + t[0]); });
+  function activate(idx){ scenes.forEach(function(s){ s.classList.remove('active'); }); scenes[idx].classList.add('active'); }
+  function run(){ var acc = 0; T.forEach(function(t, k){ setTimeout(function(){ activate(k); }, acc); acc += t[1]; }); }
+  document.addEventListener('click', function(){ run(); });
+  run();
+  function fit(){ var s = Math.min(window.innerWidth/1080, window.innerHeight/1920); stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;'; }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
