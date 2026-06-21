@@ -8,12 +8,24 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
+// W447 — drop these 12 Midjourney PNGs in the repo ROOT (src names below), then run
+// `node scripts/process-boss-art.js`. Each is resized to the 1254 house box (bosses keep
+// aspect; items square-padded by edge-copy), PNG-compressed, written to dst, and the heavy
+// original archived to art-originals/. MISSING files are skipped, so partial drops are fine.
+// Prompts: SPRINT-W447-COOP-ART.md.
 const JOBS = [
-  { src: 'the-unbroken-anvil.png',           dst: 'assets/bosses/the-unbroken-anvil.png',           kind: 'boss' },
-  { src: 'duskforge-the-anvils-verdict.png', dst: 'assets/items/duskforge-the-anvils-verdict.png', kind: 'item' },
-  { src: 'forgewarden-gauntlets.png',        dst: 'assets/items/forgewarden-gauntlets.png',        kind: 'item' },
-  { src: 'anvilrest-cuirass.png',            dst: 'assets/items/anvilrest-cuirass.png',            kind: 'item' },
-  { src: 'charm-of-the-emberkeeper.png',     dst: 'assets/items/charm-of-the-emberkeeper.png',     kind: 'item' },
+  { src: 'the-gaunt-wardens.png',          dst: 'assets/bosses/the-gaunt-wardens.png',          kind: 'boss' },
+  { src: 'the-gaunt-wardens-summons.png',  dst: 'assets/bosses/the-gaunt-wardens-summons.png',  kind: 'boss' },
+  { src: 'the-sundered-choir.png',         dst: 'assets/bosses/the-sundered-choir.png',         kind: 'boss' },
+  { src: 'the-sundered-choir-summons.png', dst: 'assets/bosses/the-sundered-choir-summons.png', kind: 'boss' },
+  { src: 'the_wardens_vigil.png',          dst: 'assets/items/the_wardens_vigil.png',           kind: 'item' },
+  { src: 'the_stairwalkers_treads.png',    dst: 'assets/items/the_stairwalkers_treads.png',     kind: 'item' },
+  { src: 'the_famished_circlet.png',       dst: 'assets/items/the_famished_circlet.png',        kind: 'item' },
+  { src: 'the_gaunt_mantle.png',           dst: 'assets/items/the_gaunt_mantle.png',            kind: 'item' },
+  { src: 'the_choirmasters_vestment.png',  dst: 'assets/items/the_choirmasters_vestment.png',   kind: 'item' },
+  { src: 'the_discordant_crown.png',       dst: 'assets/items/the_discordant_crown.png',        kind: 'item' },
+  { src: 'the_sundered_grips.png',         dst: 'assets/items/the_sundered_grips.png',          kind: 'item' },
+  { src: 'the_antiphon_striders.png',      dst: 'assets/items/the_antiphon_striders.png',       kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });
