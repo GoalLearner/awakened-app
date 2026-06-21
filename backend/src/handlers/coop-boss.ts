@@ -37,14 +37,22 @@ import { jsonOk, jsonError } from '../lib/responses';
 // windowHours is the hunt length, stamped on join. metric selects which
 // verified-event stream the hunt aggregates: 'steps' (steps_total) or
 // 'flights' (flights_total, W397 — stairs-climbed co-op).
+// W447 — metric 'both' is a DUAL hunt: BOTH a steps goal (goalSteps) AND a flights goal
+// (goalFlights) must be met (combined across the two hunters) to fell the boss.
 const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' }
+  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' }
 > = {
   the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 50,  windowHours: 24, metric: 'steps' },
   the_coursing_dread:   { rank: 'C', goalSteps: 18000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
   the_hollow_monarch:   { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
+  // W447 — dual-condition (steps AND flights) co-op duo bosses.
+  the_gaunt_wardens:    { rank: 'C', goalSteps: 10000, goalFlights: 6,  rewardSouls: 130, windowHours: 24, metric: 'both' },
+  the_sundered_choir:   { rank: 'B', goalSteps: 12000, goalFlights: 10, rewardSouls: 240, windowHours: 24, metric: 'both' },
 };
+function bossMetric(bossId: string): 'steps' | 'flights' | 'both' {
+  return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
+}
 
 const STEPS_EVENT_TYPE = 'steps_total';
 const FLIGHTS_EVENT_TYPE = 'flights_total';
@@ -58,6 +66,13 @@ function eventTypeForBoss(bossId: string): string {
   const cfg = COOP_BOSS_CFG[bossId];
   return eventTypeForMetric(cfg ? cfg.metric : 'steps');
 }
+// W447 — which verified-event types this boss accepts. A 'both' boss accepts BOTH
+// steps_total and flights_total (the instance is no longer homogeneous); single-metric
+// bosses accept only their one type.
+function metricAllowedForBoss(bossId: string, eventType: string): boolean {
+  if (bossMetric(bossId) === 'both') return eventType === STEPS_EVENT_TYPE || eventType === FLIGHTS_EVENT_TYPE;
+  return eventType === eventTypeForBoss(bossId);
+}
 const MAX_LIST = 20;
 
 interface CoopBossRow {
@@ -67,6 +82,7 @@ interface CoopBossRow {
   challenger_user_id: string;
   partner_user_id: string;
   goal_steps: number;
+  goal_flights: number | null;   // W447 — dual-metric ('both') bosses; null for single-metric
   reward_souls: number;
   status: string;
   result: string | null;
@@ -108,60 +124,73 @@ async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, str
   return map;
 }
 
-/** Per-user metric contribution for ONE instance: MAX(value) per user, over
- *  the boss's event_type (steps_total or flights_total). */
-async function getCoopStepsByUser(
-  env: Env,
-  instanceId: string,
-  eventType: string,
-): Promise<Map<string, number>> {
+// W447 — per-instance progress is now DUAL: MAX(value) per user for steps_total AND
+// flights_total. A single-metric boss simply has an empty map for the other stream;
+// a 'both' boss uses both. The "primary" stream (what the metric-generic combined_steps/
+// goal_steps fields carry) is flights for a flights boss, steps otherwise.
+interface CoopProgress { steps: Map<string, number>; flights: Map<string, number>; }
+function emptyProgress(): CoopProgress { return { steps: new Map(), flights: new Map() }; }
+
+/** Per-user MAX(value) for ONE instance, split by metric stream. */
+async function getCoopProgress(env: Env, instanceId: string): Promise<CoopProgress> {
   const rows = await env.DB.prepare(
-    `SELECT user_id, COALESCE(MAX(value), 0) AS s
+    `SELECT user_id, event_type, COALESCE(MAX(value), 0) AS s
        FROM verified_events
-      WHERE boss_instance_id = ? AND event_type = ?
-      GROUP BY user_id`,
+      WHERE boss_instance_id = ? AND event_type IN (?, ?)
+      GROUP BY user_id, event_type`,
   )
-    .bind(instanceId, eventType)
-    .all<{ user_id: string; s: number }>();
-  const m = new Map<string, number>();
-  for (const r of rows.results ?? []) m.set(r.user_id, Number(r.s) || 0);
-  return m;
+    .bind(instanceId, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE)
+    .all<{ user_id: string; event_type: string; s: number }>();
+  const p = emptyProgress();
+  for (const r of rows.results ?? []) {
+    (r.event_type === FLIGHTS_EVENT_TYPE ? p.flights : p.steps).set(r.user_id, Number(r.s) || 0);
+  }
+  return p;
 }
 
-/** Batched variant for the list endpoint: instanceId → (userId → steps). */
-async function getCoopStepsForInstances(
-  env: Env,
-  ids: string[],
-): Promise<Map<string, Map<string, number>>> {
-  const out = new Map<string, Map<string, number>>();
+/** Batched variant for the list endpoint: instanceId → CoopProgress. */
+async function getCoopProgressForInstances(env: Env, ids: string[]): Promise<Map<string, CoopProgress>> {
+  const out = new Map<string, CoopProgress>();
   if (ids.length === 0) return out;
   const placeholders = ids.map(() => '?').join(',');
-  // Both event_types in one pass — safe because each instance is homogeneous,
-  // so its rows carry exactly one metric and the per-instance MAX is unambiguous.
   const rows = await env.DB.prepare(
-    `SELECT boss_instance_id AS bid, user_id, COALESCE(MAX(value), 0) AS s
+    `SELECT boss_instance_id AS bid, user_id, event_type, COALESCE(MAX(value), 0) AS s
        FROM verified_events
       WHERE boss_instance_id IN (${placeholders}) AND event_type IN (?, ?)
-      GROUP BY boss_instance_id, user_id`,
+      GROUP BY boss_instance_id, user_id, event_type`,
   )
     .bind(...ids, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE)
-    .all<{ bid: string; user_id: string; s: number }>();
+    .all<{ bid: string; user_id: string; event_type: string; s: number }>();
   for (const r of rows.results ?? []) {
-    if (!out.has(r.bid)) out.set(r.bid, new Map());
-    out.get(r.bid)!.set(r.user_id, Number(r.s) || 0);
+    if (!out.has(r.bid)) out.set(r.bid, emptyProgress());
+    const p = out.get(r.bid)!;
+    (r.event_type === FLIGHTS_EVENT_TYPE ? p.flights : p.steps).set(r.user_id, Number(r.s) || 0);
   }
   return out;
 }
 
-function combinedFrom(row: CoopBossRow, byUser: Map<string, number>): number {
-  return (byUser.get(row.challenger_user_id) || 0) + (byUser.get(row.partner_user_id) || 0);
+function combinedSteps(row: CoopBossRow, p: CoopProgress): number {
+  return (p.steps.get(row.challenger_user_id) || 0) + (p.steps.get(row.partner_user_id) || 0);
+}
+function combinedFlights(row: CoopBossRow, p: CoopProgress): number {
+  return (p.flights.get(row.challenger_user_id) || 0) + (p.flights.get(row.partner_user_id) || 0);
+}
+/** Authoritative win test across all boss metrics. A 'both' boss requires BOTH goals;
+ *  a flights boss compares its (metric-generic) goal_steps against the flight total. */
+function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
+  const metric = bossMetric(row.boss_id);
+  return (p: CoopProgress) => {
+    if (metric === 'both') return combinedSteps(row, p) >= row.goal_steps && combinedFlights(row, p) >= (row.goal_flights || 0);
+    if (metric === 'flights') return combinedFlights(row, p) >= row.goal_steps;
+    return combinedSteps(row, p) >= row.goal_steps;
+  };
 }
 
 function serializeCoop(
   row: CoopBossRow,
   aliasMap: Map<string, string>,
   viewerUserId: string,
-  byUser: Map<string, number>,
+  p: CoopProgress,
 ): Record<string, unknown> {
   const role: 'challenger' | 'partner' | 'observer' =
     row.challenger_user_id === viewerUserId
@@ -176,29 +205,37 @@ function serializeCoop(
     if (Number.isFinite(endsMs)) timeRemainingMs = Math.max(0, endsMs - Date.now());
   }
 
-  const challengerSteps = byUser.get(row.challenger_user_id) || 0;
-  const partnerSteps = byUser.get(row.partner_user_id) || 0;
+  const metric = bossMetric(row.boss_id);
+  // The metric-generic "primary" stream: flights for a flights boss, steps otherwise.
+  const primary = metric === 'flights' ? p.flights : p.steps;
+  const cPrimary = (uid: string) => primary.get(uid) || 0;
+  const isBoth = metric === 'both';
 
   return {
     id: row.id,
     boss_id: row.boss_id,
     boss_rank: row.boss_rank,
-    metric: COOP_BOSS_CFG[row.boss_id]?.metric ?? 'steps',
+    metric,
     status: row.status,
     result: row.result ?? null,
     role,
     goal_steps: row.goal_steps,
     reward_souls: row.reward_souls,
-    combined_steps: challengerSteps + partnerSteps,
+    combined_steps: cPrimary(row.challenger_user_id) + cPrimary(row.partner_user_id),
+    // W447 — dual-metric bosses also surface the SECOND (flights) stream + goal so the
+    // client can render two progress bars; omitted for single-metric bosses.
+    ...(isBoth ? { goal_flights: row.goal_flights ?? 0, combined_flights: combinedFlights(row, p) } : {}),
     challenger: {
       user_id: row.challenger_user_id,
       alias: aliasMap.get(row.challenger_user_id) ?? null,
-      steps: challengerSteps,
+      steps: cPrimary(row.challenger_user_id),
+      ...(isBoth ? { flights: p.flights.get(row.challenger_user_id) || 0 } : {}),
     },
     partner: {
       user_id: row.partner_user_id,
       alias: aliasMap.get(row.partner_user_id) ?? null,
-      steps: partnerSteps,
+      steps: cPrimary(row.partner_user_id),
+      ...(isBoth ? { flights: p.flights.get(row.partner_user_id) || 0 } : {}),
     },
     starts_at: row.starts_at,
     ends_at: row.ends_at,
@@ -254,10 +291,10 @@ export async function validateBossInstanceForUser(
     return { ok: false, reason: 'NOT_PARTICIPANT' };
   }
   if (row.status !== 'active') return { ok: false, reason: 'BOSS_NOT_ACTIVE' };
-  // W397 — the event must carry THIS boss's metric (a flights boss only counts
-  // flights_total; a steps boss only steps_total). Enforced here so every
-  // instance stays homogeneous and the resolver's per-metric MAX is exact.
-  if (eventType && eventType !== eventTypeForBoss(row.boss_id)) {
+  // W397 — the event must carry a metric THIS boss counts (a flights boss only counts
+  // flights_total; a steps boss only steps_total). W447 — a 'both' boss accepts EITHER
+  // steps_total or flights_total (the dual hunt aggregates each stream separately).
+  if (eventType && !metricAllowedForBoss(row.boss_id, eventType)) {
     return { ok: false, reason: 'WRONG_METRIC' };
   }
   const now = Date.now();
@@ -315,16 +352,16 @@ export async function handleCoopBossCreate(
   await env.DB.prepare(
     `INSERT INTO coop_boss_instances
        (id, boss_id, boss_rank, challenger_user_id, partner_user_id,
-        goal_steps, reward_souls, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        goal_steps, goal_flights, reward_souls, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
   )
-    .bind(id, bossId, cfg.rank, session.userId, partnerUserId, cfg.goalSteps, cfg.rewardSouls)
+    .bind(id, bossId, cfg.rank, session.userId, partnerUserId, cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls)
     .run();
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(500, 'INTERNAL', 'Failed to read back created instance.');
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, new Map()) });
+  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, emptyProgress()) });
 }
 
 // ── GET /v1/coop-boss — list caller's instances ─────────────────────
@@ -352,13 +389,13 @@ export async function handleCoopBossList(
     userIds.add(r.challenger_user_id);
     userIds.add(r.partner_user_id);
   }
-  const [stepsByInstance, aliasMap] = await Promise.all([
-    getCoopStepsForInstances(env, ids),
+  const [progByInstance, aliasMap] = await Promise.all([
+    getCoopProgressForInstances(env, ids),
     getAliasMap(env, Array.from(userIds)),
   ]);
 
   const instances = list.map((r) =>
-    serializeCoop(r, aliasMap, session.userId, stepsByInstance.get(r.id) ?? new Map()),
+    serializeCoop(r, aliasMap, session.userId, progByInstance.get(r.id) ?? emptyProgress()),
   );
   return jsonOk({ ok: true, instances });
 }
@@ -378,9 +415,9 @@ export async function handleCoopBossGet(
   if (!isParticipant(row, session.userId)) {
     return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
   }
-  const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
+  const prog = await getCoopProgress(env, row.id);
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, byUser) });
+  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, prog) });
 }
 
 // ── POST /v1/coop-boss/:id/join — partner accepts ───────────────────
@@ -419,7 +456,7 @@ export async function handleCoopBossJoin(
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back joined instance.');
   const aliasMap = await getAliasMap(env, [refreshed.challenger_user_id, refreshed.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, new Map()) });
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
 }
 
 // ── POST /v1/coop-boss/:id/decline — partner declines ───────────────
@@ -468,8 +505,8 @@ export async function handleCoopBossCancel(
     // Don't let a leave throw away an already-earned win: if the combined goal
     // is met it must resolve as a WIN, not vanish. (The client also auto-resolves
     // on goal-met; this guards the small race where a leave races the resolve.)
-    const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
-    if (combinedFrom(row, byUser) >= row.goal_steps) {
+    const prog = await getCoopProgress(env, row.id);
+    if (isGoalMet(row)(prog)) {
       return jsonError(409, 'ALREADY_WON', 'This hunt already hit its goal — claim the win instead.');
     }
   } else {
@@ -492,10 +529,10 @@ export async function handleCoopBossCancel(
   // committed a terminal status first), return the REAL current row with REAL
   // steps so the client can still award a won hunt and show correct totals.
   // When it DID cancel, the steps are irrelevant (empty map is fine).
-  const byUser = cancelled
-    ? new Map<string, number>()
-    : await getCoopStepsByUser(env, refreshed.id, eventTypeForBoss(refreshed.boss_id));
-  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, byUser) });
+  const prog = cancelled
+    ? emptyProgress()
+    : await getCoopProgress(env, refreshed.id);
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, prog) });
 }
 
 /** Shared pending→terminal transition for decline/cancel. */
@@ -530,7 +567,7 @@ async function setTerminalStatus(
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
   const aliasMap = await getAliasMap(env, [refreshed.challenger_user_id, refreshed.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, new Map()) });
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
 }
 
 // ── POST /v1/coop-boss/:id/resolve — evaluate the hunt ──────────────
@@ -549,24 +586,23 @@ export async function handleCoopBossResolve(
     return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
   }
 
-  const byUser = await getCoopStepsByUser(env, row.id, eventTypeForBoss(row.boss_id));
-  const combined = combinedFrom(row, byUser);
+  const prog = await getCoopProgress(env, row.id);
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
 
-  // Idempotent: already resolved → return the stored verdict + live steps.
+  // Idempotent: already resolved → return the stored verdict + live progress.
   if (row.status === 'completed' || row.status === 'expired') {
     return jsonOk({
       ok: true,
       resolved: true,
       already_resolved: true,
-      instance: serializeCoop(row, aliasMap, session.userId, byUser),
+      instance: serializeCoop(row, aliasMap, session.userId, prog),
     });
   }
   if (row.status !== 'active') {
     return jsonError(400, 'BAD_STATE', `Cannot resolve from status "${row.status}".`);
   }
 
-  const goalMet = combined >= row.goal_steps;
+  const goalMet = isGoalMet(row)(prog);   // W447 — 'both' bosses require BOTH steps AND flights
   const endsMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
   const expired = Number.isFinite(endsMs) && Date.now() >= endsMs;
 
@@ -594,7 +630,7 @@ export async function handleCoopBossResolve(
     return jsonOk({
       ok: true,
       resolved: false,
-      instance: serializeCoop(row, aliasMap, session.userId, byUser),
+      instance: serializeCoop(row, aliasMap, session.userId, prog),
     });
   }
 
@@ -602,6 +638,6 @@ export async function handleCoopBossResolve(
   return jsonOk({
     ok: true,
     resolved: true,
-    instance: serializeCoop(refreshed, aliasMap, session.userId, byUser),
+    instance: serializeCoop(refreshed, aliasMap, session.userId, prog),
   });
 }

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w445'; // W445 — friend-Echo summon: re-tap guard + clear loading; harder/deeper ranked bot roster (Master/Awakened Echoes)
+  const APP_BUILD_TAG = '2.3.1-w447'; // W447 — 2 dual-condition co-op duo bosses (Gaunt Wardens C, Sundered Choir B): steps AND flights, ranger/mage armor drops
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -481,6 +481,27 @@
       archetype:  'caster',
       statDomain: 'WILL',
       dropTable:  { ultra_rare: 0.30, rare: 0.55 },
+    },
+    // W447 — dual-condition (steps AND flights) co-op duo bosses. coopOnly drop-source
+    // stubs (the live hunt cfg lives in COOP_BOSSES; the condition in COOP_BOSS_CFG).
+    // rare bumped to 0.60 because each pool has 3 rares (vs 2) — keeps per-rare ~20%.
+    the_gaunt_wardens: {
+      id:         'the_gaunt_wardens',
+      name:       'The Gaunt Wardens',
+      rank:       'C',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'VIT',
+      dropTable:  { ultra_rare: 0.25, rare: 0.60 },
+    },
+    the_sundered_choir: {
+      id:         'the_sundered_choir',
+      name:       'The Sundered Choir',
+      rank:       'B',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'INT',
+      dropTable:  { ultra_rare: 0.30, rare: 0.60 },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -2136,6 +2157,128 @@
       bonuses: { str: 0, vit: 5, int: 15, focus: 6, will: 2, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [4,8], int: [13,17], focus: [4,8], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Gaunt Wardens (C) co-op pool — W447 ────────────────
+    // Dual-condition duo boss (10k steps + 6 flights). ARMOR only, no weapons:
+    // 2 ranger (FOCUS-dominant) + 2 mage (INT-dominant), C-tier budgets
+    // (rare ~14, ultra ~22). Class is read off the dominant stat; armor carries
+    // no move kit (special_effect null).
+    the_wardens_vigil: {
+      id: 'the_wardens_vigil',
+      name: "Warden's Vigil",
+      slot: 'body',
+      source_boss: 'the_gaunt_wardens',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'Plate worn thin by a watch that never ended. It still keeps the long road and the high stair both in view.',
+      art_path: 'assets/items/the_wardens_vigil.png',
+      bonuses: { str: 3, vit: 6, int: 0, focus: 11, will: 2, wlt: 0 },
+      bonus_ranges: { str: [1,5], vit: [4,8], int: [0,0], focus: [9,13], will: [0,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_stairwalkers_treads: {
+      id: 'the_stairwalkers_treads',
+      name: "Stairwalker's Treads",
+      slot: 'boots',
+      source_boss: 'the_gaunt_wardens',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'Soles ground flat by a thousand flights. They have never once turned back at a landing.',
+      art_path: 'assets/items/the_stairwalkers_treads.png',
+      bonuses: { str: 1, vit: 4, int: 0, focus: 8, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,3], vit: [2,6], int: [0,0], focus: [6,10], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_famished_circlet: {
+      id: 'the_famished_circlet',
+      name: 'Famished Circlet',
+      slot: 'helm',
+      source_boss: 'the_gaunt_wardens',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'It hungers for thought the way the Wardens hungered for rest. Feed it; it pays you back in clarity.',
+      art_path: 'assets/items/the_famished_circlet.png',
+      bonuses: { str: 0, vit: 3, int: 8, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [1,5], int: [6,10], focus: [0,4], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_gaunt_mantle: {
+      id: 'the_gaunt_mantle',
+      name: 'Gaunt Mantle',
+      slot: 'cape',
+      source_boss: 'the_gaunt_wardens',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'Threadbare and starlit, it drapes the shoulders of those who walk far and climb farther.',
+      art_path: 'assets/items/the_gaunt_mantle.png',
+      bonuses: { str: 0, vit: 4, int: 8, focus: 1, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [2,6], int: [6,10], focus: [0,3], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Sundered Choir (B) co-op pool — W447 ───────────────
+    // Dual-condition duo boss (12k steps + 10 flights). ARMOR only, no weapons:
+    // 2 mage (INT) + 2 ranger (FOCUS), B-tier budgets (rare ~18, ultra ~28).
+    the_choirmasters_vestment: {
+      id: 'the_choirmasters_vestment',
+      name: "Choirmaster's Vestment",
+      slot: 'body',
+      source_boss: 'the_sundered_choir',
+      rarity: 'ultra_rare',
+      tier: 'B',
+      flavor: 'Stitched from the silence between two voices. While you wear it, the song bends to your thought instead. Best in slot, until an A-rank hymn falls.',
+      art_path: 'assets/items/the_choirmasters_vestment.png',
+      bonuses: { str: 0, vit: 6, int: 15, focus: 5, will: 2, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [4,8], int: [13,17], focus: [3,7], will: [0,4], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_discordant_crown: {
+      id: 'the_discordant_crown',
+      name: 'Discordant Crown',
+      slot: 'helm',
+      source_boss: 'the_sundered_choir',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'Two notes that should never sound at once, fused into a single cold chord. It clears the mind by drowning out everything else.',
+      art_path: 'assets/items/the_discordant_crown.png',
+      bonuses: { str: 0, vit: 4, int: 11, focus: 2, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [2,6], int: [9,13], focus: [0,4], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_sundered_grips: {
+      id: 'the_sundered_grips',
+      name: 'Sundered Grips',
+      slot: 'gloves',
+      source_boss: 'the_sundered_choir',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'Gauntlets that learned to nock and loose to a rhythm only the Choir kept. Your aim keeps time now.',
+      art_path: 'assets/items/the_sundered_grips.png',
+      bonuses: { str: 2, vit: 5, int: 0, focus: 10, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,4], vit: [3,7], int: [0,0], focus: [8,12], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    the_antiphon_striders: {
+      id: 'the_antiphon_striders',
+      name: 'Antiphon Striders',
+      slot: 'boots',
+      source_boss: 'the_sundered_choir',
+      rarity: 'rare',
+      tier: 'B',
+      flavor: 'One boot keeps the flat dark, the other the climbing stair — call and response, step for step, until the song runs out.',
+      art_path: 'assets/items/the_antiphon_striders.png',
+      bonuses: { str: 2, vit: 6, int: 0, focus: 9, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,4], vit: [4,8], int: [0,0], focus: [7,11], will: [0,3], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
 
@@ -39384,6 +39527,49 @@
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 20 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
       coopVictoryTitle:'THE THRONE IS TAKEN',
     },
+    // W447 — C-rank DUAL duo hunt: steps AND flights both required (combined across the two
+    // hunters). coopGoalSteps + coopGoalFlights MUST match the server COOP_BOSS_CFG.
+    the_gaunt_wardens: {
+      id:              'the_gaunt_wardens',
+      name:            'The Gaunt Wardens',
+      rank:            'C',
+      artId:           'the_gaunt_wardens',
+      dropSourceBoss:  'the_gaunt_wardens',
+      coopMetric:      'both',
+      coopGoalSteps:   10000,
+      coopGoalFlights: 6,
+      coopUnit:        'steps',
+      coopUnitFlights: 'flights',
+      coopRewardSouls: 130,
+      coopWindowHours: 24,
+      statDomain:      'VIT',
+      flavorShort:     'Two wardens, two roads. Outwalk them AND outclimb them — together.',
+      flavorLong:      'They were set to guard the low road and the high stair both, and starved at their posts until only the watching was left. One way past them is never enough: the ground must be covered AND the stairs must be taken. Two hunters, splitting the distance and the climb, leave the Gaunt Wardens nothing left to guard.',
+      killCondShort:   'Two hunters: 10,000 steps AND 6 flights in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 10,000 verified steps AND climb 6 verified flights of stairs between you. BOTH must be met to fell the Wardens — split the road and the climb however you like. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE WARDENS FALL',
+    },
+    // W447 — B-rank DUAL duo hunt: steps AND flights both required.
+    the_sundered_choir: {
+      id:              'the_sundered_choir',
+      name:            'The Sundered Choir',
+      rank:            'B',
+      artId:           'the_sundered_choir',
+      dropSourceBoss:  'the_sundered_choir',
+      coopMetric:      'both',
+      coopGoalSteps:   12000,
+      coopGoalFlights: 10,
+      coopUnit:        'steps',
+      coopUnitFlights: 'flights',
+      coopRewardSouls: 240,
+      coopWindowHours: 24,
+      statDomain:      'INT',
+      flavorShort:     'One voice walks, one voice climbs. Silence both to end the song.',
+      flavorLong:      'It sings in two voices that never meet — one that paces the long flat dark, one that spirals the endless stair. Answer only one and the other sings louder. Walk down the first AND climb out the second, together, and the Sundered Choir finally falls quiet.',
+      killCondShort:   'Two hunters: 12,000 steps AND 10 flights in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 12,000 verified steps AND climb 10 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE CHOIR IS SILENCED',
+    },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
   let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
@@ -39480,7 +39666,7 @@
     const inst = _coopSheet.instance;
     if (inst && (inst.status === 'pending' || inst.status === 'active')) _coopSetEngaged(true);
     if (inst && inst.status === 'active') {
-      if ((inst.combined_steps || 0) >= (inst.goal_steps || Infinity)) { _coopResolve(inst.id); return; }
+      if (_coopGoalReached(inst)) { _coopResolve(inst.id); return; }   // W447 — 'both' needs steps AND flights
       if (inst.time_remaining_ms === 0) { _coopResolve(inst.id); return; }
       _coopStartPolling();
     } else {
@@ -39524,11 +39710,26 @@
   // server-serialized inst.metric; fall back to the local boss config (covers a
   // pre-deploy backend that doesn't serialize metric yet).
   function _coopMetric(inst) {
-    if (inst && (inst.metric === 'flights' || inst.metric === 'steps')) return inst.metric;
+    if (inst && (inst.metric === 'flights' || inst.metric === 'steps' || inst.metric === 'both')) return inst.metric;
     // Fall back to the OPEN sheet's boss cfg — the recruit view renders with a
     // null instance, so we must read the metric off the boss being viewed.
     const cfg = (inst && COOP_BOSSES[inst.boss_id]) || (_coopSheet && _coopSheet.cfg);
     return (cfg && cfg.coopMetric) || 'steps';
+  }
+  // W447 — true for a dual-condition (steps AND flights) hunt.
+  function _coopIsBoth(inst) { return _coopMetric(inst) === 'both'; }
+  // W447 — has the hunt hit its goal(s)? A 'both' hunt needs BOTH the steps goal
+  // (combined_steps / goal_steps) AND the flights goal (combined_flights / goal_flights).
+  function _coopGoalReached(inst) {
+    if (!inst) return false;
+    const cfg = COOP_BOSSES[inst.boss_id] || _coopSheet.cfg || {};
+    const stepGoal = inst.goal_steps || cfg.coopGoalSteps || Infinity;
+    if ((inst.combined_steps || 0) < stepGoal) return false;
+    if (_coopIsBoth(inst)) {
+      const flightGoal = inst.goal_flights || cfg.coopGoalFlights || Infinity;
+      if ((inst.combined_flights || 0) < flightGoal) return false;
+    }
+    return true;
   }
   // Unit noun for the hunt UI ("steps" / "flights"). Singularized by callers.
   function _coopUnit(inst) {
@@ -39540,8 +39741,8 @@
   // Query my verified progress (steps OR flights) inside the hunt window.
   // HealthKit on device; falls back to 0 (preview / no HealthKit) so pre-hunt
   // totals never inflate the shared goal.
-  async function _coopQueryWindowSteps(inst) {
-    const fn = _coopMetric(inst) === 'flights' ? 'getFlightsClimbedBetween' : 'getStepsBetween';
+  async function _coopQueryWindowValue(inst, metric) {
+    const fn = metric === 'flights' ? 'getFlightsClimbedBetween' : 'getStepsBetween';
     try {
       if (typeof Health !== 'undefined' && Health && typeof Health[fn] === 'function' && inst.starts_at) {
         // W371 — clamp the upper bound to the hunt end so post-window progress
@@ -39561,21 +39762,30 @@
 
   async function _coopSubmitMySteps(inst) {
     if (!inst || inst.status !== 'active') return;
-    const value = await _coopQueryWindowSteps(inst);
-    if (!(value > 0)) return;
+    // W447 — a 'both' hunt submits BOTH streams (steps_total + flights_total); single-metric
+    // hunts submit just their one. The server tags each by boss_instance_id and aggregates per
+    // stream, so each metric's combined goal is checked independently.
     const metric = _coopMetric(inst);
-    const ev = {
-      client_event_id: 'coop_' + inst.id + '_' + Date.now(),
-      event_type: metric === 'flights' ? 'flights_total' : 'steps_total',
-      metric: metric,
-      value: value,
-      source: 'apple_health',
-      occurred_at: new Date().toISOString(),
-      boss_instance_id: inst.id,
-      window_start: inst.starts_at || null,
-      window_end: inst.ends_at || null,
-    };
-    try { await Auth.submitVerifiedEvents([ev]); } catch (_) {}
+    const streams = metric === 'both' ? ['steps', 'flights'] : [metric];
+    const now = Date.now();
+    const events = [];
+    for (const m of streams) {
+      const value = await _coopQueryWindowValue(inst, m);
+      if (!(value > 0)) continue;
+      events.push({
+        client_event_id: 'coop_' + inst.id + '_' + m + '_' + now,
+        event_type: m === 'flights' ? 'flights_total' : 'steps_total',
+        metric: m,
+        value: value,
+        source: 'apple_health',
+        occurred_at: new Date().toISOString(),
+        boss_instance_id: inst.id,
+        window_start: inst.starts_at || null,
+        window_end: inst.ends_at || null,
+      });
+    }
+    if (!events.length) return;
+    try { await Auth.submitVerifiedEvents(events); } catch (_) {}
   }
 
   // Grant the co-op kill on THIS device, once per instance. Souls +
@@ -39740,8 +39950,10 @@
       note +
       '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
       '<div class="coop-goal-card">' +
-        '<div class="coop-goal-big">' + cfg.coopGoalSteps.toLocaleString('en-US') + '</div>' +
-        '<div class="coop-goal-sub">combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters</div>' +
+        '<div class="coop-goal-big">' + (cfg.coopGoalSteps || 0).toLocaleString('en-US') + '</div>' +
+        '<div class="coop-goal-sub">' + (cfg.coopMetric === 'both'
+          ? 'steps + ' + cfg.coopGoalFlights + ' flights \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters'
+          : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters') + '</div>' +
       '</div>' +
       _coopErrBlock() +
       '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
@@ -39806,7 +40018,9 @@
       '<div class="coopsm-pact' + r3 + '">' +
         '<div class="coopsm-pact-label">The Pact</div>' +
         '<div class="coopsm-pact-num">' + goal + '</div>' +
-        '<div class="coopsm-pact-sub"><b>combined ' + esc(_coopUnit(inst)) + '</b> · ' + hrs + 'h from when you join</div>' +
+        '<div class="coopsm-pact-sub"><b>' + (_coopIsBoth(inst)
+          ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
+          : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + 'h from when you join</div>' +
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
@@ -39828,28 +40042,41 @@
   function _coopActiveHtml(inst) {
     const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
-    const goal = inst.goal_steps || cfg.coopGoalSteps;
-    const combined = inst.combined_steps || 0;
-    const pct = Math.max(0, Math.min(100, Math.round(combined / goal * 100)));
-    const meSteps = (v.me && v.me.steps) || 0;
-    const themSteps = (v.them && v.them.steps) || 0;
-    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
+    const both = _coopIsBoth(inst);   // W447 — steps AND flights
     const dis = _coopSheet.busy ? ' disabled' : '';
-    const unit = _coopUnit(inst);   // W397 — 'steps' | 'flights'
+    const unit = _coopUnit(inst);   // W397 — 'steps' | 'flights' (primary)
+    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
+    // one combined progress bar (combined / goal)
+    const bar = function (combined, goal, label) {
+      const c = combined || 0, g = goal || Infinity;
+      const pct = Math.max(0, Math.min(100, Math.round(c / g * 100)));
+      return '<div class="coop-combined">' +
+        '<div class="coop-combined-num">' + c.toLocaleString('en-US') + ' <span>/ ' + (goal || 0).toLocaleString('en-US') + '</span></div>' +
+        '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="coop-combined-label">combined ' + esc(label) + '</div>' +
+      '</div>';
+    };
+    const stepGoal = inst.goal_steps || cfg.coopGoalSteps;
+    const bars = both
+      ? bar(inst.combined_steps, stepGoal, 'steps') + bar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'flights')
+      : bar(inst.combined_steps, stepGoal, unit);
+    // per-hunter split — for a dual hunt show both their streams ("N st · N fl")
+    const meSteps = (v.me && v.me.steps) || 0, themSteps = (v.them && v.them.steps) || 0;
+    const splitVal = function (who) {
+      const s = (who && who.steps) || 0;
+      if (both) return s.toLocaleString('en-US') + ' st · ' + ((who && who.flights) || 0).toLocaleString('en-US') + ' fl';
+      return s.toLocaleString('en-US');
+    };
     return (
       '<div class="coop-timer">' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</div>' +
-      '<div class="coop-combined">' +
-        '<div class="coop-combined-num">' + combined.toLocaleString('en-US') + ' <span>/ ' + goal.toLocaleString('en-US') + '</span></div>' +
-        '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="coop-combined-label">combined ' + esc(unit) + '</div>' +
-      '</div>' +
+      bars +
       '<div class="coop-split">' +
-        '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + meSteps.toLocaleString('en-US') + '</span></div>' +
-        '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + themSteps.toLocaleString('en-US') + '</span></div>' +
+        '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + splitVal(v.me) + '</span></div>' +
+        '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + splitVal(v.them) + '</span></div>' +
       '</div>' +
-      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : 'SYNC MY ' + esc(unit.toUpperCase())) + '</button>' +
+      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : (both ? 'SYNC MY PROGRESS' : 'SYNC MY ' + esc(unit.toUpperCase()))) + '</button>' +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
-      '<p class="coop-foot">Your ' + esc(unit) + ' sync on their own while this is open. Tap to push yours now.</p>'
+      '<p class="coop-foot">Your progress syncs on its own while this is open. Tap to push yours now.</p>'
     );
   }
 
@@ -39861,9 +40088,13 @@
     const unit = _coopUnit(inst);                                       // W397
     const verb = _coopMetric(inst) === 'flights' ? 'climbed' : 'walked';
     const title = cfg.coopVictoryTitle || 'THE HUNT IS WON';
+    // W447 — a dual hunt recounts BOTH feats.
+    const deed = _coopIsBoth(inst)
+      ? 'walked ' + combined + ' steps and climbed ' + (inst.combined_flights || 0).toLocaleString('en-US') + ' flights'
+      : verb + ' ' + combined + ' ' + esc(unit);
     return (
       '<div class="coop-victory">' + esc(title) + '</div>' +
-      '<p class="coop-lead">You and ' + themAlias + ' ' + verb + ' ' + combined + ' ' + esc(unit) +
+      '<p class="coop-lead">You and ' + themAlias + ' ' + deed +
         ' together, enough to bring down ' + esc(cfg.name) + '.</p>' +
       '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
       '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
@@ -40106,10 +40337,15 @@
       const themPct = goal > 0 ? Math.min(Math.max(0, 100 - youPct), theirs / goal * 100) : 0;
       const tleft = _coopFmtRemaining(inst.time_remaining_ms).replace(/ left$/, '');
       const unitLabel = _coopUnit(inst) === 'flights' ? 'Flights' : 'Steps';   // W397
+      // W447 — a dual hunt shows the primary (steps) bar plus a compact flights line.
+      const flightsLine = _coopIsBoth(inst)
+        ? '<div class="cph-prog-second">' + N(inst.combined_flights || 0) + ' <span>/ ' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</span> Combined Flights</div>'
+        : '';
       body =
         '<div class="cph-prog">' +
           '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span></span><span class="cph-prog-label">Combined ' + esc(unitLabel) + '</span></div>' +
           '<div class="cph-bar"><div class="cph-you" style="width:' + youPct.toFixed(1) + '%"></div><div class="cph-them" style="width:' + themPct.toFixed(1) + '%"></div></div>' +
+          flightsLine +
           '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span>You <b>' + N(mine) + '</b></span><span class="cph-leg cph-them"><span class="cph-sw"></span>' + esc(ally) + ' <b>' + N(theirs) + '</b></span>' + (tleft ? '<span class="cph-time"><span class="cph-lab">Time Left</span>' + esc(tleft) + '</span>' : '') + '</div>' +
         '</div>';
     } else {
