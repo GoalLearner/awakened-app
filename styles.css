@@ -30518,6 +30518,14 @@ button.guildhall-summary-tile:active {
 .pvp-hub-sheet .got { height: 46px; border-radius: 13px; cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8aa2; background: transparent; border: 1px solid rgba(255,255,255,0.07); }
 .pvp-echo-tag { margin-top: 18px; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #54546c; border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 8px 12px; }
 .pvp-echo-tag b { color: #5ad6c8; }
+/* W445 — friend-Echo summon: an explicit "Loading · no need to tap" state with a pulsing dot trio */
+.pvp-echo-tag--load { display: inline-flex; align-items: center; gap: 8px; color: #7fd6cb; border-color: rgba(90,214,200,0.3); background: rgba(90,214,200,0.06); }
+.pvp-echo-tag--load .dots { display: inline-flex; gap: 4px; }
+.pvp-echo-tag--load .dots i { width: 5px; height: 5px; border-radius: 50%; background: #5ad6c8; opacity: 0.35; animation: pvpLoadDot 1.05s ease-in-out infinite; }
+.pvp-echo-tag--load .dots i:nth-child(2) { animation-delay: 0.18s; }
+.pvp-echo-tag--load .dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes pvpLoadDot { 0%, 70%, 100% { opacity: 0.35; transform: scale(1); } 35% { opacity: 1; transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .pvp-echo-tag--load .dots i { animation: none; opacity: 0.7; } }
 
 /* ── W422 · the Ascent Ceremony (ClaudeDesign) — full-screen tier-up/down beat over the
    Arena. Baked rgba per tier (set inline); no color-mix (iOS 14 floor). */

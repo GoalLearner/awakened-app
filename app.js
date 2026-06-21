@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w444'; // W444 — Hunter Profile: Arena Rating row (ranked PvP standing, server-authoritative from pvp_ratings)
+  const APP_BUILD_TAG = '2.3.1-w445'; // W445 — friend-Echo summon: re-tap guard + clear loading; harder/deeper ranked bot roster (Master/Awakened Echoes)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10344,6 +10344,7 @@
   let _pvpEchoName = '';           // the friend whose Echo we're sparring (for the "Spar again" rematch)
   let _pvpEchoAvatar = '';         // that friend's avatar (for the summon screen + rematch)
   let _pvpEchoFriends = null;      // W441 — cached accepted-friends list for the Arena "Spar a Friend's Echo" picker
+  let _pvpEchoBusy = false;        // W445 — a friend-Echo summon is in flight; ignore re-taps (they'd trip the rate limiter)
   let _pvpVsTimer = null;          // pre-match VS auto-advance
   let _pvpVsCountTimer = null;     // pre-match VS 3-2-1 countdown ticker
   let _pvpPreElo = null;           // my ELO at match start (for the rank-up/down moment)
@@ -10629,8 +10630,8 @@
           (fav ? '<img class="spr" src="' + esc(fav) + '" alt="">' : '<span class="emb">' + _pvpTierEmblem('bronze', 88) + '</span>') + '</div>' +
         '<div class="pvp-vs2-search-eb">Friendly Echo &middot; Unrated</div>' +
         '<div class="pvp-vs2-search-h">Summoning ' + fname + '’s Echo</div>' +
-        '<div class="pvp-vs2-search-w">A construct mirroring ' + fname + '’s real loadout</div>' +
-        '<div class="pvp-echo-tag">AI mirror of a friend &middot; <b>unrated</b> &middot; rank unaffected</div>' +
+        '<div class="pvp-vs2-search-w">Mirroring ' + fname + '’s loadout &mdash; the duel begins automatically.</div>' +
+        '<div class="pvp-echo-tag pvp-echo-tag--load"><span class="dots"><i></i><i></i><i></i></span> Loading &middot; no need to tap</div>' +
         '</div>';
     } else if (mode === 'searching') {
       // W433 "Echo Mode" (ClaudeDesign) — summoning a RATED AI hunter (Echo) mirrored at your
@@ -10861,31 +10862,42 @@
   async function _pvpEchoFriend(friendAlias, friendAvatar) {
     const alias = String(friendAlias || '').trim();
     if (!alias || !PVP_ENABLED) return;
-    try { _closeProfileCard(); } catch (_) {}
-    try { openArena(); } catch (_) {}          // the duel lives inside the Arena overlay
-    if (!_pvpRequireAuth()) return;
-    _pvpTeardown(); _arClearTimers(); _arSess = null; _arBodyMode(false);
-    _pvpFriendEcho = true; _pvpEchoName = alias; _pvpEchoAvatar = _pvpSafeAvatar(friendAvatar || '');
-    _pvpOpponentMeta = null;
-    _pvpRenderLobby('searching', { friend: alias, friendAvatar: _pvpEchoAvatar });
-    PvP.onMessage(_pvpOnMessage);
-    let r; try { r = await PvP.echoFriend(alias, _pvpBuildMyCombatant()); } catch (_) { r = null; }
-    if (_arView !== 'pvp-lobby') {   // user left mid-summon — don't orphan the match
-      if (r && r.ok && r.code) { try { PvP.forfeit(); } catch (_) {} }
-      try { _pvpTeardown(); } catch (_) {}
-      return;
+    // W445 — Rendell hit this: tapping the friend row repeatedly (it felt unresponsive while the
+    // match span up) stacked summon calls that tripped the duel rate-limiter ("slow down a moment").
+    // Guard re-entry so ONE tap → loading → auto-enter; further taps are no-ops until this resolves.
+    if (_pvpEchoBusy) return;
+    _pvpEchoBusy = true;
+    try {
+      try { _closeProfileCard(); } catch (_) {}
+      // only (re)open the Arena overlay if it's hidden — from the friend picker we're already inside
+      // it, and a fresh openArena() would flash the tower behind the summon (read as "nothing happened").
+      try { const ov = document.getElementById('arena-overlay'); if (!ov || ov.classList.contains('hidden')) openArena(); } catch (_) {}
+      if (!_pvpRequireAuth()) return;
+      _pvpTeardown(); _arClearTimers(); _arSess = null; _arBodyMode(false);
+      _pvpFriendEcho = true; _pvpEchoName = alias; _pvpEchoAvatar = _pvpSafeAvatar(friendAvatar || '');
+      _pvpOpponentMeta = null;
+      _pvpRenderLobby('searching', { friend: alias, friendAvatar: _pvpEchoAvatar });
+      PvP.onMessage(_pvpOnMessage);
+      let r; try { r = await PvP.echoFriend(alias, _pvpBuildMyCombatant()); } catch (_) { r = null; }
+      if (_arView !== 'pvp-lobby') {   // user left mid-summon — don't orphan the match
+        if (r && r.ok && r.code) { try { PvP.forfeit(); } catch (_) {} }
+        try { _pvpTeardown(); } catch (_) {}
+        return;
+      }
+      if (!(r && r.ok && r.code)) {
+        // land on the friend-Echo picker with an inline reason (a NO_ECHO friend just hasn't updated
+        // yet) — '_pvpRenderLobby("home")' would swallow the message. Picker = a natural "pick another".
+        _pvpFriendEcho = false;
+        const fl = _pvpEchoFriends || (_friendsCache && Array.isArray(_friendsCache.friends) ? _friendsCache.friends : []);
+        _pvpRenderFriendEchoPicker(fl, { err: alias + ' — ' + _pvpEchoErr(r) });
+        return;
+      }
+      _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
+      _pvpOpponentMeta = r.opponent || null;
+      if (r.state) _pvpStartVs(r.state);   // → the VS pre-roll auto-advances into the battle
+    } finally {
+      _pvpEchoBusy = false;
     }
-    if (!(r && r.ok && r.code)) {
-      // land on the friend-Echo picker with an inline reason (a NO_ECHO friend just hasn't updated
-      // yet) — '_pvpRenderLobby("home")' would swallow the message. Picker = a natural "pick another".
-      _pvpFriendEcho = false;
-      const fl = _pvpEchoFriends || (_friendsCache && Array.isArray(_friendsCache.friends) ? _friendsCache.friends : []);
-      _pvpRenderFriendEchoPicker(fl, { err: alias + ' — ' + _pvpEchoErr(r) });
-      return;
-    }
-    _pvpYou = PvP.you || 'p'; _pvpCode = r.code; _pvpView = r.state || null;
-    _pvpOpponentMeta = r.opponent || null;
-    if (r.state) _pvpStartVs(r.state);
   }
   // Friendly, specific copy for the Echo-summon failure modes (the generic _pvpErr is rank-flavoured).
   function _pvpEchoErr(r) {
