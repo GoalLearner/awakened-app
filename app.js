@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w450'; // W450 — Armory class + power (ClaudeDesign #16): per-relic class chip + PWR + power meter + vs-equipped delta; archetype filter + PWR sort
+  const APP_BUILD_TAG = '2.3.1-w451'; // W451 — relic chip = dominant COMBAT-TRIANGLE role (Melee/Ranger/Mage), not dominant raw stat; 3 roles only, no WLT/6-class
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12230,33 +12230,27 @@
     return total;
   }
 
-  // ── W450 (ClaudeDesign "Armory · Class & Power") — per-relic CLASS + POWER ──
-  // A relic's class is the class of its DOMINANT stat (the canonical STATS→CLASSES map:
-  // STR=Warrior, VIT=Ranger, INT=Mage, FOCUS=Assassin, WILL=Paladin, WLT=Merchant), grouped
-  // into the 3 combat archetypes for filtering. Its POWER is the SAME combat number the
-  // Ascent/PvP use (_arenaCombatProfile: Melee=STR×2.3, Magic=(INT+VIT)×1.15, Ranged=
-  // (FOCUS+WILL)×1.15). Both are COMPUTED from existing bonuses — zero schema change.
-  const _RELIC_ARCH = { STR: 'melee', WILL: 'melee', VIT: 'ranged', FOCUS: 'ranged', INT: 'magic', WLT: 'magic' };
-  const _RELIC_ARCH_LABEL = { melee: 'Melee', ranged: 'Ranged', magic: 'Magic' };
-  // class glyphs (14×14, currentColor) — from the ClaudeDesign mock, keyed by the class's stat
-  const _RELIC_CLASS_GLYPH = {
-    STR:   '<path d="M11.5 2.5L6 8m-3 3l1.6-1.6M3 11l-1 1m4-4L4.4 6.4M11.5 2.5l-.2 2.3-5 5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-    WILL:  '<path d="M7 1.5l4.5 1.5v4c0 3-2 4.8-4.5 5.5C4.5 11.8 2.5 10 2.5 7V3z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/>',
-    VIT:   '<path d="M2 12L12 2M12 2H8M12 2v4M2.5 7.5l4 4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-    FOCUS: '<path d="M3 3l6 6 1-1L4 2zM10 9l1.5 1.5M2.5 11.5L5 9" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-    INT:   '<path d="M7 1.5l1.3 3.9 3.9.1-3.1 2.4 1.1 3.8L7 9.9 3.8 11.7l1.1-3.8L1.8 5.5l3.9-.1z" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linejoin="round"/>',
-    WLT:   '<circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7 4.5v5M5.5 6h2a1 1 0 010 2H5.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
+  // ── W450 (ClaudeDesign "Armory · Class & Power") — per-relic ROLE + POWER ──
+  // A relic's role is its DOMINANT side of the combat triangle — NOT its dominant single stat.
+  // The triangle (same as the Ascent/PvP via _arenaCombatProfile):
+  //   Melee  = STR × 2.3        Ranger = (FOCUS + WILL) × 1.15      Mage = (INT + VIT) × 1.15
+  // The biggest of those three IS the role; POWER = their sum. Both COMPUTED from existing
+  // bonuses — zero schema change. (3 combat roles only: Melee / Ranger / Mage.)
+  const _RELIC_ROLES = {
+    melee:  { label: 'Melee',  color: '#ef4444', glyph: '<path d="M11.5 2.5L6 8m-3 3l1.6-1.6M3 11l-1 1m4-4L4.4 6.4M11.5 2.5l-.2 2.3-5 5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
+    ranged: { label: 'Ranger', color: '#22c55e', glyph: '<path d="M2 12L12 2M12 2H8M12 2v4M2.5 7.5l4 4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
+    magic:  { label: 'Mage',   color: '#3b82f6', glyph: '<path d="M7 1.5l1.3 3.9 3.9.1-3.1 2.4 1.1 3.8L7 9.9 3.8 11.7l1.1-3.8L1.8 5.5l3.9-.1z" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linejoin="round"/>' },
   };
+  const _RELIC_ARCH_LABEL = { melee: 'Melee', ranged: 'Ranger', magic: 'Mage' };   // filter-segment labels
   function _relicProfile(card) {
     const b = (card && card.bonuses) || {};
-    const stat = { STR: b.str | 0, VIT: b.vit | 0, INT: b.int | 0, FOCUS: b.focus | 0, WILL: b.will | 0, WLT: b.wlt | 0 };
-    let domId = 'STR', domVal = -1;
-    ['STR', 'VIT', 'INT', 'FOCUS', 'WILL', 'WLT'].forEach((k) => { if (stat[k] > domVal) { domVal = stat[k]; domId = k; } });
-    const cls = (typeof CLASSES !== 'undefined' && CLASSES[domId]) || { name: 'Hunter', color: '#9aa0bd' };
-    let power = 0;
-    try { power = Math.round(_arenaCombatProfile({ STR: stat.STR, VIT: stat.VIT, INT: stat.INT, FOCUS: stat.FOCUS, WILL: stat.WILL, WLT: 0 }).power); } catch (_) {}
-    const arch = _RELIC_ARCH[domId] || 'melee';
-    return { statId: domId, className: cls.name, classColor: cls.color, classGlyph: _RELIC_CLASS_GLYPH[domId] || '', arch: arch, archLabel: _RELIC_ARCH_LABEL[arch], power: power };
+    const STR = b.str | 0, VIT = b.vit | 0, INT = b.int | 0, FOCUS = b.focus | 0, WILL = b.will | 0;
+    const melee = STR * 2.3, ranged = (FOCUS + WILL) * 1.15, magic = (INT + VIT) * 1.15;   // the combat triangle
+    let arch = 'melee', top = melee;
+    if (ranged > top) { arch = 'ranged'; top = ranged; }
+    if (magic > top) { arch = 'magic'; top = magic; }
+    const role = _RELIC_ROLES[arch];
+    return { arch: arch, className: role.label, classColor: role.color, classGlyph: role.glyph, archLabel: role.label, power: Math.round(melee + ranged + magic) };
   }
   // Power of the currently-equipped item in each typed slot → the baseline a candidate's
   // "▲ vs equipped" delta compares against (0 = empty slot ⇒ pure equip gain).
@@ -15208,8 +15202,8 @@
             chip = '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>';
           }
           const newCls = isNew ? ' archive-card--new archive-card--new-' + c.rarity : '';
-          // W450 — class + power signals. Class chip (dominant-stat class, canonical color) +
-          // PWR badge in the art footer; a power meter + a "vs equipped" delta in the meta.
+          // W450 — role + power signals. Role chip (dominant combat-triangle role: Melee/
+          // Ranger/Mage) + PWR badge in the art footer; a power meter + a "vs equipped" delta.
           const prof = _relicProfile(c);
           const artFoot =
             '<div class="pdx-artfoot">' +
