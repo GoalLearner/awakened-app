@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w451'; // W451 — relic chip = dominant COMBAT-TRIANGLE role (Melee/Ranger/Mage), not dominant raw stat; 3 roles only, no WLT/6-class
+  const APP_BUILD_TAG = '2.3.1-w452'; // W452 — rank-curve compression (faster top end): A 12k→7k, S 40k→12k, S+ 100k→36k; non-demoting (D/C/B unchanged); rank achievements re-synced; tools/sim-rank.js
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17776,16 +17776,27 @@
   // Post-w153 thresholds:
   //   E 0   D 100   C 600    B 3000   A 12000   S 40000   S+ 100000
   //
+  // W452 rank-compression (the "XP takes forever" retention fix, per the
+  // owner+Rendell pacing discussion). The TOP was too far: S sat ~10 months
+  // out (40000 XP) for a median ~130 XP/day user. We lower A/S/S+ only and
+  // leave the already-fast early game (D/C/B) EXACTLY as-is — so the new
+  // curve is NON-DEMOTING (every threshold <= the old one ⇒ no existing
+  // user can drop a rank), which matters because migrateXPToNewThresholds()
+  // is a no-op since w154. New target pacing (median consistent user):
+  // B ~1mo, A ~2mo, S ~3mo, S+ ~9mo. See tools/sim-rank.js.
+  //   E 0   D 100   C 600    B 3000   A 7000   S 12000   S+ 36000
+  //
   // No XP earning changed (diffPts / totalPoints unchanged).
   // No dungeon gate code, sub-rank logic, or popup logic touched.
+  // Rank-named achievements (awakened/shadow_monarch/the_one) re-synced below.
   const RANKS = [
     { id: 'E',  label: 'E Rank',  desc: 'Just getting started',                                      min: 0,      max: 99,       next: 100    },
     { id: 'D',  label: 'D Rank',  desc: 'Building awareness',                                        min: 100,    max: 599,      next: 600    },
     { id: 'C',  label: 'C Rank',  desc: 'Consistency is forming',                                    min: 600,    max: 2999,     next: 3000   },
-    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',     min: 3000,   max: 11999,    next: 12000  },
-    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                            min: 12000,  max: 39999,    next: 40000  },
-    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                         min: 40000,  max: 99999,    next: 100000 },
-    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.', min: 100000, max: Infinity, next: null   },
+    { id: 'B',  label: 'B Rank',  desc: 'Above average discipline. Most people never get here.',     min: 3000,   max: 6999,     next: 7000   },
+    { id: 'A',  label: 'A Rank',  desc: 'True excellence. This is rare.',                            min: 7000,   max: 11999,    next: 12000  },
+    { id: 'S',  label: 'S Rank',  desc: 'Elite. You have become the habit.',                         min: 12000,  max: 35999,    next: 36000  },
+    { id: 'S+', label: 'S+ Rank', desc: 'Legendary. Less than 1% of humans operate at this level.', min: 36000,  max: Infinity, next: null   },
   ];
 
   // ── PERSONAL RECORDS (PRs) ───────────────────────────────
@@ -17876,14 +17887,14 @@
       desc: 'Reach C Rank (600 pts)', target: 600,
       getProgress: c => ({ current: Math.min(c.totalPoints, 600), target: 600 }) },
     { id: 'awakened',      category: 'rank', icon: '💎', name: 'Awakened',
-      desc: 'Reach A Rank (12,000 pts)', target: 12000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 12000), target: 12000 }) },
+      desc: 'Reach A Rank (7,000 pts)', target: 7000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 7000), target: 7000 }) },
     { id: 'shadow_monarch',category: 'rank', icon: '🌑', name: 'Shadow Monarch',
-      desc: 'Reach S Rank (40,000 pts)', target: 40000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 40000), target: 40000 }) },
+      desc: 'Reach S Rank (12,000 pts)', target: 12000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 12000), target: 12000 }) },
     { id: 'the_one',       category: 'rank', icon: '⭐', name: 'The One',
-      desc: 'Reach S+ Rank (100,000 pts)', target: 100000,
-      getProgress: c => ({ current: Math.min(c.totalPoints, 100000), target: 100000 }) },
+      desc: 'Reach S+ Rank (36,000 pts)', target: 36000,
+      getProgress: c => ({ current: Math.min(c.totalPoints, 36000), target: 36000 }) },
     { id: 'golden_hour',   category: 'rank', icon: '🏆', name: 'Golden Hour',
       desc: 'Earn 7,500 lifetime XP', target: 7500,
       getProgress: c => ({ current: Math.min(c.totalPoints, 7500), target: 7500 }) },
