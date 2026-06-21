@@ -14406,6 +14406,33 @@ body.bfs-locked { overflow: hidden; }
   border-radius: 8px;
   display: block;
 }
+/* ── W450 — Armory class + power (ClaudeDesign "Armory · Class & Power") ── */
+/* archetype filter + PWR sort, above the rarity sections */
+.pdx-controls { display: flex; align-items: center; gap: 7px; padding: 2px 2px 9px; }
+.pdx-seg { display: flex; gap: 4px; background: rgba(16,16,38,0.7); border: 1px solid rgba(124,108,200,0.16); border-radius: 11px; padding: 3px; }
+.pdx-seg-btn { border: none; background: transparent; cursor: pointer; border-radius: 8px; padding: 6px 10px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: #8a8aa8; text-transform: uppercase; }
+.pdx-seg-btn[data-active="1"] { color: #f3f1fb; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
+.pdx-seg-btn--melee[data-active="1"]  { color: #ff9a96; background: rgba(239,68,68,0.14); }
+.pdx-seg-btn--ranged[data-active="1"] { color: #86efac; background: rgba(34,197,94,0.14); }
+.pdx-seg-btn--magic[data-active="1"]  { color: #a9cbff; background: rgba(59,130,246,0.16); }
+.pdx-sortbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; background: rgba(16,16,38,0.7); border: 1px solid rgba(124,108,200,0.16); border-radius: 11px; padding: 7px 11px; cursor: pointer; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: #8a8aa8; text-transform: uppercase; }
+.pdx-sortbtn.is-on { color: #f5b842; border-color: rgba(245,184,66,0.4); background: rgba(245,184,66,0.08); }
+.pdx-hint { padding: 0 2px 12px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8.5px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.5; color: #5a5a76; }
+.pdx-hint b { color: #8a8aa8; font-weight: 700; }
+/* art footer on each card: class chip + PWR */
+.pdx-artfoot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 6px 6px; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,16,0), rgba(8,8,16,0.82) 62%); }
+.pdx-class { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 3px 6px 3px 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; background: rgba(8,8,16,0.55); border: 1px solid color-mix(in srgb, var(--cc, #fff) 55%, transparent); color: var(--cc, #fff); }
+.pdx-class svg { width: 10px; height: 10px; display: block; flex: none; }
+.pdx-pwr { text-align: right; line-height: 1; }
+.pdx-pwr .pn { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 17px; font-weight: 800; line-height: 0.9; color: #f3f1fb; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+.pdx-pwr .pl { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 6.5px; font-weight: 700; letter-spacing: 1.6px; color: rgba(255,255,255,0.6); }
+/* power meter + "vs equipped" delta in the card body */
+.pdx-pmeter { margin-top: 7px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.pdx-pmeter i { display: block; height: 100%; border-radius: 3px; box-shadow: 0 0 6px rgba(255,255,255,0.12); }
+.pdx-delta { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.4px; border-radius: 6px; padding: 3px 6px; text-transform: uppercase; }
+.pdx-delta--best { color: #f5b842; background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.32); }
+.pdx-delta--up, .pdx-delta--gain { color: #46d39a; background: rgba(70,211,154,0.12); border: 1px solid rgba(70,211,154,0.3); }
+.pdx-delta--down { color: #8f8fa6; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
 .pokedex-card-name {
   font-size: 0.7rem;
   font-weight: 700;

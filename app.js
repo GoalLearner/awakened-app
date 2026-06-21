@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w449'; // W449 — co-op DEFEAT screen (ClaudeDesign #15): dimmed/warded boss + dual near-miss bars + fellowship + Call Again
+  const APP_BUILD_TAG = '2.3.1-w450'; // W450 — Armory class + power (ClaudeDesign #16): per-relic class chip + PWR + power meter + vs-equipped delta; archetype filter + PWR sort
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12229,6 +12229,60 @@
     }
     return total;
   }
+
+  // ── W450 (ClaudeDesign "Armory · Class & Power") — per-relic CLASS + POWER ──
+  // A relic's class is the class of its DOMINANT stat (the canonical STATS→CLASSES map:
+  // STR=Warrior, VIT=Ranger, INT=Mage, FOCUS=Assassin, WILL=Paladin, WLT=Merchant), grouped
+  // into the 3 combat archetypes for filtering. Its POWER is the SAME combat number the
+  // Ascent/PvP use (_arenaCombatProfile: Melee=STR×2.3, Magic=(INT+VIT)×1.15, Ranged=
+  // (FOCUS+WILL)×1.15). Both are COMPUTED from existing bonuses — zero schema change.
+  const _RELIC_ARCH = { STR: 'melee', WILL: 'melee', VIT: 'ranged', FOCUS: 'ranged', INT: 'magic', WLT: 'magic' };
+  const _RELIC_ARCH_LABEL = { melee: 'Melee', ranged: 'Ranged', magic: 'Magic' };
+  // class glyphs (14×14, currentColor) — from the ClaudeDesign mock, keyed by the class's stat
+  const _RELIC_CLASS_GLYPH = {
+    STR:   '<path d="M11.5 2.5L6 8m-3 3l1.6-1.6M3 11l-1 1m4-4L4.4 6.4M11.5 2.5l-.2 2.3-5 5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    WILL:  '<path d="M7 1.5l4.5 1.5v4c0 3-2 4.8-4.5 5.5C4.5 11.8 2.5 10 2.5 7V3z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/>',
+    VIT:   '<path d="M2 12L12 2M12 2H8M12 2v4M2.5 7.5l4 4" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    FOCUS: '<path d="M3 3l6 6 1-1L4 2zM10 9l1.5 1.5M2.5 11.5L5 9" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    INT:   '<path d="M7 1.5l1.3 3.9 3.9.1-3.1 2.4 1.1 3.8L7 9.9 3.8 11.7l1.1-3.8L1.8 5.5l3.9-.1z" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linejoin="round"/>',
+    WLT:   '<circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7 4.5v5M5.5 6h2a1 1 0 010 2H5.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
+  };
+  function _relicProfile(card) {
+    const b = (card && card.bonuses) || {};
+    const stat = { STR: b.str | 0, VIT: b.vit | 0, INT: b.int | 0, FOCUS: b.focus | 0, WILL: b.will | 0, WLT: b.wlt | 0 };
+    let domId = 'STR', domVal = -1;
+    ['STR', 'VIT', 'INT', 'FOCUS', 'WILL', 'WLT'].forEach((k) => { if (stat[k] > domVal) { domVal = stat[k]; domId = k; } });
+    const cls = (typeof CLASSES !== 'undefined' && CLASSES[domId]) || { name: 'Hunter', color: '#9aa0bd' };
+    let power = 0;
+    try { power = Math.round(_arenaCombatProfile({ STR: stat.STR, VIT: stat.VIT, INT: stat.INT, FOCUS: stat.FOCUS, WILL: stat.WILL, WLT: 0 }).power); } catch (_) {}
+    const arch = _RELIC_ARCH[domId] || 'melee';
+    return { statId: domId, className: cls.name, classColor: cls.color, classGlyph: _RELIC_CLASS_GLYPH[domId] || '', arch: arch, archLabel: _RELIC_ARCH_LABEL[arch], power: power };
+  }
+  // Power of the currently-equipped item in each typed slot → the baseline a candidate's
+  // "▲ vs equipped" delta compares against (0 = empty slot ⇒ pure equip gain).
+  function _equippedPowerBySlot() {
+    const build = getHunterBuild();
+    const map = {};
+    for (let i = 0; i < EQUIPMENT_SLOTS.length; i++) {
+      const cid = build.slots[i];
+      const card = cid ? CARDS[cid] : null;
+      map[EQUIPMENT_SLOTS[i].key] = card ? _relicProfile(card).power : 0;
+    }
+    return map;
+  }
+  // Archive filter/sort state (W450): which archetype is active + whether to sort by power.
+  let _pokedexArch = 'all';     // 'all' | 'melee' | 'ranged' | 'magic'
+  let _pokedexSortPwr = false;  // false = acquisition chronology (the discovery log); true = power desc
+  function _pokedexFilterBarHtml() {
+    const seg = ['all', 'melee', 'ranged', 'magic'].map((a) =>
+      '<button type="button" class="pdx-seg-btn pdx-seg-btn--' + a + '" data-pdx-arch="' + a + '"' + (_pokedexArch === a ? ' data-active="1"' : '') + '>' +
+        (a === 'all' ? 'All' : _RELIC_ARCH_LABEL[a]) + '</button>').join('');
+    return '<div class="pdx-controls">' +
+        '<div class="pdx-seg">' + seg + '</div>' +
+        '<button type="button" class="pdx-sortbtn' + (_pokedexSortPwr ? ' is-on' : '') + '" data-pdx-sort="1" aria-pressed="' + (_pokedexSortPwr ? 'true' : 'false') + '">PWR ' + (_pokedexSortPwr ? '▼' : '↕') + '</button>' +
+      '</div>' +
+      '<div class="pdx-hint"><b>Tap an archetype</b> to filter · <b>PWR</b> sorts by power · ▲ = gain vs equipped</div>';
+  }
   // Dominant path — sum each card's bonuses across the equipped
   // build, return the stat id with the largest contribution. Returns
   // null if nothing's equipped or all bonuses sum to zero.
@@ -15075,8 +15129,9 @@
     ];
 
     const collapsed = loadPokedexCollapsed();
+    const eqPwrBySlot = _equippedPowerBySlot();   // W450 — baseline for the "vs equipped" deltas
 
-    root.innerHTML = sections.map(s => {
+    const sectionsHtml = sections.map(s => {
       const sectionCards = allIds
         .map(id => CARDS[id])
         .filter(c => c.rarity === s.key);
@@ -15091,18 +15146,26 @@
       // clutter (the user expects commons to roll in passively;
       // teasing them adds noise, not motivation). Rare + ultra
       // sections still show mystery slots to motivate hunting.
-      const discoveredCards = sectionCards
-        .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered)
-        .sort((a, b) => {
+      let discoveredCards = sectionCards
+        .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered);
+      // W450 — archetype filter (melee/ranged/magic) applied WITHIN the rarity section, so the
+      // categories survive. Default order is acquisition chronology (the discovery log); the PWR
+      // toggle re-sorts by power desc instead.
+      if (_pokedexArch !== 'all') discoveredCards = discoveredCards.filter(c => _relicProfile(c).arch === _pokedexArch);
+      discoveredCards.sort((a, b) => {
+        if (_pokedexSortPwr) {
+          const pa = _relicProfile(a).power, pb = _relicProfile(b).power;
+          if (pa !== pb) return pb - pa;
+        } else {
           const da = (inv.cards[a.id] && inv.cards[a.id].first_acquired_date) || '';
           const db = (inv.cards[b.id] && inv.cards[b.id].first_acquired_date) || '';
-          // ISO strings sort lexically. Cards w/o date fall to top.
-          if (da === db) return (a.name || '').localeCompare(b.name || '');
-          if (!da) return -1;
-          if (!db) return  1;
-          return da.localeCompare(db);
-        });
-      const undiscoveredCards = (s.key === 'common')
+          if (da !== db) { if (!da) return -1; if (!db) return 1; return da.localeCompare(db); }
+        }
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      // Undiscovered silhouettes hide when a specific archetype is selected (class is unknown
+      // until discovered) — and always in the common section.
+      const undiscoveredCards = (s.key === 'common' || _pokedexArch !== 'all')
         ? []
         : sectionCards.filter(c => !(inv.cards[c.id] && inv.cards[c.id].discovered));
       const visibleCards = discoveredCards.concat(undiscoveredCards);
@@ -15145,6 +15208,20 @@
             chip = '<span class="pokedex-card-equipped-badge archive-equipped-badge" aria-label="Equipped">EQUIPPED</span>';
           }
           const newCls = isNew ? ' archive-card--new archive-card--new-' + c.rarity : '';
+          // W450 — class + power signals. Class chip (dominant-stat class, canonical color) +
+          // PWR badge in the art footer; a power meter + a "vs equipped" delta in the meta.
+          const prof = _relicProfile(c);
+          const artFoot =
+            '<div class="pdx-artfoot">' +
+              '<span class="pdx-class" style="--cc:' + esc(prof.classColor) + '"><svg viewBox="0 0 14 14" aria-hidden="true">' + prof.classGlyph + '</svg>' + esc(prof.className) + '</span>' +
+              '<span class="pdx-pwr"><span class="pn">' + prof.power + '</span><span class="pl">PWR</span></span>' +
+            '</div>';
+          const eqP = eqPwrBySlot[slotKey] || 0;
+          let deltaHtml;
+          if (isEq) deltaHtml = '<span class="pdx-delta pdx-delta--best">★ Equipped · Best</span>';
+          else if (eqP === 0) deltaHtml = '<span class="pdx-delta pdx-delta--gain">▲ +' + prof.power + ' Equip Gain</span>';
+          else { const d = prof.power - eqP; deltaHtml = d > 0 ? '<span class="pdx-delta pdx-delta--up">▲ +' + d + ' vs Equipped</span>' : d < 0 ? '<span class="pdx-delta pdx-delta--down">▼ ' + d + ' vs Equipped</span>' : '<span class="pdx-delta pdx-delta--down">= Even vs Equipped</span>'; }
+          const pMeter = '<div class="pdx-pmeter"><i style="width:' + Math.max(4, Math.min(100, prof.power)) + '%;background:' + esc(prof.classColor) + '"></i></div>';
           return '<div class="pokedex-cell">' + (
             '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + newCls + '" type="button" data-card-id="' + esc(c.id) + '">' +
               '<div class="pokedex-card-art">' +
@@ -15152,9 +15229,12 @@
                 artImg +
                 slotBadge +
                 chip +
+                artFoot +
               '</div>' +
               '<div class="pokedex-card-name">' + esc(c.name) + '</div>' +
               sourceLine +
+              pMeter +
+              deltaHtml +
             '</button>'
           ) + _marketAffordanceHtml(c, entry) + '</div>';
         }
@@ -15191,6 +15271,8 @@
         '</div>'
       );
     }).join('');
+    // W450 — the archetype filter + PWR sort ride above the rarity sections (which are preserved).
+    root.innerHTML = _pokedexFilterBarHtml() + sectionsHtml;
 
     // Attach error handlers to all card-art images so a 404 cleanly
     // falls back to the emoji + rarity gradient underneath. inline
@@ -15280,6 +15362,11 @@
     const root = document.getElementById('pokedex-sections');
     if (!root) return;
     root.addEventListener('click', (e) => {
+      // W450 — archetype filter + PWR sort (short-circuit before the card/section paths).
+      const archBtn = e.target.closest('[data-pdx-arch]');
+      if (archBtn) { _pokedexArch = archBtn.getAttribute('data-pdx-arch') || 'all'; try { _audCue('ui_tap'); } catch (_) {} renderPokedex(); return; }
+      const sortBtn = e.target.closest('[data-pdx-sort]');
+      if (sortBtn) { _pokedexSortPwr = !_pokedexSortPwr; try { _audCue('ui_tap'); } catch (_) {} renderPokedex(); return; }
       // Section-header toggle (collapsible). Check first so it short-circuits
       // before the card-click path.
       const hdr = e.target.closest('[data-section-toggle]');
