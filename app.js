@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w458'; // W458 — IA fix (path-to-A step 1): visible text labels under all 7 bottom-tab icons (was symbol-only); a non-gamer can now read the nav
+  const APP_BUILD_TAG = '2.3.1-w459'; // W459 — graded compound credit (path-to-A step 2): near-complete packs earn 50%/25% partial (was zero); full day unchanged; provably monotonic (tools/sim-compound.js)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18419,6 +18419,7 @@
   let psAwarded = new Set();
   let compoundStreaks  = {}; // packId → { streak, lastDate }
   let compoundAwarded = {}; // packId → date (last award date, prevents double-award)
+  let compoundPartial = {}; // W459 — packId → { date, given } : graded partial compound XP paid today
   let personalRecords  = {}; // prId → { value, meta, lastUpdated }
 
   // ── STREAK FORGIVENESS ─────────────────────────────────
@@ -19723,6 +19724,30 @@
   // shows first, then the Locked-In Bonus modal queues behind it.
   const BONUS_PACK_IDS = ['morning', 'locked-in'];
 
+  // ── W459 — GRADED COMPOUND CREDIT ─────────────────────────
+  // A near-complete pack no longer pays ZERO. It earns a fraction of THAT
+  // day's full compound bonus, by how many pack habits are still MISSING.
+  // Completing the whole pack still pays 100% (the full path tops the day up
+  // to the remainder), so finishing is always strictly best and a perfect day
+  // nets identical XP to before. The cumulative credit at a given completion
+  // count is  E(done) = fullBonusToday × factor(missing) , and because the
+  // factors are non-decreasing (0 ≤ 0.25 ≤ 0.5 ≤ 1.0) over a CONSTANT daily
+  // base, E(done) is monotonically non-decreasing — completing one more pack
+  // habit can never lower the day's XP, at every step including the tier seams.
+  // Tiers are by ABSOLUTE missing count and are tunable here. Proof + the
+  // per-completion table: tools/sim-compound.js.
+  const COMPOUND_PARTIAL_TIERS = [
+    { maxMissing: 3, factor: 0.50 },   // missing 1–3 → 50%
+    { maxMissing: 8, factor: 0.25 },   // missing 4–8 → 25%
+  ];                                    // missing 0 = full (1.0) · missing 9+ = 0
+  function compoundPartialFactor(missing) {
+    if (missing <= 0) return 1;
+    for (let i = 0; i < COMPOUND_PARTIAL_TIERS.length; i++) {
+      if (missing <= COMPOUND_PARTIAL_TIERS[i].maxMissing) return COMPOUND_PARTIAL_TIERS[i].factor;
+    }
+    return 0;
+  }
+
   // ── PACK HELPERS — generic, work for any packId ────────────
   function getPackById(packId)         { return PACKS.find(p => p.id === packId); }
   function getPackHabitDefs(packId) {
@@ -19934,6 +19959,7 @@
       habitNotes      = JSON.parse(localStorage.getItem('hb_notes')             || '{}');
       compoundStreaks  = JSON.parse(localStorage.getItem('hb_compound')         || '{}');
       compoundAwarded  = JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}');
+      compoundPartial  = JSON.parse(localStorage.getItem('hb_compound_partial') || '{}'); // W459
       personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
       streakShields    = JSON.parse(localStorage.getItem('hb_shields')           || '{}');
       shieldClaimedAt  = JSON.parse(localStorage.getItem('hb_shield_claimed')    || '{}');
@@ -19984,6 +20010,7 @@
       if (!_isObj(habitNotes))             habitNotes = {};
       if (!_isObj(compoundStreaks))        compoundStreaks = {};
       if (!_isObj(compoundAwarded))        compoundAwarded = {};
+      if (!_isObj(compoundPartial))        compoundPartial = {}; // W459
       if (!_isObj(personalRecords))        personalRecords = {};
       if (!_isObj(streakShields))          streakShields = {};
       if (!_isObj(shieldClaimedAt))        shieldClaimedAt = {};
@@ -20028,6 +20055,7 @@
       localStorage.setItem('hb_notes',             JSON.stringify(habitNotes));
       localStorage.setItem('hb_compound',          JSON.stringify(compoundStreaks));
       localStorage.setItem('hb_compound_awarded',  JSON.stringify(compoundAwarded));
+      localStorage.setItem('hb_compound_partial',  JSON.stringify(compoundPartial)); // W459
       localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
       localStorage.setItem('hb_shields',           JSON.stringify(streakShields));
       localStorage.setItem('hb_shield_claimed',    JSON.stringify(shieldClaimedAt));
@@ -21157,6 +21185,8 @@
           const base = getCompoundXP(packId, streak);
           xp += isWeekend() ? base * 2 : base;
         }
+      } else {
+        xp += _compoundPartialGiven(packId);   // W459 — graded partial credit counts toward today's XP
       }
     });
     return xp;
@@ -34664,6 +34694,36 @@
   let _bonusPopupQueue  = [];
   let _bonusPopupActive = false;
 
+  // W459 — graded partial credit helpers. compoundPartial tracks the cumulative
+  // compound XP already paid for a pack TODAY (lazily reset on date rollover),
+  // so the full-completion path pays only the remainder and the day always
+  // totals exactly the full bonus.
+  function _compoundPartialGiven(packId) {
+    const e = compoundPartial[packId];
+    return (e && e.date === today) ? (e.given || 0) : 0;
+  }
+  function _setCompoundPartialGiven(packId, given) {
+    compoundPartial[packId] = { date: today, given: given };
+  }
+  // The full compound bonus this pack WOULD pay if completed right now — the
+  // EXACT base awardCompoundEffect uses (streak-projected + weekend ×2), so the
+  // partial fractions and the full remainder always reconcile to it.
+  function _compoundFullBonusToday(packId) {
+    const cs = compoundStreaks[packId] || { streak: 0, lastDate: null };
+    const projStreak = (cs.lastDate === prevDay(today)) ? (cs.streak + 1) : 1;
+    const baseXP = getCompoundXP(packId, projStreak);
+    return isWeekend() ? baseXP * 2 : baseXP;
+  }
+  function _showPartialCompoundToast(packId, xp) {
+    try {
+      const pack = getPackById(packId);
+      const name = pack ? pack.name : 'routine';
+      if (typeof showHabitToast === 'function') {
+        showHabitToast('⚡ +' + xp + ' partial ' + name + ' bonus — finish all to claim the full Compound Effect', { duration: 4200 });
+      }
+    } catch (_) {}
+  }
+
   function checkCompoundEffect(habitId) {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
@@ -34672,11 +34732,33 @@
     // tick — the modal queue sequences their celebration popups.
     BONUS_PACK_IDS.forEach(packId => {
       if (!isHabitInPack(habit, packId)) return;
-      if (compoundAwarded[packId] === today) return;
+      if (compoundAwarded[packId] === today) return;        // already full-awarded today
       if (!userHasAllPackHabits(packId)) return;
       const { done, total } = getPackProgress(packId);
-      if (total === 0 || done < total) return;
-      awardCompoundEffect(packId);
+      if (total === 0) return;
+      if (done >= total) { awardCompoundEffect(packId); return; }   // FULL — pays the remainder, streak++
+
+      // W459 — graded partial credit. Top the day's compound credit up to
+      // E(done) = fullBonusToday × factor(missing); pay only the positive delta.
+      // (full path stays strictly best; perfect days net identical XP.)
+      const factor = compoundPartialFactor(total - done);
+      if (factor <= 0) return;                               // missing 9+ → nothing yet
+      const targetCumulative = Math.round(_compoundFullBonusToday(packId) * factor);
+      const alreadyGiven = _compoundPartialGiven(packId);
+      const delta = targetCumulative - alreadyGiven;
+      if (delta <= 0) return;                                // already credited at this (or a higher) tier
+      totalPoints += delta;
+      _setCompoundPartialGiven(packId, targetCumulative);
+      prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + delta);
+      save();
+      renderRank();
+      if (currentTab === 'profile') renderProfile();
+      try { renderCompoundProgress(); } catch (_) {}
+      // W459 — re-record the day's peak XP now that this partial is paid (check()
+      // computed most_xp_day before the compound fired, so a last-tap partial
+      // would otherwise be missed by the monotonic PR).
+      try { prUpdate('most_xp_day', computeTodayXP()); } catch (_) {}
+      if (alreadyGiven === 0) _showPartialCompoundToast(packId, delta);   // one nudge per pack per day
     });
   }
 
@@ -34688,14 +34770,22 @@
     compoundStreaks[packId]  = { streak: newStreak, lastDate: today };
     compoundAwarded[packId]  = today;
 
-    const baseXP  = getCompoundXP(packId, newStreak);
-    const finalXP = isWeekend() ? baseXP * 2 : baseXP;
-    totalPoints  += finalXP;
+    const baseXP    = getCompoundXP(packId, newStreak);
+    const fullBonus = isWeekend() ? baseXP * 2 : baseXP;   // the full compound — what the celebration shows
+    // W459 — subtract any graded partial credit already paid today so the day's
+    // compound XP totals EXACTLY the full bonus (perfect days are unchanged),
+    // then clear this pack's partial ledger.
+    const finalXP   = Math.max(0, fullBonus - _compoundPartialGiven(packId)); // remainder added now
+    _setCompoundPartialGiven(packId, 0);
+    totalPoints    += finalXP;
 
     save();
     renderRank();
     if (currentTab === 'profile') renderProfile();
     renderCompoundProgress();
+    // W459 — re-record the day's peak XP now the full compound is paid (check()
+    // ran most_xp_day before this fired); compoundAwarded is already set above.
+    try { prUpdate('most_xp_day', computeTodayXP()); } catch (_) {}
 
     // ── Streak Shield: earn one for every 14-day milestone (max 3) ────
     tryEarnShield(packId, newStreak);
@@ -34709,8 +34799,8 @@
     _bonusPopupQueue.push({
       packId,
       newStreak,
-      finalXP,
-      doubled: isWeekend() && finalXP !== baseXP,
+      finalXP: fullBonus,              // W459 — celebration shows the FULL compound, not the remainder
+      doubled: isWeekend(),
     });
     drainBonusPopupQueue();
   }
