@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w448'; // W448 — co-op DEFEAT notification (both hunters told win OR loss); defeat was previously silent
+  const APP_BUILD_TAG = '2.3.1-w449'; // W449 — co-op DEFEAT screen (ClaudeDesign #15): dimmed/warded boss + dual near-miss bars + fellowship + Call Again
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39486,6 +39486,7 @@
       killCondShort:   'Two hunters: 16,000 combined steps in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
       coopVictoryTitle:'BOTH HEADS FALL',
+      coopDefeatTitle: 'THE MAW STILL HUNGERS',
     },
     // W397 — C-rank duo hunt. Steps, but a far longer road than the E-rank.
     the_coursing_dread: {
@@ -39505,6 +39506,7 @@
       killCondShort:   'Two hunters: 18,000 combined steps in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 18,000 verified steps between you — keep moving, keep ahead of it, and run the Dread down. Both hunters are credited the kill.',
       coopVictoryTitle:'THE DREAD IS RUN DOWN',
+      coopDefeatTitle: 'THE DREAD RUNS ON',
     },
     // W397 — B-rank duo hunt. FLIGHTS of stairs, not steps: the first co-op
     // boss that scores a different verified metric (flights_total). Renamed
@@ -39526,6 +39528,7 @@
       killCondShort:   'Two hunters: 20 combined flights of stairs in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 20 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
       coopVictoryTitle:'THE THRONE IS TAKEN',
+      coopDefeatTitle: 'THE THRONE KEEPS ITS KING',
     },
     // W447 — C-rank DUAL duo hunt: steps AND flights both required (combined across the two
     // hunters). coopGoalSteps + coopGoalFlights MUST match the server COOP_BOSS_CFG.
@@ -39548,6 +39551,7 @@
       killCondShort:   'Two hunters: 10,000 steps AND 6 flights in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 10,000 verified steps AND climb 6 verified flights of stairs between you. BOTH must be met to fell the Wardens — split the road and the climb however you like. Both hunters are credited the kill.',
       coopVictoryTitle:'THE WARDENS FALL',
+      coopDefeatTitle: 'THE WARDENS STILL STAND',
     },
     // W447 — B-rank DUAL duo hunt: steps AND flights both required.
     the_sundered_choir: {
@@ -39569,6 +39573,7 @@
       killCondShort:   'Two hunters: 12,000 steps AND 10 flights in 24h',
       killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 12,000 verified steps AND climb 10 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
       coopVictoryTitle:'THE CHOIR IS SILENCED',
+      coopDefeatTitle: 'THE CHOIR HOLDS',
     },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
@@ -39868,6 +39873,7 @@
   async function _coopHandleAction(action, btn) {
     if (_coopSheet.busy) return;
     if (action === 'invite') { openCoopPartnerPicker(); return; }
+    if (action === 'close') { try { closeCoopSheet(); } catch (_) {} return; }   // W449 — defeat screen "Back to the Dungeon"
     if (action === 'pick-cancel') { _coopSheet.picking = false; renderCoopSheet(); return; }
     if (action === 'pick') { const uid = btn.getAttribute('data-user-id'); _coopSheet.picking = false; if (uid) _coopCreate(uid); return; }
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
@@ -39963,12 +39969,18 @@
     const inst = _coopSheet.instance;
     const isSummons = !_coopSheet.picking && !!inst && inst.status === 'pending' && inst.role === 'partner';
     _coopApplySummonsMode(isSummons);
+    // W449 — DEFEAT state (ClaudeDesign handoff #15): dim + crimson-ward the hero so the boss
+    // reads as UNBEATEN, then render the verdict / near-miss bars / fellowship in the body.
+    const isDefeat = !_coopSheet.picking && !!inst && inst.status === 'expired' && inst.result === 'defeat';
+    const overlay = document.getElementById('coop-fs-overlay');
+    if (overlay) overlay.classList.toggle('coop-overlay--defeat', isDefeat);
 
     if (_coopSheet.picking) { body.innerHTML = _coopPickerHtml(); return; }
     if (_coopSheet.loading && !_coopSheet.instance) { body.innerHTML = '<div class="coop-msg">Loading the hunt...</div>'; return; }
     if (inst && inst.status === 'pending') { body.innerHTML = _coopPendingHtml(inst); return; }
     if (inst && inst.status === 'active') { body.innerHTML = _coopActiveHtml(inst); return; }
     if (inst && inst.status === 'completed' && inst.result === 'success') { body.innerHTML = _coopVictoryHtml(inst); return; }
+    if (isDefeat) { body.innerHTML = _coopDefeatHtml(inst); return; }
     body.innerHTML = _coopRecruitHtml(inst);
   }
 
@@ -40135,6 +40147,64 @@
         ' together, enough to bring down ' + esc(cfg.name) + '.</p>' +
       '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
       '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
+    );
+  }
+
+  // W449 \u2014 DEFEAT screen (ClaudeDesign handoff #15): the somber twin of _coopVictoryHtml, shown
+  // when the hunt's 24h window closed with the goal unmet. Centerpiece is the SHARED near-miss \u2014
+  // both goals (for a dual boss) with the per-hunter split \u2014 so two allies see how close they came
+  // TOGETHER. No blame, no reward; crimson register; "call again". The hero is dimmed + crimson-warded
+  // by the coop-overlay--defeat class (toggled in renderCoopSheet) so the boss reads as unbeaten.
+  function _coopDefeatHtml(inst) {
+    const cfg = _coopSheet.cfg;
+    const v = _coopView(inst);
+    const both = _coopIsBoth(inst);
+    const ally = _coopAlias((v.them && v.them.alias) || 'your ally');
+    let youAlias = 'You'; try { const u = Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) youAlias = u.alias; } catch (_) {}
+    const youInit = esc((String(youAlias).trim().charAt(0) || 'Y').toUpperCase());
+    const allyInit = esc((String(ally).trim().charAt(0) || 'A').toUpperCase());
+    const kicker = cfg.coopDefeatTitle || 'THE QUARRY HOLDS';
+    const flavor = 'You and ' + esc(ally) + ' fell short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
+    // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the two-hunter split
+    const goalBar = function (combined, goal, label, meVal, themVal) {
+      const c = Math.max(0, combined || 0), g = goal || 0;
+      const pct = g > 0 ? Math.max(0, Math.min(100, Math.round(c / g * 100))) : 0;
+      return '<div class="coopdf-goal">' +
+        '<div class="coopdf-goal-top"><span class="coopdf-goal-name">' + esc(label) + '</span>' +
+          '<span class="coopdf-goal-val">' + c.toLocaleString('en-US') + ' <span class="of">/ ' + g.toLocaleString('en-US') + '</span><span class="pct">' + pct + '%</span></span></div>' +
+        '<div class="coopdf-track"><div class="coopdf-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="coopdf-split">' +
+          '<span class="coopdf-who"><span class="coopdf-dot you"></span>You <b>' + Math.max(0, meVal || 0).toLocaleString('en-US') + '</b></span>' +
+          '<span class="coopdf-who"><span class="coopdf-dot ally"></span>' + esc(ally) + ' <b>' + Math.max(0, themVal || 0).toLocaleString('en-US') + '</b></span>' +
+        '</div></div>';
+    };
+    let bars;
+    if (both) {
+      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', v.me && v.me.steps, v.them && v.them.steps) +
+             goalBar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'Combined Flights', v.me && v.me.flights, v.them && v.them.flights);
+    } else {
+      const u = _coopUnit(inst);
+      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined ' + (u.charAt(0).toUpperCase() + u.slice(1)), v.me && v.me.steps, v.them && v.them.steps);
+    }
+    return (
+      '<div class="coopdf">' +
+        '<div class="coopdf-verdict">' +
+          '<div class="coopdf-kicker">' + esc(kicker) + '</div>' +
+          '<div class="coopdf-headline">The Hunt Fell Short</div>' +
+          '<div class="coopdf-flavor">' + flavor + '</div>' +
+        '</div>' +
+        '<div class="coopdf-progress">' + bars + '</div>' +
+        '<div class="coopdf-fellowship">' +
+          '<div class="coopdf-hunter"><div class="coopdf-av you">' + youInit + '</div><div class="coopdf-tag you">You</div></div>' +
+          '<div class="coopdf-seam"></div>' +
+          '<div class="coopdf-hunter"><div class="coopdf-av ally">' + allyInit + '</div><div class="coopdf-tag ally">' + esc(ally) + '</div></div>' +
+        '</div>' +
+        '<div class="coopdf-reset">No relic claimed \u00B7 the hunt resets</div>' +
+        '<div class="coopdf-ctas">' +
+          '<button class="coopdf-callagain" data-coop-action="invite"><svg class="spark" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 0l1.5 5L13 6.5 8.5 8 7 14 5.5 8 1 6.5 5.5 5z" fill="#f5b842"/></svg>Call Again</button>' +
+          '<button class="coopdf-back" data-coop-action="close">Back to the Dungeon</button>' +
+        '</div>' +
+      '</div>'
     );
   }
 
