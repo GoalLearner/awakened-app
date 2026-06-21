@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w455'; // W455 — relic Armory alignment: lock card-name to 2 lines + clamp drop-source to 1 line + unify slot/EQUIPPED/NEW badges into one fixed 16px box so the status pill + footer chip never drift
+  const APP_BUILD_TAG = '2.3.1-w456'; // W456 — Perfect Day redesign (ClaudeDesign seal-stamp): gold-foil PERFECT DAY wordmark + hex seal + tier-escalating FX/Web-Audio fanfare/haptics; single popup (old confetti + legacy milestone modal retired, milestone XP kept)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -23262,8 +23262,13 @@
     totalPoints += ms.bonus;
     save();
     renderRank();
-    levelUpQueue.push({ type: 'perfectday', milestone: ms, streakCount: n });
-    if (!levelUpActive) drainLevelUpQueue();
+    // W456 — the milestone XP bonus STILL applies, but the legacy full-screen
+    // milestone modal (showPerfectDayScreen) is no longer shown. The redesigned
+    // everyday Perfect Day celebration (triggerPerfectDayCelebration) is now the
+    // SINGLE Perfect Day popup and already escalates by streak — its ASCENDANT
+    // (30-99) / ETERNAL (100+) tiers ARE the 30/100 milestones — so queueing the
+    // old modal here would be the exact double-popup we're avoiding. Left
+    // dormant (showPerfectDayScreen + #perfect-day-screen still exist, unused).
   }
 
   function updatePerfectStreakDisplay() {
@@ -26946,71 +26951,190 @@
     if (overlay) overlay.addEventListener('click', closeRankPopup);
   }
 
-  // ── FEATURE 5: PERFECT DAY CELEBRATION ───────────────────
-  let pdcRafId = null;
+  // ── FEATURE 5: PERFECT DAY CELEBRATION (W456 — ClaudeDesign seal-stamp) ──
+  // The everyday Perfect Day moment, fired once per perfect day from
+  // checkPerfectDay(). A gold-foil "PERFECT DAY" Cinzel seal stamps in over a
+  // scrim, with canvas spark/rain FX, a 5-layer Web Audio C-major fanfare, and
+  // named haptics. It ESCALATES with the perfect-streak count via four tiers:
+  //   KINDLED 1-6 · TEMPERED 7-29 · ASCENDANT 30-99 · ETERNAL 100+
+  // so day 100 outranks day 1. This is the SINGLE Perfect Day popup — it
+  // replaces both the old confetti AND the legacy milestone modal (the
+  // milestone XP bonus is still granted in checkPerfectStreakMilestone). Drives
+  // its own #pday-overlay; the relic-drop confetti keeps using #pdc-overlay.
+  var _pdayState = { tier: 1, streak: 1, xp: 0, wired: false, timers: [], rafId: 0,
+                     ctx2d: null, W: 0, H: 0, DPR: 1, parts: [], rain: [], running: false, startT: 0, reduced: false };
+  function _pdayTierOf(n) { if (n >= 100) return 4; if (n >= 30) return 3; if (n >= 7) return 2; return 1; }
+  var _PDAY_TIER_NAME = { 1: 'KINDLED', 2: 'TEMPERED', 3: 'ASCENDANT', 4: 'ETERNAL' };
 
-  function triggerPerfectDayCelebration() {
-    const overlay = document.getElementById('pdc-overlay');
-    const canvas  = document.getElementById('pdc-canvas');
-    const xpEl    = document.getElementById('pdc-xp');
-    if (!overlay || !canvas) return;
-
-    // Compute today's total XP
-    const todayIds = completions[today] || [];
-    const todayXP  = todayIds.reduce((sum, id) => {
-      const h = habits.find(x => x.id === id);
-      return sum + (h ? diffPts(h.difficulty) : 0);
-    }, 0);
-    xpEl.innerHTML = iconify('+' + todayXP + ' XP earned today ⚡', { size: 16 });
-
-    // Confetti canvas
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const ctx = canvas.getContext('2d');
-
-    const COLORS = ['#f59e0b', '#fbbf24', '#22c55e', '#a78bfa', '#60a5fa', '#fff'];
-    const dots   = Array.from({ length: 60 }, () => ({
-      x:     Math.random() * canvas.width,
-      y:     -10 - Math.random() * canvas.height * 0.4,
-      vx:    (Math.random() - 0.5) * 3,
-      vy:    2 + Math.random() * 3,
-      r:     2.5 + Math.random() * 3,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: 1,
-    }));
-
-    if (pdcRafId) { cancelAnimationFrame(pdcRafId); pdcRafId = null; }
-
-    function drawPDC() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      dots.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.alpha -= 0.008;
-        if (p.alpha <= 0) return;
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle   = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1;
-      if (dots.some(p => p.alpha > 0)) pdcRafId = requestAnimationFrame(drawPDC);
-    }
-    pdcRafId = requestAnimationFrame(drawPDC);
-
-    overlay.classList.remove('hidden');
-    overlay.classList.add('pdc-active');
-    navigator.vibrate && navigator.vibrate([50, 30, 80, 30, 50]);
-
-    // Auto-dismiss after 2.2 s; tap to dismiss early
-    const dismiss = () => {
-      overlay.classList.remove('pdc-active');
-      overlay.classList.add('hidden');
-      if (pdcRafId) { cancelAnimationFrame(pdcRafId); pdcRafId = null; }
-      overlay.removeEventListener('click', dismiss);
-    };
-    overlay.addEventListener('click', dismiss);
-    setTimeout(dismiss, 2200);
+  function _pdayApplyLabels() {
+    var ov = document.getElementById('pday-overlay'); if (!ov) return;
+    var t = _pdayState.tier;
+    var sn = document.getElementById('pday-streakNum'); if (sn) sn.textContent = 'Day ' + _pdayState.streak;
+    var st = document.getElementById('pday-streakTier'); if (st) st.textContent = _PDAY_TIER_NAME[t];
+    var xn = document.getElementById('pday-xpNum'); if (xn) xn.textContent = '+' + _pdayState.xp;
+    var kt = document.getElementById('pday-kickerTxt'); if (kt) kt.textContent = t >= 4 ? 'SEAL OF MASTERY · ETERNAL' : 'SEAL OF MASTERY';
+    ov.querySelectorAll('.word .ln').forEach(function (ln) {
+      ln.style.backgroundImage = t >= 4
+        ? 'linear-gradient(180deg, #ffffff 0%, #ffe9b0 40%, #f5b842 100%)'
+        : 'linear-gradient(180deg, #ffe9b0 0%, #f5b842 46%, #9a6c14 100%)';
+    });
   }
+
+  // 5-layer C-major fanfare on a shared resumable AudioContext (iOS suspension),
+  // fired inside the same gesture that opened the overlay. Honors soundEnabled.
+  function _pdayPlaySfx() {
+    if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+      if (!window.__bloomCtx) window.__bloomCtx = new Ctx();
+      var ctx = window.__bloomCtx; if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime, tier = _pdayState.tier;
+      var master = ctx.createGain(); master.gain.value = 0.85; master.connect(ctx.destination);
+      function tone(type, freq, t0, dur, peak, detune) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq; if (detune) o.detune.value = detune;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(peak, t0 + 0.018);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + 0.05); return o;
+      }
+      // ① rise whoosh into the hit
+      var rise = ctx.createOscillator(), rg = ctx.createGain(), rf = ctx.createBiquadFilter();
+      rise.type = 'sawtooth'; rise.frequency.setValueAtTime(280, now); rise.frequency.exponentialRampToValueAtTime(1100, now + 0.52);
+      rf.type = 'bandpass'; rf.frequency.value = 950; rf.Q.value = 0.7;
+      rg.gain.setValueAtTime(0.0001, now); rg.gain.linearRampToValueAtTime(0.06, now + 0.46); rg.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      rise.connect(rf).connect(rg).connect(master); rise.start(now); rise.stop(now + 0.64);
+      var tHit = now + 0.55;
+      // ② fanfare hit — C-major stab + low body + bright top
+      [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(i < 2 ? 'triangle' : 'sine', f, tHit, 0.75, i === 0 ? 0.12 : 0.085, (i - 1.5) * 5); });
+      tone('sine', 130.81, tHit, 0.42, 0.26); tone('sine', 261.63, tHit, 0.5, 0.13); tone('triangle', 1567.98, tHit + 0.01, 0.5, 0.045);
+      // ③ rising arpeggio + warm pad (grow with tier)
+      var arp = [523.25, 659.25, 783.99, 1046.5, 1318.51]; if (tier >= 2) arp.push(1567.98); if (tier >= 4) arp.push(2093.0);
+      arp.forEach(function (f, i) { tone('triangle', f, tHit + 0.05 + i * 0.058, 0.4, 0.06); });
+      var pad = [261.63, 392.0, 523.25]; if (tier >= 3) pad.push(659.25); if (tier >= 4) pad.push(783.99);
+      var pg = ctx.createGain(); pg.gain.setValueAtTime(0.0001, tHit + 0.05); pg.gain.linearRampToValueAtTime(0.055, tHit + 0.2);
+      pg.gain.setValueAtTime(0.055, tHit + 0.65); pg.gain.exponentialRampToValueAtTime(0.0001, tHit + 1.3); pg.connect(master);
+      pad.forEach(function (f, i) { var o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.detune.value = (i - 1) * 5; o.connect(pg); o.start(tHit + 0.05); o.stop(tHit + 1.4); });
+      // ④ sparkle cascade
+      var spark = [1046.5, 1318.51, 1567.98, 2093.0]; if (tier >= 4) spark.push(2637.02); var tS = now + 1.05;
+      spark.forEach(function (f, i) { if (i >= 3 && tier < 2) return; tone('sine', f, tS + i * 0.075, 0.72, 0.052); });
+      if (tier >= 4) tone('sine', 3135.96, tS + 0.5, 0.95, 0.038);
+    } catch (e) {}
+  }
+
+  // Named impacts via Capacitor Haptics (the real iOS path — navigator.vibrate
+  // is a no-op there); falls back to vibrate on web. Always pulses a gold flash
+  // tell. Withheld under reduced-motion except one gentle forced cue.
+  function _pdayHaptic(kind, force) {
+    if (_pdayState.reduced && !force) return;
+    var hf = document.getElementById('pday-hapFlash');
+    if (hf) { hf.classList.remove('beat'); void hf.offsetWidth; var strength = (kind === 'HEAVY' || kind === 'SUCCESS') ? '0 0 70px 8px' : '0 0 44px 5px'; hf.style.boxShadow = 'inset ' + strength + ' rgba(245,184,66,0.42)'; hf.classList.add('beat'); }
+    try { var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; if (H) { if (kind === 'SUCCESS') H.notification({ type: 'SUCCESS' }); else H.impact({ style: kind }); return; } } catch (e) {}
+    try { if (navigator.vibrate) { var map = { LIGHT: 10, MEDIUM: 22, HEAVY: 42, SUCCESS: [18, 40, 28] }; navigator.vibrate(map[kind] || 14); } } catch (e) {}
+  }
+
+  function _pdaySizeCanvas() {
+    var fx = document.getElementById('pday-fx'); if (!fx) return;
+    _pdayState.DPR = Math.min(2, window.devicePixelRatio || 1);
+    var r = fx.getBoundingClientRect(); _pdayState.W = r.width; _pdayState.H = r.height;
+    fx.width = _pdayState.W * _pdayState.DPR; fx.height = _pdayState.H * _pdayState.DPR;
+    _pdayState.ctx2d = fx.getContext('2d'); _pdayState.ctx2d.setTransform(_pdayState.DPR, 0, 0, _pdayState.DPR, 0, 0);
+  }
+  function _pdaySpawnFX(tier) {
+    var W = _pdayState.W, H = _pdayState.H; _pdayState.parts = []; _pdayState.rain = [];
+    var cx = W * 0.5, cy = H * 0.42, n = [0, 18, 24, 32, 40][tier];
+    for (var i = 0; i < n; i++) {
+      var ang = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.4, sp = 2.2 + Math.random() * 3.4, violet = tier >= 3 && Math.random() < 0.4;
+      _pdayState.parts.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 0.6, life: 0, max: 520 + Math.random() * 260, sz: 1.4 + Math.random() * 2.2, col: violet ? '#a78bfa' : (Math.random() < 0.5 ? '#ffe9b0' : '#f5b842'), delay: Math.random() * 70 });
+    }
+    var rn = [0, 18, 30, 42, 58][tier];
+    for (var j = 0; j < rn; j++) {
+      var violetR = tier >= 4 && Math.random() < 0.3;
+      _pdayState.rain.push({ x: Math.random() * W, y: -Math.random() * H * 0.6 - 20, len: 8 + Math.random() * 16, vy: 1.6 + Math.random() * 2.6, sz: 1 + Math.random() * 1.4, col: violetR ? '#a78bfa' : '#f5b842', delay: 300 + Math.random() * 900, life: 0 });
+    }
+  }
+  function _pdayLoop(now) {
+    var S = _pdayState; if (!S.running || !S.ctx2d) return;
+    var ctx2d = S.ctx2d, W = S.W, H = S.H, el = now - S.startT;
+    ctx2d.clearRect(0, 0, W, H);
+    for (var i = 0; i < S.parts.length; i++) {
+      var p = S.parts[i]; if (el < 550 + p.delay) continue; p.life += 16; if (p.life > p.max) continue;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.vx *= 0.985; var a = 1 - p.life / p.max; ctx2d.globalAlpha = Math.max(0, a);
+      ctx2d.fillStyle = p.col; ctx2d.shadowColor = p.col; ctx2d.shadowBlur = p.sz * 3; ctx2d.beginPath(); ctx2d.arc(p.x, p.y, p.sz * (0.4 + a * 0.8), 0, 6.28); ctx2d.fill();
+    }
+    for (var j = 0; j < S.rain.length; j++) {
+      var r = S.rain[j]; if (el < r.delay) continue; r.life += 16; r.y += r.vy; if (r.y > H + 20) { r.y = -20; }
+      var fade = el > 2400 ? Math.max(0, 1 - (el - 2400) / 900) : Math.min(1, r.life / 300); ctx2d.globalAlpha = 0.55 * fade;
+      ctx2d.strokeStyle = r.col; ctx2d.shadowColor = r.col; ctx2d.shadowBlur = 4; ctx2d.lineWidth = r.sz; ctx2d.beginPath(); ctx2d.moveTo(r.x, r.y); ctx2d.lineTo(r.x, r.y - r.len); ctx2d.stroke();
+    }
+    ctx2d.globalAlpha = 1; ctx2d.shadowBlur = 0;
+    if (el < 3600) S.rafId = requestAnimationFrame(_pdayLoop); else { S.running = false; ctx2d.clearRect(0, 0, W, H); }
+  }
+
+  function _pdayClearTimers() { _pdayState.timers.forEach(clearTimeout); _pdayState.timers = []; }
+  function _pdayT(fn, ms) { _pdayState.timers.push(setTimeout(fn, ms)); }
+  function _pdayReset() {
+    var ov = document.getElementById('pday-overlay'); if (!ov) return;
+    _pdayClearTimers(); _pdayState.running = false; cancelAnimationFrame(_pdayState.rafId);
+    ov.classList.remove('closing');
+    ov.querySelectorAll('.ring').forEach(function (e) { e.classList.remove('go'); });
+    var ry = ov.querySelector('#pday-rays'); if (ry) ry.classList.remove('show');
+    ov.querySelectorAll('.hexline').forEach(function (e) { e.classList.remove('draw'); });
+    var rn = ov.querySelector('.runes'); if (rn) rn.classList.remove('lit');
+    ['#pday-kicker', '#pday-wPerfect', '#pday-wDay', '#pday-foil', '#pday-streak', '#pday-xp', '#pday-dismiss'].forEach(function (s) {
+      var e = ov.querySelector(s); if (e) { e.classList.remove('in'); e.classList.remove('strike'); e.classList.remove('sweep'); }
+    });
+    if (_pdayState.ctx2d) _pdayState.ctx2d.clearRect(0, 0, _pdayState.W, _pdayState.H);
+  }
+  function _pdayClose() {
+    var ov = document.getElementById('pday-overlay'); if (!ov) return;
+    _pdayClearTimers(); ov.classList.add('closing');
+    setTimeout(function () { ov.classList.remove('on'); _pdayReset(); }, 300);
+  }
+
+  // Public entry — streak + XP default to the live perfect-streak + today's XP.
+  function triggerPerfectDayCelebration(streakCount, todayXp) {
+    var ov = document.getElementById('pday-overlay'); if (!ov) return;
+    var streak = (typeof streakCount === 'number' && streakCount > 0) ? streakCount : ((typeof perfectStreak !== 'undefined' && perfectStreak.count) || 1);
+    var xp;
+    if (typeof todayXp === 'number') xp = todayXp; else { try { xp = computeTodayXP(); } catch (_) { xp = 0; } }
+    _pdayState.streak = streak; _pdayState.xp = xp; _pdayState.tier = _pdayTierOf(streak);
+    _pdayState.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (!_pdayState.wired) { ov.addEventListener('click', _pdayClose); _pdayState.wired = true; }
+
+    _pdayReset();
+    _pdayApplyLabels();
+    ov.classList.toggle('reduced', _pdayState.reduced);
+    ov.classList.add('on');
+    _pdaySizeCanvas(); _pdaySpawnFX(_pdayState.tier);
+    void ov.offsetWidth; // reflow so re-added animation classes restart
+
+    var tier = _pdayState.tier;
+    ov.querySelectorAll('.hexline').forEach(function (e) { e.classList.add('draw'); });
+    var rn = ov.querySelector('.runes'); if (rn) rn.classList.add('lit');
+    ov.querySelector('#pday-kicker').classList.add('in');
+    ov.querySelector('#pday-ring1').classList.add('go');
+    if (tier >= 2) ov.querySelector('#pday-ring2').classList.add('go');
+    if (tier >= 4) ov.querySelector('#pday-ring3').classList.add('go');
+    if (tier >= 3) ov.querySelector('#pday-rays').classList.add('show');
+    ov.querySelector('#pday-wPerfect').classList.add('strike');
+    ov.querySelector('#pday-wDay').classList.add('strike');
+    if (tier >= 3 && !_pdayState.reduced) ov.querySelector('#pday-foil').classList.add('sweep');
+    ov.querySelector('#pday-streak').classList.add('in');
+    ov.querySelector('#pday-xp').classList.add('in');
+    ov.querySelector('#pday-dismiss').classList.add('in');
+
+    _pdayPlaySfx();
+    _pdayState.running = true; _pdayState.startT = performance.now(); _pdayState.rafId = requestAnimationFrame(_pdayLoop);
+
+    _pdayHaptic('LIGHT', _pdayState.reduced);
+    if (!_pdayState.reduced) {
+      _pdayT(function () { _pdayHaptic('HEAVY'); }, 550);
+      if (tier >= 2) _pdayT(function () { _pdayHaptic('MEDIUM'); }, 950);
+      _pdayT(function () { _pdayHaptic('SUCCESS'); }, 1400);
+    }
+    _pdayT(_pdayClose, 3600);
+  }
+  window.addEventListener('resize', function () { if (document.getElementById('pday-overlay') && document.getElementById('pday-overlay').classList.contains('on')) _pdaySizeCanvas(); });
 
   // toggleHabit(id, li, opts?)
   //   opts.silent     — skip burst UI (chime, particles, flash, XP float).

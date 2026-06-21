@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=481">
+  <link rel="stylesheet" href="styles.css?v=482">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2988,12 +2988,57 @@
     </div>
   </div>
 
+  <!-- W456 — Perfect Day Celebration (ClaudeDesign seal-stamp redesign). A
+       separate overlay from #pdc-overlay (which the relic-drop confetti reuses).
+       Driven by triggerPerfectDayCelebration(streak, todayXp) in app.js. -->
+  <div id="pday-overlay" class="pday-overlay">
+    <div class="scrim"></div>
+    <canvas class="fx" id="pday-fx"></canvas>
+    <div class="rays" id="pday-rays"></div>
+    <div class="ring" id="pday-ring1"></div>
+    <div class="ring r2" id="pday-ring2"></div>
+    <div class="ring r3" id="pday-ring3"></div>
+    <div class="seal">
+      <div class="sigil" id="pday-sigil">
+        <svg viewBox="0 0 300 300">
+          <defs>
+            <linearGradient id="pdayGoldGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffe9b0"/><stop offset="0.5" stop-color="#f5b842"/><stop offset="1" stop-color="#9a6c14"/>
+            </linearGradient>
+          </defs>
+          <polygon class="hexline" points="150,18 264,84 264,216 150,282 36,216 36,84"/>
+          <polygon class="hexline inner" points="150,52 234,100 234,200 150,248 66,200 66,100"/>
+          <g class="runes" stroke="url(#pdayGoldGrad)" stroke-width="1.2" stroke-linecap="round">
+            <path d="M150 18 v16"/><path d="M150 282 v-16"/>
+            <path d="M264 84 l-13 8"/><path d="M36 216 l13 -8"/>
+            <path d="M264 216 l-13 -8"/><path d="M36 84 l13 8"/>
+            <circle cx="150" cy="150" r="3" fill="url(#pdayGoldGrad)" stroke="none"/>
+          </g>
+        </svg>
+      </div>
+      <div class="kicker" id="pday-kicker"><span class="dd"></span><span id="pday-kickerTxt">SEAL OF MASTERY</span><span class="dd"></span></div>
+      <div class="word">
+        <span class="ln perfect" id="pday-wPerfect">PERFECT</span>
+        <span class="ln day" id="pday-wDay">DAY</span>
+        <span class="foil" id="pday-foil"></span>
+      </div>
+      <div class="streak" id="pday-streak">
+        <svg class="flame" viewBox="0 0 15 18"><path d="M7.5 0C5 4 1.5 6.5 1.5 11A6 6 0 0013.5 11C13.5 7.5 10 5 7.5 0z" fill="url(#pdayGoldGrad)"/><path d="M7.5 7c-1.2 1.8-2.4 3-2.4 4.6a2.4 2.4 0 004.8 0C9.9 10 8.7 8.8 7.5 7z" fill="#241502" opacity="0.55"/></svg>
+        <span class="txt"><b id="pday-streakNum">Day 1</b> &middot; PERFECT</span>
+        <span class="tier" id="pday-streakTier">KINDLED</span>
+      </div>
+      <div class="xp" id="pday-xp"><svg class="bolt" viewBox="0 0 9 13"><path d="M5 0L0 7h3l-1 6 7-9H5l2-4z" fill="#ffe9b0"/></svg><span>Today &middot; <b id="pday-xpNum">+0</b> XP earned</span></div>
+    </div>
+    <div class="dismiss" id="pday-dismiss">TAP ANYWHERE TO CONTINUE</div>
+    <div class="haptic-flash" id="pday-hapFlash"></div>
+  </div>
+
   <script src="auth.js?v=32"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=895"></script>
+  <script src="app.js?v=896"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
