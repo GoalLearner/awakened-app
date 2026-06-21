@@ -2612,6 +2612,20 @@ footer {
   transform: scale(1.06);
 }
 
+/* W458 — visible tab labels (IA fix). Symbol-only nav was a maze for a
+   non-gamer ("can't tell Status from Stats from Dungeon"). Stack a short text
+   label under each icon so the bar is self-explanatory; icon shrinks a touch
+   to keep the bar compact. Active label takes the violet accent to match the
+   active icon glow + underline. */
+.tab-btn { flex-direction: column; gap: 2px; min-height: 50px; padding: 5px 3px 4px; }
+.tab-icon { width: 25px; height: 25px; }
+.tab-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.2px; line-height: 1;
+  color: rgba(245, 243, 251, 0.5); max-width: 100%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
+}
+.tab-btn.active .tab-label { color: var(--accent); }
+
 /* ── TAB PANELS ── */
 .tab-panel {
   flex: 1;

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w457'; // W457 — Perfect Day is TAP TO CONTINUE only: removed the 3.6s auto-dismiss so the moment holds until the user taps anywhere (never auto-advances)
+  const APP_BUILD_TAG = '2.3.1-w458'; // W458 — IA fix (path-to-A step 1): visible text labels under all 7 bottom-tab icons (was symbol-only); a non-gamer can now read the nav
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
