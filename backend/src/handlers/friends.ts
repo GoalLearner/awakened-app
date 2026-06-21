@@ -79,6 +79,7 @@ interface PublicProfileFriendRow {
   rank_division: string | null;
   rank_label: string | null;
   rank_sort_value: number | null;
+  prestige: number | null;   // W453 — Prestige star count (S+ endgame)
   server_updated_at: number | null;
   // v3 Phase 1z.195 — Global Friend Achievements MVP-A.
   // Cumulative count aggregates + a public-safe streak label.
@@ -107,6 +108,7 @@ interface SerializedFriendRow {
   rankDivision?: string | null;
   rankLabel?: string;
   rankSortValue?: number;
+  prestige?: number;   // W453 — Prestige star count, present with the rank badge
   rankUpdatedAt?: string;
   // v3 Phase 1z.195 — Global Friend Achievements MVP-A. Cumulative
   // count aggregates + a public-safe verified streak label. Only
@@ -148,6 +150,7 @@ async function serializeFriendRow(
             p.rank_division          AS rank_division,
             p.rank_label             AS rank_label,
             p.rank_sort_value        AS rank_sort_value,
+            p.prestige_level         AS prestige,
             p.server_updated_at      AS server_updated_at,
             p.bosses_slain_total     AS bosses_slain_total,
             p.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -178,6 +181,8 @@ async function serializeFriendRow(
     out.rankDivision  = joined.rank_division; // may be null for S+
     out.rankLabel     = joined.rank_label;
     out.rankSortValue = joined.rank_sort_value ?? 0;
+    out.prestige      = joined.prestige ?? 0; // W453 — 0 unless S+
+
     if (typeof joined.server_updated_at === 'number' && Number.isFinite(joined.server_updated_at)) {
       out.rankUpdatedAt = new Date(joined.server_updated_at).toISOString();
     }

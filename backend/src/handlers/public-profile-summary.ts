@@ -68,6 +68,10 @@ const RANK_LABEL_RE = /^(E|D|C|B|A|S|S\+)(?: (I|II|III))?$/;
 // without us having to hardcode the exact formula on the server.
 const SORT_VALUE_MAX = 6_999_999_999;
 const RANK_POINTS_MAX = 999_999_999;
+// W453 — Prestige star count (S+ endgame). Display-only, client-authoritative,
+// stored verbatim like rank_points. The ceiling is pure anti-garbage: 100k
+// stars would be ~1.2 billion XP, far above any real player.
+const PRESTIGE_MAX = 100_000;
 
 // v3 Phase 1z.195 — public achievement summary caps. Tight enough
 // to defend against accidental client-side overflow without being
@@ -112,6 +116,7 @@ interface PutBody {
   rankLabel?: unknown;
   rankSortValue?: unknown;
   rankPoints?: unknown;
+  prestige?: unknown;   // W453 — Prestige star count (S+ only)
   clientUpdatedAt?: unknown;
   achievements?: unknown;
   arenaTitle?: unknown;
@@ -141,6 +146,7 @@ interface Validated {
   rankLabel: string;
   rankSortValue: number;
   rankPoints: number;
+  prestige: number;   // W453 — coerced to 0 for non-S+ tiers
   clientUpdatedAt: string;
   achievements: ValidatedAchievements;
   // W257 — equipped Arena title. Same set/clear/preserve semantics as
@@ -328,6 +334,21 @@ function validate(body: PutBody):
     };
   }
 
+  // W453 — Prestige star count. Optional (pre-W453 clients omit it → 0) and
+  // only meaningful at S+, so coerce to 0 for every lower tier.
+  let prestige = 0;
+  if (body.prestige !== undefined && body.prestige !== null) {
+    if (!isSafeInt(body.prestige, 0, PRESTIGE_MAX)) {
+      return {
+        ok: false,
+        code: 'INVALID_PRESTIGE',
+        detail: `prestige must be an integer in [0, ${PRESTIGE_MAX}].`,
+      };
+    }
+    prestige = body.prestige;
+  }
+  if (rankTier !== 'S+') prestige = 0;
+
   if (typeof body.clientUpdatedAt !== 'string') {
     return {
       ok: false,
@@ -441,6 +462,7 @@ function validate(body: PutBody):
       rankLabel: body.rankLabel,
       rankSortValue: body.rankSortValue,
       rankPoints: body.rankPoints,
+      prestige,
       clientUpdatedAt: body.clientUpdatedAt,
       achievements: achCheck.value,
       arenaTitle,
@@ -525,15 +547,17 @@ export async function handlePublicProfileSummaryPut(
         client_updated_at, server_updated_at, metadata_json,
         bosses_slain_total, ultra_rare_drops_total,
         verified_streak_label, achievements_updated_at,
-        arena_title, avatar_id, power, avg_steps_per_day, combatant_json
+        arena_title, avatar_id, power, avg_steps_per_day, combatant_json,
+        prestige_level
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0), ?)
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0), ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
         rank_label        = excluded.rank_label,
         rank_sort_value   = excluded.rank_sort_value,
         rank_points       = excluded.rank_points,
+        prestige_level    = excluded.prestige_level,
         client_updated_at = excluded.client_updated_at,
         server_updated_at = excluded.server_updated_at,
         bosses_slain_total      = CASE WHEN ? = 1
@@ -575,6 +599,7 @@ export async function handlePublicProfileSummaryPut(
       v.power.value,
       v.avgStepsPerDay.value,
       v.combatant.value,
+      v.prestige,   // W453 — appended last (the table's newest column → INSERT bind index 17)
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,

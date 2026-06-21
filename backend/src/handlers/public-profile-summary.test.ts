@@ -270,12 +270,15 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[9]).toBeNull();
     expect(calls[0]?.binds[10]).toBeNull();
     expect(calls[0]?.binds[11]).toBeNull();
-    // ON CONFLICT CASE WHEN sentinels (12, 14, 16, 18) — all 0
-    // because no achievement fields were set.
+    // W453 — prestige is appended as the LAST INSERT bind (index 17);
+    // 0 for a non-S+ tier (coerced) and for pre-W453 clients (omitted).
     expect(calls[0]?.binds[17]).toBe(0);
-    expect(calls[0]?.binds[19]).toBe(0);
-    expect(calls[0]?.binds[21]).toBe(0);
-    expect(calls[0]?.binds[23]).toBe(0);
+    // ON CONFLICT CASE WHEN sentinels shifted +1 (now 18, 20, 22, 24) —
+    // all 0 because no achievement fields were set.
+    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[20]).toBe(0);
+    expect(calls[0]?.binds[22]).toBe(0);
+    expect(calls[0]?.binds[24]).toBe(0);
   });
 
   it('upserts a valid S+ summary with null division', async () => {
@@ -287,6 +290,7 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
         rankLabel:       'S+',
         rankSortValue:   6_003_000_000,
         rankPoints:      200_000,
+        prestige:        13,   // W453 — Prestige ✦13
         clientUpdatedAt: '2026-05-29T00:00:00.000Z',
       }),
       makeEnv(db),
@@ -299,6 +303,38 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[1]).toBe('S+');
     expect(calls[0]?.binds[2]).toBe(null);
     expect(calls[0]?.binds[3]).toBe('S+');
+    expect(calls[0]?.binds[17]).toBe(13);   // W453 — prestige stored verbatim for S+
+  });
+
+  it('W453 — coerces prestige to 0 for a non-S+ tier even if the client sends one', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({
+        rankTier:        'A',
+        rankDivision:    'I',
+        rankLabel:       'A I',
+        rankSortValue:   4_002_500_000,
+        rankPoints:      11_000,
+        prestige:        7,   // bogus for an A-tier — must be coerced to 0
+        clientUpdatedAt: '2026-05-29T00:00:00.000Z',
+      }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(200);
+    expect(db._calls()[0]?.binds[17]).toBe(0);
+  });
+
+  it('W453 — rejects an out-of-range prestige', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, prestige: 100_001 }),
+      makeEnv(db),
+      session,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error: string }).error).toBe('INVALID_PRESTIGE');
+    expect(db._calls().length).toBe(0);
   });
 });
 
@@ -441,11 +477,12 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(calls[0]?.binds[9]).toBe(1);
     expect(calls[0]?.binds[10]).toBe('30-day MR streak');
     expect(calls[0]?.binds[11]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
-    // Sentinels (12, 14, 16, 18) — all 1 since all fields set.
-    expect(calls[0]?.binds[17]).toBe(1);
-    expect(calls[0]?.binds[19]).toBe(1);
-    expect(calls[0]?.binds[21]).toBe(1);
-    expect(calls[0]?.binds[23]).toBe(1);
+    // Sentinels shifted +1 by the appended prestige bind (now 18, 20, 22, 24)
+    // — all 1 since all fields set.
+    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[20]).toBe(1);
+    expect(calls[0]?.binds[22]).toBe(1);
+    expect(calls[0]?.binds[24]).toBe(1);
   });
 
   it('partial achievement payload only marks present fields for update', async () => {
@@ -459,16 +496,16 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
       session,
     );
     const calls = db._calls();
-    // bossesSlainTotal set → sentinel 1, value 28
-    expect(calls[0]?.binds[17]).toBe(1);
-    expect(calls[0]?.binds[18]).toBe(28);
+    // bossesSlainTotal set → sentinel 1, value 28 (all +1 from prestige bind)
+    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[19]).toBe(28);
     // ultraRareDropsTotal NOT set → sentinel 0
-    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[20]).toBe(0);
     // verifiedStreakLabel NOT set → sentinel 0
-    expect(calls[0]?.binds[21]).toBe(0);
+    expect(calls[0]?.binds[22]).toBe(0);
     // achievements_updated_at: hasAny=true → sentinel 1 + stamped ts
-    expect(calls[0]?.binds[23]).toBe(1);
-    expect(calls[0]?.binds[24]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+    expect(calls[0]?.binds[24]).toBe(1);
+    expect(calls[0]?.binds[25]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
   });
 
   it('empty achievements object is treated as a no-op for the achievement surface', async () => {
@@ -483,11 +520,11 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(json.achievementsUpdatedAt).toBeNull();
 
     const calls = db._calls();
-    // Every sentinel must be 0 → preserve every existing value.
-    expect(calls[0]?.binds[17]).toBe(0);
-    expect(calls[0]?.binds[19]).toBe(0);
-    expect(calls[0]?.binds[21]).toBe(0);
-    expect(calls[0]?.binds[23]).toBe(0);
+    // Every sentinel (shifted +1 by prestige → 18, 20, 22, 24) must be 0.
+    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[20]).toBe(0);
+    expect(calls[0]?.binds[22]).toBe(0);
+    expect(calls[0]?.binds[24]).toBe(0);
   });
 
   it('explicit null verifiedStreakLabel marks the field for clear', async () => {
@@ -502,14 +539,14 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    // verifiedStreakLabel set (explicit null) → sentinel 1 + null value
-    expect(calls[0]?.binds[21]).toBe(1);
-    expect(calls[0]?.binds[22]).toBeNull();
+    // verifiedStreakLabel set (explicit null) → sentinel 1 + null value (+1 shift)
+    expect(calls[0]?.binds[22]).toBe(1);
+    expect(calls[0]?.binds[23]).toBeNull();
     // Other counts NOT set → sentinel 0
-    expect(calls[0]?.binds[17]).toBe(0);
-    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[20]).toBe(0);
     // hasAny=true → ach timestamp stamped
-    expect(calls[0]?.binds[23]).toBe(1);
+    expect(calls[0]?.binds[24]).toBe(1);
   });
 
   it('accepts zero bossesSlainTotal as a real submitted value (not a clear)', async () => {
@@ -524,18 +561,18 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[17]).toBe(1);
-    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(1);
+    expect(calls[0]?.binds[19]).toBe(0);
   });
 
   it('rank-only submit leaves CASE WHEN sentinels all zero (preserve existing achievement columns)', async () => {
     const db = makeDb();
     await handlePublicProfileSummaryPut(makeReq(validPayload), makeEnv(db), session);
     const calls = db._calls();
-    expect(calls[0]?.binds[17]).toBe(0);
-    expect(calls[0]?.binds[19]).toBe(0);
-    expect(calls[0]?.binds[21]).toBe(0);
-    expect(calls[0]?.binds[23]).toBe(0);
+    expect(calls[0]?.binds[18]).toBe(0);
+    expect(calls[0]?.binds[20]).toBe(0);
+    expect(calls[0]?.binds[22]).toBe(0);
+    expect(calls[0]?.binds[24]).toBe(0);
   });
 });
 
@@ -565,8 +602,8 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(calls.length).toBe(1);
     expect(calls[0].sql).toContain('arena_title');
     expect(calls[0].binds[12]).toBe('asc_brawler');   // INSERT value
-    expect(calls[0].binds[25]).toBe(1);               // titleSet sentinel
-    expect(calls[0].binds[26]).toBe('asc_brawler');   // CASE WHEN value
+    expect(calls[0].binds[26]).toBe(1);               // titleSet sentinel (+1 from prestige)
+    expect(calls[0].binds[27]).toBe('asc_brawler');   // CASE WHEN value
   });
 
   it('accepts null as a deliberate "unequipped" clear', async () => {
@@ -576,8 +613,8 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
     expect(calls[0].binds[12]).toBe(null);
-    expect(calls[0].binds[25]).toBe(1);               // set → clears the column
-    expect(calls[0].binds[26]).toBe(null);
+    expect(calls[0].binds[26]).toBe(1);               // set → clears the column (+1 from prestige)
+    expect(calls[0].binds[27]).toBe(null);
   });
 
   it('preserves the existing title when the key is omitted (sentinel 0)', async () => {
@@ -586,7 +623,7 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
       makeReq(validPayload), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
-    expect(calls[0].binds[25]).toBe(0);               // not set → CASE preserves
+    expect(calls[0].binds[26]).toBe(0);               // not set → CASE preserves (+1 from prestige)
   });
 
   it('rejects a non-whitelisted title id', async () => {
@@ -640,7 +677,7 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
     expect(calls[0].binds[16]).toBeNull();   // INSERT value null when unset
-    expect(calls[0].binds[33]).toBe(0);      // combatantSet sentinel → CASE preserves
+    expect(calls[0].binds[34]).toBe(0);      // combatantSet sentinel → CASE preserves (+1 from prestige)
   });
 
   it('null combatant is a deliberate clear (sentinel 1, value null)', async () => {
@@ -650,8 +687,8 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
     expect(calls[0].binds[16]).toBeNull();
-    expect(calls[0].binds[33]).toBe(1);
-    expect(calls[0].binds[34]).toBeNull();
+    expect(calls[0].binds[34]).toBe(1);
+    expect(calls[0].binds[35]).toBeNull();
   });
 
   it('accepts a valid combatant and stores a sanitized JSON snapshot', async () => {
@@ -660,9 +697,9 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
       makeReq({ ...validPayload, combatant: goodCombatant }), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
-    expect(calls[0].binds[33]).toBe(1);                      // set
+    expect(calls[0].binds[34]).toBe(1);                      // set (+1 from prestige)
     const stored = JSON.parse(String(calls[0].binds[16]));   // INSERT value
-    expect(stored).toEqual(JSON.parse(String(calls[0].binds[34])));   // INSERT == CASE value
+    expect(stored).toEqual(JSON.parse(String(calls[0].binds[35])));   // INSERT == CASE value
     expect(stored.weaponId).toBe('aetherspire_staff');
     expect(stored.stats).toEqual({ STR: 40, VIT: 55, INT: 120, FOCUS: 70, WILL: 60, WLT: 30 });
     expect(stored.avatar).toBe('avatar-sage.png');

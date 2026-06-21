@@ -19,6 +19,7 @@ interface ProfileRow {
   alias: string;
   rank_label: string | null;
   rank_tier: string | null;
+  prestige: number | null;   // W453 — Prestige star count (S+ endgame)
   power: number | null;
   avatar_id: string | null;
   arena_title: string | null;
@@ -57,6 +58,7 @@ export async function handlePublicProfileGet(
   const row = await env.DB.prepare(
     `SELECT u.alias AS alias,
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
+            pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.arena_title AS arena_title,
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -109,6 +111,7 @@ export async function handlePublicProfileGet(
     arena,
     rankLabel: row.rank_label,
     rankTier: row.rank_tier,
+    prestige: row.prestige ?? 0,
     power: row.power ?? 0,
     avatarId: row.avatar_id,                       // null → client falls back to class default
     arenaTitle: row.arena_title,
