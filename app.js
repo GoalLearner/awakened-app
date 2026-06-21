@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w459'; // W459 — graded compound credit (path-to-A step 2): near-complete packs earn 50%/25% partial (was zero); full day unchanged; provably monotonic (tools/sim-compound.js)
+  const APP_BUILD_TAG = '2.3.1-w460'; // W460 — First Step reward (path-to-A step 3, onboarding): first-ever MANUAL completion grants +50 REAL rank XP (totalPoints) + lightweight first-win celebration, once-only via persisted guard; existing users grandfathered in load(); silent-first-completion new users still earn it on first manual tap
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20017,6 +20017,25 @@
       if (!_isObj(honestDays))             honestDays = {};
       if (!Array.isArray(pendingShieldNotices)) pendingShieldNotices = [];
       if (!Array.isArray(streakBreakLog))       streakBreakLog = [];
+
+      // W460 — grandfather the First Step guard. The First Step bonus (a real
+      // rank-XP grant fired on the first-ever MANUAL completion, ~toggleHabit
+      // rank-detection) is gated SOLELY on FIRST_COMPLETION_GUARD_KEY so it still
+      // reaches a brand-new hunter whose very first completion arrived via a
+      // SILENT HealthKit auto-verify (that path can't show the tap-to-continue
+      // celebration, so the bonus rightly waits for the first manual tap). To
+      // keep EXISTING users from a surprise grant on their next tap, claim the
+      // guard WITHOUT granting for anyone who already has completion history the
+      // first time this build loads — the same grandfathering ONBOARDING_FIRST_XP
+      // uses. A fresh install / post-Reset has empty completions and stays
+      // eligible; an onboarded-but-never-completed user also stays eligible
+      // (their first completion genuinely IS their first win).
+      try {
+        if (localStorage.getItem(FIRST_COMPLETION_GUARD_KEY) !== '1' &&
+            Object.values(completions).some(a => a && a.length)) {
+          localStorage.setItem(FIRST_COMPLETION_GUARD_KEY, '1');
+        }
+      } catch (_) {}
     } catch (_) {
       habits = []; completions = {}; streaks = {};
       totalPoints = 0; unlockedAchievements = new Set();
@@ -27329,6 +27348,36 @@
         }
       }
 
+      // W460 — First Step. On the user's first-ever MANUAL completion, grant a
+      // real rank-XP bonus — added to totalPoints, the exact value getRank()
+      // reads, so the rank/points bar visibly moves (NOT cosmetic) — on top of
+      // the per-habit XP, paired with the lightweight first-win celebration,
+      // EXACTLY ONCE per user. Placed BEFORE the rank / prestige / sub-rank
+      // detection below so if the bonus tips the hunter over a boundary (e.g.
+      // E→D) the existing celebration machinery owns that moment instead of
+      // silently swallowing it.
+      //   • The !silent wrapper means the first time this runs is necessarily a
+      //     MANUAL tap, so a brand-new hunter whose first completion came via a
+      //     SILENT HealthKit auto-verify still earns it on their first tap.
+      //   • Gated SOLELY on the persisted guard (not a derived completion count
+      //     an uncheck→recheck could re-trip); existing users are grandfathered
+      //     in load(), so only a genuinely fresh hunter ever trips it — veterans
+      //     never do. Un-farmable; stable across reload / cloud restore.
+      //   • Guard written BEFORE the grant: a (rare) localStorage write failure
+      //     means the bonus is simply not applied — never applied-without-guard,
+      //     which could risk a re-grant. The hb_ key is swept by Reset All Progress.
+      if (!silent && localStorage.getItem(FIRST_COMPLETION_GUARD_KEY) !== '1') {
+        let _firstStepClaimed = false;
+        try { localStorage.setItem(FIRST_COMPLETION_GUARD_KEY, '1'); _firstStepClaimed = true; } catch (_) {}
+        if (_firstStepClaimed) {
+          totalPoints += FIRST_COMPLETION_BONUS_XP;            // real rank XP (getRank reads totalPoints)
+          save();
+          try { prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + FIRST_COMPLETION_BONUS_XP); } catch (_) {}
+          try { renderRank(); } catch (_) {}
+          levelUpQueue.unshift({ type: 'first_win', habitName: habit ? habit.name : '', xp: FIRST_COMPLETION_BONUS_XP });
+        }
+      }
+
       // Detect rank up
       const newRank = getRank(totalPoints);
       const majorRankChanged = newRank.id !== oldRank.id;
@@ -27425,19 +27474,6 @@
       // origin story), and multi-stat ties prompt the class-choice screen.
       if (STATS.some(st => statLevel(stats[st.id]?.pts || 0) > (oldStatLevels[st.id] || 0))) {
         checkClassChange(false);
-      }
-
-      // W337 — the activation "First Mark": the user's first-ever manual
-      // completion. totalCompletions === 1 right after check(id) is true
-      // exactly once per lifetime (veterans are past 1; a post-Reset fresh
-      // start re-earns it). Unshift -> shown ahead of any other beat.
-      if (!silent) {
-        try {
-          const _tc = Object.values(completions).reduce((n, a) => n + (a ? a.length : 0), 0);
-          if (_tc === 1) {
-            levelUpQueue.unshift({ type: 'first_win', habitName: habit ? habit.name : '', xp: (habit ? diffPts(habit.difficulty) : 0) });
-          }
-        } catch (_) {}
       }
 
       if (levelUpQueue.length && !levelUpActive) drainLevelUpQueue();
@@ -46130,6 +46166,26 @@
   // total without contaminating habit-completion streaks. Naturally
   // rolls off after 30 days.
   const ONBOARDING_FIRST_XP_DATE_KEY = 'hb_onboarding_first_xp_date';
+
+  // W460 — First Step reward (path-to-A, onboarding). The user's first-ever
+  // MANUAL habit completion grants a real rank-XP bonus — added to totalPoints,
+  // the exact value getRank() reads, so the rank/points bar visibly moves — on
+  // top of the small per-habit XP, paired with the lightweight first-win
+  // celebration. Fires EXACTLY ONCE per user, gated SOLELY on this persisted
+  // guard (inside the !silent manual-tap branch). Earlier this gated on
+  // totalCompletions===1, but check() records SILENT HealthKit auto-verifies too,
+  // so a brand-new hunter whose first completion was a silent step/sleep verify
+  // would consume that count and never see the bonus on their first manual tap —
+  // the guard-only gate fixes that while the !silent wrapper keeps the celebration
+  // on a manual interaction. Existing users are GRANDFATHERED in load() (the
+  // guard is pre-claimed if they already have completion history) so veterans /
+  // upgraders never get a surprise grant; an uncheck→recheck can't re-trip it and
+  // reload / cloud restore can't re-grant. The hb_ key is swept by Reset All
+  // Progress, so a fresh QA pass re-earns it. Tunable: +50 puts a brand-new
+  // hunter most of the way to D-rank on their first tap (onboarding +25 + habit
+  // +5 + 50 = 80), a real first-session progression hit. E→D is 100 pts.
+  const FIRST_COMPLETION_BONUS_XP  = 50;
+  const FIRST_COMPLETION_GUARD_KEY = 'hb_first_completion_bonus_v1';
 
   function _completeOnboardingFinish() {
     // v3 Phase 1z.232 — Duplicate `#ob-name-input` is no longer in the
