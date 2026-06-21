@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w460'; // W460 — First Step reward (path-to-A step 3, onboarding): first-ever MANUAL completion grants +50 REAL rank XP (totalPoints) + lightweight first-win celebration, once-only via persisted guard; existing users grandfathered in load(); silent-first-completion new users still earn it on first manual tap
+  const APP_BUILD_TAG = '2.3.1-w461'; // W461 — daily rank-XP soft-cap (path-to-A, economy guardrail): per-habit XP capped at 750/day then 50% (compound + spikes + one-time grants EXEMPT); persisted ledger can't be reload-reset; identity below knee proven (tools/sim-dailycap.js); a ceiling vs pathological farming, not a curve change
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18391,6 +18391,7 @@
   let completions = {};
   let streaks = {};
   let totalPoints = 0;
+  let dayXpLedger = { date: null, raw: 0 }; // W461 — daily rank-XP soft-cap: raw cappable XP earned today (persisted so a reload can't reset the cap)
   let habitNotes = {}; // habitId → note string
   let unlockedAchievements = new Set();
   let achievementUnlockDates = {};  // achId → 'YYYY-MM-DD' first unlock
@@ -19944,6 +19945,7 @@
       completions = JSON.parse(localStorage.getItem('hb_completions') || '{}');
       streaks     = JSON.parse(localStorage.getItem('hb_streaks')     || '{}');
       totalPoints = parseInt(localStorage.getItem('hb_points') || '0', 10) || 0;
+      dayXpLedger = JSON.parse(localStorage.getItem('hb_day_xp_ledger') || '{"date":null,"raw":0}'); // W461 — restore today's soft-cap ledger so a reload can't reset the cap
       const ach   = JSON.parse(localStorage.getItem('hb_achievements') || '[]');
       unlockedAchievements = new Set(ach);
       achievementUnlockDates = JSON.parse(localStorage.getItem('hb_ach_dates') || '{}');
@@ -20015,6 +20017,7 @@
       if (!_isObj(streakShields))          streakShields = {};
       if (!_isObj(shieldClaimedAt))        shieldClaimedAt = {};
       if (!_isObj(honestDays))             honestDays = {};
+      if (!_isObj(dayXpLedger) || typeof dayXpLedger.raw !== 'number') dayXpLedger = { date: null, raw: 0 }; // W461
       if (!Array.isArray(pendingShieldNotices)) pendingShieldNotices = [];
       if (!Array.isArray(streakBreakLog))       streakBreakLog = [];
 
@@ -21211,6 +21214,41 @@
     return xp;
   }
 
+  // W461 — daily rank-XP soft-cap (path-to-A, economy). PER-HABIT completion XP
+  // earns FULL credit up to KNEE rank XP per device-local day, then earns at
+  // OVER_RATE beyond it — a guardrail against pathological per-habit farming (the
+  // one user-inflatable lever: creating 75+ habits) once seasonal rank rewards
+  // ship. COMPOUND pack bonuses are EXEMPT: their value is bounded (at most 2
+  // packs, fixed by streak), so they are NOT a farm vector — capping them only
+  // ever clipped legit pack users and loyal streak-milestone (day 90/180/365)
+  // spike days, so compound (regular AND spikes) never routes here. All one-time /
+  // rare grants are likewise exempt (first completion, onboarding, fully-awakened,
+  // comeback, weekend challenge, stat thresholds, perfect-day milestones). Only
+  // totalPoints (rank pace) is capped; stat XP, lifetime-XP, most_xp_day and
+  // celebrations keep the RAW value, so effort is fully recorded and only RANK
+  // advances at a paced daily rate. NOT the rejected rank soft-cap — a per-day
+  // VOLUME guardrail, not a curve change. Tunable knobs:
+  const DAILY_XP_SOFT_CAP_KNEE = 750;   // full credit up to this many raw XP/day
+  const DAILY_XP_OVER_CAP_RATE = 0.5;   // fraction credited beyond the knee
+
+  // Credit `raw` rank XP through the daily soft-cap and advance the persisted day
+  // ledger. Returns the actual rank XP to add to totalPoints (== raw below the
+  // knee). The ledger tracks RAW cappable XP earned today, resets on the
+  // device-local day rollover, and self-persists so a mid-day reload can't reset
+  // the cap. hb_ key is swept by Reset All Progress.
+  function creditDailyXP(raw) {
+    if (!(raw > 0)) return raw || 0;
+    if (!dayXpLedger || dayXpLedger.date !== today) dayXpLedger = { date: today, raw: 0 };
+    const before = dayXpLedger.raw;
+    const after  = before + raw;
+    const KNEE   = DAILY_XP_SOFT_CAP_KNEE;
+    const fullPortion = Math.max(0, Math.min(after, KNEE) - Math.min(before, KNEE));
+    const overPortion = Math.max(0, after - Math.max(before, KNEE));
+    dayXpLedger.raw = after;
+    try { localStorage.setItem('hb_day_xp_ledger', JSON.stringify(dayXpLedger)); } catch (_) {}
+    return Math.round(fullPortion + overPortion * DAILY_XP_OVER_CAP_RATE);
+  }
+
   function diffPts(diff) {
     const base = (DIFFICULTY[diff] || DIFFICULTY.easy).pts;
     return isWeekend() ? base * 2 : base;
@@ -21249,7 +21287,7 @@
     streaks[id] = s;
 
     const pts = diffPts(habit ? habit.difficulty : 'easy');
-    totalPoints += pts;
+    totalPoints += creditDailyXP(pts);
     applyStatPts(habit, pts, 1);
     save();
     checkAchievements();
@@ -34813,7 +34851,7 @@
     // then clear this pack's partial ledger.
     const finalXP   = Math.max(0, fullBonus - _compoundPartialGiven(packId)); // remainder added now
     _setCompoundPartialGiven(packId, 0);
-    totalPoints    += finalXP;
+    totalPoints    += finalXP;   // W461 — compound is EXEMPT from the daily cap (bounded, not a farm vector; protects pack + spike-day loyalty)
 
     save();
     renderRank();
@@ -49190,7 +49228,7 @@
     // ratio of correctness vs added complexity favors using today's
     // diffPts for now; refactor if a weekly backfill ever ships.
     const pts = diffPts(habit ? habit.difficulty : 'easy');
-    totalPoints += pts;
+    totalPoints += creditDailyXP(pts);
     try { applyStatPts(habit, pts, 1); } catch (_) {}
     // Recompute streak from the completions map. The naive
     // increment-on-write path (check()) assumes today; for a
