@@ -311,7 +311,7 @@ export async function handleCoopBossCreate(
   env: Env,
   session: SessionPayload,
 ): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   let body: { partner_user_id?: unknown; boss_id?: unknown };
@@ -332,6 +332,25 @@ export async function handleCoopBossCreate(
 
   if (!(await areAcceptedFriends(env, session.userId, partnerUserId))) {
     return jsonError(403, 'NOT_FRIENDS', 'You can only co-op with an accepted friend.');
+  }
+
+  // W463 — summoner rank gate. A hunter may only INITIATE a hunt for a boss at
+  // or below their OWN rank (the invited partner can be any rank — they're just
+  // helping). Rank lives in the client-reported public_profile_summary (the app
+  // is client-authoritative for rank), so this blocks the honest/casual over-rank
+  // summon that was reported (a C-rank hunter sending a B-rank hunt). A missing
+  // profile row defaults to E; a deliberately spoofing client is out of scope,
+  // same trust model as the rest of the rank surface.
+  const RANK_ORDER: Record<string, number> = { E: 0, D: 1, C: 2, B: 3, A: 4, S: 5, 'S+': 6 };
+  const prof = await env.DB.prepare(
+    'SELECT rank_tier FROM public_profile_summary WHERE user_id = ?',
+  )
+    .bind(session.userId)
+    .first<{ rank_tier: string }>();
+  const myRank = RANK_ORDER[prof?.rank_tier ?? 'E'] ?? 0;
+  const bossRank = RANK_ORDER[cfg.rank] ?? 0;
+  if (myRank < bossRank) {
+    return jsonError(403, 'INSUFFICIENT_RANK', `You must reach ${cfg.rank} rank to summon this hunt.`);
   }
 
   // One live (pending/active) instance per pair+boss, either direction.
@@ -427,7 +446,7 @@ export async function handleCoopBossJoin(
   session: SessionPayload,
   id: string,
 ): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   const row = await loadInstance(env, id);
@@ -480,7 +499,7 @@ export async function handleCoopBossCancel(
   session: SessionPayload,
   id: string,
 ): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   const row = await loadInstance(env, id);
@@ -543,7 +562,7 @@ async function setTerminalStatus(
   nextStatus: 'declined' | 'cancelled',
   who: 'partner' | 'challenger',
 ): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   const row = await loadInstance(env, id);
@@ -577,7 +596,7 @@ export async function handleCoopBossResolve(
   session: SessionPayload,
   id: string,
 ): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   const row = await loadInstance(env, id);

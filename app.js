@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w461'; // W461 — daily rank-XP soft-cap (path-to-A, economy guardrail): per-habit XP capped at 750/day then 50% (compound + spikes + one-time grants EXEMPT); persisted ledger can't be reload-reset; identity below knee proven (tools/sim-dailycap.js); a ceiling vs pathological farming, not a curve change
+  const APP_BUILD_TAG = '2.3.1-w463'; // W463 — co-op duo-hunt bug fixes: (1) dedicated RL_COOP_WRITE bucket so JOIN no longer 429s [backend], (2) dashboard error-vs-empty + backoff retry (no false "No active pacts"), (3) ungated reconcile-and-award on resume so a backgrounded hunter always collects the drop, (4) summoner rank gate (server + client) so you can't summon a boss above your rank
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40479,6 +40479,18 @@
     else if (inst && inst.status === 'declined') note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
     else if (inst && inst.status === 'cancelled') note = '<div class="coop-note">That hunt was called off. Send a new call to go again.</div>';
     const dis = _coopSheet.busy ? ' disabled' : '';
+    // W463 \u2014 summoner rank gate (mirrors the server check): you may only INITIATE
+    // a hunt for a boss at or below your OWN rank (the invited partner can be any
+    // rank). Below the boss rank \u2192 the RECRUIT button is replaced by a locked
+    // "reach X rank" affordance, so the over-rank summon is never offered in-app.
+    const _myRankIdx   = RANKS.findIndex(function (r) { return r.id === getRank(totalPoints).id; });
+    const _bossRankIdx = RANKS.findIndex(function (r) { return r.id === cfg.rank; });
+    const _rankLocked  = _bossRankIdx > _myRankIdx;
+    const cta = _rankLocked
+      ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">REACH ' + esc(cfg.rank) + ' RANK TO SUMMON</button>' +
+        '<p class="coop-foot">This hunt requires ' + esc(cfg.rank) + ' rank to summon. Keep climbing.</p>'
+      : '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
+        '<p class="coop-foot">Both hunters earn ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.</p>';
     return (
       note +
       '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
@@ -40489,8 +40501,7 @@
           : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters') + '</div>' +
       '</div>' +
       _coopErrBlock() +
-      '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
-      '<p class="coop-foot">Both hunters earn ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.</p>'
+      cta
     );
   }
 
@@ -40744,11 +40755,20 @@
   // co-op pay no network cost.
   // ════════════════════════════════════════════════════════════
   function _coopEngaged() { try { return localStorage.getItem('hb_coop_engaged') === '1'; } catch (_) { return false; } }
-  function _coopSetEngaged(on) { try { if (on) localStorage.setItem('hb_coop_engaged', '1'); else localStorage.removeItem('hb_coop_engaged'); } catch (_) {} }
+  // W463 — persistent "has ever engaged co-op" flag: set when a hunt first goes
+  // live on this device, NEVER auto-cleared. Keeps the background reconcile
+  // running so a won hunt's drop always lands even on a backgrounded hunter whose
+  // transient hb_coop_engaged flag was already cleared ("partner got the drop, I
+  // didn't").
+  function _coopEverEngaged() { try { return localStorage.getItem('hb_coop_ever') === '1'; } catch (_) { return false; } }
+  function _coopSetEngaged(on) { try { if (on) { localStorage.setItem('hb_coop_engaged', '1'); localStorage.setItem('hb_coop_ever', '1'); } else localStorage.removeItem('hb_coop_engaged'); } catch (_) {} }
   let _coopBgInFlight = false;
   let _coopBgLast = 0;
   async function _coopBackgroundSync() {
-    if (!_coopEngaged()) return;
+    // W463 — gate on the PERSISTENT ever-engaged flag (not the transient
+    // hb_coop_engaged, which is cleared once no hunt is live) so a just-completed
+    // hunt's drop is still reconciled + awarded on a backgrounded hunter's device.
+    if (!_coopEverEngaged()) return;
     if (!window.Auth || typeof Auth.coopBossList !== 'function') return;
     const overlay = document.getElementById('coop-fs-overlay');
     if (overlay && !overlay.classList.contains('hidden')) return;
@@ -40911,6 +40931,8 @@
   let _coopDashWired = false;
   let _coopDashReturn = false;   // detail opened from the dashboard → Back returns here
   let _coopDashBossId = COOP_PRIMARY_BOSS_ID;   // W396 — which co-op boss the dashboard was opened for (drives Recruit)
+  let _coopDashRetry = 0;
+  let _coopDashRetryTimer = null;   // W463 — dashboard load backoff so a failed fetch shows an error, not a false "No active pacts"
 
   function _coopHuntCardHtml(inst) {
     const v = _coopView(inst);
@@ -41008,15 +41030,55 @@
     _coopDashWireOnce();
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
+    // W463 — loading state up front, then load with error-vs-empty handling.
+    _coopDashRetry = 0;
+    clearTimeout(_coopDashRetryTimer); _coopDashRetryTimer = null;
+    const countEl0 = document.getElementById('coop-dash-count');
+    if (countEl0) countEl0.innerHTML = '<span class="cph-pip"></span>Loading…';
+    const emptyEl0 = document.getElementById('coop-dash-empty');
+    if (emptyEl0) emptyEl0.classList.add('hidden');
+    _coopDashLoad();
+  }
+  // W463 — load the pact list, distinguishing a FAILED fetch from a genuinely
+  // empty list. A transient network/token error previously coerced to [] and
+  // rendered the false "No active pacts" empty state (the reported bug). Now it
+  // shows an error + backoff-retries; the empty state only renders on a real
+  // ok-but-empty response.
+  async function _coopDashLoad() {
+    const overlay = document.getElementById('coop-dash-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
     let res;
     try { res = (window.Auth && typeof Auth.coopBossList === 'function') ? await Auth.coopBossList() : null; } catch (_) { res = null; }
-    const instances = (res && res.ok && Array.isArray(res.instances)) ? res.instances : [];
+    if (overlay.classList.contains('hidden')) return;   // closed during the fetch
+    if (!res || !res.ok) {
+      _coopRenderDashboardError();
+      const n = (_coopDashRetry = (_coopDashRetry || 0) + 1);
+      if (n <= 4) { clearTimeout(_coopDashRetryTimer); _coopDashRetryTimer = setTimeout(_coopDashLoad, Math.min(8000, 1000 * Math.pow(2, n))); }
+      return;
+    }
+    _coopDashRetry = 0; clearTimeout(_coopDashRetryTimer); _coopDashRetryTimer = null;
+    const instances = Array.isArray(res.instances) ? res.instances : [];
     if (instances.some(function (x) { return x && (x.status === 'pending' || x.status === 'active'); })) _coopSetEngaged(true);
     _coopRenderDashboard(instances);
+  }
+  function _coopRenderDashboardError() {
+    const listEl  = document.getElementById('coop-dash-list');
+    const emptyEl = document.getElementById('coop-dash-empty');
+    const countEl = document.getElementById('coop-dash-count');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (countEl) countEl.innerHTML = '<span class="cph-pip" style="background:#e0683c;box-shadow:none"></span>Couldn’t load';
+    if (listEl) listEl.innerHTML =
+      '<div class="coop-dash-err" style="text-align:center;padding:30px 18px;color:#9aa0bd">' +
+        '<p style="margin:0 0 14px;font-size:14px;line-height:1.5">Couldn’t reach the hunt board. Check your connection — retrying…</p>' +
+        '<button type="button" id="coop-dash-retry-btn" class="coop-cta" style="max-width:220px;margin:0 auto">Retry now</button>' +
+      '</div>';
+    const rb = document.getElementById('coop-dash-retry-btn');
+    if (rb) rb.addEventListener('click', function () { _coopDashRetry = 0; clearTimeout(_coopDashRetryTimer); _coopDashRetryTimer = null; _coopDashLoad(); });
   }
   function _coopCloseDashboard() {
     const overlay = document.getElementById('coop-dash-overlay');
     if (!overlay) return;
+    clearTimeout(_coopDashRetryTimer); _coopDashRetryTimer = null;   // W463 — stop backoff on close
     overlay.classList.add('hidden');
     document.body.classList.remove('bfs-locked');
   }

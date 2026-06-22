@@ -219,3 +219,16 @@ name = "RL_HALL_READ"
 type = "ratelimit"
 namespace_id = "1018"
 simple = { limit = 30, period = 60 }  # 30/min per user
+
+# Co-op duo bosses (W463). DEDICATED bucket for all co-op WRITE endpoints
+# (create / join / cancel / decline / resolve). Previously these shared
+# RL_DUELS_WRITE (6/min), so a co-op JOIN could 429 off a bucket already
+# drained by a recent duel/resolve write — the user's "first JOIN tap does
+# nothing, retry works" bug. 20/min comfortably covers join + the resolve
+# poll/background catch-up while still bounding abuse (each write is a cheap
+# state transition).
+[[unsafe.bindings]]
+name = "RL_COOP_WRITE"
+type = "ratelimit"
+namespace_id = "1019"
+simple = { limit = 20, period = 60 }  # 20/min per user
