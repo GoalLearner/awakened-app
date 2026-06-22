@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w469'; // W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w470'; // W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6385,6 +6385,17 @@
       ledgerBtn.addEventListener('click', () => {
         closeSoulsInfoModal();
         setTimeout(() => { try { openSoulsLedger(); } catch (_) {} }, 80);
+      });
+    }
+    // W470 — Marketplace gateway. Souls are spendable on relics in the Items
+    // tab, but the souls modal never said so (path-to-A IA/Scope prominence
+    // fix). Close the info modal first so the surfaces don't stack, then switch
+    // to the Items tab where the per-relic buy/sell affordances live.
+    const marketBtn = document.getElementById('souls-info-market-btn');
+    if (marketBtn) {
+      marketBtn.addEventListener('click', () => {
+        closeSoulsInfoModal();
+        setTimeout(() => { try { switchTab('items'); } catch (_) {} }, 80);
       });
     }
   }
@@ -25236,21 +25247,30 @@
     // per axis breathes at a time, creating a slow constellation-twinkle
     // effect). The dominant stat's dot pulses faster + larger via a
     // sc-radar-dot--dom modifier.
+    // W470 — WLT (Wealth) is economy-only (no combat role; see stat defs). On the
+    // radar it was rendering as a full-prominence peer of the five character
+    // stats (equal colour/dot/label), implying a combat dimension it doesn't
+    // have. De-emphasise it: muted slate instead of its gold, smaller dot/label,
+    // and never the highlighted "dominant" axis (path-to-A: Scope/IA honesty).
+    const WLT_MUTE = 'rgba(226,232,240,0.34)';
     let dominantIdx = -1;
-    if (currentClass && currentClass !== 'CIVILIAN' && currentClass !== 'SAGE') {
+    if (currentClass && currentClass !== 'CIVILIAN' && currentClass !== 'SAGE' && currentClass !== 'WLT') {
       dominantIdx = STATS.findIndex(s => s.id === currentClass);
     } else {
-      const topLv = Math.max.apply(null, levels);
-      if (topLv > 0) dominantIdx = levels.indexOf(topLv);
+      // Highest COMBAT stat only — WLT excluded so the dominant-axis glow never
+      // lands on the economy stat.
+      let best = -1;
+      STATS.forEach((s, i) => { if (s.id !== 'WLT' && levels[i] > best) { best = levels[i]; dominantIdx = i; } });
     }
     STATS.forEach((st, i) => {
       const r = R_MAX + 4;
       const [x, y] = pt(r, i);
       const isDom = i === dominantIdx;
-      svg += '<circle class="sc-radar-dot' + (isDom ? ' sc-radar-dot--dom' : '') + '" '
+      const isWlt = st.id === 'WLT';
+      svg += '<circle class="sc-radar-dot' + (isDom ? ' sc-radar-dot--dom' : '') + (isWlt ? ' sc-radar-dot--econ' : '') + '" '
            + 'data-stat-idx="' + i + '" '
-           + 'cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" r="4" '
-           + 'fill="' + st.color + '" opacity="0.85"/>';
+           + 'cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" r="' + (isWlt ? '3' : '4') + '" '
+           + 'fill="' + (isWlt ? WLT_MUTE : st.color) + '" opacity="' + (isWlt ? '0.55' : '0.85') + '"/>';
     });
 
     // 4b. Energy core — small pulsing circle at the radar center.
@@ -25276,12 +25296,15 @@
       // Label: abbreviation on first line, level on second.
       // Y offsets widened to keep larger labels from overlapping each other.
       // data-statid makes the text itself clickable, not just the hit-circle.
+      // W470 — WLT renders muted (slate, smaller) so it reads as a subordinate
+      // economy stat, not a sixth combat peer; its sublabel never goes gold at MAX.
+      const isWlt = st.id === 'WLT';
       svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly - 8).toFixed(2) + '" '
-           + 'class="sc-radar-lbl" fill="' + st.color + '" text-anchor="middle" '
+           + 'class="sc-radar-lbl' + (isWlt ? ' sc-radar-lbl--econ' : '') + '" fill="' + (isWlt ? WLT_MUTE : st.color) + '" text-anchor="middle" '
            + 'data-statid="' + st.id + '" style="cursor:pointer">'
            + st.label + '</text>';
       svg += '<text x="' + lx.toFixed(2) + '" y="' + (ly + 14).toFixed(2) + '" '
-           + 'class="sc-radar-sublbl" fill="' + (lv >= MAX_LV ? '#f59e0b' : 'rgba(255,255,255,0.45)') + '" text-anchor="middle" '
+           + 'class="sc-radar-sublbl' + (isWlt ? ' sc-radar-sublbl--econ' : '') + '" fill="' + (isWlt ? 'rgba(226,232,240,0.30)' : (lv >= MAX_LV ? '#f59e0b' : 'rgba(255,255,255,0.45)')) + '" text-anchor="middle" '
            + 'data-statid="' + st.id + '" style="cursor:pointer">'
            + (lv >= MAX_LV ? 'MAX' : 'Lv.' + lv) + '</text>';
     });

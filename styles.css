@@ -7625,6 +7625,21 @@ footer {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
 }
 
+/* W470 — WLT (Wealth) is economy-only, no combat role. On the radar it now
+   reads as a subordinate stat, not a sixth combat peer: smaller/lighter label,
+   muted slate fill (set inline), and a calmer, dimmer dot pulse. */
+.sc-radar-lbl--econ {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.sc-radar-sublbl--econ { opacity: 0.72; }
+.sc-radar-dot--econ { animation-name: sc-radar-dot-pulse-econ; }
+@keyframes sc-radar-dot-pulse-econ {
+  0%, 100% { transform: scale(0.85); opacity: 0.4; }
+  50%      { transform: scale(1);    opacity: 0.6; }
+}
+
 /* Bottom metrics strip — v3 Phase 1q polish */
 .sc-metrics {
   display: grid;
@@ -29919,6 +29934,24 @@ button.guildhall-summary-tile:active {
 .souls-daily-text { flex: 1; min-width: 0; }
 .souls-daily-title { font-size: 0.96rem; font-weight: 700; color: var(--text-primary); }
 .souls-daily-sub { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* W470 — Marketplace spend-sink CTA in the souls modal. Mirrors the .souls-daily
+   callout shape but is a tappable button (gold accent + chevron) that routes to
+   the Items-tab marketplace. Surfaces the souls spend-sink that the modal text
+   previously omitted (path-to-A: IA/Scope prominence anchor). */
+.souls-spend-cta {
+  display: flex; align-items: center; gap: 13px; width: 100%;
+  padding: 12px 14px; border-radius: 14px; text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.03));
+  border: 1px solid rgba(245,184,66,0.32);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.souls-spend-cta:hover  { background: linear-gradient(180deg, rgba(245,184,66,0.18), rgba(245,184,66,0.05)); border-color: rgba(245,184,66,0.5); }
+.souls-spend-cta:active { transform: scale(0.985); }
+.souls-spend-cta-text  { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.souls-spend-cta-title { font-size: 0.96rem; font-weight: 700; color: var(--text-primary); }
+.souls-spend-cta-sub   { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+.souls-spend-cta-arrow { flex: none; font-size: 1.5rem; line-height: 1; color: var(--gold, #f5b842); opacity: 0.85; }
 
 /* BOSS ECONOMY · merged rank table */
 .souls-econ {
