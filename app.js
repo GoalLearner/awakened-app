@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w464.1'; // W464 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.1-w465'; // W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15734,19 +15734,21 @@
         setBossState(id, state);
         // v2.0.1: kill grants tier-scaled souls. Earn happens here so
         // the toast message can include the actual amount awarded.
-        const reward = killRewardSouls(cfg.rank);
+        // W465 — reward once per (boss, night), independent of boss-state churn.
+        const _firstKill = _claimBossKillReward(id, nightDate);
+        const reward = _firstKill ? killRewardSouls(cfg.rank) : 0;
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         // v3 Phase 1z.277D — WLT Merchant bonus on kill reward.
         // Capped +20% reward at WLT Lv20. Separate earnSouls() so
         // the ledger shows it as its own row. Fires ONLY after a
         // real kill — gated by the same code path as the base
         // reward above, so failed hunts and engages never trigger.
-        const _wltBonus_1 = wltKillBonusSouls(cfg.rank);
+        const _wltBonus_1 = _firstKill ? wltKillBonusSouls(cfg.rank) : 0;
         if (_wltBonus_1 > 0) earnSouls(_wltBonus_1, 'wlt_bonus_kill_' + id);
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
-        const dropped = rollBossDrop(id);
-        announceKillAndDrop(cfg, reward, dropped);
+        const dropped = _firstKill ? rollBossDrop(id) : null;
+        if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -15845,13 +15847,15 @@
         state.last_defeated_at = new Date().toISOString();
         state.last_hunt_outcome = 'defeated';
         setBossState(id, state);
-        const reward = killRewardSouls(cfg.rank);
+        // W465 — reward once per (boss, day), independent of boss-state churn.
+        const _firstKill = _claimBossKillReward(id, dayDate);
+        const reward = _firstKill ? killRewardSouls(cfg.rank) : 0;
         if (reward > 0) earnSouls(reward, 'kill_' + id);
         // v3 Phase 1z.277D — WLT Merchant bonus (per-day boss path).
-        const _wltBonus_3 = wltKillBonusSouls(cfg.rank);
+        const _wltBonus_3 = _firstKill ? wltKillBonusSouls(cfg.rank) : 0;
         if (_wltBonus_3 > 0) earnSouls(_wltBonus_3, 'wlt_bonus_kill_' + id);
-        const dropped = rollBossDrop(id);
-        announceKillAndDrop(cfg, reward, dropped);
+        const dropped = _firstKill ? rollBossDrop(id) : null;
+        if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
@@ -15904,7 +15908,36 @@
   // + toast + UI refresh) across three evaluators. Caller is
   // responsible for the qualifying-condition check + idempotency
   // guard before invoking.
+  // W465 — souls-farm exploit fix. Boss-kill REWARDS (souls + WLT bonus + drop +
+  // guild feed) are once per (boss, calendar day), guarded by an INDEPENDENT
+  // localStorage flag that survives the engage/disengage state churn. Root cause:
+  // engageBoss does NOT reset boss `last_eval_date` (disengageBoss does), so a
+  // re-engaged boss whose qualifying day was already credited got re-killed every
+  // foreground via the UNGUARDED resolver backfill (_awardHuntKillFromBackfill →
+  // _awardSingleShotKill) — +50/+5 souls per app entry. last_eval_date alone is
+  // insufficient (disengage nulls it), so this flag is independent of boss state.
+  // Returns true (and claims) the FIRST time today; false thereafter. Reset All
+  // Progress sweeps hb_* (incl. this).
+  function _claimBossKillReward(id, dateStr) {
+    try {
+      const k = 'hb_kill_reward_' + id + '_' + dateStr;
+      if (localStorage.getItem(k) === '1') return false;
+      localStorage.setItem(k, '1');
+      return true;
+    } catch (_) { return true; }
+  }
+
   function _awardSingleShotKill(id, cfg, dayDate, state) {
+    // W465 — gate the whole kill+reward per (boss, day). The resolver backfill
+    // reaches here UNGUARDED; without this a re-engaged already-credited day
+    // re-kills + re-pays every foreground (the reported souls-farm exploit).
+    state.last_eval_date = dayDate;   // always stamp so the eval-path guard holds going forward
+    if (!_claimBossKillReward(id, dayDate)) {
+      state.streak = 0;
+      _clearBossHuntFields(state);
+      setBossState(id, state);
+      return;
+    }
     state.kill_count = (state.kill_count || 0) + 1;
     state.streak = 0;
     state.last_eval_date = dayDate;
