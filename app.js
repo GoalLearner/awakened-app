@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w464'; // W464 — durable co-op drop credit (bug-3 hardening): backend coop_boss_awards table + atomic POST /claim; the client claims before granting so a drop lands EXACTLY ONCE per user across device wipe / multi-device. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.1-w464.1'; // W464 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40283,7 +40283,10 @@
   // victory beat. Each hunter grants their own reward on their own
   // device (the awarded-set is per-device, keyed by instance id).
   const _coopClaimInFlight = {};   // W463.1 — dedupe concurrent claims per instance
+  // W464.1 — whole body wrapped so this async fn NEVER rejects (callers are
+  // fire-and-forget); a sync throw would otherwise become an unhandled rejection.
   async function _awardCoopKill(inst) {
+   try {
     if (!inst || !inst.id) return;
     const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
     if (_loadCoopAwarded()[inst.id]) return;     // same-device guard (fast path)
@@ -40309,8 +40312,11 @@
     }
     const awarded = _loadCoopAwarded();
     if (awarded[inst.id]) return;                // re-check after the await
-    awarded[inst.id] = true; _saveCoopAwarded(awarded);
-    if (!grant) return;                          // another device already claimed the drop
+    if (!grant) { awarded[inst.id] = true; _saveCoopAwarded(awarded); return; }   // claimed elsewhere — record + skip
+    // W464.1 — grant the drop BEFORE persisting the local guard, so a crash
+    // between guard-save and grant can't strand the drop. The atomic server claim
+    // above already guarantees only this device grants, so granting first cannot
+    // double-grant.
     const reward = cfg.coopRewardSouls || 0;
     try { earnSouls(reward, 'coop_' + cfg.id); } catch (_) {}
     let dropInfo = null;
@@ -40320,9 +40326,11 @@
         { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
         reward, dropInfo);
     } catch (_) {}
+    awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
     // W448 — also drop a notification-tray record (best-effort) so a win lands even if
     // the resolution was detected on app-resume rather than while watching the sheet.
     try { _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls and a relic claimed.' : '.')); } catch (_) {}
+   } catch (_) {}
   }
 
   // W448 — Rendell lost two co-op hunts and was never told: DEFEAT (the window closed

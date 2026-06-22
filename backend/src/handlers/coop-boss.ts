@@ -592,7 +592,12 @@ export async function handleCoopBossCancel(
   const prog = cancelled
     ? emptyProgress()
     : await getCoopProgress(env, refreshed.id);
-  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, prog) });
+  // W464.1 — if the cancel RACED a win (refreshed is completed/success), surface
+  // the viewer's drop credit so the raced win flows through the same atomic claim
+  // path as every other endpoint instead of the per-device fallback. A real
+  // cancel (or any non-won state) has no credit.
+  const award = cancelled ? null : await getViewerAward(env, refreshed.id, session.userId);
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, prog, award) });
 }
 
 /** Shared pending→terminal transition for decline/cancel. */
