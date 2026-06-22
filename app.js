@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w466'; // W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w467'; // W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1913,8 +1913,13 @@
   // "self-funding" relic farm — engage them when you'll clear them, lose
   // the wager when you won't. E bosses remain the soul-accumulation path.
   // C and beyond keep the doubling pattern.
-  const SOULS_KILL_REWARDS  = { E: 50, D: 35, C: 200, B: 400, A: 800, S: 1600 };
-  const SOULS_ENGAGE_COSTS  = { E: 25, D: 35, C: 100, B: 200, A: 400, S:  800 };
+  // W467 — D put back on the clean doubling curve (was the off-curve 35/35
+  // break-even, which made E pay more than D). Now every rank's kill pays 2× its
+  // engage wager and each tier exactly doubles the last: engage 25/50/100/200/400/800,
+  // kill 50/100/200/400/800/1600. The souls modal + its "2× wager" takeaway both
+  // auto-derive from these (app.js:6282-6298), so no copy edit is needed.
+  const SOULS_KILL_REWARDS  = { E: 50, D: 100, C: 200, B: 400, A: 800, S: 1600 };
+  const SOULS_ENGAGE_COSTS  = { E: 25, D:  50, C: 100, B: 200, A: 400, S:  800 };
 
   // ── EQUIPMENT CARDS (v2.0.1 DROPS Phase 1) ──────────────────
   // Drops from boss kills. Each card is also an equippable item per
