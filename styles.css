@@ -14667,6 +14667,24 @@ body.bfs-locked { overflow: hidden; }
   pointer-events: none;
 }
 
+/* W466 — duplicate count chip on the relic card name line (Rendell's request:
+   see how many you own from the grid without opening each item). Only shown
+   when count > 1. */
+.pdx-count {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.5;
+  vertical-align: middle;
+  color: #f8e7b0;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.34);
+}
+
 /* Equipped badge — top-right pill. Replaces the old crossed-swords
    prefix with a clean gold pill that mirrors the slot-badge shape
    on the opposite corner. */
