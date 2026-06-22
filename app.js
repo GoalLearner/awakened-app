@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w465'; // W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.1-w465.1'; // W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15918,13 +15918,17 @@
   // insufficient (disengage nulls it), so this flag is independent of boss state.
   // Returns true (and claims) the FIRST time today; false thereafter. Reset All
   // Progress sweeps hb_* (incl. this).
+  const _killRewardClaimedMem = new Set();   // W465.1 — same-session fallback when localStorage throws (private mode / quota), so the reward guard can't fail OPEN and re-pay.
   function _claimBossKillReward(id, dateStr) {
+    const k = 'hb_kill_reward_' + id + '_' + dateStr;
+    if (_killRewardClaimedMem.has(k)) return false;   // already claimed this session
+    let already = false;
     try {
-      const k = 'hb_kill_reward_' + id + '_' + dateStr;
-      if (localStorage.getItem(k) === '1') return false;
-      localStorage.setItem(k, '1');
-      return true;
-    } catch (_) { return true; }
+      if (localStorage.getItem(k) === '1') already = true;
+      else localStorage.setItem(k, '1');
+    } catch (_) { /* storage unavailable — the in-memory Set below is the guard */ }
+    _killRewardClaimedMem.add(k);
+    return !already;   // true = first claim (grant reward); false = already claimed in storage
   }
 
   function _awardSingleShotKill(id, cfg, dayDate, state) {
