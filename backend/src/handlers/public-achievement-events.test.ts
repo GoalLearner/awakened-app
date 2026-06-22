@@ -188,6 +188,21 @@ const VALID_VERIFIED_WORKOUT = {
   clientCreatedAt: NOW_ISO,
 };
 
+// W469 — canonical Perfect Day milestone payload (30-day band). Label / key /
+// clientEventId are all server-anchored per band; clientEventId is pinned to
+// "perfect_day:<band>" (once-ever per user via UNIQUE), so unlike the
+// date-suffixed verified_streak it carries NO date. Privacy-safe — only the
+// streak day count travels, never a habit name or completion detail.
+const VALID_PERFECT_DAY_30 = {
+  eventType:       'perfect_day',
+  eventKey:        'perfect_day:30',
+  eventLabel:      'sealed a 30-day Perfect streak',
+  eventValue:      30,
+  rarity:          null,
+  clientEventId:   'perfect_day:30',
+  clientCreatedAt: NOW_ISO,
+};
+
 // W258 — canonical Arena-title payload. Label is server-anchored per title id;
 // clientEventId pinned to "arena_title:<id>" (once-ever per user via UNIQUE).
 const VALID_ARENA_TITLE = {
@@ -947,6 +962,155 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     await handlePublicAchievementEventsPost(
       makeReq({ events: [{
         ...VALID_VERIFIED_STREAK_30,
+        habitName:     'Quit smoking',
+        habitCategory: 'meditation',
+        metadata:      { secret: 'leak' },
+      }] }),
+      makeEnv(db), session,
+    );
+    const calls = db._calls();
+    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    expect(joined).not.toContain('Quit smoking');
+    expect(joined).not.toContain('meditation');
+    expect(joined).not.toContain('leak');
+    expect(joined).not.toContain('secret');
+  });
+
+  // — perfect_day (W469) —
+  for (const band of [7, 14, 21, 30, 60, 100]) {
+    it(`accepts perfect_day band ${band}`, async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          eventType:       'perfect_day',
+          eventKey:        'perfect_day:' + band,
+          eventLabel:      `sealed a ${band}-day Perfect streak`,
+          eventValue:      band,
+          rarity:          null,
+          clientEventId:   'perfect_day:' + band,
+          clientCreatedAt: NOW_ISO,
+        }] }),
+        makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      const calls = db._calls();
+      expect(calls[0]?.binds[2]).toBe('perfect_day');
+      expect(calls[0]?.binds[3]).toBe('perfect_day:' + band);
+      expect(calls[0]?.binds[4]).toBe(`sealed a ${band}-day Perfect streak`);
+      expect(calls[0]?.binds[5]).toBe(band);
+      expect(calls[0]?.binds[6]).toBeNull();
+    });
+  }
+
+  it('rejects perfect_day with non-allowed band 5', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        eventKey:   'perfect_day:5',
+        eventLabel: 'sealed a 5-day Perfect streak',
+        eventValue: 5,
+        clientEventId: 'perfect_day:5',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  // Post-100 "UNSTOPPABLE" repeats (130, 160, ...) are intentionally NOT public
+  // bands — they would re-spam the feed forever, so the announce caps at 100.
+  it('rejects perfect_day with post-100 repeat band 130', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        eventKey:   'perfect_day:130',
+        eventLabel: 'sealed a 130-day Perfect streak',
+        eventValue: 130,
+        clientEventId: 'perfect_day:130',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+  });
+
+  it('rejects perfect_day with a habit name in the label', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        eventLabel: 'sealed a 30-day Meditation streak',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects perfect_day with label/value band mismatch (label 30, value 7)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        eventValue: 7,
+        eventKey:   'perfect_day:7',
+        clientEventId: 'perfect_day:7',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_LABEL');
+  });
+
+  it('rejects perfect_day with key/value band mismatch (value 30, key :7)', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        eventKey: 'perfect_day:7',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
+  });
+
+  // The pinned clientEventId is what makes each band a once-ever announcement
+  // (a date-suffixed id like verified_streak uses would let a rebuilt streak
+  // re-announce the same band) — so a non-pinned clientEventId must be rejected.
+  it('rejects perfect_day with a non-pinned clientEventId', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        clientEventId: 'perfect_day:30:2026-05-31',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_CLIENT_EVENT_ID');
+  });
+
+  it('rejects perfect_day with non-null rarity', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
+        rarity: 'S',
+      }] }),
+      makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_RARITY');
+  });
+
+  it('perfect_day: smuggle attempt (habitName/habitCategory/metadata) never binds those values', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_PERFECT_DAY_30,
         habitName:     'Quit smoking',
         habitCategory: 'meditation',
         metadata:      { secret: 'leak' },

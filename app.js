@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w468'; // W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w469'; // W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4268,6 +4268,9 @@
       // and stays visually distinct from rank_up's ◆ (which tracks
       // character rank tiers D→C→B→A, not leaderboard position).
       case 'leaderboard_top10_step': glyph = '▲'; clsKey = 'step'; break;
+      // W469 — Perfect Day streak milestone. Radiant-gold star with its own
+      // 'perfect' tint (distinct from ultra's loot-gold) for a prestige read.
+      case 'perfect_day':       glyph = '★'; clsKey = 'perfect'; break;
       default:                  glyph = '·'; clsKey = 'social'; break;
     }
     return '<span class="guildhall-activity-icon guildhall-activity-icon--' +
@@ -4320,6 +4323,14 @@
         verb = 'reached';
         target = (p.toRank || 'a new rank');
         targetCls = 'guildhall-activity-target--rank';
+        break;
+      // W469 — Perfect Day streak milestone. "You sealed a 30-day Perfect
+      // streak" → radiant-gold prestige target. The day count is the only
+      // payload; defensive-defaults to 7 if a malformed entry slips through.
+      case 'perfect_day':
+        verb = 'sealed';
+        target = 'a ' + ((typeof p.days === 'number' && p.days > 0) ? p.days : 7) + '-day Perfect streak';
+        targetCls = 'guildhall-activity-target--perfect';
         break;
       // v3 Phase 1z.283 W181 — Weekly Steps leaderboard top-10.
       // Reads "You reached #3 on the Steps leaderboard". The rank
@@ -4445,6 +4456,9 @@
     // Counts as a personal feat (FEATS · 24H tile + Today's Feats sheet)
     // since it celebrates the user's competitive standing.
     'leaderboard_top10_step',
+    // W469 — Perfect Day streak milestone. A personal feat (counts in the
+    // FEATS · 24H tile + Today's Feats sheet); the user earned it themselves.
+    'perfect_day',
   ]);
   // v3 Phase 1z.197 — Hunter-feed visibility extends the personal-
   // feat allowlist with roster/social events (currently just
@@ -5795,6 +5809,11 @@
     if (eventType === 'friend_added' && label === 'joined your Guild') {
       return { prefix: '', target: 'joined your Guild', suffix: '', cls: 'social' };
     }
+    // W469 — perfect_day — "sealed a <N>-day Perfect streak" → radiant gold (Tier 1 prestige)
+    if (eventType === 'perfect_day') {
+      const m = /^sealed a (\d+-day Perfect streak)$/.exec(label);
+      if (m) return { prefix: 'sealed a ', target: m[1], suffix: '', cls: 'perfect' };
+    }
     return null;
   }
 
@@ -5844,6 +5863,7 @@
     else if (ev.eventType === 'verified_sleep_7h')     { iconGlyph = '✦'; iconClsKey = 'verify'; }
     else if (ev.eventType === 'flights_milestone_bucket') { iconGlyph = '▲'; iconClsKey = 'flight'; }
     else if (ev.eventType === 'arena_title_earned')    { iconGlyph = '❖'; iconClsKey = 'arenatitle'; }   // W258 — gold Tier-1 prestige
+    else if (ev.eventType === 'perfect_day')           { iconGlyph = '★'; iconClsKey = 'perfect'; }       // W469 — radiant-gold Perfect Day
     else if (ev.eventType === 'friend_added')          { iconGlyph = '·'; iconClsKey = 'social'; }
     else                                                { iconGlyph = '·'; iconClsKey = 'social'; }
     const iconHtml =
@@ -20689,6 +20709,7 @@
     'verified_sleep_7h',
     'flights_milestone_bucket',
     'arena_title_earned',   // W258 — Arena title unlocked (Ascent tower prestige)
+    'perfect_day',          // W469 — Perfect Day streak milestone (7/14/21/30/60/100)
   ]);
 
   // v3 Phase 1z.273M — Submit helpers for the three event types
@@ -20737,6 +20758,31 @@
       eventValue:      null,
       rarity:          null,
       clientEventId:   'verified_sleep_7h:' + nightDateKey,
+      clientCreatedAt: new Date().toISOString(),
+    });
+    try { localStorage.setItem(mk, '1'); } catch (_) {}
+  }
+
+  // W469 — Perfect Day streak milestone public event. Fires once-ever per band
+  // (the localStorage marker + the backend's pinned-clientEventId UNIQUE
+  // constraint both enforce it). Only the milestone day count travels — never a
+  // habit name, category, or completion detail. The repeating post-100
+  // "UNSTOPPABLE" milestones (130, 160, ...) are intentionally not announced;
+  // the band list caps the public feed at the 100-day Century milestone.
+  const _PAE_PERFECT_DAY_BANDS = [7, 14, 21, 30, 60, 100];
+  function _emitPerfectDayEvent(day) {
+    if (typeof _queuePublicAchievementEvent !== 'function') return;
+    if (!Number.isInteger(day) || _PAE_PERFECT_DAY_BANDS.indexOf(day) < 0) return;
+    const key = 'perfect_day:' + day;
+    const mk  = 'hb_pae_' + key;
+    try { if (localStorage.getItem(mk) === '1') return; } catch (_) {}
+    _queuePublicAchievementEvent({
+      eventType:       'perfect_day',
+      eventKey:        key,
+      eventLabel:      'sealed a ' + day + '-day Perfect streak',
+      eventValue:      day,
+      rarity:          null,
+      clientEventId:   key,
       clientCreatedAt: new Date().toISOString(),
     });
     try { localStorage.setItem(mk, '1'); } catch (_) {}
@@ -23403,6 +23449,13 @@
     totalPoints += ms.bonus;
     save();
     renderRank();
+    // W469 — surface the milestone to the guild. _emitPerfectDayEvent gates to
+    // the public bands {7,14,21,30,60,100} (post-100 "UNSTOPPABLE" repeats stay
+    // silent) and is once-ever per band; recordGuildActivity logs the same
+    // milestone to the user's own local Hunter feed. Privacy-safe — only the
+    // streak day count travels, never a habit name or completion detail.
+    try { if (typeof _emitPerfectDayEvent === 'function') _emitPerfectDayEvent(n); } catch (_) {}
+    try { if (typeof recordGuildActivity === 'function') recordGuildActivity('perfect_day', { days: n }, 'perfect_day_' + n); } catch (_) {}
     // W456 — the milestone XP bonus STILL applies, but the legacy full-screen
     // milestone modal (showPerfectDayScreen) is no longer shown. The redesigned
     // everyday Perfect Day celebration (triggerPerfectDayCelebration) is now the

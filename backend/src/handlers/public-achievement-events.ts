@@ -100,6 +100,15 @@ const ALLOWED_EVENT_TYPES = [
   // the UNIQUE(user_id, client_event_id) constraint, makes each title
   // announce ONCE EVER per user — re-clears and soft resets stay silent.
   'arena_title_earned',
+  // W469 — Perfect Day streak milestone (N consecutive days with every
+  // scheduled habit completed). Band-keyed like verified_streak — eventValue
+  // carries the milestone day {7,14,21,30,60,100}; eventLabel / eventKey /
+  // clientEventId are all server-anchored per band so NO habit name, habit
+  // category, completion detail, or free text ever travels. clientEventId is
+  // pinned to "perfect_day:<band>" so the UNIQUE(user_id, client_event_id)
+  // constraint makes each band a once-ever announcement per user (a streak that
+  // breaks and is rebuilt to the same band stays silent the second time).
+  'perfect_day',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -201,6 +210,31 @@ const VERIFIED_STREAK_KEY_FOR_BAND: Record<number, string> = {
   30:  'verified_streak:30',
   100: 'verified_streak:100',
   365: 'verified_streak:365',
+};
+
+// W469 — Perfect Day milestone bands. Mirrors the client
+// PERFECT_STREAK_MILESTONES day set {7,14,21,30,60,100}. The repeating
+// post-100 "UNSTOPPABLE" milestones (130, 160, ...) are intentionally NOT
+// public bands — they would re-spam the feed every 30 days forever, so the
+// public announce caps at the 100-day Century milestone. label / key /
+// clientEventId are all derived per band so the trio is internally consistent
+// and tamper-proof; no habit name or completion detail is ever accepted.
+const PERFECT_DAY_BANDS = new Set([7, 14, 21, 30, 60, 100]);
+const PERFECT_DAY_LABEL_FOR_BAND: Record<number, string> = {
+  7:   'sealed a 7-day Perfect streak',
+  14:  'sealed a 14-day Perfect streak',
+  21:  'sealed a 21-day Perfect streak',
+  30:  'sealed a 30-day Perfect streak',
+  60:  'sealed a 60-day Perfect streak',
+  100: 'sealed a 100-day Perfect streak',
+};
+const PERFECT_DAY_KEY_FOR_BAND: Record<number, string> = {
+  7:   'perfect_day:7',
+  14:  'perfect_day:14',
+  21:  'perfect_day:21',
+  30:  'perfect_day:30',
+  60:  'perfect_day:60',
+  100: 'perfect_day:100',
 };
 
 const ALLOWED_STEP_BUCKETS = new Set([10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]);
@@ -742,6 +776,53 @@ function validateEvent(
         ok: false,
         code: 'INVALID_RARITY',
         detail: 'arena_title_earned rarity must be null.',
+      };
+    }
+    rarity = null;
+  } else if (eventType === 'perfect_day') {
+    // W469 — Perfect Day streak milestone. Band-keyed like verified_streak
+    // (eventValue carries the milestone day; label + key cross-checked so the
+    // trio is internally consistent), with the arena_title posture of pinning
+    // clientEventId to "perfect_day:<band>" so the UNIQUE(user_id,
+    // client_event_id) constraint makes each band a once-ever announcement per
+    // user. No habit name / category / completion detail is ever accepted.
+    if (!isInt(raw.eventValue, 7, 100) || !PERFECT_DAY_BANDS.has(raw.eventValue)) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_VALUE',
+        detail: 'perfect_day eventValue must be one of 7, 14, 21, 30, 60, 100.',
+      };
+    }
+    const band = raw.eventValue;
+    const expectedLabel = PERFECT_DAY_LABEL_FOR_BAND[band];
+    if (eventLabel !== expectedLabel) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_LABEL',
+        detail: `perfect_day label must be exactly "${expectedLabel}" for eventValue ${band}.`,
+      };
+    }
+    const expectedKey = PERFECT_DAY_KEY_FOR_BAND[band];
+    if (eventKey !== expectedKey) {
+      return {
+        ok: false,
+        code: 'INVALID_EVENT_KEY',
+        detail: `perfect_day eventKey must be exactly "${expectedKey}" for eventValue ${band}.`,
+      };
+    }
+    if (clientEventId !== expectedKey) {
+      return {
+        ok: false,
+        code: 'INVALID_CLIENT_EVENT_ID',
+        detail: 'perfect_day clientEventId must be "perfect_day:<band>".',
+      };
+    }
+    eventValue = band;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return {
+        ok: false,
+        code: 'INVALID_RARITY',
+        detail: 'perfect_day rarity must be null.',
       };
     }
     rarity = null;

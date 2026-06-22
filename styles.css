@@ -22789,6 +22789,14 @@ button.guildhall-summary-tile:active {
   font-weight: 700;
   text-shadow: 0 0 13px rgba(245, 184, 66, 0.60);
 }
+/* W469 — Perfect Day streak milestone · radiant warm gold. Its own identity,
+   distinct from the loot-gold ultra and the achievement-gold club/arenatitle,
+   so a Perfect Day reads as a top-tier discipline flex at a glance. */
+.guildhall-activity-target--perfect {
+  color: #ffc24d;
+  font-weight: 700;
+  text-shadow: 0 0 14px rgba(255, 194, 77, 0.62);
+}
 
 /* ── Tier 3 — routine confirmations · NO glow ──────────────── */
 .guildhall-activity-target--verify {
@@ -22852,6 +22860,12 @@ button.guildhall-summary-tile:active {
   color: #f5b842;
   border-color: rgba(245, 184, 66, 0.40);
   background: rgba(245, 184, 66, 0.12);
+}
+/* W469 — Perfect Day icon tile · radiant warm gold (mirrors the target hue) */
+.guildhall-activity-icon--perfect {
+  color: #ffc24d;
+  border-color: rgba(255, 194, 77, 0.42);
+  background: rgba(255, 194, 77, 0.13);
 }
 .guildhall-activity-icon--verify {
   color: #34d399;
