@@ -17461,6 +17461,16 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    '2.3.2': {
+      subtitle: 'The Arena, co-op hunts & a sharper climb.',
+      items: [
+        { emoji: '', title: 'Ranked PvP — The Arena',     description: "Challenge real hunters in live, turn-based duels. Climb a seasonal rating ladder, earn promotions, and spar a friend's Echo whenever you like — a server-run battle, so you never wait on them to be online." },
+        { emoji: '', title: 'Co-op Hunts',                 description: "Summon a guild ally and bring down a two-hunter boss together. Combine your verified steps and flights to fell it within 24 hours — when it drops, both hunters claim souls and a relic." },
+        { emoji: '', title: 'Prestige',                    description: "The climb no longer ends at S+. Every milestone beyond it now earns an ascending star, so even the very top still has somewhere to go." },
+        { emoji: '', title: 'Perfect Day, reimagined',     description: "Complete every habit in a day and the celebration hits harder — sound, motion, and a seal that escalates the longer your perfect streak runs." },
+        { emoji: '', title: 'Smoother co-op + polish',     description: "Joining a hunt now takes on the first tap, your active pacts always show, and both hunters reliably collect their drop — even if the app was closed mid-hunt. Plus a tightened economy and dozens of smaller fixes." },
+      ],
+    },
     '2.2.1': {
       subtitle: 'Leaderboard feels alive.',
       items: [
