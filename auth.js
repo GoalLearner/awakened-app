@@ -1363,6 +1363,7 @@
   function coopBossDecline(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/decline'); }
   function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }
   function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
+  function coopBossClaim(id)   { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/claim'); }   // W463.1 — atomic durable drop credit
 
   // Expose on window for app.js + Settings interactions.
   // ── W297 — Skins IAP (RevenueCat) + entitlements ───────────────────
@@ -1521,6 +1522,7 @@
     coopBossDecline,
     coopBossCancel,
     coopBossResolve,
+    coopBossClaim,
     devSignInIfLocalhost,
     isLocalhostDev,
     startGuest,

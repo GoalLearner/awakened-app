@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.1';   // S2 — Rematch + shareable result card
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.1-w463'; // W463 — co-op duo-hunt bug fixes: (1) dedicated RL_COOP_WRITE bucket so JOIN no longer 429s [backend], (2) dashboard error-vs-empty + backoff retry (no false "No active pacts"), (3) ungated reconcile-and-award on resume so a backgrounded hunter always collects the drop, (4) summoner rank gate (server + client) so you can't summon a boss above your rank
+  const APP_BUILD_TAG = '2.3.1-w464'; // W464 — durable co-op drop credit (bug-3 hardening): backend coop_boss_awards table + atomic POST /claim; the client claims before granting so a drop lands EXACTLY ONCE per user across device wipe / multi-device. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40282,12 +40282,35 @@
   // a relic from the shared E-rank pool, announced via the normal
   // victory beat. Each hunter grants their own reward on their own
   // device (the awarded-set is per-device, keyed by instance id).
-  function _awardCoopKill(inst) {
+  const _coopClaimInFlight = {};   // W463.1 — dedupe concurrent claims per instance
+  async function _awardCoopKill(inst) {
     if (!inst || !inst.id) return;
     const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
+    if (_loadCoopAwarded()[inst.id]) return;     // same-device guard (fast path)
+    if (_coopClaimInFlight[inst.id]) return;     // a claim is already resolving for this hunt
+    // W463.1 — durable exactly-once-per-user claim. New hunts carry inst.award
+    // ({owed, claimed}) from the server; claim ATOMICALLY so only the device that
+    // wins the claim grants — others (incl. a wiped/second device) see it already
+    // claimed and skip. Old hunts / a legacy backend (no inst.award) fall back to
+    // the local-guard-only grant (still once-per-device).
+    let grant = true;
+    const aw = inst.award;
+    if (aw && typeof aw.owed !== 'undefined') {
+      if (!aw.owed || aw.claimed) {              // nothing owed, or already claimed elsewhere
+        const m = _loadCoopAwarded(); m[inst.id] = true; _saveCoopAwarded(m);
+        return;
+      }
+      _coopClaimInFlight[inst.id] = true;
+      try {
+        const r = await Auth.coopBossClaim(inst.id);
+        grant = (r && r.ok) ? !!r.first : true;  // claim failed → grant anyway (local guard dedupes this device)
+      } catch (_) { grant = true; }
+      finally { delete _coopClaimInFlight[inst.id]; }
+    }
     const awarded = _loadCoopAwarded();
-    if (awarded[inst.id]) return;
+    if (awarded[inst.id]) return;                // re-check after the await
     awarded[inst.id] = true; _saveCoopAwarded(awarded);
+    if (!grant) return;                          // another device already claimed the drop
     const reward = cfg.coopRewardSouls || 0;
     try { earnSouls(reward, 'coop_' + cfg.id); } catch (_) {}
     let dropInfo = null;

@@ -186,11 +186,47 @@ function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
   };
 }
 
+// ── W463.1 — durable per-participant drop credit ───────────────────
+/** The caller's drop credit for ONE instance, or null if no award row exists
+ *  (a pre-feature hunt, or one not yet won). owed = a row exists. */
+async function getViewerAward(
+  env: Env,
+  instanceId: string,
+  userId: string,
+): Promise<{ owed: boolean; claimed: boolean } | null> {
+  const r = await env.DB.prepare(
+    'SELECT claimed FROM coop_boss_awards WHERE instance_id = ? AND user_id = ?',
+  )
+    .bind(instanceId, userId)
+    .first<{ claimed: number }>();
+  return r ? { owed: true, claimed: Number(r.claimed) === 1 } : null;
+}
+
+/** Batched award lookup for the list endpoint: instanceId → {owed, claimed}. */
+async function getViewerAwardsForInstances(
+  env: Env,
+  ids: string[],
+  userId: string,
+): Promise<Map<string, { owed: boolean; claimed: boolean }>> {
+  const out = new Map<string, { owed: boolean; claimed: boolean }>();
+  if (ids.length === 0) return out;
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = await env.DB.prepare(
+    `SELECT instance_id AS iid, claimed FROM coop_boss_awards
+      WHERE user_id = ? AND instance_id IN (${placeholders})`,
+  )
+    .bind(userId, ...ids)
+    .all<{ iid: string; claimed: number }>();
+  for (const r of rows.results ?? []) out.set(r.iid, { owed: true, claimed: Number(r.claimed) === 1 });
+  return out;
+}
+
 function serializeCoop(
   row: CoopBossRow,
   aliasMap: Map<string, string>,
   viewerUserId: string,
   p: CoopProgress,
+  award?: { owed: boolean; claimed: boolean } | null,
 ): Record<string, unknown> {
   const role: 'challenger' | 'partner' | 'observer' =
     row.challenger_user_id === viewerUserId
@@ -219,6 +255,9 @@ function serializeCoop(
     status: row.status,
     result: row.result ?? null,
     role,
+    // W463.1 — the viewer's durable drop credit (present only when an award row
+    // exists, i.e. a won hunt). owed+!claimed → the client claims then grants.
+    ...(award ? { award } : {}),
     goal_steps: row.goal_steps,
     reward_souls: row.reward_souls,
     combined_steps: cPrimary(row.challenger_user_id) + cPrimary(row.partner_user_id),
@@ -408,13 +447,14 @@ export async function handleCoopBossList(
     userIds.add(r.challenger_user_id);
     userIds.add(r.partner_user_id);
   }
-  const [progByInstance, aliasMap] = await Promise.all([
+  const [progByInstance, aliasMap, awardByInstance] = await Promise.all([
     getCoopProgressForInstances(env, ids),
     getAliasMap(env, Array.from(userIds)),
+    getViewerAwardsForInstances(env, ids, session.userId),   // W463.1 — caller's drop credits
   ]);
 
   const instances = list.map((r) =>
-    serializeCoop(r, aliasMap, session.userId, progByInstance.get(r.id) ?? emptyProgress()),
+    serializeCoop(r, aliasMap, session.userId, progByInstance.get(r.id) ?? emptyProgress(), awardByInstance.get(r.id) ?? null),
   );
   return jsonOk({ ok: true, instances });
 }
@@ -436,7 +476,8 @@ export async function handleCoopBossGet(
   }
   const prog = await getCoopProgress(env, row.id);
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
-  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, prog) });
+  const award = await getViewerAward(env, row.id, session.userId);   // W463.1
+  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, prog, award) });
 }
 
 // ── POST /v1/coop-boss/:id/join — partner accepts ───────────────────
@@ -610,11 +651,12 @@ export async function handleCoopBossResolve(
 
   // Idempotent: already resolved → return the stored verdict + live progress.
   if (row.status === 'completed' || row.status === 'expired') {
+    const award = await getViewerAward(env, row.id, session.userId);   // W463.1
     return jsonOk({
       ok: true,
       resolved: true,
       already_resolved: true,
-      instance: serializeCoop(row, aliasMap, session.userId, prog),
+      instance: serializeCoop(row, aliasMap, session.userId, prog, award),
     });
   }
   if (row.status !== 'active') {
@@ -635,6 +677,12 @@ export async function handleCoopBossResolve(
     )
       .bind(id)
       .run();
+    // W463.1 — durable per-participant drop credit (idempotent). Both hunters
+    // are now OWED a drop; each claims it atomically before granting client-side.
+    await env.DB.batch([
+      env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, row.challenger_user_id),
+      env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, row.partner_user_id),
+    ]);
   } else if (expired) {
     await env.DB.prepare(
       `UPDATE coop_boss_instances
@@ -654,9 +702,49 @@ export async function handleCoopBossResolve(
   }
 
   const refreshed = (await loadInstance(env, id)) ?? row;
+  // W463.1 — on a WIN the viewer now has a fresh unclaimed award row; on a loss
+  // there is no credit.
+  const award = goalMet ? { owed: true, claimed: false } : null;
   return jsonOk({
     ok: true,
     resolved: true,
-    instance: serializeCoop(refreshed, aliasMap, session.userId, prog),
+    instance: serializeCoop(refreshed, aliasMap, session.userId, prog, award),
   });
+}
+
+// ── POST /v1/coop-boss/:id/claim — claim the durable drop credit (W463.1) ──
+// Atomic, exactly-once-per-user. Only the device that flips this user's award
+// row claimed 0→1 gets first=true and grants the souls+relic client-side; other
+// devices (or a re-run) see first=false and skip. owed=false means no credit
+// (a pre-feature hunt or a hunt this user wasn't a winner of).
+export async function handleCoopBossClaim(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  id: string,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  const row = await loadInstance(env, id);
+  if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
+  if (!isParticipant(row, session.userId)) {
+    return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
+  }
+
+  const upd = await env.DB.prepare(
+    `UPDATE coop_boss_awards
+        SET claimed = 1, claimed_at = datetime('now')
+      WHERE instance_id = ? AND user_id = ? AND claimed = 0`,
+  )
+    .bind(id, session.userId)
+    .run();
+  const first = Number(upd?.meta?.changes ?? 0) > 0;
+  const exists = await env.DB.prepare(
+    'SELECT 1 AS ok FROM coop_boss_awards WHERE instance_id = ? AND user_id = ?',
+  )
+    .bind(id, session.userId)
+    .first<{ ok: number }>();
+  const owed = !!exists;
+  return jsonOk({ ok: true, owed, claimed: owed, first });
 }
