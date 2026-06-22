@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Awakened — Co-op Hunt (social trailer B · the pact)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
+<style>
+  /* ───────────────────────────────────────────────────────────────────────
+     coop-pact.html — self-contained ~30s vertical (1080x1920) social clip.
+     CO-OP "the pact" angle (sibling of coop-hunt.html, same beats + outro so
+     one music edit fits both): some bosses you can't beat alone → RECRUIT a
+     hunter → seal the pact (combined goal) → fell it → both loot. Cooler
+     accent: VIOLET (the system / you) + CRIMSON (the boss) + GOLD (brand).
+         node marketing/clips/render.js coop-pact.html 31
+     ─────────────────────────────────────────────────────────────────────── */
+  :root{ --gold:#f5b842; --gold2:#ffd574; --goldHi:#ffe9b0; --gold-deep:#c8901f; --ivory:#f5f3fb;
+         --mute:#9a9ab8; --faint:#54546c; --crimson:#e0564f; --crimHi:#ff8a7a; --violet:#a78bfa; --violetHi:#c9b8ff; --teal:#5ad6c8; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#04040d; overflow:hidden; }
+  .stage{
+    position:relative; width:1080px; height:1920px; transform-origin:top left;
+    background:
+      radial-gradient(120% 70% at 50% 12%, rgba(167,139,250,0.14), transparent 60%),
+      radial-gradient(140% 60% at 50% 116%, rgba(224,86,79,0.12), transparent 60%),
+      linear-gradient(180deg,#0c0a1e 0%,#0a0710 52%,#04040d 100%);
+    overflow:hidden; font-family:"Cinzel",Georgia,serif; color:var(--ivory);
+  }
+  .vig{ position:absolute; inset:0; pointer-events:none; z-index:40; box-shadow: inset 0 0 360px 90px rgba(0,0,0,0.7); }
+  .ember{ position:absolute; bottom:-40px; width:6px; height:6px; border-radius:50%;
+    background:var(--violet); box-shadow:0 0 12px 2px rgba(167,139,250,0.7); opacity:0;
+    animation:rise linear infinite; z-index:2; }
+  @keyframes rise{ 0%{ transform:translateY(0) scale(1); opacity:0; } 12%{ opacity:0.8; } 100%{ transform:translateY(-1700px) scale(0.4); opacity:0; } }
+
+  .scene{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.45s ease; padding:0 80px; }
+  .scene.active{ opacity:1; }
+  .eyebrow{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:34px; letter-spacing:8px;
+    text-transform:uppercase; color:var(--violetHi); margin-bottom:38px; text-shadow:0 0 22px rgba(167,139,250,0.4); }
+  @keyframes popUp{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes popUpC{ from{opacity:0;transform:translateY(20px);} to{ opacity:1; transform:translateY(0); } }
+  @keyframes slamIn{ 0%{opacity:0;transform:scale(0.55);} 70%{opacity:1;transform:scale(1.06);} 100%{opacity:1;transform:scale(1);} }
+
+  /* ── SCENE 1 · HOOK (some bosses you can't beat alone) ────────────── */
+  #sc-hook .big{ display:flex; flex-direction:column; align-items:center; text-align:center; }
+  #sc-hook .l1{ font-weight:800; font-size:108px; line-height:0.98; letter-spacing:1px; color:var(--ivory);
+    text-shadow:0 8px 60px rgba(0,0,0,0.65); opacity:0; transform:scale(0.6); }
+  #sc-hook.active .l1{ animation:slamIn 0.5s cubic-bezier(.18,1.5,.3,1) 0.2s forwards; }
+  #sc-hook .vs{ font-family:"Cormorant Garamond",Georgia,serif; font-style:italic; font-weight:500; font-size:60px;
+    color:var(--mute); margin:14px 0 18px; opacity:0; }
+  #sc-hook.active .vs{ animation:popUp 0.5s ease 0.8s forwards; }
+  #sc-hook .l2{ font-weight:900; font-size:200px; line-height:1; letter-spacing:4px; color:var(--crimson);
+    text-shadow:0 0 80px rgba(224,86,79,0.55), 0 2px 0 #7a1e18; opacity:0; transform:scale(0.7); }
+  #sc-hook.active .l2{ animation:slamIn 0.55s cubic-bezier(.18,1.5,.3,1) 1.25s forwards; }
+  #sc-hook .sub{ margin-top:54px; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:32px;
+    letter-spacing:6px; text-transform:uppercase; color:var(--violetHi); opacity:0; }
+  #sc-hook.active .sub{ animation:popUpC 0.7s ease 2.1s forwards; }
+
+  /* ── SCENE 2 · RECRUIT (you call an ally; she answers) ────────────── */
+  #sc-recruit .cta-btn{ width:760px; text-align:center; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:40px; letter-spacing:4px; color:var(--violetHi);
+    text-transform:uppercase; padding:34px 0; border-radius:20px; border:1.5px dashed rgba(167,139,250,0.55); background:rgba(167,139,250,0.06);
+    opacity:0; transform:translateY(20px); }
+  #sc-recruit.active .cta-btn{ animation:popUpC 0.6s ease 0.3s forwards; }
+  #sc-recruit .arrow{ font-size:54px; color:var(--violet); margin:20px 0; opacity:0; }
+  #sc-recruit.active .arrow{ animation:popUpC 0.5s ease 1.1s forwards; }
+  #sc-recruit .card{ width:760px; border-radius:26px; padding:34px 40px; display:flex; align-items:center; gap:26px; opacity:0; transform:translateY(30px) scale(0.94);
+    background:linear-gradient(180deg, rgba(24,22,52,0.96), rgba(12,10,26,0.96)); border:1px solid rgba(167,139,250,0.45);
+    box-shadow:0 0 50px rgba(167,139,250,0.18); }
+  #sc-recruit.active .card{ animation:popUp 0.6s cubic-bezier(.16,1,.3,1) 1.5s forwards; }
+  #sc-recruit .av{ width:92px; height:92px; flex:none; border-radius:20px; display:flex; align-items:center; justify-content:center;
+    font-family:"Cinzel",serif; font-weight:900; font-size:50px; color:var(--violetHi);
+    background:radial-gradient(circle at 35% 28%, rgba(167,139,250,0.34), #15122e 66%); border:2px solid var(--violet); box-shadow:0 0 24px rgba(167,139,250,0.5); }
+  #sc-recruit .nm{ flex:1; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:26px; letter-spacing:3px; color:var(--mute); }
+  #sc-recruit .nm b{ display:block; font-family:"Cinzel",serif; font-size:48px; letter-spacing:1px; color:var(--ivory); margin-top:4px; }
+  #sc-recruit .ok{ flex:none; width:64px; height:64px; border-radius:50%; border:3px solid var(--teal); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.4); box-shadow:0 0 22px rgba(90,214,200,0.5); }
+  #sc-recruit .ok svg{ width:36px; height:36px; } #sc-recruit .ok path{ stroke:var(--teal); stroke-width:5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  #sc-recruit.active .ok{ animation:slamIn 0.4s cubic-bezier(.18,1.5,.3,1) 2.3s forwards; }
+  #sc-recruit .joined{ margin-top:34px; font-weight:700; font-size:44px; letter-spacing:0.5px; opacity:0; transform:translateY(16px); }
+  #sc-recruit .joined b{ color:var(--violetHi); }
+  #sc-recruit.active .joined{ animation:popUpC 0.6s ease 2.7s forwards; }
+
+  /* ── SCENE 3 · THE BOSS (looms) ───────────────────────────────────── */
+  #sc-boss .rank{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px; letter-spacing:7px; color:var(--crimHi);
+    text-transform:uppercase; margin-bottom:30px; opacity:0; }
+  #sc-boss.active .rank{ animation:popUpC 0.6s ease 0.3s forwards; }
+  #sc-boss .maw{ width:300px; height:300px; opacity:0; transform:scale(0.7); filter:drop-shadow(0 0 40px rgba(224,86,79,0.5)); }
+  #sc-boss.active .maw{ animation:slamIn 0.7s cubic-bezier(.18,1.4,.3,1) 0.5s forwards, sway 5s ease-in-out 1.2s infinite; }
+  @keyframes sway{ 0%,100%{ transform:scale(1) translateY(0); } 50%{ transform:scale(1.02) translateY(-10px); } }
+  #sc-boss .maw path, #sc-boss .maw circle{ fill:none; stroke:url(#mgrad); stroke-width:5; stroke-linejoin:round; stroke-linecap:round; }
+  #sc-boss .nm{ font-weight:900; font-size:124px; line-height:0.92; letter-spacing:2px; text-align:center; margin-top:30px; color:var(--ivory);
+    text-shadow:0 0 50px rgba(224,86,79,0.4); opacity:0; transform:translateY(24px); }
+  #sc-boss.active .nm{ animation:popUpC 0.7s cubic-bezier(.16,1,.3,1) 1.3s forwards; }
+  #sc-boss .sub{ margin-top:34px; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:32px; letter-spacing:3px;
+    text-transform:uppercase; color:var(--mute); opacity:0; }
+  #sc-boss.active .sub{ animation:popUpC 0.7s ease 1.9s forwards; }
+
+  /* ── SCENE 4 · THE PACT (two bars fill toward the goal) ───────────── */
+  #sc-pact .big{ font-weight:900; font-size:170px; line-height:0.9; color:var(--violetHi); text-shadow:0 0 70px rgba(167,139,250,0.5);
+    opacity:0; transform:scale(0.7); }
+  #sc-pact.active .big{ animation:slamIn 0.6s cubic-bezier(.18,1.4,.3,1) 0.3s forwards; }
+  #sc-pact .lbl{ font-family:"JetBrains Mono",monospace; font-weight:700; font-size:34px; letter-spacing:5px; text-transform:uppercase;
+    color:var(--mute); margin-top:6px; opacity:0; }
+  #sc-pact.active .lbl{ animation:popUpC 0.6s ease 0.8s forwards; }
+  #sc-pact .bars{ width:820px; margin-top:64px; display:flex; flex-direction:column; gap:30px; }
+  #sc-pact .row{ opacity:0; transform:translateY(18px); }
+  #sc-pact.active .row.you{ animation:popUpC 0.5s ease 1.1s forwards; }
+  #sc-pact.active .row.ally{ animation:popUpC 0.5s ease 1.4s forwards; }
+  #sc-pact .rt{ display:flex; justify-content:space-between; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:28px; letter-spacing:2px; margin-bottom:12px; }
+  #sc-pact .row.you .rt .who{ color:var(--violetHi); } #sc-pact .row.ally .rt .who{ color:var(--goldHi); }
+  #sc-pact .rt .amt{ color:var(--ivory); }
+  #sc-pact .track{ height:26px; border-radius:14px; background:rgba(255,255,255,0.07); overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,0.5); }
+  #sc-pact .fill{ height:100%; width:0; border-radius:14px; }
+  #sc-pact .row.you .fill{ background:linear-gradient(90deg,var(--violet),var(--violetHi)); box-shadow:0 0 18px rgba(167,139,250,0.6); }
+  #sc-pact .row.ally .fill{ background:linear-gradient(90deg,var(--gold),var(--goldHi)); box-shadow:0 0 18px rgba(245,184,66,0.6); }
+  #sc-pact.active .row.you .fill{ animation:fillTo 1.8s cubic-bezier(.4,.6,.2,1) 1.5s forwards; }
+  #sc-pact.active .row.ally .fill{ animation:fillTo 1.8s cubic-bezier(.4,.6,.2,1) 1.7s forwards; }
+  @keyframes fillTo{ to{ width:100%; } }
+  #sc-pact .meet{ margin-top:50px; font-weight:700; font-size:46px; letter-spacing:1px; text-align:center; opacity:0; transform:translateY(18px); }
+  #sc-pact .meet b{ color:var(--violetHi); }
+  #sc-pact.active .meet{ animation:popUpC 0.7s cubic-bezier(.16,1,.3,1) 3.6s forwards; }
+
+  /* ── SCENE 5 · DEFEATED (both loot) ───────────────────────────────── */
+  #sc-fell .ring{ position:absolute; top:40%; left:50%; width:300px; height:300px; border-radius:50%; transform:translate(-50%,-50%) scale(0.4); opacity:0; pointer-events:none; z-index:2; border:3px solid var(--gold); box-shadow:0 0 30px rgba(245,184,66,0.6); }
+  #sc-fell.active .ring{ animation:ringExp 1s cubic-bezier(.2,.7,.3,1) 0.6s forwards; }
+  #sc-fell.active .ring.r2{ animation-delay:0.85s; border-color:var(--crimHi); }
+  @keyframes ringExp{ 0%{ transform:translate(-50%,-50%) scale(0.4); opacity:0; } 18%{ opacity:0.95; } 100%{ transform:translate(-50%,-50%) scale(3); opacity:0; } }
+  #sc-fell .kick{ position:relative; z-index:6; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:30px; letter-spacing:7px; color:var(--crimHi); margin-bottom:22px; opacity:0; }
+  #sc-fell.active .kick{ animation:popUpC 0.5s ease 0.5s forwards; }
+  #sc-fell .word{ position:relative; z-index:6; text-align:center; line-height:0.9; }
+  #sc-fell .word .ln{ display:block; font-weight:900; letter-spacing:5px; font-size:150px;
+    background-image:linear-gradient(180deg, var(--crimHi) 0%, var(--gold) 60%, #8a5f12 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 4px 2px rgba(0,0,0,0.7)); opacity:0; transform:scale(1.5); }
+  #sc-fell.active .word .ln.a{ animation:wordStrike 0.7s cubic-bezier(.16,1,.3,1) 0.6s forwards; }
+  #sc-fell.active .word .ln.b{ animation:wordStrike 0.7s cubic-bezier(.16,1,.3,1) 0.78s forwards; }
+  @keyframes wordStrike{ 0%{opacity:0;transform:scale(1.5);letter-spacing:24px;} 55%{opacity:1;} 100%{opacity:1;transform:scale(1);letter-spacing:5px;} }
+  #sc-fell .chip{ position:relative; z-index:6; display:flex; align-items:center; gap:16px; margin-top:46px; padding:18px 34px; border-radius:999px; opacity:0; transform:translateY(14px) scale(0.9);
+    background:linear-gradient(180deg, rgba(42,33,12,0.95), rgba(22,16,5,0.95)); border:1px solid rgba(245,184,66,0.55); box-shadow:0 0 30px rgba(245,184,66,0.3); }
+  #sc-fell .chip .souls{ font-family:"JetBrains Mono",monospace; font-weight:800; font-size:36px; letter-spacing:1px; color:var(--goldHi); }
+  #sc-fell .chip .relic{ font-family:"JetBrains Mono",monospace; font-size:30px; letter-spacing:2px; color:var(--gold); border-left:1px solid rgba(245,184,66,0.4); padding-left:18px; }
+  #sc-fell.active .chip{ animation:popUp 0.6s cubic-bezier(.34,1.4,.5,1) 1.5s forwards; }
+  #sc-fell .both{ position:relative; z-index:6; margin-top:26px; font-weight:700; font-size:44px; letter-spacing:0.5px; color:var(--ivory); opacity:0; }
+  #sc-fell .both b{ color:var(--violetHi); }
+  #sc-fell.active .both{ animation:popUpC 0.6s ease 1.95s forwards; }
+
+  /* ── SCENE 6 · OUTRO ──────────────────────────────────────────────── */
+  #sc-outro .logo{ width:280px; height:280px; opacity:0; transform:scale(0.78); filter:drop-shadow(0 0 36px rgba(245,184,66,0.55)); }
+  #sc-outro.active .logo{ animation:logoIn 0.9s cubic-bezier(.16,1,.3,1) 0.15s forwards, glowL 3.2s ease-in-out 1.1s infinite; }
+  @keyframes logoIn{ to{ opacity:1; transform:scale(1); } }
+  @keyframes glowL{ 0%,100%{filter:drop-shadow(0 0 30px rgba(245,184,66,0.45));} 50%{filter:drop-shadow(0 0 52px rgba(245,184,66,0.8));} }
+  #sc-outro .tagline{ margin-top:48px; font-weight:700; font-size:84px; letter-spacing:2px; line-height:1.16; text-align:center; max-width:940px;
+    text-shadow:0 4px 40px rgba(0,0,0,0.6); opacity:0; transform:translateY(26px); }
+  #sc-outro .tagline .g{ color:var(--gold); }
+  #sc-outro.active .tagline{ animation:popUpC 0.8s cubic-bezier(.16,1,.3,1) 0.9s forwards; }
+  #sc-outro .cta{ margin-top:58px; font-family:"JetBrains Mono",monospace; font-weight:800; font-size:36px; letter-spacing:3px; color:#241a05;
+    text-transform:uppercase; padding:30px 56px; border-radius:20px; background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,var(--gold-deep));
+    box-shadow:0 0 50px rgba(245,184,66,0.34), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4); opacity:0; transform:translateY(26px) scale(0.96); }
+  #sc-outro.active .cta{ animation:popUp 0.7s cubic-bezier(.16,1,.3,1) 1.5s forwards, pulseC 2.4s ease-in-out 2.3s infinite; }
+  @keyframes pulseC{ 0%,100%{box-shadow:0 0 44px rgba(245,184,66,0.3), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 10px rgba(120,70,0,0.4);} 50%{box-shadow:0 0 74px rgba(245,184,66,0.6), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -4px 10px rgba(120,70,0,0.4);} }
+  #sc-outro .handle{ position:absolute; bottom:130px; left:0; right:0; text-align:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:30px; letter-spacing:5px; color:var(--mute); opacity:0; }
+  #sc-outro.active .handle{ animation:fadeH 0.8s ease 1.9s forwards; }
+  @keyframes fadeH{ to{ opacity:0.85; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- SCENE 1 · HOOK -->
+  <div class="scene" id="sc-hook">
+    <div class="big">
+      <span class="l1">SOME BOSSES</span>
+      <span class="vs">you can't beat</span>
+      <span class="l2">ALONE</span>
+    </div>
+    <div class="sub">Summon an ally</div>
+  </div>
+
+  <!-- SCENE 2 · RECRUIT -->
+  <div class="scene" id="sc-recruit">
+    <div class="eyebrow">The Pacts</div>
+    <div class="cta-btn">&#43; Recruit a Hunter</div>
+    <div class="arrow">&#8595;</div>
+    <div class="card">
+      <span class="av">G</span>
+      <span class="nm">GUILD ALLY<b>galilea</b></span>
+      <span class="ok"><svg viewBox="0 0 36 36"><path d="M7 19 L15 27 L29 10"/></svg></span>
+    </div>
+    <div class="joined">She answered the <b>call</b>.</div>
+  </div>
+
+  <!-- SCENE 3 · THE BOSS -->
+  <div class="scene" id="sc-boss">
+    <div class="rank">E-Rank Co-op Hunt</div>
+    <svg class="maw" viewBox="0 0 300 300" aria-hidden="true">
+      <defs><linearGradient id="mgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a7a"/><stop offset="1" stop-color="#9a2c24"/></linearGradient></defs>
+      <path d="M150 70 C95 70 70 120 70 160 C70 210 110 240 150 240 C190 240 230 210 230 160 C230 120 205 70 150 70 Z"/>
+      <path d="M150 150 L150 240"/>
+      <circle cx="112" cy="150" r="16"/><circle cx="188" cy="150" r="16"/>
+      <path d="M96 200 L120 184 L132 204 L150 186 L168 204 L180 184 L204 200"/>
+    </svg>
+    <div class="nm">THE TWIN MAW</div>
+    <div class="sub">Two hunters · no blind side · 24 hours</div>
+  </div>
+
+  <!-- SCENE 4 · THE PACT -->
+  <div class="scene" id="sc-pact">
+    <div class="big">16,000</div>
+    <div class="lbl">combined steps</div>
+    <div class="bars">
+      <div class="row you">
+        <div class="rt"><span class="who">YOU</span><span class="amt">8,400</span></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="row ally">
+        <div class="rt"><span class="who">GALILEA</span><span class="amt">7,600</span></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+    </div>
+    <div class="meet">One road. <b>Two hunters.</b></div>
+  </div>
+
+  <!-- SCENE 5 · DEFEATED -->
+  <div class="scene" id="sc-fell">
+    <div class="ring"></div>
+    <div class="ring r2"></div>
+    <div class="kick">THE MAW FALLS</div>
+    <div class="word"><span class="ln a">BOSS</span><span class="ln b">DEFEATED</span></div>
+    <div class="chip"><span class="souls">+90 souls</span><span class="relic">RELIC CLAIMED</span></div>
+    <div class="both">Both hunters <b>credited the kill</b>.</div>
+  </div>
+
+  <!-- SCENE 6 · OUTRO -->
+  <div class="scene" id="sc-outro">
+    <svg class="logo" viewBox="0 0 200 200" aria-hidden="true">
+      <polygon points="100,46 159,158 41,158" fill="none" stroke="#f5b842" stroke-width="6.5" stroke-linejoin="round"/>
+      <circle cx="100" cy="46" r="5.5" fill="#f5b842"/><circle cx="159" cy="158" r="5.5" fill="#f5b842"/><circle cx="41" cy="158" r="5.5" fill="#f5b842"/>
+      <path d="M100 86 C113 104, 113 126, 100 140 C87 126, 87 104, 100 86 Z" fill="#f5b842"/>
+    </svg>
+    <div class="tagline">NO ONE CLIMBS<br><span class="g">ALONE</span>.</div>
+    <div class="cta">Download free on iOS</div>
+    <div class="handle">@AWAKENEDRPG</div>
+  </div>
+
+  <div class="vig"></div>
+</div>
+
+<script>
+  var stage = document.getElementById('stage');
+  for (var i=0;i<16;i++){
+    var e = document.createElement('div'); e.className='ember';
+    e.style.left = (Math.round((i*73+30) % 100)) + '%';
+    e.style.animationDuration = (5 + (i%5)) + 's';
+    e.style.animationDelay = (-(i*0.6)) + 's';
+    e.style.width = e.style.height = (4 + (i%3)*2) + 'px';
+    stage.appendChild(e);
+  }
+  // master timeline [scene id, ms] — sums to 30000 (matches coop-hunt.html)
+  var T = [['hook',4500],['recruit',5500],['boss',5000],['pact',6000],['fell',5000],['outro',4000]];
+  var scenes = T.map(function(t){ return document.getElementById('sc-' + t[0]); });
+  function activate(idx){ scenes.forEach(function(s){ s.classList.remove('active'); }); scenes[idx].classList.add('active'); }
+  function run(){ var acc = 0; T.forEach(function(t, k){ setTimeout(function(){ activate(k); }, acc); acc += t[1]; }); }
+  document.addEventListener('click', function(){ run(); });
+  run();
+  function fit(){ var s = Math.min(window.innerWidth/1080, window.innerHeight/1920); stage.style.transform = 'scale(' + s + ')';
+    document.body.style.cssText += ';display:flex;align-items:flex-start;justify-content:flex-start;'; }
+  window.addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
