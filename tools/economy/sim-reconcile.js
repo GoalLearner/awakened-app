@@ -208,21 +208,26 @@ function packSupersede(h, day, packFull) {                 // mirror _refundOrph
 // Finishing W479: the custom path must be a TRUE PEER of the packs. Model the FORGIVENESS
 // lifecycle (mirrors tryEarnShield + processStreakRollover) so the parity is PROVEN: a shielded
 // miss preserves the custom streak exactly like a pack, and the strip shows the right state.
-const W482_SHIELD_THRESHOLD = 14, W482_SHIELD_MAX = 3;
-function newShieldHunter() { return { custom: { streak: 0, lastDate: null }, shields: 0, shieldClaimedAt: 0 }; }
-function tryEarnShieldM(h, newStreak) {                       // mirror app.js tryEarnShield (pack-agnostic)
-  if (newStreak < W482_SHIELD_THRESHOLD) return false;
-  if (newStreak % W482_SHIELD_THRESHOLD !== 0) return false;
-  if (newStreak <= h.shieldClaimedAt) return false;
-  if (h.shields >= W482_SHIELD_MAX) { h.shieldClaimedAt = newStreak; return false; }
-  h.shields += 1; h.shieldClaimedAt = newStreak; return true;
+const W484_SHIELD_THRESHOLD = 14, W484_SHIELD_MAX = 3;
+function newShieldHunter() { return { custom: { streak: 0, lastDate: null }, shields: 0, shieldMilestoneClaimed: -1 }; }
+// W484 — shields are earned from DAYS ACTIVE into a single GLOBAL pool (mirror tryEarnActivityShield):
+// 1 per 14 days-active, max 3, idempotent via shieldMilestoneClaimed, seed-on-first-run (no retro flood).
+function tryEarnActivityShieldM(h, daysActive) {
+  const milestones = Math.floor(daysActive / W484_SHIELD_THRESHOLD);
+  if (h.shieldMilestoneClaimed < 0) { h.shieldMilestoneClaimed = milestones; return false; }
+  if (milestones <= h.shieldMilestoneClaimed) return false;
+  let earned = false;
+  while (h.shieldMilestoneClaimed < milestones) {
+    h.shieldMilestoneClaimed++;
+    if (h.shields < W484_SHIELD_MAX) { h.shields += 1; earned = true; }
+  }
+  return earned;
 }
-function awardCustomShieldDay(h, day) {                       // mirror awardCustomRoutineCompound (streak + snapshot + earn)
+// W484 — the award advances the custom STREAK only; shields are NOT earned here anymore.
+function awardCustomShieldDay(h, day) {
   const cs = h.custom;
   const newStreak = (cs.lastDate === day - 1) ? cs.streak + 1 : 1;
-  h.custom = { streak: newStreak, lastDate: day, prevStreak: cs.streak || 0, prevLastDate: cs.lastDate,
-               prevShields: h.shields, prevShieldClaimed: h.shieldClaimedAt };
-  tryEarnShieldM(h, newStreak);
+  h.custom = { streak: newStreak, lastDate: day, prevStreak: cs.streak || 0, prevLastDate: cs.lastDate };
 }
 function rolloverCustomM(h, today) {                          // mirror processStreakRollover for 'custom'
   const cs = h.custom;
@@ -239,9 +244,10 @@ function rolloverCustomM(h, today) {                          // mirror processS
 // INVARIANT 11 — a SHIELDED miss PRESERVES the custom streak (the owner's #1 parity test).
 {
   const h = newShieldHunter();
-  for (let d = 1; d <= 14; d++) awardCustomShieldDay(h, d);   // 14-day streak earns 1 shield at day 14
-  check('W482: shield earned at the 14-day custom milestone', h.shields === 1, `(${h.shields})`);
-  check('W482: custom streak is 14', h.custom.streak === 14);
+  for (let d = 1; d <= 14; d++) awardCustomShieldDay(h, d);   // 14-day streak (the award no longer earns a shield)
+  h.shields = 1;                                              // a shield earned from DAYS ACTIVE (see the W484 earn invariant)
+  check('W484: a custom streak can hold a (global, activity-earned) shield', h.shields === 1);
+  check('W484: custom streak is 14', h.custom.streak === 14);
   rolloverCustomM(h, 16);                                     // missed day 15; app opens on day 16
   check('W482: shielded miss CONSUMED a shield', h.shields === 0, `(${h.shields})`);
   check('W482: shielded miss PRESERVED the custom streak (held at 14)', h.custom.streak === 14 && h.custom.lastDate === 15, `(streak ${h.custom.streak}, last ${h.custom.lastDate})`);
@@ -275,17 +281,26 @@ function refundOrphanStreak(ccs, today) {                     // mirror _refundO
   const fresh = refundOrphanStreak({ streak: 8, lastDate: 100, prevStreak: 7, prevLastDate: 99 }, 100);
   check('W482: post-W482 refund exact rollback to prevStreak (8->7, last 99)', fresh.streak === 7 && fresh.lastDate === 99);
 }
-// INVARIANT 15 — a milestone day that earned a shield then got superseded rolls the shield back.
+// INVARIANT 15 — W484 ACTIVITY-EARNED shields: 1 per 14 days-active, idempotent, cap 3, seed-no-flood.
 {
-  const h = newShieldHunter();
-  for (let d = 1; d <= 14; d++) awardCustomShieldDay(h, d);   // earns a shield at day 14; snapshot prevShields=0
-  check('W482: pre-supersede shield present', h.shields === 1);
-  const ccs = h.custom;                                       // {streak:14,lastDate:14,prevStreak:13,prevShields:0,...}
-  if (ccs.lastDate === 14 && 'prevStreak' in ccs) {           // mirror the refund's streak+shield rollback
-    h.custom = { streak: ccs.prevStreak, lastDate: ccs.prevLastDate };
-    if ('prevShields' in ccs) { h.shields = ccs.prevShields; h.shieldClaimedAt = ccs.prevShieldClaimed; }
-  }
-  check('W482: superseded milestone rolls back the phantom shield AND streak', h.shields === 0 && h.custom.streak === 13, `(shields ${h.shields}, streak ${h.custom.streak})`);
+  // (a) an existing user with prior activity does NOT get a retroactive flood on first run
+  const h = newShieldHunter();                               // shieldMilestoneClaimed = -1 (needs seeding)
+  tryEarnActivityShieldM(h, 40);                             // first call seeds to floor(40/14)=2, grants nothing
+  check('W484: first run seeds the milestone (no retroactive flood)', h.shields === 0 && h.shieldMilestoneClaimed === 2, `(${h.shields},${h.shieldMilestoneClaimed})`);
+  // (b) a fresh user earns exactly 1 shield at 14 days active
+  const h2 = newShieldHunter();
+  tryEarnActivityShieldM(h2, 1);                             // seed at day 1 -> milestone 0
+  for (let da = 2; da <= 13; da++) tryEarnActivityShieldM(h2, da);
+  check('W484: no shield before 14 days active', h2.shields === 0);
+  tryEarnActivityShieldM(h2, 14);
+  check('W484: 1 shield at 14 days active', h2.shields === 1 && h2.shieldMilestoneClaimed === 1);
+  // (c) idempotent — re-evaluating at the same days-active count never double-grants
+  tryEarnActivityShieldM(h2, 14);
+  check('W484: idempotent at the same milestone (no double-grant)', h2.shields === 1);
+  // (d) recurring earn, capped at SHIELD_MAX (milestones still advance/consume past the cap)
+  for (let da = 15; da <= 70; da++) tryEarnActivityShieldM(h2, da);  // crosses 28/42/56/70 -> 5 milestones total
+  check('W484: shields cap at SHIELD_MAX=3', h2.shields === 3, `(${h2.shields})`);
+  check('W484: milestones advance past the cap (consumed, no retro-flood on spend)', h2.shieldMilestoneClaimed === 5, `(${h2.shieldMilestoneClaimed})`);
 }
 // INVARIANT 16 — diffPts weekend now reflects the SEALED date, not today (the backfill bug).
 function isWeekendDate(dateStr) {                             // mirror app.js isWeekend(dateStr) LA-anchored 'T20:00:00Z'
