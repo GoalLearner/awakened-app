@@ -14110,9 +14110,7 @@ body.bfs-locked { overflow: hidden; }
 }
 .pokedex-header {
   text-align: center;
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgba(245, 158, 11, 0.10);
+  margin-bottom: 8px;
 }
 /* v3 Phase 1z.7 — Title row carries the optional "1 NEW" gold pulse pill
    beside the title. Hidden when no relics carry NEW state. */
@@ -14237,71 +14235,94 @@ body.bfs-locked { overflow: hidden; }
 .pokedex-sections {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 9px;
 }
+/* W475 — ClaudeDesign Relic Archive refresh: rarity sections are now contained
+   cards with an enriched header (accent bar + rarity sigil + sub-label + a
+   per-section mini progress bar). --ac/--acg are set per section in render. */
 .pokedex-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.012);
+  overflow: hidden;
 }
+.pokedex-section--mythic     { border-color: rgba(94,234,212,0.28); }
+.pokedex-section--ultra_rare { border-color: rgba(245,184,66,0.26); }
 .pokedex-section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 2px;
+  gap: 11px;
+  width: 100%;
+  padding: 13px 13px;
   background: transparent;
   border: none;
-  width: 100%;
   cursor: pointer;
   font-family: inherit;
   color: inherit;
   text-align: left;
+  position: relative;
   -webkit-tap-highlight-color: transparent;
-  border-radius: 6px;
   transition: background-color 0.15s ease;
 }
-.pokedex-section-header:hover { background: rgba(255,255,255,0.03); }
-.pokedex-section-header:active { background: rgba(255,255,255,0.05); }
-.pokedex-section-chevron {
-  font-size: 0.85rem;
-  color: var(--gold);
-  line-height: 1;
-  transition: transform 0.18s ease;
-  width: 12px;
-  display: inline-block;
-  text-align: center;
+.pokedex-section-header:active { background: rgba(255,255,255,0.025); }
+.pdx-sec-accent {
+  width: 4px; align-self: stretch; flex: none; border-radius: 3px;
+  background: var(--ac, var(--gold)); box-shadow: 0 0 10px var(--acg, transparent);
 }
-.pokedex-section--collapsed .pokedex-section-chevron { transform: rotate(-90deg); }
+.pdx-sec-glyph { width: 22px; height: 22px; flex: none; color: var(--ac, var(--gold)); }
+.pdx-sec-titlewrap { flex: 1; min-width: 0; }
 .pokedex-section-label {
+  display: block;
   font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--ac, var(--gold));
+  text-transform: uppercase;
+  line-height: 1;
+}
+.pdx-sec-sub {
+  display: block;
+  margin-top: 6px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--text-tertiary, #5a5a76);
+  text-transform: uppercase;
+}
+.pdx-sec-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.pokedex-section-count {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--gold);
-  text-transform: uppercase;
-  flex: 1;
-}
-.pokedex-section-count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.04em;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-  margin-left: auto;
 }
+.pokedex-section-count b { color: var(--ac, var(--ink)); font-weight: 800; }
+.pdx-sec-minibar { width: 54px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.pdx-sec-minibar i { display: block; height: 100%; border-radius: 3px; background: var(--ac, var(--gold)); box-shadow: 0 0 7px var(--acg, transparent); }
+.pokedex-section-chevron {
+  flex: none;
+  line-height: 0;
+  color: var(--text-tertiary, #5a5a76);
+  transition: transform 0.22s ease;
+  transform: rotate(90deg);
+}
+.pokedex-section--collapsed .pokedex-section-chevron { transform: rotate(0deg); }
 .pokedex-section-body {
   overflow: hidden;
   transition: max-height 0.22s ease;
+  padding: 0 11px 14px;
 }
 .pokedex-section--collapsed .pokedex-section-body { display: none; }
 .pokedex-section-empty {
-  padding: 14px 6px;
+  padding: 2px 4px 12px;
   font-size: 0.78rem;
   color: var(--text-tertiary);
   font-style: italic;
   text-align: center;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
 }
 /* (Common rarity tint is defined below in the rarity-tints block.) */
 
@@ -14545,7 +14566,10 @@ body.bfs-locked { overflow: hidden; }
 }
 /* ── W450 — Armory class + power (ClaudeDesign "Armory · Class & Power") ── */
 /* archetype filter + PWR sort, above the rarity sections */
-.pdx-controls { display: flex; align-items: center; gap: 7px; padding: 2px 2px 9px; }
+.pdx-controls { display: flex; align-items: center; gap: 7px; padding: 8px 2px 9px;
+  position: sticky; top: 0; z-index: 30;
+  background: linear-gradient(180deg, rgba(8,8,18,0.96), rgba(8,8,18,0.82) 72%, rgba(8,8,18,0));
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .pdx-seg { display: flex; gap: 4px; background: rgba(16,16,38,0.7); border: 1px solid rgba(124,108,200,0.16); border-radius: 11px; padding: 3px; }
 .pdx-seg-btn { border: none; background: transparent; cursor: pointer; border-radius: 8px; padding: 6px 10px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: #8a8aa8; text-transform: uppercase; }
 .pdx-seg-btn[data-active="1"] { color: #f3f1fb; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }

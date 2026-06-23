@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w474'; // W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w475'; // W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12313,8 +12313,7 @@
     return '<div class="pdx-controls">' +
         '<div class="pdx-seg">' + seg + '</div>' +
         '<button type="button" class="pdx-sortbtn' + (_pokedexSortPwr ? ' is-on' : '') + '" data-pdx-sort="1" aria-pressed="' + (_pokedexSortPwr ? 'true' : 'false') + '">PWR ' + (_pokedexSortPwr ? '▼' : '↕') + '</button>' +
-      '</div>' +
-      '<div class="pdx-hint"><b>Tap an archetype</b> to filter · <b>PWR</b> sorts by power · ▲ = gain vs equipped</div>';
+      '</div>';
   }
   // Dominant path — sum each card's bonuses across the equipped
   // build, return the stat id with the largest contribution. Returns
@@ -15160,6 +15159,19 @@
       { key: 'rare',       label: 'RARE RELICS' },
       { key: 'common',     label: 'COMMON RELICS' },
     ];
+    // W475 — ClaudeDesign Relic Archive refresh: per-rarity accent colour, sigil,
+    // and sub-label powering the enriched section headers (accent bar + glyph +
+    // sub-label + per-section mini progress bar). Keys match the section keys.
+    const ARCHIVE_RARITY_META = {
+      mythic:     { ac: '#5eead4', acg: 'rgba(94,234,212,.5)',  sub: 'Mythic · one exists',
+        glyph: '<path d="M11 2l2.6 5.8L20 8.6l-5 4.2 1.6 6.2L11 15.6 5.4 19l1.6-6.2-5-4.2 6.4-.8z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/>' },
+      ultra_rare: { ac: '#f5b842', acg: 'rgba(245,184,66,.5)',  sub: 'Best-in-slot drops',
+        glyph: '<path d="M11 3l5 4v8l-5 4-5-4V7z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/><path d="M11 7v8M7 9l8 4M15 9l-8 4" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>' },
+      rare:       { ac: '#a78bfa', acg: 'rgba(167,139,250,.5)', sub: 'Notable finds',
+        glyph: '<path d="M11 3l6 4-2 11H7L5 7z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/>' },
+      common:     { ac: '#9aa0bd', acg: 'transparent',          sub: 'Steady gains',
+        glyph: '<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="11" cy="11" r="3" stroke="currentColor" stroke-width="1.3" fill="none"/>' },
+    };
 
     const collapsed = loadPokedexCollapsed();
     const eqPwrBySlot = _equippedPowerBySlot();   // W450 — baseline for the "vs equipped" deltas
@@ -15295,12 +15307,22 @@
         ? '<div class="pokedex-section-empty">No items in this tier yet.</div>'
         : '<div class="pokedex-grid">' + cardsHtml + '</div>';
       const headerExtra = s.key === 'mythic' ? ' archive-rarity-header--mythic' : (s.key === 'ultra_rare' ? ' archive-rarity-header--ultra' : '');
+      const rm = ARCHIVE_RARITY_META[s.key] || ARCHIVE_RARITY_META.common;
+      const secPct = sectionTotal > 0 ? Math.round(sectionDiscovered / sectionTotal * 100) : 0;
       return (
-        '<div class="pokedex-section pokedex-section--' + s.key + (isCollapsed ? ' pokedex-section--collapsed' : '') + '" data-section-key="' + s.key + '">' +
+        '<div class="pokedex-section pokedex-section--' + s.key + (isCollapsed ? ' pokedex-section--collapsed' : '') + '" data-section-key="' + s.key + '" style="--ac:' + rm.ac + ';--acg:' + rm.acg + '">' +
           '<button class="pokedex-section-header archive-rarity-header' + headerExtra + '" type="button" data-section-toggle="' + s.key + '" aria-expanded="' + (isCollapsed ? 'false' : 'true') + '">' +
-            '<span class="pokedex-section-chevron" aria-hidden="true">▾</span>' +
-            '<span class="pokedex-section-label">' + s.label + '</span>' +
-            '<span class="pokedex-section-count">' + sectionDiscovered + ' / ' + sectionTotal + '</span>' +
+            '<span class="pdx-sec-accent" aria-hidden="true"></span>' +
+            '<svg class="pdx-sec-glyph" viewBox="0 0 22 22" aria-hidden="true">' + rm.glyph + '</svg>' +
+            '<span class="pdx-sec-titlewrap">' +
+              '<span class="pokedex-section-label">' + s.label + '</span>' +
+              '<span class="pdx-sec-sub">' + rm.sub + '</span>' +
+            '</span>' +
+            '<span class="pdx-sec-right">' +
+              '<span class="pokedex-section-count"><b>' + sectionDiscovered + '</b> / ' + sectionTotal + '</span>' +
+              '<span class="pdx-sec-minibar"><i style="width:' + secPct + '%"></i></span>' +
+            '</span>' +
+            '<span class="pokedex-section-chevron" aria-hidden="true"><svg viewBox="0 0 9 14" width="9" height="14" fill="none"><path d="M1.5 1.5l6 5.5-6 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '</button>' +
           '<div class="pokedex-section-body">' + bodyHtml + '</div>' +
         '</div>'
