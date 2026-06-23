@@ -54,6 +54,12 @@ echo "── [1/9] Copy PWA files into www/ ──"
 rm -rf www
 mkdir -p www
 cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
+# W480 — lib/economy.js (the W471 economy-math extraction) is PATH-BEARING: index.html
+# references it as `lib/economy.js`, so it needs its own dir + copy (it can't ride the
+# flat list above). It was omitted from W471 until W480 — the absence left AwakenedEconomy
+# undefined on device, so statLevel() threw on the Ascent power path (POWER 0 + dead FIGHT).
+mkdir -p www/lib
+cp lib/economy.js www/lib/
 cp avatar-*.png www/
 cp icon-192.png icon-512.png www/
 mkdir -p www/assets/tab-icons
@@ -151,6 +157,19 @@ if [ -z "$WWW_BUILD_TAG" ]; then
   echo "  FAIL: APP_BUILD_TAG missing from www/app.js"
   exit 1
 fi
+# W480 — hard gate: index.html references lib/economy.js, and app.js delegates ALL
+# stat-level / XP math to AwakenedEconomy (defined ONLY in that file). If it's missing
+# from www/, the device build bricks combat (POWER 0 + dead FIGHT). Fail the build LOUD
+# rather than ship it again.
+if [ ! -f www/lib/economy.js ]; then
+  echo "  FAIL: www/lib/economy.js is MISSING — index.html references it; build would brick the Ascent. Aborting."
+  exit 1
+fi
+if ! grep -q "AwakenedEconomy" www/lib/economy.js; then
+  echo "  FAIL: www/lib/economy.js present but missing the AwakenedEconomy export. Aborting."
+  exit 1
+fi
+echo "  www/lib/economy.js  OK"
 echo ""
 
 # ── 2. Wipe ios/App/App/public/ before sync ─────────────────────────

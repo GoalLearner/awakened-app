@@ -126,6 +126,15 @@ workflows:
         script: |
           mkdir -p www
           cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
+          # W480 — lib/economy.js (the W471 economy-math extraction) is PATH-BEARING:
+          # index.html references it as `lib/economy.js`, so it needs its own dir, not the
+          # flat list above. It was omitted from W471 until W480 — the absence left
+          # AwakenedEconomy undefined on device, throwing on the Ascent power path
+          # (POWER 0 + dead FIGHT). Copy it AND fail the build loud if it's ever missing.
+          mkdir -p www/lib
+          cp lib/economy.js www/lib/
+          if [ ! -f www/lib/economy.js ]; then echo "FAIL: www/lib/economy.js missing — build would brick combat"; exit 1; fi
+          if ! grep -q "AwakenedEconomy" www/lib/economy.js; then echo "FAIL: www/lib/economy.js missing AwakenedEconomy export"; exit 1; fi
           # Class avatar silhouettes
           cp avatar-*.png www/
           # PWA app-icons (rendered from app-icon-source.png by
