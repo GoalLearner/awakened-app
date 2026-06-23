@@ -122,19 +122,29 @@ workflows:
       - name: Install Node dependencies
         script: npm install
 
+      - name: Unit-test gate (economy math) — FAILS THE BUILD ON RED
+        script: |
+          set -e
+          echo "── W487 unit-test gate (regression guard; runs the lib/economy tests before any bundling) ──"
+          npm run test:unit
+
       - name: Copy PWA files into www/ for Capacitor
         script: |
           mkdir -p www
-          cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
-          # W480 — lib/economy.js (the W471 economy-math extraction) is PATH-BEARING:
-          # index.html references it as `lib/economy.js`, so it needs its own dir, not the
-          # flat list above. It was omitted from W471 until W480 — the absence left
-          # AwakenedEconomy undefined on device, throwing on the Ascent power path
-          # (POWER 0 + dead FIGHT). Copy it AND fail the build loud if it's ever missing.
-          mkdir -p www/lib
-          cp lib/economy.js www/lib/
-          if [ ! -f www/lib/economy.js ]; then echo "FAIL: www/lib/economy.js missing — build would brick combat"; exit 1; fi
-          if ! grep -q "AwakenedEconomy" www/lib/economy.js; then echo "FAIL: www/lib/economy.js missing AwakenedEconomy export"; exit 1; fi
+          # Path-less shell files — copy explicitly.
+          cp index.html styles.css sw.js manifest.json www/
+          # W487 — the JS bundle is DERIVED from index.html's <script src> graph, NOT a
+          # hand-kept filename list, so any local script (incl. path-bearing files like
+          # lib/economy.js) is auto-copied with its sub-path. This generalizes the W480
+          # lib/economy.js one-off: the next new JS file can never be silently omitted.
+          # (?v= version drift is still validated separately by the freshness gate below.)
+          SCRIPTS=$(grep -oE '<script[^>]+src="[^"]+"' index.html | sed -E 's/.*src="([^"]+)".*/\1/' | sed -E 's/\?v=[0-9]+$//' | grep -vE '^https?:')
+          echo "JS referenced by index.html:"; echo "$SCRIPTS"
+          for js in $SCRIPTS; do
+            if [ ! -f "$js" ]; then echo "FAIL: index.html references <script src=\"$js\"> but $js is missing on disk"; exit 1; fi
+            mkdir -p "www/$(dirname "$js")"
+            cp "$js" "www/$js"
+          done
           # Class avatar silhouettes
           cp avatar-*.png www/
           # PWA app-icons (rendered from app-icon-source.png by
@@ -214,6 +224,18 @@ workflows:
           if compgen -G "assets/coach/*.png" > /dev/null; then
             cp assets/coach/*.png www/assets/coach/
           fi
+
+      - name: Boot-smoke — www/ bundle completeness (W480-class guard)
+        script: |
+          set -e
+          echo "── W487 boot-smoke: every www/index.html <script src>/<link href> JS+CSS must exist in www/ ──"
+          MISSING=0
+          REFS=$(grep -oE '(src|href)="[^"]+\.(js|css)(\?v=[0-9]+)?"' www/index.html | sed -E 's/.*="([^"]+)".*/\1/' | sed -E 's/\?v=[0-9]+$//' | grep -vE '^https?:')
+          for r in $REFS; do
+            if [ ! -f "www/$r" ]; then echo "FAIL: www/index.html references $r but www/$r is missing — would brick on device"; MISSING=1; fi
+          done
+          if [ "$MISSING" != "0" ]; then exit 1; fi
+          echo "OK: www/ bundle complete ($(echo "$REFS" | grep -c . ) assets verified)."
 
       - name: Add iOS platform (runs on first build only)
         script: |

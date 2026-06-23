@@ -49,17 +49,26 @@ echo "Git HEAD: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 echo "Disk free: $(df -h . | tail -1 | awk '{print $4}')"
 echo ""
 
+# ── Pre-flight: unit-test gate (W487) — fail the local build on red BEFORE assembling www/ ──
+echo "── Pre-flight: unit-test gate (economy math) ──"
+npm run test:unit || { echo "FAIL: unit tests are red — aborting build."; exit 1; }
+echo ""
+
 # ── 1. Copy PWA files into www/ ─────────────────────────────────────
 echo "── [1/9] Copy PWA files into www/ ──"
 rm -rf www
 mkdir -p www
-cp index.html styles.css app.js auth.js simulated-leaderboard.js sw.js manifest.json www/
-# W480 — lib/economy.js (the W471 economy-math extraction) is PATH-BEARING: index.html
-# references it as `lib/economy.js`, so it needs its own dir + copy (it can't ride the
-# flat list above). It was omitted from W471 until W480 — the absence left AwakenedEconomy
-# undefined on device, so statLevel() threw on the Ascent power path (POWER 0 + dead FIGHT).
-mkdir -p www/lib
-cp lib/economy.js www/lib/
+# Path-less shell files — copy explicitly.
+cp index.html styles.css sw.js manifest.json www/
+# W487 — JS bundle DERIVED from index.html's <script src> graph (not a hand-kept list), so any
+# local script (incl. path-bearing like lib/economy.js) is auto-copied with its sub-path. This
+# generalizes the W480 lib/economy.js one-off — the next new JS file can never be silently omitted.
+SCRIPTS=$(grep -oE '<script[^>]+src="[^"]+"' index.html | sed -E 's/.*src="([^"]+)".*/\1/' | sed -E 's/\?v=[0-9]+$//' | grep -vE '^https?:')
+for js in $SCRIPTS; do
+  if [ ! -f "$js" ]; then echo "FAIL: index.html references <script src=\"$js\"> but $js is missing"; exit 1; fi
+  mkdir -p "www/$(dirname "$js")"
+  cp "$js" "www/$js"
+done
 cp avatar-*.png www/
 cp icon-192.png icon-512.png www/
 mkdir -p www/assets/tab-icons

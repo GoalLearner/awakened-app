@@ -1,0 +1,36 @@
+name: CI
+
+# W487 — fast feedback loop (Linux) on every push/PR, before any iOS build is triggered.
+# codemagic stays the last-line gate; this catches reds at commit time on the Windows-dev flow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Unit tests + bundle integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The economy math (XP/rank/compound/difficulty/shields) — zero deps, exits non-zero on red.
+      - name: Unit tests (economy math)
+        run: node lib/economy.test.js
+
+      # W480-class guard: every local <script src> index.html references must exist on disk, so a
+      # path-bearing JS file (like lib/economy.js) can never be silently omitted from the bundle.
+      - name: Bundle completeness (index.html script graph)
+        run: |
+          set -e
+          MISSING=0
+          SCRIPTS=$(grep -oE '<script[^>]+src="[^"]+"' index.html | sed -E 's/.*src="([^"]+)".*/\1/' | sed -E 's/\?v=[0-9]+$//' | grep -vE '^https?:')
+          echo "Scripts referenced by index.html:"; echo "$SCRIPTS"
+          for js in $SCRIPTS; do
+            if [ ! -f "$js" ]; then echo "FAIL: index.html references <script src=\"$js\"> but $js is missing on disk"; MISSING=1; fi
+          done
+          if [ "$MISSING" != "0" ]; then exit 1; fi
+          echo "OK: all referenced scripts present."
