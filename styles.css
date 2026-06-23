@@ -3466,16 +3466,45 @@ footer {
   color: #f8fafc;
   line-height: 1.2;
 }
+/* W476 — stat level-up toast: same shell as the division toast, tinted to the
+   stat's colour (passed via --sl-color). Used for the in-between levels. */
+.habit-toast--statlvl {
+  background: linear-gradient(180deg, rgba(28, 26, 48, 0.98) 0%, rgba(18, 16, 34, 0.98) 100%);
+  border: 1px solid var(--sl-color, rgba(245, 158, 11, 0.55));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55), 0 0 16px -3px var(--sl-color, transparent);
+  padding: 10px 22px;
+  border-radius: 14px;
+  white-space: normal;
+}
+.habit-toast--statlvl .habit-toast-kicker {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--sl-color, var(--gold, #f59e0b));
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.habit-toast--statlvl .habit-toast-value {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #f8fafc;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+.habit-toast--statlvl .stl-lv { color: var(--sl-color, var(--gold, #f59e0b)); }
 /* Reduced-motion: skip the rise transform, keep opacity fade only.
    The base .habit-toast rule applies translateX(-50%) translateY(8px)
    as its non-visible state and removes the Y on .--visible. Override
    both endpoints so the toast simply fades in place. */
 @media (prefers-reduced-motion: reduce) {
-  .habit-toast--division {
+  .habit-toast--division,
+  .habit-toast--statlvl {
     transform: translateX(-50%);
     transition: opacity 0.2s;
   }
-  .habit-toast--division.habit-toast--visible {
+  .habit-toast--division.habit-toast--visible,
+  .habit-toast--statlvl.habit-toast--visible {
     transform: translateX(-50%);
   }
 }

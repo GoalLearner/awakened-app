@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w475'; // W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w476'; // W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22503,6 +22503,14 @@
       levelUpActive = false;
       drainLevelUpQueue();
     }
+    else if (item.type === 'statToast') {
+      // W476 — lightweight stat level-up toast (the in-between levels). Non-blocking
+      // like the sub-rank toast: free the queue lock immediately so trailing items
+      // (milestone modals, achievements) drain without waiting on the fade timer.
+      try { showStatLevelToast(item); } catch (_) {}
+      levelUpActive = false;
+      drainLevelUpQueue();
+    }
     else if (item.type === 'fa_rankup') {
       // v3 Phase 1z.282D — The First Awakened acknowledges the rank
       // advancement and gifts engage souls for the boss tier just
@@ -25895,6 +25903,32 @@
     }, 2800);
   }
 
+  // W476 — lightweight, non-blocking stat level-up toast. Used for the in-between
+  // levels (the milestone levels 5/10/15/20 keep the full modal). Makes a single
+  // habit completion feel like progress — "STR reached Lv.3" in the stat's colour —
+  // without the 1z.276A modal flood. No rank XP here (bonus XP is granted only at
+  // the thresholds, in applyStatPts), so this is purely a celebration, not economy.
+  function showStatLevelToast(item) {
+    const stat = item && item.stat;
+    const level = item && item.level;
+    if (!stat || !level) return;
+    try { document.querySelectorAll('.habit-toast').forEach(t => t.remove()); } catch (_) {}
+    const toast = document.createElement('div');
+    toast.className = 'habit-toast habit-toast--statlvl';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    try { toast.style.setProperty('--sl-color', stat.color); } catch (_) {}
+    toast.innerHTML =
+      '<div class="habit-toast-kicker">Stat Level Up</div>' +
+      '<div class="habit-toast-value">' + esc(stat.label) + ' reached <span class="stl-lv">Lv.' + level + '</span></div>';
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
+    setTimeout(() => {
+      toast.classList.remove('habit-toast--visible');
+      setTimeout(() => { try { toast.remove(); } catch (_) {} }, 300);
+    }, 2200);
+  }
+
   // Brief floating toast anchored near the bottom of the screen.
   // showHabitToast(msg, opts?)
   // opts.onTap   — if provided, the toast becomes a tap target. Tapping
@@ -27607,14 +27641,24 @@
         }
       } catch (_) {}
 
-      // Detect stat level-ups — every level triggers a notification
+      // Detect stat level-ups. W476 — the milestone levels (5/10/15/20, the only
+      // ones that grant bonus rank XP via STAT_BONUS_THRESHOLDS) keep the full
+      // LEVEL UP modal; every in-between level collapses into ONE lightweight,
+      // non-blocking TOAST per stat per completion. Fixes the 1z.276A "modal flood"
+      // (a single tap could cross Lv2/3/4 → three stacked modals) while still making
+      // each stat advance feel acknowledged on a single-habit completion.
       STATS.forEach(st => {
         const oldLv = oldStatLevels[st.id];
         const newLv = statLevel(stats[st.id]?.pts || 0);
+        if (newLv <= oldLv) return;
+        let topMilestone = 0;
         for (let lv = oldLv + 1; lv <= newLv; lv++) {
           const bonusThr = STAT_BONUS_THRESHOLDS.find(t => t.level === lv);
-          levelUpQueue.push({ type: 'stat', stat: st, level: lv, bonusPts: bonusThr ? bonusThr.pts : null });
+          if (bonusThr) { levelUpQueue.push({ type: 'stat', stat: st, level: lv, bonusPts: bonusThr.pts }); topMilestone = lv; }
         }
+        // Toast the final level reached — unless it was itself a milestone modal,
+        // which already owns the moment.
+        if (newLv !== topMilestone) levelUpQueue.push({ type: 'statToast', stat: st, level: newLv });
       });
 
       // v3 Phase 1z.275C — Sub-rank celebration.
