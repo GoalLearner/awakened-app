@@ -28838,6 +28838,20 @@ button.guildhall-summary-tile:active {
 .sc-climb-cta { font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; letter-spacing:1.5px; color:#9090a8; }
 .sc-climb-cta.summit { color:#f5b842; }
 
+/* W488 — home-screen Ranked PvP entry: slim, teal-accented (reads as combat), distinct from
+   the gold Ascent climb banner. Matches the .sc-climb font family (Mono eyebrow + Cinzel title). */
+.sc-pvp-row { margin-top:8px; }
+.sc-pvp-btn { width:100%; box-sizing:border-box; display:flex; align-items:center; gap:13px; padding:12px 16px;
+  border-radius:14px; border:1px solid rgba(45,212,191,0.30);
+  background:linear-gradient(180deg, rgba(45,212,191,0.10), #0e1822); box-shadow:0 6px 16px rgba(0,0,0,0.34);
+  text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform 120ms ease, filter 120ms ease; }
+.sc-pvp-btn:active { transform:scale(0.985); filter:brightness(1.08); }
+.sc-pvp-ico { flex:none; font-size:20px; line-height:1; filter:drop-shadow(0 0 6px rgba(45,212,191,0.4)); }
+.sc-pvp-tx { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+.sc-pvp-eyebrow { font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; letter-spacing:2.5px; color:#2dd4bf; }
+.sc-pvp-title { font-family:"Cinzel",Georgia,serif; font-size:18px; font-weight:700; color:#eafaf6; line-height:1; }
+.sc-pvp-chev { flex:none; font-size:20px; font-weight:700; color:rgba(45,212,191,0.7); }
+
 /* opening challenge overlay (one-time, full-screen) */
 .ao-opening { position:fixed; inset:0; z-index:99000; overflow:hidden; opacity:1;
   background:radial-gradient(120% 70% at 50% 0%, #12122c 0%, #07070f 62%);
