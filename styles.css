@@ -30261,6 +30261,14 @@ button.guildhall-summary-tile:active {
   box-shadow: 0 0 18px rgba(245,184,66,0.35); -webkit-appearance: none; appearance: none;
 }
 .first-win-cta:active { transform: scale(0.98); }
+/* W486 — Field Manual pointer (one-time, chained after the First Mark). Reuses .first-win-card. */
+.fm-pointer-glyph { font-size: 2.4rem; line-height: 1; margin-bottom: 2px; }
+.fm-pointer-later {
+  margin: 12px 0 0; width: 100%; height: 38px; border: none; background: none; cursor: pointer;
+  font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 1.6px;
+  color: #8b88a6; -webkit-appearance: none; appearance: none;
+}
+.fm-pointer-later:active { color: #bdbad6; }
 @media (prefers-reduced-motion: reduce) {
   .first-win-overlay, .first-win-card { animation: none; }
   .first-win-ring { animation: none; }

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=494">
+  <link rel="stylesheet" href="styles.css?v=495">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1047,6 +1047,20 @@
       <h2 id="welcome-back-title" class="first-win-title">Welcome Back</h2>
       <p class="first-win-verse">The chain holds.<br>Today is yours to claim.</p>
       <button id="welcome-back-cta" class="first-win-cta" type="button">LET'S GO</button>
+    </div>
+  </div>
+
+  <!-- W486 — one-time Field Manual pointer, chained after the First Mark so new players
+       discover the manual (which explains Rank/XP/Compound/Stats). Re-openable from
+       Settings → Field Manual. Reuses First Mark overlay styling. -->
+  <div id="fm-pointer-overlay" class="first-win-overlay hidden" aria-hidden="true">
+    <div class="first-win-card fm-pointer-card" role="dialog" aria-labelledby="fm-pointer-title">
+      <div class="fm-pointer-glyph" aria-hidden="true">📖</div>
+      <div class="first-win-eyebrow">THE FIELD MANUAL</div>
+      <h2 id="fm-pointer-title" class="first-win-title">New to the System?</h2>
+      <p class="first-win-verse">Rank, XP, the Compound Effect, your stats —<br>the manual explains it all, plainly.</p>
+      <button id="fm-pointer-read" class="first-win-cta" type="button">READ THE MANUAL</button>
+      <button id="fm-pointer-later" class="fm-pointer-later" type="button">Maybe later</button>
     </div>
   </div>
 
@@ -3059,7 +3073,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=926"></script>
+  <script src="app.js?v=927"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
