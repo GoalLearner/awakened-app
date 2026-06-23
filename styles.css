@@ -28852,6 +28852,12 @@ button.guildhall-summary-tile:active {
 .sc-pvp-title { font-family:"Cinzel",Georgia,serif; font-size:18px; font-weight:700; color:#eafaf6; line-height:1; }
 .sc-pvp-chev { flex:none; font-size:20px; font-weight:700; color:rgba(45,212,191,0.7); }
 
+/* W490 — shared, subtle tappability cue for Status interactive elements (a dim "›"). v1 applies
+   it to the always-tappable class chip; radar dots + conditional rank hero are a careful follow-up. */
+.sc-tap-cue { display:inline-block; margin-left:4px; font-size:0.78em; line-height:1; font-weight:700;
+  color:rgba(255,255,255,0.32); transition:color .18s ease; -webkit-user-select:none; user-select:none; pointer-events:none; }
+.sc-hero-class:active .sc-tap-cue { color:currentColor; }
+
 /* opening challenge overlay (one-time, full-screen) */
 .ao-opening { position:fixed; inset:0; z-index:99000; overflow:hidden; opacity:1;
   background:radial-gradient(120% 70% at 50% 0%, #12122c 0%, #07070f 62%);
