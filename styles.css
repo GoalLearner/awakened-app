@@ -30386,6 +30386,16 @@ button.guildhall-summary-tile:active {
 .coop-friend:active { background: rgba(255,255,255,0.08); }
 .coop-friend-name { color: #fff; font-size: 0.95rem; }
 .coop-friend-go { color: rgba(255,255,255,0.4); font-size: 1.3rem; }
+/* W483 — ally rank gate: rank badge + locked (under-rank) state in the picker */
+.coop-friend-rank { margin-left: auto; margin-right: 10px; font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.06em; color: #f5b842; background: rgba(245,184,66,0.12);
+  border: 1px solid rgba(245,184,66,0.35); border-radius: 6px; padding: 2px 7px;
+  min-width: 22px; text-align: center; }
+.coop-friend--locked { cursor: default; opacity: 0.6; }
+.coop-friend--locked:active { background: rgba(255,255,255,0.04); }
+.coop-friend--locked .coop-friend-rank { color: #9aa0b0; background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15); }
+.coop-friend-need { font-size: 0.72rem; font-weight: 600; color: #e07a7a; letter-spacing: 0.02em; }
 
 /* W371 — co-op card live-state badges (invite discovery) */
 .bcard--coop-invite .bcard-coop-badge {

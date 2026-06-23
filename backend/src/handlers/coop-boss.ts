@@ -392,6 +392,21 @@ export async function handleCoopBossCreate(
     return jsonError(403, 'INSUFFICIENT_RANK', `You must reach ${cfg.rank} rank to summon this hunt.`);
   }
 
+  // W483 — ALLY rank gate (owner design change). Previously the invited partner could be
+  // ANY rank ("they're just helping"); per owner, you may now only pair hunters who BOTH
+  // meet the boss's prerequisite — a C-rank ally can no longer be invited to a B-rank hunt.
+  // Same trust model + source as the summoner gate above (client-authoritative rank in
+  // public_profile_summary; a missing row defaults to E, which matches the client's display).
+  const partnerProf = await env.DB.prepare(
+    'SELECT rank_tier FROM public_profile_summary WHERE user_id = ?',
+  )
+    .bind(partnerUserId)
+    .first<{ rank_tier: string }>();
+  const partnerRank = RANK_ORDER[partnerProf?.rank_tier ?? 'E'] ?? 0;
+  if (partnerRank < bossRank) {
+    return jsonError(403, 'ALLY_RANK', `Your ally must reach ${cfg.rank} rank to join this hunt.`);
+  }
+
   // One live (pending/active) instance per pair+boss, either direction.
   const existing = await env.DB.prepare(
     `SELECT id FROM coop_boss_instances
