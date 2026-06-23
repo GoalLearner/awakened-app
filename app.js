@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w470'; // W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w473'; // W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1702,8 +1702,8 @@
     catch (_) { return {}; }
   }
   function saveBosses(state) {
-    try { localStorage.setItem('hb_bosses', JSON.stringify(state)); } catch (_) {}
-    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('bosses'); } catch (_) {}
+    try { localStorage.setItem('hb_bosses', JSON.stringify(state)); } catch (e) { _logSwallow('saveBosses:persist', e); }
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('bosses'); } catch (e) { _logSwallow('saveBosses:cloudSync', e); }
   }
   // Returns the per-boss state, defaulting to the initial shape if
   // unset. Always returns a valid object — callers don't need to
@@ -3589,8 +3589,8 @@
     return _souls;
   }
   function persistSouls() {
-    try { localStorage.setItem(SOULS_STORAGE_KEY, JSON.stringify(_souls)); } catch (_) {}
-    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('souls'); } catch (_) {}
+    try { localStorage.setItem(SOULS_STORAGE_KEY, JSON.stringify(_souls)); } catch (e) { _logSwallow('persistSouls:persist', e); }
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('souls'); } catch (e) { _logSwallow('persistSouls:cloudSync', e); }
   }
   function getSoulsBalance() {
     if (!_souls) loadSouls();
@@ -3623,7 +3623,7 @@
     // The `source` param (e.g. 'daily_login', 'kill_the_steel_wolf')
     // gets classified into a friendly label inside the helper. Fire
     // AFTER persistSouls so balance_after reflects the new value.
-    try { recordSoulsTransaction(amount, source); } catch (_) {}
+    try { recordSoulsTransaction(amount, source); } catch (e) { _logSwallow('earnSouls:ledger', e); }
     refreshSoulsDisplay();
   }
 
@@ -3637,7 +3637,7 @@
     _souls.totalSpent += amount;
     persistSouls();
     // v3 Phase 1z.44 — record the spend.
-    try { recordSoulsTransaction(-amount, sink); } catch (_) {}
+    try { recordSoulsTransaction(-amount, sink); } catch (e) { _logSwallow('spendSouls:ledger', e); }
     refreshSoulsDisplay();
     return true; // W355 (V2) — charge succeeded
   }
@@ -12547,8 +12547,8 @@
     return _inventory;
   }
   function persistInventory() {
-    try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(_inventory)); } catch (_) {}
-    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('inventory'); } catch (_) {}
+    try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(_inventory)); } catch (e) { _logSwallow('persistInventory:persist', e); }
+    try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('inventory'); } catch (e) { _logSwallow('persistInventory:cloudSync', e); }
   }
   function getInventory() {
     if (!_inventory) loadInventory();
@@ -19822,17 +19822,9 @@
   // habit can never lower the day's XP, at every step including the tier seams.
   // Tiers are by ABSOLUTE missing count and are tunable here. Proof + the
   // per-completion table: tools/sim-compound.js.
-  const COMPOUND_PARTIAL_TIERS = [
-    { maxMissing: 3, factor: 0.50 },   // missing 1–3 → 50%
-    { maxMissing: 8, factor: 0.25 },   // missing 4–8 → 25%
-  ];                                    // missing 0 = full (1.0) · missing 9+ = 0
-  function compoundPartialFactor(missing) {
-    if (missing <= 0) return 1;
-    for (let i = 0; i < COMPOUND_PARTIAL_TIERS.length; i++) {
-      if (missing <= COMPOUND_PARTIAL_TIERS[i].maxMissing) return COMPOUND_PARTIAL_TIERS[i].factor;
-    }
-    return 0;
-  }
+  // W471 — graded compound partial-credit extracted to lib/economy.js (tested).
+  // Thin delegation; the tiers + logic are byte-identical in the tested module.
+  function compoundPartialFactor(missing) { return AwakenedEconomy.compoundPartialFactor(missing); }
 
   // ── PACK HELPERS — generic, work for any packId ────────────
   function getPackById(packId)         { return PACKS.find(p => p.id === packId); }
@@ -20690,6 +20682,21 @@
   let _paeFlushTimer      = null;
   let _paeInflight        = false;
 
+  // W473 — diagnostic logger for the handful of CRITICAL-PATH catch(_) blocks
+  // (local-state persistence + souls/economy writes) that previously swallowed
+  // errors with zero trace. NO-OP in production: it only emits when the user has
+  // opted into diagnostics via localStorage 'hb_debug' === '1'. Behavior is
+  // otherwise unchanged — the error is still swallowed; this just makes a
+  // "my progress didn't save / souls vanished" failure VISIBLE while debugging.
+  // Function declaration (hoisted) so the early persist/earn paths can call it
+  // even though it's defined here. Logging must never throw.
+  function _logSwallow(context, err) {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('hb_debug') === '1') {
+        console.warn('[awakened:swallowed]', context, err);
+      }
+    } catch (_) { /* never let diagnostics break the app */ }
+  }
   // INTENTIONAL twin of _prsLogBreadcrumb (2026-06-12 live session, Richie
   // verdict: keep both) — subsystem-local wrapper; do not flag as duplicate.
   function _paeLog(name, fields) {
@@ -21351,13 +21358,10 @@
     if (!(raw > 0)) return raw || 0;
     if (!dayXpLedger || dayXpLedger.date !== today) dayXpLedger = { date: today, raw: 0 };
     const before = dayXpLedger.raw;
-    const after  = before + raw;
-    const KNEE   = DAILY_XP_SOFT_CAP_KNEE;
-    const fullPortion = Math.max(0, Math.min(after, KNEE) - Math.min(before, KNEE));
-    const overPortion = Math.max(0, after - Math.max(before, KNEE));
-    dayXpLedger.raw = after;
+    dayXpLedger.raw = before + raw;
     try { localStorage.setItem('hb_day_xp_ledger', JSON.stringify(dayXpLedger)); } catch (_) {}
-    return Math.round(fullPortion + overPortion * DAILY_XP_OVER_CAP_RATE);
+    // W471 — paced soft-cap math extracted to lib/economy.js (tested); state stays here.
+    return AwakenedEconomy.pacedDailyXp(raw, before, DAILY_XP_SOFT_CAP_KNEE, DAILY_XP_OVER_CAP_RATE);
   }
 
   function diffPts(diff) {
@@ -21549,31 +21553,13 @@
   }
 
   // ── STATS ─────────────────────────────────────────────────
-  // XP required to advance FROM level `l` TO level `l+1`
-  function xpToNextLevel(l) {
-    // Explicit XP required to go FROM level l TO level l+1 (max level is 20)
-    const TABLE = [5, 15, 30, 50, 75, 105, 140, 180, 225, 275, 330, 390, 455, 525, 600, 680, 765, 855, 950];
-    return (l >= 1 && l <= 19) ? TABLE[l - 1] : 0; // 0 at cap — Level 20 has nowhere to go
-  }
-
-  // Total cumulative XP needed to REACH level `l` (level 1 = 0 XP)
-  function xpForLevel(l) {
-    let total = 0;
-    for (let i = 1; i < l; i++) total += xpToNextLevel(i);
-    return total;
-  }
-
-  function statLevel(pts) {
-    if (!pts || pts <= 0) return 1;
-    let lv = 1, cumXP = 0;
-    while (lv < 20) {
-      const needed = xpToNextLevel(lv);
-      if (pts < cumXP + needed) break;
-      cumXP += needed;
-      lv++;
-    }
-    return lv;
-  }
+  // W471 — the XP curve + stat-level math is extracted to lib/economy.js (loaded
+  // before app.js) so it can be unit-tested in isolation (lib/economy.test.js,
+  // `npm run test:unit`). These are thin delegations — ZERO behavior change; the
+  // implementations are byte-identical copies now living in the tested module.
+  function xpToNextLevel(l) { return AwakenedEconomy.xpToNextLevel(l); }
+  function xpForLevel(l)    { return AwakenedEconomy.xpForLevel(l); }
+  function statLevel(pts)   { return AwakenedEconomy.statLevel(pts); }
 
   function applyStatPts(habit, pts, direction) {
     if (!habit) return;
@@ -40448,7 +40434,7 @@
     // above already guarantees only this device grants, so granting first cannot
     // double-grant.
     const reward = cfg.coopRewardSouls || 0;
-    try { earnSouls(reward, 'coop_' + cfg.id); } catch (_) {}
+    try { earnSouls(reward, 'coop_' + cfg.id); } catch (e) { _logSwallow('coopAward:earnSouls', e); }
     let dropInfo = null;
     try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf'); } catch (_) {}
     try {
@@ -45421,6 +45407,25 @@
       if (e.key === 'Enter' && !confirm.disabled) _confirmName();
     });
     confirm.addEventListener('click', _confirmName);
+
+    // W472 — optional lore primer. A quiet info dot on the naming screen opens a
+    // glossary of the in-world terms (Hunter / Mark / Vow / the System) so a cold
+    // new user gets a foothold without interrupting the cinematic. Opt-in only.
+    const glossOpen  = root.querySelector('#cin-glossary-open');
+    const glossModal = root.querySelector('#cin-glossary');
+    const glossClose = root.querySelector('#cin-glossary-close');
+    if (glossOpen && glossModal) {
+      glossOpen.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        glossModal.classList.remove('hidden');
+        glossModal.setAttribute('aria-hidden', 'false');
+      });
+      const closeGloss = () => { glossModal.classList.add('hidden'); glossModal.setAttribute('aria-hidden', 'true'); };
+      if (glossClose) glossClose.addEventListener('click', closeGloss);
+      glossModal.addEventListener('click', (e) => { if (e.target === glossModal) closeGloss(); });
+      // Escape-to-close, matching the app's modal convention (souls-info, market sheet, etc.).
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !glossModal.classList.contains('hidden')) closeGloss(); });
+    }
 
     function _showNameError(msg, suggested) {
       if (errEl) {

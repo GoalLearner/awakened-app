@@ -24844,6 +24844,56 @@ button.guildhall-summary-tile:active {
    the cinematic flow.
    ═══════════════════════════════════════════════════════════════ */
 
+/* W472 — onboarding lore primer (opt-in glossary on the naming screen). A quiet
+   info dot + a dark centered card, styled to sit inside the cinematic without
+   breaking its mood. */
+.cin-glossary-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin-left: 9px; padding: 0; vertical-align: middle;
+  font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; font-style: italic;
+  color: rgba(245,243,251,0.78); background: rgba(139,92,246,0.16);
+  border: 1px solid rgba(139,92,246,0.55); border-radius: 50%; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .1s ease;
+}
+.cin-glossary-dot:hover  { background: rgba(139,92,246,0.28); border-color: rgba(139,92,246,0.85); }
+.cin-glossary-dot:active { transform: scale(0.92); }
+.cin-glossary {
+  position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center;
+  justify-content: center; padding: 28px;
+  background: rgba(6,5,16,0.84); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+}
+.cin-glossary.hidden { display: none; }
+.cin-glossary-card {
+  width: 100%; max-width: 360px; padding: 26px 24px 22px; border-radius: 20px;
+  background: linear-gradient(180deg, rgba(28,24,52,0.97), rgba(13,11,28,0.98));
+  border: 1px solid rgba(139,92,246,0.34);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 44px rgba(139,92,246,0.12);
+}
+.cin-glossary-kicker {
+  font-family: 'Cinzel', serif; font-size: 0.64rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: rgba(245,184,66,0.85); text-align: center;
+}
+.cin-glossary-title {
+  font-family: 'Cinzel', serif; font-size: 1.4rem; font-weight: 800; color: #f5f3fb;
+  text-align: center; margin: 8px 0 18px;
+}
+.cin-glossary-list { margin: 0; display: flex; flex-direction: column; gap: 13px; }
+.cin-glossary-row dt {
+  font-family: 'Cinzel', serif; font-size: 0.92rem; font-weight: 700; color: #c4b5fd;
+}
+.cin-glossary-row dd {
+  margin: 3px 0 0; font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1rem; line-height: 1.4; color: rgba(245,243,251,0.74);
+}
+.cin-glossary-close {
+  display: block; width: 100%; margin-top: 22px; padding: 13px; border-radius: 13px;
+  font-family: 'Cinzel', serif; font-size: 0.76rem; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #f5f3fb; cursor: pointer;
+  background: linear-gradient(180deg, rgba(139,92,246,0.3), rgba(139,92,246,0.12));
+  border: 1px solid rgba(139,92,246,0.55);
+}
+.cin-glossary-close:active { transform: scale(0.985); }
+
 #cin-onboarding .cin-name-error {
   margin-top: 14px;
   font-family: "Cormorant Garamond", Georgia, serif;

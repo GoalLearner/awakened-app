@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=486">
+  <link rel="stylesheet" href="styles.css?v=487">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -270,7 +270,7 @@
       <div class="halo"></div>
       <span class="sigil breathe rise" id="cin-sig2"></span>
       <div class="kicker rise d1" id="cin-name-kicker" style="margin-top:24px">The system asks</div>
-      <h1 class="title rise d1" id="cin-name-title" style="margin:12px 0 18px">What do they call you?</h1>
+      <h1 class="title rise d1" id="cin-name-title" style="margin:12px 0 18px">What do they call you?<button type="button" id="cin-glossary-open" class="cin-glossary-dot" aria-label="What do these words mean?">i</button></h1>
       <div id="cin-nameInputWrap" class="rise d2">
         <input class="field" id="cin-nameField" maxlength="20" placeholder="hunter name"
                autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
@@ -427,6 +427,23 @@
       </div>
     </section>
 
+    <!-- W472 — optional lore primer. The cinematic introduces several in-world
+         terms (Hunter, Mark, Vow, the System) atmosphere-first; this quiet, opt-in
+         glossary (the info dot on the naming screen) gives a cold new user a
+         foothold WITHOUT breaking the cinematic's flow. Path-to-A: onboarding clarity. -->
+    <div id="cin-glossary" class="cin-glossary hidden" role="dialog" aria-modal="true" aria-labelledby="cin-glossary-title" aria-hidden="true">
+      <div class="cin-glossary-card">
+        <div class="cin-glossary-kicker">The system, in plain words</div>
+        <h2 id="cin-glossary-title" class="cin-glossary-title">Before you begin</h2>
+        <dl class="cin-glossary-list">
+          <div class="cin-glossary-row"><dt>Hunter</dt><dd>You — the one who answered the call to change.</dd></div>
+          <div class="cin-glossary-row"><dt>Mark</dt><dd>A single completed habit. The system counts only what you do.</dd></div>
+          <div class="cin-glossary-row"><dt>Vow</dt><dd>A habit you swear to keep. You choose the days; the chain is your power.</dd></div>
+          <div class="cin-glossary-row"><dt>The System</dt><dd>The quiet law that tracks your discipline and ranks your growth.</dd></div>
+        </dl>
+        <button type="button" id="cin-glossary-close" class="cin-glossary-close">Understood</button>
+      </div>
+    </div>
     <div class="fadeblack" id="cin-fb" aria-hidden="true"></div>
   </div>
 
@@ -3060,7 +3077,8 @@
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
-  <script src="app.js?v=913"></script>
+  <script src="lib/economy.js?v=1"></script>
+  <script src="app.js?v=914"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
