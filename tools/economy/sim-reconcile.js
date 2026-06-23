@@ -29,9 +29,12 @@ function morningCompoundXP(streak) {
   if (streak === 365) return 1000;
   return 300;
 }
-// Mirror of app.js _customFullBonusToday(size): round THEN weekend-double.
-function customFullBonusToday(size, streak, weekend) {
-  const base = Math.round(morningCompoundXP(streak) * E.customCompoundSizeFactor(size));
+// Mirror of app.js _customFullBonusToday(size): round THEN weekend-double. W485 adds the
+// difficulty factor (avgPts defaults to medium=3 -> 1.0x, so every size-reconciliation invariant
+// below is unchanged); pass avgPts to exercise the difficulty tilt.
+function customFullBonusToday(size, streak, weekend, avgPts) {
+  const diffF = E.customCompoundDifficultyFactor(avgPts === undefined ? 3 : avgPts);
+  const base = Math.round(morningCompoundXP(streak) * E.customCompoundSizeFactor(size) * diffF);
   return weekend ? base * 2 : base;
 }
 
@@ -311,6 +314,26 @@ check('W482: a Thursday-sealed date is a WEEKDAY (no x2)',          isWeekendDat
 check('W482: a Saturday-sealed date is a WEEKEND (x2)',            isWeekendDate('2026-06-20') === true);   // 2026-06-20 = Sat
 check('W482: Friday counts as weekend (Fri/Sat/Sun set preserved)', isWeekendDate('2026-06-19') === true);  // 2026-06-19 = Fri
 check('W482: Monday is a weekday',                                  isWeekendDate('2026-06-22') === false); // 2026-06-22 = Mon
+
+// INVARIANT 17 — W485 difficulty tilt: medium UNCHANGED (no inflation), easy<med<legendary,
+// and a mid-day difficulty change reconciles via the SAME clawback as a size change.
+{
+  check('W485: medium routine (avg 3) compound is UNCHANGED vs pre-tilt',
+    customFullBonusToday(10, 30, false, 3) === customFullBonusToday(10, 30, false));
+  const med  = customFullBonusToday(10, 30, false, 3);
+  const easy = customFullBonusToday(10, 30, false, 1);
+  const leg  = customFullBonusToday(10, 30, false, 10);
+  check('W485: easy < medium < legendary compound', easy < med && med < leg, `(${easy},${med},${leg})`);
+  check('W485: easy ~0.7x medium',            Math.abs(easy / med - 0.7) < 0.02, `(${(easy/med).toFixed(3)})`);
+  check('W485: legendary ~1.5x medium (clamped)', Math.abs(leg / med - 1.5) < 0.02, `(${(leg/med).toFixed(3)})`);
+  // A legendary 2/3 partial banked, then the routine becomes all-easy -> the full award reconciles
+  // to the (smaller) easy fullBonus, forcing a NEGATIVE remainder (clawback) so the day never overpays.
+  const partialAtLeg = Math.round(leg * E.customCompoundPartialFactor(7, 10)); // 0.5 of legendary
+  const fullAtEasy   = easy;
+  const remainder    = fullAtEasy - partialAtLeg;
+  check('W485: a difficulty DROP forces a clawback (remainder < 0)', remainder < 0, `(rem ${remainder})`);
+  check('W485: day reconciles to the final (easy) fullBonus, never overpays', partialAtLeg + remainder === fullAtEasy);
+}
 
 // ── W482 review fix — dormant-skip + genuine-absence comeback gate ──────────
 // processStreakRollover now (a) SKIPS a dormant custom streak while the user is on a preset pack
