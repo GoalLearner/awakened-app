@@ -3496,7 +3496,10 @@ footer {
 
 /* W477/W478 — centered partial-compound nudge (replaces the off-screen bottom toast).
    W478: tap-to-continue — a light backdrop captures the tap; no auto-dismiss. */
-.compound-notice-wrap {
+/* W481 — generalized centered "notice card" (was .compound-notice, W477/W478).
+   A reusable middle-of-screen, tap-to-continue card for long/narrative/outcome
+   messages that a bottom toast would clip + auto-dismiss before they're read. */
+.notice-card-wrap {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -3510,8 +3513,8 @@ footer {
   opacity: 0;
   transition: opacity 0.25s ease;
 }
-.compound-notice-wrap--visible { opacity: 1; }
-.compound-notice {
+.notice-card-wrap--visible { opacity: 1; }
+.notice-card {
   width: 100%;
   max-width: 320px;
   padding: 22px 22px 18px;
@@ -3523,33 +3526,43 @@ footer {
   transform: scale(0.94);
   transition: transform 0.25s ease;
 }
-.compound-notice-wrap--visible .compound-notice { transform: scale(1); }
-.compound-notice-top { display: inline-flex; align-items: center; gap: 8px; }
-.compound-notice-top svg { width: 26px; height: 26px; }
-.compound-notice-amt {
+.notice-card-wrap--visible .notice-card { transform: scale(1); }
+/* Tone variants: default = gold (reward/win); loss = crimson; warn = amber. */
+.notice-card-wrap--loss .notice-card {
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(239, 68, 68, 0.10) inset, 0 0 36px rgba(239, 68, 68, 0.16);
+}
+.notice-card-wrap--warn .notice-card {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 158, 11, 0.10) inset, 0 0 36px rgba(245, 158, 11, 0.16);
+}
+.notice-card-head { display: inline-flex; align-items: center; gap: 8px; }
+.notice-card-head svg { width: 26px; height: 26px; }
+.notice-card-ic { font-size: 1.7rem; line-height: 1; }
+.notice-card-amt {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 1.5rem; font-weight: 800; letter-spacing: 0.02em; color: #ffd574;
 }
-.compound-notice-title {
+.notice-card-title {
   font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700;
   letter-spacing: 0.04em; color: #f3f1fb; margin-top: 8px;
 }
-.compound-notice-sub {
+.notice-card-body {
   font-size: 0.86rem; line-height: 1.45; color: var(--text-secondary, #8a8aa8); margin-top: 8px;
 }
-.compound-notice-sub b { color: var(--gold, #f5b842); font-weight: 700; }
-.compound-notice-cont {
+.notice-card-body b { color: var(--gold, #f5b842); font-weight: 700; }
+.notice-card-cont {
   margin-top: 16px;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--text-tertiary, #5a5a76);
-  animation: compound-cont-pulse 1.8s ease-in-out infinite;
+  animation: notice-cont-pulse 1.8s ease-in-out infinite;
 }
-@keyframes compound-cont-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
+@keyframes notice-cont-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
 @media (prefers-reduced-motion: reduce) {
-  .compound-notice { transform: none; transition: opacity 0.2s; }
-  .compound-notice-wrap--visible .compound-notice { transform: none; }
-  .compound-notice-cont { animation: none; opacity: 0.7; }
+  .notice-card { transform: none; transition: opacity 0.2s; }
+  .notice-card-wrap--visible .notice-card { transform: none; }
+  .notice-card-cont { animation: none; opacity: 0.7; }
 }
 /* Reduced-motion: skip the rise transform, keep opacity fade only.
    The base .habit-toast rule applies translateX(-50%) translateY(8px)

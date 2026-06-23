@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w480'; // W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w481'; // W481 — readable centered "notice cards" for long messages that were clipping + flashing by at the screen bottom (Richie's report). Generalized the W477/W478 compound nudge into a reusable showNoticeCard (centered, tap-to-continue, no auto-dismiss, 350ms tap-guard, .notice-card CSS renamed from .compound-notice + loss/warn tone variants). Converted: co-op hunt DEFEAT (was a bare 2.2s bottom toast — the co-op WIN already gets a rich result modal), the Storage-full data-loss warning, Streak Shield earned, and Honest Rest day. Left as quick bottom toasts: all the short status floats (Link copied / X equipped / Now hunting Y / friend + backup + rank-gate confirmations), shield-USED (it staggers multiple per-pack notices on rollover), and solo boss kills (they already show a boss-result modal). W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19947,9 +19947,9 @@
     streakShields[packId] = cur + 1;
     shieldClaimedAt[packId] = newStreak;
     save();
-    if (typeof showHabitToast === 'function') {
-      showHabitToast('Streak Shield earned. You held ' + newStreak + ' straight days.');
-    }
+    // W481 — centered tap-to-continue card (a milestone reward worth reading, not a
+    // 2.2s bottom toast).
+    try { showNoticeCard({ icon: '🛡️', title: 'Streak Shield earned', body: 'You held ' + newStreak + ' straight days.' }); } catch (_) {}
     return true;
   }
 
@@ -20236,11 +20236,15 @@
         if (typeof _addHabitBreadcrumb === 'function') {
           _addHabitBreadcrumb('save-failed', { quota: _isQuota, name: (e && e.name) || 'unknown' });
         }
-        if (!_saveFailureWarned && typeof showHabitToast === 'function') {
+        if (!_saveFailureWarned) {
           _saveFailureWarned = true;
-          showHabitToast(_isQuota
-            ? 'Storage full — recent progress may not be saved. Free up space, or sign in to back up to the cloud.'
-            : 'Could not save progress locally.');
+          // W481 — the quota warning is a long, important data-loss message; surface it
+          // as a centered tap-to-continue card so it can't clip + flash by. The short
+          // generic failure stays a quick toast.
+          try {
+            if (_isQuota) showNoticeCard({ icon: '⚠️', title: 'Storage full', body: 'Recent progress may not be saved. Free up space, or sign in to back up to the cloud.', tone: 'warn' });
+            else if (typeof showHabitToast === 'function') showHabitToast('Could not save progress locally.');
+          } catch (_) {}
         }
       } catch (_) {}
     }
@@ -35002,37 +35006,60 @@
     const baseXP = getCompoundXP(packId, projStreak);
     return isWeekend() ? baseXP * 2 : baseXP;
   }
+  // W481 — centered, tap-to-continue NOTICE CARD. Generalized from the W477/W478
+  // partial-compound nudge: a LONG / NARRATIVE / OUTCOME message belongs in the MIDDLE
+  // of the screen, NOT a bottom toast that clips the text + auto-dismisses before it can
+  // be read (Richie's report). Backdrop + card + a pulsing "Tap to continue" cue; NO
+  // auto-dismiss; a 350ms guard so the tap that triggered it can't carry through and
+  // close it. Use this (not showHabitToast) for any message the user must actually READ.
+  //   opts: { icon (html: emoji/svg), amount (text), title (text),
+  //           body (text) | bodyHtml (trusted html), cta (text='Tap to continue'),
+  //           tone ('loss' | 'warn' | undefined=gold), onClose (fn) }
+  function showNoticeCard(opts) {
+    try {
+      opts = opts || {};
+      try { document.querySelectorAll('.notice-card-wrap').forEach(n => n.remove()); } catch (_) {}
+      const wrap = document.createElement('div');
+      wrap.className = 'notice-card-wrap' + (opts.tone ? ' notice-card-wrap--' + opts.tone : '');
+      wrap.setAttribute('role', 'dialog');
+      wrap.setAttribute('aria-live', 'polite');
+      const head = (opts.icon || opts.amount)
+        ? '<div class="notice-card-head">' +
+            (opts.icon ? '<span class="notice-card-ic">' + opts.icon + '</span>' : '') +
+            (opts.amount ? '<span class="notice-card-amt">' + esc(opts.amount) + '</span>' : '') +
+          '</div>'
+        : '';
+      const body = opts.bodyHtml ? opts.bodyHtml : (opts.body ? esc(opts.body) : '');
+      wrap.innerHTML =
+        '<div class="notice-card">' + head +
+          (opts.title ? '<div class="notice-card-title">' + esc(opts.title) + '</div>' : '') +
+          (body ? '<div class="notice-card-body">' + body + '</div>' : '') +
+          '<div class="notice-card-cont">' + esc(opts.cta || 'Tap to continue') + '</div>' +
+        '</div>';
+      document.body.appendChild(wrap);
+      requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('notice-card-wrap--visible')));
+      const close = () => {
+        wrap.classList.remove('notice-card-wrap--visible');
+        setTimeout(() => { try { wrap.remove(); } catch (_) {} if (typeof opts.onClose === 'function') { try { opts.onClose(); } catch (_) {} } }, 260);
+      };
+      const shownAt = Date.now();
+      wrap.addEventListener('click', () => { if (Date.now() - shownAt < 350) return; close(); });
+    } catch (_) {}
+  }
+
   function _showPartialCompoundToast(packId, xp) {
     try {
       const pack = getPackById(packId);
       // W479 — the custom pack's display name ('Make Your Own') reads oddly inline;
       // call a self-built routine just "routine" in the partial nudge.
       const name = (packId === 'custom') ? 'routine' : (pack ? pack.name : 'routine');
-      // W477/W478 — centered, readable nudge (the old bottom showHabitToast ran off
-      // the screen edge). W478: TAP TO CONTINUE — no auto-dismiss; a light backdrop
-      // captures the tap so a single tap anywhere closes it. Fires once per pack
-      // per day. Matches the app's other tap-to-dismiss celebration modals.
-      try { document.querySelectorAll('.compound-notice-wrap').forEach(n => n.remove()); } catch (_) {}
-      const bolt = (typeof xpIconHtml === 'function') ? xpIconHtml({ size: 26 }) : '⚡';
-      const wrap = document.createElement('div');
-      wrap.className = 'compound-notice-wrap';
-      wrap.setAttribute('role', 'dialog');
-      wrap.setAttribute('aria-live', 'polite');
-      wrap.innerHTML =
-        '<div class="compound-notice">' +
-          '<div class="compound-notice-top">' + bolt + '<span class="compound-notice-amt">+' + xp + ' XP</span></div>' +
-          '<div class="compound-notice-title">Partial ' + esc(name) + ' bonus</div>' +
-          '<div class="compound-notice-sub">Finish all of them to claim the full <b>Compound Effect</b>.</div>' +
-          '<div class="compound-notice-cont">Tap to continue</div>' +
-        '</div>';
-      document.body.appendChild(wrap);
-      requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('compound-notice-wrap--visible')));
-      const close = () => { wrap.classList.remove('compound-notice-wrap--visible'); setTimeout(() => { try { wrap.remove(); } catch (_) {} }, 260); };
-      // Tap anywhere to continue. The handler is attached immediately (so the modal
-      // can never get stuck un-dismissable) but ignores taps in the first 350ms, so
-      // the habit-completion tap that triggered this can't carry through and close it.
-      const shownAt = Date.now();
-      wrap.addEventListener('click', () => { if (Date.now() - shownAt < 350) return; close(); });
+      // W477/W478 centered nudge; W481 routes it through the shared showNoticeCard.
+      showNoticeCard({
+        icon:     (typeof xpIconHtml === 'function') ? xpIconHtml({ size: 26 }) : '⚡',
+        amount:   '+' + xp + ' XP',
+        title:    'Partial ' + name + ' bonus',
+        bodyHtml: 'Finish all of them to claim the full <b>Compound Effect</b>.',
+      });
     } catch (_) {}
   }
 
@@ -35402,8 +35429,9 @@
     if (!_honestPackPending) { closeHonestDayModal(); return; }
     const ok = markTodayAsHonestDay(_honestPackPending);
     closeHonestDayModal();
-    if (ok && typeof showHabitToast === 'function') {
-      showHabitToast('🌙 Honest Rest day marked. Your streak is held.');
+    // W481 — centered tap-to-continue card; a deliberate ritual moment, not a flash.
+    if (ok) {
+      try { showNoticeCard({ icon: '🌙', title: 'Honest Rest day', body: 'Your streak is held.' }); } catch (_) {}
     }
     if (currentTab === 'habits')   renderCompoundProgress();
     if (currentTab === 'profile')  renderProfile();
@@ -40729,8 +40757,17 @@
     const awarded = _loadCoopAwarded();
     if (awarded[inst.id]) return;            // this instance's outcome already handled here
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // a hunt resolves to ONE outcome — win XOR loss
-    const msg = cfg.name + ' bested you — the co-op hunt fell short before the window closed. Rally your ally and call again.';
-    try { if (typeof showHabitToast === 'function') showHabitToast(msg); } catch (_) {}
+    // W481 — centered tap-to-continue card (was a bottom toast that clipped the long
+    // line + flashed by in 2.2s). The co-op WIN already gets a rich result modal; this
+    // gives the DEFEAT a matching readable beat.
+    try {
+      showNoticeCard({
+        icon:  '☠️',
+        title: cfg.name + ' bested you',
+        body:  'The co-op hunt fell short before the window closed. Rally your ally and call again.',
+        tone:  'loss',
+      });
+    } catch (_) {}
     try { playSfx('ar_lose'); } catch (_) {}
     try { _coopLocalNotify('Defeated by ' + cfg.name, 'Your co-op hunt fell short. Rally your ally and call again.'); } catch (_) {}
   }
