@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w478'; // W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w479'; // W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19823,6 +19823,8 @@
       name:    'Make Your Own',
       tagline: 'Your path, your rules',
       color:   '#a855f7',
+      bonusLabel: '⚡ PERSONAL ROUTINE BONUS',   // W479 — custom-path compound celebration
+      packLabel:  'Personal Routine Bonus',
       habits:  [],
     },
   ];
@@ -21351,6 +21353,12 @@
         xp += _compoundPartialGiven(packId);   // W459 — graded partial credit counts toward today's XP
       }
     });
+    // W479 — the custom-path compound ledger holds the EXACT XP paid today: partials
+    // accumulate, and the full award RECONCILES it to fullBonus and KEEPS it (never
+    // clears to 0). Read it directly rather than re-deriving from the live routine size
+    // — the user can change that size after the award, which made most_xp_day report a
+    // different (non-monotonic) value than was actually credited to totalPoints.
+    xp += _compoundPartialGiven('custom');
     return xp;
   }
 
@@ -27726,7 +27734,7 @@
       }
     }
 
-    if (!wasDone) checkCompoundEffect(id);
+    if (!wasDone) { checkCompoundEffect(id); checkCustomRoutineCompound(); }
     renderRank();
     updateProgress();
     checkPerfectDay();
@@ -34973,7 +34981,9 @@
   function _showPartialCompoundToast(packId, xp) {
     try {
       const pack = getPackById(packId);
-      const name = pack ? pack.name : 'routine';
+      // W479 — the custom pack's display name ('Make Your Own') reads oddly inline;
+      // call a self-built routine just "routine" in the partial nudge.
+      const name = (packId === 'custom') ? 'routine' : (pack ? pack.name : 'routine');
       // W477/W478 — centered, readable nudge (the old bottom showHabitToast ran off
       // the screen edge). W478: TAP TO CONTINUE — no auto-dismiss; a light backdrop
       // captures the tap so a single tap anywhere closes it. Fires once per pack
@@ -35025,6 +35035,7 @@
       const alreadyGiven = _compoundPartialGiven(packId);
       const delta = targetCumulative - alreadyGiven;
       if (delta <= 0) return;                                // already credited at this (or a higher) tier
+      _refundOrphanCustomCompound();                         // W479 — pack supersedes any custom credit banked earlier today (no double-dip)
       totalPoints += delta;
       _setCompoundPartialGiven(packId, targetCumulative);
       prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + delta);
@@ -35047,6 +35058,7 @@
 
     compoundStreaks[packId]  = { streak: newStreak, lastDate: today };
     compoundAwarded[packId]  = today;
+    _refundOrphanCustomCompound();   // W479 — pack supersedes any custom credit banked earlier today (no double-dip on a mid-day flip into a pack)
 
     const baseXP    = getCompoundXP(packId, newStreak);
     const fullBonus = isWeekend() ? baseXP * 2 : baseXP;   // the full compound — what the celebration shows
@@ -35083,6 +35095,148 @@
     drainBonusPopupQueue();
   }
 
+  // ── W479 — CUSTOM-PATH COMPOUND ──────────────────────────────────
+  // The pack Compound Effect rewards consistency, but a user who builds their OWN
+  // routine matches no preset pack and earned ZERO compound — the two-tier economy
+  // gap (pack users reach S+ ~45d, custom-path ~1,400d). This pays a daily compound
+  // for completing a SELF-BUILT routine, on the SAME Morning streak curve, scaled by
+  // routine size (full Morning rate at 10+ habits, proportionally less below, capped
+  // there — the curated Locked-In cycle stays the premium). It is SELF-CONTAINED:
+  // reuses the generic compoundStreaks/Awarded/Partial['custom'] ledgers (already
+  // persisted) and mirrors checkCompoundEffect's W459 graded partial credit so a
+  // near-complete custom day never pays zero (no re-introduced compound cliff).
+  // Fires ONLY when the user is NOT on a preset pack (no double-dip) and runs a
+  // routine of >= CUSTOM_COMPOUND_MIN_HABITS scheduled habits.
+  const CUSTOM_COMPOUND_PACK_ID    = 'custom';
+  const CUSTOM_COMPOUND_MIN_HABITS = 3;
+
+  // True when the user already earns a preset-pack compound — in which case the
+  // custom path stands down so the two never both pay (no double-dip).
+  function _onPresetPack() {
+    return userHasAllPackHabits('morning') || userHasAllPackHabits('locked-in');
+  }
+  // Today's self-built routine = all habits scheduled today; done = those checked.
+  function _customRoutineProgress() {
+    const todayHabits = habits.filter(isScheduledToday);
+    const done = todayHabits.filter(h => isChecked(h.id)).length;
+    return { done, total: todayHabits.length };
+  }
+  // The full custom compound this routine WOULD pay if completed right now — the
+  // EXACT base awardCustomRoutineCompound uses (streak-projected Morning curve ×
+  // size factor × weekend), so partial fractions + the full remainder reconcile to it.
+  function _customFullBonusToday(size) {
+    const cs = compoundStreaks[CUSTOM_COMPOUND_PACK_ID] || { streak: 0, lastDate: null };
+    const projStreak = (cs.lastDate === prevDay(today)) ? (cs.streak + 1) : 1;
+    const baseXP = Math.round(getCompoundXP('morning', projStreak) * AwakenedEconomy.customCompoundSizeFactor(size));
+    return isWeekend() ? baseXP * 2 : baseXP;
+  }
+
+  // W479 review fix — pack compound SUPERSEDES the custom-path compound. If the user
+  // banked custom credit earlier today (a partial, OR a full award) and THEN completes a
+  // preset pack, that custom credit is orphaned — refund it so the day nets EXACTLY the
+  // pack compound, never both (covers a mid-day flip INTO a pack). The custom path's own
+  // latch (below) covers the reverse flip OUT of a pack; both sides are required because
+  // either compound can pay first. Called from the pack payment paths.
+  function _refundOrphanCustomCompound() {
+    const orphan = _compoundPartialGiven(CUSTOM_COMPOUND_PACK_ID);
+    if (orphan > 0) {
+      totalPoints = Math.max(0, totalPoints - orphan);
+      _setCompoundPartialGiven(CUSTOM_COMPOUND_PACK_ID, 0);
+      compoundAwarded[CUSTOM_COMPOUND_PACK_ID] = null;   // a superseded custom day is no longer an awarded custom day
+      // W479 review fix — if a FULL custom routine was awarded today (streak advanced
+      // with the prev snapshot), roll the streak back too, so a pack-superseded day does
+      // NOT leave the custom streak inflated (which would pay the next custom-only day at
+      // a higher tier). Partial-only orphans never advanced the streak (no prevStreak /
+      // lastDate!==today), so this correctly no-ops there.
+      const ccs = compoundStreaks[CUSTOM_COMPOUND_PACK_ID];
+      if (ccs && ccs.lastDate === today && Object.prototype.hasOwnProperty.call(ccs, 'prevStreak')) {
+        compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: ccs.prevStreak || 0, lastDate: ccs.prevLastDate || null };
+      }
+    }
+  }
+
+  function checkCustomRoutineCompound() {
+    try {
+      if (_onPresetPack()) return;                                   // pack users already covered — no double-dip
+      // Symmetric day-scoped latch (review fix): _onPresetPack() is a point-in-time read
+      // of MUTABLE habit composition. If a preset pack has already PAID or partially paid
+      // today, the custom path must stand down for the rest of the day even if the user
+      // then drops a pack habit (flipping _onPresetPack() back to false) — otherwise a
+      // full custom compound stacks on the already-latched pack compound.
+      if (compoundAwarded['morning'] === today || compoundAwarded['locked-in'] === today) return;
+      if (_compoundPartialGiven('morning') > 0 || _compoundPartialGiven('locked-in') > 0) return;
+      if (compoundAwarded[CUSTOM_COMPOUND_PACK_ID] === today) return;// already full-awarded today
+      const { done, total } = _customRoutineProgress();
+      if (total < CUSTOM_COMPOUND_MIN_HABITS) return;                // not a routine
+      if (done <= 0) return;
+      if (done >= total) { awardCustomRoutineCompound(total); return; } // FULL — reconciles + streak++
+
+      // W459-parity graded partial credit, RECONCILED to the CURRENT routine size on every
+      // tick: target = fullBonusToday(size) × factor(done/size). Pay the positive delta; if
+      // the routine SHRANK since an earlier partial (target now lower — a larger partial was
+      // banked at a bigger size factor), claw the excess back so the banked credit always
+      // matches what the CURRENT routine warrants (no inflate-then-shrink overpay). The
+      // ledger thus always holds the exact custom XP paid today.
+      const factor = AwakenedEconomy.customCompoundPartialFactor(done, total);
+      const targetCumulative = factor > 0 ? Math.round(_customFullBonusToday(total) * factor) : 0;
+      const alreadyGiven = _compoundPartialGiven(CUSTOM_COMPOUND_PACK_ID);
+      const delta = targetCumulative - alreadyGiven;
+      if (delta === 0) return;                                       // already at the warranted tier
+      totalPoints = Math.max(0, totalPoints + delta);                // delta < 0 = shrink clawback
+      _setCompoundPartialGiven(CUSTOM_COMPOUND_PACK_ID, targetCumulative);
+      if (delta > 0) prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + delta);
+      save();
+      renderRank();
+      if (currentTab === 'profile') renderProfile();
+      try { renderCompoundProgress(); } catch (_) {}
+      try { prUpdate('most_xp_day', computeTodayXP()); } catch (_) {}
+      if (delta > 0 && alreadyGiven === 0) _showPartialCompoundToast(CUSTOM_COMPOUND_PACK_ID, delta); // one nudge per day
+    } catch (_) {}
+  }
+
+  function awardCustomRoutineCompound(size) {
+    const cs        = compoundStreaks[CUSTOM_COMPOUND_PACK_ID] || { streak: 0, lastDate: null };
+    const yesterday = prevDay(today);
+    const newStreak = cs.lastDate === yesterday ? cs.streak + 1 : 1;
+
+    // W479 review fix — carry the PRE-award streak so _refundOrphanCustomCompound can
+    // roll it back if a preset pack later supersedes this day (else a refunded full-custom
+    // day would still advance the streak, paying the next custom-only day at an inflated
+    // tier). Embedded in the persisted compoundStreaks entry (survives a mid-day reload),
+    // mirroring perfectStreak's prevCount/prevLastDate pattern.
+    compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: newStreak, lastDate: today, prevStreak: cs.streak || 0, prevLastDate: cs.lastDate || null };
+    compoundAwarded[CUSTOM_COMPOUND_PACK_ID] = today;
+
+    const baseXP    = Math.round(getCompoundXP('morning', newStreak) * AwakenedEconomy.customCompoundSizeFactor(size));
+    const fullBonus = isWeekend() ? baseXP * 2 : baseXP;
+    // Reconcile to EXACTLY fullBonus at the CURRENT routine size. The remainder is
+    // normally positive (the full path tops up any graded partial already paid today, so
+    // a perfect day nets fullBonus). It can be NEGATIVE if a larger partial was banked
+    // earlier today and the routine then SHRANK (size factor dropped) — then we claw the
+    // excess back so an inflate-then-shrink can never bank more than the final routine
+    // warrants. The ledger KEEPS the exact amount paid (not cleared to 0) so computeTodayXP
+    // reads it instead of re-deriving from a mutable live size.
+    const alreadyPaid = _compoundPartialGiven(CUSTOM_COMPOUND_PACK_ID);
+    const remainder   = fullBonus - alreadyPaid;
+    totalPoints = Math.max(0, totalPoints + remainder);   // compound is EXEMPT from the daily cap (matches packs); remainder<0 = shrink clawback
+    _setCompoundPartialGiven(CUSTOM_COMPOUND_PACK_ID, fullBonus);
+
+    save();
+    renderRank();
+    if (currentTab === 'profile') renderProfile();
+    renderCompoundProgress();
+    try { prUpdate('most_xp_day', computeTodayXP()); } catch (_) {}
+    if (remainder > 0) prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + remainder);
+
+    _bonusPopupQueue.push({
+      packId:    CUSTOM_COMPOUND_PACK_ID,
+      newStreak,
+      finalXP:   fullBonus,        // celebration shows the FULL compound, not the remainder
+      doubled:   isWeekend(),
+    });
+    drainBonusPopupQueue();
+  }
+
   function drainBonusPopupQueue() {
     if (_bonusPopupActive || !_bonusPopupQueue.length) return;
     const item = _bonusPopupQueue.shift();
@@ -35094,6 +35248,7 @@
     const pack = getPackById(packId);
     if (!pack) { _bonusPopupActive = false; return; }
     const isLockedIn = packId === 'locked-in';
+    const isCustom   = packId === CUSTOM_COMPOUND_PACK_ID;   // W479 — self-built routine
 
     // Pack-specific copy
     const labelEl = document.getElementById('cp-label');
@@ -35101,7 +35256,9 @@
     document.getElementById('cp-pack-msg').textContent =
       isLockedIn
         ? 'All 16 habits complete. You owned the day.'
-        : 'All ' + pack.name + ' habits complete!';
+        : isCustom
+          ? 'Your whole routine, complete. The compound effect is yours.'
+          : 'All ' + pack.name + ' habits complete!';
     document.getElementById('cp-xp').textContent     = '+' + xp + ' XP' + (doubled ? ' 2×' : '');
     document.getElementById('cp-streak').innerHTML = streakify('Day ' + streak + ' in a row 🔥', 18);
     document.getElementById('cp-motivation').textContent = getCompoundMotivation(streak);

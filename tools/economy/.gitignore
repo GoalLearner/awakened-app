@@ -1,0 +1,4 @@
+# Generated simulation artifacts — re-created by sim-twotier.js / chart.py.
+# The committed scripts regenerate all of these; don't track the outputs.
+sim-twotier.json
+twotier.png
