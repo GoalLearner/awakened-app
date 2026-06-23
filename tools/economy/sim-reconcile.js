@@ -204,5 +204,132 @@ function packSupersede(h, day, packFull) {                 // mirror _refundOrph
   check('partial-orphan: streak untouched (no full award)', h.custom.streak === 5 && h.custom.lastDate === 0, `(streak ${h.custom.streak})`);
 }
 
+// ── W482 — shield + rollover + strip + backfill-date invariants ─────────────
+// Finishing W479: the custom path must be a TRUE PEER of the packs. Model the FORGIVENESS
+// lifecycle (mirrors tryEarnShield + processStreakRollover) so the parity is PROVEN: a shielded
+// miss preserves the custom streak exactly like a pack, and the strip shows the right state.
+const W482_SHIELD_THRESHOLD = 14, W482_SHIELD_MAX = 3;
+function newShieldHunter() { return { custom: { streak: 0, lastDate: null }, shields: 0, shieldClaimedAt: 0 }; }
+function tryEarnShieldM(h, newStreak) {                       // mirror app.js tryEarnShield (pack-agnostic)
+  if (newStreak < W482_SHIELD_THRESHOLD) return false;
+  if (newStreak % W482_SHIELD_THRESHOLD !== 0) return false;
+  if (newStreak <= h.shieldClaimedAt) return false;
+  if (h.shields >= W482_SHIELD_MAX) { h.shieldClaimedAt = newStreak; return false; }
+  h.shields += 1; h.shieldClaimedAt = newStreak; return true;
+}
+function awardCustomShieldDay(h, day) {                       // mirror awardCustomRoutineCompound (streak + snapshot + earn)
+  const cs = h.custom;
+  const newStreak = (cs.lastDate === day - 1) ? cs.streak + 1 : 1;
+  h.custom = { streak: newStreak, lastDate: day, prevStreak: cs.streak || 0, prevLastDate: cs.lastDate,
+               prevShields: h.shields, prevShieldClaimed: h.shieldClaimedAt };
+  tryEarnShieldM(h, newStreak);
+}
+function rolloverCustomM(h, today) {                          // mirror processStreakRollover for 'custom'
+  const cs = h.custom;
+  if (!cs || cs.lastDate == null || cs.streak === 0) return;
+  if (cs.lastDate === today || cs.lastDate === today - 1) return;
+  let cursor = cs.lastDate + 1, broken = false;
+  while (cursor < today) {
+    if (h.shields > 0) { h.shields -= 1; cs.lastDate = cursor; cursor++; continue; }   // Honest-Rest omitted (same absorb mechanism)
+    broken = true; break;
+  }
+  if (broken) { cs.streak = 0; cs.lastDate = null; }
+}
+
+// INVARIANT 11 — a SHIELDED miss PRESERVES the custom streak (the owner's #1 parity test).
+{
+  const h = newShieldHunter();
+  for (let d = 1; d <= 14; d++) awardCustomShieldDay(h, d);   // 14-day streak earns 1 shield at day 14
+  check('W482: shield earned at the 14-day custom milestone', h.shields === 1, `(${h.shields})`);
+  check('W482: custom streak is 14', h.custom.streak === 14);
+  rolloverCustomM(h, 16);                                     // missed day 15; app opens on day 16
+  check('W482: shielded miss CONSUMED a shield', h.shields === 0, `(${h.shields})`);
+  check('W482: shielded miss PRESERVED the custom streak (held at 14)', h.custom.streak === 14 && h.custom.lastDate === 15, `(streak ${h.custom.streak}, last ${h.custom.lastDate})`);
+  awardCustomShieldDay(h, 16);                                // complete day 16 → continues
+  check('W482: custom streak CONTINUES after a shielded miss', h.custom.streak === 15, `(${h.custom.streak})`);
+}
+// INVARIANT 12 — an UNSHIELDED miss breaks the custom streak (same as a pack).
+{
+  const h = newShieldHunter();
+  for (let d = 1; d <= 5; d++) awardCustomShieldDay(h, d);    // streak 5, < 14 so no shield
+  check('W482: no shield before the 14-day threshold', h.shields === 0);
+  rolloverCustomM(h, 7);                                      // missed day 6, no shield → break
+  check('W482: UNshielded miss BREAKS the custom streak', h.custom.streak === 0 && h.custom.lastDate === null);
+}
+// INVARIANT 13 — the strip shows the custom row ONLY on the custom path (the owner's #2 test).
+function stripShowsCustomRow(onPresetPack, total) { return !onPresetPack && total >= 3; }   // mirror renderCompoundProgress onCustom gate
+check('W482: strip SHOWS the custom row on the custom path (>=3 habits)', stripShowsCustomRow(false, 5) === true);
+check('W482: strip shows NO custom row on a preset pack (no phantom)', stripShowsCustomRow(true, 12) === false);
+check('W482: strip shows NO custom row for a <3-habit non-pack user', stripShowsCustomRow(false, 2) === false);
+// INVARIANT 14 — stale pre-W482 save (no prevStreak) refund neutralizes the streak inflation.
+function refundOrphanStreak(ccs, today) {                     // mirror _refundOrphanCustomCompound streak block
+  if (!(ccs && ccs.lastDate === today)) return ccs;
+  if (Object.prototype.hasOwnProperty.call(ccs, 'prevStreak')) {
+    return { streak: ccs.prevStreak || 0, lastDate: ccs.prevLastDate || null };
+  }
+  return { streak: Math.max(0, (ccs.streak || 0) - 1), lastDate: null };
+}
+{
+  const stale = refundOrphanStreak({ streak: 8, lastDate: 100 }, 100);             // pre-W482: no prevStreak
+  check('W482: stale-save refund neutralizes inflation (8->7, lastDate null)', stale.streak === 7 && stale.lastDate === null, `(${stale.streak},${stale.lastDate})`);
+  const fresh = refundOrphanStreak({ streak: 8, lastDate: 100, prevStreak: 7, prevLastDate: 99 }, 100);
+  check('W482: post-W482 refund exact rollback to prevStreak (8->7, last 99)', fresh.streak === 7 && fresh.lastDate === 99);
+}
+// INVARIANT 15 — a milestone day that earned a shield then got superseded rolls the shield back.
+{
+  const h = newShieldHunter();
+  for (let d = 1; d <= 14; d++) awardCustomShieldDay(h, d);   // earns a shield at day 14; snapshot prevShields=0
+  check('W482: pre-supersede shield present', h.shields === 1);
+  const ccs = h.custom;                                       // {streak:14,lastDate:14,prevStreak:13,prevShields:0,...}
+  if (ccs.lastDate === 14 && 'prevStreak' in ccs) {           // mirror the refund's streak+shield rollback
+    h.custom = { streak: ccs.prevStreak, lastDate: ccs.prevLastDate };
+    if ('prevShields' in ccs) { h.shields = ccs.prevShields; h.shieldClaimedAt = ccs.prevShieldClaimed; }
+  }
+  check('W482: superseded milestone rolls back the phantom shield AND streak', h.shields === 0 && h.custom.streak === 13, `(shields ${h.shields}, streak ${h.custom.streak})`);
+}
+// INVARIANT 16 — diffPts weekend now reflects the SEALED date, not today (the backfill bug).
+function isWeekendDate(dateStr) {                             // mirror app.js isWeekend(dateStr) LA-anchored 'T20:00:00Z'
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(Date.parse(dateStr + 'T20:00:00Z')));
+  return day === 'Fri' || day === 'Sat' || day === 'Sun';
+}
+check('W482: a Thursday-sealed date is a WEEKDAY (no x2)',          isWeekendDate('2026-06-18') === false);  // 2026-06-18 = Thu
+check('W482: a Saturday-sealed date is a WEEKEND (x2)',            isWeekendDate('2026-06-20') === true);   // 2026-06-20 = Sat
+check('W482: Friday counts as weekend (Fri/Sat/Sun set preserved)', isWeekendDate('2026-06-19') === true);  // 2026-06-19 = Fri
+check('W482: Monday is a weekday',                                  isWeekendDate('2026-06-22') === false); // 2026-06-22 = Mon
+
+// ── W482 review fix — dormant-skip + genuine-absence comeback gate ──────────
+// processStreakRollover now (a) SKIPS a dormant custom streak while the user is on a preset pack
+// (frozen — no break/shield-spend/toast), and (b) queues a Comeback ONLY on a genuine absence
+// (lastActiveDate strictly before yesterday), so an active path-switcher gets no phantom +25 XP.
+function rolloverCustomFull(h, today, onPresetPack, lastActiveDate) {
+  if (onPresetPack) return { broken: false, comebackQueued: false };         // (a) dormant skip
+  const cs = h.custom;
+  if (!cs || cs.lastDate == null || cs.streak === 0) return { broken: false, comebackQueued: false };
+  if (cs.lastDate === today || cs.lastDate === today - 1) return { broken: false, comebackQueued: false };
+  let cursor = cs.lastDate + 1, broken = false;
+  while (cursor < today) { if (h.shields > 0) { h.shields--; cs.lastDate = cursor; cursor++; continue; } broken = true; break; }
+  if (!broken) return { broken: false, comebackQueued: false };
+  cs.streak = 0; cs.lastDate = null;                                          // streak still breaks
+  const comebackQueued = (lastActiveDate != null && lastActiveDate < today - 1);  // (b) genuine-absence gate
+  return { broken: true, comebackQueued };
+}
+// INVARIANT 17 — a dormant custom streak is FROZEN on a preset pack (no break / shield spend / comeback).
+{
+  const h = newShieldHunter(); h.custom = { streak: 20, lastDate: 10 }; h.shields = 2;
+  const r = rolloverCustomFull(h, 16, true, 15);
+  check('W482: dormant custom FROZEN on a pack — no break, shields preserved', !r.broken && h.custom.streak === 20 && h.shields === 2);
+  check('W482: dormant custom FROZEN on a pack — no comeback', !r.comebackQueued);
+}
+// INVARIANT 18 — comeback gate: an ACTIVE custom user whose streak breaks gets NO comeback;
+// a genuinely-ABSENT one does.
+{
+  const ha = newShieldHunter(); ha.custom = { streak: 20, lastDate: 10 }; ha.shields = 0;
+  const ra = rolloverCustomFull(ha, 16, false, 15);   // active yesterday (day 15), today 16
+  check('W482: ACTIVE switcher — custom streak breaks but NO phantom comeback', ra.broken && !ra.comebackQueued);
+  const hb = newShieldHunter(); hb.custom = { streak: 20, lastDate: 10 }; hb.shields = 0;
+  const rb = rolloverCustomFull(hb, 16, false, 10);   // last active day 10 (genuinely away)
+  check('W482: genuinely-ABSENT user — custom streak breaks AND comeback fires', rb.broken && rb.comebackQueued);
+}
+
 console.log('\nsim-reconcile: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

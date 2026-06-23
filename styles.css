@@ -5387,7 +5387,6 @@ footer {
    slot without any glyph. Collapsing the empty containers prevents
    awkward whitespace where the emoji used to sit. */
 .ach-popup-icon:empty,
-.cw-icon:empty,
 .bi-icon:empty {
   display: none;
 }
@@ -5437,7 +5436,6 @@ footer {
 .lib-pack-bolt:has(.xp-icon-img),
 .cp-prog-bolt:has(.xp-icon-img),
 .path-card-emoji:has(.xp-icon-img),
-.cw-icon:has(.xp-icon-img),
 .bi-icon:has(.xp-icon-img),
 .streaks-row-icon:has(.xp-icon-img) {
   font-size: 0;
@@ -8580,93 +8578,8 @@ footer {
   opacity: 0.88;
 }
 
-/* ── Make Your Own warning popup ── */
-.custom-warning-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 24px;
-  animation: cw-fade 0.22s ease-out;
-}
-.custom-warning-overlay.hidden { display: none !important; }
-@keyframes cw-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.cw-card {
-  background: linear-gradient(160deg, #1a1a2e 0%, #14142a 100%);
-  border: 1.5px solid rgba(245, 158, 11, 0.35);
-  box-shadow: 0 0 40px rgba(245, 158, 11, 0.18), 0 12px 40px rgba(0, 0, 0, 0.6);
-  border-radius: 22px;
-  padding: 28px 24px 22px;
-  max-width: 360px;
-  width: 100%;
-  text-align: center;
-  animation: cw-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes cw-pop {
-  from { opacity: 0; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.cw-icon {
-  font-size: 2.4rem;
-  margin-bottom: 8px;
-  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.5));
-}
-.cw-title {
-  font-size: 1.3rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: #fff;
-  margin-bottom: 14px;
-}
-.cw-body {
-  font-size: 0.92rem;
-  color: rgba(255, 255, 255, 0.78);
-  line-height: 1.55;
-  margin-bottom: 22px;
-}
-.cw-highlight {
-  color: #f59e0b;
-  font-weight: 700;
-}
-
-.cw-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.cw-btn {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  -webkit-appearance: none;
-  transition: transform 0.1s, opacity 0.2s;
-}
-.cw-btn:active { transform: scale(0.97); opacity: 0.9; }
-.cw-btn-primary {
-  background: #f59e0b;
-  color: #1a1505;
-}
-.cw-btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
+/* W482 — the "Make Your Own warning popup" (.custom-warning-overlay / .cw-card / .cw-* )
+   was removed with the stale pre-W479 two-tier scare modal (showCustomWarning). */
 
 /* Flash overlay for path → onboarding transition */
 .path-flash-overlay {

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w481'; // W481 — readable centered "notice cards" for long messages that were clipping + flashing by at the screen bottom (Richie's report). Generalized the W477/W478 compound nudge into a reusable showNoticeCard (centered, tap-to-continue, no auto-dismiss, 350ms tap-guard, .notice-card CSS renamed from .compound-notice + loss/warn tone variants). Converted: co-op hunt DEFEAT (was a bare 2.2s bottom toast — the co-op WIN already gets a rich result modal), the Storage-full data-loss warning, Streak Shield earned, and Honest Rest day. Left as quick bottom toasts: all the short status floats (Link copied / X equipped / Now hunting Y / friend + backup + rank-gate confirmations), shield-USED (it staggers multiple per-pack notices on rollover), and solo boss kills (they already show a boss-result modal). W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w482'; // W482 — finish W479: make the custom-path compound a TRUE PEER of the preset packs (the B− re-grade's #1 finding — custom was structurally fragile for identical effort). (1) STREAK SHIELD: awardCustomRoutineCompound now earns a shield at each 14-day milestone (tryEarnShield) + snapshots prevShields; processStreakRollover iterates a new FORGIVENESS_PACK_IDS (['morning','locked-in','custom']) so a missed custom day CONSUMES a shield / Honest-Rest and holds the streak, else breaks it — identical to a pack. (2) PERSISTENT STRIP: renderCompoundProgress shows a "Your Routine" row (Day-N + shield + Rest chips) for custom-path users (gated !_onPresetPack && >=3 habits; suppresses the misleading partial-pack nudge; no phantom row on a preset pack). (3) RETIRED showCustomWarning — the stale "custom gets no bonus, switch to Morning" onboarding scare (+ neutralized the path-note copy + removed the dead modal/CSS). BUGS: (4) _refundOrphanCustomCompound now neutralizes a pre-W482 stale-save streak-inflation (prevStreak-absent -> streak-1, reload-safe) + rolls back a phantom shield on a superseded milestone; (5) diffPts/isWeekend take the COMPLETION's date so a historical/backfilled seal uses that day's weekend x2, not today's (LA-anchored). 18 new sim-reconcile invariants (115 total) prove a shielded miss preserves the custom streak + the strip state. W481 — readable centered "notice cards" for long messages that were clipping + flashing by at the screen bottom (Richie's report). Generalized the W477/W478 compound nudge into a reusable showNoticeCard (centered, tap-to-continue, no auto-dismiss, 350ms tap-guard, .notice-card CSS renamed from .compound-notice + loss/warn tone variants). Converted: co-op hunt DEFEAT (was a bare 2.2s bottom toast — the co-op WIN already gets a rich result modal), the Storage-full data-loss warning, Streak Shield earned, and Honest Rest day. Left as quick bottom toasts: all the short status floats (Link copied / X equipped / Now hunting Y / friend + backup + rank-gate confirmations), shield-USED (it staggers multiple per-pack notices on rollover), and solo boss kills (they already show a boss-result modal). W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18627,8 +18627,15 @@
     return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date());
   }
 
-  function isWeekend() {
-    const day = getTodayDayName();
+  function isWeekend(dateStr) {
+    // W482 — optional date. The weekend ×2 must reflect the LA weekday of THE COMPLETION's date,
+    // not always today (the historical-backfill path credited a PAST date at today's rate — a
+    // weekday seal evaluated on a weekend over-doubled, and vice-versa). When a date is given,
+    // resolve its LA weekday with the SAME 'T20:00:00Z' anchor prevDay() uses: timezone-
+    // independent (UTC-anchored instant), lands squarely inside the LA day, no bare-date slip.
+    const day = dateStr
+      ? new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(Date.parse(dateStr + 'T20:00:00Z')))
+      : getTodayDayName();
     return day === 'Fri' || day === 'Sat' || day === 'Sun';
   }
 
@@ -19858,6 +19865,14 @@
   // shows first, then the Locked-In Bonus modal queues behind it.
   const BONUS_PACK_IDS = ['morning', 'locked-in'];
 
+  // W482 — the FORGIVENESS lifecycle (Streak Shield earn/consume + Honest-Rest absorption in
+  // processStreakRollover) applies to the custom path too, so a missed custom day is protected
+  // identically to a pack. This is a SEPARATE list on purpose: 'custom' must NOT join
+  // BONUS_PACK_IDS (that drives the strip rows, computeTodayXP's compound loop, and PR hooks —
+  // adding it there would phantom-row + double-count). Literal 'custom' (not the const, which is
+  // declared later) to avoid a TDZ at module-eval.
+  const FORGIVENESS_PACK_IDS = ['morning', 'locked-in', 'custom'];
+
   // ── W459 — GRADED COMPOUND CREDIT ─────────────────────────
   // A near-complete pack no longer pays ZERO. It earns a fraction of THAT
   // day's full compound bonus, by how many pack habits are still MISSING.
@@ -19958,7 +19973,12 @@
   // yesterday, absorbing each via Honest Day or Shield. If absorption
   // fails, the streak breaks and a comeback flag is queued.
   function processStreakRollover() {
-    BONUS_PACK_IDS.forEach(packId => {
+    FORGIVENESS_PACK_IDS.forEach(packId => {   // W482 — includes 'custom' so a missed custom day consumes a shield / Honest-Rest, same as a pack
+      // W482 review fix — a custom streak is DORMANT while the user is on a preset pack (the custom
+      // compound is latched off then). Don't roll it over: leave it frozen — preserve earned shields,
+      // no shield-used toasts, no break — for a routine they aren't currently running. It resets
+      // naturally on the next custom award if there was a real gap.
+      if (packId === 'custom' && _onPresetPack()) return;
       const cs = compoundStreaks[packId];
       if (!cs || !cs.lastDate || cs.streak === 0) return;
       if (cs.lastDate === today)            return;
@@ -19995,8 +20015,14 @@
       if (broken) {
         streakBreakLog.push({ packId, date: today, brokenStreak: cs.streak });
         if (streakBreakLog.length > 60) streakBreakLog = streakBreakLog.slice(-60);
-        // Set comeback only if not already set (don't overwrite earlier break)
-        if (!pendingComeback) {
+        // Set comeback only if not already set (don't overwrite earlier break).
+        // W482 review fix — AND only on a GENUINE absence: a daily-active user who lets ONE routine
+        // lapse while staying active (switches custom -> a preset pack, or stops fully completing
+        // their custom routine but still checks off some habits) never "left", so no +25 XP /
+        // "welcome back" comeback should fire. lastActiveDate (persisted, hb_last_active) is the
+        // activity signal: active yesterday/today => not absent. The streak still BREAKS and is
+        // logged — only the comeback REWARD is gated. Reload-safe (persisted ledger state).
+        if (!pendingComeback && lastActiveDate && lastActiveDate < prevDay(today)) {
           pendingComeback = { packId, brokenStreak: cs.streak, breakDate: today };
         }
         cs.streak = 0;
@@ -20038,7 +20064,9 @@
     save();
     Object.values(byPack).forEach((n, i) => {
       const pack = getPackById(n.packId);
-      const name = pack ? pack.name : n.packId;
+      // W482 — the custom pack's display name ('Make Your Own') reads oddly inline; call a
+      // self-built routine "Your routine" in the shield-used notice (matches the W479 nudge).
+      const name = (n.packId === 'custom') ? 'Your routine' : (pack ? pack.name : n.packId);
       const msg  = 'Shield used. ' + name + ' streak protected. ' + n.remaining + ' shield' + (n.remaining === 1 ? '' : 's') + ' remaining.';
       // Stagger so multiple don't pile on each other
       setTimeout(() => { if (typeof showHabitToast === 'function') showHabitToast(msg, { duration: 4500 }); }, 400 + i * 1800);
@@ -21422,9 +21450,11 @@
     return AwakenedEconomy.pacedDailyXp(raw, before, DAILY_XP_SOFT_CAP_KNEE, DAILY_XP_OVER_CAP_RATE);
   }
 
-  function diffPts(diff) {
+  function diffPts(diff, dateStr) {
     const base = (DIFFICULTY[diff] || DIFFICULTY.easy).pts;
-    return isWeekend() ? base * 2 : base;
+    // W482 — dateStr optional: pass the COMPLETION's date for a backfilled/historical seal so it
+    // uses that day's weekend rate, not today's. Live callers omit it → today (unchanged).
+    return isWeekend(dateStr) ? base * 2 : base;
   }
 
   // ── STREAK / CHECK HELPERS ────────────────────────────────
@@ -35200,8 +35230,25 @@
       // a higher tier). Partial-only orphans never advanced the streak (no prevStreak /
       // lastDate!==today), so this correctly no-ops there.
       const ccs = compoundStreaks[CUSTOM_COMPOUND_PACK_ID];
-      if (ccs && ccs.lastDate === today && Object.prototype.hasOwnProperty.call(ccs, 'prevStreak')) {
-        compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: ccs.prevStreak || 0, lastDate: ccs.prevLastDate || null };
+      if (ccs && ccs.lastDate === today) {
+        if (Object.prototype.hasOwnProperty.call(ccs, 'prevStreak')) {
+          // W479/W482 snapshot present — exact rollback of the streak AND the shield state, so
+          // a milestone day that earned a custom shield then got superseded by a pack leaves no
+          // phantom shield / inflated shieldClaimedAt behind.
+          compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: ccs.prevStreak || 0, lastDate: ccs.prevLastDate || null };
+          if (Object.prototype.hasOwnProperty.call(ccs, 'prevShields')) {
+            streakShields[CUSTOM_COMPOUND_PACK_ID]   = ccs.prevShields || 0;
+            shieldClaimedAt[CUSTOM_COMPOUND_PACK_ID] = ccs.prevShieldClaimed || 0;
+          }
+        } else {
+          // W482 — pre-W482 save mid-pack-flip: a full custom award advanced the streak today
+          // (newStreak = prev+1) but no prevStreak was snapshotted, so the W479 guard used to
+          // SKIP the rollback and leave the streak inflated. Reconstruct the pre-award value as
+          // streak-1 (the award's own +1) and drop lastDate so the next custom award re-evaluates
+          // continuity cleanly. Neutralizes the inflation; fully inside the persisted ledger
+          // (reload-safe — NOT a module-var snapshot).
+          compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: Math.max(0, (ccs.streak || 0) - 1), lastDate: null };
+        }
       }
     }
   }
@@ -35255,7 +35302,14 @@
     // day would still advance the streak, paying the next custom-only day at an inflated
     // tier). Embedded in the persisted compoundStreaks entry (survives a mid-day reload),
     // mirroring perfectStreak's prevCount/prevLastDate pattern.
-    compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = { streak: newStreak, lastDate: today, prevStreak: cs.streak || 0, prevLastDate: cs.lastDate || null };
+    // W482 — ALSO snapshot the SHIELD state (captured BEFORE the tryEarnShield below), so the
+    // same refund rolls back a shield earned at a now-reverted milestone (no phantom shield).
+    compoundStreaks[CUSTOM_COMPOUND_PACK_ID] = {
+      streak: newStreak, lastDate: today,
+      prevStreak: cs.streak || 0, prevLastDate: cs.lastDate || null,
+      prevShields: streakShields[CUSTOM_COMPOUND_PACK_ID] || 0,
+      prevShieldClaimed: shieldClaimedAt[CUSTOM_COMPOUND_PACK_ID] || 0,
+    };
     compoundAwarded[CUSTOM_COMPOUND_PACK_ID] = today;
 
     const baseXP    = Math.round(getCompoundXP('morning', newStreak) * AwakenedEconomy.customCompoundSizeFactor(size));
@@ -35278,6 +35332,13 @@
     renderCompoundProgress();
     try { prUpdate('most_xp_day', computeTodayXP()); } catch (_) {}
     if (remainder > 0) prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + remainder);
+
+    // W482 — custom path is now a TRUE PEER of the packs: earn a Streak Shield at each 14-day
+    // milestone exactly like awardCompoundEffect (app.js tryEarnShield call). processStreakRollover
+    // (extended to FORGIVENESS_PACK_IDS) then CONSUMES it to forgive a missed custom day, so a
+    // custom miss is protected identically to a pack miss. tryEarnShield is pack-agnostic (keys
+    // by packId); the prevShields snapshot above lets a same-day pack supersede roll this back.
+    tryEarnShield(CUSTOM_COMPOUND_PACK_ID, newStreak);
 
     _bonusPopupQueue.push({
       packId:    CUSTOM_COMPOUND_PACK_ID,
@@ -35411,7 +35472,9 @@
     if (!canMarkHonestDayToday(packId)) return;
     _honestPackPending = packId;
     const pack = getPackById(packId);
-    const packName = pack ? pack.name : packId;
+    // W482 — the custom pack's display name ('Make Your Own') reads oddly inline; call a
+    // self-built routine "your routine" in the Honest-Rest modal.
+    const packName = (packId === 'custom') ? 'your routine' : (pack ? pack.name : packId);
     const remainingThisMonth = 1 - getHonestDayUsesThisMonth(packId); // always 1 when canMark is true
     document.getElementById('hm-body').innerHTML =
       "You'll skip <b>" + esc(packName) + "</b> today without breaking your streak. " +
@@ -41871,9 +41934,47 @@
   }
   try { window.__showFirstVerifiedScreen = showFirstVerifiedScreen; } catch (_) {}
 
+  // W482 — the custom routine's strip row: a TRUE PEER of the pack rows (Day-N streak chip +
+  // Streak Shield chip + Honest-Rest chip) so a self-directed grinder watches their streak and
+  // forgiveness the same way a pack user does. Differs from a pack row only by dropping the
+  // add-missing affordance (a self-built routine has no fixed roster to "complete"). Chips reuse
+  // the SAME delegated handlers (data-bonus-info / data-shield-info / data-honest-pack), which
+  // key by packId, so 'custom' works unchanged.
+  function _buildCustomCompoundRow(prog) {
+    const packId  = CUSTOM_COMPOUND_PACK_ID;
+    const done    = prog.done, total = prog.total;
+    const awarded = compoundAwarded[packId] === today;
+    const cs      = compoundStreaks[packId];
+    const streak  = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
+    const shieldCount = streakShields[packId] || 0;
+    const shieldChip  = shieldCount > 0
+      ? '<span class="cp-prog-shield" data-shield-info="custom" role="button" tabindex="0" aria-label="Streak Shields">🛡️ ' + shieldCount + '</span>'
+      : '';
+    const honestAvailable = streak > 0 && !awarded && canMarkHonestDayToday(packId);
+    const honestChip = honestAvailable
+      ? '<span class="cp-prog-honest" data-honest-pack="custom" role="button" tabindex="0" aria-label="Mark today as Honest Rest">🌙 Rest</span>'
+      : '';
+    return '<div class="cp-prog-row" role="group" aria-label="Your routine progress">' +
+      '<span class="cp-prog-name">' + iconify('⚡', { size: 14 }) + ' Your Routine</span>' +
+      '<span class="cp-prog-count' + (awarded ? ' cp-prog-done' : '') + '">' +
+        (awarded ? '✓ Complete' : done + '/' + total) +
+      '</span>' +
+      '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">' + xpIconHtml({ size: 22 }) + '</button>' +
+      (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' ' + streakIconHtml({ size: 14 }) + '</span>' : '') +
+      shieldChip + honestChip +
+    '</div>';
+  }
+
   function renderCompoundProgress() {
     const wrap = document.getElementById('compound-progress');
     if (!wrap) return;
+    // W482 — a custom-path user (NOT on a full preset pack, with a >=3-habit routine) sees ONLY
+    // their own "Your Routine" row — a clean peer, not a partial-pack nudge (morning-named
+    // habits are common, so the old strip would show a misleading "Morning 3/10 +7 missing"
+    // alongside). A full-pack user (_onPresetPack) keeps the pack rows and gets NO custom row
+    // (no phantom). A <3-habit non-pack user falls through to the existing pack rows.
+    const customProg = _customRoutineProgress();
+    const onCustom   = !_onPresetPack() && customProg.total >= CUSTOM_COMPOUND_MIN_HABITS;
     // Show a row for every bonus pack the user has at least one habit in.
     // EXCEPT: hide the Morning Routine row when the user has truly committed
     // to the Locked-In path. Since LI's 16 = MR's 10 + 6 extras, any LI
@@ -41892,7 +41993,7 @@
       // reflect what's currently part of the discipline.
       return habits.some(h => _isActiveHabit(h) && liExtraNames.has(h.name));
     })();
-    const rows = BONUS_PACK_IDS.map(packId => {
+    const packRows = onCustom ? '' : BONUS_PACK_IDS.map(packId => {
       if (packId === 'morning' && liExclusivelyActive) return '';
       if (packId === 'locked-in' && !liExclusivelyActive) return '';
       const { done, total } = getPackProgress(packId);
@@ -41951,6 +42052,8 @@
         addPill +
       '</div>';
     }).filter(Boolean).join('');
+    const customRow = onCustom ? _buildCustomCompoundRow(customProg) : '';
+    const rows = packRows + customRow;
     if (rows) {
       wrap.innerHTML = rows;
       wrap.classList.remove('hidden');
@@ -46498,31 +46601,13 @@
       btn.style.background = color;
     }
 
-    var customWarningShown = false;
-
-    function showCustomWarning() {
-      var ov = document.getElementById('custom-warning-overlay');
-      if (!ov) return;
-      ov.classList.remove('hidden');
-
-      document.getElementById('cw-continue-btn').onclick = function() {
-        ov.classList.add('hidden');
-        // user keeps custom selection — already applied
-      };
-      document.getElementById('cw-switch-btn').onclick = function() {
-        ov.classList.add('hidden');
-        selectCard(morningCard, 'morning', '#f59e0b');
-      };
-    }
-
-    morningCard.onclick  = function() { selectCard(morningCard,  'morning',   '#f59e0b'); };
-    customCard.onclick   = function() {
-      selectCard(customCard, 'custom', '#a855f7');
-      if (!customWarningShown) {
-        customWarningShown = true;
-        showCustomWarning();
-      }
-    };
+    // W482 — the "Going Solo?" warning modal (showCustomWarning) is RETIRED. It claimed custom
+    // paths get no Compound Effect Bonus and offered a one-click bounce back to Morning Routine —
+    // stale pre-W479 two-tier anxiety. W479 made the custom routine a compound peer and W482 gave
+    // it the shield + persistent strip, so the custom path is now first-class: pick it like any
+    // pack, no scare modal.
+    morningCard.onclick = function() { selectCard(morningCard, 'morning', '#f59e0b'); };
+    customCard.onclick  = function() { selectCard(customCard,  'custom',  '#a855f7'); };
 
     cardsEl.appendChild(morningCard);
     cardsEl.appendChild(customCard);
@@ -49755,13 +49840,10 @@
     // pill (History tab corner dot, etc.) renders correctly.
     try { AUTO_VERIFY.recordAutoVerify(habit.id, meta || { source: 'backfill' }, dateStr); }
     catch (_) {}
-    // Grant XP. diffPts() doubles on Sat/Sun PT today — for the
-    // historical date we want the rate that WAS in effect for that
-    // calendar day, but diffPts has no date parameter and the worst
-    // case is yesterday (always weekday-vs-weekend off by one). The
-    // ratio of correctness vs added complexity favors using today's
-    // diffPts for now; refactor if a weekly backfill ever ships.
-    const pts = diffPts(habit ? habit.difficulty : 'easy');
+    // Grant XP at the weekend rate that WAS in effect on the sealed calendar day.
+    // W482 — diffPts now takes the date; previously it was date-blind and used TODAY's
+    // weekend ×2, so a weekday seal evaluated on a weekend (or vice-versa) mis-credited.
+    const pts = diffPts(habit ? habit.difficulty : 'easy', dateStr);
     totalPoints += creditDailyXP(pts);
     try { applyStatPts(habit, pts, 1); } catch (_) {}
     // Recompute streak from the completions map. The naive
