@@ -2644,7 +2644,7 @@
   <div id="custom-overlay" class="custom-overlay hidden">
     <div class="custom-card">
       <div class="custom-title">Create Your Own Habit</div>
-      <div class="custom-sub">Reward is fixed at <span class="custom-sub-strong">3 XP per completion</span> (Medium). Pick the stat it builds.</div>
+      <div class="custom-sub">Pick the stat it builds and how demanding it is.</div>
 
       <div class="custom-row">
         <button id="custom-emoji-btn" class="custom-emoji-btn" type="button" aria-label="Chosen habit icon">⚡</button>
@@ -2662,6 +2662,16 @@
 
       <div class="custom-stat-label">WHICH STAT DOES THIS TRAIN?</div>
       <div id="custom-stat-grid" class="custom-stat-grid"></div>
+
+      <!-- W489 — difficulty picker (easy/medium/hard; legendary intentionally omitted, anti-gaming).
+           Reuses the edit modal's .diff-row/.diff-btn/.edit-diff-help styling — no new CSS. -->
+      <div class="custom-stat-label">HOW DEMANDING IS IT?</div>
+      <div class="diff-row" id="custom-diff-row">
+        <button class="diff-btn" data-diff="easy"   type="button">Easy</button>
+        <button class="diff-btn" data-diff="medium" type="button">Medium</button>
+        <button class="diff-btn" data-diff="hard"   type="button">Hard</button>
+      </div>
+      <div class="edit-diff-help">XP per completion — Easy +1, Medium +3, Hard +5.</div>
 
       <!-- v3 Phase 1z.273D — Days row. Reuses the same `.days-row` /
            `.day-btn[data-day]` markup as the existing schedule picker
@@ -3073,7 +3083,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=928"></script>
+  <script src="app.js?v=929"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
