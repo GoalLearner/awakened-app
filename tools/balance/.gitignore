@@ -1,0 +1,8 @@
+# Generated analysis artifacts — re-created by extract.js / analyze.py / chart.py.
+# The committed scripts regenerate all of these; don't track the outputs.
+items.json
+items_before.json
+_app_before.js
+curve.png
+BEFORE.txt
+AFTER.txt

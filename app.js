@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w473'; // W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w474'; // W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2287,14 +2287,14 @@
       on_equip: null, cooldown_seconds: null,
     },
 
-    // ── The Steel Wolf (D, VIT) — signature slot: BOOTS ─────
+    // ── The Steel Wolf (E, VIT) — signature slot: BOOTS ─────
     pack_leaders_greaves: {
       id: 'pack_leaders_greaves',
       name: "Pack Leader's Greaves",
       slot: 'legs',
       source_boss: 'the_steel_wolf',
       rarity: 'common',
-      tier: 'D',
+      tier: 'E',
       flavor: 'The wolf does not stop.',
       art_path: 'assets/items/pack_leaders_greaves.png',
       bonuses: { str: 1, vit: 3, int: 0, focus: 0, will: 0, wlt: 0 },
@@ -2308,11 +2308,11 @@
       slot: 'body',
       source_boss: 'the_steel_wolf',
       rarity: 'rare',
-      tier: 'D',
+      tier: 'E',
       flavor: 'Mantle of one who leads the hunt.',
       art_path: 'assets/items/alphas_mantle.png',
-      bonuses: { str: 2, vit: 7, int: 0, focus: 1, will: 0, wlt: 0 },
-      bonus_ranges: { str: [1,3], vit: [5,9], int: [0,0], focus: [0,2], will: [0,0], wlt: [0,0] },
+      bonuses: { str: 2, vit: 5, int: 0, focus: 1, will: 0, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [4,6], int: [0,0], focus: [0,2], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2322,7 +2322,7 @@
       slot: 'boots',
       source_boss: 'the_steel_wolf',
       rarity: 'ultra_rare',
-      tier: 'D',
+      tier: 'E',
       flavor: 'Every step counts. These have counted thousands. Best in slot — until the trail goes further.',
       art_path: 'assets/items/trail_worn_boots.png',
       bonuses: { str: 4, vit: 9, int: 0, focus: 2, will: 0, wlt: 0 },
@@ -2401,14 +2401,14 @@
       on_equip: null, cooldown_seconds: null,
     },
 
-    // ── The Steel Wolf (D, VIT) — new commons ───────────────
+    // ── The Steel Wolf (E, VIT) — new commons ───────────────
     pups_hood: {
       id: 'pups_hood',
       name: "Pup's Hood",
       slot: 'helm',
       source_boss: 'the_steel_wolf',
       rarity: 'common',
-      tier: 'D',
+      tier: 'E',
       flavor: 'A scrappy hood from a young hunter still finding their place in the pack. The fur is patchy but the spirit is fierce.',
       art_path: 'assets/items/pups_hood.png',
       bonuses:       { str: 1, vit: 3, int: 0, focus: 0, will: 0, wlt: 0 },
@@ -2422,7 +2422,7 @@
       slot: 'cape',
       source_boss: 'the_steel_wolf',
       rarity: 'common',
-      tier: 'D',
+      tier: 'E',
       flavor: "A weathered cloak earned by those who hunt the trail before joining the alpha's kill.",
       art_path: 'assets/items/trackers_wrap.png',
       bonuses:       { str: 0, vit: 3, int: 0, focus: 1, will: 0, wlt: 0 },
@@ -2517,8 +2517,8 @@
       tier: 'D',
       flavor: 'A blade that grows heavier when the oath is broken. Best in slot for the STR/WILL discipline build.',
       art_path: 'assets/items/titan-oathblade.png',
-      bonuses:       { str: 10, vit: 0, int: 0, focus: 2, will: 3, wlt: 0 },
-      bonus_ranges:  { str: [8,12], vit: [0,0], int: [0,0], focus: [1,3], will: [2,4], wlt: [0,0] },
+      bonuses:       { str: 12, vit: 0, int: 0, focus: 3, will: 3, wlt: 0 },
+      bonus_ranges:  { str: [10,14], vit: [0,0], int: [0,0], focus: [2,4], will: [2,4], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2589,8 +2589,8 @@
       tier: 'D',
       flavor: 'A ring that points toward the next step before the mind resists. Best in slot for the VIT/FOCUS movement build.',
       art_path: 'assets/items/horizon-step-ring.png',
-      bonuses:       { str: 2, vit: 8, int: 0, focus: 5, will: 0, wlt: 0 },
-      bonus_ranges:  { str: [1,3], vit: [6,10], int: [0,0], focus: [3,7], will: [0,0], wlt: [0,0] },
+      bonuses:       { str: 2, vit: 10, int: 0, focus: 6, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [1,3], vit: [8,12], int: [0,0], focus: [4,8], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2661,8 +2661,8 @@
       tier: 'D',
       flavor: 'A crown worn only by those who learned that recovery is not weakness. Best in slot for the VIT/FOCUS recovery build.',
       art_path: 'assets/items/crown-of-deep-rest.png',
-      bonuses:       { str: 0, vit: 7, int: 3, focus: 5, will: 0, wlt: 0 },
-      bonus_ranges:  { str: [0,0], vit: [5,9], int: [2,4], focus: [3,7], will: [0,0], wlt: [0,0] },
+      bonuses:       { str: 0, vit: 8, int: 4, focus: 6, will: 0, wlt: 0 },
+      bonus_ranges:  { str: [0,0], vit: [6,10], int: [3,5], focus: [4,8], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -3249,8 +3249,8 @@
       tier: 'S',
       flavor: 'Greaves cut from the throne of endless dusk, gold-veined and wreathed in shadow. Best in slot.',
       art_path: 'assets/items/greaves-of-the-umbral-throne.png',
-      bonuses:       { str: 8, vit: 9, int: 3, focus: 7, will: 7, wlt: 0 },
-      bonus_ranges:  { str: [6,10], vit: [7,11], int: [1,5], focus: [5,9], will: [5,9], wlt: [0,0] },
+      bonuses:       { str: 8, vit: 10, int: 3, focus: 8, will: 7, wlt: 0 },
+      bonus_ranges:  { str: [6,10], vit: [8,12], int: [1,5], focus: [6,10], will: [5,9], wlt: [0,0] },
       set_id: 'sovereign_regalia', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -3355,19 +3355,19 @@
       source_boss: null, rarity: 'ultra_rare', tier: 'A',
       flavor: 'A greatstaff crowned with caged starlight. It does not cut — it unmakes. The arcanist’s answer to the blade.',
       art_path: 'assets/items/aetherspire-staff.png',
-      bonuses:       { str: 3, vit: 11, int: 14, focus: 5, will: 8, wlt: 0 },
-      bonus_ranges:  { str: [1,5], vit: [9,13], int: [12,16], focus: [3,7], will: [6,10], wlt: [0,0] },
+      bonuses:       { str: 2, vit: 9, int: 12, focus: 4, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [0,4], vit: [7,11], int: [10,14], focus: [2,6], will: [4,8], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane mastery — Arcane Bolt / Force Wave / Shatter Hex / Siphon kit.', on_equip: null, cooldown_seconds: null,
     },
     // W306 — Wraithwind (bow): first RANGED player weapon. Shop-buyable.
     // Stats lean FOCUS+WILL (Ranged).
     wraithwind_bow: {
-      id: 'wraithwind_bow', name: 'Wraithwind, the Long Hunt', slot: 'weapon',
+      id: 'wraithwind_bow', name: 'Wraithwind, the Far Hunt', slot: 'weapon',
       source_boss: null, rarity: 'ultra_rare', tier: 'A',
       flavor: 'A recurve bow strung with captured wind. Its arrows find the gap no armor closes. Death, at a distance.',
       art_path: 'assets/items/wraithwind-bow.png',
-      bonuses:       { str: 4, vit: 7, int: 3, focus: 14, will: 11, wlt: 0 },
-      bonus_ranges:  { str: [2,6], vit: [5,9], int: [1,5], focus: [12,16], will: [9,13], wlt: [0,0] },
+      bonuses:       { str: 3, vit: 6, int: 2, focus: 13, will: 9, wlt: 0 },
+      bonus_ranges:  { str: [1,5], vit: [4,8], int: [0,4], focus: [11,15], will: [7,11], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'A ranger’s volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.', on_equip: null, cooldown_seconds: null,
     },
     forgewarden_gauntlets: {
