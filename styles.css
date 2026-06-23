@@ -3494,27 +3494,36 @@ footer {
 }
 .habit-toast--statlvl .stl-lv { color: var(--sl-color, var(--gold, #f59e0b)); }
 
-/* W477 — centered, readable partial-compound nudge (replaces the off-screen bottom
-   toast). Floats in the middle of the screen, wraps, auto-dismisses, tap to close. */
-.compound-notice {
+/* W477/W478 — centered partial-compound nudge (replaces the off-screen bottom toast).
+   W478: tap-to-continue — a light backdrop captures the tap; no auto-dismiss. */
+.compound-notice-wrap {
   position: fixed;
-  top: 47%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.94);
+  inset: 0;
   z-index: 200;
-  width: calc(100% - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(6, 5, 14, 0.58);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.compound-notice-wrap--visible { opacity: 1; }
+.compound-notice {
+  width: 100%;
   max-width: 320px;
-  padding: 20px 22px 18px;
+  padding: 22px 22px 18px;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(36, 28, 60, 0.985), rgba(20, 16, 38, 0.985));
+  background: linear-gradient(180deg, rgba(36, 28, 60, 0.99), rgba(20, 16, 38, 0.99));
   border: 1px solid rgba(245, 184, 66, 0.5);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 184, 66, 0.10) inset, 0 0 36px rgba(245, 184, 66, 0.14);
   text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform: scale(0.94);
+  transition: transform 0.25s ease;
 }
-.compound-notice--visible { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+.compound-notice-wrap--visible .compound-notice { transform: scale(1); }
 .compound-notice-top { display: inline-flex; align-items: center; gap: 8px; }
 .compound-notice-top svg { width: 26px; height: 26px; }
 .compound-notice-amt {
@@ -3529,9 +3538,18 @@ footer {
   font-size: 0.86rem; line-height: 1.45; color: var(--text-secondary, #8a8aa8); margin-top: 8px;
 }
 .compound-notice-sub b { color: var(--gold, #f5b842); font-weight: 700; }
+.compound-notice-cont {
+  margin-top: 16px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary, #5a5a76);
+  animation: compound-cont-pulse 1.8s ease-in-out infinite;
+}
+@keyframes compound-cont-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.95; } }
 @media (prefers-reduced-motion: reduce) {
-  .compound-notice { transform: translate(-50%, -50%); transition: opacity 0.2s; }
-  .compound-notice--visible { transform: translate(-50%, -50%); }
+  .compound-notice { transform: none; transition: opacity 0.2s; }
+  .compound-notice-wrap--visible .compound-notice { transform: none; }
+  .compound-notice-cont { animation: none; opacity: 0.7; }
 }
 /* Reduced-motion: skip the rise transform, keep opacity fade only.
    The base .habit-toast rule applies translateX(-50%) translateY(8px)
