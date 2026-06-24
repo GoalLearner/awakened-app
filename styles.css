@@ -31135,12 +31135,18 @@ button.guildhall-summary-tile:active {
    all now orphaned). Priority = fill weight, not a new colour per button: teal =
    playable, neutral = utility; gold no longer shouts from the one UNAVAILABLE
    action. Grouped under RANKED / FRIENDS micro-labels. Ported 1:1 from the mock. */
-.pha-grouplabel { display: flex; align-items: center; gap: 8px; margin: 5px 2px 1px; }
+.pha-grouplabel { display: flex; align-items: center; gap: 8px; margin: 14px 2px 3px; }
 .pha-grouplabel:first-child { margin-top: 0; }
 .pha-grouplabel .t { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.24em; text-transform: uppercase; color: #54546c; }
 .pha-grouplabel .ln { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.07), transparent); }
 .pha-btn { width: 100%; margin-top: 9px; border-radius: 15px; cursor: pointer; border: 1px solid transparent; position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; padding: 13px 14px; text-align: left; background: none; transition: transform 0.08s ease; }
-.pha-grouplabel + .pha-btn { margin-top: 0; }
+/* W499 — owner: the group headings (RANKED / FRIENDS) read too close to the
+   button below them. Give the label real breathing room. NOTE the label's
+   margin-bottom and the button's margin-top COLLAPSE (.pvp-hub-actions is
+   block-level), so the gap is the LARGER of the two — drive it from the button.
+   16px below each heading vs the 9px inter-button gap, ~14px above the FRIENDS
+   label to separate the two groups. */
+.pha-grouplabel + .pha-btn { margin-top: 16px; }
 .pha-btn:active { transform: translateY(1px); }
 .pha-btn > * { position: relative; z-index: 1; }
 .pha-ic { width: 42px; height: 42px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
