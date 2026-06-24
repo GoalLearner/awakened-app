@@ -2680,6 +2680,10 @@
         <button class="diff-btn" data-diff="hard"   type="button">Hard</button>
       </div>
       <div class="edit-diff-help">XP per completion — Easy +1, Medium +3, Hard +5.</div>
+      <!-- W508 — surface the W485 difficulty tilt: the daily Compound (~90% of rank XP) scales by the
+           routine's AVERAGE difficulty. Populated live from AwakenedEconomy.customCompoundDifficultyFactor
+           so it can never disagree with the award path. Display-only. -->
+      <div class="edit-diff-help" id="custom-diff-mult"></div>
 
       <!-- v3 Phase 1z.273D — Days row. Reuses the same `.days-row` /
            `.day-btn[data-day]` markup as the existing schedule picker
@@ -3091,7 +3095,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=944"></script>
+  <script src="app.js?v=945"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
