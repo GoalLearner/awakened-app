@@ -27,6 +27,7 @@ export default defineConfig({
 
   use: {
     baseURL: 'http://localhost:8080',
+    serviceWorkers: 'block',         // W492 — app registers sw.js; block it so cached assets can't interfere with reloads
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -53,7 +54,7 @@ export default defineConfig({
   // reuseExistingServer = true so a manually-running `pwsh serve.ps1`
   // doesn't conflict during local dev iterations.
   webServer: {
-    command: 'powershell -NoProfile -ExecutionPolicy Bypass -File ./serve.ps1',
+    command: 'node serve.mjs',   // W492 — cross-platform (was Windows-only serve.ps1; can't run on Linux CI). serve.ps1 kept for local muscle-memory.
     url: 'http://localhost:8080',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

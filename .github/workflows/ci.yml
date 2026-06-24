@@ -34,3 +34,25 @@ jobs:
           done
           if [ "$MISSING" != "0" ]; then exit 1; fi
           echo "OK: all referenced scripts present."
+
+  e2e:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    # W492 — RUNS the Playwright smoke on every push (cross-platform via serve.mjs — was Windows-only
+    # serve.ps1, which couldn't run on Linux CI). NON-BLOCKING for now (continue-on-error) so it
+    # surfaces results in the Action log without red-walling pushes until a clean green CI run is
+    # confirmed — then drop continue-on-error to make it a required gate.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke suite (served by serve.mjs)
+        env:
+          CI: 'true'
+        run: npx playwright test
