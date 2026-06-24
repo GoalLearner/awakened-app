@@ -434,6 +434,34 @@ h1 {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 7px;
 }
+/* W504 — one-time first-vow pointer banner: guides a brand-new user to their
+   first completion (the +50 First Step). Sits above the habit list, gently
+   pulses, auto-retires on the first completion. */
+.first-vow-pointer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 10px 10px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(245,184,66,0.35);
+  background: linear-gradient(180deg, rgba(245,184,66,0.14), rgba(245,184,66,0.04));
+  animation: fvp-pulse 2.4s ease-in-out infinite;
+}
+@keyframes fvp-pulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(245,184,66,0.10); }
+  50%      { box-shadow: 0 0 26px rgba(245,184,66,0.24); }
+}
+.fvp-spark { flex: none; color: var(--gold, #f5b842); font-size: 1.05rem; }
+.fvp-text { flex: 1; font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--text-secondary, #cbd0e0); }
+.fvp-text b { color: var(--gold, #f5b842); font-weight: 800; }
+.fvp-x {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
+  color: var(--text-tertiary, #8a8aa2); font-size: 0.85rem; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+@media (prefers-reduced-motion: reduce) { .first-vow-pointer { animation: none; } }
 
 /* ═══════════════════════════════════════════════════════════════════
    v3 Phase 1z.284 W191 — Habits List View
