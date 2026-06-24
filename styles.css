@@ -8695,12 +8695,52 @@ footer {
 .cp-prog-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 7px 12px;
   background: rgba(245,158,11,0.07);
   border: 1px solid rgba(245,158,11,0.18);
   border-radius: 11px;
 }
+/* W501 — compound XP meter: the banked → full projected compound XP this day
+   will pay. Wraps to its own full-width line under the routine row. */
+.cp-prog-xp {
+  flex: 0 0 100%;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cp-prog-xp-bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(245,158,11,0.14);
+  overflow: hidden;
+}
+.cp-prog-xp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 8px rgba(245,158,11,0.5);
+  transition: width 0.4s ease;
+}
+.cp-prog-xp-text {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(245,158,11,0.7);
+  white-space: nowrap;
+}
+.cp-prog-xp-text b { color: #fbbf24; font-weight: 800; }
+.cp-prog-xp--done .cp-prog-xp-fill {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  box-shadow: 0 0 8px rgba(34,197,94,0.5);
+}
+.cp-prog-xp--done .cp-prog-xp-text { color: rgba(34,197,94,0.8); }
+.cp-prog-xp--done .cp-prog-xp-text b { color: #22c55e; }
 .cp-prog-name {
   flex: 1;
   font-size: 12px;
