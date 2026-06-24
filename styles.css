@@ -14710,6 +14710,29 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-tertiary);
   letter-spacing: 0.02em;
 }
+/* W502 (IA) — Marketplace label: names the souls-spending home on the Items tab. */
+.pokedex-market {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245,184,66,0.22);
+  background: linear-gradient(180deg, rgba(245,184,66,0.08), rgba(245,184,66,0.02));
+}
+.pokedex-market-glyph { flex: none; color: var(--gold, #f5b842); font-size: 0.85rem; }
+.pokedex-market-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-secondary, #9ca3af);
+}
+.pokedex-market-text b {
+  color: var(--gold, #f5b842);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
 
 /* Armory CTA — secondary status line. .archive-armory-cta-text is
    the wrapper that stacks main + sub vertically so the existing
@@ -31224,6 +31247,22 @@ button.guildhall-summary-tile:active {
 /* GHOST — quiet utility (neutral, centered, no accent) */
 .pha-btn--ghost { background: #13131f; border-color: rgba(255,255,255,0.07); justify-content: center; gap: 9px; padding: 12px 14px; color: #8a8aa2; }
 .pha-btn--ghost svg { opacity: 0.55; }
+/* W502 (IA) — Ladder / Match History promoted from faint text links to two
+   first-class destination buttons under the action stack. */
+.pha-dests { display: flex; gap: 9px; margin-top: 10px; }
+.pha-dest {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  color: #b9bace; text-align: left;
+  appearance: none; -webkit-appearance: none; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.pha-dest:active { transform: translateY(1px); }
+.pha-dest:hover { background: rgba(255,255,255,0.055); border-color: rgba(255,255,255,0.14); }
+.pha-dest-ic { flex: none; color: #8a8aa2; }
+.pha-dest-lbl { flex: 1; min-width: 0; font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pha-dest-chev { flex: none; color: rgba(255,255,255,0.3); }
 /* W441 — friend-Echo picker (list of accepted friends to spar) */
 .pvp-echo-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .pvp-echo-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 13px; border-radius: 12px; cursor: pointer; text-align: left; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); }

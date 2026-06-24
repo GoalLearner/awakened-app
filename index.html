@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=504">
+  <link rel="stylesheet" href="styles.css?v=505">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -849,6 +849,14 @@
             <div id="pokedex-progress-fill" class="pokedex-progress-fill"></div>
           </div>
           <p class="archive-flavor">Every relic was earned through discipline.</p>
+          <!-- W502 (IA) — the Marketplace had no labeled home: souls-spending was
+               only an inline BUY/SELL chip on each relic, so a new player had no
+               obvious "where do I spend souls" answer. This one-line affordance
+               names the Marketplace and explains the souls economy here. -->
+          <div class="pokedex-market">
+            <span class="pokedex-market-glyph" aria-hidden="true">◈</span>
+            <span class="pokedex-market-text"><b>Marketplace</b> — spend souls to buy relics here, or sell duplicates back</span>
+          </div>
           <!-- v2.1 — entry point to the equipment panel modal. Same
                modal is also opened by tapping the avatar on the
                Status tab. v3 Phase 1g — secondary status line shows
@@ -3083,7 +3091,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=938"></script>
+  <script src="app.js?v=939"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
