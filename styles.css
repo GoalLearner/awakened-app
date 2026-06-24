@@ -29211,7 +29211,14 @@ button.guildhall-summary-tile:active {
 .sc-am-tile--climb:active, .sc-am-tile--climb:hover { box-shadow:0 6px 18px rgba(245,184,66,0.18); border-color:rgba(245,184,66,0.45); }
 .sc-am-tile--duel:active,  .sc-am-tile--duel:hover  { box-shadow:0 6px 18px rgba(94,234,212,0.18); border-color:rgba(94,234,212,0.45); }
 .sc-am-tile-top { display:flex; align-items:center; gap:9px; }
-.sc-am-tower { flex:none; display:block; }
+/* W524 — the Ascent tower (_aoTowerHtml) renders ~72px tall: its height math
+   (segH = h/segs - gap) ignores each rung's 1px border, so 14 rungs add ~28px the
+   declared h=44 box never accounts for, and the surplus spilled OUT the top of the
+   tile ("coming out of the box"). Contain + scale back to the intended ~44px size so
+   the whole tower stays visible inside the slot. (Header tower h=92 has the room, so
+   _aoTowerHtml itself is left untouched.) */
+.sc-am-tower { flex:none; width:26px; height:46px; overflow:hidden; display:inline-flex; align-items:flex-end; justify-content:center; }
+.sc-am-tower > .ao-tower { transform:scale(0.62); transform-origin:bottom center; }
 .sc-am-swords { flex:none; display:block; }
 .sc-am-tx { min-width:0; }
 .sc-am-kick { display:block; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:8.5px;
