@@ -14447,7 +14447,17 @@ body.bfs-locked { overflow: hidden; }
 
 .pokedex-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* W525 — minmax(0,1fr), NOT 1fr. Plain `1fr` is `minmax(auto,1fr)`: a column can
+     never shrink below its content's min-width, so an owned relic card with a wide
+     unshrinkable element (the "▼ -18 vs Equipped" delta pill or the "SELL +900" market
+     button) forces ITS column wider and squeezes the other two — the middle card balloons
+     and the third is pushed off-screen. This surfaced on a narrower effective viewport
+     (iPhone 16 Pro Max with Display Zoom / larger text), where the column is tight enough
+     for the pill to exceed it. minmax(0,1fr) lets all 3 columns stay truly equal at any
+     width; min-width:0 (below) lets the cell/card shrink so content clips instead of
+     forcing overflow. Verified: a wide probe took a 1fr column 96px→149px; minmax(0,1fr)
+     held it at 96px. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -14456,8 +14466,8 @@ body.bfs-locked { overflow: hidden; }
    (ports ClaudeDesign "Relic Marketplace" to scoped CSS classes)
    ═══════════════════════════════════════════════════════════════════ */
 /* Each grid cell stacks the (unchanged) card button + its trade control. */
-.pokedex-cell { display: flex; flex-direction: column; gap: 7px; }
-.pokedex-cell > .pokedex-card { flex: 1 1 auto; }
+.pokedex-cell { display: flex; flex-direction: column; gap: 7px; min-width: 0; }   /* W525 — allow the cell to shrink below content min-width (see .pokedex-grid) */
+.pokedex-cell > .pokedex-card { flex: 1 1 auto; min-width: 0; }
 
 /* ── Card-level trade button (compact for the 3-col grid) ───────────── */
 .market-trade {
