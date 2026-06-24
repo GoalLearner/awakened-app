@@ -31069,7 +31069,13 @@ button.guildhall-summary-tile:active {
    --tier/--tier-deep/--tier-rim are set inline per render; no color-mix (iOS 14 floor). */
 .pvp-hub { position: relative; display: flex; flex-direction: column; min-height: 100%; padding: 2px 4px 4px; --tier: #cbd5e1; --tier-deep: #5b6675; --tier-rim: #f4f8fc; }
 .pvp-hub-aura { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); width: 320px; height: 320px; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0.16; background: radial-gradient(circle, var(--tier), transparent 62%); }
-.pvp-hub > *:not(.pvp-hub-aura) { position: relative; z-index: 1; }
+/* W498 — exclude the coming-soon overlay (scrim + sheet) from this "lift content
+   above the aura" rule. It set position:relative on EVERY direct hub child, which
+   silently overrode the sheet's intended position:absolute (W433) → the sheet fell
+   into normal flow at the bottom of the hub, so "Ranked awakens soon" sat at the
+   page bottom on scroll (the reported bug). Excluded, the scrim/sheet keep their
+   own position:fixed (pinned to the viewport, opening only on the Find Match tap). */
+.pvp-hub > *:not(.pvp-hub-aura):not(.pvp-hub-scrim):not(.pvp-hub-sheet) { position: relative; z-index: 1; }
 .pvp-hub-top { display: flex; align-items: center; }
 .pvp-hub-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; letter-spacing: 2px; color: #f5f3fb; }
 .pvp-hub-name span { color: #f5b842; }
@@ -31194,9 +31200,16 @@ button.guildhall-summary-tile:active {
 .pvp-friendly-hint { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 10px; line-height: 1.5; color: #6b6b86; margin-top: 14px; padding: 0 10px; }
 @media (prefers-reduced-motion: reduce) { .pha-btn--primary::after, .pvp-hub-promo, .pvp-hub-season .live { animation: none !important; } .pha-btn--primary::after { opacity: 0.6; } }
 /* W433 — Find Match coming-soon sheet + the Echo summon tagline */
-.pvp-hub-scrim { position: absolute; inset: 0; z-index: 18; background: rgba(4,4,10,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; border-radius: inherit; }
+/* W498 — scrim + sheet are position:FIXED (pin to the viewport via the fixed
+   .ar-overlay; no transform ancestor) rather than position:absolute inside the
+   scrollable .pvp-hub. As absolute children the closed sheet (translateY(110%))
+   rendered BELOW the hub box and added scrollable height to .ar-body, so the
+   "Ranked awakens soon" panel sat at the page bottom on scroll. Fixed elements
+   add NO scroll height (kills that) and stay pinned to the screen bottom when
+   opened — robust even on a small phone where the hub content itself scrolls. */
+.pvp-hub-scrim { position: fixed; inset: 0; z-index: 18; background: rgba(4,4,10,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
 .pvp-hub-scrim.on { opacity: 1; pointer-events: auto; }
-.pvp-hub-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 19; background: linear-gradient(180deg, #16161f, #0e0e18); border-top: 1px solid rgba(245,184,66,0.25); border-radius: 22px 22px 0 0; padding: 24px 22px calc(24px + env(safe-area-inset-bottom)); transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.2,1,0.3,1); box-shadow: 0 -20px 50px rgba(0,0,0,0.5); }
+.pvp-hub-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 19; background: linear-gradient(180deg, #16161f, #0e0e18); border-top: 1px solid rgba(245,184,66,0.25); border-radius: 22px 22px 0 0; padding: 24px 22px calc(24px + env(safe-area-inset-bottom)); transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.2,1,0.3,1); box-shadow: 0 -20px 50px rgba(0,0,0,0.5); }
 .pvp-hub-sheet.on { transform: translateY(0); }
 .pvp-hub-sheet .grip { width: 40px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.18); margin: -8px auto 16px; }
 .pvp-hub-sheet .sicon { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245,184,66,0.35); box-shadow: 0 0 24px rgba(245,184,66,0.12), inset 0 0 18px rgba(245,184,66,0.06); }
