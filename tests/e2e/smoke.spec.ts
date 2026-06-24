@@ -1863,3 +1863,60 @@ test.describe('Q · Sleep verify no false positives (1z.123)', () => {
     expect(r.post.wasUnchecked).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// R · Compound reward caption on the Habits tab (W514/W515).
+// The Compound Effect (~90% of rank XP) was only legible in the Status
+// today-strip MODAL; W514 surfaced it on the Habits tab, and W515 fixed an
+// over-correction that briefly rendered a SECOND progress bar under
+// "Seal your vows". This locks both in:
+//   1. #vows-header-reward renders the routine XP projection.
+//   2. There is exactly ONE progress bar in the Habits panel — the W514
+//      routine-spine element and its banked-XP bar must NOT reappear
+//      (the regression guard that the double-bar slip lacked).
+test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () => {
+  test('caption renders the routine XP projection; no second progress bar', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_onboarding_seen_v2', '1');
+        localStorage.setItem('hb_welcomed', '1');
+        localStorage.setItem('hb_hunter_name_claimed', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        localStorage.setItem('hb_habits_listview_hint_v1', '1');   // suppress the list-view tip
+        const _d = new Date();
+        const _ymd = _d.getFullYear() + '-' +
+          String(_d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(_d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        // A 4-habit custom routine → a non-zero compound projection, so the
+        // caption renders ("Complete your routine for +N XP").
+        const seeded = [
+          { id: 'r1', name: 'Read 10 pages',  emoji: '📖', difficulty: 'easy',   type: 'build', primaryStat: 'INT' },
+          { id: 'r2', name: 'Cold shower',    emoji: '🚿', difficulty: 'medium', type: 'build', primaryStat: 'WILL' },
+          { id: 'r3', name: 'Stretch 10 min', emoji: '🧘', difficulty: 'easy',   type: 'build', primaryStat: 'VIT' },
+          { id: 'r4', name: 'No sugar today', emoji: '🍬', difficulty: 'hard',   type: 'break', primaryStat: 'FOCUS' },
+        ];
+        localStorage.setItem('hb_habits', JSON.stringify(seeded));
+      } catch (_) {}
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+
+    // W514 — the compound reward caption renders under "Seal your vows" with a projection.
+    const reward = page.locator('#vows-header-reward');
+    await expect(reward).toBeVisible({ timeout: 10_000 });
+    await expect(reward).toContainText(/\+\d+\s*XP/);
+
+    // W515 — exactly ONE progress bar in the Habits panel. The completion bar
+    // (#vows-header-fill) stays; the W514 routine-spine (#habits-routine-spine)
+    // and its banked-XP bar (.cp-prog-xp-fill) must NOT appear in #main-scroll
+    // (the hidden footer #compound-progress lives OUTSIDE #main-scroll, so the
+    // scoped selector cannot match it).
+    await expect(page.locator('#vows-header-fill')).toHaveCount(1);
+    await expect(page.locator('#habits-routine-spine')).toHaveCount(0);
+    await expect(page.locator('#main-scroll .cp-prog-xp-fill')).toHaveCount(0);
+  });
+});
