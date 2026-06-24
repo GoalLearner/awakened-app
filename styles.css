@@ -3530,7 +3530,13 @@ footer {
 .notice-card-wrap {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  /* W521 — was 200, which sat UNDER the Ascent overlay (.ar-overlay z 12300), so a
+     notice card opened from inside the Ascent (the W518 POWER breakdown) rendered
+     BEHIND the tower and only appeared once the overlay closed (on the main page).
+     A notice card is a blocking must-read — it belongs in the top tier, above the
+     arena + its own info modals (#ct-overlay 12400 / .ct-modal 12401), below the
+     one-time Ascent cinematic (99000) and corner toasts (99999). */
+  z-index: 12500;
   display: flex;
   align-items: center;
   justify-content: center;
