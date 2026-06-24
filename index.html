@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=498">
+  <link rel="stylesheet" href="styles.css?v=499">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3083,7 +3083,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=932"></script>
+  <script src="app.js?v=933"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3804,7 +3804,14 @@
       <h2 id="carddetail-name" class="carddetail-name">—</h2>
       <div id="carddetail-source" class="carddetail-source">—</div>
       <p id="carddetail-flavor" class="carddetail-flavor">—</p>
+      <!-- W495 — set membership tag. Hidden unless the relic carries a set_id;
+           the discovery hook that tells a player this piece is part of a set. -->
+      <div id="carddetail-set" class="carddetail-set hidden"></div>
       <div id="carddetail-stats" class="carddetail-stats"></div>
+      <!-- W494 — Relic Upgrade row. Hidden unless the relic is owned + upgradeable.
+           Shows LV n / max, the next-level cost (+1 to the dominant stat), and an
+           UPGRADE button. Filled by openCardDetailModal; handler in setupCardDetailModal. -->
+      <div id="carddetail-upgrade" class="carddetail-upgrade hidden"></div>
       <div id="carddetail-acquired" class="carddetail-acquired"></div>
       <div id="carddetail-stack" class="carddetail-stack"></div>
       <!-- v3 PvP Phase 1a — Equip / Unequip control. Renders only

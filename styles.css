@@ -15424,6 +15424,123 @@ body.reveal-locked { overflow: hidden; }
   color: var(--gold);
 }
 
+/* W495 — set membership tag (card-detail modal). One reductive line
+   between the flavor text and the stat badges. */
+.carddetail-set {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px auto 2px;
+}
+.carddetail-set.hidden { display: none; }
+.carddetail-set-glyph { color: var(--gold); font-size: 0.78rem; }
+.carddetail-set-name {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+}
+.carddetail-set-note {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: rgba(196, 181, 253, 0.7);
+}
+
+/* ───────────────────────────────────────────────────────────────
+   W494 — Relic Upgrade row (card-detail modal). The terminal souls
+   sink: spend souls to raise an owned relic's level (+1 to its
+   dominant stat per level, max 3). Hidden unless owned + upgradeable;
+   sits between the stat badges and the acquired/stack lines.
+   ─────────────────────────────────────────────────────────────── */
+.carddetail-upgrade {
+  margin: 14px auto 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.10), rgba(20, 16, 34, 0.30));
+}
+.carddetail-upgrade.hidden { display: none; }
+.cdu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cdu-title {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.85);
+}
+.cdu-level {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+.cdu-pips { display: flex; gap: 6px; margin-bottom: 10px; }
+.cdu-pip {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.cdu-pip--on {
+  background: linear-gradient(90deg, #c4b5fd, #f6c453);
+  border-color: rgba(246, 196, 83, 0.55);
+  box-shadow: 0 0 8px rgba(196, 181, 253, 0.45);
+}
+.cdu-current {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.cdu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(246, 196, 83, 0.40);
+  background: linear-gradient(180deg, rgba(246, 196, 83, 0.18), rgba(139, 92, 246, 0.16));
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.14s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.cdu-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(139, 92, 246, 0.30); }
+.cdu-btn:active { transform: translateY(0); }
+.cdu-btn-cost { display: inline-flex; align-items: center; gap: 4px; color: var(--gold); }
+.cdu-souls { width: 12px; height: 12px; }
+.cdu-btn--short, .cdu-btn--max { opacity: 0.5; cursor: default; }
+.cdu-btn--short:hover, .cdu-btn--max:hover { transform: none; box-shadow: none; }
+.cdu-gain {
+  text-align: center;
+  margin-top: 7px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(196, 181, 253, 0.8);
+}
+
 /* ───────────────────────────────────────────────────────────────
    v3 Phase 1d — Card detail modal action button.
    Final CTA at the bottom of the carddetail modal. Two states
@@ -17026,6 +17143,84 @@ body.reveal-locked { overflow: hidden; }
   color: var(--text-tertiary, #6b7280);
   text-align: center;
   padding: 14px 8px;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   W495 — Set-bonus progress block. Sits beneath the bonus sigil
+   grid in the EQUIPMENT BONUSES panel; one card per set the player
+   has any piece of equipped, each tier lit when active.
+   ─────────────────────────────────────────────────────────────── */
+.hbb-sets { margin-top: 14px; }
+.hbb-sets-title {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.75);
+  margin-bottom: 8px;
+}
+.hbb-set {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), rgba(20, 16, 34, 0.22));
+}
+.hbb-set + .hbb-set { margin-top: 8px; }
+.hbb-set-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.hbb-set-name {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+.hbb-set-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+.hbb-set-tiers { display: flex; flex-direction: column; gap: 5px; }
+.hbb-set-tier {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  opacity: 0.5;
+}
+.hbb-set-tier--on {
+  opacity: 1;
+  background: linear-gradient(90deg, rgba(246, 196, 83, 0.14), rgba(139, 92, 246, 0.10));
+  box-shadow: inset 0 0 0 1px rgba(246, 196, 83, 0.30);
+}
+.hbb-set-tier-pc {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(196, 181, 253, 0.85);
+  min-width: 26px;
+}
+.hbb-set-tier--on .hbb-set-tier-pc { color: var(--gold); }
+.hbb-set-tier-bonus {
+  flex: 1 1 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-secondary, #9ca3af);
+}
+.hbb-set-tier--on .hbb-set-tier-bonus { color: var(--text-primary); }
+.hbb-set-tier-on {
+  color: var(--gold);
+  font-size: 0.7rem;
+  text-shadow: 0 0 8px rgba(246, 196, 83, 0.6);
 }
 /* Narrow-screen fallback — keeps the 2-col rhythm down to
    tiny widths so the cards never crush the value. Single

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.3.2';   // co-op hunt fixes + boss-reward exploit patch (2.3.1 train closed by Apple → bump required)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.3.2-w493'; // W493 — finish the Status tap-affordances (IA #2 major, started in W490): (1) the AVATAR (an <img>, role=button "tap to change your look") now carries a small ✎ pencil badge pinned to its lower-right (✎ = the app's edit verb, matching the name-edit cue) — a sibling in .sc-avatar-row, not nested, so it can't disturb the avatar crossfade; (2) the RADAR (6 tappable stat axes -> openStatDetail, previously only cursor:pointer with no touch affordance) gets ONE faint "TAP A STAT" whisper at the bottom-center of the SVG (owner prefers a single hint to 6 per-axis cues). With W490's class-chip cue, all 3 always-tappable Status surfaces now signal it; the plain rank-hero disc stays uncued (it's inert — only the 100k-club variant is tappable). [W492 = e2e smoke now runs in CI via cross-platform serve.mjs; test/CI plumbing, no app bump.] W491 — error VISIBILITY (re-grade's #1 Craft/Economy leverage): routed the 9 highest-value silent catch(_) blocks through _logSwallow (no-op unless localStorage hb_debug=1 — ZERO production behavior change). Instrumented: the whole-state-wipe load() recovery (a transient parse/quota error silently reset ALL habits/points/stats), the 6 per-subsystem loaders that silently fall back to defaults (souls/inventory/bosses/equipped/hunterBuild/leaderboard — i.e. souls vanish, gear un-equips, streaks reset), the daily-cap ledger persist (W461 bug class), and the checkCustomRoutineCompound outer catch (a throw there silently drops compound XP ~90% of rank XP). Surfaces the silent data-loss/economy failures that blinded the new W487 CI. ~26 lower-value reward-integrity/secondary persist catches noted for a follow-up (cosmetic DOM/render catches deliberately left). W490 — Status-tab tap-affordance cue v1 (IA): interactive Status elements opened modals with no visual "tappable" cue. Added a shared subtle ".sc-tap-cue" ("›") + applied it to the always-tappable class chip (.sc-hero-class[data-class-key], role=button "Class details"). DELIBERATELY scoped to that one element this pass: the rank hero is only CONDITIONALLY tappable (100k-club variant; the plain disc is inert — must NOT be cued) and the 6 radar dots are SVG-positioned — both need a careful follow-up pass rather than a rushed blind edit to the first screen. W489 — per-habit difficulty picker for custom habits (closes the W485 "effort, not attendance" gap for custom-CREATORS). Custom habits were hard-pinned to medium (CUSTOM_HABIT_DIFFICULTY), so W485's difficulty tilt was a flat 1.0x for the exact population it was named to fix. Now the Create modal has an easy/medium/hard picker (#custom-diff-row, reuses the edit modal's .diff-row/.diff-btn CSS — no new CSS); default medium (economy byte-identical for non-users). ANTI-GAMING CLAMP: legendary is EXCLUDED in 3 layers — omitted from the markup, ignored in the click handler (_clampCustomDiff), AND clamped on persist (saveCustomHabit) — so a user-authored habit tops out at hard (5 XP/completion, 1.3x compound), never the 1.5x legendary tier. Matches the library habits' own easy→hard range (no library habit is legendary either). Edit-modal unlock deferred (create-only v1; existing customs stay medium). W488 — discoverable Ranked PvP entry (path-to-A IA fix): ranked PvP was buried 2 layers deep behind the gold "THE ASCENT / CLIMB" banner (nothing said Duel/PvP). Added a slim, teal-accented "Duel a Hunter / RANKED PVP" button (#sc-pvp-btn) as a sibling row under the Ascent strip on the home Score screen, gated by PVP_ENABLED. New openArenaPvP() deep-links straight into the PvP hub (openArena(skipOpening=true) to un-hide the overlay + wire [data-ar] without popping the Ascent first-entry challenge over the hub, then _pvpOpenLobby()). Wired via the existing setupOriginStorySheet delegated handler. The in-overlay "Enter the Arena" banner stays (serves users already in the tower). [W487 = CI gate + glob/manifest bundling, build-pipeline only, no app bump.] W486 — teach the economy (path-to-A Onboarding). FINDING: the app ALREADY teaches it — a 7-section ClaudeDesign Field Manual (Rank·XP, Stats·Class, Bosses·Souls, …) + First-Awakened coachmarks (Quests, Stats) + tappable rank/stat/compound explainers; the "no explanation" audit was stale. TWO real gaps fixed: (1) the COMPOUND EFFECT — ~90% of rank XP — was the one UNDOCUMENTED mechanic; added an 8th Field Manual section "THE COMPOUND EFFECT" (+ a nested-diamond glyph) in a placeholder ClaudeDesign voice (pending their refinement — the others stay canonical, do not reword). (2) the manual was buried in Settings; added a ONE-TIME pointer card (#fm-pointer-overlay, reuses First-Mark styling) chained after showFirstWinScreen ("New to the System? Read the manual" / "Maybe later") gated by hb_fm_pointer_seen → openFieldManual(). New users discover it at the peak teaching moment; existing users unaffected (re-openable from Settings → Field Manual). W485 — difficulty-aware CUSTOM compound (path-to-A Economy: "rank rewards attendance, not effort"). The compound is ~90% of rank XP and was difficulty-BLIND; now the CUSTOM compound scales by the routine's AVERAGE habit difficulty (easy 1/med 3/hard 5/legendary 10), REBALANCED around medium (3pts=1.0x, byte-identical to before — NO inflation, owner's requirement): all-easy ~0.7x, all-hard ~1.3x, clamped [0.7,1.5]. customCompoundDifficultyFactor in lib/economy.js (6 tests) threaded into _customFullBonusToday + awardCustomRoutineCompound; computeTodayXP inherits it via the ledger; reconciles via the W479 clawback (a mid-day difficulty change is handled exactly like a size change — verified). CUSTOM-ONLY (preset packs untouched; per-habit XP already rewards difficulty for everyone). 4-dim multi-agent review = SHIP, no must-fix. HEADROOM: no library habit is 'legendary' + custom-CREATED habits are pinned medium, so the OPERATIVE band TODAY is ~0.7x-1.3x (all-custom routine = 1.0x); the 1.5x ceiling is forward-looking (needs legendary habits or per-habit difficulty selection). 6 new sim-reconcile invariants (129 total) + days-to-S+ sim (tools/economy/sim-difficulty.js: medium 153d UNCHANGED, easy->hard reachable spread ~1.76x). W484 — Streak Shields are now earned from ENGAGEMENT, not routine discipline: 1 shield per 14 distinct DAYS ACTIVE (any day with >=1 completion), max 3, in a SINGLE GLOBAL pool (was: a 14-day-consecutive per-routine completion streak with a per-routine pool). Rewards just showing up. tryEarnActivityShield() (called from check() on each completion) REPLACES tryEarnShield(); idempotent + recurring via shieldMilestoneClaimed (the highest 14-days-active milestone credited), with first-run SEEDING (-1 sentinel) so a returning user's past days never retroactively flood shields, and a cap that still advances the milestone (no re-flood on spend). processStreakRollover consumes from the one global pool to forgive a missed day on ANY routine. Removed the now-moot W482 per-routine shield-earn + prevShields snapshot/refund-rollback (the custom STREAK rollback stays). Migrated persistence: hb_shields object->number (summed, clamped) + new hb_shield_milestone. Updated the 🛡️ info modal + bonus-info copy (were "per-pack 14-day streak"). Adversarial-reviewed (logic clean: migration throw/flood-safe, earn idempotent/seeded/capped); 4 new sim-reconcile invariants (123 total). W483 — co-op ALLY rank gate (owner design change): you may now only pair hunters who BOTH meet a co-op boss's rank prerequisite. Reverses the old "the invited partner can be any rank — they're just helping" design (a C-rank ally could be invited to a B-rank hunt). BACKEND (coop-boss.ts create): after the existing summoner gate, look up the PARTNER's rank_tier in public_profile_summary and reject with ALLY_RANK 403 if below cfg.rank (same RANK_ORDER incl S+, same default-E trust model). CLIENT: the ally picker now shows each friend's rank tier and LOCKS under-rank allies (non-tappable "Needs B" row, greyed) so the invite is never even offered; _coopRankMeets mirrors the server RANK_ORDER exactly (unknown/unsynced rank => E, matching the server); ALLY_RANK + INSUFFICIENT_RANK now map to clear picker messages. "Can't invite" (summoner) was already enforced by the summoner gate + the boss preview-gate; this closes the "can't be invited" half. W482 — finish W479: make the custom-path compound a TRUE PEER of the preset packs (the B− re-grade's #1 finding — custom was structurally fragile for identical effort). (1) STREAK SHIELD: awardCustomRoutineCompound now earns a shield at each 14-day milestone (tryEarnShield) + snapshots prevShields; processStreakRollover iterates a new FORGIVENESS_PACK_IDS (['morning','locked-in','custom']) so a missed custom day CONSUMES a shield / Honest-Rest and holds the streak, else breaks it — identical to a pack. (2) PERSISTENT STRIP: renderCompoundProgress shows a "Your Routine" row (Day-N + shield + Rest chips) for custom-path users (gated !_onPresetPack && >=3 habits; suppresses the misleading partial-pack nudge; no phantom row on a preset pack). (3) RETIRED showCustomWarning — the stale "custom gets no bonus, switch to Morning" onboarding scare (+ neutralized the path-note copy + removed the dead modal/CSS). BUGS: (4) _refundOrphanCustomCompound now neutralizes a pre-W482 stale-save streak-inflation (prevStreak-absent -> streak-1, reload-safe) + rolls back a phantom shield on a superseded milestone; (5) diffPts/isWeekend take the COMPLETION's date so a historical/backfilled seal uses that day's weekend x2, not today's (LA-anchored). 18 new sim-reconcile invariants (115 total) prove a shielded miss preserves the custom streak + the strip state. W481 — readable centered "notice cards" for long messages that were clipping + flashing by at the screen bottom (Richie's report). Generalized the W477/W478 compound nudge into a reusable showNoticeCard (centered, tap-to-continue, no auto-dismiss, 350ms tap-guard, .notice-card CSS renamed from .compound-notice + loss/warn tone variants). Converted: co-op hunt DEFEAT (was a bare 2.2s bottom toast — the co-op WIN already gets a rich result modal), the Storage-full data-loss warning, Streak Shield earned, and Honest Rest day. Left as quick bottom toasts: all the short status floats (Link copied / X equipped / Now hunting Y / friend + backup + rank-gate confirmations), shield-USED (it staggers multiple per-pack notices on rollover), and solo boss kills (they already show a boss-result modal). W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
+  const APP_BUILD_TAG = '2.3.2-w495'; // W494+W495 — TWO economy-depth features (path-to-A re-grade #2 queue, items #3 + #5), shipped together after a 4-critic adversarial review (verdict ship-with-fixes; balance ruling = no constants trimmed). W494 RELIC UPGRADE (the terminal souls sink the economy lacked): spend souls to raise an OWNED relic's upgrade_level 0→3, each level +1 to that relic's SINGLE DOMINANT base stat only (_relicDominantStatKey). Cost = RELIC_UPGRADE_BASE_COST[tier]×2^level (E300…S3200; maxing an S relic = 3200+6400+12800 = 22,400 souls). Bounded by design: a fully-maxed 8-relic build gains only ~+24–38 combat power (<10%), so it can't bust the F100 ceiling or PvP symmetry. SUNK-COST: relicSellPrice ignores upgrades + selling the LAST copy resets the level → zero arbitrage. RARITY-GATED to tradeable relics (rare/ultra/mythic), mirroring the market (commons excluded). upgrade_level rides hb_inventory (CloudSync 'inventory', zero backend change). Combat hook = ONE line in _aggregateBuildBonuses, so Ascent (_ascPlayerPower) + PvP inherit it automatically. UI: a card-detail UPGRADE row (level pips, next-cost, +1 STAT, MAX state). W495 SET BONUSES (activates the long-dead set_id schema — 0 prior functional consumers): SET_BONUSES table — Sovereign's Regalia 2pc{vit4,will3}/3pc{str4,vit6,will4,focus3} (NO 4pc: body+legs both collapse to the one 'plate' slot, so 3 is the real cap), Wakeful Vigil 2pc{vit3,focus3}/4pc{vit6,focus5,will4}. _activeSetBonuses counts equipped pieces per set over the live build and applies ONLY the single highest qualifying tier (cumulative-total, no 2pc+3pc double-count — browser-verified: a 3pc Sovereign build totalled 136 = gear 116 + upgrade 3 + 3pc 17, NOT 143). Folds into the SAME _aggregateBuildBonuses read-point. These set pieces ARE best-in-slot, so the bonus is a flat endgame-collection power bump by design (not an opportunity-cost trade) — fine because F100 is a fixed wall already cleared at 84%/65% and PvP is server-authoritative + symmetric. UI: a SET BONUSES progress block under the equipment-bonuses grid (tiers lit when active) + a set-membership discovery tag in the card-detail modal. REVIEW MUST-FIXES (both data-loss on the now-paid inventory blob): (1) CloudSync startup push is now guarded — a provably-STALE device (local last-change older than the cloud snapshot) no longer blind-overwrites a newer cloud copy via last-writer-wins (only SKIPS when older, never blocks a newer-local push, so no new-change loss; full field-merge still the v2 item); (2) a CORRUPT hb_inventory no longer auto-stubs+persists+pushes the wipe — loadInventory runs the session on an in-memory stub WITHOUT persisting, preserves the raw blob for cloud-restore, and collectState SKIPS the inventory key while flagged (_inventoryCorrupt) so another subsystem's push can't clobber the cloud's good copy. Browser-verified end-to-end (boot clean, cost curve 3200/6400/12800, max cap, exact 22,400 debit, rarity gate, both combat folds). [W493 = Status tap-affordances; below.] W493 — finish the Status tap-affordances (IA #2 major, started in W490): (1) the AVATAR (an <img>, role=button "tap to change your look") now carries a small ✎ pencil badge pinned to its lower-right (✎ = the app's edit verb, matching the name-edit cue) — a sibling in .sc-avatar-row, not nested, so it can't disturb the avatar crossfade; (2) the RADAR (6 tappable stat axes -> openStatDetail, previously only cursor:pointer with no touch affordance) gets ONE faint "TAP A STAT" whisper at the bottom-center of the SVG (owner prefers a single hint to 6 per-axis cues). With W490's class-chip cue, all 3 always-tappable Status surfaces now signal it; the plain rank-hero disc stays uncued (it's inert — only the 100k-club variant is tappable). [W492 = e2e smoke now runs in CI via cross-platform serve.mjs; test/CI plumbing, no app bump.] W491 — error VISIBILITY (re-grade's #1 Craft/Economy leverage): routed the 9 highest-value silent catch(_) blocks through _logSwallow (no-op unless localStorage hb_debug=1 — ZERO production behavior change). Instrumented: the whole-state-wipe load() recovery (a transient parse/quota error silently reset ALL habits/points/stats), the 6 per-subsystem loaders that silently fall back to defaults (souls/inventory/bosses/equipped/hunterBuild/leaderboard — i.e. souls vanish, gear un-equips, streaks reset), the daily-cap ledger persist (W461 bug class), and the checkCustomRoutineCompound outer catch (a throw there silently drops compound XP ~90% of rank XP). Surfaces the silent data-loss/economy failures that blinded the new W487 CI. ~26 lower-value reward-integrity/secondary persist catches noted for a follow-up (cosmetic DOM/render catches deliberately left). W490 — Status-tab tap-affordance cue v1 (IA): interactive Status elements opened modals with no visual "tappable" cue. Added a shared subtle ".sc-tap-cue" ("›") + applied it to the always-tappable class chip (.sc-hero-class[data-class-key], role=button "Class details"). DELIBERATELY scoped to that one element this pass: the rank hero is only CONDITIONALLY tappable (100k-club variant; the plain disc is inert — must NOT be cued) and the 6 radar dots are SVG-positioned — both need a careful follow-up pass rather than a rushed blind edit to the first screen. W489 — per-habit difficulty picker for custom habits (closes the W485 "effort, not attendance" gap for custom-CREATORS). Custom habits were hard-pinned to medium (CUSTOM_HABIT_DIFFICULTY), so W485's difficulty tilt was a flat 1.0x for the exact population it was named to fix. Now the Create modal has an easy/medium/hard picker (#custom-diff-row, reuses the edit modal's .diff-row/.diff-btn CSS — no new CSS); default medium (economy byte-identical for non-users). ANTI-GAMING CLAMP: legendary is EXCLUDED in 3 layers — omitted from the markup, ignored in the click handler (_clampCustomDiff), AND clamped on persist (saveCustomHabit) — so a user-authored habit tops out at hard (5 XP/completion, 1.3x compound), never the 1.5x legendary tier. Matches the library habits' own easy→hard range (no library habit is legendary either). Edit-modal unlock deferred (create-only v1; existing customs stay medium). W488 — discoverable Ranked PvP entry (path-to-A IA fix): ranked PvP was buried 2 layers deep behind the gold "THE ASCENT / CLIMB" banner (nothing said Duel/PvP). Added a slim, teal-accented "Duel a Hunter / RANKED PVP" button (#sc-pvp-btn) as a sibling row under the Ascent strip on the home Score screen, gated by PVP_ENABLED. New openArenaPvP() deep-links straight into the PvP hub (openArena(skipOpening=true) to un-hide the overlay + wire [data-ar] without popping the Ascent first-entry challenge over the hub, then _pvpOpenLobby()). Wired via the existing setupOriginStorySheet delegated handler. The in-overlay "Enter the Arena" banner stays (serves users already in the tower). [W487 = CI gate + glob/manifest bundling, build-pipeline only, no app bump.] W486 — teach the economy (path-to-A Onboarding). FINDING: the app ALREADY teaches it — a 7-section ClaudeDesign Field Manual (Rank·XP, Stats·Class, Bosses·Souls, …) + First-Awakened coachmarks (Quests, Stats) + tappable rank/stat/compound explainers; the "no explanation" audit was stale. TWO real gaps fixed: (1) the COMPOUND EFFECT — ~90% of rank XP — was the one UNDOCUMENTED mechanic; added an 8th Field Manual section "THE COMPOUND EFFECT" (+ a nested-diamond glyph) in a placeholder ClaudeDesign voice (pending their refinement — the others stay canonical, do not reword). (2) the manual was buried in Settings; added a ONE-TIME pointer card (#fm-pointer-overlay, reuses First-Mark styling) chained after showFirstWinScreen ("New to the System? Read the manual" / "Maybe later") gated by hb_fm_pointer_seen → openFieldManual(). New users discover it at the peak teaching moment; existing users unaffected (re-openable from Settings → Field Manual). W485 — difficulty-aware CUSTOM compound (path-to-A Economy: "rank rewards attendance, not effort"). The compound is ~90% of rank XP and was difficulty-BLIND; now the CUSTOM compound scales by the routine's AVERAGE habit difficulty (easy 1/med 3/hard 5/legendary 10), REBALANCED around medium (3pts=1.0x, byte-identical to before — NO inflation, owner's requirement): all-easy ~0.7x, all-hard ~1.3x, clamped [0.7,1.5]. customCompoundDifficultyFactor in lib/economy.js (6 tests) threaded into _customFullBonusToday + awardCustomRoutineCompound; computeTodayXP inherits it via the ledger; reconciles via the W479 clawback (a mid-day difficulty change is handled exactly like a size change — verified). CUSTOM-ONLY (preset packs untouched; per-habit XP already rewards difficulty for everyone). 4-dim multi-agent review = SHIP, no must-fix. HEADROOM: no library habit is 'legendary' + custom-CREATED habits are pinned medium, so the OPERATIVE band TODAY is ~0.7x-1.3x (all-custom routine = 1.0x); the 1.5x ceiling is forward-looking (needs legendary habits or per-habit difficulty selection). 6 new sim-reconcile invariants (129 total) + days-to-S+ sim (tools/economy/sim-difficulty.js: medium 153d UNCHANGED, easy->hard reachable spread ~1.76x). W484 — Streak Shields are now earned from ENGAGEMENT, not routine discipline: 1 shield per 14 distinct DAYS ACTIVE (any day with >=1 completion), max 3, in a SINGLE GLOBAL pool (was: a 14-day-consecutive per-routine completion streak with a per-routine pool). Rewards just showing up. tryEarnActivityShield() (called from check() on each completion) REPLACES tryEarnShield(); idempotent + recurring via shieldMilestoneClaimed (the highest 14-days-active milestone credited), with first-run SEEDING (-1 sentinel) so a returning user's past days never retroactively flood shields, and a cap that still advances the milestone (no re-flood on spend). processStreakRollover consumes from the one global pool to forgive a missed day on ANY routine. Removed the now-moot W482 per-routine shield-earn + prevShields snapshot/refund-rollback (the custom STREAK rollback stays). Migrated persistence: hb_shields object->number (summed, clamped) + new hb_shield_milestone. Updated the 🛡️ info modal + bonus-info copy (were "per-pack 14-day streak"). Adversarial-reviewed (logic clean: migration throw/flood-safe, earn idempotent/seeded/capped); 4 new sim-reconcile invariants (123 total). W483 — co-op ALLY rank gate (owner design change): you may now only pair hunters who BOTH meet a co-op boss's rank prerequisite. Reverses the old "the invited partner can be any rank — they're just helping" design (a C-rank ally could be invited to a B-rank hunt). BACKEND (coop-boss.ts create): after the existing summoner gate, look up the PARTNER's rank_tier in public_profile_summary and reject with ALLY_RANK 403 if below cfg.rank (same RANK_ORDER incl S+, same default-E trust model). CLIENT: the ally picker now shows each friend's rank tier and LOCKS under-rank allies (non-tappable "Needs B" row, greyed) so the invite is never even offered; _coopRankMeets mirrors the server RANK_ORDER exactly (unknown/unsynced rank => E, matching the server); ALLY_RANK + INSUFFICIENT_RANK now map to clear picker messages. "Can't invite" (summoner) was already enforced by the summoner gate + the boss preview-gate; this closes the "can't be invited" half. W482 — finish W479: make the custom-path compound a TRUE PEER of the preset packs (the B− re-grade's #1 finding — custom was structurally fragile for identical effort). (1) STREAK SHIELD: awardCustomRoutineCompound now earns a shield at each 14-day milestone (tryEarnShield) + snapshots prevShields; processStreakRollover iterates a new FORGIVENESS_PACK_IDS (['morning','locked-in','custom']) so a missed custom day CONSUMES a shield / Honest-Rest and holds the streak, else breaks it — identical to a pack. (2) PERSISTENT STRIP: renderCompoundProgress shows a "Your Routine" row (Day-N + shield + Rest chips) for custom-path users (gated !_onPresetPack && >=3 habits; suppresses the misleading partial-pack nudge; no phantom row on a preset pack). (3) RETIRED showCustomWarning — the stale "custom gets no bonus, switch to Morning" onboarding scare (+ neutralized the path-note copy + removed the dead modal/CSS). BUGS: (4) _refundOrphanCustomCompound now neutralizes a pre-W482 stale-save streak-inflation (prevStreak-absent -> streak-1, reload-safe) + rolls back a phantom shield on a superseded milestone; (5) diffPts/isWeekend take the COMPLETION's date so a historical/backfilled seal uses that day's weekend x2, not today's (LA-anchored). 18 new sim-reconcile invariants (115 total) prove a shielded miss preserves the custom streak + the strip state. W481 — readable centered "notice cards" for long messages that were clipping + flashing by at the screen bottom (Richie's report). Generalized the W477/W478 compound nudge into a reusable showNoticeCard (centered, tap-to-continue, no auto-dismiss, 350ms tap-guard, .notice-card CSS renamed from .compound-notice + loss/warn tone variants). Converted: co-op hunt DEFEAT (was a bare 2.2s bottom toast — the co-op WIN already gets a rich result modal), the Storage-full data-loss warning, Streak Shield earned, and Honest Rest day. Left as quick bottom toasts: all the short status floats (Link copied / X equipped / Now hunting Y / friend + backup + rank-gate confirmations), shield-USED (it staggers multiple per-pack notices on rollover), and solo boss kills (they already show a boss-result modal). W480 — CRITICAL iOS build fix: lib/economy.js (the W471 economy-math extraction that defines AwakenedEconomy, which app.js delegates ALL stat-level/XP math to) was NEVER copied into the www/ bundle by prep-local-build.sh / codemagic.yaml (both copy JS by explicit name). So on every iOS build since W471, index.html referenced lib/economy.js but the file 404'd → AwakenedEconomy undefined → statLevel() threw on the Ascent power path → POWER read 0 (display catches the throw) AND tapping FIGHT silently no-op'd ("can't enter tower", the throw propagates uncaught from the unwrapped arenaMatchup→_ascentPlayerCombatant). PvP/spar survived (server-authoritative). Fix: (1) both build scripts now copy lib/economy.js into www/lib/ + FAIL the build if it's missing; (2) _ascentPlayerCombatant wraps the player-stat/profile build in try/catch (mirrors the display path) so a calc throw can never dead-end FIGHT again; (3) boot logs a FATAL if AwakenedEconomy didn't load; (4) gear bonus is numeric-coerced so a corrupt build can't poison power into NaN. W479 — custom-path compound (path-to-A Economy, the two-tier gap): a SELF-BUILT routine (matching no preset pack) now earns a daily Compound Effect on the Morning streak curve, scaled by routine size (full Morning rate at 10+ habits, CAPPED there so the curated Locked-In cycle stays premium; >=3-habit floor). Mirrors checkCompoundEffect incl. W459 graded partial credit (so a near-complete custom day never pays zero — no re-introduced compound cliff) + the bonus celebration ("Personal Routine Bonus"). Fires ONLY when NOT on a preset pack (no double-dip); idempotent via compoundAwarded['custom'] (uncheck/recheck can't re-award). Pure size + fractional-partial math lives in lib/economy.js (8 new node:assert tests). Closes the ~6-10x days-to-S+ gap for EQUIVALENT effort (sim: 934d->153d at 10 habits = exact pack parity; 5 habits stays proportional/fair). Tools: tools/economy/. W478 — partial-compound nudge is now TAP TO CONTINUE (no auto-dismiss): a light backdrop captures the tap, a pulsing "Tap to continue" cue, tap-handler attached immediately with a 350ms guard so the completing tap can't carry through (and it can never get stuck). W477 — partial-compound nudge is now a CENTERED, readable card (was a bottom showHabitToast whose long "+N partial <pack> bonus — finish all…" text ran off the screen edge). Fires once per pack per day; auto-dismiss + tap to close. W476 — stat level-up toast (path-to-A Core loop): the in-between stat levels (2/3/4/6/7…) now fire ONE lightweight, non-blocking, stat-coloured toast per stat per completion ("STR reached Lv.3") instead of the full-screen modal flood (1z.276A); milestone levels (5/10/15/20, the only ones with bonus rank XP) keep the full modal. Purely celebration cadence — no economy change. W475 — ClaudeDesign Relic Archive (Items tab) visual refresh: rarity sections are now contained cards with an enriched header (accent bar + rarity sigil + sub-label + per-section mini progress bar, per-rarity tint); sticky blurred filter/sort bar; tightened spacing (9px section gaps, removed the header divider + the "tap an archetype" hint). Structure/features (deltas, chips, buy/sell) were already live from W450/W470 — this is polish only. W474 — drop-table power-curve tune: retuned the 2 W306 shop weapons (Aetherspire/Wraithwind) from cp41/39 DOWN into A's band (cp33, kept shop-buyable, Wraithwind renamed "Far Hunt"); raised D-ultras 15→18 (killed the E=D flat); lifted the S Regalia floor 34→36 (cleared the A/S tie); flattened Alpha's Mantle E-rare 10→8; fixed 5 stale Steel Wolf tier labels (D→E). E→S now rises monotonic, no flats, no solo outliers/inversions. Tools in tools/balance/. W471–W473 path-to-A batch 2: W471 extracted the pure XP/rank/compound/soft-cap math to lib/economy.js (17 node:assert tests, app.js delegates — zero behavior change); W472 opt-in onboarding lore glossary (info dot on the naming screen → Hunter/Mark/Vow/System primer); W473 _logSwallow diagnostic on 9 critical-path catch(_) (souls/bosses/inventory persistence + coop reward), no-op unless localStorage hb_debug=1. W470 — path-to-A prominence anchor: (1) Marketplace spend-sink surfaced via a "Ways to spend" CTA in the souls modal (routes to Items tab); (2) WLT de-emphasized on the Status radar (muted slate, smaller dot/label, never the dominant axis) so it stops reading as a 6th combat stat. W469 — Perfect Day guild event: milestone perfect streaks (7/14/21/30/60/100) now post a privacy-safe public 'perfect_day' event to friends' guild feed + the user's own Hunter feed (radiant-gold ★, "sealed a 30-day Perfect streak"). Band-keyed + once-ever per band (pinned clientEventId). W465.1 — souls-farm fix hardened per adversarial review (in-memory fallback so the kill-reward guard can't fail-open under storage failure). W465 — URGENT: patch souls-farm exploit (solo boss re-killed via unguarded resolver backfill on re-engage → +50/+5 souls per app entry); kill rewards now once per (boss,day) via an independent hb_kill_reward_ flag. [W464.1 — durable co-op drop credit (coop_boss_awards table + atomic POST /claim; drop lands EXACTLY ONCE per user). W464.1 — adversarial-review hardening: cancel-race now carries the award (server-side), _awardCoopKill never rejects, and grants BEFORE persisting the local guard. (W463 = the 4 co-op bug fixes: join-429, false-empty dashboard, missed-drop reconcile, rank gate.)
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -3406,6 +3406,78 @@
     },
   };
 
+  // ── W495 — Equipment Set Bonuses ─────────────────────────────────────────
+  // Wearing multiple pieces of a named set grants a tier stat bonus — the
+  // collection payoff that finally activates the long-dead set_id schema. Folded
+  // into the SAME _aggregateBuildBonuses read-point as relics, so Ascent + PvP
+  // both inherit it with zero per-system edits.
+  //
+  // Tiers are CUMULATIVE TOTALS, not stacking deltas: apply ONLY the single
+  // highest tier whose `pieces` ≤ the equipped count for that set (3 Sovereign
+  // pieces → the 3pc bonus, NOT 2pc+3pc). Bounded — peak ~+28 power (Sovereign
+  // 3pc). NOTE (verified by the W494/W495 balance review): these set pieces ARE
+  // the best-in-slot items for their slots, so the bonus is NOT an opportunity-
+  // cost trade — it's a flat power-ceiling bump on the optimal endgame build, by
+  // design: the collection payoff for assembling a full set. It does not break
+  // the game because F100 is a FIXED wall already cleared at 84%/65% (the stack
+  // only pushes those win-rates toward ~100% after an enormous grind) and PvP is
+  // server-authoritative + symmetric (both statlines run through this same hook).
+  // WLT is excluded (reward-only, out of combat).
+  //
+  // Sovereign Regalia gets NO 4pc: its body + legs pieces both collapse to the
+  // single 'plate' build slot (LEGACY_TO_TYPED_SLOT), so 4 can never be worn at
+  // once — the real cap is 3 (weapon + helm + plate). 2pc + 3pc only.
+  const SET_BONUSES = {
+    sovereign_regalia: {
+      id: 'sovereign_regalia', name: "Sovereign's Regalia",
+      tiers: [
+        { pieces: 2, bonus: { vit: 4, will: 3 },                   label: '+4 VIT · +3 WILL' },
+        { pieces: 3, bonus: { str: 4, vit: 6, will: 4, focus: 3 }, label: '+4 STR · +6 VIT · +4 WILL · +3 FOCUS' },
+      ],
+    },
+    wakeful_vigil: {
+      id: 'wakeful_vigil', name: 'Wakeful Vigil',
+      tiers: [
+        { pieces: 2, bonus: { vit: 3, focus: 3 },          label: '+3 VIT · +3 FOCUS' },
+        { pieces: 4, bonus: { vit: 6, focus: 5, will: 4 }, label: '+6 VIT · +5 FOCUS · +4 WILL' },
+      ],
+    },
+  };
+  // Counts equipped pieces per set over the LIVE Hunter Build, resolves the
+  // single highest qualifying tier per set, and sums those tier bonuses.
+  // Returns { totals, active } — `active` drives the UI (set name, n equipped,
+  // the tier list, and the currently-active tier). Self-guarded so a malformed
+  // build yields zero bonus rather than throwing the build aggregate.
+  function _activeSetBonuses() {
+    const totals = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    const active = [];
+    try {
+      const build = (typeof getHunterBuild === 'function') ? getHunterBuild() : null;
+      const slots = (build && Array.isArray(build.slots)) ? build.slots : [];
+      const counts = {};
+      for (let i = 0; i < slots.length; i++) {
+        const cid = slots[i];
+        const c = cid && CARDS[cid];
+        if (c && c.set_id) counts[c.set_id] = (counts[c.set_id] || 0) + 1;
+      }
+      Object.keys(counts).forEach(sid => {
+        const set = SET_BONUSES[sid];
+        if (!set) return;
+        let best = null;
+        for (const t of set.tiers) {
+          if (counts[sid] >= t.pieces && (!best || t.pieces > best.pieces)) best = t;
+        }
+        if (best) {
+          Object.keys(best.bonus).forEach(k => {
+            if (Object.prototype.hasOwnProperty.call(totals, k)) totals[k] += best.bonus[k] | 0;
+          });
+        }
+        active.push({ setId: sid, name: set.name, equipped: counts[sid], tiers: set.tiers, activeTier: best });
+      });
+    } catch (_) { /* defensive — no set bonus on a malformed build */ }
+    return { totals: totals, active: active };
+  }
+
   // Slot icons for placeholder rendering (until DALL-E art lands at
   // each card's art_path). Once real PNGs ship in assets/items/, the
   // card render path can swap to <img src> with onerror fallback.
@@ -3756,6 +3828,12 @@
       const rid = h.slice(11);
       const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
       return { type: 'relic_sell', label: 'Relic sold', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
+    // W494 — Relic Upgrade sink. Hint: 'relic_upgrade_<id>'.
+    if (h.indexOf('relic_upgrade_') === 0) {
+      const rid = h.slice(14);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_upgrade', label: 'Relic upgraded', detail: rcard ? rcard.name : null, ref_id: rid || null };
     }
     // v3 W200 — RETAINED intentionally. The W198 Founder's Gift grant
     // was removed before public launch, but TestFlight claimers still
@@ -12481,6 +12559,14 @@
 
   const INVENTORY_STORAGE_KEY = 'hb_inventory';
   let _inventory = null;
+  // W494 — set true when an EXISTING hb_inventory blob fails to parse. Guards two
+  // data-loss paths now that the blob carries non-refundable relic upgrade souls:
+  // (1) loadInventory runs this session on an in-memory stub WITHOUT persisting
+  //     (so the corrupt blob is preserved for cloud-restore, not overwritten);
+  // (2) CloudSync.collectState SKIPS the inventory key while flagged, so a push
+  //     triggered by another subsystem can't clobber the cloud's last-good copy.
+  // Cleared by the next valid persistInventory().
+  let _inventoryCorrupt = false;
 
   // v3 Phase 1h — fresh-pity stub for a never-killed boss.
   function _freshPityState() {
@@ -12492,13 +12578,18 @@
     };
   }
   function _stubCard() {
-    return { discovered: false, count: 0, first_acquired_date: null };
+    // W494 — upgrade_level: per-owned relic enhancement (0..RELIC_UPGRADE_MAX).
+    // Lives on the OWNED inventory entry (survives equip/unequip); reset to 0
+    // only when the last copy sells. Feeds _aggregateBuildBonuses (dominant stat).
+    return { discovered: false, count: 0, first_acquired_date: null, upgrade_level: 0 };
   }
 
   function loadInventory() {
+    let rawExisted = false;
     try {
       const raw = localStorage.getItem(INVENTORY_STORAGE_KEY);
       if (raw) {
+        rawExisted = true;
         const parsed = JSON.parse(raw);
         // v1.3 rename migration — prefer new keys, fall back to legacy.
         const firstCommonPulled = (parsed.first_common_pulled === true)
@@ -12531,6 +12622,13 @@
         Object.keys(CARDS).forEach(id => {
           if (!_inventory.cards[id]) _inventory.cards[id] = _stubCard();
         });
+        // W494 — coerce upgrade_level onto pre-existing entries (the backfill
+        // above only touches MISSING cards; saves from before relic upgrades
+        // have owned entries with no upgrade_level field).
+        Object.keys(_inventory.cards).forEach(id => {
+          const e = _inventory.cards[id];
+          if (e && typeof e.upgrade_level !== 'number') e.upgrade_level = 0;
+        });
         // v3 Phase 1h migration. If first_common_by_boss is missing
         // but the user already owns any common card, infer that the
         // protection has ended for those source bosses. Bosses with
@@ -12559,7 +12657,9 @@
         return _inventory;
       }
     } catch (e) { _logSwallow('loadInventory:parse', e); }   // W491 — a parse error silently wipes the relic collection to all-stub
-    // First install — stub-populate every card as undiscovered.
+    // Reached on (a) genuine first install (no saved blob) OR (b) a CORRUPT
+    // existing blob that failed to parse. Build an in-memory stub either way so
+    // the app runs, but branch on which case it is for persistence.
     _inventory = {
       cards: {},
       first_common_pulled: false,
@@ -12574,10 +12674,21 @@
         _inventory.drop_pity_by_boss[bid] = _freshPityState();
       });
     }
-    persistInventory();
+    if (rawExisted) {
+      // W494 — CORRUPT existing inventory. Do NOT persist (that would overwrite
+      // the recoverable raw blob with an empty stub AND schedule a CloudSync push
+      // of the wipe, clobbering the cloud's good copy — fatal for a feature whose
+      // souls are non-refundable). Run this session on the in-memory stub and
+      // flag collectState to skip the inventory key until a valid write clears it.
+      _inventoryCorrupt = true;
+    } else {
+      // Genuine first install — establish the baseline.
+      persistInventory();
+    }
     return _inventory;
   }
   function persistInventory() {
+    _inventoryCorrupt = false; // W494 — a valid write supersedes any earlier corrupt-blob state; lift the collectState skip.
     try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(_inventory)); } catch (e) { _logSwallow('persistInventory:persist', e); }
     try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('inventory'); } catch (e) { _logSwallow('persistInventory:cloudSync', e); }
   }
@@ -12623,6 +12734,63 @@
   };
   const RELIC_STAT_WEIGHT = 10;    // souls per total stat-bonus point
   const RELIC_SELL_RATIO  = 0.70;  // sell = 70% of buy (recover 70%, ~1.4× spread)
+
+  // ── W494 — Relic Upgrade (terminal souls sink) ───────────────────────────
+  // The ONLY repeatable, never-refunded place to pour souls late-game. Spend to
+  // raise an OWNED relic's upgrade level; each level adds +1 to that relic's
+  // SINGLE DOMINANT base stat (the stat it already leans into). Deliberately
+  // BOUNDED so the late grind can't break combat:
+  //   • MAX 3 levels → +3 to one stat per relic. A fully-maxed 8-relic build
+  //     gains ~+24–38 combat power (<10%): the F100 win-rate headroom absorbs
+  //     it and PvP is symmetric (both sides can upgrade), so no power-creep cliff.
+  //   • Dominant-stat-only keeps a relic's identity (a STR weapon stays STR) and
+  //     preserves the Melee/Mage/Ranger triangle — an upgrade deepens a build,
+  //     never reshapes it.
+  //   • Cost is tier-scaled geometric: BASE[tier] × 2^(currentLevel). Rising, so
+  //     each level is a real decision; ~half a relic's buy price per step, so a
+  //     full 3-level max ≈ buying a second copy. Maxing an S relic = 3200+6400+
+  //     12800 = 22,400 souls — a genuine terminal sink for the soul-rich.
+  const RELIC_UPGRADE_MAX = 3;
+  const RELIC_UPGRADE_COST_MULT = 2;
+  const RELIC_UPGRADE_BASE_COST = { E: 300, D: 400, C: 900, B: 1600, A: 2400, S: 3200 };
+  // Souls to go from `fromLevel` → `fromLevel+1`. null when already at max or
+  // the relic has no priced tier (commons are never upgradeable).
+  function relicUpgradeCost(cardId, fromLevel) {
+    const card = CARDS[cardId];
+    if (!card) return null;
+    const base = RELIC_UPGRADE_BASE_COST[card.tier];
+    if (base == null) return null;
+    const lvl = (typeof fromLevel === 'number') ? fromLevel : getRelicLevel(cardId);
+    if (lvl >= RELIC_UPGRADE_MAX) return null;
+    return base * Math.pow(RELIC_UPGRADE_COST_MULT, lvl);
+  }
+  // The single stat a relic leans into (argmax of its combat bonuses, WLT
+  // excluded — WLT is reward-only and out of combat). Stable tie-break via the
+  // canonical stat order so the target is deterministic for the cap math.
+  function _relicDominantStatKey(card) {
+    const b = card && card.bonuses;
+    if (!b) return null;
+    let best = null, bestV = 0;
+    ['str', 'vit', 'int', 'focus', 'will'].forEach(k => {
+      const v = +b[k];
+      if (isFinite(v) && v > bestV) { bestV = v; best = k; }
+    });
+    return best;
+  }
+  function getRelicLevel(cardId) {
+    const inv = (typeof getInventory === 'function') ? getInventory() : _inventory;
+    const e = inv && inv.cards && inv.cards[cardId];
+    const n = e && +e.upgrade_level;
+    return (isFinite(n) && n > 0) ? Math.min(RELIC_UPGRADE_MAX, Math.trunc(n)) : 0;
+  }
+  function setRelicLevel(cardId, n) {
+    const inv = getInventory();
+    if (!inv || !inv.cards) return;
+    const e = inv.cards[cardId];
+    if (!e) return;
+    e.upgrade_level = Math.max(0, Math.min(RELIC_UPGRADE_MAX, Math.trunc(+n || 0)));
+    persistInventory();
+  }
 
   function _relicTotalBonus(card) {
     const b = card && card.bonuses;
@@ -12728,17 +12896,55 @@
     // (buyRelic guards first_acquired_date with !entry.first_acquired_date).
     // Note: canSellRelic blocks selling the last copy of an EQUIPPED
     // relic, so this revert can never orphan an equipped slot.
-    if (entry.count <= 0) entry.discovered = false;
+    if (entry.count <= 0) {
+      entry.discovered = false;
+      entry.upgrade_level = 0; // W494 — selling the last copy drops its upgrades (re-buy starts fresh)
+    }
     inv.cards[cardId] = entry;
     persistInventory();
     earnSouls(price, 'relic_sell_' + cardId);
     return { ok: true, price: price, newCount: entry.count };
+  }
+  // W494 — Relic Upgrade preflight. { ok, reason, ... } so the UI renders the
+  // exact disabled state without re-deriving. Requires an owned relic with a
+  // dominant combat stat, below max, and enough souls for the next level.
+  function canUpgradeRelic(cardId) {
+    const card = CARDS[cardId];
+    if (!card) return { ok: false, reason: 'unknown' };
+    // W494 — only tradeable relics (rare/ultra/mythic) upgrade, mirroring the
+    // market; commons are filler and excluded (keeps the sink on relics players
+    // keep and makes the 'untradeable' reason accurate). All such relics have a
+    // priced tier, so the BASE_COST guard below is defense-in-depth.
+    if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    if (RELIC_UPGRADE_BASE_COST[card.tier] == null) return { ok: false, reason: 'untradeable' };
+    if (!_relicDominantStatKey(card)) return { ok: false, reason: 'no_stat' };
+    const entry = getInventory().cards[cardId] || _stubCard();
+    if ((entry.count || 0) < 1) return { ok: false, reason: 'not_owned' };
+    const level = getRelicLevel(cardId);
+    if (level >= RELIC_UPGRADE_MAX) return { ok: false, reason: 'maxed', level: level };
+    const cost = relicUpgradeCost(cardId, level);
+    const bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
+    if (bal < cost) return { ok: false, reason: 'insufficient', cost: cost, level: level, shortBy: cost - bal };
+    return { ok: true, cost: cost, level: level, stat: _relicDominantStatKey(card) };
+  }
+  // Execute one upgrade level. Re-checks preflight (stale-UI defense), charges
+  // souls FIRST (never grant before charging), then raises the persisted level.
+  function upgradeRelic(cardId) {
+    const chk = canUpgradeRelic(cardId);
+    if (!chk.ok) return chk;
+    const cost = chk.cost;
+    if (!spendSouls(cost, 'relic_upgrade_' + cardId)) return { ok: false, reason: 'insufficient' };
+    const newLevel = chk.level + 1;
+    setRelicLevel(cardId, newLevel);
+    return { ok: true, cost: cost, newLevel: newLevel, stat: chk.stat };
   }
   try {
     window.buyRelic = buyRelic;
     window.sellRelic = sellRelic;
     window.canBuyRelic = canBuyRelic;
     window.canSellRelic = canSellRelic;
+    window.upgradeRelic = upgradeRelic;
+    window.canUpgradeRelic = canUpgradeRelic;
   } catch (_) {}
 
   // ── Marketplace UI (Layer B) — inline card affordance + confirm sheets ──
@@ -15540,6 +15746,48 @@
   // ── Card detail modal (static, non-cinematic) ───────────────
   // Tap a discovered card in the Pokédex → review its details.
   // Same data as the reveal modal but without animations.
+  // W494 — fills the Relic Upgrade row in the card-detail modal. Hidden unless
+  // the relic is owned AND upgradeable (priced tier + has a dominant combat stat).
+  // Shows level pips, the cumulative bonus so far, and the next-level UPGRADE
+  // button (priced, +1 dominant stat) — or a MAX state. Re-run on every open so
+  // it reflects the latest level + souls balance after an upgrade re-opens it.
+  function _fillCardDetailUpgrade(card, entry) {
+    const box = document.getElementById('carddetail-upgrade');
+    if (!box) return;
+    const owned = !!(entry && (entry.count || 0) > 0);
+    const dom = _relicDominantStatKey(card);
+    const upgradeable = owned && dom && _relicIsTradeable(card.id) && RELIC_UPGRADE_BASE_COST[card.tier] != null;
+    if (!upgradeable) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    const STAT_LABELS = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL' };
+    const domLabel = STAT_LABELS[dom] || String(dom).toUpperCase();
+    const level = getRelicLevel(card.id);
+    const atMax = level >= RELIC_UPGRADE_MAX;
+    let pips = '';
+    for (let i = 0; i < RELIC_UPGRADE_MAX; i++) {
+      pips += '<span class="cdu-pip' + (i < level ? ' cdu-pip--on' : '') + '"></span>';
+    }
+    let btnHtml;
+    if (atMax) {
+      btnHtml = '<button id="carddetail-upgrade-btn" class="cdu-btn cdu-btn--max" type="button" disabled>MAX LEVEL</button>';
+    } else {
+      const cost = relicUpgradeCost(card.id, level);
+      const bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
+      const afford = bal >= cost;
+      btnHtml = '<button id="carddetail-upgrade-btn" class="cdu-btn' + (afford ? '' : ' cdu-btn--short') + '" type="button"' + (afford ? '' : ' disabled') + '>' +
+          '<span class="cdu-btn-main">UPGRADE</span>' +
+          '<span class="cdu-btn-cost">−' + cost + _marketSoulsSvg('cdu-souls') + '</span>' +
+        '</button>' +
+        '<div class="cdu-gain">Next: +1 ' + domLabel + (afford ? '' : ' · need ' + (cost - bal) + ' more') + '</div>';
+    }
+    box.innerHTML =
+      '<div class="cdu-head"><span class="cdu-title">RELIC LEVEL</span>' +
+        '<span class="cdu-level">' + level + ' / ' + RELIC_UPGRADE_MAX + '</span></div>' +
+      '<div class="cdu-pips">' + pips + '</div>' +
+      (level > 0 ? '<div class="cdu-current">+' + level + ' ' + domLabel + ' from upgrades</div>' : '') +
+      btnHtml;
+    box.classList.remove('hidden');
+  }
+
   function openCardDetailModal(card, entry) {
     const overlay = document.getElementById('carddetail-overlay');
     if (!overlay) return;
@@ -15552,8 +15800,25 @@
       'Dropped from ' + (BOSSES[card.source_boss] ? BOSSES[card.source_boss].name : '—');
     document.getElementById('carddetail-rarity').textContent = RARITY_LABELS[card.rarity] || card.rarity;
     document.getElementById('carddetail-flavor').textContent = card.flavor || '';
+    // W495 — set membership tag. Shows "◈ <Set> · n / total set pieces" when the
+    // relic belongs to a defined set, so players discover the set + its bonus.
+    const cdSet = document.getElementById('carddetail-set');
+    if (cdSet) {
+      const setDef = (card.set_id && typeof SET_BONUSES !== 'undefined') ? SET_BONUSES[card.set_id] : null;
+      const topTier = (setDef && setDef.tiers && setDef.tiers.length) ? setDef.tiers[setDef.tiers.length - 1] : null;
+      if (setDef && topTier) {
+        cdSet.innerHTML = '<span class="carddetail-set-glyph" aria-hidden="true">◈</span>' +
+          '<span class="carddetail-set-name">' + esc(setDef.name) + '</span>' +
+          '<span class="carddetail-set-note">Set · wear ' + topTier.pieces + ' for the full bonus</span>';
+        cdSet.classList.remove('hidden');
+      } else {
+        cdSet.classList.add('hidden');
+        cdSet.innerHTML = '';
+      }
+    }
     const cdStats = document.getElementById('carddetail-stats');
     if (cdStats) cdStats.innerHTML = cardStatBadgesHtml(card);
+    _fillCardDetailUpgrade(card, entry); // W494 — relic upgrade row
     const acqEl = document.getElementById('carddetail-acquired');
     if (acqEl) acqEl.textContent = entry.first_acquired_date
       ? 'First found ' + formatAcquiredDate(entry.first_acquired_date)
@@ -15592,6 +15857,7 @@
   function closeCardDetailModal() {
     const overlay = document.getElementById('carddetail-overlay');
     if (overlay) overlay.classList.add('hidden');
+    _carddetailCurrentCardId = null; // W494 — honor the "cleared on close" contract the stash comment promises
   }
   function setupCardDetailModal() {
     const overlay = document.getElementById('carddetail-overlay');
@@ -15653,6 +15919,36 @@
         openCardDetailModal(card, inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null });
         try { if (currentTab === 'items') renderPokedex(); } catch (_) {}
         try { refreshEquipmentModalIfOpen(); } catch (_) {}
+      });
+    }
+
+    // W494 — Relic Upgrade handler. Delegated on the static container because
+    // the button itself is re-rendered (innerHTML) on every open. Charges souls
+    // via upgradeRelic, then re-opens the modal so level/cost/balance refresh.
+    const upgradeBox = document.getElementById('carddetail-upgrade');
+    if (upgradeBox) {
+      upgradeBox.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('#carddetail-upgrade-btn');
+        if (!btn || btn.disabled) return;
+        const cardId = _carddetailCurrentCardId;
+        if (!cardId) return;
+        const card = CARDS[cardId];
+        if (!card) return;
+        const res = (typeof upgradeRelic === 'function') ? upgradeRelic(cardId) : null;
+        if (res && res.ok) {
+          const STAT_LABELS = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL' };
+          const sl = STAT_LABELS[res.stat] || String(res.stat || '').toUpperCase();
+          try { showHabitToast(card.name + ' upgraded — LV ' + res.newLevel + ', +1 ' + sl); } catch (_) {}
+          try { refreshSoulsDisplay(); } catch (_) {}
+          const inv = getInventory();
+          openCardDetailModal(card, inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null, upgrade_level: res.newLevel });
+          try { if (currentTab === 'items') renderPokedex(); } catch (_) {}
+          try { refreshEquipmentModalIfOpen(); } catch (_) {}
+        } else if (res && res.reason === 'insufficient') {
+          try { showHabitToast('Not enough souls to upgrade this relic.'); } catch (_) {}
+        } else if (res && res.reason === 'maxed') {
+          try { showHabitToast(card.name + ' is already at max level.'); } catch (_) {}
+        }
       });
     }
   }
@@ -28593,11 +28889,59 @@
           if (!Number.isFinite(v) || v === 0) continue;
           totals[s.key] += Math.trunc(v);
         }
+        // W494 — relic upgrade: +1 to this relic's dominant stat per level.
+        // Single combat hook → Ascent (_ascPlayerPower) + PvP both inherit it
+        // with no per-system edit. Bounded (max +3/relic, dominant stat only).
+        const _lvl = (typeof getRelicLevel === 'function') ? getRelicLevel(cid) : 0;
+        if (_lvl > 0) {
+          const _dom = _relicDominantStatKey(card);
+          if (_dom && Object.prototype.hasOwnProperty.call(totals, _dom)) totals[_dom] += _lvl;
+        }
       }
+      // W495 — fold in active equipment SET bonuses (Sovereign's Regalia /
+      // Wakeful Vigil). Same read-point as relics, so Ascent + PvP inherit it.
+      // _activeSetBonuses guards its own try; this stays bounded (peak ~+28).
+      try {
+        const _setTotals = _activeSetBonuses().totals;
+        for (const s of HUNTER_BUILD_BONUS_STATS) totals[s.key] += (_setTotals[s.key] || 0);
+      } catch (_) {}
     } catch (_) {
       // Defensive: leave totals as zeros, render the empty state.
     }
     return { totals: totals, equippedCount: equippedCount, skippedMalformed: skippedMalformed };
+  }
+
+  // W495 — Set-bonus progress block appended under the bonus sigil grid. Lists
+  // every set the player has ANY piece of equipped: set name, n / top-tier
+  // progress, and each tier (lit when active) so an almost-complete set nudges
+  // the last piece. Empty string when no set pieces are equipped.
+  function _setBonusPanelHtml() {
+    let info;
+    try { info = _activeSetBonuses(); } catch (_) { return ''; }
+    const active = (info && Array.isArray(info.active)) ? info.active.slice() : [];
+    if (!active.length) return '';
+    active.sort((a, b) => b.equipped - a.equipped);
+    let rows = '';
+    active.forEach(s => {
+      const maxPieces = (s.tiers && s.tiers.length) ? s.tiers[s.tiers.length - 1].pieces : 0;
+      const tierChips = (s.tiers || []).map(t => {
+        const on = s.equipped >= t.pieces;
+        return '<div class="hbb-set-tier' + (on ? ' hbb-set-tier--on' : '') + '">' +
+            '<span class="hbb-set-tier-pc">' + t.pieces + 'PC</span>' +
+            '<span class="hbb-set-tier-bonus">' + esc(t.label) + '</span>' +
+            (on ? '<span class="hbb-set-tier-on" aria-hidden="true">✦</span>' : '') +
+          '</div>';
+      }).join('');
+      rows +=
+        '<div class="hbb-set">' +
+          '<div class="hbb-set-head">' +
+            '<span class="hbb-set-name">' + esc(s.name) + '</span>' +
+            '<span class="hbb-set-count">' + s.equipped + ' / ' + maxPieces + '</span>' +
+          '</div>' +
+          '<div class="hbb-set-tiers">' + tierChips + '</div>' +
+        '</div>';
+    });
+    return '<div class="hbb-sets"><div class="hbb-sets-title">SET BONUSES</div>' + rows + '</div>';
   }
 
   function renderHunterBuildBonuses() {
@@ -28663,7 +29007,7 @@
         '</div>' +
       '</div>';
 
-    el.innerHTML = '<div class="hbb-grid">' + cellsHtml + '</div>';
+    el.innerHTML = '<div class="hbb-grid">' + cellsHtml + '</div>' + _setBonusPanelHtml(); // W495 — set bonuses under the grid
   }
   try { window.renderHunterBuildBonuses = renderHunterBuildBonuses; } catch (_) {}
 
@@ -51613,6 +51957,10 @@
       const keys = {};
       SNAPSHOT_KEYS.forEach(k => {
         try {
+          // W494 — never upload a known-corrupt inventory: skip the key so the
+          // cloud's last-good copy (with the user's paid relic upgrades) survives
+          // until a valid inventory is written locally and clears the flag.
+          if (k === INVENTORY_STORAGE_KEY && _inventoryCorrupt) return;
           const v = localStorage.getItem(k);
           if (v !== null) keys[k] = v;
         } catch (_) {}
@@ -51756,10 +52104,29 @@
         return;
       }
       if (cloud.exists && haveLocal) {
-        // Both present. Do NOT auto-overwrite. User can restore from
-        // Settings if they really want to (v2 will add smarter merge).
-        // Schedule an upload to keep cloud fresh with local changes.
-        scheduleDebouncedPush('init_local_exists');
+        // Both present. Do NOT auto-overwrite local with cloud (v2 will add a
+        // smarter field-level merge). Refresh cloud from local with one guard:
+        // W494 — only push when local is at least as new as the cloud snapshot.
+        // A STALE device (local last-change older than the cloud copy) that blind-
+        // pushed would clobber a newer cloud via last-writer-wins — which, now that
+        // the inventory blob carries NON-REFUNDABLE relic-upgrade souls, is real
+        // data loss. When local is provably older we skip this startup push (the
+        // user keeps local for the session and can restore the newer cloud from
+        // Settings; any genuine local change afterward still pushes normally).
+        // When timestamps are missing/unparseable we fall back to the prior
+        // behavior (push) so single-device users keep their cloud fresh.
+        let localStale = false;
+        try {
+          const localChangeRaw = localStorage.getItem(LS_KEY_LAST_CHANGE);
+          const cloudTs = cloud.client_updated_at ? Date.parse(cloud.client_updated_at) : NaN;
+          const localTs = localChangeRaw ? Date.parse(localChangeRaw) : NaN;
+          if (!isNaN(cloudTs) && !isNaN(localTs) && localTs < cloudTs) localStale = true;
+        } catch (_) {}
+        if (!localStale) {
+          scheduleDebouncedPush('init_local_exists');
+        } else {
+          console.warn('[CloudSync] local state older than cloud — skipping startup push to avoid clobber. Restore from Settings to adopt the newer cloud copy.');
+        }
         return;
       }
       // No cloud, but we have local → upload baseline.
