@@ -8769,6 +8769,42 @@ footer {
 }
 .cp-prog-xp--done .cp-prog-xp-text { color: rgba(34,197,94,0.8); }
 .cp-prog-xp--done .cp-prog-xp-text b { color: #22c55e; }
+
+/* W514 — Habits-tab routine spine. A slim, read-only mirror of the active
+   routine's compound projection, sitting just under the "Seal your vows"
+   header so the rank engine is legible at the moment vows are sealed. Quiet
+   gold card; the meter inside reuses the .cp-prog-xp* bar/text styles. */
+.habits-routine-spine {
+  margin: 0 0 10px;
+  padding: 9px 12px 10px;
+  border-radius: 12px;
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.16);
+}
+.habits-routine-spine .hrs-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.habits-routine-spine .hrs-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245,158,11,0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.habits-routine-spine .hrs-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim, rgba(255,255,255,0.55));
+}
+.habits-routine-spine .hrs-count--done { color: #22c55e; }
 .cp-prog-name {
   flex: 1;
   font-size: 12px;
