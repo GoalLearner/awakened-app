@@ -3579,6 +3579,13 @@ footer {
   font-size: 0.86rem; line-height: 1.45; color: var(--text-secondary, #8a8aa8); margin-top: 8px;
 }
 .notice-card-body b { color: var(--gold, #f5b842); font-weight: 700; }
+/* W518 — habit→power breakdown, rendered inside a notice card (#powerinfo). */
+.pwr-bd { display: flex; flex-direction: column; gap: 11px; text-align: left; margin-top: 4px; }
+.pwr-bd-row { display: flex; align-items: baseline; gap: 11px; }
+.pwr-bd-n { flex: 0 0 auto; min-width: 56px; text-align: right; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 19px; color: var(--gold, #f5b842); line-height: 1; }
+.pwr-bd-l { font-size: 12.5px; line-height: 1.35; color: rgba(255,255,255,0.66); }
+.pwr-bd-l b { color: rgba(255,255,255,0.92); font-weight: 700; }
+.pwr-bd-foot { margin-top: 3px; font-size: 12px; font-style: italic; color: rgba(245,184,66,0.82); }
 .notice-card-cont {
   margin-top: 16px;
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -29018,6 +29025,9 @@ button.guildhall-summary-tile:active {
 .al-head-nums { display: flex; align-items: flex-end; gap: 8px; }
 .al-lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.5px; color: #6b6b86; }
 .al-rating, .al-power { display: flex; flex-direction: column; gap: 3px; }   /* W272 — power replaces rating in the ledger header */
+/* W518 — POWER is tappable → the habit→power breakdown (data-ar="powerinfo"). */
+.al-power[role="button"] { cursor: pointer; }
+.al-power-i { font-size: 9px; color: #8a8aa6; vertical-align: 1px; margin-left: 1px; }
 .al-rating-row { display: flex; align-items: baseline; gap: 9px; }
 .al-rating-row .num { font-family: "Cinzel", Georgia, serif; font-size: 28px; font-weight: 700; color: #f5b842; line-height: 1; }
 .al-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; }
