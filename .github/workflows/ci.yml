@@ -35,6 +35,25 @@ jobs:
           if [ "$MISSING" != "0" ]; then exit 1; fi
           echo "OK: all referenced scripts present."
 
+      # W507 — E2E spec-count floor. The Playwright smoke suite (W500) is the behavioral safety
+      # net for the monolith; this guards against it silently SHRINKING — a spec deleted or
+      # renamed away would drop coverage with no red flag, since a smaller-but-passing suite
+      # still goes green. Counts top-level test() calls across tests/e2e/*.spec.ts and fails if
+      # the total falls below the floor. Raise FLOOR deliberately when you ADD specs; the only
+      # way it drops is an intentional edit here, which shows up in review.
+      - name: E2E spec-count floor
+        run: |
+          set -e
+          FLOOR=28
+          COUNT=$(cat tests/e2e/*.spec.ts | grep -cE '^[[:space:]]*test\(')
+          echo "E2E spec count: $COUNT (floor $FLOOR)"
+          if [ "$COUNT" -lt "$FLOOR" ]; then
+            echo "FAIL: e2e spec count $COUNT is below the floor of $FLOOR — specs were removed."
+            echo "If this was intentional, lower FLOOR in .github/workflows/ci.yml in the same change."
+            exit 1
+          fi
+          echo "OK: spec count at or above floor."
+
   e2e:
     name: E2E smoke (Playwright)
     runs-on: ubuntu-latest
