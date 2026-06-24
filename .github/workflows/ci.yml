@@ -39,10 +39,12 @@ jobs:
     name: E2E smoke (Playwright)
     runs-on: ubuntu-latest
     # W492 — RUNS the Playwright smoke on every push (cross-platform via serve.mjs — was Windows-only
-    # serve.ps1, which couldn't run on Linux CI). NON-BLOCKING for now (continue-on-error) so it
-    # surfaces results in the Action log without red-walling pushes until a clean green CI run is
-    # confirmed — then drop continue-on-error to make it a required gate.
-    continue-on-error: true
+    # serve.ps1, which couldn't run on Linux CI).
+    # W500 — now a BLOCKING gate: continue-on-error was dropped after the suite went green locally
+    # (all 28 specs, twice). The 6 UI specs that had rotted were repaired to the current DOM
+    # (cinematic-onboarding seed, redesigned Add-Habits chip flow, dormant leaderboard hub, custom
+    # icon-choice gate). retries:1 (playwright.config) absorbs transient modal-timing flake; if a real
+    # UI break lands it now red-walls the push instead of silently rotting.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
