@@ -8770,41 +8770,30 @@ footer {
 .cp-prog-xp--done .cp-prog-xp-text { color: rgba(34,197,94,0.8); }
 .cp-prog-xp--done .cp-prog-xp-text b { color: #22c55e; }
 
-/* W514 — Habits-tab routine spine. A slim, read-only mirror of the active
-   routine's compound projection, sitting just under the "Seal your vows"
-   header so the rank engine is legible at the moment vows are sealed. Quiet
-   gold card; the meter inside reuses the .cp-prog-xp* bar/text styles. */
-.habits-routine-spine {
-  margin: 0 0 10px;
-  padding: 9px 12px 10px;
-  border-radius: 12px;
-  background: rgba(245,158,11,0.05);
-  border: 1px solid rgba(245,158,11,0.16);
-}
-.habits-routine-spine .hrs-head {
+/* W515 — compound-reward caption folded into the vows header (under the
+   existing completion bar). A single quiet gold line telling the hunter what
+   compound XP their routine pays — NOT a second progress bar (the W514
+   over-correction the owner flagged). Read-only. */
+.vows-header-reward {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-.habits-routine-spine .hrs-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(245,158,11,0.85);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.habits-routine-spine .hrs-count {
-  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
   font-size: 11px;
-  font-weight: 700;
-  color: var(--text-dim, rgba(255,255,255,0.55));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(245,158,11,0.72);
 }
-.habits-routine-spine .hrs-count--done { color: #22c55e; }
+.vows-header-reward.hidden { display: none; }
+.vows-header-reward .vhr-glyph {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.9;
+}
+.vows-header-reward .vhr-text b { color: #fbbf24; font-weight: 800; }
+.vows-header-reward--done { color: rgba(34,197,94,0.85); }
+.vows-header-reward--done .vhr-text b { color: #22c55e; }
 .cp-prog-name {
   flex: 1;
   font-size: 12px;
