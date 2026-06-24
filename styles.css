@@ -28857,6 +28857,14 @@ button.guildhall-summary-tile:active {
 .sc-tap-cue { display:inline-block; margin-left:4px; font-size:0.78em; line-height:1; font-weight:700;
   color:rgba(255,255,255,0.32); transition:color .18s ease; -webkit-user-select:none; user-select:none; pointer-events:none; }
 .sc-hero-class:active .sc-tap-cue { color:currentColor; }
+/* W493 — avatar tap cue: the avatar is an <img> (no child possible), so a small ✎ badge pinned to
+   its lower-right corner inside the row signals "tap to change your look" (✎ = the app's edit verb,
+   matching the name-edit cue). The radar's "TAP A STAT" hint is styled inline in the SVG. */
+.sc-avatar-row { position:relative; }
+.sc-avatar-cue { position:absolute; right:14px; bottom:6px; width:18px; height:18px;
+  display:flex; align-items:center; justify-content:center; font-size:10px; line-height:1;
+  color:rgba(255,255,255,0.6); background:rgba(15,12,30,0.74); border:1px solid rgba(255,255,255,0.18);
+  border-radius:50%; pointer-events:none; }
 
 /* opening challenge overlay (one-time, full-screen) */
 .ao-opening { position:fixed; inset:0; z-index:99000; overflow:hidden; opacity:1;
