@@ -8167,6 +8167,35 @@
       const c = CARDS[BIS[slot]];
       if (c && c.bonuses) ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach((k) => { gear[k] += (c.bonuses[k] || 0); });
     });
+    // W510 — INSTRUMENT FIX: the LIVE combat path (_aggregateBuildBonuses) folds in
+    // W495/W506 SET BONUSES + W494 RELIC UPGRADES, but this sim historically built the
+    // statline from BiS card bonuses ONLY. So it under-reported the true ceiling and the
+    // fixed F100 wall silently softened every time a relic/upgrade/set shipped, unseen.
+    // opts.invest models the real investment spread so the balance check stops measuring a
+    // phantom: 'gear' (BiS only — legacy, byte-identical default), 'sets' (+ active set
+    // bonuses), 'max' (+ both sets AND maxed relic upgrades = the true min-maxed ceiling).
+    const invest = opts.invest || 'gear';
+    if (invest === 'sets' || invest === 'max') {
+      // Active set bonuses over the BiS build — mirrors _activeSetBonuses' single-highest-tier rule.
+      const setCounts = {};
+      Object.keys(BIS).forEach((slot) => { const c = CARDS[BIS[slot]]; if (c && c.set_id) setCounts[c.set_id] = (setCounts[c.set_id] || 0) + 1; });
+      Object.keys(setCounts).forEach((sid) => {
+        const set = (typeof SET_BONUSES !== 'undefined') ? SET_BONUSES[sid] : null;
+        if (!set || !set.tiers) return;
+        let best = null;
+        for (const t of set.tiers) if (setCounts[sid] >= t.pieces && (!best || t.pieces > best.pieces)) best = t;
+        if (best && best.bonus) Object.keys(best.bonus).forEach((k) => { if (Object.prototype.hasOwnProperty.call(gear, k)) gear[k] += (best.bonus[k] | 0); });
+      });
+    }
+    if (invest === 'max') {
+      // Maxed relic upgrades — +RELIC_UPGRADE_MAX to each upgradeable relic's dominant stat (W494).
+      Object.keys(BIS).forEach((slot) => {
+        const c = CARDS[BIS[slot]];
+        if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null) return;   // commons / unpriced tiers are not upgradeable
+        const dom = _relicDominantStatKey(c);
+        if (dom && Object.prototype.hasOwnProperty.call(gear, dom)) gear[dom] += RELIC_UPGRADE_MAX;
+      });
+    }
     const sline = { STR: 20 + gear.str, VIT: 20 + gear.vit, INT: 20 + gear.int, FOCUS: 20 + gear.focus, WILL: 20 + gear.will, WLT: 20 + gear.wlt };
     const prof = _arenaCombatProfile(sline);
     const player = { name: 'Hunter', attack: prof.attack, defense: prof.defense, edge: prof.edge, stats: sline, isBot: false };
