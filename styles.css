@@ -29047,6 +29047,54 @@ button.guildhall-summary-tile:active {
 .sc-pvp-title { font-family:"Cinzel",Georgia,serif; font-size:18px; font-weight:700; color:#eafaf6; line-height:1; }
 .sc-pvp-chev { flex:none; font-size:20px; font-weight:700; color:rgba(45,212,191,0.7); }
 
+/* W496 — ClaudeDesign "Merged Ascent + PvP Button" (Direction D). One "THE ARENA"
+   umbrella card holding two independently-tappable inset tiles (gold ASCENT /
+   teal RANKED PVP). Replaces the W255 .sc-climb banner + the W488 .sc-pvp-btn row
+   (both now orphaned). Values ported 1:1 from the mock's inline styles. */
+.sc-arena-merged {
+  box-sizing:border-box; border-radius:16px; padding:13px 13px 14px;
+  border:1px solid rgba(255,255,255,0.08); box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
+}
+.sc-am-head { display:flex; align-items:center; justify-content:center; gap:11px; margin-bottom:13px; }
+.sc-am-word { font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:11px; letter-spacing:3.5px;
+  color:#f5b842; text-shadow:0 0 12px rgba(245,184,66,0.35); }
+.sc-am-rule { width:26px; height:1px; flex:none; }
+.sc-am-rule--l { background:linear-gradient(90deg, transparent, rgba(245,184,66,0.5)); }
+.sc-am-rule--r { background:linear-gradient(90deg, rgba(94,234,212,0.5), transparent); }
+.sc-am-tiles { display:flex; gap:11px; }
+.sc-am-tile { flex:1; min-width:0; box-sizing:border-box; display:flex; flex-direction:column;
+  border-radius:12px; padding:13px; text-align:left; cursor:pointer;
+  appearance:none; -webkit-appearance:none; -webkit-tap-highlight-color:transparent;
+  transition:transform 120ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+.sc-am-tile--climb { border:1px solid rgba(245,184,66,0.28);
+  background:linear-gradient(160deg, rgba(245,184,66,0.12), rgba(245,184,66,0.025)); }
+.sc-am-tile--duel  { border:1px solid rgba(94,234,212,0.28);
+  background:linear-gradient(160deg, rgba(94,234,212,0.12), rgba(94,234,212,0.025)); }
+.sc-am-tile:active { transform:translateY(1px); }
+.sc-am-tile--climb:active, .sc-am-tile--climb:hover { box-shadow:0 6px 18px rgba(245,184,66,0.18); border-color:rgba(245,184,66,0.45); }
+.sc-am-tile--duel:active,  .sc-am-tile--duel:hover  { box-shadow:0 6px 18px rgba(94,234,212,0.18); border-color:rgba(94,234,212,0.45); }
+.sc-am-tile-top { display:flex; align-items:center; gap:9px; }
+.sc-am-tower { flex:none; display:block; }
+.sc-am-swords { flex:none; display:block; }
+.sc-am-tx { min-width:0; }
+.sc-am-kick { display:block; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:8.5px;
+  font-weight:800; letter-spacing:2.5px; text-transform:uppercase; }
+.sc-am-kick--gold { color:#f5b842; }
+.sc-am-kick--teal { color:#5eead4; }
+.sc-am-floor { display:flex; align-items:baseline; gap:3px; margin-top:6px; }
+.sc-am-floor b { font-family:"Cinzel",Georgia,serif; font-weight:800; font-size:26px; line-height:0.8; color:#f3f1fb; }
+.sc-am-floor .of { font-family:"Cinzel",Georgia,serif; font-size:12px; color:#5f5d78; }
+.sc-am-duel { display:block; font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:17px; line-height:1; color:#f3f1fb; margin-top:6px; }
+.sc-am-foot { display:flex; align-items:center; gap:4px; margin-top:11px; }
+.sc-am-cta { font-family:"JetBrains Mono",ui-monospace,monospace; font-size:9px; font-weight:800; letter-spacing:1.6px; }
+.sc-am-cta--gold { color:#f5b842; }
+.sc-am-cta--teal { color:#5eead4; }
+.sc-am-chev { display:block; flex:none; }
+/* PvP-disabled fallback — a single climb tile shouldn't stretch full-bleed. */
+.sc-arena-merged--solo .sc-am-tiles { justify-content:flex-start; }
+.sc-arena-merged--solo .sc-am-tile { flex:0 1 60%; }
+
 /* W490 — shared, subtle tappability cue for Status interactive elements (a dim "›"). v1 applies
    it to the always-tappable class chip; radar dots + conditional rank hero are a careful follow-up. */
 .sc-tap-cue { display:inline-block; margin-left:4px; font-size:0.78em; line-height:1; font-weight:700;
