@@ -29195,6 +29195,10 @@ button.guildhall-summary-tile:active {
 .sc-am-rule--l { background:linear-gradient(90deg, transparent, rgba(245,184,66,0.5)); }
 .sc-am-rule--r { background:linear-gradient(90deg, rgba(94,234,212,0.5), transparent); }
 .sc-am-tiles { display:flex; gap:11px; }
+/* W522 — habit→power thread connector line under the Arena tiles. */
+.sc-am-thread { margin-top:11px; text-align:center; font-size:10.5px; line-height:1.4; letter-spacing:0.02em; color:rgba(255,255,255,0.42); }
+.sc-am-thread b { color:rgba(245,184,66,0.78); font-weight:700; }
+.sc-am-thread-i { color:rgba(245,184,66,0.6); margin-right:2px; }
 .sc-am-tile { flex:1; min-width:0; box-sizing:border-box; display:flex; flex-direction:column;
   border-radius:12px; padding:13px; text-align:left; cursor:pointer;
   appearance:none; -webkit-appearance:none; -webkit-tap-highlight-color:transparent;
