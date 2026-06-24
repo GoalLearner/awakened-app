@@ -169,7 +169,13 @@ for rar in ("rare","ultra_rare"):
     mx_by_rank = {}
     mn_by_rank = {}
     for rank in sorted({i["boss_rank"] for i in pool}, key=lambda r:RANK_ORD.get(r,9)):
-        v=[i["combat_power"] for i in pool if i["boss_rank"]==rank]
+        # W503 — co-op carve-out: duo-boss drops intentionally run hot (a reward
+        # for the harder co-op content), so they are EXEMPT from the rarity-power
+        # ordering. Compare STANDARD (non-co-op) items only — otherwise the hot
+        # co-op B-rares false-flag every A-rare below them as a cross-rank
+        # inversion, which is the carve-out working as designed, not a bug.
+        v=[i["combat_power"] for i in pool if i["boss_rank"]==rank and not i.get("coopOnly")]
+        if not v: continue
         mx_by_rank[rank]=max(v); mn_by_rank[rank]=min(v)
     ranks = sorted(mx_by_rank, key=lambda r:RANK_ORD.get(r,9))
     for lo in ranks:
