@@ -60,6 +60,8 @@ new_sqlite_classes = ["MatchRoom"]
 #   wrangler secret put JWT_SIGNING_KEY
 #   wrangler secret put APPLE_BUNDLE_ID
 #   wrangler secret put APPLE_TEAM_ID
+#   wrangler secret put REVENUECAT_WEBHOOK_AUTH
+#   wrangler secret put ADMIN_METRICS_SECRET   # gates GET /v1/admin/retention (owner metrics)
 # Each secret prompts for the value at the CLI. Values are encrypted
 # at rest in Cloudflare's secret store. See BACKEND.md §10 for the
 # canonical secret list and capture instructions.
@@ -232,3 +234,14 @@ name = "RL_COOP_WRITE"
 type = "ratelimit"
 namespace_id = "1019"
 simple = { limit = 20, period = 60 }  # 20/min per user
+
+# Per-user retention tracking (owner-requested). Guards POST /v1/users/me/app-open
+# — a fire-and-forget lifecycle ping written on launch + foreground. The write is
+# a single UPSERT deduped per UTC day server-side, and the client throttles to
+# ~5-min intervals, so legit usage is a handful per session. 6/min is far above
+# that and bounds a misbehaving client.
+[[unsafe.bindings]]
+name = "RL_APP_OPEN"
+type = "ratelimit"
+namespace_id = "1020"
+simple = { limit = 6, period = 60 }   # 6/min per user

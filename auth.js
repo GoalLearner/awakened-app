@@ -1455,8 +1455,32 @@
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
 
+  // ── Per-user retention ping (W526) ──────────────────────────────────────
+  // POST /v1/users/me/app-open on launch + foreground so the backend can compute
+  // real D1/D7/D30 retention, independent of Apple's opt-in App Store Analytics.
+  // FIRE-AND-FORGET: never awaited on a UI path, errors swallowed, and throttled
+  // client-side to one call / 5 min (the backend ALSO dedups per UTC day + rate-
+  // limits, so this is belt-and-suspenders). Skips guest / local-dev / not-signed-in
+  // users via _stubGate (no real backend session to authenticate with).
+  let _lastAppOpenReportMs = 0;
+  function reportAppOpen() {
+    try {
+      const u = readUser();
+      if (_stubGate(u)) return;
+      const now = Date.now();
+      if (now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
+      _lastAppOpenReportMs = now;
+      fetch(BACKEND_URL + '/v1/users/me/app-open', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+        keepalive: true,
+      }).catch(function () { /* fire-and-forget — a metrics ping must never surface to the user */ });
+    } catch (_) { /* never let retention tracking break the app */ }
+  }
+
   window.Auth = {
     getCurrentUser,
+    reportAppOpen,
     getJwt,
     clearUser,
     isJwtNearExpiry,

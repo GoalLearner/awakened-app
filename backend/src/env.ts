@@ -57,6 +57,13 @@ export interface Env {
    * closed if this is unset, so a misconfigured deploy can't grant skins. */
   REVENUECAT_WEBHOOK_AUTH: string;
 
+  /** Admin metrics secret — gates GET /v1/admin/retention (per-user retention,
+   * owner-requested). NOT a Sign-in-with-Apple route: the caller passes
+   * `Authorization: Bearer <this value>`. FAIL CLOSED — if unset, the route 401s,
+   * so a misconfigured deploy can't expose retention publicly. Recommended form:
+   * "<openssl rand -hex 32>". Set with `wrangler secret put ADMIN_METRICS_SECRET`. */
+  ADMIN_METRICS_SECRET: string;
+
   /** Rate limiters — one per endpoint. Cloudflare's API supports only
    * 10s or 60s periods, so the "12/hour" submit cap from BACKEND.md §8
    * is approximated as 2/minute (≈ 120/hour). Client-side debounce at
@@ -117,4 +124,9 @@ export interface Env {
    *  namespace_id 1018 in wrangler.toml. 30/min per user — matches the
    *  other friend-adjacent reads. */
   RL_HALL_READ: RateLimit;
+  /** Per-user retention tracking (owner-requested) — guards
+   *  POST /v1/users/me/app-open. namespace_id 1020 in wrangler.toml. 6/min per
+   *  user: a fire-and-forget lifecycle ping, deduped per UTC day server-side and
+   *  throttled to ~5-min intervals client-side, so 6/min is far above legit usage. */
+  RL_APP_OPEN: RateLimit;
 }

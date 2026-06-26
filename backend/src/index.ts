@@ -31,6 +31,8 @@ import { handleLeaderboardLastWeek } from './handlers/leaderboard-last-week';
 import { handleStep100kClub } from './handlers/step-100k-club';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
+import { handleAppOpenPost } from './handlers/app-open';
+import { handleAdminRetention } from './handlers/admin-retention';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
 import { handleEntitlementsGet } from './handlers/iap-entitlements';
@@ -139,6 +141,13 @@ export default {
       else if (path === '/v1/iap/revenuecat-webhook' && method === 'POST') {
         response = await handleRevenueCatWebhook(request, env);
       }
+      // ── Admin retention metrics (owner-requested; secret-gated, NO user session) ──
+      // Like the RevenueCat webhook above, this is NOT a Sign-in-with-Apple route —
+      // it authenticates (fail-closed) via the ADMIN_METRICS_SECRET shared secret in
+      // the Authorization header, so it lives BEFORE the Bearer-session gate.
+      else if (path === '/v1/admin/retention' && method === 'GET') {
+        response = await handleAdminRetention(request, env);
+      }
       // ── Health check (uncached, no auth) ──
       else if (path === '/health' && method === 'GET') {
         response = Response.json({
@@ -200,6 +209,10 @@ export default {
           } else if (path === '/v1/users/me/state' && method === 'POST') {
             // Cloud Sync v1 (v3 Phase 1w) — backup upsert.
             response = await handleUserStatePost(request, env, session);
+          } else if (path === '/v1/users/me/app-open' && method === 'POST') {
+            // Per-user retention tracking (owner-requested) — fire-and-forget
+            // lifecycle ping; UPSERTs one row per (user, UTC day). No reads.
+            response = await handleAppOpenPost(request, env, session);
           } else if (path === '/v1/users/me/accolades' && method === 'GET') {
             // v3 Phase 1z.27 — 100K Step Club + future accolade types.
             response = await handleUserAccoladesGet(request, env, session);

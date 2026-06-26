@@ -59,6 +59,7 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM friends WHERE requester_user_id = ? OR recipient_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM coop_boss_instances WHERE challenger_user_id = ? OR partner_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM duels WHERE challenger_user_id = ? OR opponent_user_id = ?', uid, uid);
+  await bestEffortDelete(env, 'DELETE FROM app_opens WHERE user_id = ?', uid); // 0027 retention rows
 
   // ── Core deletion (MUST succeed) ──
   // user_state_snapshots has no FK on users.id (kept independent so the schema
