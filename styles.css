@@ -31123,6 +31123,12 @@ button.guildhall-summary-tile:active {
 .cph-pip{ width:6px; height:6px; border-radius:50%; background:#5ad6c8; box-shadow:0 0 8px #5ad6c8; }
 .cph-count b{ color:#f5f3fb; font-weight:800; }
 .cph-list{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px 16px 8px; display:flex; flex-direction:column; gap:13px; }
+/* W528 — "Accept all" bulk-join bar atop the Pacts dashboard (only when ≥2 pending invites). Teal to match the "summoned you" accent. */
+.cph-accept-all{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px 16px; border-radius:14px; border:1px solid rgba(90,214,200,.42); background:linear-gradient(180deg,rgba(90,214,200,.17),rgba(90,214,200,.06)); color:#8fe9de; font-family:inherit; font-weight:700; font-size:14px; letter-spacing:.04em; cursor:pointer; box-shadow:0 5px 20px rgba(90,214,200,.13); transition:filter .15s ease, transform .1s ease; }
+.cph-accept-all:hover{ filter:brightness(1.08); }
+.cph-accept-all:active{ transform:scale(.99); }
+.cph-accept-all:disabled{ opacity:.6; cursor:default; }
+.cph-accept-all .cph-aa-ic{ display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center; border-radius:50%; background:#5ad6c8; color:#06231f; font-size:12px; font-weight:800; flex:none; }
 .cph-hunt{ position:relative; display:block; width:100%; text-align:left; cursor:pointer; padding:15px 16px 16px; border-radius:16px; background:linear-gradient(157deg,#12122c 0%,#0c0c20 55%,#07070f 100%); border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); overflow:hidden; font-family:inherit; color:inherit; }
 .cph-hunt.cph-active::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg,#5ad6c8,#2bb6a6); box-shadow:0 0 14px rgba(90,214,200,.6); animation:cphEdgeBreath 3.4s ease-in-out infinite; }
 @keyframes cphEdgeBreath{ 0%,100%{ opacity:.7; } 50%{ opacity:1; } }
