@@ -28,6 +28,37 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
+// ── Global splash neutralizer (CI click-interception fix) ────────────────────
+// The boot splash (#awakened-splash) is position:fixed, inset:0, z-index:99999. It
+// only stops intercepting pointer events once its OWN 'is-hidden' class lands
+// (pointer-events:none) or it self-removes — both timer-driven. On a fast machine
+// hideSplash() clears it before the first tap; on the slow Linux CI runner it can
+// STILL be up at first-click time, which silently times out every .click()-based spec
+// while eval-based specs sail through (the exact CI-only failure we hit). freshApp()
+// removes it, but several specs (e.g. R) inline their own setup and never call it — so
+// neutralize the splash for EVERY test, before any app script runs, by injecting CSS.
+// It is purely decorative; hiding it changes no app behavior (mount is independent).
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const css = '#awakened-splash{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+    const inject = () => {
+      const root = document.head || document.documentElement;
+      if (root && !document.getElementById('e2e-splash-kill')) {
+        const s = document.createElement('style');
+        s.id = 'e2e-splash-kill';
+        s.textContent = css;
+        root.appendChild(s);
+      }
+    };
+    // addInitScript runs after the document is created but BEFORE <html> exists, so
+    // document.head/documentElement can both be null here — guard, then retry on DOM
+    // ready (well before any tab interaction). NEVER let this throw: spec A asserts a
+    // clean console, and a null .appendChild here surfaces as a fatal pageerror.
+    inject();
+    document.addEventListener('DOMContentLoaded', inject);
+  });
+});
+
 /**
  * Reset SW + caches so each test boots fresh. Seeds the localStorage
  * keys that gate onboarding + first-run cloud-restore prompts so the

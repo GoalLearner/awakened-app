@@ -23,7 +23,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,                     // single-worker, single-tab — no cross-test contamination
-  reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never' }]],
+  // CI: 'list' for the live log + 'github' so each failure becomes a GitHub check
+  // annotation (file:line + error), readable via the public annotations API without
+  // admin/log access — added after a CI-only failure whose cause was only in the log.
+  reporter: process.env.CI ? [['list'], ['github']] : [['list'], ['html', { open: 'never' }]],
 
   use: {
     baseURL: 'http://localhost:8080',
