@@ -77,3 +77,16 @@ jobs:
         env:
           CI: 'true'
         run: npx playwright test
+      # On failure, upload the Playwright trace/screenshot/video bundle (trace:
+      # retain-on-failure in playwright.config) so a CI-only failure can be inspected with
+      # `npx playwright show-trace` instead of guessing from the log. Added after a CI-only
+      # break (slow-runner splash overlay intercepting clicks) where the failing assertion
+      # was only legible inside the trace.
+      - name: Upload Playwright traces on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

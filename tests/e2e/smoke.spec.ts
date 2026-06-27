@@ -87,7 +87,20 @@ async function freshApp(page: Page) {
   // intercepted. Belt-and-suspenders on top of the localStorage
   // seeds above.
   await page.evaluate(() => {
-    const ids = ['awakened-splash', 'wn-overlay', 'wn-modal', 'modal-overlay', 'welcome-overlay', 'fri-challenge-modal', 'cin-onboarding'];
+    // The boot splash (#awakened-splash) is a z-index:99999, position:fixed, inset:0
+    // full-screen overlay. It is dismissed via its OWN 'is-hidden' class (which sets
+    // pointer-events:none) plus a timed self-remove — so the generic '.hidden' toggle
+    // below is a NO-OP on it (its CSS keys on '.is-hidden'/'.awakened-splash', never
+    // '.hidden'). On a fast machine hideSplash() fires before the first tab tap, so it's
+    // gone; on a slow runner (CI) it can still be intercepting pointer events when the
+    // first .click() fires — which silently fails every click-based spec while the
+    // eval-based specs sail through. It is purely decorative and never reused, so remove
+    // it outright rather than trusting timing.
+    const splash = document.getElementById('awakened-splash');
+    if (splash) splash.remove();
+    // The rest are REUSABLE containers (e.g. modal-overlay is un-hidden again when a
+    // modal opens), so only HIDE them — never remove.
+    const ids = ['wn-overlay', 'wn-modal', 'modal-overlay', 'welcome-overlay', 'fri-challenge-modal', 'cin-onboarding'];
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
