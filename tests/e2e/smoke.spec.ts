@@ -28,19 +28,23 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-// ── Global splash neutralizer (CI click-interception fix) ────────────────────
-// The boot splash (#awakened-splash) is position:fixed, inset:0, z-index:99999. It
-// only stops intercepting pointer events once its OWN 'is-hidden' class lands
-// (pointer-events:none) or it self-removes — both timer-driven. On a fast machine
-// hideSplash() clears it before the first tap; on the slow Linux CI runner it can
-// STILL be up at first-click time, which silently times out every .click()-based spec
-// while eval-based specs sail through (the exact CI-only failure we hit). freshApp()
-// removes it, but several specs (e.g. R) inline their own setup and never call it — so
-// neutralize the splash for EVERY test, before any app script runs, by injecting CSS.
-// It is purely decorative; hiding it changes no app behavior (mount is independent).
+// ── Global full-screen-overlay neutralizer (CI click-interception fix) ───────
+// Two full-screen overlays were silently intercepting tab/card clicks on the CI
+// runner — confirmed via the Playwright trace call-log:
+//   1. #awakened-splash — the boot splash (position:fixed, inset:0, z-index:99999).
+//      Dismissed only when its OWN 'is-hidden' class lands or it self-removes (both
+//      timer-driven). Fast machine clears it pre-tap; slow runner leaves it up.
+//   2. #fri-challenge-overlay — the Friday Weekend Challenge banner. setupFridayBanner()
+//      shows it on FRIDAYS, gated by an hb_fri_banner_<today> key. freshApp seeds that
+//      key, but the suppression is unreliable across timezones (the seed's local-date
+//      ymd vs the app's `today` mismatch on the UTC runner), AND freshApp force-hides
+//      the wrong id ('fri-challenge-modal', not the overlay). Net effect: the suite
+//      passed Mon–Thu and failed Fri–Sun on CI.
+// Both are non-essential to every smoke spec, so hide them outright for EVERY test,
+// before any app script runs, by injecting CSS. Date/timezone/timing independent.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const css = '#awakened-splash{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal{display:none!important;visibility:hidden!important;pointer-events:none!important}';
     const inject = () => {
       const root = document.head || document.documentElement;
       if (root && !document.getElementById('e2e-splash-kill')) {
