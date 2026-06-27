@@ -117,7 +117,6 @@ const WEAPON_MOVES = {
   the_long_pursuit:      ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
   the_monarchs_writ:     ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   crownpiercer:          ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
-  the_hollow_crown:      ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
 };
 
 // minimal pure HTML-escape (event text is display-only; client re-derives per
