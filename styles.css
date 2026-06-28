@@ -31815,3 +31815,122 @@ button.guildhall-summary-tile:active {
 @keyframes pvpRzPop { from { opacity: 0; transform: scale(.85) translateY(-10px); } to { opacity: 1; transform: none; } }
 @keyframes pvpRzUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pvp-rz-card.play * { animation: none !important; } .pvp-rz-fill { transition: none !important; } .pvp-rz-promo { animation: none !important; } }
+
+/* ============================================================================
+   W539 - The First Awakened, Unbound - phase-transition CINEMATIC (ClaudeDesign)
+   Full-screen overlay; choreography = CSS @keyframes with delays as fractions of
+   --dur (set by JS). Real portraits replace the geometric mask/silhouette.
+   ========================================================================== */
+.fa-cine{position:fixed;inset:0;z-index:9000;overflow:hidden;background:#040209;pointer-events:none;
+  font-family:'Cinzel','Trajan Pro',Georgia,serif;-webkit-font-smoothing:antialiased;contain:layout paint;}
+.fa-cine.bye{animation:faBye calc(var(--dur)*0.17) ease forwards;}
+@keyframes faBye{to{opacity:0;}}
+.fa-cine *{box-sizing:border-box;}
+
+.fa-cine-bd{position:absolute;inset:0;opacity:0;
+  background:radial-gradient(125% 95% at 50% 36%,rgba(127,19,32,0.6),rgba(42,8,16,0.86) 46%,#050208 80%);
+  animation:faBd calc(var(--dur)*0.55) ease-out calc(var(--dur)*0.03) both;}
+@keyframes faBd{to{opacity:1;}}
+
+.fa-cine-lb{position:absolute;left:0;right:0;height:0;background:#000;z-index:60;}
+.fa-cine-lb.t{top:0;animation:faLbT var(--dur) cubic-bezier(.33,1,.68,1) both;}
+.fa-cine-lb.b{bottom:0;box-shadow:inset 0 1px 0 rgba(226,37,61,.18);animation:faLbB var(--dur) cubic-bezier(.33,1,.68,1) both;}
+@keyframes faLbT{0%{height:0;}6%{height:5.5vh;}84%{height:5.5vh;}100%{height:0;}}
+@keyframes faLbB{0%{height:0;}6%{height:8vh;}84%{height:8vh;}100%{height:0;}}
+
+.fa-cine-figwrap{position:absolute;inset:0;}
+.fa-cine-fig{position:absolute;left:50%;top:35.5%;transform:translate(-50%,-50%);width:min(62vw,250px);height:auto;
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,.6));opacity:0;animation:faFig var(--dur) ease both;}
+@keyframes faFig{
+  0%{opacity:0;transform:translate(-50%,calc(-50% + 10px)) scale(.985);}
+  10%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  32%{transform:translate(calc(-50% - 1.4px),-50%) scale(1);}
+  34%{transform:translate(calc(-50% + 1.8px),-50%) scale(1.004);}
+  35.8%{transform:translate(-50%,-50%) scale(1);filter:brightness(2.5) drop-shadow(0 0 42px rgba(255,120,120,.95));}
+  42%{filter:drop-shadow(0 0 26px rgba(226,37,61,.6));}
+  100%{opacity:1;filter:drop-shadow(0 0 28px rgba(226,37,61,.62));}}
+
+.fa-cine-cracks{position:absolute;inset:0;width:100%;height:100%;z-index:5;}
+.fa-cine-cracks path{fill:none;stroke:#ffd9d9;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 3px rgba(255,90,90,.9));stroke-dasharray:760;stroke-dashoffset:760;opacity:0;
+  animation:faCrack calc(var(--dur)*0.42) cubic-bezier(.33,1,.68,1) calc(var(--dur)*0.205) both,
+            faCrackFade calc(var(--dur)*0.13) ease calc(var(--dur)*0.82) both;}
+@keyframes faCrack{to{stroke-dashoffset:0;opacity:.92;}}
+@keyframes faCrackFade{to{opacity:0;}}
+
+.fa-cine-flash{position:absolute;left:50%;top:35.5%;transform:translate(-50%,-50%);
+  width:min(150vw,620px);height:min(150vw,620px);border-radius:50%;mix-blend-mode:screen;opacity:0;z-index:8;
+  background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(255,120,120,.7) 22%,rgba(226,37,61,.4) 45%,transparent 68%);
+  animation:faFlash calc(var(--dur)*0.10) ease calc(var(--dur)*0.352) both;}
+@keyframes faFlash{0%{opacity:0;}30%{opacity:1;}100%{opacity:0;}}
+
+.fa-cine-shards{position:absolute;left:50%;top:35.5%;width:0;height:0;z-index:7;}
+.fa-cine-shards i{position:absolute;left:0;top:0;width:14px;height:18px;margin:-9px 0 0 -7px;background:var(--sc,#f2ebdf);
+  clip-path:polygon(0 30%,55% 0,100% 45%,60% 100%,15% 70%);opacity:0;
+  animation:faShard calc(var(--dur)*0.16) cubic-bezier(.22,1,.36,1) calc(var(--dur)*0.358) both;}
+@keyframes faShard{0%{opacity:0;transform:translate(0,0) rotate(0);}18%{opacity:.95;}
+  100%{opacity:0;transform:translate(var(--fx),var(--fy)) rotate(var(--fr));}}
+
+.fa-cine-sigil{position:absolute;left:50%;top:35.5%;transform:translate(-50%,-50%);
+  width:min(46vw,170px);height:min(46vw,170px);z-index:9;filter:drop-shadow(0 0 12px rgba(226,37,61,.7));opacity:0;
+  animation:faSig calc(var(--dur)*0.22) cubic-bezier(.34,1.56,.64,1) calc(var(--dur)*0.43) both,
+            faSigFade calc(var(--dur)*0.11) ease calc(var(--dur)*0.84) both;}
+.fa-cine-sigil .sg path{fill:#ffd574;stroke:#ff5a5a;stroke-width:1;}
+.fa-cine-sigil .sg circle{fill:#fff;}
+@keyframes faSig{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-14deg);}60%{opacity:1;}
+  100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(6deg);}}
+@keyframes faSigFade{to{opacity:0;}}
+.fa-cine-ring{position:absolute;left:50%;top:35.5%;width:min(54vw,200px);height:min(54vw,200px);border-radius:50%;z-index:8;
+  border:2px solid rgba(255,120,130,.9);box-shadow:0 0 14px rgba(226,37,61,.6);transform:translate(-50%,-50%) scale(.2);opacity:0;}
+.fa-cine-ring.r1{animation:faRing calc(var(--dur)*0.2) cubic-bezier(.25,1,.5,1) calc(var(--dur)*0.43) both;}
+.fa-cine-ring.r2{animation:faRing calc(var(--dur)*0.2) cubic-bezier(.25,1,.5,1) calc(var(--dur)*0.55) both;}
+.fa-cine-ring.r3{animation:faRing calc(var(--dur)*0.2) cubic-bezier(.25,1,.5,1) calc(var(--dur)*0.67) both;}
+@keyframes faRing{0%{opacity:.5;transform:translate(-50%,-50%) scale(.2);}100%{opacity:0;transform:translate(-50%,-50%) scale(3.6);}}
+
+.fa-cine-narr{position:absolute;left:24px;right:24px;top:58%;text-align:center;z-index:50;}
+.fa-cine-narr .k{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.42em;
+  color:#9a93a6;text-transform:uppercase;margin-bottom:10px;opacity:0;animation:faNk calc(var(--dur)*0.5) ease calc(var(--dur)*0.04) both;}
+@keyframes faNk{0%{opacity:0;}12%{opacity:.85;}80%{opacity:.6;}100%{opacity:0;}}
+.fa-cine-narr .l{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:25px;font-weight:600;
+  color:#f4f2ee;position:absolute;left:0;right:0;text-shadow:0 1px 6px rgba(0,0,0,.7);opacity:0;}
+.fa-cine-narr .l1{animation:faL1 var(--dur) ease both;}
+.fa-cine-narr .l2{animation:faL2 var(--dur) ease both;}
+.fa-cine-narr .l2 b{color:#e2253d;font-style:normal;}
+@keyframes faL1{0%{opacity:0;transform:translateY(8px);}5%{opacity:1;transform:none;}17%{opacity:1;}22%{opacity:0;transform:translateY(-6px);}100%{opacity:0;}}
+@keyframes faL2{0%,29%{opacity:0;transform:translateY(8px);}38%{opacity:1;transform:none;}45%{opacity:1;}50%{opacity:0;transform:translateY(-6px);}100%{opacity:0;}}
+
+.fa-cine-title{position:absolute;left:0;right:0;top:43%;text-align:center;z-index:55;}
+.fa-cine-title .kick{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.5em;color:#f5b842;
+  text-transform:uppercase;text-shadow:0 0 12px rgba(245,184,66,.5);opacity:0;
+  animation:faRise calc(var(--dur)*0.08) ease calc(var(--dur)*0.45) both,faRecede calc(var(--dur)*0.1) ease calc(var(--dur)*0.82) both;}
+.fa-cine-title .nm{margin-top:14px;font-size:21px;font-weight:600;letter-spacing:.2em;color:#d8a23a;text-transform:uppercase;
+  text-shadow:0 0 18px rgba(226,37,61,.45),0 2px 2px rgba(0,0,0,.6);opacity:0;
+  animation:faRise calc(var(--dur)*0.085) cubic-bezier(.33,1,.68,1) calc(var(--dur)*0.465) both,faRecede calc(var(--dur)*0.1) ease calc(var(--dur)*0.82) both;}
+.fa-cine-title .ub{position:relative;margin-top:2px;font-size:min(15vw,54px);line-height:1;font-weight:700;letter-spacing:.07em;
+  color:#e2253d;text-transform:uppercase;-webkit-text-stroke:.6px rgba(245,184,66,.4);opacity:0;
+  text-shadow:0 0 26px rgba(226,37,61,.7),0 0 8px rgba(255,90,90,.7),0 2px 3px rgba(0,0,0,.7);
+  animation:faSlam calc(var(--dur)*0.07) cubic-bezier(.16,1,.3,1) calc(var(--dur)*0.485) both,faRecede calc(var(--dur)*0.1) ease calc(var(--dur)*0.82) both;}
+@keyframes faSlam{0%{opacity:0;transform:scale(1.34);filter:blur(18px);letter-spacing:.4em;}
+  55%{opacity:1;transform:scale(.98);filter:blur(0);}100%{opacity:1;transform:scale(1);letter-spacing:.07em;filter:blur(0);}}
+.fa-cine-title .rule{margin:14px auto 0;height:1px;width:0;box-shadow:0 0 8px rgba(226,37,61,.6);
+  background:linear-gradient(90deg,transparent,#e2253d,#f5b842,#e2253d,transparent);
+  animation:faRule calc(var(--dur)*0.11) cubic-bezier(.25,1,.5,1) calc(var(--dur)*0.53) both,faRecede calc(var(--dur)*0.1) ease calc(var(--dur)*0.82) both;}
+@keyframes faRule{to{width:188px;}}
+@keyframes faRise{0%{opacity:0;transform:translateY(16px);}100%{opacity:1;transform:translateY(0);}}
+@keyframes faRecede{to{opacity:0;transform:translateY(-40px) scale(.92);}}
+
+.fa-cine-taunt{position:absolute;left:28px;right:28px;top:70%;text-align:center;z-index:55;opacity:0;animation:faTaunt var(--dur) ease both;}
+.fa-cine-taunt .dv{display:block;width:5px;height:5px;margin:0 auto 12px;transform:rotate(45deg);background:#e2253d;box-shadow:0 0 7px #e2253d;}
+.fa-cine-taunt .tx{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;font-size:23px;line-height:1.35;
+  color:#f6ecd6;text-shadow:0 0 16px rgba(226,37,61,.4),0 1px 2px rgba(0,0,0,.7);}
+@keyframes faTaunt{0%,64%{opacity:0;transform:translateY(14px);}74%{opacity:1;transform:none;}82%{opacity:1;}90%{opacity:0;transform:translateY(-10px);}100%{opacity:0;}}
+
+.fa-cine-bar{position:absolute;left:20px;right:20px;top:8%;z-index:55;opacity:0;animation:faBar var(--dur) ease both;}
+.fa-cine-bar .lbl{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.22em;color:#ff5a5a;margin-bottom:6px;}
+.fa-cine-bar .fill{display:block;height:9px;border-radius:5px;background:linear-gradient(90deg,#7f1320,#e2253d 55%,#ff5a5a);
+  box-shadow:0 0 14px rgba(226,37,61,.7),inset 0 1px 0 rgba(255,255,255,.25);transform-origin:left;transform:scaleX(0);
+  animation:faBarFill calc(var(--dur)*0.13) cubic-bezier(.25,1,.5,1) calc(var(--dur)*0.84) both;}
+@keyframes faBar{0%,82%{opacity:0;}90%{opacity:1;}100%{opacity:1;}}
+@keyframes faBarFill{to{transform:scaleX(1);}}
+
+@media (prefers-reduced-motion:reduce){.fa-cine *{animation-duration:.01ms!important;}}
