@@ -31970,3 +31970,7 @@ button.guildhall-summary-tile:active {
 .review-pp-not:active{color:#b8b8c4;}
 .review-pp-foot{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:#5a5570;margin-top:12px;}
 @media (prefers-reduced-motion:reduce){.review-pp,.review-pp-card{transition:none;}}
+
+/* W545 — CO-OP dungeon rows in the Kill Log (Bosses Slain sheet) */
+.guild-bosses-coop-tag{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:5px;font-size:8.5px;font-weight:800;letter-spacing:.1em;vertical-align:middle;color:#c4b5fd;background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.42);}
+.guild-bosses-row--coop .guild-bosses-row-dot{background:#8b5cf6;box-shadow:0 0 7px rgba(139,92,246,.6);}
