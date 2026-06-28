@@ -15,7 +15,10 @@ const CAPS = [
     bot: { attack: 0.988, defense: 0.9753333333333333, edge: 1.8366666666666664, arch: 'trickster' },
     pMoves: ['jab', 'hook', 'guard', 'focus'], bMoves: ['arrowvolley', 'snapshot', 'tumble', 'quickshot'],
     moveSeq: Array(22).fill('jab'),
-    result: { won: true, turns: 23, pHP: 24.108143, bHP: 0, dp: 42, db: 21 } },
+    // W529 — recaptured: the trickster bot now gains passive evasion (_arRangerEvade),
+    // so it slips more jabs → fight resolves a turn sooner. Re-verified byte-identical
+    // on BOTH engines (app.js Arena._battle + this combat-core) at the new values.
+    result: { won: true, turns: 22, pHP: 22.949108, bHP: 0, dp: 42, db: 22 } },
   { floor: 12, seed: 4242,
     player: { attack: 2.3, defense: 2.3, edge: 2.3, stats: { STR: 1, VIT: 1, INT: 1, FOCUS: 1, WILL: 1, WLT: 1 }, arch: 'balanced', attuned: 1 },
     bot: { attack: 19.70190908092534, defense: 10.870018803269154, edge: 10.19064262806483, arch: 'aggressor' },
@@ -28,6 +31,15 @@ const CAPS = [
     pMoves: ['jab', 'hook', 'guard', 'focus'], bMoves: ['cleave', 'sunder', 'slash', 'focus'],
     moveSeq: ['jab', 'jab'],
     result: { won: false, turns: 3, pHP: 0, bHP: 106.496673, dp: 3, db: 45 } },
+  // W530 — Bulwark (the melee combined Guard+Focus+cleanse stance) parity guard.
+  // Player casts bulwark turn 1 then attacks; db=6 confirms the -40% taken applies
+  // identically on both engines. Captured from app.js Arena._battle + this core.
+  { floor: 20, seed: 8088,
+    player: { attack: 26.0, defense: 9.0, edge: 5.0, stats: { STR: 1, VIT: 1, INT: 1, FOCUS: 1, WILL: 1, WLT: 1 }, arch: 'aggressor', attuned: 1 },
+    bot: { attack: 7.0, defense: 4.0, edge: 4.0, arch: 'aggressor' },
+    pMoves: ['cleave', 'sunder', 'bulwark', 'oathstrike'], bMoves: ['cleave', 'sunder', 'slash', 'focus'],
+    moveSeq: ['bulwark', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike'],
+    result: { won: true, turns: 6, pHP: 53.793526, bHP: 0, dp: 49, db: 6 } },
 ];
 
 function near(a, b) { return Math.abs(a - b) < 1e-4; }
