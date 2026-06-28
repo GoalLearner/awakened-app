@@ -147,6 +147,15 @@ function _arPushMod(S, k, kind, mag, dur) {
 function _arStatAtkMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'atk') m *= (1 + x.mag); }); return _arClamp(m, _ATK_CLAMP[0], _ATK_CLAMP[1]); }
 function _arStatTakenMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'def') m *= (1 + x.mag); }); return _arClamp(m, _TAKEN_CLAMP[0], _TAKEN_CLAMP[1]); }
 function _arStatDodge(s) { let d = 0; s.mods.forEach((x) => { if (x.k === 'dodge') d += x.mag; }); return Math.min(_DODGE_CAP, d); }
+// W529 — Ranger (trickster) passive evasion. MUST mirror app.js exactly for PvP parity.
+// Scales with the incoming hit's power + the defender's missing HP, bounded at +0.28
+// and folded under the hard _DODGE_CAP (0.50). Archetype-gated → symmetric, non-tricksters get 0.
+function _arRangerEvade(defC, hpFrac, power) {
+  if (!defC || _arenaArchOf(defC) !== 'trickster') return 0;
+  var heavy    = Math.max(0, (power || 0) - 1.0) * 0.10;
+  var cornered = (1 - Math.max(0, Math.min(1, hpFrac || 0))) * 0.22;
+  return Math.min(0.28, heavy + cornered);
+}
 function _arStatArmorShred(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'shred') m *= (1 - x.mag); }); return Math.max(_ARMOR_SHRED_MIN, m); }
 function _arStruggleMove() { return { id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, acc: 0.95, cd: 0, desc: 'A desperate blow.' }; }
 function _arAccBonusOf(c) {
@@ -278,7 +287,7 @@ function _arExecMove(sess, side, move, events) {
     const defBase  = (side === 'p' ? sess.m.bot.defense : sess.m.player.defense) || 0;
     const shred    = _arStatArmorShred(defS);
     const takenM   = _arStatTakenMult(defS);
-    const dodge    = _arStatDodge(defS);
+    const dodge    = Math.min(_DODGE_CAP, _arStatDodge(defS) + _arRangerEvade(side === 'p' ? sess.m.bot : sess.m.player, side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax), move.power || 0));   // W529 — ranger passive evasion
     const accBonus = side === 'p' ? sess.pAccB : sess.bAccB;
     const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
     const remBefore = side === 'p' ? sess.bHP : sess.pHP;
