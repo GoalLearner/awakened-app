@@ -80,7 +80,7 @@ const ARENA_MOVE_LIB = {
   temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', kind: 'temper', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
   evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
   refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
-  bulwark:    { name: 'Bulwark',      gl: 'shield', power: 0,    acc: 1,    cd: 5, fx: { t: 'bulwark', mag: 0.40, dur: 3 }, desc: 'Guard (-40% taken), focus (+40% hits) AND burn off afflictions — 3 turns. Long cooldown.' },
+  bulwark:    { name: 'Bulwark',      gl: 'shield', power: 0,    acc: 1,    cd: 5, fx: { t: 'bulwark', mag: 0.40, dur: 3 }, desc: 'Brace, empower & cleanse — 3 turns.' },
   lastvow:    { name: 'Last Vow',     gl: 'shield', power: 0,    acc: 1,    cd: 4, fx: { t: 'heal', mag: 0.4 }, desc: 'Restore 40% of your health.' },
   arcanebolt: { name: 'Arcane Bolt',  gl: 'magic',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A bolt of raw mana.' },
   forcewave:  { name: 'Force Wave',   gl: 'magic',  power: 1.55, acc: 0.78, cd: 2, desc: 'A crushing wave of force.' },
