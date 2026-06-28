@@ -28816,6 +28816,13 @@ button.guildhall-summary-tile:active {
 .pkb-spot::before { content: ''; position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); width: 70%; height: 16%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent 75%); }
 .pkb-spot .spr { position: relative; width: 78%; height: 90%; display: flex; align-items: flex-end; justify-content: center; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.55)); }
 .pkb-spot .spr img, .pkb-spot .spr svg { width: 100%; height: 100%; object-fit: contain; }
+/* W535 — The First Awakened, Unbound: phase-2 menace on the foe portrait (same figure,
+   recolored crimson + glowing), with a white "unbind" flash on the transition. */
+.pkb-spot.fa-unbound .spr { filter: drop-shadow(0 0 26px rgba(229,40,40,0.6)) drop-shadow(0 8px 12px rgba(0,0,0,0.6)); animation: pkbUnbindFlash 0.7s ease both; }
+.pkb-spot.fa-unbound .spr img, .pkb-spot.fa-unbound .spr svg { filter: saturate(1.5) contrast(1.18) hue-rotate(-20deg) brightness(0.9); }
+.pkb-spot.fa-unbound .plat { border-color: rgba(229,40,40,0.7) !important; box-shadow: 0 0 24px rgba(229,40,40,0.45); }
+@keyframes pkbUnbindFlash { 0% { filter: brightness(2.6) saturate(0.2) drop-shadow(0 0 40px rgba(255,90,90,0.9)); transform: scale(1.05); } 40% { transform: scale(0.99); } 100% { filter: drop-shadow(0 0 26px rgba(229,40,40,0.6)) drop-shadow(0 8px 12px rgba(0,0,0,0.6)); transform: scale(1); } }
+.pkb-stage.fa-unbound-stage { box-shadow: inset 0 0 120px rgba(180,20,20,0.28); }
 
 /* ── W428 · Combat Attack VFX (ClaudeDesign) — the attacker's signature strike, mounted
    over the shared .pkb battle stage (Ascent + PvP). All scoped under .pkb-vfx so the inner
