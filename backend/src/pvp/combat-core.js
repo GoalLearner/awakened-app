@@ -80,6 +80,7 @@ const ARENA_MOVE_LIB = {
   temper:     { name: 'Temper',       gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', kind: 'temper', mag: 0.4, dur: 3 }, desc: 'Stoke your fury (+40%).' },
   evade:      { name: 'Evade',        gl: 'dagger', power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: '40% dodge for 2 turns.' },
   refuse:     { name: 'Refuse',       gl: 'shield', power: 0,    acc: 1,    cd: 2, fx: { t: 'guardCleanse' }, desc: 'Guard and shed afflictions.' },
+  bulwark:    { name: 'Bulwark',      gl: 'shield', power: 0,    acc: 1,    cd: 5, fx: { t: 'bulwark', mag: 0.40, dur: 3 }, desc: 'Guard (-40% taken), focus (+40% hits) AND burn off afflictions — 3 turns. Long cooldown.' },
   lastvow:    { name: 'Last Vow',     gl: 'shield', power: 0,    acc: 1,    cd: 4, fx: { t: 'heal', mag: 0.4 }, desc: 'Restore 40% of your health.' },
   arcanebolt: { name: 'Arcane Bolt',  gl: 'magic',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A bolt of raw mana.' },
   forcewave:  { name: 'Force Wave',   gl: 'magic',  power: 1.55, acc: 0.78, cd: 2, desc: 'A crushing wave of force.' },
@@ -100,13 +101,13 @@ const ARENA_MOVE_LIB = {
 const WEAPON_MOVES = {
   unarmed:               ['jab', 'hook', 'guard', 'focus'],
   rusted_training_blade: ['slash', 'lunge', 'guard', 'focus'],
-  titan_oathblade:       ['cleave', 'sunder', 'brace', 'oathstrike'],
-  hammerfall_warmaul:    ['crush', 'stagger', 'brace', 'quake'],
-  kilnforged_warblade:   ['searing', 'ember', 'temper', 'immolate'],
+  titan_oathblade:       ['cleave', 'sunder', 'bulwark', 'oathstrike'],   // W529 melee combined stance (was brace)
+  hammerfall_warmaul:    ['crush', 'stagger', 'brace', 'quake'],          // sentinel weapon — keeps Brace
+  kilnforged_warblade:   ['searing', 'ember', 'bulwark', 'immolate'],     // W529 (was temper)
   ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
   vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
   nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
-  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'temper'],
+  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],   // W529 melee combined stance (was temper)
   aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
   wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
   twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],
@@ -357,6 +358,17 @@ function _arApplyFx(sess, side, fx, events, atkName, defName) {
       selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
       _arPushMod(selfS, 'dotImmune', 'cauterize', 1, 2);
       events.push({ side, t: 'fx', text: atkName + ' refuses — afflictions shed, wounds cauterized.' }); break;
+    case 'bulwark': {
+      // W529 — melee combined stance = Guard (-40% taken) + Focus (+40% atk) + cleanse,
+      // 3 turns. CLEANSE FIRST (it strips mag<0 mods, which would otherwise eat the def
+      // buff we add next), THEN apply the buffs. Mirrors app.js exactly for PvP parity.
+      selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0; selfS.guard = 1;
+      const _bw = Math.abs(fx.mag || 0.40), _bd = fx.dur || 3;
+      _arPushMod(selfS, 'def', 'guard', -_bw, _bd);
+      _arPushMod(selfS, 'atk', 'focus', _bw, _bd);
+      _arPushMod(selfS, 'dotImmune', 'cauterize', 1, 2);
+      events.push({ side, t: 'fx', text: atkName + ' raises a bulwark — warded, focused, afflictions cauterized.' }); break;
+    }
     case 'heal': {
       const max = side === 'p' ? sess.pMax : sess.bMax;
       const amt = Math.round(max * fx.mag);
