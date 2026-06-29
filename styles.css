@@ -31821,7 +31821,7 @@ button.guildhall-summary-tile:active {
    Full-screen overlay; choreography = CSS @keyframes with delays as fractions of
    --dur (set by JS). Real portraits replace the geometric mask/silhouette.
    ========================================================================== */
-.fa-cine{position:fixed;inset:0;z-index:9000;overflow:hidden;background:#040209;pointer-events:none;
+.fa-cine{position:fixed;inset:0;z-index:99000;overflow:hidden;background:#040209;pointer-events:none;
   font-family:'Cinzel','Trajan Pro',Georgia,serif;-webkit-font-smoothing:antialiased;contain:layout paint;}
 .fa-cine.bye{animation:faBye calc(var(--dur)*0.17) ease forwards;}
 @keyframes faBye{to{opacity:0;}}
@@ -31984,11 +31984,11 @@ button.guildhall-summary-tile:active {
    continue, reader-paced (solves the "too fast to read" Unbound feedback).
    Tokens: CN/AS from the handoff engine. Canvas 390x844 -> % of the overlay.
    ========================================================================== */
-.asc-cine{position:fixed;inset:0;z-index:9000;overflow:hidden;background:#040209;
+.asc-cine{position:fixed;inset:0;z-index:99000;overflow:hidden;background:#040209;
   font-family:'Cinzel','Trajan Pro',Georgia,serif;-webkit-font-smoothing:antialiased;contain:layout paint;
   opacity:0;animation:ascFadeIn .6s ease forwards;cursor:pointer;}
 @keyframes ascFadeIn{to{opacity:1;}}
-.asc-cine.asc-bye{animation:ascFadeOut .5s ease forwards;}
+.asc-cine.asc-bye{animation:ascFadeOut .5s ease forwards;pointer-events:none;}
 @keyframes ascFadeOut{to{opacity:0;}}
 .asc-cine *{box-sizing:border-box;}
 
