@@ -17951,6 +17951,17 @@ body.reveal-locked { overflow: hidden; }
   /* Subtle, never bouncy. Pure opacity/glow breath. */
   animation: splash-logo-breathe 4s ease-in-out infinite;
 }
+/* W555 — splash hero logo (gold-A + AWKND on transparency). Replaces the
+   small triangle emblem + Cinzel wordmark. The glow pulse is owned by the
+   animation; the static filter is the reduced-motion fallback. */
+.splash-logo-img {
+  width: clamp(208px, 58vw, 300px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.30));
+  animation: splash-emblem-glow 4s ease-in-out infinite;
+}
 .splash-subtitle {
   margin-top: 18px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -17985,7 +17996,7 @@ body.reveal-locked { overflow: hidden; }
   50%      { transform: scale(1.04); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .splash-logo, .splash-emblem, .splash-bg-orb { animation: none; }
+  .splash-logo, .splash-logo-img, .splash-emblem, .splash-bg-orb { animation: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
