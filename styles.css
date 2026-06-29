@@ -29369,6 +29369,10 @@ button.guildhall-summary-tile:active {
 .fn-obj-complete .cell i { font-family: "JetBrains Mono", monospace; font-style: normal; font-size: 7.5px; font-weight: 800; letter-spacing: 2px; color: #9090a8; }
 .fn-obj-complete .div { width: 1px; background: rgba(255,255,255,0.08); margin: 3px 0; }
 .fn-obj-stamp { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 3.5px; color: #f5b842; }
+/* W553 — any% "time to summit" speedrun line on the static summit */
+.fn-summit-time { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 250px; margin: 0 auto 14px; padding-top: 12px; border-top: 1px solid rgba(245,184,66,0.12); }
+.fn-summit-time .lbl { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 3px; color: #9a93a6; text-transform: uppercase; }
+.fn-summit-time .val { font-family: "Cinzel", serif; font-size: 19px; font-weight: 700; letter-spacing: 0.04em; background: linear-gradient(180deg,#ffe9b0 0%,#f5b842 48%,#c08418 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .fn-obj-stamp .d { width: 5px; height: 5px; transform: rotate(45deg); background: #f5b842; border-radius: 1px; box-shadow: 0 0 7px #f5b842; }
 .fn-cta { border: none; cursor: pointer; width: 100%; border-radius: 13px; padding: 16px 0; text-align: center; background: linear-gradient(180deg, #f5b842, #c08418); font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 800; letter-spacing: 3px; color: #241502; -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 18px rgba(245,184,66,0.24); }
 
@@ -32179,6 +32183,10 @@ button.guildhall-summary-tile:active {
 .asc-card .foot{position:relative;margin-top:16px;display:flex;align-items:center;justify-content:space-between;}
 .asc-card .foot .h{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:800;letter-spacing:.16em;color:#5a5570;}
 .asc-card .foot .d{font-family:'JetBrains Mono',monospace;font-size:7.5px;font-weight:700;letter-spacing:.1em;color:#f5b842;}
+/* W553 — any% "time to summit" speedrun line on the summit card */
+.asc-card .asc-card-time{position:relative;margin-top:13px;padding-top:11px;display:flex;flex-direction:column;align-items:center;gap:3px;border-top:1px solid rgba(245,184,66,.12);}
+.asc-card .asc-card-time .lbl{font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:800;letter-spacing:.22em;color:#9a93a6;text-transform:uppercase;}
+.asc-card .asc-card-time .val{font-family:'Cinzel',serif;font-size:17px;font-weight:700;letter-spacing:.04em;background:linear-gradient(180deg,#ffe9b0 0%,#f5b842 48%,#c08418 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .asc-card .glint{position:absolute;inset:0;pointer-events:none;opacity:0;
   background:linear-gradient(105deg,transparent 40%,rgba(255,233,176,.5) 50%,transparent 60%);transform:translateX(-130%);}
 .asc-cine[data-beat="5"] .asc-card .glint{animation:ascGlint 1s ease .35s forwards;}
