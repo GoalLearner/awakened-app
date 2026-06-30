@@ -71,6 +71,11 @@ for js in $SCRIPTS; do
 done
 cp avatar-*.png www/
 cp icon-192.png icon-512.png www/
+# W565 — splash-screen logo. index.html's .splash-logo-img references
+# assets/awknd-logo.png, but the selective copy list below omitted it, so the
+# splash showed a broken-image placeholder on device (TestFlight build 374).
+mkdir -p www/assets
+if [ -f assets/awknd-logo.png ]; then cp assets/awknd-logo.png www/assets/; fi
 mkdir -p www/assets/tab-icons
 for icon in tab-status tab-habits tab-stats tab-history tab-dungeon tab-items tab-social; do
   cp "assets/tab-icons/$icon.png" "www/assets/tab-icons/$icon.png"
@@ -152,6 +157,19 @@ if compgen -G "assets/backgrounds/*.webp" > /dev/null; then
   cp assets/backgrounds/*.webp www/assets/backgrounds/
 fi
 echo "  www/ assembled."
+echo ""
+
+# W565 — missing-asset gate. The selective copy list above is easy to forget
+# when a new image lands (exactly how the splash logo shipped broken in build
+# 374). Fail the build if any assets/* path referenced by the bundled HTML/CSS/
+# JS is absent from www/ — so it's caught here, not on a device.
+echo "── Asset-reference check ──"
+ASSET_FAIL=0
+for ref in $(grep -ohrE "assets/[A-Za-z0-9_./-]+\.(png|jpe?g|webp|svg|m4a|mp3|gif)" www/index.html www/styles.css www/app.js 2>/dev/null | sort -u); do
+  if [ ! -f "www/$ref" ]; then echo "  ERROR: referenced asset missing from www/: $ref"; ASSET_FAIL=1; fi
+done
+if [ "$ASSET_FAIL" = "1" ]; then echo "  Add the missing file(s) to the copy list in this script, then rebuild."; exit 1; fi
+echo "  OK — every referenced asset is bundled."
 echo ""
 
 # Verify version knobs are in www/ (sanity check)
