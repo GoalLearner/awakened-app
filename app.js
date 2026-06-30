@@ -2298,7 +2298,7 @@
     pack_leaders_greaves: {
       id: 'pack_leaders_greaves',
       name: "Pack Leader's Greaves",
-      slot: 'legs',
+      slot: 'boots',
       source_boss: 'the_steel_wolf',
       rarity: 'common',
       tier: 'E',
@@ -2724,7 +2724,7 @@
     stairbound_greaves: {
       id: 'stairbound_greaves',
       name: 'Stairbound Greaves',
-      slot: 'legs',
+      slot: 'boots',
       source_boss: 'the_ascendant_colossus',
       rarity: 'common',
       tier: 'C',
@@ -2842,7 +2842,7 @@
     greaves_of_the_endless_road: {
       id: 'greaves_of_the_endless_road',
       name: 'Greaves of the Endless Road',
-      slot: 'legs',
+      slot: 'boots',
       source_boss: 'the_marathon_wraith',
       rarity: 'ultra_rare',
       tier: 'C',
@@ -2891,7 +2891,7 @@
     furnacewalk_legplates: {
       id: 'furnacewalk_legplates',
       name: 'Furnacewalk Legplates',
-      slot: 'legs',
+      slot: 'boots',
       source_boss: 'the_furnace_knight',
       rarity: 'common',
       tier: 'C',
@@ -3250,7 +3250,7 @@
     greaves_of_the_umbral_throne: {
       id: 'greaves_of_the_umbral_throne',
       name: 'Greaves of the Umbral Throne',
-      slot: 'legs',
+      slot: 'boots',
       source_boss: 'erebus_the_shadow_sovereign',
       rarity: 'ultra_rare',
       tier: 'S',
@@ -3303,7 +3303,7 @@
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
     restplate_of_the_wanderer: {
-      id: 'restplate_of_the_wanderer', name: 'Restplate of the Wanderer', slot: 'legs',
+      id: 'restplate_of_the_wanderer', name: 'Restplate of the Wanderer', slot: 'boots',
       source_boss: 'the_tideless_marcher', rarity: 'rare', tier: 'A',
       flavor: 'Legplates light enough to walk all day, warm enough to rest all night.',
       art_path: 'assets/items/restplate-of-the-wanderer.png',
@@ -6755,6 +6755,21 @@
     eq[slot] = null;
     saveEquipped();
     return { ok: true, prevCardId: prev || null };
+  }
+
+  // W569 — leg armor (greaves/legplates) moved from the retired 'legs' data
+  // slot to 'boots' (their item slot field now reads 'boots'; W563 already
+  // remapped the typed slot). Slide any item still stored under the old 'legs'
+  // key into 'boots' so it shows in the boots slot rather than just counting
+  // invisibly. Only when 'boots' is free, so it can never displace a worn boot
+  // or change anyone's total bonuses. One-time, device-local.
+  function _migrateLegsToBoots() {
+    try {
+      if (localStorage.getItem('hb_legs2boots_v1')) return;
+      const eq = getEquipped();
+      if (eq && eq.legs && !eq.boots) { eq.boots = eq.legs; eq.legs = null; saveEquipped(); }
+      localStorage.setItem('hb_legs2boots_v1', '1');
+    } catch (_) {}
   }
 
   // Aggregates the stat bonuses across all currently-equipped cards.
@@ -13012,9 +13027,10 @@
   // The Armory is now an 8-slot 4×2 grid, ordered anatomically:
   //   Row 1 (upper body):  HELM | AMULET | CAPE | WEAPON
   //   Row 2 (lower body):  PLATE | GLOVES | BOOTS | RING
-  // Future: dedicated 'legs' slot if/when more content makes a
-  // dedicated greaves slot meaningful (currently leg cards
-  // collapse into PLATE — see LEGACY_TO_TYPED_SLOT).
+  // W563/W569 — the 'legs' slot is retired: greaves / leg armor now carry
+  // slot:'boots' directly and equip under BOOTS (no separate legs slot). The
+  // legs:'boots' entry in LEGACY_TO_TYPED_SLOT + _migrateLegsToBoots() keep any
+  // old save's leg cards working.
   const EQUIPMENT_SLOTS = [
     { key: 'helm',   label: 'HELM'   },
     { key: 'amulet', label: 'AMULET' },
@@ -53721,6 +53737,7 @@
     // and BEFORE any rank-rendering / achievement-checking that
     // reads totalPoints. See migrateXPToNewThresholds() for rationale.
     try { migrateXPToNewThresholds(); } catch (_) {}
+    try { _migrateLegsToBoots(); } catch (_) {}   // W569 — consolidate the retired 'legs' slot into 'boots'
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
     histViewMonth = parseInt(today.slice(5, 7), 10) - 1;
