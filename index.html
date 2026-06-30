@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=526">
+  <link rel="stylesheet" href="styles.css?v=527">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -793,6 +793,21 @@
             </div>
           </button>
         </div>
+        <!-- W564 — The Pacts entry banner (ClaudeDesign handoff 8). Discoverable
+             co-op hub entry below the rank gates; state/count/allies are filled
+             by _pactsEntryRender(). Defaults to the empty/discovery state. -->
+        <a id="pacts-entry" class="pacts-entry empty" role="button" tabindex="0"
+           aria-label="The Pacts — co-op hunts. Tap to open.">
+          <span class="pe-emblem">
+            <span class="pe-summon"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          </span>
+          <span class="pe-txt">
+            <span class="pe-eyebrow"><span class="spark"></span>Co-op Hunts</span>
+            <span class="pe-title">The Pacts</span>
+            <span class="pe-standing">No active pacts<span class="sep">·</span>summon an ally</span>
+          </span>
+          <span class="pe-chev"><svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </a>
       </div>
 
       <!-- Expanded state — back button + dungeon header + boss cards.
@@ -3078,7 +3093,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=997"></script>
+  <script src="app.js?v=998"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

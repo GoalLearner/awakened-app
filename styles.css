@@ -32259,3 +32259,58 @@ button.guildhall-summary-tile:active {
 @media (prefers-reduced-motion:reduce){
   .asc-cine,.asc-cine *{animation-duration:.01ms!important;transition-duration:.01ms!important;}
 }
+
+/* ============================================================================
+   W564 — THE PACTS entry banner (ClaudeDesign handoff 8). A discoverable co-op
+   hub entry on the Dungeon tab, below the rank gates. Teal co-op identity +
+   ally-face cluster, deliberately unlike the rank-tinted solo gates. States:
+   .pending (count badge + breathing edge) · .live (blink dot) · .empty (summon
+   ring). Self-contained; opens The Pacts hub (_coopOpenDashboard).
+   ========================================================================== */
+.pacts-entry{
+  --pe-teal:#5ad6c8; --pe-teal-deep:#2bb6a6;
+  position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;
+  margin-top:18px;padding:14px 15px;border-radius:16px;overflow:hidden;color:#f2f2f7;
+  font-family:inherit;border:1px solid rgba(255,255,255,0.08);text-decoration:none;
+  background:linear-gradient(157deg,#12122c 0%,#0c0c20 55%,#07070f 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);-webkit-tap-highlight-color:transparent;
+  transition:transform .14s ease;
+}
+.pacts-entry::after{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(90,214,200,0.30), 0 0 24px rgba(90,214,200,0.14);}
+.pacts-entry.pending::after{animation:peBreath 3.2s ease-in-out infinite;}
+@keyframes peBreath{0%,100%{opacity:.55;}50%{opacity:1;}}
+.pacts-entry > *{position:relative;z-index:1;}
+.pacts-entry:active{transform:translateY(1px);}
+.pe-emblem{position:relative;flex:none;width:62px;height:48px;}
+.pacts-entry.empty .pe-emblem{width:48px;}
+.pe-ava{position:absolute;top:2px;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',Georgia,serif;font-weight:700;font-size:16px;color:var(--pe-teal);letter-spacing:.5px;
+  background:radial-gradient(circle at 50% 34%, rgba(43,182,166,0.30), #0b0b1e 72%);
+  box-shadow:0 0 0 1.6px var(--pe-teal), 0 0 13px rgba(90,214,200,0.40), inset 0 0 8px rgba(90,214,200,0.16);}
+.pe-ava.a1{left:0;z-index:1;}
+.pe-ava.a2{left:20px;z-index:2;}
+.pe-count{position:absolute;top:-3px;right:-3px;z-index:4;min-width:22px;height:22px;padding:0 5px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:800;color:#04201d;letter-spacing:0;
+  background:linear-gradient(180deg,#8defdf,var(--pe-teal) 60%,var(--pe-teal-deep));
+  box-shadow:0 0 0 2px #0c0c20, 0 0 14px rgba(90,214,200,0.8);animation:peBadge 2.4s ease-in-out infinite;}
+@keyframes peBadge{0%,100%{box-shadow:0 0 0 2px #0c0c20,0 0 10px rgba(90,214,200,0.55);}50%{box-shadow:0 0 0 2px #0c0c20,0 0 18px rgba(90,214,200,0.95);}}
+.pe-summon{position:absolute;left:0;top:0;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1.5px dashed rgba(90,214,200,0.5);color:var(--pe-teal);
+  background:radial-gradient(circle at 50% 35%, rgba(43,182,166,0.12), transparent 70%);}
+.pe-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.pe-eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:800;letter-spacing:2.2px;text-transform:uppercase;color:var(--pe-teal);display:flex;align-items:center;gap:6px;}
+.pe-eyebrow .spark{width:5px;height:5px;border-radius:50%;background:var(--pe-teal);box-shadow:0 0 7px var(--pe-teal);}
+.pe-title{font-family:'Cinzel',Georgia,serif;font-size:19px;font-weight:700;letter-spacing:.5px;color:#f2f2f7;line-height:1;}
+.pacts-entry.empty .pe-title{color:#cfd0e2;}
+.pe-standing{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10.5px;font-weight:700;letter-spacing:.6px;color:#9596b2;}
+.pacts-entry.empty .pe-standing{color:#585a76;}
+.pe-standing .dot{width:6px;height:6px;border-radius:50%;background:var(--pe-teal);box-shadow:0 0 7px var(--pe-teal);flex:none;}
+.pe-standing b{color:var(--pe-teal);font-weight:800;}
+.pe-standing .sep{color:#585a76;}
+.pacts-entry.live .pe-ava{color:#7fe0d4;}
+.pacts-entry.live .pe-standing .live-dot{width:7px;height:7px;border-radius:50%;background:var(--pe-teal);box-shadow:0 0 8px var(--pe-teal);flex:none;animation:liveBlink 1.8s ease-in-out infinite;}
+@keyframes liveBlink{0%,100%{opacity:1;}50%{opacity:.4;}}
+.pe-chev{flex:none;color:#5b5c78;display:flex;align-items:center;}
+@media (prefers-reduced-motion:reduce){.pacts-entry::after,.pe-count,.pacts-entry.live .pe-standing .live-dot{animation:none!important;}}
