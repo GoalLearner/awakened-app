@@ -34,7 +34,7 @@ const _ATK_CLAMP = [0.25, 2.0], _TAKEN_CLAMP = [0.40, 2.0], _DODGE_CAP = 0.50, _
 const _EDGE_TIE_BAND = 0.03, _STRUGGLE_POWER = 0.5;
 const _ACC_EDGE_COEF = 0.20, _ACC_EDGE_MAXBONUS = 0.08;
 const _DOT_INTAKE_CAP = 0.15;
-const _ARENA_EFF_MULT = 1.20, _ARENA_EFF_PEN = 0.83;
+const _ARENA_EFF_MULT = 1.20, _ARENA_EFF_PEN = 0.83, _ARENA_EFF_STRONG = 1.13;   // W566 — label-magnitude threshold (labels only, no combat-math change)
 
 // per-edge type-eff map (verbatim ~6788)
 const _ARENA_EFF_EDGES = {
@@ -183,12 +183,15 @@ function _arenaArchOf(c) {
 function _arenaBaseArch(k) { return k === 'glasscannon' ? 'aggressor' : k === 'juggernaut' ? 'sentinel' : k; }
 function _arenaEffectiveness(pa, fa) {
   const p = _arenaBaseArch(pa), f = _arenaBaseArch(fa);
-  if (p === 'balanced' || f === 'balanced' || p === f) return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
+  if (p === 'balanced' || f === 'balanced' || p === f) return { key: 'neutral', tier: 'none', label: 'EVEN MATCH', mult: 1.0 };
+  // W566 — label graduated to the real magnitude (>=_ARENA_EFF_STRONG => "super").
   const sup = _ARENA_EFF_EDGES[p + '>' + f];
-  if (sup) return { key: 'super', label: 'SUPER EFFECTIVE', mult: sup.win };
+  if (sup) { const strong = sup.win >= _ARENA_EFF_STRONG;
+    return { key: 'super', tier: strong ? 'strong' : 'mild', label: strong ? 'SUPER EFFECTIVE' : 'FAVORED', mult: sup.win }; }
   const weak = _ARENA_EFF_EDGES[f + '>' + p];
-  if (weak) return { key: 'weak',  label: 'NOT VERY EFFECTIVE', mult: weak.lose };
-  return { key: 'neutral', label: 'EVEN MATCH', mult: 1.0 };
+  if (weak) { const strong = weak.lose <= (1 / _ARENA_EFF_STRONG);
+    return { key: 'weak', tier: strong ? 'strong' : 'mild', label: strong ? 'NOT VERY EFFECTIVE' : 'RESISTED', mult: weak.lose }; }
+  return { key: 'neutral', tier: 'none', label: 'EVEN MATCH', mult: 1.0 };
 }
 function _arenaSideOdds(c) {
   const tot = Math.max(1e-6, (c.attack || 0) + (c.defense || 0) + (c.edge || 0));
