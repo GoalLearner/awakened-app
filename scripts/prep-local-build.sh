@@ -319,6 +319,26 @@ if [ -n "$BUILD_NUMBER_ARG" ]; then
     echo "  WARN: could not parse APP_VERSION from app.js — set Marketing Version in Xcode."
   fi
   (cd ios/App && agvtool new-version -all "$BUILD_NUMBER_ARG")
+  # W562 — agvtool new-marketing-version can leave the MARKETING_VERSION build
+  # setting (what Xcode's General tab + the archive actually read) stuck at an
+  # old value (e.g. 2.3.1) while only updating Info.plist. Force MARKETING_VERSION
+  # + CURRENT_PROJECT_VERSION straight into project.pbxproj via xcodeproj (same
+  # gem used for entitlements above) so the shown + built version always equal
+  # root APP_VERSION + the passed build number.
+  if [ -n "$ROOT_MARKETING_VERSION" ]; then
+    (cd ios/App && ruby -e "
+      require 'xcodeproj'
+      project = Xcodeproj::Project.open('App.xcodeproj')
+      target = project.targets.find { |t| t.name == 'App' }
+      raise 'App target not found' unless target
+      target.build_configurations.each do |config|
+        config.build_settings['MARKETING_VERSION'] = '$ROOT_MARKETING_VERSION'
+        config.build_settings['CURRENT_PROJECT_VERSION'] = '$BUILD_NUMBER_ARG'
+      end
+      project.save
+      puts '  forced MARKETING_VERSION=$ROOT_MARKETING_VERSION CURRENT_PROJECT_VERSION=$BUILD_NUMBER_ARG in project.pbxproj'
+    ")
+  fi
   echo ""
 else
   echo "── [optional] Build number NOT set — bump it in Xcode before archiving"
