@@ -5765,7 +5765,7 @@ footer {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  border: 2.5px solid var(--ru-color, #3b82f6);
+  border: 2.5px solid var(--ru-color, #8b5cf6);   /* W559 — canonical brand fallback */
   opacity: 0;
   pointer-events: none;
   z-index: 1;
@@ -5790,8 +5790,8 @@ footer {
 }
 .rankup-screen.rank-splus .rankup-rank-name {
   animation: ru-fade-up 0.45s ease 1.15s both;
-  color: var(--gold, #f59e0b);
-  text-shadow: 0 0 30px rgba(245,158,11,0.6);
+  color: #facc15;   /* W559 — canonical S+ gold */
+  text-shadow: 0 0 30px rgba(250,204,21,0.6);
 }
 
 /* Class unlock */
@@ -20142,29 +20142,22 @@ body.bro-locked { overflow: hidden; }
   flex: 1;
   min-width: 0;
 }
+/* W559 — canonical per-rank palette via --rank-color (was E=red, D-S all gold) */
 .bro-rank-pill {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
   border-radius: 4px;
-  background: rgba(239,68,68,0.10);
-  border: 0.5px solid rgba(239,68,68,0.45);
-  color: #ef4444;
+  background: var(--rank-color-bg, rgba(139,92,246,0.12));
+  border: 0.5px solid var(--rank-color, #8b5cf6);
+  color: var(--rank-color, #8b5cf6);
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
-.bro-rank-pill[data-rank="D"],
-.bro-rank-pill[data-rank="C"],
-.bro-rank-pill[data-rank="B"],
-.bro-rank-pill[data-rank="A"],
-.bro-rank-pill[data-rank="S"] {
-  background: rgba(245,184,66,0.10);
-  border-color: rgba(245,184,66,0.45);
-  color: var(--gold, #f5b842);
-}
+.bro-rank-pill[data-rank="S+"] { color: #facc15; border-color: #facc15; background: rgba(250,204,21,0.12); }
 .bro-boss-name {
   margin: 6px 0 4px;
   font-family: 'Cinzel', serif;
@@ -20634,15 +20627,18 @@ body.bro-locked { overflow: hidden; }
     0 0 14px rgba(167,139,250,0.55),
     inset 0 0 14px rgba(167,139,250,0.30);
 }
-/* Re-tint the rank disc by stored rank — uses the existing rank palette */
-.sc-card--profile .sc-rank-hero[data-rank="E"]  { color: #a78bfa; border: 1.5px solid #a78bfa; box-shadow: 0 0 14px rgba(167,139,250,0.55), inset 0 0 14px rgba(167,139,250,0.30); }
-.sc-card--profile .sc-rank-hero[data-rank="D"]  { color: #8b5cf6; border: 1.5px solid #8b5cf6; box-shadow: 0 0 14px rgba(139, 92,246,0.55), inset 0 0 14px rgba(139, 92,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(139,92,246,0.40) 0%, transparent 65%), #1d1d2e; }
-.sc-card--profile .sc-rank-hero[data-rank="C"]  { color: #8b5cf6; border: 1.5px solid #8b5cf6; box-shadow: 0 0 14px rgba(139, 92,246,0.55), inset 0 0 14px rgba(139, 92,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(139,92,246,0.40) 0%, transparent 65%), #1d1d2e; }
-.sc-card--profile .sc-rank-hero[data-rank="B"]  { color: #3b82f6; border: 1.5px solid #3b82f6; box-shadow: 0 0 14px rgba( 59,130,246,0.55), inset 0 0 14px rgba( 59,130,246,0.30); background: radial-gradient(circle at 35% 30%, rgba(59,130,246,0.40) 0%, transparent 65%), #1d1d2e; }
-.sc-card--profile .sc-rank-hero[data-rank="A"]  { color: #a855f7; border: 1.5px solid #a855f7; box-shadow: 0 0 14px rgba(168, 85,247,0.55), inset 0 0 14px rgba(168, 85,247,0.30); background: radial-gradient(circle at 35% 30%, rgba(168,85,247,0.40) 0%, transparent 65%), #1d1d2e; }
-.sc-card--profile .sc-rank-hero[data-rank="S"]  { color: #f97316; border: 1.5px solid #f97316; box-shadow: 0 0 14px rgba(249,115, 22,0.55), inset 0 0 14px rgba(249,115, 22,0.30); background: radial-gradient(circle at 35% 30%, rgba(249,115,22,0.40) 0%, transparent 65%), #1d1d2e; }
+/* W559 — re-tint the rank disc from the CANONICAL --rank-color tokens
+   (the [data-rank] block ~12423) so the Hunter Profile matches the Status
+   tile / leaderboard / kill log instead of the old hardcoded blue-B palette.
+   One rule replaces the six per-rank overrides; it can never drift again. */
+.sc-card--profile .sc-rank-hero[data-rank] {
+  color: var(--rank-color, #8b5cf6);
+  border: 1.5px solid var(--rank-color, #8b5cf6);
+  box-shadow: 0 0 14px var(--rank-color-shadow, rgba(139,92,246,0.45)), inset 0 0 14px var(--rank-color-shadow, rgba(139,92,246,0.30));
+  background: radial-gradient(circle at 35% 30%, var(--rank-color-bg, rgba(139,92,246,0.30)) 0%, transparent 65%), #1d1d2e;
+}
 .sc-card--profile .sc-rank-hero.splus,
-.sc-card--profile .sc-rank-hero[data-rank="S+"] { color: #f59e0b; border: 1.5px solid #f59e0b; box-shadow: 0 0 18px rgba(245,158, 11,0.65), inset 0 0 14px rgba(245,158, 11,0.32); background: radial-gradient(circle at 35% 30%, rgba(245,158,11,0.42) 0%, transparent 65%), #1d1d2e; }
+.sc-card--profile .sc-rank-hero[data-rank="S+"] { color: #facc15; border: 1.5px solid #facc15; box-shadow: 0 0 18px rgba(250,204,21,0.55), inset 0 0 14px rgba(250,204,21,0.30); background: radial-gradient(circle at 35% 30%, rgba(250,204,21,0.22) 0%, transparent 65%), #1d1d2e; }
 
 .sc-card--profile .sc-hero-info {
   flex: 1 1 auto;
@@ -20674,13 +20670,8 @@ body.bro-locked { overflow: hidden; }
   font-weight: 800;
   letter-spacing: 0.6px;
 }
-.sc-card--profile .sc-identity-rank[data-rank="E"]  { color: #a78bfa; }
-.sc-card--profile .sc-identity-rank[data-rank="D"],
-.sc-card--profile .sc-identity-rank[data-rank="C"]  { color: #8b5cf6; }
-.sc-card--profile .sc-identity-rank[data-rank="B"]  { color: #3b82f6; }
-.sc-card--profile .sc-identity-rank[data-rank="A"]  { color: #a855f7; }
-.sc-card--profile .sc-identity-rank[data-rank="S"]  { color: #f97316; }
-.sc-card--profile .sc-identity-rank[data-rank="S+"] { color: #f59e0b; }
+.sc-card--profile .sc-identity-rank[data-rank]      { color: var(--rank-color, #8b5cf6); }   /* W559 — canonical rank palette */
+.sc-card--profile .sc-identity-rank[data-rank="S+"] { color: #facc15; }
 .sc-card--profile .sc-identity-sep {
   color: var(--text-tertiary);
   margin: 0 6px;
@@ -21507,10 +21498,10 @@ body.habit-drag-active * {
   /* Tier custom props -- defaulted to E (violet); each rank variant
      overrides these. Keeping them here means the hero/ring/well CSS
      below can stay generic. */
-  --tier:       #a78bfa;
-  --tier-ring:  rgba(167, 139, 250, 0.55);
-  --tier-wash:  rgba(167, 139, 250, 0.12);
-  --tier-glow:  rgba(167, 139, 250, 0.55);
+  --tier:       #8b5cf6;   /* W559 — canonical E/brand default */
+  --tier-ring:  rgba(139, 92, 246, 0.55);
+  --tier-wash:  rgba(139, 92, 246, 0.12);
+  --tier-glow:  rgba(139, 92, 246, 0.55);
   --gold:       #f5b842;
   --gold-light: #f7c558;
   --gold-deep:  #c08418;
@@ -21542,42 +21533,42 @@ body.habit-drag-active * {
   outline-offset: 3px;
 }
 
-/* Per-rank tier custom-property overrides (frame stays gold). */
+/* Per-rank tier custom-property overrides (frame stays gold). W559 — canonical palette. */
 .sc-card--profile .sc-rank-hero.club-badge.club-badge--e {
-  --tier:      #a78bfa;
-  --tier-ring: rgba(167, 139, 250, 0.55);
-  --tier-wash: rgba(167, 139, 250, 0.12);
-  --tier-glow: rgba(167, 139, 250, 0.55);
+  --tier:      #8b5cf6;
+  --tier-ring: rgba(139, 92, 246, 0.55);
+  --tier-wash: rgba(139, 92, 246, 0.12);
+  --tier-glow: rgba(139, 92, 246, 0.55);
 }
 .sc-card--profile .sc-rank-hero.club-badge.club-badge--d {
-  --tier:      #22c55e;
-  --tier-ring: rgba(34, 197, 94, 0.55);
-  --tier-wash: rgba(34, 197, 94, 0.10);
-  --tier-glow: rgba(34, 197, 94, 0.55);
+  --tier:      #22d3ee;
+  --tier-ring: rgba(34, 211, 238, 0.55);
+  --tier-wash: rgba(34, 211, 238, 0.10);
+  --tier-glow: rgba(34, 211, 238, 0.55);
 }
 .sc-card--profile .sc-rank-hero.club-badge.club-badge--c {
-  --tier:      #3b82f6;
-  --tier-ring: rgba(59, 130, 246, 0.55);
-  --tier-wash: rgba(59, 130, 246, 0.10);
-  --tier-glow: rgba(59, 130, 246, 0.55);
+  --tier:      #34d399;
+  --tier-ring: rgba(52, 211, 153, 0.55);
+  --tier-wash: rgba(52, 211, 153, 0.10);
+  --tier-glow: rgba(52, 211, 153, 0.55);
 }
 .sc-card--profile .sc-rank-hero.club-badge.club-badge--b {
-  --tier:      #5b8def;
-  --tier-ring: rgba(30, 64, 175, 0.65);
-  --tier-wash: rgba(30, 64, 175, 0.16);
-  --tier-glow: rgba(91, 141, 239, 0.55);
+  --tier:      #fbbf24;
+  --tier-ring: rgba(251, 191, 36, 0.60);
+  --tier-wash: rgba(251, 191, 36, 0.14);
+  --tier-glow: rgba(251, 191, 36, 0.55);
 }
 .sc-card--profile .sc-rank-hero.club-badge.club-badge--a {
-  --tier:      #fcd34d;
-  --tier-ring: rgba(167, 139, 250, 0.55); /* violet ring breaks gold-on-gold */
-  --tier-wash: rgba(252, 211, 77, 0.10);
-  --tier-glow: rgba(252, 211, 77, 0.55);
-}
-.sc-card--profile .sc-rank-hero.club-badge.club-badge--s {
   --tier:      #ef4444;
   --tier-ring: rgba(239, 68, 68, 0.60);
-  --tier-wash: rgba(239, 68, 68, 0.14);
-  --tier-glow: rgba(239, 68, 68, 0.65);
+  --tier-wash: rgba(239, 68, 68, 0.12);
+  --tier-glow: rgba(239, 68, 68, 0.55);
+}
+.sc-card--profile .sc-rank-hero.club-badge.club-badge--s {
+  --tier:      #e879f9;
+  --tier-ring: rgba(232, 121, 249, 0.60);
+  --tier-wash: rgba(232, 121, 249, 0.14);
+  --tier-glow: rgba(232, 121, 249, 0.65);
 }
 
 /* Frame -- gold, constant across every rank. Uses padding to draw
@@ -22762,12 +22753,8 @@ button.guildhall-summary-tile:active {
   text-shadow: 0 0 8px rgba(245,184,66,0.30);
   font-variant-numeric: tabular-nums;
 }
-.guild-bosses-ledger-val--rank[data-rank="E"] { color: #a78bfa; text-shadow: 0 0 8px rgba(167,139,250,0.50); }
-.guild-bosses-ledger-val--rank[data-rank="D"] { color: #f5b842; text-shadow: 0 0 8px rgba(245,184,66,0.50); }
-.guild-bosses-ledger-val--rank[data-rank="C"] { color: #f97316; text-shadow: 0 0 8px rgba(249,115,22,0.50); }
-.guild-bosses-ledger-val--rank[data-rank="B"] { color: #3b82f6; text-shadow: 0 0 8px rgba(59,130,246,0.50); }
-.guild-bosses-ledger-val--rank[data-rank="A"] { color: #ec4899; text-shadow: 0 0 8px rgba(236,72,153,0.50); }
-.guild-bosses-ledger-val--rank[data-rank="S"] { color: #ef4444; text-shadow: 0 0 8px rgba(239,68,68,0.55); }
+/* W559 — canonical rank palette (consumes --rank-color from the [data-rank] block) */
+.guild-bosses-ledger-val--rank[data-rank] { color: var(--rank-color, #8b5cf6); text-shadow: 0 0 8px var(--rank-color-shadow, rgba(139,92,246,0.40)); }
 .guild-bosses-ledger-lbl {
   margin-top: 4px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -22803,18 +22790,19 @@ button.guildhall-summary-tile:active {
 /* Per-rank group (header + left-accent panel). The rank palette
    custom properties live on the group so both the header crest
    and the panel border use the same color without duplication. */
+/* W559 — canonical rank palette (E purple, D cyan, C emerald, B amber, A red, S fuchsia) */
 .guild-bosses-group {
-  --rank-color: #f5b842;
-  --rank-glow:  rgba(245,184,66,0.50);
-  --rank-soft:  rgba(245,184,66,0.14);
-  --rank-rule:  rgba(245,184,66,0.45);
+  --rank-color: #8b5cf6;
+  --rank-glow:  rgba(139,92,246,0.50);
+  --rank-soft:  rgba(139,92,246,0.14);
+  --rank-rule:  rgba(139,92,246,0.45);
 }
-.guild-bosses-group--rank-e { --rank-color: #a78bfa; --rank-glow: rgba(167,139,250,0.50); --rank-soft: rgba(167,139,250,0.16); --rank-rule: rgba(167,139,250,0.45); }
-.guild-bosses-group--rank-d { --rank-color: #f5b842; --rank-glow: rgba(245,184,66,0.50); --rank-soft: rgba(245,184,66,0.14); --rank-rule: rgba(245,184,66,0.45); }
-.guild-bosses-group--rank-c { --rank-color: #f97316; --rank-glow: rgba(249,115,22,0.50); --rank-soft: rgba(249,115,22,0.14); --rank-rule: rgba(249,115,22,0.45); }
-.guild-bosses-group--rank-b { --rank-color: #3b82f6; --rank-glow: rgba(59,130,246,0.50); --rank-soft: rgba(59,130,246,0.14); --rank-rule: rgba(59,130,246,0.45); }
-.guild-bosses-group--rank-a { --rank-color: #ec4899; --rank-glow: rgba(236,72,153,0.50); --rank-soft: rgba(236,72,153,0.14); --rank-rule: rgba(236,72,153,0.45); }
-.guild-bosses-group--rank-s { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.55); --rank-soft: rgba(239,68,68,0.16); --rank-rule: rgba(239,68,68,0.50); }
+.guild-bosses-group--rank-e { --rank-color: #8b5cf6; --rank-glow: rgba(139,92,246,0.50); --rank-soft: rgba(139,92,246,0.16); --rank-rule: rgba(139,92,246,0.45); }
+.guild-bosses-group--rank-d { --rank-color: #22d3ee; --rank-glow: rgba(34,211,238,0.50); --rank-soft: rgba(34,211,238,0.14); --rank-rule: rgba(34,211,238,0.45); }
+.guild-bosses-group--rank-c { --rank-color: #34d399; --rank-glow: rgba(52,211,153,0.50); --rank-soft: rgba(52,211,153,0.14); --rank-rule: rgba(52,211,153,0.45); }
+.guild-bosses-group--rank-b { --rank-color: #fbbf24; --rank-glow: rgba(251,191,36,0.50); --rank-soft: rgba(251,191,36,0.14); --rank-rule: rgba(251,191,36,0.45); }
+.guild-bosses-group--rank-a { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.50); --rank-soft: rgba(239,68,68,0.14); --rank-rule: rgba(239,68,68,0.45); }
+.guild-bosses-group--rank-s { --rank-color: #e879f9; --rank-glow: rgba(232,121,249,0.55); --rank-soft: rgba(232,121,249,0.16); --rank-rule: rgba(232,121,249,0.50); }
 
 .guild-bosses-group-head {
   display: flex;
@@ -30566,12 +30554,13 @@ button.guildhall-summary-tile:active {
   color: var(--rh);
   box-shadow: 0 0 12px color-mix(in srgb, var(--rh) 15%, transparent);
 }
-.souls-rank-chip--E { --rh: #a78bfa; }
-.souls-rank-chip--D { --rh: #34d399; }
-.souls-rank-chip--C { --rh: #3b82f6; }
-.souls-rank-chip--B { --rh: #6366f1; }
-.souls-rank-chip--A { --rh: #fbbf24; }
-.souls-rank-chip--S { --rh: #ef4444; }
+/* W559 — canonical rank palette */
+.souls-rank-chip--E { --rh: #8b5cf6; }
+.souls-rank-chip--D { --rh: #22d3ee; }
+.souls-rank-chip--C { --rh: #34d399; }
+.souls-rank-chip--B { --rh: #fbbf24; }
+.souls-rank-chip--A { --rh: #ef4444; }
+.souls-rank-chip--S { --rh: #e879f9; }
 
 /* non-refundable rule callout */
 .souls-rule {
