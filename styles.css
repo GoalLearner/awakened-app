@@ -32419,6 +32419,8 @@ button.guildhall-summary-tile:active {
 .cl-art{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(72% 62% at 50% 36%,var(--glow,rgba(120,110,170,.28)),rgba(12,12,26,0) 72%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 2px,rgba(255,255,255,0) 2px 8px),linear-gradient(160deg,#1b1b32,#0c0c1a);}
 .cl-art .cl-slot{width:38px;height:38px;opacity:.66;filter:drop-shadow(0 0 8px var(--glow,transparent));}
+.cl-art-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .22s ease;z-index:1;}
+.cl-art-img.cl-on{opacity:1;}
 .cl-art.cl-myst{background:repeating-linear-gradient(135deg,rgba(255,255,255,.03) 0 2px,rgba(255,255,255,0) 2px 9px),linear-gradient(160deg,#14142a,#0a0a16);}
 .cl-art.cl-myst .cl-slot{opacity:.14;}
 .cl-art .cl-q{position:absolute;font-family:'Cinzel',serif;font-size:30px;font-weight:800;color:rgba(255,255,255,.16);}
