@@ -97,7 +97,8 @@ for icon in \
   icon-visualize icon-pack-morning icon-pack-lockedin icon-pack-custom \
   icon-streak icon-xp icon-class-civilian icon-class-warrior \
   icon-class-ranger icon-class-mage icon-class-assassin icon-class-paladin \
-  icon-class-merchant icon-class-sage; do
+  icon-class-merchant icon-class-sage \
+  icon-maxjump icon-depthjump icon-broadjump icon-bandjump icon-weightedjump; do
   src="assets/habit-icons/$icon.png"
   if [ -f "$src" ]; then
     cp "$src" "www/assets/habit-icons/$icon.png"

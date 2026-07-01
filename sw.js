@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.898';
+const CACHE_VERSION = 'v5.899';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -77,6 +77,12 @@ const PRECACHE_ASSETS = [
   '/assets/habit-icons/icon-podcast.png',
   '/assets/habit-icons/icon-pray.png',
   '/assets/habit-icons/icon-visualize.png',
+  // Vertical Jump Program movement icons (W578)
+  '/assets/habit-icons/icon-maxjump.png',
+  '/assets/habit-icons/icon-depthjump.png',
+  '/assets/habit-icons/icon-broadjump.png',
+  '/assets/habit-icons/icon-bandjump.png',
+  '/assets/habit-icons/icon-weightedjump.png',
   // Pack/path entry icons (Add Habits library headers)
   '/assets/habit-icons/icon-pack-morning.png',
   '/assets/habit-icons/icon-pack-lockedin.png',
