@@ -206,6 +206,26 @@ export async function handleUserStatePost(
     )
     .run();
 
+  // ── Vertical Jump Program (migration 0028) — mirror the client's
+  // onboarding-goal flag into the queryable users.onboarding_goal column so
+  // cohort counts (the FITxVERT proxy metric) never require parsing the JSON
+  // blob. collectState() stores raw localStorage strings under state.keys.
+  // Best-effort: absent on old clients -> leave the column at its default.
+  // Never fatal — the snapshot already persisted above.
+  try {
+    const st = body.state as { keys?: Record<string, unknown> } | null;
+    const raw = st && st.keys ? st.keys['hb_onboarding_goal'] : undefined;
+    if (raw === 'jump_program' || raw === 'default') {
+      await env.DB.prepare(
+        'UPDATE users SET onboarding_goal = ?, updated_at = ? WHERE id = ?',
+      )
+        .bind(raw, now, session.userId)
+        .run();
+    }
+  } catch {
+    // non-fatal: the goal mirror can catch up on the next sync.
+  }
+
   return jsonOk({
     state_version: stateVersion,
     client_updated_at: clientUpdatedAt,

@@ -20703,6 +20703,23 @@
     { emoji: '💊', name: 'Vitamins and minerals',                    difficulty: 'easy'                },  // 46
     { emoji: '🧘', name: 'Visualization practice',                   difficulty: 'medium'              },  // 47
     { emoji: '🌙', name: 'Sleep early before 11PM',                  difficulty: 'medium'              },  // 48
+    // ── 🦘 VERTICAL JUMP PROGRAM (49+) — FITxVERT acquisition library ─────────
+    // library:'jump_program' PARTITIONS these: invisible to default users
+    // (filtered out of the Add-Habit picker + first-vow quick-picks), and
+    // seeded + fully visible ONLY when hb_onboarding_goal === 'jump_program'.
+    // Undefined library on all other habits = unrestricted (backward compat).
+    // ⚠ PLACEHOLDER SET — swap names/difficulty/schedule for Richie's final
+    // list; the partition/seed/pack wiring is exercise-agnostic and stays.
+    { emoji: '🦘', name: 'Plyometrics (Box Jumps)', difficulty: 'hard',   defaultDays: ['Mon','Wed','Fri'], library: 'jump_program' },  // 49
+    { emoji: '🏋️', name: 'Lower-Body Strength',     difficulty: 'hard',   defaultDays: ['Tue','Thu'],       library: 'jump_program' },  // 50
+    { emoji: '🦵', name: 'Calf Raises',             difficulty: 'easy',                                     library: 'jump_program' },  // 51
+    { emoji: '🧎', name: 'Ankle & Hip Mobility',    difficulty: 'easy',                                     library: 'jump_program' },  // 52
+    { emoji: '🪢', name: 'Jump Rope',               difficulty: 'medium',                                   library: 'jump_program' },  // 53
+    { emoji: '📏', name: 'Measure Your Vertical',   difficulty: 'easy',   defaultDays: ['Sun'],             library: 'jump_program' },  // 54
+    { emoji: '🤸', name: 'Depth Jumps',             difficulty: 'hard',   defaultDays: ['Mon','Fri'],       library: 'jump_program' },  // 55
+    { emoji: '💨', name: 'Sprint Intervals',        difficulty: 'medium', defaultDays: ['Tue','Sat'],       library: 'jump_program' },  // 56
+    { emoji: '🧊', name: 'Foam Roll & Recover',     difficulty: 'easy',                                     library: 'jump_program' },  // 57
+    { emoji: '🥩', name: 'Protein Intake',          difficulty: 'medium',                                   library: 'jump_program' },  // 58
   ];
 
   const OB_CATEGORIES = [
@@ -20750,6 +20767,11 @@
     'Track finances & net worth': 'WLT', 'Work on a side project or business': 'WLT',
     'Review investments or trading journal': 'WLT',
     'Generate one new business or content idea': 'WLT',
+    // W574 — Vertical Jump Program (STR = training/power, VIT = recovery/conditioning)
+    'Plyometrics (Box Jumps)': 'STR', 'Lower-Body Strength': 'STR', 'Calf Raises': 'STR',
+    'Depth Jumps': 'STR', 'Protein Intake': 'STR',
+    'Ankle & Hip Mobility': 'VIT', 'Jump Rope': 'VIT', 'Sprint Intervals': 'VIT', 'Foam Roll & Recover': 'VIT',
+    'Measure Your Vertical': 'FOCUS',
   };
   // Enrich each habit definition with its primary stat — single source of truth
   DEFAULT_HABITS.forEach(h => { h.primaryStat = HABIT_PRIMARY_STAT[h.name] || 'FOCUS'; });
@@ -21425,12 +21447,29 @@
       packLabel:  'Personal Routine Bonus',
       habits:  [],
     },
+    // W574 — Vertical Jump Program (FITxVERT acquisition). A real compound-bonus
+    // pack (owner-confirmed) so jump users get the streak/compound-XP retention
+    // loop like Morning Routine. Starter habits (indices 49-54) seed on jump
+    // selection; the full jump library (49-58) is addable, all partitioned by
+    // library:'jump_program'. ⚠ PLACEHOLDER habit set — swap for the final list.
+    {
+      id:      'jump_program',
+      emoji:   '🦘',
+      name:    'Vertical Jump Program',
+      tagline: 'Gain 10–15″ in your first year.',
+      sub:     'For the athlete chasing hops.',
+      color:   '#22d3ee',
+      bonusLabel: '🦘 JUMP PROGRAM BONUS',
+      packLabel:  'Jump Program Bonus',
+      library: 'jump_program',
+      habits:  [49, 50, 51, 52, 53, 54],
+    },
   ];
 
   // Bonus-eligible packs in fire-order. MR fires before Locked-In so
   // when both complete in the same tick, the Compound Effect modal
   // shows first, then the Locked-In Bonus modal queues behind it.
-  const BONUS_PACK_IDS = ['morning', 'locked-in'];
+  const BONUS_PACK_IDS = ['morning', 'locked-in', 'jump_program'];   // W574 — jump pack gets the compound loop
 
   // W482 — the FORGIVENESS lifecycle (Streak Shield earn/consume + Honest-Rest absorption in
   // processStreakRollover) applies to the custom path too, so a missed custom day is protected
@@ -21438,7 +21477,7 @@
   // BONUS_PACK_IDS (that drives the strip rows, computeTodayXP's compound loop, and PR hooks —
   // adding it there would phantom-row + double-count). Literal 'custom' (not the const, which is
   // declared later) to avoid a TDZ at module-eval.
-  const FORGIVENESS_PACK_IDS = ['morning', 'locked-in', 'custom'];
+  const FORGIVENESS_PACK_IDS = ['morning', 'locked-in', 'custom', 'jump_program'];   // W574
 
   // ── W459 — GRADED COMPOUND CREDIT ─────────────────────────
   // A near-complete pack no longer pays ZERO. It earns a fraction of THAT
@@ -34818,6 +34857,18 @@
     'Cardio workout',
   ];
 
+  // W574 — Vertical Jump Program partition. Templates tagged
+  // library:'jump_program' are visible/addable ONLY to users whose onboarding
+  // goal is the jump program (hb_onboarding_goal, server-authoritative + mirrored
+  // locally). Undefined library on every other habit = unrestricted (backward-
+  // compatible; visible to all).
+  function _jumpProgramUnlocked() {
+    try { return localStorage.getItem('hb_onboarding_goal') === 'jump_program'; } catch (_) { return false; }
+  }
+  function _habitHiddenForGoal(h) {
+    return !!(h && h.library === 'jump_program' && !_jumpProgramUnlocked());
+  }
+
   function _libGetVisibleIndices(activeNames) {
     // Search overrides chip filter.
     if (_libQuery) {
@@ -34826,6 +34877,7 @@
       for (let i = 0; i < DEFAULT_HABITS.length; i++) {
         const h = DEFAULT_HABITS[i];
         if (!h || !h.name) continue;
+        if (_habitHiddenForGoal(h)) continue;   // W574 — jump-library partition
         if (activeNames.has(h.name)) continue;
         if (h.name.toLowerCase().includes(q)) out.push(i);
       }
@@ -34855,6 +34907,7 @@
     if (!cat) return [];
     const out = [];
     for (let i = cat.start; i < cat.end; i++) {
+      if (_habitHiddenForGoal(DEFAULT_HABITS[i])) continue;   // W574 — jump-library partition
       if (!activeNames.has(DEFAULT_HABITS[i].name)) out.push(i);
     }
     return out;
@@ -53631,6 +53684,7 @@
       'hb_review_pday_last',
       'hb_coop_kills',            // W545 — per-co-op-boss kill counts for the Kill Log
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
+      'hb_onboarding_goal',       // W574 — Vertical Jump Program goal flag ('jump_program'|'default'); server mirrors it to the queryable users.onboarding_goal column
       'hb_summit_finished_at',    // W553 — local F100 finish stamp (offline-stable end anchor)
       // Core progression
       'hb_habits',
