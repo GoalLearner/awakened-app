@@ -32439,3 +32439,67 @@ button.guildhall-summary-tile:active {
 .cl-cdate{font-family:'JetBrains Mono',monospace;font-size:6.8px;font-weight:700;letter-spacing:.7px;color:#5a5a76;text-transform:uppercase;margin-top:6px;display:flex;align-items:center;gap:4px;}
 .cl-cdate .dt{width:3px;height:3px;border-radius:3px;background:#f5b842;box-shadow:0 0 4px #f5b842;}
 @media (prefers-reduced-motion:reduce){.cl-lens .cl-slider,.cl-dchev,.cl-dbody{transition:none;}}
+
+/* ============================================================================
+   W572 — THE PACTS redesign (ClaudeDesign handoff 10): grouped + time-sorted
+   co-op hunts, a prominent urgency-colored LIVE time pill, inline invite
+   Accept/Decline, and a footer Accept-All (replaces Recruit). Extends the
+   existing .cph-* namespace.
+   ========================================================================== */
+.cph-grp{ display:flex; flex-direction:column; gap:11px; }
+.cph-grp-lab{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:9.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#5a5a78; display:flex; align-items:center; gap:9px; padding:2px 3px 0; }
+.cph-grp-lab b{ color:#9090a8; font-weight:800; }
+.cph-grp-lab::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,.09),transparent); }
+
+/* soft scroll fade */
+.cph-list{ mask-image:linear-gradient(180deg,transparent 0,#000 12px,#000 calc(100% - 14px),transparent 100%); -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 12px,#000 calc(100% - 14px),transparent 100%); }
+
+/* progress top row: number left, time pill right */
+.cph-prog-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; }
+.cph-prog-num{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:14px; font-weight:800; letter-spacing:.3px; color:#f5f3fb; }
+.cph-prog-num span{ color:#9090a8; font-weight:500; }
+.cph-pct{ color:#5ad6c8; font-weight:800; margin-left:7px; font-size:11px; }
+
+/* ===== the prominent LIVE time pill ===== */
+.cph-time{ display:inline-flex; align-items:center; gap:5px; flex:none; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10.5px; font-weight:800; letter-spacing:.4px; padding:4px 9px 4px 8px; border-radius:8px; white-space:nowrap; color:#5ad6c8; background:rgba(90,214,200,.09); border:1px solid rgba(90,214,200,.28); }
+.cph-time svg{ opacity:.9; }
+.cph-time.warn{ color:#f5b842; background:rgba(245,184,66,.1); border-color:rgba(245,184,66,.32); }
+.cph-time.crit{ color:#ff5d5d; background:rgba(255,93,93,.11); border-color:rgba(255,93,93,.38); animation:cphCritPulse 1.6s ease-in-out infinite; }
+@keyframes cphCritPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,93,93,0);} 50%{ box-shadow:0 0 12px 0 rgba(255,93,93,.35);} }
+/* invite pills read muted by default; urgency (2-class) still wins */
+.cph-time--inv{ color:#9090a8; background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.12); }
+
+/* crit active-card edge tint */
+.cph-hunt.cph-crit::before{ background:linear-gradient(180deg,#ff5d5d,#e2531c) !important; box-shadow:0 0 16px rgba(255,93,93,.6) !important; }
+
+/* rank pill tints */
+.cph-rank--e{ color:#8fe6da; border-color:rgba(90,214,200,.4); background:rgba(90,214,200,.07); }
+.cph-rank--b{ color:#ffd574; border-color:rgba(255,213,116,.45); background:rgba(255,213,116,.08); }
+.cph-rank--s{ color:#f0a8ff; border-color:rgba(232,121,249,.4); background:rgba(232,121,249,.08); }
+
+/* header count separator */
+.cph-sep{ color:#5a5a78; margin:0 7px; }
+
+/* ===== pending invite body (inline Accept / Decline) ===== */
+.cph-inv{ margin-top:13px; padding-top:13px; border-top:1px solid rgba(255,255,255,.07); }
+.cph-inv-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.cph-inv-target{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11px; font-weight:700; letter-spacing:.2px; color:#9090a8; }
+.cph-inv-target b{ color:#f5f3fb; font-weight:800; }
+.cph-inv-act{ display:flex; gap:9px; }
+.cph-btn{ flex:1; height:40px; border-radius:11px; cursor:pointer; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:7px; border:none; }
+.cph-decline{ color:#9090a8; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12); flex:0 0 40%; }
+.cph-decline:hover{ color:#f5f3fb; }
+.cph-accept{ color:#04120f; background:linear-gradient(180deg,#5ad6c8,#2bb6a6); box-shadow:0 6px 16px rgba(43,182,166,.34); }
+.cph-btn:active{ transform:translateY(1px); }
+.cph-wait-pill{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#5a5a78; padding:4px 9px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); }
+.cph-hunt.cph-wait{ opacity:.92; }
+
+/* ===== footer Accept-All (replaces Recruit) ===== */
+.cph-foot{ transition:max-height .32s ease, opacity .26s ease, padding .32s ease; overflow:hidden; }
+.cph-foot--off{ max-height:0 !important; padding-top:0 !important; padding-bottom:0 !important; opacity:0; pointer-events:none; }
+.cph-acceptall{ width:100%; height:54px; border-radius:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:13px; font-weight:800; letter-spacing:2.2px; text-transform:uppercase; color:#04120f; background:linear-gradient(180deg,#5ad6c8,#2bb6a6); border:none; box-shadow:0 12px 28px rgba(43,182,166,.32),inset 0 1px 0 rgba(255,255,255,.22); }
+.cph-acceptall:active{ transform:translateY(1px); }
+.cph-acceptall:disabled{ opacity:.7; cursor:default; }
+.cph-aa-chk{ width:20px; height:20px; flex:none; border-radius:50%; background:rgba(4,18,15,.16); display:flex; align-items:center; justify-content:center; color:#04120f; }
+.cph-aa-cnt{ min-width:21px; height:21px; padding:0 6px; border-radius:11px; background:rgba(4,18,15,.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; letter-spacing:0; }
+@media (prefers-reduced-motion:reduce){ .cph-time.crit{ animation:none; } }
