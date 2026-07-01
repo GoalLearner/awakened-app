@@ -20206,6 +20206,22 @@
     return day === 'Fri' || day === 'Sat' || day === 'Sun';
   }
 
+  // W575 — Vertical Jump Program 14-day cycle. Today's day number (1-14) in the
+  // rolling program, anchored to hb_jump_program_started (set when the user picks
+  // the jump program). Null if not started / unparseable.
+  function _jumpCycleDayToday() {
+    try {
+      const start = localStorage.getItem('hb_jump_program_started');
+      if (!start) return null;
+      const s = new Date(start + 'T00:00:00');
+      const t = new Date(getDeviceLocalDate() + 'T00:00:00');
+      if (isNaN(s.getTime()) || isNaN(t.getTime())) return null;
+      const days = Math.floor((t.getTime() - s.getTime()) / 86400000);
+      if (days < 0) return null;
+      return (days % 14) + 1;   // 1..14
+    } catch (_) { return null; }
+  }
+
   function isScheduledToday(habit) {
     // v3 Phase 1z.283 — Soft archive guard. Archived vows do NOT
     // appear in today's daily render, do NOT count toward daily
@@ -20213,6 +20229,15 @@
     // in the habits array (with streak/completions preserved) but
     // the daily-active read path stops here.
     if (!habit || habit.archived) return false;
+    // W575 — Vertical Jump Program 14-day cycle. A habit with cycleDays is
+    // active ONLY on those day-numbers (1-14) of the rolling program. Rest-day /
+    // support habits (creatine, protein, steps) carry NO cycleDays and stay
+    // daily/weekly as normal. Non-jump users never have cycleDays -> unchanged.
+    if (Array.isArray(habit.cycleDays) && habit.cycleDays.length) {
+      const d = _jumpCycleDayToday();
+      if (d != null) return habit.cycleDays.indexOf(d) !== -1;
+      return true;   // no program-start anchor yet -> show it (don't hide all training)
+    }
     if (!habit.days || habit.days.length === 7) return true;
     return habit.days.includes(getTodayDayName());
   }
@@ -20708,18 +20733,30 @@
     // (filtered out of the Add-Habit picker + first-vow quick-picks), and
     // seeded + fully visible ONLY when hb_onboarding_goal === 'jump_program'.
     // Undefined library on all other habits = unrestricted (backward compat).
-    // ⚠ PLACEHOLDER SET — swap names/difficulty/schedule for Richie's final
-    // list; the partition/seed/pack wiring is exercise-agnostic and stays.
-    { emoji: '🦘', name: 'Plyometrics (Box Jumps)', difficulty: 'hard',   defaultDays: ['Mon','Wed','Fri'], library: 'jump_program' },  // 49
-    { emoji: '🏋️', name: 'Lower-Body Strength',     difficulty: 'hard',   defaultDays: ['Tue','Thu'],       library: 'jump_program' },  // 50
-    { emoji: '🦵', name: 'Calf Raises',             difficulty: 'easy',                                     library: 'jump_program' },  // 51
-    { emoji: '🧎', name: 'Ankle & Hip Mobility',    difficulty: 'easy',                                     library: 'jump_program' },  // 52
-    { emoji: '🪢', name: 'Jump Rope',               difficulty: 'medium',                                   library: 'jump_program' },  // 53
-    { emoji: '📏', name: 'Measure Your Vertical',   difficulty: 'easy',   defaultDays: ['Sun'],             library: 'jump_program' },  // 54
-    { emoji: '🤸', name: 'Depth Jumps',             difficulty: 'hard',   defaultDays: ['Mon','Fri'],       library: 'jump_program' },  // 55
-    { emoji: '💨', name: 'Sprint Intervals',        difficulty: 'medium', defaultDays: ['Tue','Sat'],       library: 'jump_program' },  // 56
-    { emoji: '🧊', name: 'Foam Roll & Recover',     difficulty: 'easy',                                     library: 'jump_program' },  // 57
-    { emoji: '🥩', name: 'Protein Intake',          difficulty: 'medium',                                   library: 'jump_program' },  // 58
+    //
+    // W575 — TRUE 14-DAY ROTATING CYCLE. `cycleDays` lists the day-numbers
+    // (1-14) a TRAINING habit is active. The cycle is anchored to
+    // hb_jump_program_started and rotates forever: day 15 == day 1 (see
+    // _jumpCycleDayToday + the isScheduledToday cycle branch). Habits with NO
+    // cycleDays are DAILY SUPPORT (protein / creatine / steps) — they run every
+    // day, rest days included. Because scheduling collapses each day to just
+    // that day's ~3-5 habits, the whole program can be seeded at once and the
+    // daily view still stays clean. ⚠ PLACEHOLDER cadence + copy — swap for
+    // Richie's final block; the cycle primitive + partition/seed/pack wiring is
+    // content-agnostic and stays. Authoring rule: cycleDays ⊆ 1..14; omit it
+    // entirely for an every-day support habit.
+    { emoji: '🦘', name: 'Plyometrics (Box Jumps)', difficulty: 'hard',   cycleDays: [1, 8],         library: 'jump_program' },  // 49
+    { emoji: '🏋️', name: 'Lower-Body Strength',     difficulty: 'hard',   cycleDays: [1, 4, 8, 11],  library: 'jump_program' },  // 50
+    { emoji: '🦵', name: 'Calf Raises',             difficulty: 'easy',   cycleDays: [2, 5, 9, 12],  library: 'jump_program' },  // 51
+    { emoji: '🧎', name: 'Ankle & Hip Mobility',    difficulty: 'easy',   cycleDays: [3, 6, 10, 13], library: 'jump_program' },  // 52  (rest-day mobility)
+    { emoji: '🪢', name: 'Jump Rope',               difficulty: 'medium', cycleDays: [5, 12],        library: 'jump_program' },  // 53
+    { emoji: '📏', name: 'Measure Your Vertical',   difficulty: 'easy',   cycleDays: [7, 14],        library: 'jump_program' },  // 54  (biweekly check-in)
+    { emoji: '🤸', name: 'Depth Jumps',             difficulty: 'hard',   cycleDays: [4, 11],        library: 'jump_program' },  // 55
+    { emoji: '💨', name: 'Sprint Intervals',        difficulty: 'medium', cycleDays: [2, 9],         library: 'jump_program' },  // 56
+    { emoji: '🧊', name: 'Foam Roll & Recover',     difficulty: 'easy',   cycleDays: [3, 6, 10, 13], library: 'jump_program' },  // 57  (rest-day recovery)
+    { emoji: '🥩', name: 'Protein Intake',          difficulty: 'medium',                            library: 'jump_program' },  // 58  (daily support)
+    { emoji: '💊', name: 'Creatine (5g)',           difficulty: 'easy',                              library: 'jump_program' },  // 59  (daily support)
+    { emoji: '🚶', name: 'Daily Steps (8k)',        difficulty: 'easy',                              library: 'jump_program' },  // 60  (daily support)
   ];
 
   const OB_CATEGORIES = [
@@ -20769,8 +20806,9 @@
     'Generate one new business or content idea': 'WLT',
     // W574 — Vertical Jump Program (STR = training/power, VIT = recovery/conditioning)
     'Plyometrics (Box Jumps)': 'STR', 'Lower-Body Strength': 'STR', 'Calf Raises': 'STR',
-    'Depth Jumps': 'STR', 'Protein Intake': 'STR',
+    'Depth Jumps': 'STR', 'Protein Intake': 'STR', 'Creatine (5g)': 'STR',
     'Ankle & Hip Mobility': 'VIT', 'Jump Rope': 'VIT', 'Sprint Intervals': 'VIT', 'Foam Roll & Recover': 'VIT',
+    'Daily Steps (8k)': 'VIT',
     'Measure Your Vertical': 'FOCUS',
   };
   // Enrich each habit definition with its primary stat — single source of truth
@@ -21449,8 +21487,9 @@
     },
     // W574 — Vertical Jump Program (FITxVERT acquisition). A real compound-bonus
     // pack (owner-confirmed) so jump users get the streak/compound-XP retention
-    // loop like Morning Routine. Starter habits (indices 49-54) seed on jump
-    // selection; the full jump library (49-58) is addable, all partitioned by
+    // loop like Morning Routine. W575 — seeds the whole 14-day program (indices
+    // 49-60): training habits carry cycleDays (1-14 rotation), support habits
+    // (protein/creatine/steps) run daily. All partitioned by
     // library:'jump_program'. ⚠ PLACEHOLDER habit set — swap for the final list.
     {
       id:      'jump_program',
@@ -21462,7 +21501,10 @@
       bonusLabel: '🦘 JUMP PROGRAM BONUS',
       packLabel:  'Jump Program Bonus',
       library: 'jump_program',
-      habits:  [49, 50, 51, 52, 53, 54],
+      // W575 — seed the WHOLE 14-day program (all training + daily support).
+      // Safe to seed everything: the cycleDays scheduler shows only each day's
+      // ~3-5 habits, so the daily view never clutters. Indices 49-60.
+      habits:  [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60],
     },
   ];
 
@@ -34665,6 +34707,9 @@
       type:        def.type || 'build',
     };
     if (def.primaryStat) newH.primaryStat = def.primaryStat;
+    // W575 — carry the 14-day jump cadence onto library-added jump habits so
+    // isScheduledToday's cycle branch governs them (only jump templates set it).
+    if (Array.isArray(def.cycleDays) && def.cycleDays.length) newH.cycleDays = def.cycleDays.slice();
     try {
       if (typeof isStepGoalHabit === 'function' && isStepGoalHabit(def) &&
           typeof HEALTHKIT_WALK_DEFAULT_THRESHOLD === 'number') {
@@ -48676,9 +48721,13 @@
         // W574 — Vertical Jump Program (FITxVERT). Mirror the goal flag: it's
         // server-authoritative (user-state UPSERT -> users.onboarding_goal, the
         // queryable install metric) and drives the jump-library partition. The
-        // pack's own habits (49-54) seed through the existing getPackById path
-        // just below — no separate seeding needed.
+        // pack's own habits (49-60) seed through the existing getPackById path
+        // just below — no separate seeding needed; cycleDays carries through
+        // _completeOnboardingFinish onto each created habit (W575).
         try { localStorage.setItem('hb_onboarding_goal', selectedPackId === 'jump_program' ? 'jump_program' : 'default'); } catch (_) {}
+        // W575 — anchor the 14-day jump cycle to the program start (today) so
+        // cycleDays habits schedule off day-1. Set once; synced via SNAPSHOT_KEYS.
+        try { if (selectedPackId === 'jump_program' && !localStorage.getItem('hb_jump_program_started')) localStorage.setItem('hb_jump_program_started', getDeviceLocalDate()); } catch (_) {}
 
         // Pre-populate obSelected with the pack's habit indices so
         // _completeOnboardingFinish builds the habit list correctly.
@@ -49221,6 +49270,12 @@
         : (Array.isArray(base.defaultDays) ? base.defaultDays : null);
       if (_resolvedDays && _resolvedDays.length > 0 && _resolvedDays.length < 7) {
         newH.days = _resolvedDays.slice();
+      }
+      // W575 — Vertical Jump Program 14-day cycle cadence. Fixed by the template
+      // (not user-editable via the weekly picker); carried onto the created habit
+      // so isScheduledToday's cycle branch governs it. Only jump templates carry it.
+      if (Array.isArray(base.cycleDays) && base.cycleDays.length) {
+        newH.cycleDays = base.cycleDays.slice();
       }
       if (cfg.startDate) newH.startDate = cfg.startDate;
       // Goal — mutually exclusive across four branches: step-goal
@@ -53692,6 +53747,7 @@
       'hb_coop_kills',            // W545 — per-co-op-boss kill counts for the Kill Log
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
       'hb_onboarding_goal',       // W574 — Vertical Jump Program goal flag ('jump_program'|'default'); server mirrors it to the queryable users.onboarding_goal column
+      'hb_jump_program_started',  // W575 — 14-day jump-cycle start anchor (device-local YYYY-MM-DD); cycleDays habits schedule off this
       'hb_summit_finished_at',    // W553 — local F100 finish stamp (offline-stable end anchor)
       // Core progression
       'hb_habits',
