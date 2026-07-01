@@ -48031,7 +48031,8 @@
       sleep: '<svg viewBox="0 0 42 42" fill="none"><path d="M28 23a10 10 0 11-9-13 8 8 0 009 13z" stroke="#34d399" stroke-width="1.6" stroke-linejoin="round"/></svg>',
       focus: '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="12" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="5.5" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="1.6" fill="#eab308"/></svg>',
       body:  '<svg viewBox="0 0 42 42" fill="none"><path d="M8 21h26" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"/><rect x="5" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="33.4" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="10" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/><rect x="29" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/></svg>',
-      mind:  '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="11" stroke="#3b82f6" stroke-width="1.6"/><path d="M21 10v22M10 21a11 11 0 0122 0" stroke="#3b82f6" stroke-width="1.2" opacity=".7"/></svg>'
+      mind:  '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="11" stroke="#3b82f6" stroke-width="1.6"/><path d="M21 10v22M10 21a11 11 0 0122 0" stroke="#3b82f6" stroke-width="1.2" opacity=".7"/></svg>',
+      jump:  '<svg viewBox="0 0 42 42" fill="none"><path d="M21 8l-9 11h6v8h6v-8h6z" stroke="#22d3ee" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 34h18" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round"/></svg>'   /* W574 — Vertical Jump Program WHY icon */
     };
     root.querySelectorAll('.sigil').forEach((s) => {
       if (s.hasAttribute('data-mini')) {
@@ -48672,6 +48673,12 @@
         // Pack → match the legacy IDs the rest of the app uses.
         selectedPackId = state.pack || 'morning';
         localStorage.setItem('hb_path', selectedPackId);
+        // W574 — Vertical Jump Program (FITxVERT). Mirror the goal flag: it's
+        // server-authoritative (user-state UPSERT -> users.onboarding_goal, the
+        // queryable install metric) and drives the jump-library partition. The
+        // pack's own habits (49-54) seed through the existing getPackById path
+        // just below — no separate seeding needed.
+        try { localStorage.setItem('hb_onboarding_goal', selectedPackId === 'jump_program' ? 'jump_program' : 'default'); } catch (_) {}
 
         // Pre-populate obSelected with the pack's habit indices so
         // _completeOnboardingFinish builds the habit list correctly.

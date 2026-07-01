@@ -261,8 +261,11 @@
       <div class="kicker rise d1" style="margin-top:6px">Speak it once</div>
       <h1 class="title rise d1" style="margin:10px 0 20px;font-size:25px">What are you here<br/>to overcome?</h1>
       <div class="grid2 rise d2" id="cin-whyGrid">
-        <button class="pick" role="checkbox" aria-checked="false" data-why="VIT"   data-pack="morning"   type="button">
-          <span class="ic" data-ic="sleep"></span><span class="pl">Sleep</span><span class="ps">Recovery</span>
+        <!-- W574 — Vertical Jump Program (FITxVERT). Was Sleep/Recovery; now the
+             jump theme leads the WHY screen and biases the Path to the jump pack
+             (data-pack="jump_program"). data-why="STR" -> "Your first rep, logged." -->
+        <button class="pick" role="checkbox" aria-checked="false" data-why="STR"   data-pack="jump_program" type="button">
+          <span class="ic" data-ic="jump"></span><span class="pl">Jump</span><span class="ps">Vertical</span>
         </button>
         <!-- v3 Phase 1z.251 — FOCUS / INT used to bias the cinematic
              Path screen toward Locked-In. With Locked-In removed from
@@ -304,6 +307,14 @@
           <div class="pn"><span class="sigil" data-mini></span>Forge Your Own</div>
           <div class="pb">Walk a road no one cut for you.</div>
           <div class="warn">Going solo? The system favors the consistent — the lone road is harder to hold.</div>
+        </button>
+        <!-- W574 — Vertical Jump Program (FITxVERT acquisition path). Picking it
+             seeds the partitioned jump-training habits (49-54) via the existing
+             pack path + sets the onboarding_goal flag. Copy is a PLACEHOLDER. -->
+        <button class="pack" role="checkbox" aria-checked="false" data-pack="jump_program" type="button">
+          <div class="pn"><span class="sigil" data-mini></span>Vertical Jump Program</div>
+          <div class="pb">Train for hops — gain 10–15&Prime; in your first year.</div>
+          <div class="bonus"><span class="sigil" data-mini></span>Jump Program bonus active</div>
         </button>
       </div>
       <div class="rise d2" style="margin-top:18px">
