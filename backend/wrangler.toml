@@ -245,3 +245,17 @@ name = "RL_APP_OPEN"
 type = "ratelimit"
 namespace_id = "1020"
 simple = { limit = 6, period = 60 }   # 6/min per user
+
+# Realtime PvP action guard (W585 — security audit hardening). The HTTP PvP
+# move endpoints (submit / forfeit / rematch-decline / state) forward to the
+# MatchRoom Durable Object; previously they had NO rate limit, so a script
+# could amplify DO invocations against the operator's Cloudflare bill (the DO
+# still rejects non-participants, so it's a cost nuisance, not a game exploit).
+# 60/min = one action/sec: far above real turn-based play (a turn deadline is
+# tens of seconds → a few moves/min) and above any reasonable state-poll
+# cadence, so it never throttles a live match — it only bounds a runaway loop.
+[[unsafe.bindings]]
+name = "RL_PVP_ACTION"
+type = "ratelimit"
+namespace_id = "1021"
+simple = { limit = 60, period = 60 }  # 60/min per user

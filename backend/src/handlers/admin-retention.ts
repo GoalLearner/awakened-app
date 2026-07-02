@@ -16,6 +16,7 @@
  */
 import type { Env } from '../env';
 import { jsonOk, jsonError } from '../lib/responses';
+import { timingSafeEqual } from '../lib/timing-safe';
 
 interface CohortRow {
   cohort_date: string;
@@ -47,7 +48,9 @@ export async function handleAdminRetention(request: Request, env: Env): Promise<
   // → 401 (a misconfigured deploy can't accidentally expose retention publicly).
   const expected = env.ADMIN_METRICS_SECRET;
   const provided = request.headers.get('Authorization');
-  if (!expected || !provided || provided !== `Bearer ${expected}`) {
+  // W585 — constant-time compare (see lib/timing-safe). Fail closed on a
+  // missing/unset secret before comparing.
+  if (!expected || !provided || !timingSafeEqual(provided, `Bearer ${expected}`)) {
     return jsonError(401, 'ADMIN_AUTH_FAILED', 'Invalid or missing admin secret.');
   }
 

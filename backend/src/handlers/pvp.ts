@@ -150,6 +150,8 @@ export async function handlePvpEchoFriend(request: Request, env: Env, session: S
 
 // POST /v1/pvp/submit { code, turn, moveId }
 export async function handlePvpSubmit(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585 — 60/min, above live-turn cadence
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }
   const code = String(body.code || '').toUpperCase();
@@ -159,6 +161,8 @@ export async function handlePvpSubmit(request: Request, env: Env, session: Sessi
 
 // POST /v1/pvp/forfeit { code }
 export async function handlePvpForfeit(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }
   const code = String(body.code || '').toUpperCase();
@@ -179,6 +183,8 @@ export async function handlePvpRematch(request: Request, env: Env, session: Sess
 
 // POST /v1/pvp/rematch/decline { code } — decline an outstanding rematch offer.
 export async function handlePvpRematchDecline(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }
   const code = String(body.code || '').toUpperCase();
@@ -188,6 +194,8 @@ export async function handlePvpRematchDecline(request: Request, env: Env, sessio
 
 // GET /v1/pvp/state?code=XXX
 export async function handlePvpState(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585 — 60/min covers reconnect state polling
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const code = String(new URL(request.url).searchParams.get('code') || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'state', session.userId, session.alias, {});

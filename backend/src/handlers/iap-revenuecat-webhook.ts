@@ -20,6 +20,7 @@
 import type { Env } from '../env';
 import { jsonOk, jsonError } from '../lib/responses';
 import { skinForProduct } from '../lib/skin-products';
+import { timingSafeEqual } from '../lib/timing-safe';
 
 // Non-consumable skins arrive as one of these RevenueCat event types.
 const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE']);
@@ -28,7 +29,9 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
   // ── shared-secret auth (fail closed) ──
   const expected = env.REVENUECAT_WEBHOOK_AUTH;
   const provided = request.headers.get('Authorization');
-  if (!expected || !provided || provided !== expected) {
+  // W585 — constant-time compare (see lib/timing-safe). Fail closed on a
+  // missing/unset secret before comparing.
+  if (!expected || !provided || !timingSafeEqual(provided, expected)) {
     return jsonError(401, 'WEBHOOK_AUTH_FAILED', 'Invalid or missing webhook authorization.');
   }
 

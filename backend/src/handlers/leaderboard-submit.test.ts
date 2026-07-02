@@ -74,11 +74,16 @@ function makeReq(body: unknown): Request {
 }
 
 describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
-  // Pin time to 2026-05-17 (Sunday) UTC -- the week-start key for that
-  // moment is '2026-05-17'. Same week as the rest of the test suite.
+  // Pin time to Wed 2026-05-20 20:00 UTC (13:00 PDT). The Sunday-Pacific
+  // week-start key is still '2026-05-17' (unchanged from the original
+  // Sunday pin, so every week_start assertion below holds), but placing
+  // "now" mid-week gives the W585 step_total velocity clamp its full 150k
+  // headroom (elapsed ≈ 4 days × 50k/day = 200k, capped to 150k) so the
+  // suite's synthetic high-value submits (88k, 104k) still validate. The
+  // clamp's own boundary behavior is covered in its dedicated describe below.
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));
+    vi.setSystemTime(new Date(Date.UTC(2026, 4, 20, 20, 0, 0)));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -615,6 +620,57 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
       expect(hofInsert).toBeDefined();
       expect(hofInsert!.binds[2]).toBe('2026-05-17');
       expect(hofInsert!.binds[3]).toBe(88420);
+    });
+  });
+
+  // ── W585 — step_total day-of-week velocity clamp ────────────────
+  // The flat cap alone (150k) let a fabricated near-cap value dominate the
+  // shared board on day 1 of the week and permanently poison the MAX-sticky
+  // best_value → Hall-of-Fame / 100K-club accolades. The clamp rejects any
+  // step_total above min(150k, elapsedDays × 50k) BEFORE any DB write.
+  describe('step_total velocity clamp (W585)', () => {
+    it('rejects an implausible day-1 (Sunday) submit above the elapsed-day ceiling', async () => {
+      // Sunday 2026-05-17 06:00 PDT → elapsed = 1 day → ceiling = 50k.
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));
+      const db = makeDb(null);
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 120000 }), env, session);
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('INVALID_VALUE');
+      // No DB write happened — the clamp returns before the upsert/accolade.
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      expect(calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))).toBeUndefined();
+      expect(calls.find(c => c.sql.includes('INSERT INTO user_accolades'))).toBeUndefined();
+    });
+
+    it('accepts a normal day-1 accumulation under the ceiling', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));   // day 1 → 50k ceiling
+      const db = makeDb({ current_value: 40000, best_value: 40000 });
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 40000 }), env, session);
+      expect(res.status).toBe(200);
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      expect(calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))).toBeDefined();
+    });
+
+    it('allows a full-week (day-7 Saturday) total up to the flat cap', async () => {
+      // Saturday 2026-05-23 13:00 PDT → week_start still 2026-05-17, elapsed = 7 → ceiling = 150k.
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));
+      const db = makeDb({ current_value: 140000, best_value: 140000 });
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 140000 }), env, session);
+      expect(res.status).toBe(200);
+    });
+
+    it('rejects a value above the lowered 150k flat cap even late in the week', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));   // day 7
+      const db = makeDb(null);
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 160000 }), env, session);
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('INVALID_VALUE');
     });
   });
 

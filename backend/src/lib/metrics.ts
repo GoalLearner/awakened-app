@@ -39,9 +39,16 @@ export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
-  /** Cumulative steps over a rolling window. Cap is ~5× the
-   * world-class daily ceiling × 7 days = absurd but legitimate. */
-  step_total: 200_000,
+  /** Cumulative steps over the current Sunday-Pacific week. W585 lowered
+   * this from 200_000 to 150_000: a real world-class weekly total is
+   * ~100-140k, so 150k is a hair above the plausible human ceiling. The
+   * flat cap is paired with a day-of-week VELOCITY clamp (see
+   * maxPlausibleStepTotal) so a fabricated value can't dominate the shared
+   * board early in the week either. Neither is true anti-cheat (device
+   * attestation is still the durable fix) — but together they stop the
+   * cross-user leaderboard/Hall-of-Fame/100K-club poisoning that a flat
+   * 200k cap allowed. */
+  step_total: 150_000,
   /** Consecutive nights ≥7h sleep. 365 = full year; cap protects
    * against accidental millisecond-style values. */
   sleep_streak: 365,
@@ -64,6 +71,42 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
 
 export function isValidMetric(value: unknown): value is Metric {
   return typeof value === 'string' && (METRICS as readonly string[]).includes(value);
+}
+
+// W585 — per-day plausibility ceiling for the weekly cumulative step total.
+// A very big real day (a marathon ≈ 50k steps) sits at this line; sustaining
+// >50k EVERY day for a week is ultra-athlete territory that effectively no
+// account reaches, so a legit accumulator never trips it. The purpose is to
+// stop a fabricated weekly total from occupying rank #1 early in the week when
+// only a day or two has elapsed.
+export const STEP_TOTAL_PER_DAY_CEILING = 50_000;
+
+/**
+ * Elapsed days (1..7) into the current weekly window given `nowMs` and the
+ * Sunday-Pacific `weekStart` date string ('YYYY-MM-DD').
+ *
+ * weekStart is parsed as UTC midnight — that is 7-8h EARLIER than true Pacific
+ * midnight, so elapsed is very slightly OVER-counted, which only makes the
+ * derived ceiling MORE permissive (never a false rejection from timezone skew).
+ * A malformed date parses to NaN → 7 (fully permissive, defer to the flat cap).
+ */
+export function weeklyElapsedDays(nowMs: number, weekStart: string): number {
+  const startMs = Date.parse(weekStart + 'T00:00:00Z');
+  if (!Number.isFinite(startMs)) return 7;
+  const days = Math.floor((nowMs - startMs) / 86_400_000) + 1;
+  return Math.min(7, Math.max(1, days));
+}
+
+/**
+ * The maximum plausible cumulative step_total this far into the week:
+ * min(flat cap, elapsedDays × per-day ceiling). A submit above this is
+ * rejected before it can poison the shared board or the permanent accolades.
+ */
+export function maxPlausibleStepTotal(nowMs: number, weekStart: string): number {
+  return Math.min(
+    METRIC_CAPS.step_total,
+    weeklyElapsedDays(nowMs, weekStart) * STEP_TOTAL_PER_DAY_CEILING,
+  );
 }
 
 /**

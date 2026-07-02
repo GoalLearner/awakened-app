@@ -37,7 +37,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { isValidMetric, isWeeklyMetric, METRIC_CAPS, type Metric } from '../lib/metrics';
+import { isValidMetric, isWeeklyMetric, METRIC_CAPS, maxPlausibleStepTotal, type Metric } from '../lib/metrics';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
 
 // v3 Phase 1z.27 -- 100K Step Club accolade. Awarded inline during
@@ -172,6 +172,27 @@ export async function handleLeaderboardSubmit(
   const weekStart: string | null = isWeeklyMetric(metric)
     ? getAccoladeWeekStart(now)
     : null;
+
+  // W585 — day-of-week VELOCITY clamp for step_total. The flat METRIC_CAPS
+  // check above bounds the absolute value, but a value just under the cap
+  // submitted on day 1 of the week still dominates the shared Steps board (and
+  // permanently poisons the MAX-sticky best_value → Hall-of-Fame / 100K-club
+  // accolades) with a total no honest user can reach that early. Reject any
+  // step_total that exceeds the plausible accumulation for how far into the
+  // week we actually are, BEFORE the upsert + accolade write below. Only
+  // step_total is clamped (it's the metric with permanent accolade impact);
+  // other weekly metrics keep their tighter flat caps. Real accumulators stay
+  // far under elapsedDays × 50k/day, so this never rejects a legitimate submit.
+  if (metric === 'step_total' && weekStart !== null) {
+    const ceiling = maxPlausibleStepTotal(now, weekStart);
+    if (value > ceiling) {
+      return jsonError(
+        400,
+        'INVALID_VALUE',
+        `current_value (${value}) exceeds the plausible weekly step pace (${ceiling}) this far into the week.`,
+      );
+    }
+  }
 
   // UPSERT with MAX preservation on best_value AND same-week
   // monotonic MAX on current_value for weekly cumulative metrics.

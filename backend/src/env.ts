@@ -129,4 +129,10 @@ export interface Env {
    *  user: a fire-and-forget lifecycle ping, deduped per UTC day server-side and
    *  throttled to ~5-min intervals client-side, so 6/min is far above legit usage. */
   RL_APP_OPEN: RateLimit;
+  /** Realtime PvP action guard (W585) — guards the HTTP PvP move endpoints
+   *  (submit / forfeit / rematch-decline / state) that forward to the MatchRoom
+   *  DO. namespace_id 1021 in wrangler.toml. 60/min per user: one action/sec,
+   *  far above turn-based play + state polling, so it bounds runaway abuse
+   *  without ever throttling a live match. */
+  RL_PVP_ACTION: RateLimit;
 }
