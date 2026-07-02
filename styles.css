@@ -17070,6 +17070,20 @@ body.reveal-locked { overflow: hidden; }
 }
 .hunter-build-slot--equipped .hunter-build-slot-label {
   border-bottom-color: rgba(245, 158, 11, 0.55);
+  white-space: nowrap;
+}
+/* W587 — item power chip beside the slot type ("CAPE 14 PWR"). */
+.hunter-build-slot-pwr {
+  margin-left: 4px;
+  color: #f5b842;
+  letter-spacing: 0.02em;
+  font-weight: 900;
+}
+.hunter-build-slot-pwr i {
+  font-style: normal;
+  font-size: 0.76em;
+  opacity: 0.6;
+  margin-left: 1px;
 }
 .hunter-build-slot--locked .hunter-build-slot-label {
   color: rgba(248, 231, 176, 0.65);
