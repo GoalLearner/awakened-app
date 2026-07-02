@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=532">
+  <link rel="stylesheet" href="styles.css?v=533">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -726,6 +726,24 @@
           <button id="empty-state-browse" class="ev-browse" type="button">Browse the full library →</button>
         </div>
       </div>
+
+      <!-- W584 — Vertical Jump Program guide row. The First Awakened lives
+           under the vows for jump-program users; tapping him REPLAYS the
+           program walkthrough (the same beats as the first-run welcome).
+           Hidden for everyone else; renderHabits() toggles visibility. -->
+      <button id="fa-program-guide" class="fa-guide hidden" type="button"
+              aria-label="The First Awakened — hear the program explained again">
+        <span class="fa-guide-portrait" aria-hidden="true">
+          <img src="assets/coach/first-awakened-scroll.png" alt="" loading="lazy" decoding="async">
+        </span>
+        <span class="fa-guide-txt">
+          <span class="fa-guide-eyebrow">The First Awakened</span>
+          <span class="fa-guide-line">Questions about your program? I will explain it again.</span>
+        </span>
+        <span class="fa-guide-chev" aria-hidden="true">
+          <svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1l5 5-5 5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
     </main>
 
 
@@ -3129,7 +3147,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1013"></script>
+  <script src="app.js?v=1014"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

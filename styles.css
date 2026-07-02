@@ -25610,6 +25610,36 @@ button.guildhall-summary-tile:active {
   outline: none;
 }
 
+/* ── W584 — Jump-program guide row (The First Awakened under the vows) ── */
+.fa-guide {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  margin: 14px 0 2px; padding: 11px 12px;
+  background: linear-gradient(157deg, rgba(24,23,48,.85) 0%, rgba(13,13,30,.9) 60%);
+  border: 1px solid rgba(245,184,66,.16); border-radius: 14px;
+  cursor: pointer; text-align: left;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.fa-guide:active { transform: translateY(1px); }
+.fa-guide.hidden { display: none; }
+.fa-guide-portrait {
+  width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, rgba(245,184,66,.22), rgba(8,8,26,.7) 74%);
+  box-shadow: 0 0 0 1.4px rgba(245,184,66,.55), 0 0 14px rgba(245,184,66,.25);
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.fa-guide-portrait img { width: 150%; height: auto; margin-top: 2px; object-fit: cover; }
+.fa-guide-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fa-guide-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 800;
+  letter-spacing: 2.2px; text-transform: uppercase; color: #f5b842;
+}
+.fa-guide-line {
+  font-family: "Cormorant Garamond", Georgia, serif; font-style: italic;
+  font-size: 13.5px; line-height: 1.25; color: #a9a9c4; letter-spacing: .2px;
+}
+.fa-guide-chev { flex: none; color: #5c5c78; display: flex; align-items: center; }
+.fa-guide:hover .fa-guide-chev, .fa-guide:focus-visible .fa-guide-chev { color: #f5b842; }
+
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .empty-state .ev-sigil-ring {
