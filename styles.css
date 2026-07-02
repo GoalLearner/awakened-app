@@ -31151,6 +31151,25 @@ button.guildhall-summary-tile:active {
 .csb-banner.arriving .csb-answer{ box-shadow:0 0 34px rgba(255,122,60,.7), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(40,10,0,.35); animation:none; }
 .csb-banner.arriving .csb-ally{ box-shadow:0 0 0 1.8px #5ad6c8, 0 0 26px rgba(90,214,200,.8), inset 0 0 12px rgba(90,214,200,.3); }
 @media (prefers-reduced-motion:reduce){ .csb-banner{ transform:none!important; animation:none!important; transition:opacity .25s ease; } .csb-answer{ animation:none!important; } }
+/* W582 — friend-request skin for the summons banner: guild GOLD replaces the
+   boss teal/ember (same geometry/motion, different blood). The ally monogram,
+   eyebrow, edge glow and CTA all shift to #f5b842; the hunter's name flips to
+   teal so it still pops against the gold chrome. */
+.csb-banner.csb--friend::before{ background:radial-gradient(closest-side,rgba(245,184,66,.20),rgba(245,184,66,0) 75%); }
+.csb-banner.csb--friend::after{ box-shadow:inset 0 0 0 1px rgba(245,184,66,calc(var(--csb-glow) * .9)), 0 0 26px rgba(245,184,66,calc(var(--csb-glow) * .7)); }
+.csb-banner.csb--friend .csb-ally{ color:#f5b842; background:radial-gradient(circle at 50% 35%,rgba(245,184,66,.28),rgba(8,8,26,.6) 72%);
+  box-shadow:0 0 0 1.6px #f5b842, 0 0 16px rgba(245,184,66,.45), inset 0 0 10px rgba(245,184,66,.18); }
+.csb-banner.csb--friend .csb-eyebrow{ color:#f5b842; }
+.csb-banner.csb--friend .csb-spark{ background:#f5b842; box-shadow:0 0 8px #f5b842; }
+.csb-banner.csb--friend .csb-who{ color:#5ad6c8; }
+.csb-banner.csb--friend .csb-answer{ color:#241a05; background:linear-gradient(120deg,#8a6a1f 0%,#c9962e 45%,#f5b842 100%);
+  text-shadow:0 1px 1px rgba(255,235,180,.35);
+  box-shadow:0 0 18px rgba(245,184,66,.30), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 5px rgba(60,40,0,.35);
+  animation:csbCtaPulseGold 2.6s ease-in-out infinite; }
+@keyframes csbCtaPulseGold{ 0%,100%{ box-shadow:0 0 14px rgba(245,184,66,.24), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 5px rgba(60,40,0,.35); }
+  50%{ box-shadow:0 0 26px rgba(245,184,66,.5), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(60,40,0,.35); } }
+.csb-banner.csb--friend.arriving .csb-answer{ box-shadow:0 0 34px rgba(245,184,66,.7), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(60,40,0,.35); animation:none; }
+.csb-banner.csb--friend.arriving .csb-ally{ box-shadow:0 0 0 1.8px #f5b842, 0 0 26px rgba(245,184,66,.8), inset 0 0 12px rgba(245,184,66,.3); }
 
 /* ── W394 — Co-op Hunts Dashboard "The Pacts" (ClaudeDesign) ───────────────
    Multi-hunt roster: every active/pending duo hunt with its own progress.
