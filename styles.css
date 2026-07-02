@@ -30214,7 +30214,10 @@ button.guildhall-summary-tile:active {
    crossed-blades mark + crimson read as combat, distinct from the step badge. */
 .lb-rank-boss100 {
   display: inline-flex; align-items: center; justify-content: center; gap: 1px; flex: none;
-  box-sizing: border-box; width: 28px; height: 15px; margin-left: 2px; padding-bottom: 0.5px;
+  /* W583 — width flexes so upgraded century tiers (200 … 1200) never clip;
+     the %-based hex clip-path stretches with it. */
+  box-sizing: border-box; min-width: 28px; width: auto; height: 15px; margin-left: 2px;
+  padding: 0 6.5px 0.5px;
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   background: linear-gradient(180deg, #e2675c, #c0392b 55%, #87241a);
   box-shadow: 0 0 6px rgba(214,69,48,0.5);
