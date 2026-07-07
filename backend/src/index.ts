@@ -72,6 +72,11 @@ import {
   handleCoopBossClaim,
 } from './handlers/coop-boss';
 import {
+  // Push notifications v1 (W603) — device-token register/unregister.
+  handleDeviceTokenRegister,
+  handleDeviceTokenUnregister,
+} from './handlers/push';
+import {
   // Realtime human PvP (PVP.md §21) — invite-by-code duels over a MatchRoom
   // Durable Object (WebSocket primary + HTTP fallback).
   handlePvpCreate,
@@ -116,7 +121,7 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    _ctx: ExecutionContext,
+    ctx: ExecutionContext,
   ): Promise<Response> {
     // CORS preflight short-circuit
     if (request.method === 'OPTIONS') {
@@ -245,6 +250,12 @@ export default {
           } else if (path === '/v1/hall-of-awakened' && method === 'GET') {
             // W270 — the Roll: top finishers + the caller's neighbourhood.
             response = await handleHallGet(request, env, session);
+          } else if (path === '/v1/users/me/device-token' && method === 'POST') {
+            // W603 — push: register this device's APNs token for the caller.
+            response = await handleDeviceTokenRegister(request, env, session);
+          } else if (path === '/v1/users/me/device-token' && method === 'DELETE') {
+            // W603 — push: unregister on sign-out.
+            response = await handleDeviceTokenUnregister(request, env, session);
           } else if (USER_PROFILE_RE.test(path) && method === 'GET') {
             // W-next — public profile card for any user by alias.
             const m = path.match(USER_PROFILE_RE)!;
@@ -259,13 +270,14 @@ export default {
             // (no new schema/binding; read budget shares RL_FRIENDS_READ).
             response = await handleFriendsLeaderboardGet(request, env, session);
           } else if (path === '/v1/friends/request' && method === 'POST') {
-            response = await handleFriendsRequest(request, env, session);
+            // W603 — ctx passed so the handler can ctx.waitUntil() an APNs push.
+            response = await handleFriendsRequest(request, env, session, ctx);
           } else if (FRIENDS_ID_RE.test(path) && method === 'POST') {
             const match = path.match(FRIENDS_ID_RE)!;
             const friendshipId = match[1];
             const action = match[2];
             if (action === 'accept') {
-              response = await handleFriendsAccept(request, env, session, friendshipId);
+              response = await handleFriendsAccept(request, env, session, friendshipId, ctx);
             } else if (action === 'decline') {
               response = await handleFriendsDecline(request, env, session, friendshipId);
             } else {
@@ -292,7 +304,8 @@ export default {
           // ── Co-op Dungeon Bosses (W370) ──
           else if (path === '/v1/coop-boss' && method === 'POST') {
             // Challenger invites an accepted friend to a shared boss hunt.
-            response = await handleCoopBossCreate(request, env, session);
+            // W603 — ctx passed for the APNs invite push.
+            response = await handleCoopBossCreate(request, env, session, ctx);
           } else if (path === '/v1/coop-boss' && method === 'GET') {
             // List the caller's co-op hunts (both challenger + partner roles).
             response = await handleCoopBossList(request, env, session);
@@ -301,7 +314,7 @@ export default {
             const instanceId = match[1];
             const action = match[2];
             if (action === 'join') {
-              response = await handleCoopBossJoin(request, env, session, instanceId);
+              response = await handleCoopBossJoin(request, env, session, instanceId, ctx);
             } else if (action === 'decline') {
               response = await handleCoopBossDecline(request, env, session, instanceId);
             } else if (action === 'cancel') {

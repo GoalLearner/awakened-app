@@ -29,6 +29,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { notifyUser } from '../lib/apns';
 
 // ── Server-authoritative co-op boss roster ──────────────────────────
 // goalSteps is the COMBINED target across both hunters (for flights bosses it
@@ -349,6 +350,7 @@ export async function handleCoopBossCreate(
   request: Request,
   env: Env,
   session: SessionPayload,
+  ctx?: ExecutionContext,
 ): Promise<Response> {
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
@@ -434,6 +436,18 @@ export async function handleCoopBossCreate(
   const row = await loadInstance(env, id);
   if (!row) return jsonError(500, 'INTERNAL', 'Failed to read back created instance.');
   const aliasMap = await getAliasMap(env, [row.challenger_user_id, row.partner_user_id]);
+  // W603 — push the invited partner NOW (the co-op badge only surfaced this on
+  // their next app-open; this makes the summons a live event). bossId rides in
+  // the payload so a tapped push can deep-link straight to the hunt.
+  if (ctx)
+    ctx.waitUntil(
+      notifyUser(env, partnerUserId, {
+        title: 'Co-op Summons',
+        body: `${session.alias} summoned you to a co-op hunt.`,
+        type: 'coop_invite',
+        data: { bossId },
+      }),
+    );
   return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, emptyProgress()) });
 }
 
@@ -501,6 +515,7 @@ export async function handleCoopBossJoin(
   env: Env,
   session: SessionPayload,
   id: string,
+  ctx?: ExecutionContext,
 ): Promise<Response> {
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
@@ -531,6 +546,16 @@ export async function handleCoopBossJoin(
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back joined instance.');
   const aliasMap = await getAliasMap(env, [refreshed.challenger_user_id, refreshed.partner_user_id]);
+  // W603 — tell the challenger their ally answered and the 24h hunt is live.
+  if (ctx)
+    ctx.waitUntil(
+      notifyUser(env, refreshed.challenger_user_id, {
+        title: 'The Hunt Begins',
+        body: `${session.alias} answered your summons — the hunt is on.`,
+        type: 'coop_joined',
+        data: { bossId: refreshed.boss_id },
+      }),
+    );
   return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
 }
 

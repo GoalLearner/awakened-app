@@ -18,6 +18,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { notifyUser } from '../lib/apns';
 
 interface FriendRow {
   id: string;
@@ -249,6 +250,7 @@ export async function handleFriendsRequest(
   request: Request,
   env: Env,
   session: SessionPayload,
+  ctx?: ExecutionContext,
 ): Promise<Response> {
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) {
@@ -327,6 +329,15 @@ export async function handleFriendsRequest(
       .run();
     const refreshed = { ...inversePending, status: 'accepted' };
     const friend = await serializeFriendRow(env, refreshed, session.userId);
+    // W603 — the ORIGINAL requester (target.id) is now friends → tell them.
+    if (ctx)
+      ctx.waitUntil(
+        notifyUser(env, target.id, {
+          title: 'Guild Request Accepted',
+          body: `${session.alias} accepted your request — you're now in the same guild.`,
+          type: 'friend_accepted',
+        }),
+      );
     return jsonOk({ ok: true, friend, autoAccepted: true });
   }
 
@@ -361,6 +372,15 @@ export async function handleFriendsRequest(
           .run();
         const refreshed = { ...stale, status: 'pending' };
         const friend = await serializeFriendRow(env, refreshed, session.userId);
+        // W603 — revived pending request → push the recipient like a fresh one.
+        if (ctx)
+          ctx.waitUntil(
+            notifyUser(env, target.id, {
+              title: 'Guild Request',
+              body: `${session.alias} wants to join your guild.`,
+              type: 'friend_request',
+            }),
+          );
         return jsonOk({ ok: true, friend, revived: true });
       }
       return jsonError(409, 'FRIEND_CONFLICT', 'A friend request between you already exists.');
@@ -378,6 +398,16 @@ export async function handleFriendsRequest(
     return jsonError(500, 'INTERNAL', 'Failed to read back created friend row.');
   }
   const friend = await serializeFriendRow(env, created, session.userId);
+  // W603 — the whole point: push the recipient NOW, even if their app is
+  // closed, so a friend request is a live event, not a next-open discovery.
+  if (ctx)
+    ctx.waitUntil(
+      notifyUser(env, target.id, {
+        title: 'Guild Request',
+        body: `${session.alias} wants to join your guild.`,
+        type: 'friend_request',
+      }),
+    );
   return jsonOk({ ok: true, friend });
 }
 
@@ -389,6 +419,7 @@ export async function handleFriendsAccept(
   env: Env,
   session: SessionPayload,
   friendshipId: string,
+  ctx?: ExecutionContext,
 ): Promise<Response> {
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) {
@@ -417,6 +448,15 @@ export async function handleFriendsAccept(
     .run();
   const refreshed = { ...row, status: 'accepted' };
   const friend = await serializeFriendRow(env, refreshed, session.userId);
+  // W603 — tell the ORIGINAL requester their request was accepted.
+  if (ctx)
+    ctx.waitUntil(
+      notifyUser(env, row.requester_user_id, {
+        title: 'Guild Request Accepted',
+        body: `${session.alias} accepted your request — you're now in the same guild.`,
+        type: 'friend_accepted',
+      }),
+    );
   return jsonOk({ ok: true, friend });
 }
 

@@ -62,6 +62,9 @@ new_sqlite_classes = ["MatchRoom"]
 #   wrangler secret put APPLE_TEAM_ID
 #   wrangler secret put REVENUECAT_WEBHOOK_AUTH
 #   wrangler secret put ADMIN_METRICS_SECRET   # gates GET /v1/admin/retention (owner metrics)
+#   wrangler secret put APNS_AUTH_KEY          # W603 push — the .p8 auth-key contents (PEM)
+#   wrangler secret put APNS_KEY_ID            # W603 push — the 10-char Key ID of that .p8
+# (APNs also reuses the existing APPLE_TEAM_ID + APPLE_BUNDLE_ID secrets.)
 # Each secret prompts for the value at the CLI. Values are encrypted
 # at rest in Cloudflare's secret store. See BACKEND.md §10 for the
 # canonical secret list and capture instructions.
@@ -259,3 +262,13 @@ name = "RL_PVP_ACTION"
 type = "ratelimit"
 namespace_id = "1021"
 simple = { limit = 60, period = 60 }  # 60/min per user
+
+# Push notifications v1 (W603). Guards POST/DELETE /v1/users/me/device-token —
+# the client registers its APNs device token once per launch + on token
+# rotation, so 6/min is far above legit usage while bounding a misbehaving
+# client that spams registrations.
+[[unsafe.bindings]]
+name = "RL_PUSH_WRITE"
+type = "ratelimit"
+namespace_id = "1022"
+simple = { limit = 6, period = 60 }   # 6/min per user

@@ -44,10 +44,19 @@ export interface Env {
    * Set with `wrangler secret put APPLE_BUNDLE_ID`. */
   APPLE_BUNDLE_ID: string;
 
-  /** Apple Developer Team ID. Reserved for v2.2+ server-to-server flows
-   * (e.g. account-revocation webhook). Not used by v2.1 endpoints.
-   * Value: "LK8FVGBQPL". Set with `wrangler secret put APPLE_TEAM_ID`. */
+  /** Apple Developer Team ID. Value: "LK8FVGBQPL". Set with `wrangler secret
+   * put APPLE_TEAM_ID`. Reused by APNs push (W603) as the provider-JWT `iss`. */
   APPLE_TEAM_ID: string;
+
+  /** APNs push (W603) — the .p8 auth-key contents (PEM PKCS8) downloaded once
+   * from the Apple Developer portal (Keys → APNs). Used by src/lib/apns.ts to
+   * ES256-sign the provider JWT. Set with `wrangler secret put APNS_AUTH_KEY`.
+   * Optional: if unset, notifyUser() no-ops (push disabled) — never throws. */
+  APNS_AUTH_KEY?: string;
+
+  /** APNs push (W603) — the 10-char Key ID of the .p8 above (the JWT header
+   * `kid`). Set with `wrangler secret put APNS_KEY_ID`. Optional; see above. */
+  APNS_KEY_ID?: string;
 
   /** Shared secret for the RevenueCat purchase webhook (skin IAP, W297).
    * The EXACT value RevenueCat sends in the Authorization header — set the
@@ -135,4 +144,9 @@ export interface Env {
    *  far above turn-based play + state polling, so it bounds runaway abuse
    *  without ever throttling a live match. */
   RL_PVP_ACTION: RateLimit;
+  /** Push device-token register/unregister (W603) — guards POST/DELETE
+   *  /v1/users/me/device-token. namespace_id 1022 in wrangler.toml. 6/min per
+   *  user: the client registers once per launch (+ on APNs token rotation), so
+   *  6/min is far above legit usage and bounds a misbehaving client. */
+  RL_PUSH_WRITE: RateLimit;
 }
