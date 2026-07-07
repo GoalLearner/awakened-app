@@ -9702,6 +9702,63 @@ footer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ══ W590 — Reusable skeleton / loading system ("etched runes") ══════════════
+   A calm, on-theme loading state: dark card blocks with a violet→gold light
+   sweep (energy tracing a rune) + a faint breathe — not flat gray bars. Drive
+   it with showLoading(target, kind, count) / hideLoading(target) in app.js.
+   Every primitive is a .skel; compose them into rows / grids / heroes. Uses
+   ONLY the app tokens. */
+.skel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  animation: skel-breathe 2.8s ease-in-out infinite;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    transparent 18%,
+    rgba(139, 92, 246, 0.20) 42%,
+    rgba(245, 158, 11, 0.16) 50%,
+    rgba(139, 92, 246, 0.20) 58%,
+    transparent 82%);
+  transform: translateX(-100%);
+  animation: skel-sweep 1.9s ease-in-out infinite;
+}
+@keyframes skel-sweep   { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes skel-breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.9; } }
+
+/* ── Primitives ── */
+.skel-line        { height: 11px; border-radius: 5px; }
+.skel-line--title { height: 15px; border-radius: 6px; width: 62%; }
+.skel-line--sm    { height: 9px;  width: 44%; opacity: 0.85; }
+.skel-chip        { height: 20px; width: 58px; border-radius: 999px; }
+.skel-avatar      { width: 44px; height: 44px; border-radius: 50%; flex: none; }
+.skel-tile        { aspect-ratio: 3 / 4; border-radius: var(--radius-sm); }
+.skel-hero        { height: 118px; border-radius: var(--radius); }
+.skel-card        { height: 76px; border-radius: var(--radius); }
+
+/* ── Layouts (compose primitives) ── */
+.skel-wrap { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.skel-row  { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
+.skel-row .skel { background: rgba(255, 255, 255, 0.03); border-color: transparent; }
+.skel-row-lines { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+.skel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.skel-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.skel-duo  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+[aria-busy="true"] { cursor: progress; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel::after { animation: none; opacity: 0.5; }
+  .skel { animation: skel-breathe 3.2s ease-in-out infinite; }
+}
 .lb-rank-divider {
   height: 1px;
   background: var(--border);
