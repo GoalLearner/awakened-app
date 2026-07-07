@@ -32756,17 +32756,22 @@ button.guildhall-summary-tile:active {
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:26px; --sp-7:34px;
 }
 
-/* ── Armory header: gear-power pill + gold title + flavour sub ──────────── */
-.armory-head{padding-top:var(--sp-3);}
-.armory-head .head-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);}
-/* W601 — un-scoped so the pill works in its new home (the Equipment Build row). */
-.gear-power{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 11px;border-radius:999px;
-  background:var(--gold-glow);border:1px solid rgba(245,158,11,.35);}
-.gear-power .gp-n{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;}
-.gear-power .gp-l{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.2;}
-.armory-title{font-family:var(--serif);font-size:27px;font-weight:800;letter-spacing:2px;line-height:1;margin:var(--sp-4) 0 0;
+/* ── Armory header (v2, W606): title (left) · close-x + Gear Power pill (right) ── */
+.armory-head{padding-top:var(--sp-4);}
+.armory-head .head-main{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);}
+.armory-head .head-left{min-width:0;}
+.armory-head .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-3);flex:none;}
+.close-x{width:32px;height:32px;flex:none;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;color:var(--text-secondary);cursor:pointer;
+  -webkit-appearance:none;appearance:none;padding:0;margin:0;-webkit-tap-highlight-color:transparent;}
+.close-x:active{background:rgba(255,255,255,.09);color:var(--text-primary);}
+.gp-pill{display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;
+  background:var(--gold-glow);border:1px solid rgba(245,158,11,.38);}
+.gp-num{font-family:var(--mono);font-size:19px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--gold-glow);}
+.gp-label{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.25;}
+.armory-title{font-family:var(--serif);font-size:29px;font-weight:800;letter-spacing:2.5px;line-height:1;margin:0;
   background:linear-gradient(180deg,#ffe6a8,var(--gold) 62%,#c17d0c);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.armory-sub{font-family:var(--flavor);font-style:italic;font-size:15px;font-weight:500;color:var(--text-secondary);letter-spacing:.2px;margin:var(--sp-2) 0 0;}
+.armory-sub{font-family:var(--flavor);font-style:italic;font-size:15px;font-weight:500;color:var(--text-secondary);letter-spacing:.2px;margin:9px 0 0;}
 
 /* ── consistent section rhythm: mono eyebrow left · quiet meta right ─────── */
 .aw-section{margin-top:var(--sp-6);}
@@ -32818,13 +32823,54 @@ button.guildhall-summary-tile:active {
 .aw-card__empty .e1{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1.6px;color:var(--text-secondary);text-transform:uppercase;}
 .aw-card__empty .e2{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
 
-/* ── Equipment Build grid: 2 columns ────────────────────────────────────── */
-.build-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);}
+/* ── Equipment Build grid (v2, W606): 4×2 gear-cards; item names live in a
+     caption strip BELOW the art (off it) so the whole grid keeps one baseline.
+     Narrow phones (≤380px) fall back to 2-col so the caption stays legible. ── */
+.build-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+@media (max-width:380px){.build-grid{grid-template-columns:repeat(2,1fr);gap:var(--sp-3);}}
+.gear-card{display:flex;flex-direction:column;gap:var(--sp-2);cursor:pointer;
+  /* renders as a <button> (tap-to-equip) — strip native chrome for iOS WKWebView */
+  -webkit-appearance:none;appearance:none;background:none;border:0;padding:0;margin:0;
+  font:inherit;color:inherit;text-align:center;-webkit-tap-highlight-color:transparent;}
+.gear-card__thumb{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;border:1px solid var(--border);
+  background:
+    radial-gradient(72% 62% at 50% 42%, var(--glow,rgba(139,92,246,.20)), rgba(19,19,42,0) 72%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, rgba(255,255,255,0) 2px 9px),
+    linear-gradient(160deg,#26264d,#161636);
+  display:flex;align-items:center;justify-content:center;transition:transform .16s ease;}
+.gear-card:active .gear-card__thumb{transform:scale(.965);}
+.gear-card--ultra {--glow:rgba(245,158,11,.28); --gc:#f5b842;}
+.gear-card--mega  {--glow:rgba(34,211,238,.28); --gc:#5ee7f5;}
+.gear-card--rare  {--glow:rgba(139,92,246,.26); --gc:#a78bfa;}
+.gear-card--common{--glow:rgba(142,142,147,.16); --gc:#9aa0bd;}
+.gear-card--ultra  .gear-card__thumb{border-color:rgba(245,158,11,.45);box-shadow:0 0 0 1px rgba(245,158,11,.10),0 5px 16px rgba(245,158,11,.07);}
+.gear-card--mega   .gear-card__thumb{border-color:rgba(34,211,238,.45);box-shadow:0 0 0 1px rgba(34,211,238,.10),0 5px 16px rgba(34,211,238,.07);}
+.gear-card--rare   .gear-card__thumb{border-color:rgba(139,92,246,.42);}
+.gear-card--common .gear-card__thumb{border-color:var(--border);}
+.gear-card__thumb>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.gear-card__glyph{width:42%;height:42%;opacity:.9;color:var(--gc);filter:drop-shadow(0 0 9px var(--glow));}
+.gear-card__scrim{position:absolute;top:0;left:0;right:0;height:46%;z-index:2;
+  background:linear-gradient(180deg,rgba(6,6,16,.78),rgba(6,6,16,0));pointer-events:none;}
+.gear-card__slot{position:absolute;top:6px;left:8px;z-index:3;font-family:var(--mono);font-size:7.5px;font-weight:800;
+  letter-spacing:1.1px;color:#e7e9f5;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.85);}
+.gear-card__pwr{position:absolute;top:5px;right:6px;z-index:3;display:flex;align-items:baseline;gap:2px;
+  padding:2px 5px;border-radius:6px;background:rgba(6,6,16,.5);}
+.gear-card__pwr .n{font-family:var(--mono);font-size:11px;font-weight:800;color:#fff;line-height:1;font-variant-numeric:tabular-nums;}
+.gear-card__pwr .u{font-family:var(--mono);font-size:6.5px;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.4px;}
+.gear-card__name{font-family:var(--sans);font-size:10.5px;font-weight:600;line-height:1.22;color:var(--text-primary);text-align:center;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:calc(2 * 1.22 * 10.5px);padding:0 1px;}
+.gear-card__name--muted{color:var(--text-tertiary);font-family:var(--mono);font-weight:700;font-size:8.5px;letter-spacing:1px;text-transform:uppercase;}
+/* empty / locked slots (v2 mockup is 8/8; these keep the same frame) */
+.gear-card--empty .gear-card__thumb,.gear-card--locked .gear-card__thumb{border-style:dashed;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.015);}
+.gear-card__plus{color:var(--text-secondary);font-size:26px;font-weight:300;line-height:1;}
+.gear-card__lock{font-size:17px;opacity:.7;}
 
 /* ── EQUIPMENT BONUSES — the "Sigil Grid" (5 stats + gold TOTAL) ─────────── */
 .bonus-panel{border-radius:var(--radius);background:var(--bg-raised);border:1px solid var(--border);
   padding:var(--sp-4);display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);}
-.bonus-chip{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;
+/* v2 (W606): fixed height + shared columns keep every chip's icon/value/label aligned */
+.bonus-chip{display:flex;align-items:center;gap:11px;padding:0 12px;height:56px;border-radius:12px;
   background:linear-gradient(180deg,var(--sc-tint),transparent);border:1px solid var(--sc-line);}
 .bonus-chip .glyph{width:30px;height:30px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;
   background:var(--sc-tint);border:1px solid var(--sc-line);}
@@ -32856,12 +32902,16 @@ button.guildhall-summary-tile:active {
 .set-track{margin-top:var(--sp-3);height:5px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;}
 .set-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#7c5cf0,var(--accent));box-shadow:0 0 10px var(--accent-glow);}
 .set-bonuses{margin-top:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2);}
-.set-line{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:11px;background:rgba(255,255,255,.02);border:1px solid var(--border);}
-.set-line.locked{opacity:.42;}
-.set-line .pc{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1px;color:var(--accent);flex:none;width:30px;text-transform:uppercase;}
-.set-line.locked .pc{color:var(--text-secondary);}
-.set-line .desc{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text-primary);line-height:1.3;flex:1;}
-.set-line.locked .desc{color:var(--text-secondary);}
-.set-line .lock{flex:none;color:var(--text-tertiary);}
-.set-line .lock svg{width:13px;height:13px;display:block;}
+/* v2 (W606): strict 3-col grid; met tiers lit (.active), unmet dimmed (.locked) */
+.set-line{display:grid;grid-template-columns:34px 1fr 16px;align-items:center;gap:11px;
+  padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);}
+.set-line.active{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.4);}
+.set-line.locked{opacity:.5;}
+.set-line .pc{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.8px;color:var(--text-secondary);text-transform:uppercase;}
+.set-line.active .pc{color:var(--accent);}
+.set-line .desc{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--text-primary);line-height:1.3;}
+.set-line.locked .desc{color:var(--text-secondary);font-weight:500;}
+.set-line .end{justify-self:end;display:flex;color:var(--accent);}
+.set-line.locked .end{color:var(--text-tertiary);}
+.set-line .end svg{width:14px;height:14px;display:block;}
 .set-empty{font-family:var(--mono);font-size:11px;letter-spacing:.4px;color:var(--text-secondary);padding:2px 0;}
