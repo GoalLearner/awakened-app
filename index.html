@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=544">
+  <link rel="stylesheet" href="styles.css?v=545">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1856,22 +1856,23 @@
   <div id="equipment-modal" class="equipment-modal hidden" role="dialog" aria-labelledby="equipment-modal-title">
     <button id="equipment-close" class="equipment-close" type="button" aria-label="Close">✕</button>
     <!-- W592 — Armory redesign (ClaudeDesign handoff 11). #equipment-close (✕)
-         above stays the close affordance; gear-power pill sits in the header. -->
+         above stays the close affordance. W601 — the Gear Power pill moved OUT
+         of the header down into the Equipment Build row (owner preference). -->
     <header class="armory-head">
-      <div class="head-row">
-        <div class="gear-power">
-          <span class="gp-n" id="armory-gear-power">0</span>
-          <span class="gp-l">Gear<br>Power</span>
-        </div>
-      </div>
       <h2 id="equipment-modal-title" class="armory-title">ARMORY</h2>
       <p class="armory-sub">Equip gear. Shape your hunter build.</p>
     </header>
 
-    <!-- EQUIPMENT BUILD — 8-slot 2-col gear grid. Populated by renderHunterBuild(). -->
+    <!-- EQUIPMENT BUILD — 8-slot compact gear grid. Populated by renderHunterBuild(). -->
     <section class="aw-section">
-      <div class="aw-section-head">
-        <span class="aw-eyebrow">Equipment Build</span>
+      <div class="aw-section-head aw-section-head--gp">
+        <div class="ash-left">
+          <span class="aw-eyebrow">Equipment Build</span>
+          <div class="gear-power">
+            <span class="gp-n" id="armory-gear-power">0</span>
+            <span class="gp-l">Gear<br>Power</span>
+          </div>
+        </div>
         <span class="aw-meta" id="armory-build-meta"><b>0</b> / 8 Equipped</span>
       </div>
       <div id="hunter-build-grid" class="hunter-build-grid"></div>
@@ -3166,7 +3167,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1029"></script>
+  <script src="app.js?v=1030"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

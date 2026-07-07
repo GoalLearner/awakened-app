@@ -32740,10 +32740,11 @@ button.guildhall-summary-tile:active {
 /* ── Armory header: gear-power pill + gold title + flavour sub ──────────── */
 .armory-head{padding-top:var(--sp-3);}
 .armory-head .head-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);}
-.armory-head .gear-power{display:flex;align-items:center;gap:var(--sp-2);padding:7px 12px;border-radius:999px;
+/* W601 — un-scoped so the pill works in its new home (the Equipment Build row). */
+.gear-power{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 11px;border-radius:999px;
   background:var(--gold-glow);border:1px solid rgba(245,158,11,.35);}
-.armory-head .gear-power .gp-n{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;}
-.armory-head .gear-power .gp-l{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.2;}
+.gear-power .gp-n{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;}
+.gear-power .gp-l{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.2;}
 .armory-title{font-family:var(--serif);font-size:27px;font-weight:800;letter-spacing:2px;line-height:1;margin:var(--sp-4) 0 0;
   background:linear-gradient(180deg,#ffe6a8,var(--gold) 62%,#c17d0c);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .armory-sub{font-family:var(--flavor);font-style:italic;font-size:15px;font-weight:500;color:var(--text-secondary);letter-spacing:.2px;margin:var(--sp-2) 0 0;}
@@ -32751,6 +32752,10 @@ button.guildhall-summary-tile:active {
 /* ── consistent section rhythm: mono eyebrow left · quiet meta right ─────── */
 .aw-section{margin-top:var(--sp-6);}
 .aw-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3);}
+/* W601 — Equipment Build head hosts the Gear Power pill inline with the eyebrow
+   (grouped left) and keeps the "n / 8 Equipped" meta on the right. */
+.aw-section-head--gp{align-items:center;}
+.aw-section-head--gp .ash-left{display:flex;align-items:center;gap:var(--sp-3);min-width:0;}
 .aw-eyebrow{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:2.2px;color:var(--text-secondary);text-transform:uppercase;}
 .aw-meta{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
 .aw-meta b{color:var(--text-secondary);font-weight:800;}
