@@ -3964,6 +3964,14 @@ footer {
   color: rgba(255, 255, 255, 0.55);
   font-weight: 600;
 }
+/* W597 — forward-looking "next milestone" sub-line: gold to read as a reward. */
+.streaks-row-sub.streaks-row-next {
+  color: rgba(245, 158, 11, 0.78);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+.streaks-row-next b { color: var(--gold, #f59e0b); font-weight: 800; }
 .streaks-row-count {
   display: flex;
   flex-direction: column;
