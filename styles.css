@@ -8913,6 +8913,25 @@ footer {
   margin-bottom: 8px;
   text-shadow: 0 0 24px rgba(245,158,11,0.4);
 }
+/* W602 — milestone souls line: a bright violet "amethyst" chip under the XP,
+   shown only on a 30/90/365 streak day. .hidden (global) collapses it otherwise. */
+.cp-souls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #d8b4fe;
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.22), rgba(167, 139, 250, 0.10));
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 999px;
+  padding: 6px 13px;
+  margin: 0 auto 14px;
+  text-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+}
+.cp-souls.hidden { display: none; }
+.cp-souls-icon { width: 16px; height: 16px; object-fit: contain; flex: none; filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.6)); }
 .cp-streak {
   font-size: 14px;
   font-weight: 700;
