@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=547">
+  <link rel="stylesheet" href="styles.css?v=548">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -878,6 +878,11 @@
           <div class="pokedex-title-row">
             <div class="pokedex-title">RELIC ARCHIVE</div>
             <span id="archive-new-count" class="archive-new-count hidden" aria-live="polite">0 NEW</span>
+            <!-- W611 — always-visible entry to the Rewards / Drop History sheet so a
+                 drop whose reveal pop-up misfired is never lost (Rendell's red flag). -->
+            <button id="drop-history-btn" type="button" class="archive-drophist-btn" aria-label="Open reward drop history">
+              <span aria-hidden="true">⏱</span> Rewards
+            </button>
           </div>
           <div class="pokedex-count">DISCOVERED <span id="pokedex-discovered">0</span> / <span id="pokedex-total">9</span><span id="pokedex-pct" class="pokedex-pct"></span></div>
           <div class="pokedex-progress-bar">
@@ -2107,6 +2112,23 @@
     </div>
   </div>
 
+  <!-- W611 — Drop Ledger (Rewards / Drop History). Sourced from `hb_drop_ledger`.
+       Every relic drop, newest-first; each row taps to re-view the relic so a
+       drop whose reveal pop-up misfired is never lost. Mirrors the souls ledger. -->
+  <div id="drop-ledger-overlay" class="vn-overlay hidden"></div>
+  <div id="drop-ledger-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">REWARDS</div>
+      <h2 class="lb-rank-title">Drop History</h2>
+      <button id="drop-ledger-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb">Every relic you’ve earned. Tap one to view it.</p>
+      <div id="drop-ledger-list" class="souls-ledger-list"></div>
+    </div>
+  </div>
+
   <!-- v3 Phase 1z.171 — Guild Members roster sheet. Opens ONLY
        from the HUNTERS tile (1z.172 routing fix). Reuses the
        .vn-sheet shell + .lb-rank-* header classes. -->
@@ -3176,7 +3198,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1034"></script>
+  <script src="app.js?v=1035"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

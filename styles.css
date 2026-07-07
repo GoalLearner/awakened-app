@@ -2430,6 +2430,104 @@ footer {
   font-size: 0.98rem;
 }
 
+/* ── W611 — Drop Ledger (Rewards / Drop History) rows ────────────────────── */
+.drop-ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--dl-edge, var(--border));
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.drop-ledger-row:active { transform: scale(0.995); }
+.drop-ledger-row--r-common { --dl-edge: rgba(142,142,147,0.5); }
+.drop-ledger-row--r-rare   { --dl-edge: #8b5cf6; }
+.drop-ledger-row--r-ultra  { --dl-edge: #f59e0b; }
+.drop-ledger-row--r-mega   { --dl-edge: #22d3ee; }
+.drop-ledger-row__crest {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #26264d, #161636);
+  border: 1px solid var(--border);
+}
+.drop-ledger-row__crest img { width: 100%; height: 100%; object-fit: cover; }
+.drop-ledger-row__glyph { font-size: 20px; opacity: 0.7; }
+.drop-ledger-row__main { flex: 1 1 auto; min-width: 0; }
+.drop-ledger-row__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+.drop-ledger-row__newdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #f5b842; box-shadow: 0 0 6px rgba(245,184,66,0.6); flex: 0 0 auto;
+}
+.drop-ledger-row__meta {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+}
+.drop-ledger-row__state {
+  margin-top: 1px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.drop-ledger-row--unseen .drop-ledger-row__state { color: #f5b842; }
+.drop-ledger-row__view {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #c4b5fd;
+  opacity: 0.85;
+}
+/* W611 — "Rewards" entry chip in the Relic Archive header. */
+.archive-drophist-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(245, 184, 66, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #f5b842;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.archive-drophist-btn:active { transform: scale(0.97); }
+
 .souls-info-header {
   text-align: center;
   margin: 4px 0 18px;
