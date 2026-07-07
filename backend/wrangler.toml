@@ -22,6 +22,12 @@ compatibility_date = "2026-05-12"
 compatibility_flags = ["nodejs_compat"]
 account_id = "2bfe4268082103ba069c1f65f500ad54"
 workers_dev = true
+# W603 — do NOT let `wrangler deploy` delete vars/secrets configured in the
+# Cloudflare dashboard but absent from this file. The APNs config is set in the
+# dashboard (APNS_AUTH_KEY = encrypted secret, APNS_KEY_ID = plaintext var);
+# without this, a deploy could wipe the plaintext APNS_KEY_ID and silently
+# disable push. Secrets are preserved regardless, but this protects the var too.
+keep_vars = true
 
 # ── D1 database binding ──────────────────────────────────────────
 # binding:       In-Worker variable name (accessed as env.DB from
