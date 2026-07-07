@@ -26447,6 +26447,43 @@ button.guildhall-summary-tile:active {
   color: #fca5a5;
 }
 
+/* ── W596 — "Invite a hunter" viral-loop CTA (share your name) ──────────── */
+.social-invite-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.16), rgba(245, 158, 11, 0.06) 72%);
+  border: 1px solid rgba(139, 92, 246, 0.34);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+.social-invite-btn:active { transform: scale(0.99); }
+.social-invite-ic { font-size: 17px; flex: none; line-height: 1; }
+.social-invite-txt { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.social-invite-txt b {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffd68a;
+}
+.social-invite-txt span {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+.social-invite-chev { color: rgba(245, 158, 11, 0.7); font-size: 18px; flex: none; line-height: 1; }
+
 /* ── Friend row layout (flex for avatar | main | actions) ── */
 .social-row {
   display: flex;
