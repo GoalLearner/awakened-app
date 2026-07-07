@@ -14402,6 +14402,11 @@ body.bfs-locked { overflow: hidden; }
   color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
+/* W593 — completion readout ("· 32% Complete") appended to the count line. */
+.pokedex-pct {
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
 .pokedex-progress-bar {
   width: 100%;
   max-width: 280px;
