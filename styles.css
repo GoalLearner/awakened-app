@@ -12683,9 +12683,12 @@ footer {
   justify-content: center;
   /* Symmetric horizontal padding so the centered name has room for
      the absolute-positioned rank pill on the left without colliding.
-     32px ≈ pill width (22) + left inset (6) + breathing room. */
-  padding: 6px 32px;
-  min-height: 30px;
+     30px ≈ pill width (22) + left inset (6) + breathing room. */
+  padding: 6px 30px;
+  /* W588 — room for a two-line boss name (see .bcard-name). Longer names
+     (THE DREAM TYRANT, THE FURNACE KNIGHT, THE SUNDERED CHOIR) wrap instead
+     of truncating; short ones still center on one line. */
+  min-height: 42px;
   background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid rgba(245, 158, 11, 0.10);
 }
@@ -12706,14 +12709,19 @@ footer {
 .bcard-name {
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
   color: var(--gold);
   text-align: center;
-  /* Truncate per CARDS.md if name overflows. */
-  white-space: nowrap;
+  line-height: 1.1;
+  /* W588 — wrap to two lines instead of truncating with an ellipsis. Long
+     boss names were clipping ("THE DREAM T…"); the relic archive already uses
+     this exact 2-line clamp, so cards read consistently. Names longer than two
+     lines still ellipsize gracefully. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
