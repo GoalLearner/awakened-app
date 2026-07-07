@@ -4208,7 +4208,7 @@ footer {
 .cd-stats-grid--six {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: var(--sp-2); /* W595 — 8px, tokenized */
 }
 .cd-stats-grid--six .cd-stat-tile {
   flex-direction: column;
@@ -5242,7 +5242,7 @@ footer {
 .osrs-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: var(--sp-2); /* W595 — was 6px; aligns with the app's other 3-col stat grids (cd-stats/custom-stat/hi-stats all 8px) */
   margin-bottom: 4px;
 }
 
@@ -7913,7 +7913,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 4px;
+  padding: var(--sp-4) var(--sp-5) var(--sp-1); /* W595 — 16/20/4px, tokenized */
 }
 
 .settings-title {
@@ -10287,7 +10287,7 @@ footer {
 .custom-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: var(--sp-2); /* W595 — 8px, tokenized */
   margin-bottom: 14px;
 }
 .custom-stat-btn {
@@ -10589,7 +10589,7 @@ footer {
 .hi-stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: var(--sp-2); /* W595 — 8px, tokenized */
   margin-top: 4px;
 }
 .hi-stat-cell {
@@ -12425,7 +12425,7 @@ footer {
 .gate-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: var(--sp-3); /* W595 — 12px, tokenized */
   width: 96%;
   max-width: 600px;
   margin: 14px auto 24px;
@@ -12695,7 +12695,7 @@ footer {
 .bosses-list--cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--sp-3); /* W595 — 12px, tokenized */
 }
 
 .bcard {
@@ -23134,7 +23134,7 @@ button.guildhall-summary-tile:active {
 .guildhall-section-title {
   margin-top: 2px;
   font-family: 'Cinzel', serif;
-  font-weight: 600;
+  font-weight: 700; /* W595 — was 600; brings the lone light Cinzel heading in line with the app-wide 700 serif titles */
   font-size: 1rem;
   letter-spacing: 0.03em;
   color: var(--text-primary);
