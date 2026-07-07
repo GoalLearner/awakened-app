@@ -291,12 +291,16 @@ echo "── [8/9] Sign in with Apple entitlement ──"
 /usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin:0 string 'Default'" "$ENTITLEMENTS" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :com.apple.developer.applesignin:0 'Default'" "$ENTITLEMENTS"
 echo "  applesignin entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS" | tr -d '\n')"
-# W607 — aps-environment (Push) entitlement REMOVED from the build (was W604).
-# Adding it forced Xcode to regenerate the provisioning profile, which cascaded
-# into the signing failures on build 387. The push CLIENT + deployed backend
-# stay in place (dormant, harmless without this entitlement); re-add this line
-# in a dedicated session once the App Store profile is regenerated WITH Push and
-# the local signing identity is sorted. See memory: awakened-push-notifications.
+# ── Push Notifications (APNs) entitlement ───────────────────────────
+# W604 added this; W607 reverted it to ship 387 (adding the capability had
+# forced an Apple-side profile regen that broke signing). W610 RESTORES it:
+# the "Awakened App Store Manual" profile is now push-enabled (tied to the
+# Jun-10-2027 / LK8FVGBQPL distribution cert) and installed on the Mac, so a
+# MANUAL-signed Archive resolves cleanly. 'production' is the correct
+# aps-environment for App Store + TestFlight. See memory: awakened-push-notifications.
+/usr/libexec/PlistBuddy -c "Add :aps-environment string production" "$ENTITLEMENTS" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENTITLEMENTS"
+echo "  aps-environment entitlement: $(/usr/libexec/PlistBuddy -c "Print :aps-environment" "$ENTITLEMENTS" | tr -d '\n')"
 echo ""
 
 # ── 8b. iOS AppIcon patch (Phase 1z.109) ────────────────────────────

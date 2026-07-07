@@ -4,6 +4,39 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 ---
 
+## BUILD & SHIP PIPELINE (READ THIS FIRST — canonical, corrected 2026-07-07)
+
+**No Codemagic.** iOS builds do NOT go through Codemagic. `codemagic.yaml` is dormant/unused — ignore it for build guidance. (The historical per-change "Process note" boilerplate below that lists "…/Codemagic/archive/upload" is legacy log text, not current process.)
+
+**Two-machine setup.**
+- **Windows desktop** — where Claude Code runs, the repo is edited, and commits are pushed to GitHub (`GoalLearner/awakened-app`). iOS CANNOT be built here.
+- **MacBook** — where the owner pulls, runs the Terminal prep command, and Archives → uploads to App Store Connect via Xcode. Repo path on the Mac: `/Volumes/AwakenedDev/repos/awakened-app`.
+- **Ship flow:** Claude (Windows) commits + pushes → owner pulls on the MacBook → owner runs `git pull; npm install; bash scripts/prep-local-build.sh <BUILD#>; npx cap open ios` → owner Archives in Xcode → uploads. `APP_VERSION` (app.js) drives MARKETING_VERSION (prep forces it in); the `<BUILD#>` arg is CFBundleVersion.
+
+**Code signing (MANUAL, on the MacBook).**
+- Three Apple Distribution certs exist on developer.apple.com (expiring Apr 29 / May 19 / **Jun 10 2027**), but **only the Jun-10-2027 cert (team `LK8FVGBQPL`) has its private key on the MacBook** — it is the ONLY cert that can sign/Archive.
+- Any provisioning profile used MUST be tied to the Jun-10-2027 (LK8FVGBQPL) cert, or Xcode fails with *"doesn't include signing certificate."*
+- Working profile: **"Awakened App Store Manual"** (App Store type, tied to LK8FVGBQPL; includes HealthKit + In-App Purchase + Push Notifications + Sign In with Apple).
+- Xcode uses **manual signing** (NOT automatic): that profile + the LK8FVGBQPL cert. Bundle id: `com.goallearner.awakened`.
+- The "regenerate profile / re-upload to Codemagic" step from older guidance is WRONG — the equivalent for this setup is selecting the correct profile + cert in Xcode on the MacBook.
+
+**Adding ANY iOS capability (push, etc.) — browser-first, or it breaks.** Adding a capability to the App ID invalidates existing profiles, forcing Xcode to regenerate them by CALLING APPLE. If Apple's signing service is slow/unreachable ("Communication with Apple failed") this blocks the build and cascades into misleading "no devices / no profiles / no certificate" errors. **Correct order:**
+1. Enable the capability on the App ID (developer.apple.com).
+2. Regenerate the provisioning profile WITH the new capability, tied to the LK8FVGBQPL cert, in the browser → download → double-click to install on the MacBook.
+3. THEN add the capability in Xcode — it finds the already-valid matching profile and does NOT call Apple.
+- If "Communication with Apple failed" persists it's environmental (hung signing daemon): a **full Mac reboot** fixes it (not more toggling); these transient Apple issues also often clear overnight.
+
+**Device registration.** Richie's iPhone (iPhone 14 Pro Max) is registered in Xcode Devices. The "no devices" error only blocks DEVELOPMENT signing — IRRELEVANT for Archive/distribution (needs no registered device).
+
+**Dependency lockfile discipline.** Any `package.json` dep change MUST be followed by `npm install` and the resulting `package-lock.json` committed in the SAME change — CI's `npm ci` fails on drift (dies at "Install dependencies" with a generic exit 1 + no per-test annotation; passes locally because node_modules already exists). This bit build 387 (W604 added `@capacitor/push-notifications` without syncing the lock → W608 fixed).
+
+**Push notifications backend (DEPLOYED — do NOT redo).**
+- Migration 0029 (`device_tokens`) applied to remote D1. Worker deployed with the APNs sender (`backend/src/lib/apns.ts`, ES256 via `jose`), 4 triggers (friend request/accept, co-op invite/join).
+- Cloudflare secrets set: `APNS_AUTH_KEY` (secret) + `APNS_KEY_ID` (plaintext `462R922K4F`); `keep_vars = true` in wrangler.toml so they survive deploys. The `.p8` key + Key ID are valid and loaded — do NOT regenerate.
+- Push stays dormant until a build ships WITH the `aps-environment` entitlement — `prep-local-build.sh` writes `aps-environment = production` (W610), first shipped in build 388.
+
+---
+
 ## Jun 4, 2026 — 1z.279 Duels/PvP subsystem permanently retired (READ THIS FIRST)
 
 **TL;DR.** The entire Duels/PvP subsystem has been permanently retired. Anywhere CLAUDE.md history below refers to "Discipline Duels v1," "Steps Duel Scoring," "Verified Duel Scoring Engine," `DUELS_UI_HIDDEN`, `renderDuelsSection`, `submitVerifiedEventsForDuels`, `Auth.fetchDuels`, etc. — **that code is gone**. The historical entries are preserved as record but no longer reflect the current state.
