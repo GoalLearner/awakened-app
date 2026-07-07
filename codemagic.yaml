@@ -704,16 +704,9 @@ workflows:
           /usr/libexec/PlistBuddy -c "Set :com.apple.developer.applesignin:0 'Default'" "$ENTITLEMENTS"
           echo "Sign in with Apple entitlement set."
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS"
-          # W603/W604 — Push Notifications (APNs). aps-environment is a single
-          # string; 'production' is correct for TestFlight + App Store builds
-          # (the sandbox value is only for Xcode debug installs). Requires the
-          # App ID to have Push Notifications enabled + the provisioning profile
-          # regenerated to carry it (portal + Codemagic re-upload) — see the
-          # profile note at the top of this file (lines 48-52).
-          /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "$ENTITLEMENTS" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENTITLEMENTS"
-          echo "Push (aps-environment) entitlement set."
-          /usr/libexec/PlistBuddy -c "Print :aps-environment" "$ENTITLEMENTS"
+          # W607 — aps-environment (Push) entitlement REMOVED (was W604). It forced
+          # a provisioning-profile regen that broke signing on build 387. Re-add in
+          # a dedicated push session once the profile is regenerated with Push.
 
       - name: Wire entitlements file into Xcode project
         script: |
