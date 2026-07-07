@@ -14917,6 +14917,15 @@ body.bfs-locked { overflow: hidden; }
 .pdx-seg-btn--magic[data-active="1"]  { color: #a9cbff; background: rgba(59,130,246,0.16); }
 .pdx-sortbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; background: rgba(16,16,38,0.7); border: 1px solid rgba(124,108,200,0.16); border-radius: 11px; padding: 7px 11px; cursor: pointer; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: #8a8aa8; text-transform: uppercase; }
 .pdx-sortbtn.is-on { color: #f5b842; border-color: rgba(245,184,66,0.4); background: rgba(245,184,66,0.08); }
+/* W616 — "Rewards" (Drop History) chip in the filter row. margin-left:auto here
+   AND on .pdx-sortbtn splits the free space evenly → this sits centered between
+   the archetype segment and the PWR sort. Gold-accented (matches the reward tone). */
+.pdx-rewardsbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.34); border-radius: 11px;
+  padding: 7px 11px; cursor: pointer; font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 1px; color: #f5b842; text-transform: uppercase;
+  -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+.pdx-rewardsbtn:active { transform: scale(0.97); }
 .pdx-hint { padding: 0 2px 12px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8.5px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.5; color: #5a5a76; }
 .pdx-hint b { color: #8a8aa8; font-weight: 700; }
 /* art footer on each card: class chip + PWR */

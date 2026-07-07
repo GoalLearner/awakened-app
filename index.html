@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=548">
+  <link rel="stylesheet" href="styles.css?v=549">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -878,11 +878,9 @@
           <div class="pokedex-title-row">
             <div class="pokedex-title">RELIC ARCHIVE</div>
             <span id="archive-new-count" class="archive-new-count hidden" aria-live="polite">0 NEW</span>
-            <!-- W611 — always-visible entry to the Rewards / Drop History sheet so a
-                 drop whose reveal pop-up misfired is never lost (Rendell's red flag). -->
-            <button id="drop-history-btn" type="button" class="archive-drophist-btn" aria-label="Open reward drop history">
-              <span aria-hidden="true">⏱</span> Rewards
-            </button>
+            <!-- W616 — the "Rewards" (Drop History) entry moved to the filter/sort
+                 row (between the archetype pills and PWR); see _pokedexFilterBarHtml.
+                 The "N NEW" pill here stays tappable → Drop History. -->
           </div>
           <div class="pokedex-count">DISCOVERED <span id="pokedex-discovered">0</span> / <span id="pokedex-total">9</span><span id="pokedex-pct" class="pokedex-pct"></span></div>
           <div class="pokedex-progress-bar">
@@ -3198,7 +3196,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1037"></script>
+  <script src="app.js?v=1038"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
