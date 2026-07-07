@@ -455,6 +455,18 @@ h1 {
 .fvp-spark { flex: none; color: var(--gold, #f5b842); font-size: 1.05rem; }
 .fvp-text { flex: 1; font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--text-secondary, #cbd0e0); }
 .fvp-text b { color: var(--gold, #f5b842); font-weight: 800; }
+/* W598 — dungeon tease reuses the first-vow shell but is TAPPABLE and crimson-
+   keyed (the Dungeon reads as danger), distinct from the gold vow pointer. */
+.dungeon-tease-pointer {
+  cursor: pointer;
+  border-color: rgba(220, 38, 38, 0.38);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.13), rgba(220, 38, 38, 0.03));
+  animation: none;
+  box-shadow: 0 0 18px rgba(220, 38, 38, 0.12);
+}
+.dungeon-tease-pointer .fvp-spark,
+.dungeon-tease-pointer .fvp-text b { color: #f0776b; }
+.dungeon-tease-pointer:active { transform: scale(0.995); }
 .fvp-x {
   flex: none; width: 24px; height: 24px; border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
@@ -26491,6 +26503,26 @@ button.guildhall-summary-tile:active {
   color: var(--text-secondary);
 }
 .social-invite-chev { color: rgba(245, 158, 11, 0.7); font-size: 18px; flex: none; line-height: 1; }
+/* W598 — invite CTA inside the empty friends state (new-user discoverability). */
+.social-empty-invite {
+  margin: 12px auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  -webkit-tap-highlight-color: transparent;
+}
+.social-empty-invite:active { transform: scale(0.98); }
 
 /* ── Friend row layout (flex for avatar | main | actions) ── */
 .social-row {
