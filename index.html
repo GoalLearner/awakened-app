@@ -1056,6 +1056,15 @@
                    placeholder="find a hunter…" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
             <button id="social-friend-send" class="social-btn social-btn--primary" type="button">＋ ADD FRIEND</button>
           </div>
+          <!-- W596/W598 (fix) — invite a hunter who isn't in the app yet. This
+               is the LIVE friends markup (#social-panel); the delegated
+               [data-guild-invite] handler → _guildInviteShare. Sits as a
+               full-width row below the add form. -->
+          <button class="social-invite-btn" type="button" data-guild-invite="1">
+            <span class="social-invite-ic" aria-hidden="true">🔗</span>
+            <span class="social-invite-txt"><b>Invite a hunter</b><span>Send your name so a friend can add you</span></span>
+            <span class="social-invite-chev" aria-hidden="true">›</span>
+          </button>
         </div>
       </section>
 
@@ -3157,7 +3166,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1027"></script>
+  <script src="app.js?v=1028"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
