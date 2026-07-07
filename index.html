@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=538">
+  <link rel="stylesheet" href="styles.css?v=539">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1846,34 +1846,44 @@
   <div id="equipment-overlay" class="equipment-overlay hidden"></div>
   <div id="equipment-modal" class="equipment-modal hidden" role="dialog" aria-labelledby="equipment-modal-title">
     <button id="equipment-close" class="equipment-close" type="button" aria-label="Close">✕</button>
-    <div class="equipment-modal-header">
-      <h2 id="equipment-modal-title" class="equipment-modal-title">ARMORY</h2>
-      <p class="equipment-modal-sub">Equip gear. Shape your hunter build.</p>
-    </div>
+    <!-- W592 — Armory redesign (ClaudeDesign handoff 11). #equipment-close (✕)
+         above stays the close affordance; gear-power pill sits in the header. -->
+    <header class="armory-head">
+      <div class="head-row">
+        <div class="gear-power">
+          <span class="gp-n" id="armory-gear-power">0</span>
+          <span class="gp-l">Gear<br>Power</span>
+        </div>
+      </div>
+      <h2 id="equipment-modal-title" class="armory-title">ARMORY</h2>
+      <p class="armory-sub">Equip gear. Shape your hunter build.</p>
+    </header>
 
-    <!-- EQUIPMENT BUILD — 6-slot 3×2 typed grid (helm / weapon /
-         plate / gloves / boots / ring). Populated by renderHunterBuild() -->
-    <section class="hunter-build-section">
-      <h3 class="hunter-build-section-label">EQUIPMENT BUILD</h3>
-      <div id="hunter-build-grid" class="hunter-build-grid"></div>
+    <!-- EQUIPMENT BUILD — 8-slot 2-col gear grid. Populated by renderHunterBuild(). -->
+    <section class="aw-section">
+      <div class="aw-section-head">
+        <span class="aw-eyebrow">Equipment Build</span>
+        <span class="aw-meta" id="armory-build-meta"><b>0</b> / 8 Equipped</span>
+      </div>
+      <div id="hunter-build-grid" class="build-grid"></div>
     </section>
 
-    <!-- v3 Phase 1z.212 — BUILD SUMMARY section removed per
-         product direction. Gear Power / Dominant Path / Equipped
-         count are no longer surfaced here; EQUIPMENT BONUSES
-         carries the entire build-state read-out now.
-         renderHunterBuildSummary() survives as the chain trigger
-         for renderHunterBuildBonuses() — it early-returns
-         silently when the summary DOM container is absent. -->
-
-    <!-- v3 Phase 1z.211 — EQUIPMENT BONUSES. Read-only aggregation
-         of structured stat bonuses (str/vit/int/focus/will/wlt)
-         from currently equipped CARDS. Populated by
-         renderHunterBuildBonuses() which is chained off
-         renderHunterBuildSummary(). -->
-    <section class="hunter-build-section hunter-build-section--bonuses">
-      <h3 class="hunter-build-section-label">EQUIPMENT BONUSES</h3>
+    <!-- EQUIPMENT BONUSES — aggregated stat totals. renderHunterBuildBonuses(). -->
+    <section class="aw-section">
+      <div class="aw-section-head">
+        <span class="aw-eyebrow">Equipment Bonuses</span>
+        <span class="aw-meta">Aggregated from gear</span>
+      </div>
       <div id="hunter-build-bonuses" class="hunter-build-bonuses"></div>
+    </section>
+
+    <!-- SET BONUSES — its own section now (was appended inside bonuses). -->
+    <section class="aw-section" id="armory-sets-section">
+      <div class="aw-section-head">
+        <span class="aw-eyebrow">Set Bonuses</span>
+        <span class="aw-meta" id="armory-set-meta">No active set</span>
+      </div>
+      <div id="hunter-build-sets" class="hunter-build-sets"></div>
     </section>
 
     <p class="equipment-modal-footer">Your gear reflects the discipline you have earned.</p>
@@ -3147,7 +3157,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1021"></script>
+  <script src="app.js?v=1022"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

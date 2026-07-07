@@ -32637,3 +32637,125 @@ button.guildhall-summary-tile:active {
 .cph-aa-chk{ width:20px; height:20px; flex:none; border-radius:50%; background:rgba(4,18,15,.16); display:flex; align-items:center; justify-content:center; color:#04120f; }
 .cph-aa-cnt{ min-width:21px; height:21px; padding:0 6px; border-radius:11px; background:rgba(4,18,15,.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; letter-spacing:0; }
 @media (prefers-reduced-motion:reduce){ .cph-time.crit{ animation:none; } }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   W592 — ARMORY redesign (ClaudeDesign handoff 11). Ported from the mockup;
+   frame chrome stripped, generic .section namespaced to .aw-section. Shares
+   the .aw-card recipe with the Relic Archive (ported next). Tokens below are
+   additive (new names, no collisions) — shared by both screens.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --serif:"Cinzel",Georgia,serif;
+  --flavor:"Cormorant Garamond",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --sans:-apple-system,"SF Pro Display",system-ui,sans-serif;
+  --stat-str:#ef4444; --stat-vit:#22c55e; --stat-int:#3b82f6;
+  --stat-focus:#9ca3af; --stat-will:#f97316; --stat-wlt:#a78bfa;
+  --r-common:#8e8e93; --r-rare:#8b5cf6; --r-ultra:#f59e0b; --r-mega:#22d3ee;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:26px; --sp-7:34px;
+}
+
+/* ── Armory header: gear-power pill + gold title + flavour sub ──────────── */
+.armory-head{padding-top:var(--sp-3);}
+.armory-head .head-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);}
+.armory-head .gear-power{display:flex;align-items:center;gap:var(--sp-2);padding:7px 12px;border-radius:999px;
+  background:var(--gold-glow);border:1px solid rgba(245,158,11,.35);}
+.armory-head .gear-power .gp-n{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;}
+.armory-head .gear-power .gp-l{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.2;}
+.armory-title{font-family:var(--serif);font-size:27px;font-weight:800;letter-spacing:2px;line-height:1;margin:var(--sp-4) 0 0;
+  background:linear-gradient(180deg,#ffe6a8,var(--gold) 62%,#c17d0c);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.armory-sub{font-family:var(--flavor);font-style:italic;font-size:15px;font-weight:500;color:var(--text-secondary);letter-spacing:.2px;margin:var(--sp-2) 0 0;}
+
+/* ── consistent section rhythm: mono eyebrow left · quiet meta right ─────── */
+.aw-section{margin-top:var(--sp-6);}
+.aw-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3);}
+.aw-eyebrow{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:2.2px;color:var(--text-secondary);text-transform:uppercase;}
+.aw-meta{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
+.aw-meta b{color:var(--text-secondary);font-weight:800;}
+
+/* ── STANDARDIZED CARD RECIPE (.aw-card) — shared with Relic Archive ─────── */
+.aw-card{border-radius:var(--radius-sm);background:var(--bg-card);border:1px solid var(--border);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;
+  /* W592 — .aw-card renders as a <button> in the Armory; strip native button
+     chrome so iOS WKWebView doesn't paint its own gradient/padding over ours. */
+  -webkit-appearance:none;appearance:none;padding:0;margin:0;width:100%;
+  text-align:left;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.aw-card--equipped{border-color:rgba(245,158,11,.55);box-shadow:0 0 0 1px rgba(245,158,11,.12),0 6px 20px rgba(245,158,11,.10);}
+.aw-card--empty{border-style:dashed;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.015);cursor:pointer;}
+.aw-card--r-ultra{border-color:rgba(245,158,11,.40);box-shadow:0 0 0 1px rgba(245,158,11,.07),0 6px 18px rgba(245,158,11,.07);}
+.aw-card--r-mega{border-color:rgba(34,211,238,.40);box-shadow:0 0 0 1px rgba(34,211,238,.07),0 6px 18px rgba(34,211,238,.07);}
+.aw-card--r-rare{border-color:rgba(139,92,246,.34);}
+.aw-card--r-common{border-color:var(--border);}
+.aw-card__art{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;
+  background:
+    radial-gradient(72% 60% at 50% 34%, var(--glow,rgba(139,92,246,.22)), rgba(19,19,42,0) 72%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, rgba(255,255,255,0) 2px 9px),
+    linear-gradient(160deg,#26264d,#161636);
+  display:flex;align-items:center;justify-content:center;}
+.aw-card__art>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.aw-card__glyph{width:40px;height:40px;opacity:.55;filter:drop-shadow(0 0 8px var(--glow,transparent));}
+.aw-card__banner{position:absolute;top:0;left:0;right:0;z-index:3;height:24px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 8px;
+  background:linear-gradient(180deg,rgba(9,9,20,.82),rgba(9,9,20,0));}
+.aw-card__id{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1px;color:#d6d8ea;text-transform:uppercase;
+  display:flex;align-items:center;gap:4px;}
+.aw-card__pwr{display:flex;align-items:baseline;gap:3px;}
+.aw-card__pwr .pn{font-family:var(--mono);font-size:14px;font-weight:800;line-height:1;color:var(--text-primary);text-shadow:0 1px 4px rgba(0,0,0,.7);}
+.aw-card__pwr .pl{font-family:var(--mono);font-size:7px;font-weight:800;letter-spacing:1px;color:rgba(255,255,255,.62);}
+.aw-card__body{padding:var(--sp-3) 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1;}
+.aw-card__name{font-family:var(--sans);font-size:12.5px;font-weight:700;line-height:1.16;color:var(--text-primary);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.32em;}
+.aw-card__rarity{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--pc,var(--text-secondary));}
+.aw-card__empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;}
+.aw-card__empty .plus{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--text-tertiary);color:var(--text-secondary);
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:300;line-height:1;}
+.aw-card__empty .e1{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1.6px;color:var(--text-secondary);text-transform:uppercase;}
+.aw-card__empty .e2{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
+
+/* ── Equipment Build grid: 2 columns ────────────────────────────────────── */
+.build-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);}
+
+/* ── EQUIPMENT BONUSES — the "Sigil Grid" (5 stats + gold TOTAL) ─────────── */
+.bonus-panel{border-radius:var(--radius);background:var(--bg-raised);border:1px solid var(--border);
+  padding:var(--sp-4);display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);}
+.bonus-chip{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;
+  background:linear-gradient(180deg,var(--sc-tint),transparent);border:1px solid var(--sc-line);}
+.bonus-chip .glyph{width:30px;height:30px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:var(--sc-tint);border:1px solid var(--sc-line);}
+.bonus-chip .glyph svg{width:16px;height:16px;display:block;}
+.bonus-chip .bv{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--sc);line-height:1;font-variant-numeric:tabular-nums;}
+.bonus-chip .bl{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;margin-top:5px;}
+.bonus-chip--str  {--sc:var(--stat-str);  --sc-tint:rgba(239,68,68,.10); --sc-line:rgba(239,68,68,.30);}
+.bonus-chip--vit  {--sc:var(--stat-vit);  --sc-tint:rgba(34,197,94,.10); --sc-line:rgba(34,197,94,.30);}
+.bonus-chip--int  {--sc:var(--stat-int);  --sc-tint:rgba(59,130,246,.10);--sc-line:rgba(59,130,246,.30);}
+.bonus-chip--focus{--sc:var(--stat-focus);--sc-tint:rgba(156,163,175,.10);--sc-line:rgba(156,163,175,.30);}
+.bonus-chip--will {--sc:var(--stat-will); --sc-tint:rgba(249,115,22,.10);--sc-line:rgba(249,115,22,.30);}
+.bonus-chip--wlt  {--sc:var(--stat-wlt);  --sc-tint:rgba(167,139,250,.10);--sc-line:rgba(167,139,250,.30);}
+.bonus-chip.total {--sc:var(--gold);--sc-tint:rgba(245,158,11,.14);--sc-line:rgba(245,158,11,.5);}
+.bonus-chip.total .bv{text-shadow:0 0 10px var(--gold-glow);}
+.bonus-panel .hbb-empty{grid-column:1/-1;font-family:var(--mono);font-size:11px;letter-spacing:.4px;color:var(--text-secondary);text-align:center;padding:6px 0;}
+
+/* ── SET BONUSES — one calm violet-keyed panel per active set ────────────── */
+.set-panel{border-radius:var(--radius);background:var(--bg-raised);border:1px solid rgba(139,92,246,.30);padding:var(--sp-4);}
+.set-panel + .set-panel{margin-top:var(--sp-3);}
+.set-top{display:flex;align-items:center;gap:11px;}
+.set-crest{width:38px;height:38px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,var(--accent-glow),rgba(139,92,246,.05));border:1px solid rgba(139,92,246,.4);color:#c4b5fd;}
+.set-crest svg{width:20px;height:20px;display:block;}
+.set-idwrap{flex:1;min-width:0;}
+.set-name{font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:1.2px;color:var(--text-primary);text-transform:uppercase;line-height:1;}
+.set-tagline{font-family:var(--flavor);font-style:italic;font-size:13px;color:var(--text-secondary);margin-top:4px;}
+.set-frac{font-family:var(--mono);font-size:13px;font-weight:800;color:#c4b5fd;flex:none;}
+.set-frac span{color:var(--text-tertiary);}
+.set-track{margin-top:var(--sp-3);height:5px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;}
+.set-track i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#7c5cf0,var(--accent));box-shadow:0 0 10px var(--accent-glow);}
+.set-bonuses{margin-top:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2);}
+.set-line{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:11px;background:rgba(255,255,255,.02);border:1px solid var(--border);}
+.set-line.locked{opacity:.42;}
+.set-line .pc{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1px;color:var(--accent);flex:none;width:30px;text-transform:uppercase;}
+.set-line.locked .pc{color:var(--text-secondary);}
+.set-line .desc{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text-primary);line-height:1.3;flex:1;}
+.set-line.locked .desc{color:var(--text-secondary);}
+.set-line .lock{flex:none;color:var(--text-tertiary);}
+.set-line .lock svg{width:13px;height:13px;display:block;}
+.set-empty{font-family:var(--mono);font-size:11px;letter-spacing:.4px;color:var(--text-secondary);padding:2px 0;}
