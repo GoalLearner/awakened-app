@@ -122,6 +122,10 @@ async function sendOne(
     } catch {
       /* body not JSON */
     }
+    // W613 — keep ONE minimal failure log (no token/secrets). The 2-day push
+    // hunt happened partly because the send path was silent; a status+reason
+    // line surfaces a bad key/topic/env without redeploying diagnostics.
+    console.log('[APNS] send failed', { status: res.status, reason });
     const prune = res.status === 410 || reason === 'BadDeviceToken' || reason === 'Unregistered';
     return { ok: false, prune };
   } catch {
