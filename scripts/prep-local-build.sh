@@ -313,6 +313,41 @@ echo "── [8b] iOS AppIcon patch ──"
 bash "$SCRIPT_DIR/patch-ios-app-icon.sh"
 echo ""
 
+# ── 8c. Push Notifications AppDelegate forwarding (W613) ─────────────
+# THE build-388 push bug: @capacitor/push-notifications does NOT auto-wire the
+# APNs device-token callback. register() gets a token from APNs, but iOS hands
+# it to AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken — and the
+# stock Capacitor AppDelegate.swift doesn't forward it to the plugin, so the JS
+# 'registration' event never fires and no token is ever uploaded (device_tokens
+# stayed empty). `cap sync` never adds these, so inject them idempotently as an
+# AppDelegate extension. See memory: awakened-push-notifications.
+echo "── [8c] Push AppDelegate forwarding ──"
+APPDELEGATE="ios/App/App/AppDelegate.swift"
+if [ -f "$APPDELEGATE" ]; then
+  if grep -q "didRegisterForRemoteNotificationsWithDeviceToken" "$APPDELEGATE"; then
+    echo "  AppDelegate push-forwarding: already present ✓"
+  else
+    cat >> "$APPDELEGATE" <<'SWIFT'
+
+// W613 — forward the APNs device token to @capacitor/push-notifications.
+// Required manual step (cap sync does not add it); without it register()
+// never delivers the token to the JS 'registration' listener → no push.
+extension AppDelegate {
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+}
+SWIFT
+    echo "  AppDelegate push-forwarding: injected ✓"
+  fi
+else
+  echo "  ⚠ AppDelegate.swift not found at $APPDELEGATE — push forwarding NOT applied"
+fi
+echo ""
+
 # ── 9. Wire CODE_SIGN_ENTITLEMENTS into Xcode project ───────────────
 echo "── [9/9] Wire CODE_SIGN_ENTITLEMENTS into project.pbxproj ──"
 (cd ios/App && ruby -e "
