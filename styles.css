@@ -12714,16 +12714,19 @@ footer {
   color: var(--gold);
   text-align: center;
   line-height: 1.1;
-  /* W588 — wrap to two lines instead of truncating with an ellipsis. Long
-     boss names were clipping ("THE DREAM T…"); the relic archive already uses
-     this exact 2-line clamp, so cards read consistently. Names longer than two
-     lines still ellipsize gracefully. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  /* W589 — two-line boss name that never truncates. A block (not -webkit-box)
+     so JS can measure scrollHeight and shrink the font to fit exactly two lines
+     (_fitBossNames). max-height clips to ~2 lines as the no-JS fallback. The
+     length buckets below give a good CSS-only starting size (and cut the JS
+     shrink work / first-paint flash); JS then refines to a pixel-perfect fit. */
+  display: block;
+  white-space: normal;
   overflow: hidden;
+  max-height: 2.42em;
   max-width: 100%;
 }
+.bcard-name--long  { font-size: 0.67rem; }               /* 18-21 chars */
+.bcard-name--xlong { font-size: 0.59rem; letter-spacing: 0.01em; }  /* 22+ chars */
 
 /* ── Region b: Art window (~45%) ─────────────────────────────── */
 .bcard-art {
