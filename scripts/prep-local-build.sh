@@ -291,6 +291,13 @@ echo "── [8/9] Sign in with Apple entitlement ──"
 /usr/libexec/PlistBuddy -c "Add :com.apple.developer.applesignin:0 string 'Default'" "$ENTITLEMENTS" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :com.apple.developer.applesignin:0 'Default'" "$ENTITLEMENTS"
 echo "  applesignin entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin" "$ENTITLEMENTS" | tr -d '\n')"
+# W603/W604 — Push Notifications (APNs). 'production' aps-environment is correct
+# for TestFlight/App Store; needs the App ID's Push capability + a regenerated
+# provisioning profile (portal). For an Xcode DEBUG run on a device you'd set
+# 'development' instead, but the shipped builds are production.
+/usr/libexec/PlistBuddy -c "Add :aps-environment string production" "$ENTITLEMENTS" 2>/dev/null || \
+/usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENTITLEMENTS"
+echo "  aps-environment entitlement: $(/usr/libexec/PlistBuddy -c "Print :aps-environment" "$ENTITLEMENTS" | tr -d '\n')"
 echo ""
 
 # ── 8b. iOS AppIcon patch (Phase 1z.109) ────────────────────────────

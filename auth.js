@@ -1338,6 +1338,21 @@
   function declineFriendRequest(friendshipId)   { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/decline'); }
   function removeFriend(friendshipId)           { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/remove'); }
 
+  // W603/W604 — push notifications. Register this device's APNs token so the
+  // backend can push a friend-request / co-op-invite the moment it happens
+  // (app closed). environment: 'production' for TestFlight/App Store builds,
+  // 'sandbox' for Xcode debug. No-ops (returns a gate) when not signed in.
+  function registerPushToken(token, environment) {
+    return _authedFetch('POST', '/v1/users/me/device-token', {
+      token: token,
+      platform: 'ios',
+      environment: environment === 'sandbox' ? 'sandbox' : 'production',
+    });
+  }
+  function unregisterPushToken(token) {
+    return _authedFetch('DELETE', '/v1/users/me/device-token', { token: token });
+  }
+
   // v3 Phase 1z.279 — Sole surviving duel-named auth helper. Used
   // by app.js _drainVerifiedEventOutbox to flush any pre-retirement
   // queued events on upgraded devices. The backend POST
@@ -1534,6 +1549,9 @@
     acceptFriendRequest,
     declineFriendRequest,
     removeFriend,
+    // Push notifications (W603/W604) — device-token register/unregister.
+    registerPushToken,
+    unregisterPushToken,
     // v3 Phase 1z.279 — legacy outbox drain target (sole surviving
     // duel-named helper; the 9 other duel API wrappers were removed
     // along with the Duels subsystem).
