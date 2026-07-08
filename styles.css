@@ -30050,8 +30050,14 @@ button.guildhall-summary-tile:active {
   background: #14122c; border: 2px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
 .wd-tile.is-equipped .wd-tile-av { border-color: #f5b842; box-shadow: 0 0 12px rgba(245,184,66,0.4); }
 .wd-tile-av img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
-.wd-tile-name { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.6px; color: #c8c6d8; }
+.wd-tile-name { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.6px; color: #c8c6d8; text-align: center; line-height: 1.25; }
 .wd-tile.is-equipped .wd-tile-name { color: #f5b842; }
+/* W629 — two-line names ("Stardust Sovereign", "The Verdant Oracle") rendered
+   left-ragged and pushed the rarity label out of line with neighbors: the span
+   box centers but its wrapped text lines keep the default left alignment, and
+   1-line tiles sat a row shorter. Center the text and reserve a constant
+   2-line box on shop tiles so every rarity label starts at the same height. */
+.wd-tile--premium .wd-tile-name { min-height: 23px; display: flex; align-items: center; justify-content: center; }
 .wd-tile-badge { position: absolute; top: 6px; right: 6px; font-family: "JetBrains Mono", monospace; font-size: 6.5px; font-weight: 800; letter-spacing: 0.8px; color: #07070f; background: #5eead4; border-radius: 5px; padding: 2px 5px; }
 .wd-tile-tick { position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: #f5b842; color: #07070f; font-size: 11px; line-height: 16px; text-align: center; font-weight: 800; }
 /* paid-shop teaser (Layer 2 lands here) */
