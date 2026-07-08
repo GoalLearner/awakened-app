@@ -1447,6 +1447,31 @@
       return { ok: false, code: 'ERROR', detail: msg };
     }
   }
+  // W625 — batch localized price lookup for the shop tiles. Returns
+  // { ok, prices: { <productId>: '<localizedPriceString>' } } — e.g.
+  // { 'com.goallearner.awakened.skin.stardust.sovereign': '$4.99' }. Uses the
+  // SAME getProducts call as purchaseSkin, so a product that resolves here is
+  // guaranteed purchasable. Shows the STORE's price (region/currency-correct) —
+  // never a hardcoded value. Gated on iapAvailable so it no-ops while dormant;
+  // never throws.
+  async function getProductPrices(productIds) {
+    if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
+    if (!Array.isArray(productIds) || !productIds.length) return { ok: true, prices: {} };
+    const cfg = await configurePurchases();
+    if (!cfg.ok) return cfg;
+    const rc = _rcPlugin();
+    try {
+      const got = await rc.getProducts({ productIdentifiers: productIds, type: 'NON_SUBSCRIPTION' });
+      const list = (got && got.products) || [];
+      const prices = {};
+      for (const p of list) {
+        if (p && p.identifier && p.priceString) prices[p.identifier] = String(p.priceString);
+      }
+      return { ok: true, prices: prices };
+    } catch (e) {
+      return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) };
+    }
+  }
   // Restore previously-purchased skins (App Store requirement). Webhook re-grants.
   async function restorePurchases() {
     if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
@@ -1560,6 +1585,7 @@
     getBackendBase,
     configurePurchases,
     purchaseSkin,
+    getProductPrices,   // W625 — localized shop prices
     restorePurchases,
     fetchEntitlements,
     // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
