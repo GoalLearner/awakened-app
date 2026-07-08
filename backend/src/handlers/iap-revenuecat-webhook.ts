@@ -19,7 +19,7 @@
  */
 import type { Env } from '../env';
 import { jsonOk, jsonError } from '../lib/responses';
-import { skinForProduct } from '../lib/skin-products';
+import { entitlementForProduct } from '../lib/skin-products';
 import { timingSafeEqual } from '../lib/timing-safe';
 
 // Non-consumable skins arrive as one of these RevenueCat event types.
@@ -59,8 +59,9 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
   if (!GRANT_EVENT_TYPES.has(type) || !appUserId || !productId) {
     return jsonOk({ ok: true, granted: null, reason: 'ignored' });
   }
-  const skinId = skinForProduct(productId);
-  if (!skinId) {
+  // W618 — resolve to a skin id OR the reserved 'founder' entitlement id.
+  const grantId = entitlementForProduct(productId);
+  if (!grantId) {
     return jsonOk({ ok: true, granted: null, reason: 'unknown_product' });
   }
 
@@ -69,8 +70,8 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
        (user_id, skin_id, product_id, store, store_txn_id, source)
      VALUES (?, ?, ?, 'app_store', ?, 'revenuecat_webhook')`,
   )
-    .bind(appUserId, skinId, productId, txnId)
+    .bind(appUserId, grantId, productId, txnId)
     .run();
 
-  return jsonOk({ ok: true, granted: skinId });
+  return jsonOk({ ok: true, granted: grantId });
 }

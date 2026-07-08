@@ -27,3 +27,21 @@ export const PRODUCT_TO_SKIN: Readonly<Record<string, string>> = {
 export function skinForProduct(productId: string): string | null {
   return PRODUCT_TO_SKIN[productId] ?? null;
 }
+
+// ── W618 — Founder's Lifetime (one-time supporter pack) ──────────────────────
+// A cosmetic-only supporter unlock (Founder frame/badge + a Founder-exclusive
+// look), NOT a skin. It rides the same skin_entitlements table under a reserved
+// entitlement id, so the whole grant/read/GDPR-delete machinery is reused with
+// zero schema change. Non-consumable, own-forever. Cosmetic only — never power.
+export const FOUNDER_PRODUCT_ID = 'com.goallearner.awakened.founders_lifetime';
+export const FOUNDER_ENTITLEMENT_ID = 'founder';
+
+/**
+ * Resolve a store product id to the entitlement id to persist — either the
+ * Founder entitlement or a skin catalog id, or null if unknown. Used by the
+ * webhook so one grant path covers both product lines.
+ */
+export function entitlementForProduct(productId: string): string | null {
+  if (productId === FOUNDER_PRODUCT_ID) return FOUNDER_ENTITLEMENT_ID;
+  return skinForProduct(productId);
+}

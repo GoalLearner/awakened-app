@@ -66,6 +66,17 @@ export interface Env {
    * closed if this is unset, so a misconfigured deploy can't grant skins. */
   REVENUECAT_WEBHOOK_AUTH: string;
 
+  /** Founder grandfathering (W618) — Unix-ms cutoff. Any account whose
+   * users.created_at is BEFORE this value gets Founder status for free (the
+   * "all pre-launch users are Founders" grant), surfaced by GET
+   * /v1/users/me/entitlements as { founder: true }. Optional: if unset, the
+   * handler defaults to 2027-01-01 UTC (grandfather the whole 2026 pre-
+   * monetization cohort). At go-live set it to the exact launch timestamp so
+   * only genuinely-pre-launch accounts qualify; set to "0" to disable
+   * grandfathering entirely. Cosmetic only. Set with `wrangler secret put
+   * FOUNDER_GRANDFATHER_BEFORE_MS` (or a plain [vars] entry). */
+  FOUNDER_GRANDFATHER_BEFORE_MS?: string;
+
   /** Admin metrics secret — gates GET /v1/admin/retention (per-user retention,
    * owner-requested). NOT a Sign-in-with-Apple route: the caller passes
    * `Authorization: Bearer <this value>`. FAIL CLOSED — if unset, the route 401s,

@@ -103,6 +103,27 @@ describe('handleRevenueCatWebhook — grant', () => {
     expect(res.status).toBe(200);
     expect((await res.json() as { granted: string }).granted).toBe('avatar-skin-stardust.png');
   });
+
+  // W618 — the one-time Founder pack rides the same grant path under the reserved
+  // 'founder' entitlement id (no schema change; cosmetic-only supporter unlock).
+  it('grants the Founder entitlement on the founders_lifetime product', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(
+      webhook(purchase({ product_id: 'com.goallearner.awakened.founders_lifetime' })),
+      makeEnv(db),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, granted: 'founder' });
+    const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).toMatch(/INSERT OR IGNORE INTO skin_entitlements/);
+    expect(calls[0].binds).toEqual([
+      'user-123',
+      'founder',
+      'com.goallearner.awakened.founders_lifetime',
+      'txn-abc',
+    ]);
+  });
 });
 
 describe('handleRevenueCatWebhook — no-op paths', () => {

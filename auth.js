@@ -1464,10 +1464,44 @@
     try { res = await fetch(url, { method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt } }); }
     catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
     let data; try { data = await res.json(); } catch (_) { data = null; }
-    if (res.status === 200 && data) return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [] };
+    if (res.status === 200 && data) {
+      _updateFounderCache(!!data.founder);   // W618 — piggyback Founder status on the same read
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder };
+    }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
+  // ── W618 — Founder's Lifetime (one-time supporter pack) ─────────────────
+  // Same RevenueCat rails as skins; the backend grants a reserved 'founder'
+  // entitlement (or grandfathers pre-launch accounts) and returns it on
+  // GET /entitlements as { founder }. isFounder() is DISPLAY-GATED behind
+  // IAP_ENABLED so nothing surfaces until the owner flips it live. Cosmetic only.
+  let _founderCache = null; // tri-state: null = not yet resolved this session
+  function _updateFounderCache(isF) {
+    _founderCache = !!isF;
+    try { localStorage.setItem('hb_founder_owned', _founderCache ? '1' : '0'); } catch (_) {}
+  }
+  function isFounder() {
+    try {
+      if (!IAP_ENABLED) return false;              // dormant until go-live
+      if (_founderCache === null) _founderCache = (localStorage.getItem('hb_founder_owned') === '1');
+      return _founderCache === true;
+    } catch (_) { return false; }
+  }
+  // Buy the Founder pack. Identical RevenueCat flow to a skin (non-consumable);
+  // the webhook grants server-side, so we revalidate (one short retry for webhook
+  // lag) to refresh isFounder() before the caller re-renders the offer sheet.
+  async function purchaseFounders(productId) {
+    const r = await purchaseSkin(productId || 'com.goallearner.awakened.founders_lifetime');
+    if (r && r.ok) {
+      try {
+        await fetchEntitlements();
+        if (!isFounder()) { await new Promise((res) => setTimeout(res, 1500)); await fetchEntitlements(); }
+      } catch (_) {}
+    }
+    return r;
   }
 
   // ── Per-user retention ping (W526) ──────────────────────────────────────
@@ -1528,6 +1562,9 @@
     purchaseSkin,
     restorePurchases,
     fetchEntitlements,
+    // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
+    purchaseFounders,
+    isFounder,
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,
