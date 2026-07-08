@@ -29842,7 +29842,7 @@ button.guildhall-summary-tile:active {
   background: var(--bg-card);
   border: 1px solid rgba(245, 184, 66, 0.28);
   border-radius: 11px;
-  font-size: 0.86rem;
+  font-size: 0.8rem;   /* W630 — was 0.86rem: three buttons (Steps · Highest Floor · Collection) must fit at 375px */
 }
 .lb-metric-btn {
   flex: 1;
@@ -29851,10 +29851,11 @@ button.guildhall-summary-tile:active {
   background: transparent;
   border: 0;
   color: var(--text-secondary);
-  padding: 9px 10px;
+  padding: 9px 6px;      /* W630 — was 10px sides: three-way switch */
   border-radius: 8px;
   font-weight: 700;
   letter-spacing: 0.3px;
+  white-space: nowrap;   /* W630 — "Highest Floor" must never wrap mid-button */
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease;
 }
