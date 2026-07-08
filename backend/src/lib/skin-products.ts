@@ -9,9 +9,17 @@
  *
  * Convention: com.goallearner.awakened.skin.<slug>. All NON-CONSUMABLE
  * (own forever). Cosmetic only — never gates power.
+ *
+ * W624 — Stardust is the ONE exception to the <slug> convention: App Store
+ * Connect permanently reserved 'com.goallearner.awakened.skin.stardust' from an
+ * earlier draft (Apple never releases a used product id), so the real product
+ * carries a '.sovereign' suffix. Both ids map to the same skin (the old one is a
+ * harmless dead alias — no product will ever transact it). The client mirrors
+ * this via _SKIN_PRODUCT_ID_OVERRIDES so its purchase call uses the real id.
  */
 export const PRODUCT_TO_SKIN: Readonly<Record<string, string>> = {
-  'com.goallearner.awakened.skin.stardust':      'avatar-skin-stardust.png',
+  'com.goallearner.awakened.skin.stardust.sovereign': 'avatar-skin-stardust.png',   // W624 — real ASC id
+  'com.goallearner.awakened.skin.stardust':      'avatar-skin-stardust.png',         // reserved/dead alias
   'com.goallearner.awakened.skin.dawnbringer':   'avatar-skin-dawnbringer.png',
   'com.goallearner.awakened.skin.nullprotocol':  'avatar-skin-nullprotocol.png',
   'com.goallearner.awakened.skin.nullprotocol2': 'avatar-skin-nullprotocol-2.png',
