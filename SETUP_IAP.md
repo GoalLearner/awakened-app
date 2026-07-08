@@ -14,7 +14,8 @@ Cosmetic only — skins never affect stats, the Ascent, or rank.
 
 **Frontend** (this commit)
 - `auth.js`: `configurePurchases` / `purchaseSkin` / `restorePurchases` / `fetchEntitlements`
-  (RevenueCat bridge + entitlement read). `IAP_ENABLED = false`, `REVENUECAT_PUBLIC_SDK_KEY = 'appl_REPLACE_ME'`.
+  (RevenueCat bridge + entitlement read). `IAP_ENABLED = false`; `REVENUECAT_PUBLIC_SDK_KEY`
+  = the real production key since W627 (2026-07-08) — the only remaining switch is the flag.
 - `app.js`: owned-skins SWR cache; the Wardrobe shop renders `BUY / OWNED / EQUIP` when live,
   auto-equips after purchase, and revalidates ownership from the backend.
 - `package.json`: `@revenuecat/purchases-capacitor` added (install on the Mac).

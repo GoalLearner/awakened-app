@@ -1389,7 +1389,10 @@
   // ownership via the RevenueCat webhook; the client reads truth from GET
   // /v1/users/me/entitlements. Cosmetic only — never power. See SETUP_IAP.md.
   const IAP_ENABLED = false;                              // ← flip true once setup is done
-  const REVENUECAT_PUBLIC_SDK_KEY = 'appl_REPLACE_ME';    // RevenueCat → API keys → Apple
+  // W627 — real production key (RevenueCat → Awakened: Habit RPG (App Store) →
+  // Public API Key, created 2026-07-08). A PUBLIC client key by design — safe to
+  // commit; the secret key never goes in the repo. Inert until IAP_ENABLED flips.
+  const REVENUECAT_PUBLIC_SDK_KEY = 'appl_phiMKPUJwIaixRkGliIxAfwOQVF';
 
   function _rcPlugin() {
     try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases) || null; }
