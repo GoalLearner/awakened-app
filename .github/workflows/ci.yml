@@ -44,7 +44,9 @@ jobs:
       - name: E2E spec-count floor
         run: |
           set -e
-          FLOOR=29
+          # W635 — lowered 29 → 27: the M (sleep_streak floor, 3 tests) + P (workout_streak
+          # modal, 1 test) blocks were intentionally removed with their leaderboards (W634).
+          FLOOR=27
           COUNT=$(cat tests/e2e/*.spec.ts | grep -cE '^[[:space:]]*test\(')
           echo "E2E spec count: $COUNT (floor $FLOOR)"
           if [ "$COUNT" -lt "$FLOOR" ]; then
