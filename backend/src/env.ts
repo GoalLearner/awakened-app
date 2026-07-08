@@ -66,15 +66,19 @@ export interface Env {
    * closed if this is unset, so a misconfigured deploy can't grant skins. */
   REVENUECAT_WEBHOOK_AUTH: string;
 
-  /** Founder grandfathering (W618) — Unix-ms cutoff. Any account whose
-   * users.created_at is BEFORE this value gets Founder status for free (the
-   * "all pre-launch users are Founders" grant), surfaced by GET
-   * /v1/users/me/entitlements as { founder: true }. Optional: if unset, the
-   * handler defaults to 2027-01-01 UTC (grandfather the whole 2026 pre-
-   * monetization cohort). At go-live set it to the exact launch timestamp so
-   * only genuinely-pre-launch accounts qualify; set to "0" to disable
-   * grandfathering entirely. Cosmetic only. Set with `wrangler secret put
-   * FOUNDER_GRANDFATHER_BEFORE_MS` (or a plain [vars] entry). */
+  /** W626 — Founder grandfathering, now a CAPPED "First N Founders" launch
+   * promotion. The first N accounts by registration order (users.created_at, id
+   * tie-break) get Founder status for free, surfaced by GET
+   * /v1/users/me/entitlements as { founder: true }. Optional: defaults to 100 if
+   * unset; "0" disables the promo. Capped (unlike the old time-cutoff, which
+   * would have given the paid Founder pack away to EVERY 2026 joiner). Derived at
+   * read-time from the rank query — idempotent, no backfill, can't double-grant.
+   * Set with `wrangler secret put FOUNDER_FIRST_N` (or a [vars] entry). */
+  FOUNDER_FIRST_N?: string;
+
+  /** DEPRECATED (W626): the old time-cutoff grandfather knob, superseded by the
+   * capped FOUNDER_FIRST_N promo. Field kept only so an existing deploy's var
+   * doesn't fail typing; the entitlements handler no longer reads it. */
   FOUNDER_GRANDFATHER_BEFORE_MS?: string;
 
   /** Admin metrics secret — gates GET /v1/admin/retention (per-user retention,

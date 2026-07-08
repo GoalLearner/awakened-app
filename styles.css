@@ -30481,6 +30481,33 @@ button.guildhall-summary-tile:active {
 .founder-restore { background: none; border: 0; color: #8a8aa2; font-size: 0.82rem; padding: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .founder-owned { text-align: center; padding: 16px; border-radius: 14px; font-weight: 700; color: #f5b842; background: rgba(245,184,66,0.10); border: 1px solid rgba(245,184,66,0.4); }
 .founder-fineprint { text-align: center; margin-top: 14px; font-size: 0.72rem; color: #6f6f88; letter-spacing: 0.03em; }
+
+/* W626 — one-time "First 100 Founder" congratulations modal (grandfather grant). */
+.fc-overlay { position: fixed; inset: 0; z-index: 360; display: flex; align-items: center; justify-content: center; padding: 26px;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(40,32,10,0.72), rgba(4,4,12,0.9)); animation: vn-fade 0.28s ease-out; -webkit-tap-highlight-color: transparent; }
+.fc-card { position: relative; width: 100%; max-width: 360px; text-align: center; padding: 30px 24px 24px; border-radius: 22px;
+  background: linear-gradient(180deg, #1b1a40, #12122c 60%, #0d0d20); border: 1.5px solid rgba(245,184,66,0.38);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 40px rgba(245,184,66,0.10); animation: fc-rise 0.5s cubic-bezier(0.2,1,0.3,1) both; }
+.fc-card::before { content: ""; position: absolute; top: 0; left: 26px; right: 26px; height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), rgba(245,158,11,0.6), transparent); }
+.fc-crest { width: 74px; height: 74px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(245,184,66,0.34), rgba(245,184,66,0.06)); border: 1.5px solid rgba(245,184,66,0.6);
+  box-shadow: 0 0 34px rgba(245,184,66,0.32); animation: fc-glow 2.6s ease-in-out infinite; }
+.fc-crest-spark { font-size: 34px; color: #ffe6a8; text-shadow: 0 0 18px rgba(245,184,66,0.9); }
+.fc-eyebrow { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 2.4px; color: #a78bfa; text-transform: uppercase; }
+.fc-title { margin-top: 8px; font-family: "Cinzel", Georgia, serif; font-weight: 800; font-size: 1.6rem; letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #ffe6a8, #f5b842 62%, #cf9326); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.fc-body { margin: 12px 0 22px; font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.12rem; line-height: 1.4; color: #cdcde0; }
+.fc-body b { color: #ffd68a; font-weight: 600; }
+.fc-cta { width: 100%; padding: 15px; border: 0; border-radius: 14px; cursor: pointer; font-family: "JetBrains Mono", monospace;
+  font-weight: 800; font-size: 0.92rem; letter-spacing: 0.05em; color: #1b1405; background: linear-gradient(180deg, #f7c558, #e2a32f);
+  box-shadow: 0 6px 22px rgba(245,184,66,0.3); }
+.fc-cta:active { transform: scale(0.985); }
+@keyframes fc-rise { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fc-glow { 0%,100% { box-shadow: 0 0 28px rgba(245,184,66,0.24); } 50% { box-shadow: 0 0 44px rgba(245,184,66,0.42); } }
+}
+@media (prefers-reduced-motion: reduce) { .fc-crest { animation: none; } .fc-card { animation: none; } }
 /* ── W328 · First-verified completion celebration (reuses comeback shell) ── */
 .firstverify-screen .cb-eyebrow { color: #f5b842; }
 .firstverify-screen .cb-xp { color: #e8c889; }
