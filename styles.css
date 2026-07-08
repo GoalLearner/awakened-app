@@ -2430,82 +2430,160 @@ footer {
   font-size: 0.98rem;
 }
 
-/* ── W611 — Drop Ledger (Rewards / Drop History) rows ────────────────────── */
-.drop-ledger-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 9px 11px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--dl-edge, var(--border));
-  border-radius: 10px;
-  text-align: left;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  color: inherit;
-  font: inherit;
-  -webkit-tap-highlight-color: transparent;
+/* ── W617 — Drop History (Rewards) — ClaudeDesign handoff 17 ──────────────────
+   Replaces the W611 flat .drop-ledger-row list with the grouped loot-log:
+   date-shelf headers + rarity-tinted collectible rows (66px art thumb, rarity
+   ramp common→mega, dot-label states, co-op/dungeon tag, chevron). Everything
+   is namespaced .dh-* and the sheet is #drop-ledger-sheet.dh-sheet so the
+   design's generic prototype names (.row/.art/.name/.state) can't collide with
+   the rest of the stylesheet. Tokens are the app's sanctioned Armory / Relic
+   Archive set, pinned locally on the sheet for self-containment. Layers over the
+   shared .vn-sheet shell (positioning + rise animation + .hidden toggle). */
+#drop-ledger-sheet.dh-sheet {
+  --dh-bg-card: #1e1e3f;
+  --dh-border: rgba(255,255,255,.10);
+  --dh-tp: #f2f2f7; --dh-ts: #8e8e93; --dh-tt: #56566a;
+  --dh-accent: #8b5cf6; --dh-gold: #f59e0b; --dh-gold-glow: rgba(245,158,11,.25); --dh-mint: #5eead4;
+  --dh-serif: "Cinzel", Georgia, serif;
+  --dh-flavor: "Cormorant Garamond", Georgia, serif;
+  --dh-mono: "JetBrains Mono", ui-monospace, monospace;
+  --dh-sans: -apple-system, "SF Pro Display", system-ui, sans-serif;
 }
-.drop-ledger-row:active { transform: scale(0.995); }
-.drop-ledger-row--r-common { --dl-edge: rgba(142,142,147,0.5); }
-.drop-ledger-row--r-rare   { --dl-edge: #8b5cf6; }
-.drop-ledger-row--r-ultra  { --dl-edge: #f59e0b; }
-.drop-ledger-row--r-mega   { --dl-edge: #22d3ee; }
-.drop-ledger-row__crest {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 9px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(160deg, #26264d, #161636);
-  border: 1px solid var(--border);
+/* faint violet→gold rim of light along the sheet's top edge */
+#drop-ledger-sheet.dh-sheet::before {
+  content: ""; position: absolute; top: 0; left: 22px; right: 22px; height: 1px; z-index: 5;
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,.55), rgba(245,158,11,.5), transparent);
 }
-.drop-ledger-row__crest img { width: 100%; height: 100%; object-fit: cover; }
-.drop-ledger-row__glyph { font-size: 20px; opacity: 0.7; }
-.drop-ledger-row__main { flex: 1 1 auto; min-width: 0; }
-.drop-ledger-row__name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-primary);
-  font-weight: 700;
-  font-size: 0.9rem;
-  line-height: 1.2;
+
+/* HEADER (pinned; list scrolls beneath) */
+.dh-head {
+  flex: none; position: relative; z-index: 4; padding: 6px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06); box-shadow: 0 12px 20px -14px rgba(0,0,0,.65);
 }
-.drop-ledger-row__newdot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #f5b842; box-shadow: 0 0 6px rgba(245,184,66,0.6); flex: 0 0 auto;
+.dh-head-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dh-eyebrow {
+  font-family: var(--dh-mono); font-size: 10px; font-weight: 800; letter-spacing: 2.6px;
+  color: var(--dh-accent); text-transform: uppercase;
 }
-.drop-ledger-row__meta {
-  margin-top: 2px;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  letter-spacing: 0.2px;
+.dh-title {
+  margin: 5px 0 0; font-family: var(--dh-serif); font-size: 24px; font-weight: 800;
+  letter-spacing: 1.4px; line-height: 1;
+  background: linear-gradient(180deg, #ffe6a8, var(--dh-gold) 62%, #cf9326);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.drop-ledger-row__state {
-  margin-top: 1px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+.dh-close {
+  width: 32px; height: 32px; flex: none; border-radius: 10px; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,.05); border: 1px solid var(--dh-border); color: var(--dh-ts);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s, transform .1s;
 }
-.drop-ledger-row--unseen .drop-ledger-row__state { color: #f5b842; }
-.drop-ledger-row__view {
-  flex: 0 0 auto;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  color: #c4b5fd;
-  opacity: 0.85;
+.dh-close:hover { background: rgba(255,255,255,.09); color: var(--dh-tp); }
+.dh-close:active { transform: scale(.92); }
+.dh-close svg { width: 13px; height: 13px; display: block; }
+.dh-head-sub { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.dh-flavor {
+  margin: 0; flex: 1; font-family: var(--dh-flavor); font-style: italic; font-size: 14.5px; font-weight: 500;
+  color: var(--dh-ts); line-height: 1.32; letter-spacing: .2px; max-width: 230px;
+}
+.dh-stat {
+  flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 11px 6px 9px; border-radius: 999px;
+  background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.28);
+}
+.dh-stat svg { width: 13px; height: 13px; display: block; color: var(--dh-gold); flex: none; filter: drop-shadow(0 0 4px var(--dh-gold-glow)); }
+.dh-stat .dh-n { font-family: var(--dh-serif); font-size: 15px; font-weight: 700; color: #ffd68a; line-height: 1; }
+.dh-stat .dh-l { font-family: var(--dh-mono); font-size: 8px; font-weight: 800; letter-spacing: 1.2px; color: var(--dh-ts); text-transform: uppercase; }
+
+/* LIST */
+#drop-ledger-sheet .dh-list {
+  flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+  padding: 2px 16px 20px; scrollbar-width: none; -ms-overflow-style: none;
+}
+#drop-ledger-sheet .dh-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* date group shelf */
+.dh-grp { display: flex; align-items: center; gap: 10px; padding: 20px 4px 11px; }
+.dh-grp:first-child { padding-top: 12px; }
+.dh-grp-day { font-family: var(--dh-serif); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; color: var(--dh-tp); text-transform: uppercase; line-height: 1; }
+.dh-grp-date { font-family: var(--dh-mono); font-size: 9px; font-weight: 700; letter-spacing: .8px; color: var(--dh-tt); text-transform: uppercase; }
+.dh-grp-rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,0)); }
+.dh-grp-count { font-family: var(--dh-mono); font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--dh-tt); text-transform: uppercase; }
+
+.dh-drops { display: flex; flex-direction: column; gap: 8px; }
+
+/* rarity ramp — each bucket sets the shared row/art custom props */
+.dh-row--common { --rc: #8e8e93; --glow: rgba(142,142,147,.16); --rim: var(--dh-border);       --rimhi: rgba(255,255,255,.18); --rshadow: none;                        --artrim: rgba(255,255,255,.06); }
+.dh-row--rare   { --rc: #8b5cf6; --glow: rgba(139,92,246,.28);  --rim: rgba(139,92,246,.30);    --rimhi: rgba(139,92,246,.5);   --rshadow: 0 4px 16px rgba(139,92,246,.08); --artrim: rgba(139,92,246,.35); }
+.dh-row--ultra  { --rc: #f59e0b; --glow: rgba(245,158,11,.30);  --rim: rgba(245,158,11,.38);    --rimhi: rgba(245,158,11,.6);   --rshadow: 0 4px 18px rgba(245,158,11,.10); --artrim: rgba(245,158,11,.42); }
+.dh-row--mega   { --rc: #22d3ee; --glow: rgba(34,211,238,.34);  --rim: rgba(34,211,238,.42);    --rimhi: rgba(34,211,238,.65);  --rshadow: 0 6px 22px rgba(34,211,238,.14); --artrim: rgba(34,211,238,.55); }
+
+/* the collectible loot row */
+.dh-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; cursor: pointer; text-align: left;
+  -webkit-appearance: none; appearance: none; font: inherit; color: inherit; -webkit-tap-highlight-color: transparent;
+  border-radius: 14px; background: var(--dh-bg-card); border: 1px solid var(--rim, var(--dh-border));
+  box-shadow: var(--rshadow, none); transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.dh-row:hover { border-color: var(--rimhi, rgba(255,255,255,.18)); }
+.dh-row:active { transform: scale(.988); }
+
+/* art thumbnail — real art (cover img) or a slot-glyph placeholder + rarity glow */
+.dh-art {
+  position: relative; width: 66px; height: 66px; flex: none; border-radius: 12px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(72% 62% at 50% 36%, var(--glow, rgba(139,92,246,.22)), rgba(19,19,42,0) 72%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 2px, rgba(255,255,255,0) 2px 9px),
+    linear-gradient(160deg, #26264d, #161636);
+  box-shadow: inset 0 0 0 1px var(--artrim, rgba(255,255,255,.06));
+}
+.dh-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.10) 0%, transparent 34%); pointer-events: none; }
+.dh-art img { width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
+.dh-art .dh-glyph { width: 32px; height: 32px; position: relative; z-index: 1; color: var(--rc); filter: drop-shadow(0 0 7px var(--glow, transparent)); }
+.dh-spark { position: absolute; top: 6px; left: 6px; width: 5px; height: 5px; border-radius: 50%; z-index: 2; background: var(--rc); box-shadow: 0 0 7px var(--rc); }
+.dh-row--mega .dh-art { box-shadow: inset 0 0 0 1px rgba(34,211,238,.55), 0 0 16px rgba(34,211,238,.16); }
+
+/* row body */
+.dh-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.dh-line { display: flex; align-items: center; gap: 8px; }
+.dh-line.dh-top { align-items: baseline; }
+.dh-name {
+  flex: 1; min-width: 0; font-family: var(--dh-sans); font-size: 14.5px; font-weight: 700; line-height: 1.18;
+  color: var(--dh-tp); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.dh-time { flex: none; display: inline-flex; align-items: center; gap: 5px; font-family: var(--dh-mono); font-size: 10px; font-weight: 700; letter-spacing: .2px; color: var(--dh-ts); font-variant-numeric: tabular-nums; }
+.dh-unseen { width: 6px; height: 6px; border-radius: 50%; background: var(--dh-mint); box-shadow: 0 0 6px rgba(94,234,212,.7); flex: none; }
+.dh-rar { flex: 1; min-width: 0; font-family: var(--dh-mono); font-size: 9px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dh-ts); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-rar b { font-weight: 800; color: var(--rc); letter-spacing: 1.2px; }
+.dh-state { flex: none; display: inline-flex; align-items: center; gap: 5px; font-family: var(--dh-mono); font-size: 8.5px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }
+.dh-state .dh-d { width: 5px; height: 5px; border-radius: 50%; flex: none; }
+.dh-state--new { color: var(--dh-mint); } .dh-state--new .dh-d { background: var(--dh-mint); box-shadow: 0 0 6px rgba(94,234,212,.7); }
+.dh-state--dup { color: var(--dh-tt); }   .dh-state--dup .dh-d { background: var(--dh-tt); }
+.dh-state--cap { color: #d99a3a; }        .dh-state--cap .dh-d { background: var(--dh-gold); box-shadow: 0 0 6px var(--dh-gold-glow); }
+.dh-src { flex: 1; min-width: 0; font-family: var(--dh-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--dh-ts); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-mode { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 7px; font-family: var(--dh-mono); font-size: 8px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+.dh-mode svg { width: 10px; height: 10px; display: block; }
+.dh-mode--coop { color: #c4b5fd; background: rgba(139,92,246,.14); border: 1px solid rgba(139,92,246,.32); }
+.dh-mode--dungeon { color: var(--dh-ts); background: rgba(255,255,255,.04); border: 1px solid var(--dh-border); }
+.dh-chev { flex: none; width: 14px; color: var(--dh-tt); transition: color .15s, transform .12s; display: flex; align-items: center; justify-content: center; }
+.dh-chev svg { width: 9px; height: 14px; display: block; }
+.dh-row:hover .dh-chev { color: var(--dh-gold); }
+.dh-row:active .dh-chev { transform: translateX(2px); }
+
+/* empty state, styled to the sheet */
+.dh-empty { padding: 40px 20px; text-align: center; color: var(--dh-ts); font-family: var(--dh-sans); }
+.dh-empty__title { font-family: var(--dh-serif); font-size: 15px; font-weight: 700; letter-spacing: .5px; color: var(--dh-tp); margin-bottom: 8px; }
+.dh-empty__sub { font-size: 13px; line-height: 1.4; }
+
+/* the shared "Show older" button, spaced for this list */
+#drop-ledger-sheet .souls-ledger-show-older { margin: 16px auto 4px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .dh-row--mega .dh-art { animation: dh-mega-pulse 3.4s ease-in-out infinite; }
+  @keyframes dh-mega-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(34,211,238,.5), 0 0 12px rgba(34,211,238,.12); }
+    50%      { box-shadow: inset 0 0 0 1px rgba(34,211,238,.7), 0 0 22px rgba(34,211,238,.26); }
+  }
 }
 /* W611 — "Rewards" entry chip in the Relic Archive header. */
 .archive-drophist-btn {

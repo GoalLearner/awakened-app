@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=549">
+  <link rel="stylesheet" href="styles.css?v=550">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2114,17 +2114,27 @@
        Every relic drop, newest-first; each row taps to re-view the relic so a
        drop whose reveal pop-up misfired is never lost. Mirrors the souls ledger. -->
   <div id="drop-ledger-overlay" class="vn-overlay hidden"></div>
-  <div id="drop-ledger-sheet" class="vn-sheet hidden">
+  <div id="drop-ledger-sheet" class="vn-sheet dh-sheet hidden">
     <div class="vn-drag-handle"></div>
-    <div class="lb-rank-header">
-      <div class="lb-rank-eyebrow">REWARDS</div>
-      <h2 class="lb-rank-title">Drop History</h2>
-      <button id="drop-ledger-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
-    </div>
-    <div class="lb-rank-body">
-      <p class="lb-rank-blurb">Every relic you’ve earned. Tap one to view it.</p>
-      <div id="drop-ledger-list" class="souls-ledger-list"></div>
-    </div>
+    <header class="dh-head">
+      <div class="dh-head-top">
+        <div>
+          <div class="dh-eyebrow">Rewards</div>
+          <h2 class="dh-title">Drop History</h2>
+        </div>
+        <button id="drop-ledger-close" class="dh-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="dh-head-sub">
+        <p class="dh-flavor">Every relic you’ve earned, newest first. Tap any drop to view it again.</p>
+        <span class="dh-stat" id="drop-ledger-stat">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l3 4h4l-7 16L5 6h4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <span class="dh-n" id="drop-ledger-earned">0</span><span class="dh-l">Earned</span>
+        </span>
+      </div>
+    </header>
+    <div id="drop-ledger-list" class="dh-list"></div>
   </div>
 
   <!-- v3 Phase 1z.171 — Guild Members roster sheet. Opens ONLY
@@ -3196,7 +3206,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1038"></script>
+  <script src="app.js?v=1039"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
