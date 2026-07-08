@@ -1388,7 +1388,14 @@
   // Connect + RevenueCat, (3) REVENUECAT_PUBLIC_SDK_KEY set below. Backend grants
   // ownership via the RevenueCat webhook; the client reads truth from GET
   // /v1/users/me/entitlements. Cosmetic only — never power. See SETUP_IAP.md.
-  const IAP_ENABLED = false;                              // ← flip true once setup is done
+  // W628 — GO-LIVE (2026-07-08): every gate verified before this flip — 11 IAPs in
+  // ASC (Stardust = .sovereign id), RC App Store app + paste-verified public key
+  // (W627), .p8 In-App Purchase Key "Valid credentials" in RC, Paid Apps agreement
+  // ACTIVE (thru Apr 2027), webhook chain configured, first-100 grandfather deployed
+  // (cf1bad73). Ships in build 393 WITH the 11 IAPs attached to the version's App
+  // Review submission, so review sees a working purchase flow. Web stays inert
+  // (iapAvailable also requires the native RC plugin, absent in browsers).
+  const IAP_ENABLED = true;
   // W627 — real production key (RevenueCat → Awakened: Habit RPG (App Store) →
   // Public API Key, created 2026-07-08). A PUBLIC client key by design — safe to
   // commit; the secret key never goes in the repo. Inert until IAP_ENABLED flips.
