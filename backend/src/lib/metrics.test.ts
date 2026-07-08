@@ -16,6 +16,17 @@ describe('metric registry', () => {
     expect(WEEKLY_METRICS.has('floor_best')).toBe(false);
   });
 
+  it('W622 — relics_collected is registered, capped at 200, and NOT weekly', () => {
+    // NOT weekly matters doubly here: it keeps the board all-time AND routes
+    // submits through the plain-overwrite ELSE branch of the upsert — the
+    // count can legitimately DECREASE (selling the last copy of a relic
+    // reverts it to undiscovered client-side, W204).
+    expect(isValidMetric('relics_collected')).toBe(true);
+    expect(METRIC_CAPS.relics_collected).toBe(200);
+    expect(isWeeklyMetric('relics_collected')).toBe(false);
+    expect(WEEKLY_METRICS.has('relics_collected')).toBe(false);
+  });
+
   it('rejects unknown metrics', () => {
     expect(isValidMetric('floor')).toBe(false);
     expect(isValidMetric(42)).toBe(false);

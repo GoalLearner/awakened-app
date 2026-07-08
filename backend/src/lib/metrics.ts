@@ -35,7 +35,15 @@
 // Awakened (the floor-100 finisher registry). NOT weekly — it's an
 // all-time best, carried forward via the snapshot's MAX-preserved
 // best_value (same storage shape as every other metric; no migration).
-export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed', 'floor_best'] as const;
+// W622 — relics_collected: unique relics currently in the client's
+// Collection Log (rare/ultra-rare/mythic with a resolvable source
+// boss; commons excluded — ~59 today, catalog still growing). NOT
+// weekly, and deliberately NOT monotonic: selling the last copy of a
+// relic reverts it to undiscovered client-side (W204), so submits ride
+// the plain-overwrite ELSE branch of the upsert (current_value may
+// decrease; best_value stays MAX-sticky). Client-derived like every
+// other metric — the cap is sanity, not anti-cheat.
+export const METRICS = ['step_total', 'sleep_streak', 'bedtime_streak', 'workout_streak', 'flights_climbed', 'floor_best', 'relics_collected'] as const;
 export type Metric = (typeof METRICS)[number];
 
 export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
@@ -67,6 +75,11 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
   /** Highest Ascent floor ever cleared. Hard ceiling is the tower
    * height (100); anything above is corrupt-client garbage. W274. */
   floor_best: 100,
+  /** Unique relics in the Collection Log. The log holds ~59 eligible
+   * relics today (95-card catalog, commons + orphans excluded) and the
+   * catalog only grows a few per release — 200 leaves generous headroom
+   * while catching garbage (counts as milliseconds, etc.). W622. */
+  relics_collected: 200,
 };
 
 export function isValidMetric(value: unknown): value is Metric {
