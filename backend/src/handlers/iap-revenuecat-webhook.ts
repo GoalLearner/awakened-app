@@ -55,23 +55,51 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
       ? String(ev.original_transaction_id)
       : null;
 
-  // Only purchase events grant; everything else is acknowledged and ignored.
-  if (!GRANT_EVENT_TYPES.has(type) || !appUserId || !productId) {
-    return jsonOk({ ok: true, granted: null, reason: 'ignored' });
-  }
+  // W636 — decide grant eligibility UP FRONT so a single structured log line can
+  // cover EVERY webhook, including the ignored/test events that were silent during
+  // the auth-mismatch hunt. isGrantEvent = a purchase event carrying the ids we need.
+  const isGrantEvent = GRANT_EVENT_TYPES.has(type) && !!appUserId && !!productId;
   // W618 — resolve to a skin id OR the reserved 'founder' entitlement id.
-  const grantId = entitlementForProduct(productId);
-  if (!grantId) {
-    return jsonOk({ ok: true, granted: null, reason: 'unknown_product' });
-  }
+  const grantId = isGrantEvent ? entitlementForProduct(productId) : null;
 
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO skin_entitlements
-       (user_id, skin_id, product_id, store, store_txn_id, source)
-     VALUES (?, ?, ?, 'app_store', ?, 'revenuecat_webhook')`,
-  )
-    .bind(appUserId, grantId, productId, txnId)
-    .run();
+  // W636 — ONE structured line per webhook, visible in `wrangler tail`. No PII:
+  // app_user_id is truncated to an 8-char prefix. reason:
+  //   'granted'         — known product on a purchase event → entitlement written
+  //   'unknown_product' — purchase event, but the product id maps to nothing
+  //   'ignored_event'   — non-purchase event (e.g. TEST/CANCELLATION), or a
+  //                       purchase event missing app_user_id / product_id
+  const reason = grantId ? 'granted' : isGrantEvent ? 'unknown_product' : 'ignored_event';
+  console.log('[iap-webhook]', JSON.stringify({
+    type,
+    product: productId || null,
+    granted: grantId,
+    user: appUserId ? appUserId.slice(0, 8) : null,
+    reason,
+  }));
+
+  // Only purchase events grant; everything else is acknowledged and ignored so
+  // RevenueCat stops retrying (responses are byte-identical to pre-W636).
+  if (!isGrantEvent) return jsonOk({ ok: true, granted: null, reason: 'ignored' });
+  if (!grantId) return jsonOk({ ok: true, granted: null, reason: 'unknown_product' });
+
+  try {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO skin_entitlements
+         (user_id, skin_id, product_id, store, store_txn_id, source)
+       VALUES (?, ?, ?, 'app_store', ?, 'revenuecat_webhook')`,
+    )
+      .bind(appUserId, grantId, productId, txnId)
+      .run();
+  } catch (e) {
+    // W636 — surface a grant-write failure (was silent). Rethrow so the handler
+    // 500s and RevenueCat RETRIES the delivery, rather than dropping the grant.
+    console.error('[iap-webhook] grant insert failed', JSON.stringify({
+      product: productId,
+      granted: grantId,
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    throw e;
+  }
 
   return jsonOk({ ok: true, granted: grantId });
 }
