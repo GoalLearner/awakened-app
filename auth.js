@@ -1423,14 +1423,36 @@
       return (payload && typeof payload.sub === 'string' && payload.sub) ? payload.sub : null;
     } catch (_) { return null; }
   }
-  // Configure RevenueCat with the backend user_id as appUserID. Idempotent;
-  // no-op while IAP is disabled or off-device.
+  // Configure RevenueCat AND identify the backend user as its appUserID.
+  // W638 — THE grant-integrity fix. RevenueCat's configure() is meant to run
+  // EXACTLY ONCE per process and does NOT reliably switch/identify the user on
+  // later calls; logIn() is the API that (a) binds the SDK to a specific
+  // appUserID and (b) ALIASES any purchases made under an anonymous id (e.g. a
+  // getProducts that ran before identify, or a cached anon id from a prior
+  // launch) onto that account. Without this, a "successful" purchase can land on
+  // a stale/anonymous RevenueCat subscriber — so its webhook grant targets the
+  // wrong account and the buyer is stuck (observed: purchases never reaching the
+  // signed-in user's RC subscriber). Guarded so configure runs once and logIn
+  // runs only when the identity needs to change. no-op while IAP off / off-device.
+  let _rcConfigured = false;
+  let _rcIdentifiedFor = null;
   async function configurePurchases() {
     if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
     const uid = getBackendUserId();
     if (!uid) return { ok: false, code: 'NOT_SIGNED_IN' };
-    try { await _rcPlugin().configure({ apiKey: REVENUECAT_PUBLIC_SDK_KEY, appUserID: uid }); return { ok: true }; }
-    catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
+    const rc = _rcPlugin();
+    try {
+      if (!_rcConfigured) {
+        await rc.configure({ apiKey: REVENUECAT_PUBLIC_SDK_KEY, appUserID: uid });
+        _rcConfigured = true;
+      }
+      if (_rcIdentifiedFor !== uid) {
+        // logIn requires configure() first; aliases any anon-id purchases onto uid.
+        try { await rc.logIn({ appUserID: uid }); } catch (_) {}
+        _rcIdentifiedFor = uid;
+      }
+      return { ok: true };
+    } catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
   }
   // Purchase a skin by App Store product id. On success RevenueCat fires the
   // backend webhook (server-side grant); the caller then refreshes entitlements.
@@ -1502,8 +1524,12 @@
     }
   }
   // Restore previously-purchased skins (App Store requirement). Webhook re-grants.
+  // W638 — IDENTIFY first (configure + logIn), so the receipt is restored onto THIS
+  // backend user's RC subscriber (not a stale/anonymous id), then reconcile picks it up.
   async function restorePurchases() {
     if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
+    const cfg = await configurePurchases();
+    if (!cfg.ok) return cfg;
     try { await _rcPlugin().restorePurchases(); return { ok: true }; }
     catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
   }
