@@ -1453,7 +1453,26 @@
       return { ok: true };
     } catch (e) {
       const msg = String((e && e.message) || e);
+      const code = String((e && (e.code || e.errorCode)) || '');
       if (e && (e.userCancelled || /cancel/i.test(msg))) return { ok: false, code: 'CANCELLED' };
+      // W637 — the store reports the user ALREADY OWNS this non-consumable (bought
+      // in a prior install/session that RevenueCat never captured, so a fresh
+      // purchase is impossible). RESTORE instead: that pushes Apple's receipt to
+      // RevenueCat, which then knows about the purchase — and the caller's
+      // reconcileEntitlements() can grant it. Reported as success-needs-reconcile.
+      // W637.1 — the RevenueCat Capacitor plugin rejects with a NUMERIC code STRING
+      // ('6' = PRODUCT_ALREADY_PURCHASED, '7' = RECEIPT_ALREADY_IN_USE — the iOS
+      // bridge does call.reject(msg, "\(error.code)")) and a description like
+      // "already active"/"already in use" — NOT the symbolic names. Match the codes
+      // FIRST (the reliable signal); keep the symbolic names (Android
+      // ITEM_ALREADY_OWNED) + message wording as fallbacks.
+      const alreadyOwned = code === '6' || code === '7'
+        || /PRODUCT_ALREADY_PURCHASED|RECEIPT_ALREADY_IN_USE|ITEM_ALREADY_OWNED/i.test(code)
+        || /already[\s_-]*(purchas|own|active|in[\s_-]*use)/i.test(msg);
+      if (alreadyOwned) {
+        try { await rc.restorePurchases(); } catch (_) {}
+        return { ok: true, restored: true };
+      }
       return { ok: false, code: 'ERROR', detail: msg };
     }
   }
@@ -1507,6 +1526,31 @@
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
+  // W637 — SELF-HEALING grant. Asks the backend to reconcile ownership against
+  // RevenueCat's authoritative REST record and grant anything missing locally.
+  // Recovers a lost/delayed webhook, and — after purchaseSkin's restore-on-
+  // already-owned — a purchase RevenueCat only just ingested. Same return shape
+  // + Founder-cache side-effect as fetchEntitlements; `reconciled` = # newly
+  // granted. Safe to call redundantly (server INSERT OR IGNORE is idempotent).
+  async function reconcileEntitlements() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/users/me/entitlements/reconcile', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    let data; try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      _updateFounderCache(!!data.founder);
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, reconciled: (data.reconciled | 0) };
+    }
+    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
 
   // ── W618 — Founder's Lifetime (one-time supporter pack) ─────────────────
   // Same RevenueCat rails as skins; the backend grants a reserved 'founder'
@@ -1525,15 +1569,17 @@
       return _founderCache === true;
     } catch (_) { return false; }
   }
-  // Buy the Founder pack. Identical RevenueCat flow to a skin (non-consumable);
-  // the webhook grants server-side, so we revalidate (one short retry for webhook
-  // lag) to refresh isFounder() before the caller re-renders the offer sheet.
+  // Buy the Founder pack. Identical RevenueCat flow to a skin (non-consumable).
+  // W637 — RECONCILE (not just fetch) after success: it grants server-side from
+  // RevenueCat's authoritative record even if the webhook was lost/delayed or the
+  // pack was already-owned-then-restored, then refreshes isFounder() before the
+  // caller re-renders the offer sheet. One short retry absorbs propagation lag.
   async function purchaseFounders(productId) {
     const r = await purchaseSkin(productId || 'com.goallearner.awakened.founders_lifetime');
     if (r && r.ok) {
       try {
-        await fetchEntitlements();
-        if (!isFounder()) { await new Promise((res) => setTimeout(res, 1500)); await fetchEntitlements(); }
+        await reconcileEntitlements();
+        if (!isFounder()) { await new Promise((res) => setTimeout(res, 1500)); await reconcileEntitlements(); }
       } catch (_) {}
     }
     return r;
@@ -1598,6 +1644,7 @@
     getProductPrices,   // W625 — localized shop prices
     restorePurchases,
     fetchEntitlements,
+    reconcileEntitlements,   // W637 — self-healing grant (recovers lost webhook / restored purchase)
     // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
     purchaseFounders,
     isFounder,

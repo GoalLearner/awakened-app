@@ -45,21 +45,33 @@ async function isFirstNFounder(env: Env, userId: string): Promise<boolean> {
   return earlier < n; // ranks 0 .. n-1 are the first N
 }
 
-export async function handleEntitlementsGet(
-  _request: Request,
+/**
+ * Read a user's owned entitlements from D1 (+ the first-N Founder promo).
+ * Shared by GET /entitlements and the W637 reconcile endpoint so both return
+ * the identical { skins, founder } shape. The reserved 'founder' id is filtered
+ * out of `skins` and surfaced as the `founder` flag.
+ */
+export async function readEntitlements(
   env: Env,
-  session: SessionPayload,
-): Promise<Response> {
+  userId: string,
+): Promise<{ skins: string[]; founder: boolean }> {
   const rows = await env.DB.prepare(
     `SELECT skin_id FROM skin_entitlements WHERE user_id = ? ORDER BY acquired_at ASC`,
   )
-    .bind(session.userId)
+    .bind(userId)
     .all<{ skin_id: string }>();
 
   const owned = (rows.results ?? []).map((r) => r.skin_id);
   let founder = owned.includes(FOUNDER_ENTITLEMENT_ID);
   const skins = owned.filter((id) => id !== FOUNDER_ENTITLEMENT_ID);
-  if (!founder) founder = await isFirstNFounder(env, session.userId);   // W626 — first-N promo
+  if (!founder) founder = await isFirstNFounder(env, userId);   // W626 — first-N promo
+  return { skins, founder };
+}
 
-  return jsonOk({ skins, founder });
+export async function handleEntitlementsGet(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+): Promise<Response> {
+  return jsonOk(await readEntitlements(env, session.userId));
 }

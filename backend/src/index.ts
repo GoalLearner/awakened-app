@@ -36,6 +36,7 @@ import { handleAdminRetention } from './handlers/admin-retention';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
 import { handleEntitlementsGet } from './handlers/iap-entitlements';
+import { handleEntitlementsReconcile } from './handlers/iap-reconcile';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
 import { handleRankBandGet } from './handlers/leaderboard-rank-band';
@@ -225,6 +226,12 @@ export default {
             // W297 — owned cosmetic skin ids (real-money IAP). Source of truth
             // for skin ownership; the client caches it display-only.
             response = await handleEntitlementsGet(request, env, session);
+          } else if (path === '/v1/users/me/entitlements/reconcile' && method === 'POST') {
+            // W637 — self-healing grant. Reads the caller's authoritative
+            // purchases from RevenueCat's REST API and grants any missing
+            // locally (recovers a lost/delayed webhook + a restored already-owned
+            // purchase). Called by the client after a purchase/restore.
+            response = await handleEntitlementsReconcile(request, env, session);
           } else if (path === '/v1/users/me/public-profile-summary' && method === 'PUT') {
             // v3 Phase 1z.190 — Friend rank badges MVP. Upserts the
             // caller's public_profile_summary row. Read path is the

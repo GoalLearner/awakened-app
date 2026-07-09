@@ -66,6 +66,13 @@ export interface Env {
    * closed if this is unset, so a misconfigured deploy can't grant skins. */
   REVENUECAT_WEBHOOK_AUTH: string;
 
+  /** W637 — RevenueCat PUBLIC SDK key (appl_...) used by the self-healing
+   * reconcile endpoint to read GET /v1/subscribers/{id} from RevenueCat's REST
+   * API. PUBLIC by design (same value as the client), so it can live in a [vars]
+   * block or be omitted entirely — iap-reconcile.ts falls back to a hardcoded
+   * constant when unset. NOT a secret; the reconcile is read-only. */
+  REVENUECAT_PUBLIC_KEY?: string;
+
   /** W626 — Founder grandfathering, now a CAPPED "First N Founders" launch
    * promotion. The first N accounts by registration order (users.created_at, id
    * tie-break) get Founder status for free, surfaced by GET
@@ -164,4 +171,10 @@ export interface Env {
    *  user: the client registers once per launch (+ on APNs token rotation), so
    *  6/min is far above legit usage and bounds a misbehaving client. */
   RL_PUSH_WRITE: RateLimit;
+  /** W637 — self-healing IAP reconcile (POST /v1/users/me/entitlements/reconcile).
+   *  DEDICATED bucket (never shared) because the handler makes an external
+   *  RevenueCat REST call; 12/min per user is far above legit usage (called after
+   *  a purchase/restore) while bounding a client that spams RevenueCat's API.
+   *  namespace_id 1023 in wrangler.toml. */
+  RL_IAP_RECONCILE: RateLimit;
 }

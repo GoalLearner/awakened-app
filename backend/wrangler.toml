@@ -278,3 +278,15 @@ name = "RL_PUSH_WRITE"
 type = "ratelimit"
 namespace_id = "1022"
 simple = { limit = 6, period = 60 }   # 6/min per user
+
+# Self-healing IAP reconcile (W637). Guards POST /v1/users/me/entitlements/reconcile,
+# which reads the caller's authoritative purchases from RevenueCat's REST API and
+# grants any missing locally (recovers a lost/delayed webhook + a restored
+# already-owned purchase). DEDICATED bucket — the handler makes an external RC call,
+# so it must not share a budget. The client calls it after a purchase/restore, so
+# 12/min is far above legit usage while bounding a client spamming RevenueCat's API.
+[[unsafe.bindings]]
+name = "RL_IAP_RECONCILE"
+type = "ratelimit"
+namespace_id = "1023"
+simple = { limit = 12, period = 60 }  # 12/min per user
