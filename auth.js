@@ -1444,7 +1444,6 @@
     try {
       if (!_rcConfigured) {
         await rc.configure({ apiKey: REVENUECAT_PUBLIC_SDK_KEY, appUserID: uid });
-        try { await rc.setLogLevel({ level: 'DEBUG' }); } catch (_) {}   // W639 — SDK logs to device console for diagnosis
         _rcConfigured = true;
       }
       if (_rcIdentifiedFor !== uid) {
@@ -1454,20 +1453,6 @@
       }
       return { ok: true };
     } catch (e) { return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) }; }
-  }
-  // W639 — on-device RevenueCat diagnostic. Returns the SDK's CURRENT appUserID
-  // (should equal the backend userId; a '$RCAnonymousID:' value means the RC
-  // identity is desynced from the account) + what RevenueCat itself says the user
-  // owns. Lets the client show WHY a purchase didn't unlock, right on the phone
-  // (no Xcode). Read-only; never throws.
-  async function iapDebugInfo() {
-    if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
-    const rc = _rcPlugin();
-    let appUserID = '';
-    let owned = [];
-    try { const a = await rc.getAppUserID(); appUserID = (a && a.appUserID) || ''; } catch (_) {}
-    try { const c = await rc.getCustomerInfo(); owned = (c && c.customerInfo && c.customerInfo.allPurchasedProductIdentifiers) || []; } catch (_) {}
-    return { ok: true, appUserID: appUserID, backendUserID: getBackendUserId() || '', owned: Array.isArray(owned) ? owned : [] };
   }
   // Purchase a skin by App Store product id. On success RevenueCat fires the
   // backend webhook (server-side grant); the caller then refreshes entitlements.
@@ -1686,7 +1671,6 @@
     restorePurchases,
     fetchEntitlements,
     reconcileEntitlements,   // W637 — self-healing grant (recovers lost webhook / restored purchase)
-    iapDebugInfo,            // W639 — on-device RC identity/owned diagnostic
     // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
     purchaseFounders,
     isFounder,
