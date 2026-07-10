@@ -1436,6 +1436,11 @@
   // runs only when the identity needs to change. no-op while IAP off / off-device.
   let _rcConfigured = false;
   let _rcIdentifiedFor = null;
+  // W642 — StoreProduct cache. getProductPrices (wardrobe open) fetches every
+  // product for its price tile; stash the StoreProduct objects here so purchaseSkin
+  // can open the StoreKit sheet WITHOUT a second getProducts round-trip on tap
+  // (that delay is what read as an "unresponsive" purchase button in App Review).
+  let _rcProductCache = {};
   async function configurePurchases() {
     if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
     const uid = getBackendUserId();
@@ -1468,8 +1473,14 @@
     if (!cfg.ok) return cfg;
     const rc = _rcPlugin();
     try {
-      const got = await rc.getProducts({ productIdentifiers: [productId], type: 'NON_SUBSCRIPTION' });
-      const product = got && got.products && got.products[0];
+      // W642 — reuse the StoreProduct already fetched for the price tile so the
+      // StoreKit sheet opens immediately on tap; fall back to a fresh fetch.
+      let product = _rcProductCache[productId];
+      if (!product) {
+        const got = await rc.getProducts({ productIdentifiers: [productId], type: 'NON_SUBSCRIPTION' });
+        product = got && got.products && got.products[0];
+        if (product) _rcProductCache[productId] = product;
+      }
       if (!product) return { ok: false, code: 'NO_PRODUCT' };
       await rc.purchaseStoreProduct({ product });
       return { ok: true };
@@ -1516,7 +1527,10 @@
       const list = (got && got.products) || [];
       const prices = {};
       for (const p of list) {
-        if (p && p.identifier && p.priceString) prices[p.identifier] = String(p.priceString);
+        if (p && p.identifier) {
+          _rcProductCache[p.identifier] = p;   // W642 — reuse in purchaseSkin (instant sheet)
+          if (p.priceString) prices[p.identifier] = String(p.priceString);
+        }
       }
       return { ok: true, prices: prices };
     } catch (e) {
