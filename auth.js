@@ -1468,16 +1468,27 @@
   // v8 fix: getProducts type defaults to SUBSCRIPTION, so a NON-CONSUMABLE must
   // pass NON_SUBSCRIPTION (ignored on iOS, REQUIRED on Android). StoreKit 2 also
   // needs an In-App Purchase Key set in the RevenueCat dashboard (see SETUP_IAP.md).
+  // W643 — timeout for the PREP leg ONLY (configure/getProducts). The purchase
+  // sheet is user-paced and must NEVER be timed out — timing it out would falsely
+  // fail a real in-flight charge and skip the grant/equip (adversarial-review find).
+  function _rcWithTimeout(promise, ms) {
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(function (_res, rej) { setTimeout(function () { rej(new Error('rc-timeout')); }, ms); }),
+    ]);
+  }
   async function purchaseSkin(productId) {
-    const cfg = await configurePurchases();
-    if (!cfg.ok) return cfg;
     const rc = _rcPlugin();
+    let cfg;
+    try { cfg = await _rcWithTimeout(configurePurchases(), 25000); }
+    catch (_) { return { ok: false, code: 'TIMEOUT' }; }
+    if (!cfg.ok) return cfg;
     try {
       // W642 — reuse the StoreProduct already fetched for the price tile so the
       // StoreKit sheet opens immediately on tap; fall back to a fresh fetch.
       let product = _rcProductCache[productId];
       if (!product) {
-        const got = await rc.getProducts({ productIdentifiers: [productId], type: 'NON_SUBSCRIPTION' });
+        const got = await _rcWithTimeout(rc.getProducts({ productIdentifiers: [productId], type: 'NON_SUBSCRIPTION' }), 25000);
         product = got && got.products && got.products[0];
         if (product) _rcProductCache[productId] = product;
       }
@@ -1487,6 +1498,7 @@
     } catch (e) {
       const msg = String((e && e.message) || e);
       const code = String((e && (e.code || e.errorCode)) || '');
+      if (/rc-timeout/.test(msg)) return { ok: false, code: 'TIMEOUT' };   // W643 — prep-leg fetch timed out (not the sheet)
       if (e && (e.userCancelled || /cancel/i.test(msg))) return { ok: false, code: 'CANCELLED' };
       // W637 — the store reports the user ALREADY OWNS this non-consumable (bought
       // in a prior install/session that RevenueCat never captured, so a fresh
