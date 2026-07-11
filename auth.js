@@ -134,6 +134,14 @@
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (_) {}
+    // W644 — entitlements are PER-ACCOUNT; purge their display caches on sign-out
+    // so the next account on this device can't inherit them. (Apple's reviewer
+    // hit this: their first auto-Founder'd session left hb_founder_owned='1',
+    // so a brand-new Sign-in-with-Apple account still rendered "You're a
+    // Founder" → the 2.1(b) "already purchased on a new account" rejection.)
+    _founderCache = null;
+    try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}
+    try { localStorage.removeItem('hb_skins_owned_cache'); } catch (_) {}
   }
 
   // True when JWT is within 14 days of expiry. Phase A stubs and

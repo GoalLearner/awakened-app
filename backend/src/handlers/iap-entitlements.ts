@@ -21,8 +21,17 @@ import { FOUNDER_ENTITLEMENT_ID } from '../lib/skin-products';
 // Founders. Default 100. Replaces the old time-cutoff, which would have given the
 // paid Founder pack away for free to EVERY 2026 joiner — this caps the giveaway.
 const DEFAULT_FIRST_N_FOUNDERS = 100;
+// W644 — the promo window CLOSED at monetization go-live (2026-07-09T00:00:00Z).
+// Grandfathering exists to thank accounts that were ALREADY here before the
+// Founder pack was purchasable; without this cutoff every post-launch signup
+// (including App Review's fresh test accounts — the 2.1(b) rejection: "Founder's
+// Lifetime was already purchased when we made a new account") kept getting
+// auto-Founder'd until account #100, which also made the pack unpurchasable
+// for exactly the reviewers who needed to test buying it.
+const FOUNDER_PROMO_CUTOFF_MS = 1783555200000; // 2026-07-09T00:00:00Z (users.created_at is epoch-ms)
 
-/** First-N grandfather check: is this account among the first N registered?
+/** First-N grandfather check: is this account among the first N registered
+ *  AND registered before the promo closed (go-live)?
  *  Rank = how many accounts registered strictly BEFORE this one (deterministic
  *  tie-break: same created_at → lower id ranks first). Founder iff rank < N.
  *  Derived at read-time — idempotent, no stored grant, can't double-count. Only
@@ -36,6 +45,7 @@ async function isFirstNFounder(env: Env, userId: string): Promise<boolean> {
     .first<{ created_at: number }>();
   const created = me && Number(me.created_at);
   if (!(typeof created === 'number' && created >= 0)) return false;
+  if (created >= FOUNDER_PROMO_CUTOFF_MS) return false; // W644 — joined after go-live: not grandfathered
   const rank = await env.DB.prepare(
     'SELECT COUNT(*) AS earlier FROM users WHERE created_at < ? OR (created_at = ? AND id < ?)',
   )
