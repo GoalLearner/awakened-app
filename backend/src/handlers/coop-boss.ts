@@ -30,6 +30,44 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
+import { readEntitlements } from './iap-entitlements';
+
+// ── W648 — concurrent-hunt cap (the co-op membership paywall) ───────
+// Free hunters may run at most this many simultaneous hunts; Founders (and any
+// future premium entitlement folded into readEntitlements().founder) are
+// unlimited. Enforced server-side in BOTH create and join — the client mirror
+// is UX only. The entrance fee itself is client-side souls (same trust model
+// as solo engage costs; see the header note above).
+const FREE_CONCURRENT_HUNT_CAP = 3;
+
+/** Hunts that count against a user's cap: ones they INITIATED (pending or
+ *  active) plus ones they ACCEPTED (active). A received-but-unanswered invite
+ *  deliberately does NOT count — otherwise any friend could fill a free
+ *  player's cap just by spamming summons at them. */
+async function countRunningHunts(env: Env, userId: string): Promise<number> {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM coop_boss_instances
+      WHERE status IN ('pending','active')
+        AND (challenger_user_id = ? OR (partner_user_id = ? AND status = 'active'))`,
+  )
+    .bind(userId, userId)
+    .first<{ n: number }>();
+  return row ? Number(row.n) : 0;
+}
+
+/** 409 CAP_REACHED gate shared by create + join. Returns null when allowed. */
+async function checkHuntCap(env: Env, userId: string): Promise<Response | null> {
+  const { founder } = await readEntitlements(env, userId);
+  if (founder) return null; // premium: unlimited concurrent hunts
+  const running = await countRunningHunts(env, userId);
+  if (running < FREE_CONCURRENT_HUNT_CAP) return null;
+  return jsonError(
+    409,
+    'CAP_REACHED',
+    `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or become a Founder for unlimited hunts.`,
+    { cap: FREE_CONCURRENT_HUNT_CAP },
+  );
+}
 
 // ── Server-authoritative co-op boss roster ──────────────────────────
 // goalSteps is the COMBINED target across both hunters (for flights bosses it
@@ -40,16 +78,22 @@ import { notifyUser } from '../lib/apns';
 // 'flights' (flights_total, W397 — stairs-climbed co-op).
 // W447 — metric 'both' is a DUAL hunt: BOTH a steps goal (goalSteps) AND a flights goal
 // (goalFlights) must be met (combined across the two hunters) to fell the boss.
+// W648 — rewardSouls normalized to EXACTLY half the solo kill table for the
+// boss's rank (owner's split model: two hunters split a solo dungeon's payout).
+// Solo kill rewards: E50 D100 C200 B400 A800 S1600 → per-hunter co-op: E25 C100 B200.
+// Was inconsistent (E paid 100% of solo, the W447 duals 60-65%) which made co-op
+// strictly better souls/effort than solo at E — one leg of the co-op-runs-hot
+// problem (the other leg, dupe-sell income, was cut in W646).
 const COOP_BOSS_CFG: Record<
   string,
   { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' }
 > = {
-  the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 50,  windowHours: 24, metric: 'steps' },
+  the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },
   the_coursing_dread:   { rank: 'C', goalSteps: 18000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
   the_hollow_monarch:   { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
   // W447 — dual-condition (steps AND flights) co-op duo bosses.
-  the_gaunt_wardens:    { rank: 'C', goalSteps: 10000, goalFlights: 6,  rewardSouls: 130, windowHours: 24, metric: 'both' },
-  the_sundered_choir:   { rank: 'B', goalSteps: 12000, goalFlights: 10, rewardSouls: 240, windowHours: 24, metric: 'both' },
+  the_gaunt_wardens:    { rank: 'C', goalSteps: 10000, goalFlights: 6,  rewardSouls: 100, windowHours: 24, metric: 'both' },
+  the_sundered_choir:   { rank: 'B', goalSteps: 12000, goalFlights: 10, rewardSouls: 200, windowHours: 24, metric: 'both' },
 };
 function bossMetric(bossId: string): 'steps' | 'flights' | 'both' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
@@ -423,6 +467,13 @@ export async function handleCoopBossCreate(
     return jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.');
   }
 
+  // W648 — free hunters: at most 3 running hunts; Founders unlimited. Checked
+  // AFTER the cheap validation gates so the entitlement lookup only runs on
+  // otherwise-valid summons. The invitee is deliberately NOT capped here —
+  // their cap is enforced when they JOIN (a pending invite costs them nothing).
+  const capHit = await checkHuntCap(env, session.userId);
+  if (capHit) return capHit;
+
   const id = crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO coop_boss_instances
@@ -528,6 +579,12 @@ export async function handleCoopBossJoin(
   if (row.status !== 'pending') {
     return jsonError(400, 'BAD_STATE', `Cannot join from status "${row.status}".`);
   }
+
+  // W648 — the joiner's cap. THIS instance is their received-pending row, which
+  // countRunningHunts already excludes, so at the cap the join is refused
+  // without off-by-one gymnastics. Founders bypass inside checkHuntCap.
+  const capHit = await checkHuntCap(env, session.userId);
+  if (capHit) return capHit;
 
   const cfg = COOP_BOSS_CFG[row.boss_id];
   const windowHours = cfg ? cfg.windowHours : 24;
