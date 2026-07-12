@@ -91,9 +91,14 @@ export async function readEntitlements(
       .bind(userId)
       .first<{ expires_at_ms: number }>();
     premium = !!sub && Number(sub.expires_at_ms) > Date.now();
-  } catch (_) {
-    // Table missing (migration not yet applied) → premium simply reads false;
-    // never let the membership check take down the whole entitlements read.
+  } catch (e) {
+    // W652 — swallow ONLY the missing-table case (migration 0030 not applied
+    // yet on this environment). Any OTHER D1 error must propagate as a 500:
+    // a swallowed transient error would return premium=false on a clean 200,
+    // wrongly capping a paying subscriber AND poisoning the client's member
+    // cache for the whole session (a 500 leaves the client's cache untouched).
+    const msg = String((e && (e as Error).message) || e);
+    if (!/no such table/i.test(msg)) throw e;
   }
 
   return { skins, founder, premium, member: founder || premium };

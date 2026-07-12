@@ -122,3 +122,32 @@ describe('readEntitlements — premium + member (W650)', () => {
     expect(r.member).toBe(false);
   });
 });
+
+// ── W652 — the premium-query guard swallows ONLY the missing-table case ──────
+describe('readEntitlements — premium D1 error handling (W652)', () => {
+  function makeThrowingDb(err: string) {
+    return {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => {
+            if (sql.includes('FROM premium_subscriptions')) throw new Error(err);
+            if (sql.includes('FROM users WHERE id')) return { created_at: POST_LAUNCH };
+            if (sql.includes('COUNT(*) AS earlier')) return { earlier: 999 };
+            return null;
+          },
+          run: async () => ({ success: true, meta: { changes: 0 } }),
+        }),
+      }),
+    } as unknown as D1Database;
+  }
+
+  it('missing table (migration not applied) → premium quietly false', async () => {
+    const r = await readEntitlements(makeEnv(makeThrowingDb('no such table: premium_subscriptions')), 'u1');
+    expect(r.premium).toBe(false);
+  });
+
+  it('any OTHER D1 error PROPAGATES (a 500 must not read as premium=false)', async () => {
+    await expect(readEntitlements(makeEnv(makeThrowingDb('D1_ERROR: network timeout')), 'u1')).rejects.toThrow();
+  });
+});

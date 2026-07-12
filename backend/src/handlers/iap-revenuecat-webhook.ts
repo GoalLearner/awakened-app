@@ -25,17 +25,42 @@ import { timingSafeEqual } from '../lib/timing-safe';
 // Non-consumable skins arrive as one of these RevenueCat event types.
 const GRANT_EVENT_TYPES = new Set(['INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE']);
 
-// W650 — subscription lifecycle events that carry a fresh paid-through horizon
-// (expiration_at_ms). The premium entitlement is DERIVED (expires_at_ms > now),
-// so these are the ONLY events that need state: CANCELLATION just turns off
-// auto-renew (paid time keeps running — App Store rules) and EXPIRATION is
-// implied by the horizon passing; both are logged and acknowledged, no write.
+// W650/W652 — subscription lifecycle events that carry a paid-through horizon
+// (expiration_at_ms). The premium entitlement is DERIVED (expires_at_ms > now).
+// Writes are last-writer-wins by the event's own timestamp (last_event_ms), so
+// the horizon can both GROW (purchase/renewal) and SHRINK (refund) safely:
+//  - horizon events (below): adopt expiration_at_ms
+//  - EXPIRATION: adopt expiration_at_ms — for an Apple REFUND RevenueCat moves
+//    it to the refund time, which is what claws the membership back (W652;
+//    under the old MAX-only semantics a refunded yearly kept ~12 months)
+//  - CANCELLATION with cancel_reason CUSTOMER_SUPPORT (the refund signal):
+//    adopt too, belt-and-suspenders with the EXPIRATION that follows
+//  - voluntary CANCELLATION (auto-renew off): NO write — paid time keeps
+//    running, per App Store rules
+//  - BILLING_ISSUE: adopt grace_period_expiration_at_ms when present, so a
+//    grace-period member keeps access until Apple resolves or the grace ends
 const PREMIUM_HORIZON_EVENTS = new Set([
   'INITIAL_PURCHASE',
   'RENEWAL',
   'UNCANCELLATION',
   'PRODUCT_CHANGE',
 ]);
+
+/** Resolve the horizon a premium event carries, or null if it carries none
+ *  (a non-premium product, a voluntary cancel, or a malformed payload). */
+function premiumEventHorizon(type: string, ev: Record<string, unknown>): number | null {
+  const expMs = Number(ev.expiration_at_ms) || 0;
+  if (PREMIUM_HORIZON_EVENTS.has(type)) return expMs > 0 ? expMs : null;
+  if (type === 'EXPIRATION') return expMs > 0 ? expMs : null;
+  if (type === 'CANCELLATION' && String(ev.cancel_reason ?? '') === 'CUSTOMER_SUPPORT') {
+    return expMs > 0 ? expMs : null;   // refund — RC has moved expiration to the refund time
+  }
+  if (type === 'BILLING_ISSUE') {
+    const grace = Number(ev.grace_period_expiration_at_ms) || 0;
+    return grace > 0 ? grace : null;   // keep the member through Apple's billing grace
+  }
+  return null;
+}
 
 export async function handleRevenueCatWebhook(request: Request, env: Env): Promise<Response> {
   // ── shared-secret auth (fail closed) ──
@@ -67,13 +92,15 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
       ? String(ev.original_transaction_id)
       : null;
 
-  // W650 — auto-renewable premium membership rides its OWN table with a
-  // paid-through horizon, never the permanent skin path. MAX() upsert makes
-  // redelivered / out-of-order events harmless: a stale horizon can never
-  // shrink a newer one, and re-subscribing after a lapse extends it again.
-  const expMs = Number(ev.expiration_at_ms) || 0;
-  const isPremiumUpsert =
-    isPremiumProduct(productId) && !!appUserId && expMs > 0 && PREMIUM_HORIZON_EVENTS.has(type);
+  // W650/W652 — auto-renewable premium membership rides its OWN table with a
+  // paid-through horizon, never the permanent skin path. Writes are ordered by
+  // the event's own timestamp: a redelivered/stale event can never overwrite a
+  // newer truth, while a refund's EXPIRATION legitimately pulls the horizon in.
+  const premiumHorizon = isPremiumProduct(productId) && !!appUserId
+    ? premiumEventHorizon(type, ev)
+    : null;
+  const isPremiumUpsert = premiumHorizon != null;
+  const eventMs = Number(ev.event_timestamp_ms) || Date.now();
 
   // W636 — decide grant eligibility UP FRONT so a single structured log line can
   // cover EVERY webhook, including the ignored/test events that were silent during
@@ -92,28 +119,34 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
   //   'ignored_event'    — non-purchase event (e.g. TEST/CANCELLATION/EXPIRATION),
   //                        or a purchase event missing app_user_id / product_id
   const reason = isPremiumUpsert
-    ? 'premium_extended'
+    ? 'premium_horizon'
     : grantId ? 'granted' : isGrantEvent ? 'unknown_product' : 'ignored_event';
   console.log('[iap-webhook]', JSON.stringify({
     type,
     product: productId || null,
     granted: grantId,
-    premiumUntil: isPremiumUpsert ? expMs : null,
+    premiumUntil: isPremiumUpsert ? premiumHorizon : null,
     user: appUserId ? appUserId.slice(0, 8) : null,
     reason,
   }));
 
   if (isPremiumUpsert) {
     try {
+      // W652 — last-writer-wins by event time. The DO UPDATE ... WHERE guard
+      // rejects stale/redelivered events (their event_timestamp_ms is older
+      // than the write that already landed), while a NEWER event may move the
+      // horizon in EITHER direction — forward on renewal, backward on refund.
       await env.DB.prepare(
-        `INSERT INTO premium_subscriptions (user_id, product_id, expires_at_ms, updated_at)
-         VALUES (?, ?, ?, datetime('now'))
+        `INSERT INTO premium_subscriptions (user_id, product_id, expires_at_ms, last_event_ms, updated_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
          ON CONFLICT(user_id) DO UPDATE SET
            product_id    = excluded.product_id,
-           expires_at_ms = MAX(premium_subscriptions.expires_at_ms, excluded.expires_at_ms),
-           updated_at    = excluded.updated_at`,
+           expires_at_ms = excluded.expires_at_ms,
+           last_event_ms = excluded.last_event_ms,
+           updated_at    = excluded.updated_at
+         WHERE excluded.last_event_ms > premium_subscriptions.last_event_ms`,
       )
-        .bind(appUserId, productId, expMs)
+        .bind(appUserId, productId, premiumHorizon, eventMs)
         .run();
     } catch (e) {
       // Same contract as the skin path: surface + rethrow so RevenueCat retries.
@@ -123,7 +156,7 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
       }));
       throw e;
     }
-    return jsonOk({ ok: true, premium: true, expires_at_ms: expMs });
+    return jsonOk({ ok: true, premium: true, expires_at_ms: premiumHorizon });
   }
 
   // Only purchase events grant; everything else is acknowledged and ignored so

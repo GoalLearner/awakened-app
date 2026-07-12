@@ -38,7 +38,8 @@ interface RcNonSubRecord {
   id?: string;
 }
 interface RcSubscriptionRecord {
-  expires_date?: string | null;   // ISO-8601 paid-through (incl. grace), RC REST shape
+  expires_date?: string | null;               // ISO-8601 paid-through, RC REST shape
+  grace_period_expires_date?: string | null;  // W652 — billing-grace horizon when Apple grants one
 }
 interface RcSubscriberResponse {
   subscriber?: {
@@ -128,28 +129,37 @@ export async function handleEntitlementsReconcile(
           .run();
         if (r.meta && r.meta.changes) granted += r.meta.changes; // 1 if newly inserted, 0 if already owned
       }
-      // W650 — the self-heal path for the PREMIUM membership: if RevenueCat
-      // knows an active premium subscription the webhook never delivered,
-      // adopt its paid-through horizon (same MAX-upsert as the webhook, so a
-      // stale record can never shrink a newer one). Sharing-via-restore is
-      // bounded by expiry — a transferred sub stops mattering within one
-      // billing period — so no per-txn guard is needed here, unlike skins.
+      // W650/W652 — the self-heal path for the PREMIUM membership. RC's REST
+      // record is the CURRENT truth at fetch time, so adopt it exactly (the
+      // horizon may move in either direction — forward for a missed renewal,
+      // BACKWARD for a refund the webhook never delivered). Ordered against
+      // webhook writes via last_event_ms = now. Grace-period horizons count
+      // (grace_period_expires_date > expires_date while Apple retries billing).
+      // Sharing-via-restore stays bounded by expiry — no per-txn guard needed.
       const subs = (data && data.subscriber && data.subscriber.subscriptions) || {};
       for (const pid of Object.keys(subs)) {
         if (!isPremiumProduct(pid)) continue;
-        const expMs = subs[pid] && subs[pid].expires_date ? Date.parse(String(subs[pid].expires_date)) : NaN;
-        if (!Number.isFinite(expMs) || expMs <= 0) continue;
+        const rec = subs[pid] || {};
+        const expMs = rec.expires_date ? Date.parse(String(rec.expires_date)) : NaN;
+        const graceMs = rec.grace_period_expires_date ? Date.parse(String(rec.grace_period_expires_date)) : NaN;
+        const horizon = Math.max(
+          Number.isFinite(expMs) ? expMs : 0,
+          Number.isFinite(graceMs) ? graceMs : 0,
+        );
+        if (!(horizon > 0)) continue;
         await env.DB.prepare(
-          `INSERT INTO premium_subscriptions (user_id, product_id, expires_at_ms, updated_at)
-           VALUES (?, ?, ?, datetime('now'))
+          `INSERT INTO premium_subscriptions (user_id, product_id, expires_at_ms, last_event_ms, updated_at)
+           VALUES (?, ?, ?, ?, datetime('now'))
            ON CONFLICT(user_id) DO UPDATE SET
              product_id    = excluded.product_id,
-             expires_at_ms = MAX(premium_subscriptions.expires_at_ms, excluded.expires_at_ms),
-             updated_at    = excluded.updated_at`,
+             expires_at_ms = excluded.expires_at_ms,
+             last_event_ms = excluded.last_event_ms,
+             updated_at    = excluded.updated_at
+           WHERE excluded.last_event_ms > premium_subscriptions.last_event_ms`,
         )
-          .bind(userId, pid, expMs)
+          .bind(userId, pid, horizon, Date.now())
           .run();
-        premiumSwept = Math.max(premiumSwept, expMs);
+        premiumSwept = Math.max(premiumSwept, horizon);
       }
     } else {
       // RC unreachable/error → don't fail the client; fall through and return

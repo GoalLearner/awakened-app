@@ -1682,11 +1682,17 @@
   // REST record (subscriptions sweep, W650).
   async function purchasePremium(productId) {
     const pid = productId || PREMIUM_PRODUCTS.monthly;
-    const cfg = await configurePurchases();
+    // W652 — the W643 lesson applies here too: timeout the PREP leg only
+    // (configure/getProducts can hang on a flaky StoreKit fetch and would
+    // latch the caller's busy guard forever); the purchase sheet itself is
+    // user-paced and must never be timed out.
+    let cfg;
+    try { cfg = await _rcWithTimeout(configurePurchases(), 25000); }
+    catch (_) { return { ok: false, code: 'TIMEOUT' }; }
     if (!cfg.ok) return cfg;
     const rc = _rcPlugin();
     try {
-      const got = await rc.getProducts({ productIdentifiers: [pid] });
+      const got = await _rcWithTimeout(rc.getProducts({ productIdentifiers: [pid] }), 25000);
       const product = got && got.products && got.products[0];
       if (!product) return { ok: false, code: 'NO_PRODUCT' };
       await rc.purchaseStoreProduct({ product });
@@ -1705,7 +1711,11 @@
       await reconcileEntitlements();
       if (!isMember()) { await new Promise((res) => setTimeout(res, 1500)); await reconcileEntitlements(); }
     } catch (_) {}
-    return { ok: true };
+    // W652 — HONEST result: ok = the flow completed, member = the entitlement
+    // actually landed. The already-subscribed fallthrough can complete without
+    // membership materializing (restore found nothing / reconcile offline) —
+    // the caller must not celebrate on ok alone.
+    return { ok: true, member: isMember() };
   }
   // Localized subscription prices for the membership sheet. Separate from
   // getProductPrices because subscriptions must NOT pass NON_SUBSCRIPTION.

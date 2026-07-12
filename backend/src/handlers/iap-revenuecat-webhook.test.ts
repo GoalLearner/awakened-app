@@ -151,20 +151,22 @@ describe('handleRevenueCatWebhook — no-op paths', () => {
   });
 });
 
-// ── W650 — auto-renewable "Awakened Premium" membership events ──────────────
-describe('handleRevenueCatWebhook — premium subscription (W650)', () => {
+// ── W650/W652 — auto-renewable "Awakened Premium" membership events ─────────
+describe('handleRevenueCatWebhook — premium subscription (W650/W652)', () => {
   const FUTURE_MS = 1799999999000; // any fixed future horizon
+  const EVENT_MS = 1783600000000;  // the RC event timestamp (drives write ordering)
   const premiumEvent = (type: string, over: Record<string, unknown> = {}) => ({
     event: {
       type,
       app_user_id: 'user-123',
       product_id: 'com.goallearner.awakened.premium.monthly',
       expiration_at_ms: FUTURE_MS,
+      event_timestamp_ms: EVENT_MS,
       ...over,
     },
   });
 
-  it('INITIAL_PURCHASE upserts the paid-through horizon with MAX semantics', async () => {
+  it('INITIAL_PURCHASE writes the horizon guarded by event-time ordering', async () => {
     const db = makeDb();
     const res = await handleRevenueCatWebhook(webhook(premiumEvent('INITIAL_PURCHASE')), makeEnv(db));
     expect(res.status).toBe(200);
@@ -174,12 +176,14 @@ describe('handleRevenueCatWebhook — premium subscription (W650)', () => {
     const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
     expect(calls).toHaveLength(1);
     expect(calls[0].sql).toContain('INSERT INTO premium_subscriptions');
-    // Out-of-order/redelivery safety: a stale horizon can never shrink a newer one.
-    expect(calls[0].sql).toContain('MAX(premium_subscriptions.expires_at_ms, excluded.expires_at_ms)');
-    expect(calls[0].binds).toEqual(['user-123', 'com.goallearner.awakened.premium.monthly', FUTURE_MS]);
+    // W652 — last-writer-wins BY EVENT TIME: a redelivered/stale event can't
+    // overwrite a newer truth, and a newer event may move the horizon in
+    // EITHER direction (renewal forward, refund backward).
+    expect(calls[0].sql).toMatch(/WHERE excluded\.last_event_ms > premium_subscriptions\.last_event_ms/);
+    expect(calls[0].binds).toEqual(['user-123', 'com.goallearner.awakened.premium.monthly', FUTURE_MS, EVENT_MS]);
   });
 
-  it('RENEWAL extends the horizon (same upsert path)', async () => {
+  it('RENEWAL extends the horizon (same write path)', async () => {
     const db = makeDb();
     const res = await handleRevenueCatWebhook(webhook(premiumEvent('RENEWAL')), makeEnv(db));
     expect(res.status).toBe(200);
@@ -187,18 +191,47 @@ describe('handleRevenueCatWebhook — premium subscription (W650)', () => {
     expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(1);
   });
 
-  it('CANCELLATION writes nothing — paid time keeps running until the horizon', async () => {
+  it('voluntary CANCELLATION writes nothing — paid time keeps running until the horizon', async () => {
     const db = makeDb();
-    const res = await handleRevenueCatWebhook(webhook(premiumEvent('CANCELLATION')), makeEnv(db));
+    const res = await handleRevenueCatWebhook(
+      webhook(premiumEvent('CANCELLATION', { cancel_reason: 'UNSUBSCRIBE' })),
+      makeEnv(db),
+    );
     expect(res.status).toBe(200);
     expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(0);
   });
 
-  it('EXPIRATION writes nothing — expiry is derived from the stored horizon', async () => {
+  it('W652 — refund CANCELLATION (CUSTOMER_SUPPORT) CLAWS the horizon back', async () => {
+    const REFUND_MS = EVENT_MS; // RC moves expiration to the refund time
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(
+      webhook(premiumEvent('CANCELLATION', { cancel_reason: 'CUSTOMER_SUPPORT', expiration_at_ms: REFUND_MS })),
+      makeEnv(db),
+    );
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].binds[2]).toBe(REFUND_MS);   // the horizon SHRINKS to the refund time
+  });
+
+  it('W652 — EXPIRATION adopts the (possibly pulled-in) horizon', async () => {
     const db = makeDb();
     const res = await handleRevenueCatWebhook(webhook(premiumEvent('EXPIRATION')), makeEnv(db));
     expect(res.status).toBe(200);
-    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(0);
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(1);
+  });
+
+  it('W652 — BILLING_ISSUE keeps the member through the grace window', async () => {
+    const GRACE_MS = FUTURE_MS + 16 * 24 * 3600 * 1000;
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(
+      webhook(premiumEvent('BILLING_ISSUE', { grace_period_expiration_at_ms: GRACE_MS })),
+      makeEnv(db),
+    );
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].binds[2]).toBe(GRACE_MS);
   });
 
   it('a premium product NEVER rides the permanent skin-grant path', async () => {
