@@ -44,6 +44,20 @@ export function skinForProduct(productId: string): string | null {
 export const FOUNDER_PRODUCT_ID = 'com.goallearner.awakened.founders_lifetime';
 export const FOUNDER_ENTITLEMENT_ID = 'founder';
 
+// ── W650 — "Awakened Premium" auto-renewable membership ─────────────────────
+// The subscription tier of the OSRS-style membership: no co-op entrance fees,
+// unlimited concurrent hunts, unlimited Ascent attempts. Founder = the
+// LIFETIME tier of the same membership (member = founder OR active premium).
+// These are AUTO-RENEWABLE products — they expire, so they ride the
+// premium_subscriptions table (expiry-derived), NEVER skin_entitlements.
+export const PREMIUM_PRODUCT_IDS: ReadonlySet<string> = new Set([
+  'com.goallearner.awakened.premium.monthly',   // $4.99/mo
+  'com.goallearner.awakened.premium.yearly',    // $39.99/yr
+]);
+export function isPremiumProduct(productId: string): boolean {
+  return PREMIUM_PRODUCT_IDS.has(productId);
+}
+
 /**
  * Resolve a store product id to the entitlement id to persist — either the
  * Founder entitlement or a skin catalog id, or null if unknown. Used by the

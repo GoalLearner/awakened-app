@@ -24,6 +24,7 @@ function makeDb(opts: {
   skins?: string[];          // rows in skin_entitlements for the caller
   user?: UserRow | null;     // the caller's users row (null = missing)
   earlier?: number;          // accounts registered before the caller
+  premiumExpiresAt?: number; // W650 — premium_subscriptions horizon (absent = no row)
 }) {
   const skins = (opts.skins ?? []).map((skin_id) => ({ skin_id }));
   return {
@@ -31,6 +32,9 @@ function makeDb(opts: {
       bind: () => ({
         all: async () => ({ results: skins, success: true, meta: {} }),
         first: async () => {
+          if (sql.includes('FROM premium_subscriptions')) {
+            return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
+          }
           if (sql.includes('FROM users WHERE id')) return opts.user === undefined ? { created_at: PRE_LAUNCH } : opts.user;
           if (sql.includes('COUNT(*) AS earlier')) return { earlier: opts.earlier ?? 0 };
           return null;
@@ -83,5 +87,38 @@ describe('readEntitlements — First-N Founder grandfather (W626 + W644 cutoff)'
     const db = makeDb({ user: null, earlier: 0 });
     const r = await readEntitlements(makeEnv(db), 'ghost');
     expect(r.founder).toBe(false);
+  });
+});
+
+// ── W650 — premium membership derivation (expiry-based, no revocation events) ──
+describe('readEntitlements — premium + member (W650)', () => {
+  it('an unexpired premium horizon → premium=true, member=true (non-founder)', async () => {
+    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999, premiumExpiresAt: Date.now() + 86_400_000 });
+    const r = await readEntitlements(makeEnv(db), 'subscriber-1');
+    expect(r.premium).toBe(true);
+    expect(r.founder).toBe(false);
+    expect(r.member).toBe(true);
+  });
+
+  it('a LAPSED horizon self-revokes: premium=false, member=false', async () => {
+    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999, premiumExpiresAt: Date.now() - 1000 });
+    const r = await readEntitlements(makeEnv(db), 'lapsed-subscriber');
+    expect(r.premium).toBe(false);
+    expect(r.member).toBe(false);
+  });
+
+  it('a Founder with no subscription is still a member (lifetime tier)', async () => {
+    const db = makeDb({ skins: ['founder'], user: { created_at: POST_LAUNCH } });
+    const r = await readEntitlements(makeEnv(db), 'founder-1');
+    expect(r.founder).toBe(true);
+    expect(r.premium).toBe(false);
+    expect(r.member).toBe(true);
+  });
+
+  it('no subscription row at all → premium=false', async () => {
+    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999 });
+    const r = await readEntitlements(makeEnv(db), 'free-user');
+    expect(r.premium).toBe(false);
+    expect(r.member).toBe(false);
   });
 });

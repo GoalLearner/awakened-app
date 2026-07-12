@@ -140,7 +140,9 @@
     // so a brand-new Sign-in-with-Apple account still rendered "You're a
     // Founder" → the 2.1(b) "already purchased on a new account" rejection.)
     _founderCache = null;
+    _memberCache = null;   // W651 — membership is per-account too
     try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}
+    try { localStorage.removeItem('hb_member_owned'); } catch (_) {}
     try { localStorage.removeItem('hb_skins_owned_cache'); } catch (_) {}
   }
 
@@ -1580,7 +1582,8 @@
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
       _updateFounderCache(!!data.founder);   // W618 — piggyback Founder status on the same read
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder };
+      _updateMemberCache(data);              // W651 — and the membership (founder OR active premium)
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, premium: !!data.premium, member: !!(data.member || data.founder) };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -1605,7 +1608,8 @@
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
       _updateFounderCache(!!data.founder);
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, reconciled: (data.reconciled | 0) };
+      _updateMemberCache(data);              // W651 — reconcile also refreshes the membership
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, premium: !!data.premium, member: !!(data.member || data.founder), reconciled: (data.reconciled | 0) };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -1643,6 +1647,82 @@
       } catch (_) {}
     }
     return r;
+  }
+
+  // ── W651 — "Awakened Premium" auto-renewable membership ─────────────────
+  // The subscription tier of the OSRS-style membership (Founder = the lifetime
+  // tier of the SAME membership): no co-op entrance fees, unlimited concurrent
+  // hunts, unlimited Ascent attempts. The backend derives `premium` from the
+  // RevenueCat-webhook-maintained paid-through horizon and returns the combined
+  // `member` flag on GET /entitlements — the client caches it like Founder.
+  const PREMIUM_PRODUCTS = {
+    monthly: 'com.goallearner.awakened.premium.monthly',   // $4.99/mo
+    yearly:  'com.goallearner.awakened.premium.yearly',    // $39.99/yr
+  };
+  let _memberCache = null; // tri-state, same contract as _founderCache
+  function _updateMemberCache(data) {
+    const m = !!(data && (data.member || data.founder));
+    _memberCache = m;
+    try { localStorage.setItem('hb_member_owned', m ? '1' : '0'); } catch (_) {}
+  }
+  // The ONE flag every membership perk gates on (co-op fees/cap, Ascent lives).
+  // Founder ⊂ member, so existing Founder perks are unchanged.
+  function isMember() {
+    try {
+      if (!IAP_ENABLED) return false;
+      if (isFounder()) return true;   // lifetime tier — no cache dance needed
+      if (_memberCache === null) _memberCache = (localStorage.getItem('hb_member_owned') === '1');
+      return _memberCache === true;
+    } catch (_) { return false; }
+  }
+  // Buy a premium subscription. Same identify-first RevenueCat flow as skins,
+  // but WITHOUT the NON_SUBSCRIPTION type override — these are auto-renewable
+  // products, which is getProducts' default type. On success the webhook sets
+  // the paid-through horizon; reconcile self-heals a lost delivery from RC's
+  // REST record (subscriptions sweep, W650).
+  async function purchasePremium(productId) {
+    const pid = productId || PREMIUM_PRODUCTS.monthly;
+    const cfg = await configurePurchases();
+    if (!cfg.ok) return cfg;
+    const rc = _rcPlugin();
+    try {
+      const got = await rc.getProducts({ productIdentifiers: [pid] });
+      const product = got && got.products && got.products[0];
+      if (!product) return { ok: false, code: 'NO_PRODUCT' };
+      await rc.purchaseStoreProduct({ product });
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      const code = String((e && (e.code || e.errorCode)) || '');
+      if (e && (e.userCancelled || /cancel/i.test(msg))) return { ok: false, code: 'CANCELLED' };
+      // Already-subscribed (codes 6/7, same numeric-string contract as skins):
+      // restore so RevenueCat re-ingests the receipt, then fall through to the
+      // reconcile below — it adopts the horizon from RC's REST record.
+      const already = code === '6' || code === '7' || /already[\s_-]*(purchas|own|active|in[\s_-]*use)/i.test(msg);
+      if (!already) return { ok: false, code: 'ERROR', detail: msg };
+      try { await rc.restorePurchases(); } catch (_) {}
+    }
+    try {
+      await reconcileEntitlements();
+      if (!isMember()) { await new Promise((res) => setTimeout(res, 1500)); await reconcileEntitlements(); }
+    } catch (_) {}
+    return { ok: true };
+  }
+  // Localized subscription prices for the membership sheet. Separate from
+  // getProductPrices because subscriptions must NOT pass NON_SUBSCRIPTION.
+  async function getPremiumPrices() {
+    if (!iapAvailable()) return { ok: false, code: 'IAP_DISABLED' };
+    const cfg = await configurePurchases();
+    if (!cfg.ok) return cfg;
+    try {
+      const got = await _rcPlugin().getProducts({ productIdentifiers: [PREMIUM_PRODUCTS.monthly, PREMIUM_PRODUCTS.yearly] });
+      const prices = {};
+      for (const p of (got && got.products) || []) {
+        if (p && p.identifier && p.priceString) prices[p.identifier] = String(p.priceString);
+      }
+      return { ok: true, prices: prices };
+    } catch (e) {
+      return { ok: false, code: 'ERROR', detail: String((e && e.message) || e) };
+    }
   }
 
   // ── Per-user retention ping (W526) ──────────────────────────────────────
@@ -1708,6 +1788,11 @@
     // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
     purchaseFounders,
     isFounder,
+    // W651 — Awakened Premium (auto-renewable membership; Founder = lifetime tier)
+    purchasePremium,
+    getPremiumPrices,
+    isMember,
+    PREMIUM_PRODUCTS,
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,
     uploadCloudState,

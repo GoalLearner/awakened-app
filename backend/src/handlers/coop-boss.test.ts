@@ -36,7 +36,7 @@ const PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; founder?: boolean; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; founder?: boolean; premiumExpiresAt?: number; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
   return {
     prepare: (sql: string) => {
       sqlLog?.push(sql);
@@ -52,6 +52,9 @@ function makeDb(opts: { running?: number; founder?: boolean; instance?: Record<s
             return { results: [], success: true, meta: {} };
           },
           first: async () => {
+            if (sql.includes('FROM premium_subscriptions')) {
+              return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
+            }
             if (sql.includes('FROM friends')) return { id: 'friend-row' };
             if (sql.includes('FROM public_profile_summary')) return { rank_tier: 'S' };
             if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return { n: opts.running ?? 0 };
@@ -109,6 +112,28 @@ describe('W648 — concurrent-hunt cap on CREATE', () => {
     const body = (await res.json()) as { ok?: boolean };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
+  });
+
+  it('W650 — lets an active premium SUBSCRIBER (non-founder) create past the cap', async () => {
+    const res = await handleCoopBossCreate(
+      createReq(),
+      makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() + 86_400_000 })),
+      session('u1'),
+    );
+    const body = (await res.json()) as { ok?: boolean };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
+
+  it('W650 — a LAPSED subscriber is capped like a free hunter', async () => {
+    const res = await handleCoopBossCreate(
+      createReq(),
+      makeEnv(makeDb({ running: 3, premiumExpiresAt: Date.now() - 1000 })),
+      session('u1'),
+    );
+    const body = (await res.json()) as { error?: string };
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('CAP_REACHED');
   });
 
   it('counts hunts via the received-invites-excluded formula (griefing guard)', async () => {

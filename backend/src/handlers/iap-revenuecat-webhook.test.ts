@@ -150,3 +150,71 @@ describe('handleRevenueCatWebhook — no-op paths', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ── W650 — auto-renewable "Awakened Premium" membership events ──────────────
+describe('handleRevenueCatWebhook — premium subscription (W650)', () => {
+  const FUTURE_MS = 1799999999000; // any fixed future horizon
+  const premiumEvent = (type: string, over: Record<string, unknown> = {}) => ({
+    event: {
+      type,
+      app_user_id: 'user-123',
+      product_id: 'com.goallearner.awakened.premium.monthly',
+      expiration_at_ms: FUTURE_MS,
+      ...over,
+    },
+  });
+
+  it('INITIAL_PURCHASE upserts the paid-through horizon with MAX semantics', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(webhook(premiumEvent('INITIAL_PURCHASE')), makeEnv(db));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; premium: boolean; expires_at_ms: number };
+    expect(body.premium).toBe(true);
+    expect(body.expires_at_ms).toBe(FUTURE_MS);
+    const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).toContain('INSERT INTO premium_subscriptions');
+    // Out-of-order/redelivery safety: a stale horizon can never shrink a newer one.
+    expect(calls[0].sql).toContain('MAX(premium_subscriptions.expires_at_ms, excluded.expires_at_ms)');
+    expect(calls[0].binds).toEqual(['user-123', 'com.goallearner.awakened.premium.monthly', FUTURE_MS]);
+  });
+
+  it('RENEWAL extends the horizon (same upsert path)', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(webhook(premiumEvent('RENEWAL')), makeEnv(db));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { premium: boolean }).premium).toBe(true);
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(1);
+  });
+
+  it('CANCELLATION writes nothing — paid time keeps running until the horizon', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(webhook(premiumEvent('CANCELLATION')), makeEnv(db));
+    expect(res.status).toBe(200);
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(0);
+  });
+
+  it('EXPIRATION writes nothing — expiry is derived from the stored horizon', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(webhook(premiumEvent('EXPIRATION')), makeEnv(db));
+    expect(res.status).toBe(200);
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(0);
+  });
+
+  it('a premium product NEVER rides the permanent skin-grant path', async () => {
+    const db = makeDb();
+    await handleRevenueCatWebhook(webhook(premiumEvent('INITIAL_PURCHASE')), makeEnv(db));
+    const calls = (db as unknown as { _calls: () => CapturedCall[] })._calls();
+    expect(calls.some((c) => c.sql.includes('skin_entitlements'))).toBe(false);
+  });
+
+  it('a horizon event missing expiration_at_ms is acknowledged with no write', async () => {
+    const db = makeDb();
+    const res = await handleRevenueCatWebhook(
+      webhook(premiumEvent('INITIAL_PURCHASE', { expiration_at_ms: undefined })),
+      makeEnv(db),
+    );
+    expect(res.status).toBe(200);
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()).toHaveLength(0);
+  });
+});

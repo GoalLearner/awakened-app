@@ -23,7 +23,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { entitlementForProduct } from '../lib/skin-products';
+import { entitlementForProduct, isPremiumProduct } from '../lib/skin-products';
 import { readEntitlements } from './iap-entitlements';
 
 // RevenueCat PUBLIC SDK key — the SAME value the client uses (auth.js
@@ -37,9 +37,13 @@ interface RcNonSubRecord {
   store_transaction_id?: string;
   id?: string;
 }
+interface RcSubscriptionRecord {
+  expires_date?: string | null;   // ISO-8601 paid-through (incl. grace), RC REST shape
+}
 interface RcSubscriberResponse {
   subscriber?: {
     non_subscriptions?: Record<string, RcNonSubRecord[]>;
+    subscriptions?: Record<string, RcSubscriptionRecord>;
   };
 }
 
@@ -67,6 +71,7 @@ export async function handleEntitlementsReconcile(
   let seen = 0;
   let granted = 0;
   let refused = 0;
+  let premiumSwept = 0;   // W650 — latest premium horizon adopted from RC (0 = none)
 
   try {
     const res = await fetch(
@@ -123,6 +128,29 @@ export async function handleEntitlementsReconcile(
           .run();
         if (r.meta && r.meta.changes) granted += r.meta.changes; // 1 if newly inserted, 0 if already owned
       }
+      // W650 — the self-heal path for the PREMIUM membership: if RevenueCat
+      // knows an active premium subscription the webhook never delivered,
+      // adopt its paid-through horizon (same MAX-upsert as the webhook, so a
+      // stale record can never shrink a newer one). Sharing-via-restore is
+      // bounded by expiry — a transferred sub stops mattering within one
+      // billing period — so no per-txn guard is needed here, unlike skins.
+      const subs = (data && data.subscriber && data.subscriber.subscriptions) || {};
+      for (const pid of Object.keys(subs)) {
+        if (!isPremiumProduct(pid)) continue;
+        const expMs = subs[pid] && subs[pid].expires_date ? Date.parse(String(subs[pid].expires_date)) : NaN;
+        if (!Number.isFinite(expMs) || expMs <= 0) continue;
+        await env.DB.prepare(
+          `INSERT INTO premium_subscriptions (user_id, product_id, expires_at_ms, updated_at)
+           VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT(user_id) DO UPDATE SET
+             product_id    = excluded.product_id,
+             expires_at_ms = MAX(premium_subscriptions.expires_at_ms, excluded.expires_at_ms),
+             updated_at    = excluded.updated_at`,
+        )
+          .bind(userId, pid, expMs)
+          .run();
+        premiumSwept = Math.max(premiumSwept, expMs);
+      }
     } else {
       // RC unreachable/error → don't fail the client; fall through and return
       // whatever is already granted locally so the UI still gets the user's skins.
@@ -140,7 +168,7 @@ export async function handleEntitlementsReconcile(
   }
 
   // One structured line per reconcile (mirrors the [iap-webhook] observability).
-  console.log('[iap-reconcile]', JSON.stringify({ user: userId.slice(0, 8), seen, granted, refused }));
+  console.log('[iap-reconcile]', JSON.stringify({ user: userId.slice(0, 8), seen, granted, refused, premiumUntil: premiumSwept || null }));
 
   const ent = await readEntitlements(env, userId);
   return jsonOk({ ok: true, reconciled: granted, ...ent });

@@ -66,14 +66,16 @@ async function countRunningHunts(env: Env, userId: string): Promise<number> {
 
 /** 409 CAP_REACHED gate shared by create + join. Returns null when allowed. */
 async function checkHuntCap(env: Env, userId: string): Promise<Response | null> {
-  const { founder } = await readEntitlements(env, userId);
-  if (founder) return null; // premium: unlimited concurrent hunts
+  // W650 — `member` = Founder (lifetime) OR active premium subscription; both
+  // tiers of the same membership get unlimited concurrent hunts.
+  const { member } = await readEntitlements(env, userId);
+  if (member) return null;
   const running = await countRunningHunts(env, userId);
   if (running < FREE_CONCURRENT_HUNT_CAP) return null;
   return jsonError(
     409,
     'CAP_REACHED',
-    `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or become a Founder for unlimited hunts.`,
+    `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
     { cap: FREE_CONCURRENT_HUNT_CAP },
   );
 }

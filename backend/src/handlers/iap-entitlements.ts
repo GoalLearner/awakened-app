@@ -58,13 +58,19 @@ async function isFirstNFounder(env: Env, userId: string): Promise<boolean> {
 /**
  * Read a user's owned entitlements from D1 (+ the first-N Founder promo).
  * Shared by GET /entitlements and the W637 reconcile endpoint so both return
- * the identical { skins, founder } shape. The reserved 'founder' id is filtered
- * out of `skins` and surfaced as the `founder` flag.
+ * the identical shape. The reserved 'founder' id is filtered out of `skins`
+ * and surfaced as the `founder` flag.
+ *
+ * W650 — `premium` is the auto-renewable membership, DERIVED at read time as
+ * (premium_subscriptions.expires_at_ms > now): a lapsed subscription revokes
+ * itself with no revocation machinery. `member` = founder OR premium — the ONE
+ * flag every membership perk (co-op fees/cap, Ascent lives) gates on; Founder
+ * is simply the lifetime tier of the same membership.
  */
 export async function readEntitlements(
   env: Env,
   userId: string,
-): Promise<{ skins: string[]; founder: boolean }> {
+): Promise<{ skins: string[]; founder: boolean; premium: boolean; member: boolean }> {
   const rows = await env.DB.prepare(
     `SELECT skin_id FROM skin_entitlements WHERE user_id = ? ORDER BY acquired_at ASC`,
   )
@@ -75,7 +81,22 @@ export async function readEntitlements(
   let founder = owned.includes(FOUNDER_ENTITLEMENT_ID);
   const skins = owned.filter((id) => id !== FOUNDER_ENTITLEMENT_ID);
   if (!founder) founder = await isFirstNFounder(env, userId);   // W626 — first-N promo
-  return { skins, founder };
+
+  // W650 — active premium subscription (paid-through horizon in the future).
+  let premium = false;
+  try {
+    const sub = await env.DB.prepare(
+      'SELECT expires_at_ms FROM premium_subscriptions WHERE user_id = ? LIMIT 1',
+    )
+      .bind(userId)
+      .first<{ expires_at_ms: number }>();
+    premium = !!sub && Number(sub.expires_at_ms) > Date.now();
+  } catch (_) {
+    // Table missing (migration not yet applied) → premium simply reads false;
+    // never let the membership check take down the whole entitlements read.
+  }
+
+  return { skins, founder, premium, member: founder || premium };
 }
 
 export async function handleEntitlementsGet(
