@@ -43,12 +43,21 @@ const FREE_CONCURRENT_HUNT_CAP = 3;
 /** Hunts that count against a user's cap: ones they INITIATED (pending or
  *  active) plus ones they ACCEPTED (active). A received-but-unanswered invite
  *  deliberately does NOT count — otherwise any friend could fill a free
- *  player's cap just by spamming summons at them. */
+ *  player's cap just by spamming summons at them.
+ *  W649 — an 'active' hunt whose 24h window already LAPSED doesn't count
+ *  either: rows only flip to expired when a participant's client resolves
+ *  them, so without the ends_at guard three abandoned hunts would wall a free
+ *  player behind CAP_REACHED (and a Founder upsell) indefinitely. ends_at is
+ *  an ISO-8601 string, which SQLite's strftime parses natively.
+ *  Known, accepted: the cap is check-then-insert without a transaction — two
+ *  perfectly-raced creates can briefly land 4 hunts. Impact is one extra
+ *  hunt, self-corrects as hunts finish; not worth a compensating delete. */
 async function countRunningHunts(env: Env, userId: string): Promise<number> {
   const row = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM coop_boss_instances
       WHERE status IN ('pending','active')
-        AND (challenger_user_id = ? OR (partner_user_id = ? AND status = 'active'))`,
+        AND (challenger_user_id = ? OR (partner_user_id = ? AND status = 'active'))
+        AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))`,
   )
     .bind(userId, userId)
     .first<{ n: number }>();

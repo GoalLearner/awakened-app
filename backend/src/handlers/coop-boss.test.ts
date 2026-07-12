@@ -119,6 +119,9 @@ describe('W648 — concurrent-hunt cap on CREATE', () => {
     // A received-but-unanswered invite must NOT count against the invitee:
     // partner-side rows only count once ACTIVE (i.e., the user accepted).
     expect(capSql).toMatch(/partner_user_id = \? AND status = 'active'/);
+    // W649 — an active hunt whose window already lapsed must not count either
+    // (unresolved-expired rows would otherwise wall the user forever).
+    expect(capSql).toMatch(/strftime\('%s', ends_at\) > strftime\('%s', 'now'\)/);
   });
 });
 
