@@ -38,6 +38,8 @@ interface TopRow {
   // W453 — Prestige star count + tier (for the "S+ ✦N" flex on the board).
   prestige: number | null;
   rank_tier: string | null;
+  // W656 — free Founder marker number (prestige only; null = not a Founder).
+  founder_seq: number | null;
 }
 
 interface MyRow {
@@ -95,7 +97,8 @@ export async function handleLeaderboardTop(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
                 pps.arena_title AS arena_title,
                 pps.bosses_slain_total AS bosses_slain,
-                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier
+                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
+                pps.founder_seq AS founder_seq
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -109,7 +112,8 @@ export async function handleLeaderboardTop(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
                 pps.arena_title AS arena_title,
                 pps.bosses_slain_total AS bosses_slain,
-                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier
+                pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
+                pps.founder_seq AS founder_seq
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -131,6 +135,7 @@ export async function handleLeaderboardTop(
     // W453 — Prestige stars + tier (0 / null when no pps row or below S+)
     prestige: row.prestige ?? 0,
     rankTier: row.rank_tier ?? null,
+    founderSeq: row.founder_seq ?? null,   // W656 — Founder # for the row's crest
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,

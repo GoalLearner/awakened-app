@@ -55,6 +55,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { maybeGrantFounderMark } from '../lib/founder-mark';
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 const ALLOWED_DIVISIONS = ['I', 'II', 'III'] as const;
@@ -612,6 +613,11 @@ export async function handlePublicProfileSummaryPut(
       combatantSet, v.combatant.value,
     )
     .run();
+
+  // W656 — grant/refresh the free Founder marker for a now-eligible account and
+  // stamp its number onto the row we just wrote (cross-user leaderboard/profile
+  // reads pick it up). Never throws; fast-path is a single query once granted.
+  await maybeGrantFounderMark(env, session.userId);
 
   return jsonOk({
     ok: true,

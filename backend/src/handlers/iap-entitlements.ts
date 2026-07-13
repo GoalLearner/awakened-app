@@ -16,6 +16,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk } from '../lib/responses';
+import { getFounderSeq } from '../lib/founder-mark';
 
 /**
  * Read a user's owned entitlements from D1. Shared by GET /entitlements and the
@@ -25,7 +26,7 @@ import { jsonOk } from '../lib/responses';
 export async function readEntitlements(
   env: Env,
   userId: string,
-): Promise<{ skins: string[]; premium: boolean; member: boolean }> {
+): Promise<{ skins: string[]; premium: boolean; member: boolean; founder_seq: number | null }> {
   const rows = await env.DB.prepare(
     `SELECT skin_id FROM skin_entitlements WHERE user_id = ? ORDER BY acquired_at ASC`,
   )
@@ -53,7 +54,10 @@ export async function readEntitlements(
     if (!/no such table/i.test(msg)) throw e;
   }
 
-  return { skins, premium, member: premium };
+  // W656 — the caller's free Founder marker number (prestige only; null = none).
+  const founder_seq = await getFounderSeq(env, userId);
+
+  return { skins, premium, member: premium, founder_seq };
 }
 
 export async function handleEntitlementsGet(

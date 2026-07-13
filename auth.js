@@ -138,7 +138,9 @@
     // so the next account on this device can't inherit them (the class of bug
     // behind the 2.1(b) "already purchased on a new account" rejection).
     _memberCache = null;   // W651 — membership is per-account
+    _founderSeqCache = null;   // W656 — Founder marker # is per-account too
     try { localStorage.removeItem('hb_member_owned'); } catch (_) {}
+    try { localStorage.removeItem('hb_founder_seq'); } catch (_) {}   // W656 — per-account Founder marker #
     try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}   // W655 — legacy key cleanup
     try { localStorage.removeItem('hb_skins_owned_cache'); } catch (_) {}
   }
@@ -1579,7 +1581,7 @@
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
       _updateMemberCache(data);              // W651/W655 — membership (active premium subscription)
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member };
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, founderSeq: founderSeq() };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -1604,7 +1606,7 @@
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
       _updateMemberCache(data);              // W651 — reconcile also refreshes the membership
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, reconciled: (data.reconciled | 0) };
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, founderSeq: founderSeq(), reconciled: (data.reconciled | 0) };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -1622,10 +1624,17 @@
     yearly:  'com.goallearner.awakened.premium.yearly',    // $39.99/yr
   };
   let _memberCache = null; // tri-state: null = not yet resolved this session
+  let _founderSeqCache = null; // W656 — own free Founder marker # (0 = none), cached for the hunter card
   function _updateMemberCache(data) {
     const m = !!(data && data.member);
     _memberCache = m;
     try { localStorage.setItem('hb_member_owned', m ? '1' : '0'); } catch (_) {}
+    // W656 — cache the free Founder marker number so the OWN hunter card can show
+    // it even before its public-profile fetch lands (cross-user cards read founderSeq
+    // straight off the leaderboard/profile payload). Not gated by IAP — it's earned.
+    const fs = (data && data.founder_seq != null) ? (data.founder_seq | 0) : 0;
+    _founderSeqCache = fs > 0 ? fs : 0;
+    try { localStorage.setItem('hb_founder_seq', String(_founderSeqCache)); } catch (_) {}
   }
   // The ONE flag every membership perk gates on (co-op fees/cap, Ascent lives).
   function isMember() {
@@ -1634,6 +1643,14 @@
       if (_memberCache === null) _memberCache = (localStorage.getItem('hb_member_owned') === '1');
       return _memberCache === true;
     } catch (_) { return false; }
+  }
+  // W656 — the caller's OWN free Founder marker number (0 = none). NOT IAP-gated:
+  // the marker is earned, not bought, and must render regardless of the store flag.
+  function founderSeq() {
+    try {
+      if (_founderSeqCache === null) _founderSeqCache = (parseInt(localStorage.getItem('hb_founder_seq'), 10) || 0);
+      return _founderSeqCache | 0;
+    } catch (_) { return 0; }
   }
   // Buy a premium subscription. Same identify-first RevenueCat flow as skins,
   // but WITHOUT the NON_SUBSCRIPTION type override — these are auto-renewable

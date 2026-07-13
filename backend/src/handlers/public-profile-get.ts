@@ -22,6 +22,7 @@ interface ProfileRow {
   prestige: number | null;   // W453 — Prestige star count (S+ endgame)
   power: number | null;
   avatar_id: string | null;
+  founder_seq: number | null;   // W656 — free Founder marker number (null = none)
   arena_title: string | null;
   bosses_slain_total: number | null;
   ultra_rare_drops_total: number | null;
@@ -60,6 +61,7 @@ export async function handlePublicProfileGet(
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
             pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.arena_title AS arena_title,
+            pps.founder_seq AS founder_seq,
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
             pps.verified_streak_label AS verified_streak_label,
@@ -114,6 +116,7 @@ export async function handlePublicProfileGet(
     prestige: row.prestige ?? 0,
     power: row.power ?? 0,
     avatarId: row.avatar_id,                       // null → client falls back to class default
+    founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
     arenaTitle: row.arena_title,
     bossesSlain: row.bosses_slain_total ?? 0,
     ultraRareDrops: row.ultra_rare_drops_total ?? 0,
