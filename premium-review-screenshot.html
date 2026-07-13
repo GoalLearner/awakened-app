@@ -12,6 +12,7 @@ canvas{display:none}</style></head><body>
 <h1>Awakened Premium — review screenshots (1242×2688)</h1>
 <button onclick="paint('monthly')">Export MONTHLY screenshot</button>
 <button onclick="paint('yearly')">Export YEARLY screenshot</button>
+<p id="hint" style="color:#9a97ad">Click a button — the PNG downloads AND previews below.</p>
 <canvas id="c" width="1242" height="2688"></canvas>
 <script>
 const NAVY='#14162b', PANEL='#1d2040', GOLD='#c9a227', INK='#e8e6f0', DIM='#9a97ad', LINE='#34375c';
@@ -67,6 +68,11 @@ function paint(which){
   // links row
   ctx.fillStyle=GOLD; ctx.font='36px Georgia';
   ctx.fillText('Terms of Use (EULA)          ·          Privacy Policy',621,2610);
+  // W654.1 — show the render on the page (it was display:none, so the page
+  // looked like it did nothing beyond a silent download)
+  cv.style.display='block'; cv.style.width='340px'; cv.style.margin='16px auto';
+  cv.style.border='1px solid #34375c'; cv.style.borderRadius='12px';
+  document.getElementById('hint').textContent='Previewing: '+which.toUpperCase()+' — the PNG also downloaded to your Downloads folder.';
   // export
   const a=document.createElement('a');
   a.download='premium-'+which+'-review-1242x2688.png';
