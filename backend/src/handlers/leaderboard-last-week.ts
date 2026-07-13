@@ -23,6 +23,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
+import { grantWeeklyChampionIfEarned } from '../lib/weekly-champion';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -135,36 +136,12 @@ export async function handleLeaderboardLastWeek(
 
   // W322 — lazy weekly-champion badge. If the caller topped last week
   // (rank 1, real steps), credit the persistent 'weekly_step_champion'
-  // accolade. Idempotent per week (same last_qualified_week_start => no
-  // repeat_count bump), so re-viewing the recap never double-counts.
-  let myTitle: { count: number; isNew: boolean } | null = null;
-  if (me && me.rank === 1 && me.steps > 0) {
-    const prior = await env.DB.prepare(
-      `SELECT repeat_count, last_qualified_week_start FROM user_accolades
-        WHERE user_id = ? AND accolade_type = 'weekly_step_champion'`,
-    ).bind(session.userId).first<{ repeat_count: number; last_qualified_week_start: string }>();
-    const priorCount = prior && typeof prior.repeat_count === 'number' ? prior.repeat_count : 0;
-    const isNew = !(prior && prior.last_qualified_week_start === lastWeek);
-    const nowMs = Date.now();
-    await env.DB.prepare(
-      `INSERT INTO user_accolades
-         (id, user_id, accolade_type, unlock_week_start, unlock_value,
-          best_value, repeat_count, last_qualified_week_start, unlocked_at, updated_at)
-       VALUES (?, ?, 'weekly_step_champion', ?, ?, ?, 1, ?, ?, ?)
-       ON CONFLICT(user_id, accolade_type) DO UPDATE SET
-         best_value   = MAX(user_accolades.best_value, excluded.best_value),
-         repeat_count = CASE
-           WHEN user_accolades.last_qualified_week_start = excluded.last_qualified_week_start
-             THEN user_accolades.repeat_count
-             ELSE user_accolades.repeat_count + 1
-         END,
-         last_qualified_week_start = excluded.last_qualified_week_start,
-         updated_at = excluded.updated_at`,
-    ).bind(
-      crypto.randomUUID(), session.userId, lastWeek, me.steps, me.steps, lastWeek, nowMs, nowMs,
-    ).run();
-    myTitle = { count: isNew ? priorCount + 1 : priorCount, isNew };
-  }
+  // accolade. W657 — extracted to lib/weekly-champion.ts so the Week Recap
+  // endpoint shares the SAME idempotent SQL: viewing this strip AND the
+  // recap ceremony can never double-count a week's crown.
+  const myTitle = await grantWeeklyChampionIfEarned(
+    env, session.userId, lastWeek, me ? me.rank : null, me ? me.steps : null,
+  );
 
   return jsonOk({
     metric: 'step_total',

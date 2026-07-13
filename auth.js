@@ -143,6 +143,10 @@
     try { localStorage.removeItem('hb_founder_seq'); } catch (_) {}   // W656 — per-account Founder marker #
     try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}   // W655 — legacy key cleanup
     try { localStorage.removeItem('hb_skins_owned_cache'); } catch (_) {}
+    // W657 — the Week Recap seen-hint is per-account (server flag is truth);
+    // without this purge, account A's dismissal would silently rob account B's
+    // ceremony on the same device (the hint short-circuits before the fetch).
+    try { localStorage.removeItem('hb_recap_seen_week'); } catch (_) {}
   }
 
   // True when JWT is within 14 days of expiry. Phase A stubs and
@@ -504,6 +508,75 @@
       clearUser();
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
+    return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
+  // W657 — Week Recap ceremony payload: the finished week's final standings
+  // (durable weekly_step_records merge, NOT the eroding snapshots) + the
+  // caller's placement, movement baseline (prev week), own-history ordinal,
+  // Step Crown, and the server-side seen flag.
+  async function fetchWeekRecap() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/leaderboard/recap', {
+        method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        eligible:  !!data.eligible,
+        seen:      !!data.seen,
+        week:      data.week,
+        weekEnd:   data.weekEnd,
+        total:     data.total || 0,
+        records:   Array.isArray(data.records) ? data.records : [],
+        me:        data.me || null,
+        prev:      data.prev || null,
+        myHistory: data.myHistory || null,
+        myTitle:   data.myTitle || null,
+      };
+    }
+    if (res.status === 401) {
+      clearUser();
+      return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
+    }
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
+  // W657 — mark the Week Recap dismissed. Server keeps the high-water week;
+  // stale/duplicate calls are no-ops. The recap persists until this succeeds.
+  async function markWeekRecapSeen(week) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (typeof week !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+      return { ok: false, code: 'INVALID_WEEK' };
+    }
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/leaderboard/recap/seen', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week: week }),
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return { ok: true, recapSeenWeek: data.recap_seen_week || week };
+    }
+    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
 
@@ -1754,6 +1827,9 @@
     fetchRankBand,
     fetchFriendsLeaderboard,
     fetchLastWeekSteps,
+    // W657 — Week Recap ceremony (payload + server-side seen flag)
+    fetchWeekRecap,
+    markWeekRecapSeen,
     // Weekly Steps Hall of Fame (v3 Phase 1z.36)
     fetchLeaderboardHallOfFame,
     // 100K Step Club roster (v3 Phase 1z.52)

@@ -1,0 +1,13 @@
+-- 0032_recap_seen.sql — W657 Week Recap: per-user "has seen week N recap" flag.
+--
+-- The Week Recap is a one-time ceremony shown on the first app-open after the
+-- Pacific week boundary: last week's final standings + a personal recap. It
+-- PERSISTS until seen (no timer), so the flag must be server-side — a client-
+-- local flag would re-show after reinstall and could be spoofed away.
+--
+-- One additive column, no new table: recap_seen_week holds the most recent
+-- 'YYYY-MM-DD' Sunday week key whose recap the user has dismissed. ISO date
+-- strings compare lexicographically, so "seen?" is recap_seen_week >= week.
+-- A user who misses several weeks sees ONLY the most recent finished week's
+-- recap (by design), which a single high-water value models exactly.
+ALTER TABLE users ADD COLUMN recap_seen_week TEXT;

@@ -19,7 +19,9 @@ interface CapturedCall {
 }
 
 function makeDb(opts: {
-  topRows?: Array<{ alias: string; current_value: number }>;
+  // W453/W656 — rows may carry the optional passthrough columns the live
+  // SELECT projects (prestige/rank_tier/founder_seq); absent = null-ish.
+  topRows?: Array<{ alias: string; current_value: number; prestige?: number; rank_tier?: string; founder_seq?: number }>;
   myRow?: { current_value: number } | null;
   rank?: number;
 } = {}) {
@@ -183,7 +185,7 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
     const body = (await res.json()) as { metric: string; top: Array<{ rank: number; alias: string; current_value: number }>; me: { rank: number; current_value: number } | null };
     expect(body.metric).toBe('step_total');
     expect(body.top).toHaveLength(2);
-    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, bosses_slain: null, prestige: 5, rankTier: 'S+' });   // W453 — prestige flows through
+    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, bosses_slain: null, prestige: 5, rankTier: 'S+', founderSeq: null });   // W453 prestige + W656 founderSeq flow through
     expect(body.me).toEqual({ rank: 12, current_value: 1776 });
   });
 });

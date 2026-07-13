@@ -33182,3 +33182,68 @@ button.guildhall-summary-tile:active {
 .set-line.locked .end{color:var(--text-tertiary);}
 .set-line .end svg{width:14px;height:14px;display:block;}
 .set-empty{font-family:var(--mono);font-size:11px;letter-spacing:.4px;color:var(--text-secondary);padding:2px 0;}
+
+/* ── W657 — Week Recap ceremony ─────────────────────────────────────── */
+.wr-overlay {
+  position: fixed; inset: 0; z-index: 30000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 7, 15, 0.92);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  padding: 24px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  animation: wrFadeIn 0.35s ease-out;
+}
+@keyframes wrFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.wr-card {
+  width: 100%; max-width: 380px; max-height: 86vh; overflow-y: auto;
+  background: linear-gradient(180deg, #10131f 0%, #0b0e18 100%);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 0 60px rgba(245, 158, 11, 0.12), 0 24px 60px rgba(0, 0, 0, 0.6);
+  padding: 26px 22px 22px;
+  text-align: center;
+  animation: wrCardUp 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes wrCardUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+.wr-kicker {
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.22em;
+  color: var(--gold, #f59e0b); margin-bottom: 6px;
+}
+.wr-range {
+  font-family: 'Cinzel', ui-serif, serif;
+  font-size: 1.35rem; font-weight: 700; color: #f2f4fa; margin-bottom: 18px;
+}
+.wr-podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin-bottom: 6px; }
+.wr-pod { flex: 1; max-width: 108px; border-radius: 12px; padding: 10px 6px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
+.wr-pod-1 { padding-top: 18px; padding-bottom: 16px; background: linear-gradient(180deg, rgba(245,158,11,0.14), rgba(245,158,11,0.04)); border-color: rgba(245,158,11,0.45); box-shadow: 0 0 24px rgba(245,158,11,0.15); }
+.wr-pod-rank { font-size: 0.7rem; font-weight: 800; color: #8b90a3; margin-bottom: 4px; }
+.wr-pod-1 .wr-pod-rank { color: var(--gold, #f59e0b); font-size: 0.85rem; }
+.wr-pod-1 .wr-pod-rank::before { content: '\2726  '; }
+.wr-pod-alias { font-size: 0.82rem; font-weight: 700; color: #e8eaf2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-pod-1 .wr-pod-alias { font-size: 0.92rem; }
+.wr-pod-steps { font-size: 0.78rem; font-weight: 600; color: #9aa0b4; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.wr-pod-1 .wr-pod-steps { color: var(--gold, #f59e0b); }
+.wr-divider { height: 1px; margin: 16px 4px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent); }
+.wr-me { margin-bottom: 18px; }
+.wr-me-rank {
+  font-family: 'Cinzel', ui-serif, serif;
+  font-size: 2rem; font-weight: 800; color: #f2f4fa;
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;
+}
+.wr-move { font-family: inherit; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; padding: 4px 9px; border-radius: 999px; }
+.wr-move-up { color: #4ade80; background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.35); }
+.wr-move-down { color: #f87171; background: rgba(248, 113, 113, 0.10); border: 1px solid rgba(248, 113, 113, 0.30); }
+.wr-move-held { color: #9aa0b4; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); }
+.wr-line { font-size: 0.86rem; color: #b7bccb; margin: 4px 0; }
+.wr-hook {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #f5d9a8; font-size: 0.88rem; font-weight: 600; line-height: 1.4;
+}
+.wr-zero { color: #c6cad8; font-size: 0.95rem; line-height: 1.55; padding: 4px 6px; }
+.wr-cta {
+  width: 100%; padding: 14px; border: none; border-radius: 12px;
+  background: linear-gradient(180deg, #f5b842, #d9930f);
+  color: #1a1405; font-size: 0.9rem; font-weight: 800; letter-spacing: 0.1em;
+  cursor: pointer; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.25);
+}
+.wr-cta:active { transform: translateY(1px); }

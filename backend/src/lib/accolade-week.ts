@@ -113,6 +113,34 @@ export function getAccoladeWeekStart(nowMs: number = Date.now()): string {
 }
 
 /**
+ * W657 — the Sunday-Pacific week_start of the week BEFORE `weekStart`.
+ * Pure date math: a fixed 7-day step in ms is exactly 7 calendar days off
+ * a UTC-midnight anchor (no DST hazard — the anchor is date-only).
+ * Centralized here so the recap/archive endpoints share ONE copy
+ * (leaderboard-last-week.ts predates this and keeps its local twin).
+ */
+export function priorWeekStart(weekStart: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStart);
+  if (!m) return weekStart;
+  const ms = Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)) - 7 * 24 * 60 * 60 * 1000;
+  const d = new Date(ms);
+  return d.getUTCFullYear() + '-' +
+    String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getUTCDate()).padStart(2, '0');
+}
+
+/** W657 — Saturday 'YYYY-MM-DD' that closes the week starting `weekStart`. */
+export function weekEndFromStart(weekStart: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStart);
+  if (!m) return weekStart;
+  const ms = Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)) + 6 * 24 * 60 * 60 * 1000;
+  const d = new Date(ms);
+  return d.getUTCFullYear() + '-' +
+    String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getUTCDate()).padStart(2, '0');
+}
+
+/**
  * UTC fallback for the rare case where Intl.DateTimeFormat
  * returns unexpected output. Mirrors the pre-1z.218 Sunday-UTC
  * helper exactly so the Worker never throws inside an UPSERT.

@@ -1,6 +1,6 @@
 # Awakened 2.4.3 — App Store submission package
 
-Build **406** · marketing version **2.4.3** (APP_VERSION drives it; prep forces it in).
+Build **404** · marketing version **2.4.3** (APP_VERSION drives it; prep forces it in).
 Covers: paid Founder tier removed → Awakened Premium subscription is the only paid
 membership · co-op dungeon entrance-fee/paywall · free earned "Founder #N" prestige
 marker · stability polish.
@@ -10,14 +10,14 @@ backfilled). Nothing else server-side is needed.
 
 ---
 
-## 1. Build on the MacBook (build 406)
+## 1. Build on the MacBook (build 404)
 
 ```bash
-cd /Volumes/AwakenedDev/repos/awakened-app && git pull && npm install && bash scripts/prep-local-build.sh 406 && npx cap open ios
+cd /Volumes/AwakenedDev/repos/awakened-app && git pull && npm install && bash scripts/prep-local-build.sh 404 && npx cap open ios
 ```
 
 Then in Xcode: **Product → Archive → Distribute App → App Store Connect → Upload**.
-`prep-local-build.sh` forces MARKETING_VERSION = 2.4.3; the `406` arg is CFBundleVersion.
+`prep-local-build.sh` forces MARKETING_VERSION = 2.4.3; the `404` arg is CFBundleVersion.
 
 ---
 
@@ -25,7 +25,7 @@ Then in Xcode: **Product → Archive → Distribute App → App Store Connect �
 
 1. **Version.** My Apps → Awakened → create/open the **2.4.3** version (marketing
    version 2.4.3).
-2. **Build.** After the upload finishes processing, attach **build 406**.
+2. **Build.** After the upload finishes processing, attach **build 404**.
 3. **Attach the subscriptions to this version (required for their first review).**
    In the version's *In-App Purchases and Subscriptions* section, add BOTH:
    - `com.goallearner.awakened.premium.monthly` — $4.99 / month
@@ -83,18 +83,31 @@ Fill in the demo account (same one used for 2.4.2).
 
 ## 4. "What's New" (release notes — no emojis)
 
+Primary (recommended, ~88 words):
+
 ```
-Awakened Premium is here. Support the game and unlock the full co-op experience with
-a membership, monthly or yearly. Premium removes co-op dungeon entrance fees, lifts
-the concurrent-hunt cap, and grants unlimited Ascent attempts.
+Hunter, your climb just leveled up.
 
-Co-op dungeons now show a clear entrance fee up front and split rewards fairly across
-the party.
+Awakened Premium (optional) — no co-op dungeon entrance fee, no cap on how many
+hunts you run at once, and unlimited daily Ascent attempts. It rewards your grind,
+not your wallet: no stat boosts, no combat edge. Leaderboards stay all skill.
 
-Founders: the first 100 hunters who were here before launch and earned their place
-now carry a permanent Founder number on their profile and the leaderboard.
+Co-op Dungeons — see the entrance fee before you commit, and rewards split fairly
+across your party.
 
-Plus stability fixes and polish across the Arena and co-op.
+Founders — the first 100 hunters who earned their place carry a permanent marker.
+Free and earned, never for sale.
+
+Plus stability fixes across the Arena and co-op.
+```
+
+Short variant (~50 words, if you want it tighter):
+
+```
+Awakened Premium (optional): no co-op dungeon fee, no cap on hunts run at once,
+unlimited daily Ascent attempts. It rewards your grind, not your wallet — no stat
+boosts, no combat edge. Co-op fees shown up front, loot split fairly. Plus permanent
+Founder markers for our first 100 hunters.
 ```
 
 ---

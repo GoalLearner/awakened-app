@@ -250,7 +250,10 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(json.achievementsUpdatedAt).toBeNull();
 
     const calls = db._calls();
-    expect(calls.length).toBe(1);
+    // W656 — the Founder-marker grant runs read-only follow-ups after the
+    // upsert (founder_marks fast-path + eligibility probe); the profile
+    // upsert itself must still be the FIRST and ONLY write.
+    expect(calls.filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);
     expect(calls[0]?.sql).toMatch(/INSERT INTO public_profile_summary/);
     // INSERT binds 0-7: user_id, tier, division, label, sort,
     // points, clientUpdatedAt, serverUpdatedAt.
@@ -599,7 +602,9 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
       makeReq({ ...validPayload, arenaTitle: 'asc_brawler' }), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
-    expect(calls.length).toBe(1);
+    // W656 — Founder-marker follow-up reads run after the upsert; the
+    // profile INSERT is still calls[0] and the only profile write.
+    expect(calls.filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);
     expect(calls[0].sql).toContain('arena_title');
     expect(calls[0].binds[12]).toBe('asc_brawler');   // INSERT value
     expect(calls[0].binds[26]).toBe(1);               // titleSet sentinel (+1 from prestige)
