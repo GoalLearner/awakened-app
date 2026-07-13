@@ -580,6 +580,44 @@
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
 
+  // W658 — one finished week's FINAL Steps board (the archive week-flipper).
+  // Server validates the key (Sunday, past-only, 8-week cap) and returns the
+  // durable weekly_step_records merge + min_week/weeks_available bounds.
+  async function fetchLeaderboardArchive(week) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    if (typeof week !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+      return { ok: false, code: 'INVALID_WEEK' };
+    }
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/leaderboard/archive?week=' + encodeURIComponent(week), {
+        method: 'GET', headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return {
+        ok: true,
+        week:      data.week,
+        weekEnd:   data.weekEnd,
+        final:     !!data.final,
+        records:   Array.isArray(data.records) ? data.records : [],
+        me:        data.me || null,
+        total:     data.total || 0,
+        minWeek:   data.min_week || null,
+        weeksAvailable: Array.isArray(data.weeks_available) ? data.weeks_available : [],
+      };
+    }
+    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
+
   // W320 — friends leaderboard read (steps this week among accepted friends).
   async function fetchFriendsLeaderboard(metric, limit) {
     const u = readUser();
@@ -1830,6 +1868,8 @@
     // W657 — Week Recap ceremony (payload + server-side seen flag)
     fetchWeekRecap,
     markWeekRecapSeen,
+    // W658 — archive week-flipper (one finished week's FINAL board)
+    fetchLeaderboardArchive,
     // Weekly Steps Hall of Fame (v3 Phase 1z.36)
     fetchLeaderboardHallOfFame,
     // 100K Step Club roster (v3 Phase 1z.52)

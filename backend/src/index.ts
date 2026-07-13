@@ -29,6 +29,7 @@ import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleLeaderboardHallOfFame } from './handlers/hall-of-fame';
 import { handleLeaderboardLastWeek } from './handlers/leaderboard-last-week';
 import { handleLeaderboardRecapGet, handleLeaderboardRecapSeenPost } from './handlers/leaderboard-recap';
+import { handleLeaderboardArchiveGet } from './handlers/leaderboard-archive';
 import { handleStep100kClub } from './handlers/step-100k-club';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
@@ -207,6 +208,9 @@ export default {
           } else if (path === '/v1/leaderboard/recap/seen' && method === 'POST') {
             // W657 — mark the recap dismissed (server-side high-water flag).
             response = await handleLeaderboardRecapSeenPost(request, env, session);
+          } else if (path === '/v1/leaderboard/archive' && method === 'GET') {
+            // W658 — one finished week's FINAL board (the week-flipper).
+            response = await handleLeaderboardArchiveGet(request, env, session);
           } else if (path === '/v1/leaderboard/step-100k-club' && method === 'GET') {
             // v3 Phase 1z.52 — 100K Step Club roster (real users only).
             response = await handleStep100kClub(request, env, session);
