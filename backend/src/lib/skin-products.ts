@@ -36,19 +36,11 @@ export function skinForProduct(productId: string): string | null {
   return PRODUCT_TO_SKIN[productId] ?? null;
 }
 
-// ── W618 — Founder's Lifetime (one-time supporter pack) ──────────────────────
-// A cosmetic-only supporter unlock (Founder frame/badge + a Founder-exclusive
-// look), NOT a skin. It rides the same skin_entitlements table under a reserved
-// entitlement id, so the whole grant/read/GDPR-delete machinery is reused with
-// zero schema change. Non-consumable, own-forever. Cosmetic only — never power.
-export const FOUNDER_PRODUCT_ID = 'com.goallearner.awakened.founders_lifetime';
-export const FOUNDER_ENTITLEMENT_ID = 'founder';
-
 // ── W650 — "Awakened Premium" auto-renewable membership ─────────────────────
-// The subscription tier of the OSRS-style membership: no co-op entrance fees,
-// unlimited concurrent hunts, unlimited Ascent attempts. Founder = the
-// LIFETIME tier of the same membership (member = founder OR active premium).
-// These are AUTO-RENEWABLE products — they expire, so they ride the
+// The membership: no co-op entrance fees, unlimited concurrent hunts, unlimited
+// Ascent attempts. W655 — the subscription is now the ONLY paid tier (the paid
+// "Founder's Lifetime" one-time pack was removed; it cannibalized the sub and
+// created a permanent liability). AUTO-RENEWABLE — they expire, so they ride the
 // premium_subscriptions table (expiry-derived), NEVER skin_entitlements.
 export const PREMIUM_PRODUCT_IDS: ReadonlySet<string> = new Set([
   'com.goallearner.awakened.premium.monthly',   // $4.99/mo
@@ -59,11 +51,10 @@ export function isPremiumProduct(productId: string): boolean {
 }
 
 /**
- * Resolve a store product id to the entitlement id to persist — either the
- * Founder entitlement or a skin catalog id, or null if unknown. Used by the
- * webhook so one grant path covers both product lines.
+ * Resolve a store product id to the skin catalog id to persist, or null if
+ * unknown. Used by the webhook + reconcile skin-grant path. (Premium products
+ * are handled separately via the premium_subscriptions horizon, not here.)
  */
 export function entitlementForProduct(productId: string): string | null {
-  if (productId === FOUNDER_PRODUCT_ID) return FOUNDER_ENTITLEMENT_ID;
   return skinForProduct(productId);
 }

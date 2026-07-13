@@ -33,9 +33,9 @@ import { notifyUser } from '../lib/apns';
 import { readEntitlements } from './iap-entitlements';
 
 // ── W648 — concurrent-hunt cap (the co-op membership paywall) ───────
-// Free hunters may run at most this many simultaneous hunts; Founders (and any
-// future premium entitlement folded into readEntitlements().founder) are
-// unlimited. Enforced server-side in BOTH create and join — the client mirror
+// Free hunters may run at most this many simultaneous hunts; Premium members
+// (readEntitlements().member) are unlimited. Enforced server-side in BOTH
+// create and join — the client mirror
 // is UX only. The entrance fee itself is client-side souls (same trust model
 // as solo engage costs; see the header note above).
 const FREE_CONCURRENT_HUNT_CAP = 3;

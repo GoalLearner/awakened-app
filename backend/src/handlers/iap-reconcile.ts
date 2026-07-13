@@ -100,7 +100,7 @@ export async function handleEntitlementsReconcile(
         // W637.1 — ANTI-FARMING: an Apple transaction may back a grant on only ONE
         // account. A restore can TRANSFER a receipt onto a second (free) backend
         // account's RevenueCat subscriber; without this guard, reconcile would grant
-        // that single purchase to unlimited accounts (skins AND the $49.99 Founder).
+        // that single purchase to unlimited accounts (any owned skin).
         // If this transaction is already claimed by a DIFFERENT user, refuse it.
         // (The webhook path needs no such guard — it only grants on
         // INITIAL/NON_RENEWING_PURCHASE, never on a TRANSFER — so the exposure is

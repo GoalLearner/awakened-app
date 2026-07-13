@@ -1,29 +1,16 @@
 /**
- * iap-entitlements.test.ts — readEntitlements: the explicit-grant path and the
- * W626/W644 "First N Founders" grandfather (rank cap + go-live cutoff). Same
- * hand-rolled D1 mock as the other handler tests, extended so each prepared
- * statement can return a canned row.
- *
- * The W644 cutoff is the App-Review-critical branch: a fresh account created
- * AFTER go-live (like Apple's 2.1(b) review account) must NOT be auto-Founder'd,
- * or the Founder pack renders as "already purchased" on a brand-new account.
+ * iap-entitlements.test.ts — readEntitlements: owned skins + the Awakened
+ * Premium membership derivation. W655 — the paid Founder tier (one-time pack +
+ * first-N grandfather promo) was removed; the subscription is the only paid
+ * tier, so `member` == `premium`.
  */
 import { describe, expect, it } from 'vitest';
 import { readEntitlements } from './iap-entitlements';
 import type { Env } from '../env';
 
-// 2026-07-09T00:00:00Z — must mirror FOUNDER_PROMO_CUTOFF_MS in the handler.
-const CUTOFF_MS = 1783555200000;
-const PRE_LAUNCH = CUTOFF_MS - 60_000;  // account created before go-live
-const POST_LAUNCH = CUTOFF_MS + 60_000; // account created after go-live (reviewer case)
-
-interface UserRow { created_at: number }
-
 /** D1 mock: routes each prepared SQL to a canned response by substring. */
 function makeDb(opts: {
   skins?: string[];          // rows in skin_entitlements for the caller
-  user?: UserRow | null;     // the caller's users row (null = missing)
-  earlier?: number;          // accounts registered before the caller
   premiumExpiresAt?: number; // W650 — premium_subscriptions horizon (absent = no row)
 }) {
   const skins = (opts.skins ?? []).map((skin_id) => ({ skin_id }));
@@ -35,8 +22,6 @@ function makeDb(opts: {
           if (sql.includes('FROM premium_subscriptions')) {
             return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
           }
-          if (sql.includes('FROM users WHERE id')) return opts.user === undefined ? { created_at: PRE_LAUNCH } : opts.user;
-          if (sql.includes('COUNT(*) AS earlier')) return { earlier: opts.earlier ?? 0 };
           return null;
         },
         run: async () => ({ success: true, meta: { changes: 0 } }),
@@ -45,80 +30,45 @@ function makeDb(opts: {
   } as unknown as D1Database;
 }
 
-function makeEnv(db: D1Database, firstN?: string): Env {
-  return { DB: db, FOUNDER_FIRST_N: firstN } as unknown as Env;
+function makeEnv(db: D1Database): Env {
+  return { DB: db } as unknown as Env;
 }
 
-describe('readEntitlements — explicit grants', () => {
-  it('returns owned skins and filters the reserved founder id out of skins', async () => {
-    const db = makeDb({ skins: ['avatar-skin-stardust.png', 'founder'], user: { created_at: POST_LAUNCH } });
-    const r = await readEntitlements(makeEnv(db), 'user-1');
-    expect(r.skins).toEqual(['avatar-skin-stardust.png']);
-    expect(r.founder).toBe(true); // explicit entitlement wins regardless of promo window
+describe('readEntitlements — owned skins', () => {
+  it('returns the caller owned skin ids', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({ skins: ['avatar-skin-stardust.png', 'avatar-skin-tempest.png'] })), 'user-1');
+    expect(r.skins).toEqual(['avatar-skin-stardust.png', 'avatar-skin-tempest.png']);
+  });
+
+  it('no rows → empty skins, not a member', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({})), 'free-user');
+    expect(r.skins).toEqual([]);
+    expect(r.member).toBe(false);
   });
 });
 
-describe('readEntitlements — First-N Founder grandfather (W626 + W644 cutoff)', () => {
-  it('grandfathers a pre-launch account inside the first N', async () => {
-    const db = makeDb({ user: { created_at: PRE_LAUNCH }, earlier: 5 });
-    const r = await readEntitlements(makeEnv(db), 'user-1');
-    expect(r.founder).toBe(true);
-  });
-
-  it('does NOT grandfather an account created after go-live, even at rank < N (the App-Review case)', async () => {
-    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 33 });
-    const r = await readEntitlements(makeEnv(db), 'reviewer-fresh-account');
-    expect(r.founder).toBe(false);
-  });
-
-  it('does NOT grandfather a pre-launch account at rank >= N', async () => {
-    const db = makeDb({ user: { created_at: PRE_LAUNCH }, earlier: 100 });
-    const r = await readEntitlements(makeEnv(db), 'user-101');
-    expect(r.founder).toBe(false);
-  });
-
-  it('respects FOUNDER_FIRST_N=0 as a promo kill-switch', async () => {
-    const db = makeDb({ user: { created_at: PRE_LAUNCH }, earlier: 0 });
-    const r = await readEntitlements(makeEnv(db, '0'), 'user-1');
-    expect(r.founder).toBe(false);
-  });
-
-  it('fails closed when the users row is missing', async () => {
-    const db = makeDb({ user: null, earlier: 0 });
-    const r = await readEntitlements(makeEnv(db), 'ghost');
-    expect(r.founder).toBe(false);
-  });
-});
-
-// ── W650 — premium membership derivation (expiry-based, no revocation events) ──
-describe('readEntitlements — premium + member (W650)', () => {
-  it('an unexpired premium horizon → premium=true, member=true (non-founder)', async () => {
-    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999, premiumExpiresAt: Date.now() + 86_400_000 });
-    const r = await readEntitlements(makeEnv(db), 'subscriber-1');
+// ── W650/W655 — premium membership derivation (expiry-based, no revocation events) ──
+describe('readEntitlements — premium membership', () => {
+  it('an unexpired premium horizon → premium=true, member=true', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), 'subscriber-1');
     expect(r.premium).toBe(true);
-    expect(r.founder).toBe(false);
     expect(r.member).toBe(true);
   });
 
   it('a LAPSED horizon self-revokes: premium=false, member=false', async () => {
-    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999, premiumExpiresAt: Date.now() - 1000 });
-    const r = await readEntitlements(makeEnv(db), 'lapsed-subscriber');
+    const r = await readEntitlements(makeEnv(makeDb({ premiumExpiresAt: Date.now() - 1000 })), 'lapsed-subscriber');
     expect(r.premium).toBe(false);
     expect(r.member).toBe(false);
   });
 
-  it('a Founder with no subscription is still a member (lifetime tier)', async () => {
-    const db = makeDb({ skins: ['founder'], user: { created_at: POST_LAUNCH } });
-    const r = await readEntitlements(makeEnv(db), 'founder-1');
-    expect(r.founder).toBe(true);
+  it('no subscription row at all → premium=false, member=false', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({})), 'free-user');
     expect(r.premium).toBe(false);
-    expect(r.member).toBe(true);
+    expect(r.member).toBe(false);
   });
 
-  it('no subscription row at all → premium=false', async () => {
-    const db = makeDb({ user: { created_at: POST_LAUNCH }, earlier: 999 });
-    const r = await readEntitlements(makeEnv(db), 'free-user');
-    expect(r.premium).toBe(false);
+  it('owning skins does NOT confer membership', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({ skins: ['avatar-skin-bloodmoon.png'] })), 'skin-owner');
     expect(r.member).toBe(false);
   });
 });
@@ -132,8 +82,6 @@ describe('readEntitlements — premium D1 error handling (W652)', () => {
           all: async () => ({ results: [], success: true, meta: {} }),
           first: async () => {
             if (sql.includes('FROM premium_subscriptions')) throw new Error(err);
-            if (sql.includes('FROM users WHERE id')) return { created_at: POST_LAUNCH };
-            if (sql.includes('COUNT(*) AS earlier')) return { earlier: 999 };
             return null;
           },
           run: async () => ({ success: true, meta: { changes: 0 } }),

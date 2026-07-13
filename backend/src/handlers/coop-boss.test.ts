@@ -2,7 +2,7 @@
  * coop-boss.test.ts — W648 concurrent-hunt cap (the co-op membership paywall).
  *
  * Free hunters may run at most FREE_CONCURRENT_HUNT_CAP (3) simultaneous
- * hunts; Founders are unlimited. The cap is enforced server-side in BOTH
+ * hunts; Premium members are unlimited. The cap is enforced server-side in BOTH
  * create and join, so a modded client cannot bypass it. Same hand-rolled
  * substring-routed D1 mock as the other handler tests.
  */
@@ -10,11 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { handleCoopBossCreate, handleCoopBossJoin } from './coop-boss';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-
-// A created_at AFTER the W644 go-live cutoff so the first-N grandfather never
-// makes test users accidental Founders — founder status in these tests comes
-// only from an explicit 'founder' entitlement row.
-const POST_LAUNCH = 1783555200000 + 60_000;
 
 const PENDING_ROW = {
   id: 'inst-1',
@@ -36,16 +31,13 @@ const PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; founder?: boolean; premiumExpiresAt?: number; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
   return {
     prepare: (sql: string) => {
       sqlLog?.push(sql);
       return {
         bind: () => ({
           all: async () => {
-            if (sql.includes('FROM skin_entitlements')) {
-              return { results: opts.founder ? [{ skin_id: 'founder' }] : [], success: true, meta: {} };
-            }
             if (sql.includes('FROM users WHERE id IN')) {
               return { results: [{ id: 'u1', alias: 'challenger' }, { id: 'u2', alias: 'partner' }], success: true, meta: {} };
             }
@@ -62,8 +54,6 @@ function makeDb(opts: { running?: number; founder?: boolean; premiumExpiresAt?: 
             if (sql.includes('SELECT * FROM coop_boss_instances')) {
               return opts.instance === undefined ? { ...PENDING_ROW } : opts.instance;
             }
-            if (sql.includes('COUNT(*) AS earlier')) return { earlier: 999 };
-            if (sql.includes('FROM users WHERE id = ?')) return { created_at: POST_LAUNCH };
             return null;
           },
           run: async () => ({ success: true, meta: { changes: 1 } }),
@@ -107,14 +97,7 @@ describe('W648 — concurrent-hunt cap on CREATE', () => {
     expect(body.cap).toBe(3);
   });
 
-  it('lets a Founder create far past the cap (unlimited)', async () => {
-    const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 50, founder: true })), session('u1'));
-    const body = (await res.json()) as { ok?: boolean };
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-  });
-
-  it('W650 — lets an active premium SUBSCRIBER (non-founder) create past the cap', async () => {
+  it('W650 — lets an active premium SUBSCRIBER create past the cap', async () => {
     const res = await handleCoopBossCreate(
       createReq(),
       makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() + 86_400_000 })),
@@ -165,8 +148,8 @@ describe('W648 — concurrent-hunt cap on JOIN', () => {
     expect(body.ok).toBe(true);
   });
 
-  it('lets a Founder join past the cap (unlimited)', async () => {
-    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 50, founder: true })), session('u2'), 'inst-1');
+  it('W650 — lets an active premium SUBSCRIBER join past the cap (unlimited)', async () => {
+    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() + 86_400_000 })), session('u2'), 'inst-1');
     const body = (await res.json()) as { ok?: boolean };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);

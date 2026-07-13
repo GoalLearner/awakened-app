@@ -73,21 +73,6 @@ export interface Env {
    * constant when unset. NOT a secret; the reconcile is read-only. */
   REVENUECAT_PUBLIC_KEY?: string;
 
-  /** W626 — Founder grandfathering, now a CAPPED "First N Founders" launch
-   * promotion. The first N accounts by registration order (users.created_at, id
-   * tie-break) get Founder status for free, surfaced by GET
-   * /v1/users/me/entitlements as { founder: true }. Optional: defaults to 100 if
-   * unset; "0" disables the promo. Capped (unlike the old time-cutoff, which
-   * would have given the paid Founder pack away to EVERY 2026 joiner). Derived at
-   * read-time from the rank query — idempotent, no backfill, can't double-grant.
-   * Set with `wrangler secret put FOUNDER_FIRST_N` (or a [vars] entry). */
-  FOUNDER_FIRST_N?: string;
-
-  /** DEPRECATED (W626): the old time-cutoff grandfather knob, superseded by the
-   * capped FOUNDER_FIRST_N promo. Field kept only so an existing deploy's var
-   * doesn't fail typing; the entitlements handler no longer reads it. */
-  FOUNDER_GRANDFATHER_BEFORE_MS?: string;
-
   /** Admin metrics secret — gates GET /v1/admin/retention (per-user retention,
    * owner-requested). NOT a Sign-in-with-Apple route: the caller passes
    * `Authorization: Bearer <this value>`. FAIL CLOSED — if unset, the route 401s,

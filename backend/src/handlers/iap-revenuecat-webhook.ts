@@ -108,7 +108,7 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
   // W650 — premium product ids are EXCLUDED from the skin path even on
   // INITIAL_PURCHASE (entitlementForProduct doesn't know them anyway).
   const isGrantEvent = GRANT_EVENT_TYPES.has(type) && !!appUserId && !!productId && !isPremiumProduct(productId);
-  // W618 — resolve to a skin id OR the reserved 'founder' entitlement id.
+  // Resolve a purchase event's product id to a skin catalog id (or null).
   const grantId = isGrantEvent ? entitlementForProduct(productId) : null;
 
   // W636 — ONE structured line per webhook, visible in `wrangler tail`. No PII:
