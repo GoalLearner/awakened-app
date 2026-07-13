@@ -42,9 +42,12 @@ function paint(which){
     const y=1020+i*300;
     ctx.fillStyle=PANEL; rr(101,y,1040,250,28); ctx.fill();
     ctx.strokeStyle=i===sel?GOLD:LINE; ctx.lineWidth=i===sel?7:3; rr(101,y,1040,250,28); ctx.stroke();
-    ctx.textAlign='left'; ctx.fillStyle=INK; ctx.font='bold 52px Georgia'; ctx.fillText(c.t,150,y+95);
-    ctx.fillStyle=DIM; ctx.font='40px Georgia'; ctx.fillText(c.s,150,y+165);
-    ctx.textAlign='right'; ctx.fillStyle=GOLD; ctx.font='bold 56px Georgia'; ctx.fillText(c.p,1095,y+130);
+    // W654 — title owns line 1; price + billing meta share line 2 (price
+    // right-aligned). The old layout right-aligned the price 35px under the
+    // title baseline, colliding with long titles (review-screenshot bug).
+    ctx.textAlign='left'; ctx.fillStyle=INK; ctx.font='bold 52px Georgia'; ctx.fillText(c.t,150,y+100);
+    ctx.fillStyle=DIM; ctx.font='38px Georgia'; ctx.fillText(c.s,150,y+185);
+    ctx.textAlign='right'; ctx.fillStyle=GOLD; ctx.font='bold 52px Georgia'; ctx.fillText(c.p,1095,y+185);
     ctx.textAlign='center';
   });
   // benefits
