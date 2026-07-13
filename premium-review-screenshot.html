@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- premium-review-screenshot.html — W653: App Review screenshots for the two
+     Awakened Premium auto-renewable subscriptions. Self-contained (pure canvas,
+     no network). Open in any browser → click a button → a 1242×2688 PNG
+     downloads. Mirrors the real in-app paywall content (title+length, price,
+     auto-renew disclosure, Terms/Privacy links, Restore) so the screenshot
+     matches what the reviewer sees in-app, per 3.1.2. -->
+<html><head><meta charset="utf-8"><title>Premium review screenshots</title>
+<style>body{background:#14162b;color:#e8e6f0;font-family:Georgia,serif;text-align:center;padding:40px}
+button{background:#c9a227;color:#14162b;border:0;padding:14px 26px;font-size:16px;font-weight:bold;border-radius:8px;margin:10px;cursor:pointer}
+canvas{display:none}</style></head><body>
+<h1>Awakened Premium — review screenshots (1242×2688)</h1>
+<button onclick="paint('monthly')">Export MONTHLY screenshot</button>
+<button onclick="paint('yearly')">Export YEARLY screenshot</button>
+<canvas id="c" width="1242" height="2688"></canvas>
+<script>
+const NAVY='#14162b', PANEL='#1d2040', GOLD='#c9a227', INK='#e8e6f0', DIM='#9a97ad', LINE='#34375c';
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+let ctx;
+function paint(which){
+  const cv=document.getElementById('c'); ctx=cv.getContext('2d');
+  // backdrop
+  const bg=ctx.createLinearGradient(0,0,0,2688); bg.addColorStop(0,'#101226'); bg.addColorStop(.55,NAVY); bg.addColorStop(1,'#0c0e1e');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,1242,2688);
+  // status bar-ish spacing + app header
+  ctx.fillStyle=GOLD; ctx.font='bold 92px Georgia'; ctx.textAlign='center';
+  ctx.fillText('AWAKENED',621,260);
+  ctx.fillStyle=DIM; ctx.font='42px Georgia'; ctx.fillText('A W A K E N E D   ·   P R E M I U M',621,350);
+  // crest
+  ctx.strokeStyle=GOLD; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(621,560,120,0,7); ctx.stroke();
+  ctx.fillStyle=GOLD; ctx.font='120px Georgia'; ctx.fillText('✦',621,610);
+  // headline
+  ctx.fillStyle=INK; ctx.font='bold 86px Georgia'; ctx.fillText('Awakened Premium',621,850);
+  ctx.fillStyle=DIM; ctx.font='italic 44px Georgia'; ctx.fillText('The full membership. Cancel anytime.',621,930);
+  // tier cards
+  const sel = which==='monthly' ? 0 : 1;
+  const cards=[
+    {t:'Awakened Premium — 1 Month', p:'$4.99 / month', s:'Billed monthly'},
+    {t:'Awakened Premium — 1 Year',  p:'$39.99 / year', s:'≈ $3.33/mo · save 33%'},
+  ];
+  cards.forEach((c,i)=>{
+    const y=1020+i*300;
+    ctx.fillStyle=PANEL; rr(101,y,1040,250,28); ctx.fill();
+    ctx.strokeStyle=i===sel?GOLD:LINE; ctx.lineWidth=i===sel?7:3; rr(101,y,1040,250,28); ctx.stroke();
+    ctx.textAlign='left'; ctx.fillStyle=INK; ctx.font='bold 52px Georgia'; ctx.fillText(c.t,150,y+95);
+    ctx.fillStyle=DIM; ctx.font='40px Georgia'; ctx.fillText(c.s,150,y+165);
+    ctx.textAlign='right'; ctx.fillStyle=GOLD; ctx.font='bold 56px Georgia'; ctx.fillText(c.p,1095,y+130);
+    ctx.textAlign='center';
+  });
+  // benefits
+  const ben=['✦  Unlimited co-op hunts — no 3-hunt cap','✦  No co-op entrance fees, ever','✦  Unlimited Ascent attempts each day','✦  Member badge on your hunter card'];
+  ctx.textAlign='left'; ctx.font='46px Georgia';
+  ben.forEach((b,i)=>{ ctx.fillStyle=INK; ctx.fillText(b,150,1740+i*85); });
+  // CTA
+  ctx.fillStyle=GOLD; rr(101,2090,1040,130,32); ctx.fill();
+  ctx.fillStyle=NAVY; ctx.font='bold 54px Georgia'; ctx.textAlign='center';
+  ctx.fillText(which==='monthly'?'Subscribe — $4.99 / month':'Subscribe — $39.99 / year',621,2172);
+  // restore
+  ctx.fillStyle=DIM; ctx.font='44px Georgia'; ctx.fillText('Restore Purchases',621,2300);
+  // auto-renew disclosure (the 3.1.2-required block)
+  ctx.font='31px Georgia'; ctx.fillStyle=DIM;
+  const disc=['Subscription renews automatically unless cancelled at least 24 hours','before the end of the current period. Payment is charged to your Apple ID.','Manage or cancel anytime in App Store account settings.'];
+  disc.forEach((d,i)=>ctx.fillText(d,621,2405+i*46));
+  // links row
+  ctx.fillStyle=GOLD; ctx.font='36px Georgia';
+  ctx.fillText('Terms of Use (EULA)          ·          Privacy Policy',621,2610);
+  // export
+  const a=document.createElement('a');
+  a.download='premium-'+which+'-review-1242x2688.png';
+  a.href=cv.toDataURL('image/png'); a.click();
+}
+</script></body></html>
