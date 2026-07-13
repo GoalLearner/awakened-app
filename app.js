@@ -9192,7 +9192,7 @@
           '<span class="al-rating-row"><span class="num">' + pwr.toLocaleString('en-US') + '</span></span></div>' +
         '<div class="al-lives' + (_founder ? ' al-lives--founder' : '') + '"><span class="al-lbl">LIVES' +
           // W652 — tier-aware tag: a Premium subscriber is not a FOUNDER.
-          (_founder ? ' <span class="al-founder-tag">✦ ' + ((window.Auth && Auth.isFounder && Auth.isFounder()) ? 'FOUNDER' : 'PREMIUM') + '</span>' : '') + '</span>' +
+          (_founder ? ' <span class="al-founder-tag">✦ PREMIUM</span>' : '') + '</span>' +
           '<span class="al-lives-row">' + hearts + '<span class="n">' +
             (_founder ? '∞' : left + '/' + ASCENT_DAILY_LIVES) + '</span>' +
             '<button class="al-tips" data-ar="tips" type="button" aria-label="Combat styles">?</button></span></div>' +
@@ -9291,7 +9291,7 @@
     // branch: left = Infinity via ascentLivesLeft). W651: label follows the tier.
     const founderNote = _ascentIsMember()
       ? '<div class="al-founder-note">✦ ' +
-        ((window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder()) ? 'FOUNDER' : 'PREMIUM') +
+        'PREMIUM' +
         ' BENEFIT · UNLIMITED ASCENT ATTEMPTS</div>'
       : '';
     const cta = (left > 0
@@ -11336,7 +11336,7 @@
     // W620 — members have no daily cap; the strip states the benefit instead of a count.
     // W652 — tier-aware label (Premium subscribers are members, not Founders).
     const _livesTxt = (f.livesLeft === Infinity)
-      ? '✦ ' + ((window.Auth && Auth.isFounder && Auth.isFounder()) ? 'FOUNDER' : 'PREMIUM') + ' · UNLIMITED ATTEMPTS'
+      ? '✦ PREMIUM · UNLIMITED ATTEMPTS'
       : f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY';
     const ratingStrip = f.advanced
       ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">FLOOR ' + f.floorCleared + ' CLEARED</span></div>' +
@@ -24821,8 +24821,8 @@
       let _ruLive = false;
       try { _ruLive = _canShowFounderPrompt(); } catch (_) {}
       if (_ruLive) {
-        _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Become a Founder \u2014 back the climb' +
-          '<span class="fv-founder-sub">UNLIMITED ASCENT ATTEMPTS \u00b7 LIFETIME</span></button>';   // W621 \u2014 headline benefit at the peak
+        _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Go Premium \u2014 back the climb' +
+          '<span class="fv-founder-sub">UNLIMITED ASCENT \u00b7 UNLIMITED HUNTS</span></button>';   // W621 \u2014 headline benefit at the peak
         _ruFounder.classList.remove('hidden');
         try { _recordFounderPrompt(); } catch (_) {}
         const _ruCta = document.getElementById('rankup-founder-cta');
@@ -26596,8 +26596,8 @@
       let _pdLive = false;
       try { _pdLive = (ms.day === 7) && _canShowFounderPrompt(); } catch (_) {}
       if (_pdLive) {
-        _pdFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="pd-founder-cta">\u2726 Become a Founder \u2014 stay the course' +
-          '<span class="fv-founder-sub">UNLIMITED ASCENT ATTEMPTS \u00b7 LIFETIME</span></button>';   // W621 \u2014 headline benefit at the peak
+        _pdFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="pd-founder-cta">\u2726 Go Premium \u2014 stay the course' +
+          '<span class="fv-founder-sub">UNLIMITED ASCENT \u00b7 UNLIMITED HUNTS</span></button>';   // W621 \u2014 headline benefit at the peak
         const _pdCta = document.getElementById('pd-founder-cta');
         if (_pdCta) _pdCta.onclick = function (e) { try { e.stopPropagation(); } catch (_) {} dismiss(); try { openFounder(); } catch (_) {} };
         setTimeout(function () { if (live) { _pdFounder.classList.remove('hidden'); try { _recordFounderPrompt(); } catch (_) {} } }, 1400);
@@ -27496,7 +27496,6 @@
     _iapPricesInFlight = true;
     try {
       const ids = PREMIUM_SKINS.map((sk) => _skinProductId(sk.id));
-      try { ids.push(FOUNDER_OFFER.productId); } catch (_) {}   // localize the Founder price too
       const r = await Auth.getProductPrices(ids);
       // W651 — subscription prices ride a SEPARATE fetch (subs must not pass
       // NON_SUBSCRIPTION); merged into the same product-id-keyed map.
@@ -27520,11 +27519,6 @@
     } catch (_) { /* prices are a nicety — never break the UI */ }
     finally { _iapPricesInFlight = false; }
   }
-  // Localized Founder price if IAP is live + loaded, else the hardcoded fallback.
-  function _founderPriceStr() {
-    try { return _iapPrices[FOUNDER_OFFER.productId] || FOUNDER_OFFER.price; }
-    catch (_) { try { return FOUNDER_OFFER.price; } catch (__) { return ''; } }
-  }
   function _skinsCacheRead() {
     try { const raw = localStorage.getItem(SKINS_CACHE_KEY); if (!raw) return null;
       const p = JSON.parse(raw); return (p && Array.isArray(p.skins)) ? p.skins : null; } catch (_) { return null; }
@@ -27545,11 +27539,6 @@
         _skinsCacheWrite(r.skins);
         try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
       }
-      // W626 — fetchEntitlements just refreshed the Founder cache; if the server
-      // confirms Founder for the first time (first-100 grandfather OR purchase),
-      // fire the one-time congrats. Runs on every refresh path (cold launch,
-      // wardrobe open, restore); the seen-flag makes it once-ever.
-      try { _maybeShowFounderCongrats(); } catch (_) {}
     } catch (_) {} finally { _skinsInFlight = false; }
   }
   // W637 — throttled self-heal. Asks the backend to reconcile ownership against
@@ -27580,43 +27569,6 @@
       } else {
         try { localStorage.setItem(RECONCILE_THROTTLE_KEY, String(now - (DAY - HOUR))); } catch (_) {}
       }
-    } catch (_) {}
-  }
-  // W626 — one-time "First 100 Founder" congratulations. Fires the first time the
-  // SERVER confirms Founder status and the user hasn't seen it. Guarded by a
-  // localStorage flag → shows exactly once, ever. DORMANT until go-live:
-  // Auth.isFounder() is display-gated on IAP_ENABLED, so this no-ops until the
-  // owner flips it (a grandfathered hunter then sees it on their next launch).
-  const FOUNDER_CONGRATS_SEEN_KEY = 'hb_founder_congrats_seen_v1';
-  function _maybeShowFounderCongrats() {
-    try {
-      if (localStorage.getItem(FOUNDER_CONGRATS_SEEN_KEY)) return;
-      if (!(window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder())) return;
-      localStorage.setItem(FOUNDER_CONGRATS_SEEN_KEY, '1');   // set BEFORE showing so a render throw can't re-loop it
-      _showFounderCongratsModal();
-    } catch (_) {}
-  }
-  function _showFounderCongratsModal() {
-    try {
-      if (document.getElementById('founder-congrats-overlay')) return;   // never double-mount
-      const ov = document.createElement('div');
-      ov.id = 'founder-congrats-overlay';
-      ov.className = 'fc-overlay';
-      ov.innerHTML =
-        '<div class="fc-card" role="dialog" aria-modal="true" aria-label="Founder status granted">' +
-          '<div class="fc-crest" aria-hidden="true"><span class="fc-crest-spark">✦</span></div>' +
-          '<div class="fc-eyebrow">FOUNDER · FIRST 100</div>' +
-          '<div class="fc-title">Congratulations!</div>' +
-          '<p class="fc-body">As one of the <b>first 100 hunters</b> to join Awakened, you’ve been granted <b>lifetime Founder status</b> with unlimited Ascent attempts and exclusive perks.</p>' +
-          '<button type="button" class="fc-cta" id="founder-congrats-close">✦ Claim your title</button>' +
-        '</div>';
-      document.body.appendChild(ov);
-      const done = function () { try { ov.remove(); } catch (_) {} };
-      const btn = ov.querySelector('#founder-congrats-close');
-      if (btn) btn.addEventListener('click', done);
-      ov.addEventListener('click', function (e) { if (e.target === ov) done(); });
-      try { if (typeof playSfx === 'function') playSfx('boss_victory'); } catch (_) {}
-      try { if (navigator.vibrate) navigator.vibrate([18, 40, 70]); } catch (_) {}
     } catch (_) {}
   }
   // Buy a premium skin → on success the RevenueCat webhook grants server-side;
@@ -40566,7 +40518,7 @@
       const _youPill = isMe ? '<span class="lb-you-pill">YOU</span>' : '';
       // W618 — Founder mark on the caller's OWN row (the client only knows its own
       // Founder status). Dormant: Auth.isFounder() is false until IAP_ENABLED flips.
-      const _founderChip = (isMe && window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder())
+      const _founderChip = false
         ? '<span class="lb-rank-founder" title="Founder" aria-label="Founder">✦</span>' : '';
       const _nameDisp = esc(displayAliases[i] || '—');
 
@@ -42375,7 +42327,7 @@
     // Founder status, so this shows on the own card only; cross-user badges would
     // need Founder status published into the public profile (documented follow-on).
     // Dormant: Auth.isFounder() returns false until IAP_ENABLED flips live.
-    const founderBadge = (isOwn && window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder())
+    const founderBadge = false
       ? '<span class="pc-founder" title="Founder">\u2726\u00A0FOUNDER</span>'
       : '';
     body.innerHTML =
@@ -42544,8 +42496,8 @@
         ? '<button type="button" class="wd-founder-teaser" data-wd-founder="1">' +
             '<span class="ft-glyph" aria-hidden="true">✦</span>' +
             '<span class="ft-text">' +
-              '<span class="ft-title">Become a Founder · <b>' + esc(_founderPriceStr()) + '</b> lifetime</span>' +
-              '<span class="ft-benefit">UNLIMITED ASCENT ATTEMPTS · EXCLUSIVE LOOK</span>' +   // 2 items — 3 ellipsized at 393px
+              '<span class="ft-title">Awakened Premium · <b>' + esc(_premiumPriceStr('monthly')) + '</b>/mo</span>' +
+              '<span class="ft-benefit">UNLIMITED ASCENT ATTEMPTS · NO ENTRANCE FEES</span>' +   // 2 items — 3 ellipsized at 393px
             '</span>' +
             '<span class="ft-chev" aria-hidden="true">›</span>' +
           '</button>'
@@ -42591,35 +42543,15 @@
   }
   try { window.__openWardrobe = openWardrobe; } catch (_) {}
 
-  // ── W326 — Founder's Lifetime offer (presentation surface) ───────────
-  // The headline monetization play: one-time, additive-only, never pay-to-win.
-  // This builds the OFFER SCREEN only. The buy CTA calls Auth.purchaseFounders
-  // (a hook the OWNER wires to RevenueCat); until that + IAP exist it degrades
-  // to a graceful toast. Edit price/benefits in this one config.
-  const FOUNDER_OFFER = {
-    productId: 'com.goallearner.awakened.founders_lifetime',
-    price:     '$49.99',
-    cadence:   'one-time',
-    title:     'Become a Founder',
-    tagline:   'Unlock everything. Yours for life.',
-    benefits: [
-      { glyph: '\u221E', title: 'Lifetime, one payment', body: 'Pay once. Every premium feature, now and forever. No subscription, ever.' },
-      { glyph: '\u2726', title: 'The Founder\u2019s mark', body: 'A permanent Founder frame + badge on your hunter card and the leaderboard.' },
-      { glyph: '\u25C6', title: 'A Founder-exclusive look', body: 'An avatar skin only Founders carry \u2014 separate from the a-la-carte shop.' },
-      // W620 \u2014 Path B (owner decision): the cosmetic-only pledge is replaced by the Ascent
-      // benefit. Stated plainly so a buyer knows exactly what is and isn't included.
-      { glyph: '\u2694', title: 'Unlimited Ascent attempts', body: 'Founder benefit: the daily 2-life cap is lifted \u2014 the tower never closes on you. Floors, foes, and rewards are identical for everyone.' },
-      { glyph: '\u2665', title: 'Fund a solo studio', body: 'Awakened is built by one person. You\u2019re backing the work directly.' },
-    ],
-    fineprint: 'One-time payment \u00b7 no subscription \u00b7 restore anytime.',
-  };
 
+  // W655 — legacy helper names, now PREMIUM semantics: _founderIapReady() = the
+  // priced paywall may be shown; _founderOwned() = the user is an active member.
   function _founderIapReady() {
-    try { return !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable() && typeof Auth.purchaseFounders === 'function'); }
+    try { return !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable() && typeof Auth.purchasePremium === 'function'); }
     catch (_) { return false; }
   }
   function _founderOwned() {
-    try { return !!(window.Auth && typeof Auth.isFounder === 'function' && Auth.isFounder()); } catch (_) { return false; }
+    try { return !!(window.Auth && typeof Auth.isMember === 'function' && Auth.isMember()); } catch (_) { return false; }
   }
   // W342 — shared Founder-prompt throttle. One mechanism for every value-peak
   // surface (rank-up, perfect-day) so a user never sees two upsells stacked.
@@ -42629,12 +42561,7 @@
   const FOUNDER_PROMPT_MIN_INTERVAL_MS = 3600000; // 1h minimum between any two prompts
   function _canShowFounderPrompt() {
     try {
-      if (_founderOwned()) return false;
-      // W652 — an active Premium member already HAS the pitched perks
-      // (unlimited Ascent attempts / hunts); don't upsell them at rank-ups
-      // and perfect days. The membership sheet itself still shows the
-      // Founder lifetime tier when they open it deliberately.
-      if (window.Auth && typeof Auth.isMember === 'function' && Auth.isMember()) return false;
+      if (_founderOwned()) return false;              // already a member — nothing to pitch
       if (!_founderIapReady()) return false;
       if (_founderPromptsThisSession >= 1) return false;
       const last = parseInt(localStorage.getItem('hb_founder_last_prompt_ms') || '0', 10) || 0;
@@ -42653,96 +42580,61 @@
       return _iapPrices[pid] || (tier === 'yearly' ? '$39.99' : '$4.99');
     } catch (_) { return tier === 'yearly' ? '$39.99' : '$4.99'; }
   }
-  function _premiumOwned() {
-    // Premium-only state (Founder renders its own receipt): member but not founder.
-    try { return !!(window.Auth && typeof Auth.isMember === 'function' && Auth.isMember() && !_founderOwned()); }
-    catch (_) { return false; }
-  }
-  // W651 — the Founder sheet is now the MEMBERSHIP sheet: Awakened Premium
-  // (monthly/yearly auto-renewable) on top, Founder = the lifetime tier below.
-  // Apple 3.1.2 requires the paywall itself to disclose price+period,
-  // auto-renewal, and carry working Terms of Use + Privacy Policy links —
-  // that's the fineprint block at the bottom; don't trim it.
+  // W651/W655 — the "founder" sheet is now the Awakened Premium paywall (the
+  // only paid tier). One clean paywall: active members see a receipt; everyone
+  // else sees the monthly/yearly offer. Apple 3.1.2 requires the paywall itself
+  // to disclose price+period, auto-renewal, and carry working Terms of Use +
+  // Privacy Policy links + a Restore control — that's the fineprint/restore
+  // block at the bottom; don't trim it.
   function _renderFounder() {
     const body = document.getElementById('founder-body');
     if (!body) return;
-    const o = FOUNDER_OFFER;
-    const _fp = _founderPriceStr();   // W625 — localized Founder price (fallback: o.price)
-    const owned = _founderOwned();
-    const ready = _founderIapReady();
-    const benefits = o.benefits.map(function (b) {
-      return '<div class="founder-benefit">' +
-        '<span class="founder-benefit-glyph" aria-hidden="true">' + b.glyph + '</span>' +
-        '<span class="founder-benefit-text"><span class="founder-benefit-title">' + esc(b.title) + '</span>' +
-        '<span class="founder-benefit-body">' + esc(b.body) + '</span></span></div>';
-    }).join('');
-    let cta;
-    if (owned) {
-      cta = '<div class="founder-owned">\u2713 You\u2019re a Founder. Thank you.</div>';
-    } else {
-      const label = ready ? ('Become a Founder \u2014 ' + _fp) : (_fp + ' \u00b7 Coming soon');
-      cta = '<button type="button" class="founder-cta' + (ready ? '' : ' founder-cta--soon') + '" data-founder-buy>' +
-        '<span class="founder-cta-spark" aria-hidden="true">\u2726</span>' + esc(label) + '</button>' +
-        '<button type="button" class="founder-restore" data-founder-restore>Restore purchase</button>';
-    }
-    // ── W651 — Premium (auto-renewable) section above the Founder block ──
     const mo = _premiumPriceStr('monthly'), yr = _premiumPriceStr('yearly');
-    let premiumHtml;
-    if (owned) {
-      premiumHtml = '';   // a Founder already owns the lifetime membership — no sub pitch
-    } else if (_premiumOwned()) {
-      premiumHtml =
-        '<div class="founder-owned">✦ You’re a Premium member.</div>' +
-        '<div class="founder-fineprint">Manage or cancel anytime in Settings → Apple ID → Subscriptions.</div>' +
-        '<div class="founder-fineprint" style="margin-top:14px;opacity:.75">Want it forever — plus the Founder’s mark and exclusive look?</div>';
-    } else {
-      premiumHtml =
-        '<div class="founder-hero" style="margin-bottom:6px">' +
+    const ready = _founderIapReady();
+    // Active member -> receipt, no pitch.
+    if (_founderOwned()) {
+      body.innerHTML =
+        '<div class="founder-hero"><div class="founder-crest" aria-hidden="true"><span class="founder-crest-spark">✦</span></div>' +
           '<div class="founder-title">Awakened Premium</div>' +
-          '<div class="founder-tagline">The full membership. Cancel anytime.</div>' +
-        '</div>' +
-        '<div class="founder-benefits">' +
-          '<div class="founder-benefit"><span class="founder-benefit-glyph" aria-hidden="true">⚔</span>' +
-            '<span class="founder-benefit-text"><span class="founder-benefit-title">Unlimited co-op hunts</span>' +
-            '<span class="founder-benefit-body">No entrance fees, no 3-hunt limit — summon and answer freely.</span></span></div>' +
-          '<div class="founder-benefit"><span class="founder-benefit-glyph" aria-hidden="true">∞</span>' +
-            '<span class="founder-benefit-text"><span class="founder-benefit-title">Unlimited Ascent attempts</span>' +
-            '<span class="founder-benefit-body">The daily 2-life cap is lifted — the tower never closes on you.</span></span></div>' +
-          '<div class="founder-benefit"><span class="founder-benefit-glyph" aria-hidden="true">✦</span>' +
-            '<span class="founder-benefit-text"><span class="founder-benefit-title">Member status</span>' +
-            '<span class="founder-benefit-body">Every future membership perk, the moment it ships.</span></span></div>' +
-        '</div>' +
-        '<div class="founder-cta-wrap">' +
-          '<button type="button" class="founder-cta" data-premium-buy="monthly">' +
-            '<span class="founder-cta-spark" aria-hidden="true">✦</span>Monthly — ' + esc(mo) + '/month</button>' +
-          '<button type="button" class="founder-cta" data-premium-buy="yearly" style="margin-top:10px">' +
-            '<span class="founder-cta-spark" aria-hidden="true">✦</span>Yearly — ' + esc(yr) + '/year · SAVE 33%</button>' +
-        '</div>' +
-        '<div class="founder-fineprint" style="margin:14px 0 4px;opacity:.8">— or own it forever —</div>';
+          '<div class="founder-tagline">You’re a member. Thank you.</div></div>' +
+        '<div class="founder-owned">✓ Membership active</div>' +
+        '<div class="founder-fineprint">Manage or cancel anytime in Settings → Apple ID → Subscriptions.</div>';
+      return;
     }
+    const soon = ready ? '' : ' founder-cta--soon';
+    const benefit = function (glyph, title, bodyTxt) {
+      return '<div class="founder-benefit"><span class="founder-benefit-glyph" aria-hidden="true">' + glyph + '</span>' +
+        '<span class="founder-benefit-text"><span class="founder-benefit-title">' + esc(title) + '</span>' +
+        '<span class="founder-benefit-body">' + esc(bodyTxt) + '</span></span></div>';
+    };
     body.innerHTML =
-      premiumHtml +
       '<div class="founder-hero">' +
-        '<div class="founder-crest" aria-hidden="true"><span class="founder-crest-spark">\u2726</span></div>' +
-        '<div class="founder-title">' + esc(o.title) + '</div>' +
-        '<div class="founder-tagline">' + esc(o.tagline) + '</div>' +
-        '<div class="founder-price"><span class="founder-price-num">' + esc(_fp) + '</span>' +
-          '<span class="founder-price-cadence">' + esc(o.cadence) + '</span></div>' +
+        '<div class="founder-crest" aria-hidden="true"><span class="founder-crest-spark">✦</span></div>' +
+        '<div class="founder-title">Awakened Premium</div>' +
+        '<div class="founder-tagline">The full membership. Cancel anytime.</div>' +
       '</div>' +
-      '<div class="founder-benefits">' + benefits + '</div>' +
-      '<div class="founder-cta-wrap">' + cta + '</div>' +
-      '<div class="founder-fineprint">' + esc(o.fineprint) + '</div>' +
-      // W651 — Apple-required subscription disclosure + legal links (3.1.2).
-      (owned ? '' :
-        '<div class="founder-fineprint" style="margin-top:10px">Premium is ' + esc(mo) + '/month or ' + esc(yr) + '/year, charged to your Apple ID. ' +
-          'It renews automatically until cancelled at least 24 hours before the period ends. ' +
-          'Manage or cancel in Settings → Apple ID → Subscriptions.</div>' +
-        '<div class="founder-fineprint" style="margin-top:8px">' +
-          '<a href="#" data-ext-url="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" style="color:inherit;text-decoration:underline">Terms of Use</a>' +
-          ' · ' +
-          '<a href="#" data-ext-url="' + esc(AWAKENED_PRIVACY_POLICY_URL) + '" style="color:inherit;text-decoration:underline">Privacy Policy</a>' +
-        '</div>');
+      '<div class="founder-benefits">' +
+        benefit('⚔', 'Unlimited co-op hunts', 'No entrance fees, no 3-hunt limit — summon and answer freely.') +
+        benefit('∞', 'Unlimited Ascent attempts', 'The daily 2-life cap is lifted — the tower never closes on you.') +
+        benefit('✦', 'Member status', 'Every future membership perk, the moment it ships.') +
+      '</div>' +
+      '<div class="founder-cta-wrap">' +
+        '<button type="button" class="founder-cta' + soon + '" data-premium-buy="monthly">' +
+          '<span class="founder-cta-spark" aria-hidden="true">✦</span>Monthly — ' + esc(mo) + '/month</button>' +
+        '<button type="button" class="founder-cta' + soon + '" data-premium-buy="yearly" style="margin-top:10px">' +
+          '<span class="founder-cta-spark" aria-hidden="true">✦</span>Yearly — ' + esc(yr) + '/year · SAVE 33%</button>' +
+        '<button type="button" class="founder-restore" data-premium-restore>Restore Purchases</button>' +
+      '</div>' +
+      '<div class="founder-fineprint" style="margin-top:12px">Awakened Premium is ' + esc(mo) + '/month or ' + esc(yr) + '/year. ' +
+        'Payment is charged to your Apple ID. It renews automatically unless cancelled at least 24 hours before the ' +
+        'end of the current period; manage or cancel anytime in Settings → Apple ID → Subscriptions.</div>' +
+      '<div class="founder-fineprint" style="margin-top:8px">' +
+        '<a href="#" data-ext-url="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" style="color:inherit;text-decoration:underline">Terms of Use</a>' +
+        ' · ' +
+        '<a href="#" data-ext-url="' + esc(AWAKENED_PRIVACY_POLICY_URL) + '" style="color:inherit;text-decoration:underline">Privacy Policy</a>' +
+      '</div>';
   }
+
   // W651 — buy a premium subscription from the membership sheet.
   let _premiumBuyBusy = false;
   async function _premiumBuy(tier) {
@@ -42785,44 +42677,30 @@
     } catch (_) {}
   }
   function openFounder() {
-    // App Store 2.1 — never present the priced offer (with buy/restore controls) unless IAP is
-    // actually live; a reachable $price screen that cannot transact is a guaranteed rejection.
-    // Durable chokepoint: re-checked live on every open, for every entry point. Owned Founders keep
-    // their "You're a Founder" receipt.
+    // App Store 2.1 — never present the priced paywall unless IAP is live; a
+    // member may still open it to see their receipt. Re-checked on every open.
     if (!_founderIapReady() && !_founderOwned()) return;
     const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
     if (!ov || !sh) return;
     _renderFounder();
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
-    try { _refreshIapPrices(); } catch (_) {}   // W625 — localize the Founder price (repaints on land)
+    try { _refreshIapPrices(); } catch (_) {}   // localize the prices (repaints on land)
   }
   function closeFounder() {
     const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
     if (ov) ov.classList.add('hidden');
     if (sh) sh.classList.add('hidden');
   }
-  async function _founderBuy() {
-    if (!_founderIapReady()) {
-      if (typeof showHabitToast === 'function') showHabitToast('Founder\u2019s Lifetime unlocks soon \u2014 thank you for the support.');
-      return;
-    }
-    if (_iapPurchaseBusy) return;                              // W642 \u2014 guard + instant feedback
-    _iapSetBusy(true, 'Contacting the App Store\u2026');
-    try { await Auth.purchaseFounders(FOUNDER_OFFER.productId); } catch (_) {}
-    _iapSetBusy(false);
-    try { _renderFounder(); } catch (_) {}
-  }
-  function _founderRestore() {
+  // W655 — Restore Purchases from the Premium paywall (Apple requires it for subs).
+  // Restore pushes Apple's receipt to RevenueCat; reconcile then adopts the
+  // subscription horizon from RC's REST record before the sheet re-renders.
+  function _premiumRestore() {
     if (!(window.Auth && Auth.iapAvailable && Auth.iapAvailable())) {
       if (typeof showHabitToast === 'function') showHabitToast('Restore is available once purchases are live.');
       return;
     }
     try {
       Promise.resolve(Auth.restorePurchases()).then(function () {
-        // W637 — restore pushed Apple's receipt to RevenueCat; RECONCILE pulls it
-        // into a server-side grant (a plain entitlements read can't see a purchase
-        // RevenueCat only just ingested), then refresh so a restored Founder/skin
-        // reflects immediately when the sheet re-renders.
         var _rec = (window.Auth && typeof Auth.reconcileEntitlements === 'function') ? Auth.reconcileEntitlements() : null;
         Promise.resolve(_rec)
           .then(function () { return (typeof refreshSkinEntitlements === 'function') ? refreshSkinEntitlements() : null; })
@@ -42830,6 +42708,7 @@
       }, function () { if (typeof showHabitToast === 'function') showHabitToast('Nothing to restore.'); });
     } catch (_) {}
   }
+
   try { window.__openFounder = openFounder; } catch (_) {}
 
   // ── W330 — Guest deferred sign-in claim ──────────────────────────
@@ -46140,7 +46019,7 @@
       let live = false;
       try { live = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable()); } catch (_) {}
       if (live) {
-        fdEl.innerHTML = '<button type="button" class="fv-founder-cta" id="fv-founder-cta">Become a Founder \u2014 keep Awakened forever</button>';
+        fdEl.innerHTML = '<button type="button" class="fv-founder-cta" id="fv-founder-cta">Go Premium \u2014 keep Awakened forever</button>';
         fdEl.classList.remove('hidden');
       } else {
         fdEl.innerHTML = '';
@@ -56928,12 +56807,11 @@
       if (fdSheet) fdSheet.addEventListener('click', function (e) {
         // W651 — the sheet now also sells the Premium subscription and carries
         // the Apple-required Terms/Privacy links (opened externally).
-        const t = e.target && e.target.closest ? e.target.closest('[data-founder-buy],[data-founder-restore],[data-premium-buy],[data-ext-url]') : null;
+        const t = e.target && e.target.closest ? e.target.closest('[data-premium-buy],[data-premium-restore],[data-ext-url]') : null;
         if (!t) return;
         if (t.hasAttribute('data-ext-url')) { e.preventDefault(); try { window.open(t.getAttribute('data-ext-url'), '_blank'); } catch (_) {} return; }
         if (t.hasAttribute('data-premium-buy')) _premiumBuy(t.getAttribute('data-premium-buy'));
-        else if (t.hasAttribute('data-founder-buy')) _founderBuy();
-        else if (t.hasAttribute('data-founder-restore')) _founderRestore();
+        else if (t.hasAttribute('data-premium-restore')) _premiumRestore();
       });
       // W327 — App Store Restore Purchases (Apple requires it for non-
       // consumables). Wired to the EXISTING Auth.restorePurchases; gated

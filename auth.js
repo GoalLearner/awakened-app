@@ -135,14 +135,11 @@
       localStorage.removeItem(STORAGE_KEY);
     } catch (_) {}
     // W644 — entitlements are PER-ACCOUNT; purge their display caches on sign-out
-    // so the next account on this device can't inherit them. (Apple's reviewer
-    // hit this: their first auto-Founder'd session left hb_founder_owned='1',
-    // so a brand-new Sign-in-with-Apple account still rendered "You're a
-    // Founder" → the 2.1(b) "already purchased on a new account" rejection.)
-    _founderCache = null;
-    _memberCache = null;   // W651 — membership is per-account too
-    try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}
+    // so the next account on this device can't inherit them (the class of bug
+    // behind the 2.1(b) "already purchased on a new account" rejection).
+    _memberCache = null;   // W651 — membership is per-account
     try { localStorage.removeItem('hb_member_owned'); } catch (_) {}
+    try { localStorage.removeItem('hb_founder_owned'); } catch (_) {}   // W655 — legacy key cleanup
     try { localStorage.removeItem('hb_skins_owned_cache'); } catch (_) {}
   }
 
@@ -1581,9 +1578,8 @@
     catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
-      _updateFounderCache(!!data.founder);   // W618 — piggyback Founder status on the same read
-      _updateMemberCache(data);              // W651 — and the membership (founder OR active premium)
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, premium: !!data.premium, member: !!(data.member || data.founder) };
+      _updateMemberCache(data);              // W651/W655 — membership (active premium subscription)
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -1593,7 +1589,7 @@
   // RevenueCat's authoritative REST record and grant anything missing locally.
   // Recovers a lost/delayed webhook, and — after purchaseSkin's restore-on-
   // already-owned — a purchase RevenueCat only just ingested. Same return shape
-  // + Founder-cache side-effect as fetchEntitlements; `reconciled` = # newly
+  // + member-cache side-effect as fetchEntitlements; `reconciled` = # newly
   // granted. Safe to call redundantly (server INSERT OR IGNORE is idempotent).
   async function reconcileEntitlements() {
     const u = readUser();
@@ -1607,70 +1603,34 @@
     } catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
-      _updateFounderCache(!!data.founder);
       _updateMemberCache(data);              // W651 — reconcile also refreshes the membership
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], founder: !!data.founder, premium: !!data.premium, member: !!(data.member || data.founder), reconciled: (data.reconciled | 0) };
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, reconciled: (data.reconciled | 0) };
     }
     if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
 
-  // ── W618 — Founder's Lifetime (one-time supporter pack) ─────────────────
-  // Same RevenueCat rails as skins; the backend grants a reserved 'founder'
-  // entitlement (or grandfathers pre-launch accounts) and returns it on
-  // GET /entitlements as { founder }. isFounder() is DISPLAY-GATED behind
-  // IAP_ENABLED so nothing surfaces until the owner flips it live. Cosmetic only.
-  let _founderCache = null; // tri-state: null = not yet resolved this session
-  function _updateFounderCache(isF) {
-    _founderCache = !!isF;
-    try { localStorage.setItem('hb_founder_owned', _founderCache ? '1' : '0'); } catch (_) {}
-  }
-  function isFounder() {
-    try {
-      if (!IAP_ENABLED) return false;              // dormant until go-live
-      if (_founderCache === null) _founderCache = (localStorage.getItem('hb_founder_owned') === '1');
-      return _founderCache === true;
-    } catch (_) { return false; }
-  }
-  // Buy the Founder pack. Identical RevenueCat flow to a skin (non-consumable).
-  // W637 — RECONCILE (not just fetch) after success: it grants server-side from
-  // RevenueCat's authoritative record even if the webhook was lost/delayed or the
-  // pack was already-owned-then-restored, then refreshes isFounder() before the
-  // caller re-renders the offer sheet. One short retry absorbs propagation lag.
-  async function purchaseFounders(productId) {
-    const r = await purchaseSkin(productId || 'com.goallearner.awakened.founders_lifetime');
-    if (r && r.ok) {
-      try {
-        await reconcileEntitlements();
-        if (!isFounder()) { await new Promise((res) => setTimeout(res, 1500)); await reconcileEntitlements(); }
-      } catch (_) {}
-    }
-    return r;
-  }
-
-  // ── W651 — "Awakened Premium" auto-renewable membership ─────────────────
-  // The subscription tier of the OSRS-style membership (Founder = the lifetime
-  // tier of the SAME membership): no co-op entrance fees, unlimited concurrent
-  // hunts, unlimited Ascent attempts. The backend derives `premium` from the
-  // RevenueCat-webhook-maintained paid-through horizon and returns the combined
-  // `member` flag on GET /entitlements — the client caches it like Founder.
+  // ── W651/W655 — "Awakened Premium" auto-renewable membership ─────────────
+  // The membership, and since W655 the ONLY paid tier (the one-time Founder
+  // pack was removed): no co-op entrance fees, unlimited concurrent hunts,
+  // unlimited Ascent attempts. The backend derives `premium`/`member` from the
+  // RevenueCat-webhook-maintained paid-through horizon; the client caches the
+  // member flag for offline gating.
   const PREMIUM_PRODUCTS = {
     monthly: 'com.goallearner.awakened.premium.monthly',   // $4.99/mo
     yearly:  'com.goallearner.awakened.premium.yearly',    // $39.99/yr
   };
-  let _memberCache = null; // tri-state, same contract as _founderCache
+  let _memberCache = null; // tri-state: null = not yet resolved this session
   function _updateMemberCache(data) {
-    const m = !!(data && (data.member || data.founder));
+    const m = !!(data && data.member);
     _memberCache = m;
     try { localStorage.setItem('hb_member_owned', m ? '1' : '0'); } catch (_) {}
   }
   // The ONE flag every membership perk gates on (co-op fees/cap, Ascent lives).
-  // Founder ⊂ member, so existing Founder perks are unchanged.
   function isMember() {
     try {
       if (!IAP_ENABLED) return false;
-      if (isFounder()) return true;   // lifetime tier — no cache dance needed
       if (_memberCache === null) _memberCache = (localStorage.getItem('hb_member_owned') === '1');
       return _memberCache === true;
     } catch (_) { return false; }
@@ -1795,10 +1755,7 @@
     restorePurchases,
     fetchEntitlements,
     reconcileEntitlements,   // W637 — self-healing grant (recovers lost webhook / restored purchase)
-    // W618 — Founder's Lifetime (one-time supporter pack); dormant behind IAP_ENABLED
-    purchaseFounders,
-    isFounder,
-    // W651 — Awakened Premium (auto-renewable membership; Founder = lifetime tier)
+    // W651/W655 — Awakened Premium (auto-renewable membership; the only paid tier)
     purchasePremium,
     getPremiumPrices,
     isMember,
