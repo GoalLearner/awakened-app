@@ -22876,6 +22876,10 @@
       dirty: function () { return _saveDirty; },
       poke: function (n) { for (var i = 0; i < (n || 1); i++) save(); },
       flush: function () { saveFlush(); },
+      // The app keys completions by getPTDate() (Pacific), NOT the device/UTC
+      // date — expose it so an E2E reads the SAME key the app writes, regardless
+      // of the runner's timezone (CI is UTC → naive local-date keys diverge).
+      today: function () { try { return today; } catch (_) { return null; } },
       // Drives the REAL completion path (toggleHabit → save) silently, so an
       // E2E can prove rapid real completions persist without fighting the
       // celebration UI. toggleHabit is hoisted; resolved at call time.

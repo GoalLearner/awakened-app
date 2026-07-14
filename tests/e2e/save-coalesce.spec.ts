@@ -69,6 +69,13 @@ type SaveTest = {
 };
 const H = [{ id: 'h1', name: 'A', emoji: '🅰️', difficulty: 'easy', type: 'build', primaryStat: 'STR' }];
 
+// Pin the browser clock to UTC so this spec runs in the SAME timezone as the CI
+// runner. The app keys completions by getPTDate() (Pacific); a naive local-date
+// key in a test diverges from it whenever local≠PT — which is exactly why T5/T6
+// passed on a Pacific-ish dev box but failed on the UTC CI runner. Pinning UTC
+// reproduces that here forever, and the tests read the app's own today() key.
+test.use({ timezoneId: 'UTC' });
+
 test.describe('W659 · save() coalescing + flush-before-kill', () => {
   test('T1 — 9 redundant saves in one action collapse to ONE disk write', async ({ page }) => {
     await bootWith(page, H);
@@ -142,12 +149,12 @@ test.describe('W659 · save() coalescing + flush-before-kill', () => {
     // immediate force-quit (pagehide) before the microtask would even drain.
     // Nothing may be lost: the pagehide flush persists the accumulated state.
     const persisted = await page.evaluate(() => {
-      const s = (window as unknown as { __saveTest: { complete: (id: string) => void; nowCalls: () => number } }).__saveTest;
+      const s = (window as unknown as { __saveTest: { complete: (id: string) => void; nowCalls: () => number; today: () => string } }).__saveTest;
       const writesBefore = s.nowCalls();
       ['h1', 'h2', 'h3', 'h4', 'h5'].forEach((id) => s.complete(id));   // 5 rapid real taps
       window.dispatchEvent(new Event('pagehide'));                       // force-quit NOW
       const writesAfter = s.nowCalls();
-      const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+      const today = s.today();   // the app's PT-keyed date, not a naive local/UTC one
       let comp: Record<string, string[]> = {};
       try { comp = JSON.parse(localStorage.getItem('hb_completions') || '{}'); } catch (_) {}
       return { ids: comp[today] || [], writesDuringBurst: writesAfter - writesBefore };
@@ -178,7 +185,7 @@ test.describe('W659 · save() coalescing + flush-before-kill', () => {
     await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
     // After a genuine reboot of the document, the completion must be on disk.
     const persistedAfterReload = await page.evaluate(() => {
-      const today = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+      const today = (window as unknown as { __saveTest: { today: () => string } }).__saveTest.today();
       let comp: Record<string, string[]> = {};
       try { comp = JSON.parse(localStorage.getItem('hb_completions') || '{}'); } catch (_) {}
       return comp[today] || [];
