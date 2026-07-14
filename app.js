@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w660'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w661'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7497,15 +7497,19 @@
       const p = _ASC_PREFIX[Math.floor(rnd() * _ASC_PREFIX.length)];
       const n = _ASC_NOUN[Math.floor(rnd() * _ASC_NOUN.length)];
       name = 'The ' + p + ' ' + n;
-      // W232 — rotate the regular-floor archetype by committed attempts so no
-      // stat-shape is permanently walled by a fixed bad matchup (bosses stay
-      // fixed). Name + total power unchanged; only the role split / matchup rotates.
-      let attempts = 0; try { const st = getAscentState(); attempts = (st.wins || 0) + (st.losses || 0); } catch (_) {}
-      // W236 — trickster excluded from the F1–F3 pool (onboarding sequencing: a
-      // fresh weaponless account has no answer to DoT; the full triangle resumes
-      // at F4+ where rotation + lives absorb the matchup).
+      // W661 — the floor's opponent is now FIXED per floor. The old W232
+      // rotation seeded the archetype by committed attempts (wins+losses), so a
+      // LOSS swapped the stat-shape (magic/tanky -> ranged/squishy at the same
+      // power) AND let a player savescum by reopening the app. Owner's call: a
+      // loss must re-face the SAME opponent. Seed by floor ONLY -> deterministic.
+      // A rated floor is fought until cleared (a win advances currentFloor past
+      // it, so it's never re-fought as a rated floor), which makes "never
+      // re-roll" and "re-roll only after a win" identical for the climb. Bosses
+      // stay fixed; name + total power were already floor-only (unchanged).
+      // W236 — trickster still excluded from the F1–F3 pool (a fresh weaponless
+      // account has no answer to DoT; the full triangle resumes at F4+).
       const pool = (f <= 3) ? ['aggressor', 'sentinel'] : ['aggressor', 'sentinel', 'trickster'];
-      archKey = pool[((f + attempts) % pool.length + pool.length) % pool.length];
+      archKey = pool[((f % pool.length) + pool.length) % pool.length];
     }
     const a = ASCENT_ARCHETYPES[archKey] || ASCENT_ARCHETYPES.balanced;
     // W306 — the type-fair (balanced) summit is tankier than the old trickster
@@ -7829,7 +7833,7 @@
   // summit) but wields a deadly master kit so the climb still ends in a wall.
   // Sim-tuned via Arena.simAscent to the doable band (best build ~85%).
   const _FIRST_AWAKENED_KIT = ['arrowvolley', 'snapshot', 'tumble', 'flamearrow'];
-  const _FIRST_AWAKENED_POWER = 0.96;   // W306 — type-fair summit trim (sim: NF ~86% / A-weapons ~57%)
+  const _FIRST_AWAKENED_POWER = 0.987;  // W306 type-fair trim -> W661 owner buff: phase-1 4278 -> ~4400 (was 0.96; set 1.010 for 4500). Phase-2 buffed to 4600 below. sim: frontier ~3922 power ~7.4% win phase-1.
   // ── W535 — THE FIRST AWAKENED IS A TWO-PHASE BOSS ──────────────────────────
   // Phase 1 is the balanced summit (above). On its defeat it does NOT die — it
   // UNBINDS into a harder AGGRESSOR form (the Kalphite-Queen "you only met the
@@ -7837,7 +7841,7 @@
   // the phase-2 blitz. The player heals +50% on the transition. Phase-2 power is
   // on the SAME basis as _FIRST_AWAKENED_POWER (× _ascentFloorPower(100)); tuned by
   // sim so only a near-maxed hunter clears BOTH phases.
-  const _FA_P2_POWER = 1.02;     // phase-2 power × _ascentFloorPower(100)  [sim-tuned]
+  const _FA_P2_POWER = 1.0322;   // phase-2 power × _ascentFloorPower(100). W661 owner buff: 4546 -> 4600 (was 1.02).
   const _FA_P2_ARCH  = 'aggressor';
   const _FA_P2_NAME  = 'The First Awakened, Unbound';
   const _FA_P2_TAUNT = 'You met only the mask. Now climb against what the system made of me.';
@@ -12886,7 +12890,7 @@
     const styleVars = '--tierC:' + tcol + ';--auraC:' + tint.aura + ';--rayC:' + tint.ray + ';--glowC:' + tint.glow;
     const kicker = demote ? 'You slip to' : apex ? 'You join the' : 'You ascend to';
     const flavor = demote ? '“The ladder tests all who climb. Hold your footing — and climb again.”'
-      : apex ? '“You stand at the summit, where the First Awakened waits. Few hunters are named here.”'
+      : apex ? '“You stand atop the ladder. Few hunters are ever named among the Awakened.”'
       : '“The proven climb higher. The ladder bends to your will.”';
     const climbV = (typeof o.delta === 'number') ? (o.delta > 0 ? '+' + o.delta : '' + o.delta) : '&mdash;';
     const stats = '<div class="pvp-cer-stats">' +
