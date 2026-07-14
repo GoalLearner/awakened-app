@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w659'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w660'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -36666,22 +36666,35 @@
   // diagnostic via Copy Debug Info → payload.healthVerify.debug.
   //
   // Cap 60 entries (per-render fires multiple breadcrumbs).
+  // W660 — cached debug flag: the per-call console.log on the two breadcrumb
+  // writers (~160 call sites, several on hot boot/render paths) is pure overhead
+  // in production (no console reads it on iOS). Read the flag ONCE.
+  let _bcDebug = null;
+  function _bcDebugOn() {
+    if (_bcDebug === null) { try { _bcDebug = (localStorage.getItem('hb_debug') === '1'); } catch (_) { _bcDebug = false; } }
+    return _bcDebug === true;
+  }
+  // W660 — in-memory ring so the per-call getItem+JSON.parse is paid ONCE per
+  // session (lazy load), not on every call. The setItem persist stays (Copy Debug
+  // Info + the smoke E2E read the localStorage key) and cross-session history is
+  // preserved via the lazy load — zero behavior change to the persisted payload.
+  let _hkVerifyRing = null;
   function _addHealthVerifyBreadcrumb(step, data) {
     try {
       const key = 'hb_health_verify_debug_v1';
-      let existing;
-      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
-      catch (_) { existing = []; }
-      if (!Array.isArray(existing)) existing = [];
+      if (_hkVerifyRing === null) {
+        try { _hkVerifyRing = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { _hkVerifyRing = []; }
+        if (!Array.isArray(_hkVerifyRing)) _hkVerifyRing = [];
+      }
       const entry = { t: Date.now(), step: String(step) };
       if (data !== undefined && data !== null) {
         try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
       }
-      existing.push(entry);
-      if (existing.length > 60) existing.splice(0, existing.length - 60);
-      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+      _hkVerifyRing.push(entry);
+      if (_hkVerifyRing.length > 60) _hkVerifyRing.splice(0, _hkVerifyRing.length - 60);
+      try { localStorage.setItem(key, JSON.stringify(_hkVerifyRing)); } catch (_) {}
     } catch (_) {}
-    try { console.log('[hk-verify-debug]', step, data || ''); } catch (_) {}
+    if (_bcDebugOn()) { try { console.log('[hk-verify-debug]', step, data || ''); } catch (_) {} }
   }
 
   // v3 Phase 1z.96 — notification permission auto-recovery.
@@ -36809,22 +36822,23 @@
   //
   // EVERY call is independently try-wrapped so a localStorage failure
   // (quota, private mode, disabled) can never break the add path.
+  let _addHabitRing = null;   // W660 — in-memory ring (see _addHealthVerifyBreadcrumb)
   function _addHabitBreadcrumb(step, data) {
     try {
       const key = 'hb_add_habit_debug_v1';
-      let existing;
-      try { existing = JSON.parse(localStorage.getItem(key) || '[]'); }
-      catch (_) { existing = []; }
-      if (!Array.isArray(existing)) existing = [];
+      if (_addHabitRing === null) {
+        try { _addHabitRing = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { _addHabitRing = []; }
+        if (!Array.isArray(_addHabitRing)) _addHabitRing = [];
+      }
       const entry = { t: Date.now(), step: String(step) };
       if (data !== undefined && data !== null) {
         try { entry.data = JSON.parse(JSON.stringify(data)); } catch (_) {}
       }
-      existing.push(entry);
-      if (existing.length > 80) existing.splice(0, existing.length - 80);
-      try { localStorage.setItem(key, JSON.stringify(existing)); } catch (_) {}
+      _addHabitRing.push(entry);
+      if (_addHabitRing.length > 80) _addHabitRing.splice(0, _addHabitRing.length - 80);
+      try { localStorage.setItem(key, JSON.stringify(_addHabitRing)); } catch (_) {}
     } catch (_) {}
-    try { console.log('[add-habit-debug]', step, data || ''); } catch (_) {}
+    if (_bcDebugOn()) { try { console.log('[add-habit-debug]', step, data || ''); } catch (_) {} }
   }
 
   // v3 Phase 1z.92 — in-app debug-info export. Safari Web Inspector
@@ -45618,6 +45632,40 @@
   function _coopSetEngaged(on) { try { if (on) { localStorage.setItem('hb_coop_engaged', '1'); localStorage.setItem('hb_coop_ever', '1'); } else localStorage.removeItem('hb_coop_engaged'); } catch (e) { _logSwallow('coop_engaged:persist', e); } }
   let _coopBgInFlight = false;
   let _coopBgLast = 0;
+  // W660 — _coopBackgroundSync and _coopRefreshBadge each fire GET /v1/coop-boss,
+  // and boot + resume call them BACK-TO-BACK, so a co-op-engaged hunter paid two
+  // identical list fetches every launch/foreground. Share a 5s cache: the second
+  // caller in a burst reuses the first's response, while independent later calls
+  // (both throttles are >= 20s) still fetch fresh. Only a good (ok) response is
+  // cached — a failure is never reused as "no instances". The per-instance
+  // resolve/award calls are untouched; this dedupes ONLY the enumeration read.
+  let _coopListAt = 0, _coopListRes = null, _coopListInflight = null;
+  // Dedupes GET /v1/coop-boss two ways: (1) a <=5s resolved-value cache, AND
+  // (2) an IN-FLIGHT-PROMISE join — the boot/resume pair calls the two consumers
+  // back-to-back WITHOUT awaiting, so a resolved-value cache alone wouldn't catch
+  // the concurrent race; the second caller joins the first's in-flight fetch, so
+  // ONE network request serves both. `force` (a push-driven refresh, W615)
+  // bypasses BOTH: a push is a definitive post-event signal and must fetch fresh.
+  // Only an ok response is cached (a failure is returned as-is; both callers bail
+  // on !ok). Award/fee reconcilers are unchanged + idempotent, so any <=5s
+  // staleness only DELAYS a cycle, never double- or missed-grants (W660 review).
+  function _coopBossListCached(force) {
+    const now = Date.now();
+    if (!force) {
+      if (_coopListRes && (now - _coopListAt) < 5000) return Promise.resolve(_coopListRes);
+      if (_coopListInflight) return _coopListInflight;
+    }
+    const p = Promise.resolve()
+      .then(function () { return Auth.coopBossList(); })
+      .then(
+        function (res) { if (res && res.ok) { _coopListRes = res; _coopListAt = Date.now(); } return res; },
+        function () { return null; },
+      );
+    _coopListInflight = p;
+    const clear = function () { if (_coopListInflight === p) _coopListInflight = null; };
+    p.then(clear, clear);
+    return p;
+  }
   async function _coopBackgroundSync() {
     // W463 — gate on the PERSISTENT ever-engaged flag (not the transient
     // hb_coop_engaged, which is cleared once no hunt is live) so a just-completed
@@ -45631,8 +45679,7 @@
     if (now - _coopBgLast < 30000) return;
     _coopBgInFlight = true; _coopBgLast = now;
     try {
-      let res;
-      try { res = await Auth.coopBossList(); } catch (_) { res = null; }
+      const res = await _coopBossListCached();   // W660 — shared 5s cache (dedupes the boot/resume double-fetch)
       if (!res || !res.ok) return;
       const list = Array.isArray(res.instances) ? res.instances : [];
       try { _coopSettleFees(list); } catch (_) {}   // W648 — settle fees even if the user never opens a co-op surface
@@ -45694,8 +45741,7 @@
     const now = Date.now();
     if (!force && now - _coopBadgeLast < 20000) return;
     _coopBadgeLast = now;
-    let res;
-    try { res = await Auth.coopBossList(); } catch (_) { return; }
+    const res = await _coopBossListCached(force);   // W660 — shared 5s cache (force/push bypasses it)
     if (!res || !res.ok) return;
     const list = Array.isArray(res.instances) ? res.instances : [];
     // Per-boss: a pending invite (you're the partner) outranks an active hunt.
