@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w663'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w664'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5602,25 +5602,66 @@
     } catch (_) { _coopBackfillBusy = false; }
   }
 
-  // ── W663 — Co-op "Pact" streak (Snapchat-style, per friend-pair) ─────────────
-  // hb_coop_pacts = { [friendUserId]: { total, run, lastWonAt(ms), lastBossId, alias } }.
-  // total = every co-op boss you two have EVER felled together (a "Bond", never lost).
-  // run = the current UNBROKEN streak: a shared win within PACT_WINDOW of the last
-  // ticks it up + keeps the flame lit; let the window lapse and the flame goes cold
-  // and the run ends (next shared win resets run to 1). A generous 7-day window — NOT
-  // a Snapchat-literal daily reset — because co-op hunts are fee-gated, need a partner
-  // + a 24h window, so daily would punish, not retain. Client-side + cloud-synced (v1).
-  const PACT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;   // tunable
-  function _loadCoopPacts() { try { return JSON.parse(localStorage.getItem('hb_coop_pacts') || '{}') || {}; } catch (_) { return {}; } }
+  // ── W663 — Co-op "Pact" streak (Snapchat-style DAILY streak, per friend-pair) ──
+  // hb_coop_pacts = { [friendUserId]: { streak, best, total, daysBonded, lastDay,
+  //                                     firstWonAt(ms), lastWonAt(ms), lastBossId, alias } }.
+  // DAILY streak (owner: "log in every day and do a dungeon with a partner"): each
+  // PACIFIC calendar day you two fell a co-op boss together ticks the streak +1 (once
+  // per day, no matter how many hunts); miss a day and it breaks (next shared win
+  // restarts at 1). Snapchat rule: the streak stays LIT if the last shared win was
+  // today OR yesterday (you have until end of today to keep a yesterday streak going).
+  //   streak = current unbroken day-streak; best = all-time longest (shown on tap);
+  //   total = every co-op boss you two have EVER felled together (the Bond, never lost);
+  //   daysBonded = distinct days you've cleared together; firstWonAt = pact-forged date.
+  // Client-side + cloud-synced (v1); a server-authoritative pact is a Phase-2 follow-up.
+  var _coopPactsMigrated = false;
+  function _loadCoopPacts() {
+    var m; try { m = JSON.parse(localStorage.getItem('hb_coop_pacts') || '{}') || {}; } catch (_) { return {}; }
+    if (!_coopPactsMigrated) {   // one-time forward-migration of any pre-daily / partial records
+      _coopPactsMigrated = true; var dirty = false;
+      for (var k in m) {
+        var e = m[k]; if (!e || typeof e !== 'object') continue;
+        if (e.streak == null && (e.total | 0) > 0) {   // v1 (7-day) shape { total, run } → seed daily fields
+          e.streak = e.run | 0; e.best = Math.max(e.best | 0, e.run | 0);
+          e.lastDay = e.lastWonAt ? _pactDayKey(e.lastWonAt) : ''; dirty = true;
+        }
+        if (e.firstWonAt == null) { e.firstWonAt = e.lastWonAt || 0; dirty = true; }
+        if (e.daysBonded == null) { e.daysBonded = Math.max(e.streak | 0, (e.total | 0) > 0 ? 1 : 0); dirty = true; }
+      }
+      if (dirty) { try { localStorage.setItem('hb_coop_pacts', JSON.stringify(m)); } catch (_) {} }
+    }
+    return m;
+  }
   function _saveCoopPacts(m) { try { localStorage.setItem('hb_coop_pacts', JSON.stringify(m || {})); } catch (e) { _logSwallow('coop_pacts:persist', e); } }
-  // Read a friend's pact for display. `lit` is computed at READ time so a lapsed run
-  // shows cold no matter what's stored. null when there's no bond yet (render nothing).
+  // PT 'YYYY-MM-DD' day key for a timestamp (getPTDate() gives the same for "now").
+  function _pactDayKey(ms) { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date(ms)); } catch (_) { return ''; } }
+  // The calendar day BEFORE a 'YYYY-MM-DD' key (UTC date-math on a date-only value =
+  // no DST/timezone hazard). Drives the consecutive-day + "yesterday" checks.
+  function _pactPrevDay(dayKey) {
+    var mt = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey || ''); if (!mt) return '';
+    var d = new Date(Date.UTC(+mt[1], +mt[2] - 1, +mt[3]) - 86400000);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+  }
+  // Read a friend's pact for display. `alive` (lit) is computed at READ time (last win
+  // today|yesterday) so a lapsed streak always shows cold. `streak` reads 0 once
+  // lapsed; `best` (all-time) is preserved. null when there is no bond (render nothing).
   function _coopPactFor(friendUserId) {
     if (!friendUserId) return null;
     var m = _loadCoopPacts(); var e = m[String(friendUserId)];
     if (!e || !(e.total > 0)) return null;
-    var lit = typeof e.lastWonAt === 'number' && (Date.now() - e.lastWonAt) <= PACT_WINDOW_MS;
-    return { total: e.total | 0, run: e.run | 0, lit: lit, lastWonAt: e.lastWonAt || null, lastBossId: e.lastBossId || null, alias: e.alias || null };
+    var today = getPTDate();
+    var alive = e.lastDay === today || e.lastDay === _pactPrevDay(today);
+    return {
+      streak: alive ? (e.streak | 0) : 0,
+      best: e.best | 0,
+      total: e.total | 0,
+      daysBonded: e.daysBonded | 0,
+      firstWonAt: e.firstWonAt || null,
+      lastDay: e.lastDay || null,
+      alive: alive,
+      securedToday: e.lastDay === today,
+      lastWonAt: e.lastWonAt || null, lastBossId: e.lastBossId || null, alias: e.alias || null,
+    };
   }
   // Relative "last hunt" label for the Pact card.
   function _coopPactAgo(ms) {
@@ -5633,50 +5674,66 @@
     var wk = Math.floor(days / 7);
     return wk <= 1 ? 'a week ago' : wk + ' weeks ago';
   }
-  // Tapping the flame → the "Pact with <ally>" detail (streak run + lit/cold, all-time
-  // Bond total, last hunt). Reuses the centered notice card (W481).
+  // Fallback text card (used only if the rich Pact Flames sheet isn't available).
   function _coopShowPactCard(userId, fallbackAlias) {
     try {
       var p = _coopPactFor(userId);
       var alias = (p && p.alias) || fallbackAlias || 'this hunter';
       if (!p) {
-        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Fell a co-op boss with ' + alias + ' to light a Pact — a flame that grows each time you two win together.', tone: 'info' });
+        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Fell a co-op dungeon boss with ' + alias + ' to start a daily Pact streak — team up every day to keep the flame alive.', tone: 'info' });
         return;
       }
       var bossName = (p.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[p.lastBossId] && COOP_BOSSES[p.lastBossId].name) || null;
       var when = p.lastWonAt ? _coopPactAgo(p.lastWonAt) : null;
       var lines = [];
-      lines.push(p.lit
-        ? '<b>🔥 ' + (p.run | 0) + '-hunt streak</b> — going strong.'
-        : '<b>Flame gone cold</b> — one co-op win relights it.');
+      lines.push(p.alive
+        ? '<b>🔥 ' + (p.streak | 0) + '-day streak</b> — team up again today to keep it lit.'
+        : '<b>Streak broken</b> — one co-op dungeon together today lights a new flame.');
+      lines.push('All-time best: <b>' + (p.best | 0) + '</b>-day streak.');
       lines.push('Bond: <b>' + (p.total | 0) + '</b> co-op ' + ((p.total | 0) === 1 ? 'boss' : 'bosses') + ' felled together.');
       if (bossName) lines.push('Last hunt: ' + esc(bossName) + (when ? ' · ' + when : '') + '.');
-      showNoticeCard({ icon: p.lit ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.lit ? 'good' : 'info' });
+      showNoticeCard({ icon: p.alive ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.alive ? 'good' : 'info' });
     } catch (_) {}
   }
-  // Increment the pact with the OTHER participant when a co-op win is granted (called
-  // from _awardCoopKill, guarded once-per-instance by hb_coop_awarded — no double count).
+  // Advance the DAILY pact with the OTHER participant when a co-op win is granted
+  // (called from _awardCoopKill, guarded once-per-instance by hb_coop_awarded — no
+  // double count). Ticks the day-streak at most ONCE per PT day.
   function _coopBumpPact(inst) {
     try {
       if (!inst) return;
       var other = (inst.role === 'partner') ? inst.challenger : inst.partner;
       var fid = other && other.user_id; if (!fid) return;
+      var nowMs = Date.now();
+      // Key the day off the WIN's RESOLVED day (parity with backfill), not this device's
+      // processing day — a late-processed award must not false-break a streak.
+      var today = (inst.resolved_at ? _pactDayKey(Date.parse(inst.resolved_at)) : '') || getPTDate();
       var m = _loadCoopPacts(); var key = String(fid);
-      var e = m[key] || { total: 0, run: 0, lastWonAt: 0, lastBossId: null, alias: null };
-      var within = typeof e.lastWonAt === 'number' && e.lastWonAt > 0 && (Date.now() - e.lastWonAt) <= PACT_WINDOW_MS;
-      e.run = within ? ((e.run | 0) + 1) : 1;
+      var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
+      if (e.lastDay === today) {
+        // second hunt SAME PT day — streak + daysBonded already ticked; only Bond + last-hunt refresh.
+      } else if (today > (e.lastDay || '')) {   // a NEWER day than the last counted (lexicographic == chronological)
+        e.daysBonded = (e.daysBonded | 0) + 1;
+        e.streak = (e.lastDay && e.lastDay === _pactPrevDay(today)) ? ((e.streak | 0) + 1) : 1;   // consecutive vs reset
+        e.lastDay = today;
+      } else {
+        // today < lastDay: an OLDER win processed out of order — count the Bond but do
+        // NOT roll the day-streak backward (that would false-break a correct streak).
+      }
+      e.best = Math.max(e.best | 0, e.streak | 0);
       e.total = (e.total | 0) + 1;
-      e.lastWonAt = Date.now();
+      if (!e.firstWonAt) e.firstWonAt = nowMs;
+      e.lastWonAt = nowMs;
       e.lastBossId = inst.boss_id || e.lastBossId || null;
       if (other && other.alias) e.alias = other.alias;   // display cache (alias can change; user_id is the key)
       m[key] = e; _saveCoopPacts(m);
     } catch (_) {}
   }
   // Best-effort backfill from the backend's completed instances (mirrors
-  // _coopBackfillKills): seed total + run per friend from history the live path
-  // already processed (in hb_coop_awarded). Monotonic — only seeds when it knows
-  // MORE than the live store, so it never clobbers a live +1. Bounded by the list's
-  // LIMIT-20 (accepts undercount on a fresh install; the live path is exact forward).
+  // _coopBackfillKills): reconstruct the DAILY streak / best / bond per friend from the
+  // history the live path already processed (in hb_coop_awarded). Monotonic — only
+  // seeds when it knows MORE hunts than the live store, and NEVER rolls a live
+  // streak/lastDay backward (a stale/LIMIT-20 reconstruction must not clobber a fresh
+  // live +1, then cloud-sync the regression). Live path is exact going forward.
   var _coopPactBackfillDone = false;
   function _coopBackfillPacts() {
     try {
@@ -5699,21 +5756,261 @@
         var m = _loadCoopPacts(); var changed = false;
         for (var fid in byFriend) {
           var g = byFriend[fid]; g.times.sort(function (a, b) { return a.t - b.t; });
-          var run = 0, prev = 0;
-          g.times.forEach(function (x) { run = (prev && (x.t - prev) <= PACT_WINDOW_MS) ? run + 1 : 1; prev = x.t; });
-          var last = g.times[g.times.length - 1] || { t: 0, boss: null };
-          var cur = m[fid] || { total: 0, run: 0, lastWonAt: 0, lastBossId: null, alias: null };
-          if (g.times.length > (cur.total | 0)) {   // only when the backfill knows more than the live store
-            cur.total = g.times.length; cur.run = run;
-            cur.lastWonAt = last.t || cur.lastWonAt; cur.lastBossId = last.boss || cur.lastBossId;
-            if (g.alias) cur.alias = g.alias;
-            m[fid] = cur; changed = true;
+          // Unique PT days, in order -> longest consecutive-day run (best) and the run
+          // ending at the most recent day (current streak; alive-checked at read).
+          var days = [], seen = {};
+          g.times.forEach(function (x) { var dk = x.t ? _pactDayKey(x.t) : ''; if (dk && !seen[dk]) { seen[dk] = true; days.push(dk); } });
+          var best = 0, cur = 0;
+          for (var i = 0; i < days.length; i++) {
+            cur = (i > 0 && days[i - 1] === _pactPrevDay(days[i])) ? cur + 1 : 1;
+            if (cur > best) best = cur;
           }
+          var last = g.times[g.times.length - 1] || { t: 0, boss: null };
+          var lastDayK = days.length ? days[days.length - 1] : '';
+          var curM = m[fid] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
+          var before = (curM.streak | 0) + '|' + (curM.best | 0) + '|' + (curM.daysBonded | 0) + '|' + (curM.total | 0) + '|' + (curM.lastDay || '');
+          // UPWARD-ONLY corrections — applied even when totals already match, so an
+          // out-of-order live bump that under-counted a genuinely-consecutive run
+          // (Day1→Day3→late-Day2 drained out of order) gets repaired. All three are
+          // Math.max / strictly-greater, so a LIMIT-20-truncated reconstruction can
+          // never LOWER a live value or roll a fresh live +1 backward.
+          if (best > (curM.best | 0)) curM.best = best;
+          if (days.length > (curM.daysBonded | 0)) curM.daysBonded = days.length;
+          if (lastDayK && lastDayK >= (curM.lastDay || '') && cur > (curM.streak | 0)) {   // raise the streak only
+            curM.streak = cur; curM.lastDay = lastDayK;
+          }
+          if (g.times.length > (curM.total | 0)) {   // metadata: only when the backfill truly knows more hunts
+            curM.total = g.times.length;
+            curM.lastWonAt = Math.max(curM.lastWonAt | 0, last.t || 0) || curM.lastWonAt;
+            curM.lastBossId = last.boss || curM.lastBossId;
+            if (!curM.firstWonAt) curM.firstWonAt = (g.times[0] && g.times[0].t) || 0;
+            if (g.alias) curM.alias = g.alias;
+          }
+          var after = (curM.streak | 0) + '|' + (curM.best | 0) + '|' + (curM.daysBonded | 0) + '|' + (curM.total | 0) + '|' + (curM.lastDay || '');
+          if (after !== before) { m[fid] = curM; changed = true; }
         }
         if (changed) { _saveCoopPacts(m); try { renderFriendsSection(); } catch (_) {} }
       }).catch(function () {});
     } catch (_) {}
   }
+
+  // ── W664 — PACT FLAMES screen (ClaudeDesign handoff 18) ─────────────────────
+  // A dedicated co-op-dungeon-streak hub, ported from Co-op Dungeon Streak.html.
+  // Reads the daily-pact store via _coopPactFor + the friends list; pure display.
+  var _PF_RANK_COLOR = { S: '#ec4899', A: '#fb7185', B: '#f5b842', C: '#34d399', D: '#22d3ee', E: '#a78bfa' };
+  function _pfRankColor(rank) { return _PF_RANK_COLOR[String(rank || '').charAt(0).toUpperCase()] || '#8b5cf6'; }
+  function _pfTierOf(n) {
+    n = n | 0;
+    if (n >= 365) return { name: 'ETERNAL', floor: 365, cap: null, next: null };
+    if (n >= 100) return { name: 'INFERNO', floor: 100, cap: 365, next: 'ETERNAL' };
+    if (n >= 30)  return { name: 'BLAZE',   floor: 30,  cap: 100, next: 'INFERNO' };
+    if (n >= 7)   return { name: 'FLAME',   floor: 7,   cap: 30,  next: 'BLAZE' };
+    if (n >= 3)   return { name: 'KINDLING', floor: 3,  cap: 7,   next: 'FLAME' };
+    return { name: 'SPARK', floor: 0, cap: 3, next: 'KINDLING' };
+  }
+  var _PF_F_OUT = 'M32 5 C 29 20 18 25 18 41 C 15 38 13 33 13 28 C 7 38 6 53 11 64 C 16 76 24 83 32 83 C 40 83 48 76 53 64 C 58 53 57 38 51 28 C 51 33 49 38 46 41 C 46 25 35 20 32 5 Z';
+  var _PF_F_IN  = 'M32 33 C 30 43 25 47 25 57 C 25 68 29 77 32 78 C 35 77 39 68 39 57 C 39 47 34 43 32 33 Z';
+  function _pfFlame(w, risk) {
+    return '<svg class="pf-flame" width="' + w + '" viewBox="0 0 64 88" fill="none" aria-hidden="true">' +
+      '<path d="' + _PF_F_OUT + '" fill="url(#' + (risk ? 'pf-fgr' : 'pf-fg') + ')"/>' +
+      '<path d="' + _PF_F_IN + '" fill="url(#pf-fgi)" opacity="' + (risk ? 0.4 : 0.92) + '"/></svg>';
+  }
+  // Seconds until the next Pacific midnight (when a not-yet-secured streak breaks).
+  function _pfSecToMidnightPT() {
+    try {
+      var h = 0, mm = 0, s = 0;
+      new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        .formatToParts(new Date()).forEach(function (p) {
+          if (p.type === 'hour') h = (+p.value) % 24; else if (p.type === 'minute') mm = +p.value; else if (p.type === 'second') s = +p.value;
+        });
+      return Math.max(0, (86400 - (h * 3600 + mm * 60 + s)) % 86400);   // % 86400 → exact PT midnight reads 0, not 24h
+    } catch (_) { return 0; }
+  }
+  function _pfFmtLeft(sec) { sec = Math.max(0, sec | 0); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h + 'h ' + String(m).padStart(2, '0') + 'm'; }
+  function _pfFmtClock(sec) { sec = Math.max(0, sec | 0); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return h + ':' + String(m).padStart(2, '0') + ':' + String(x).padStart(2, '0'); }
+  var _PF_CHECK = '<svg viewBox="0 0 14 14" fill="none"><path d="M2 7.5l3.2 3.2L12 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var _PF_GLASS = '<svg viewBox="0 0 14 16" fill="none"><path d="M2.5 1h9M2.5 15h9M3.5 1c0 3.5 6.9 4 6.9 7s-6.9 3.5-6.9 7M10.5 1c0 3.5-6.9 4-6.9 7s6.9 3.5 6.9 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var _PF_SWORD = '<svg viewBox="0 0 18 18" fill="none"><path d="M14.5 2.5l-7 7m-2.5 5.5l1.8-1.8m-1.8 1.8l-1.8 1.8m1.8-1.8l-1.8-1.8m11.8-11.5l-1.8 4.3-6.4 6.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // Build the sorted bond list from the friends payload + the pact store.
+  function _pfBuildData(friends) {
+    var out = [];
+    (Array.isArray(friends) ? friends : []).forEach(function (f) {
+      if (!f || !f.user_id) return;
+      var p; try { p = _coopPactFor(f.user_id); } catch (_) { p = null; }
+      if (!p || !(p.total > 0)) return;   // only real bonds
+      var rank = _friendRankLabel ? (_friendRankLabel(f) || (f.rankTier || '')) : (f.rankTier || '');
+      var rankLetter = String(rank || (f.rankTier || '')).charAt(0).toUpperCase() || '?';
+      var state = p.securedToday ? 'safe' : (p.alive ? 'risk' : 'broken');
+      out.push({
+        userId: f.user_id, alias: _coopAlias ? _coopAlias(f.alias || p.alias) : (f.alias || p.alias || 'hunter'),
+        rank: rankLetter, tier: (rank || rankLetter), rc: _pfRankColor(rankLetter),
+        streak: p.streak | 0, best: p.best | 0, total: p.total | 0, daysBonded: p.daysBonded | 0,
+        firstWonAt: p.firstWonAt || null, lastBossId: p.lastBossId || null, state: state,
+      });
+    });
+    // Alive bonds first (by streak desc), broken ones after (by best desc).
+    out.sort(function (a, b) {
+      var aa = a.state !== 'broken', ba = b.state !== 'broken';
+      if (aa !== ba) return aa ? -1 : 1;
+      return aa ? (b.streak - a.streak) : (b.best - a.best);
+    });
+    return out;
+  }
+  function _pfRowHtml(d, i) {
+    // Design rule (Co-op Dungeon Streak.html): the number IS the current day-streak
+    // and the flame dims for any non-secured state. A broken bond therefore reads 0
+    // with a cold flame + "Broken" tag (its peak lives in the sheet's stats); this
+    // keeps the row, the sheet hero, and the tier all derived from the same value.
+    var num = d.streak | 0;
+    var tag = d.state === 'safe' ? '<span class="pf-tag pf-safe">' + _PF_CHECK + 'Secured</span>'
+      : d.state === 'risk' ? '<span class="pf-tag pf-warn">' + _PF_GLASS + '<span data-pf-cd>—</span> left</span>'
+      : '<span class="pf-tag pf-warn" style="color:var(--pf-faint)">Broken</span>';
+    return '<div class="pf-row ' + (d.state === 'risk' ? 'pf-risk' : '') + '" role="button" tabindex="0" data-pf-open="' + esc(d.userId) + '" style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', ' + num + ' day flame">' +
+      '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
+      '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + '</div>' +
+        '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · ' + (d.total | 0) + ' defeated together</div></div>' +
+      '<div class="pf-streak"><div class="pf-streak-main"><span class="pf-num">' + num + '</span>' + _pfFlame(19, d.state !== 'safe') + '</div>' + tag + '</div>' +
+    '</div>';
+  }
+  function _pfChain(d) {
+    // Derived (like the mock): the last `streak` days lit; today pending if at-risk.
+    var secured = d.state === 'safe', prior = secured ? Math.max(0, d.streak - 1) : d.streak, out = '';
+    for (var i = 0; i < 14; i++) {
+      var ago = 13 - i;
+      if (ago === 0) out += '<div class="pf-pip ' + (secured ? 'lit' : (d.state === 'risk' ? 'pend' : 'dim')) + '"></div>';
+      else out += '<div class="pf-pip ' + (ago <= prior ? 'lit' : 'dim') + '"></div>';
+    }
+    return out;
+  }
+  function _pfSheetHtml(d) {
+    var risk = d.state === 'risk', tier = _pfTierOf(d.streak), peak = d.streak >= d.best && d.streak > 0;
+    var toNext = tier.cap ? tier.cap - d.streak : 0;
+    var pct = tier.cap ? Math.round((d.streak - tier.floor) / (tier.cap - tier.floor) * 100) : 100;
+    var bossName = (d.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[d.lastBossId] && COOP_BOSSES[d.lastBossId].name) || 'a co-op boss';
+    var since = d.firstWonAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d.firstWonAt)) : '—';
+    var banner = risk
+      ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Clear one dungeon boss with ' + esc(d.alias) + ' before midnight.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
+      : d.state === 'safe'
+        ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">Secured for today</div><div class="p">You both defeated ' + esc(bossName) + ' — the flame burns on.</div></div></div>'
+        : '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">The flame went cold</div><div class="p">Clear one dungeon boss together to light a new streak.</div></div></div>';
+    var mile = tier.next
+      ? '<div class="pf-miletop"><span class="l">Next tier</span><span class="r">' + tier.next + '</span></div><div class="pf-milebar"><div class="fill" style="width:' + Math.max(6, pct) + '%"></div></div><div class="pf-milecap"><b>' + toNext + ' more day' + (toNext === 1 ? '' : 's') + '</b> together to ignite the ' + tier.next.charAt(0) + tier.next.slice(1).toLowerCase() + ' tier.</div>'
+      : '<div class="pf-miletop"><span class="l">Highest bond</span><span class="r">ETERNAL</span></div><div class="pf-milebar"><div class="fill" style="width:100%"></div></div><div class="pf-milecap">The eternal flame — no bond burns hotter.</div>';
+    var big = d.streak | 0;   // hero = current streak (0 when broken); peak lives in the stats trio + "went cold" banner
+    return '<div class="pf-handle"></div>' +
+      '<button class="pf-sclose" data-pf-sclose aria-label="Close"><svg viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
+      '<div class="pf-sbody">' +
+        '<div class="pf-ally"><div class="pf-av" style="--pf-rc:' + d.rc + '">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div><div class="pf-who"><div class="pf-name">' + esc(d.alias) + '</div><div class="pf-pact" style="--pf-rc:' + d.rc + '">Pact forged ' + esc(since) + ' · <b>' + esc(d.rank) + '-Rank</b></div></div></div>' +
+        '<div class="pf-hero ' + (risk ? 'pf-risk' : '') + '"><div class="pf-halo"></div>' + _pfFlame(132, d.state !== 'safe').replace('pf-flame', 'pf-flame pf-bigflame') + '<div class="pf-hcount"><div class="n">' + big + '</div><div class="d">Day Flame</div></div></div>' +
+        '<div class="pf-tier">' + tier.name + '</div>' +
+        (peak ? '<div class="pf-peakwrap"><span class="pf-peak"><span class="dia">◆</span>All-time peak</span></div>' : '') +
+        banner +
+        '<div class="pf-stats"><div class="pf-stat"><div class="sv">' + (d.daysBonded | 0) + '</div><div class="sl">Days<br>Bonded</div></div><div class="pf-stat best"><div class="sv">' + (d.best | 0) + '</div><div class="sl">All-Time<br>Best Flame</div></div><div class="pf-stat"><div class="sv">' + (d.total | 0) + '</div><div class="sl">Bosses<br>Defeated</div></div></div>' +
+        '<div class="pf-blockh"><span class="t">The Chain</span><span class="n">Last 14 days</span></div><div class="pf-chain">' + _pfChain(d) + '</div>' +
+        '<div class="pf-legend"><span class="l1"><i></i>Cleared together</span>' + (risk ? '<span class="l2"><i></i>Today — not yet</span>' : '') + '</div>' +
+        '<div class="pf-mile">' + mile + '</div>' +
+        '<button class="pf-cta ' + (risk || d.state === 'broken' ? 'pf-warn' : 'pf-safe') + '" data-pf-hunt>' + _PF_SWORD + (risk ? 'Enter Dungeon Together' : d.state === 'broken' ? 'Relight the Flame' : 'Hunt Again') + '</button>' +
+      '</div>';
+  }
+
+  var _pfData = [], _pfTimer = null, _pfEl = null;
+  function _pfDefs() {
+    return '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+      '<linearGradient id="pf-fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd574"/><stop offset=".5" stop-color="#ff7a3c"/><stop offset="1" stop-color="#e2531c"/></linearGradient>' +
+      '<linearGradient id="pf-fgi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6d5"/><stop offset="1" stop-color="#ffd574"/></linearGradient>' +
+      '<linearGradient id="pf-fgr" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb98a"/><stop offset=".55" stop-color="#e2531c"/><stop offset="1" stop-color="#7a2a14"/></linearGradient>' +
+      '</defs></svg>';
+  }
+  function _pfListHtml() {
+    var hottest = _pfData.reduce(function (m, d) { return Math.max(m, d.state === 'broken' ? 0 : d.streak); }, 0);
+    var burning = _pfData.filter(function (d) { return d.state !== 'broken'; }).length;
+    var sub = '<b>' + burning + '</b> bond' + (burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + hottest + 'd</b>';
+    var rows = _pfData.length
+      ? _pfData.map(_pfRowHtml).join('')
+      : '<div class="pf-empty">No pacts yet.<br>Fell a co-op dungeon boss with a friend to light your first flame.</div>';
+    return _pfDefs() +
+      '<div class="pf-topbar"><button class="pf-back" data-pf-close><svg viewBox="0 0 9 14" fill="none"><path d="M7.5 1.5l-6 5.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Back</button></div>' +
+      '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + sub + '</div></div>' +
+      '<div class="pf-list">' + rows + '</div>' +
+      '<div class="pf-foot"><p class="pf-hint">Tap a flame to see your all-time bond</p>' +
+        '<button class="pf-invite" type="button" data-guild-invite="1"><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M9.2 14.8l5.6-5.6M8.2 11.4 6.6 13a3.2 3.2 0 004.5 4.5l1.6-1.6M15.8 12.6 17.4 11a3.2 3.2 0 00-4.5-4.5l-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+        '<span class="pf-itxt"><span class="pf-it">Invite a Hunter</span><span class="pf-ip">Send your name so a friend can add you</span></span></button></div>' +
+      '<div class="pf-scrim" data-pf-sclose></div><section class="pf-sheet" data-pf-sheet></section>';
+  }
+  function _pfTick() {
+    var sec = _pfSecToMidnightPT();
+    if (_pfEl) {
+      _pfEl.querySelectorAll('[data-pf-cd]').forEach(function (el) { el.textContent = _pfFmtLeft(sec); });
+      var cs = _pfEl.querySelector('[data-pf-cds]'); if (cs) cs.textContent = _pfFmtClock(sec);
+    }
+  }
+  function _pfCloseDetail() {
+    if (!_pfEl) return;
+    var sh = _pfEl.querySelector('[data-pf-sheet]'), sc = _pfEl.querySelector('.pf-scrim');
+    if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open');
+  }
+  function _pfOpenDetail(userId) {
+    var d = _pfData.filter(function (x) { return String(x.userId) === String(userId); })[0];
+    if (!d || !_pfEl) return;
+    var sh = _pfEl.querySelector('[data-pf-sheet]'), sc = _pfEl.querySelector('.pf-scrim');
+    if (!sh) return;
+    sh.innerHTML = _pfSheetHtml(d);
+    if (sc) sc.classList.add('open');
+    setTimeout(function () { if (sh) sh.classList.add('open'); }, 20);   // slide-up (setTimeout fires even backgrounded, unlike rAF)
+    _pfTick();
+    try { if (typeof Haptics !== 'undefined' && Haptics.tap) Haptics.tap(); } catch (_) {}
+  }
+  function closePactFlames() {
+    if (_pfTimer) { clearInterval(_pfTimer); _pfTimer = null; }
+    if (_pfEl) { try { _pfEl.remove(); } catch (_) {} _pfEl = null; }
+  }
+  async function openPactFlames(autoOpenUserId) {
+    try {
+      // cache-first friends, then paint (fresh fetch swaps in if it changes)
+      var friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : null;
+      if (!friends) { try { var r = await Auth.fetchFriends(); if (r && r.ok) { _friendsCache = r; friends = r.friends || []; } else friends = []; } catch (_) { friends = []; } }
+      _pfData = _pfBuildData(friends);
+      _pfShow(autoOpenUserId);
+    } catch (_) {
+      // Real degradation: openPactFlames is async, so the flame-chip caller's
+      // synchronous try/catch can't catch a screen-build failure — fall back to the
+      // plain "Pact with <ally>" text card here (it self-looks-up the alias).
+      try { if (autoOpenUserId) _coopShowPactCard(autoOpenUserId); } catch (__) {}
+    }
+  }
+  function _pfShow(autoOpenUserId) {
+    closePactFlames();
+    _pfEl = document.createElement('div'); _pfEl.id = 'pf-overlay';
+    _pfEl.innerHTML = _pfListHtml();
+    document.body.appendChild(_pfEl);
+    _pfEl.classList.add('open');   // synchronous display (rAF is paused in a backgrounded tab)
+    _pfEl.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t.closest('[data-pf-close]')) { closePactFlames(); return; }
+      if (t.closest('[data-pf-sclose]')) { _pfCloseDetail(); return; }
+      if (t.closest('[data-pf-hunt]')) { closePactFlames(); try { openCoopSheet && openCoopSheet(); } catch (_) {} return; }
+      if (t.closest('[data-guild-invite]')) { try { _guildInviteShare && _guildInviteShare(); } catch (_) {} return; }
+      var row = t.closest('[data-pf-open]'); if (row) { _pfOpenDetail(row.getAttribute('data-pf-open')); }
+    });
+    _pfTimer = setInterval(_pfTick, 1000); _pfTick();
+    if (autoOpenUserId) { try { _pfOpenDetail(autoOpenUserId); } catch (_) {} }
+  }
+  try {
+    window.openPactFlames = openPactFlames; window.closePactFlames = closePactFlames;
+    // QA: build the screen from a fake bond set (bypasses the friends fetch so it
+    // renders in the dev-stub preview). __pfDemo() uses a default 6-bond sample.
+    window.__pfDemo = function (data) {
+      _pfData = Array.isArray(data) && data.length ? data : [
+        { userId: 'd1', alias: 'rendiesel', rank: 'S', tier: 'S III', rc: '#ec4899', streak: 128, best: 128, total: 340, daysBonded: 214, firstWonAt: Date.now() - 214 * 864e5, lastBossId: null, state: 'risk' },
+        { userId: 'd2', alias: 'galilea', rank: 'B', tier: 'B III', rc: '#f5b842', streak: 41, best: 63, total: 198, daysBonded: 150, firstWonAt: Date.now() - 150 * 864e5, lastBossId: null, state: 'safe' },
+        { userId: 'd3', alias: 'james', rank: 'C', tier: 'C II', rc: '#34d399', streak: 12, best: 12, total: 57, daysBonded: 40, firstWonAt: Date.now() - 40 * 864e5, lastBossId: null, state: 'safe' },
+        { userId: 'd4', alias: 'anthony', rank: 'C', tier: 'C II', rc: '#34d399', streak: 7, best: 21, total: 81, daysBonded: 66, firstWonAt: Date.now() - 66 * 864e5, lastBossId: null, state: 'safe' },
+        { userId: 'd5', alias: 'joe', rank: 'E', tier: 'E III', rc: '#a78bfa', streak: 0, best: 5, total: 16, daysBonded: 14, firstWonAt: Date.now() - 14 * 864e5, lastBossId: null, state: 'broken' },
+      ];
+      _pfShow();
+    };
+  } catch (_) {}
 
   function _guildBossesSlainRows() {
     let state = {};
@@ -39935,6 +40232,24 @@
       }
     }
     if (friends.length) {
+      // W664 — general entry point into the Pact Flames screen (the full list of
+      // co-op daily-streak bonds). Only surfaced when at least one bond exists (a
+      // co-op boss felled together), so it stays reductive for solo players. Lives
+      // in its OWN row (not the Friends subhead, which the live Guild-Hall path
+      // hides via `.guildhall-friend-body > .social-section-subhead{display:none}`);
+      // a dedicated element renders in both the guildhall and fallback markup paths.
+      var _pactBonds = 0;
+      try { for (var _pi = 0; _pi < friends.length; _pi++) { if (_coopPactFor(friends[_pi].user_id)) _pactBonds++; } } catch (_) {}
+      if (_pactBonds > 0) {
+        parts.push(
+          '<button type="button" class="pf-entry-row" data-open-pactflames="1" aria-label="Open Pact Flames">' +
+            '<span class="pf-entry-glyph" aria-hidden="true">🔥</span>' +
+            '<span class="pf-entry-txt"><span class="pf-entry-title">Pact Flames</span>' +
+              '<span class="pf-entry-sub">' + _pactBonds + ' co-op ' + (_pactBonds === 1 ? 'bond' : 'bonds') + '</span></span>' +
+            '<span class="pf-entry-chev" aria-hidden="true">›</span>' +
+          '</button>'
+        );
+      }
       parts.push('<div class="social-section-subhead">Friends</div>');
       // v3 Phase 1z.186 — future backend seam: when real friend
       // rank fields ship, sort accepted friends by rank hierarchy
@@ -39982,15 +40297,16 @@
         const rankSubHtml = tierForRow
           ? ('<div class="social-row-rank-sub">' + esc(tierForRow) + '-RANK</div>')
           : '';
-        // W663 — co-op Pact flame next to the name: 🔥 + run while the streak is
-        // lit (a shared win within 7 days), an ash flame + all-time bond total when
-        // it's gone cold. Renders nothing until a bond exists (reductive). Tapping
-        // opens the "Pact with <ally>" detail (data-friend-action="pact").
+        // W663 — co-op Pact DAILY-streak flame next to the name: 🔥 + the current
+        // day-streak while it's alive (a shared co-op win today or yesterday), an
+        // ash flame + the all-time BEST streak once it's broken (relight it). Nothing
+        // until a bond exists (reductive). Tap → "Pact with <ally>" (data-friend-action="pact").
         const _pact = (function () { try { return _coopPactFor(f.user_id); } catch (_) { return null; } })();
-        const _pactFlame = _pact
-          ? ('<button type="button" class="friend-pact-flame' + (_pact.lit ? '' : ' friend-pact-flame--cold') + '" data-friend-action="pact" data-user-id="' + esc(f.user_id) + '" aria-label="Co-op Pact with ' + esc(aliasDisp) + '">' +
+        const _pactN = _pact ? (_pact.alive ? (_pact.streak | 0) : (_pact.best | 0)) : 0;
+        const _pactFlame = (_pact && _pactN > 0)
+          ? ('<button type="button" class="friend-pact-flame' + (_pact.alive ? '' : ' friend-pact-flame--cold') + '" data-friend-action="pact" data-user-id="' + esc(f.user_id) + '" aria-label="Co-op Pact with ' + esc(aliasDisp) + '">' +
               '<span class="fpf-glyph" aria-hidden="true">🔥</span>' +
-              '<span class="fpf-num">' + (_pact.lit ? (_pact.run | 0) : (_pact.total | 0)) + '</span>' +
+              '<span class="fpf-num">' + _pactN + '</span>' +
             '</button>')
           : '';
         parts.push(
@@ -40102,6 +40418,10 @@
         // delegated handler so both survive re-renders with no per-element wiring.
         const inviteEl = e.target.closest && e.target.closest('[data-guild-invite]');
         if (inviteEl) { try { _guildInviteShare(); } catch (_) {} return; }
+        // W664 — general entry into the Pact Flames screen (full bond list, no
+        // friend focused). Delegated here so it survives friends-section re-renders.
+        const pfEl = e.target.closest && e.target.closest('[data-open-pactflames]');
+        if (pfEl) { try { openPactFlames(); } catch (_) {} return; }
         const toggle = e.target.closest && e.target.closest('.social-section-toggle');
         if (!toggle) return;
         const section = toggle.closest('.social-section--collapsible');
@@ -40162,7 +40482,10 @@
         // BEFORE the fid/disabled machinery — it's a display flame (keyed by the
         // friend's user_id), not a friend-mutation button.
         if (action === 'pact') {
-          try { _coopShowPactCard(btn.getAttribute('data-user-id'), row.getAttribute('data-alias')); } catch (_) {}
+          // W664 — open the rich Pact Flames screen focused on this bond (falls back
+          // to the plain text card if the screen fails for any reason).
+          try { openPactFlames(btn.getAttribute('data-user-id')); }
+          catch (_) { try { _coopShowPactCard(btn.getAttribute('data-user-id'), row.getAttribute('data-alias')); } catch (__) {} }
           return;
         }
         const fid    = row.getAttribute('data-friendship-id');
