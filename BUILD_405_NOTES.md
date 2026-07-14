@@ -32,6 +32,14 @@ MARKETING_VERSION = 2.4.3; the `405` arg is CFBundleVersion.
   - Co-op list double-fetch on boot/resume deduped to one request.
   - Diagnostic breadcrumb writers no longer re-parse localStorage per call;
     per-call console.log gated behind a debug flag. Copy Debug Info unchanged.
+- **W661 — pre-submission fixes (from Rendell's testing)**:
+  - Ranked "Awakened" tier-up ceremony no longer borrows the tower's "summit /
+    First Awakened" language (it was confusingly describing the tower endgame in
+    a PvP screen). Copy-only; not a mis-wire.
+  - The First Awakened (tower Floor-100 boss) buffed: phase-1 4278→4400,
+    phase-2 4546→4600.
+  - Ascent floor opponents are now FIXED per floor — a loss re-faces the same
+    foe (was re-rolling to an easier type, which also enabled savescum-by-reopen).
 
 Every persistence/money-adjacent change was adversarially reviewed (multi-agent,
 find→verify) before ship — those reviews caught a phantom-crown bug (W657), a
