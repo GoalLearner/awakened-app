@@ -13824,6 +13824,10 @@ These are NOT in `main` and should NOT be assumed live. Tag in CLAUDE.md or a ne
 8. **Hall of Fame minimum-qualify threshold** — currently every real-user submit creates a row. If the table gets noisy with sub-10k entries, add a `WHERE steps >= 10000` filter at write time (no schema change required).
 9. **Sims-to-HoF backend persistence** — explicitly DECIDED AGAINST. Sims stay client-only filler. Do not add sim users to `weekly_step_records`.
 
+### Known tech debt (structural — do NOT fix piecemeal)
+
+- **`hb_completions` grows unbounded (owner-flagged 2026-07-13).** It's a `{ 'YYYY-MM-DD': [habitId,...] }` map with **one entry per active day, forever** — real user history (feeds streaks/stats/accolades), so it must NOT be pruned or compacted casually. **W659** made *writing* it ~9× cheaper (coalesced `save()` → one write per action instead of 3–9), but the blob itself still grows, and every flush still `JSON.stringify`s the whole thing. On iOS WKWebView the localStorage quota is ~5–10MB, so a multi-year daily user eventually feels this on every save and risks `QuotaExceededError` (which `save()` already surfaces once, but that's a symptom, not a fix). **The structural answer is deferred and needs a design pass**: chunk by month (`hb_completions_2026_07`), move history server-side (CloudSync already backs state up — could page old months out of the hot blob), or a ring-buffer of recent months + a cold archive. **Do not** solve this by deleting history. When picked up, coordinate with CloudSync's serialize shape and the streak/accolade readers that walk `completions`. Same growth caveat applies to `hb_streak_breaks` and `hb_ach_dates` but they grow far slower.
+
 ### 🛑 Safety warnings (read before any destructive work)
 
 - **D1 migrations.** Do NOT run `wrangler d1 migrations apply` — the historical migrations are not seeded in the `d1_migrations` tracker. Use direct `wrangler d1 execute --remote --file=migrations/XXXX.sql` (with `printf 'y\n' |` to bypass the interactive confirmation) for new migrations. The `0008` and `0009` migrations applied today both used this pattern.

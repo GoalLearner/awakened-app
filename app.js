@@ -22732,7 +22732,23 @@
   // v3 W199 hardening — gates the storage-failure toast to once per
   // session so a persistently-full quota doesn't spam on every save().
   let _saveFailureWarned = false;
-  function save() {
+  // W659 — coalesced persistence. _saveNow() is the real disk write (the former
+  // save() body, unchanged). The public save() below collapses the 3-9 redundant
+  // persists per user action into ONE write, scheduled on a microtask so it lands
+  // at the end of the current task — before paint, before a queued
+  // location.reload(), and before any graceful teardown (the pagehide /
+  // beforeunload / visibilitychange flush). That is "microtask-strong": it is NOT
+  // immunity to a hard async OS kill mid-task (iOS OOM-jettison / force-quit)
+  // while a long synchronous tail is still running after the save() — the
+  // microtask cannot run until that tail unwinds. Paths that must survive that
+  // window (habit completion, see toggleHabit) call saveFlush() SYNCHRONOUSLY at
+  // the moment of mutation for exact pre-W659 durability. saveFlush() is also the
+  // backstop fired on every graceful teardown.
+  let _saveNowCalls = 0;              // real disk writes so far (test + telemetry)
+  let _saveDirty = false;
+  let _saveMicroScheduled = false;
+  function _saveNow() {
+    _saveNowCalls++;
     try {
       // v2.0 — enforce auto-verify-first ordering on every persist
       // so the invariant always holds in storage. Cheap (O(n) on a
@@ -22804,6 +22820,68 @@
     // (early calls during boot) or if the user isn't signed in.
     try { if (typeof CloudSync !== 'undefined') CloudSync.markLocalStateChanged('save'); } catch (_) {}
   }
+
+  // W659 — coalesced public save(). Every existing caller keeps calling save()
+  // unchanged; the 3-9 redundant calls within one user action now collapse to a
+  // SINGLE _saveNow(). Uses a microtask, NOT a timer: it drains at the end of
+  // THIS task — before paint, before the next event, and before the browser
+  // processes a queued location.reload() — so there is never a cross-turn window
+  // where a pending write can be lost to a kill/crash. (A debounce timer cannot
+  // promise that; that is why this is a microtask.)
+  function save() {
+    _saveDirty = true;
+    if (_saveMicroScheduled) return;
+    _saveMicroScheduled = true;
+    var schedule = (typeof queueMicrotask === 'function')
+      ? queueMicrotask
+      : function (fn) { Promise.resolve().then(fn); };
+    schedule(function () {
+      _saveMicroScheduled = false;
+      saveFlush();
+    });
+  }
+
+  // Synchronous flush of any pending write. Idempotent; a no-op when clean.
+  // This is the flush-before-kill guarantee on graceful teardown paths.
+  function saveFlush() {
+    if (!_saveDirty) return;
+    _saveDirty = false;
+    _saveNow();
+  }
+
+  // W659 — flush on EVERY graceful teardown so a pending coalesced write can
+  // never be lost when the app is backgrounded, reloaded, or navigated away.
+  // pagehide + beforeunload cover reload / kill / navigation (they fire
+  // synchronously before teardown, and setItem is synchronous so it completes);
+  // visibilitychange(hidden) covers iOS backgrounding (fires before the WebView
+  // is suspended). NOTE: a hard OS kill that fires none of these (OOM-jettison
+  // mid-render-tail) is covered NOT here but by the synchronous saveFlush() at
+  // the point of a critical mutation (completion path in toggleHabit).
+  try {
+    window.addEventListener('pagehide', saveFlush);
+    window.addEventListener('beforeunload', saveFlush);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') saveFlush();
+    });
+  } catch (_) {}
+
+  // W659 — minimal test surface (mirrors the __test_* convention Leaderboard /
+  // Health already expose). NOT referenced by any app code.
+  try {
+    window.__saveTest = {
+      // nowCalls/dirty reflect COALESCED, not-yet-flushed state: after a bare
+      // save()/poke() they show delta-0 + dirty=true until the microtask drains
+      // (await Promise.resolve()) or a synchronous saveFlush()/teardown fires.
+      nowCalls: function () { return _saveNowCalls; },
+      dirty: function () { return _saveDirty; },
+      poke: function (n) { for (var i = 0; i < (n || 1); i++) save(); },
+      flush: function () { saveFlush(); },
+      // Drives the REAL completion path (toggleHabit → save) silently, so an
+      // E2E can prove rapid real completions persist without fighting the
+      // celebration UI. toggleHabit is hoisted; resolved at call time.
+      complete: function (id) { try { toggleHabit(id, null, { silent: true }); } catch (_) {} },
+    };
+  } catch (_) {}
 
   // ── RANK HELPERS ──────────────────────────────────────────
   function getRank(pts) {
@@ -30434,6 +30512,16 @@
       // If it does, the fanfare in showCompoundPopup() replaces the regular chime.
       const compoundBefore = JSON.stringify(compoundAwarded);
       check(id);
+      // W659 DURABILITY — persist the completion to disk SYNCHRONOUSLY right now,
+      // BEFORE the long synchronous render/celebration tail below (particles, XP
+      // burst, rank-up drain, profile repaint). check()'s coalesced save() would
+      // otherwise defer the write to a microtask that cannot run until this whole
+      // tail unwinds — and a hard OS kill (iOS OOM-jettison / force-quit) during
+      // that tail would lose the completion. This restores the exact pre-W659
+      // synchronous-write guarantee on the one path that must NEVER lose data.
+      // The tail's incidental saves (XP/rank/stats) still coalesce into ONE
+      // trailing microtask write, so we keep the efficiency everywhere it's safe.
+      saveFlush();
       const compoundFiredNow = JSON.stringify(compoundAwarded) !== compoundBefore;
 
       if (li) {
@@ -35664,6 +35752,12 @@
       if (def.note) habitNotes[newH.id] = def.note;
     });
     save();
+    // W659 — the auto-verify-first sort now lives inside the coalesced (deferred)
+    // _saveNow, so a pack that adds an auto-verify habit (e.g. Daily walk) would
+    // paint in the unsorted tail until the next render trigger. Sort synchronously
+    // here so the immediate re-render below shows canonical order. Idempotent with
+    // the deferred sort; persisted order is unaffected either way.
+    try { sortHabitsAutoVerifyFirst(habits); } catch (_) {}
 
     // Mark the player's path (only on first MR add — Locked-In doesn't override)
     if (packId === 'morning' && !selectedPackId) {
