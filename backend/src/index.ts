@@ -74,6 +74,7 @@ import {
   handleCoopBossResolve,
   handleCoopBossClaim,
 } from './handlers/coop-boss';
+import { handleCoopPacts } from './handlers/coop-pacts';
 import {
   // Push notifications v1 (W603) — device-token register/unregister.
   handleDeviceTokenRegister,
@@ -328,6 +329,11 @@ export default {
           } else if (path === '/v1/coop-boss' && method === 'GET') {
             // List the caller's co-op hunts (both challenger + partner roles).
             response = await handleCoopBossList(request, env, session);
+          } else if (path === '/v1/coop-boss/pacts' && method === 'GET') {
+            // W664 Phase 2 — canonical per-friend co-op daily-streak "pacts"
+            // computed from the durable instance history (so both friends agree).
+            // Matched before the /:id detail route; 'pacts' can't be an :id (8+ hex).
+            response = await handleCoopPacts(request, env, session);
           } else if (COOP_BOSS_ACTION_RE.test(path) && method === 'POST') {
             const match = path.match(COOP_BOSS_ACTION_RE)!;
             const instanceId = match[1];

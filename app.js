@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w664'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w665'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5635,6 +5635,19 @@
   function _saveCoopPacts(m) { try { localStorage.setItem('hb_coop_pacts', JSON.stringify(m || {})); } catch (e) { _logSwallow('coop_pacts:persist', e); } }
   // PT 'YYYY-MM-DD' day key for a timestamp (getPTDate() gives the same for "now").
   function _pactDayKey(ms) { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date(ms)); } catch (_) { return ''; } }
+  // Parse a backend resolved_at/updated_at to epoch-ms as UTC. SQLite CURRENT_TIMESTAMP
+  // is 'YYYY-MM-DD HH:MM:SS' with NO zone suffix — Date.parse would read that space-form
+  // in the DEVICE's local zone, mis-bucketing a near-PT-midnight win onto the wrong day
+  // and diverging from the server. Normalize (space→'T', append 'Z') so client + server
+  // agree exactly. Mirrors backend/src/lib/pact-streak.ts `sqliteUtcToMs`.
+  function _coopTsToMs(ts) {
+    if (!ts) return 0;
+    var s = String(ts).trim(); if (!s) return 0;
+    if (s.indexOf('T') < 0) s = s.replace(' ', 'T');
+    if (!/[Zz]$|[+-]\d{2}:?\d{2}$/.test(s)) s += 'Z';
+    var ms = Date.parse(s);
+    return isFinite(ms) ? ms : 0;
+  }
   // The calendar day BEFORE a 'YYYY-MM-DD' key (UTC date-math on a date-only value =
   // no DST/timezone hazard). Drives the consecutive-day + "yesterday" checks.
   function _pactPrevDay(dayKey) {
@@ -5706,7 +5719,7 @@
       var nowMs = Date.now();
       // Key the day off the WIN's RESOLVED day (parity with backfill), not this device's
       // processing day — a late-processed award must not false-break a streak.
-      var today = (inst.resolved_at ? _pactDayKey(Date.parse(inst.resolved_at)) : '') || getPTDate();
+      var today = (inst.resolved_at ? _pactDayKey(_coopTsToMs(inst.resolved_at)) : '') || getPTDate();
       var m = _loadCoopPacts(); var key = String(fid);
       var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
       if (e.lastDay === today) {
@@ -5749,7 +5762,7 @@
           if (!it || it.status !== 'completed' || it.result !== 'success' || !awarded[it.id]) return;
           var other = (it.role === 'partner') ? it.challenger : it.partner;
           var fid = other && other.user_id; if (!fid) return;
-          var t = Date.parse(it.resolved_at || it.updated_at || '') || 0;
+          var t = _coopTsToMs(it.resolved_at || it.updated_at);
           (byFriend[fid] = byFriend[fid] || { times: [], alias: (other && other.alias) || null })
             .times.push({ t: t, boss: it.boss_id });
         });
@@ -5791,6 +5804,61 @@
         }
         if (changed) { _saveCoopPacts(m); try { renderFriendsSection(); } catch (_) {} }
       }).catch(function () {});
+    } catch (_) {}
+  }
+  // ── W664 Phase 2 — server-authoritative pact sync ───────────────────────────
+  // The backend (GET /v1/coop-boss/pacts) computes the CANONICAL daily streak per
+  // friend from the FULL durable instance history (no LIMIT-20 truncation, one
+  // Pacific-day computation for everyone), so BOTH friends see identical numbers.
+  // We merge it into the local store server-authoritatively but UPWARD-favouring,
+  // so a just-happened optimistic live bump (a win the server's read-replica
+  // hasn't surfaced yet) is never rolled backward. Falls back to the v1 local
+  // reconstruction (_coopBackfillPacts) when the endpoint is unavailable (old
+  // client / offline). Runs once per session (the live bump keeps it fresh after).
+  var _coopPactServerSynced = false;
+  function _coopServerSyncPacts() {
+    try {
+      if (_coopPactServerSynced) return;
+      if (!(window.Auth && Auth.coopPacts)) { _coopBackfillPacts(); return; }   // no endpoint → v1 fallback
+      _coopPactServerSynced = true;
+      var _pp; try { _pp = Auth.coopPacts(); } catch (_e) { _pp = null; }
+      if (!_pp || typeof _pp.then !== 'function') { _coopBackfillPacts(); return; }   // sync throw / non-thenable → v1 fallback
+      _pp.then(function (res) {
+        if (!res || !res.ok || !res.pacts || typeof res.pacts !== 'object') { _coopBackfillPacts(); return; }
+        var m = _loadCoopPacts(); var changed = false;
+        for (var fid in res.pacts) {
+          var s = res.pacts[fid]; if (!s || typeof s !== 'object') continue;
+          var key = String(fid);
+          var curM = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
+          var before = (curM.streak | 0) + '|' + (curM.best | 0) + '|' + (curM.daysBonded | 0) + '|' + (curM.total | 0) + '|' + (curM.lastDay || '') + '|' + (curM.firstWonAt || 0) + '|' + (curM.lastWonAt || 0) + '|' + (curM.lastBossId || '');
+          var sBest = s.best | 0, sDays = s.daysBonded | 0, sTotal = s.total | 0, sStreak = s.streak | 0, sLastDay = s.lastDay || '';
+          if (sBest > (curM.best | 0)) curM.best = sBest;
+          if (sDays > (curM.daysBonded | 0)) curM.daysBonded = sDays;
+          if (sTotal > (curM.total | 0)) curM.total = sTotal;
+          // streak/lastDay: adopt the server's canonical run when it ends on a day
+          // NEWER than ours (server saw a win we missed), or on the SAME day with a
+          // longer run; keep a strictly-newer LOCAL day (fresh optimistic bump).
+          if (sLastDay) {
+            if (sLastDay > (curM.lastDay || '')) { curM.streak = sStreak; curM.lastDay = sLastDay; }
+            else if (sLastDay === curM.lastDay && sStreak > (curM.streak | 0)) { curM.streak = sStreak; }
+          }
+          // NB: firstWonAt/lastWonAt are epoch-MS (~1.78e12) — never `| 0` them (ToInt32
+          // wraps a real ms value to a garbage ~1970 date); only the small-int streak
+          // fields above are bit-ORed.
+          if (s.lastWonAt) curM.lastWonAt = Math.max(curM.lastWonAt || 0, s.lastWonAt || 0);
+          if (s.lastBossId && sLastDay && sLastDay >= (curM.lastDay || '')) curM.lastBossId = s.lastBossId;
+          // firstWonAt: the server sees the TRUE earliest win (complete history) — adopt the earlier.
+          if (s.firstWonAt && (!curM.firstWonAt || s.firstWonAt < curM.firstWonAt)) curM.firstWonAt = s.firstWonAt;
+          if ((curM.streak | 0) > (curM.best | 0)) curM.best = curM.streak | 0;   // best must never trail the current streak
+          var after = (curM.streak | 0) + '|' + (curM.best | 0) + '|' + (curM.daysBonded | 0) + '|' + (curM.total | 0) + '|' + (curM.lastDay || '') + '|' + (curM.firstWonAt || 0) + '|' + (curM.lastWonAt || 0) + '|' + (curM.lastBossId || '');
+          if (after !== before) { m[key] = curM; changed = true; }
+        }
+        if (changed) {
+          _saveCoopPacts(m);
+          try { renderFriendsSection(); } catch (_) {}
+          try { _pfRefreshIfOpen(); } catch (_) {}   // live-refresh the Pact Flames list if the screen is open
+        }
+      }).catch(function () { try { _coopBackfillPacts(); } catch (_) {} });
     } catch (_) {}
   }
 
@@ -5922,17 +5990,34 @@
       '<linearGradient id="pf-fgr" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb98a"/><stop offset=".55" stop-color="#e2531c"/><stop offset="1" stop-color="#7a2a14"/></linearGradient>' +
       '</defs></svg>';
   }
-  function _pfListHtml() {
+  function _pfSubInner() {
     var hottest = _pfData.reduce(function (m, d) { return Math.max(m, d.state === 'broken' ? 0 : d.streak); }, 0);
     var burning = _pfData.filter(function (d) { return d.state !== 'broken'; }).length;
-    var sub = '<b>' + burning + '</b> bond' + (burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + hottest + 'd</b>';
-    var rows = _pfData.length
+    return '<b>' + burning + '</b> bond' + (burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + hottest + 'd</b>';
+  }
+  function _pfRowsInner() {
+    return _pfData.length
       ? _pfData.map(_pfRowHtml).join('')
       : '<div class="pf-empty">No pacts yet.<br>Fell a co-op dungeon boss with a friend to light your first flame.</div>';
+  }
+  // W664 Phase 2 — when the server pact sync lands new numbers while the screen is
+  // OPEN, refresh the list + header in place (skip if a detail sheet is open, so we
+  // don't yank the user's view out from under them).
+  function _pfRefreshIfOpen() {
+    if (!_pfEl) return;
+    var sheet = _pfEl.querySelector('[data-pf-sheet]');
+    if (sheet && sheet.classList.contains('open')) return;   // detail open — leave it be
+    var friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
+    try { _pfData = _pfBuildData(friends); } catch (_) { return; }
+    var listEl = _pfEl.querySelector('.pf-list'); if (listEl) listEl.innerHTML = _pfRowsInner();
+    var subEl = _pfEl.querySelector('.pf-sub'); if (subEl) subEl.innerHTML = _pfSubInner();
+    _pfTick();
+  }
+  function _pfListHtml() {
     return _pfDefs() +
       '<div class="pf-topbar"><button class="pf-back" data-pf-close><svg viewBox="0 0 9 14" fill="none"><path d="M7.5 1.5l-6 5.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Back</button></div>' +
-      '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + sub + '</div></div>' +
-      '<div class="pf-list">' + rows + '</div>' +
+      '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + _pfSubInner() + '</div></div>' +
+      '<div class="pf-list">' + _pfRowsInner() + '</div>' +
       '<div class="pf-foot"><p class="pf-hint">Tap a flame to see your all-time bond</p>' +
         '<button class="pf-invite" type="button" data-guild-invite="1"><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M9.2 14.8l5.6-5.6M8.2 11.4 6.6 13a3.2 3.2 0 004.5 4.5l1.6-1.6M15.8 12.6 17.4 11a3.2 3.2 0 00-4.5-4.5l-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
         '<span class="pf-itxt"><span class="pf-it">Invite a Hunter</span><span class="pf-ip">Send your name so a friend can add you</span></span></button></div>' +
@@ -5972,6 +6057,7 @@
       if (!friends) { try { var r = await Auth.fetchFriends(); if (r && r.ok) { _friendsCache = r; friends = r.friends || []; } else friends = []; } catch (_) { friends = []; } }
       _pfData = _pfBuildData(friends);
       _pfShow(autoOpenUserId);
+      try { _coopServerSyncPacts(); } catch (_) {}   // W664 P2 — freshen from the server; _pfRefreshIfOpen updates the open screen if numbers change
     } catch (_) {
       // Real degradation: openPactFlames is async, so the flame-chip caller's
       // synchronous try/catch can't catch a screen-build failure — fall back to the
@@ -40111,7 +40197,7 @@
 
   async function renderFriendsSection() {
     _ensureSocialMarkup();
-    try { _coopBackfillPacts(); } catch (_) {}   // W663 — seed co-op Pact streaks (once/session; re-renders if it finds more)
+    try { _coopServerSyncPacts(); } catch (_) {}   // W664 P2 — canonical server pacts (once/session; falls back to the v1 _coopBackfillPacts if the endpoint is unavailable; re-renders if numbers change)
     const body = document.getElementById('social-friends-body');
     const countEl = document.getElementById('social-friends-count');
     if (!body) return;

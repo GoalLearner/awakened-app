@@ -1499,6 +1499,7 @@
   function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }
   function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
   function coopBossClaim(id)   { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/claim'); }   // W463.1 — atomic durable drop credit
+  function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
 
   // Expose on window for app.js + Settings interactions.
   // ── W297 — Skins IAP (RevenueCat) + entitlements ───────────────────
@@ -1930,6 +1931,7 @@
     coopBossCancel,
     coopBossResolve,
     coopBossClaim,
+    coopPacts,
     devSignInIfLocalhost,
     isLocalhostDev,
     startGuest,
