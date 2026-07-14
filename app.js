@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w661'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w662'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14679,6 +14679,24 @@
         { card: dropped, wasFirst: wasFirstAcquisition, wasCapped: wasCapped, count: entry.count },
         bossId, dropOpts);
     } catch (_) {}
+
+    // W662 — LOCAL notification on an ULTRA-RARE-or-above drop (drops are awarded
+    // client-side, so the server can't remote-push this). Fires for solo + co-op;
+    // native-only, silent no-op on web/denied. Gate on !wasCapped so a blocked 2nd
+    // Mega-Rare (cap 1, NOT awarded) never pings. Reuses _coopLocalNotify (shared
+    // iOS notification permission → no new prompt). This is the single per-kill
+    // choke-point, so no dedup guard is needed.
+    if (!wasCapped && (dropped.rarity === 'ultra_rare' || dropped.rarity === 'mythic')) {
+      try {
+        var _isCoopDrop = !!(dropOpts && dropOpts.source === 'coop');
+        var _rLbl = RARITY_LABELS[dropped.rarity] || (dropped.rarity === 'mythic' ? 'Mega-Rare' : 'Ultra-Rare');
+        var _dName = dropped.name || 'a relic';
+        var _body = _isCoopDrop
+          ? (_rLbl + ' relic from ' + ((dropOpts && dropOpts.sourceName) || 'the hunt') + ': ' + _dName)
+          : (_rLbl + ' drop: ' + _dName);
+        _coopLocalNotify('✦ ' + _rLbl + ' drop!', _body);
+      } catch (_) {}
+    }
 
     // Update pity counters for the realized outcome.
     resetDropPityAfterDrop(bossId, dropped.rarity);
@@ -43726,6 +43744,14 @@
     }
     if (state.streak > 0) stateClasses.push('bcard--active');
     if (state.kill_count > 0) stateClasses.push('bcard--defeated');
+    // W662 — Rendell: PERMANENT faint fade once a boss has EVER been felled
+    // (kill_count is durable + cloud-synced). Distinct from the transient daily
+    // '.bcard--cleared' below. Skip preview cards; and — mirroring the co-op path,
+    // which un-fades while HUNTING — do NOT fade a boss you're actively re-hunting
+    // (engaged, or a live streak) so its progress bar + pulse stay legible.
+    if (!isPreview && state.kill_count > 0 && state.engaged !== true && !(state.streak > 0)) {
+      stateClasses.push('is-cleared');
+    }
     // W298 — Rendell feedback: surface per-cadence completion on the GRID so
     // the player reads "done for now" at a glance instead of opening each boss.
     // Cleared = unlocked, not currently hunting, and the engage gate reports a
@@ -44796,8 +44822,12 @@
     const cfg = COOP_BOSSES[id];
     if (!cfg) return '';
     const imgId = cfg.artId || id;
+    // W662 — permanent faint fade once this co-op boss has EVER been felled
+    // (hb_coop_kills, cloud-synced). Build-time sets the initial state; thereafter
+    // _coopApplyBadge is the single authority (un-fades while INVITE/HUNTING).
+    const _clr = (function () { try { const e = _loadCoopKills()[id]; return !!(e && e.count > 0); } catch (_) { return false; } })();
     return (
-      '<button type="button" class="bcard bcard--coop bcard--dormant" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
+      '<button type="button" class="bcard bcard--coop bcard--dormant' + (_clr ? ' is-cleared' : '') + '" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
         '<span class="bcard-coop-badge" aria-hidden="true">CO-OP</span>' +
         '<div class="bcard-header">' +
           '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
@@ -45046,12 +45076,23 @@
     } catch (_) {}
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
     try { _coopBumpKill(inst.boss_id); } catch (_) {}     // W545 — per-co-op-boss kill count for the Kill Log
+    // W662 — instant fade: drop the stale live-badge entry FIRST so _coopApplyBadge
+    // takes the idle branch and faints the just-felled card now (else it reads the
+    // lingering 'active' state and strips is-cleared until the next 20s poll).
+    try { delete _coopBadgeByBoss[inst.boss_id]; } catch (_) {}
+    try { _coopApplyBadge(); } catch (_) {}
     // W541 — co-op dungeon win → mark first-coop + arm the review pre-prompt (fires on modal close).
     _rvSet(_RV.firstCoop, '1');
     try { _reviewArm('coop', { dungeonName: (cfg && cfg.name) || 'the dungeon', partySize: 2 }); } catch (_) {}
     // W448 — also drop a notification-tray record (best-effort) so a win lands even if
     // the resolution was detected on app-resume rather than while watching the sheet.
-    try { _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls and a relic claimed.' : '.')); } catch (_) {}
+    // W662 — suppress the generic win ping when an ULTRA/MEGA drop already fired
+    // its own '✦ drop!' notification (rollBossDrop, above) so a lucky win isn't
+    // double-notified. Common/rare wins still get the generic ping.
+    try {
+      const _uDrop = !!(dropInfo && dropInfo.card && (dropInfo.card.rarity === 'ultra_rare' || dropInfo.card.rarity === 'mythic'));
+      if (!_uDrop) _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls and a relic claimed.' : '.'));
+    } catch (_) {}
    } catch (_) {}
   }
 
@@ -45725,12 +45766,19 @@
   function _coopApplyBadge() {
     // one co-op card per dungeon view — badge each by ITS OWN boss, not a global flag.
     document.querySelectorAll('#bosses-list .bcard--coop[data-coop-boss]').forEach(function (card) {
-      const st = _coopBadgeByBoss[card.getAttribute('data-coop-boss')] || null;
+      const bossId = card.getAttribute('data-coop-boss');
+      const st = _coopBadgeByBoss[bossId] || null;
       const badge = card.querySelector('.bcard-coop-badge');
       card.classList.remove('bcard--coop-invite', 'bcard--coop-active');
-      if (st === 'invite') { card.classList.add('bcard--coop-invite'); if (badge) badge.textContent = 'INVITE'; }
-      else if (st === 'active') { card.classList.add('bcard--coop-active'); if (badge) badge.textContent = 'HUNTING'; }
-      else if (badge) { badge.textContent = 'CO-OP'; }
+      // W662 — a live INVITE/HUNTING state un-fades a previously-cleared boss; when
+      // idle, restore the permanent ever-felled fade from the durable kill count.
+      if (st === 'invite') { card.classList.add('bcard--coop-invite'); card.classList.remove('is-cleared'); if (badge) badge.textContent = 'INVITE'; }
+      else if (st === 'active') { card.classList.add('bcard--coop-active'); card.classList.remove('is-cleared'); if (badge) badge.textContent = 'HUNTING'; }
+      else {
+        let _c = false; try { const e = _loadCoopKills()[bossId]; _c = !!(e && e.count > 0); } catch (_) {}
+        card.classList.toggle('is-cleared', _c);
+        if (badge) badge.textContent = 'CO-OP';
+      }
     });
   }
   async function _coopRefreshBadge(force) {
@@ -53003,8 +53051,8 @@
     function _route(data) {
       try {
         const type = (data && (data.type || data.kind)) || '';
-        if (type === 'coop_invite' || type === 'coop_joined') {
-          const bossId = data && data.bossId;
+        if (type === 'coop_invite' || type === 'coop_joined' || type === 'coop_complete') {
+          const bossId = data && data.bossId;   // W662 — coop_complete taps open the resolved hunt (re-pulls instances)
           if (bossId && typeof openCoopSheet === 'function') { openCoopSheet(bossId); return; }
           const q = document.getElementById('tab-quests'); if (q) { q.click(); return; }
         }

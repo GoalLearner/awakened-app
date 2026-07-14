@@ -13140,6 +13140,22 @@ footer {
 .bcard--cleared .bcard-art img { filter: saturate(0.45) brightness(0.82); }
 .bcard--cleared.bcard--active { animation: none; }   /* cleared = quiet, no pulse */
 .bcard--cleared .bcard-rank-pill { display: none; }  /* the green check takes the corner */
+/* W662 — Rendell: a PERMANENT "ever felled" fade (kill_count>0 solo / hb_coop_kills co-op),
+   distinct from the transient daily .bcard--cleared above (which resets at midnight). Shared
+   .bcard.is-cleared so the SOLO and CO-OP grids read identically: a boss you've beaten dims so
+   the eye jumps to the ones still standing. Child-scoped (like .bcard--cleared) so the gold
+   .bcard--defeated border, corner badges, and the co-op CO-OP/INVITE/HUNTING pill stay crisp
+   above the faded body. No rank-pill hide here (no green check replaces it — the fade alone
+   signals cleared). Same specificity as .bcard--cleared, so it holds on hover too. */
+.bcard.is-cleared > .bcard-header,
+.bcard.is-cleared > .bcard-stats,
+.bcard.is-cleared > .bcard-flavor,
+.bcard.is-cleared > .bcard-cond,
+.bcard.is-cleared > .bcard-progress,
+.bcard.is-cleared > .boss-archetype-pill { opacity: 0.42; }
+.bcard.is-cleared > .bcard-art { opacity: 0.6; }
+.bcard.is-cleared .bcard-art img { filter: saturate(0.45) brightness(0.82); }
+.bcard.is-cleared.bcard--active { animation: none; }
 .bcard-corner-cleared {
   position: absolute;
   top: 4px;

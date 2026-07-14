@@ -339,7 +339,7 @@ export default {
             } else if (action === 'cancel') {
               response = await handleCoopBossCancel(request, env, session, instanceId);
             } else if (action === 'resolve') {
-              response = await handleCoopBossResolve(request, env, session, instanceId);
+              response = await handleCoopBossResolve(request, env, session, instanceId, ctx);   // W662 — ctx for the hunt-complete push
             } else {
               response = await handleCoopBossClaim(request, env, session, instanceId);
             }

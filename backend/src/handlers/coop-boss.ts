@@ -749,6 +749,7 @@ export async function handleCoopBossResolve(
   env: Env,
   session: SessionPayload,
   id: string,
+  ctx?: ExecutionContext,   // W662 — for the hunt-complete push (waitUntil)
 ): Promise<Response> {
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
@@ -782,7 +783,7 @@ export async function handleCoopBossResolve(
 
   // Win can land mid-window the instant the combined goal is reached.
   if (goalMet) {
-    await env.DB.prepare(
+    const upd = await env.DB.prepare(
       `UPDATE coop_boss_instances
           SET status = 'completed', result = 'success',
               resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
@@ -796,6 +797,22 @@ export async function handleCoopBossResolve(
       env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, row.challenger_user_id),
       env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, row.partner_user_id),
     ]);
+    // W662 — push BOTH hunters that the hunt is won, EXACTLY ONCE. Both clients
+    // poll /resolve (and re-poll), but the `WHERE status='active'` guard means
+    // only the request that actually flipped the row gets changes>0 — every later
+    // post-win poll is a no-op here, so the push can't re-send. notifyUser never
+    // throws and no-ops if push is unconfigured or a hunter has no device token.
+    if (ctx && Number(upd?.meta?.changes ?? 0) > 0) {
+      const cAlias = aliasMap.get(row.challenger_user_id) ?? 'your ally';
+      const pAlias = aliasMap.get(row.partner_user_id) ?? 'your ally';
+      const data = { bossId: row.boss_id, instanceId: id };
+      ctx.waitUntil(notifyUser(env, row.challenger_user_id, {
+        title: 'Hunt Complete', body: `You and ${pAlias} felled your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
+      }));
+      ctx.waitUntil(notifyUser(env, row.partner_user_id, {
+        title: 'Hunt Complete', body: `You and ${cAlias} felled your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
+      }));
+    }
   } else if (expired) {
     await env.DB.prepare(
       `UPDATE coop_boss_instances
