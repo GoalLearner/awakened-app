@@ -151,6 +151,18 @@ type = "ratelimit"
 namespace_id = "1010"
 simple = { limit = 6, period = 60 }   # 6/min per user
 
+# W663 — dedicated bucket for the INTERACTIVE friend-Echo summon. Same fix class
+# as RL_COOP_WRITE (W463): handlePvpEchoFriend used to share RL_DUELS_WRITE (6/min)
+# with the co-op step-submission drain (/v1/verified-events → handleVerifiedEventsSubmit),
+# so a hunter with a live co-op hunt 429'd on their FIRST Echo tap ("slow down a
+# moment, then try again"). Its own 20/min namespace so a single tap always has
+# budget (one summon = one token). Ranked create/join/find/rematch keep RL_DUELS_WRITE.
+[[unsafe.bindings]]
+name = "RL_PVP_WRITE"
+type = "ratelimit"
+namespace_id = "1024"
+simple = { limit = 20, period = 60 }  # 20/min per user
+
 # 100K Step Club + future accolades (v3 Phase 1z.27). Authenticated
 # read of the user's own accolade list. Cheap (single PK-indexed
 # scan with bounded row count). Client fetches once per app session

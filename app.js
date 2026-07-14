@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w662'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w663'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5602,6 +5602,119 @@
     } catch (_) { _coopBackfillBusy = false; }
   }
 
+  // ── W663 — Co-op "Pact" streak (Snapchat-style, per friend-pair) ─────────────
+  // hb_coop_pacts = { [friendUserId]: { total, run, lastWonAt(ms), lastBossId, alias } }.
+  // total = every co-op boss you two have EVER felled together (a "Bond", never lost).
+  // run = the current UNBROKEN streak: a shared win within PACT_WINDOW of the last
+  // ticks it up + keeps the flame lit; let the window lapse and the flame goes cold
+  // and the run ends (next shared win resets run to 1). A generous 7-day window — NOT
+  // a Snapchat-literal daily reset — because co-op hunts are fee-gated, need a partner
+  // + a 24h window, so daily would punish, not retain. Client-side + cloud-synced (v1).
+  const PACT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;   // tunable
+  function _loadCoopPacts() { try { return JSON.parse(localStorage.getItem('hb_coop_pacts') || '{}') || {}; } catch (_) { return {}; } }
+  function _saveCoopPacts(m) { try { localStorage.setItem('hb_coop_pacts', JSON.stringify(m || {})); } catch (e) { _logSwallow('coop_pacts:persist', e); } }
+  // Read a friend's pact for display. `lit` is computed at READ time so a lapsed run
+  // shows cold no matter what's stored. null when there's no bond yet (render nothing).
+  function _coopPactFor(friendUserId) {
+    if (!friendUserId) return null;
+    var m = _loadCoopPacts(); var e = m[String(friendUserId)];
+    if (!e || !(e.total > 0)) return null;
+    var lit = typeof e.lastWonAt === 'number' && (Date.now() - e.lastWonAt) <= PACT_WINDOW_MS;
+    return { total: e.total | 0, run: e.run | 0, lit: lit, lastWonAt: e.lastWonAt || null, lastBossId: e.lastBossId || null, alias: e.alias || null };
+  }
+  // Relative "last hunt" label for the Pact card.
+  function _coopPactAgo(ms) {
+    var d = Date.now() - (ms || 0); if (d < 0) d = 0;
+    var day = 86400000;
+    if (d < day) return 'today';
+    var days = Math.floor(d / day);
+    if (days === 1) return 'yesterday';
+    if (days < 7) return days + ' days ago';
+    var wk = Math.floor(days / 7);
+    return wk <= 1 ? 'a week ago' : wk + ' weeks ago';
+  }
+  // Tapping the flame → the "Pact with <ally>" detail (streak run + lit/cold, all-time
+  // Bond total, last hunt). Reuses the centered notice card (W481).
+  function _coopShowPactCard(userId, fallbackAlias) {
+    try {
+      var p = _coopPactFor(userId);
+      var alias = (p && p.alias) || fallbackAlias || 'this hunter';
+      if (!p) {
+        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Fell a co-op boss with ' + alias + ' to light a Pact — a flame that grows each time you two win together.', tone: 'info' });
+        return;
+      }
+      var bossName = (p.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[p.lastBossId] && COOP_BOSSES[p.lastBossId].name) || null;
+      var when = p.lastWonAt ? _coopPactAgo(p.lastWonAt) : null;
+      var lines = [];
+      lines.push(p.lit
+        ? '<b>🔥 ' + (p.run | 0) + '-hunt streak</b> — going strong.'
+        : '<b>Flame gone cold</b> — one co-op win relights it.');
+      lines.push('Bond: <b>' + (p.total | 0) + '</b> co-op ' + ((p.total | 0) === 1 ? 'boss' : 'bosses') + ' felled together.');
+      if (bossName) lines.push('Last hunt: ' + esc(bossName) + (when ? ' · ' + when : '') + '.');
+      showNoticeCard({ icon: p.lit ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.lit ? 'good' : 'info' });
+    } catch (_) {}
+  }
+  // Increment the pact with the OTHER participant when a co-op win is granted (called
+  // from _awardCoopKill, guarded once-per-instance by hb_coop_awarded — no double count).
+  function _coopBumpPact(inst) {
+    try {
+      if (!inst) return;
+      var other = (inst.role === 'partner') ? inst.challenger : inst.partner;
+      var fid = other && other.user_id; if (!fid) return;
+      var m = _loadCoopPacts(); var key = String(fid);
+      var e = m[key] || { total: 0, run: 0, lastWonAt: 0, lastBossId: null, alias: null };
+      var within = typeof e.lastWonAt === 'number' && e.lastWonAt > 0 && (Date.now() - e.lastWonAt) <= PACT_WINDOW_MS;
+      e.run = within ? ((e.run | 0) + 1) : 1;
+      e.total = (e.total | 0) + 1;
+      e.lastWonAt = Date.now();
+      e.lastBossId = inst.boss_id || e.lastBossId || null;
+      if (other && other.alias) e.alias = other.alias;   // display cache (alias can change; user_id is the key)
+      m[key] = e; _saveCoopPacts(m);
+    } catch (_) {}
+  }
+  // Best-effort backfill from the backend's completed instances (mirrors
+  // _coopBackfillKills): seed total + run per friend from history the live path
+  // already processed (in hb_coop_awarded). Monotonic — only seeds when it knows
+  // MORE than the live store, so it never clobbers a live +1. Bounded by the list's
+  // LIMIT-20 (accepts undercount on a fresh install; the live path is exact forward).
+  var _coopPactBackfillDone = false;
+  function _coopBackfillPacts() {
+    try {
+      if (_coopPactBackfillDone) return;
+      if (!(window.Auth && Auth.coopBossList)) return;
+      _coopPactBackfillDone = true;
+      Auth.coopBossList().then(function (res) {
+        var list = (res && (res.instances || res.items || res.list)) || res;
+        if (!Array.isArray(list)) return;
+        var awarded = {}; try { awarded = _loadCoopAwarded() || {}; } catch (_) {}
+        var byFriend = {};
+        list.forEach(function (it) {
+          if (!it || it.status !== 'completed' || it.result !== 'success' || !awarded[it.id]) return;
+          var other = (it.role === 'partner') ? it.challenger : it.partner;
+          var fid = other && other.user_id; if (!fid) return;
+          var t = Date.parse(it.resolved_at || it.updated_at || '') || 0;
+          (byFriend[fid] = byFriend[fid] || { times: [], alias: (other && other.alias) || null })
+            .times.push({ t: t, boss: it.boss_id });
+        });
+        var m = _loadCoopPacts(); var changed = false;
+        for (var fid in byFriend) {
+          var g = byFriend[fid]; g.times.sort(function (a, b) { return a.t - b.t; });
+          var run = 0, prev = 0;
+          g.times.forEach(function (x) { run = (prev && (x.t - prev) <= PACT_WINDOW_MS) ? run + 1 : 1; prev = x.t; });
+          var last = g.times[g.times.length - 1] || { t: 0, boss: null };
+          var cur = m[fid] || { total: 0, run: 0, lastWonAt: 0, lastBossId: null, alias: null };
+          if (g.times.length > (cur.total | 0)) {   // only when the backfill knows more than the live store
+            cur.total = g.times.length; cur.run = run;
+            cur.lastWonAt = last.t || cur.lastWonAt; cur.lastBossId = last.boss || cur.lastBossId;
+            if (g.alias) cur.alias = g.alias;
+            m[fid] = cur; changed = true;
+          }
+        }
+        if (changed) { _saveCoopPacts(m); try { renderFriendsSection(); } catch (_) {} }
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
   function _guildBossesSlainRows() {
     let state = {};
     try { if (typeof loadBosses === 'function') state = loadBosses() || {}; }
@@ -5729,6 +5842,31 @@
       '</span>'
     );
   }
+  // W663 — merge the solo (hb_bosses) + co-op (hb_coop_kills) kill rows into ONE
+  // row per boss id: sum the counts and tag CO-OP by IDENTITY (COOP_BOSSES), not by
+  // which store the count came from. Fixes "only The Twin Maw shows CO-OP" (the other
+  // co-op bosses' legacy counts sit in the solo store) AND prevents a double row +
+  // double-counted ledger total once a future co-op win also bumps hb_coop_kills for
+  // a boss that already has a solo count.
+  function _killLogMergeRows() {
+    const byId = Object.create(null);
+    const order = [];
+    function add(r) {
+      if (!r || !r.id) return;
+      if (!byId[r.id]) { byId[r.id] = Object.assign({}, r, { kill_count: 0, coop: false }); order.push(r.id); }
+      const m = byId[r.id];
+      m.kill_count += (r.kill_count || 0);
+      if (!m.name && r.name) m.name = r.name;
+      if (!m.rank && r.rank) m.rank = r.rank;
+      if (r.coop) m.coop = true;
+    }
+    try { _guildBossesSlainRows().forEach(add); } catch (_) {}
+    try { _guildCoopSlainRows().forEach(add); } catch (_) {}
+    const isCoopBoss = (typeof COOP_BOSSES === 'object' && COOP_BOSSES) ? COOP_BOSSES : null;
+    order.forEach(function (id) { if (isCoopBoss && isCoopBoss[id]) byId[id].coop = true; });
+    return order.map(function (id) { return byId[id]; });
+  }
+
   function renderBossesSlainSheet() {
     const list   = document.getElementById('guild-bosses-list');
     const empty  = document.getElementById('guild-bosses-empty');
@@ -5736,7 +5874,7 @@
     const codex  = document.getElementById('guild-bosses-codex');
     if (!list) return;
     try { _coopBackfillKills(); } catch (_) {}   // W545 — pull any backend co-op wins (async, re-renders if it finds more)
-    const rows = _guildBossesSlainRows().concat(_guildCoopSlainRows());   // W545 — solo + co-op dungeons, one ranked log
+    const rows = _killLogMergeRows();   // W545 solo + co-op; W663 merge-by-id (dedup + tag CO-OP by identity)
     if (rows.length === 0) {
       list.innerHTML = '';
       if (ledger) ledger.setAttribute('hidden', '');
@@ -39676,6 +39814,7 @@
 
   async function renderFriendsSection() {
     _ensureSocialMarkup();
+    try { _coopBackfillPacts(); } catch (_) {}   // W663 — seed co-op Pact streaks (once/session; re-renders if it finds more)
     const body = document.getElementById('social-friends-body');
     const countEl = document.getElementById('social-friends-count');
     if (!body) return;
@@ -39843,13 +39982,25 @@
         const rankSubHtml = tierForRow
           ? ('<div class="social-row-rank-sub">' + esc(tierForRow) + '-RANK</div>')
           : '';
+        // W663 — co-op Pact flame next to the name: 🔥 + run while the streak is
+        // lit (a shared win within 7 days), an ash flame + all-time bond total when
+        // it's gone cold. Renders nothing until a bond exists (reductive). Tapping
+        // opens the "Pact with <ally>" detail (data-friend-action="pact").
+        const _pact = (function () { try { return _coopPactFor(f.user_id); } catch (_) { return null; } })();
+        const _pactFlame = _pact
+          ? ('<button type="button" class="friend-pact-flame' + (_pact.lit ? '' : ' friend-pact-flame--cold') + '" data-friend-action="pact" data-user-id="' + esc(f.user_id) + '" aria-label="Co-op Pact with ' + esc(aliasDisp) + '">' +
+              '<span class="fpf-glyph" aria-hidden="true">🔥</span>' +
+              '<span class="fpf-num">' + (_pact.lit ? (_pact.run | 0) : (_pact.total | 0)) + '</span>' +
+            '</button>')
+          : '';
         parts.push(
-          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle"' + tierAttr + '>' +
+          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-user-id="' + esc(f.user_id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle"' + tierAttr + '>' +
             _friendAvatarHtml(aliasDisp, 'accent', f) +
             '<div class="social-row-main">' +
               '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
               rankSubHtml +
             '</div>' +
+            _pactFlame +
             '<div class="social-row-actions">' +
               '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove friend">•••</button>' +
               '<div class="social-row-confirm" hidden>' +
@@ -40007,6 +40158,13 @@
         const row = btn.closest('.social-row');
         if (!row) return;
         const action = btn.getAttribute('data-friend-action');
+        // W663 — the co-op Pact flame opens the "Pact with <ally>" detail. Handle it
+        // BEFORE the fid/disabled machinery — it's a display flame (keyed by the
+        // friend's user_id), not a friend-mutation button.
+        if (action === 'pact') {
+          try { _coopShowPactCard(btn.getAttribute('data-user-id'), row.getAttribute('data-alias')); } catch (_) {}
+          return;
+        }
         const fid    = row.getAttribute('data-friendship-id');
         if (!fid) return;
         btn.disabled = true;
@@ -45076,6 +45234,7 @@
     } catch (_) {}
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
     try { _coopBumpKill(inst.boss_id); } catch (_) {}     // W545 — per-co-op-boss kill count for the Kill Log
+    try { _coopBumpPact(inst); } catch (_) {}             // W663 — co-op Pact streak with this ally
     // W662 — instant fade: drop the stale live-badge entry FIRST so _coopApplyBadge
     // takes the idle branch and faints the just-felled card now (else it reads the
     // lingering 'active' state and strips is-cleared until the next 20s poll).
@@ -45141,8 +45300,10 @@
   // ── Picker / create / lifecycle actions ──
   async function openCoopPartnerPicker() {
     _coopSheet.picking = true; _coopSheet.friends = null; _coopSheet.error = null; renderCoopSheet();
-    let res;
+    let res, listRes;
     try { res = await Auth.fetchFriends(); } catch (_) { res = { ok: false }; }
+    try { listRes = await _coopBossListCached(); } catch (_) { listRes = null; }   // W663 — fade allies already on a hunt with you
+    _coopSheet.busyPartnerIds = _coopLivePartnerIds(listRes);
     if (res && res.ok) { _coopSheet.friends = Array.isArray(res.friends) ? res.friends : []; }
     else { _coopSheet.friends = []; _coopSheet.error = (res && res.code) || 'ERROR'; }
     renderCoopSheet();
@@ -45602,6 +45763,28 @@
     return ar >= br;
   }
 
+  // W663 — the set of friend user-ids you ALREADY have a live (pending/active)
+  // co-op hunt with ON THIS BOSS, so the picker can fade+lock them (mirrors the
+  // backend ALREADY_ACTIVE per-(boss,pair) gate — a hunt on a DIFFERENT boss can
+  // still validly be invited here, so it's per-boss). Fail-open: empty on error
+  // → nobody wrongly faded (the create-time ALREADY_ACTIVE backstop still guards).
+  function _coopLivePartnerIds(listRes) {
+    const ids = new Set();
+    try {
+      const cfgId = _coopSheet.cfg && _coopSheet.cfg.id;
+      const list = (listRes && listRes.ok && Array.isArray(listRes.instances)) ? listRes.instances : [];
+      list.forEach(function (inst) {
+        if (!inst || (inst.status !== 'active' && inst.status !== 'pending')) return;
+        if (cfgId && inst.boss_id !== cfgId) return;
+        const other = (inst.role === 'partner')
+          ? (inst.challenger && inst.challenger.user_id)
+          : (inst.partner && inst.partner.user_id);
+        if (other) ids.add(String(other));
+      });
+    } catch (_) {}
+    return ids;
+  }
+
   function _coopPickerHtml() {
     const friends = _coopSheet.friends;
     if (friends === null) return _skelHtml('rows', 4); // W594 — skeleton rows instead of plain "Loading hunters..."
@@ -45613,6 +45796,16 @@
       rows = friends.filter(function (f) { return f && f.user_id; }).map(function (f) {
         const tier = (typeof f.rankTier === 'string' && f.rankTier) ? f.rankTier : null;
         const rankBadge = '<span class="coop-friend-rank">' + esc(tier || '?') + '</span>';
+        // W663 \u2014 already on a live hunt with this hunter (on THIS boss) \u2192 fade + lock,
+        // don't offer a tap that would only bounce as ALREADY_ACTIVE. Checked BEFORE
+        // the rank gate so the busy reason (the actionable one) wins if both apply.
+        if (_coopSheet.busyPartnerIds && _coopSheet.busyPartnerIds.has(String(f.user_id))) {
+          return '<div class="coop-friend coop-friend--locked" aria-disabled="true">' +
+            '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
+            rankBadge +
+            '<span class="coop-friend-need">On a hunt with you</span>' +
+          '</div>';
+        }
         // W483 \u2014 an ally below the boss's rank is shown (with their rank) but NOT invitable
         // \u2014 no pick action, locked styling, a "Needs X" note. The backend ALLY_RANK gate is
         // the real enforcement; this is the matching UX so the tap is never offered.
@@ -56435,6 +56628,7 @@
       'hb_review_pday_count',
       'hb_review_pday_last',
       'hb_coop_kills',            // W545 — per-co-op-boss kill counts for the Kill Log
+      'hb_coop_pacts',            // W663 — per-friend co-op Pact streak (Snapchat-style)
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
       'hb_onboarding_goal',       // W574 — Vertical Jump Program goal flag ('jump_program'|'default'); server mirrors it to the queryable users.onboarding_goal column
       'hb_jump_program_started',  // W575 — 14-day jump-cycle start anchor (device-local YYYY-MM-DD); cycleDays habits schedule off this

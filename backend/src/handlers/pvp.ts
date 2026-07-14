@@ -108,7 +108,9 @@ async function areAcceptedFriends(env: Env, a: string, b: string): Promise<boole
 // so it never moves ranked ELO (same anti-farm rule as invite-by-code duels). Fully async: the
 // friend needn't be online; the MatchRoom resolves the Echo's moves with the shipped Ascent AI.
 export async function handlePvpEchoFriend(request: Request, env: Env, session: SessionPayload): Promise<Response> {
-  const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
+  // W663 — dedicated bucket, NOT the co-op-step-drained RL_DUELS_WRITE, so a first
+  // Echo tap isn't 429'd ("slow down a moment") when a co-op hunt is running.
+  const rl = await env.RL_PVP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   let body: any = {};
   try { body = await request.json(); } catch { /* */ }

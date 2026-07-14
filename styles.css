@@ -26778,6 +26778,33 @@ button.guildhall-summary-tile:active {
   gap: 6px;
   flex-shrink: 0;
 }
+/* W663 — co-op Pact flame in the Guild friend row. Lit = an active streak (warm
+   orange); cold = lapsed (ash — surfaces the all-time bond). Pinned to the right,
+   next to the ••• actions (Snapchat-style). Renders only when a bond exists. */
+.friend-pact-flame {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  font-weight: 800;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.friend-pact-flame .fpf-num { font-variant-numeric: tabular-nums; }
+.friend-pact-flame--cold {
+  border-color: rgba(148, 163, 184, 0.30);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-tertiary, #94a3b8);
+}
+.friend-pact-flame--cold .fpf-glyph { filter: grayscale(1); opacity: 0.75; }
 
 /* END v3 Phase 1z.279-fix-w163 restoration block */
 

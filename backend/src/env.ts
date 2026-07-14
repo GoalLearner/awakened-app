@@ -106,6 +106,9 @@ export interface Env {
    *  cancel / decline / resolve so a co-op join no longer 429s off the
    *  shared RL_DUELS_WRITE bucket. namespace_id 1019 in wrangler.toml. */
   RL_COOP_WRITE: RateLimit;
+  /* W663 — dedicated interactive-PvP write bucket (the friend-Echo summon), so a
+   *  live co-op hunt's step-submission drain can't starve it. namespace_id 1024. */
+  RL_PVP_WRITE: RateLimit;
   /** 100K Step Club + future accolades (v3 Phase 1z.27) — guards
    *  GET /v1/users/me/accolades. 12/min per user. */
   RL_USER_ACCOLADES_READ: RateLimit;
