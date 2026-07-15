@@ -33506,6 +33506,9 @@ button.guildhall-summary-tile:active {
 .pf-addbtn[disabled]{opacity:.6;pointer-events:none;}
 .pf-addbtn .pf-pl{font-family:var(--pf-sans,system-ui,sans-serif);font-size:19px;font-weight:400;line-height:0;}
 /* detail sheet */
+/* W670 — standalone bond-detail modal (tapping a Guild row): fixed container that
+   anchors the absolute scrim + slide-up sheet over the Guild, no secondary page. */
+.pf-detail-modal{position:fixed;inset:0;z-index:12250;}
 .pf-scrim{position:absolute;inset:0;z-index:50;background:rgba(4,4,12,.6);opacity:0;pointer-events:none;transition:opacity .34s ease;}
 .pf-scrim.open{opacity:1;pointer-events:auto;}
 .pf-sheet{position:absolute;left:0;right:0;bottom:0;z-index:51;height:93%;display:flex;flex-direction:column;overflow:hidden;

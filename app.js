@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w669'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w670'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6108,6 +6108,46 @@
     if (_pfTimer) { clearInterval(_pfTimer); _pfTimer = null; }
     if (_pfEl) { try { _pfEl.remove(); } catch (_) {} _pfEl = null; }
   }
+  // W670 — standalone bond-detail sheet. The Guild tab IS the Pact Flames list now,
+  // so tapping a row must open ONLY the detail (scrim + slide-up sheet), NOT the
+  // whole secondary Pact Flames page. Reuses _pfSheetHtml + the (global) .pf-scrim/
+  // .pf-sheet styles; .pf-scope supplies the tokens.
+  var _pfDetailEl = null, _pfDetailTimer = null;
+  function _pfCloseBondDetail() {
+    if (_pfDetailTimer) { clearInterval(_pfDetailTimer); _pfDetailTimer = null; }
+    if (!_pfDetailEl) return;
+    var el = _pfDetailEl; _pfDetailEl = null;
+    try {
+      var sh = el.querySelector('.pf-sheet'), sc = el.querySelector('.pf-scrim');
+      if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open');
+    } catch (_) {}
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 380);   // let the slide-down finish
+  }
+  function _pfOpenBondDetail(userId) {
+    try {
+      var friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
+      var d = _pfBuildData(friends).filter(function (x) { return String(x.userId) === String(userId); })[0];   // bonded only
+      if (!d) { try { _coopShowPactCard(userId); } catch (_) {} return; }   // no bond → text card
+      _pfCloseBondDetail();
+      _pfEnsureDefs();
+      _pfDetailEl = document.createElement('div');
+      _pfDetailEl.className = 'pf-scope pf-detail-modal';
+      _pfDetailEl.innerHTML = '<div class="pf-scrim" data-pf-sclose></div><section class="pf-sheet" data-pf-sheet>' + _pfSheetHtml(d) + '</section>';
+      document.body.appendChild(_pfDetailEl);
+      var sh = _pfDetailEl.querySelector('.pf-sheet'), sc = _pfDetailEl.querySelector('.pf-scrim');
+      if (sc) sc.classList.add('open');
+      setTimeout(function () { if (sh) sh.classList.add('open'); }, 20);   // slide up (setTimeout fires even backgrounded)
+      _pfDetailEl.addEventListener('click', function (e) {
+        var t = e.target;
+        if (t.closest('[data-pf-sclose]')) { _pfCloseBondDetail(); return; }
+        if (t.closest('[data-pf-hunt]')) { _pfCloseBondDetail(); try { openCoopSheet && openCoopSheet(); } catch (_) {} return; }
+      });
+      var _tick = function () { var sec = _pfSecToMidnightPT(); if (_pfDetailEl) { var cs = _pfDetailEl.querySelector('[data-pf-cds]'); if (cs) cs.textContent = _pfFmtClock(sec); } };
+      _pfDetailTimer = setInterval(_tick, 1000); _tick();
+      try { if (typeof Haptics !== 'undefined' && Haptics.tap) Haptics.tap(); } catch (_) {}
+    } catch (_) {}
+  }
+  try { window.closePactFlames = window.closePactFlames || closePactFlames; } catch (_) {}
   async function openPactFlames(autoOpenUserId) {
     try {
       // cache-first friends, then paint (fresh fetch swaps in if it changes)
@@ -40577,7 +40617,7 @@
           const uid = pfRow.getAttribute('data-pf-open');
           const al = pfRow.getAttribute('data-alias');
           if (pfRow.classList.contains('pf-row--nobond')) { try { _coopShowPactCard(uid, al); } catch (_) {} }
-          else { try { openPactFlames(uid); } catch (_) { try { _coopShowPactCard(uid, al); } catch (__) {} } }
+          else { try { _pfOpenBondDetail(uid); } catch (_) { try { _coopShowPactCard(uid, al); } catch (__) {} } }   // W670 — detail sheet only, not the redundant full page
           return;
         }
         const btn = e.target.closest('button[data-friend-action]');
