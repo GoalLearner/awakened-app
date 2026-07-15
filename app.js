@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w671'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w672'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8497,7 +8497,7 @@
   // summit) but wields a deadly master kit so the climb still ends in a wall.
   // Sim-tuned via Arena.simAscent to the doable band (best build ~85%).
   const _FIRST_AWAKENED_KIT = ['arrowvolley', 'snapshot', 'tumble', 'flamearrow'];
-  const _FIRST_AWAKENED_POWER = 0.987;  // W306 type-fair trim -> W661 owner buff: phase-1 4278 -> ~4400 (was 0.96; set 1.010 for 4500). Phase-2 buffed to 4600 below. sim: frontier ~3922 power ~7.4% win phase-1.
+  const _FIRST_AWAKENED_POWER = 1.2547;  // W672 owner: phase-1 must top the (W671-buffed) F99 by 5% → F99×1.05 ≈ 5592 disp (was 0.987/4400). [hist W306 type-fair 0.96; W661 4400]
   // ── W535 — THE FIRST AWAKENED IS A TWO-PHASE BOSS ──────────────────────────
   // Phase 1 is the balanced summit (above). On its defeat it does NOT die — it
   // UNBINDS into a harder AGGRESSOR form (the Kalphite-Queen "you only met the
@@ -8505,7 +8505,7 @@
   // the phase-2 blitz. The player heals +50% on the transition. Phase-2 power is
   // on the SAME basis as _FIRST_AWAKENED_POWER (× _ascentFloorPower(100)); tuned by
   // sim so only a near-maxed hunter clears BOTH phases.
-  const _FA_P2_POWER = 1.0322;   // phase-2 power × _ascentFloorPower(100). W661 owner buff: 4546 -> 4600 (was 1.02).
+  const _FA_P2_POWER = 1.3622;   // phase-2 power × _ascentFloorPower(100). W672 owner: phase-2 tops the (W671-buffed) F99 by ~14% → F99×1.14 ≈ 6071 disp (was 1.0322/4600). [hist W661 4600]
   const _FA_P2_ARCH  = 'aggressor';
   const _FA_P2_NAME  = 'The First Awakened, Unbound';
   const _FA_P2_TAUNT = 'You met only the mask. Now climb against what the system made of me.';
