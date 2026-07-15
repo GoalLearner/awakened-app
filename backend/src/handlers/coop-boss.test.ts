@@ -155,3 +155,43 @@ describe('W648 — concurrent-hunt cap on JOIN', () => {
     expect(body.ok).toBe(true);
   });
 });
+
+// ── W674 — atomic guarded create backstop (the race the fast-path checks miss) ──
+describe('W674 — atomic guarded create insert', () => {
+  function racedDb(dupExists: boolean) {
+    return {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          all: async () =>
+            sql.includes('FROM users WHERE id IN')
+              ? { results: [{ id: 'u1', alias: 'challenger' }, { id: 'u2', alias: 'partner' }], success: true, meta: {} }
+              : { results: [], success: true, meta: {} },
+          first: async () => {
+            if (sql.includes('FROM premium_subscriptions')) return null; // free hunter
+            if (sql.includes('FROM friends')) return { id: 'friend-row' };
+            if (sql.includes('FROM public_profile_summary')) return { rank_tier: 'S' };
+            if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return { n: 0 }; // fast-path cap passes
+            if (sql.includes('SELECT id FROM coop_boss_instances')) return null; // pre-check dup: none
+            if (sql.includes('SELECT 1 AS x FROM coop_boss_instances')) return dupExists ? { x: 1 } : null; // re-check
+            return null;
+          },
+          run: async () => ({ success: true, meta: { changes: 0 } }), // atomic insert LOST the race
+        }),
+      }),
+    } as unknown as D1Database;
+  }
+
+  it('409 ALREADY_ACTIVE when the guarded insert loses to a raced duplicate', async () => {
+    const res = await handleCoopBossCreate(createReq(), makeEnv(racedDb(true)), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('ALREADY_ACTIVE');
+  });
+
+  it('409 CAP_REACHED when the guarded insert is blocked by the cap in the race', async () => {
+    const res = await handleCoopBossCreate(createReq(), makeEnv(racedDb(false)), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('CAP_REACHED');
+  });
+});

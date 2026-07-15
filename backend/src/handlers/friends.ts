@@ -395,10 +395,44 @@ export async function handleFriendsRequest(
       .run();
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
-    // UNIQUE(requester, recipient) — race condition w/ a prior pending or
-    // declined row that was logically replaced by a fresh request.
+    // A uniqueness constraint fired — either the legacy directional
+    // UNIQUE(requester, recipient) (a stale same-direction row) OR the W674
+    // partial live-pair index idx_friends_live_pair (a concurrent request for the
+    // same pair won the race between our pre-checks and this INSERT). Re-derive the
+    // pair's live state and converge to the SAME outcome the pre-checks would have,
+    // so a raced request never dead-ends at a spurious conflict.
     if (msg.includes('UNIQUE') || msg.includes('constraint')) {
-      // Could be a stale declined row blocking. Find + flip to pending.
+      // (a) THE MUTUAL-ADD RACE: an inverse pending (target -> me) now exists →
+      // AUTO-ACCEPT it, exactly like the inversePending pre-check above. This is
+      // the case the old handler mishandled (it fell through to FRIEND_CONFLICT,
+      // and — pre-W674 — often let a second directional row be created instead).
+      const invPending = await env.DB.prepare(
+        `SELECT id, requester_user_id, recipient_user_id, status, created_at, updated_at
+           FROM friends
+          WHERE requester_user_id = ? AND recipient_user_id = ? AND status = 'pending'
+          LIMIT 1`,
+      )
+        .bind(target.id, session.userId)
+        .first<FriendRow>();
+      if (invPending) {
+        await env.DB.prepare(
+          "UPDATE friends SET status = 'accepted', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        )
+          .bind(invPending.id)
+          .run();
+        const friend = await serializeFriendRow(env, { ...invPending, status: 'accepted' }, session.userId);
+        if (ctx)
+          ctx.waitUntil(
+            notifyUser(env, target.id, {
+              title: 'Guild Request Accepted',
+              body: `${session.alias} accepted your request — you're now in the same guild.`,
+              type: 'friend_accepted',
+            }),
+          );
+        return jsonOk({ ok: true, friend, autoAccepted: true });
+      }
+      // (b) same-direction row (me -> target): a stale DECLINED row is revived to
+      // pending; an existing pending/accepted one is simply returned idempotently.
       const stale = await env.DB.prepare(
         `SELECT id, requester_user_id, recipient_user_id, status, created_at, updated_at
            FROM friends
@@ -425,6 +459,23 @@ export async function handleFriendsRequest(
             }),
           );
         return jsonOk({ ok: true, friend, revived: true });
+      }
+      if (stale && (stale.status === 'pending' || stale.status === 'accepted')) {
+        const friend = await serializeFriendRow(env, stale, session.userId);
+        return jsonOk({ ok: true, friend, ...(stale.status === 'accepted' ? { alreadyFriends: true } : { alreadyPending: true }) });
+      }
+      // (c) inverse ACCEPTED (target -> me) → already friends.
+      const invAccepted = await env.DB.prepare(
+        `SELECT id, requester_user_id, recipient_user_id, status, created_at, updated_at
+           FROM friends
+          WHERE requester_user_id = ? AND recipient_user_id = ? AND status = 'accepted'
+          LIMIT 1`,
+      )
+        .bind(target.id, session.userId)
+        .first<FriendRow>();
+      if (invAccepted) {
+        const friend = await serializeFriendRow(env, invAccepted, session.userId);
+        return jsonOk({ ok: true, friend, alreadyFriends: true });
       }
       return jsonError(409, 'FRIEND_CONFLICT', 'A friend request between you already exists.');
     }
@@ -569,7 +620,20 @@ export async function handleFriendsRemove(
   if (row.status !== 'accepted') {
     return jsonError(400, 'BAD_STATE', 'Only accepted friendships can be removed.');
   }
-  await env.DB.prepare('DELETE FROM friends WHERE id = ?').bind(friendshipId).run();
+  // W674 — delete BOTH directions of the accepted friendship, not just this id.
+  // A pre-W674 mutual-add race could leave two accepted rows for the pair, so a
+  // remove-by-id left the reciprocal row intact and areAcceptedFriends still
+  // returned true ("remove" silently failed). The new partial unique index means
+  // only one live row exists going forward, but deleting both directions is the
+  // correct, damage-proof teardown.
+  await env.DB.prepare(
+    `DELETE FROM friends
+      WHERE status = 'accepted'
+        AND ( (requester_user_id = ? AND recipient_user_id = ?)
+           OR (requester_user_id = ? AND recipient_user_id = ?) )`,
+  )
+    .bind(row.requester_user_id, row.recipient_user_id, row.recipient_user_id, row.requester_user_id)
+    .run();
   return jsonOk({ ok: true, removed: true });
 }
 

@@ -482,18 +482,74 @@ export async function handleCoopBossCreate(
   // AFTER the cheap validation gates so the entitlement lookup only runs on
   // otherwise-valid summons. The invitee is deliberately NOT capped here —
   // their cap is enforced when they JOIN (a pending invite costs them nothing).
-  const capHit = await checkHuntCap(env, session.userId);
-  if (capHit) return capHit;
+  // W674 — the dup check above + this cap are FAST-PATH specific errors for the
+  // common (unraced) case; `member` is read here and reused by the atomic insert's
+  // cap guard below so entitlements are read once.
+  const { member } = await readEntitlements(env, session.userId);
+  if (!member) {
+    const running = await countRunningHunts(env, session.userId);
+    if (running >= FREE_CONCURRENT_HUNT_CAP) {
+      return jsonError(
+        409,
+        'CAP_REACHED',
+        `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
+        { cap: FREE_CONCURRENT_HUNT_CAP },
+      );
+    }
+  }
 
   const id = crypto.randomUUID();
-  await env.DB.prepare(
+  // W674 — atomic guarded insert (the race backstop). Re-checks BOTH guards — no
+  // live instance for this pair+boss (either direction) AND, for non-members, the
+  // concurrent-hunt cap — inside ONE INSERT ... SELECT ... WHERE statement, so two
+  // creates that both passed the fast-path checks above cannot both land a row
+  // (which caused duplicate winnable hunts / cap+paywall bypass). Inserts 0 rows
+  // when a raced create already took the slot. Mirrors founder-mark.ts's pattern.
+  const ins = await env.DB.prepare(
     `INSERT INTO coop_boss_instances
        (id, boss_id, boss_rank, challenger_user_id, partner_user_id,
         goal_steps, goal_flights, reward_souls, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+     SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'pending'
+      WHERE NOT EXISTS (
+              SELECT 1 FROM coop_boss_instances
+               WHERE boss_id = ?2 AND status IN ('pending','active')
+                 AND ( (challenger_user_id = ?4 AND partner_user_id = ?5)
+                    OR (challenger_user_id = ?5 AND partner_user_id = ?4) )
+            )
+        AND ( ?9 = 1 OR (
+              SELECT COUNT(*) FROM coop_boss_instances
+               WHERE status IN ('pending','active')
+                 AND (challenger_user_id = ?4 OR (partner_user_id = ?4 AND status = 'active'))
+                 AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))
+            ) < ?10 )`,
   )
-    .bind(id, bossId, cfg.rank, session.userId, partnerUserId, cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls)
+    .bind(
+      id, bossId, cfg.rank, session.userId, partnerUserId,
+      cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls,
+      member ? 1 : 0, FREE_CONCURRENT_HUNT_CAP,
+    )
     .run();
+
+  if (!(ins.meta && Number(ins.meta.changes) >= 1)) {
+    // A concurrent create won the race between the fast-path checks and the insert.
+    // Re-derive which guard blocked us so the client keeps its specific 409.
+    const dup = await env.DB.prepare(
+      `SELECT 1 AS x FROM coop_boss_instances
+        WHERE boss_id = ? AND status IN ('pending','active')
+          AND ( (challenger_user_id = ? AND partner_user_id = ?)
+             OR (challenger_user_id = ? AND partner_user_id = ?) )
+        LIMIT 1`,
+    )
+      .bind(bossId, session.userId, partnerUserId, partnerUserId, session.userId)
+      .first();
+    if (dup) return jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.');
+    return jsonError(
+      409,
+      'CAP_REACHED',
+      `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
+      { cap: FREE_CONCURRENT_HUNT_CAP },
+    );
+  }
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(500, 'INTERNAL', 'Failed to read back created instance.');

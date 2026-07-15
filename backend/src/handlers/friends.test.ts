@@ -10,7 +10,7 @@
  * D1 mock shape as the other handler tests.
  */
 import { describe, expect, it } from 'vitest';
-import { handleFriendsList } from './friends';
+import { handleFriendsList, handleFriendsRequest, handleFriendsRemove } from './friends';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -129,5 +129,83 @@ describe('GET /v1/friends (batched serialization)', () => {
     expect(body.friends).toEqual([]);
     expect(body.incoming).toEqual([]);
     expect(body.outgoing).toEqual([]);
+  });
+});
+
+// ── W674: the mutual-add race converges to auto-accept, and remove kills both dirs ──
+function makeWriteEnv(db: D1Database): Env {
+  return {
+    DB: db,
+    RL_FRIENDS_WRITE: { limit: async () => ({ success: true }) },
+  } as unknown as Env;
+}
+
+describe('POST /v1/friends/request — mutual-add race (W674)', () => {
+  it('auto-accepts when the guarded INSERT loses the race to an inverse pending row', async () => {
+    // Simulate: both pre-checks pass (no live rows yet), then the INSERT hits the
+    // new partial live-pair UNIQUE (the other user's A→B pending committed first).
+    // The catch must find the inverse pending and AUTO-ACCEPT it (not 409).
+    let inserted = false;
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          first: async () => {
+            if (/FROM users/.test(sql)) return { id: 'target', alias: 'friendo' };
+            if (/status = 'accepted'/.test(sql) && !/requester_user_id = \? AND recipient_user_id = \? AND status = 'accepted'/.test(sql)) return null; // existingAccepted (both-dir)
+            if (/LEFT JOIN public_profile_summary/.test(sql)) return { __joinId: binds[0], alias: 'friendo', rank_label: null, rank_tier: null };
+            // pending lookups keyed by (requester, recipient)
+            if (/status = 'pending'/.test(sql)) {
+              const reqBind = binds[0];
+              if (reqBind === 'me') return null;                 // outgoingPending
+              // (requester=target, recipient=me): inversePending pre-check → null;
+              // the SAME shape in the catch (after the throw) → the winner's row.
+              return inserted ? { id: 'inv1', requester_user_id: 'target', recipient_user_id: 'me', status: 'pending', created_at: 't', updated_at: 't' } : null;
+            }
+            if (/requester_user_id = \? AND recipient_user_id = \?\s+LIMIT 1/.test(sql)) return null; // stale same-dir (none)
+            return null;
+          },
+          all: async () => ({ results: [], success: true, meta: {} }),
+          run: async () => {
+            if (/INSERT INTO friends/.test(sql)) { inserted = true; throw new Error('D1_ERROR: UNIQUE constraint failed: index idx_friends_live_pair'); }
+            return { success: true, meta: { changes: 1 } };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const request = new Request('http://test/v1/friends/request', { method: 'POST', body: JSON.stringify({ alias: 'friendo' }) });
+    const res = await handleFriendsRequest(request, makeWriteEnv(db), session('me'));
+    const body = (await res.json()) as { ok: boolean; autoAccepted?: boolean; friend?: { status: string } };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.autoAccepted).toBe(true);           // NOT a 409 FRIEND_CONFLICT
+    expect(body.friend?.status).toBe('accepted');
+  });
+});
+
+describe('POST /v1/friends/:id/remove — deletes both directions (W674)', () => {
+  it('issues a DELETE covering both (requester,recipient) orderings for the accepted pair', async () => {
+    const calls: { sql: string; binds: unknown[] }[] = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => {
+          calls.push({ sql, binds });
+          return {
+            first: async () => (/FROM friends WHERE id = \?/.test(sql)
+              ? { id: 'f1', requester_user_id: 'me', recipient_user_id: 'them', status: 'accepted' }
+              : null),
+            run: async () => ({ success: true, meta: { changes: 1 } }),
+          };
+        },
+      }),
+    } as unknown as D1Database;
+
+    const res = await handleFriendsRemove(new Request('http://test/x', { method: 'POST' }), makeWriteEnv(db), session('me'), 'f1');
+    expect(res.status).toBe(200);
+    const del = calls.find((c) => /DELETE FROM friends/.test(c.sql));
+    expect(del).toBeTruthy();
+    // both directions bound: (me,them) OR (them,me)
+    expect(del!.binds).toEqual(['me', 'them', 'them', 'me']);
+    expect(del!.sql).toMatch(/status = 'accepted'/);
   });
 });
