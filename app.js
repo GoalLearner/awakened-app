@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w673'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w675'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34033,7 +34033,12 @@
       className:   cls.name,
       classStat:   currentClass || 'SAGE',
       classColor:  cls.color,
-      classAsset:  cls.asset,
+      // W675 — the shareable Hunter Report must show the EQUIPPED SKIN, not the
+      // plain class default. getAvatarSrc() is the same skin-aware resolver the
+      // home portrait / profile card / arena use (equipped hb_avatar_skin, else the
+      // class default), so the card now matches what the player sees on Status.
+      // The class palette still drives the ring COLOR (classColor above).
+      classAsset:  (function () { try { return getAvatarSrc() || cls.asset; } catch (_) { return cls.asset; } })(),
       rank:        rankId,
       division:    division,
       totalXP:     totalPoints || 0,
