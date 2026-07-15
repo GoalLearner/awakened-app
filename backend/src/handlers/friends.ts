@@ -126,11 +126,35 @@ interface SerializedFriendRow {
  *  of `viewerUserId`. The "other" party's alias is fetched from users
  *  and optional rank fields are LEFT-JOINed from
  *  public_profile_summary (v3 Phase 1z.190). */
-async function serializeFriendRow(
-  env: Env,
+// Shared projection for the "other" party's users + public_profile_summary
+// join (LEFT JOIN so a friend with no summary still resolves on alias alone).
+// __joinId carries u.id so the BATCH path (handleFriendsList) can key a Map.
+const FRIEND_PROFILE_COLS = `u.id                    AS __joinId,
+            u.alias                  AS alias,
+            p.rank_tier              AS rank_tier,
+            p.rank_division          AS rank_division,
+            p.rank_label             AS rank_label,
+            p.rank_sort_value        AS rank_sort_value,
+            p.prestige_level         AS prestige,
+            p.server_updated_at      AS server_updated_at,
+            p.bosses_slain_total     AS bosses_slain_total,
+            p.ultra_rare_drops_total AS ultra_rare_drops_total,
+            p.verified_streak_label  AS verified_streak_label,
+            p.achievements_updated_at AS achievements_updated_at`;
+
+type JoinedFriendProfile = { __joinId: string; alias: string } & PublicProfileFriendRow;
+
+// W673 — pure in-memory mapper: build a serialized friend row from an already-
+// fetched joined profile (or null → skip, mirroring the old `if (!joined) return
+// null`). Extracted so the list path can batch the reads (see handleFriendsList)
+// instead of one DB round-trip per friend (N+1). Behavior byte-identical to the
+// prior serializeFriendRow body — only the DB fetch moved out.
+function mapFriendRow(
   row: FriendRow,
   viewerUserId: string,
-): Promise<SerializedFriendRow | null> {
+  joined: JoinedFriendProfile | null | undefined,
+): SerializedFriendRow | null {
+  if (!joined) return null;
   const otherId =
     row.requester_user_id === viewerUserId
       ? row.recipient_user_id
@@ -141,29 +165,6 @@ async function serializeFriendRow(
       : row.requester_user_id === viewerUserId
         ? 'outgoing'
         : 'incoming';
-  // Single LEFT-JOIN-style read against users + public_profile_summary
-  // so the friend row carries optional rank fields when the friend
-  // has opted in. Joining via LEFT JOIN means a friend with no
-  // summary row still resolves cleanly (only alias is required).
-  const joined = await env.DB.prepare(
-    `SELECT u.alias                  AS alias,
-            p.rank_tier              AS rank_tier,
-            p.rank_division          AS rank_division,
-            p.rank_label             AS rank_label,
-            p.rank_sort_value        AS rank_sort_value,
-            p.prestige_level         AS prestige,
-            p.server_updated_at      AS server_updated_at,
-            p.bosses_slain_total     AS bosses_slain_total,
-            p.ultra_rare_drops_total AS ultra_rare_drops_total,
-            p.verified_streak_label  AS verified_streak_label,
-            p.achievements_updated_at AS achievements_updated_at
-       FROM users u
-       LEFT JOIN public_profile_summary p ON p.user_id = u.id
-      WHERE u.id = ?`,
-  )
-    .bind(otherId)
-    .first<{ alias: string } & PublicProfileFriendRow>();
-  if (!joined) return null;
   const out: SerializedFriendRow = {
     id: row.id,
     user_id: otherId,
@@ -175,8 +176,7 @@ async function serializeFriendRow(
   };
   // Merge optional rank fields only when the friend has a summary.
   // rankLabel + rank_tier are NOT NULL on the summary row, so their
-  // presence is the gate. rank_points is NEVER returned to friends
-  // in v1.
+  // presence is the gate. rank_points is NEVER returned to friends in v1.
   if (joined.rank_label && joined.rank_tier) {
     out.rankTier      = joined.rank_tier;
     out.rankDivision  = joined.rank_division; // may be null for S+
@@ -187,13 +187,10 @@ async function serializeFriendRow(
     if (typeof joined.server_updated_at === 'number' && Number.isFinite(joined.server_updated_at)) {
       out.rankUpdatedAt = new Date(joined.server_updated_at).toISOString();
     }
-    // v3 Phase 1z.195 — achievement summary fields. Only surface
-    // them once the friend has actually submitted achievements
-    // (gated on achievements_updated_at being non-null). This
-    // distinguishes "friend has never submitted" (omit all) from
-    // "friend submitted zero bosses" (return 0 honestly). Streak
-    // label is intentionally allowed to be null (deliberate clear)
-    // even when other achievement fields are present.
+    // v3 Phase 1z.195 — achievement summary fields. Only surface them once the
+    // friend has actually submitted achievements (gated on achievements_updated_at
+    // being non-null): distinguishes "never submitted" (omit all) from "submitted
+    // zero bosses" (return 0 honestly). Streak label may be null (deliberate clear).
     if (typeof joined.achievements_updated_at === 'number'
         && Number.isFinite(joined.achievements_updated_at)) {
       out.bossesSlainTotal     = joined.bosses_slain_total ?? 0;
@@ -203,6 +200,28 @@ async function serializeFriendRow(
     }
   }
   return out;
+}
+
+// Single-row serialize (used by the six write-path callers — accept/decline/
+// remove/request responses — where it's one row, not N+1). Fetches then maps.
+async function serializeFriendRow(
+  env: Env,
+  row: FriendRow,
+  viewerUserId: string,
+): Promise<SerializedFriendRow | null> {
+  const otherId =
+    row.requester_user_id === viewerUserId
+      ? row.recipient_user_id
+      : row.requester_user_id;
+  const joined = await env.DB.prepare(
+    `SELECT ${FRIEND_PROFILE_COLS}
+       FROM users u
+       LEFT JOIN public_profile_summary p ON p.user_id = u.id
+      WHERE u.id = ?`,
+  )
+    .bind(otherId)
+    .first<JoinedFriendProfile>();
+  return mapFriendRow(row, viewerUserId, joined);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -232,8 +251,32 @@ export async function handleFriendsList(
   const incoming: ReturnType<typeof JSON.parse>[] = [];
   const outgoing: ReturnType<typeof JSON.parse>[] = [];
 
-  for (const row of rows.results ?? []) {
-    const serialized = await serializeFriendRow(env, row, session.userId);
+  const rowList = rows.results ?? [];
+  // W673 — batch the per-friend profile read (was 1 DB round-trip per row = N+1).
+  // Collect every distinct "other" user id, fetch them in one IN(...) query
+  // (chunked to stay under SQLite's ~999 bound-param cap), then map each friend
+  // row from an in-memory Map. Turns 1+F sequential queries into ~2.
+  const otherIdOf = (r: FriendRow) =>
+    r.requester_user_id === session.userId ? r.recipient_user_id : r.requester_user_id;
+  const otherIds = [...new Set(rowList.map(otherIdOf))];
+  const joinedMap = new Map<string, JoinedFriendProfile>();
+  const CHUNK = 400;
+  for (let i = 0; i < otherIds.length; i += CHUNK) {
+    const slice = otherIds.slice(i, i + CHUNK);
+    const ph = slice.map(() => '?').join(',');
+    const jr = await env.DB.prepare(
+      `SELECT ${FRIEND_PROFILE_COLS}
+         FROM users u
+         LEFT JOIN public_profile_summary p ON p.user_id = u.id
+        WHERE u.id IN (${ph})`,
+    )
+      .bind(...slice)
+      .all<JoinedFriendProfile>();
+    for (const j of jr.results ?? []) joinedMap.set(j.__joinId, j);
+  }
+
+  for (const row of rowList) {
+    const serialized = mapFriendRow(row, session.userId, joinedMap.get(otherIdOf(row)) ?? null);
     if (!serialized) continue;
     if (serialized.status === 'accepted') friends.push(serialized);
     else if (serialized.direction === 'incoming') incoming.push(serialized);
