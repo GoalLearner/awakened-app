@@ -33360,18 +33360,39 @@ button.guildhall-summary-tile:active {
    Ported from project/Co-op Dungeon Streak.html; phone-frame chrome stripped,
    classes pf-* to avoid collisions, tokens folded into #pf-overlay scope. Data is
    the daily-pact store (hb_coop_pacts) via _coopPactFor. */
-#pf-overlay{
+/* W667 — tokens shared by the overlay AND the in-Guild pact list (.pf-scope) */
+#pf-overlay, .pf-scope{
   --pf-card:#14142f; --pf-card2:#0e0e22; --pf-border:rgba(255,255,255,.09);
   --pf-ivory:#f5f3fb; --pf-mute:#9090a8; --pf-faint:#5a5a78;
   --pf-ember:#ff7a3c; --pf-ember-deep:#e2531c; --pf-gold:#f5b842; --pf-gold-lt:#ffd574;
   --pf-teal:#5ad6c8;
   --pf-serif:'Cinzel','Trajan Pro',Georgia,serif; --pf-flavor:'Cormorant Garamond',Georgia,serif;
   --pf-mono:'JetBrains Mono',ui-monospace,monospace;
+  --pf-sans:-apple-system,"SF Pro Display",system-ui,sans-serif;
+}
+#pf-overlay{
   position:fixed;inset:0;z-index:12200;display:none;flex-direction:column;
   background:radial-gradient(120% 58% at 50% -6%,#191636 0%,#0b0b1a 52%,#07070f 100%);
   color:var(--pf-ivory);overflow:hidden;
   padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
 }
+/* W667 — the Guild tab renders the pact roster inline via .pf-scope */
+.pf-scope{color:var(--pf-ivory);display:flex;flex-direction:column;gap:10px;}
+.pf-scope .pf-list{display:flex;flex-direction:column;gap:10px;padding:0;}
+/* the roster rows also carry .social-row/.friend-row (so the existing remove/request
+   handlers work); re-assert the pact FLEX layout over any guild-roster grid rule. */
+.pf-scope .pf-row{display:flex !important;align-items:center;gap:13px;grid-template-columns:none !important;padding:14px 15px;background:linear-gradient(157deg,var(--pf-card) 0%,var(--pf-card2) 100%);}
+.pf-scope .pf-row .social-row-actions{flex:none;margin-left:2px;}
+.pf-row--nobond{opacity:.9;}
+.pf-row--nobond .pf-name{color:var(--pf-mute);}
+.pf-nobond{color:var(--pf-faint);text-transform:none;letter-spacing:.3px;font-style:italic;}
+.pf-streak--empty{min-width:34px;display:flex;align-items:center;justify-content:flex-end;}
+.pf-nobond-dash{font-family:var(--pf-mono);font-size:20px;color:var(--pf-faint);line-height:1;}
+.pf-guild-sub{margin:2px 2px 6px;display:flex;align-items:center;gap:9px;font-family:var(--pf-mono);font-size:10.5px;font-weight:700;
+  letter-spacing:1.3px;color:var(--pf-mute);text-transform:uppercase;}
+.pf-guild-sub b{color:var(--pf-ivory);font-weight:800;}
+.pf-guild-sub .pf-fl{filter:drop-shadow(0 0 5px rgba(255,122,60,.6));}
+.pf-guild-sub .pf-dot{width:3px;height:3px;border-radius:50%;background:var(--pf-faint);}
 #pf-overlay.open{display:flex;}
 .pf-topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 2px;}
 .pf-back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;cursor:pointer;

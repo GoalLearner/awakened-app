@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w666'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w667'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5918,31 +5918,66 @@
   var _PF_SWORD = '<svg viewBox="0 0 18 18" fill="none"><path d="M14.5 2.5l-7 7m-2.5 5.5l1.8-1.8m-1.8 1.8l-1.8 1.8m1.8-1.8l-1.8-1.8m11.8-11.5l-1.8 4.3-6.4 6.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   // Build the sorted bond list from the friends payload + the pact store.
-  function _pfBuildData(friends) {
+  // includeAll (W667 — Pact Flames IS the Guild): also emit friends with NO bond
+  // yet as state 'none' ("no bond yet"), so the whole roster lives in one list.
+  function _pfBuildData(friends, includeAll) {
     var out = [];
     (Array.isArray(friends) ? friends : []).forEach(function (f) {
       if (!f || !f.user_id) return;
       var p; try { p = _coopPactFor(f.user_id); } catch (_) { p = null; }
-      if (!p || !(p.total > 0)) return;   // only real bonds
       var rank = _friendRankLabel ? (_friendRankLabel(f) || (f.rankTier || '')) : (f.rankTier || '');
       var rankLetter = String(rank || (f.rankTier || '')).charAt(0).toUpperCase() || '?';
-      var state = p.securedToday ? 'safe' : (p.alive ? 'risk' : 'broken');
-      out.push({
-        userId: f.user_id, alias: _coopAlias ? _coopAlias(f.alias || p.alias) : (f.alias || p.alias || 'hunter'),
+      var base = {
+        userId: f.user_id, fid: f.id || null,
+        alias: _coopAlias ? _coopAlias(f.alias || (p && p.alias)) : (f.alias || (p && p.alias) || 'hunter'),
         rank: rankLetter, tier: (rank || rankLetter), rc: _pfRankColor(rankLetter),
-        streak: p.streak | 0, best: p.best | 0, total: p.total | 0, daysBonded: p.daysBonded | 0,
-        firstWonAt: p.firstWonAt || null, lastBossId: p.lastBossId || null, state: state,
-      });
+      };
+      if (p && p.total > 0) {
+        base.streak = p.streak | 0; base.best = p.best | 0; base.total = p.total | 0; base.daysBonded = p.daysBonded | 0;
+        base.firstWonAt = p.firstWonAt || null; base.lastBossId = p.lastBossId || null;
+        base.state = p.securedToday ? 'safe' : (p.alive ? 'risk' : 'broken');
+        out.push(base);
+      } else if (includeAll) {
+        base.streak = 0; base.best = 0; base.total = 0; base.daysBonded = 0; base.firstWonAt = null; base.lastBossId = null; base.state = 'none';
+        out.push(base);
+      }
     });
-    // Alive bonds first (by streak desc), broken ones after (by best desc).
+    // Bonded first (alive by streak desc, broken by best desc), then un-bonded (server order).
     out.sort(function (a, b) {
+      var an = a.state === 'none', bn = b.state === 'none';
+      if (an !== bn) return an ? 1 : -1;
+      if (an && bn) return 0;
       var aa = a.state !== 'broken', ba = b.state !== 'broken';
       if (aa !== ba) return aa ? -1 : 1;
       return aa ? (b.streak - a.streak) : (b.best - a.best);
     });
     return out;
   }
-  function _pfRowHtml(d, i) {
+  // W667 — the Guild variant of a pact row adds the social-row wrapper + the proven
+  // •••/Cancel/Remove control so the EXISTING friend handlers (remove-init / -cancel /
+  // -confirm, keyed by data-friendship-id + .social-row) work unchanged.
+  var _PF_GUILD_ACTIONS = '<div class="social-row-actions">' +
+    '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove hunter">•••</button>' +
+    '<div class="social-row-confirm" hidden>' +
+      '<button class="social-btn social-btn--ghost" data-friend-action="remove-cancel">Cancel</button>' +
+      '<button class="social-btn social-btn--danger" data-friend-action="remove-confirm">Remove</button>' +
+    '</div>' +
+  '</div>';
+  function _pfRowHtml(d, opts) {
+    var guild = !!(opts && opts.guild);
+    var extraCls = guild ? ' social-row friend-row friend-row--accepted' : '';
+    var actions = guild ? _PF_GUILD_ACTIONS : '';
+    var idAttrs = ' data-pf-open="' + esc(d.userId) + '" data-user-id="' + esc(d.userId) + '" data-friendship-id="' + esc(d.fid || '') + '" data-alias="' + esc(d.alias) + '" data-row-mode="idle"';
+    // W667 — un-bonded friend: rank + name + "no bond yet", muted, no streak block.
+    if (d.state === 'none') {
+      return '<div class="pf-row pf-row--nobond' + extraCls + '" role="button" tabindex="0"' + idAttrs + ' style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', no bond yet">' +
+        '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
+        '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + '</div>' +
+          '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · <span class="pf-nobond">no bond yet</span></div></div>' +
+        '<div class="pf-streak pf-streak--empty"><span class="pf-nobond-dash" aria-hidden="true">—</span></div>' +
+        actions +
+      '</div>';
+    }
     // Design rule (Co-op Dungeon Streak.html): the number IS the current day-streak
     // and the flame dims for any non-secured state. A broken bond therefore reads 0
     // with a cold flame + "Broken" tag (its peak lives in the sheet's stats); this
@@ -5951,11 +5986,12 @@
     var tag = d.state === 'safe' ? '<span class="pf-tag pf-safe">' + _PF_CHECK + 'Secured</span>'
       : d.state === 'risk' ? '<span class="pf-tag pf-warn">' + _PF_GLASS + '<span data-pf-cd>—</span> left</span>'
       : '<span class="pf-tag pf-warn" style="color:var(--pf-faint)">Broken</span>';
-    return '<div class="pf-row ' + (d.state === 'risk' ? 'pf-risk' : '') + '" role="button" tabindex="0" data-pf-open="' + esc(d.userId) + '" style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', ' + num + ' day flame">' +
+    return '<div class="pf-row ' + (d.state === 'risk' ? 'pf-risk' : '') + extraCls + '" role="button" tabindex="0"' + idAttrs + ' style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', ' + num + ' day flame">' +
       '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
       '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + '</div>' +
         '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · ' + (d.total | 0) + ' defeated together</div></div>' +
       '<div class="pf-streak"><div class="pf-streak-main"><span class="pf-num">' + num + '</span>' + _pfFlame(19, d.state !== 'safe') + '</div>' + tag + '</div>' +
+      actions +
     '</div>';
   }
   function _pfChain(d) {
@@ -40368,103 +40404,25 @@
       }
     }
     if (friends.length) {
-      // W664 — general entry point into the Pact Flames screen (the full list of
-      // co-op daily-streak bonds). Only surfaced when at least one bond exists (a
-      // co-op boss felled together), so it stays reductive for solo players. Lives
-      // in its OWN row (not the Friends subhead, which the live Guild-Hall path
-      // hides via `.guildhall-friend-body > .social-section-subhead{display:none}`);
-      // a dedicated element renders in both the guildhall and fallback markup paths.
-      var _pactBonds = 0;
-      try { for (var _pi = 0; _pi < friends.length; _pi++) { if (_coopPactFor(friends[_pi].user_id)) _pactBonds++; } } catch (_) {}
-      if (_pactBonds > 0) {
-        parts.push(
-          '<button type="button" class="pf-entry-row" data-open-pactflames="1" aria-label="Open Pact Flames">' +
-            '<span class="pf-entry-glyph" aria-hidden="true">🔥</span>' +
-            '<span class="pf-entry-txt"><span class="pf-entry-title">Pact Flames</span>' +
-              '<span class="pf-entry-sub">' + _pactBonds + ' co-op ' + (_pactBonds === 1 ? 'bond' : 'bonds') + '</span></span>' +
-            '<span class="pf-entry-chev" aria-hidden="true">›</span>' +
-          '</button>'
-        );
+      // W667 — the Guild IS Pact Flames: render the whole roster as pact rows
+      // (bonded → flame + streak + "N defeated together"; un-bonded → "no bond yet"),
+      // wrapped in .pf-scope so the pact tokens apply outside the overlay. The proven
+      // •••/Remove control rides along (guild:true), so friend-management is unchanged.
+      // Sorted inside _pfBuildData (bonded by streak, then un-bonded) — do NOT pre-sort.
+      try { _pfEnsureDefs(); } catch (_) {}
+      var _pfRoster = _pfBuildData(friends, true);
+      var _burning = 0, _hottest = 0;
+      for (var _bi = 0; _bi < _pfRoster.length; _bi++) {
+        var _rd = _pfRoster[_bi];
+        if (_rd.state !== 'none' && _rd.state !== 'broken') { _burning++; if ((_rd.streak | 0) > _hottest) _hottest = _rd.streak | 0; }
       }
-      parts.push('<div class="social-section-subhead">Friends</div>');
-      // v3 Phase 1z.186 — future backend seam: when real friend
-      // rank fields ship, sort accepted friends by rank hierarchy
-      // here ("S I" above "A I"; "A I" above "A II"; "D II" above
-      // "D III"; etc.). Until then, _friendRankSortValue returns
-      // null for every friend and we preserve the server's order.
-      // DO NOT sort by bosses slain or any other proxy metric.
-      const rankSortReady = friends.every(f => _friendRankSortValue(f) !== null);
-      if (rankSortReady) {
-        // v3 Phase 1z.191 — higher rankSortValue = stronger rank,
-        // so descending order puts S+ on top and E III at the
-        // bottom. The 1z.189 formula is monotonic, so this is
-        // simply (b - a).
-        friends.sort((a, b) => (_friendRankSortValue(b) - _friendRankSortValue(a)));
-      }
-      for (const f of friends) {
-        // v3 Phase 1z.209 — strict-lowercase alias display.
-        const aliasDisp = _displayAliasLower(f.alias);
-        // v3 Phase 1z.166 — public Duel surface removed.
-        // v3 Phase 1z.279 — Duels permanently retired; the entire
-        // duel subsystem is gone (no passive resolve, no ledger
-        // reconcile, no Challenge action). Friend row stops at
-        // Remove.
-        // v3 Phase 1z.176 — accidental-tap safety. The exposed
-        // red Remove button on every friend row was easy to
-        // fat-finger. New pattern: a `•••` overflow icon that
-        // reveals an inline Cancel / Remove confirm row when
-        // tapped. Two intentional taps to destroy. Auto-resets
-        // back to the icon after 6s (handled in the row click
-        // handler) so a tester who walks away from the screen
-        // doesn't return to a primed destructive button.
-        // v3 Phase 1z.207 — Guild Roster redesign. Per-row
-        // data-rank-tier hook drives the left-edge hairline
-        // accent, the avatar ring color, the rank chip, and
-        // the "D-RANK" mono sub-line. Parsed from the same
-        // _friendRankLabel source as the avatar so they always
-        // agree. Row markup + remove-friend wiring unchanged.
-        const rankLabelForRow = _friendRankLabel(f);
-        let tierForRow = null;
-        if (rankLabelForRow) {
-          const tm = String(rankLabelForRow).match(/^(S\+|S|A|B|C|D|E)(?: (I|II|III))?$/);
-          if (tm) tierForRow = tm[1];
-        }
-        const tierAttr = tierForRow ? ' data-rank-tier="' + esc(tierForRow) + '"' : '';
-        const rankSubHtml = tierForRow
-          ? ('<div class="social-row-rank-sub">' + esc(tierForRow) + '-RANK</div>')
-          : '';
-        // W663 — co-op Pact DAILY-streak flame next to the name: 🔥 + the current
-        // day-streak while it's alive (a shared co-op win today or yesterday), an
-        // ash flame + the all-time BEST streak once it's broken (relight it). Nothing
-        // until a bond exists (reductive). Tap → "Pact with <ally>" (data-friend-action="pact").
-        const _pact = (function () { try { return _coopPactFor(f.user_id); } catch (_) { return null; } })();
-        const _pactN = _pact ? (_pact.alive ? (_pact.streak | 0) : (_pact.best | 0)) : 0;
-        // W665 — branded SVG flame, NEVER the 🔥 emoji (ClaudeDesign handoff-19 spec).
-        // Alive → warm gold flame; cold (lapsed) → ashen (risk gradient).
-        const _pactFlame = (_pact && _pactN > 0)
-          ? ('<button type="button" class="friend-pact-flame' + (_pact.alive ? '' : ' friend-pact-flame--cold') + '" data-friend-action="pact" data-user-id="' + esc(f.user_id) + '" aria-label="Co-op Pact with ' + esc(aliasDisp) + '">' +
-              '<span class="fpf-glyph" aria-hidden="true">' + _pfFlame(15, !_pact.alive) + '</span>' +
-              '<span class="fpf-num">' + _pactN + '</span>' +
-            '</button>')
-          : '';
-        parts.push(
-          '<div class="social-row friend-row friend-row--accepted friend-row--no-sub" data-friendship-id="' + esc(f.id) + '" data-user-id="' + esc(f.user_id) + '" data-alias="' + esc(f.alias) + '" data-row-mode="idle"' + tierAttr + '>' +
-            _friendAvatarHtml(aliasDisp, 'accent', f) +
-            '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(aliasDisp) + '</div>' +
-              rankSubHtml +
-            '</div>' +
-            _pactFlame +
-            '<div class="social-row-actions">' +
-              '<button class="social-btn social-btn--icon" data-friend-action="remove-init" aria-label="Remove friend">•••</button>' +
-              '<div class="social-row-confirm" hidden>' +
-                '<button class="social-btn social-btn--ghost" data-friend-action="remove-cancel">Cancel</button>' +
-                '<button class="social-btn social-btn--danger" data-friend-action="remove-confirm">Remove</button>' +
-              '</div>' +
-            '</div>' +
-          '</div>'
-        );
-      }
+      var _subHtml = _burning
+        ? ('<b>' + _burning + '</b> bond' + (_burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + _hottest + 'd</b>')
+        : ('<b>' + friends.length + '</b> ' + (friends.length === 1 ? 'hunter' : 'hunters') + ' · clear a co-op dungeon together to light a flame');
+      parts.push('<div class="pf-scope">' +
+        '<div class="pf-guild-sub">' + _subHtml + '</div>' +
+        '<div class="pf-list">' + _pfRoster.map(function (d) { return _pfRowHtml(d, { guild: true }); }).join('') + '</div>' +
+      '</div>');
     }
     if (parts.length === 0) {
       // v3 Phase 1z.164 — Guild Hall zero-friends empty state.
@@ -40611,6 +40569,17 @@
     const friendsBody = document.getElementById('social-friends-body');
     if (friendsBody) {
       friendsBody.addEventListener('click', async (e) => {
+        // W667 — tapping a pact roster ROW (not one of its buttons) opens its detail:
+        // the rich bond sheet for a bonded friend, the intro card for an un-bonded one.
+        // Buttons (•••/Cancel/Remove) fall through to the friend-action handler below.
+        const pfRow = e.target.closest && e.target.closest('.pf-row[data-pf-open]');
+        if (pfRow && !e.target.closest('button')) {
+          const uid = pfRow.getAttribute('data-pf-open');
+          const al = pfRow.getAttribute('data-alias');
+          if (pfRow.classList.contains('pf-row--nobond')) { try { _coopShowPactCard(uid, al); } catch (_) {} }
+          else { try { openPactFlames(uid); } catch (_) { try { _coopShowPactCard(uid, al); } catch (__) {} } }
+          return;
+        }
         const btn = e.target.closest('button[data-friend-action]');
         if (!btn) return;
         const row = btn.closest('.social-row');
