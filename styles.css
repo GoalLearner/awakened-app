@@ -12784,6 +12784,38 @@ footer {
   opacity: 0.85;
 }
 
+/* W676 — day-clear state: an unlocked gate whose SOLO bosses are ALL cleared for
+   today greys out until the daily reset. Cosmetic + STILL TAPPABLE (players can
+   re-enter any time). Distinguished from locked/preview by a teal ✓ affordance so
+   a faded-because-done gate never reads as locked/broken. Co-op bosses never
+   trigger this — a gate can be day-cleared while its co-op boss stays lit inside. */
+.gate-cell--cleared .gate-cell-img {
+  filter: brightness(0.5) saturate(0.5) grayscale(0.2);
+}
+.gate-cell--cleared .gate-cell-rank-pill {
+  opacity: 0.7;
+}
+.gate-cell--cleared::after {
+  content: "\2713";               /* ✓ */
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #5ad6c8;
+  background: rgba(6, 10, 18, 0.72);
+  border: 1px solid rgba(90, 214, 200, 0.5);
+  border-radius: 50%;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
 /* Lock overlay — center-bottom of the cell, hidden by default.
    Revealed only when the parent carries .gate-cell--locked. */
 .gate-cell-lock-overlay {

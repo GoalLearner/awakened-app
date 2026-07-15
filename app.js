@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w675'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w676'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44409,14 +44409,11 @@
     }
     if (state.streak > 0) stateClasses.push('bcard--active');
     if (state.kill_count > 0) stateClasses.push('bcard--defeated');
-    // W662 — Rendell: PERMANENT faint fade once a boss has EVER been felled
-    // (kill_count is durable + cloud-synced). Distinct from the transient daily
-    // '.bcard--cleared' below. Skip preview cards; and — mirroring the co-op path,
-    // which un-fades while HUNTING — do NOT fade a boss you're actively re-hunting
-    // (engaged, or a live streak) so its progress bar + pulse stay legible.
-    if (!isPreview && state.kill_count > 0 && state.engaged !== true && !(state.streak > 0)) {
-      stateClasses.push('is-cleared');
-    }
+    // W676 — the W662 PERMANENT ever-felled per-boss fade is REMOVED (owner: players
+    // still want to run a boss even after farming all its gear, so it must NOT grey
+    // out for good). The "done for today" signal now lives on the rank GATE instead
+    // (gate-cell--cleared in renderQuestsPanel, when ALL solo bosses of a rank are
+    // cleared for the day). The transient per-boss daily '.bcard--cleared' below stays.
     // W298 — Rendell feedback: surface per-cadence completion on the GRID so
     // the player reads "done for now" at a glance instead of opening each boss.
     // Cleared = unlocked, not currently hunting, and the engage gate reports a
@@ -45487,12 +45484,11 @@
     const cfg = COOP_BOSSES[id];
     if (!cfg) return '';
     const imgId = cfg.artId || id;
-    // W662 — permanent faint fade once this co-op boss has EVER been felled
-    // (hb_coop_kills, cloud-synced). Build-time sets the initial state; thereafter
-    // _coopApplyBadge is the single authority (un-fades while INVITE/HUNTING).
-    const _clr = (function () { try { const e = _loadCoopKills()[id]; return !!(e && e.count > 0); } catch (_) { return false; } })();
+    // W676 — co-op bosses stay LIT AT ALL TIMES (owner). The W662 ever-felled fade
+    // is removed here; the rank-gate day-clear fade is driven by SOLO bosses only,
+    // so an unfinished (or fully-farmed) co-op hunt never dims anything.
     return (
-      '<button type="button" class="bcard bcard--coop bcard--dormant' + (_clr ? ' is-cleared' : '') + '" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
+      '<button type="button" class="bcard bcard--coop bcard--dormant" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
         '<span class="bcard-coop-badge" aria-hidden="true">CO-OP</span>' +
         '<div class="bcard-header">' +
           '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
@@ -47254,6 +47250,27 @@
   }
   try { window.isGateEntryAllowed = isGateEntryAllowed; } catch (_) {}
 
+  // W676 — a rank's GATE dims for the day once EVERY solo boss in it is cleared for
+  // today (owner: co-op bosses are EXCLUDED — they stay lit and never gate the fade,
+  // so an unfinished/fully-farmed co-op hunt can't keep the gate lit). Mirrors the
+  // per-boss '.bcard--cleared' signal: a solo boss counts as done when it's not
+  // mid-hunt AND its cadence can't be engaged again until the daily reset. Cosmetic
+  // only — the gate stays tappable.
+  function _rankSoloClearedForDay(rank) {
+    try {
+      const ids = Object.keys(BOSSES).filter((id) => BOSSES[id] && BOSSES[id].rank === rank && !BOSSES[id].coopOnly);
+      if (!ids.length) return false;   // a rank with no solo bosses never auto-dims
+      if (typeof canEngageBossNow !== 'function' || typeof getBossState !== 'function') return false;
+      for (const id of ids) {
+        const st = getBossState(id) || {};
+        if (st.engaged === true) return false;             // mid-hunt → not done
+        const can = canEngageBossNow(id, BOSSES[id]);
+        if (!can || can.ok !== false) return false;         // can still engage → not done
+      }
+      return true;
+    } catch (_) { return false; }
+  }
+
   function renderQuestsPanel() {
     const gateView    = document.getElementById('quests-gate-view');
     const dungeonView = document.getElementById('quests-dungeon-view');
@@ -47296,11 +47313,17 @@
 
         cell.classList.toggle('gate-cell--locked', isHardLocked);
         cell.classList.toggle('gate-cell--preview', isPreview);
+        // W676 — day-clear dim: an unlocked gate whose SOLO bosses are all cleared
+        // for today greys out (still tappable). Co-op bosses don't count.
+        const clearedToday = unlocked && _rankSoloClearedForDay(r);
+        cell.classList.toggle('gate-cell--cleared', clearedToday);
 
         // Aria label reflects state for screen readers. Preview gates
         // are walkable but communicate the engagement gate to come.
         let label;
-        if (unlocked) {
+        if (unlocked && clearedToday) {
+          label = 'Enter ' + r + '-rank dungeon — all bosses cleared for today';
+        } else if (unlocked) {
           label = 'Enter ' + r + '-rank dungeon';
         } else if (isPreview) {
           label = 'Preview ' + r + '-rank dungeon. Reach ' + r + ' rank to engage.';
