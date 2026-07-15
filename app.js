@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.3';   // Marketing version. 2.4.1 approved by App Store Connect; 2.4.2 = next train (owner-set). [history] 2.3.3 approved + released by Apple → new marketing version for the next train. Carries W527–W560: Forged Plate combat bar, ranger evasion + melee Bulwark, the F100 "Ascension" finale + two-phase Unbound boss, TIME TO SUMMIT speedrun clock, co-op Accept-All + feed entries, new app icon + splash logo, rank-color unification, burn nerf, + fixes (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.3-w665'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.3-w666'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5865,7 +5865,7 @@
   // ── W664 — PACT FLAMES screen (ClaudeDesign handoff 18) ─────────────────────
   // A dedicated co-op-dungeon-streak hub, ported from Co-op Dungeon Streak.html.
   // Reads the daily-pact store via _coopPactFor + the friends list; pure display.
-  var _PF_RANK_COLOR = { S: '#ec4899', A: '#fb7185', B: '#f5b842', C: '#34d399', D: '#22d3ee', E: '#a78bfa' };
+  var _PF_RANK_COLOR = { S: '#ec4899', A: '#ff6b6b', B: '#f5b842', C: '#34d399', D: '#22d3ee', E: '#a78bfa' };
   function _pfRankColor(rank) { return _PF_RANK_COLOR[String(rank || '').charAt(0).toUpperCase()] || '#8b5cf6'; }
   function _pfTierOf(n) {
     n = n | 0;
@@ -5882,6 +5882,23 @@
     return '<svg class="pf-flame" width="' + w + '" viewBox="0 0 64 88" fill="none" aria-hidden="true">' +
       '<path d="' + _PF_F_OUT + '" fill="url(#' + (risk ? 'pf-fgr' : 'pf-fg') + ')"/>' +
       '<path d="' + _PF_F_IN + '" fill="url(#pf-fgi)" opacity="' + (risk ? 0.4 : 0.92) + '"/></svg>';
+  }
+  // W665 — inject the flame gradient defs into <body> ONCE (idempotent) so the
+  // branded SVG flame (_pfFlame → url(#pf-fg)) resolves EVERYWHERE, not just inside
+  // the Pact Flames overlay: the Guild-roster flame chip (never the 🔥 emoji, per
+  // ClaudeDesign handoff-19 spec) references the same gradients.
+  function _pfEnsureDefs() {
+    if (document.getElementById('pf-grad-defs')) return;
+    var d = document.createElement('div');
+    d.id = 'pf-grad-defs';
+    d.setAttribute('aria-hidden', 'true');
+    d.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none';
+    d.innerHTML = '<svg width="0" height="0" aria-hidden="true"><defs>' +
+      '<linearGradient id="pf-fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd574"/><stop offset=".5" stop-color="#ff8a3c"/><stop offset="1" stop-color="#e2531c"/></linearGradient>' +
+      '<linearGradient id="pf-fgi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6d5"/><stop offset="1" stop-color="#ffd574"/></linearGradient>' +
+      '<linearGradient id="pf-fgr" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb98a"/><stop offset=".55" stop-color="#e2531c"/><stop offset="1" stop-color="#7a2a14"/></linearGradient>' +
+      '</defs></svg>';
+    try { document.body.appendChild(d); } catch (_) {}
   }
   // Seconds until the next Pacific midnight (when a not-yet-secured streak breaks).
   function _pfSecToMidnightPT() {
@@ -6014,11 +6031,16 @@
     _pfTick();
   }
   function _pfListHtml() {
-    return _pfDefs() +
+    return '' +   // flame gradient defs are injected globally by _pfEnsureDefs()
       '<div class="pf-topbar"><button class="pf-back" data-pf-close><svg viewBox="0 0 9 14" fill="none"><path d="M7.5 1.5l-6 5.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Back</button></div>' +
       '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + _pfSubInner() + '</div></div>' +
       '<div class="pf-list">' + _pfRowsInner() + '</div>' +
+      // W665 — pinned footer (ClaudeDesign handoff-19): hint + find-a-hunter/Add Friend + Invite.
       '<div class="pf-foot"><p class="pf-hint">Tap a flame to see your all-time bond</p>' +
+        '<div class="pf-addrow">' +
+          '<input class="pf-finder" id="pf-finder" type="text" placeholder="find a hunter…" aria-label="Find a hunter" autocapitalize="none" autocorrect="off" spellcheck="false" />' +
+          '<button class="pf-addbtn" type="button" data-pf-addfriend><span class="pf-pl">+</span>Add Friend</button>' +
+        '</div>' +
         '<button class="pf-invite" type="button" data-guild-invite="1"><span class="pf-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M9.2 14.8l5.6-5.6M8.2 11.4 6.6 13a3.2 3.2 0 004.5 4.5l1.6-1.6M15.8 12.6 17.4 11a3.2 3.2 0 00-4.5-4.5l-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
         '<span class="pf-itxt"><span class="pf-it">Invite a Hunter</span><span class="pf-ip">Send your name so a friend can add you</span></span></button></div>' +
       '<div class="pf-scrim" data-pf-sclose></div><section class="pf-sheet" data-pf-sheet></section>';
@@ -6065,8 +6087,31 @@
       try { if (autoOpenUserId) _coopShowPactCard(autoOpenUserId); } catch (__) {}
     }
   }
+  // W665 — the Pact Flames footer "Add Friend" (find-a-hunter field) reuses the Guild
+  // friend-request flow so a hunter can grow a bond without leaving the screen.
+  function _pfSubmitAddFriend() {
+    try {
+      var inp = _pfEl && _pfEl.querySelector('#pf-finder'); if (!inp) return;
+      var raw = (inp.value || '').trim();
+      if (!raw) { try { showHabitToast('Enter a hunter alias.'); } catch (_) {} return; }
+      if (!(window.Auth && Auth.sendFriendRequest)) { try { showHabitToast('Sign in to add friends.'); } catch (_) {} return; }
+      var btn = _pfEl.querySelector('[data-pf-addfriend]'); if (btn) btn.disabled = true;
+      Auth.sendFriendRequest(raw).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (!res || !res.ok) { try { showHabitToast((res && res.detail) || 'Could not send request.'); } catch (_) {} return; }
+        inp.value = '';
+        var msg = res.autoAccepted ? 'Friend request accepted — they had already requested you.'
+          : res.alreadyFriends ? 'Already friends.'
+          : res.alreadyPending ? 'Request already pending.'
+          : 'Friend request sent.';
+        try { showHabitToast(msg); } catch (_) {}
+        try { renderFriendsSection(); } catch (_) {}
+      }).catch(function () { if (btn) btn.disabled = false; try { showHabitToast('Network error'); } catch (_) {} });
+    } catch (_) {}
+  }
   function _pfShow(autoOpenUserId) {
     closePactFlames();
+    _pfEnsureDefs();
     _pfEl = document.createElement('div'); _pfEl.id = 'pf-overlay';
     _pfEl.innerHTML = _pfListHtml();
     document.body.appendChild(_pfEl);
@@ -6077,8 +6122,12 @@
       if (t.closest('[data-pf-sclose]')) { _pfCloseDetail(); return; }
       if (t.closest('[data-pf-hunt]')) { closePactFlames(); try { openCoopSheet && openCoopSheet(); } catch (_) {} return; }
       if (t.closest('[data-guild-invite]')) { try { _guildInviteShare && _guildInviteShare(); } catch (_) {} return; }
+      if (t.closest('[data-pf-addfriend]')) { _pfSubmitAddFriend(); return; }
       var row = t.closest('[data-pf-open]'); if (row) { _pfOpenDetail(row.getAttribute('data-pf-open')); }
     });
+    // Enter in the find-a-hunter field submits the friend request (parity with the Guild add-friend).
+    var _pfFind = _pfEl.querySelector('#pf-finder');
+    if (_pfFind) _pfFind.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); _pfSubmitAddFriend(); } });
     _pfTimer = setInterval(_pfTick, 1000); _pfTick();
     if (autoOpenUserId) { try { _pfOpenDetail(autoOpenUserId); } catch (_) {} }
   }
@@ -40198,6 +40247,7 @@
   async function renderFriendsSection() {
     _ensureSocialMarkup();
     try { _coopServerSyncPacts(); } catch (_) {}   // W664 P2 — canonical server pacts (once/session; falls back to the v1 _coopBackfillPacts if the endpoint is unavailable; re-renders if numbers change)
+    try { _pfEnsureDefs(); } catch (_) {}   // W665 — flame gradient defs for the roster SVG chips
     const body = document.getElementById('social-friends-body');
     const countEl = document.getElementById('social-friends-count');
     if (!body) return;
@@ -40389,9 +40439,11 @@
         // until a bond exists (reductive). Tap → "Pact with <ally>" (data-friend-action="pact").
         const _pact = (function () { try { return _coopPactFor(f.user_id); } catch (_) { return null; } })();
         const _pactN = _pact ? (_pact.alive ? (_pact.streak | 0) : (_pact.best | 0)) : 0;
+        // W665 — branded SVG flame, NEVER the 🔥 emoji (ClaudeDesign handoff-19 spec).
+        // Alive → warm gold flame; cold (lapsed) → ashen (risk gradient).
         const _pactFlame = (_pact && _pactN > 0)
           ? ('<button type="button" class="friend-pact-flame' + (_pact.alive ? '' : ' friend-pact-flame--cold') + '" data-friend-action="pact" data-user-id="' + esc(f.user_id) + '" aria-label="Co-op Pact with ' + esc(aliasDisp) + '">' +
-              '<span class="fpf-glyph" aria-hidden="true">🔥</span>' +
+              '<span class="fpf-glyph" aria-hidden="true">' + _pfFlame(15, !_pact.alive) + '</span>' +
               '<span class="fpf-num">' + _pactN + '</span>' +
             '</button>')
           : '';
