@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w670'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w671'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6123,6 +6123,17 @@
     } catch (_) {}
     setTimeout(function () { try { el.remove(); } catch (_) {} }, 380);   // let the slide-down finish
   }
+  // W671 — "Hunt Again" / "Relight the Flame" must go to SELECT YOUR ALLY (start a
+  // fresh co-op hunt), NOT resume whatever in-progress hunt openCoopSheet() would
+  // surface (that dropped the user into a random partner's live hunt). Open the
+  // co-op sheet for the primary boss, then jump straight into the ally picker.
+  function _pfHuntAgain() {
+    try {
+      if (typeof openCoopSheet !== 'function') return;
+      openCoopSheet();
+      if (typeof openCoopPartnerPicker === 'function') openCoopPartnerPicker();
+    } catch (_) {}
+  }
   function _pfOpenBondDetail(userId) {
     try {
       var friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
@@ -6140,7 +6151,7 @@
       _pfDetailEl.addEventListener('click', function (e) {
         var t = e.target;
         if (t.closest('[data-pf-sclose]')) { _pfCloseBondDetail(); return; }
-        if (t.closest('[data-pf-hunt]')) { _pfCloseBondDetail(); try { openCoopSheet && openCoopSheet(); } catch (_) {} return; }
+        if (t.closest('[data-pf-hunt]')) { _pfCloseBondDetail(); _pfHuntAgain(); return; }
       });
       var _tick = function () { var sec = _pfSecToMidnightPT(); if (_pfDetailEl) { var cs = _pfDetailEl.querySelector('[data-pf-cds]'); if (cs) cs.textContent = _pfFmtClock(sec); } };
       _pfDetailTimer = setInterval(_tick, 1000); _tick();
@@ -6196,7 +6207,7 @@
       var t = e.target;
       if (t.closest('[data-pf-close]')) { closePactFlames(); return; }
       if (t.closest('[data-pf-sclose]')) { _pfCloseDetail(); return; }
-      if (t.closest('[data-pf-hunt]')) { closePactFlames(); try { openCoopSheet && openCoopSheet(); } catch (_) {} return; }
+      if (t.closest('[data-pf-hunt]')) { closePactFlames(); _pfHuntAgain(); return; }
       if (t.closest('[data-guild-invite]')) { try { _guildInviteShare && _guildInviteShare(); } catch (_) {} return; }
       if (t.closest('[data-pf-addfriend]')) { _pfSubmitAddFriend(); return; }
       var row = t.closest('[data-pf-open]'); if (row) { _pfOpenDetail(row.getAttribute('data-pf-open')); }
@@ -7818,6 +7829,12 @@
   // only at 59% there, so raising it would brick honest players (the 491→578 power
   // SPREAD can't be straddled by one wall — see W510). This is the APPROACH fix.
   const _ASCENT_SUMMIT_PLATEAU = 1.14;   // ×power on regular floors 91–99 (boss floors excluded)
+  // W671 — owner: "buff floors 75–99 by 25% — make it a bit more challenging." The
+  // late-tower run (Pale Expanse → Sovereign Steps → the Summit approach) gets a flat
+  // +25% power. Floor 100 / the First Awakened is EXCLUDED (owner tuned it to 4600 in
+  // W661); its two-phase gauntlet stays the hardest ENCOUNTER even though a single
+  // buffed F99 now edges F100's per-phase power. Applies to F80/F90 bosses too (in-range).
+  const _ASCENT_LATE_BUFF = 1.25;
   // W293 — verified (Arena.simAscent): after the OSRS stat re-pairing (attack=STR,
   // defense=INT+VIT, edge=FOCUS+WILL) the BiS max build's stats are spread enough
   // that it derives to NEUTRAL (no role >40% share), so the summit is decided by
@@ -7831,6 +7848,7 @@
     if (f <= 5) return _ASCENT_RAMP_ANCHOR + _ASCENT_RAMP_SLOPE * (f - 1);
     let p = _ASCENT_BASE * Math.pow(f, _ASCENT_EXP);
     if (f >= 91 && f <= 99) p *= _ASCENT_SUMMIT_PLATEAU;   // W511 — summit-approach plateau (regulars only; boss floors excluded)
+    if (f >= 75 && f <= 99) p *= _ASCENT_LATE_BUFF;        // W671 — late-tower +25% challenge (F100/First Awakened excluded)
     return (f % 10 === 0) ? p * _ASCENT_BOSS_BUMP : p;
   }
   function _ascentIsBoss(floor) { return floor % 10 === 0; }
@@ -14689,7 +14707,13 @@
     const card = CARDS[cardId];
     return !!(card && RELIC_TRADEABLE_RARITIES[card.rarity]);
   }
-  function relicBuyPrice(cardId) {
+  // W671 — items were far too cheap to buy once co-op souls-farming scaled up, so
+  // the BUY price is marked up 25% while the SELL price is UNCHANGED. Both used to
+  // derive from one figure (sell = buy x ratio), so a naive buy bump would have
+  // raised sell too. They're now split: `_relicBaseValue` is the original valuation
+  // (drives SELL, unchanged), and the buy price applies RELIC_BUY_MARKUP on top.
+  const RELIC_BUY_MARKUP = 1.25;
+  function _relicBaseValue(cardId) {
     const card = CARDS[cardId];
     if (!card || !_relicIsTradeable(cardId)) return null;
     // W289 — Nightfall (the one Mega-Rare) is HAND-PRICED, not formula-derived:
@@ -14702,14 +14726,20 @@
     const raw  = base + RELIC_STAT_WEIGHT * _relicTotalBonus(card);
     return Math.max(10, Math.round(raw / 10) * 10);
   }
+  function relicBuyPrice(cardId) {
+    const base = _relicBaseValue(cardId);
+    if (base == null) return null;
+    return Math.max(10, Math.round(base * RELIC_BUY_MARKUP / 10) * 10);   // +25% buy markup
+  }
   function relicSellPrice(cardId) {
-    const buy = relicBuyPrice(cardId);
-    if (buy == null) return null;
+    const base = _relicBaseValue(cardId);
+    if (base == null) return null;
     // W289 — the Mega-Rare cashes out at only 10% (vs 70% rare/ultra): a lucky 1%
     // Erebus drop is a modest windfall, but the 88k buy is never a profitable flip.
+    // NOTE: sell is on the ORIGINAL base (NOT the marked-up buy) so it stays put.
     const card = CARDS[cardId];
     const ratio = (card && card.rarity === 'mythic') ? 0.10 : RELIC_SELL_RATIO;
-    return Math.max(10, Math.round(buy * ratio / 10) * 10);
+    return Math.max(10, Math.round(base * ratio / 10) * 10);
   }
 
   // W645 — relics that can NEVER be bought with souls, only earned as drops.
