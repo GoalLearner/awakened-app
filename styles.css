@@ -33393,6 +33393,41 @@ button.guildhall-summary-tile:active {
 .pf-guild-sub b{color:var(--pf-ivory);font-weight:800;}
 .pf-guild-sub .pf-fl{filter:drop-shadow(0 0 5px rgba(255,122,60,.6));}
 .pf-guild-sub .pf-dot{width:3px;height:3px;border-radius:50%;background:var(--pf-faint);}
+/* W668 — the Guild section IS the Pact Flames page: pact header + footer chrome
+   (high-specificity overrides scoped to #guildhall-friends-section). */
+#guildhall-friends-section .guildhall-section-eyebrow{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;font-weight:800;letter-spacing:2.6px;
+  color:#ff7a3c;text-transform:uppercase;margin-bottom:6px;text-align:left;}
+#guildhall-friends-section .guildhall-section-title{
+  font-family:'Cinzel','Trajan Pro',Georgia,serif;font-weight:800;font-size:25px;letter-spacing:1.1px;line-height:1;text-transform:none;
+  background:linear-gradient(180deg,#ffe6a8,#f5b842 60%,#cf8f26);-webkit-background-clip:text;background-clip:text;color:transparent;
+  display:flex;align-items:baseline;gap:9px;}
+#guildhall-friends-section .guildhall-section-count{
+  -webkit-text-fill-color:#9090a8;color:#9090a8;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;}
+/* footer — pact "find a hunter / Add Friend" row + Invite bar */
+#guildhall-friends-section .guildhall-friend-add--bottom{display:flex;align-items:center;gap:11px;background:none;border:0;padding:10px 0 0;}
+#guildhall-friends-section .guildhall-friend-add--bottom .social-friend-input{
+  flex:1;min-width:0;height:52px;border-radius:14px;padding:0 16px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.09);color:#f5f3fb;font-size:15px;letter-spacing:.2px;transition:border-color .15s,background .15s;}
+#guildhall-friends-section .guildhall-friend-add--bottom .social-friend-input::placeholder{color:#585874;}
+#guildhall-friends-section .guildhall-friend-add--bottom .social-friend-input:focus{border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.06);}
+#guildhall-friends-section .guildhall-friend-add--bottom #social-friend-send{
+  flex:none;height:52px;padding:0 20px;border-radius:14px;animation:none;
+  font-family:'Cinzel','Trajan Pro',Georgia,serif;font-weight:700;font-size:13.5px;letter-spacing:1.4px;text-transform:uppercase;color:#160b26;
+  background:linear-gradient(100deg,#8b5cf6 0%,#a575f5 38%,#ffd574 100%);
+  border:1px solid rgba(245,184,66,.55);box-shadow:0 0 22px rgba(139,92,246,.3),inset 0 1px 0 rgba(255,255,255,.35);}
+#guildhall-friends-section .social-invite-btn{
+  margin-top:11px;display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:15px;
+  background:linear-gradient(120deg,rgba(139,92,246,.11),rgba(139,92,246,.03));border:1px solid rgba(139,92,246,.32);}
+#guildhall-friends-section .social-invite-btn .social-invite-ic{
+  width:36px;height:36px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  color:#f5b842;background:rgba(245,184,66,.09);border:1px solid rgba(245,184,66,.28);font-size:16px;}
+#guildhall-friends-section .social-invite-btn .social-invite-txt b{
+  font-family:'Cinzel','Trajan Pro',Georgia,serif;font-weight:700;font-size:14px;letter-spacing:1px;color:#ffd574;text-transform:uppercase;}
+#guildhall-friends-section .social-invite-btn .social-invite-txt span{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9.5px;font-weight:600;color:#9090a8;}
+#guildhall-friends-section .social-invite-btn .social-invite-chev{color:#f5b842;}
 #pf-overlay.open{display:flex;}
 .pf-topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 2px;}
 .pf-back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;cursor:pointer;
