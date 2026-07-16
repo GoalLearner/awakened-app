@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.994';
+const CACHE_VERSION = 'v5.995';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -330,6 +330,15 @@ const PRECACHE_ASSETS = [
   '/assets/items/roadwardens_harness.png',
   '/assets/items/milestone_cowl.png',
   '/assets/items/longroad_grips.png',
+  // W688 — The Myrmidon King raid pool (2 mythics + 6 S ultras).
+  '/assets/items/reverie_staff.png',
+  '/assets/items/vigil_bow.png',
+  '/assets/items/watchkeepers_carapace.png',
+  '/assets/items/grips_of_the_third_night.png',
+  '/assets/items/striders_of_the_waking_march.png',
+  '/assets/items/circlet_of_lucid_sleep.png',
+  '/assets/items/shroud_of_the_dreaming_court.png',
+  '/assets/items/pendant_of_the_seventh_hour.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
