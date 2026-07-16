@@ -52,22 +52,28 @@ const FREE_CONCURRENT_HUNT_CAP = 3;
  *  Known, accepted: the cap is check-then-insert without a transaction — two
  *  perfectly-raced creates can briefly land 4 hunts. Impact is one extra
  *  hunt, self-corrects as hunts finish; not worth a compensating delete. */
+// W692 — the single "does this user have a running hunt?" predicate, shared as a
+// SQL fragment by countRunningHunts (the fast-path) and the create atomic-insert
+// cap guard so the two can NEVER drift (the W677 review flagged the duplication as
+// the failure mode). ?U is the user placeholder; the caller binds it.
+//
+// A hunt counts when the user is: the challenger; OR a participant on an ACTIVE
+// hunt; OR a participant who has ANSWERED (joined_at set) on a still-pending hunt.
+// The answered-pending arm is the W677 paywall-integrity guard: without it a free
+// user could answer unlimited N-hunter summons cap-free and have them all flip
+// active later (deterministic bypass). A hunter stuck waiting on the last ally can
+// free the slot via /decline. Lapsed active hunts (past ends_at) don't count (W649).
+const RUNNING_HUNT_SQL = `status IN ('pending','active')
+        AND (challenger_user_id = ?U
+          OR EXISTS (SELECT 1 FROM coop_boss_participants p
+                      WHERE p.instance_id = coop_boss_instances.id AND p.user_id = ?U
+                        AND (coop_boss_instances.status = 'active'
+                             OR (coop_boss_instances.status = 'pending' AND p.joined_at IS NOT NULL))))
+        AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))`;
+
 async function countRunningHunts(env: Env, userId: string): Promise<number> {
-  // W677 — an accepted TRIO seat (partner2) counts exactly like a partner seat.
-  // A trio seat also counts the moment it is ANSWERED (stamped joined_at) even while
-  // the instance is still 'pending' on the other ally — otherwise a free user could
-  // answer unlimited trio summons cap-free and have them all flip active later
-  // (review W677 #1: deterministic paywall bypass). Duo-inert: the duo join path
-  // never stamps joined_at (join == activate). A hunter stuck waiting on a third
-  // ally can free the slot via /decline (either invited seat may decline pending).
   const row = await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM coop_boss_instances
-      WHERE status IN ('pending','active')
-        AND (challenger_user_id = ?1
-          OR ((partner_user_id = ?1 OR partner2_user_id = ?1) AND status = 'active')
-          OR (partner_user_id = ?1 AND status = 'pending' AND partner_joined_at IS NOT NULL)
-          OR (partner2_user_id = ?1 AND status = 'pending' AND partner2_joined_at IS NOT NULL))
-        AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))`,
+    `SELECT COUNT(*) AS n FROM coop_boss_instances WHERE ${RUNNING_HUNT_SQL.replace(/\?U/g, '?1')}`,
   )
     .bind(userId)
     .first<{ n: number }>();
@@ -111,7 +117,7 @@ async function checkHuntCap(env: Env, userId: string): Promise<Response | null> 
 // header already blesses column reuse; no migration.
 const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number }
+  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean }
 > = {
   the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
@@ -194,16 +200,50 @@ interface CoopBossRow {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+  // W692 — N-hunter model: every hunter EXCEPT the challenger, from
+  // coop_boss_participants. Attached by loadInstance / the list query. The legacy
+  // partner* columns above are retained for one release (old-client serialize).
+  participants?: CoopParticipant[];
 }
 
-/** W677 — every hunter on this instance (2 for a duo, 3 for a trio). The single
- *  seam the progress/serialize/notify/pact paths fan out over. */
+interface CoopParticipant {
+  user_id: string;
+  joined_at: string | null;   // NULL = invited/unanswered; set = joined (clock-eligible)
+}
+
+/** W677→W692 — every hunter on this instance (challenger + all participants).
+ *  The single seam the progress/serialize/notify/pact paths fan out over. Reads
+ *  the N-participant array when present; falls back to the legacy partner columns
+ *  for a row loaded without it (defensive — loadInstance/list always attach it). */
 function participantIds(
-  row: Pick<CoopBossRow, 'challenger_user_id' | 'partner_user_id' | 'partner2_user_id'>,
+  row: Pick<CoopBossRow, 'challenger_user_id' | 'partner_user_id' | 'partner2_user_id' | 'participants'>,
 ): string[] {
+  if (Array.isArray(row.participants)) {
+    return [row.challenger_user_id, ...row.participants.map((p) => p.user_id)];
+  }
   const ids = [row.challenger_user_id, row.partner_user_id];
   if (row.partner2_user_id) ids.push(row.partner2_user_id);
   return ids;
+}
+
+/** W692 — load the participant rows for a set of instance ids, grouped by
+ *  instance. One query; used to attach `participants` on loadInstance + list. */
+async function loadParticipants(env: Env, instanceIds: string[]): Promise<Map<string, CoopParticipant[]>> {
+  const out = new Map<string, CoopParticipant[]>();
+  if (!instanceIds.length) return out;
+  const ph = instanceIds.map(() => '?').join(', ');
+  const rows = await env.DB.prepare(
+    `SELECT instance_id, user_id, joined_at FROM coop_boss_participants
+       WHERE instance_id IN (${ph}) ORDER BY created_at, user_id`,
+  )
+    .bind(...instanceIds)
+    .all<{ instance_id: string; user_id: string; joined_at: string | null }>();
+  for (const r of rows.results ?? []) {
+    const list = out.get(r.instance_id) ?? [];
+    list.push({ user_id: r.user_id, joined_at: r.joined_at ?? null });
+    out.set(r.instance_id, list);
+  }
+  return out;
 }
 
 // ── Small shared helpers ────────────────────────────────────────────
@@ -352,16 +392,19 @@ function serializeCoop(
   p: CoopProgress,
   award?: { owed: boolean; claimed: boolean } | null,
 ): Record<string, unknown> {
-  // W677 — partner2 = the trio's second invited ally. Client role checks are all
-  // "am I the challenger, else an invited ally"; 'partner2' keeps that shape.
-  const role: 'challenger' | 'partner' | 'partner2' | 'observer' =
+  // W677/W692 — partner2 = the trio's second invited ally; 'ally' covers the 4th/5th
+  // raid seats (no legacy column). Client role checks are all "am I the challenger,
+  // else an invited ally", so every non-challenger/non-observer value reads the same.
+  const role: 'challenger' | 'partner' | 'partner2' | 'ally' | 'observer' =
     row.challenger_user_id === viewerUserId
       ? 'challenger'
       : row.partner_user_id === viewerUserId
         ? 'partner'
         : row.partner2_user_id === viewerUserId
           ? 'partner2'
-          : 'observer';
+          : (row.participants ?? []).some((pt) => pt.user_id === viewerUserId)
+            ? 'ally'
+            : 'observer';
 
   let timeRemainingMs: number | null = null;
   if (row.status === 'active' && row.ends_at) {
@@ -394,6 +437,23 @@ function serializeCoop(
     // W677 — party size rides along so the client renders the right roster without
     // sniffing for a partner2 key.
     party_size: participantIds(row).length,
+    // W692 — the N-hunter roster: challenger first, then every ally (in seat order),
+    // each with per-hunter progress + answered state. New clients render from this;
+    // the legacy challenger/partner/partner2 keys below stay one release for old ones.
+    party: participantIds(row).map((uid) => {
+      const answered = uid === row.challenger_user_id
+        ? true
+        : !!(row.participants ?? []).find((pt) => pt.user_id === uid)?.joined_at;
+      return {
+        user_id: uid,
+        alias: aliasMap.get(uid) ?? null,
+        role: uid === row.challenger_user_id ? 'challenger' : 'ally',
+        steps: cPrimary(uid),
+        ...(isBoth ? { flights: p.flights.get(uid) || 0 } : {}),
+        ...(isSleep ? { sleep_minutes: p.sleep.get(uid) || 0 } : {}),
+        joined: answered,
+      };
+    }),
     combined_steps: participantIds(row).reduce((s, uid) => s + cPrimary(uid), 0),
     // W447 — dual-metric bosses also surface the SECOND (flights) stream + goal so the
     // client can render two progress bars; omitted for single-metric bosses.
@@ -440,7 +500,9 @@ async function loadInstance(env: Env, id: string): Promise<CoopBossRow | null> {
   const row = await env.DB.prepare('SELECT * FROM coop_boss_instances WHERE id = ?')
     .bind(id)
     .first<CoopBossRow>();
-  return row ?? null;
+  if (!row) return null;
+  row.participants = (await loadParticipants(env, [id])).get(id) ?? [];   // W692
+  return row;
 }
 
 function isParticipant(row: CoopBossRow, userId: string): boolean {
@@ -478,10 +540,17 @@ export async function validateBossInstanceForUser(
       ends_at: string | null;
     }>();
   if (!row) return { ok: false, reason: 'BOSS_INSTANCE_NOT_FOUND' };
-  // W677 — a trio's third hunter is a full participant; without this their verified
-  // steps would be rejected at submit and never count toward the combined goal.
-  if (!participantIds(row).includes(userId)) {
-    return { ok: false, reason: 'NOT_PARTICIPANT' };
+  // W677/W692 — every invited hunter is a full participant whose verified steps must
+  // count toward the combined goal. This lean SELECT doesn't attach participants, so
+  // check membership directly: challenger column, participant table (raid seats 4/5),
+  // or the legacy partner columns (migration→deploy window fallback).
+  if (row.challenger_user_id !== userId && row.partner_user_id !== userId && row.partner2_user_id !== userId) {
+    const part = await env.DB.prepare(
+      `SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND user_id = ? LIMIT 1`,
+    )
+      .bind(instanceId, userId)
+      .first();
+    if (!part) return { ok: false, reason: 'NOT_PARTICIPANT' };
   }
   if (row.status !== 'active') return { ok: false, reason: 'BOSS_NOT_ACTIVE' };
   // W397 — the event must carry a metric THIS boss counts (a flights boss only counts
@@ -515,7 +584,12 @@ export async function handleCoopBossCreate(
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { partner_user_id?: unknown; partner2_user_id?: unknown; boss_id?: unknown };
+  let body: {
+    partner_user_id?: unknown;
+    partner2_user_id?: unknown;
+    ally_user_ids?: unknown;
+    boss_id?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -523,26 +597,53 @@ export async function handleCoopBossCreate(
   }
 
   const bossId = typeof body.boss_id === 'string' ? body.boss_id : '';
-  const partnerUserId = typeof body.partner_user_id === 'string' ? body.partner_user_id : '';
-  const partner2UserId = typeof body.partner2_user_id === 'string' ? body.partner2_user_id : '';
   const cfg = COOP_BOSS_CFG[bossId];
   if (!cfg) return jsonError(400, 'UNKNOWN_BOSS', 'Unknown co-op boss id.');
-  // W677 — party size comes from the BOSS (a trio boss requires exactly 2 allies;
-  // a duo boss exactly 1). The summoner hand-picks accepted friends for every seat.
-  const partySize = cfg.partySize ?? 2;
-  if (!partnerUserId) return jsonError(400, 'MISSING_PARTNER', 'partner_user_id is required.');
-  if (partySize === 3 && !partner2UserId) {
-    return jsonError(400, 'MISSING_PARTNER2', 'This hunt takes three hunters — pick a second ally.');
+
+  // W692 — N-hunter party bounds. A boss can specify a RANGE (minParty..maxParty,
+  // e.g. the Grinning God raid: attemptable at 2, fills toward 5); the legacy fixed
+  // `partySize` (duo=2 / trio=3) is the fallback for both ends. The summoner is one
+  // seat, so ally counts are party-minus-one.
+  const fixedParty = cfg.partySize ?? 2;
+  const minParty = cfg.minParty ?? fixedParty;
+  const maxParty = cfg.maxParty ?? fixedParty;
+  const minAllies = Math.max(1, minParty - 1);
+  const maxAllies = Math.max(1, maxParty - 1);
+
+  // Accept the N-hunter ally ARRAY; fall back to the legacy partner/partner2 fields
+  // so an old client (which sends partner_user_id[/partner2_user_id]) still summons.
+  let allies: string[];
+  if (Array.isArray(body.ally_user_ids)) {
+    allies = body.ally_user_ids.filter((x): x is string => typeof x === 'string' && x.length > 0);
+  } else {
+    allies = [body.partner_user_id, body.partner2_user_id].filter(
+      (x): x is string => typeof x === 'string' && x.length > 0,
+    );
   }
-  if (partySize === 2 && partner2UserId) {
-    return jsonError(400, 'PARTY_SIZE', 'This boss is a duo hunt — only one ally can be invited.');
+
+  if (allies.length < minAllies) {
+    return jsonError(
+      400,
+      'MISSING_PARTNER',
+      minAllies === 1
+        ? 'Pick an ally to summon this hunt.'
+        : `This hunt needs at least ${minParty} hunters — pick ${minAllies} allies.`,
+    );
   }
-  const allies = partySize === 3 ? [partnerUserId, partner2UserId] : [partnerUserId];
+  if (allies.length > maxAllies) {
+    return jsonError(
+      400,
+      'PARTY_SIZE',
+      maxAllies === 1
+        ? 'This boss is a duo hunt — only one ally can be invited.'
+        : `This hunt takes at most ${maxParty} hunters — pick up to ${maxAllies} allies.`,
+    );
+  }
   if (allies.includes(session.userId)) {
     return jsonError(400, 'SELF_PARTNER', 'You cannot co-op with yourself.');
   }
-  if (partySize === 3 && partnerUserId === partner2UserId) {
-    return jsonError(400, 'DUPLICATE_ALLY', 'Pick two different allies.');
+  if (new Set(allies).size !== allies.length) {
+    return jsonError(400, 'DUPLICATE_ALLY', 'Pick different allies — no duplicates.');
   }
 
   for (const ally of allies) {
@@ -588,21 +689,34 @@ export async function handleCoopBossCreate(
     }
   }
 
-  // One live (pending/active) instance per pair+boss. W677 generalization: block when
-  // a live instance of this boss already CONTAINS the summoner together with ANY of
-  // the invited allies (in any seat) — the duo either-direction rule, seat-agnostic.
-  const existing = await env.DB.prepare(
-    `SELECT id FROM coop_boss_instances
-      WHERE boss_id = ?1 AND status IN ('pending','active')
-        AND (challenger_user_id = ?2 OR partner_user_id = ?2 OR partner2_user_id = ?2)
-        AND ( (challenger_user_id = ?3 OR partner_user_id = ?3 OR partner2_user_id = ?3)
-           OR (?4 IS NOT NULL AND (challenger_user_id = ?4 OR partner_user_id = ?4 OR partner2_user_id = ?4)) )
-      LIMIT 1`,
-  )
-    .bind(bossId, session.userId, partnerUserId, partner2UserId || null)
-    .first<{ id: string }>();
-  if (existing) {
-    return jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.');
+  // W692 — the seat-agnostic dup predicate as a reusable SELECT: "a live instance of
+  // this boss already CONTAINS the summoner together with ANY invited ally". Sourced
+  // from the challenger column + the participant table + the legacy partner columns
+  // (belt-and-suspenders across the migration→deploy window, when an instance an old
+  // worker created may have partner columns but no participant rows yet). `P` pushes a
+  // bind and returns '?'; passing the SAME closure to the fast-path check, the atomic
+  // insert guard, and the post-insert re-derive keeps all three from ever drifting.
+  const allyInList = (P: (v: unknown) => string) => allies.map((a) => P(a)).join(',');
+  const dupSelect = (P: (v: unknown) => string) =>
+    `SELECT 1 FROM coop_boss_instances i
+      WHERE i.boss_id = ${P(bossId)} AND i.status IN ('pending','active')
+        AND ( i.challenger_user_id = ${P(session.userId)}
+              OR i.partner_user_id = ${P(session.userId)} OR i.partner2_user_id = ${P(session.userId)}
+              OR EXISTS (SELECT 1 FROM coop_boss_participants p
+                          WHERE p.instance_id = i.id AND p.user_id = ${P(session.userId)}) )
+        AND ( i.challenger_user_id IN (${allyInList(P)})
+              OR i.partner_user_id IN (${allyInList(P)}) OR i.partner2_user_id IN (${allyInList(P)})
+              OR EXISTS (SELECT 1 FROM coop_boss_participants p2
+                          WHERE p2.instance_id = i.id AND p2.user_id IN (${allyInList(P)})) )`;
+
+  {
+    const fp: unknown[] = [];
+    const existing = await env.DB.prepare(`${dupSelect((v) => (fp.push(v), '?'))} LIMIT 1`)
+      .bind(...fp)
+      .first();
+    if (existing) {
+      return jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.');
+    }
   }
 
   // W648 — free hunters: at most 3 running hunts; Founders unlimited. Checked
@@ -626,56 +740,54 @@ export async function handleCoopBossCreate(
   }
 
   const id = crypto.randomUUID();
-  // W674 — atomic guarded insert (the race backstop). Re-checks BOTH guards — no
-  // live instance for this boss containing the summoner + any invited ally, AND,
-  // for non-members, the concurrent-hunt cap — inside ONE INSERT ... SELECT ...
-  // WHERE statement, so two creates that both passed the fast-path checks above
-  // cannot both land a row (duplicate winnable hunts / cap+paywall bypass).
-  // Inserts 0 rows when a raced create already took the slot. Mirrors
-  // founder-mark.ts's pattern. W677 — ?11 is the trio's second ally (NULL for a
-  // duo: every `= NULL` comparison is never-true, so the extra clauses vanish).
-  const ins = await env.DB.prepare(
+  const partner1 = allies[0];
+  const partner2 = allies[1] ?? null; // dual-write legacy columns for old clients
+
+  // W674/W692 — atomic guarded insert (the race backstop). Re-checks BOTH guards —
+  // no live instance for this boss containing the summoner + any invited ally, AND,
+  // for non-members, the concurrent-hunt cap — inside ONE INSERT … SELECT … WHERE, so
+  // two creates that both passed the fast-path checks cannot both land a row. SQLite
+  // serializes writers, so the cap COUNT re-reads after any raced create commits →
+  // the paywall can't be bypassed by a double-summon. The participant rows are written
+  // in the SAME env.DB.batch (below), each guarded on the instance existing, so a lost
+  // race writes neither the instance nor its participants. Anonymous `?` placeholders
+  // are bound in build order via the `bind`/push helper.
+  const insBinds: unknown[] = [];
+  const IP = (v: unknown) => (insBinds.push(v), '?');
+  const insertSql =
     `INSERT INTO coop_boss_instances
        (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
         goal_steps, goal_flights, reward_souls, status)
-     SELECT ?1, ?2, ?3, ?4, ?5, ?11, ?6, ?7, ?8, 'pending'
-      WHERE NOT EXISTS (
-              SELECT 1 FROM coop_boss_instances
-               WHERE boss_id = ?2 AND status IN ('pending','active')
-                 AND (challenger_user_id = ?4 OR partner_user_id = ?4 OR partner2_user_id = ?4)
-                 AND ( (challenger_user_id = ?5 OR partner_user_id = ?5 OR partner2_user_id = ?5)
-                    OR (?11 IS NOT NULL AND (challenger_user_id = ?11 OR partner_user_id = ?11 OR partner2_user_id = ?11)) )
-            )
-        AND ( ?9 = 1 OR (
+     SELECT ${IP(id)}, ${IP(bossId)}, ${IP(cfg.rank)}, ${IP(session.userId)}, ${IP(partner1)}, ${IP(partner2)},
+            ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, 'pending'
+      WHERE NOT EXISTS ( ${dupSelect(IP)} )
+        AND ( ${IP(member ? 1 : 0)} = 1 OR (
               SELECT COUNT(*) FROM coop_boss_instances
-               WHERE status IN ('pending','active')
-                 AND (challenger_user_id = ?4
-                   OR ((partner_user_id = ?4 OR partner2_user_id = ?4) AND status = 'active')
-                   OR (partner_user_id = ?4 AND status = 'pending' AND partner_joined_at IS NOT NULL)
-                   OR (partner2_user_id = ?4 AND status = 'pending' AND partner2_joined_at IS NOT NULL))
-                 AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))
-            ) < ?10 )`,
-  )
-    .bind(
-      id, bossId, cfg.rank, session.userId, partnerUserId,
-      cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls,
-      member ? 1 : 0, FREE_CONCURRENT_HUNT_CAP,
-      partner2UserId || null,
-    )
-    .run();
+               WHERE ${RUNNING_HUNT_SQL.replace(/\?U/g, () => IP(session.userId))}
+            ) < ${IP(FREE_CONCURRENT_HUNT_CAP)} )`;
 
-  if (!(ins.meta && Number(ins.meta.changes) >= 1)) {
+  // Batch: instance insert (statement 0) + one participant row per ally, each guarded
+  // on the instance existing so a lost cap/dup race writes no orphan participant rows.
+  const batchStmts = [env.DB.prepare(insertSql).bind(...insBinds)];
+  for (const ally of allies) {
+    batchStmts.push(
+      env.DB
+        .prepare(
+          `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+             SELECT ?1, ?2, NULL WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1)`,
+        )
+        .bind(id, ally),
+    );
+  }
+  const batchRes = await env.DB.batch(batchStmts);
+  const insMeta = batchRes[0]?.meta;
+
+  if (!(insMeta && Number(insMeta.changes) >= 1)) {
     // A concurrent create won the race between the fast-path checks and the insert.
     // Re-derive which guard blocked us so the client keeps its specific 409.
-    const dup = await env.DB.prepare(
-      `SELECT 1 AS x FROM coop_boss_instances
-        WHERE boss_id = ?1 AND status IN ('pending','active')
-          AND (challenger_user_id = ?2 OR partner_user_id = ?2 OR partner2_user_id = ?2)
-          AND ( (challenger_user_id = ?3 OR partner_user_id = ?3 OR partner2_user_id = ?3)
-             OR (?4 IS NOT NULL AND (challenger_user_id = ?4 OR partner_user_id = ?4 OR partner2_user_id = ?4)) )
-        LIMIT 1`,
-    )
-      .bind(bossId, session.userId, partnerUserId, partner2UserId || null)
+    const dp: unknown[] = [];
+    const dup = await env.DB.prepare(`${dupSelect((v) => (dp.push(v), '?'))} LIMIT 1`)
+      .bind(...dp)
       .first();
     if (dup) return jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.');
     return jsonError(
@@ -717,7 +829,10 @@ export async function handleCoopBossList(
 
   const rows = await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
-      WHERE challenger_user_id = ?1 OR partner_user_id = ?1 OR partner2_user_id = ?1
+      WHERE challenger_user_id = ?1
+         OR partner_user_id = ?1
+         OR partner2_user_id = ?1
+         OR id IN (SELECT instance_id FROM coop_boss_participants WHERE user_id = ?1)
       ORDER BY updated_at DESC
       LIMIT ?2`,
   )
@@ -726,6 +841,10 @@ export async function handleCoopBossList(
 
   const list = rows.results ?? [];
   const ids = list.map((r) => r.id);
+  // W692 — attach participant rows (one batch query) so participantIds() + serialize
+  // see the full N-hunter party, not just the legacy partner columns.
+  const partsByInstance = await loadParticipants(env, ids);
+  for (const r of list) r.participants = partsByInstance.get(r.id) ?? [];
   const userIds = new Set<string>();
   for (const r of list) for (const uid of participantIds(r)) userIds.add(uid);
   const [progByInstance, aliasMap, awardByInstance] = await Promise.all([
@@ -774,19 +893,20 @@ export async function handleCoopBossJoin(
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
-  const isP1 = row.partner_user_id === session.userId;
-  const isP2 = !!row.partner2_user_id && row.partner2_user_id === session.userId;
-  if (!isP1 && !isP2) {
+  // W692 — the invited seats now live in coop_boss_participants (attached to `row`
+  // by loadInstance). The joiner must be one of them, and not the challenger.
+  const parts = row.participants ?? [];
+  const mySeat = parts.find((p) => p.user_id === session.userId);
+  if (!mySeat) {
     return jsonError(403, 'FORBIDDEN', 'Only the invited hunter can join this hunt.');
   }
   if (row.status !== 'pending') {
     return jsonError(400, 'BAD_STATE', `Cannot join from status "${row.status}".`);
   }
-  const isTrio = !!row.partner2_user_id;
-  // W677 — a trio seat can only answer once; the hunt stays 'pending' until BOTH
-  // allies have answered (the 24h clock must not run against a half-formed party).
-  if (isTrio && ((isP1 && row.partner_joined_at) || (isP2 && row.partner2_joined_at))) {
-    return jsonError(400, 'ALREADY_JOINED', 'You already answered this summons — waiting on your other ally.');
+  // A seat answers only once; the hunt stays 'pending' until EVERY seat has answered
+  // (the clock must not run against a half-formed party).
+  if (mySeat.joined_at) {
+    return jsonError(400, 'ALREADY_JOINED', 'You already answered this summons — waiting on the rest of the party.');
   }
 
   // W648 — the joiner's cap. THIS instance is their received-pending row, which
@@ -801,46 +921,56 @@ export async function handleCoopBossJoin(
   const startsAt = new Date(nowMs).toISOString();
   const endsAt = new Date(nowMs + windowHours * 3600 * 1000).toISOString();
 
-  if (!isTrio) {
-    // Duo (v1 behavior, unchanged): the single ally's join activates the hunt.
-    await env.DB.prepare(
-      `UPDATE coop_boss_instances
-          SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND status = 'pending'`,
-    )
-      .bind(startsAt, endsAt, id)
-      .run();
-  } else {
-    // W677 trio: stamp THIS seat's answer (guarded — only if unanswered), then
-    // activate IFF both seats have answered. The two statements run in ONE
-    // env.DB.batch (an implicit transaction — review W677 #4): a failure between
-    // them can't strand a row with both stamps set but status still 'pending'
-    // (which nothing could ever activate, since ALREADY_JOINED blocks re-joins).
-    // Concurrency: two simultaneous joins each stamp their own column and at most
-    // ONE batch's activation UPDATE matches (status='pending' + both stamps), so
-    // the clock starts exactly once, when the party is full.
-    const col = isP1 ? 'partner_joined_at' : 'partner2_joined_at';
-    await env.DB.batch([
-      env.DB.prepare(
-        `UPDATE coop_boss_instances
-            SET ${col} = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ? AND status = 'pending' AND ${col} IS NULL`,
-      ).bind(id),
-      env.DB.prepare(
+  // W692 — stamp THIS seat's participant row (guarded — only if unanswered), then
+  // activate IFF NO seat is still unanswered. All statements run in ONE env.DB.batch
+  // (an implicit transaction — W677 #4): a failure between them can't strand a fully-
+  // answered row still 'pending' (nothing could re-activate it, since ALREADY_JOINED
+  // blocks re-joins). Concurrency: two simultaneous joins each stamp their OWN row and
+  // at most one batch's activation UPDATE matches (status='pending' + zero NULL seats),
+  // so the clock starts exactly once, when the party is full. The legacy partner_joined
+  // columns are dual-written for old clients (allies[0]→partner, allies[1]→partner2).
+  const legacyCol =
+    row.partner_user_id === session.userId
+      ? 'partner_joined_at'
+      : row.partner2_user_id === session.userId
+        ? 'partner2_joined_at'
+        : null;
+  const joinStmts = [
+    env.DB
+      .prepare(
+        `UPDATE coop_boss_participants SET joined_at = CURRENT_TIMESTAMP
+          WHERE instance_id = ? AND user_id = ? AND joined_at IS NULL`,
+      )
+      .bind(id, session.userId),
+  ];
+  if (legacyCol) {
+    joinStmts.push(
+      env.DB
+        .prepare(
+          `UPDATE coop_boss_instances SET ${legacyCol} = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND status = 'pending' AND ${legacyCol} IS NULL`,
+        )
+        .bind(id),
+    );
+  }
+  joinStmts.push(
+    env.DB
+      .prepare(
         `UPDATE coop_boss_instances
             SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ? AND status = 'pending'
-            AND partner_joined_at IS NOT NULL AND partner2_joined_at IS NOT NULL`,
-      ).bind(startsAt, endsAt, id),
-    ]);
-  }
+            AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NULL)`,
+      )
+      .bind(startsAt, endsAt, id, id),
+  );
+  await env.DB.batch(joinStmts);
 
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back joined instance.');
   const aliasMap = await getAliasMap(env, participantIds(refreshed));
-  // W603 — push the moment the hunt goes LIVE (duo: this join; trio: the second
-  // answer) to every participant except the joiner. W677 — a trio's FIRST answer
-  // instead tells the summoner one seat is still open.
+  // W603 — push the moment the hunt goes LIVE to every participant except the joiner.
+  // W692 — an EARLIER answer (seats still open) instead tells the summoner how many
+  // hunters are still awaited.
   if (ctx) {
     if (refreshed.status === 'active') {
       for (const uid of participantIds(refreshed)) {
@@ -855,10 +985,14 @@ export async function handleCoopBossJoin(
         );
       }
     } else {
+      const stillOut = (refreshed.participants ?? []).filter((p) => !p.joined_at).length;
       ctx.waitUntil(
         notifyUser(env, refreshed.challenger_user_id, {
           title: 'Ally Answered',
-          body: `${session.alias} answered your summons — waiting on one more ally.`,
+          body:
+            stillOut === 1
+              ? `${session.alias} answered your summons — waiting on one more ally.`
+              : `${session.alias} answered your summons — waiting on ${stillOut} more allies.`,
           type: 'coop_joined',
           data: { bossId: refreshed.boss_id },
         }),
@@ -962,11 +1096,13 @@ async function setTerminalStatus(
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
-  // W677 — 'partner' means "an invited ally": either trio seat may decline, and one
-  // decline ends the whole summons (the challenger re-summons with someone else —
-  // a half-party must never silently become a smaller hunt than was priced/goaled).
+  // W677/W692 — 'partner' means "an invited ally": ANY invited seat (participant row)
+  // may decline, and one decline ends the whole summons (the challenger re-summons with
+  // someone else — a half-party must never silently become a smaller hunt than was
+  // priced/goaled). Sourced from the participant table so raid seats 4/5 (which have no
+  // legacy partner column) can decline too.
   const allowed = who === 'partner'
-    ? (row.partner_user_id === session.userId || (!!row.partner2_user_id && row.partner2_user_id === session.userId))
+    ? (row.participants ?? []).some((pt) => pt.user_id === session.userId)
     : row.challenger_user_id === session.userId;
   if (!allowed) {
     return jsonError(403, 'FORBIDDEN', `Only the ${who} can ${nextStatus === 'declined' ? 'decline' : 'cancel'} this hunt.`);

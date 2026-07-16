@@ -31,20 +31,44 @@ export async function handleCoopPacts(
   // ORDER BY DESC so that IF the (unhittable) cap were reached, it keeps the NEWEST
   // wins — the ones the current streak/lastDay depend on — rather than the oldest.
   // computePacts sorts internally, so direction doesn't affect the math otherwise.
-  // W677 — trio wins ride the same rows (partner2_user_id NULL on duo hunts);
-  // computePacts credits the viewer's pact with EVERY other hunter on the row.
+  // W677/W692 — the viewer is a hunter when they're the challenger OR hold a
+  // participant row (raid seats 4/5 have no legacy partner column). We fetch the
+  // instance ids, then attach the FULL roster per win so computePacts credits a
+  // pact with EVERY co-hunter, not just the two legacy columns.
   const rows = await env.DB.prepare(
-    `SELECT challenger_user_id, partner_user_id, partner2_user_id, boss_id, resolved_at
-       FROM coop_boss_instances
-      WHERE status = 'completed' AND result = 'success'
-        AND resolved_at IS NOT NULL
-        AND (challenger_user_id = ?1 OR partner_user_id = ?1 OR partner2_user_id = ?1)
-      ORDER BY resolved_at DESC
+    `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id, i.resolved_at
+       FROM coop_boss_instances i
+      WHERE i.status = 'completed' AND i.result = 'success'
+        AND i.resolved_at IS NOT NULL
+        AND ( i.challenger_user_id = ?1
+              OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?1) )
+      ORDER BY i.resolved_at DESC
       LIMIT ?2`,
   )
     .bind(session.userId, MAX_WIN_ROWS)
     .all<WinRow>();
 
-  const pacts = computePacts(rows.results ?? [], session.userId);
+  const list = rows.results ?? [];
+  // Attach each win's full roster (challenger + participant rows) in one batch query.
+  const ids = list.map((r) => r.id).filter((x): x is string => !!x);
+  const rosterByInstance = new Map<string, string[]>();
+  if (ids.length) {
+    const ph = ids.map(() => '?').join(', ');
+    const pr = await env.DB.prepare(
+      `SELECT instance_id, user_id FROM coop_boss_participants WHERE instance_id IN (${ph})`,
+    )
+      .bind(...ids)
+      .all<{ instance_id: string; user_id: string }>();
+    for (const p of pr.results ?? []) {
+      const a = rosterByInstance.get(p.instance_id) ?? [];
+      a.push(p.user_id);
+      rosterByInstance.set(p.instance_id, a);
+    }
+  }
+  for (const r of list) {
+    r.participant_ids = [r.challenger_user_id, ...(r.id ? rosterByInstance.get(r.id) ?? [] : [])];
+  }
+
+  const pacts = computePacts(list, session.userId);
   return jsonOk({ ok: true, day: ptDayKey(Date.now()), pacts });
 }

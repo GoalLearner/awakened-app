@@ -11,15 +11,44 @@ import { handleCoopPacts } from './coop-pacts';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
-type Row = { challenger_user_id: string; partner_user_id: string; partner2_user_id?: string | null; boss_id: string; resolved_at: string };
+type Row = {
+  id?: string;
+  challenger_user_id: string;
+  partner_user_id: string;
+  partner2_user_id?: string | null;
+  // W692 — an explicit N-hunter roster (non-challenger hunters). When omitted the
+  // mock derives it from the legacy partner/partner2 columns (duo/trio rows).
+  party?: string[];
+  boss_id: string;
+  resolved_at: string;
+};
 
+// W692 — the handler now issues TWO queries: the wins over coop_boss_instances, then
+// the roster over coop_boss_participants. This SQL-routed mock answers each: the
+// instances query returns the win rows (with a synthesized id); the participants query
+// returns {instance_id, user_id} for every non-challenger hunter of each win.
 function makeDb(rows: Row[], sqlLog?: string[]) {
+  const insts = rows.map((r, i) => ({ ...r, id: r.id ?? `inst${i}` }));
   return {
     prepare: (sql: string) => {
       sqlLog?.push(sql);
+      // Route on the roster query's distinctive SELECT — the instances query also
+      // mentions coop_boss_participants (in its EXISTS membership subquery).
+      const isParticipants = sql.includes('SELECT instance_id, user_id FROM coop_boss_participants');
       return {
         bind: () => ({
-          all: async () => ({ results: rows, success: true, meta: {} }),
+          all: async () => {
+            if (isParticipants) {
+              const prows: { instance_id: string; user_id: string }[] = [];
+              for (const r of insts) {
+                const allies =
+                  r.party ?? [r.partner_user_id, r.partner2_user_id].filter((x): x is string => !!x);
+                for (const uid of allies) prows.push({ instance_id: r.id, user_id: uid });
+              }
+              return { results: prows, success: true, meta: {} };
+            }
+            return { results: insts, success: true, meta: {} };
+          },
           first: async () => null,
           run: async () => ({ success: true, meta: { changes: 0 } }),
         }),
@@ -73,15 +102,17 @@ describe('GET /v1/coop-boss/pacts', () => {
     expect(body.error).toBe('RATE_LIMITED');
   });
 
-  it('queries only WINS the caller participated in (any seat, incl. trio partner2)', async () => {
+  it('queries only WINS the caller participated in (challenger or any participant seat)', async () => {
     const log: string[] = [];
     await handleCoopPacts(req(), makeEnv(makeDb([], log)), session('u1'));
     const sql = log.find((s) => s.includes('FROM coop_boss_instances'));
     expect(sql).toBeTruthy();
-    expect(sql).toMatch(/status = 'completed' AND result = 'success'/);
-    // W677 — one positional param probes all three participant seats.
-    expect(sql).toMatch(/challenger_user_id = \?1 OR partner_user_id = \?1 OR partner2_user_id = \?1/);
-    expect(sql).toMatch(/SELECT challenger_user_id, partner_user_id, partner2_user_id/);
+    expect(sql).toMatch(/i\.status = 'completed' AND i\.result = 'success'/);
+    // W692 — membership is challenger OR a participant row (raid seats 4/5 have no
+    // legacy partner column), so the filter probes the participant table.
+    expect(sql).toMatch(/i\.challenger_user_id = \?1/);
+    expect(sql).toMatch(/EXISTS \(SELECT 1 FROM coop_boss_participants p WHERE p\.instance_id = i\.id AND p\.user_id = \?1\)/);
+    expect(sql).toMatch(/SELECT i\.id, i\.challenger_user_id, i\.partner_user_id, i\.partner2_user_id/);
   });
 
   // W677 — a TRIO win is one row but must credit the viewer's pact with BOTH
@@ -110,5 +141,28 @@ describe('GET /v1/coop-boss/pacts', () => {
     // duo win on 7/13 + trio win on 7/14 with friendA → consecutive-day streak 2
     expect(body.pacts['friendA']).toMatchObject({ streak: 2, total: 2, daysBonded: 2 });
     expect(body.pacts['friendB']).toMatchObject({ streak: 1, total: 1, daysBonded: 1 });
+  });
+
+  // W692 — a 5-hunter raid win credits the viewer's pact with ALL FOUR co-hunters,
+  // including seats 4/5 (which have NO legacy partner column — sourced from the
+  // participant roster). The challenger here is a co-hunter; the viewer is a seat-4 ally.
+  it('credits a 5-hunter raid win to all four co-hunters (incl. no-legacy-column seats)', async () => {
+    const rows: Row[] = [
+      {
+        challenger_user_id: 'friendA',
+        partner_user_id: 'friendB',
+        partner2_user_id: 'friendC',
+        party: ['friendB', 'friendC', 'u1', 'friendD'],
+        boss_id: 'the_grinning_god',
+        resolved_at: '2026-07-15 20:00:00',
+      },
+    ];
+    const res = await handleCoopPacts(req(), makeEnv(makeDb(rows)), session('u1'));
+    const body = (await res.json()) as { ok: boolean; pacts: Record<string, { streak: number; total: number }> };
+    expect(body.ok).toBe(true);
+    expect(Object.keys(body.pacts).sort()).toEqual(['friendA', 'friendB', 'friendC', 'friendD']);
+    for (const f of ['friendA', 'friendB', 'friendC', 'friendD']) {
+      expect(body.pacts[f]).toMatchObject({ streak: 1, total: 1 });
+    }
   });
 });

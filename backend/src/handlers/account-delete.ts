@@ -62,6 +62,17 @@ export async function handleAccountDelete(
   // the line above would make the WHOLE duo purge fail (swallowed) on a not-yet-
   // migrated DB — bestEffortDelete isolation is the point of this file's structure.
   await bestEffortDelete(env, 'DELETE FROM coop_boss_instances WHERE partner2_user_id = ?', uid);
+  // W692 — N-hunter raids (0037): drop the hunts this user is a participant on (raid
+  // seats 4/5 have no legacy partner column), then their own participant rows, then any
+  // orphan rows left by the instance deletes above (each its own guarded statement so a
+  // not-yet-migrated participants table can't break the rest of the deletion).
+  await bestEffortDelete(
+    env,
+    'DELETE FROM coop_boss_instances WHERE id IN (SELECT instance_id FROM coop_boss_participants WHERE user_id = ?)',
+    uid,
+  );
+  await bestEffortDelete(env, 'DELETE FROM coop_boss_participants WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM coop_boss_participants WHERE instance_id NOT IN (SELECT id FROM coop_boss_instances)');
   await bestEffortDelete(env, 'DELETE FROM duels WHERE challenger_user_id = ? OR opponent_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM app_opens WHERE user_id = ?', uid); // 0027 retention rows
 

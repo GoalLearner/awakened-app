@@ -45,14 +45,30 @@ const TRIO_PENDING_ROW = {
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
 function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
+  // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
+  const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
     prepare: (sql: string) => {
       sqlLog?.push(sql);
       return {
-        bind: () => ({
+        bind: (...args: unknown[]) => ({
           all: async () => {
             if (sql.includes('FROM users WHERE id IN')) {
               return { results: [{ id: 'u1', alias: 'challenger' }, { id: 'u2', alias: 'partner' }, { id: 'u3', alias: 'partner2' }], success: true, meta: {} };
+            }
+            // W692 — the participant roster (loadParticipants), derived from the mock
+            // instance's legacy partner columns; joined_at mirrors the *_joined_at cols
+            // so the join/ALREADY_JOINED paths see the right per-seat answered state.
+            // The rows echo the QUERIED instance_id (bind arg 0) so loadInstance's
+            // map.get(newUUID) resolves on a just-created hunt (its id is a fresh UUID).
+            if (sql.includes('FROM coop_boss_participants')) {
+              const i = inst();
+              if (!i) return { results: [], success: true, meta: {} };
+              const iid = (args[0] as string) ?? i.id;
+              const rows: Record<string, unknown>[] = [];
+              if (i.partner_user_id) rows.push({ instance_id: iid, user_id: i.partner_user_id, joined_at: i.partner_joined_at ?? null });
+              if (i.partner2_user_id) rows.push({ instance_id: iid, user_id: i.partner2_user_id, joined_at: i.partner2_joined_at ?? null });
+              return { results: rows, success: true, meta: {} };
             }
             // W686 — per-user MAX(value) progress rows for the steps+sleep raid tests.
             if (sql.includes('FROM verified_events')) {
@@ -153,13 +169,13 @@ describe('W648 — concurrent-hunt cap on CREATE', () => {
     await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 0 }, log)), session('u1'));
     const capSql = log.find((s) => s.includes('COUNT(*) AS n FROM coop_boss_instances'));
     expect(capSql).toBeTruthy();
-    // A received-but-unanswered invite must NOT count against the invitee:
-    // ally-side rows (either seat — W677 trio) only count once ACTIVE (accepted).
-    expect(capSql).toMatch(/\(partner_user_id = \?1 OR partner2_user_id = \?1\) AND status = 'active'/);
-    // W677 review #1 — an ANSWERED trio seat counts even while the instance is
-    // still pending on the other ally (else: deterministic cap/paywall bypass).
-    expect(capSql).toMatch(/partner_joined_at IS NOT NULL/);
-    expect(capSql).toMatch(/partner2_joined_at IS NOT NULL/);
+    // W692 — a received-but-unanswered invite must NOT count against the invitee.
+    // Ally seats now live in coop_boss_participants; the cap counts a participant only
+    // once the hunt is ACTIVE, or (the W677 answered-pending guard) once THAT seat has
+    // been stamped joined_at while still pending — else a free user answers unlimited
+    // summons cap-free and they all flip active later (deterministic paywall bypass).
+    expect(capSql).toMatch(/EXISTS \(SELECT 1 FROM coop_boss_participants p\s+WHERE p\.instance_id = coop_boss_instances\.id AND p\.user_id = \?1/);
+    expect(capSql).toMatch(/p\.joined_at IS NOT NULL/);
     // W649 — an active hunt whose window already lapsed must not count either
     // (unresolved-expired rows would otherwise wall the user forever).
     expect(capSql).toMatch(/strftime\('%s', ends_at\) > strftime\('%s', 'now'\)/);
@@ -204,13 +220,20 @@ describe('W674 — atomic guarded create insert', () => {
             if (sql.includes('FROM friends')) return { id: 'friend-row' };
             if (sql.includes('FROM public_profile_summary')) return { rank_tier: 'S' };
             if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return { n: 0 }; // fast-path cap passes
-            if (sql.includes('SELECT id FROM coop_boss_instances')) return null; // pre-check dup: none
-            if (sql.includes('SELECT 1 AS x FROM coop_boss_instances')) return dupExists ? { x: 1 } : null; // re-check
+            // W692 — the dup check (fast-path AND post-insert re-derive share dupSelect:
+            // `SELECT 1 FROM coop_boss_instances i …`). dupExists=false → the fast-path
+            // passes and the CAP (lost batch) is what blocks → CAP_REACHED.
+            if (sql.includes('SELECT 1 FROM coop_boss_instances i')) return dupExists ? { x: 1 } : null;
+            if (sql.includes('SELECT * FROM coop_boss_instances')) return { ...PENDING_ROW };
             return null;
           },
           run: async () => ({ success: true, meta: { changes: 0 } }), // atomic insert LOST the race
         }),
       }),
+      // W692 — the create's atomic insert + participant rows go through env.DB.batch;
+      // each bound statement's run() reports changes:0, so the instance insert (result
+      // [0]) shows the race was lost.
+      batch: async (stmts: Array<{ run: () => Promise<unknown> }>) => Promise.all(stmts.map((s) => s.run())),
     } as unknown as D1Database;
   }
 
@@ -235,13 +258,14 @@ describe('W677 — trio create validation', () => {
     return new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify(body) });
   }
 
-  it('400 MISSING_PARTNER2 when a trio boss gets only one ally', async () => {
+  it('400 MISSING_PARTNER when a trio boss gets only one ally', async () => {
     const res = await handleCoopBossCreate(
       trioReq({ partner_user_id: 'u2', boss_id: 'the_threefold_court' }),
       makeEnv(makeDb({})), session('u1'));
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
-    expect(body.error).toBe('MISSING_PARTNER2');
+    // W692 — the under-min-party guard is a single MISSING_PARTNER code across all sizes.
+    expect(body.error).toBe('MISSING_PARTNER');
   });
 
   it('400 PARTY_SIZE when a duo boss gets a second ally', async () => {
@@ -295,13 +319,18 @@ describe('W677 — trio join (activate only when BOTH allies answered)', () => {
     const body = (await res.json()) as { ok?: boolean; instance?: { status?: string } };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
-    // seat stamp is guarded (only-if-unanswered) …
+    // W692 — the participant seat is stamped (guarded, only-if-unanswered) …
+    const partStamp = log.find((s) => s.includes('UPDATE coop_boss_participants SET joined_at = CURRENT_TIMESTAMP'));
+    expect(partStamp).toBeTruthy();
+    expect(partStamp).toMatch(/user_id = \? AND joined_at IS NULL/);
+    // … the legacy partner column is dual-written for old clients (guarded) …
     const stamp = log.find((s) => s.includes('SET partner_joined_at = CURRENT_TIMESTAMP'));
     expect(stamp).toBeTruthy();
     expect(stamp).toMatch(/partner_joined_at IS NULL/);
-    // … and activation demands BOTH stamps (the mock row has neither → still pending).
+    // … and activation demands NO seat is still unanswered (mock has u2+u3 both NULL →
+    // one join leaves the other NULL → stays pending).
     const activate = log.find((s) => s.includes("SET status = 'active'"));
-    expect(activate).toMatch(/partner_joined_at IS NOT NULL AND partner2_joined_at IS NOT NULL/);
+    expect(activate).toMatch(/NOT EXISTS \(SELECT 1 FROM coop_boss_participants WHERE instance_id = \? AND joined_at IS NULL\)/);
     expect(body.instance?.status).toBe('pending');
   });
 
