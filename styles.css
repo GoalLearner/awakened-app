@@ -33631,3 +33631,100 @@ button.guildhall-summary-tile:active {
   .pf-row.pf-risk .pf-flame,.pf-hero.pf-risk .pf-bigflame{animation:pfFlick 1s ease-in-out infinite;}
   .pf-pip.pend{animation:pfFlick 1.6s ease-in-out infinite;}
 }
+
+/* ===== W679 — Weekly (Monday) update-reminder banner (ClaudeDesign handoff-20) =====
+   Slim gold "System Update" strip, fixed under the status bar, slides over the app
+   header. .upd-arriving = entrance glow peak; .upd-resting = gentle breathing pulse;
+   .upd-gone = slide-up dismiss. All classes prefixed .upd- to avoid collisions. */
+@property --upd-glow { syntax: '<number>'; inherits: false; initial-value: .32; }
+#upd-banner.upd-banner {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 10px; right: 10px; margin: 0 auto; max-width: 520px; z-index: 9500;
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 14px; border-radius: 16px;
+  background: linear-gradient(157deg, #221a2e 0%, #120e1c 55%, #0a070f 100%);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  overflow: hidden; cursor: pointer; --upd-glow: .32;
+}
+#upd-banner::before {
+  content: ""; position: absolute; top: -40%; right: -10%; width: 160px; height: 180%;
+  background: radial-gradient(closest-side, rgba(245,184,66,.20), rgba(245,184,66,0) 75%);
+  pointer-events: none;
+}
+#upd-banner::after {
+  content: ""; position: absolute; inset: 0; border-radius: 16px; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(245,184,66, calc(var(--upd-glow) * .9)),
+              0 0 26px rgba(245,184,66, calc(var(--upd-glow) * .8));
+}
+#upd-banner > * { position: relative; z-index: 1; }
+#upd-banner .upd-sigil {
+  width: 46px; height: 46px; flex: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(245,184,66,.28), rgba(10,7,15,.6) 72%);
+  box-shadow: 0 0 0 1.6px #f5b842, 0 0 16px rgba(245,184,66,.45), inset 0 0 10px rgba(245,184,66,.18);
+}
+#upd-banner .upd-sigil svg { display: block; filter: drop-shadow(0 0 5px rgba(245,184,66,.5)); }
+#upd-banner .upd-arrow { animation: updBob 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes updBob { 0%,100% { transform: translateY(-1px); } 50% { transform: translateY(1.5px); } }
+#upd-banner .upd-txt { flex: 1; min-width: 0; }
+#upd-banner .upd-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 800;
+  letter-spacing: 2.4px; color: #f5b842; text-transform: uppercase; margin-bottom: 5px;
+  display: flex; align-items: center; gap: 7px;
+}
+#upd-banner .upd-spark { width: 5px; height: 5px; border-radius: 50%; background: #f5b842; box-shadow: 0 0 8px #f5b842; }
+#upd-banner .upd-msg {
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif; font-weight: 600; font-size: 15.5px;
+  line-height: 1.14; color: #f5f3fb; letter-spacing: .1px;
+}
+#upd-banner .upd-msg .upd-em { color: #f5b842; font-weight: 700; }
+#upd-banner .upd-sub {
+  font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 13px;
+  line-height: 1.2; color: #9090a8; margin-top: 3px; letter-spacing: .2px;
+}
+#upd-banner .upd-cta {
+  flex: none; align-self: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 800;
+  letter-spacing: 1.6px; text-transform: uppercase; color: #2a1a02;
+  padding: 10px 15px; border-radius: 11px; border: none; cursor: pointer;
+  background: linear-gradient(120deg, #e0921f 0%, #f5b842 42%, #ffd574 100%);
+  text-shadow: 0 1px 0 rgba(255,255,255,.28);
+  box-shadow: 0 0 18px rgba(245,184,66,.30), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(120,70,0,.35);
+  white-space: nowrap; animation: updCtaPulse 2.6s ease-in-out infinite;
+}
+@keyframes updCtaPulse {
+  0%,100% { box-shadow: 0 0 14px rgba(245,184,66,.24), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 5px rgba(120,70,0,.35); }
+  50% { box-shadow: 0 0 26px rgba(245,184,66,.5), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 5px rgba(120,70,0,.35); }
+}
+#upd-banner .upd-cta:active { transform: translateY(1px); }
+#upd-banner .upd-dismiss {
+  position: absolute; top: 7px; right: 9px; z-index: 2;
+  width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,.04); color: #6a6a82;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+#upd-banner .upd-dismiss:hover { color: #a0a0bc; background: rgba(255,255,255,.08); }
+#upd-banner .upd-dismiss svg { display: block; }
+#upd-banner.upd-resting { animation: updRestPulse 3.4s ease-in-out infinite; }
+@keyframes updRestPulse { 0%,100% { --upd-glow: .26; } 50% { --upd-glow: .42; } }
+#upd-banner.upd-arriving {
+  --upd-glow: .95;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), 0 0 8px rgba(245,184,66,.25);
+}
+#upd-banner.upd-arriving .upd-cta {
+  box-shadow: 0 0 34px rgba(245,184,66,.7), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 5px rgba(120,70,0,.35);
+  animation: none;
+}
+#upd-banner.upd-arriving .upd-sigil {
+  box-shadow: 0 0 0 1.8px #f5b842, 0 0 26px rgba(245,184,66,.8), inset 0 0 12px rgba(245,184,66,.3);
+}
+#upd-banner.upd-slidein { animation: updSlideIn .4s ease both; }
+@keyframes updSlideIn { from { transform: translateY(-18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+#upd-banner.upd-gone {
+  transform: translateY(-16px); opacity: 0; pointer-events: none;
+  transition: transform .32s ease, opacity .32s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  #upd-banner, #upd-banner .upd-cta, #upd-banner .upd-arrow, #upd-banner.upd-resting, #upd-banner.upd-slidein { animation: none !important; }
+}

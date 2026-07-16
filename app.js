@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w678'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w679'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -58611,6 +58611,11 @@
           try { if (!(typeof _isAnyHigherPriorityModalActive === 'function' && _isAnyHigherPriorityModalActive()) && shouldShowDailyInsight()) showDailyInsight(); } catch (_) {}
         });
       } catch (_) {}
+      // W679 review #3 — Monday update-banner on WARM resume too: iOS users rarely
+      // cold-launch (the app sits backgrounded all weekend), so a Monday-morning
+      // foreground is the common "first open". Fully self-gated (Monday + once/day
+      // seen-key + What's-New suppression), so this is a no-op every other resume.
+      setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} }, 60_000);
     registerSW();
@@ -58703,6 +58708,10 @@
         render();
         setupFridayBanner();
         maybeAutoShowWhatsNew();
+        // W679 — Monday update-reminder banner (existing users only; a brand-new
+        // installer just got the newest build). Slim top strip; coexists with any
+        // modal above it. Deferred so the render settles + What's New lands first.
+        setTimeout(() => { try { _maybeShowUpdateBanner(); } catch (_) {} }, 700);
         // W361 — the daily insight now fires via the unified early-journey
         // dispatcher (maybeShowFirstAwakenedRetentionMoment) so it can never
         // stack with the welcome-back screen or a milestone beat.
@@ -58734,6 +58743,80 @@
       enterFirstRunFlow();
     }
   }
+
+  // ── W679 — Weekly (Monday) update-reminder banner (ClaudeDesign handoff-20).
+  // A slim gold "System Update" strip that slides down on the FIRST app-open each
+  // Monday (device-local day), nudging hunters to pull the newest App Store build
+  // — whether or not one exists (owner: "more than likely there's an update at
+  // least once a week; I want users on the newest version"). Tap the strip or
+  // UPDATE → the App Store listing (id6764727990); ✕ dismisses until next Monday.
+  // Shown once per Monday (seen-key = that day's date). No version-check / network.
+  var _UPD_STORE_URL = 'https://apps.apple.com/app/id6764727990';
+  function _updBannerDayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function _updOpenStore() {
+    try { if (typeof Haptics !== 'undefined' && Haptics.tap) Haptics.tap(); } catch (_) {}
+    // '_system' opens the App Store app on Capacitor/iOS (same as the review flow);
+    // '_blank' is the browser-preview fallback.
+    try { window.open(_UPD_STORE_URL, '_system'); } catch (_) {
+      try { window.open(_UPD_STORE_URL, '_blank', 'noopener'); } catch (__) {}
+    }
+  }
+  function closeUpdateBanner() {
+    var el = document.getElementById('upd-banner');
+    if (!el) return;
+    el.classList.add('upd-gone');
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 360);   // let the slide-up finish
+  }
+  function _showUpdateBanner(dayKey) {
+    if (document.getElementById('upd-banner')) return;
+    var el = document.createElement('div');
+    el.id = 'upd-banner';
+    el.className = 'upd-banner upd-arriving upd-slidein';
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', 'A new version of Awakened is available. Tap to update in the App Store.');
+    el.innerHTML =
+      '<div class="upd-sigil" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#ffd574" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<g class="upd-arrow"><path d="M12 3v11"/><path d="M7.5 10l4.5 4.5 4.5-4.5"/></g><path d="M5 19.5h14"/></svg></div>' +
+      '<div class="upd-txt"><div class="upd-eyebrow"><span class="upd-spark" aria-hidden="true"></span>System Update</div>' +
+        '<div class="upd-msg">A new version has <span class="upd-em">awakened</span></div>' +
+        '<div class="upd-sub">The App Store won’t update on its own</div></div>' +
+      '<button type="button" class="upd-cta" data-upd-action="update">Update</button>' +
+      '<button type="button" class="upd-dismiss" data-upd-action="dismiss" aria-label="Dismiss for the week">' +
+        '<svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true"><path d="M1 1l7 7M8 1l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+    el.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.closest && t.closest('[data-upd-action="dismiss"]')) { e.stopPropagation(); closeUpdateBanner(); return; }
+      _updOpenStore();   // banner body OR the Update pill → the store listing
+    });
+    el.addEventListener('keydown', function (e) {
+      // Review W679 #2 — only when the BANNER itself is focused: without the target
+      // guard, Enter/Space on the inner ✕ button bubbles here and opens the store.
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); _updOpenStore(); }
+    });
+    document.body.appendChild(el);
+    // entrance peak → settle to the gentle resting breathing pulse.
+    setTimeout(function () { if (el && el.classList) { el.classList.remove('upd-arriving', 'upd-slidein'); el.classList.add('upd-resting'); } }, 900);
+    try { localStorage.setItem('hb_update_banner_seen', dayKey); } catch (_) {}   // mark seen on show → once per Monday
+  }
+  function _maybeShowUpdateBanner() {
+    try {
+      if (new Date().getDay() !== 1) return;   // 1 = Monday (device-local; a UX nudge, not a game-day)
+      // Review W679 #1 — never float over the What's New sheet (z 340 < banner
+      // 9500). Bail WITHOUT setting the seen-key so the next open this Monday
+      // (post-sheet) still shows it. Mirrors the boot-beat suppression convention.
+      var wn = document.getElementById('wn-overlay');
+      if (wn && !wn.classList.contains('hidden')) return;
+      var today = _updBannerDayKey();
+      var seen = ''; try { seen = localStorage.getItem('hb_update_banner_seen') || ''; } catch (_) {}
+      if (seen === today) return;               // already shown/dismissed this Monday
+      _showUpdateBanner(today);
+    } catch (_) {}
+  }
+  try { window.__updBannerDemo = function () { _showUpdateBanner('demo'); }; window.closeUpdateBanner = closeUpdateBanner; } catch (_) {}
 
   document.addEventListener('DOMContentLoaded', init);
 })();

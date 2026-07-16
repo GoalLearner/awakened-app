@@ -44,7 +44,10 @@ import { test, expect, Page } from '@playwright/test';
 // before any app script runs, by injecting CSS. Date/timezone/timing independent.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+    // W679 — the Monday update-reminder banner (#upd-banner) is a fixed top strip;
+    // on a UTC-Monday CI run it would fire and could intercept top-of-screen taps
+    // (same failure class as the Friday overlay). Hide it in the suite like the rest.
+    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner{display:none!important;visibility:hidden!important;pointer-events:none!important}';
     const inject = () => {
       const root = document.head || document.documentElement;
       if (root && !document.getElementById('e2e-splash-kill')) {
