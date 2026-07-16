@@ -29,6 +29,16 @@ workers_dev = true
 # disable push. Secrets are preserved regardless, but this protects the var too.
 keep_vars = true
 
+# ── W680 — Monday "update available" push broadcast cron ─────────
+# Fires every 5 minutes across the 16:00–17:59 UTC window on Mondays; the
+# handler (src/lib/update-push.ts) only proceeds when it is 9 AM
+# America/Los_Angeles, which the 2-hour window covers in BOTH DST phases
+# (16 UTC = 9 AM PDT; 17 UTC = 9 AM PST) — the other hour's runs no-op.
+# Each eligible run sends one bounded page (free-plan subrequest budget);
+# 12 eligible runs/Monday × 12 users/page = weekly fanout capacity.
+[triggers]
+crons = ["*/5 16-17 * * 1"]
+
 # ── D1 database binding ──────────────────────────────────────────
 # binding:       In-Worker variable name (accessed as env.DB from
 #                src/index.ts and src/db-related modules).

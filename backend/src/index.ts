@@ -103,6 +103,8 @@ import { handlePreflight, withCors } from './lib/cors';
 // runtime can instantiate it (matches class_name in wrangler.toml).
 export { MatchRoom } from './pvp/match-room';
 import { jsonError } from './lib/responses';
+import { timingSafeEqual } from './lib/timing-safe';
+import { runUpdatePushCron, runUpdatePushPage } from './lib/update-push';
 
 // Regex matchers for parameterized routes.
 // Capture group #1 is the row UUID. We accept the standard randomUUID()
@@ -156,6 +158,25 @@ export default {
       // the Authorization header, so it lives BEFORE the Bearer-session gate.
       else if (path === '/v1/admin/retention' && method === 'GET') {
         response = await handleAdminRetention(request, env);
+      }
+      // ── W680 — admin test-fire for the Monday update push (secret-gated). Runs
+      // ONE page immediately, bypassing the Monday-9AM-PT cron gate, against an
+      // explicit ?day= key (use a throwaway like test-2026-07-16 so a real Monday's
+      // idempotency row is never consumed by testing). Same fail-closed auth as
+      // /v1/admin/retention.
+      else if (path === '/v1/admin/push-update-reminder' && method === 'POST') {
+        const expected = env.ADMIN_METRICS_SECRET;
+        const provided = request.headers.get('authorization') || '';
+        if (!expected || !provided || !timingSafeEqual(provided, `Bearer ${expected}`)) {
+          response = jsonError(401, 'UNAUTHORIZED', 'Missing or invalid admin secret.');
+        } else {
+          const day = url.searchParams.get('day') || '';
+          if (!/^[A-Za-z0-9_-]{4,40}$/.test(day)) {
+            response = jsonError(400, 'INVALID_DAY', 'Pass ?day=<key> (e.g. test-2026-07-16).');
+          } else {
+            response = Response.json(await runUpdatePushPage(env, day));
+          }
+        }
       }
       // ── Health check (uncached, no auth) ──
       else if (path === '/health' && method === 'GET') {
@@ -393,6 +414,14 @@ export default {
 
     logRequest(method, path, response.status, Date.now() - startMs);
     return withCors(response);
+  },
+
+  // ── W680 — cron: the Monday 9 AM PT "update available" push broadcast ──
+  // wrangler.toml fires this every 5 min across 16:00–17:59 UTC on Mondays;
+  // runUpdatePushCron gates to 9 AM America/Los_Angeles (DST-proof) and sends
+  // one bounded page per run (see lib/update-push.ts).
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runUpdatePushCron(env));
   },
 } satisfies ExportedHandler<Env>;
 
