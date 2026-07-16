@@ -32,6 +32,12 @@ const JOBS = [
   { src: 'vestments_of_the_final_verdict.png', dst: 'assets/items/vestments_of_the_final_verdict.png', kind: 'item' },
   { src: 'courthunters_grips.png',          dst: 'assets/items/courthunters_grips.png',          kind: 'item' },
   { src: 'seal_of_the_threefold_court.png', dst: 'assets/items/seal_of_the_threefold_court.png', kind: 'item' },
+  // W682 — The Unresting March (D 48h duo) + its 3-piece ranger pool.
+  { src: 'the-unresting-march.png',         dst: 'assets/bosses/the-unresting-march.png',         kind: 'boss' },
+  { src: 'the-unresting-march-summons.png', dst: 'assets/bosses/the-unresting-march-summons.png', kind: 'boss' },
+  { src: 'roadwardens_harness.png',         dst: 'assets/items/roadwardens_harness.png',          kind: 'item' },
+  { src: 'milestone_cowl.png',              dst: 'assets/items/milestone_cowl.png',               kind: 'item' },
+  { src: 'longroad_grips.png',              dst: 'assets/items/longroad_grips.png',               kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });

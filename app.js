@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w681'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w682'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -466,6 +466,17 @@
       archetype:  'sustainer',
       statDomain: 'VIT',
       dropTable:  { ultra_rare: 0.22, rare: 0.55 },
+    },
+    // W682 — D-rank co-op DROP SOURCE (The Unresting March, the 48h endurance
+    // duo). Rate sits on the rank ladder between E (.22) and C (.25).
+    the_unresting_march: {
+      id:         'the_unresting_march',
+      name:       'The Unresting March',
+      rank:       'D',
+      coopOnly:   true,
+      archetype:  'sustainer',
+      statDomain: 'VIT',
+      dropTable:  { ultra_rare: 0.24, rare: 0.55 },
     },
     // W397 — C-rank co-op DROP SOURCE (The Coursing Dread). coopOnly keeps it
     // out of the dungeon grid; exists only so rollBossDrop resolves its
@@ -1949,9 +1960,10 @@
   // yet). The schema is the source of truth — UI builds on top.
   //
   // Slot ownership per boss locked in EQUIPMENT.md "Slot Ownership"
-  // section. Stat magnitudes follow the tier-doubling table:
-  // E-tier common=2, rare=6, ultra-rare=12 // D-tier =4/12/24.
-  // Don't improvise values — pull from EQUIPMENT.md verbatim.
+  // section. Stat budgets follow the AS-SHIPPED W474 curve (Σ of bonuses):
+  // E 2-4/6-8/12-15 · D 4/10/18 · C 6/14/22 · B 8/18/28 · A -/22-25/30-34
+  // (common/rare/ultra; co-op pools may run 1-2 hotter — "co-op runs hot").
+  // Don't improvise values — match the tier's shipped neighbors.
   const CARDS = {
     // ── The Insomniac (E, VIT) — signature slot: AMULET ─────
     dream_woven_hood: {
@@ -2354,6 +2366,54 @@
       bonuses:      { str: 0, vit: 2, int: 8, focus: 1, will: 3, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [0,2], will: [2,4], wlt: [0,0] },
       set_id: 'threefold_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
+    // ── The Unresting March (D) 48h duo pool — W682 ─────────────────────
+    // 3 RANGER pieces (body/helm/gloves): before this the D-rank ranger shelf
+    // held ZERO items in any slot. Budgets on the solo D curve (rare Σ10,
+    // ultra Σ18). Armor only — no WEAPON_MOVES. 3-piece 'unresting_march' set,
+    // capped below the Threefold 3pc (cp7 < cp9) per the W506 ladder.
+    roadwardens_harness: {
+      id: 'roadwardens_harness',
+      name: "Roadwarden's Harness",
+      slot: 'body',
+      source_boss: 'the_unresting_march',
+      rarity: 'ultra_rare',
+      tier: 'D',
+      flavor: 'Stripped from the column that never rests. It carries the weight so the walker can keep walking — mile after mile after mile.',
+      art_path: 'assets/items/roadwardens_harness.png',
+      bonuses:      { str: 2, vit: 5, int: 0, focus: 9, will: 2, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [3,7], int: [0,0], focus: [7,11], will: [1,3], wlt: [0,0] },
+      set_id: 'unresting_march', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    milestone_cowl: {
+      id: 'milestone_cowl',
+      name: 'Milestone Cowl',
+      slot: 'helm',
+      source_boss: 'the_unresting_march',
+      rarity: 'rare',
+      tier: 'D',
+      flavor: 'A road-grey hood that keeps the eyes on the next marker, never the miles behind.',
+      art_path: 'assets/items/milestone_cowl.png',
+      bonuses:      { str: 1, vit: 2, int: 0, focus: 6, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,2], vit: [1,3], int: [0,0], focus: [5,7], will: [0,2], wlt: [0,0] },
+      set_id: 'unresting_march', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    longroad_grips: {
+      id: 'longroad_grips',
+      name: 'Longroad Grips',
+      slot: 'gloves',
+      source_boss: 'the_unresting_march',
+      rarity: 'rare',
+      tier: 'D',
+      flavor: 'Worn soft by two days of marching. The hands stop asking when the road ends.',
+      art_path: 'assets/items/longroad_grips.png',
+      bonuses:      { str: 1, vit: 3, int: 0, focus: 5, will: 1, wlt: 0 },
+      bonus_ranges: { str: [0,2], vit: [2,4], int: [0,0], focus: [4,6], will: [0,2], wlt: [0,0] },
+      set_id: 'unresting_march', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
 
@@ -3554,6 +3614,16 @@
       tiers: [
         { pieces: 2, bonus: { int: 3, vit: 2 },            label: '+3 INT · +2 VIT' },
         { pieces: 3, bonus: { int: 4, focus: 3, vit: 2 },  label: '+4 INT · +3 FOCUS · +2 VIT' },
+      ],
+    },
+    // W682 — the 48h endurance duo's 3-piece ranger set (body/helm/gloves, one
+    // boss line). D-tier = the smallest set on the W506 ladder: full set cp7,
+    // under Threefold 3pc cp9 and Choir/Wardens 4pc cp11.
+    unresting_march: {
+      id: 'unresting_march', name: 'The Unresting March',
+      tiers: [
+        { pieces: 2, bonus: { focus: 2, vit: 2 },           label: '+2 FOCUS · +2 VIT' },
+        { pieces: 3, bonus: { focus: 3, vit: 2, will: 2 },  label: '+3 FOCUS · +2 VIT · +2 WILL' },
       ],
     },
   };
@@ -45387,6 +45457,30 @@
       coopVictoryTitle:'BOTH HEADS FALL',
       coopDefeatTitle: 'THE MAW STILL HUNGERS',
     },
+    // W682 — first D-rank co-op + the first 48-HOUR hunt window. An endurance
+    // duo: 34,000 combined is deliberately more than a day's walking for two —
+    // the window is the mechanic. Reward = half solo D (100 → 50/hunter; MUST
+    // mirror server COOP_BOSS_CFG). Drops its own 3-piece RANGER set (the D-rank
+    // ranger shelf was literally EMPTY — zero items in any slot before this).
+    the_unresting_march: {
+      id:              'the_unresting_march',
+      name:            'The Unresting March',
+      rank:            'D',
+      artId:           'the_unresting_march',
+      dropSourceBoss:  'the_unresting_march',
+      coopGoalSteps:   34000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 50,
+      coopWindowHours: 48,
+      statDomain:      'VIT',
+      flavorShort:     'It does not stop to sleep. Neither will you.',
+      flavorLong:      'A column of armored shades that has walked the border road since the old war ended — never resting, never arriving. It cannot be run down in a single day. Bring an ally, and walk it into the ground across two.',
+      killCondShort:   'Two hunters: 34,000 combined steps in 48h',
+      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, walk 34,000 verified steps between you — outlast the column that never rests. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE MARCH HALTS',
+      coopDefeatTitle: 'THE COLUMN MARCHES ON',
+    },
     // W397 — C-rank duo hunt. Steps, but a far longer road than the E-rank.
     the_coursing_dread: {
       id:              'the_coursing_dread',
@@ -46042,6 +46136,8 @@
     if (typeof ms !== 'number' || ms <= 0) return 'Time is up';
     const totalMin = Math.floor(ms / 60000);
     const h = Math.floor(totalMin / 60); const m = totalMin % 60;
+    // W682 — 48h hunts: roll to days above 24h ("1d 23h left"), matching _coopFmtShort.
+    if (h >= 24) return Math.floor(h / 24) + 'd ' + (h % 24) + 'h left';
     return (h > 0 ? (h + 'h ' + m + 'm') : (m + 'm')) + ' left';
   }
   function _coopErrText(code) {
@@ -46201,6 +46297,11 @@
     );
   }
 
+  // W682 — a hunt's window length in hours, from its boss config (48h bosses
+  // exist now; every "N-hour hunt" copy line must derive, never hardcode 24).
+  function _coopWindowHrs(inst) {
+    try { return (COOP_BOSSES[inst.boss_id] && COOP_BOSSES[inst.boss_id].coopWindowHours) || 24; } catch (_) { return 24; }
+  }
   function _coopPendingHtml(inst) {
     const v = _coopView(inst);
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
@@ -46232,14 +46333,14 @@
           seatRow(inst.role === 'partner' ? inst.partner2 : inst.partner);
       return (
         rows +
-        '<p class="coop-lead">The 24-hour hunt begins the moment BOTH allies join.</p>' +
+        '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment BOTH allies join.</p>' +
         _coopErrBlock() +
         (isSummoner ? '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL SUMMONS</button>' : '')
       );
     }
     return (
       '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + themAlias + ' to accept</div>' +
-      '<p class="coop-lead">The 24-hour hunt begins the moment ' + themAlias + ' joins.</p>' +
+      '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment ' + themAlias + ' joins.</p>' +
       _coopErrBlock() +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL INVITE</button>'
     );
@@ -47141,7 +47242,7 @@
       const unit = _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
       return '<div class="cph-hunt cph-pending" data-coop-invite="' + esc(inst.id) + '">' + top +
         '<div class="cph-inv">' +
-          '<div class="cph-inv-meta"><span class="cph-inv-target">Target <b>' + N(goal) + '</b> ' + unit + ' · 24h clock</span>' + _coopTimePill(inst, true) + '</div>' +
+          '<div class="cph-inv-meta"><span class="cph-inv-target">Target <b>' + N(goal) + '</b> ' + unit + ' · ' + _coopWindowHrs(inst) + 'h clock</span>' + _coopTimePill(inst, true) + '</div>' +
           '<div class="cph-inv-act"><button type="button" class="cph-btn cph-decline" data-coop-decline="' + esc(inst.id) + '">Decline</button>' +
           '<button type="button" class="cph-btn cph-accept" data-coop-accept="' + esc(inst.id) + '">Accept Pact</button></div>' +
         '</div>' +
