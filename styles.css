@@ -12816,6 +12816,74 @@ footer {
   pointer-events: none;
 }
 
+/* ── W691 — special (non-rank) gates: Holiday + Members-only raid ────────
+   Centered 2-up row below the B-A-S rank grid; cell width ≈ the rank cells
+   (64vw / 2 cols ≈ 96vw / 3 cols). A CSS treatment stands in for gate art. */
+.gate-grid-special {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  width: 64%;
+  max-width: 396px;
+  margin: 2px auto 22px;
+}
+.gate-cell--special {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(120% 90% at 50% 15%, rgba(24, 26, 46, 0.9), rgba(9, 10, 22, 0.96));
+}
+.gate-cell--special .gate-special-emblem { width: 34%; max-width: 58px; opacity: 0.92; }
+.gate-cell--special .gate-special-emblem svg { width: 100%; height: 100%; display: block; }
+.gate-special-pill {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px; font-weight: 800; letter-spacing: 1.4px;
+  padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
+}
+/* Holiday — festive multi-light glow (stands in for christmas-lights art). */
+.gate-cell--holiday {
+  border-color: rgba(240, 90, 90, 0.4);
+  box-shadow: 0 0 22px rgba(240, 90, 90, 0.18), inset 0 0 30px rgba(46, 160, 90, 0.12);
+  background:
+    radial-gradient(60% 50% at 22% 18%, rgba(240, 90, 90, 0.22), transparent 70%),
+    radial-gradient(60% 50% at 78% 20%, rgba(52, 200, 120, 0.20), transparent 70%),
+    radial-gradient(70% 60% at 50% 92%, rgba(245, 184, 66, 0.20), transparent 72%),
+    radial-gradient(120% 90% at 50% 15%, rgba(20, 24, 40, 0.9), rgba(8, 12, 20, 0.96));
+}
+.gate-cell--holiday .gate-special-emblem { color: #ffd574; filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.6)); }
+.gate-cell--holiday .gate-special-pill { color: #ffe6a8; background: rgba(240, 90, 90, 0.16); border: 1px solid rgba(245, 184, 66, 0.4); }
+/* Members — gold/violet apex-raid glow. */
+.gate-cell--members {
+  border-color: rgba(245, 184, 66, 0.45);
+  box-shadow: 0 0 26px rgba(245, 184, 66, 0.16), inset 0 0 34px rgba(139, 92, 246, 0.14);
+  background:
+    radial-gradient(70% 60% at 50% 30%, rgba(139, 92, 246, 0.22), transparent 72%),
+    radial-gradient(80% 60% at 50% 100%, rgba(245, 184, 66, 0.20), transparent 70%),
+    radial-gradient(120% 90% at 50% 12%, rgba(20, 18, 40, 0.92), rgba(8, 8, 20, 0.97));
+}
+.gate-cell--members .gate-special-emblem { color: #ffd574; filter: drop-shadow(0 0 7px rgba(245, 184, 66, 0.65)); }
+.gate-cell--members .gate-special-pill { color: #160b26; background: linear-gradient(100deg, #a78bfa, #ffd574); border: 1px solid rgba(245, 184, 66, 0.6); }
+/* Special-gate CLOSED overlay — always shown while the gate is dormant. */
+.gate-cell--special .gate-special-closed {
+  display: flex; opacity: 1;
+  position: absolute; left: 0; right: 0; bottom: 0;
+  flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 4px 8px;
+  background: linear-gradient(0deg, rgba(4, 6, 12, 0.86), transparent);
+}
+.gate-cell--special .gate-special-closed .gate-cell-lock-icon { font-size: 15px; }
+.gate-cell--special .gate-special-closed .gate-cell-lock-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.6px; color: #b9b9cc; text-align: center;
+}
+/* Members gate, once the raid is LIVE (renderQuestsPanel adds .gate-cell--open):
+   drop the closed overlay so the gate reads as enterable. */
+.gate-cell--special.gate-cell--open .gate-special-closed { display: none; }
+
 /* Lock overlay — center-bottom of the cell, hidden by default.
    Revealed only when the parent carries .gate-cell--locked. */
 .gate-cell-lock-overlay {

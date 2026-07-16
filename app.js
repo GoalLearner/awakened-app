@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w690'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w691'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48115,6 +48115,40 @@
     } catch (_) { return false; }
   }
 
+  // W691 — special (non-rank) gate flags. Both dormant until their content ships:
+  // the Holiday gate opens only during seasonal events (owner adds bosses + dates
+  // near each holiday); the Members gate opens The Grinning God raid (W693 flips
+  // _GRINNING_GOD_LIVE true once the raid + N-hunter model land).
+  const _HOLIDAY_GATE_OPEN = false;
+  const _GRINNING_GOD_LIVE = false;
+  function _isMemberNow() {
+    try { return !!(window.Auth && typeof Auth.isMember === 'function' && Auth.isMember()); } catch (_) { return false; }
+  }
+  function _renderSpecialGates(gateView) {
+    try {
+      const holiday = gateView.querySelector('.gate-cell--holiday');
+      if (holiday) {
+        holiday.classList.toggle('gate-cell--open', _HOLIDAY_GATE_OPEN);
+        const lbl = holiday.querySelector('.gate-cell-lock-label');
+        if (lbl) lbl.textContent = 'Opens during holidays';
+        holiday.setAttribute('aria-label', 'Holiday gate — opens during seasonal events');
+      }
+      const members = gateView.querySelector('.gate-cell--members');
+      if (members) {
+        const isMember = _isMemberNow();
+        const open = _GRINNING_GOD_LIVE && isMember;
+        members.classList.toggle('gate-cell--open', open);
+        const lbl = members.querySelector('.gate-cell-lock-label');
+        if (open) {
+          members.setAttribute('aria-label', 'Enter the members raid — The Grinning God');
+        } else {
+          if (lbl) lbl.textContent = isMember ? 'Coming soon' : 'Members only';
+          members.setAttribute('aria-label', isMember ? 'The Grinning God raid — coming soon' : 'Members-only raid — tap to go Premium');
+        }
+      }
+    } catch (_) {}
+  }
+
   function renderQuestsPanel() {
     const gateView    = document.getElementById('quests-gate-view');
     const dungeonView = document.getElementById('quests-dungeon-view');
@@ -48176,6 +48210,7 @@
         }
         cell.setAttribute('aria-label', label);
       });
+      _renderSpecialGates(gateView);   // W691 — holiday + members raid gate states
     }
     // W564 — keep the Dungeon-tab Pacts entry in sync when the gate view renders:
     // paint from cache immediately, then refresh from the live pact list.
@@ -48225,6 +48260,40 @@
       backBtn.addEventListener('click', () => {
         questsGateExpanded = false;
         renderQuestsPanel();
+      });
+    }
+
+    // W691 — special (non-rank) gates get their own delegated handler (they carry
+    // data-gate-special, not data-gate-rank, so the rank grid's handler skips them).
+    const specialGrid = document.getElementById('quests-gate-special');
+    if (specialGrid) {
+      specialGrid.addEventListener('click', (e) => {
+        const cell = e.target.closest('.gate-cell[data-gate-special]');
+        if (!cell || !specialGrid.contains(cell)) return;
+        const kind = cell.getAttribute('data-gate-special');
+        if (kind === 'holiday') {
+          if (!_HOLIDAY_GATE_OPEN && typeof showHabitToast === 'function') {
+            showHabitToast('The Holiday Gate opens only during seasonal events — check back around the holidays.');
+          }
+          // (when a holiday is live, open its dungeon here — owner wires content later)
+          return;
+        }
+        if (kind === 'members') {
+          if (!_isMemberNow()) {
+            // Non-members: this gate IS a Premium funnel → open the paywall.
+            try { if (typeof openFounder === 'function') openFounder(); } catch (_) {}
+            return;
+          }
+          if (!_GRINNING_GOD_LIVE) {
+            if (typeof showHabitToast === 'function') {
+              showHabitToast('The Grinning God stirs behind the seal — this raid arrives soon.');
+            }
+            return;
+          }
+          // Raid live (W693): open The Grinning God. Wired when the raid lands.
+          try { if (typeof _openMembersRaid === 'function') _openMembersRaid(); } catch (_) {}
+          return;
+        }
       });
     }
   }
