@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v5.991';
+const CACHE_VERSION = 'v5.992';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -323,6 +323,13 @@ const PRECACHE_ASSETS = [
   '/assets/items/pilgrims-coal-wraps.png',
   '/assets/items/boots-of-the-long-road.png',
   '/assets/items/ember-ledger-of-the-patient-flame.png',
+  // W678/W684 — Threefold Court (trio) + Unresting March (48h duo) pools.
+  '/assets/items/vestments_of_the_final_verdict.png',
+  '/assets/items/courthunters_grips.png',
+  '/assets/items/seal_of_the_threefold_court.png',
+  '/assets/items/roadwardens_harness.png',
+  '/assets/items/milestone_cowl.png',
+  '/assets/items/longroad_grips.png',
   // (v2.1 equipment panel-base.png retired in v3 Phase 1d — the
   //  Hunter Build replaces the body-slot armory art with a tiled
   //  6-slot grid. Asset remains on disk for archival.)
