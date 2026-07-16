@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w689'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w690'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12257,7 +12257,12 @@
     try { const raw = localStorage.getItem(_JOURNEY_START_KEY); if (raw) { const t = Date.parse(raw); if (isFinite(t) && t > 0) return t; } } catch (_) {}
     let start = Date.now();
     try {
-      const comps = JSON.parse(localStorage.getItem('hb_completions') || '{}') || {};
+      // W690 review F6 — prefer the merged in-memory map (full history incl.
+      // archive chunks); the raw blob is hot-window-only and would anchor the
+      // any% clock ≤14 months back on a chunked restore.
+      const comps = (typeof completions === 'object' && completions && Object.keys(completions).length)
+        ? completions
+        : (JSON.parse(localStorage.getItem('hb_completions') || '{}') || {});
       let earliest = null;
       for (const d in comps) { if (/^\d{4}-\d{2}-\d{2}$/.test(d) && comps[d] && comps[d].length) { if (!earliest || d < earliest) earliest = d; } }
       if (earliest) { const t0 = Date.parse(earliest + 'T00:00:00'); if (isFinite(t0) && t0 > 0 && t0 < start) start = t0; }
@@ -23680,6 +23685,7 @@
           : [];
       }
       completions = JSON.parse(localStorage.getItem('hb_completions') || '{}');
+      try { _compMergeArchives(completions, COMP_ARCH_PREFIX); } catch (_) {}   // W690 — overlay cold month-chunks so every reader still sees FULL history
       try { _journeyStartMs(); } catch (_) {}   // W553 — anchor the any% "time to summit" clock at first boot (precise for new players; earliest-active-day for existing)
       streaks     = JSON.parse(localStorage.getItem('hb_streaks')     || '{}');
       totalPoints = parseInt(localStorage.getItem('hb_points') || '0', 10) || 0;
@@ -23812,6 +23818,132 @@
   // window (habit completion, see toggleHabit) call saveFlush() SYNCHRONOUSLY at
   // the moment of mutation for exact pre-W659 durability. saveFlush() is also the
   // backstop fired on every graceful teardown.
+  // ── W690 — completions month-chunk archive (the CLAUDE.md hb_completions debt) ──
+  // The owner-prescribed structural fix (2026-07-13 note: "do NOT delete history"):
+  // the IN-MEMORY `completions` map stays FULL (every reader — streaks, History,
+  // accolades, backfills — is untouched), but on disk the hot `hb_completions`
+  // blob holds only the most recent COMPLETIONS_HOT_MONTHS; older months freeze
+  // into write-once `hb_completions_arch_YYYY_MM` chunks. save() therefore
+  // stringifies O(hot window) instead of O(lifetime) — the QuotaExceeded /
+  // slow-save risk stops growing with account age. Chunks are merged back over
+  // the hot blob at load, ride CloudSync via a dynamic prefix scan, and are
+  // hb_*-prefixed so the W689 account-switch purge clears them automatically.
+  // Same treatment for the (bigger) hb_completions_auto metadata twin.
+  const COMPLETIONS_HOT_MONTHS = 14;   // this month + 13 back (~425 days: covers the
+                                       // yearly History grid + every backfill window)
+  const COMP_ARCH_PREFIX = 'hb_completions_arch_';
+  const COMP_AUTO_ARCH_PREFIX = 'hb_completions_auto_arch_';
+  function _compHotCutoff() {   // 'YYYY-MM'; date-keys whose month sorts below this are cold
+    const d = new Date();
+    d.setDate(1); d.setMonth(d.getMonth() - (COMPLETIONS_HOT_MONTHS - 1));
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  // Overlay every cold chunk under the hot map (hot wins on collision) so readers
+  // see full history. Called from load() for both maps.
+  function _compMergeArchives(map, prefix) {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(prefix) === 0) keys.push(k);
+      }
+      keys.forEach((k) => {
+        try {
+          const chunk = JSON.parse(localStorage.getItem(k) || '{}') || {};
+          for (const d in chunk) if (!(d in map)) map[d] = chunk[d];
+        } catch (_) {}
+      });
+    } catch (_) {}
+    return map;
+  }
+  // Per-prefix archival state: the cutoff in force when archival last ran, and
+  // the set of month-keys ('YYYY-MM') whose chunk write VERIFIABLY succeeded.
+  // W690 review F1/F2 — the hot slice may only drop months in this set, sliced
+  // with THIS cutoff: a month whose chunk write quota-failed (F2), or one that
+  // turned cold mid-session after a month rollover before re-archival (F1),
+  // stays in the hot blob — zero-loss by construction, retried on later saves.
+  const _compArchState = {};
+  // Move cold-dated entries into their month chunks (idempotent, additive).
+  function _compArchiveCold(map, prefix) {
+    const st = _compArchState[prefix] = {
+      cutoff: _compHotCutoff(),
+      months: (_compArchState[prefix] && _compArchState[prefix].months) || new Set(),
+    };
+    try {
+      const coldByMonth = {};
+      for (const d in map) {
+        if (typeof d === 'string' && d.length >= 7 && d.slice(0, 7) < st.cutoff) {
+          const m = d.slice(0, 7);
+          (coldByMonth[m] = coldByMonth[m] || {})[d] = map[d];
+        }
+      }
+      for (const m in coldByMonth) {
+        const key = prefix + m.replace('-', '_');
+        try {
+          let existing = {};
+          try { existing = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { existing = {}; }
+          let changed = false;
+          for (const d in coldByMonth[m]) {
+            if (!(d in existing)) { existing[d] = coldByMonth[m][d]; changed = true; }
+          }
+          if (changed) localStorage.setItem(key, JSON.stringify(existing));   // a quota throw skips the mark below
+          st.months.add(m);   // verified: written (or already fully present)
+        } catch (e) { _logSwallow('compArch:persist', e); }   // month stays UNarchived → stays hot
+      }
+    } catch (_) {}
+    return st;
+  }
+  // Re-archive when needed (first save of a session, or the cutoff advanced
+  // mid-session — the app survives midnight in place via checkDayChange).
+  function _compEnsureArchived(map, prefix) {
+    const st = _compArchState[prefix];
+    if (!st || st.cutoff !== _compHotCutoff()) _compArchiveCold(map, prefix);
+  }
+  // Hot slice for the per-save write. Drops a date ONLY when its month is both
+  // cold under the ARCHIVAL-TIME cutoff and verifiably archived.
+  function _compHotSlice(map, prefix) {
+    const st = _compArchState[prefix];
+    const cutoff = st ? st.cutoff : _compHotCutoff();
+    const months = st ? st.months : null;
+    const hot = {};
+    for (const d in map) {
+      const m = (typeof d === 'string' && d.length >= 7) ? d.slice(0, 7) : null;
+      const dropSafe = m && m < cutoff && months && months.has(m);
+      if (!dropSafe) hot[d] = map[d];
+    }
+    return hot;
+  }
+  // W690 review F3 — deleteHabit scrubs a habit id from ALL history, including
+  // cold dates that live only in write-once chunks; without this the scrub of
+  // >14-month-old days silently reverts at next boot (chunk re-merge resurrects
+  // the id). Best-effort per chunk: a failed write leaves that chunk's old
+  // entries (status-quo), never corrupts.
+  function _compScrubHabitFromArchives(habitId) {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.indexOf(COMP_ARCH_PREFIX) === 0 || k.indexOf(COMP_AUTO_ARCH_PREFIX) === 0)) keys.push(k);
+      }
+      keys.forEach((k) => {
+        try {
+          const chunk = JSON.parse(localStorage.getItem(k) || '{}') || {};
+          let changed = false;
+          const isAuto = k.indexOf(COMP_AUTO_ARCH_PREFIX) === 0;
+          for (const d in chunk) {
+            if (isAuto) {
+              if (chunk[d] && typeof chunk[d] === 'object' && habitId in chunk[d]) { delete chunk[d][habitId]; changed = true; }
+            } else if (Array.isArray(chunk[d]) && chunk[d].indexOf(habitId) !== -1) {
+              chunk[d] = chunk[d].filter((x) => x !== habitId); changed = true;
+            }
+          }
+          if (changed) localStorage.setItem(k, JSON.stringify(chunk));
+        } catch (e) { _logSwallow('compArch:scrub', e); }
+      });
+    } catch (_) {}
+  }
+  try { window.__compChunkTest = { hotSlice: _compHotSlice, archiveCold: _compArchiveCold, mergeArchives: _compMergeArchives, cutoff: _compHotCutoff, state: _compArchState }; } catch (_) {}
+
   let _saveNowCalls = 0;              // real disk writes so far (test + telemetry)
   let _saveDirty = false;
   let _saveMicroScheduled = false;
@@ -23823,7 +23955,11 @@
       // ≤49-habit array) and guarantees post-drag snap-back behavior.
       sortHabitsAutoVerifyFirst(habits);
       localStorage.setItem('hb_habits',         JSON.stringify(habits));
-      localStorage.setItem('hb_completions',     JSON.stringify(completions));
+      // W690 — archive cold months (first save of the session, and again if the
+      // cutoff advanced mid-session), then write the hot window only — the slice
+      // drops nothing that isn't verifiably in a chunk (review F1/F2).
+      _compEnsureArchived(completions, COMP_ARCH_PREFIX);
+      localStorage.setItem('hb_completions',     JSON.stringify(_compHotSlice(completions, COMP_ARCH_PREFIX)));
       localStorage.setItem('hb_streaks',         JSON.stringify(streaks));
       localStorage.setItem('hb_points',          String(totalPoints));
       localStorage.setItem('hb_achievements',    JSON.stringify([...unlockedAchievements]));
@@ -49923,6 +50059,7 @@
   function deleteHabit(id) {
     habits = habits.filter(h => h.id !== id);
     for (const d in completions) if (Array.isArray(completions[d])) completions[d] = completions[d].filter(x => x !== id); // W360 - guard a non-array (corrupted/restored) value from crashing habit deletion
+    try { _compScrubHabitFromArchives(id); } catch (_) {}   // W690 review F3 — cold-month chunks too, else the scrub of old dates reverts at next boot
     delete streaks[id];
     try { delete habitNotes[id]; } catch (_) {} // W356 (V4) clean up orphaned note
     save();
@@ -56078,31 +56215,11 @@
           endDate: endISO,
           limit: 0,
         });
-        const samples = (result && result.resultData) || [];
-        // W348 — dedupe by source (same fix as W347 for steps). HealthKit
-        // returns a sample per source (iPhone + Apple Watch + 3rd-party apps);
-        // summing all double-counts overlapping samples. Sum per source; when
-        // >1 source prefer the max single-source total. One source unchanged;
-        // no source -> raw sum fallback. Native HKStatisticsQuery is the proper
-        // uniform fix (see spec).
-        let total = 0;
-        const _bySource = Object.create(null);
-        let _srcCount = 0;
-        for (const s of samples) {
-          const v = Number(s && s.value);
-          if (!isFinite(v) || v <= 0) continue;
-          total += v;
-          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
-          if (_src) {
-            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
-            _bySource[_src] += v;
-          }
-        }
-        if (_srcCount > 1) {
-          let _maxSrc = 0;
-          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
-          total = _maxSrc;
-        }
+        // W348→W690 — the W681 Apple-preferred source dedup, applied here too
+        // (this third W348 block was missed in the W681 sweep: a ring writing
+        // activeEnergy would double-count the Furnace Knight's kcal condition
+        // exactly like the steps bug).
+        const total = _totalFromHealthSamples((result && result.resultData) || []);
         setStatus('granted');
         return Math.round(total);
       } catch (e) {
@@ -56165,11 +56282,20 @@
   // (hb_walk_unchecked_dates) into 'Daily walk' under the new key.
   const AUTO_VERIFY = (() => {
     function load() {
-      try { return JSON.parse(localStorage.getItem('hb_completions_auto') || '{}'); }
+      try {
+        const map = JSON.parse(localStorage.getItem('hb_completions_auto') || '{}') || {};
+        return _compMergeArchives(map, COMP_AUTO_ARCH_PREFIX);   // W690 — full history for readers
+      }
       catch (_) { return {}; }
     }
     function persist(map) {
-      try { localStorage.setItem('hb_completions_auto', JSON.stringify(map)); } catch (e) { _logSwallow('completions_auto:persist', e); }
+      try {
+        // W690 — same month-chunking as hb_completions (this map is the FATTER
+        // twin — per-day per-habit {source,value,threshold} objects). The slice
+        // drops only verifiably-archived months (review F1/F2).
+        _compEnsureArchived(map, COMP_AUTO_ARCH_PREFIX);
+        localStorage.setItem('hb_completions_auto', JSON.stringify(_compHotSlice(map, COMP_AUTO_ARCH_PREFIX)));
+      } catch (e) { _logSwallow('completions_auto:persist', e); }
     }
     function loadUncheckedMap() {
       // One-time migration: fold legacy 'hb_walk_unchecked_dates' (flat
@@ -58014,6 +58140,19 @@
           if (v !== null) keys[k] = v;
         } catch (_) {}
       });
+      // W690 — completions ARCHIVE chunks are dynamic keys (one per cold month),
+      // so they can't live in the static SNAPSHOT_KEYS list. Sweep them in by
+      // prefix so a cloud restore on a new device carries FULL history, not just
+      // the hot window.
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.indexOf('hb_completions_arch_') === 0 || k.indexOf('hb_completions_auto_arch_') === 0)) {
+            const v = localStorage.getItem(k);
+            if (v !== null) keys[k] = v;
+          }
+        }
+      } catch (_) {}
       return {
         version:    CLOUD_STATE_VERSION,
         appVersion: (typeof APP_VERSION !== 'undefined') ? APP_VERSION : null,
@@ -58040,6 +58179,29 @@
             } else if (v === null) {
               localStorage.removeItem(k);
             }
+          }
+        });
+        // W690 — restore the dynamic completions-archive chunks too (allowlisted
+        // by PREFIX; everything else in the snapshot outside SNAPSHOT_KEYS is
+        // still ignored, preserving the allowlist security posture).
+        // Review F5 — restore means REPLACE: drop local chunks the snapshot
+        // lacks, or a rollback restore silently resurrects cold months.
+        const _isArch = k => (k.indexOf('hb_completions_arch_') === 0 || k.indexOf('hb_completions_auto_arch_') === 0);
+        const _localArch = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && _isArch(k)) _localArch.push(k);
+        }
+        _localArch.forEach(k => {
+          if (!Object.prototype.hasOwnProperty.call(snapshot.keys, k)) { try { localStorage.removeItem(k); } catch (_) {} }
+        });
+        // Review F4 — a chunk write failure must FAIL the restore (no swallow):
+        // returning ok on a truncated restore would let the next push overwrite
+        // the full cloud copy with the truncated set. A throw here lands in the
+        // outer catch → WRITE_FAILED, no reload, cloud copy stays intact.
+        Object.keys(snapshot.keys).forEach(k => {
+          if (_isArch(k) && typeof snapshot.keys[k] === 'string') {
+            localStorage.setItem(k, snapshot.keys[k]);
           }
         });
         localStorage.setItem(LS_KEY_LAST_RESTORE, new Date().toISOString());

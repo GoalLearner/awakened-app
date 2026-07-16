@@ -56,6 +56,29 @@ export async function handleDeviceTokenRegister(
     .bind(token, session.userId, platform, environment, env.APPLE_BUNDLE_ID)
     .run();
 
+  // W690 — lazy per-user pruning at the only write point (scale-audit: dead
+  // tokens accumulated forever — iOS rotates APNs tokens on restore/reinstall,
+  // and the APNs-410 prune only fires when a send actually targets the row).
+  // Registration happens on every cold launch, so active devices constantly
+  // refresh updated_at; anything a user hasn't refreshed in 60 days is a
+  // rotated corpse. The count cap (newest 8) bounds pathological rotation
+  // between sends. Both DELETEs ride idx_device_tokens_user; best-effort —
+  // a prune failure must never fail the registration.
+  try {
+    await env.DB.prepare(
+      `DELETE FROM device_tokens
+        WHERE user_id = ?1 AND updated_at < datetime('now', '-60 days')`,
+    ).bind(session.userId).run();
+    await env.DB.prepare(
+      `DELETE FROM device_tokens
+        WHERE user_id = ?1 AND token NOT IN (
+          SELECT token FROM device_tokens WHERE user_id = ?1
+           ORDER BY updated_at DESC, token DESC LIMIT 8)`,
+    ).bind(session.userId).run();
+  } catch (e) {
+    console.warn('[push] token prune failed (non-fatal)', String(e instanceof Error ? e.message : e));
+  }
+
   return jsonOk({ ok: true });
 }
 

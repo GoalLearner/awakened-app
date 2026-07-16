@@ -1721,3 +1721,60 @@ test.describe('T · Account-switch purge (W689)', () => {
     expect(r.promptKept).toBe(true);
   });
 });
+
+// ── U · Completions month-chunk archive (W690) ──────────────────────────────
+// The hb_completions unbounded-growth fix: cold months (older than the
+// 14-month hot window) archive into write-once hb_completions_arch_YYYY_MM
+// chunks; the hot blob holds only recent months; the load-time merge restores
+// FULL history for readers. Pins: split correctness, chunk content, merge
+// round-trip (no history loss), and hot-wins collision semantics.
+test.describe('U · Completions month-chunk archive (W690)', () => {
+  test('cold months archive, hot slice sheds them, merge restores full history', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    const r = await page.evaluate(() => {
+      const t = (window as any).__compChunkTest;
+      const PFX = 'hb_completions_arch_';
+      // clean any stale chunks from prior runs
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i); if (k && k.indexOf(PFX) === 0) localStorage.removeItem(k);
+      }
+      const map = { '2024-11-03': ['h1'], '2025-01-15': ['h1', 'h2'], '2099-01-01': ['hot'] };
+      const st = t.archiveCold(map, PFX);
+      const hot = t.hotSlice(map, PFX);
+      const chunk2024 = JSON.parse(localStorage.getItem(PFX + '2024_11') || 'null');
+      const chunk2025 = JSON.parse(localStorage.getItem(PFX + '2025_01') || 'null');
+      // merge round-trip: hot slice + chunks = full history; hot wins on collision
+      const merged = t.mergeArchives(JSON.parse(JSON.stringify(hot)), PFX);
+      const collide = t.mergeArchives({ '2024-11-03': ['hot-wins'] }, PFX);
+      // W690 review F1/F2 invariant: a cold month NOT verifiably archived must
+      // survive the slice (simulate a quota-failed chunk write by unmarking it).
+      st.months.delete('2025-01');
+      const hotAfterFail = t.hotSlice(map, PFX);
+      st.months.add('2025-01');   // restore for other tests
+      // slice with NO archival state for a prefix drops nothing (fail-safe)
+      const noState = t.hotSlice(map, 'hb_completions_arch_NEVER_RAN_');
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i); if (k && k.indexOf(PFX) === 0) localStorage.removeItem(k);
+      }
+      return {
+        hotHasCold: '2024-11-03' in hot || '2025-01-15' in hot,
+        hotHasRecent: '2099-01-01' in hot,
+        chunk2024ok: !!chunk2024 && JSON.stringify(chunk2024['2024-11-03']) === '["h1"]',
+        chunk2025ok: !!chunk2025 && JSON.stringify(chunk2025['2025-01-15']) === '["h1","h2"]',
+        mergedFull: '2024-11-03' in merged && '2025-01-15' in merged && '2099-01-01' in merged,
+        hotWins: JSON.stringify(collide['2024-11-03']) === '["hot-wins"]',
+        unarchivedMonthKeptHot: '2025-01-15' in hotAfterFail && !('2024-11-03' in hotAfterFail),
+        noStateDropsNothing: '2024-11-03' in noState && '2025-01-15' in noState,
+      };
+    });
+    expect(r.hotHasCold).toBe(false);
+    expect(r.hotHasRecent).toBe(true);
+    expect(r.chunk2024ok).toBe(true);
+    expect(r.chunk2025ok).toBe(true);
+    expect(r.mergedFull).toBe(true);
+    expect(r.hotWins).toBe(true);
+    expect(r.unarchivedMonthKeptHot).toBe(true);
+    expect(r.noStateDropsNothing).toBe(true);
+  });
+});
