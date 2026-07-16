@@ -31,16 +31,18 @@ export async function handleCoopPacts(
   // ORDER BY DESC so that IF the (unhittable) cap were reached, it keeps the NEWEST
   // wins — the ones the current streak/lastDay depend on — rather than the oldest.
   // computePacts sorts internally, so direction doesn't affect the math otherwise.
+  // W677 — trio wins ride the same rows (partner2_user_id NULL on duo hunts);
+  // computePacts credits the viewer's pact with EVERY other hunter on the row.
   const rows = await env.DB.prepare(
-    `SELECT challenger_user_id, partner_user_id, boss_id, resolved_at
+    `SELECT challenger_user_id, partner_user_id, partner2_user_id, boss_id, resolved_at
        FROM coop_boss_instances
       WHERE status = 'completed' AND result = 'success'
         AND resolved_at IS NOT NULL
-        AND (challenger_user_id = ? OR partner_user_id = ?)
+        AND (challenger_user_id = ?1 OR partner_user_id = ?1 OR partner2_user_id = ?1)
       ORDER BY resolved_at DESC
-      LIMIT ?`,
+      LIMIT ?2`,
   )
-    .bind(session.userId, session.userId, MAX_WIN_ROWS)
+    .bind(session.userId, MAX_WIN_ROWS)
     .all<WinRow>();
 
   const pacts = computePacts(rows.results ?? [], session.userId);

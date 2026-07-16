@@ -58,6 +58,10 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM user_souls_ledger WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM friends WHERE requester_user_id = ? OR recipient_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM coop_boss_instances WHERE challenger_user_id = ? OR partner_user_id = ?', uid, uid);
+  // W677 — the trio seat (0035), as its OWN statement: folding partner2_user_id into
+  // the line above would make the WHOLE duo purge fail (swallowed) on a not-yet-
+  // migrated DB — bestEffortDelete isolation is the point of this file's structure.
+  await bestEffortDelete(env, 'DELETE FROM coop_boss_instances WHERE partner2_user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM duels WHERE challenger_user_id = ? OR opponent_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM app_opens WHERE user_id = ?', uid); // 0027 retention rows
 

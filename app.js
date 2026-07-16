@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w676'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w677'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5708,37 +5708,43 @@
       showNoticeCard({ icon: p.alive ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.alive ? 'good' : 'info' });
     } catch (_) {}
   }
-  // Advance the DAILY pact with the OTHER participant when a co-op win is granted
+  // Advance the DAILY pact with EVERY other participant when a co-op win is granted
   // (called from _awardCoopKill, guarded once-per-instance by hb_coop_awarded — no
-  // double count). Ticks the day-streak at most ONCE per PT day.
+  // double count). W677 — a trio win ticks BOTH pairwise pacts (owner: "counts for
+  // the flames for all three"). Ticks each pair's day-streak at most ONCE per PT day.
   function _coopBumpPact(inst) {
     try {
       if (!inst) return;
-      var other = (inst.role === 'partner') ? inst.challenger : inst.partner;
-      var fid = other && other.user_id; if (!fid) return;
+      var others = _coopOthers(inst);
+      if (!others.length) return;
       var nowMs = Date.now();
       // Key the day off the WIN's RESOLVED day (parity with backfill), not this device's
       // processing day — a late-processed award must not false-break a streak.
       var today = (inst.resolved_at ? _pactDayKey(_coopTsToMs(inst.resolved_at)) : '') || getPTDate();
-      var m = _loadCoopPacts(); var key = String(fid);
-      var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
-      if (e.lastDay === today) {
-        // second hunt SAME PT day — streak + daysBonded already ticked; only Bond + last-hunt refresh.
-      } else if (today > (e.lastDay || '')) {   // a NEWER day than the last counted (lexicographic == chronological)
-        e.daysBonded = (e.daysBonded | 0) + 1;
-        e.streak = (e.lastDay && e.lastDay === _pactPrevDay(today)) ? ((e.streak | 0) + 1) : 1;   // consecutive vs reset
-        e.lastDay = today;
-      } else {
-        // today < lastDay: an OLDER win processed out of order — count the Bond but do
-        // NOT roll the day-streak backward (that would false-break a correct streak).
-      }
-      e.best = Math.max(e.best | 0, e.streak | 0);
-      e.total = (e.total | 0) + 1;
-      if (!e.firstWonAt) e.firstWonAt = nowMs;
-      e.lastWonAt = nowMs;
-      e.lastBossId = inst.boss_id || e.lastBossId || null;
-      if (other && other.alias) e.alias = other.alias;   // display cache (alias can change; user_id is the key)
-      m[key] = e; _saveCoopPacts(m);
+      var m = _loadCoopPacts(); var changed = false;
+      others.forEach(function (other) {
+        var fid = other && other.user_id; if (!fid) return;
+        var key = String(fid);
+        var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
+        if (e.lastDay === today) {
+          // second hunt SAME PT day — streak + daysBonded already ticked; only Bond + last-hunt refresh.
+        } else if (today > (e.lastDay || '')) {   // a NEWER day than the last counted (lexicographic == chronological)
+          e.daysBonded = (e.daysBonded | 0) + 1;
+          e.streak = (e.lastDay && e.lastDay === _pactPrevDay(today)) ? ((e.streak | 0) + 1) : 1;   // consecutive vs reset
+          e.lastDay = today;
+        } else {
+          // today < lastDay: an OLDER win processed out of order — count the Bond but do
+          // NOT roll the day-streak backward (that would false-break a correct streak).
+        }
+        e.best = Math.max(e.best | 0, e.streak | 0);
+        e.total = (e.total | 0) + 1;
+        if (!e.firstWonAt) e.firstWonAt = nowMs;
+        e.lastWonAt = nowMs;
+        e.lastBossId = inst.boss_id || e.lastBossId || null;
+        if (other && other.alias) e.alias = other.alias;   // display cache (alias can change; user_id is the key)
+        m[key] = e; changed = true;
+      });
+      if (changed) _saveCoopPacts(m);
     } catch (_) {}
   }
   // Best-effort backfill from the backend's completed instances (mirrors
@@ -5760,11 +5766,13 @@
         var byFriend = {};
         list.forEach(function (it) {
           if (!it || it.status !== 'completed' || it.result !== 'success' || !awarded[it.id]) return;
-          var other = (it.role === 'partner') ? it.challenger : it.partner;
-          var fid = other && other.user_id; if (!fid) return;
           var t = _coopTsToMs(it.resolved_at || it.updated_at);
-          (byFriend[fid] = byFriend[fid] || { times: [], alias: (other && other.alias) || null })
-            .times.push({ t: t, boss: it.boss_id });
+          // W677 — a trio win seeds the pact with EACH other hunter on the instance.
+          _coopOthers(it).forEach(function (other) {
+            var fid = other && other.user_id; if (!fid) return;
+            (byFriend[fid] = byFriend[fid] || { times: [], alias: (other && other.alias) || null })
+              .times.push({ t: t, boss: it.boss_id });
+          });
         });
         var m = _loadCoopPacts(); var changed = false;
         for (var fid in byFriend) {
@@ -45392,6 +45400,32 @@
       coopVictoryTitle:'THE CHOIR IS SILENCED',
       coopDefeatTitle: 'THE CHOIR HOLDS',
     },
+    // W677 — first TRIO hunt (partySize 3: you + 2 hand-picked friends). Owner spec:
+    // C-rank, 27,000 combined steps. Reward = floor(solo C 200 / 3) = 66/hunter
+    // (thirds split; MUST mirror server COOP_BOSS_CFG). NAME + FLAVOR + ART are
+    // PLACEHOLDERS pending the owner's boss design (id `the_threefold_court` is
+    // stable — rename via these display strings only). dropSourceBoss points at the
+    // existing C-rank co-op pool until the boss gets its own drops.
+    the_threefold_court: {
+      id:              'the_threefold_court',
+      name:            'The Threefold Court',
+      rank:            'C',
+      partySize:       3,
+      artId:           'the_threefold_court',
+      dropSourceBoss:  'the_coursing_dread',
+      coopGoalSteps:   27000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 66,
+      coopWindowHours: 24,
+      statDomain:      'VIT',
+      flavorShort:     'Three thrones, one hunger. It takes three hunters to starve it.',
+      flavorLong:      'Three crowned shades hold court in the deep, and their hunger is triune: whatever road one hunter takes, two thrones still watch the others. No pair has ever unseated them. Bring a third — split the court’s gaze three ways — and walk the kingdom out from under it.',
+      killCondShort:   'Three hunters: 27,000 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 27,000 verified steps between the three of you. All three hunters are credited the kill.',
+      coopVictoryTitle:'THE COURT IS CAST DOWN',
+      coopDefeatTitle: 'THE COURT STILL REIGNS',
+    },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
 
@@ -45502,11 +45536,11 @@
           '<span class="bcard-stat-value">' + esc(cfg.statDomain) + '</span>' +
           '<span class="bcard-stat-sep">\u00B7</span>' +
           '<span class="bcard-stat-label">HUNTERS</span> ' +
-          '<span class="bcard-stat-value">2</span>' +
+          '<span class="bcard-stat-value">' + ((cfg.partySize | 0) || 2) + '</span>' +   // W677 — trio-aware
         '</div>' +
         '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
         '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
-        '<div class="boss-archetype-pill" data-archetype="coop">Requires 2 Hunters</div>' +
+        '<div class="boss-archetype-pill" data-archetype="coop">Requires ' + ((cfg.partySize | 0) || 2) + ' Hunters</div>' +
       '</button>'
     );
   }
@@ -45745,7 +45779,7 @@
     try { _coopApplyBadge(); } catch (_) {}
     // W541 — co-op dungeon win → mark first-coop + arm the review pre-prompt (fires on modal close).
     _rvSet(_RV.firstCoop, '1');
-    try { _reviewArm('coop', { dungeonName: (cfg && cfg.name) || 'the dungeon', partySize: 2 }); } catch (_) {}
+    try { _reviewArm('coop', { dungeonName: (cfg && cfg.name) || 'the dungeon', partySize: (inst && inst.party_size) || 2 }); } catch (_) {}   // W677 — trio-aware
     // W448 — also drop a notification-tray record (best-effort) so a win lands even if
     // the resolution was detected on app-resume rather than while watching the sheet.
     // W662 — suppress the generic win ping when an ULTRA/MEGA drop already fired
@@ -45802,7 +45836,9 @@
 
   // ── Picker / create / lifecycle actions ──
   async function openCoopPartnerPicker() {
-    _coopSheet.picking = true; _coopSheet.friends = null; _coopSheet.error = null; renderCoopSheet();
+    _coopSheet.picking = true; _coopSheet.friends = null; _coopSheet.error = null;
+    _coopSheet.pickSel = [];   // W677 — trio multi-select state (selected ally user_ids)
+    renderCoopSheet();
     let res, listRes;
     try { res = await Auth.fetchFriends(); } catch (_) { res = { ok: false }; }
     try { listRes = await _coopBossListCached(); } catch (_) { listRes = null; }   // W663 — fade allies already on a hunt with you
@@ -45811,7 +45847,7 @@
     else { _coopSheet.friends = []; _coopSheet.error = (res && res.code) || 'ERROR'; }
     renderCoopSheet();
   }
-  async function _coopCreate(partnerUserId) {
+  async function _coopCreate(partnerUserId, partner2UserId) {
     const cfg = _coopSheet.cfg; if (!cfg) return;
     // W648 — entrance fee, checked BEFORE the network call so a broke hunter
     // gets an instant, clear answer (and no server round-trip).
@@ -45821,7 +45857,7 @@
     }
     _coopSheet.busy = true; _coopSheet.error = null; renderCoopSheet();   // W649 — a new attempt clears the stale refusal
     let res;
-    try { res = await Auth.coopBossCreate(partnerUserId, cfg.id); } catch (_) { res = { ok: false }; }
+    try { res = await Auth.coopBossCreate(partnerUserId, cfg.id, partner2UserId || undefined); } catch (_) { res = { ok: false }; }   // W677 — trio passes the 2nd ally
     _coopSheet.busy = false;
     if (res && res.ok && res.instance) {
       _coopChargeFee(res.instance.id, cfg, 'summon');   // W648 — charge only on server-accepted create
@@ -45855,12 +45891,30 @@
     if (action === 'close') { try { closeCoopSheet(); } catch (_) {} return; }   // W449 — defeat screen "Back to the Dungeon"
     if (action === 'pick-cancel') { _coopSheet.picking = false; renderCoopSheet(); return; }
     if (action === 'pick') { const uid = btn.getAttribute('data-user-id'); _coopSheet.picking = false; if (uid) _coopCreate(uid); return; }
+    // W677 — trio multi-select: tap toggles a seat (max 2); Summon fires the create.
+    if (action === 'pick-toggle') {
+      const uid = String(btn.getAttribute('data-user-id') || ''); if (!uid) return;
+      const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : (_coopSheet.pickSel = []);
+      const at = sel.indexOf(uid);
+      const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
+      if (at !== -1) sel.splice(at, 1);
+      else if (sel.length < need) sel.push(uid);
+      else { try { showHabitToast('Two allies max — tap one to swap them out.'); } catch (_) {} }
+      renderCoopSheet(); return;
+    }
+    if (action === 'pick-confirm') {
+      const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
+      const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
+      if (sel.length !== need) return;
+      _coopSheet.picking = false;
+      _coopCreate(sel[0], sel[1]); return;
+    }
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
     if (action === 'cancel' && inst.status === 'active') {
-      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for both hunters and the progress so far is lost.'); } catch (_) {}
+      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for ' + ((inst.party_size === 3 || inst.partner2) ? 'all three hunters' : 'both hunters') + ' and the progress so far is lost.'); } catch (_) {}   // W677 — trio-aware
       if (!ok) return;
     }
     _coopSheet.busy = true; _coopSheet.error = null; renderCoopSheet();   // W649 — a new attempt clears the stale refusal
@@ -45880,10 +45934,35 @@
   }
 
   // ── Render ──
+  // W677 — every hunter on an instance EXCEPT the viewer (1 on a duo, 2 on a trio).
+  // The single client seam the pact/notify/fade/render paths fan out over.
+  function _coopOthers(inst) {
+    if (!inst) return [];
+    const seats = [
+      { p: inst.challenger, mine: inst.role === 'challenger' },
+      { p: inst.partner, mine: inst.role === 'partner' },
+      { p: inst.partner2, mine: inst.role === 'partner2' },
+    ];
+    return seats.filter(function (s) { return s.p && !s.mine; }).map(function (s) { return s.p; });
+  }
+  // W677 — is this instance an ACTIONABLE incoming summons for the viewer? True for
+  // an invited seat (partner OR partner2) on a pending hunt that the viewer hasn't
+  // answered yet. On duo rows `joined` is absent (undefined → not answered), so the
+  // v1 behavior is unchanged; on a trio, a seat that already answered stops counting
+  // as an invite (they're just waiting on the third hunter).
+  function _coopIsMyInvite(x) {
+    if (!x || x.status !== 'pending') return false;
+    if (x.role === 'partner') return !(x.partner && x.partner.joined);
+    if (x.role === 'partner2') return !(x.partner2 && x.partner2.joined);
+    return false;
+  }
   function _coopView(inst) {
     const ch = inst.challenger || {}; const pa = inst.partner || {};
-    if (inst.role === 'partner') return { me: pa, them: ch };
-    return { me: ch, them: pa };
+    const me = inst.role === 'partner' ? pa : inst.role === 'partner2' ? (inst.partner2 || {}) : ch;
+    const others = _coopOthers(inst);
+    // `them` stays the FIRST other hunter (every duo-era render spot keeps working);
+    // `others` carries the full ally list for trio-aware surfaces.
+    return { me: me, them: others[0] || {}, others: others };
   }
   function _coopFmtRemaining(ms) {
     if (typeof ms !== 'number' || ms <= 0) return 'Time is up';
@@ -45965,7 +46044,7 @@
     if (rankEl && cfg.rank) { rankEl.textContent = String(cfg.rank); rankEl.setAttribute('data-rank', String(cfg.rank)); }
 
     const inst = _coopSheet.instance;
-    const isSummons = !_coopSheet.picking && !!inst && inst.status === 'pending' && inst.role === 'partner';
+    const isSummons = !_coopSheet.picking && !!inst && _coopIsMyInvite(inst);   // W677 — either invited seat, unanswered
     _coopApplySummonsMode(isSummons);
     // W449 — DEFEAT state (ClaudeDesign handoff #15): dim + crimson-ward the hero so the boss
     // reads as UNBEATEN, then render the verdict / near-miss bars / fellowship in the body.
@@ -46020,16 +46099,19 @@
     const _fee = _coopEntranceFee(cfg);
     const _bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
     const _brokeLocked = !_rankLocked && _fee > 0 && _bal < _fee;
+    // W677 — party-size-aware copy ('every hunter' scales to any size).
+    const _party = (cfg.partySize | 0) || 2;
+    const _partyNoun = _party === 3 ? 'three hunters' : 'two hunters';
     const _feeFoot = _fee > 0
-      ? 'Entrance: ' + _fee + ' souls each · both hunters earn ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.'
-      : '✦ Members summon free · both hunters earn ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.';
+      ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.'
+      : '✦ Members summon free · every hunter earns ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.';
     const cta = _rankLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">REACH ' + esc(cfg.rank) + ' RANK TO SUMMON</button>' +
         '<p class="coop-foot">This hunt requires ' + esc(cfg.rank) + ' rank to summon. Keep climbing.</p>'
       : _brokeLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">NEED ' + (_fee - _bal) + ' MORE SOULS</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>'
-      : '<button class="coop-cta" data-coop-action="invite"' + dis + '>RECRUIT A HUNTER</button>' +
+      : '<button class="coop-cta" data-coop-action="invite"' + dis + '>' + (_party === 3 ? 'RECRUIT TWO HUNTERS' : 'RECRUIT A HUNTER') + '</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>';
     return (
       note +
@@ -46037,8 +46119,8 @@
       '<div class="coop-goal-card">' +
         '<div class="coop-goal-big">' + (cfg.coopGoalSteps || 0).toLocaleString('en-US') + '</div>' +
         '<div class="coop-goal-sub">' + (cfg.coopMetric === 'both'
-          ? 'steps + ' + cfg.coopGoalFlights + ' flights \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters'
-          : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 two hunters') + '</div>' +
+          ? 'steps + ' + cfg.coopGoalFlights + ' flights \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
+          : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun) + '</div>' +
       '</div>' +
       _coopErrBlock() +
       cta
@@ -46051,7 +46133,36 @@
     const dis = _coopSheet.busy ? ' disabled' : '';
     // W376 \u2014 the recipient's view is the cinematic war summons (its own
     // hero FX live in #coop-fs-overlay; this renders the lower content).
-    if (inst.role === 'partner') return _coopSummonsHtml(inst);
+    // W677 review #2 \u2014 gate on INVITE STATE, not role: an invited seat only gets
+    // the actionable summons (Join/Decline) while it is UNANSWERED. An answered
+    // trio seat re-shown that body could re-tap Join (a swallowed ALREADY_JOINED
+    // dead-end) or tap Decline and kill the party it already paid the fee to join.
+    if (_coopIsMyInvite(inst)) return _coopSummonsHtml(inst);
+    // W677 \u2014 trio: one wait-row PER ALLY, each with its live answered state.
+    // Rendered for the SUMMONER and for an ANSWERED invited seat alike; only the
+    // summoner gets the CANCEL SUMMONS control (server: cancel is challenger-only
+    // on pending \u2014 an answered ally withdraws via the summons' Decline instead,
+    // which stays reachable until they answer; after answering they are committed
+    // unless the summoner cancels).
+    if (inst.party_size === 3 || inst.partner2) {
+      const seatRow = function (p, label) {
+        const a = esc(_coopAlias((p && p.alias) || 'your ally'));
+        return p && p.joined
+          ? '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> ' + (label || a + ' has answered') + '</div>'
+          : '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + a + ' to accept</div>';
+      };
+      const isSummoner = inst.role === 'challenger';
+      const rows = isSummoner
+        ? seatRow(inst.partner) + seatRow(inst.partner2)
+        : '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> You answered the summons</div>' +
+          seatRow(inst.role === 'partner' ? inst.partner2 : inst.partner);
+      return (
+        rows +
+        '<p class="coop-lead">The 24-hour hunt begins the moment BOTH allies join.</p>' +
+        _coopErrBlock() +
+        (isSummoner ? '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL SUMMONS</button>' : '')
+      );
+    }
     return (
       '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + themAlias + ' to accept</div>' +
       '<p class="coop-lead">The 24-hour hunt begins the moment ' + themAlias + ' joins.</p>' +
@@ -46104,11 +46215,14 @@
         '<div class="coopsm-pact-num">' + goal + '</div>' +
         '<div class="coopsm-pact-sub"><b>' + (_coopIsBoth(inst)
           ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
-          : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + 'h from when you join</div>' +
+          : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + ((inst.party_size === 3 || inst.partner2) ? 'h once all three answer</div>' : 'h from when you join</div>') +   // W677 — trio clock starts on the FULL party
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
-          '<span class="coopsm-who">' + themAlias + '</span>' +
+          // W677 — the party preview names EVERY other hunter (summoner + the other ally on a trio).
+          '<span class="coopsm-who">' + esc((v.others && v.others.length)
+            ? v.others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); }).join(' · ')
+            : _coopAlias((v.them && v.them.alias) || 'ally')) + '</span>' +
         '</div>' +
       '</div>' +
       _coopErrBlock() +
@@ -46122,7 +46236,7 @@
         const joinDis = (broke ? ' disabled' : dis);
         const footer = broke
           ? 'You need ' + (fee - bal) + ' more souls to answer — the entrance fee is ' + fee + '.'
-          : 'The ' + hrs + '-hour hunt begins the instant you accept.' +
+          : ((inst.party_size === 3 || inst.partner2) ? 'The ' + hrs + '-hour hunt begins once the full party has answered.' : 'The ' + hrs + '-hour hunt begins the instant you accept.') +   // W677
             (fee > 0 ? ' Entrance fee: ' + fee + ' souls.' : ' Members join free.');
         return '<div class="coopsm-ctas' + r4 + '">' +
           '<button class="coopsm-join" data-coop-action="join"' + joinDis + (broke ? ' style="opacity:.5;cursor:not-allowed"' : '') + '>' +
@@ -46164,12 +46278,16 @@
       if (both) return s.toLocaleString('en-US') + ' st · ' + ((who && who.flights) || 0).toLocaleString('en-US') + ' fl';
       return s.toLocaleString('en-US');
     };
+    // W677 — one split row per ALLY (1 on a duo, 2 on a trio).
+    const allyRows = (v.others || [v.them]).map(function (o) {
+      return '<div class="coop-split-row"><span class="coop-split-name">' + esc(_coopAlias((o && o.alias) || 'ally')) + '</span><span class="coop-split-val">' + splitVal(o) + '</span></div>';
+    }).join('');
     return (
       '<div class="coop-timer">' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</div>' +
       bars +
       '<div class="coop-split">' +
         '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + splitVal(v.me) + '</span></div>' +
-        '<div class="coop-split-row"><span class="coop-split-name">' + themAlias + '</span><span class="coop-split-val">' + splitVal(v.them) + '</span></div>' +
+        allyRows +
       '</div>' +
       '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : (both ? 'SYNC MY PROGRESS' : 'SYNC MY ' + esc(unit.toUpperCase()))) + '</button>' +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
@@ -46180,7 +46298,10 @@
   function _coopVictoryHtml(inst) {
     const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
-    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'your ally'));
+    // W677 — name EVERY ally in the victory line ("A and B" on a trio).
+    const themAlias = esc((v.others && v.others.length)
+      ? v.others.map(function (o) { return _coopAlias((o && o.alias) || 'your ally'); }).join(' and ')
+      : _coopAlias((v.them && v.them.alias) || 'your ally'));
     const combined = (inst.combined_steps || 0).toLocaleString('en-US');
     const unit = _coopUnit(inst);                                       // W397
     const verb = _coopMetric(inst) === 'flights' ? 'climbed' : 'walked';
@@ -46207,32 +46328,39 @@
     const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
     const both = _coopIsBoth(inst);
-    const ally = _coopAlias((v.them && v.them.alias) || 'your ally');
+    // W677 review #8 \u2014 the defeat story includes EVERY hunter (flavor, per-hunter
+    // split, fellowship strip), so a trio's third hunter isn't erased from the loss
+    // and the split values sum to the combined near-miss number.
+    const others = (v.others && v.others.length) ? v.others : [v.them];
+    const ally = others.map(function (o) { return _coopAlias((o && o.alias) || 'your ally'); }).join(' and ');
     let youAlias = 'You'; try { const u = Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) youAlias = u.alias; } catch (_) {}
     const youInit = esc((String(youAlias).trim().charAt(0) || 'Y').toUpperCase());
-    const allyInit = esc((String(ally).trim().charAt(0) || 'A').toUpperCase());
     const kicker = cfg.coopDefeatTitle || 'THE QUARRY HOLDS';
     const flavor = 'You and ' + esc(ally) + ' fell short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
-    // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the two-hunter split
-    const goalBar = function (combined, goal, label, meVal, themVal) {
+    // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the per-hunter split
+    const goalBar = function (combined, goal, label, metric) {
       const c = Math.max(0, combined || 0), g = goal || 0;
       const pct = g > 0 ? Math.max(0, Math.min(100, Math.round(c / g * 100))) : 0;
+      const val = function (p) { return Math.max(0, (p && p[metric]) || 0).toLocaleString('en-US'); };
+      const allySplit = others.map(function (o) {
+        return '<span class="coopdf-who"><span class="coopdf-dot ally"></span>' + esc(_coopAlias((o && o.alias) || 'ally')) + ' <b>' + val(o) + '</b></span>';
+      }).join('');
       return '<div class="coopdf-goal">' +
         '<div class="coopdf-goal-top"><span class="coopdf-goal-name">' + esc(label) + '</span>' +
           '<span class="coopdf-goal-val">' + c.toLocaleString('en-US') + ' <span class="of">/ ' + g.toLocaleString('en-US') + '</span><span class="pct">' + pct + '%</span></span></div>' +
         '<div class="coopdf-track"><div class="coopdf-fill" style="width:' + pct + '%"></div></div>' +
         '<div class="coopdf-split">' +
-          '<span class="coopdf-who"><span class="coopdf-dot you"></span>You <b>' + Math.max(0, meVal || 0).toLocaleString('en-US') + '</b></span>' +
-          '<span class="coopdf-who"><span class="coopdf-dot ally"></span>' + esc(ally) + ' <b>' + Math.max(0, themVal || 0).toLocaleString('en-US') + '</b></span>' +
+          '<span class="coopdf-who"><span class="coopdf-dot you"></span>You <b>' + val(v.me) + '</b></span>' +
+          allySplit +
         '</div></div>';
     };
     let bars;
     if (both) {
-      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', v.me && v.me.steps, v.them && v.them.steps) +
-             goalBar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'Combined Flights', v.me && v.me.flights, v.them && v.them.flights);
+      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', 'steps') +
+             goalBar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'Combined Flights', 'flights');
     } else {
       const u = _coopUnit(inst);
-      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined ' + (u.charAt(0).toUpperCase() + u.slice(1)), v.me && v.me.steps, v.them && v.them.steps);
+      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined ' + (u.charAt(0).toUpperCase() + u.slice(1)), 'steps');
     }
     return (
       '<div class="coopdf">' +
@@ -46244,8 +46372,11 @@
         '<div class="coopdf-progress">' + bars + '</div>' +
         '<div class="coopdf-fellowship">' +
           '<div class="coopdf-hunter"><div class="coopdf-av you">' + youInit + '</div><div class="coopdf-tag you">You</div></div>' +
-          '<div class="coopdf-seam"></div>' +
-          '<div class="coopdf-hunter"><div class="coopdf-av ally">' + allyInit + '</div><div class="coopdf-tag ally">' + esc(ally) + '</div></div>' +
+          others.map(function (o) {
+            const a = _coopAlias((o && o.alias) || 'ally');
+            return '<div class="coopdf-seam"></div>' +
+              '<div class="coopdf-hunter"><div class="coopdf-av ally">' + esc((String(a).trim().charAt(0) || 'A').toUpperCase()) + '</div><div class="coopdf-tag ally">' + esc(a) + '</div></div>';
+          }).join('') +
         '</div>' +
         '<div class="coopdf-reset">No relic claimed \u00B7 the hunt resets</div>' +
         '<div class="coopdf-ctas">' +
@@ -46279,10 +46410,10 @@
       list.forEach(function (inst) {
         if (!inst || (inst.status !== 'active' && inst.status !== 'pending')) return;
         if (cfgId && inst.boss_id !== cfgId) return;
-        const other = (inst.role === 'partner')
-          ? (inst.challenger && inst.challenger.user_id)
-          : (inst.partner && inst.partner.user_id);
-        if (other) ids.add(String(other));
+        // W677 — fade EVERY hunter already on this hunt with you (both trio allies).
+        _coopOthers(inst).forEach(function (other) {
+          if (other && other.user_id) ids.add(String(other.user_id));
+        });
       });
     } catch (_) {}
     return ids;
@@ -46292,6 +46423,10 @@
     const friends = _coopSheet.friends;
     if (friends === null) return _skelHtml('rows', 4); // W594 — skeleton rows instead of plain "Loading hunters..."
     const bossRank = (_coopSheet.cfg && _coopSheet.cfg.rank) ? _coopSheet.cfg.rank : 'E';
+    // W677 — trio bosses pick TWO allies (multi-select + a Summon confirm);
+    // duo bosses keep the v1 tap-to-summon single pick.
+    const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
+    const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
     let rows;
     if (!friends.length) {
       rows = '<div class="coop-note">No hunters yet. Add a friend from the Guild tab first.</div>';
@@ -46313,6 +46448,15 @@
         // \u2014 no pick action, locked styling, a "Needs X" note. The backend ALLY_RANK gate is
         // the real enforcement; this is the matching UX so the tap is never offered.
         if (_coopRankMeets(tier, bossRank)) {
+          // W677 \u2014 trio: tap toggles selection (checkmark), Summon confirms below.
+          if (need > 1) {
+            const on = sel.indexOf(String(f.user_id)) !== -1;
+            return '<button class="coop-friend' + (on ? ' coop-friend--selected' : '') + '" data-coop-action="pick-toggle" data-user-id="' + esc(f.user_id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+              '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
+              rankBadge +
+              '<span class="coop-friend-go" aria-hidden="true">' + (on ? '\u2713' : '+') + '</span>' +
+            '</button>';
+          }
           return '<button class="coop-friend" data-coop-action="pick" data-user-id="' + esc(f.user_id) + '">' +
             '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
             rankBadge +
@@ -46326,10 +46470,15 @@
         '</div>';
       }).join('');
     }
+    const head = need > 1 ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + need) : 'SELECT YOUR ALLY';
+    const confirmBtn = need > 1
+      ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (sel.length === need ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
+      : '';
     return (
-      '<div class="coop-picker-head">SELECT YOUR ALLY</div>' +
+      '<div class="coop-picker-head">' + head + '</div>' +
       _coopErrBlock() +
       '<div class="coop-friend-list">' + rows + '</div>' +
+      confirmBtn +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="pick-cancel">BACK</button>'
     );
   }
@@ -46498,7 +46647,7 @@
     const allInvites = [];   // W554 — every pending partner invite this poll surfaced (for the banner's "Accept all")
     list.forEach(function (x) {
       if (!x || !x.boss_id) return;
-      if (x.status === 'pending' && x.role === 'partner') { byBoss[x.boss_id] = 'invite'; anyEngaged = true; if (!firstInvite) firstInvite = x; allInvites.push(x); }
+      if (_coopIsMyInvite(x)) { byBoss[x.boss_id] = 'invite'; anyEngaged = true; if (!firstInvite) firstInvite = x; allInvites.push(x); }   // W677 — any unanswered invited seat
       else if (x.status === 'active' && byBoss[x.boss_id] !== 'invite') { byBoss[x.boss_id] = 'active'; anyEngaged = true; }
     });
     _coopBadgeByBoss = byBoss;
@@ -46604,7 +46753,7 @@
   // two accept-all surfaces can't run at once.
   async function _coopBannerAcceptAll(invites) {
     if (_coopDashAccepting) return;
-    invites = (invites || []).filter(function (x) { return x && x.id && x.status === 'pending' && x.role === 'partner'; });
+    invites = (invites || []).filter(function (x) { return x && x.id && _coopIsMyInvite(x); });   // W677
     if (!invites.length) return;
     _coopDashAccepting = true;
     const btn = document.querySelector('#coop-invite-banner .csb-answer');
@@ -46660,7 +46809,7 @@
       const mono = (String(ally).trim().charAt(0) || 'A').toUpperCase();
       // W554 — if the same poll surfaced ≥2 pending invites, the banner's primary
       // CTA becomes "Accept all N" (bulk-join); a single invite keeps "Answer".
-      const _pend = (Array.isArray(invites) ? invites : []).filter(function (x) { return x && x.id && x.status === 'pending' && x.role === 'partner'; });
+      const _pend = (Array.isArray(invites) ? invites : []).filter(function (x) { return x && x.id && _coopIsMyInvite(x); });   // W677
       const multi = _pend.length >= 2;
 
       const el = document.createElement('div');
@@ -46872,7 +47021,9 @@
 
   function _coopHuntCardHtml(inst) {
     const v = _coopView(inst);
-    const ally = _coopAlias((v.them && v.them.alias) || 'ally');
+    // W677 — name EVERY other hunter on the card chrome ("A and B" on a trio).
+    const others = (v.others && v.others.length) ? v.others : [v.them];
+    const ally = others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); }).join(' and ');
     const cfg = COOP_BOSSES[inst.boss_id] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID] || { name: 'Co-op Boss', rank: 'E' };
     const bossName = cfg.name || 'Co-op Boss';
     const rank = String(inst.boss_rank || cfg.rank || 'E').toUpperCase();
@@ -46883,25 +47034,35 @@
       const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
       const combined = Math.max(0, inst.combined_steps || 0);
       const mine = Math.max(0, (v.me && v.me.steps) || 0);
-      const theirs = Math.max(0, (v.them && v.them.steps) || 0);
       const pct = goal > 0 ? Math.min(100, Math.round(combined / goal * 100)) : 0;
       const yw = goal > 0 ? Math.min(100, mine / goal * 100) : 0;
-      const tw = goal > 0 ? Math.min(Math.max(0, 100 - yw), theirs / goal * 100) : 0;
+      // W677 review #7 — one bar segment + one legend entry PER ALLY (the trio's
+      // third hunter was invisible and the legend didn't sum to combined). Widths
+      // clamp against the cumulative remainder so the bar never overflows 100%.
+      let used = yw;
+      let allyBars = '', allyLegend = '';
+      others.forEach(function (o, i) {
+        const s = Math.max(0, (o && o.steps) || 0);
+        const w = goal > 0 ? Math.min(Math.max(0, 100 - used), s / goal * 100) : 0;
+        used += w;
+        allyBars += '<div class="cph-them' + (i > 0 ? ' cph-them--alt' : '') + '" style="width:' + w.toFixed(1) + '%"></div>';
+        allyLegend += '<span class="cph-leg cph-them' + (i > 0 ? ' cph-them--alt' : '') + '"><span class="cph-sw"></span>' + esc(_coopAlias((o && o.alias) || 'ally')) + ' <b>' + N(s) + '</b></span>';
+      });
       const flightsLine = _coopIsBoth(inst)
         ? '<div class="cph-prog-second">' + N(inst.combined_flights || 0) + ' <span>/ ' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</span> Combined Flights</div>' : '';
       const crit = _coopUrgency(inst.time_remaining_ms) === 'crit' ? ' cph-crit' : '';
       return '<a class="cph-hunt cph-active' + crit + '" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc(ally + ', active co-op hunt against ' + bossName + '. Tap to open.') + '">' + top +
         '<div class="cph-prog">' +
           '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span><span class="cph-pct">' + pct + '%</span></span>' + _coopTimePill(inst, false) + '</div>' +
-          '<div class="cph-bar"><div class="cph-you" style="width:' + yw.toFixed(1) + '%"></div><div class="cph-them" style="width:' + tw.toFixed(1) + '%"></div></div>' +
+          '<div class="cph-bar"><div class="cph-you" style="width:' + yw.toFixed(1) + '%"></div>' + allyBars + '</div>' +
           flightsLine +
-          '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span>You <b>' + N(mine) + '</b></span><span class="cph-leg cph-them"><span class="cph-sw"></span>' + esc(ally) + ' <b>' + N(theirs) + '</b></span></div>' +
+          '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span>You <b>' + N(mine) + '</b></span>' + allyLegend + '</div>' +
         '</div>' +
       '</a>';
     }
 
     // pending — an invite TO you (inline Decline / Accept Pact) or a pact YOU sent (waiting)
-    if (inst.role === 'partner') {
+    if (_coopIsMyInvite(inst)) {   // W677 — either invited seat, unanswered
       const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
       const unit = _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
       return '<div class="cph-hunt cph-pending" data-coop-invite="' + esc(inst.id) + '">' + top +
@@ -46912,8 +47073,16 @@
         '</div>' +
       '</div>';
     }
-    return '<a class="cph-hunt cph-pending cph-wait" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc('Pact sent to ' + ally + ', waiting to be accepted.') + '">' + top +
-      '<div class="cph-inv"><div class="cph-inv-meta"><span class="cph-inv-target">Waiting for <b>' + esc(ally) + '</b> to accept</span><span class="cph-wait-pill">Pact Sent</span></div></div>' +
+    // W677 review #6 — name the genuinely OUTSTANDING seat(s), not others[0] (which
+    // for an answered trio ally is the CHALLENGER — who never "accepts" anything).
+    // Only ally seats carry `joined` (strict === false test; the challenger seat has
+    // no joined key, and duo rows have none anywhere → duo falls through unchanged).
+    const outstanding = [inst.partner, inst.partner2]
+      .filter(function (p) { return p && p.joined === false && p.user_id !== ((v.me && v.me.user_id) || ''); })
+      .map(function (p) { return _coopAlias((p && p.alias) || 'ally'); });
+    const waitName = outstanding.length ? outstanding.join(' and ') : ally;
+    return '<a class="cph-hunt cph-pending cph-wait" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc('Pact sent, waiting for ' + waitName + ' to accept.') + '">' + top +
+      '<div class="cph-inv"><div class="cph-inv-meta"><span class="cph-inv-target">Waiting for <b>' + esc(waitName) + '</b> to accept</span><span class="cph-wait-pill">Pact Sent</span></div></div>' +
     '</a>';
   }
 
@@ -46967,7 +47136,7 @@
     else txt = '<b>' + nP + ' Pending</b>';
     if (countEl) countEl.innerHTML = '<span class="cph-pip"></span>' + txt;
     // W572 — footer Accept-All: only when ≥2 invites addressed to you await (replaces Recruit)
-    const invites = pend.filter(function (x) { return x.role === 'partner'; });
+    const invites = pend.filter(function (x) { return _coopIsMyInvite(x); });   // W677
     if (footEl) {
       if (invites.length >= 2) { const c = document.getElementById('coop-dash-aa-cnt'); if (c) c.textContent = invites.length; footEl.classList.remove('cph-foot--off'); }
       else footEl.classList.add('cph-foot--off');
@@ -46981,7 +47150,7 @@
   // the exact path as a single-hunt "Answer ›". Partial failures are summarized, never thrown.
   async function _coopDashAcceptAll() {
     if (_coopDashAccepting) return;
-    const invites = (_coopDashInstances || []).filter(function (x) { return x && x.status === 'pending' && x.role === 'partner'; });
+    const invites = (_coopDashInstances || []).filter(function (x) { return _coopIsMyInvite(x); });   // W677
     if (!invites.length) return;
     _coopDashAccepting = true;
     const btn = document.getElementById('coop-dash-accept-all');

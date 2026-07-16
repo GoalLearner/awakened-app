@@ -1493,7 +1493,12 @@
   // create/join/decline/cancel/resolve lifecycle + list/detail reads.
   function coopBossList()      { return _authedFetch('GET',  '/v1/coop-boss'); }
   function coopBossGet(id)     { return _authedFetch('GET',  '/v1/coop-boss/' + encodeURIComponent(id)); }
-  function coopBossCreate(partnerUserId, bossId) { return _authedFetch('POST', '/v1/coop-boss', { partner_user_id: partnerUserId, boss_id: bossId }); }
+  // W677 — partner2UserId (optional) invites a SECOND ally: trio hunts. Omitted → duo (v1).
+  function coopBossCreate(partnerUserId, bossId, partner2UserId) {
+    var body = { partner_user_id: partnerUserId, boss_id: bossId };
+    if (partner2UserId) body.partner2_user_id = partner2UserId;
+    return _authedFetch('POST', '/v1/coop-boss', body);
+  }
   function coopBossJoin(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/join'); }
   function coopBossDecline(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/decline'); }
   function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }

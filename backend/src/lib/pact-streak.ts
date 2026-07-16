@@ -62,6 +62,8 @@ export function sqliteUtcToMs(ts: string | null | undefined): number {
 export interface WinRow {
   challenger_user_id: string;
   partner_user_id: string;
+  // W677 — trio hunts: the second ally (null on duo rows).
+  partner2_user_id?: string | null;
   boss_id: string | null;
   resolved_at: string | null;
 }
@@ -87,21 +89,23 @@ export function computePacts(rows: WinRow[], viewerUserId: string): Record<strin
   const groups = new Map<string, { ms: number; boss: string | null }[]>();
   for (const r of rows || []) {
     if (!r) continue;
-    const other =
-      r.challenger_user_id === viewerUserId
-        ? r.partner_user_id
-        : r.partner_user_id === viewerUserId
-          ? r.challenger_user_id
-          : '';
-    if (!other) continue; // viewer isn't a participant (defensive; the query guarantees they are)
+    // W677 — a win credits the viewer's pact with EVERY other hunter on the
+    // instance: one other on a duo, both others on a trio (owner: a trio raid
+    // "counts for the flames for all three" — each pair's daily streak advances).
+    const participants = [r.challenger_user_id, r.partner_user_id];
+    if (r.partner2_user_id) participants.push(r.partner2_user_id);
+    if (!participants.includes(viewerUserId)) continue; // defensive; the query guarantees membership
+    const others = participants.filter((uid) => uid && uid !== viewerUserId);
     const ms = sqliteUtcToMs(r.resolved_at);
     if (!ms) continue; // unresolved / unparseable timestamp — can't place it on a day
-    let g = groups.get(other);
-    if (!g) {
-      g = [];
-      groups.set(other, g);
+    for (const other of others) {
+      let g = groups.get(other);
+      if (!g) {
+        g = [];
+        groups.set(other, g);
+      }
+      g.push({ ms, boss: r.boss_id || null });
     }
-    g.push({ ms, boss: r.boss_id || null });
   }
 
   const out: Record<string, PactAgg> = {};

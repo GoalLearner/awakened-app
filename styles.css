@@ -31401,6 +31401,8 @@ button.guildhall-summary-tile:active {
   color: rgba(255,255,255,0.82); margin: 16px 0 4px; }
 .coop-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .coop-dot--wait { background: #f5b842; box-shadow: 0 0 8px rgba(245,184,66,0.6); animation: coopPulse 1.4s ease-in-out infinite; }
+/* W677 — answered trio seat: steady green 'locked in' (vs the pulsing gold wait) */
+.coop-dot--live { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,0.6); }
 @keyframes coopPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 .coop-timer { text-align: center; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85rem;
@@ -31482,6 +31484,13 @@ button.guildhall-summary-tile:active {
   border: 1px solid rgba(245,184,66,0.35); border-radius: 6px; padding: 2px 7px;
   min-width: 22px; text-align: center; }
 .coop-friend--locked { cursor: default; opacity: 0.6; }
+/* W677 — trio picker multi-select state (tap toggles; ✓ + violet ring when in the party) */
+.coop-friend--selected {
+  border-color: rgba(139, 92, 246, 0.65);
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.22), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.coop-friend--selected .coop-friend-go { color: #a78bfa; font-weight: 800; }
 .coop-friend--locked:active { background: rgba(255,255,255,0.04); }
 .coop-friend--locked .coop-friend-rank { color: #9aa0b0; background: rgba(255,255,255,0.05);
   border-color: rgba(255,255,255,0.15); }
@@ -31815,6 +31824,9 @@ button.guildhall-summary-tile:active {
 .cph-bar{ height:8px; border-radius:5px; overflow:hidden; background:rgba(255,255,255,.05); display:flex; box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
 .cph-bar .cph-you{ background:linear-gradient(90deg,#2bb6a6,#5ad6c8); box-shadow:0 0 12px rgba(90,214,200,.5); }
 .cph-bar .cph-them{ background:linear-gradient(90deg,#ff7a3c,#f5b842); box-shadow:0 0 12px rgba(255,122,60,.4); }
+/* W677 — trio: the second ally's bar segment + legend swatch (distinguishable shade) */
+.cph-bar .cph-them--alt { filter: brightness(1.45) saturate(0.7); }
+.cph-leg.cph-them--alt .cph-sw { filter: brightness(1.45) saturate(0.7); }
 .cph-legend{ display:flex; align-items:center; gap:16px; margin-top:10px; }
 .cph-leg{ display:flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.6px; color:#9090a8; }
 .cph-leg .cph-sw{ width:8px; height:8px; border-radius:3px; }
