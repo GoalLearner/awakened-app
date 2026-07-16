@@ -139,6 +139,13 @@ const COOP_BOSS_CFG: Record<
   // (exactly 7h/night/hunter — the discipline the Crown refused). goalFlights
   // holds SLEEP MINUTES (2520 = 42h). Reward = half the solo S kill (1600 → 800).
   the_sleepless_crown:  { rank: 'S', goalSteps: 60000, goalFlights: 2520, rewardSouls: 800, windowHours: 72, metric: 'steps_sleep' },
+  // W693 — THE GRINNING GOD: the members-only apex raid (homage to Solo Leveling's
+  // Monarch/"state of god"). First N-hunter hunt (party 2–5; brutal below 5, but the
+  // goal is FIXED regardless of party size — owner spec). 150,000 COMBINED steps AND
+  // 75 COMBINED flights across 3 days (72h). memberOnly gates BOTH the summoner and
+  // every ally at create + join. Drops (client-side): the mythic-only table (Nightfall
+  // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
+  the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 72, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true },
 };
 function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
@@ -689,6 +696,23 @@ export async function handleCoopBossCreate(
     }
   }
 
+  // W693 — members-only raid (The Grinning God). The summoner AND every invited ally
+  // must hold an active membership; a non-member ally is refused here (they can't be
+  // matched or invited into the mythic raid). The gate is re-checked at JOIN too, so a
+  // membership that lapses between invite and answer can't slip a free hunter in.
+  if (cfg.memberOnly) {
+    const { member: summonerMember } = await readEntitlements(env, session.userId);
+    if (!summonerMember) {
+      return jsonError(403, 'MEMBERS_ONLY', 'The Grinning God answers only to members.');
+    }
+    for (const ally of allies) {
+      const { member: allyMember } = await readEntitlements(env, ally);
+      if (!allyMember) {
+        return jsonError(403, 'ALLY_NOT_MEMBER', 'Every hunter in this raid must be a member.');
+      }
+    }
+  }
+
   // W692 — the seat-agnostic dup predicate as a reusable SELECT: "a live instance of
   // this boss already CONTAINS the summoner together with ANY invited ally". Sourced
   // from the challenger column + the participant table + the legacy partner columns
@@ -907,6 +931,16 @@ export async function handleCoopBossJoin(
   // (the clock must not run against a half-formed party).
   if (mySeat.joined_at) {
     return jsonError(400, 'ALREADY_JOINED', 'You already answered this summons — waiting on the rest of the party.');
+  }
+
+  // W693 — members-only raid: the JOINER must be a member too (re-checked here so a
+  // membership lapse between invite/match and answer can't slip a free hunter in).
+  const joinCfg = COOP_BOSS_CFG[row.boss_id];
+  if (joinCfg?.memberOnly) {
+    const { member } = await readEntitlements(env, session.userId);
+    if (!member) {
+      return jsonError(403, 'MEMBERS_ONLY', 'The Grinning God answers only to members.');
+    }
   }
 
   // W648 — the joiner's cap. THIS instance is their received-pending row, which

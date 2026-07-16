@@ -358,6 +358,39 @@ describe('W677 — trio join (activate only when BOTH allies answered)', () => {
   });
 });
 
+// ── W693 — The Grinning God: members-only N-hunter raid gate ──────────────
+describe('W693 — Grinning God members-only gate + N-hunter party bounds', () => {
+  const raidReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify(body) });
+
+  it('403 MEMBERS_ONLY when a non-member tries to summon the raid', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({})), session('u1')); // no premiumExpiresAt → free hunter
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('MEMBERS_ONLY');
+  });
+
+  it('a member summons the raid with an ally array (2-of-5 party allowed)', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
+    const body = (await res.json()) as { ok?: boolean };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
+
+  it('400 PARTY_SIZE when a raid gets more than four allies (party > 5)', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5', 'u6'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('PARTY_SIZE');
+  });
+});
+
 // ── W686 — The Sleepless Crown: first steps+SLEEP dual metric (S-rank, 72h) ──
 const SLEEP_ACTIVE_ROW = {
   ...PENDING_ROW,
