@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w684'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w685'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2117,7 +2117,7 @@
       flavor: 'Cut from the beast that never broke stride. Looses fast on the move — the shot that finally outran the chase.',
       art_path: 'assets/items/houndsfang_recurve.png',
       bonuses: { str: 1, vit: 3, int: 0, focus: 8, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,2], vit: [2,4], int: [0,0], focus: [7,10], will: [0,2], wlt: [0,0] },
+      bonus_ranges: { str: [0,2], vit: [2,4], int: [0,0], focus: [6,10], will: [0,2], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
     },
@@ -2131,7 +2131,7 @@
       flavor: 'A focus that hums with the pack-cry of the hunt. Whatever you name as quarry, it will not let go.',
       art_path: 'assets/items/coursing_houndcall.png',
       bonuses: { str: 0, vit: 2, int: 8, focus: 3, will: 2, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [2,4], will: [1,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [1,3], int: [6,10], focus: [2,4], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
@@ -2163,7 +2163,7 @@
       flavor: 'A decree the hollow king never rescinded. Speak it, and the air itself answers to the throne.',
       art_path: 'assets/items/the_monarchs_writ.png',
       bonuses: { str: 0, vit: 3, int: 11, focus: 5, will: 4, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [2,4], int: [10,14], focus: [4,8], will: [3,5], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [2,4], int: [9,13], focus: [3,7], will: [3,5], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: 'Arcane focus — Arcane Bolt / Immolate / Cataclysm / Siphon kit.',
       on_equip: null, cooldown_seconds: null,
     },
@@ -2177,7 +2177,7 @@
       flavor: 'A long crossbow that fells what will not kneel. One bolt, one throne — it has unmade kings from the foot of the stair.',
       art_path: 'assets/items/crownpiercer.png',
       bonuses: { str: 2, vit: 6, int: 3, focus: 11, will: 2, wlt: 0 },
-      bonus_ranges: { str: [1,3], vit: [4,8], int: [2,4], focus: [10,14], will: [1,3], wlt: [0,0] },
+      bonus_ranges: { str: [1,3], vit: [4,8], int: [2,4], focus: [9,13], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
     },
@@ -2191,7 +2191,7 @@
       flavor: 'The crown comes away cold and weightless — all the cold thought that once filled it now sharpens yours. Best in slot, until an A-rank throne falls.',
       art_path: 'assets/items/the_hollow_crown.png',
       bonuses: { str: 0, vit: 5, int: 15, focus: 6, will: 2, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [4,8], int: [13,17], focus: [4,8], will: [1,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [3,7], int: [13,17], focus: [4,8], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2225,7 +2225,7 @@
       flavor: 'Soles ground flat by a thousand flights. They have never once turned back at a landing.',
       art_path: 'assets/items/the_stairwalkers_treads.png',
       bonuses: { str: 1, vit: 4, int: 0, focus: 8, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,3], vit: [2,6], int: [0,0], focus: [6,10], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,2], vit: [2,6], int: [0,0], focus: [6,10], will: [0,2], wlt: [0,0] },
       set_id: 'gaunt_wardens', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2239,7 +2239,7 @@
       flavor: 'It hungers for thought the way the Wardens hungered for rest. Feed it; it pays you back in clarity.',
       art_path: 'assets/items/the_famished_circlet.png',
       bonuses: { str: 0, vit: 3, int: 8, focus: 2, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [1,5], int: [6,10], focus: [0,4], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [1,5], int: [6,10], focus: [0,4], will: [0,2], wlt: [0,0] },
       set_id: 'gaunt_wardens', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2253,7 +2253,7 @@
       flavor: 'Threadbare and starlit, it drapes the shoulders of those who walk far and climb farther.',
       art_path: 'assets/items/the_gaunt_mantle.png',
       bonuses: { str: 0, vit: 4, int: 8, focus: 1, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [2,6], int: [6,10], focus: [0,3], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [2,6], int: [6,10], focus: [0,2], will: [0,2], wlt: [0,0] },
       set_id: 'gaunt_wardens', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2285,7 +2285,7 @@
       flavor: 'Two notes that should never sound at once, fused into a single cold chord. It clears the mind by drowning out everything else.',
       art_path: 'assets/items/the_discordant_crown.png',
       bonuses: { str: 0, vit: 4, int: 11, focus: 2, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [2,6], int: [9,13], focus: [0,4], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [2,6], int: [9,13], focus: [0,4], will: [0,2], wlt: [0,0] },
       set_id: 'sundered_choir', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2299,7 +2299,7 @@
       flavor: 'Gauntlets that learned to nock and loose to a rhythm only the Choir kept. Your aim keeps time now.',
       art_path: 'assets/items/the_sundered_grips.png',
       bonuses: { str: 2, vit: 5, int: 0, focus: 10, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,4], vit: [3,7], int: [0,0], focus: [8,12], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,4], vit: [3,7], int: [0,0], focus: [8,12], will: [0,2], wlt: [0,0] },
       set_id: 'sundered_choir', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2313,7 +2313,7 @@
       flavor: 'One boot keeps the flat dark, the other the climbing stair — call and response, step for step, until the song runs out.',
       art_path: 'assets/items/the_antiphon_striders.png',
       bonuses: { str: 2, vit: 6, int: 0, focus: 9, will: 1, wlt: 0 },
-      bonus_ranges: { str: [0,4], vit: [4,8], int: [0,0], focus: [7,11], will: [0,3], wlt: [0,0] },
+      bonus_ranges: { str: [0,4], vit: [4,8], int: [0,0], focus: [7,11], will: [0,2], wlt: [0,0] },
       set_id: 'sundered_choir', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2350,7 +2350,7 @@
       flavor: 'Drawn leather for the hand that serves the summons. The Court names the quarry; these make sure the arrow arrives.',
       art_path: 'assets/items/courthunters_grips.png',
       bonuses:      { str: 2, vit: 3, int: 0, focus: 8, will: 1, wlt: 0 },
-      bonus_ranges: { str: [1,3], vit: [2,4], int: [0,0], focus: [7,10], will: [0,2], wlt: [0,0] },
+      bonus_ranges: { str: [1,3], vit: [2,4], int: [0,0], focus: [6,10], will: [0,2], wlt: [0,0] },
       set_id: 'threefold_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -2364,7 +2364,7 @@
       flavor: 'A jade sigil split three ways and rejoined. No single hand may carry a verdict — but three together may carry anything.',
       art_path: 'assets/items/seal_of_the_threefold_court.png',
       bonuses:      { str: 0, vit: 2, int: 8, focus: 1, will: 3, wlt: 0 },
-      bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [0,2], will: [2,4], wlt: [0,0] },
+      bonus_ranges: { str: [0,0], vit: [1,3], int: [6,10], focus: [0,2], will: [2,4], wlt: [0,0] },
       set_id: 'threefold_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -3174,7 +3174,7 @@
       flavor: 'Forged across the lifetime of one smith who never missed a day at the bellows. Best in slot — discipline made into steel.',
       art_path: 'assets/items/gauntlets-of-ten-thousand-days.png',
       bonuses:       { str: 15, vit: 0, int: 0, focus: 8, will: 5, wlt: 0 },
-      bonus_ranges:  { str: [12,18], vit: [0,0], int: [0,0], focus: [6,10], will: [3,7], wlt: [0,0] },
+      bonus_ranges:  { str: [13,17], vit: [0,0], int: [0,0], focus: [6,10], will: [3,7], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
     },
@@ -3422,7 +3422,7 @@
       // VIT/FOCUS/WILL identity. Buff-only — no nerf to anything. (The co-op
       // B-rares that run hotter still do, by the documented co-op carve-out.)
       bonuses:       { str: 1, vit: 8, int: 2, focus: 7, will: 6, wlt: 0 },
-      bonus_ranges:  { str: [0,3], vit: [6,10], int: [0,4], focus: [5,9], will: [4,8], wlt: [0,0] },
+      bonus_ranges:  { str: [0,2], vit: [6,10], int: [0,4], focus: [5,9], will: [4,8], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
     restplate_of_the_wanderer: {
@@ -3431,7 +3431,7 @@
       flavor: 'Legplates light enough to walk all day, warm enough to rest all night.',
       art_path: 'assets/items/restplate-of-the-wanderer.png',
       bonuses:       { str: 4, vit: 8, int: 1, focus: 5, will: 4, wlt: 0 },
-      bonus_ranges:  { str: [2,6], vit: [6,10], int: [0,3], focus: [3,7], will: [2,6], wlt: [0,0] },
+      bonus_ranges:  { str: [2,6], vit: [6,10], int: [0,2], focus: [3,7], will: [2,6], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
 
@@ -3516,7 +3516,7 @@
       flavor: 'Gauntlets that grip the hammer by day and rest open by night. Best in slot.',
       art_path: 'assets/items/forgewarden-gauntlets.png',
       bonuses:       { str: 9, vit: 8, int: 1, focus: 6, will: 6, wlt: 0 },
-      bonus_ranges:  { str: [7,11], vit: [6,10], int: [0,3], focus: [4,8], will: [4,8], wlt: [0,0] },
+      bonus_ranges:  { str: [7,11], vit: [6,10], int: [0,2], focus: [4,8], will: [4,8], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
     anvilrest_cuirass: {
@@ -3525,7 +3525,7 @@
       flavor: 'Heavy plate built for the work, lined for the rest after — second to the Sovereign Mantle.',
       art_path: 'assets/items/anvilrest-cuirass.png',
       bonuses:       { str: 7, vit: 9, int: 1, focus: 4, will: 4, wlt: 0 },
-      bonus_ranges:  { str: [5,9], vit: [7,11], int: [0,3], focus: [2,6], will: [2,6], wlt: [0,0] },
+      bonus_ranges:  { str: [5,9], vit: [7,11], int: [0,2], focus: [2,6], will: [2,6], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
     charm_of_the_emberkeeper: {
@@ -9609,7 +9609,13 @@
       amulet: 'amulet_of_the_endless_stair',
       ring:   'skyward_vigil_ring',
       gloves: 'forgewarden_gauntlets',
-      boots:  'striders_of_the_tideless_road',
+      // W685 — instrument fix: boots were stale since the W563 legs→boots remap.
+      // greaves_of_the_umbral_throne (S ultra Σ36, sovereign_regalia) strictly
+      // dominates the A-tier striders (Σ31) AND completes the Sovereign 3pc with
+      // mantle+crown — the sim under-reported the true min-maxed ceiling (the
+      // "36.2%" F100 wall is really ~43% for a correctly built player). The wall
+      // constants are UNTOUCHED; only the measurement is honest now.
+      boots:  'greaves_of_the_umbral_throne',
     };
     const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
     Object.keys(BIS).forEach((slot) => {
@@ -45586,7 +45592,7 @@
       coopUnit:        'steps',
       coopRewardSouls: 66,
       coopWindowHours: 24,
-      statDomain:      'VIT',
+      statDomain:      'INT',
       flavorShort:     'Three thrones, one hunger. It takes three hunters to starve it.',
       flavorLong:      'Three crowned shades hold court in the deep, and their hunger is triune: whatever road one hunter takes, two thrones still watch the others. No pair has ever unseated them. Bring a third — split the court’s gaze three ways — and walk the kingdom out from under it.',
       killCondShort:   'Three hunters: 27,000 combined steps in 24h',
