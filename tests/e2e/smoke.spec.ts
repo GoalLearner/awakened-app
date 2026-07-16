@@ -1681,3 +1681,43 @@ test.describe('S · HealthKit source dedup (W681)', () => {
     expect(results.manualEntryIsApple).toBe(5000);
   });
 });
+
+// ── T · Account-switch purge (W689) ─────────────────────────────────────────
+// The cross-account bleed guard: when a DIFFERENT Apple account signs in,
+// __awakenedAccountSwitchPurge wipes every hb_* key except the device-scoped
+// keep-list (new session, new alias, owner tag, HealthKit device flags). Pins
+// both directions: per-account state gone, keep-list intact.
+test.describe('T · Account-switch purge (W689)', () => {
+  test('purges account state, keeps device-scoped keys', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    const r = await page.evaluate(() => {
+      localStorage.setItem('hb_habits', '[{"id":"userA"}]');
+      localStorage.setItem('hb_souls', '99999');
+      localStorage.setItem('hb_inventory', '{"cards":{}}');
+      localStorage.setItem('hb_user', '{"sub":"B","jwt":"x"}');
+      localStorage.setItem('hb_name', 'userB');
+      localStorage.setItem('hb_debug_healthkit', '1');
+      localStorage.setItem('hb_healthkit_prompted', '1');
+      const purged = (window as any).__awakenedAccountSwitchPurge('B');
+      return {
+        purged,
+        habitsGone: localStorage.getItem('hb_habits') === null,
+        soulsGone: localStorage.getItem('hb_souls') === null,
+        invGone: localStorage.getItem('hb_inventory') === null,
+        userKept: localStorage.getItem('hb_user') !== null,
+        nameKept: localStorage.getItem('hb_name') === 'userB',
+        debugKept: localStorage.getItem('hb_debug_healthkit') === '1',
+        promptKept: localStorage.getItem('hb_healthkit_prompted') === '1',
+      };
+    });
+    expect(r.purged).toBeGreaterThan(0);
+    expect(r.habitsGone).toBe(true);
+    expect(r.soulsGone).toBe(true);
+    expect(r.invGone).toBe(true);
+    expect(r.userKept).toBe(true);
+    expect(r.nameKept).toBe(true);
+    expect(r.debugKept).toBe(true);
+    expect(r.promptKept).toBe(true);
+  });
+});

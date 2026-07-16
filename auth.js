@@ -149,6 +149,21 @@
     try { localStorage.removeItem('hb_recap_seen_week'); } catch (_) {}
   }
 
+  // W689 — owner-tag migration: devices that were ALREADY signed in before the
+  // cross-account bleed guard shipped have state but no hb_state_owner. Tag it
+  // with the current session's sub at load so the NEXT account switch is caught.
+  // Real Apple sessions only — guests/dev-stubs never tag (so the guest→Apple
+  // upgrade keeps its progress; see the verify-success hook).
+  try {
+    (function () {
+      const u = readUser();
+      if (u && u.sub && u.jwt && u.jwt !== 'PHASE_A_STUB' && u.jwt !== LOCALHOST_DEV_STUB && u.jwt !== GUEST_STUB &&
+          !localStorage.getItem('hb_state_owner')) {
+        localStorage.setItem('hb_state_owner', u.sub);
+      }
+    })();
+  } catch (_) {}
+
   // True when JWT is within 14 days of expiry. Phase A stubs and
   // dev-stubs return false (no real backend session to refresh).
   function isJwtNearExpiry() {
@@ -341,6 +356,26 @@
       // Apple's tokens are single-use anyway. v3 Phase 1z.245 — also
       // removes the persisted PENDING_LS_KEY localStorage entry.
       _clearPending();
+      // W689 — cross-account bleed guard (scale-audit HIGH). Local app state is
+      // tagged with the Apple sub that owns it (hb_state_owner, written ONLY on
+      // real sign-ins — guests never tag, so the guest→Apple upgrade keeps its
+      // progress). If a DIFFERENT account signs in on this device, purge the
+      // previous account's state and reboot clean: without this, CloudSync's
+      // init push would upload account A's habits/souls/relics INTO account B's
+      // cloud (both directions of contamination). Same-account re-login matches
+      // the tag and keeps everything.
+      try {
+        const prevOwner = localStorage.getItem('hb_state_owner');
+        if (prevOwner && prevOwner !== _pendingAppleSub) {
+          if (window && typeof window.__awakenedAccountSwitchPurge === 'function') {
+            window.__awakenedAccountSwitchPurge(_pendingAppleSub);
+          }
+          try { localStorage.setItem('hb_state_owner', _pendingAppleSub); } catch (_) {}
+          try { window.location.reload(); } catch (_) {}
+        } else {
+          localStorage.setItem('hb_state_owner', _pendingAppleSub);
+        }
+      } catch (_) {}
       return { ok: true, alias: data.alias, isNewUser: !!data.isNewUser };
     }
 

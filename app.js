@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w688'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w689'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -225,6 +225,38 @@
   // actually running. Helps disambiguate "user has the fix" vs
   // "user is still on the prior build" when a freeze repros.
   try { console.log('[Awakened] boot · APP_VERSION=' + APP_VERSION + ' · build=' + APP_BUILD_TAG); } catch (_) {}
+
+  // ── W689 — cross-account bleed guard (scale-audit HIGH) ─────────────────
+  // auth.js calls this when a DIFFERENT Apple account signs in on this device
+  // (hb_state_owner mismatch). Without it, the previous account's habits /
+  // souls / relics stay in localStorage, the new account SEES them, and worse:
+  // CloudSync's init push uploads them INTO the new account's cloud backup.
+  // Policy: wipe every 'hb_'-prefixed key EXCEPT the explicit device-scoped
+  // keep-list. Enumerating hb_* (instead of a hand-kept purge list) means new
+  // per-account keys are purged-by-default — forgetting to register one fails
+  // SAFE. Defined this early (top of the IIFE) so it exists even if later
+  // boot stages throw. Same-account re-login never calls this.
+  try {
+    window.__awakenedAccountSwitchPurge = function (newSub) {
+      var KEEP = {
+        hb_user: 1,               // the NEW account's just-written session
+        hb_name: 1,               // the NEW account's alias (written right before)
+        hb_state_owner: 1,        // auth.js overwrites with the new sub after purge
+        hb_debug_healthkit: 1,    // device-scoped debug flag
+        hb_healthkit_prompted: 1, // device-level HealthKit pre-prompt (iOS perm is per-device)
+      };
+      var doomed = [];
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('hb_') === 0 && !KEEP[k]) doomed.push(k);
+        }
+        doomed.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+        console.warn('[Awakened] account switch — purged ' + doomed.length + ' state keys for ' + String(newSub || '').slice(0, 8) + '…');
+      } catch (_) {}
+      return doomed.length;
+    };
+  } catch (_) {}
   // W480 — lib/economy.js (the W471 extraction) defines AwakenedEconomy, which app.js
   // delegates ALL stat-level/XP math to. If a build/cache ever fails to ship it (the W480
   // bug: the iOS build scripts didn't copy lib/economy.js → AwakenedEconomy undefined →
