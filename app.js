@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w686'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w687'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -540,7 +540,7 @@
     // is the endgame shelf; ~66% of wins pay souls only.
     the_sleepless_crown: {
       id:         'the_sleepless_crown',
-      name:       'The Sleepless Crown',
+      name:       'The Myrmidon King',
       rank:       'S',
       coopOnly:   true,
       archetype:  'caster',
@@ -45785,11 +45785,17 @@
     // sleep across 3 days — exactly 7h/night per hunter, the discipline the Crown
     // refused. Reward = half the solo S kill (1600 → 800; MUST mirror the server
     // COOP_BOSS_CFG). Drops the game's first mythic caster weapons.
+    // W686+ — owner: "somewhat like the S-tier boss in Solo Leveling, Beru (the Ant
+    // King)." Homage, legally distinct: MYRMIDON = the ant-people of Greek myth, so
+    // "The Myrmidon King" IS an ant king without borrowing the character name. The
+    // id stays the_sleepless_crown (stable-id house rule; display strings + artId
+    // carry the identity). The steps+sleep condition is the theme: a colony never
+    // sleeps — out-march the swarm, then master the rest its king cannot have.
     the_sleepless_crown: {
       id:              'the_sleepless_crown',
-      name:            'The Sleepless Crown',
+      name:            'The Myrmidon King',
       rank:            'S',
-      artId:           'the_sleepless_crown',
+      artId:           'the_myrmidon_king',
       dropSourceBoss:  'the_sleepless_crown',
       coopGoalSteps:   60000,
       coopGoalSleepMinutes: 2520,
@@ -45799,12 +45805,12 @@
       coopRewardSouls: 800,
       coopWindowHours: 72,
       statDomain:      'VIT',
-      flavorShort:     'A king who never slept, and never stopped.',
-      flavorLong:      'He outlawed rest in his own halls and marched his court to dust chasing one more mile, one more war, one more waking hour. What remains wears the crown still — hollow-eyed, tireless, unbeaten. It cannot be outworked. Master BOTH disciplines it refused: walk its roads by day, and sleep the nights it never could.',
+      flavorShort:     'The colony has never slept. Its king has never fallen.',
+      flavorLong:      'Deep beneath the gate the colony works without end — a million legs, no dawn, no rest, and on its throne a king in violet chitin who has never closed his eyes. His swarm cannot be outnumbered and his court cannot be outworked. Two hunters remain his only blind spot: out-march the colony by day, then do the one thing the King cannot — sleep, truly, and wake stronger than the swarm.',
       killCondShort:   'Two hunters: 60,000 steps + 42h sleep in 72h',
       killCondLong:    'Team up with a fellow hunter. Within 72 hours of your ally joining, walk 60,000 verified steps AND bank 42 hours of verified sleep between you — that is 10,000 steps and a true 7-hour night from each of you, every day for three days. Both hunters are credited the kill.',
-      coopVictoryTitle:'THE CROWN RESTS',
-      coopDefeatTitle: 'THE CROWN ENDURES',
+      coopVictoryTitle:'THE COLONY KNEELS',
+      coopDefeatTitle: 'THE KING NEVER SLEEPS',
     },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';

@@ -39,8 +39,9 @@ const JOBS = [
   { src: 'milestone_cowl.png',              dst: 'assets/items/milestone_cowl.png',               kind: 'item' },
   { src: 'longroad_grips.png',              dst: 'assets/items/longroad_grips.png',               kind: 'item' },
   // W686 — The Sleepless Crown (S-rank 72h steps+sleep raid) + its 8-piece pool.
-  { src: 'the-sleepless-crown.png',          dst: 'assets/bosses/the-sleepless-crown.png',          kind: 'boss' },
-  { src: 'the-sleepless-crown-summons.png',  dst: 'assets/bosses/the-sleepless-crown-summons.png',  kind: 'boss' },
+  // (renamed W687 — the raid is now The Myrmidon King; artId the_myrmidon_king)
+  { src: 'the-myrmidon-king.png',            dst: 'assets/bosses/the-myrmidon-king.png',            kind: 'boss' },
+  { src: 'the-myrmidon-king-summons.png',    dst: 'assets/bosses/the-myrmidon-king-summons.png',    kind: 'boss' },
   { src: 'reverie_staff.png',                dst: 'assets/items/reverie_staff.png',                 kind: 'item' },
   { src: 'vigil_bow.png',                    dst: 'assets/items/vigil_bow.png',                     kind: 'item' },
   { src: 'watchkeepers_carapace.png',        dst: 'assets/items/watchkeepers_carapace.png',         kind: 'item' },
