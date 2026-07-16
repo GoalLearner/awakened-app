@@ -18,6 +18,10 @@
 const { Arena, loadErr } = require('./_load-arena.js');
 if (loadErr) console.log('(IIFE threw after the Arena export — fine for sim)\n');
 const NF = 'nightfall_blade', DF = 'duskforge_greatblade';
+// W686 — the mythic caster weapons (The Sleepless Crown raid). Class-ceiling
+// convergence is the tuning target: their Σ42/STR4 spread = Duskforge's engine
+// power by construction; the sim proves it holds through sets+upgrades.
+const RS = 'reverie_staff', VB = 'vigil_bow';
 const pct = (x) => (x * 100).toFixed(1) + '%';
 
 console.log('=== engine integrity ===');
@@ -33,7 +37,7 @@ const INVEST_LABEL = { gear: 'BiS gear', sets: '+ sets', max: '+ sets + maxed up
 function spreadAt(floor, n) {
   console.log(`\n=== F${floor} investment spread (player power → win rate) ===`);
   console.log('weapon      ' + INVESTS.map((iv) => INVEST_LABEL[iv].padEnd(26)).join(''));
-  for (const [wid, wn] of [[NF, 'Nightfall'], [DF, 'Duskforge']]) {
+  for (const [wid, wn] of [[NF, 'Nightfall'], [DF, 'Duskforge'], [RS, 'Reverie'], [VB, 'Vigil']]) {
     const cells = INVESTS.map((iv) => {
       const r = Arena.simAscent(floor, wid, { n, invest: iv });
       return `${String(r.playerPower).padStart(3)}pw ${pct(r.winRate).padStart(6)}`.padEnd(26);

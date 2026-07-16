@@ -7,7 +7,7 @@
  * substring-routed D1 mock as the other handler tests.
  */
 import { describe, expect, it } from 'vitest';
-import { handleCoopBossCreate, handleCoopBossJoin } from './coop-boss';
+import { handleCoopBossCreate, handleCoopBossGet, handleCoopBossJoin } from './coop-boss';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -54,6 +54,17 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
             if (sql.includes('FROM users WHERE id IN')) {
               return { results: [{ id: 'u1', alias: 'challenger' }, { id: 'u2', alias: 'partner' }, { id: 'u3', alias: 'partner2' }], success: true, meta: {} };
             }
+            // W686 — per-user MAX(value) progress rows for the steps+sleep raid tests.
+            if (sql.includes('FROM verified_events')) {
+              return {
+                results: [
+                  { user_id: 'u1', event_type: 'steps_total', s: 12000 },
+                  { user_id: 'u1', event_type: 'sleep_minutes_total', s: 410 },
+                  { user_id: 'u2', event_type: 'sleep_minutes_total', s: 190 },
+                ],
+                success: true, meta: {},
+              };
+            }
             return { results: [], success: true, meta: {} };
           },
           first: async () => {
@@ -83,6 +94,8 @@ function makeEnv(db: D1Database): Env {
   return {
     DB: db,
     RL_COOP_WRITE: { limit: async () => ({ success: true }) },
+    // W686 — handleCoopBossGet shares the friends-read bucket.
+    RL_FRIENDS_READ: { limit: async () => ({ success: true }) },
   } as unknown as Env;
 }
 
@@ -313,5 +326,56 @@ describe('W677 — trio join (activate only when BOTH allies answered)', () => {
     const res = await handleCoopBossJoin(
       createReq(), makeEnv(makeDb({ instance: { ...TRIO_PENDING_ROW } })), session('u9'), 'inst-3');
     expect(res.status).toBe(403);
+  });
+});
+
+// ── W686 — The Sleepless Crown: first steps+SLEEP dual metric (S-rank, 72h) ──
+const SLEEP_ACTIVE_ROW = {
+  ...PENDING_ROW,
+  id: 'inst-s',
+  boss_id: 'the_sleepless_crown',
+  boss_rank: 'S',
+  status: 'active',
+  goal_steps: 60000,
+  goal_flights: 2520, // metric-generic second goal: SLEEP MINUTES (42h)
+  reward_souls: 800,
+  starts_at: '2026-07-15 00:00:00',
+  ends_at: '2026-07-18 00:00:00',
+};
+
+describe('W686 — steps+sleep dual metric (The Sleepless Crown)', () => {
+  it('GET surfaces sleep-named fields and aggregates all three streams', async () => {
+    const log: string[] = [];
+    const res = await handleCoopBossGet(
+      createReq(),
+      makeEnv(makeDb({ instance: { ...SLEEP_ACTIVE_ROW } }, log)),
+      session('u1'), 'inst-s');
+    const body = (await res.json()) as { instance: Record<string, unknown> };
+    expect(res.status).toBe(200);
+    const inst = body.instance;
+    expect(inst.metric).toBe('steps_sleep');
+    expect(inst.goal_sleep_minutes).toBe(2520);
+    // u1 slept 410m + u2 slept 190m (mock verified_events rows) = 600 combined.
+    expect(inst.combined_sleep_minutes).toBe(600);
+    expect(inst.combined_steps).toBe(12000);
+    expect((inst.challenger as Record<string, unknown>).sleep_minutes).toBe(410);
+    expect((inst.partner as Record<string, unknown>).sleep_minutes).toBe(190);
+    // The progress query must fetch THREE event types (steps, flights, sleep).
+    const progressSql = log.find((s) => s.includes('FROM verified_events'));
+    expect(progressSql).toBeTruthy();
+    expect(progressSql).toContain('IN (?, ?, ?)');
+  });
+
+  it('create accepts the S-rank duo raid (no PARTY_SIZE/UNKNOWN_BOSS trip)', async () => {
+    const res = await handleCoopBossCreate(
+      new Request('http://test/v1/coop-boss', {
+        method: 'POST',
+        body: JSON.stringify({ partner_user_id: 'u2', boss_id: 'the_sleepless_crown' }),
+      }),
+      makeEnv(makeDb({ instance: { ...SLEEP_ACTIVE_ROW, status: 'pending', starts_at: null, ends_at: null } })),
+      session('u1'));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { instance: Record<string, unknown> };
+    expect(body.instance.metric).toBe('steps_sleep');
   });
 });

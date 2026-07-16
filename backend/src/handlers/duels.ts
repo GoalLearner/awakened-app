@@ -56,6 +56,7 @@ const DEFAULT_DUEL_TYPE = 'verified_objectives';
 const ALLOWED_EVENT_TYPES = new Set([
   'steps_total',
   'flights_total', // W397 — stairs-climbed co-op (The Hollow Monarch, B-rank)
+  'sleep_minutes_total', // W686 — cumulative minutes asleep in a co-op hunt window (The Sleepless Crown, S-rank steps+sleep raid). Same resubmit-growing-total + MAX-per-user convention as steps_total.
   'sleep_7h_night',
   'bedtime_before_midnight',
   'strength_workout',
@@ -71,6 +72,8 @@ const ALLOWED_EVENT_SOURCES = new Set([
   'verified_boss',
 ]);
 const MAX_EVENTS_PER_BATCH = 25;
+// W686 — per-type flat sanity caps at ingest (physical impossibility bounds).
+const EVENT_VALUE_CAPS: Record<string, number> = { sleep_minutes_total: 10080 };
 const DUEL_REWARD_REASON = 'duel_win';
 // v3 Phase 1z.155 — loser stake deduction reason. Pairs with the
 // winner-side DUEL_REWARD_REASON above; both inserts share the
@@ -794,6 +797,12 @@ export async function handleVerifiedEventsSubmit(
     if (!clientEventId) { errors.push({ index: i, reason: 'MISSING_CLIENT_EVENT_ID' }); continue; }
     if (!ALLOWED_EVENT_TYPES.has(eventType)) {
       errors.push({ index: i, reason: 'INVALID_EVENT_TYPE' }); continue;
+    }
+    // W686 — flat physical-impossibility caps (mirrors leaderboard-submit's
+    // METRIC_CAPS). sleep_minutes_total: 10,080 = 7 full days of minutes —
+    // no legitimate hunt window can exceed it.
+    if (EVENT_VALUE_CAPS[eventType] !== undefined && value > EVENT_VALUE_CAPS[eventType]) {
+      errors.push({ index: i, reason: 'INVALID_VALUE' }); continue;
     }
     if (!metric) { errors.push({ index: i, reason: 'MISSING_METRIC' }); continue; }
     if (!ALLOWED_EVENT_SOURCES.has(source)) {

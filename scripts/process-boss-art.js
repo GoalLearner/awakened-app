@@ -38,6 +38,17 @@ const JOBS = [
   { src: 'roadwardens_harness.png',         dst: 'assets/items/roadwardens_harness.png',          kind: 'item' },
   { src: 'milestone_cowl.png',              dst: 'assets/items/milestone_cowl.png',               kind: 'item' },
   { src: 'longroad_grips.png',              dst: 'assets/items/longroad_grips.png',               kind: 'item' },
+  // W686 — The Sleepless Crown (S-rank 72h steps+sleep raid) + its 8-piece pool.
+  { src: 'the-sleepless-crown.png',          dst: 'assets/bosses/the-sleepless-crown.png',          kind: 'boss' },
+  { src: 'the-sleepless-crown-summons.png',  dst: 'assets/bosses/the-sleepless-crown-summons.png',  kind: 'boss' },
+  { src: 'reverie_staff.png',                dst: 'assets/items/reverie_staff.png',                 kind: 'item' },
+  { src: 'vigil_bow.png',                    dst: 'assets/items/vigil_bow.png',                     kind: 'item' },
+  { src: 'watchkeepers_carapace.png',        dst: 'assets/items/watchkeepers_carapace.png',         kind: 'item' },
+  { src: 'grips_of_the_third_night.png',     dst: 'assets/items/grips_of_the_third_night.png',      kind: 'item' },
+  { src: 'striders_of_the_waking_march.png', dst: 'assets/items/striders_of_the_waking_march.png',  kind: 'item' },
+  { src: 'circlet_of_lucid_sleep.png',       dst: 'assets/items/circlet_of_lucid_sleep.png',        kind: 'item' },
+  { src: 'shroud_of_the_dreaming_court.png', dst: 'assets/items/shroud_of_the_dreaming_court.png',  kind: 'item' },
+  { src: 'pendant_of_the_seventh_hour.png',  dst: 'assets/items/pendant_of_the_seventh_hour.png',   kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });

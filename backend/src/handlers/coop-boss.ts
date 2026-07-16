@@ -105,9 +105,13 @@ async function checkHuntCap(env: Env, userId: string): Promise<Response | null> 
 // Was inconsistent (E paid 100% of solo, the W447 duals 60-65%) which made co-op
 // strictly better souls/effort than solo at E — one leg of the co-op-runs-hot
 // problem (the other leg, dupe-sell income, was cut in W646).
+// W686 — metric 'steps_sleep' is the S-rank raid dual: a combined STEPS goal
+// (goalSteps) AND a combined SLEEP goal must both be met. The sleep goal rides
+// the metric-generic goalFlights column as MINUTES asleep (2520 = 42h) — the
+// header already blesses column reuse; no migration.
 const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both'; partySize?: number }
+  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number }
 > = {
   the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
@@ -124,13 +128,27 @@ const COOP_BOSS_CFG: Record<
   // = 66 per hunter (thirds split — the trio analog of the W648 duo half-split).
   // NAME/ART ARE PLACEHOLDERS pending the owner's boss design; id is stable.
   the_threefold_court:  { rank: 'C', goalSteps: 27000, rewardSouls: 66, windowHours: 24, metric: 'steps', partySize: 3 },
+  // W686 — the S-rank endgame raid: first 72-HOUR window + first steps+SLEEP dual.
+  // Owner spec: duo, 60,000 combined steps AND 42h combined sleep across 3 days
+  // (exactly 7h/night/hunter — the discipline the Crown refused). goalFlights
+  // holds SLEEP MINUTES (2520 = 42h). Reward = half the solo S kill (1600 → 800).
+  the_sleepless_crown:  { rank: 'S', goalSteps: 60000, goalFlights: 2520, rewardSouls: 800, windowHours: 72, metric: 'steps_sleep' },
 };
-function bossMetric(bossId: string): 'steps' | 'flights' | 'both' {
+function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
 }
 
 const STEPS_EVENT_TYPE = 'steps_total';
 const FLIGHTS_EVENT_TYPE = 'flights_total';
+// W686 — cumulative minutes asleep inside the hunt window (The Sleepless Crown).
+// Follows the steps_total convention exactly: the client resubmits a GROWING
+// window total, so MAX(value) per user = that hunter's true total.
+const SLEEP_EVENT_TYPE = 'sleep_minutes_total';
+// W686 — how long after ends_at a steps_sleep hunt still accepts SLEEP submits
+// and defers its expiry verdict: the final night ends at the deadline and only
+// reaches HealthKit after the hunter wakes + syncs. 8h covers a post-deadline
+// wake with margin; the submitted value is window-clamped client-side.
+const SLEEP_SUBMIT_GRACE_MS = 8 * 3600 * 1000;
 // Each co-op instance is HOMOGENEOUS: only its boss's metric is ever tagged to
 // it (enforced at submit by validateBossInstanceForUser), so a per-instance
 // MAX(value) over the matching event_type is that hunter's true window total.
@@ -144,8 +162,11 @@ function eventTypeForBoss(bossId: string): string {
 // W447 — which verified-event types this boss accepts. A 'both' boss accepts BOTH
 // steps_total and flights_total (the instance is no longer homogeneous); single-metric
 // bosses accept only their one type.
+// W686 — a 'steps_sleep' boss accepts steps_total and sleep_minutes_total.
 function metricAllowedForBoss(bossId: string, eventType: string): boolean {
-  if (bossMetric(bossId) === 'both') return eventType === STEPS_EVENT_TYPE || eventType === FLIGHTS_EVENT_TYPE;
+  const metric = bossMetric(bossId);
+  if (metric === 'both') return eventType === STEPS_EVENT_TYPE || eventType === FLIGHTS_EVENT_TYPE;
+  if (metric === 'steps_sleep') return eventType === STEPS_EVENT_TYPE || eventType === SLEEP_EVENT_TYPE;
   return eventType === eventTypeForBoss(bossId);
 }
 const MAX_LIST = 20;
@@ -220,22 +241,27 @@ async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, str
 // flights_total. A single-metric boss simply has an empty map for the other stream;
 // a 'both' boss uses both. The "primary" stream (what the metric-generic combined_steps/
 // goal_steps fields carry) is flights for a flights boss, steps otherwise.
-interface CoopProgress { steps: Map<string, number>; flights: Map<string, number>; }
-function emptyProgress(): CoopProgress { return { steps: new Map(), flights: new Map() }; }
+interface CoopProgress { steps: Map<string, number>; flights: Map<string, number>; sleep: Map<string, number>; }
+function emptyProgress(): CoopProgress { return { steps: new Map(), flights: new Map(), sleep: new Map() }; }
+function progressStream(p: CoopProgress, eventType: string): Map<string, number> {
+  if (eventType === FLIGHTS_EVENT_TYPE) return p.flights;
+  if (eventType === SLEEP_EVENT_TYPE) return p.sleep;   // W686 — minutes asleep
+  return p.steps;
+}
 
 /** Per-user MAX(value) for ONE instance, split by metric stream. */
 async function getCoopProgress(env: Env, instanceId: string): Promise<CoopProgress> {
   const rows = await env.DB.prepare(
     `SELECT user_id, event_type, COALESCE(MAX(value), 0) AS s
        FROM verified_events
-      WHERE boss_instance_id = ? AND event_type IN (?, ?)
+      WHERE boss_instance_id = ? AND event_type IN (?, ?, ?)
       GROUP BY user_id, event_type`,
   )
-    .bind(instanceId, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE)
+    .bind(instanceId, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE, SLEEP_EVENT_TYPE)
     .all<{ user_id: string; event_type: string; s: number }>();
   const p = emptyProgress();
   for (const r of rows.results ?? []) {
-    (r.event_type === FLIGHTS_EVENT_TYPE ? p.flights : p.steps).set(r.user_id, Number(r.s) || 0);
+    progressStream(p, r.event_type).set(r.user_id, Number(r.s) || 0);
   }
   return p;
 }
@@ -248,15 +274,14 @@ async function getCoopProgressForInstances(env: Env, ids: string[]): Promise<Map
   const rows = await env.DB.prepare(
     `SELECT boss_instance_id AS bid, user_id, event_type, COALESCE(MAX(value), 0) AS s
        FROM verified_events
-      WHERE boss_instance_id IN (${placeholders}) AND event_type IN (?, ?)
+      WHERE boss_instance_id IN (${placeholders}) AND event_type IN (?, ?, ?)
       GROUP BY boss_instance_id, user_id, event_type`,
   )
-    .bind(...ids, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE)
+    .bind(...ids, STEPS_EVENT_TYPE, FLIGHTS_EVENT_TYPE, SLEEP_EVENT_TYPE)
     .all<{ bid: string; user_id: string; event_type: string; s: number }>();
   for (const r of rows.results ?? []) {
     if (!out.has(r.bid)) out.set(r.bid, emptyProgress());
-    const p = out.get(r.bid)!;
-    (r.event_type === FLIGHTS_EVENT_TYPE ? p.flights : p.steps).set(r.user_id, Number(r.s) || 0);
+    progressStream(out.get(r.bid)!, r.event_type).set(r.user_id, Number(r.s) || 0);
   }
   return out;
 }
@@ -267,12 +292,19 @@ function combinedSteps(row: CoopBossRow, p: CoopProgress): number {
 function combinedFlights(row: CoopBossRow, p: CoopProgress): number {
   return participantIds(row).reduce((sum, uid) => sum + (p.flights.get(uid) || 0), 0);
 }
+// W686 — combined minutes asleep across the party.
+function combinedSleep(row: CoopBossRow, p: CoopProgress): number {
+  return participantIds(row).reduce((sum, uid) => sum + (p.sleep.get(uid) || 0), 0);
+}
 /** Authoritative win test across all boss metrics. A 'both' boss requires BOTH goals;
- *  a flights boss compares its (metric-generic) goal_steps against the flight total. */
+ *  a flights boss compares its (metric-generic) goal_steps against the flight total.
+ *  W686 — a 'steps_sleep' boss requires steps >= goal_steps AND sleep minutes >=
+ *  goal_flights (the metric-generic second-goal column). */
 function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
   const metric = bossMetric(row.boss_id);
   return (p: CoopProgress) => {
     if (metric === 'both') return combinedSteps(row, p) >= row.goal_steps && combinedFlights(row, p) >= (row.goal_flights || 0);
+    if (metric === 'steps_sleep') return combinedSteps(row, p) >= row.goal_steps && combinedSleep(row, p) >= (row.goal_flights || 0);
     if (metric === 'flights') return combinedFlights(row, p) >= row.goal_steps;
     return combinedSteps(row, p) >= row.goal_steps;
   };
@@ -342,6 +374,9 @@ function serializeCoop(
   const primary = metric === 'flights' ? p.flights : p.steps;
   const cPrimary = (uid: string) => primary.get(uid) || 0;
   const isBoth = metric === 'both';
+  // W686 — steps+sleep raid: surface the sleep stream under sleep-named fields
+  // (minutes) so the client contract is explicit rather than overloading flights.
+  const isSleep = metric === 'steps_sleep';
 
   return {
     id: row.id,
@@ -363,17 +398,21 @@ function serializeCoop(
     // W447 — dual-metric bosses also surface the SECOND (flights) stream + goal so the
     // client can render two progress bars; omitted for single-metric bosses.
     ...(isBoth ? { goal_flights: row.goal_flights ?? 0, combined_flights: combinedFlights(row, p) } : {}),
+    // W686 — steps+sleep raid: sleep goal + combined total, in MINUTES.
+    ...(isSleep ? { goal_sleep_minutes: row.goal_flights ?? 0, combined_sleep_minutes: combinedSleep(row, p) } : {}),
     challenger: {
       user_id: row.challenger_user_id,
       alias: aliasMap.get(row.challenger_user_id) ?? null,
       steps: cPrimary(row.challenger_user_id),
       ...(isBoth ? { flights: p.flights.get(row.challenger_user_id) || 0 } : {}),
+      ...(isSleep ? { sleep_minutes: p.sleep.get(row.challenger_user_id) || 0 } : {}),
     },
     partner: {
       user_id: row.partner_user_id,
       alias: aliasMap.get(row.partner_user_id) ?? null,
       steps: cPrimary(row.partner_user_id),
       ...(isBoth ? { flights: p.flights.get(row.partner_user_id) || 0 } : {}),
+      ...(isSleep ? { sleep_minutes: p.sleep.get(row.partner_user_id) || 0 } : {}),
       // W677 — trio-only: has this ally answered the summons yet? (pending UI)
       ...(row.partner2_user_id ? { joined: !!row.partner_joined_at } : {}),
     },
@@ -384,6 +423,7 @@ function serializeCoop(
         alias: aliasMap.get(row.partner2_user_id) ?? null,
         steps: cPrimary(row.partner2_user_id),
         ...(isBoth ? { flights: p.flights.get(row.partner2_user_id) || 0 } : {}),
+        ...(isSleep ? { sleep_minutes: p.sleep.get(row.partner2_user_id) || 0 } : {}),
         joined: !!row.partner2_joined_at,
       },
     } : {}),
@@ -454,7 +494,14 @@ export async function validateBossInstanceForUser(
   const startMs = row.starts_at ? Date.parse(row.starts_at) : NaN;
   const endMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
   if (Number.isFinite(startMs) && now < startMs - 60000) return { ok: false, reason: 'BEFORE_WINDOW' };
-  if (Number.isFinite(endMs) && now > endMs + 60000) return { ok: false, reason: 'AFTER_WINDOW' };
+  // W686 — SLEEP submits get a long post-window grace: the third night can END
+  // at (or after) the 72h mark, and HealthKit only syncs it after the hunter
+  // wakes. The submitted VALUE is still window-clamped client-side (per-sample
+  // overlap vs ends_at), so the grace widens delivery, never credit. Steps keep
+  // the tight 60s bound (they submit in real time).
+  const lateBound = (bossMetric(row.boss_id) === 'steps_sleep' && eventType === SLEEP_EVENT_TYPE)
+    ? SLEEP_SUBMIT_GRACE_MS : 60000;
+  if (Number.isFinite(endMs) && now > endMs + lateBound) return { ok: false, reason: 'AFTER_WINDOW' };
   return { ok: true };
 }
 
@@ -978,7 +1025,11 @@ export async function handleCoopBossResolve(
 
   const goalMet = isGoalMet(row)(prog);   // W447 — 'both' bosses require BOTH steps AND flights
   const endsMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
-  const expired = Number.isFinite(endsMs) && Date.now() >= endsMs;
+  // W686 — a steps_sleep raid defers its DEFEAT verdict by the sleep grace: the
+  // final night's (window-clamped) minutes arrive only after wake + HealthKit
+  // sync. A WIN still lands the moment the goal is met; only expiry waits.
+  const expiryGraceMs = bossMetric(row.boss_id) === 'steps_sleep' ? SLEEP_SUBMIT_GRACE_MS : 0;
+  const expired = Number.isFinite(endsMs) && Date.now() >= endsMs + expiryGraceMs;
 
   // Win can land mid-window the instant the combined goal is reached.
   if (goalMet) {

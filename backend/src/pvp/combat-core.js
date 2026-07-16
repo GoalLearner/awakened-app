@@ -51,6 +51,9 @@ const _WEAPON_ATTUNE = {
   duskforge_greatblade: ['aggressor', 'juggernaut'],
   aetherspire_staff: ['sentinel', 'juggernaut'],
   wraithwind_bow: ['trickster'],
+  // W686 — mythic caster weapons (verbatim mirror of app.js).
+  reverie_staff: ['sentinel', 'juggernaut', 'balanced'],
+  vigil_bow: ['trickster', 'glasscannon', 'balanced'],
 };
 
 // ── Move templates (verbatim ~6816) ──
@@ -110,6 +113,9 @@ const WEAPON_MOVES = {
   duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],   // W529 melee combined stance (was temper)
   aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
   wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
+  // W686 — mythic caster weapons (verbatim mirror of app.js).
+  reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
+  vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],
   twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],
   twofold_gaze:          ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],

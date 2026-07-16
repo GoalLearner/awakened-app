@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w685'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w686'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -532,6 +532,20 @@
       archetype:  'caster',
       statDomain: 'INT',
       dropTable:  { ultra_rare: 0.25, rare: 0.55 },
+    },
+    // W686 — the S-rank endgame raid drop source. mythic 0.02 total = 1% per
+    // weapon with a 2-mythic pool (Erebus solo precedent: mythic 0.01 with 1);
+    // a 72h raid cadence makes the chase months-long by design. ultra 0.32 =
+    // ~5.3% per piece across the 6-ultra BiS pool. No rares, no commons — this
+    // is the endgame shelf; ~66% of wins pay souls only.
+    the_sleepless_crown: {
+      id:         'the_sleepless_crown',
+      name:       'The Sleepless Crown',
+      rank:       'S',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'VIT',
+      dropTable:  { mythic: 0.02, ultra_rare: 0.32 },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -3342,6 +3356,128 @@
       set_id: 'sovereign_regalia', required_level: null, special_effect: 'Eclipse: your signature strike lands twice.',
       on_equip: null, cooldown_seconds: null,
     },
+
+    // ── The Sleepless Crown (S) CO-OP RAID pool — W686 ──────────────────
+    // The endgame caster shelf: the game's first mythic STAFF + BOW (closing the
+    // "no ranger/mage weapon above A" gap from the W685 audit) + 6 S-ultra armor
+    // pieces (3 ranger, 3 mage; the mage trio is sim-certified BiS with its
+    // Dreaming Court set — the ranger trio runs 1-3pp shy of the VIT incumbents
+    // in the Ascent, by class-identity design; see the W686 review). Mythic spreads are Σ42 with STR 4 —
+    // engine power 1.15×(42+4)=52.9, EXACTLY Duskforge, a gap the F100 sim
+    // already certifies as converged vs Nightfall (parity at Σ42 would need
+    // STR 14, which is not a caster). Ultras sit on the S band (Σ36-37).
+    reverie_staff: {
+      id: 'reverie_staff',
+      name: 'Reverie, Staff of the Dreaming Court',
+      slot: 'weapon',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'mythic',
+      tier: 'S',
+      flavor: 'Cut from the bedpost of the throne the Crown never used. It casts with the weight of every dream he refused — and they are legion. The first Mythic focus in existence.',
+      art_path: 'assets/items/reverie_staff.png',
+      bonuses:       { str: 4, vit: 12, int: 14, focus: 6, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [10,14], int: [12,16], focus: [4,8], will: [4,8], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "An archmage's ruin — Arcane Bolt / Cataclysm / Immolate / Siphon kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+    vigil_bow: {
+      id: 'vigil_bow',
+      name: 'Vigil, Bow of the Sleepless Watch',
+      slot: 'weapon',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'mythic',
+      tier: 'S',
+      flavor: 'Strung with the last thread of the watch that never ended. It does not tire, it does not blink, and at the hour you finally rest — it keeps watch. The first Mythic bow in existence.',
+      art_path: 'assets/items/vigil_bow.png',
+      bonuses:       { str: 4, vit: 6, int: 2, focus: 16, will: 14, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [4,8], int: [0,4], focus: [14,18], will: [12,16], wlt: [0,0] },
+      set_id: null, required_level: null, special_effect: "A sharpshooter's patience — Heartseeker / Arrow Volley / Flame Arrow / Tumble kit.",
+      on_equip: null, cooldown_seconds: null,
+    },
+    watchkeepers_carapace: {
+      id: 'watchkeepers_carapace',
+      name: "Watchkeeper's Carapace",
+      slot: 'body',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'Lamellar cured on the walls through a thousand honest nights. Raid armor for the ranger who holds the watch.',
+      art_path: 'assets/items/watchkeepers_carapace.png',
+      bonuses:       { str: 7, vit: 14, int: 0, focus: 10, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [5,9], vit: [12,16], int: [0,0], focus: [8,12], will: [4,8], wlt: [0,0] },
+      set_id: 'sleepless_watch', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    grips_of_the_third_night: {
+      id: 'grips_of_the_third_night',
+      name: 'Grips of the Third Night',
+      slot: 'gloves',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'On the first night the hands shake. On the second they steady. On the third, they do not miss. Forged for the ranger’s draw.',
+      art_path: 'assets/items/grips_of_the_third_night.png',
+      bonuses:       { str: 7, vit: 13, int: 0, focus: 10, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [5,9], vit: [11,15], int: [0,0], focus: [8,12], will: [4,8], wlt: [0,0] },
+      set_id: 'sleepless_watch', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    striders_of_the_waking_march: {
+      id: 'striders_of_the_waking_march',
+      name: 'Striders of the Waking March',
+      slot: 'boots',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'Boots that learned the difference between marching from discipline and marching from madness. Made for the ranger’s stride.',
+      art_path: 'assets/items/striders_of_the_waking_march.png',
+      bonuses:       { str: 7, vit: 13, int: 0, focus: 10, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [5,9], vit: [11,15], int: [0,0], focus: [8,12], will: [4,8], wlt: [0,0] },
+      set_id: 'sleepless_watch', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    circlet_of_lucid_sleep: {
+      id: 'circlet_of_lucid_sleep',
+      name: 'Circlet of Lucid Sleep',
+      slot: 'helm',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'Worn to bed by the court magi who dreamed on purpose. Seven hours under it are worth a library. Best in slot for the mage.',
+      art_path: 'assets/items/circlet_of_lucid_sleep.png',
+      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 6, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [4,8], wlt: [0,0] },
+      set_id: 'dreaming_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    shroud_of_the_dreaming_court: {
+      id: 'shroud_of_the_dreaming_court',
+      name: 'Shroud of the Dreaming Court',
+      slot: 'cape',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'The court slept in shifts so the kingdom never had to. This is the cloth they slept beneath. Best in slot for the mage.',
+      art_path: 'assets/items/shroud_of_the_dreaming_court.png',
+      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'dreaming_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    pendant_of_the_seventh_hour: {
+      id: 'pendant_of_the_seventh_hour',
+      name: 'Pendant of the Seventh Hour',
+      slot: 'amulet',
+      source_boss: 'the_sleepless_crown',
+      rarity: 'ultra_rare',
+      tier: 'S',
+      flavor: 'It chimes once, softly, at the seventh hour of true sleep — the hour the Crown never reached. Best in slot for the mage.',
+      art_path: 'assets/items/pendant_of_the_seventh_hour.png',
+      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 5, wlt: 0 },
+      bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [3,7], wlt: [0,0] },
+      set_id: 'dreaming_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
     crown_of_eternal_night: {
       id: 'crown_of_eternal_night',
       name: 'Crown of Eternal Night',
@@ -3624,6 +3760,26 @@
       tiers: [
         { pieces: 2, bonus: { focus: 2, vit: 2 },           label: '+2 FOCUS · +2 VIT' },
         { pieces: 3, bonus: { focus: 3, vit: 2, will: 2 },  label: '+3 FOCUS · +2 VIT · +2 WILL' },
+      ],
+    },
+    // W686 — the Sleepless Crown raid sets (review #2). UNLIKE the low-tier co-op
+    // sets these are ENDGAME sets and deliberately STR-weighted: the engine's
+    // damage base is STR-only, so without carried STR the raid armor would be a
+    // stat-trap next to the sovereign/wakeful incumbents it displaces. cp15 each,
+    // still strictly below Sovereign's Regalia 3pc (cp17). TWO ids on purpose —
+    // one shared id would pool ranger+mage pieces into a bogus 6pc tier.
+    sleepless_watch: {
+      id: 'sleepless_watch', name: 'The Sleepless Watch',
+      tiers: [
+        { pieces: 2, bonus: { str: 3, focus: 2 },           label: '+3 STR · +2 FOCUS' },
+        { pieces: 3, bonus: { str: 6, vit: 6, will: 3 },  label: '+6 STR · +6 VIT · +3 WILL' },
+      ],
+    },
+    dreaming_court: {
+      id: 'dreaming_court', name: 'The Dreaming Court',
+      tiers: [
+        { pieces: 2, bonus: { int: 3, vit: 2 },             label: '+3 INT · +2 VIT' },
+        { pieces: 3, bonus: { int: 4, vit: 2 },     label: '+4 INT · +2 VIT' },
       ],
     },
   };
@@ -8493,6 +8649,12 @@
     duskforge_greatblade: ['aggressor', 'juggernaut'],
     aetherspire_staff: ['sentinel', 'juggernaut'],
     wraithwind_bow: ['trickster'],
+    // W686 — mythic caster weapons. 'balanced' is MANDATORY (a standard-BiS-armor
+    // build derives arch 'balanced'; without it a mythic would swing unattuned,
+    // the exact deficit that costs Duskforge at max invest). MUST mirror
+    // backend/src/pvp/combat-core.js verbatim.
+    reverie_staff: ['sentinel', 'juggernaut', 'balanced'],
+    vigil_bow: ['trickster', 'glasscannon', 'balanced'],
   };
   let _arSeedCtr = 0;
   function _arMulberry32(a) {
@@ -8568,6 +8730,11 @@
     duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],   // W529 melee combined stance (was temper)
     aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
     wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
+    // W686 — mythic caster weapons (The Sleepless Crown raid). Canonical class
+    // kits — the mythic edge is the Σ42 budget + full attune coverage, mirroring
+    // how the A-ultras already carry these kits. MUST mirror combat-core.js.
+    reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
+    vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],
     // W401 — co-op DROP weapons get their real kits. Without a WEAPON_MOVES entry
     // an equipped weapon silently falls back to the 'unarmed' kit (see _arenaPlayerKit),
     // so these high-stat co-op drops were stat-stick TRAPS in the Ascent. Kits match
@@ -9617,6 +9784,15 @@
       // constants are UNTOUCHED; only the measurement is honest now.
       boots:  'greaves_of_the_umbral_throne',
     };
+    // W686 — opts.bisOverride: swap specific slots (keys above; 'plate' = body)
+    // BEFORE aggregation, so the set-count and upgrade loops below follow the
+    // override automatically. Lets the balance sim measure ALTERNATE loadouts
+    // (e.g. the Sleepless Crown class-BiS trios) instead of only the fixed BIS.
+    if (opts.bisOverride) {
+      Object.keys(opts.bisOverride).forEach((slot) => {
+        if (BIS[slot] !== undefined && CARDS[opts.bisOverride[slot]]) BIS[slot] = opts.bisOverride[slot];
+      });
+    }
     const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
     Object.keys(BIS).forEach((slot) => {
       const c = CARDS[BIS[slot]];
@@ -14878,6 +15054,10 @@
     // ~100 S-boss defeats (100 x 800 net souls) + mythic prestige premium + stats.
     // The bare formula (S-base x 3.6 + stats) would undervalue a unique BiS item.
     if (card.id === 'nightfall_blade') return 88000;
+    // W686 — the mythic caster weapons price at Nightfall's hand-set base (the
+    // RELIC_GRIND_BASE table has no mythic row; an unpriced mythic would fall
+    // through to base=null → a null-priced buyable, the W685 audit footgun).
+    if (card.id === 'reverie_staff' || card.id === 'vigil_bow') return 88000;
     const tierTbl = RELIC_GRIND_BASE[card.tier] || RELIC_GRIND_BASE.C;
     const base = (tierTbl[card.rarity] != null) ? tierTbl[card.rarity] : null;
     if (base == null) return null; // only rare/ultra are priced (commons untradeable)
@@ -14907,7 +15087,7 @@
   // of 5.8k+ per ultra dupe) now banks 88k in weeks — first player bought it
   // outright 2026-07-11 off ~90k of dupe sales, skipping the endgame hunt with
   // a tap. Buying is closed; the 1% drop and selling an owned copy are untouched.
-  const DROP_ONLY_RELICS = { nightfall_blade: true };
+  const DROP_ONLY_RELICS = { nightfall_blade: true, reverie_staff: true, vigil_bow: true };   // W686 — mythics are never buyable (W645 dupe-sell lesson)
 
   // Pre-flight checks. Both return { ok, reason, ... } so the UI can
   // render the exact disabled/blocked state without re-deriving logic.
@@ -16420,7 +16600,7 @@
       '<div class="mega-rays mega-rays--prism"></div>' +
       '<div class="mega-flash mega-flash--1"></div><div class="mega-flash mega-flash--2"></div><div class="mega-flash mega-flash--ghost"></div>' +
       '<div class="mega-systemline"></div>' +
-      '<div class="mega-wordmark"><div class="mega-wordmark-kicker">S-RANK SOVEREIGN FELLED</div><div class="mega-wordmark-whisper">The eclipse answers.</div></div>' +
+      '<div class="mega-wordmark"><div class="mega-wordmark-kicker">S-RANK ' + (card && card.id === 'nightfall_blade' ? 'SOVEREIGN' : 'CROWN') + ' FELLED</div><div class="mega-wordmark-whisper">' + (card && card.id === 'nightfall_blade' ? 'The eclipse answers.' : 'The long watch ends.') + '</div></div>' +
       '<div class="reveal-group">' +
         '<div class="mega-card-wrap"><div class="prism-ring"></div>' +
           '<div class="mega-card"><div class="mega-card-inner">' +
@@ -16435,10 +16615,10 @@
           '</div></div>' +
         '</div>' +
         '<div class="rc-beats">' +
-          '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0THE ONLY MYTHIC IN EXISTENCE</div>' +
-          '<div class="rc-onlypill">\u25c6 1 OF 1 \u00b7 FIRST IN THE REALM</div>' +
+          '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0' + (card && card.id === 'nightfall_blade' ? 'THE ONLY MYTHIC BLADE IN EXISTENCE' : card && card.id === 'reverie_staff' ? 'THE ONLY MYTHIC FOCUS IN EXISTENCE' : card && card.id === 'vigil_bow' ? 'THE ONLY MYTHIC BOW IN EXISTENCE' : 'A MYTHIC OF THE REALM') + '</div>' +
+          '<div class="rc-onlypill">\u25c6 1 OF 1 \u00b7 ' + (card && card.id === 'nightfall_blade' ? 'FIRST IN THE REALM' : 'UNIQUE PER HUNTER') + '</div>' +
           '<div class="rc-source">FELLED: ' + esc(bossUpper) + '</div>' +
-          '<div class="rc-stats">' + _megaStatBadges(card) + '<span class="eclipse-badge"><span class="glyph"></span>ECLIPSE \u00b7 STRIKE LANDS TWICE (\u00d72)</span></div>' +
+          '<div class="rc-stats">' + _megaStatBadges(card) + ((typeof WEAPON_MOVES !== 'undefined' && card && WEAPON_MOVES[card.id] && WEAPON_MOVES[card.id].indexOf('eclipse') !== -1) ? '<span class="eclipse-badge"><span class="glyph"></span>ECLIPSE \u00b7 STRIKE LANDS TWICE (\u00d72)</span>' : '') + '</div>' +
           '<div class="rc-flavor">' + esc(flavor) + '</div>' +
         '</div>' +
         '<div class="forever-mark">' +
@@ -45600,6 +45780,32 @@
       coopVictoryTitle:'THE COURT IS CAST DOWN',
       coopDefeatTitle: 'THE COURT STILL REIGNS',
     },
+    // W686 — the S-RANK ENDGAME RAID: first 72-hour window + first steps+SLEEP
+    // dual condition. Owner spec: duo, 60,000 combined steps AND 42 hours combined
+    // sleep across 3 days — exactly 7h/night per hunter, the discipline the Crown
+    // refused. Reward = half the solo S kill (1600 → 800; MUST mirror the server
+    // COOP_BOSS_CFG). Drops the game's first mythic caster weapons.
+    the_sleepless_crown: {
+      id:              'the_sleepless_crown',
+      name:            'The Sleepless Crown',
+      rank:            'S',
+      artId:           'the_sleepless_crown',
+      dropSourceBoss:  'the_sleepless_crown',
+      coopGoalSteps:   60000,
+      coopGoalSleepMinutes: 2520,
+      coopMetric:      'steps_sleep',
+      coopUnit:        'steps',
+      coopUnitSleep:   'sleep',
+      coopRewardSouls: 800,
+      coopWindowHours: 72,
+      statDomain:      'VIT',
+      flavorShort:     'A king who never slept, and never stopped.',
+      flavorLong:      'He outlawed rest in his own halls and marched his court to dust chasing one more mile, one more war, one more waking hour. What remains wears the crown still — hollow-eyed, tireless, unbeaten. It cannot be outworked. Master BOTH disciplines it refused: walk its roads by day, and sleep the nights it never could.',
+      killCondShort:   'Two hunters: 60,000 steps + 42h sleep in 72h',
+      killCondLong:    'Team up with a fellow hunter. Within 72 hours of your ally joining, walk 60,000 verified steps AND bank 42 hours of verified sleep between you — that is 10,000 steps and a true 7-hour night from each of you, every day for three days. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE CROWN RESTS',
+      coopDefeatTitle: 'THE CROWN ENDURES',
+    },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
 
@@ -45817,7 +46023,7 @@
   // server-serialized inst.metric; fall back to the local boss config (covers a
   // pre-deploy backend that doesn't serialize metric yet).
   function _coopMetric(inst) {
-    if (inst && (inst.metric === 'flights' || inst.metric === 'steps' || inst.metric === 'both')) return inst.metric;
+    if (inst && (inst.metric === 'flights' || inst.metric === 'steps' || inst.metric === 'both' || inst.metric === 'steps_sleep')) return inst.metric;
     // Fall back to the OPEN sheet's boss cfg — the recruit view renders with a
     // null instance, so we must read the metric off the boss being viewed.
     const cfg = (inst && COOP_BOSSES[inst.boss_id]) || (_coopSheet && _coopSheet.cfg);
@@ -45825,8 +46031,34 @@
   }
   // W447 — true for a dual-condition (steps AND flights) hunt.
   function _coopIsBoth(inst) { return _coopMetric(inst) === 'both'; }
+  // W686 — true for the steps+SLEEP raid (The Sleepless Crown).
+  function _coopIsSleep(inst) { return _coopMetric(inst) === 'steps_sleep'; }
+  // W686 — sleep minutes → display hours ("41.5h" → "41h" floor for goals-met
+  // honesty; goals are exact minutes server-side, display rounds DOWN so the
+  // bar never claims an hour that isn't fully banked).
+  function _coopFmtSleep(minutes) {
+    const m = Math.max(0, minutes | 0);
+    const h = Math.floor(m / 60), r = m % 60;
+    return r === 0 ? (h + 'h') : (h + 'h ' + r + 'm');
+  }
+  // W686 review #1 — is a relic GUARANTEED on a win from this boss's pool? A
+  // config dropTable summing < 1 pays souls-only on the remainder (the Crown:
+  // ~66% of wins; even the older co-op tables no-drop 10-23%), so reward copy
+  // must not promise a relic it may not pay.
+  function _coopDropGuaranteed(cfg) {
+    try {
+      const stub = BOSSES[(cfg && cfg.dropSourceBoss) || ''] || null;
+      if (!stub || !stub.dropTable) return true;
+      let sum = 0; for (const k in stub.dropTable) sum += Number(stub.dropTable[k]) || 0;
+      return sum >= 0.99;
+    } catch (_) { return true; }
+  }
+  function _relicPromise(cfg) {
+    return _coopDropGuaranteed(cfg) ? 'and a relic when it falls' : 'and a chance at its relics when it falls';
+  }
   // W447 — has the hunt hit its goal(s)? A 'both' hunt needs BOTH the steps goal
   // (combined_steps / goal_steps) AND the flights goal (combined_flights / goal_flights).
+  // W686 — a steps+sleep hunt needs the steps goal AND the sleep-minutes goal.
   function _coopGoalReached(inst) {
     if (!inst) return false;
     const cfg = COOP_BOSSES[inst.boss_id] || _coopSheet.cfg || {};
@@ -45835,6 +46067,10 @@
     if (_coopIsBoth(inst)) {
       const flightGoal = inst.goal_flights || cfg.coopGoalFlights || Infinity;
       if ((inst.combined_flights || 0) < flightGoal) return false;
+    }
+    if (_coopIsSleep(inst)) {
+      const sleepGoal = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || Infinity;
+      if ((inst.combined_sleep_minutes || 0) < sleepGoal) return false;
     }
     return true;
   }
@@ -45845,18 +46081,64 @@
     return _coopMetric(inst) === 'flights' ? 'flights' : 'steps';
   }
 
-  // Query my verified progress (steps OR flights) inside the hunt window.
+  // Query my verified progress (steps, flights, OR sleep) inside the hunt window.
   // HealthKit on device; falls back to 0 (preview / no HealthKit) so pre-hunt
   // totals never inflate the shared goal.
   async function _coopQueryWindowValue(inst, metric) {
-    const fn = metric === 'flights' ? 'getFlightsClimbedBetween' : 'getStepsBetween';
     try {
-      if (typeof Health !== 'undefined' && Health && typeof Health[fn] === 'function' && inst.starts_at) {
-        // W371 — clamp the upper bound to the hunt end so post-window progress
-        // never inflates the value (the backend also rejects out-of-window
-        // submits; this keeps the client honest at the boundary).
-        let endIso = new Date().toISOString();
-        if (inst.ends_at && Date.parse(inst.ends_at) < Date.now()) endIso = inst.ends_at;
+      if (typeof Health === 'undefined' || !Health || !inst.starts_at) return 0;
+      // W371 — clamp the upper bound to the hunt end so post-window progress
+      // never inflates the value (the backend also rejects out-of-window
+      // submits; this keeps the client honest at the boundary).
+      let endIso = new Date().toISOString();
+      if (inst.ends_at && Date.parse(inst.ends_at) < Date.now()) endIso = inst.ends_at;
+      // W686 — sleep stream. Per-SAMPLE accounting rather than getSleepBetween's
+      // byDate night totals, for three review-confirmed reasons:
+      //   (1) boundary clamp — a night already in progress when the hunt starts
+      //       credits only its IN-WINDOW portion (12h lookback catches it), and a
+      //       night running past the clamp end credits only up to the clamp;
+      //   (2) source dedup — Watch + Oura + iPhone each write their own sleep
+      //       samples; summing all would ~double-count. Per-source totals, largest
+      //       APPLE source preferred (the W681 steps rule), else largest source;
+      //   (3) unit — integer MINUTES (sleep_minutes_total), cumulative in-window,
+      //       resubmitted as it grows → server MAX-per-user works.
+      if (metric === 'sleep') {
+        if (typeof Health.getSleepBetween !== 'function') return 0;
+        const startMs = Date.parse(inst.starts_at), endMs = Date.parse(endIso);
+        if (!isFinite(startMs) || !isFinite(endMs)) return 0;
+        const data = await Health.getSleepBetween(new Date(startMs - 12 * 3600 * 1000).toISOString(), endIso);
+        if (!data || !Array.isArray(data.samples)) return 0;
+        const bySource = Object.create(null), appleSrc = Object.create(null);
+        for (const s of data.samples) {
+          if (!s || (s.sleepState && s.sleepState !== 'Asleep')) continue;
+          const sMs = Date.parse(s.startDate), durMs = (Number(s.duration) || 0) * 3600e3;
+          if (!isFinite(sMs) || durMs <= 0) continue;
+          const ov = Math.min(sMs + durMs, endMs) - Math.max(sMs, startMs);
+          if (ov <= 0) continue;
+          const bundle = s.sourceBundleId || '', name = s.source || s.sourceName || '';
+          const key = bundle || name || '__untagged';
+          if (bySource[key] === undefined) {
+            bySource[key] = 0;
+            appleSrc[key] = bundle ? /^com\.apple\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
+          }
+          bySource[key] += ov;
+        }
+        const keys = Object.keys(bySource);
+        if (!keys.length) return 0;
+        let totalMs;
+        if (keys.length === 1) { totalMs = bySource[keys[0]]; }
+        else {
+          let maxApple = 0, maxAll = 0;
+          for (const k of keys) {
+            if (bySource[k] > maxAll) maxAll = bySource[k];
+            if (appleSrc[k] && bySource[k] > maxApple) maxApple = bySource[k];
+          }
+          totalMs = maxApple > 0 ? maxApple : maxAll;
+        }
+        return Math.max(0, Math.round(totalMs / 60000));
+      }
+      const fn = metric === 'flights' ? 'getFlightsClimbedBetween' : 'getStepsBetween';
+      if (typeof Health[fn] === 'function') {
         const n = await Health[fn](inst.starts_at, endIso);
         if (typeof n === 'number' && n >= 0) return Math.round(n);
       }
@@ -45872,8 +46154,11 @@
     // W447 — a 'both' hunt submits BOTH streams (steps_total + flights_total); single-metric
     // hunts submit just their one. The server tags each by boss_instance_id and aggregates per
     // stream, so each metric's combined goal is checked independently.
+    // W686 — the steps+sleep raid submits steps_total + sleep_minutes_total.
     const metric = _coopMetric(inst);
-    const streams = metric === 'both' ? ['steps', 'flights'] : [metric];
+    const streams = metric === 'both' ? ['steps', 'flights']
+      : metric === 'steps_sleep' ? ['steps', 'sleep']
+      : [metric];
     const now = Date.now();
     const events = [];
     for (const m of streams) {
@@ -45881,7 +46166,7 @@
       if (!(value > 0)) continue;
       events.push({
         client_event_id: 'coop_' + inst.id + '_' + m + '_' + now,
-        event_type: m === 'flights' ? 'flights_total' : 'steps_total',
+        event_type: m === 'flights' ? 'flights_total' : (m === 'sleep' ? 'sleep_minutes_total' : 'steps_total'),
         metric: m,
         value: value,
         source: 'apple_health',
@@ -45960,8 +46245,13 @@
     // its own '✦ drop!' notification (rollBossDrop, above) so a lucky win isn't
     // double-notified. Common/rare wins still get the generic ping.
     try {
-      const _uDrop = !!(dropInfo && dropInfo.card && (dropInfo.card.rarity === 'ultra_rare' || dropInfo.card.rarity === 'mythic'));
-      if (!_uDrop) _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls and a relic claimed.' : '.'));
+      // W686 review #17 — a CAPPED ultra/mythic dupe fires no '✦ drop!' ping (rollBossDrop
+      // gates on !wasCapped), so it must fall back to the generic win ping here.
+      const _uDrop = !!(dropInfo && dropInfo.card && !dropInfo.wasCapped && (dropInfo.card.rarity === 'ultra_rare' || dropInfo.card.rarity === 'mythic'));
+      // W686 review #1 — 'a relic claimed' only when a relic was actually claimed (the
+      // Crown's table pays souls-only on ~2/3 of wins; older pools no-drop 10-23% too).
+      const _gotRelic = !!(dropInfo && dropInfo.card && !dropInfo.wasCapped);
+      if (!_uDrop) _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls' + (_gotRelic ? ' and a relic claimed.' : '.') : '.'));
     } catch (_) {}
    } catch (_) {}
   }
@@ -46279,8 +46569,8 @@
     const _party = (cfg.partySize | 0) || 2;
     const _partyNoun = _party === 3 ? 'three hunters' : 'two hunters';
     const _feeFoot = _fee > 0
-      ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.'
-      : '✦ Members summon free · every hunter earns ' + cfg.coopRewardSouls + ' souls and a relic when the pack falls.';
+      ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.'
+      : '✦ Members summon free · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.';
     const cta = _rankLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">REACH ' + esc(cfg.rank) + ' RANK TO SUMMON</button>' +
         '<p class="coop-foot">This hunt requires ' + esc(cfg.rank) + ' rank to summon. Keep climbing.</p>'
@@ -46296,7 +46586,9 @@
         '<div class="coop-goal-big">' + (cfg.coopGoalSteps || 0).toLocaleString('en-US') + '</div>' +
         '<div class="coop-goal-sub">' + (cfg.coopMetric === 'both'
           ? 'steps + ' + cfg.coopGoalFlights + ' flights \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
-          : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun) + '</div>' +
+          : cfg.coopMetric === 'steps_sleep'
+            ? 'steps + ' + _coopFmtSleep(cfg.coopGoalSleepMinutes || 0) + ' sleep \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
+            : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun) + '</div>' +
       '</div>' +
       _coopErrBlock() +
       cta
@@ -46396,7 +46688,9 @@
         '<div class="coopsm-pact-num">' + goal + '</div>' +
         '<div class="coopsm-pact-sub"><b>' + (_coopIsBoth(inst)
           ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
-          : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + ((inst.party_size === 3 || inst.partner2) ? 'h once all three answer</div>' : 'h from when you join</div>') +   // W677 — trio clock starts on the FULL party
+          : _coopIsSleep(inst)
+            ? 'combined steps + ' + _coopFmtSleep((inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes) || 0) + ' sleep'
+            : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + ((inst.party_size === 3 || inst.partner2) ? 'h once all three answer</div>' : 'h from when you join</div>') +   // W677 — trio clock starts on the FULL party
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
@@ -46435,15 +46729,18 @@
     const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
     const both = _coopIsBoth(inst);   // W447 — steps AND flights
+    const slp = _coopIsSleep(inst);   // W686 — steps AND sleep
     const dis = _coopSheet.busy ? ' disabled' : '';
     const unit = _coopUnit(inst);   // W397 — 'steps' | 'flights' (primary)
     const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
-    // one combined progress bar (combined / goal)
-    const bar = function (combined, goal, label) {
+    // one combined progress bar (combined / goal). fmt formats both numbers
+    // (default = locale integer; sleep passes the minutes→hours formatter).
+    const bar = function (combined, goal, label, fmt) {
       const c = combined || 0, g = goal || Infinity;
+      const f = fmt || function (n) { return (n || 0).toLocaleString('en-US'); };
       const pct = Math.max(0, Math.min(100, Math.round(c / g * 100)));
       return '<div class="coop-combined">' +
-        '<div class="coop-combined-num">' + c.toLocaleString('en-US') + ' <span>/ ' + (goal || 0).toLocaleString('en-US') + '</span></div>' +
+        '<div class="coop-combined-num">' + f(c) + ' <span>/ ' + f(goal || 0) + '</span></div>' +
         '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
         '<div class="coop-combined-label">combined ' + esc(label) + '</div>' +
       '</div>';
@@ -46451,12 +46748,16 @@
     const stepGoal = inst.goal_steps || cfg.coopGoalSteps;
     const bars = both
       ? bar(inst.combined_steps, stepGoal, 'steps') + bar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'flights')
-      : bar(inst.combined_steps, stepGoal, unit);
-    // per-hunter split — for a dual hunt show both their streams ("N st · N fl")
+      : slp
+        ? bar(inst.combined_steps, stepGoal, 'steps') + bar(inst.combined_sleep_minutes, inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes, 'sleep', _coopFmtSleep)
+        : bar(inst.combined_steps, stepGoal, unit);
+    // per-hunter split — for a dual hunt show both their streams ("N st · N fl";
+    // sleep raid: "N st · Nh slept")
     const meSteps = (v.me && v.me.steps) || 0, themSteps = (v.them && v.them.steps) || 0;
     const splitVal = function (who) {
       const s = (who && who.steps) || 0;
       if (both) return s.toLocaleString('en-US') + ' st · ' + ((who && who.flights) || 0).toLocaleString('en-US') + ' fl';
+      if (slp) return s.toLocaleString('en-US') + ' st · ' + _coopFmtSleep((who && who.sleep_minutes) || 0) + ' slept';
       return s.toLocaleString('en-US');
     };
     // W677 — one split row per ALLY (1 on a duo, 2 on a trio).
@@ -46470,7 +46771,7 @@
         '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + splitVal(v.me) + '</span></div>' +
         allyRows +
       '</div>' +
-      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : (both ? 'SYNC MY PROGRESS' : 'SYNC MY ' + esc(unit.toUpperCase()))) + '</button>' +
+      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : ((both || slp) ? 'SYNC MY PROGRESS' : 'SYNC MY ' + esc(unit.toUpperCase()))) + '</button>' +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
       '<p class="coop-foot">Your progress syncs on its own while this is open. Tap to push yours now.</p>'
     );
@@ -46487,15 +46788,17 @@
     const unit = _coopUnit(inst);                                       // W397
     const verb = _coopMetric(inst) === 'flights' ? 'climbed' : 'walked';
     const title = cfg.coopVictoryTitle || 'THE HUNT IS WON';
-    // W447 — a dual hunt recounts BOTH feats.
+    // W447 — a dual hunt recounts BOTH feats. W686 — the sleep raid recounts both disciplines.
     const deed = _coopIsBoth(inst)
       ? 'walked ' + combined + ' steps and climbed ' + (inst.combined_flights || 0).toLocaleString('en-US') + ' flights'
-      : verb + ' ' + combined + ' ' + esc(unit);
+      : _coopIsSleep(inst)
+        ? 'walked ' + combined + ' steps and slept ' + _coopFmtSleep(inst.combined_sleep_minutes || 0)
+        : verb + ' ' + combined + ' ' + esc(unit);
     return (
       '<div class="coop-victory">' + esc(title) + '</div>' +
       '<p class="coop-lead">You and ' + themAlias + ' ' + deed +
         ' together, enough to bring down ' + esc(cfg.name) + '.</p>' +
-      '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 a relic claimed</div>' +
+      '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 ' + (_coopDropGuaranteed(cfg) ? 'a relic claimed' : 'a chance at its hoard') + '</div>' +
       '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
     );
   }
@@ -46519,16 +46822,19 @@
     const kicker = cfg.coopDefeatTitle || 'THE QUARRY HOLDS';
     const flavor = 'You and ' + esc(ally) + ' fell short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
     // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the per-hunter split
-    const goalBar = function (combined, goal, label, metric) {
+    // W686 — fmt formats the displayed numbers (sleep passes minutes→hours).
+    const goalBar = function (combined, goal, label, metric, fmt) {
       const c = Math.max(0, combined || 0), g = goal || 0;
-      const pct = g > 0 ? Math.max(0, Math.min(100, Math.round(c / g * 100))) : 0;
-      const val = function (p) { return Math.max(0, (p && p[metric]) || 0).toLocaleString('en-US'); };
+      const f = fmt || function (n) { return (n || 0).toLocaleString('en-US'); };
+      // W686 review #14 — FLOOR: a 1-minute near-miss must read 99%, never 100%.
+      const pct = g > 0 ? Math.max(0, Math.min(100, Math.floor(c / g * 100))) : 0;
+      const val = function (p) { return f(Math.max(0, (p && p[metric]) || 0)); };
       const allySplit = others.map(function (o) {
         return '<span class="coopdf-who"><span class="coopdf-dot ally"></span>' + esc(_coopAlias((o && o.alias) || 'ally')) + ' <b>' + val(o) + '</b></span>';
       }).join('');
       return '<div class="coopdf-goal">' +
         '<div class="coopdf-goal-top"><span class="coopdf-goal-name">' + esc(label) + '</span>' +
-          '<span class="coopdf-goal-val">' + c.toLocaleString('en-US') + ' <span class="of">/ ' + g.toLocaleString('en-US') + '</span><span class="pct">' + pct + '%</span></span></div>' +
+          '<span class="coopdf-goal-val">' + f(c) + ' <span class="of">/ ' + f(g) + '</span><span class="pct">' + pct + '%</span></span></div>' +
         '<div class="coopdf-track"><div class="coopdf-fill" style="width:' + pct + '%"></div></div>' +
         '<div class="coopdf-split">' +
           '<span class="coopdf-who"><span class="coopdf-dot you"></span>You <b>' + val(v.me) + '</b></span>' +
@@ -46539,6 +46845,9 @@
     if (both) {
       bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', 'steps') +
              goalBar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'Combined Flights', 'flights');
+    } else if (_coopIsSleep(inst)) {
+      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', 'steps') +
+             goalBar(inst.combined_sleep_minutes, inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes, 'Combined Sleep', 'sleep_minutes', _coopFmtSleep);
     } else {
       const u = _coopUnit(inst);
       bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined ' + (u.charAt(0).toUpperCase() + u.slice(1)), 'steps');
@@ -47215,7 +47524,16 @@
       const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
       const combined = Math.max(0, inst.combined_steps || 0);
       const mine = Math.max(0, (v.me && v.me.steps) || 0);
-      const pct = goal > 0 ? Math.min(100, Math.round(combined / goal * 100)) : 0;
+      // W686 review #13 — for DUAL hunts the headline % is the BINDING constraint
+      // (min of the streams), so "100%" can never show while a condition is unmet.
+      let pct = goal > 0 ? Math.min(100, Math.floor(combined / goal * 100)) : 0;
+      if (_coopIsBoth(inst)) {
+        const fg = inst.goal_flights || cfg.coopGoalFlights || 0;
+        if (fg > 0) pct = Math.min(pct, Math.min(100, Math.floor((inst.combined_flights || 0) / fg * 100)));
+      } else if (_coopIsSleep(inst)) {
+        const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
+        if (sg > 0) pct = Math.min(pct, Math.min(100, Math.floor((inst.combined_sleep_minutes || 0) / sg * 100)));
+      }
       const yw = goal > 0 ? Math.min(100, mine / goal * 100) : 0;
       // W677 review #7 — one bar segment + one legend entry PER ALLY (the trio's
       // third hunter was invisible and the legend didn't sum to combined). Widths
@@ -47230,7 +47548,9 @@
         allyLegend += '<span class="cph-leg cph-them' + (i > 0 ? ' cph-them--alt' : '') + '"><span class="cph-sw"></span>' + esc(_coopAlias((o && o.alias) || 'ally')) + ' <b>' + N(s) + '</b></span>';
       });
       const flightsLine = _coopIsBoth(inst)
-        ? '<div class="cph-prog-second">' + N(inst.combined_flights || 0) + ' <span>/ ' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</span> Combined Flights</div>' : '';
+        ? '<div class="cph-prog-second">' + N(inst.combined_flights || 0) + ' <span>/ ' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</span> Combined Flights</div>'
+        : _coopIsSleep(inst)
+          ? '<div class="cph-prog-second">' + _coopFmtSleep(inst.combined_sleep_minutes || 0) + ' <span>/ ' + _coopFmtSleep(inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0) + '</span> Combined Sleep</div>' : '';
       const crit = _coopUrgency(inst.time_remaining_ms) === 'crit' ? ' cph-crit' : '';
       return '<a class="cph-hunt cph-active' + crit + '" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc(ally + ', active co-op hunt against ' + bossName + '. Tap to open.') + '">' + top +
         '<div class="cph-prog">' +
@@ -47248,7 +47568,7 @@
       const unit = _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
       return '<div class="cph-hunt cph-pending" data-coop-invite="' + esc(inst.id) + '">' + top +
         '<div class="cph-inv">' +
-          '<div class="cph-inv-meta"><span class="cph-inv-target">Target <b>' + N(goal) + '</b> ' + unit + ' · ' + _coopWindowHrs(inst) + 'h clock</span>' + _coopTimePill(inst, true) + '</div>' +
+          '<div class="cph-inv-meta"><span class="cph-inv-target">Target <b>' + N(goal) + '</b> ' + unit + (_coopIsBoth(inst) ? ' + <b>' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</b> flights' : '') + (_coopIsSleep(inst) ? ' + <b>' + _coopFmtSleep(inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0) + '</b> sleep' : '') + ' · ' + _coopWindowHrs(inst) + 'h clock</span>' + _coopTimePill(inst, true) + '</div>' +
           '<div class="cph-inv-act"><button type="button" class="cph-btn cph-decline" data-coop-decline="' + esc(inst.id) + '">Decline</button>' +
           '<button type="button" class="cph-btn cph-accept" data-coop-accept="' + esc(inst.id) + '">Accept Pact</button></div>' +
         '</div>' +
