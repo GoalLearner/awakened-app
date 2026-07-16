@@ -113,7 +113,7 @@ const COOP_BOSS_CFG: Record<
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
   // deliberately beyond one day's walking, humane across two). Reward = half
   // the solo D kill (100 → 50/hunter, the W648 split model).
-  the_unresting_march:  { rank: 'D', goalSteps: 34000, rewardSouls: 50,  windowHours: 48, metric: 'steps' },
+  the_unresting_march:  { rank: 'D', goalSteps: 28000, rewardSouls: 50,  windowHours: 48, metric: 'steps' },
   the_coursing_dread:   { rank: 'C', goalSteps: 18000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
   the_hollow_monarch:   { rank: 'B', goalSteps: 20,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
   // W447 — dual-condition (steps AND flights) co-op duo bosses.

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w682'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w683'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45458,17 +45458,17 @@
       coopDefeatTitle: 'THE MAW STILL HUNGERS',
     },
     // W682 — first D-rank co-op + the first 48-HOUR hunt window. An endurance
-    // duo: 34,000 combined is deliberately more than a day's walking for two —
-    // the window is the mechanic. Reward = half solo D (100 → 50/hunter; MUST
-    // mirror server COOP_BOSS_CFG). Drops its own 3-piece RANGER set (the D-rank
-    // ranger shelf was literally EMPTY — zero items in any slot before this).
+    // duo across two days (W683 owner tune: 34,000 → 28,000 combined). Reward =
+    // half solo D (100 → 50/hunter; MUST mirror server COOP_BOSS_CFG). Drops its
+    // own 3-piece RANGER set (the D-rank ranger shelf was literally EMPTY —
+    // zero items in any slot before this).
     the_unresting_march: {
       id:              'the_unresting_march',
       name:            'The Unresting March',
       rank:            'D',
       artId:           'the_unresting_march',
       dropSourceBoss:  'the_unresting_march',
-      coopGoalSteps:   34000,
+      coopGoalSteps:   28000,
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 50,
@@ -45476,8 +45476,8 @@
       statDomain:      'VIT',
       flavorShort:     'It does not stop to sleep. Neither will you.',
       flavorLong:      'A column of armored shades that has walked the border road since the old war ended — never resting, never arriving. It cannot be run down in a single day. Bring an ally, and walk it into the ground across two.',
-      killCondShort:   'Two hunters: 34,000 combined steps in 48h',
-      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, walk 34,000 verified steps between you — outlast the column that never rests. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 28,000 combined steps in 48h',
+      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, walk 28,000 verified steps between you — outlast the column that never rests. Both hunters are credited the kill.',
       coopVictoryTitle:'THE MARCH HALTS',
       coopDefeatTitle: 'THE COLUMN MARCHES ON',
     },
