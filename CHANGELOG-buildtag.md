@@ -4,6 +4,17 @@ This was a ~114KB inline comment on the APP_BUILD_TAG line in app.js, moved
 here to cut parse weight on device. Historical prose only — the runtime value
 is the quoted tag string.
 
+W678 — The Threefold Court gets its OWN 3-piece drop pool (was borrowing the
+Coursing Dread's): vestments_of_the_final_verdict (ultra_rare, body, INT — the
+FIRST mage ultra at C in any slot), courthunters_grips (rare, gloves, FOCUS —
+first ranger gloves at C), seal_of_the_threefold_court (rare, amulet, INT —
+first mage amulet at C). Budgets on the W474 curve (rare Σ14 / ultra Σ22). New
+'threefold_court' 3pc set (2pc +3INT+2VIT, 3pc +4INT+3FOCUS+2VIT, cp9 — below
+the Choir/Wardens 4pc cp11 per the W506 ceiling rule). coopOnly BOSSES stub w/
+dropTable {ultra .25, rare .55}; dropSourceBoss flipped to its own id;
+process-boss-art JOBS pre-staged for 5 PNGs (2 boss + 3 items; art pending —
+nano-banana prompts issued). Client-only (drops are per-device; no worker change).
+
 ---
 
 W634 — retire the orphaned leaderboard metrics (owner: "we got rid of flights climbed, sleep streak, bedtime streak" + confirmed workout_streak + rank_band;

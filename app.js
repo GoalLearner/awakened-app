@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w677'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w678'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -509,6 +509,18 @@
       archetype:  'caster',
       statDomain: 'INT',
       dropTable:  { ultra_rare: 0.30, rare: 0.60 },
+    },
+    // W678 — TRIO raid drop source (partySize 3 lives on COOP_BOSSES; this stub
+    // exists so rollBossDrop / the Collection Log / tools-balance resolve the id).
+    // C-rank co-op convention: ultra 0.25; rare 0.55 with a 2-rare pool.
+    the_threefold_court: {
+      id:         'the_threefold_court',
+      name:       'The Threefold Court',
+      rank:       'C',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'INT',
+      dropTable:  { ultra_rare: 0.25, rare: 0.55 },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -2294,6 +2306,57 @@
       on_equip: null, cooldown_seconds: null,
     },
 
+    // ── The Threefold Court (C) TRIO pool — W678 ────────────────────────
+    // 3 pieces for the 3-hunter raid: 1 mage ultra (the FIRST mage ultra_rare at
+    // C in any slot) + 1 ranger rare (first ranger gloves at C) + 1 mage rare
+    // (first mage amulet at C) — filling the exact class-slot gaps the W678 audit
+    // found. Budgets on the W474 curve (C co-op: rare Σ13-15, ultra Σ21-22).
+    // Armor/accessory only — no WEAPON_MOVES needed. 3-piece 'threefold_court'
+    // set (SET_BONUSES) per the W506 one-boss-set pattern, capped below the
+    // Gaunt/Choir 4pc so it can't raise the build-power ceiling.
+    vestments_of_the_final_verdict: {
+      id: 'vestments_of_the_final_verdict',
+      name: 'Vestments of the Final Verdict',
+      slot: 'body',
+      source_boss: 'the_threefold_court',
+      rarity: 'ultra_rare',
+      tier: 'C',
+      flavor: 'Robes worn by the seat that speaks last. Three courts may argue — the verdict is already sewn into the hem.',
+      art_path: 'assets/items/vestments_of_the_final_verdict.png',
+      bonuses:      { str: 0, vit: 5, int: 11, focus: 3, will: 3, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [3,7], int: [9,13], focus: [2,4], will: [2,4], wlt: [0,0] },
+      set_id: 'threefold_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    courthunters_grips: {
+      id: 'courthunters_grips',
+      name: "Courthunter's Grips",
+      slot: 'gloves',
+      source_boss: 'the_threefold_court',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'Drawn leather for the hand that serves the summons. The Court names the quarry; these make sure the arrow arrives.',
+      art_path: 'assets/items/courthunters_grips.png',
+      bonuses:      { str: 2, vit: 3, int: 0, focus: 8, will: 1, wlt: 0 },
+      bonus_ranges: { str: [1,3], vit: [2,4], int: [0,0], focus: [7,10], will: [0,2], wlt: [0,0] },
+      set_id: 'threefold_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+    seal_of_the_threefold_court: {
+      id: 'seal_of_the_threefold_court',
+      name: 'Seal of the Threefold Court',
+      slot: 'amulet',
+      source_boss: 'the_threefold_court',
+      rarity: 'rare',
+      tier: 'C',
+      flavor: 'A jade sigil split three ways and rejoined. No single hand may carry a verdict — but three together may carry anything.',
+      art_path: 'assets/items/seal_of_the_threefold_court.png',
+      bonuses:      { str: 0, vit: 2, int: 8, focus: 1, will: 3, wlt: 0 },
+      bonus_ranges: { str: [0,0], vit: [1,3], int: [7,10], focus: [0,2], will: [2,4], wlt: [0,0] },
+      set_id: 'threefold_court', required_level: null, special_effect: null,
+      on_equip: null, cooldown_seconds: null,
+    },
+
     // ── The Steel Wolf (E, VIT) — signature slot: BOOTS ─────
     pack_leaders_greaves: {
       id: 'pack_leaders_greaves',
@@ -3480,6 +3543,17 @@
       tiers: [
         { pieces: 2, bonus: { focus: 3, vit: 2 },          label: '+3 FOCUS · +2 VIT' },
         { pieces: 4, bonus: { focus: 5, vit: 4, int: 2 },  label: '+5 FOCUS · +4 VIT · +2 INT' },
+      ],
+    },
+    // W678 — the trio raid's 3-piece set (body/gloves/amulet, one boss line —
+    // "three hunters, three relics"). Same W506 philosophy as Choir/Wardens:
+    // full set cp9, strictly below their 4pc cp11, so it cannot raise the
+    // build-power ceiling; a C-tier collection payoff, pure downgrade endgame.
+    threefold_court: {
+      id: 'threefold_court', name: 'The Threefold Court',
+      tiers: [
+        { pieces: 2, bonus: { int: 3, vit: 2 },            label: '+3 INT · +2 VIT' },
+        { pieces: 3, bonus: { int: 4, focus: 3, vit: 2 },  label: '+4 INT · +3 FOCUS · +2 VIT' },
       ],
     },
   };
@@ -45402,17 +45476,17 @@
     },
     // W677 — first TRIO hunt (partySize 3: you + 2 hand-picked friends). Owner spec:
     // C-rank, 27,000 combined steps. Reward = floor(solo C 200 / 3) = 66/hunter
-    // (thirds split; MUST mirror server COOP_BOSS_CFG). NAME + FLAVOR + ART are
-    // PLACEHOLDERS pending the owner's boss design (id `the_threefold_court` is
-    // stable — rename via these display strings only). dropSourceBoss points at the
-    // existing C-rank co-op pool until the boss gets its own drops.
+    // (thirds split; MUST mirror server COOP_BOSS_CFG). W678 — the Court now has
+    // its OWN 3-piece drop pool (vestments/grips/seal, set 'threefold_court');
+    // dropSourceBoss points at its own BOSSES stub. Art pending (nano-banana
+    // prompts issued W678); cards fall back to the rarity gradient until it lands.
     the_threefold_court: {
       id:              'the_threefold_court',
       name:            'The Threefold Court',
       rank:            'C',
       partySize:       3,
       artId:           'the_threefold_court',
-      dropSourceBoss:  'the_coursing_dread',
+      dropSourceBoss:  'the_threefold_court',
       coopGoalSteps:   27000,
       coopMetric:      'steps',
       coopUnit:        'steps',

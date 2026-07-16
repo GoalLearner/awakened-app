@@ -26,6 +26,12 @@ const JOBS = [
   { src: 'the_discordant_crown.png',       dst: 'assets/items/the_discordant_crown.png',        kind: 'item' },
   { src: 'the_sundered_grips.png',         dst: 'assets/items/the_sundered_grips.png',          kind: 'item' },
   { src: 'the_antiphon_striders.png',      dst: 'assets/items/the_antiphon_striders.png',       kind: 'item' },
+  // W678 — The Threefold Court (C trio) + its 3-piece pool. Prompts in the W678 notes.
+  { src: 'the-threefold-court.png',         dst: 'assets/bosses/the-threefold-court.png',         kind: 'boss' },
+  { src: 'the-threefold-court-summons.png', dst: 'assets/bosses/the-threefold-court-summons.png', kind: 'boss' },
+  { src: 'vestments_of_the_final_verdict.png', dst: 'assets/items/vestments_of_the_final_verdict.png', kind: 'item' },
+  { src: 'courthunters_grips.png',          dst: 'assets/items/courthunters_grips.png',          kind: 'item' },
+  { src: 'seal_of_the_threefold_court.png', dst: 'assets/items/seal_of_the_threefold_court.png', kind: 'item' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });
