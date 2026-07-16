@@ -1650,3 +1650,34 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
     await expect(page.locator('#main-scroll .cp-prog-xp-fill')).toHaveCount(0);
   });
 });
+
+// ── S · HealthKit source dedup prefers the Apple ecosystem (W681) ──────────
+// The Oura-inflation fix: a third-party ring's raw HealthKit samples run
+// ~15-30% over what the Apple Health app displays (wrist-motion "steps"),
+// and the old max-single-source rule let the ring win. Pin the picker via
+// the Health.__totalFromSamples test seam (pure function, real bundle):
+// Apple source preferred even when SMALLER; ring-only falls back to the
+// ring; one source sums; untagged samples keep the raw-sum fallback.
+test.describe('S · HealthKit source dedup (W681)', () => {
+  test('Apple-preferred totals across source mixes', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    const results = await page.evaluate(() => {
+      const f = (window as any).Health.__totalFromSamples;
+      const iphone = (v: number) => ({ value: v, sourceBundleId: 'com.apple.health.ABC', source: 'iPhone' });
+      const oura = (v: number) => ({ value: v, sourceBundleId: 'com.ouraring.oura', source: 'Oura' });
+      return {
+        appleWinsEvenSmaller: f([iphone(6147), oura(8263)]),
+        ringOnlyFallback: f([oura(4000), oura(2450)]),
+        singleSourceSums: f([iphone(100), iphone(200)]),
+        untaggedRawSum: f([{ value: 100 }, { value: 50 }]),
+        manualEntryIsApple: f([{ value: 5000, sourceBundleId: 'com.apple.Health', source: 'Health' }, oura(9000)]),
+      };
+    });
+    expect(results.appleWinsEvenSmaller).toBe(6147);
+    expect(results.ringOnlyFallback).toBe(6450);
+    expect(results.singleSourceSums).toBe(300);
+    expect(results.untaggedRawSum).toBe(150);
+    expect(results.manualEntryIsApple).toBe(5000);
+  });
+});

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w680'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w681'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -54463,6 +54463,54 @@
       return _queryStepsInRange(startISO, endISO);
     }
 
+    // W681 — total a HealthKit sample set with source-aware dedup, PREFERRING
+    // THE APPLE ECOSYSTEM. Shared by the steps + flights queries (W347/W348
+    // previously took the max single source, which let a third-party ring WIN:
+    // Oura writes generous wrist-motion "steps" to HealthKit — overnight
+    // micro-movement included — so its raw source total runs ~15-30% over the
+    // number the Apple Health app displays (Health merges by per-interval
+    // source PRIORITY, iPhone/Watch first; owner saw 8,263 in-app vs Health's
+    // 6,147). Rule (owner 2026-07-15, match the Health app):
+    //   >1 source  -> the largest APPLE source (iPhone/Watch/manual) when one
+    //                 exists — even if a ring's total is larger; else the
+    //                 largest third-party source (ring-only users keep working)
+    //   one source -> its total; NO source tags -> raw sum (old fallback).
+    // Trade-off accepted: phone-on-desk walks credit only what Apple saw.
+    // Apple-ness keys off sourceBundleId ('com.apple.health.*' = device writes,
+    // 'com.apple.Health' = manual entries); the name check is only a fallback
+    // for untagged bundles (the source NAME is the user's device name, e.g.
+    // "Richie's iPhone", so it's a contains-match). NOTE: the plugin's name
+    // field is `source` — the old code read `sourceName` (doesn't exist);
+    // bundleId always being present is why W347 still worked.
+    function _totalFromHealthSamples(samples) {
+      let rawSum = 0;
+      const bySource = Object.create(null);
+      const appleSrc = Object.create(null);
+      let srcCount = 0;
+      for (const s of (samples || [])) {
+        const v = Number(s && s.value);
+        if (!isFinite(v) || v <= 0) continue;
+        rawSum += v;
+        const bundle = (s && s.sourceBundleId) || '';
+        const name = (s && (s.source || s.sourceName)) || '';
+        const key = bundle || name;
+        if (!key) continue;
+        if (bySource[key] === undefined) {
+          bySource[key] = 0;
+          srcCount++;
+          appleSrc[key] = bundle ? /^com\.apple\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
+        }
+        bySource[key] += v;
+      }
+      if (srcCount <= 1) return rawSum;
+      let maxApple = 0, maxAll = 0;
+      for (const k in bySource) {
+        if (bySource[k] > maxAll) maxAll = bySource[k];
+        if (appleSrc[k] && bySource[k] > maxApple) maxApple = bySource[k];
+      }
+      return maxApple > 0 ? maxApple : maxAll;
+    }
+
     // Internal — performs the actual HealthKit step query against a
     // [start, end] window. Returns null on any failure; otherwise an
     // integer total (rounded).
@@ -54477,34 +54525,8 @@
           limit: 0, // 0 = unlimited per @perfood README
         });
         // result shape: { countReturn, resultData: [{ value, ...}, ...] }
-        const samples = (result && result.resultData) || [];
-        // W347 — dedupe HealthKit step samples by SOURCE before totaling.
-        // HealthKit returns a separate sample per source (iPhone + Apple Watch
-        // + 3rd-party apps); naively summing ALL of them double-counts the
-        // overlapping samples for the same walk (the rendiesel bug: ~15k real
-        // read as ~30k). Sum per source; when >1 source is present prefer the
-        // single highest-total source -- the most complete picture without the
-        // overlap double-count. ONE source (the common case) is unchanged, and
-        // if the plugin tags no source we fall back to the raw sum. The proper
-        // fix is a native HKStatisticsQuery cumulativeSum (see the spec doc).
-        let total = 0;
-        const _bySource = Object.create(null);
-        let _srcCount = 0;
-        for (const s of samples) {
-          const v = Number(s && s.value);
-          if (!isFinite(v) || v <= 0) continue;
-          total += v;
-          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
-          if (_src) {
-            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
-            _bySource[_src] += v;
-          }
-        }
-        if (_srcCount > 1) {
-          let _maxSrc = 0;
-          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
-          total = _maxSrc;
-        }
+        // W347→W681 — source-aware dedup, Apple-ecosystem preferred (see helper).
+        const total = _totalFromHealthSamples((result && result.resultData) || []);
         // First successful read confirms 'granted' — if iOS had silently
         // denied, the query would have thrown or returned empty.
         setStatus('granted');
@@ -55505,31 +55527,9 @@
           endDate: endISO,
           limit: 0,
         });
-        const samples = (result && result.resultData) || [];
-        // W348 — dedupe by source (same fix as W347 for steps). HealthKit
-        // returns a sample per source (iPhone + Apple Watch + 3rd-party apps);
-        // summing all double-counts overlapping samples. Sum per source; when
-        // >1 source prefer the max single-source total. One source unchanged;
-        // no source -> raw sum fallback. Native HKStatisticsQuery is the proper
-        // uniform fix (see spec).
-        let total = 0;
-        const _bySource = Object.create(null);
-        let _srcCount = 0;
-        for (const s of samples) {
-          const v = Number(s && s.value);
-          if (!isFinite(v) || v <= 0) continue;
-          total += v;
-          const _src = (s && (s.sourceBundleId || s.sourceName)) || '';
-          if (_src) {
-            if (_bySource[_src] === undefined) { _bySource[_src] = 0; _srcCount++; }
-            _bySource[_src] += v;
-          }
-        }
-        if (_srcCount > 1) {
-          let _maxSrc = 0;
-          for (const _k in _bySource) { if (_bySource[_k] > _maxSrc) _maxSrc = _bySource[_k]; }
-          total = _maxSrc;
-        }
+        // W348→W681 — same source-aware dedup as steps, Apple-ecosystem
+        // preferred (shared helper; see _totalFromHealthSamples).
+        const total = _totalFromHealthSamples((result && result.resultData) || []);
         setStatus('granted');
         return Math.round(total);
       } catch (e) {
@@ -55655,6 +55655,7 @@
       requestActiveEnergyPermissionIfNeeded, // v3 Phase 1z.62
       getStepsToday,
       getStepsBetween,       // Steps Duel Scoring v1 (v3 Phase 1y)
+      __totalFromSamples: _totalFromHealthSamples,   // W681 — test seam (pure; e2e pins the Apple-preferred dedup)
       getSleepLastNight,
       getSleepBetween,       // Verified Duel Scoring Engine v1 (v3 Phase 1z)
       getStrengthWorkoutsToday,
