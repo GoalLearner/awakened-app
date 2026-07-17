@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w698'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w699'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47072,6 +47072,9 @@
         return 'Not enough souls — this hunt’s entrance fee is ' + (f || '?') + '.';
       }
       case 'CAP_REACHED': return 'You already have 3 hunts running. Finish one first — members run unlimited hunts.';
+      // W699 — the members raid (The Grinning God) is gated on membership, not rank.
+      case 'MEMBERS_ONLY': return 'The Grinning God answers only to members.';
+      case 'ALLY_NOT_MEMBER': return 'Every hunter in this raid must be a member — pick a member ally.';
       default: return 'Something went wrong. Try again.';
     }
   }
@@ -47173,7 +47176,10 @@
     // "reach X rank" affordance, so the over-rank summon is never offered in-app.
     const _myRankIdx   = RANKS.findIndex(function (r) { return r.id === getRank(totalPoints).id; });
     const _bossRankIdx = RANKS.findIndex(function (r) { return r.id === cfg.rank; });
-    const _rankLocked  = _bossRankIdx > _myRankIdx;
+    // W699 — a members-only raid (The Grinning God) gates on MEMBERSHIP, not rank: any
+    // member may summon it at any rank (mirrors the server, which drops the rank gate for
+    // memberOnly bosses). Ordinary rank bosses still lock below their rank.
+    const _rankLocked  = !cfg.membersOnly && _bossRankIdx > _myRankIdx;
     // W648 — entrance fee on the summon surface. Founders see "summon free";
     // a hunter who can't cover the fee gets a NEED-N-MORE lock instead of a
     // doomed recruit flow (mirrors the market's insufficient state).
@@ -47621,7 +47627,9 @@
         // W483 \u2014 an ally below the boss's rank is shown (with their rank) but NOT invitable
         // \u2014 no pick action, locked styling, a "Needs X" note. The backend ALLY_RANK gate is
         // the real enforcement; this is the matching UX so the tap is never offered.
-        if (_coopRankMeets(tier, bossRank)) {
+        // W699 \u2014 the members raid gates allies on MEMBERSHIP, not rank, so any member friend
+        // is invitable at any rank (the backend re-checks membership + refuses ALLY_NOT_MEMBER).
+        if (_pcfg.membersOnly || _coopRankMeets(tier, bossRank)) {
           // W677\u2192W692 \u2014 multi-ally boss: tap toggles selection (checkmark), Summon confirms below.
           if (maxAllies > 1) {
             const on = sel.indexOf(String(f.user_id)) !== -1;

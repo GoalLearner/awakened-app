@@ -51,7 +51,7 @@ const TRIO_PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string }, sqlLog?: string[]) {
   // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
   const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
@@ -95,7 +95,7 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
               return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
             }
             if (sql.includes('FROM friends')) return { id: 'friend-row' };
-            if (sql.includes('FROM public_profile_summary')) return { rank_tier: 'S' };
+            if (sql.includes('FROM public_profile_summary')) return { rank_tier: opts.rankTier ?? 'S' };
             if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return { n: opts.running ?? 0 };
             if (sql.includes('SELECT id FROM coop_boss_instances')) return null; // pair+boss dedupe: none
             if (sql.includes('SELECT * FROM coop_boss_instances')) {
@@ -395,6 +395,55 @@ describe('W693 — Grinning God members-only gate + N-hunter party bounds', () =
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe('PARTY_SIZE');
+  });
+});
+
+// ── W699 — members raid gates on MEMBERSHIP, not rank (owner) ──────────────
+// The Grinning God (memberOnly) drops its rank gate: any member may summon/join it
+// at ANY rank. Ordinary rank bosses keep their rank gate. makeDb's default rank is
+// 'S', so these tests set a SUB-S rank to prove the exemption actually fires.
+describe('W699 — members-only raid: rank gate lifted for members', () => {
+  const raidReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify(body) });
+  const qReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/raid-queue', { method: 'POST', body: JSON.stringify(body) });
+  const member = Date.now() + 86_400_000;
+
+  it('a SUB-S member (rank A) summons the Grinning God — no INSUFFICIENT_RANK', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: member, rankTier: 'A' })), session('u1'));
+    const body = (await res.json()) as { ok?: boolean; error?: string };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+  });
+
+  it('a member well below the raid rank (E) queues the raid finder — no INSUFFICIENT_RANK', async () => {
+    const res = await handleRaidQueueJoin(
+      qReq({ boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: member, rankTier: 'E' })), session('u1'));
+    const body = (await res.json()) as { ok: boolean; queued: boolean };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.queued).toBe(true);
+  });
+
+  it('membership is STILL required — a sub-S non-member is refused MEMBERS_ONLY, not rank', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ rankTier: 'A' })), session('u1')); // rank A but no premium
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('MEMBERS_ONLY');
+  });
+
+  it('regression: an ORDINARY rank boss STILL blocks a sub-rank summoner (INSUFFICIENT_RANK)', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_coursing_dread' }), // C-rank, not memberOnly
+      makeEnv(makeDb({ premiumExpiresAt: member, rankTier: 'E' })), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('INSUFFICIENT_RANK');
   });
 });
 

@@ -695,7 +695,10 @@ export async function handleCoopBossCreate(
     .first<{ rank_tier: string }>();
   const myRank = RANK_ORDER[prof?.rank_tier ?? 'E'] ?? 0;
   const bossRank = RANK_ORDER[cfg.rank] ?? 0;
-  if (myRank < bossRank) {
+  // W699 — a members-only raid (The Grinning God) gates on MEMBERSHIP alone (enforced
+  // below), NOT rank: any member may summon it at any rank, per owner. Rank still gates
+  // the ordinary rank bosses.
+  if (!cfg.memberOnly && myRank < bossRank) {
     return jsonError(403, 'INSUFFICIENT_RANK', `You must reach ${cfg.rank} rank to summon this hunt.`);
   }
 
@@ -712,7 +715,8 @@ export async function handleCoopBossCreate(
       .bind(ally)
       .first<{ rank_tier: string }>();
     const partnerRank = RANK_ORDER[partnerProf?.rank_tier ?? 'E'] ?? 0;
-    if (partnerRank < bossRank) {
+    // W699 — members raid: allies are gated on MEMBERSHIP (checked just below), not rank.
+    if (!cfg.memberOnly && partnerRank < bossRank) {
       return jsonError(403, 'ALLY_RANK', `Your ally must reach ${cfg.rank} rank to join this hunt.`);
     }
   }
@@ -1839,7 +1843,8 @@ export async function handleRaidQueueJoin(
   const prof = await env.DB.prepare('SELECT rank_tier FROM public_profile_summary WHERE user_id = ?')
     .bind(session.userId)
     .first<{ rank_tier: string }>();
-  if ((RANK_ORDER[prof?.rank_tier ?? 'E'] ?? 0) < (RANK_ORDER[cfg.rank] ?? 0)) {
+  // W699 — members raid: no rank gate on the finder either (membership checked above).
+  if (!cfg.memberOnly && (RANK_ORDER[prof?.rank_tier ?? 'E'] ?? 0) < (RANK_ORDER[cfg.rank] ?? 0)) {
     return jsonError(403, 'INSUFFICIENT_RANK', `You must reach ${cfg.rank} rank to join this raid.`);
   }
   // Already on a live hunt for this boss → nothing to queue (avoid double-committing).
