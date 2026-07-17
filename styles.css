@@ -31464,6 +31464,9 @@ button.guildhall-summary-tile:active {
 .coop-finder-sub { font-size: 0.86rem; color: rgba(255,255,255,0.66); max-width: 22rem; }
 .coop-finder-count { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
 .coop-finder-count b { color: #fff; }
+/* W702 — reassurance line: the queue is async, you don't have to wait on this screen. */
+.coop-finder-note { margin-top: 8px; font-size: 0.78rem; line-height: 1.35; color: rgba(122,214,200,0.9);
+  max-width: 20rem; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .coop-finder-spin { animation-duration: 2.4s; } }
 /* W695 — compact searching block inside an open ("Summon & Fill") party lobby. */
 .coop-finder--inline { flex-direction: row; justify-content: center; padding: 10px 12px; gap: 10px; margin: 4px 0 10px; }

@@ -1408,13 +1408,19 @@ export async function handleCoopBossClaim(
 // seekers into a party and spins up a LIVE (active) hunt with them all auto-joined
 // (queuing IS the consent to start). Rides the W692 participant model.
 //
-// Liveness model (W694 review): the TTL runs on the last_seen_at HEARTBEAT — refreshed
-// by every ~12s client poll — NOT on created_at (which is the FIFO position). A TTL on
-// created_at deadlocks any queue that takes longer than the TTL to fill, aging out
-// hunters who are actively searching. 90s ≈ 7 missed ticks: a backgrounded/closed app
-// stops polling and ages out fast (never matched into a live 72h raid unwatched), while
-// an open lobby stays fresh indefinitely.
-const RAID_QUEUE_TTL_SEC = 90;
+// Liveness model. The TTL runs on the last_seen_at HEARTBEAT (COALESCE to created_at),
+// NOT on created_at alone (which is the FIFO position).
+//
+// W702 — the queue is now PERSISTENT / ASYNC: a member queues, LEAVES the screen (even
+// closes the app), and is paired in the BACKGROUND — either instantly by the next
+// member's join, or by the matchmaking cron (runRaidMatchmakeSweep). Every formed raid
+// pushes its hunters via notifyHuntLive, so a walk-away member is told the moment their
+// raid goes live and nothing is ever matched silently. The TTL is therefore a long "still
+// up for this?" horizon (24h), not the old 90s babysit timer — W694's short heartbeat-TTL
+// deliberately aged out anyone off the lobby screen, which the auto-start push makes moot.
+// The client no longer needs to heartbeat to hold its spot; a still-open lobby that keeps
+// polling simply refreshes last_seen_at and rides the same 24h window.
+const RAID_QUEUE_TTL_SEC = 24 * 3600;
 // The heartbeat-TTL WHERE fragment (?T binds RAID_QUEUE_TTL_SEC). COALESCE tolerates a
 // pre-heartbeat row shape.
 const RAID_QUEUE_FRESH_SQL = `(strftime('%s','now') - strftime('%s', COALESCE(q.last_seen_at, q.created_at))) < ?T`;
@@ -1811,6 +1817,36 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
     }
   }
   return null;
+}
+
+// ── W702 — background matchmaking SWEEP (cron-driven) ───────────────────────
+// The async half of the raid finder. With the queue now PERSISTENT (24h TTL), two members
+// can queue minutes apart, both close the app, and still need pairing once the oldest
+// clears RAID_SOLO_PATIENCE_SEC — but with nobody polling, nothing triggers matchmakeRaid.
+// This sweep runs it for every matchmaking boss on a short cron (see scheduled() in
+// index.ts), draining the queue into parties (and merging under-full open parties) with no
+// client watching. Every party it forms pushes its hunters via notifyHuntLive (inside
+// matchmakeRaid → formRaidInstance), so a walk-away member is told the instant their raid
+// goes live. Idempotent + bounded; never throws (a cron must not crash on one bad boss).
+export async function runRaidMatchmakeSweep(env: Env, ctx?: ExecutionContext): Promise<number> {
+  let formed = 0;
+  for (const bossId of Object.keys(COOP_BOSS_CFG)) {
+    if (!COOP_BOSS_CFG[bossId].matchmaking) continue;
+    // Bounded drain: at most a few parties per boss per tick (the member pool is tiny; the
+    // cap also guards against a non-progressing matchmakeRaid looping).
+    for (let i = 0; i < 5; i++) {
+      let inst: CoopBossRow | null = null;
+      try {
+        inst = await matchmakeRaid(env, bossId, ctx);
+      } catch (e) {
+        console.error('[raid-sweep] matchmake failed', bossId, e instanceof Error ? e.message : String(e));
+        break;
+      }
+      if (!inst) break;
+      formed++;
+    }
+  }
+  return formed;
 }
 
 // ── POST /v1/raid-queue — enter the raid finder (idempotent; also the poll tick) ──

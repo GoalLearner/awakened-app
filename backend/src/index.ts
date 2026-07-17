@@ -80,6 +80,8 @@ import {
   // W695 — "Summon & Fill" open party-hunts.
   handleRaidStart,
   handleRaidFillTick,
+  // W702 — background matchmaking sweep (cron drains the persistent raid queue).
+  runRaidMatchmakeSweep,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
 import {
@@ -435,12 +437,20 @@ export default {
     return withCors(response);
   },
 
-  // ── W680 — cron: the Monday 9 AM PT "update available" push broadcast ──
-  // wrangler.toml fires this every 5 min across 16:00–17:59 UTC on Mondays;
-  // runUpdatePushCron gates to 9 AM America/Los_Angeles (DST-proof) and sends
-  // one bounded page per run (see lib/update-push.ts).
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(runUpdatePushCron(env));
+  // ── Cron triggers (wrangler.toml [triggers].crons) ──
+  //  • "*/5 16-17 * * 1"  → W680 Monday 9 AM PT "update available" push broadcast
+  //    (runUpdatePushCron self-gates to 9 AM America/Los_Angeles, DST-proof; one bounded
+  //    page per run — see lib/update-push.ts).
+  //  • "*/2 * * * *"      → W702 raid-finder background matchmaking sweep: drains the
+  //    persistent raid queue into parties so members who queued and walked away get paired
+  //    (and push-notified) with nobody watching a lobby. Routed by event.cron so the
+  //    frequent sweep never runs the weekly broadcast and vice-versa.
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (event.cron === '*/5 16-17 * * 1') {
+      ctx.waitUntil(runUpdatePushCron(env));
+    } else {
+      ctx.waitUntil(runRaidMatchmakeSweep(env, ctx));
+    }
   },
 } satisfies ExportedHandler<Env>;
 

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w701'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w702'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46283,7 +46283,7 @@
     if (!cfg) return;
     const overlay = document.getElementById('coop-fs-overlay');
     if (!overlay) return;
-    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
+    _coopStopWatchingFinder();   // W702 — a re-open stops the local poll but KEEPS the persistent queue
     _coopSheet = { instance: null, cfg: cfg, loading: true, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
@@ -46300,9 +46300,10 @@
     overlay.scrollTop = 0;
     _coopStopPolling();
     _coopStopFillPoll();   // W695 — the open-hunt lobby poll is sheet-scoped (push covers the rest)
-    // W694 — closing the sheet leaves the raid finder (the lobby is active-only, so a
-    // member is never matched into a live 72h raid while they've walked away).
-    _coopLeaveFinderIfActive();
+    // W702 — closing the sheet KEEPS you in the persistent raid queue (the matchmaking
+    // cron pairs you and pushes you when the raid goes live). Only an explicit "Leave
+    // queue" dequeues; here we just stop the local status poll.
+    _coopStopWatchingFinder();
     // W394 — if this detail was opened from the dashboard, return there.
     if (_coopDashReturn) { _coopDashReturn = false; try { _coopOpenDashboard(); } catch (_) {} }
   }
@@ -46312,29 +46313,37 @@
   function _coopStartPolling() { if (_coopPollTimer) return; try { _coopPollTimer = setInterval(function () { _coopPollTick(); }, 60000); } catch (_) {} }
   function _coopStopPolling() { if (_coopPollTimer) { try { clearInterval(_coopPollTimer); } catch (_) {} _coopPollTimer = null; } }
 
-  // ── W694 — Raid finder (matchmaking lobby) ──
-  // Enter the finder: queue on the server, then poll every ~12s (re-POST /raid-queue is
-  // idempotent + also the tick). On a match the server returns the formed hunt; else it
-  // returns the live waiting count. Cancelling / closing leaves the queue (an active
-  // lobby, not a fire-and-forget — a member is never dropped into a 72h raid unwatched).
+  // ── W694/W702 — Raid finder (now an ASYNC persistent queue) ──
+  // Tapping FIND A PARTY enqueues ONCE (POST /raid-queue). If a second member is already
+  // queued you match INSTANTLY; otherwise you sit in the persistent server queue and can
+  // close the sheet — even the app — while a slow STATUS poll (GET, no re-queue) watches
+  // for the match. The matchmaking cron (coop-boss.ts) pairs queued members in the
+  // background and pushes everyone when the raid goes live, so nothing is missed while you
+  // walk away. Only an explicit "Leave queue" dequeues.
   function _coopStartFinder() {
     if (_coopFinderTimer) return;
-    try { _coopFinderTimer = setInterval(function () { _coopFinderTick(); }, 12000); } catch (_) {}
+    try { _coopFinderTimer = setInterval(function () { _coopFinderTick(); }, 15000); } catch (_) {}
   }
   function _coopStopFinder() {
     if (_coopFinderTimer) { try { clearInterval(_coopFinderTimer); } catch (_) {} _coopFinderTimer = null; }
   }
-  // W694 review — every search-end goes through ONE path: bump the epoch (invalidates
-  // any in-flight tick), stop the timer, clear the flag, and leave the server queue.
-  // Called by cancel, close, AND every sheet re-open/reassignment — a hunter must
-  // never stay queued server-side while nothing on this device is watching the lobby.
   let _coopFinderEpoch = 0;
-  function _coopLeaveFinderIfActive() {
+  let _coopFinderLeaving = false;   // W702 — true only across an EXPLICIT leave (see below)
+  // W702 — stop the LOCAL in-queue poll but STAY queued server-side (the persistent async
+  // queue). Used by close + every sheet re-open: neither orphans nor drops the search now.
+  function _coopStopWatchingFinder() {
     _coopFinderEpoch++;
-    if (!_coopSheet || !_coopSheet.finding) { _coopStopFinder(); return; }
-    _coopSheet.finding = false;
+    if (_coopSheet) _coopSheet.finding = false;
     _coopStopFinder();
-    try { Auth.raidQueueLeave(); } catch (_) {}   // fire-and-forget
+  }
+  // Explicit LEAVE ("Leave queue"): stop watching AND remove the server queue row. The
+  // _coopFinderLeaving flag lets an in-flight enqueue that resolves AFTER this compensate
+  // by leaving again, so a leave that races the initial join still sticks.
+  function _coopLeaveFinderIfActive() {
+    const wasFinding = !!(_coopSheet && _coopSheet.finding);
+    _coopFinderLeaving = true;
+    _coopStopWatchingFinder();
+    if (wasFinding) { try { Auth.raidQueueLeave(); } catch (_) {} }
   }
   // ── W695 — open ("Summon & Fill") hunt lobby poll ──
   // While the sheet shows a PENDING open hunt, tick /fill-tick every 12s: it drives the
@@ -46371,37 +46380,37 @@
     }
   }
 
+  // W702 — the in-queue watcher: a STATUS poll (GET, never re-queues). It refreshes the
+  // "N in the queue" count and detects the match — when our queue row is consumed by a
+  // formed party (cron or another member's join), status flips to not-queued and we drop
+  // into the live hunt via the co-op list. Purely observational, so a close/leave racing
+  // the GET needs no compensation.
   async function _coopFinderTick() {
     const cfg = _coopSheet.cfg;
     if (!cfg || !_coopSheet.finding) { _coopStopFinder(); return; }
-    const epoch = _coopFinderEpoch;   // W694 review — detect a cancel/close racing this await
+    const epoch = _coopFinderEpoch;
     let res;
-    try { res = await Auth.raidQueueJoin(cfg.id); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
-    if (epoch !== _coopFinderEpoch || !_coopSheet.finding) {
-      // Cancelled/closed while the join POST was in flight — that POST just RE-QUEUED
-      // us server-side. Compensate with another leave so the cancel actually sticks.
-      try { Auth.raidQueueLeave(); } catch (_) {}
-      return;
-    }
-    if (res && res.ok && res.matched && res.instance) {
-      // Party formed — leave the lobby and drop into the live hunt.
-      _coopStopFinder();
-      _coopSheet.finding = false;
-      _coopSheet.finderError = null;
-      _coopSheet.instance = res.instance;
-      _coopSheet.pinnedId = res.instance.id;
-      try { if (typeof showHabitToast === 'function') showHabitToast('Party found — the hunt is on.'); } catch (_) {}
-      _coopAfterInstanceUpdate();
-      return;
-    }
-    if (res && res.ok && res.queued) {
+    try { res = await Auth.raidQueueStatus(cfg.id); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    if (epoch !== _coopFinderEpoch || !_coopSheet.finding) return;   // closed/left/re-opened mid-flight
+    if (res && res.ok) {
+      if (!res.queued) {
+        // Matched — our queue row was consumed. Pull the formed hunt from the list.
+        _coopSheet.finding = false; _coopStopFinder();
+        try { await _coopRefresh(); } catch (_) {}
+        try {
+          const inst = _coopSheet.instance;
+          if (inst && (inst.status === 'active' || inst.status === 'pending')
+              && typeof showHabitToast === 'function') showHabitToast('Party found — the hunt is on.');
+        } catch (_) {}
+        return;
+      }
       _coopSheet.finderWaiting = (typeof res.waiting === 'number') ? res.waiting : null;
-      _coopSheet.finderNeed = (typeof res.need === 'number') ? res.need : null;
       _coopSheet.finderError = null;
+      renderCoopSheet();
     } else {
       _coopSheet.finderError = (res && res.code) || 'ERROR';
+      renderCoopSheet();
     }
-    renderCoopSheet();
   }
   function _coopFinderHtml() {
     const cfg = _coopSheet.cfg || {};
@@ -46409,20 +46418,25 @@
     const need = (typeof _coopSheet.finderNeed === 'number') ? _coopSheet.finderNeed : ((cfg.minParty | 0) || 2);
     const enough = waiting >= need;
     const sub = enough
-      ? 'Forming your party — hold tight.'
-      : (waiting <= 1 ? 'You are first in the queue. Others will join.' : (waiting + ' hunters searching · ' + need + ' needed to form.'));
+      ? 'Enough members are queued — your party forms any moment.'
+      : (waiting <= 1
+          ? 'You are first in the queue. The instant another member queues, you are paired.'
+          : (waiting + ' members queued · ' + need + ' needed to form.'));
     const errHtml = _coopSheet.finderError
       ? '<div class="coop-note coop-note--loss">' + esc(_coopErrText(_coopSheet.finderError)) + '</div>'
       : '';
+    // W702 — no longer a "stay on this screen" lobby: you're in a persistent queue and can
+    // leave/close the app; the matchmaking cron pairs you and pushes you when the raid goes live.
     return (
       '<div class="coop-finder">' +
         '<div class="coop-finder-spin" aria-hidden="true"></div>' +
-        '<div class="coop-finder-head">SEARCHING FOR A PARTY</div>' +
+        '<div class="coop-finder-head">IN THE RAID QUEUE</div>' +
         '<div class="coop-finder-sub">' + esc(sub) + '</div>' +
         '<div class="coop-finder-count"><b>' + waiting + '</b> in the queue</div>' +
+        '<div class="coop-finder-note">You can close the app — we’ll notify you the moment your party forms.</div>' +
       '</div>' +
       errHtml +
-      '<button class="coop-cta coop-cta--ghost" data-coop-action="find-cancel">CANCEL SEARCH</button>'
+      '<button class="coop-cta coop-cta--ghost" data-coop-action="find-cancel">LEAVE QUEUE</button>'
     );
   }
 
@@ -46442,6 +46456,33 @@
     if (!chosen) { const live = forBoss.find(function (x) { return x.status === 'pending' || x.status === 'active'; }); chosen = live || forBoss[0] || null; }
     _coopSheet.instance = chosen;
     _coopAfterInstanceUpdate();
+    _coopMaybeShowQueue(cfg);   // W702 — re-entry: flip to the in-queue screen if still queued
+  }
+
+  // W702 — re-entry: no live hunt for a matchmaking boss, but we're still in its persistent
+  // queue → flip the sheet to the in-queue screen (with Leave) instead of recruit, so the
+  // queue stays visible + cancelable across app restarts. Shared by _coopRefresh (hunt/
+  // dashboard opens) and _coopOpenRecruit (the members-gate open). Fire-and-forget: the
+  // recruit screen shows first, then flips if the status read comes back queued.
+  async function _coopMaybeShowQueue(cfg) {
+    try {
+      if (!cfg || !cfg.matchmaking || !_coopSheet || _coopSheet.finding) return;
+      const cur = _coopSheet.instance;
+      if (cur && (cur.status === 'active' || cur.status === 'pending')) return;
+      const q = await Auth.raidQueueStatus(cfg.id);
+      // Re-validate everything after the await — the sheet may have moved on.
+      if (!(q && q.ok && q.queued && q.boss_id === cfg.id)) return;
+      if (!_coopSheet || _coopSheet.finding || !_coopSheet.cfg || _coopSheet.cfg.id !== cfg.id) return;
+      const live = _coopSheet.instance;
+      if (live && (live.status === 'active' || live.status === 'pending')) return;
+      _coopFinderLeaving = false;
+      _coopSheet.finding = true;
+      _coopSheet.finderWaiting = (typeof q.waiting === 'number') ? q.waiting : 1;
+      _coopSheet.finderNeed = (cfg.minParty | 0) || 2;
+      _coopSheet.finderError = null;
+      renderCoopSheet();
+      _coopStartFinder();
+    } catch (_) {}
   }
 
   function _coopAfterInstanceUpdate() {
@@ -46866,11 +46907,40 @@
     if (action === 'invite') { openCoopPartnerPicker(); return; }
     // W694 — the raid finder (matchmaking lobby).
     if (action === 'find') {
-      _coopSheet.picking = false; _coopSheet.finding = true;
-      _coopSheet.finderWaiting = null; _coopSheet.finderNeed = null; _coopSheet.finderError = null;
+      const cfg = _coopSheet.cfg; if (!cfg) return;
+      _coopSheet.picking = false;
+      _coopFinderLeaving = false;                 // W702 — new finder session
+      _coopSheet.finding = true;                  // show the in-queue screen optimistically
+      _coopSheet.finderWaiting = null; _coopSheet.finderNeed = (cfg.minParty | 0) || 2; _coopSheet.finderError = null;
       renderCoopSheet();
-      _coopStartFinder();
-      _coopFinderTick();   // fire the first attempt immediately, don't wait 12s
+      const epoch = ++_coopFinderEpoch;           // this enqueue owns the session
+      let res; try { res = await Auth.raidQueueJoin(cfg.id); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+      if (epoch !== _coopFinderEpoch) {
+        // A leave/close raced the enqueue. If they explicitly LEFT, the POST just re-queued
+        // us — undo it. If they merely closed, the persistent queue is intended: stay in.
+        if (_coopFinderLeaving) { try { Auth.raidQueueLeave(); } catch (_) {} }
+        return;
+      }
+      if (res && res.ok && res.matched && res.instance) {
+        // Instant match (a member was already queued) — straight into the live hunt.
+        _coopSheet.finding = false; _coopStopFinder();
+        _coopSheet.instance = res.instance; _coopSheet.pinnedId = res.instance.id;
+        try { if (typeof showHabitToast === 'function') showHabitToast('Party found — the hunt is on.'); } catch (_) {}
+        _coopAfterInstanceUpdate();
+        return;
+      }
+      if (res && res.ok && res.queued) {
+        _coopSheet.finderWaiting = (typeof res.waiting === 'number') ? res.waiting : 1;
+        _coopSheet.finderNeed = (typeof res.need === 'number') ? res.need : _coopSheet.finderNeed;
+        _coopSheet.finderError = null;
+        renderCoopSheet();
+        _coopStartFinder();                        // begin the slow status watcher
+        return;
+      }
+      // Enqueue failed — toast the reason and fall back to the recruit screen.
+      _coopSheet.finding = false; _coopStopFinder();
+      try { if (typeof showHabitToast === 'function') showHabitToast(_coopErrText((res && res.code) || 'ERROR')); } catch (_) {}
+      renderCoopSheet();
       return;
     }
     if (action === 'find-cancel') {
@@ -48527,7 +48597,7 @@
     // prior screen, not the full-screen Pacts hub.
     _coopDashReturn = !!fromDash;
     _coopCloseDashboard();
-    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
+    _coopStopWatchingFinder();   // W702 — a re-open stops the local poll but KEEPS the persistent queue
     _coopSheet = { instance: inst, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: inst.id };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
@@ -48550,11 +48620,12 @@
     if (!cfg || !overlay) return;
     _coopDashReturn = false;   // close returns to the Dungeon tab, never the dashboard
     _coopCloseDashboard();     // safety: never stack the sheet under an open dashboard
-    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
+    _coopStopWatchingFinder();   // W702 — a re-open stops the local poll but KEEPS the persistent queue
     _coopSheet = { instance: null, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: null };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
     renderCoopSheet();
+    _coopMaybeShowQueue(cfg);   // W702 — if already queued for this raid, show the in-queue screen
   }
   // W693 — the members gate → the Grinning God summon sheet (same overlay + recruit UI
   // every co-op boss uses; the raid is just a `special` COOP_BOSSES entry). Reached from
