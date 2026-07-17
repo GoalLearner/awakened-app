@@ -7,7 +7,13 @@
  * substring-routed D1 mock as the other handler tests.
  */
 import { describe, expect, it } from 'vitest';
-import { handleCoopBossCreate, handleCoopBossGet, handleCoopBossJoin } from './coop-boss';
+import {
+  handleCoopBossCreate,
+  handleCoopBossGet,
+  handleCoopBossJoin,
+  handleRaidQueueJoin,
+  handleRaidQueueLeave,
+} from './coop-boss';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -388,6 +394,49 @@ describe('W693 — Grinning God members-only gate + N-hunter party bounds', () =
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe('PARTY_SIZE');
+  });
+});
+
+// ── W694 — Raid-finder matchmaking (the members raid) ──────────────────────
+describe('W694 — raid-queue matchmaking gates', () => {
+  const qReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/raid-queue', { method: 'POST', body: JSON.stringify(body) });
+
+  it('400 UNKNOWN_BOSS for an unknown boss id', async () => {
+    const res = await handleRaidQueueJoin(qReq({ boss_id: 'nope' }), makeEnv(makeDb({})), session('u1'));
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('UNKNOWN_BOSS');
+  });
+
+  it('400 NO_MATCHMAKING for a boss without a raid finder (the duo Twin Maw)', async () => {
+    const res = await handleRaidQueueJoin(qReq({ boss_id: 'the_twin_maw' }), makeEnv(makeDb({})), session('u1'));
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('NO_MATCHMAKING');
+  });
+
+  it('403 MEMBERS_ONLY when a non-member tries to queue for the raid', async () => {
+    const res = await handleRaidQueueJoin(qReq({ boss_id: 'the_grinning_god' }), makeEnv(makeDb({})), session('u1'));
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe('MEMBERS_ONLY');
+  });
+
+  it('a member with no other seekers is QUEUED (matched:false)', async () => {
+    const res = await handleRaidQueueJoin(
+      qReq({ boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })),
+      session('u1'),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; matched: boolean; queued: boolean };
+    expect(body.ok).toBe(true);
+    expect(body.matched).toBe(false);
+    expect(body.queued).toBe(true);
+  });
+
+  it('leave the queue returns ok', async () => {
+    const res = await handleRaidQueueLeave(qReq({}), makeEnv(makeDb({})), session('u1'));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
   });
 });
 

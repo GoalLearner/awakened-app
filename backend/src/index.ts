@@ -73,6 +73,10 @@ import {
   handleCoopBossCancel,
   handleCoopBossResolve,
   handleCoopBossClaim,
+  // W694 — raid-finder matchmaking (the members raid).
+  handleRaidQueueJoin,
+  handleRaidQueueLeave,
+  handleRaidQueueStatus,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
 import {
@@ -373,6 +377,14 @@ export default {
           } else if (COOP_BOSS_ID_RE.test(path) && method === 'GET') {
             const match = path.match(COOP_BOSS_ID_RE)!;
             response = await handleCoopBossGet(request, env, session, match[1]);
+          }
+          // ── W694 — Raid-finder matchmaking (the members raid) ──
+          else if (path === '/v1/raid-queue' && method === 'POST') {
+            response = await handleRaidQueueJoin(request, env, session, ctx);   // enter finder + poll tick (ctx for the "party found" push)
+          } else if (path === '/v1/raid-queue' && method === 'DELETE') {
+            response = await handleRaidQueueLeave(request, env, session);
+          } else if (path === '/v1/raid-queue' && method === 'GET') {
+            response = await handleRaidQueueStatus(request, env, session);
           }
           // ── Realtime human PvP (PVP.md §21) — invite-by-code duels. The WS
           //    upgrade is handled above (pre-auth, ?token=); these are the HTTP

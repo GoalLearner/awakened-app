@@ -117,7 +117,7 @@ async function checkHuntCap(env: Env, userId: string): Promise<Response | null> 
 // header already blesses column reuse; no migration.
 const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean }
+  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean; matchmaking?: boolean }
 > = {
   the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
@@ -145,7 +145,7 @@ const COOP_BOSS_CFG: Record<
   // 75 COMBINED flights across 3 days (72h). memberOnly gates BOTH the summoner and
   // every ally at create + join. Drops (client-side): the mythic-only table (Nightfall
   // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
-  the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 72, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true },
+  the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 72, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true, matchmaking: true },
 };
 function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
@@ -1301,4 +1301,215 @@ export async function handleCoopBossClaim(
     .first<{ ok: number }>();
   const owed = !!exists;
   return jsonOk({ ok: true, owed, claimed: owed, first });
+}
+
+// ── W694 — Raid-finder MATCHMAKING (the members raid) ───────────────────────
+// A member who can't field a full party queues here; a matchmaking pass forms queued
+// seekers into a party and spins up a LIVE (active) hunt with them all auto-joined
+// (queuing IS the consent to start). Rides the W692 participant model.
+const RAID_QUEUE_TTL_SEC = 15 * 60; // a seeker who queued >15min ago has aged out
+const RANK_ORDER: Record<string, number> = { E: 0, D: 1, C: 2, B: 3, A: 4, S: 5, 'S+': 6 };
+
+// Create a LIVE hunt from a set of matchmade hunters (challenger = first, rest are
+// auto-joined participants). starts/ends stamped now; legacy partner columns dual-written.
+async function formRaidInstance(
+  env: Env,
+  bossId: string,
+  hunterIds: string[],
+  ctx?: ExecutionContext,
+): Promise<CoopBossRow | null> {
+  const cfg = COOP_BOSS_CFG[bossId];
+  if (!cfg || hunterIds.length < 2) return null;
+  const id = crypto.randomUUID();
+  const challenger = hunterIds[0];
+  const allies = hunterIds.slice(1);
+  const nowMs = Date.now();
+  const startsAt = new Date(nowMs).toISOString();
+  const endsAt = new Date(nowMs + cfg.windowHours * 3600 * 1000).toISOString();
+  const stmts = [
+    env.DB
+      .prepare(
+        `INSERT INTO coop_boss_instances
+           (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
+            partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
+            status, starts_at, ends_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+      )
+      .bind(
+        id, bossId, cfg.rank, challenger, allies[0] ?? null, allies[1] ?? null,
+        allies[0] ? startsAt : null, allies[1] ? startsAt : null,
+        cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls, startsAt, endsAt,
+      ),
+  ];
+  for (const ally of allies) {
+    stmts.push(
+      env.DB
+        .prepare(
+          `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+             SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1)`,
+        )
+        .bind(id, ally, startsAt),
+    );
+  }
+  await env.DB.batch(stmts);
+  const row = await loadInstance(env, id);
+  if (row && ctx) {
+    for (const uid of hunterIds) {
+      ctx.waitUntil(
+        notifyUser(env, uid, {
+          title: 'Party Found',
+          body: 'Your raid party is assembled — the hunt is on.',
+          type: 'coop_joined',
+          data: { bossId },
+        }),
+      );
+    }
+  }
+  return row;
+}
+
+// Try to form a party from the current queue for a boss. Returns the new instance, or
+// null when there aren't enough available seekers. Concurrency-safe: the claim is a
+// DELETE … RETURNING, and SQLite serializes writers, so two passes can't double-book a
+// seeker — the loser simply claims fewer rows and forms nothing (re-queuing them).
+async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): Promise<CoopBossRow | null> {
+  const cfg = COOP_BOSS_CFG[bossId];
+  if (!cfg) return null;
+  const minParty = cfg.minParty ?? cfg.partySize ?? 2;
+  const maxParty = cfg.maxParty ?? cfg.partySize ?? 2;
+  // Available seekers: queued within the TTL AND not already on a live hunt of this boss.
+  const avail = await env.DB
+    .prepare(
+      `SELECT q.user_id FROM raid_queue q
+        WHERE q.boss_id = ?1
+          AND (strftime('%s','now') - strftime('%s', q.created_at)) < ?2
+          AND NOT EXISTS (
+            SELECT 1 FROM coop_boss_instances i
+             WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+               AND ( i.challenger_user_id = q.user_id
+                     OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = q.user_id) )
+          )
+        ORDER BY q.created_at`,
+    )
+    .bind(bossId, RAID_QUEUE_TTL_SEC)
+    .all<{ user_id: string }>();
+  const seekers = (avail.results ?? []).map((r) => r.user_id);
+  if (seekers.length < minParty) return null;
+  const party = seekers.slice(0, maxParty);
+  const ph = party.map(() => '?').join(', ');
+  const claimed = await env.DB
+    .prepare(`DELETE FROM raid_queue WHERE boss_id = ? AND user_id IN (${ph}) RETURNING user_id`)
+    .bind(bossId, ...party)
+    .all<{ user_id: string }>();
+  const claimedIds = (claimed.results ?? []).map((r) => r.user_id);
+  if (claimedIds.length < minParty) {
+    // Raced below the minimum — re-queue whoever we did claim so they keep seeking.
+    if (claimedIds.length) {
+      await env.DB.batch(
+        claimedIds.map((uid) =>
+          env.DB.prepare('INSERT OR IGNORE INTO raid_queue (user_id, boss_id) VALUES (?, ?)').bind(uid, bossId),
+        ),
+      );
+    }
+    return null;
+  }
+  return await formRaidInstance(env, bossId, claimedIds, ctx);
+}
+
+// ── POST /v1/raid-queue — enter the raid finder (idempotent; also the poll tick) ──
+export async function handleRaidQueueJoin(
+  request: Request,
+  env: Env,
+  session: SessionPayload,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  let body: { boss_id?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
+  }
+  const bossId = typeof body.boss_id === 'string' ? body.boss_id : '';
+  const cfg = COOP_BOSS_CFG[bossId];
+  if (!cfg) return jsonError(400, 'UNKNOWN_BOSS', 'Unknown co-op boss id.');
+  if (!cfg.matchmaking) return jsonError(400, 'NO_MATCHMAKING', 'This hunt has no raid finder.');
+
+  // Members-only + rank gates (mirror the summon path so a matchmade party is as
+  // eligible as a hand-picked one — every seeker cleared these when they queued).
+  if (cfg.memberOnly) {
+    const { member } = await readEntitlements(env, session.userId);
+    if (!member) return jsonError(403, 'MEMBERS_ONLY', 'The Grinning God answers only to members.');
+  }
+  const prof = await env.DB.prepare('SELECT rank_tier FROM public_profile_summary WHERE user_id = ?')
+    .bind(session.userId)
+    .first<{ rank_tier: string }>();
+  if ((RANK_ORDER[prof?.rank_tier ?? 'E'] ?? 0) < (RANK_ORDER[cfg.rank] ?? 0)) {
+    return jsonError(403, 'INSUFFICIENT_RANK', `You must reach ${cfg.rank} rank to join this raid.`);
+  }
+  // Already on a live hunt for this boss → nothing to queue (avoid double-committing).
+  const inHunt = await env.DB
+    .prepare(
+      `SELECT 1 FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+         AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
+       LIMIT 1`,
+    )
+    .bind(bossId, session.userId)
+    .first();
+  if (inHunt) return jsonError(409, 'ALREADY_ACTIVE', 'You are already on a hunt for this boss.');
+
+  // Enqueue (idempotent: keep the original created_at / FIFO position if re-polling).
+  // Clear any stale queue row for a different boss first (one queue per hunter).
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ? AND boss_id <> ?').bind(session.userId, bossId),
+    env.DB.prepare('INSERT OR IGNORE INTO raid_queue (user_id, boss_id) VALUES (?, ?)').bind(session.userId, bossId),
+  ]);
+
+  const inst = await matchmakeRaid(env, bossId, ctx);
+  if (inst && participantIds(inst).includes(session.userId)) {
+    const aliasMap = await getAliasMap(env, participantIds(inst));
+    return jsonOk({ ok: true, matched: true, instance: serializeCoop(inst, aliasMap, session.userId, emptyProgress()) });
+  }
+  const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM raid_queue WHERE boss_id = ?')
+    .bind(bossId)
+    .first<{ n: number }>();
+  const minParty = cfg.minParty ?? cfg.partySize ?? 2;
+  return jsonOk({ ok: true, matched: false, queued: true, waiting: cnt ? Number(cnt.n) : 1, need: minParty });
+}
+
+// ── DELETE /v1/raid-queue — leave the raid finder ──
+export async function handleRaidQueueLeave(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  await env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ?').bind(session.userId).run();
+  return jsonOk({ ok: true });
+}
+
+// ── GET /v1/raid-queue?boss_id= — am I queued + how many are waiting ──
+export async function handleRaidQueueStatus(
+  request: Request,
+  env: Env,
+  session: SessionPayload,
+): Promise<Response> {
+  const rl = await env.RL_FRIENDS_READ.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const mine = await env.DB.prepare('SELECT boss_id FROM raid_queue WHERE user_id = ?')
+    .bind(session.userId)
+    .first<{ boss_id: string }>();
+  const url = new URL(request.url);
+  const bossId = url.searchParams.get('boss_id') || (mine ? mine.boss_id : '');
+  let waiting = 0;
+  if (bossId) {
+    const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM raid_queue WHERE boss_id = ?')
+      .bind(bossId)
+      .first<{ n: number }>();
+    waiting = cnt ? Number(cnt.n) : 0;
+  }
+  return jsonOk({ ok: true, queued: !!mine, boss_id: mine ? mine.boss_id : null, waiting });
 }
