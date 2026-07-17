@@ -13,6 +13,7 @@ import {
   handleCoopBossJoin,
   handleRaidQueueJoin,
   handleRaidQueueLeave,
+  handleRaidStart,
 } from './coop-boss';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -437,6 +438,65 @@ describe('W694 — raid-queue matchmaking gates', () => {
     const res = await handleRaidQueueLeave(qReq({}), makeEnv(makeDb({})), session('u1'));
     expect(res.status).toBe(200);
     expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+  });
+});
+
+// ── W695 — "Summon & Fill" open party-hunts ────────────────────────────────
+describe('W695 — Summon & Fill gates', () => {
+  const raidReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify(body) });
+
+  it('400 NO_MATCHMAKING when fill_from_finder is sent for a non-finder boss', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_twin_maw', fill_from_finder: true }),
+      makeEnv(makeDb({})), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('NO_MATCHMAKING');
+  });
+
+  it('400 PARTY_FULL when a full pick also asks to fill', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5'], boss_id: 'the_grinning_god', fill_from_finder: true }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('PARTY_FULL');
+  });
+
+  it('a member summons an under-full party WITH fill (fill_target rides the INSERT)', async () => {
+    const log: string[] = [];
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god', fill_from_finder: true }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 }, log)), session('u1'));
+    expect(res.status).toBe(200);
+    const insert = log.find((s) => s.includes('INSERT INTO coop_boss_instances'));
+    expect(insert).toBeTruthy();
+    expect(insert).toMatch(/fill_target/);
+  });
+
+  it('start: 403 when a non-leader tries to start the open hunt', async () => {
+    const res = await handleRaidStart(
+      raidReq({}), makeEnv(makeDb({ instance: { ...PENDING_ROW, fill_target: 5 } })), session('u2'), 'inst-1');
+    expect(res.status).toBe(403);
+  });
+
+  it('start: 400 BAD_STATE on a normal (closed) pending hunt', async () => {
+    const res = await handleRaidStart(
+      raidReq({}), makeEnv(makeDb({ instance: { ...PENDING_ROW } })), session('u1'), 'inst-1');
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('BAD_STATE');
+  });
+
+  it('start: 400 NOT_READY while an invited ally is still unanswered', async () => {
+    const res = await handleRaidStart(
+      raidReq({}),
+      makeEnv(makeDb({ instance: { ...TRIO_PENDING_ROW, fill_target: 5 } })),   // u2/u3 unanswered
+      session('u1'), 'inst-3');
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('NOT_READY');
   });
 });
 

@@ -200,6 +200,11 @@ interface CoopBossRow {
   goal_steps: number;
   goal_flights: number | null;   // W447 — dual-metric ('both') bosses; null for single-metric
   reward_souls: number;
+  // W695 — "Summon & Fill": intended party size for an OPEN hunt whose empty seats the
+  // raid finder fills (NULL = normal closed hunt). While pending + all invited answered,
+  // the hunt is READY: matchmaking pours solos in / merges open hunts; activates at
+  // fill_target or on the leader's explicit start.
+  fill_target: number | null;
   status: string;
   result: string | null;
   starts_at: string | null;
@@ -441,6 +446,9 @@ function serializeCoop(
     ...(award ? { award } : {}),
     goal_steps: row.goal_steps,
     reward_souls: row.reward_souls,
+    // W695 — open ("Summon & Fill") hunts carry their intended size so the client can
+    // render filled seats vs open seats + the leader's START NOW affordance.
+    ...(row.fill_target ? { fill_target: row.fill_target } : {}),
     // W677 — party size rides along so the client renders the right roster without
     // sniffing for a partner2 key.
     party_size: participantIds(row).length,
@@ -596,6 +604,7 @@ export async function handleCoopBossCreate(
     partner2_user_id?: unknown;
     ally_user_ids?: unknown;
     boss_id?: unknown;
+    fill_from_finder?: unknown;   // W695 — open the remaining seats to the raid finder
   };
   try {
     body = (await request.json()) as typeof body;
@@ -652,6 +661,18 @@ export async function handleCoopBossCreate(
   if (new Set(allies).size !== allies.length) {
     return jsonError(400, 'DUPLICATE_ALLY', 'Pick different allies — no duplicates.');
   }
+
+  // W695 — "Summon & Fill": open the remaining seats to the raid finder. Only a
+  // matchmaking boss can fill, and only an UNDER-full party has seats to open (a
+  // full party summons closed; a lone hunter uses the solo finder instead).
+  const fillFromFinder = body.fill_from_finder === true;
+  if (fillFromFinder) {
+    if (!cfg.matchmaking) return jsonError(400, 'NO_MATCHMAKING', 'This hunt has no raid finder.');
+    if (allies.length >= maxAllies) {
+      return jsonError(400, 'PARTY_FULL', 'Your party is already full — summon it directly.');
+    }
+  }
+  const fillTarget = fillFromFinder ? maxParty : null;
 
   for (const ally of allies) {
     if (!(await areAcceptedFriends(env, session.userId, ally))) {
@@ -781,9 +802,9 @@ export async function handleCoopBossCreate(
   const insertSql =
     `INSERT INTO coop_boss_instances
        (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
-        goal_steps, goal_flights, reward_souls, status)
+        goal_steps, goal_flights, reward_souls, fill_target, status)
      SELECT ${IP(id)}, ${IP(bossId)}, ${IP(cfg.rank)}, ${IP(session.userId)}, ${IP(partner1)}, ${IP(partner2)},
-            ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, 'pending'
+            ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, ${IP(fillTarget)}, 'pending'
       WHERE NOT EXISTS ( ${dupSelect(IP)} )
         AND ( ${IP(member ? 1 : 0)} = 1 OR (
               SELECT COUNT(*) FROM coop_boss_instances
@@ -997,15 +1018,20 @@ export async function handleCoopBossJoin(
         .bind(id),
     );
   }
+  // W695 — an OPEN ("Summon & Fill") hunt does NOT activate when the invited friends
+  // have all answered: it becomes READY and the raid finder fills its remaining seats
+  // (activation happens at fill_target, or on the leader's explicit /start).
   joinStmts.push(
     env.DB
       .prepare(
         `UPDATE coop_boss_instances
             SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ? AND status = 'pending'
-            AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NULL)`,
+            AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NULL)
+            AND (fill_target IS NULL
+                 OR (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?) >= fill_target)`,
       )
-      .bind(startsAt, endsAt, id, id),
+      .bind(startsAt, endsAt, id, id, id),
   );
   await env.DB.batch(joinStmts);
   // W694 review — joining a hunt of this boss ends any raid-finder search for it
@@ -1059,7 +1085,57 @@ export async function handleCoopBossDecline(
   session: SessionPayload,
   id: string,
 ): Promise<Response> {
-  return setTerminalStatus(env, session, id, 'declined', 'partner');
+  // W695 — on an OPEN ("Summon & Fill") pending hunt, a non-leader decline/leave
+  // removes ONLY that seat (the party shrinks and the seat reopens to the finder) —
+  // one hunter must not kill a forming party of four. A CLOSED hunt keeps the
+  // original rule: one decline ends the whole summons (a hand-picked half-party
+  // must never silently become a smaller hunt than was goaled).
+  // W695 review — rate-limit BEFORE any DB read (all paths burn the same token).
+  const rlDecline = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rlDecline.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const row = await loadInstance(env, id);
+  if (row && row.fill_target && row.status === 'pending' && row.challenger_user_id !== session.userId) {
+    const mine = (row.participants ?? []).find((p) => p.user_id === session.userId);
+    if (!mine) return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
+    const leaveRes = await env.DB.batch([
+      // Guarded on the hunt STILL being pending (W695 review: an unguarded DELETE
+      // raced the activation and ripped a hunter out of a live raid).
+      env.DB
+        .prepare(
+          `DELETE FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2
+             AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'pending')`,
+        )
+        .bind(id, session.userId),
+      // Clear a matching legacy partner column so the departed hunter can't be ghost-
+      // matched later (the dup/cap predicates probe these columns; partner_user_id is
+      // NOT NULL so it blanks to '' — no real user id ever equals ''). All CASE
+      // expressions read the PRE-update row (SQLite semantics), so the tests are safe.
+      // Guarded on pending like the DELETE (same race).
+      env.DB
+        .prepare(
+          `UPDATE coop_boss_instances
+              SET partner_user_id   = CASE WHEN partner_user_id  = ?2 THEN '' ELSE partner_user_id END,
+                  partner_joined_at = CASE WHEN partner_user_id  = ?2 THEN NULL ELSE partner_joined_at END,
+                  partner2_user_id   = CASE WHEN partner2_user_id = ?2 THEN NULL ELSE partner2_user_id END,
+                  partner2_joined_at = CASE WHEN partner2_user_id = ?2 THEN NULL ELSE partner2_joined_at END,
+                  updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?1 AND status = 'pending'`,
+        )
+        .bind(id, session.userId),
+    ]);
+    // If the guarded DELETE lost the race (the hunt went ACTIVE mid-leave), the
+    // hunter is still IN the live raid — return the real state, not left_seat.
+    const leftSeat = Number(leaveRes[0]?.meta?.changes ?? 0) > 0;
+    const refreshed = await loadInstance(env, id);
+    if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
+    const aliasMap = await getAliasMap(env, participantIds(refreshed));
+    return jsonOk({
+      ok: true,
+      ...(leftSeat ? { left_seat: true } : {}),
+      instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()),
+    });
+  }
+  return setTerminalStatus(env, session, id, 'declined', 'partner', true /* W695 — RL already burned above */);
 }
 
 // ── POST /v1/coop-boss/:id/cancel — withdraw a PENDING invite (challenger
@@ -1133,16 +1209,20 @@ export async function handleCoopBossCancel(
   return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, prog, award) });
 }
 
-/** Shared pending→terminal transition for decline/cancel. */
+/** Shared pending→terminal transition for decline/cancel. skipRl: the caller already
+ *  burned the RL_COOP_WRITE token (W695 — decline rate-limits before its branch). */
 async function setTerminalStatus(
   env: Env,
   session: SessionPayload,
   id: string,
   nextStatus: 'declined' | 'cancelled',
   who: 'partner' | 'challenger',
+  skipRl?: boolean,
 ): Promise<Response> {
-  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
-  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  if (!skipRl) {
+    const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+    if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  }
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
@@ -1408,19 +1488,184 @@ async function formRaidInstance(
   return row;
 }
 
-// Try to form a party from the current queue for a boss. Returns the new instance, or
-// null when there aren't enough available seekers. Concurrency-safe: the claim is a
-// DELETE … RETURNING, and SQLite serializes writers, so two passes can't double-book a
-// seeker — the loser simply claims fewer rows and forms nothing (re-queuing them).
+// W695 — a solo-only pool holds out for a FULL party this long before settling for a
+// smaller one (owner: "fill toward 5"). Open party-hunts are unaffected (their leader
+// decides via START NOW).
+const RAID_SOLO_PATIENCE_SEC = 180;
+
+// W695 — a READY open ("Summon & Fill") hunt: pending, fill_target set, every invited
+// friend answered, seats still open. Oldest first (FIFO across hunts too).
+interface OpenHunt { id: string; challenger_user_id: string; created_at: string; size: number; fill_target: number }
+async function loadReadyOpenHunts(env: Env, bossId: string): Promise<OpenHunt[]> {
+  const rows = await env.DB
+    .prepare(
+      `SELECT i.id, i.challenger_user_id, i.created_at, i.fill_target,
+              (SELECT COUNT(*) + 1 FROM coop_boss_participants p WHERE p.instance_id = i.id) AS size
+         FROM coop_boss_instances i
+        WHERE i.boss_id = ?1 AND i.status = 'pending' AND i.fill_target IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM coop_boss_participants p2 WHERE p2.instance_id = i.id AND p2.joined_at IS NULL)
+          AND (SELECT COUNT(*) + 1 FROM coop_boss_participants p3 WHERE p3.instance_id = i.id) < i.fill_target
+        ORDER BY i.created_at`,
+    )
+    .bind(bossId)
+    .all<OpenHunt>();
+  return rows.results ?? [];
+}
+
+// Activate an open hunt IFF it reached its fill target (guarded — races safely with a
+// leader /start or a second matchmaking pass). Returns true when THIS call activated.
+async function activateIfFull(env: Env, huntId: string, windowHours: number): Promise<boolean> {
+  const nowMs = Date.now();
+  const startsAt = new Date(nowMs).toISOString();
+  const endsAt = new Date(nowMs + windowHours * 3600 * 1000).toISOString();
+  const upd = await env.DB
+    .prepare(
+      `UPDATE coop_boss_instances
+          SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'pending' AND fill_target IS NOT NULL
+          AND (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?) >= fill_target`,
+    )
+    .bind(startsAt, endsAt, huntId, huntId)
+    .run();
+  return Number(upd?.meta?.changes ?? 0) > 0;
+}
+
+// Push "the hunt is on" to every hunter on a just-activated instance.
+async function notifyHuntLive(env: Env, huntId: string, bossId: string, ctx?: ExecutionContext): Promise<void> {
+  if (!ctx) return;
+  const row = await loadInstance(env, huntId);
+  if (!row || row.status !== 'active') return;
+  for (const uid of participantIds(row)) {
+    ctx.waitUntil(
+      notifyUser(env, uid, {
+        title: 'The Raid Begins',
+        body: 'Your party is assembled — the hunt is on.',
+        type: 'coop_joined',
+        data: { bossId },
+      }),
+    );
+  }
+}
+
+// W695 — merge open hunt B (younger) into open hunt A (older). ONE atomic env.DB.batch
+// (a single D1 transaction — W695 review: a separate cancel-then-copy stranded B's
+// party when A left 'pending' in the gap):
+//   stmt 1 cancels B, guarded on B pending + A pending + the COMBINED size fitting A's
+//          fill_target (capacity is checked atomically, not from a snapshot), stamping
+//          result='merged' so a raced leader-cancel (no marker) is distinguishable;
+//   stmts 2-3 copy B's roster + leader into A, guarded on B carrying the 'merged'
+//          marker — inside the same transaction they run IFF stmt 1 applied.
+// If stmt 1 lost (0 changes), NOTHING happened — B stands untouched. bossId is the
+// BOSS id for the push deep-link (review: b.id broke it).
+async function mergeOpenHunts(env: Env, bossId: string, a: OpenHunt, b: OpenHunt, ctx?: ExecutionContext): Promise<boolean> {
+  const res = await env.DB.batch([
+    env.DB
+      .prepare(
+        `UPDATE coop_boss_instances
+            SET status = 'cancelled', result = 'merged', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?1 AND status = 'pending' AND fill_target IS NOT NULL
+            AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?2 AND status = 'pending' AND fill_target IS NOT NULL)
+            AND ( (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?2)
+                + (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?1) )
+                <= (SELECT fill_target FROM coop_boss_instances WHERE id = ?2)`,
+      )
+      .bind(b.id, a.id),
+    // B's answered allies … (never A's own challenger — belt-and-suspenders vs overlap)
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+           SELECT ?1, user_id, CURRENT_TIMESTAMP FROM coop_boss_participants
+            WHERE instance_id = ?2
+              AND user_id <> (SELECT challenger_user_id FROM coop_boss_instances WHERE id = ?1)
+              AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?2 AND status = 'cancelled' AND result = 'merged')`,
+      )
+      .bind(a.id, b.id),
+    // … and B's leader all become answered participants of A.
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+           SELECT ?1, ?2, CURRENT_TIMESTAMP
+            WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?3 AND status = 'cancelled' AND result = 'merged')`,
+      )
+      .bind(a.id, b.challenger_user_id, b.id),
+  ]);
+  if (!(Number(res[0]?.meta?.changes ?? 0) > 0)) return false;   // raced a start/cancel/fill — B stands
+  if (ctx) {
+    const merged = await loadInstance(env, b.id);
+    const names = merged ? participantIds(merged) : [b.challenger_user_id];
+    for (const uid of names) {
+      ctx.waitUntil(
+        notifyUser(env, uid, {
+          title: 'Parties United',
+          body: 'Your party joined forces with another — the raid fills.',
+          type: 'coop_joined',
+          data: { bossId },
+        }),
+      );
+    }
+  }
+  return true;
+}
+
+// Try to fill/form parties for a boss. Order of operations (each step FIFO-fair):
+//   1. MERGE ready open party-hunts (3+2, 2+2 …) — the owner's "party matchmakes with
+//      another party" case; the older hunt absorbs the younger.
+//   2. POUR fresh solo seekers into the oldest ready open hunt's seats.
+//   3. SOLO POOL — form a party from the remaining solos: a FULL party immediately, a
+//      smaller one only after the oldest solo has waited out RAID_SOLO_PATIENCE_SEC.
+// Any step that fills a hunt to target activates it. Returns the instance the CALLER
+// ended up on (join tick checks membership), else null. Concurrency-safe: the solo
+// claim is DELETE … RETURNING; hunt mutations are guarded UPDATEs.
 async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): Promise<CoopBossRow | null> {
   const cfg = COOP_BOSS_CFG[bossId];
   if (!cfg) return null;
   const minParty = cfg.minParty ?? cfg.partySize ?? 2;
   const maxParty = cfg.maxParty ?? cfg.partySize ?? 2;
-  // Available seekers: heartbeat-fresh AND not already on a live hunt of this boss.
+
+  // ── 1. Merge ready open hunts (greedy, oldest absorbs the largest that fits) ──
+  let openHunts = await loadReadyOpenHunts(env, bossId);
+  let mergedAny = false;
+  // W695 review — members-only re-check for the ABSORBED party too: a roster with a
+  // lapsed membership is skipped (left standing, never copied into the members raid).
+  const rosterAllMembers = async (huntId: string, leaderId: string): Promise<boolean> => {
+    if (!cfg.memberOnly) return true;
+    const row = await loadInstance(env, huntId);
+    const ids = row ? participantIds(row) : [leaderId];
+    for (const uid of ids) {
+      const { member } = await readEntitlements(env, uid);
+      if (!member) return false;
+    }
+    return true;
+  };
+  for (let i = 0; i < openHunts.length; i++) {
+    const a = openHunts[i];
+    if (!a || a.size >= a.fill_target) continue;
+    // largest younger partner that fits A's open seats
+    let bestJ = -1;
+    for (let j = i + 1; j < openHunts.length; j++) {
+      const b = openHunts[j];
+      if (!b) continue;
+      if (a.size + b.size <= a.fill_target && (bestJ === -1 || b.size > (openHunts[bestJ] as OpenHunt).size)) bestJ = j;
+    }
+    if (bestJ !== -1) {
+      const b = openHunts[bestJ] as OpenHunt;
+      if (!(await rosterAllMembers(b.id, b.challenger_user_id))) { openHunts[bestJ] = null as unknown as OpenHunt; continue; }
+      if (await mergeOpenHunts(env, bossId, a, b, ctx)) {
+        a.size += b.size;
+        openHunts[bestJ] = null as unknown as OpenHunt;
+        mergedAny = true;
+        if (await activateIfFull(env, a.id, cfg.windowHours)) await notifyHuntLive(env, a.id, bossId, ctx);
+      }
+    }
+  }
+  if (mergedAny) openHunts = await loadReadyOpenHunts(env, bossId);
+
+  // ── Fresh, eligible solo seekers (oldest first, with their wait age) ──
   const avail = await env.DB
     .prepare(
-      `SELECT q.user_id FROM raid_queue q
+      `SELECT q.user_id, q.created_at,
+              (strftime('%s','now') - strftime('%s', q.created_at)) AS waited_sec
+         FROM raid_queue q
         WHERE q.boss_id = ?1
           AND ${RAID_QUEUE_FRESH_SQL.replace('?T', '?2')}
           AND NOT EXISTS (
@@ -1432,20 +1677,22 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
         ORDER BY q.created_at`,
     )
     .bind(bossId, RAID_QUEUE_TTL_SEC)
-    .all<{ user_id: string }>();
-  let seekers = (avail.results ?? []).map((r) => r.user_id);
-  if (seekers.length < minParty) return null;
+    .all<{ user_id: string; created_at: string; waited_sec: number }>();
+  let seekers = (avail.results ?? []).map((r) => ({ user_id: r.user_id, created_at: r.created_at, waited_sec: Number(r.waited_sec) }));
+
+  if (!seekers.length && !openHunts.length) return null;
 
   // W694 review (HIGH) — members-only re-check at FORM time, not just enqueue time: a
   // membership that lapsed/refunded while queued must not ride into the members raid
   // (mirrors the create-path per-ally check + the join-path re-check). Lapsed seekers
   // are dropped from the queue outright — their next poll re-gates them with the 403.
-  if (cfg.memberOnly) {
-    const kept: string[] = [];
+  if (cfg.memberOnly && seekers.length) {
+    const kept: typeof seekers = [];
     const lapsed: string[] = [];
-    for (const uid of seekers.slice(0, maxParty + 2)) {
-      const { member } = await readEntitlements(env, uid);
-      (member ? kept : lapsed).push(uid);
+    for (const s of seekers.slice(0, maxParty + 2)) {
+      const { member } = await readEntitlements(env, s.user_id);
+      if (member) kept.push(s);
+      else lapsed.push(s.user_id);
       if (kept.length >= maxParty) break;
     }
     if (lapsed.length) {
@@ -1454,50 +1701,112 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
       );
     }
     seekers = kept;
-    if (seekers.length < minParty) return null;
   }
 
-  const party = seekers.slice(0, maxParty);
-  const ph = party.map(() => '?').join(', ');
-  // Claim WITH created_at so any re-queue preserves the hunter's FIFO position.
-  const claimed = await env.DB
-    .prepare(`DELETE FROM raid_queue WHERE boss_id = ? AND user_id IN (${ph}) RETURNING user_id, created_at`)
-    .bind(bossId, ...party)
-    .all<{ user_id: string; created_at: string | null }>();
-  const claimedRows = claimed.results ?? [];
+  // Claim solos WITH created_at so any re-queue preserves FIFO, then re-verify in-hunt
+  // (W694 review MEDIUM: the avail read is a snapshot — never double-book a hunter who
+  // got hand-summoned between the read and the claim; busy claims are simply dropped).
+  const claimSolos = async (want: number): Promise<{ user_id: string; created_at: string | null }[]> => {
+    const pick = seekers.slice(0, want);
+    if (!pick.length) return [];
+    seekers = seekers.slice(pick.length);
+    const ph = pick.map(() => '?').join(', ');
+    const claimed = await env.DB
+      .prepare(`DELETE FROM raid_queue WHERE boss_id = ? AND user_id IN (${ph}) RETURNING user_id, created_at`)
+      .bind(bossId, ...pick.map((s) => s.user_id))
+      .all<{ user_id: string; created_at: string | null }>();
+    const free: { user_id: string; created_at: string | null }[] = [];
+    for (const r of claimed.results ?? []) {
+      const inHunt = await env.DB
+        .prepare(
+          `SELECT 1 FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+             AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
+           LIMIT 1`,
+        )
+        .bind(bossId, r.user_id)
+        .first();
+      if (!inHunt) free.push(r);
+    }
+    return free;
+  };
 
-  // W694 review (MEDIUM) — the avail read is a snapshot; between it and the claim a
-  // hunter can join a hand-summoned hunt of this boss. Re-verify AFTER the claim and
-  // re-queue (FIFO-preserved) anyone now in a live hunt so they're never double-booked.
-  const free: typeof claimedRows = [];
-  const busy: typeof claimedRows = [];
-  for (const r of claimedRows) {
-    const inHunt = await env.DB
-      .prepare(
-        `SELECT 1 FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
-           AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
-         LIMIT 1`,
-      )
-      .bind(bossId, r.user_id)
-      .first();
-    (inHunt ? busy : free).push(r);
+  // ── 2. POUR solos into the oldest ready open hunts' seats ──
+  for (const hunt of openHunts) {
+    if (!hunt || !seekers.length) break;
+    const openSeats = hunt.fill_target - hunt.size;
+    if (openSeats <= 0) continue;
+    const poured = await claimSolos(openSeats);
+    if (!poured.length) continue;
+    const landed: typeof poured = [];
+    for (const s of poured) {
+      // Guarded on the hunt still being a pending open hunt AND on live capacity —
+      // the COUNT predicate is evaluated inside this single statement, so concurrent
+      // passes can never over-fill past fill_target (W695 review: the in-memory
+      // hunt.size snapshot alone allowed a 7-hunter 5-cap raid). A lost race
+      // re-queues the solo below.
+      const ins = await env.DB
+        .prepare(
+          `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+             SELECT ?1, ?2, CURRENT_TIMESTAMP
+              WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'pending' AND fill_target IS NOT NULL)
+                AND (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?1)
+                    < (SELECT fill_target FROM coop_boss_instances WHERE id = ?1)`,
+        )
+        .bind(hunt.id, s.user_id)
+        .run();
+      if (Number(ins?.meta?.changes ?? 0) > 0) {
+        landed.push(s);
+        hunt.size++;
+        if (ctx) {
+          ctx.waitUntil(
+            notifyUser(env, s.user_id, {
+              title: 'Party Found',
+              body: 'You joined a forming raid party.',
+              type: 'coop_joined',
+              data: { bossId },
+            }),
+          );
+          ctx.waitUntil(
+            notifyUser(env, hunt.challenger_user_id, {
+              title: 'A Hunter Answers',
+              body: 'The raid finder filled a seat in your party.',
+              type: 'coop_joined',
+              data: { bossId },
+            }),
+          );
+        }
+      } else {
+        await requeueSeekers(env, bossId, [s]);   // hunt closed mid-pour — keep them seeking
+      }
+    }
+    if (landed.length && (await activateIfFull(env, hunt.id, cfg.windowHours))) {
+      await notifyHuntLive(env, hunt.id, bossId, ctx);
+    }
   }
-  // (busy hunters are simply dropped from the queue — they're already hunting.)
-  void busy;
 
-  if (free.length < minParty) {
-    // Raced below the minimum — re-queue the free claims so they keep seeking.
-    await requeueSeekers(env, bossId, free);
-    return null;
+  // ── 3. SOLO POOL — form a party from the remaining solos ──
+  // A FULL party forms immediately; a smaller one only once the oldest solo has waited
+  // out the patience window ("fill toward 5" — don't lock two hunters into a brutal
+  // sub-party in the first minute when three more might be seconds away).
+  if (seekers.length >= minParty) {
+    const oldestWaited = seekers[0] ? seekers[0].waited_sec : 0;
+    if (seekers.length >= maxParty || oldestWaited >= RAID_SOLO_PATIENCE_SEC) {
+      const free = await claimSolos(Math.min(seekers.length, maxParty));
+      if (free.length < minParty) {
+        await requeueSeekers(env, bossId, free);   // raced below the minimum — keep seeking
+      } else {
+        // W694 review (LOW) — the claim auto-committed; a transient form failure must
+        // re-queue the claimed hunters, not silently drop them.
+        try {
+          return await formRaidInstance(env, bossId, free.map((r) => r.user_id), ctx);
+        } catch (e) {
+          await requeueSeekers(env, bossId, free);
+          throw e;
+        }
+      }
+    }
   }
-  // W694 review (LOW) — the claim DELETE auto-committed; if the form batch fails
-  // transiently the claimed hunters must be re-queued, not silently dropped.
-  try {
-    return await formRaidInstance(env, bossId, free.map((r) => r.user_id), ctx);
-  } catch (e) {
-    await requeueSeekers(env, bossId, free);
-    throw e;
-  }
+  return null;
 }
 
 // ── POST /v1/raid-queue — enter the raid finder (idempotent; also the poll tick) ──
@@ -1570,6 +1879,24 @@ export async function handleRaidQueueJoin(
     const aliasMap = await getAliasMap(env, participantIds(inst));
     return jsonOk({ ok: true, matched: true, instance: serializeCoop(inst, aliasMap, session.userId, emptyProgress()) });
   }
+  // W695 — the POUR path may have landed the CALLER on an open party-hunt without
+  // returning it (matchmakeRaid returns only a solo-pool instance). Detect it and
+  // report the match, or the client's next tick would 409 into an error state.
+  const mineNow = await env.DB
+    .prepare(
+      `SELECT i.id FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+         AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
+       LIMIT 1`,
+    )
+    .bind(bossId, session.userId)
+    .first<{ id: string }>();
+  if (mineNow) {
+    const row = await loadInstance(env, mineNow.id);
+    if (row) {
+      const aliasMap = await getAliasMap(env, participantIds(row));
+      return jsonOk({ ok: true, matched: true, instance: serializeCoop(row, aliasMap, session.userId, emptyProgress()) });
+    }
+  }
   // Waiting count = heartbeat-FRESH seekers only (an aged ghost row must not inflate
   // the lobby's "N searching" line into a promise matchmaking can't keep).
   const cnt = await env.DB
@@ -1590,6 +1917,121 @@ export async function handleRaidQueueLeave(
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   await env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ?').bind(session.userId).run();
   return jsonOk({ ok: true });
+}
+
+// ── POST /v1/coop-boss/:id/start — leader starts an under-full OPEN hunt (W695) ──
+// "Brutal below 5" is the leader's call: once every invited friend has answered and
+// the party meets the boss minimum, the leader may start rather than keep filling.
+export async function handleRaidStart(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  id: string,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  const row = await loadInstance(env, id);
+  if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
+  if (row.challenger_user_id !== session.userId) {
+    return jsonError(403, 'FORBIDDEN', 'Only the party leader can start the hunt.');
+  }
+  if (row.status !== 'pending' || !row.fill_target) {
+    return jsonError(400, 'BAD_STATE', 'Only a forming open hunt can be started.');
+  }
+  if ((row.participants ?? []).some((p) => !p.joined_at)) {
+    return jsonError(400, 'NOT_READY', "Your invited allies haven't all answered yet.");
+  }
+  const cfg = COOP_BOSS_CFG[row.boss_id];
+  const minParty = cfg ? (cfg.minParty ?? cfg.partySize ?? 2) : 2;
+  const size = participantIds(row).length;
+  if (size < minParty) {
+    return jsonError(400, 'TOO_SMALL', `The hunt needs at least ${minParty} hunters to begin.`);
+  }
+  // W695 review — the leader's membership is re-verified at START (mirrors the join
+  // path's re-check: a lapse between summon and start can't launch the members raid).
+  if (cfg?.memberOnly) {
+    const { member } = await readEntitlements(env, session.userId);
+    if (!member) return jsonError(403, 'MEMBERS_ONLY', 'The Grinning God answers only to members.');
+  }
+  const windowHours = cfg ? cfg.windowHours : 24;
+  const nowMs = Date.now();
+  const startsAt = new Date(nowMs).toISOString();
+  const endsAt = new Date(nowMs + windowHours * 3600 * 1000).toISOString();
+  // W695 review — the size/answered checks above ran on a SNAPSHOT; re-assert them
+  // INSIDE the activation UPDATE so a racing leave-seat can't start an under-minimum
+  // hunt and a racing unanswered state can't start the clock early.
+  const upd = await env.DB
+    .prepare(
+      `UPDATE coop_boss_instances
+          SET status = 'active', starts_at = ?1, ends_at = ?2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?3 AND status = 'pending'
+          AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?3 AND joined_at IS NULL)
+          AND (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?3) >= ?4`,
+    )
+    .bind(startsAt, endsAt, id, minParty)
+    .run();
+  const started = Number(upd?.meta?.changes ?? 0) > 0;
+  if (started) await notifyHuntLive(env, id, row.boss_id, ctx);
+  const refreshed = await loadInstance(env, id);
+  if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
+  if (!started && refreshed.status === 'pending') {
+    // The guarded UPDATE refused (a seat left / a seat unanswered mid-flight).
+    return jsonError(400, 'NOT_READY', 'The party changed while starting — check the seats and try again.');
+  }
+  const aliasMap = await getAliasMap(env, participantIds(refreshed));
+  return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
+}
+
+// ── POST /v1/coop-boss/:id/fill-tick — an open hunt's lobby poll (W695) ──
+// Members of a FORMING open hunt poll this: it drives a matchmaking pass (so two open
+// parties merge even when NO solos are queued — the parties themselves are the pulse)
+// and returns the freshest view. If this hunt was ABSORBED into an older party, the
+// successor hunt is found and returned so the member's client follows the merge.
+export async function handleRaidFillTick(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  id: string,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  let row = await loadInstance(env, id);
+  if (!row) return jsonError(404, 'NOT_FOUND', 'Co-op hunt not found.');
+  if (!isParticipant(row, session.userId)) {
+    return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
+  }
+  if (row.status === 'pending' && row.fill_target) {
+    await matchmakeRaid(env, row.boss_id, ctx);
+    row = (await loadInstance(env, id)) ?? row;
+  }
+  // Absorbed into an older party? Follow the merge to the successor hunt.
+  if (row.status === 'cancelled' && row.fill_target) {
+    const successor = await env.DB
+      .prepare(
+        `SELECT i.id FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+           AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
+         LIMIT 1`,
+      )
+      .bind(row.boss_id, session.userId)
+      .first<{ id: string }>();
+    if (successor) {
+      const next = await loadInstance(env, successor.id);
+      if (next) {
+        const aliasMap2 = await getAliasMap(env, participantIds(next));
+        // W695 review — the successor may already be ACTIVE (merge filled it): serve
+        // real progress, not zeroed bars.
+        const nextProg = next.status === 'active' ? await getCoopProgress(env, next.id) : emptyProgress();
+        return jsonOk({ ok: true, merged: true, instance: serializeCoop(next, aliasMap2, session.userId, nextProg) });
+      }
+    }
+  }
+  const aliasMap = await getAliasMap(env, participantIds(row));
+  const prog = row.status === 'active' ? await getCoopProgress(env, row.id) : emptyProgress();
+  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, prog) });
 }
 
 // ── GET /v1/raid-queue?boss_id= — am I queued + how many are waiting ──

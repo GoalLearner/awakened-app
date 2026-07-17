@@ -31458,6 +31458,9 @@ button.guildhall-summary-tile:active {
 .coop-finder-count { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
 .coop-finder-count b { color: #fff; }
 @media (prefers-reduced-motion: reduce) { .coop-finder-spin { animation-duration: 2.4s; } }
+/* W695 — compact searching block inside an open ("Summon & Fill") party lobby. */
+.coop-finder--inline { flex-direction: row; justify-content: center; padding: 10px 12px; gap: 10px; margin: 4px 0 10px; }
+.coop-finder--inline .coop-finder-spin { width: 18px; height: 18px; border-width: 2px; }
 
 .coop-goal-card { text-align: center; padding: 20px; margin: 0 0 20px; border-radius: 16px;
   background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));

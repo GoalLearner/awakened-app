@@ -77,6 +77,9 @@ import {
   handleRaidQueueJoin,
   handleRaidQueueLeave,
   handleRaidQueueStatus,
+  // W695 — "Summon & Fill" open party-hunts.
+  handleRaidStart,
+  handleRaidFillTick,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
 import {
@@ -124,7 +127,7 @@ const DUELS_RESOLVE_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/resolve$/;
 // Co-op Dungeon Bosses v1 (W370). Action routes (capture #1 = instance id,
 // #2 = action) are matched before the bare detail route so /:id/join etc.
 // never shadow GET /:id.
-const COOP_BOSS_ACTION_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})\/(join|decline|cancel|resolve|claim)$/;
+const COOP_BOSS_ACTION_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})\/(join|decline|cancel|resolve|claim|start|fill-tick)$/;   // W695 — start + fill-tick (open "Summon & Fill" hunts)
 const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 
 export default {
@@ -371,6 +374,10 @@ export default {
               response = await handleCoopBossCancel(request, env, session, instanceId);
             } else if (action === 'resolve') {
               response = await handleCoopBossResolve(request, env, session, instanceId, ctx);   // W662 — ctx for the hunt-complete push
+            } else if (action === 'start') {
+              response = await handleRaidStart(request, env, session, instanceId, ctx);   // W695 — leader starts an under-full open hunt
+            } else if (action === 'fill-tick') {
+              response = await handleRaidFillTick(request, env, session, instanceId, ctx);   // W695 — open-hunt lobby poll (drives merges)
             } else {
               response = await handleCoopBossClaim(request, env, session, instanceId);
             }

@@ -1531,13 +1531,19 @@
   // W692 — N-hunter model: summon with an ARRAY of ally user_ids (1..4). The server
   // reads ally_user_ids[]; we also dual-write partner_user_id/partner2_user_id so an
   // older worker (mid-deploy) still accepts the create.
-  function coopBossCreate(bossId, allyUserIds) {
+  // W695 — fillFromFinder: open the remaining seats to the raid finder ("Summon & Fill").
+  function coopBossCreate(bossId, allyUserIds, fillFromFinder) {
     var allies = (Array.isArray(allyUserIds) ? allyUserIds : [allyUserIds]).filter(Boolean);
     var body = { boss_id: bossId, ally_user_ids: allies.slice() };
     if (allies[0]) body.partner_user_id = allies[0];
     if (allies[1]) body.partner2_user_id = allies[1];
+    if (fillFromFinder) body.fill_from_finder = true;
     return _authedFetch('POST', '/v1/coop-boss', body);
   }
+  // W695 — open ("Summon & Fill") hunt controls: the leader's early start, and the
+  // forming-lobby poll (drives party merges + returns the freshest hunt view).
+  function coopBossStart(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/start'); }
+  function coopBossFillTick(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/fill-tick'); }
   function coopBossJoin(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/join'); }
   function coopBossDecline(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/decline'); }
   function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }
@@ -1980,6 +1986,8 @@
     coopBossCancel,
     coopBossResolve,
     coopBossClaim,
+    coopBossStart,
+    coopBossFillTick,
     coopPacts,
     raidQueueJoin,
     raidQueueLeave,

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w694'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w695'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46193,6 +46193,7 @@
     document.body.classList.remove('bfs-locked');
     overlay.scrollTop = 0;
     _coopStopPolling();
+    _coopStopFillPoll();   // W695 — the open-hunt lobby poll is sheet-scoped (push covers the rest)
     // W694 — closing the sheet leaves the raid finder (the lobby is active-only, so a
     // member is never matched into a live 72h raid while they've walked away).
     _coopLeaveFinderIfActive();
@@ -46229,6 +46230,41 @@
     _coopStopFinder();
     try { Auth.raidQueueLeave(); } catch (_) {}   // fire-and-forget
   }
+  // ── W695 — open ("Summon & Fill") hunt lobby poll ──
+  // While the sheet shows a PENDING open hunt, tick /fill-tick every 12s: it drives the
+  // server matchmaking pass (so two open parties merge even with zero solos queued) and
+  // returns the freshest hunt — including the SUCCESSOR hunt if ours was absorbed.
+  let _coopFillTimer = null;
+  // W695 review — the poll is SHEET-SCOPED: it must never start (or restart via an
+  // in-flight response's _coopAfterInstanceUpdate) while the overlay is closed.
+  function _coopSheetOpen() {
+    try { const ov = document.getElementById('coop-fs-overlay'); return !!(ov && !ov.classList.contains('hidden')); } catch (_) { return false; }
+  }
+  function _coopStartFillPoll() {
+    if (_coopFillTimer || !_coopSheetOpen()) return;
+    try { _coopFillTimer = setInterval(function () { _coopFillTick(); }, 12000); } catch (_) {}
+  }
+  function _coopStopFillPoll() {
+    if (_coopFillTimer) { try { clearInterval(_coopFillTimer); } catch (_) {} _coopFillTimer = null; }
+  }
+  async function _coopFillTick() {
+    const inst = _coopSheet.instance;
+    if (!_coopSheetOpen() || !inst || inst.status !== 'pending' || !inst.fill_target) { _coopStopFillPoll(); return; }
+    let res;
+    try { res = await Auth.coopBossFillTick(inst.id); } catch (_) { res = { ok: false }; }
+    if (!_coopSheetOpen()) { _coopStopFillPoll(); return; }   // closed mid-flight
+    const cur = _coopSheet.instance;
+    if (!cur || cur.id !== inst.id) return;   // sheet moved on mid-flight
+    if (res && res.ok && res.instance) {
+      // W695 review — never let a stale in-flight response DOWNGRADE fresher local
+      // state (e.g. revert an already-ACTIVE hunt to the forming lobby).
+      if (cur.status !== 'pending' && res.instance.status === 'pending' && res.instance.id === cur.id) return;
+      _coopSheet.instance = res.instance;
+      if (res.merged && res.instance.id) _coopSheet.pinnedId = res.instance.id;   // follow the absorb
+      _coopAfterInstanceUpdate();
+    }
+  }
+
   async function _coopFinderTick() {
     const cfg = _coopSheet.cfg;
     if (!cfg || !_coopSheet.finding) { _coopStopFinder(); return; }
@@ -46306,6 +46342,10 @@
     const inst = _coopSheet.instance;
     try { _coopSettleFees([inst]); } catch (_) {}   // W648 — refund a never-ran hunt / consume a started one
     if (inst && (inst.status === 'pending' || inst.status === 'active')) _coopSetEngaged(true);
+    // W695 — a PENDING open ("Summon & Fill") hunt runs the lobby poll (merges + fills);
+    // any other state stops it.
+    if (inst && inst.status === 'pending' && inst.fill_target) _coopStartFillPoll();
+    else _coopStopFillPoll();
     if (inst && inst.status === 'active') {
       if (_coopGoalReached(inst)) { _coopResolve(inst.id); return; }   // W447 — 'both' needs steps AND flights
       if (inst.time_remaining_ms === 0) { _coopResolve(inst.id); return; }
@@ -46644,12 +46684,15 @@
   // ally_user_ids[]; the Auth wrapper also dual-writes partner_user_id/partner2 for
   // old-server compat. Callers: single-pick passes [uid]; the multi-select confirm
   // passes the whole selection.
-  async function _coopCreate(allyUserIds) {
+  // W695 — fillFromFinder ("Summon & Fill"): open the unfilled seats to the raid finder;
+  // valid with 1..(maxAllies-1) picked friends (a full pick summons closed instead).
+  async function _coopCreate(allyUserIds, fillFromFinder) {
     const cfg = _coopSheet.cfg; if (!cfg) return;
     const allies = (Array.isArray(allyUserIds) ? allyUserIds : [allyUserIds]).filter(Boolean);
     const minAllies = Math.max(1, ((cfg.minParty | 0) || (cfg.partySize | 0) || 2) - 1);
     const maxAllies = Math.max(minAllies, ((cfg.maxParty | 0) || (cfg.partySize | 0) || 2) - 1);
-    if (allies.length < minAllies || allies.length > maxAllies) return;   // client bound; server re-checks
+    const fill = !!fillFromFinder && !!cfg.matchmaking && allies.length >= 1 && allies.length < maxAllies;
+    if (!fill && (allies.length < minAllies || allies.length > maxAllies)) return;   // client bound; server re-checks
     // W648 — entrance fee, checked BEFORE the network call so a broke hunter
     // gets an instant, clear answer (and no server round-trip).
     const fee = _coopEntranceFee(cfg);
@@ -46658,7 +46701,7 @@
     }
     _coopSheet.busy = true; _coopSheet.error = null; renderCoopSheet();   // W649 — a new attempt clears the stale refusal
     let res;
-    try { res = await Auth.coopBossCreate(cfg.id, allies); } catch (_) { res = { ok: false }; }   // W692 — ally array
+    try { res = await Auth.coopBossCreate(cfg.id, allies, fill); } catch (_) { res = { ok: false }; }   // W692 ally array · W695 fill flag
     _coopSheet.busy = false;
     if (res && res.ok && res.instance) {
       _coopChargeFee(res.instance.id, cfg, 'summon');   // W648 — charge only on server-accepted create
@@ -46728,6 +46771,32 @@
       _coopSheet.picking = false;
       _coopCreate(sel.slice()); return;
     }
+    // W695 — "Summon & Fill": summon the picked friends and open the rest to the finder.
+    if (action === 'pick-confirm-fill') {
+      const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
+      const _cfg = _coopSheet.cfg || {};
+      const maxAllies = Math.max(1, ((_cfg.maxParty | 0) || (_cfg.partySize | 0) || 2) - 1);
+      if (!_cfg.matchmaking || sel.length < 1 || sel.length >= maxAllies) return;
+      _coopSheet.picking = false;
+      _coopCreate(sel.slice(), true); return;
+    }
+    // W695 — the leader starts an under-full open hunt ("brutal below 5" is their call).
+    if (action === 'start') {
+      const _inst = _coopSheet.instance; if (!_inst || !_inst.id) return;
+      let okConfirm = true;
+      try {
+        const n = _coopPartySize(_inst);
+        const target = (_inst.fill_target | 0) || ((_coopSheet.cfg && _coopSheet.cfg.maxParty) | 0) || 5;
+        if (n < target) okConfirm = window.confirm('Start with ' + n + ' of ' + target + ' hunters? The goal never shrinks — a smaller party carries a heavier share.');
+      } catch (_) {}
+      if (!okConfirm) return;
+      _coopSheet.busy = true; renderCoopSheet();
+      let res; try { res = await Auth.coopBossStart(_inst.id); } catch (_) { res = { ok: false }; }
+      _coopSheet.busy = false;
+      if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
+      else { _coopSheet.error = (res && res.code) || 'ERROR'; renderCoopSheet(); }
+      return;
+    }
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
@@ -46744,7 +46813,13 @@
       else if (action === 'cancel') res = await Auth.coopBossCancel(inst.id);
     } catch (_) { res = { ok: false }; }
     _coopSheet.busy = false;
-    if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
+    if (res && res.ok && res.left_seat) {
+      // W695 — left an open party's seat: the hunt survives WITHOUT us; back to recruit.
+      _coopSheet.instance = null; _coopSheet.pinnedId = null;
+      try { showHabitToast('You left the party. The hunt goes on without you.'); } catch (_) {}
+      _coopAfterInstanceUpdate();
+    }
+    else if (res && res.ok && res.instance) { _coopSheet.instance = res.instance; _coopAfterInstanceUpdate(); }
     else if (res && !res.ok && (res.code === 'INSUFFICIENT_SOULS' || res.code === 'CAP_REACHED')) {
       // W648 — keep the summons sheet up and show WHY, instead of a blind refresh.
       _coopSheet.error = res.code; renderCoopSheet();
@@ -47037,6 +47112,55 @@
     // on pending \u2014 an answered ally withdraws via the summons' Decline instead,
     // which stays reachable until they answer; after answering they are committed
     // unless the summoner cancels).
+    // W695 — a PENDING open ("Summon & Fill") hunt: filled seats + a live "searching"
+    // block for the open ones. The finder pours hunters in / merges parties via the
+    // fill-tick poll; the LEADER may start early (>= minParty) or cancel; an invited/
+    // matchmade member may LEAVE (server: seat-leave, the party survives).
+    if (inst.fill_target) {
+      const target = inst.fill_target | 0;
+      const seatRowF = function (p) {
+        const a = esc(_coopAlias((p && p.alias) || 'your ally'));
+        return p && p.joined
+          ? '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> ' + a + ' is in the party</div>'
+          : '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + a + ' to accept</div>';
+      };
+      const isLeader = inst.role === 'challenger';
+      const myId = _coopMyId();
+      let rows = isLeader ? '' : '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> You are in the party</div>';
+      const others = _coopOthers(inst);
+      let unanswered = 0;
+      others.forEach(function (p) { if (p && p.user_id !== myId) { rows += seatRowF(p); if (!p.joined) unanswered++; } });
+      const size = _coopPartySize(inst);
+      const openSeats = Math.max(0, target - size);
+      // W695 review — the finder only fills a READY hunt (every invited friend has
+      // answered). While seats are unanswered, say THAT — don't promise a search
+      // the backend is deliberately not running yet.
+      const searching = (openSeats > 0 && unanswered === 0)
+        ? '<div class="coop-finder coop-finder--inline">' +
+            '<div class="coop-finder-spin" aria-hidden="true"></div>' +
+            '<div class="coop-finder-sub">Searching for ' + openSeats + ' more hunter' + (openSeats === 1 ? '' : 's') + '…</div>' +
+          '</div>'
+        : '';
+      const cfgMin = ((COOP_BOSSES[inst.boss_id] || {}).minParty | 0) || 2;
+      const canStart = isLeader && unanswered === 0 && size >= cfgMin;
+      const controls = isLeader
+        ? (openSeats > 0 ? '<button class="coop-cta" data-coop-action="start"' + (canStart ? '' : ' disabled') + dis + '>START WITH ' + size + '</button>' : '') +
+          '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL SUMMONS</button>'
+        : '<button class="coop-cta coop-cta--ghost" data-coop-action="decline"' + dis + '>LEAVE THE PARTY</button>';
+      const lead = unanswered > 0
+        ? 'Waiting for your invited all' + (unanswered === 1 ? 'y' : 'ies') + ' to answer — the raid finder starts filling once everyone has.'
+        : openSeats > 0
+          ? 'The raid finder is filling your party. The hunt begins at ' + target + (isLeader ? ' — or when you start it.' : ', or when your leader starts it.')
+          : 'The party is full — the hunt begins the moment every seat is answered.';
+      return (
+        '<div class="coop-picker-head">PARTY ' + size + '/' + target + '</div>' +
+        rows +
+        searching +
+        '<p class="coop-lead">' + lead + '</p>' +
+        _coopErrBlock() +
+        controls
+      );
+    }
     if (_coopIsMultiAlly(inst)) {
       const seatRow = function (p) {
         const a = esc(_coopAlias((p && p.alias) || 'your ally'));
@@ -47398,12 +47522,20 @@
     const confirmBtn = maxAllies > 1
       ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (_inRange ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
       : '';
+    // W695 — "Summon & Fill": with an UNDER-full pick on a matchmaking boss, offer to
+    // open the remaining seats to the raid finder (friends answer first, then the
+    // finder pours hunters in until the party hits 5 or the leader starts early).
+    const fillBtn = (_pcfg.matchmaking && maxAllies > 1 && sel.length >= 1 && sel.length < maxAllies)
+      ? '<button class="coop-cta coop-cta--ghost" data-coop-action="pick-confirm-fill">SUMMON & FILL THE REST</button>' +
+        '<p class="coop-foot">Your ' + (sel.length + 1) + ' start the party — the raid finder fills the other ' + (maxAllies - sel.length) + ' seat' + ((maxAllies - sel.length) === 1 ? '' : 's') + '.</p>'
+      : '';
     return (
       '<div class="coop-picker-head">' + head + '</div>' +
       warn +
       _coopErrBlock() +
       '<div class="coop-friend-list">' + rows + '</div>' +
       confirmBtn +
+      fillBtn +
       '<button class="coop-cta coop-cta--ghost" data-coop-action="pick-cancel">BACK</button>'
     );
   }
