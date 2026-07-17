@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w702'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w703'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -565,11 +565,12 @@
       statDomain: 'INT',
       dropTable:  { ultra_rare: 0.25, rare: 0.55 },
     },
-    // W686 — the S-rank endgame raid drop source. mythic 0.02 total = 1% per
-    // weapon with a 2-mythic pool (Erebus solo precedent: mythic 0.01 with 1);
-    // a 72h raid cadence makes the chase months-long by design. ultra 0.32 =
-    // ~5.3% per piece across the 6-ultra BiS pool. No rares, no commons — this
-    // is the endgame shelf; ~66% of wins pay souls only.
+    // W686/W703 — the S-rank endgame raid drop source. mythic 0.01 = a FLAT 1%
+    // chance of ANY mega-rare per kill (owner W703: 1/100 dungeons, no mercy),
+    // which the 2-mythic pool splits to 0.5% per specific weapon — the 72h raid
+    // cadence makes the set a long chase by design. ultra 0.32 = ~5.3% per piece
+    // across the 6-ultra BiS pool. No rares, no commons — the endgame shelf; ~67%
+    // of wins pay souls only.
     the_sleepless_crown: {
       id:         'the_sleepless_crown',
       name:       'The Myrmidon King',
@@ -577,13 +578,14 @@
       coopOnly:   true,
       archetype:  'caster',
       statDomain: 'VIT',
-      dropTable:  { mythic: 0.02, ultra_rare: 0.32 },
+      dropTable:  { mythic: 0.01, ultra_rare: 0.32 },
     },
-    // W693 — THE GRINNING GOD: the members-only apex raid drop source. A MYTHIC-ONLY
-    // table — no ultras, no rares, nothing else — at ~1% per weapon across the three
-    // existing mythics (0.03 total, uniform), so the full mythic set is a months-long
-    // chase. `pool` lists the three by id (their source_boss stays their canonical
-    // boss; this doesn't steal or duplicate them). ~97% of wins pay souls only.
+    // W693/W703 — THE GRINNING GOD: the members-only apex raid drop source. A MYTHIC-ONLY
+    // table — no ultras, no rares, nothing else — at a FLAT 1% chance of ANY mega-rare per
+    // kill (owner W703: 1/100 dungeons, no mercy), split uniformly across the three mythics
+    // → ~0.33% per specific weapon, so the full set is a very long chase. `pool` lists the
+    // three by id (their source_boss stays their canonical boss; this doesn't steal or
+    // duplicate them). 99% of wins pay souls only.
     the_grinning_god: {
       id:         'the_grinning_god',
       name:       'The Grinning God',
@@ -591,7 +593,7 @@
       coopOnly:   true,
       archetype:  'caster',
       statDomain: 'VIT',
-      dropTable:  { mythic: 0.03 },
+      dropTable:  { mythic: 0.01 },
       pool:       { mythic: ['nightfall_blade', 'reverie_staff', 'vigil_bow'] },
     },
     the_carouser: {
@@ -15648,6 +15650,12 @@
     // probability; pickFromPool splits evenly within a rarity (Erebus 3 ultras
     // at 30% → 10% each; an A boss's 2 ultras at 8% → 4% each). Erebus =
     // { mythic: 0.01, ultra_rare: 0.30 }; A bosses = { ultra_rare: 0.08, rare: 0.25 }.
+    // W703 — INVARIANT: EVERY mega-rare (mythic) source lives ONLY on this dropTable
+    // branch, and mythic is rolled FIRST, so a mega-rare is a FLAT 1% per kill (mythic
+    // weight = 0.01 at all three sources: Erebus, The Sleepless Crown, The Grinning God)
+    // with NO pity / mercy / luck EVER (owner: these items are too powerful to soften).
+    // Keep it that way — never add a `mythic` key to the pity/mercy logic in the else
+    // branch below, and never give a mythic-dropping boss a non-dropTable config.
     if (cfg.dropTable) {
       const _r = Math.random();
       let _acc = 0;
