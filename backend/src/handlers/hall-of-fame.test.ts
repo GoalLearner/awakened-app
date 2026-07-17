@@ -96,6 +96,7 @@ describe('GET /v1/leaderboard/hall-of-fame', () => {
     expect(body.records).toHaveLength(3);
     expect(body.records[0]).toEqual({
       rank: 1, alias: 'Richie', steps: 104821, week_start: '2026-05-17', week_end: '2026-05-23',
+      avatar_id: null,   // W704 — crest field rides the HoF rows
     });
     expect(body.records[2].alias).toBe('Richie');         // same user, second appearance
     expect(body.records[2].week_start).toBe('2026-06-07'); // different week

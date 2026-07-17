@@ -40,6 +40,9 @@ interface TopRow {
   rank_tier: string | null;
   // W656 — free Founder marker number (prestige only; null = not a Founder).
   founder_seq: number | null;
+  // W704 — synced avatar/skin filename for the row's crest (null = no pps row /
+  // never synced; the client falls back to a default portrait).
+  avatar_id: string | null;
 }
 
 interface MyRow {
@@ -98,7 +101,8 @@ export async function handleLeaderboardTop(
                 pps.arena_title AS arena_title,
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
-                pps.founder_seq AS founder_seq
+                pps.founder_seq AS founder_seq,
+                pps.avatar_id AS avatar_id
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -113,7 +117,8 @@ export async function handleLeaderboardTop(
                 pps.arena_title AS arena_title,
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
-                pps.founder_seq AS founder_seq
+                pps.founder_seq AS founder_seq,
+                pps.avatar_id AS avatar_id
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -136,6 +141,9 @@ export async function handleLeaderboardTop(
     prestige: row.prestige ?? 0,
     rankTier: row.rank_tier ?? null,
     founderSeq: row.founder_seq ?? null,   // W656 — Founder # for the row's crest
+    // W704 — avatar crest filename (snake_case per the board-row convention set by
+    // friends-leaderboard/rank-band). null → client renders its default portrait.
+    avatar_id: row.avatar_id ?? null,
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,

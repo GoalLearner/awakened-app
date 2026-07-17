@@ -32,6 +32,8 @@ interface RecordRow {
   user_id: string;
   alias: string;
   steps: number;
+  // W704 — avatar crest filename off public_profile_summary (null = never synced).
+  avatar_id: string | null;
 }
 
 interface MeRow {
@@ -102,9 +104,11 @@ export async function handleLeaderboardLastWeek(
   // Top-N final standings for last week.
   const topResult = await env.DB.prepare(
     `${MERGED_FOR_WEEK}
-     SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id
+     SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id,
+            pps.avatar_id AS avatar_id
        FROM merged m
        JOIN users u ON u.id = m.user_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
       ORDER BY m.steps DESC, u.alias ASC
       LIMIT ?2`,
   )
@@ -125,6 +129,7 @@ export async function handleLeaderboardLastWeek(
     rank: i + 1,
     alias: r.alias,
     steps: r.steps,
+    avatar_id: r.avatar_id ?? null,   // W704 — row crest
   }));
   const champion = records.length > 0 ? { alias: records[0].alias, steps: records[0].steps } : null;
 

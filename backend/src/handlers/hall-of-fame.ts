@@ -50,6 +50,8 @@ interface RecordRow {
   alias: string;
   steps: number;
   week_start: string;
+  // W704 — avatar crest filename off public_profile_summary (null = never synced).
+  avatar_id: string | null;
 }
 
 interface MyBestRow {
@@ -158,9 +160,11 @@ export async function handleLeaderboardHallOfFame(
              WHERE w.user_id = ls.user_id AND w.week_start = ls.week_start
            )
      )
-     SELECT u.alias AS alias, m.steps AS steps, m.week_start AS week_start
+     SELECT u.alias AS alias, m.steps AS steps, m.week_start AS week_start,
+            pps.avatar_id AS avatar_id
      FROM merged m
      JOIN users u ON u.id = m.user_id
+     LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
      ORDER BY m.steps DESC, m.week_start ASC
      LIMIT ?`,
   )
@@ -173,6 +177,7 @@ export async function handleLeaderboardHallOfFame(
     steps: row.steps,
     week_start: row.week_start,
     week_end: weekEndFromStart(row.week_start),
+    avatar_id: row.avatar_id ?? null,   // W704 — row crest
   }));
 
   // Caller's personal best record across all weeks. Two cheap

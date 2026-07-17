@@ -88,7 +88,7 @@ describe('GET /v1/leaderboard/archive', () => {
     expect(j.week).toBe(WEEK);
     expect(j.weekEnd).toBe('2026-07-11');
     expect(j.final).toBe(true);
-    expect(j.records[0]).toEqual({ rank: 1, alias: 'RenDIESEL', steps: 125563 });
+    expect(j.records[0]).toEqual({ rank: 1, alias: 'RenDIESEL', steps: 125563, avatar_id: null });   // W704 — crest field rides the archive rows
     expect(j.me).toEqual({ rank: 2, steps: 48535 });
     expect(j.min_week).toBe('2026-06-07');
     // weeks_available bounded below by min_week, newest first.

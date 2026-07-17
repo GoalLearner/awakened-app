@@ -30820,7 +30820,35 @@ button.guildhall-summary-tile:active {
 .lb-rank-row > .lb-rank-id,
 .lb-rank-row > .lb-rank-name,
 .lb-rank-row > .lb-rank-crown,
+.lb-rank-row > .lb-crest,
 .lb-rank-row > .lb-rank-value { position: relative; }
+
+/* W704 — leaderboard avatar crests. A small circular portrait on every board row
+   (global weekly, Friends, rank-band, HoF, 100K Club, archive), sized up on the
+   leader hero card. position:relative (list above) keeps it painting over the
+   absolutely-positioned .lb-rank-fill progress wash. */
+.lb-crest {
+  width: 27px; height: 27px; border-radius: 50%;
+  object-fit: cover; flex: 0 0 auto;
+  border: 1px solid rgba(245,184,66,0.35);
+  background: #14162a;
+}
+.lb-rank-row--me .lb-crest,
+.lb-you-foot-row .lb-crest { border-color: rgba(245,184,66,0.85); }
+/* medal rings echo the #2/#3 pos tints */
+.lb-rank-row--medal2 .lb-crest { border-color: rgba(200,198,216,0.55); }
+.lb-rank-row--medal3 .lb-crest { border-color: rgba(213,154,82,0.55); }
+.lb-crest--leader {
+  width: 46px; height: 46px;
+  border-width: 2px; border-color: rgba(245,184,66,0.7);
+  box-shadow: 0 0 12px rgba(245,184,66,0.3);
+}
+.lb-crest--foot { width: 24px; height: 24px; position: relative; }
+/* leader hero card: left group = crest + identity, so space-between keeps the
+   big stat pinned right (W704 wrapper added in lbBuildRankList). */
+.lb-rank-leader-left {
+  position: relative; display: flex; align-items: center; gap: 11px; min-width: 0;
+}
 
 /* medal-tinted rank numbers for #2 / #3 (the throne is the hero card) */
 .lb-rank-row--medal2 .lb-rank-pos { color: #c8c6d8; text-shadow: 0 0 9px rgba(200,198,216,0.40); }

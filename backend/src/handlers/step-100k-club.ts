@@ -67,6 +67,8 @@ interface MemberRow {
   repeat_count: number;
   last_qualified_week_start: string;
   unlocked_at: number;
+  // W704 — avatar crest filename off public_profile_summary (null = never synced).
+  avatar_id: string | null;
 }
 
 interface MyRow {
@@ -129,9 +131,11 @@ export async function handleStep100kClub(
             ua.unlock_week_start          AS unlock_week_start,
             ua.repeat_count               AS repeat_count,
             ua.last_qualified_week_start  AS last_qualified_week_start,
-            ua.unlocked_at                AS unlocked_at
+            ua.unlocked_at                AS unlocked_at,
+            pps.avatar_id                 AS avatar_id
      FROM user_accolades ua
      JOIN users u ON u.id = ua.user_id
+     LEFT JOIN public_profile_summary pps ON pps.user_id = ua.user_id
      WHERE ua.accolade_type = ?
        AND u.apple_sub NOT LIKE 'sim_test_%'
      ORDER BY ua.best_value DESC,
@@ -152,6 +156,7 @@ export async function handleStep100kClub(
     last_qualified_week_start: row.last_qualified_week_start,
     last_qualified_week_end:   weekEndFromStart(row.last_qualified_week_start),
     unlocked_at: row.unlocked_at,
+    avatar_id: row.avatar_id ?? null,   // W704 — row crest
   }));
 
   // Caller's membership row (if they're a member). Defensively

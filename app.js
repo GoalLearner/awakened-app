@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w703'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w704'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -41842,6 +41842,34 @@
   }
   try { window.showLoading = showLoading; window.hideLoading = hideLoading; } catch (_) {}
 
+  // W704 — leaderboard avatar crest. Resolves a board row to a small portrait <img>:
+  //   1. MY row → local getAvatarSrc() (instant on wardrobe change, pre-sync — same
+  //      local-first rule the title chip uses)
+  //   2. row.avatar_id / row.avatarId (cross-user, published via the profile heartbeat;
+  //      snake_case is the board-row convention, camel covers the profile-shaped rows)
+  //   3. sim bots → the same deterministic portrait their profile card synthesizes
+  //   4. anything else / a stale cache row without the field → avatar-base.png
+  // avatar_id is client-published untrusted data, so the PvP whitelist gate applies;
+  // onerror falls back to the base portrait (an older build missing a newer skin file).
+  function _lbCrestHtml(row, isMe, extraClass) {
+    let file = '';
+    try {
+      if (isMe && typeof getAvatarSrc === 'function') file = getAvatarSrc();
+      if (!file) file = row.avatar_id || row.avatarId || '';
+      if (!file && row._sim && window.SimulatedLeaderboard && typeof SimulatedLeaderboard.profile === 'function') {
+        const dk = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
+        const p = SimulatedLeaderboard.profile(row.alias, dk);
+        file = (p && p.avatarId) || '';
+      }
+    } catch (_) { file = ''; }
+    const safe = (typeof file === 'string' && /^avatar[a-z0-9_-]*\.png$/i.test(file)) ? file : 'avatar-base.png';
+    // NOTE: no loading="lazy" — the sheet is hidden while rows are inserted, and lazy
+    // images inside a hidden-at-insert container can stay unloaded after it opens
+    // (verified in the browser preview). These are ~10 small bundled PNGs; eager is free.
+    return '<img class="lb-crest' + (extraClass ? ' ' + extraClass : '') + '" src="' + esc(safe) + '" alt=""' +
+      ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">';
+  }
+
   // Renders the rank-list content given a backend response. Splits
   // the user-row out of the top-N (or surfaces a separate "your rank"
   // line if me.rank > top.length). Empty top → first-to-rank message.
@@ -41871,6 +41899,7 @@
         yourRankLine =
           '<div class="lb-rank-row lb-rank-row--me lb-rank-row--out-of-top" data-profile-alias="' + esc(myAlias || '') + '">' +
             '<span class="lb-rank-pos">' + me.rank + '</span>' +
+            _lbCrestHtml({}, true, '') +   // W704 — own crest (this row is always the caller); keeps the name column aligned with crested rows below
             '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + '</span>' +
             '<span class="lb-rank-value">' + meta.formatValue(me.current_value) + '</span>' +
           '</div>' +
@@ -41909,6 +41938,7 @@
         yourRankLine =
           '<div class="lb-rank-row lb-rank-row--me lb-rank-row--pending">' +
             '<span class="lb-rank-pos">—</span>' +
+            _lbCrestHtml({}, true, '') +   // W704 — keep the pending row aligned with crested rows
             '<span class="lb-rank-name">' + esc(myAliasDisplay || 'You') + ' <em class="lb-rank-name-sub">· submitting…</em></span>' +
             '<span class="lb-rank-value">—</span>' +
           '</div>' +
@@ -42017,10 +42047,15 @@
           ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
           '<span class="lb-rank-leader-glow" aria-hidden="true"></span>' +
           '<span class="lb-rank-leader-row">' +
-            '<span class="lb-rank-leader-info">' +
-              '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
-              '<span class="lb-rank-leader-name">' + _nameDisp + crown + pStar + _founderChip + '</span>' +
-              classLabel +
+            // W704 \u2014 left group wraps crest + info so the leader card's
+            // space-between keeps the stat pinned right.
+            '<span class="lb-rank-leader-left">' +
+              _lbCrestHtml(row, isMe, 'lb-crest--leader') +
+              '<span class="lb-rank-leader-info">' +
+                '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
+                '<span class="lb-rank-leader-name">' + _nameDisp + crown + pStar + _founderChip + '</span>' +
+                classLabel +
+              '</span>' +
             '</span>' +
             '<span class="lb-rank-leader-stat">' +
               '<span class="lb-rank-leader-value">' + meta.formatValue(row.current_value) + '</span>' +
@@ -42035,6 +42070,7 @@
         ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
         '<span class="lb-rank-fill" aria-hidden="true"></span>' +
         '<span class="lb-rank-pos">' + (row.rank || '?') + '</span>' +
+        _lbCrestHtml(row, isMe, '') +
         '<span class="lb-rank-id">' +
           '<span class="lb-rank-name-row">' +
             '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + pStar + _youPill + _founderChip +
@@ -42087,6 +42123,7 @@
       const rowClass = isMe ? 'lb-rank-row lb-rank-row--hof lb-rank-row--me' : 'lb-rank-row lb-rank-row--hof';
       return '<div class="' + rowClass + '">' +
         '<span class="lb-rank-pos">#' + (rec.rank || '?') + '</span>' +
+        _lbCrestHtml(rec, isMe, '') +   // W704 — rec.avatar_id rides the HoF read
         '<span class="lb-rank-name">' +
           esc(aliasDisplay || '—') +
           (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +
@@ -42147,6 +42184,7 @@
       const rowClass = 'lb-rank-row lb-rank-row--club-100k' + (isMe ? ' lb-rank-row--me' : '');
       return '<div class="' + rowClass + '">' +
         '<span class="lb-rank-pos">#' + (m.rank || '?') + '</span>' +
+        _lbCrestHtml(m, isMe, '') +   // W704 — m.avatar_id rides the 100K Club read
         '<span class="lb-rank-name">' +
           esc(aliasDisplay || '—') + mult +
           (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +
@@ -42575,6 +42613,7 @@
     const valTxt  = me ? meta.formatValue(me.current_value) : '—';
     return '<div class="lb-you-foot-row" data-profile-alias="' + esc(myAlias || '') + '">' +
         '<span class="lb-rank-pos">' + rankTxt + '</span>' +
+        _lbCrestHtml({}, true, 'lb-crest--foot') +   // W704 — own crest, local getAvatarSrc()
         '<span class="lb-rank-id">' +
           '<span class="lb-rank-name-row">' +
             '<span class="lb-rank-name">' + esc(myAliasDisplay) + '</span>' +
@@ -43499,7 +43538,9 @@
     const myAlias = lbGetMyAlias() || '';
     const rows = [];
     (Array.isArray(records) ? records : []).forEach(function (r) {
-      rows.push({ alias: r.alias, steps: Number(r.steps) || 0, _sim: false });
+      // W704 — carry avatar_id (the archive read returns it) so the crest survives
+      // this rebuild; harmless undefined for the recap consumer / older payloads.
+      rows.push({ alias: r.alias, steps: Number(r.steps) || 0, avatar_id: r.avatar_id || null, _sim: false });
     });
     if (me && me.steps > 0 && myAlias &&
         !rows.some(function (r) { return String(r.alias).toLowerCase() === myAlias.toLowerCase(); })) {
@@ -43915,7 +43956,9 @@
     // Deterministic full-week sim merge (dedup + real-first ties) → list rows.
     const merged = _wrMergedBoard(data.records, data.me, week);
     const rows = merged.map(function (r) {
-      return { rank: r.rank, alias: r.alias, current_value: r.steps, _sim: !!r._sim };
+      // W704 — avatar_id rides through so archived real hunters wear their crest
+      // (without it, only sim bots would resolve portraits — backwards).
+      return { rank: r.rank, alias: r.alias, current_value: r.steps, avatar_id: r.avatar_id || null, _sim: !!r._sim };
     });
     const meRow = _wrFindMe(merged);
     const meForList = meRow ? { rank: meRow.rank, current_value: meRow.steps } : null;
