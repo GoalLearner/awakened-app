@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.010';
+const CACHE_VERSION = 'v6.011';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -124,6 +124,9 @@ const PRECACHE_ASSETS = [
   '/assets/backgrounds/bg_b.webp',
   '/assets/backgrounds/bg_a.webp',
   '/assets/backgrounds/bg_s.webp',
+  // W705 — leaderboard painted strips (21KB total; offline boards keep their art)
+  '/assets/backgrounds/lb-row-basic.webp',
+  '/assets/backgrounds/lb-hero.webp',
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
   '/assets/audio/arena_menu.m4a',

@@ -30823,27 +30823,57 @@ button.guildhall-summary-tile:active {
 .lb-rank-row > .lb-crest,
 .lb-rank-row > .lb-rank-value { position: relative; }
 
-/* W704 — leaderboard avatar crests. A small circular portrait on every board row
-   (global weekly, Friends, rank-band, HoF, 100K Club, archive), sized up on the
-   leader hero card. position:relative (list above) keeps it painting over the
-   absolutely-positioned .lb-rank-fill progress wash. */
-.lb-crest {
-  width: 27px; height: 27px; border-radius: 50%;
-  object-fit: cover; flex: 0 0 auto;
-  border: 1px solid rgba(245,184,66,0.35);
+/* W704/W705 — leaderboard avatar crests, now DIAMOND-framed (the Rendell mock).
+   The frame is a rotated square that owns size + ring color + glow; the portrait
+   counter-rotates inside (142% cover so the diamond is always filled). Frames
+   render only on board rows (markup-driven via _lbCrestHtml), so the shared
+   .lb-rank-row skin used by other sheets is untouched. position:relative on the
+   row's children keeps frames above the .lb-rank-fill wash. */
+.lb-crest-frame {
+  width: 33px; height: 33px; flex: 0 0 auto;
+  position: relative; overflow: hidden;
+  transform: rotate(45deg);
+  border: 1px solid rgba(167,139,250,0.55);
+  border-radius: 7px;
   background: #14162a;
+  box-shadow: 0 0 10px rgba(167,139,250,0.20), inset 0 0 8px rgba(0,0,0,0.6);
+  margin: 3px 4px;
 }
-.lb-rank-row--me .lb-crest,
-.lb-you-foot-row .lb-crest { border-color: rgba(245,184,66,0.85); }
+.lb-crest {
+  position: absolute; left: 50%; top: 50%;
+  width: 142%; height: 142%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  object-fit: cover;
+}
+.lb-rank-row--me .lb-crest-frame,
+.lb-you-foot-row .lb-crest-frame {
+  border-color: rgba(245,184,66,0.9);
+  box-shadow: 0 0 12px rgba(245,184,66,0.35), inset 0 0 8px rgba(0,0,0,0.6);
+}
 /* medal rings echo the #2/#3 pos tints */
-.lb-rank-row--medal2 .lb-crest { border-color: rgba(200,198,216,0.55); }
-.lb-rank-row--medal3 .lb-crest { border-color: rgba(213,154,82,0.55); }
-.lb-crest--leader {
-  width: 46px; height: 46px;
-  border-width: 2px; border-color: rgba(245,184,66,0.7);
-  box-shadow: 0 0 12px rgba(245,184,66,0.3);
+.lb-rank-row--medal2 .lb-crest-frame { border-color: rgba(200,198,216,0.65); box-shadow: 0 0 10px rgba(200,198,216,0.28), inset 0 0 8px rgba(0,0,0,0.6); }
+.lb-rank-row--medal3 .lb-crest-frame { border-color: rgba(213,154,82,0.65); box-shadow: 0 0 10px rgba(213,154,82,0.28), inset 0 0 8px rgba(0,0,0,0.6); }
+.lb-crest-frame--leader {
+  width: 54px; height: 54px;
+  border-width: 2px; border-color: rgba(245,184,66,0.85); border-radius: 10px;
+  box-shadow: 0 0 0 3px rgba(245,184,66,0.16), 0 0 22px rgba(245,184,66,0.4), inset 0 0 10px rgba(0,0,0,0.55);
+  margin: 6px 8px 6px 6px;
 }
-.lb-crest--foot { width: 24px; height: 24px; position: relative; }
+.lb-crest-frame--foot { width: 25px; height: 25px; margin: 2px 3px; }
+
+/* W705 — faint tier-sigil watermark on the right edge of board rows (wolf /
+   blades / shield / crown). Absolute + no pointer events; the value text
+   (position:relative) reads over it. */
+.lb-sigil {
+  position: absolute; right: 6px; top: 50%;
+  width: 46px; height: 46px; margin-top: -23px;
+  pointer-events: none; opacity: 0.14;
+}
+.lb-sigil svg { width: 100%; height: 100%; display: block; }
+.lb-sigil--gold   { color: #f5b842; }
+.lb-sigil--violet { color: #a78bfa; }
+.lb-sigil--teal   { color: #5eead4; }
+.lb-sigil--iron   { color: #c8c6d8; }
 /* leader hero card: left group = crest + identity, so space-between keeps the
    big stat pinned right (W704 wrapper added in lbBuildRankList). */
 .lb-rank-leader-left {
@@ -30924,11 +30954,17 @@ button.guildhall-summary-tile:active {
 }
 .lb-rank-boss100 svg { flex: none; margin-right: 0.5px; }
 
-/* #1 leader — enthroned hero card */
+/* #1 leader — enthroned hero card. W705: painted citadel backdrop (Higgsfield
+   art, assets/backgrounds/lb-hero.webp) under a left-heavy scrim — the identity
+   column reads over the dark misty left, the ruined citadel shows through on
+   the right beneath the big stat. Board-only markup, safe to paint globally. */
 .lb-rank-leader {
   position: relative; overflow: hidden;
-  border-radius: 16px; padding: 14px 16px; margin-bottom: 2px;
-  background: linear-gradient(180deg, rgba(245,184,66,0.11), rgba(245,184,66,0.02));
+  border-radius: 16px; padding: 16px 16px 15px; margin-bottom: 2px;
+  background:
+    linear-gradient(96deg, rgba(9,8,22,0.92) 0%, rgba(9,8,22,0.66) 46%, rgba(12,9,28,0.22) 100%),
+    url('assets/backgrounds/lb-hero.webp') right 28% / cover no-repeat,
+    linear-gradient(180deg, rgba(245,184,66,0.11), rgba(245,184,66,0.02));
   border: 1px solid rgba(245,184,66,0.45);
   box-shadow: 0 0 0 1px rgba(245,184,66,0.10), 0 14px 30px rgba(0,0,0,0.45);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
@@ -31104,10 +31140,38 @@ button.guildhall-summary-tile:active {
   font-size: 12px; font-weight: 700; color: #f7c558;
 }
 /* list rows — translucent panel, roomier, mono numerals */
+/* W705 — painted row strips (Rendell mock): the shared basic stone texture under
+   a left-heavy scrim so names/values keep contrast. SCOPED to #lb-rank-sheet on
+   purpose — .lb-rank-row also skins the souls ledger / guild roster / feats /
+   kill-log sheets, which must stay flat. Member-CHOSEN backgrounds (Phase B)
+   will layer per-row art the same way via a --lb-row-bg custom property. */
 #lb-rank-sheet .lb-rank-row {
   gap: 14px; padding: 13px 15px 14px; min-height: 30px; border-radius: 14px;
-  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+  background:
+    linear-gradient(90deg, rgba(9,10,22,0.93) 0%, rgba(9,10,22,0.74) 42%, rgba(11,12,26,0.48) 100%),
+    url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
+    rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.09);
   font-size: 16px;
+}
+/* own-row keeps its gold identity over the texture */
+#lb-rank-sheet .lb-rank-row--me {
+  background:
+    linear-gradient(90deg, rgba(48,33,7,0.86) 0%, rgba(38,27,9,0.70) 45%, rgba(26,20,11,0.44) 100%),
+    url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
+    rgba(255,255,255,0.035);
+  border-color: rgba(245,158,11,0.55);
+}
+/* W705 review fix — crowned rows (.lb-rank-row--awakened, F100 finishers /
+   completed collection) set their old flat gold wash with !important
+   (styles.css ~30073), which beats the painted rules above regardless of
+   specificity. Re-assert the painted strip AT the same importance with a
+   gold-tinted scrim so crowned rows stay textured like their neighbors. */
+#lb-rank-sheet .lb-rank-row--awakened {
+  background:
+    linear-gradient(90deg, rgba(52,38,8,0.88) 0%, rgba(40,30,10,0.70) 45%, rgba(28,22,12,0.42) 100%),
+    url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
+    rgba(255,255,255,0.035) !important;
 }
 #lb-rank-sheet .lb-rank-fill {
   background: linear-gradient(90deg, rgba(245,184,66,0.055), rgba(245,184,66,0));

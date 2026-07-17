@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w704'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w705'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -41863,11 +41863,38 @@
       }
     } catch (_) { file = ''; }
     const safe = (typeof file === 'string' && /^avatar[a-z0-9_-]*\.png$/i.test(file)) ? file : 'avatar-base.png';
+    // W705 — the crest now sits inside a rotated DIAMOND frame (the Rendell-mock
+    // look); the img counter-rotates inside so the portrait stays upright. The
+    // extraClass modifier ('lb-crest--leader' / 'lb-crest--foot') maps onto the
+    // FRAME, which owns size + ring color; ring tints still key off row context
+    // (.lb-rank-row--me / --medal2 / --medal3) in CSS.
     // NOTE: no loading="lazy" — the sheet is hidden while rows are inserted, and lazy
     // images inside a hidden-at-insert container can stay unloaded after it opens
     // (verified in the browser preview). These are ~10 small bundled PNGs; eager is free.
-    return '<img class="lb-crest' + (extraClass ? ' ' + extraClass : '') + '" src="' + esc(safe) + '" alt=""' +
-      ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">';
+    const frameMod = extraClass ? ' ' + extraClass.replace(/lb-crest--/g, 'lb-crest-frame--') : '';
+    return '<span class="lb-crest-frame' + frameMod + '" aria-hidden="true">' +
+      '<img class="lb-crest" src="' + esc(safe) + '" alt=""' +
+      ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">' +
+    '</span>';
+  }
+
+  // W705 — faint right-side sigil watermark on standard rows (the mock's wolf/
+  // swords/shield marks). Keyed off the same tier ladder as the gem class label
+  // (iron/teal/violet/gold), so a hunter's sigil matches their title tier:
+  // gold → crown, violet → wolf, teal → crossed blades, iron → shield.
+  function _lbSigilHtml(tier) {
+    const paths = {
+      gold:   '<path d="M3 17.5h18M4 16l-1.5-8L8 12l4-8 4 8 5.5-4L20 16z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>',
+      violet: '<path d="M12 21l-5-4-2-7 4-6 1 4h4l1-4 4 6-2 7z M9 12l1 2M15 12l-1 2M12 15v3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>',
+      teal:   '<path d="M5 3l13 13M19 3L6 16M4 17l3 3M17 20l3-3M8 15l-3 4M16 15l3 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>',
+      iron:   '<path d="M12 3l7 2.5V12c0 4-3 6.8-7 8.5C8 18.8 5 16 5 12V5.5z M12 7v9M8.5 10.5h7" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>',
+    };
+    // Normalize unknown tiers (e.g. 'summit' — The Second Awakened) to gold for
+    // BOTH the path and the color class, so the top title never renders untinted.
+    const t = paths[tier] ? tier : 'gold';
+    return '<span class="lb-sigil lb-sigil--' + t + '" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24">' + paths[t] + '</svg>' +
+    '</span>';
   }
 
   // Renders the rank-list content given a backend response. Splits
@@ -41985,10 +42012,13 @@
       // gem "class label" UNDER the name (tier-colored), replacing the inline
       // shard pill. Same tier ladder (iron / teal / violet / gold).
       let classLabel = '';
+      // W705 — the tier drives BOTH the gem class label and the row's sigil
+      // watermark; untitled hunters default to iron (the plain shield).
+      let _lbTier = 'iron';
       if (titleId && typeof ARENA_TITLES !== 'undefined') {
         const tdef = ARENA_TITLES.find((t) => t.id === titleId);
         if (tdef) {
-          const _lbTier = tdef.tier || 'gold';
+          _lbTier = tdef.tier || 'gold';
           // W388 — crimson stamp for the 100-boss-kills club, beside the gold
           // 100K stamp. Real backend data only (bosses_slain from pps); sims
           // are excluded so it's never faked. Dark until the backend ships
@@ -42069,6 +42099,7 @@
         ' style="--lb-fill:' + _pct + '%"' +
         ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
         '<span class="lb-rank-fill" aria-hidden="true"></span>' +
+        _lbSigilHtml(_lbTier) +   // W705 — faint tier sigil watermark, right side
         '<span class="lb-rank-pos">' + (row.rank || '?') + '</span>' +
         _lbCrestHtml(row, isMe, '') +
         '<span class="lb-rank-id">' +
