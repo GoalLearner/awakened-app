@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w699'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w700'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47627,28 +47627,35 @@
         // W483 \u2014 an ally below the boss's rank is shown (with their rank) but NOT invitable
         // \u2014 no pick action, locked styling, a "Needs X" note. The backend ALLY_RANK gate is
         // the real enforcement; this is the matching UX so the tap is never offered.
-        // W699 \u2014 the members raid gates allies on MEMBERSHIP, not rank, so any member friend
-        // is invitable at any rank (the backend re-checks membership + refuses ALLY_NOT_MEMBER).
-        if (_pcfg.membersOnly || _coopRankMeets(tier, bossRank)) {
+        // W699/W700 \u2014 the members raid gates allies on MEMBERSHIP, not rank: a member friend
+        // (backend `member` flag) is invitable at any rank and wears a \u2726 badge; a NON-member
+        // is greyed with a "Members only" note. (The backend re-checks + refuses
+        // ALLY_NOT_MEMBER, but the client can't know membership without this flag \u2014 so the
+        // grey-out here means the summoner never taps a doomed pick.)
+        const _isMemberBoss = !!_pcfg.membersOnly;
+        const _memberBadge = (_isMemberBoss && f.member === true)
+          ? '<span class="coop-friend-member" title="Member" aria-hidden="true">\u2726</span>' : '';
+        const _invitable = _isMemberBoss ? (f.member === true) : _coopRankMeets(tier, bossRank);
+        if (_invitable) {
           // W677\u2192W692 \u2014 multi-ally boss: tap toggles selection (checkmark), Summon confirms below.
           if (maxAllies > 1) {
             const on = sel.indexOf(String(f.user_id)) !== -1;
             return '<button class="coop-friend' + (on ? ' coop-friend--selected' : '') + '" data-coop-action="pick-toggle" data-user-id="' + esc(f.user_id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
               '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
-              rankBadge +
+              rankBadge + _memberBadge +
               '<span class="coop-friend-go" aria-hidden="true">' + (on ? '\u2713' : '+') + '</span>' +
             '</button>';
           }
           return '<button class="coop-friend" data-coop-action="pick" data-user-id="' + esc(f.user_id) + '">' +
             '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
-            rankBadge +
+            rankBadge + _memberBadge +
             '<span class="coop-friend-go" aria-hidden="true">\u203A</span>' +
           '</button>';
         }
         return '<div class="coop-friend coop-friend--locked" aria-disabled="true">' +
           '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
           rankBadge +
-          '<span class="coop-friend-need">Needs ' + esc(bossRank) + '</span>' +
+          '<span class="coop-friend-need">' + (_isMemberBoss ? 'Members only' : ('Needs ' + esc(bossRank))) + '</span>' +
         '</div>';
       }).join('');
     }

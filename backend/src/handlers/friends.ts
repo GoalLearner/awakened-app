@@ -81,6 +81,7 @@ interface PublicProfileFriendRow {
   rank_label: string | null;
   rank_sort_value: number | null;
   prestige: number | null;   // W453 — Prestige star count (S+ endgame)
+  founder_seq: number | null; // W656/W700 — Founder mark # (non-null ⇒ lifetime member)
   server_updated_at: number | null;
   // v3 Phase 1z.195 — Global Friend Achievements MVP-A.
   // Cumulative count aggregates + a public-safe streak label.
@@ -110,6 +111,10 @@ interface SerializedFriendRow {
   rankLabel?: string;
   rankSortValue?: number;
   prestige?: number;   // W453 — Prestige star count, present with the rank badge
+  // W700 — membership flag for the members-raid ally picker: true when the friend
+  // holds a Founder mark (lifetime) OR an active premium subscription. Always present
+  // on the LIST path (handleFriendsList); the client greys out non-members for the raid.
+  member?: boolean;
   rankUpdatedAt?: string;
   // v3 Phase 1z.195 — Global Friend Achievements MVP-A. Cumulative
   // count aggregates + a public-safe verified streak label. Only
@@ -136,6 +141,7 @@ const FRIEND_PROFILE_COLS = `u.id                    AS __joinId,
             p.rank_label             AS rank_label,
             p.rank_sort_value        AS rank_sort_value,
             p.prestige_level         AS prestige,
+            p.founder_seq            AS founder_seq,
             p.server_updated_at      AS server_updated_at,
             p.bosses_slain_total     AS bosses_slain_total,
             p.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -275,9 +281,36 @@ export async function handleFriendsList(
     for (const j of jr.results ?? []) joinedMap.set(j.__joinId, j);
   }
 
+  // W700 — per-friend membership (drives the members-raid ally picker's grey-out).
+  // member = a Founder mark (comes free off the join above, founder_seq) OR an active
+  // premium subscription (batched over the same ids). Guarded for the un-migrated case
+  // (premium_subscriptions absent) exactly like readEntitlements — a friends read must
+  // never 500 on a missing table; those friends simply read as non-premium.
+  const now = Date.now();
+  const premiumSet = new Set<string>();
+  try {
+    for (let i = 0; i < otherIds.length; i += CHUNK) {
+      const slice = otherIds.slice(i, i + CHUNK);
+      if (!slice.length) continue;
+      const ph = slice.map(() => '?').join(',');
+      const pr = await env.DB.prepare(
+        `SELECT user_id FROM premium_subscriptions WHERE user_id IN (${ph}) AND expires_at_ms > ?`,
+      )
+        .bind(...slice, now)
+        .all<{ user_id: string }>();
+      for (const p of pr.results ?? []) premiumSet.add(p.user_id);
+    }
+  } catch (e) {
+    const msg = String((e && (e as Error).message) || e);
+    if (!/no such table/i.test(msg)) throw e;
+  }
+
   for (const row of rowList) {
-    const serialized = mapFriendRow(row, session.userId, joinedMap.get(otherIdOf(row)) ?? null);
+    const oid = otherIdOf(row);
+    const joined = joinedMap.get(oid) ?? null;
+    const serialized = mapFriendRow(row, session.userId, joined);
     if (!serialized) continue;
+    serialized.member = (joined?.founder_seq != null) || premiumSet.has(oid);   // W700
     if (serialized.status === 'accepted') friends.push(serialized);
     else if (serialized.direction === 'incoming') incoming.push(serialized);
     else outgoing.push(serialized);

@@ -31577,6 +31577,11 @@ button.guildhall-summary-tile:active {
 .coop-friend--locked .coop-friend-rank { color: #9aa0b0; background: rgba(255,255,255,0.05);
   border-color: rgba(255,255,255,0.15); }
 .coop-friend-need { font-size: 0.72rem; font-weight: 600; color: #e07a7a; letter-spacing: 0.02em; }
+/* W700 — members-raid ally picker: ✦ badge marking a member friend (invitable);
+   sits right of the rank badge, before the go arrow. Non-members are greyed
+   (.coop-friend--locked) with a "Members only" note instead. */
+.coop-friend-member { color: #f5b842; font-size: 0.9rem; margin-right: 8px; line-height: 1;
+  text-shadow: 0 0 6px rgba(245,184,66,0.55); }
 
 /* W371 — co-op card live-state badges (invite discovery) */
 .bcard--coop-invite .bcard-coop-badge {

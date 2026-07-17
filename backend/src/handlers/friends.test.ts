@@ -30,6 +30,7 @@ interface ProfileRow {
   rank_label: string | null;
   rank_sort_value: number | null;
   prestige: number | null;
+  founder_seq: number | null;   // W700 — Founder mark # (non-null ⇒ lifetime member)
   server_updated_at: number | null;
   bosses_slain_total: number | null;
   ultra_rare_drops_total: number | null;
@@ -39,14 +40,21 @@ interface ProfileRow {
 
 interface Capture { sql: string; binds: unknown[]; }
 
-function makeDb(friendRows: FriendRow[], profileRows: ProfileRow[], calls: Capture[]) {
+function makeDb(
+  friendRows: FriendRow[], profileRows: ProfileRow[], calls: Capture[],
+  premiumRows: { user_id: string }[] = [],   // W700 — active-premium ids (the batched member lookup)
+) {
   return {
     prepare: (sql: string) => ({
       bind: (...binds: unknown[]) => {
         calls.push({ sql, binds });
         const isProfile = /LEFT JOIN public_profile_summary/.test(sql);
+        const isPremium = /FROM premium_subscriptions/.test(sql);
         return {
-          all: async () => ({ results: isProfile ? profileRows : friendRows, success: true, meta: {} }),
+          all: async () => ({
+            results: isProfile ? profileRows : isPremium ? premiumRows : friendRows,
+            success: true, meta: {},
+          }),
           first: async () => (isProfile ? profileRows[0] ?? null : friendRows[0] ?? null),
         };
       },
@@ -60,10 +68,10 @@ function makeEnv(db: D1Database, rlOk = true): Env {
 const session = (userId: string): SessionPayload => ({ userId, alias: 'me' } as unknown as SessionPayload);
 const req = () => new Request('http://test/v1/friends', { method: 'GET' });
 
-function fullProfile(id: string, alias: string): ProfileRow {
+function fullProfile(id: string, alias: string, founderSeq: number | null = null): ProfileRow {
   return {
     __joinId: id, alias, rank_tier: 'A', rank_division: 'II', rank_label: 'A II',
-    rank_sort_value: 4200, prestige: 0, server_updated_at: 1_700_000_000_000,
+    rank_sort_value: 4200, prestige: 0, founder_seq: founderSeq, server_updated_at: 1_700_000_000_000,
     bosses_slain_total: 12, ultra_rare_drops_total: 1, verified_streak_label: '30d',
     achievements_updated_at: 1_700_000_000_000,
   };
@@ -71,7 +79,7 @@ function fullProfile(id: string, alias: string): ProfileRow {
 function aliasOnly(id: string, alias: string): ProfileRow {
   return {
     __joinId: id, alias, rank_tier: null, rank_division: null, rank_label: null,
-    rank_sort_value: null, prestige: null, server_updated_at: null,
+    rank_sort_value: null, prestige: null, founder_seq: null, server_updated_at: null,
     bosses_slain_total: null, ultra_rare_drops_total: null, verified_streak_label: null,
     achievements_updated_at: null,
   };
@@ -121,6 +129,28 @@ describe('GET /v1/friends (batched serialization)', () => {
   it('429s when the read rate-limit rejects', async () => {
     const res = await handleFriendsList(req(), makeEnv(makeDb(rows, profiles, []), false), session('me'));
     expect(res.status).toBe(429);
+  });
+
+  // W700 — per-friend membership flag for the members-raid ally picker.
+  it('member = true for a Founder friend OR an active-premium friend; false otherwise', async () => {
+    const calls: Capture[] = [];
+    // A = Founder (founder_seq set); B = premium (in the premium set); C = neither.
+    const p: ProfileRow[] = [fullProfile('A', 'ally', 4), aliasOnly('B', 'bravo'), fullProfile('C', 'charlie')];
+    const acc: FriendRow[] = [
+      { id: 'f1', requester_user_id: 'me', recipient_user_id: 'A', status: 'accepted', created_at: 't', updated_at: 't' },
+      { id: 'f2', requester_user_id: 'me', recipient_user_id: 'B', status: 'accepted', created_at: 't', updated_at: 't' },
+      { id: 'f3', requester_user_id: 'me', recipient_user_id: 'C', status: 'accepted', created_at: 't', updated_at: 't' },
+    ];
+    const res = await handleFriendsList(req(), makeEnv(makeDb(acc, p, calls, [{ user_id: 'B' }])), session('me'));
+    const body = (await res.json()) as { friends: Array<{ user_id: string; member?: boolean }> };
+    const memberOf = Object.fromEntries(body.friends.map((f) => [f.user_id, f.member]));
+    expect(memberOf.A).toBe(true);   // Founder mark
+    expect(memberOf.B).toBe(true);   // active premium
+    expect(memberOf.C).toBe(false);  // neither
+    // the premium lookup ran with an IN() over the friend ids + a now-cutoff bind
+    const premCall = calls.find((c) => /FROM premium_subscriptions/.test(c.sql));
+    expect(premCall).toBeTruthy();
+    expect(premCall!.sql).toMatch(/expires_at_ms > \?/);
   });
 
   it('returns empty buckets for a user with no friend rows', async () => {
