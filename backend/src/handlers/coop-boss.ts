@@ -1329,7 +1329,7 @@ export async function handleCoopBossResolve(
           .map((w) => aliasMap.get(w) ?? 'your ally')
           .join(' and ');
         ctx.waitUntil(notifyUser(env, uid, {
-          title: 'Hunt Complete', body: `You and ${others} felled your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
+          title: 'Hunt Complete', body: `You and ${others} brought down your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
         }));
       }
     }

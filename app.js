@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w696'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w697'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6041,7 +6041,7 @@
       var p = _coopPactFor(userId);
       var alias = (p && p.alias) || fallbackAlias || 'this hunter';
       if (!p) {
-        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Fell a co-op dungeon boss with ' + alias + ' to start a daily Pact streak — team up every day to keep the flame alive.', tone: 'info' });
+        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Defeat a co-op dungeon boss with ' + alias + ' to start a daily Pact streak — team up every day to keep the flame alive.', tone: 'info' });
         return;
       }
       var bossName = (p.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[p.lastBossId] && COOP_BOSSES[p.lastBossId].name) || null;
@@ -6051,7 +6051,7 @@
         ? '<b>🔥 ' + (p.streak | 0) + '-day streak</b> — team up again today to keep it lit.'
         : '<b>Streak broken</b> — one co-op dungeon together today lights a new flame.');
       lines.push('All-time best: <b>' + (p.best | 0) + '</b>-day streak.');
-      lines.push('Bond: <b>' + (p.total | 0) + '</b> co-op ' + ((p.total | 0) === 1 ? 'boss' : 'bosses') + ' felled together.');
+      lines.push('Bond: <b>' + (p.total | 0) + '</b> co-op ' + ((p.total | 0) === 1 ? 'boss' : 'bosses') + ' defeated together.');
       if (bossName) lines.push('Last hunt: ' + esc(bossName) + (when ? ' · ' + when : '') + '.');
       showNoticeCard({ icon: p.alive ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.alive ? 'good' : 'info' });
     } catch (_) {}
@@ -6407,7 +6407,7 @@
   function _pfRowsInner() {
     return _pfData.length
       ? _pfData.map(_pfRowHtml).join('')
-      : '<div class="pf-empty">No pacts yet.<br>Fell a co-op dungeon boss with a friend to light your first flame.</div>';
+      : '<div class="pf-empty">No pacts yet.<br>Defeat a co-op dungeon boss with a friend to light your first flame.</div>';
   }
   // W664 Phase 2 — when the server pact sync lands new numbers while the screen is
   // OPEN, refresh the list + header in place (skip if a detail sheet is open, so we
@@ -10606,7 +10606,7 @@
         ? '<div class="asc-recap-stats">' + stat(r.dpDealt, 'DMG DEALT', r.dpDealt >= r.dbDealt) + stat(r.dbDealt, 'DMG TAKEN') +
           stat(r.reason === 'timeout' ? 'TIMEOUT' : 'K.O.', 'ENDED') + '</div>'
         : '';
-      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
+      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT ENDED</span></div>' +
         '<div class="asc-recap"><div class="asc-recap-stats">' +
           stat(Math.round(r.pHP) + '/' + r.pMax, 'YOUR HP', r.untouched) + stat(Math.round(r.bHP) + '/' + r.bMax, 'FOE HP') + stat(mt, 'MATCHUP') +
         '</div>' + dmgRow + '</div></div>';
@@ -10617,7 +10617,7 @@
     rounds.forEach((rd) => { if (rd.playerWon) dealt += (rd.pRoll || 0); else taken += (rd.bRoll || 0); });
     const lines = rounds.map((rd) =>
       '<div class="ln ' + (rd.playerWon ? 'you' : 'foe') + '"><span class="dot"></span><span class="tx">' + _arNarr(rd) + '</span></div>').join('');
-    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT FELL</span></div>' +
+    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT ENDED</span></div>' +
       '<div class="asc-recap">' + lines +
       '<div class="asc-recap-stats">' + stat(dealt, 'DMG DEALT') + stat(taken, 'DMG TAKEN', taken === 0) + stat(rounds.length, 'ROUNDS') + '</div></div></div>';
   }
@@ -12412,8 +12412,8 @@
         '<div class="ar-result-rule"></div>' +
         (won
           ? '<div class="ar-result-narr">' + (_arFlawless
-              ? 'You felled ' + esc(_arMatchup.bot.name) + ' without taking a wound. <b style="color:#f5b842">FLAWLESS.</b>'
-              : 'You felled ' + esc(_arMatchup.bot.name) + '. <b style="color:#f5b842">Earned, not given.</b>') + '</div>'
+              ? 'You defeated ' + esc(_arMatchup.bot.name) + ' without taking a wound. <b style="color:#f5b842">FLAWLESS.</b>'
+              : 'You defeated ' + esc(_arMatchup.bot.name) + '. <b style="color:#f5b842">Earned, not given.</b>') + '</div>'
           // W235 gate legibility: a rated loss at the F6 cliff with no weapon
           // equipped tells the player WHERE the blade is, not just that they lost.
           : '<div class="ar-result-narr loss">' + (_arGateHint()
@@ -15746,10 +15746,10 @@
 
     // v3 Phase 1z.184 — Hunter Feed card_drop write. Fires once
     // per card lifetime (per-card-id idempotency key); skips
-    // ultra-rare to avoid colliding with the ultra_rare_drop
-    // write inside openCardRevealModal; skips capped rolls so
-    // we never log a drop that wasn't actually awarded.
-    if (wasFirstAcquisition && !wasCapped && dropped.rarity !== 'ultra_rare') {
+    // ultra-rare AND mythic (W697) to avoid colliding with the
+    // prominent ultra_rare_drop write inside openCardRevealModal;
+    // skips capped rolls so we never log a drop that wasn't awarded.
+    if (wasFirstAcquisition && !wasCapped && dropped.rarity !== 'ultra_rare' && dropped.rarity !== 'mythic') {
       try {
         if (typeof recordGuildActivity === 'function') {
           recordGuildActivity('card_drop', {
@@ -15757,6 +15757,11 @@
             cardName:   dropped.name || 'an item',
             rarity:     dropped.rarity || null,
             sourceBoss: dropped.source_boss || bossId || null,
+            // W697 — a co-op drop is credited to the BOSS THAT DROPPED IT (the Grinning
+            // God), not the card's canonical source_boss (erebus/the_sleepless_crown).
+            // The feed renderer prefers sourceBossName; leave sourceBoss canonical so
+            // solo/other rows are untouched.
+            sourceBossName: (dropOpts && dropOpts.source === 'coop' && dropOpts.sourceName) ? dropOpts.sourceName : null,
           }, 'card_drop_' + dropped.id);
         }
       } catch (_) {}
@@ -15843,13 +15848,13 @@
         inv.first_common_date = getDeviceLocalDate();
       }
     }
-    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
+    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare' || card.rarity === 'mythic')) {
       if (!inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
     }
     // v3 Phase 1z.184 — mirror the rollBossDrop card_drop write so
     // QA force-drops surface in Hunter Feed identically. Same
-    // idempotency key + ultra-rare exclusion.
-    if (wasFirstAcquisition && !wasCapped && card.rarity !== 'ultra_rare') {
+    // idempotency key + ultra-rare/mythic exclusion (W697).
+    if (wasFirstAcquisition && !wasCapped && card.rarity !== 'ultra_rare' && card.rarity !== 'mythic') {
       try {
         if (typeof recordGuildActivity === 'function') {
           recordGuildActivity('card_drop', {
@@ -15867,7 +15872,7 @@
     persistInventory();
     // Trigger reveal immediately for first-acquisition rare/ultra so
     // console testing is one-line. Capped/dupe rare-ultra: no reveal.
-    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare')) {
+    if (wasFirstAcquisition && !wasCapped && (card.rarity === 'rare' || card.rarity === 'ultra_rare' || card.rarity === 'mythic')) {
       processRevealQueue();
     }
     return {
@@ -16666,7 +16671,7 @@
     const dateStamp = _megaDateStamp();
     const art = (card && card.art_path) || 'assets/items/nightfall-blade-of-the-sovereign.png';
     stage.innerHTML =
-      '<div class="pre-snapshot"><b>' + esc(bossUpper) + ' \u2014 FELLED</b></div>' +
+      '<div class="pre-snapshot"><b>' + esc(bossUpper) + ' \u2014 DEFEATED</b></div>' +
       '<div class="light-drain"></div>' +
       '<div class="mega-vignette"></div>' +
       '<div class="mega-rays mega-rays--umbral"></div>' +
@@ -16677,7 +16682,7 @@
       '<div class="mega-rays mega-rays--prism"></div>' +
       '<div class="mega-flash mega-flash--1"></div><div class="mega-flash mega-flash--2"></div><div class="mega-flash mega-flash--ghost"></div>' +
       '<div class="mega-systemline"></div>' +
-      '<div class="mega-wordmark"><div class="mega-wordmark-kicker">S-RANK ' + (card && card.id === 'nightfall_blade' ? 'SOVEREIGN' : 'CROWN') + ' FELLED</div><div class="mega-wordmark-whisper">' + (card && card.id === 'nightfall_blade' ? 'The eclipse answers.' : 'The long watch ends.') + '</div></div>' +
+      '<div class="mega-wordmark"><div class="mega-wordmark-kicker">S-RANK ' + (card && card.id === 'nightfall_blade' ? 'SOVEREIGN' : 'CROWN') + ' DEFEATED</div><div class="mega-wordmark-whisper">' + (card && card.id === 'nightfall_blade' ? 'The eclipse answers.' : 'The long watch ends.') + '</div></div>' +
       '<div class="reveal-group">' +
         '<div class="mega-card-wrap"><div class="prism-ring"></div>' +
           '<div class="mega-card"><div class="mega-card-inner">' +
@@ -16694,7 +16699,7 @@
         '<div class="rc-beats">' +
           '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0' + (card && card.id === 'nightfall_blade' ? 'A MYTHIC BLADE, EARNED NOT BOUGHT' : card && card.id === 'reverie_staff' ? 'A MYTHIC FOCUS, EARNED NOT BOUGHT' : card && card.id === 'vigil_bow' ? 'A MYTHIC BOW, EARNED NOT BOUGHT' : 'A MYTHIC OF THE REALM') + '</div>' +   // W693 \u2014 mythics are uncapped now; no "1 of 1"/"only in existence" claims
           '<div class="rc-onlypill">\u25c6 MYTHIC \u00b7 TROPHY OF THE HUNT</div>' +
-          '<div class="rc-source">FELLED: ' + esc(bossUpper) + '</div>' +
+          '<div class="rc-source">DEFEATED: ' + esc(bossUpper) + '</div>' +
           '<div class="rc-stats">' + _megaStatBadges(card) + ((typeof WEAPON_MOVES !== 'undefined' && card && WEAPON_MOVES[card.id] && WEAPON_MOVES[card.id].indexOf('eclipse') !== -1) ? '<span class="eclipse-badge"><span class="glyph"></span>ECLIPSE \u00b7 STRIKE LANDS TWICE (\u00d72)</span>' : '') + '</div>' +
           '<div class="rc-flavor">' + esc(flavor) + '</div>' +
         '</div>' +
@@ -17624,12 +17629,18 @@
     // Per-card-id idempotent so re-opening the modal (debug, queue
     // replay, etc.) doesn't dup. Only ultra-rare qualifies — common
     // and rare drops are not feats by themselves at this scale.
+    // W697 — MYTHIC now also takes this prominent Tier-1 row. The Grinning
+    // God's table is mythic-ONLY, so without this its (rarest-in-game) drops
+    // would fall to the lesser card_drop row — the card_drop write below is
+    // coordinated to skip mythic so there's exactly one row.
     try {
-      if (card && card.rarity === 'ultra_rare') {
+      if (card && (card.rarity === 'ultra_rare' || card.rarity === 'mythic')) {
+        const _isMyth = card.rarity === 'mythic';
         recordGuildActivity('ultra_rare_drop', {
           cardId:   card.id || null,
-          cardName: card.name || 'an ultra-rare relic',
-        }, 'ultra_rare_' + (card.id || ('anon_' + Date.now())));
+          cardName: card.name || (_isMyth ? 'a mythic relic' : 'an ultra-rare relic'),
+          mythic:   _isMyth || undefined,
+        }, (_isMyth ? 'mythic_' : 'ultra_rare_') + (card.id || ('anon_' + Date.now())));
       }
     } catch (_) {}
 
@@ -18002,6 +18013,33 @@
       const e = (inv.cards && inv.cards[id]) || {};
       bg.relics.push({ id: id, name: c.name, rarity: c.rarity, slot: c.slot, art: c.art_path || '', count: e.count || 0, owned: !!e.discovered, date: e.first_acquired_date || null });
     }
+    // W697 — pool-driven boss nodes (the Grinning God). Its drop pool is the THREE
+    // EXISTING mythics whose CARDS.source_boss point at their canonical bosses, so the
+    // loop above never makes a node for it. Emit a display-only `shared` node so the
+    // members raid shows its drop table (Nightfall/Reverie/Vigil). It is EXCLUDED from
+    // the rank + overview aggregates so those same mythics aren't double-counted (they
+    // already tally under Erebus / The Sleepless Crown).
+    const _poolBossIds = {};
+    try { if (typeof BOSSES === 'object' && BOSSES) for (const k in BOSSES) if (BOSSES[k] && BOSSES[k].pool) _poolBossIds[k] = 1; } catch (_) {}
+    for (const k in coop) if (coop[k] && coop[k].pool) _poolBossIds[k] = 1;
+    for (const bid in _poolBossIds) {
+      const bDef = (typeof BOSSES === 'object' && BOSSES && BOSSES[bid]) || null;
+      const cDef = coop[bid] || null;
+      const pool = (bDef && bDef.pool) || (cDef && cDef.pool);
+      if (!pool) continue;
+      const meta = cDef || bDef || {};
+      const rank = meta.rank || '?';
+      byRank[rank] = byRank[rank] || {};
+      if (byRank[rank][bid]) continue;   // a real source_boss card already owns this node
+      const bg = byRank[rank][bid] = { name: meta.name || bid, coop: true, shared: true, relics: [] };
+      const seen = {};
+      for (const rar in pool) (pool[rar] || []).forEach(cid => {
+        if (seen[cid]) return; seen[cid] = 1;
+        const c = CARDS[cid]; if (!c) return;
+        const e = (inv.cards && inv.cards[cid]) || {};
+        bg.relics.push({ id: cid, name: c.name, rarity: c.rarity, slot: c.slot, art: c.art_path || '', count: e.count || 0, owned: !!e.discovered, date: e.first_acquired_date || null });
+      });
+    }
     const out = [];
     for (const rank of _CL_RANK_ORDER) {
       if (!byRank[rank]) continue;
@@ -18012,9 +18050,12 @@
           const bg = byRank[rank][bid];
           bg.relics.sort((x, y) => (_CL_RARORD[x.rarity] - _CL_RARORD[y.rarity]) || x.name.localeCompare(y.name));
           const have = bg.relics.filter(r => r.owned).length;
-          return { name: bg.name, coop: bg.coop, relics: bg.relics, have: have, total: bg.relics.length };
+          return { name: bg.name, coop: bg.coop, shared: !!bg.shared, relics: bg.relics, have: have, total: bg.relics.length };
         });
-      let have = 0, total = 0; bosses.forEach(b => { have += b.have; total += b.total; });
+      // W697 — a `shared` pool node (the raid) renders its own block + local seal but is
+      // NOT summed into the rank-gate totals (its mythics already count under their
+      // canonical boss); double-counting would inflate the S-gate 'X / Y relics'.
+      let have = 0, total = 0; bosses.forEach(b => { if (b.shared) return; have += b.have; total += b.total; });
       out.push({ rank: rank, locked: locked, current: rank === playerRank, bosses: bosses, have: have, total: total });
     }
     return out;
@@ -18125,6 +18166,7 @@
       have += d.have; total += d.total;
       if (!d.locked && d.total > 0 && d.have === d.total) gatesCleared++;
       d.bosses.forEach(b => {
+        if (b.shared) return;   // W697 — the raid's pool node mirrors already-counted mythics; don't double-count them in Ultra Relics / Bosses Mastered
         if (!d.locked && b.total > 0 && b.have === b.total) bossesMastered++;
         b.relics.forEach(r => { if (r.rarity === 'ultra_rare' || r.rarity === 'mythic') { ultraTotal++; if (r.owned) ultraHave++; } });
       });
@@ -18219,7 +18261,7 @@
     // and sub-label powering the enriched section headers (accent bar + glyph +
     // sub-label + per-section mini progress bar). Keys match the section keys.
     const ARCHIVE_RARITY_META = {
-      mythic:     { ac: '#5eead4', acg: 'rgba(94,234,212,.5)',  sub: 'Mythic · one exists',
+      mythic:     { ac: '#5eead4', acg: 'rgba(94,234,212,.5)',  sub: 'Mythic · trophy of the hunt',
         glyph: '<path d="M11 2l2.6 5.8L20 8.6l-5 4.2 1.6 6.2L11 15.6 5.4 19l1.6-6.2-5-4.2 6.4-.8z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/>' },
       ultra_rare: { ac: '#f5b842', acg: 'rgba(245,184,66,.5)',  sub: 'Best-in-slot drops',
         glyph: '<path d="M11 3l5 4v8l-5 4-5-4V7z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/><path d="M11 7v8M7 9l8 4M15 9l-8 4" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>' },
@@ -20704,7 +20746,7 @@
       subtitle: 'The Arena, co-op hunts & a sharper climb.',
       items: [
         { emoji: '', title: 'Ranked PvP — The Arena',     description: "Challenge real hunters in live, turn-based duels. Climb a seasonal rating ladder, earn promotions, and spar a friend's Echo whenever you like — a server-run battle, so you never wait on them to be online." },
-        { emoji: '', title: 'Co-op Hunts',                 description: "Summon a guild ally and bring down a two-hunter boss together. Combine your verified steps and flights to fell it within 24 hours — when it drops, both hunters claim souls and a relic." },
+        { emoji: '', title: 'Co-op Hunts',                 description: "Summon a guild ally and bring down a two-hunter boss together. Combine your verified steps and flights to defeat it within 24 hours — when it drops, both hunters claim souls and a relic." },
         { emoji: '', title: 'Prestige',                    description: "The climb no longer ends at S+. Every milestone beyond it now earns an ascending star, so even the very top still has somewhere to go." },
         { emoji: '', title: 'Perfect Day, reimagined',     description: "Complete every habit in a day and the celebration hits harder — sound, motion, and a seal that escalates the longer your perfect streak runs." },
         { emoji: '', title: 'Smoother co-op + polish',     description: "Joining a hunt now takes on the first tap, your active pacts always show, and both hunters reliably collect their drop — even if the app was closed mid-hunt. Plus a tightened economy and dozens of smaller fixes." },
@@ -35441,14 +35483,26 @@
       };
     }
 
-    // dungeon
+    // dungeon (solo OR co-op)
     const id  = opts.bossId;
-    const cfg = opts.cfg || ((typeof BOSSES === 'object' && BOSSES && id) ? BOSSES[id] : null) || {};
+    // W697 — a co-op boss (the Grinning God et al.) has its full config on COOP_BOSSES,
+    // NOT the lean BOSSES drop-stub (which has no killCondShort → empty feat line). Prefer
+    // COOP_BOSSES when the BOSSES entry is a coop-only stub or absent.
+    const _bStub = (typeof BOSSES === 'object' && BOSSES && id) ? BOSSES[id] : null;
+    const _coopCfg = (typeof COOP_BOSSES === 'object' && COOP_BOSSES && id) ? COOP_BOSSES[id] : null;
+    const isCoop = !!_coopCfg && (!_bStub || _bStub.coopOnly);
+    const cfg = opts.cfg || (isCoop ? _coopCfg : _bStub) || _coopCfg || _bStub || {};
     let killNo = 0;
     try {
-      const all = (typeof loadBosses === 'function') ? (loadBosses() || {}) : {};
-      const s = all[id];
-      if (s && typeof s.kill_count === 'number') killNo = s.kill_count;
+      if (isCoop) {
+        // W697 — co-op kills live in hb_coop_kills, not the solo loadBosses() store.
+        const c = (_loadCoopKills()[id] || {}).count;
+        if (typeof c === 'number') killNo = c;
+      } else {
+        const all = (typeof loadBosses === 'function') ? (loadBosses() || {}) : {};
+        const s = all[id];
+        if (s && typeof s.kill_count === 'number') killNo = s.kill_count;
+      }
     } catch (_) {}
     const rank = (cfg.rank || 'E').toUpperCase();
     return {
@@ -35457,7 +35511,7 @@
       bossName: cfg.name || 'The Boss',
       artPath: id ? getBossArtPath(id) : null,
       rankId: rank,
-      context: rank + '-RANK · DUNGEON HUNT',
+      context: rank + '-RANK · ' + (isCoop ? 'CO-OP HUNT' : 'DUNGEON HUNT'),
       feat: cfg.killCondShort || '',
       killNo: killNo,
       stamp: 'DEFEATED',
@@ -45936,7 +45990,7 @@
       flavorShort:     'Two wardens, two roads. Outwalk them AND outclimb them — together.',
       flavorLong:      'They were set to guard the low road and the high stair both, and starved at their posts until only the watching was left. One way past them is never enough: the ground must be covered AND the stairs must be taken. Two hunters, splitting the distance and the climb, leave the Gaunt Wardens nothing left to guard.',
       killCondShort:   'Two hunters: 10,000 steps AND 6 flights in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 10,000 verified steps AND climb 6 verified flights of stairs between you. BOTH must be met to fell the Wardens — split the road and the climb however you like. Both hunters are credited the kill.',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 10,000 verified steps AND climb 6 verified flights of stairs between you. BOTH must be met to defeat the Wardens — split the road and the climb however you like. Both hunters are credited the kill.',
       coopVictoryTitle:'THE WARDENS FALL',
       coopDefeatTitle: 'THE WARDENS STILL STAND',
     },
@@ -46599,6 +46653,33 @@
     } catch (_) {}
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
     try { _coopBumpKill(inst.boss_id); } catch (_) {}     // W545 — per-co-op-boss kill count for the Kill Log
+    // W697 — co-op wins now post to the Guild Activity feed like a solo kill does (they
+    // previously fired NO 'boss_kill' row, so a defeated co-op boss — the Grinning God
+    // included — was invisible in your own + friends' feeds). Once-per-instance via the
+    // award guard above; the seen/clientEvent keys use THIS device's co-op kill count so
+    // each hunter posts exactly one row for the shared kill (both DID defeat it). Boss
+    // names are canonical game fiction — no PHI, no members-raid privacy concern.
+    try {
+      const _ck = (_loadCoopKills()[inst.boss_id] || {}).count || 1;
+      recordGuildActivity('boss_kill', {
+        bossId:   inst.boss_id,
+        bossName: cfg.name,
+        rank:     cfg.rank || null,
+        coop:     true,
+        dayDate:  getPTDate(),
+      }, 'coop_boss_kill_' + inst.boss_id + '_' + _ck);
+      if (cfg.rank && /^(E|D|C|B|A|S|S\+)$/.test(cfg.rank)) {
+        _queuePublicAchievementEvent({
+          eventType:       'boss_kill',
+          eventKey:        inst.boss_id,
+          eventLabel:      'defeated ' + cfg.name,   // W697 — MUST be 'defeated ' (backend RE_BOSS_KILL_LABEL + the reader parser both anchor on it)
+          eventValue:      _ck,
+          rarity:          cfg.rank,
+          clientEventId:   'coop_boss_kill:' + inst.boss_id + ':' + _ck,
+          clientCreatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (_) {}
     try { _coopBumpPact(inst); } catch (_) {}             // W663 — co-op Pact streak with this ally
     // W662 — instant fade: drop the stale live-badge entry FIRST so _coopApplyBadge
     // takes the idle branch and faints the just-felled card now (else it reads the
