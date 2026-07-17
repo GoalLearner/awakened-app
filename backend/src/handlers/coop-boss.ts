@@ -824,6 +824,16 @@ export async function handleCoopBossCreate(
 
   const row = await loadInstance(env, id);
   if (!row) return jsonError(500, 'INTERNAL', 'Failed to read back created instance.');
+  // W694 review — a hand-picked summons commits these hunters to a hunt of this boss;
+  // drop any stale raid-finder rows they hold for it (best-effort: the inverse of the
+  // finder's "already on a live hunt" gate, so queued-AND-hunting can't coexist).
+  try {
+    await env.DB.batch(
+      [session.userId, ...allies].map((uid) =>
+        env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ? AND boss_id = ?').bind(uid, bossId),
+      ),
+    );
+  } catch (_) { /* cleanup only — never fail the create */ }
   const aliasMap = await getAliasMap(env, participantIds(row));
   // W603 — push the invited partner NOW (the co-op badge only surfaced this on
   // their next app-open; this makes the summons a live event). bossId rides in
@@ -998,6 +1008,12 @@ export async function handleCoopBossJoin(
       .bind(startsAt, endsAt, id, id),
   );
   await env.DB.batch(joinStmts);
+  // W694 review — joining a hunt of this boss ends any raid-finder search for it
+  // (inverse of the finder's "already on a live hunt" gate). Best-effort, OUTSIDE the
+  // join batch: queue cleanup must never be able to fail the join itself.
+  try {
+    await env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ? AND boss_id = ?').bind(session.userId, row.boss_id).run();
+  } catch (_) { /* cleanup only */ }
 
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back joined instance.');
@@ -1307,8 +1323,32 @@ export async function handleCoopBossClaim(
 // A member who can't field a full party queues here; a matchmaking pass forms queued
 // seekers into a party and spins up a LIVE (active) hunt with them all auto-joined
 // (queuing IS the consent to start). Rides the W692 participant model.
-const RAID_QUEUE_TTL_SEC = 15 * 60; // a seeker who queued >15min ago has aged out
+//
+// Liveness model (W694 review): the TTL runs on the last_seen_at HEARTBEAT — refreshed
+// by every ~12s client poll — NOT on created_at (which is the FIFO position). A TTL on
+// created_at deadlocks any queue that takes longer than the TTL to fill, aging out
+// hunters who are actively searching. 90s ≈ 7 missed ticks: a backgrounded/closed app
+// stops polling and ages out fast (never matched into a live 72h raid unwatched), while
+// an open lobby stays fresh indefinitely.
+const RAID_QUEUE_TTL_SEC = 90;
+// The heartbeat-TTL WHERE fragment (?T binds RAID_QUEUE_TTL_SEC). COALESCE tolerates a
+// pre-heartbeat row shape.
+const RAID_QUEUE_FRESH_SQL = `(strftime('%s','now') - strftime('%s', COALESCE(q.last_seen_at, q.created_at))) < ?T`;
 const RANK_ORDER: Record<string, number> = { E: 0, D: 1, C: 2, B: 3, A: 4, S: 5, 'S+': 6 };
+
+// Re-queue claimed seekers, PRESERVING their original created_at (FIFO position — the
+// review's fairness finding: a raced-out hunter must not drop to the back of the line).
+// last_seen_at defaults fresh so they don't instantly age out.
+async function requeueSeekers(env: Env, bossId: string, rows: { user_id: string; created_at?: string | null }[]): Promise<void> {
+  if (!rows.length) return;
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB
+        .prepare('INSERT OR IGNORE INTO raid_queue (user_id, boss_id, created_at) VALUES (?, ?, COALESCE(?, CURRENT_TIMESTAMP))')
+        .bind(r.user_id, bossId, r.created_at ?? null),
+    ),
+  );
+}
 
 // Create a LIVE hunt from a set of matchmade hunters (challenger = first, rest are
 // auto-joined participants). starts/ends stamped now; legacy partner columns dual-written.
@@ -1377,12 +1417,12 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
   if (!cfg) return null;
   const minParty = cfg.minParty ?? cfg.partySize ?? 2;
   const maxParty = cfg.maxParty ?? cfg.partySize ?? 2;
-  // Available seekers: queued within the TTL AND not already on a live hunt of this boss.
+  // Available seekers: heartbeat-fresh AND not already on a live hunt of this boss.
   const avail = await env.DB
     .prepare(
       `SELECT q.user_id FROM raid_queue q
         WHERE q.boss_id = ?1
-          AND (strftime('%s','now') - strftime('%s', q.created_at)) < ?2
+          AND ${RAID_QUEUE_FRESH_SQL.replace('?T', '?2')}
           AND NOT EXISTS (
             SELECT 1 FROM coop_boss_instances i
              WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
@@ -1393,27 +1433,71 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
     )
     .bind(bossId, RAID_QUEUE_TTL_SEC)
     .all<{ user_id: string }>();
-  const seekers = (avail.results ?? []).map((r) => r.user_id);
+  let seekers = (avail.results ?? []).map((r) => r.user_id);
   if (seekers.length < minParty) return null;
-  const party = seekers.slice(0, maxParty);
-  const ph = party.map(() => '?').join(', ');
-  const claimed = await env.DB
-    .prepare(`DELETE FROM raid_queue WHERE boss_id = ? AND user_id IN (${ph}) RETURNING user_id`)
-    .bind(bossId, ...party)
-    .all<{ user_id: string }>();
-  const claimedIds = (claimed.results ?? []).map((r) => r.user_id);
-  if (claimedIds.length < minParty) {
-    // Raced below the minimum — re-queue whoever we did claim so they keep seeking.
-    if (claimedIds.length) {
+
+  // W694 review (HIGH) — members-only re-check at FORM time, not just enqueue time: a
+  // membership that lapsed/refunded while queued must not ride into the members raid
+  // (mirrors the create-path per-ally check + the join-path re-check). Lapsed seekers
+  // are dropped from the queue outright — their next poll re-gates them with the 403.
+  if (cfg.memberOnly) {
+    const kept: string[] = [];
+    const lapsed: string[] = [];
+    for (const uid of seekers.slice(0, maxParty + 2)) {
+      const { member } = await readEntitlements(env, uid);
+      (member ? kept : lapsed).push(uid);
+      if (kept.length >= maxParty) break;
+    }
+    if (lapsed.length) {
       await env.DB.batch(
-        claimedIds.map((uid) =>
-          env.DB.prepare('INSERT OR IGNORE INTO raid_queue (user_id, boss_id) VALUES (?, ?)').bind(uid, bossId),
-        ),
+        lapsed.map((uid) => env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ?').bind(uid)),
       );
     }
+    seekers = kept;
+    if (seekers.length < minParty) return null;
+  }
+
+  const party = seekers.slice(0, maxParty);
+  const ph = party.map(() => '?').join(', ');
+  // Claim WITH created_at so any re-queue preserves the hunter's FIFO position.
+  const claimed = await env.DB
+    .prepare(`DELETE FROM raid_queue WHERE boss_id = ? AND user_id IN (${ph}) RETURNING user_id, created_at`)
+    .bind(bossId, ...party)
+    .all<{ user_id: string; created_at: string | null }>();
+  const claimedRows = claimed.results ?? [];
+
+  // W694 review (MEDIUM) — the avail read is a snapshot; between it and the claim a
+  // hunter can join a hand-summoned hunt of this boss. Re-verify AFTER the claim and
+  // re-queue (FIFO-preserved) anyone now in a live hunt so they're never double-booked.
+  const free: typeof claimedRows = [];
+  const busy: typeof claimedRows = [];
+  for (const r of claimedRows) {
+    const inHunt = await env.DB
+      .prepare(
+        `SELECT 1 FROM coop_boss_instances i WHERE i.boss_id = ?1 AND i.status IN ('pending','active')
+           AND ( i.challenger_user_id = ?2 OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?2) )
+         LIMIT 1`,
+      )
+      .bind(bossId, r.user_id)
+      .first();
+    (inHunt ? busy : free).push(r);
+  }
+  // (busy hunters are simply dropped from the queue — they're already hunting.)
+  void busy;
+
+  if (free.length < minParty) {
+    // Raced below the minimum — re-queue the free claims so they keep seeking.
+    await requeueSeekers(env, bossId, free);
     return null;
   }
-  return await formRaidInstance(env, bossId, claimedIds, ctx);
+  // W694 review (LOW) — the claim DELETE auto-committed; if the form batch fails
+  // transiently the claimed hunters must be re-queued, not silently dropped.
+  try {
+    return await formRaidInstance(env, bossId, free.map((r) => r.user_id), ctx);
+  } catch (e) {
+    await requeueSeekers(env, bossId, free);
+    throw e;
+  }
 }
 
 // ── POST /v1/raid-queue — enter the raid finder (idempotent; also the poll tick) ──
@@ -1460,11 +1544,25 @@ export async function handleRaidQueueJoin(
     .first();
   if (inHunt) return jsonError(409, 'ALREADY_ACTIVE', 'You are already on a hunt for this boss.');
 
-  // Enqueue (idempotent: keep the original created_at / FIFO position if re-polling).
-  // Clear any stale queue row for a different boss first (one queue per hunter).
+  // Enqueue (idempotent poll tick): keep the original created_at (FIFO position) but
+  // REFRESH the last_seen_at heartbeat — the TTL runs on liveness, not queue age
+  // (W694 review: a created_at TTL deadlocked any queue slower than 15min to fill).
+  // Clear any stale queue row for a different boss first (one queue per hunter), and
+  // reap aged rows (best-effort — bounds the table + keeps the waiting count honest).
   await env.DB.batch([
     env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ? AND boss_id <> ?').bind(session.userId, bossId),
-    env.DB.prepare('INSERT OR IGNORE INTO raid_queue (user_id, boss_id) VALUES (?, ?)').bind(session.userId, bossId),
+    env.DB
+      .prepare(
+        `INSERT INTO raid_queue (user_id, boss_id) VALUES (?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP`,
+      )
+      .bind(session.userId, bossId),
+    env.DB
+      .prepare(
+        `DELETE FROM raid_queue
+          WHERE (strftime('%s','now') - strftime('%s', COALESCE(last_seen_at, created_at))) >= ?`,
+      )
+      .bind(RAID_QUEUE_TTL_SEC),
   ]);
 
   const inst = await matchmakeRaid(env, bossId, ctx);
@@ -1472,8 +1570,11 @@ export async function handleRaidQueueJoin(
     const aliasMap = await getAliasMap(env, participantIds(inst));
     return jsonOk({ ok: true, matched: true, instance: serializeCoop(inst, aliasMap, session.userId, emptyProgress()) });
   }
-  const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM raid_queue WHERE boss_id = ?')
-    .bind(bossId)
+  // Waiting count = heartbeat-FRESH seekers only (an aged ghost row must not inflate
+  // the lobby's "N searching" line into a promise matchmaking can't keep).
+  const cnt = await env.DB
+    .prepare(`SELECT COUNT(*) AS n FROM raid_queue q WHERE q.boss_id = ?1 AND ${RAID_QUEUE_FRESH_SQL.replace('?T', '?2')}`)
+    .bind(bossId, RAID_QUEUE_TTL_SEC)
     .first<{ n: number }>();
   const minParty = cfg.minParty ?? cfg.partySize ?? 2;
   return jsonOk({ ok: true, matched: false, queued: true, waiting: cnt ? Number(cnt.n) : 1, need: minParty });
@@ -1506,8 +1607,10 @@ export async function handleRaidQueueStatus(
   const bossId = url.searchParams.get('boss_id') || (mine ? mine.boss_id : '');
   let waiting = 0;
   if (bossId) {
-    const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM raid_queue WHERE boss_id = ?')
-      .bind(bossId)
+    // Heartbeat-fresh seekers only (mirrors the join tick's honest count).
+    const cnt = await env.DB
+      .prepare(`SELECT COUNT(*) AS n FROM raid_queue q WHERE q.boss_id = ?1 AND ${RAID_QUEUE_FRESH_SQL.replace('?T', '?2')}`)
+      .bind(bossId, RAID_QUEUE_TTL_SEC)
       .first<{ n: number }>();
     waiting = cnt ? Number(cnt.n) : 0;
   }

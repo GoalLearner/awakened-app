@@ -31449,6 +31449,15 @@ button.guildhall-summary-tile:active {
 .coop-note--loss { color: #f3b0b0; background: rgba(120,40,40,0.18); border-color: rgba(220,120,120,0.35); }
 /* W693 — the members-raid "brutal below a full party" warning (amber, gate-of-god tone). */
 .coop-note--warn { color: #f4d58a; background: rgba(150,110,30,0.16); border-color: rgba(220,180,90,0.34); }
+/* W694 — raid finder (matchmaking lobby): a searching state with a spinner + live count. */
+.coop-finder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 16px 20px; text-align: center; }
+.coop-finder-spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(220,180,90,0.25); border-top-color: #f4d58a; animation: coopFinderSpin 0.9s linear infinite; }
+@keyframes coopFinderSpin { to { transform: rotate(360deg); } }
+.coop-finder-head { font-weight: 800; letter-spacing: 0.08em; font-size: 0.92rem; color: #f4d58a; }
+.coop-finder-sub { font-size: 0.86rem; color: rgba(255,255,255,0.66); max-width: 22rem; }
+.coop-finder-count { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
+.coop-finder-count b { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .coop-finder-spin { animation-duration: 2.4s; } }
 
 .coop-goal-card { text-align: center; padding: 20px; margin: 0 0 20px; border-radius: 16px;
   background: linear-gradient(180deg, rgba(245,184,66,0.10), rgba(245,184,66,0.02));

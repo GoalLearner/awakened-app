@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w693'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w694'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46034,6 +46034,7 @@
       special:         true,
       membersOnly:     true,
       brutalBelowFull: true,
+      matchmaking:     true,
       minParty:        2,
       maxParty:        5,
       coopGoalSteps:   150000,
@@ -46126,6 +46127,7 @@
 
   let _coopSheet = { instance: null, cfg: null, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
   let _coopPollTimer = null;
+  let _coopFinderTimer = null;   // W694 — raid-finder lobby poll (re-queues + checks for a match)
   let _coopResolving = false;   // W377 — re-entrancy guard for _coopResolve
 
   function _loadCoopAwarded() {
@@ -46175,6 +46177,7 @@
     if (!cfg) return;
     const overlay = document.getElementById('coop-fs-overlay');
     if (!overlay) return;
+    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
     _coopSheet = { instance: null, cfg: cfg, loading: true, error: null, busy: false, picking: false, friends: null, _summonsShown: false };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
@@ -46190,6 +46193,9 @@
     document.body.classList.remove('bfs-locked');
     overlay.scrollTop = 0;
     _coopStopPolling();
+    // W694 — closing the sheet leaves the raid finder (the lobby is active-only, so a
+    // member is never matched into a live 72h raid while they've walked away).
+    _coopLeaveFinderIfActive();
     // W394 — if this detail was opened from the dashboard, return there.
     if (_coopDashReturn) { _coopDashReturn = false; try { _coopOpenDashboard(); } catch (_) {} }
   }
@@ -46198,6 +46204,85 @@
 
   function _coopStartPolling() { if (_coopPollTimer) return; try { _coopPollTimer = setInterval(function () { _coopPollTick(); }, 60000); } catch (_) {} }
   function _coopStopPolling() { if (_coopPollTimer) { try { clearInterval(_coopPollTimer); } catch (_) {} _coopPollTimer = null; } }
+
+  // ── W694 — Raid finder (matchmaking lobby) ──
+  // Enter the finder: queue on the server, then poll every ~12s (re-POST /raid-queue is
+  // idempotent + also the tick). On a match the server returns the formed hunt; else it
+  // returns the live waiting count. Cancelling / closing leaves the queue (an active
+  // lobby, not a fire-and-forget — a member is never dropped into a 72h raid unwatched).
+  function _coopStartFinder() {
+    if (_coopFinderTimer) return;
+    try { _coopFinderTimer = setInterval(function () { _coopFinderTick(); }, 12000); } catch (_) {}
+  }
+  function _coopStopFinder() {
+    if (_coopFinderTimer) { try { clearInterval(_coopFinderTimer); } catch (_) {} _coopFinderTimer = null; }
+  }
+  // W694 review — every search-end goes through ONE path: bump the epoch (invalidates
+  // any in-flight tick), stop the timer, clear the flag, and leave the server queue.
+  // Called by cancel, close, AND every sheet re-open/reassignment — a hunter must
+  // never stay queued server-side while nothing on this device is watching the lobby.
+  let _coopFinderEpoch = 0;
+  function _coopLeaveFinderIfActive() {
+    _coopFinderEpoch++;
+    if (!_coopSheet || !_coopSheet.finding) { _coopStopFinder(); return; }
+    _coopSheet.finding = false;
+    _coopStopFinder();
+    try { Auth.raidQueueLeave(); } catch (_) {}   // fire-and-forget
+  }
+  async function _coopFinderTick() {
+    const cfg = _coopSheet.cfg;
+    if (!cfg || !_coopSheet.finding) { _coopStopFinder(); return; }
+    const epoch = _coopFinderEpoch;   // W694 review — detect a cancel/close racing this await
+    let res;
+    try { res = await Auth.raidQueueJoin(cfg.id); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    if (epoch !== _coopFinderEpoch || !_coopSheet.finding) {
+      // Cancelled/closed while the join POST was in flight — that POST just RE-QUEUED
+      // us server-side. Compensate with another leave so the cancel actually sticks.
+      try { Auth.raidQueueLeave(); } catch (_) {}
+      return;
+    }
+    if (res && res.ok && res.matched && res.instance) {
+      // Party formed — leave the lobby and drop into the live hunt.
+      _coopStopFinder();
+      _coopSheet.finding = false;
+      _coopSheet.finderError = null;
+      _coopSheet.instance = res.instance;
+      _coopSheet.pinnedId = res.instance.id;
+      try { if (typeof showHabitToast === 'function') showHabitToast('Party found — the hunt is on.'); } catch (_) {}
+      _coopAfterInstanceUpdate();
+      return;
+    }
+    if (res && res.ok && res.queued) {
+      _coopSheet.finderWaiting = (typeof res.waiting === 'number') ? res.waiting : null;
+      _coopSheet.finderNeed = (typeof res.need === 'number') ? res.need : null;
+      _coopSheet.finderError = null;
+    } else {
+      _coopSheet.finderError = (res && res.code) || 'ERROR';
+    }
+    renderCoopSheet();
+  }
+  function _coopFinderHtml() {
+    const cfg = _coopSheet.cfg || {};
+    const waiting = (typeof _coopSheet.finderWaiting === 'number') ? _coopSheet.finderWaiting : 1;
+    const need = (typeof _coopSheet.finderNeed === 'number') ? _coopSheet.finderNeed : ((cfg.minParty | 0) || 2);
+    const enough = waiting >= need;
+    const sub = enough
+      ? 'Forming your party — hold tight.'
+      : (waiting <= 1 ? 'You are first in the queue. Others will join.' : (waiting + ' hunters searching · ' + need + ' needed to form.'));
+    const errHtml = _coopSheet.finderError
+      ? '<div class="coop-note coop-note--loss">' + esc(_coopErrText(_coopSheet.finderError)) + '</div>'
+      : '';
+    return (
+      '<div class="coop-finder">' +
+        '<div class="coop-finder-spin" aria-hidden="true"></div>' +
+        '<div class="coop-finder-head">SEARCHING FOR A PARTY</div>' +
+        '<div class="coop-finder-sub">' + esc(sub) + '</div>' +
+        '<div class="coop-finder-count"><b>' + waiting + '</b> in the queue</div>' +
+      '</div>' +
+      errHtml +
+      '<button class="coop-cta coop-cta--ghost" data-coop-action="find-cancel">CANCEL SEARCH</button>'
+    );
+  }
 
   async function _coopRefresh() {
     const cfg = _coopSheet.cfg; if (!cfg) return;
@@ -46603,6 +46688,20 @@
   async function _coopHandleAction(action, btn) {
     if (_coopSheet.busy) return;
     if (action === 'invite') { openCoopPartnerPicker(); return; }
+    // W694 — the raid finder (matchmaking lobby).
+    if (action === 'find') {
+      _coopSheet.picking = false; _coopSheet.finding = true;
+      _coopSheet.finderWaiting = null; _coopSheet.finderNeed = null; _coopSheet.finderError = null;
+      renderCoopSheet();
+      _coopStartFinder();
+      _coopFinderTick();   // fire the first attempt immediately, don't wait 12s
+      return;
+    }
+    if (action === 'find-cancel') {
+      _coopLeaveFinderIfActive();   // W694 — epoch-bumped: also voids any in-flight tick
+      renderCoopSheet();
+      return;
+    }
     if (action === 'founder') { try { closeCoopSheet(); } catch (_) {} try { openFounder(); } catch (_) {} return; }   // W648 — cap-wall upsell → the Founder sheet
     if (action === 'close') { try { closeCoopSheet(); } catch (_) {} return; }   // W449 — defeat screen "Back to the Dungeon"
     if (action === 'pick-cancel') { _coopSheet.picking = false; renderCoopSheet(); return; }
@@ -46826,6 +46925,7 @@
     if (overlay) overlay.classList.toggle('coop-overlay--defeat', isDefeat);
 
     if (_coopSheet.picking) { body.innerHTML = _coopPickerHtml(); return; }
+    if (_coopSheet.finding) { body.innerHTML = _coopFinderHtml(); return; }   // W694 — raid finder (searching lobby)
     if (_coopSheet.loading && !_coopSheet.instance) { showLoading(body, 'hero'); return; } // W594 — skeleton instead of plain "Loading the hunt..."
     if (inst && inst.status === 'pending') { body.innerHTML = _coopPendingHtml(inst); return; }
     if (inst && inst.status === 'active') { body.innerHTML = _coopActiveHtml(inst); return; }
@@ -46892,6 +46992,12 @@
         '<p class="coop-foot">' + _feeFoot + '</p>'
       : '<button class="coop-cta" data-coop-action="invite"' + dis + '>' + (_isRange ? 'RECRUIT YOUR PARTY' : _maxParty === 3 ? 'RECRUIT TWO HUNTERS' : 'RECRUIT A HUNTER') + '</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>';
+    // W694 — the raid finder: queue to be matched with other seeking members when you
+    // can't field a full party from your own friends. Only offered when eligible to summon.
+    const finderCta = (cfg.matchmaking && !_rankLocked && !_brokeLocked)
+      ? '<button class="coop-cta coop-cta--ghost" data-coop-action="find"' + dis + '>FIND A PARTY</button>' +
+        '<p class="coop-foot">No full party? Queue and get matched with other seeking hunters.</p>'
+      : '';
     return (
       note +
       '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
@@ -46904,7 +47010,8 @@
             : 'combined ' + esc(cfg.coopUnit || 'steps') + ' \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun) + '</div>' +
       '</div>' +
       _coopErrBlock() +
-      cta
+      cta +
+      finderCta
     );
   }
 
@@ -48140,6 +48247,7 @@
     // prior screen, not the full-screen Pacts hub.
     _coopDashReturn = !!fromDash;
     _coopCloseDashboard();
+    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
     _coopSheet = { instance: inst, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: inst.id };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
@@ -48162,6 +48270,7 @@
     if (!cfg || !overlay) return;
     _coopDashReturn = false;   // close returns to the Dungeon tab, never the dashboard
     _coopCloseDashboard();     // safety: never stack the sheet under an open dashboard
+    _coopLeaveFinderIfActive();   // W694 — a sheet re-open must not orphan a live server-side search
     _coopSheet = { instance: null, cfg: cfg, loading: false, error: null, busy: false, picking: false, friends: null, _summonsShown: false, pinnedId: null };
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');

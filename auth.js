@@ -1544,6 +1544,11 @@
   function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
   function coopBossClaim(id)   { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/claim'); }   // W463.1 — atomic durable drop credit
   function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
+  // W694 — raid-finder matchmaking (the members raid). join is idempotent + doubles as
+  // the poll tick: it returns {matched, instance} once a party forms, else {queued, waiting}.
+  function raidQueueJoin(bossId)   { return _authedFetch('POST',   '/v1/raid-queue', { boss_id: bossId }); }
+  function raidQueueLeave()        { return _authedFetch('DELETE', '/v1/raid-queue'); }
+  function raidQueueStatus(bossId) { return _authedFetch('GET',    '/v1/raid-queue' + (bossId ? '?boss_id=' + encodeURIComponent(bossId) : '')); }
 
   // Expose on window for app.js + Settings interactions.
   // ── W297 — Skins IAP (RevenueCat) + entitlements ───────────────────
@@ -1976,6 +1981,9 @@
     coopBossResolve,
     coopBossClaim,
     coopPacts,
+    raidQueueJoin,
+    raidQueueLeave,
+    raidQueueStatus,
     devSignInIfLocalhost,
     isLocalhostDev,
     startGuest,

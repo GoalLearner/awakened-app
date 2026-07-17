@@ -6,8 +6,10 @@
 -- participant model — no changes to the instance tables.
 --
 -- One row per hunter (PRIMARY KEY user_id): a hunter is in at most one queue at a time.
--- created_at drives both FIFO fairness and the staleness TTL (a seeker who queued and
--- walked away ages out and is never matched into a live 72h raid).
+-- created_at is the FIFO position (kept across poll re-POSTs); last_seen_at is the
+-- liveness HEARTBEAT, refreshed by every poll tick — the staleness TTL runs on the
+-- heartbeat, NOT created_at (W694 review: a TTL on created_at deadlocks a queue that
+-- takes longer than the TTL to fill, aging out actively-searching hunters).
 --
 -- Apply to remote (house convention — d1_migrations bookkeeping stays empty, so use
 -- d1 execute --file, NOT `migrations apply`):
@@ -16,9 +18,10 @@
 --   wrangler d1 execute awakened-db --local  --file=migrations/0038_raid_queue.sql
 
 CREATE TABLE IF NOT EXISTS raid_queue (
-  user_id    TEXT PRIMARY KEY,
-  boss_id    TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  user_id      TEXT PRIMARY KEY,
+  boss_id      TEXT NOT NULL,
+  created_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 -- The matchmaking pass fans out by boss_id (oldest-first within a boss); index it.
 CREATE INDEX IF NOT EXISTS idx_raid_queue_boss ON raid_queue(boss_id, created_at);
