@@ -614,9 +614,12 @@ export async function handlePublicProfileSummaryPut(
     )
     .run();
 
-  // W656 — grant/refresh the free Founder marker for a now-eligible account and
-  // stamp its number onto the row we just wrote (cross-user leaderboard/profile
-  // reads pick it up). Never throws; fast-path is a single query once granted.
+  // W656/W698 — grant/refresh the Founder marker for a now-eligible account (>= 50
+  // boss kills, first 20 only) and stamp its number onto the row we just wrote
+  // (cross-user leaderboard/profile reads pick it up). W698 makes the mark an EARNED
+  // lifetime membership, so this grant is what unlocks member perks; it is awaited
+  // BEFORE we respond so the client's post-submit entitlements refetch sees it.
+  // Never throws; fast-path is a single query once granted.
   await maybeGrantFounderMark(env, session.userId);
 
   return jsonOk({

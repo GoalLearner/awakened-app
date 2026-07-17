@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w697'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w698'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24500,6 +24500,55 @@
     return { submit: false, why: 'skipped-same-day' };
   }
 
+  // W698 — the earned-Founder claim. The Founder requirement is simply 50 boss
+  // kills; the FIRST 20 hunters to reach it are granted a Founder mark (server-
+  // authoritative, atomically capped) that confers LIFETIME MEMBERSHIP. The grant
+  // fires SERVER-side off the public-profile-summary PUT that carries our kill
+  // total, so once we've crossed 50 and aren't yet a Founder we re-pull
+  // entitlements to pick up the fresh seq + membership, and celebrate it once.
+  // One attempt per session: if the promo is full (no grant) we don't re-fetch on
+  // every subsequent heartbeat.
+  let _founderClaimChecked = false;
+  async function _maybeClaimFounder(bossesSlain) {
+    try {
+      if (_founderClaimChecked) return;
+      if (!(Number(bossesSlain) >= 50)) return;                       // not eligible yet
+      if (!(window.Auth && typeof Auth.fetchEntitlements === 'function'
+            && typeof Auth.founderSeq === 'function')) return;
+      if (Auth.founderSeq() > 0) return;                              // already a Founder
+      _founderClaimChecked = true;                                    // one refresh per session
+      const r = await Auth.fetchEntitlements();                       // pulls the grant the PUT just made
+      if (!(r && r.ok)) { _founderClaimChecked = false; return; }     // network hiccup → let a later beat retry
+      const seq = Auth.founderSeq();
+      if (seq > 0) {
+        let celebrated = false;
+        try { celebrated = (localStorage.getItem('hb_founder_celebrated') === '1'); } catch (_) {}
+        if (!celebrated) {
+          try { localStorage.setItem('hb_founder_celebrated', '1'); } catch (_) {}
+          _celebrateFounder(seq);
+        }
+      }
+    } catch (_) {}
+  }
+  function _celebrateFounder(seq) {
+    try {
+      if (typeof showNoticeCard === 'function') {
+        showNoticeCard({
+          icon: '✦',
+          title: 'You are Founder #' + seq,
+          body: 'Fifty bosses down — you are one of the first 20 Founders. Awakened membership is now yours, for life. The members-only raid is open.',
+          tone: 'success',
+        });
+      } else if (typeof showHabitToast === 'function') {
+        showHabitToast('✦ Founder #' + seq + ' — lifetime membership unlocked!');
+      }
+    } catch (_) {}
+    // Repaint member-gated surfaces so the newly-unlocked perks light up now
+    // (the members-raid gate, waived co-op fees) without a reload. renderQuestsPanel()
+    // owns the gate-vs-dungeon visibility.
+    try { if (typeof renderQuestsPanel === 'function' && currentTab === 'quests') renderQuestsPanel(); } catch (_) {}
+  }
+
   async function _doSubmitPublicRankSummary(reason) {
     if (_prsInflight) return;
     if (!window.Auth || typeof Auth.submitPublicProfileSummary !== 'function') return;
@@ -24586,6 +24635,9 @@
       try { localStorage.setItem(_PRS_LAST_LABEL_KEY,   payload.rankLabel); }     catch (_) {}
       try { localStorage.setItem(_PRS_LAST_AT_KEY,      payload.clientUpdatedAt); } catch (_) {}
       try { localStorage.setItem(_PRS_LAST_ACH_SIG_KEY, achSig); }                catch (_) {}
+      // W698 — this PUT (carrying our kill total) is what triggers the SERVER-side
+      // Founder grant (first 20 hunters to reach 50 boss kills). Pull it back.
+      try { _maybeClaimFounder(achievements.bossesSlainTotal); } catch (_) {}
       _prsLogBreadcrumb('public-rank-summary-submit-ok', {
         rankLabel: payload.rankLabel,
         why: gate.why,

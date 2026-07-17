@@ -1,20 +1,16 @@
 /**
- * founder-mark.test.ts — W656 free Founder marker: server-verifiable eligibility,
- * the atomic cap, and sim/post-cutoff exclusion. Hand-rolled substring-routed D1
- * mock (same pattern as the other handler tests).
+ * founder-mark.test.ts — W698 earned Founder: eligibility is 50 boss kills, the promo
+ * is atomically capped at 20, and a Founder mark is a lifetime membership. Hand-rolled
+ * substring-routed D1 mock (same pattern as the other handler tests).
  */
 import { describe, expect, it } from 'vitest';
-import { isFounderMarkEligible, maybeGrantFounderMark, FOUNDER_CUTOFF_MS } from './founder-mark';
+import { isFounderMarkEligible, maybeGrantFounderMark, FOUNDER_MARK_CAP, FOUNDER_KILL_THRESHOLD } from './founder-mark';
 import type { Env } from '../env';
 
-const PRE = FOUNDER_CUTOFF_MS - 60_000;
-const POST = FOUNDER_CUTOFF_MS + 60_000;
-
-/** opts: createdAt (users row; undefined = no row = sim), has100k, coopWins,
+/** opts: bossesSlain (public_profile_summary total; undefined = no row = sim),
  *  existingSeq (already-marked), markCount (current founder_marks count). */
 function makeEnv(opts: {
-  createdAt?: number; has100k?: boolean; coopWins?: number;
-  existingSeq?: number; markCount?: number;
+  bossesSlain?: number; existingSeq?: number; markCount?: number;
 }): { env: Env; inserted: () => boolean } {
   let didInsert = false;
   let count = opts.markCount ?? 0;
@@ -26,14 +22,14 @@ function makeEnv(opts: {
             if (opts.existingSeq != null) return { seq: opts.existingSeq };
             return didInsert ? { seq: count } : null;
           }
-          if (/FROM users WHERE id/.test(sql)) return opts.createdAt === undefined ? null : { created_at: opts.createdAt };
-          if (/FROM user_accolades/.test(sql)) return opts.has100k ? { x: 1 } : null;
-          if (/COUNT\(\*\) AS n FROM coop_boss_awards/.test(sql)) return { n: opts.coopWins ?? 0 };
+          if (/bosses_slain_total FROM public_profile_summary/.test(sql)) {
+            return opts.bossesSlain === undefined ? null : { bosses_slain_total: opts.bossesSlain };
+          }
           return null;
         },
         run: async () => {
           if (/INSERT INTO founder_marks/.test(sql)) {
-            if (count < 100) { count += 1; didInsert = true; }
+            if (count < FOUNDER_MARK_CAP) { count += 1; didInsert = true; }
           }
           return { success: true, meta: { changes: 1 } };
         },
@@ -44,32 +40,28 @@ function makeEnv(opts: {
   return { env: { DB: db } as unknown as Env, inserted: () => didInsert };
 }
 
-describe('isFounderMarkEligible', () => {
-  it('pre-cutoff + 100K Club → eligible', async () => {
-    const { env } = makeEnv({ createdAt: PRE, has100k: true });
+describe('isFounderMarkEligible (50 boss kills)', () => {
+  it('50 kills → eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: FOUNDER_KILL_THRESHOLD });
     expect(await isFounderMarkEligible(env, 'u1')).toBe(true);
   });
-  it('pre-cutoff + 25 co-op wins → eligible', async () => {
-    const { env } = makeEnv({ createdAt: PRE, coopWins: 25 });
+  it('above 50 → eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: 137 });
     expect(await isFounderMarkEligible(env, 'u1')).toBe(true);
   });
-  it('pre-cutoff but 24 co-op wins and no 100K → NOT eligible', async () => {
-    const { env } = makeEnv({ createdAt: PRE, coopWins: 24 });
+  it('49 kills → NOT eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: 49 });
     expect(await isFounderMarkEligible(env, 'u1')).toBe(false);
   });
-  it('POST-cutoff account (even with 100K) → NOT eligible', async () => {
-    const { env } = makeEnv({ createdAt: POST, has100k: true, coopWins: 99 });
-    expect(await isFounderMarkEligible(env, 'reviewer')).toBe(false);
-  });
-  it('SIM (no users row) → NOT eligible', async () => {
-    const { env } = makeEnv({ createdAt: undefined, has100k: true, coopWins: 99 });
+  it('SIM / no profile row → NOT eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: undefined });
     expect(await isFounderMarkEligible(env, 'sim-42')).toBe(false);
   });
 });
 
-describe('maybeGrantFounderMark', () => {
-  it('grants an eligible newcomer and returns a seq', async () => {
-    const { env, inserted } = makeEnv({ createdAt: PRE, has100k: true, markCount: 4 });
+describe('maybeGrantFounderMark (cap 20)', () => {
+  it('grants an eligible newcomer and returns the next seq', async () => {
+    const { env, inserted } = makeEnv({ bossesSlain: 60, markCount: 4 });
     const seq = await maybeGrantFounderMark(env, 'u1');
     expect(inserted()).toBe(true);
     expect(seq).toBe(5);
@@ -79,14 +71,14 @@ describe('maybeGrantFounderMark', () => {
     expect(await maybeGrantFounderMark(env, 'u1')).toBe(7);
     expect(inserted()).toBe(false);
   });
-  it('at the cap (100) does not mint a 101st', async () => {
-    const { env, inserted } = makeEnv({ createdAt: PRE, has100k: true, markCount: 100 });
+  it('at the cap (20) does not mint a 21st', async () => {
+    const { env, inserted } = makeEnv({ bossesSlain: 200, markCount: FOUNDER_MARK_CAP });
     const seq = await maybeGrantFounderMark(env, 'u1');
     expect(inserted()).toBe(false);   // guard blocks the insert
     expect(seq).toBe(null);
   });
-  it('an ineligible user is not granted', async () => {
-    const { env, inserted } = makeEnv({ createdAt: POST, has100k: true });
+  it('an under-50 hunter is not granted', async () => {
+    const { env, inserted } = makeEnv({ bossesSlain: 10 });
     expect(await maybeGrantFounderMark(env, 'u1')).toBe(null);
     expect(inserted()).toBe(false);
   });

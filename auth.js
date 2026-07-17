@@ -1803,9 +1803,14 @@
     _founderSeqCache = fs > 0 ? fs : 0;
     try { localStorage.setItem('hb_founder_seq', String(_founderSeqCache)); } catch (_) {}
   }
-  // The ONE flag every membership perk gates on (co-op fees/cap, Ascent lives).
+  // The ONE flag every membership perk gates on (co-op fees/cap, Ascent lives, the
+  // members raid). W698 — a FOUNDER mark is an EARNED lifetime membership, so (like
+  // founderSeq itself) it is NOT gated by the store flag: the first-20 founders are
+  // members the moment they earn it, even before the paid subscription store is live.
+  // A PREMIUM-subscription member still requires IAP to be live.
   function isMember() {
     try {
+      if (founderSeq() > 0) return true;
       if (!IAP_ENABLED) return false;
       if (_memberCache === null) _memberCache = (localStorage.getItem('hb_member_owned') === '1');
       return _memberCache === true;
@@ -1948,6 +1953,7 @@
     purchasePremium,
     getPremiumPrices,
     isMember,
+    founderSeq,   // W698 — own earned Founder # (0 = none); the earned-Founder claim reads this
     PREMIUM_PRODUCTS,
     // Cloud Sync v1 (v3 Phase 1w)
     fetchCloudState,

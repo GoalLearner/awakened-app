@@ -5,13 +5,14 @@
  * treats THIS as the source of truth; its localStorage copy is a display-only
  * cache (same contract as user_accolades).
  *
- * W655 — the paid "Founder" tier (one-time pack + first-N grandfather promo)
- * was removed entirely; the Awakened Premium subscription is now the only paid
- * tier. `premium` is DERIVED at read time as (premium_subscriptions.expires_at_ms
- * > now): a lapsed subscription revokes itself with no revocation machinery.
- * `member` == `premium` — the one flag every membership perk (co-op fees/cap,
- * Ascent lives) gates on. (`member` is kept as a distinct field so client
- * gating code and any future non-subscription membership source need not change.)
+ * W655 — the paid "Founder" one-time pack was removed; the Awakened Premium
+ * subscription is the paid tier. `premium` is DERIVED at read time as
+ * (premium_subscriptions.expires_at_ms > now): a lapsed subscription revokes itself.
+ *
+ * W698 — `member` = premium OR Founder. The Founder mark (founder-mark.ts) is now an
+ * EARNED lifetime membership (the first 20 hunters to reach 50 boss kills), so it is
+ * the non-subscription membership source W655 anticipated. member is the one flag
+ * every perk (co-op fees/cap, Ascent lives, the members raid) gates on.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -54,10 +55,11 @@ export async function readEntitlements(
     if (!/no such table/i.test(msg)) throw e;
   }
 
-  // W656 — the caller's free Founder marker number (prestige only; null = none).
+  // W656 — the caller's Founder marker number (null = none). W698 — a Founder mark is
+  // now an EARNED lifetime membership, so it counts toward `member`.
   const founder_seq = await getFounderSeq(env, userId);
 
-  return { skins, premium, member: premium, founder_seq };
+  return { skins, premium, member: premium || founder_seq != null, founder_seq };
 }
 
 export async function handleEntitlementsGet(

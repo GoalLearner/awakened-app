@@ -1,41 +1,37 @@
 /**
- * founder-mark.ts — W656 free/earned "Founder" prestige marker (capped at 100).
+ * founder-mark.ts — the earned "Founder" tier.
  *
- * Server-authoritative and idempotent. Eligibility is checkable only from
- * server truth (registration date + the step_100k_club accolade + co-op wins),
- * so a modded client cannot fake its way into a permanently-scarce badge.
- * Sims never qualify: they have no `users` row, which both the created_at gate
- * and the accolade/coop-win joins require.
+ * W656 shipped this as a free prestige marker (capped 100, granted to early users).
+ * W698 (owner) repurposed it: the Founder requirement is now simply 50 boss kills,
+ * the FIRST 20 hunters to reach it are granted a Founder mark, and — the new part —
+ * a Founder mark now confers LIFETIME MEMBERSHIP (see iap-entitlements: member =
+ * premium OR founder). Once 20 marks exist the promo is closed; hunter #21+ reaching
+ * 50 kills gets nothing (membership is subscription-only thereafter). The 3 legacy
+ * W656 grandfather marks are kept — they hold the first slots and become the OG
+ * lifetime members, leaving 17 for the 50-kill promo.
+ *
+ * Server-authoritative + atomically capped so a modded client cannot mint slot #21+.
+ * The kill total itself is client-reported (public_profile_summary.bosses_slain_total,
+ * same client-authoritative trust model as rank); the cap of 20 bounds any abuse and
+ * the reward is free, so there is no revenue exposure.
  */
 import type { Env } from '../env';
 
-export const FOUNDER_MARK_CAP = 100;
-// 2026-07-09T00:00:00Z — the monetization go-live cutoff (mirrors the removed
-// FOUNDER_PROMO_CUTOFF_MS). "You were here before the store opened."
-export const FOUNDER_CUTOFF_MS = 1783555200000;
-export const FOUNDER_COOP_WIN_THRESHOLD = 25;
-const STEP_100K_ACCOLADE = 'step_100k_club';
+// W698 — the promo is capped at 20 lifetime Founders (was 100 for the W656 prestige badge).
+export const FOUNDER_MARK_CAP = 20;
+// W698 — the Founder requirement: 50 boss kills (solo + co-op), read from the
+// client-reported public-profile total.
+export const FOUNDER_KILL_THRESHOLD = 50;
 
-/** BOTH conditions, all server-verifiable: registered before go-live AND
- *  (100K Club accolade OR >= 25 co-op boss wins). */
+/** W698 — eligible = the caller's reported cumulative boss-kill total is >= 50.
+ *  Sims/unknowns have no public_profile_summary row → total treated as 0 → ineligible. */
 export async function isFounderMarkEligible(env: Env, userId: string): Promise<boolean> {
-  const u = await env.DB.prepare('SELECT created_at FROM users WHERE id = ? LIMIT 1')
-    .bind(userId)
-    .first<{ created_at: number }>();
-  const created = u && Number(u.created_at);
-  if (!(typeof created === 'number' && created >= 0 && created < FOUNDER_CUTOFF_MS)) return false;
-
-  const acc = await env.DB.prepare(
-    'SELECT 1 AS x FROM user_accolades WHERE user_id = ? AND accolade_type = ? LIMIT 1',
+  const row = await env.DB.prepare(
+    'SELECT bosses_slain_total FROM public_profile_summary WHERE user_id = ? LIMIT 1',
   )
-    .bind(userId, STEP_100K_ACCOLADE)
-    .first();
-  if (acc) return true;
-
-  const wins = await env.DB.prepare('SELECT COUNT(*) AS n FROM coop_boss_awards WHERE user_id = ?')
     .bind(userId)
-    .first<{ n: number }>();
-  return !!(wins && Number(wins.n) >= FOUNDER_COOP_WIN_THRESHOLD);
+    .first<{ bosses_slain_total: number | null }>();
+  return !!(row && Number(row.bosses_slain_total ?? 0) >= FOUNDER_KILL_THRESHOLD);
 }
 
 /** Grant + publish the Founder mark for an eligible user, atomically capped.

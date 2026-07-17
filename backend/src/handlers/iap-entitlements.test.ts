@@ -12,6 +12,7 @@ import type { Env } from '../env';
 function makeDb(opts: {
   skins?: string[];          // rows in skin_entitlements for the caller
   premiumExpiresAt?: number; // W650 — premium_subscriptions horizon (absent = no row)
+  founderSeq?: number;       // W698 — the caller's founder_marks seq (absent = not a Founder)
 }) {
   const skins = (opts.skins ?? []).map((skin_id) => ({ skin_id }));
   return {
@@ -21,6 +22,9 @@ function makeDb(opts: {
         first: async () => {
           if (sql.includes('FROM premium_subscriptions')) {
             return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
+          }
+          if (sql.includes('FROM founder_marks')) {
+            return opts.founderSeq != null ? { seq: opts.founderSeq } : null;
           }
           return null;
         },
@@ -70,6 +74,28 @@ describe('readEntitlements — premium membership', () => {
   it('owning skins does NOT confer membership', async () => {
     const r = await readEntitlements(makeEnv(makeDb({ skins: ['avatar-skin-bloodmoon.png'] })), 'skin-owner');
     expect(r.member).toBe(false);
+  });
+});
+
+// ── W698 — a Founder mark is an EARNED lifetime membership ──────────────────
+describe('readEntitlements — Founder lifetime membership', () => {
+  it('a Founder (no premium) → member=true, founder_seq set, premium=false', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({ founderSeq: 3 })), 'founder-3');
+    expect(r.premium).toBe(false);
+    expect(r.member).toBe(true);
+    expect(r.founder_seq).toBe(3);
+  });
+
+  it('a Founder with a LAPSED premium is STILL a member (the mark is lifetime)', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({ founderSeq: 1, premiumExpiresAt: Date.now() - 1000 })), 'founder-1');
+    expect(r.premium).toBe(false);
+    expect(r.member).toBe(true);
+  });
+
+  it('a non-Founder non-subscriber is not a member', async () => {
+    const r = await readEntitlements(makeEnv(makeDb({})), 'nobody');
+    expect(r.member).toBe(false);
+    expect(r.founder_seq).toBe(null);
   });
 });
 
