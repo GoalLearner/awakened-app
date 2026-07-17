@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w691'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w693'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -578,6 +578,21 @@
       archetype:  'caster',
       statDomain: 'VIT',
       dropTable:  { mythic: 0.02, ultra_rare: 0.32 },
+    },
+    // W693 — THE GRINNING GOD: the members-only apex raid drop source. A MYTHIC-ONLY
+    // table — no ultras, no rares, nothing else — at ~1% per weapon across the three
+    // existing mythics (0.03 total, uniform), so the full mythic set is a months-long
+    // chase. `pool` lists the three by id (their source_boss stays their canonical
+    // boss; this doesn't steal or duplicate them). ~97% of wins pay souls only.
+    the_grinning_god: {
+      id:         'the_grinning_god',
+      name:       'The Grinning God',
+      rank:       'S',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'VIT',
+      dropTable:  { mythic: 0.03 },
+      pool:       { mythic: ['nightfall_blade', 'reverie_staff', 'vigil_bow'] },
     },
     the_carouser: {
       id:               'the_carouser',
@@ -4009,7 +4024,8 @@
     common:     1,
     rare:       3,
     ultra_rare: Infinity,
-    mythic:     1,            // W289 — the one Mega-Rare is unique per account
+    mythic:     Infinity,     // W289: unique per account → W693: UNCAPPED (The Grinning God
+                              // drops the three mythics repeatably; own as many as you can).
   };
 
   let _souls = null; // lazy-loaded; loadSouls() initializes
@@ -15125,6 +15141,11 @@
   // outright 2026-07-11 off ~90k of dupe sales, skipping the endgame hunt with
   // a tap. Buying is closed; the 1% drop and selling an owned copy are untouched.
   const DROP_ONLY_RELICS = { nightfall_blade: true, reverie_staff: true, vigil_bow: true };   // W686 — mythics are never buyable (W645 dupe-sell lesson)
+  // W693 — mythic weapons are TROPHY-ONLY: earned, equippable, and upgradable, but NEVER
+  // sellable (owner: "trophy and equipable"). Distinct from DROP_ONLY (which blocks BUY):
+  // trophy blocks SELL. Keyed on rarity so every mythic — the three uncapped raid weapons
+  // and any future one — is covered; RELIC_TRADEABLE_RARITIES stays intact so upgrades work.
+  function _relicIsTrophy(cardId) { var c = CARDS[cardId]; return !!(c && c.rarity === 'mythic'); }
 
   // Pre-flight checks. Both return { ok, reason, ... } so the UI can
   // render the exact disabled/blocked state without re-deriving logic.
@@ -15146,6 +15167,7 @@
   function canSellRelic(cardId) {
     const card = CARDS[cardId];
     if (!card) return { ok: false, reason: 'unknown' };
+    if (_relicIsTrophy(cardId)) return { ok: false, reason: 'trophy' };   // W693 — mythics are trophies, never sold
     if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
     const entry = getInventory().cards[cardId] || _stubCard();
     if ((entry.count || 0) < 1) return { ok: false, reason: 'not_owned' };
@@ -15260,6 +15282,13 @@
     if (!card || !_relicIsTradeable(card.id)) return '';
     const owned = !!(entry && (entry.count || 0) > 0);
     if (owned) {
+      // W693 — trophy mythics are never sold: a disabled TROPHY chip (mirrors DROP ONLY),
+      // no sell action, so the reward stays a trophy you keep and equip.
+      if (_relicIsTrophy(card.id)) {
+        return '<button class="market-trade market-trade--sell is-disabled" type="button" disabled>' +
+          '<span class="market-trade-label">TROPHY</span>' +
+        '</button>';
+      }
       const sell = relicSellPrice(card.id);
       return '<button class="market-trade market-trade--sell" type="button" ' +
         'data-market-action="sell" data-card-id="' + esc(card.id) + '">' +
@@ -15583,6 +15612,17 @@
       rare:       bossCards.filter(c => c.rarity === 'rare'),
       common:     bossCards.filter(c => c.rarity === 'common'),
     };
+    // W693 — explicit per-rarity pool override (cfg.pool). The Grinning God drops the
+    // three EXISTING mythics (nightfall/reverie/vigil) whose source_boss points at their
+    // canonical bosses, so a source_boss filter wouldn't pool them; list them directly
+    // without stealing them from their original sources or duplicating the cards.
+    if (cfg.pool) {
+      Object.keys(cfg.pool).forEach(function (_rk) {
+        if (Array.isArray(cfg.pool[_rk])) {
+          pools[_rk] = cfg.pool[_rk].map(function (id) { return CARDS[id]; }).filter(Boolean);
+        }
+      });
+    }
     const pickFromPool = (pool) => pool.length === 0
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
@@ -16652,8 +16692,8 @@
           '</div></div>' +
         '</div>' +
         '<div class="rc-beats">' +
-          '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0' + (card && card.id === 'nightfall_blade' ? 'THE ONLY MYTHIC BLADE IN EXISTENCE' : card && card.id === 'reverie_staff' ? 'THE ONLY MYTHIC FOCUS IN EXISTENCE' : card && card.id === 'vigil_bow' ? 'THE ONLY MYTHIC BOW IN EXISTENCE' : 'A MYTHIC OF THE REALM') + '</div>' +
-          '<div class="rc-onlypill">\u25c6 1 OF 1 \u00b7 ' + (card && card.id === 'nightfall_blade' ? 'FIRST IN THE REALM' : 'UNIQUE PER HUNTER') + '</div>' +
+          '<div class="rc-flex">DROP RATE <span class="odo" id="megaOdo">1%</span>\u00a0 \u2014 \u00a0' + (card && card.id === 'nightfall_blade' ? 'A MYTHIC BLADE, EARNED NOT BOUGHT' : card && card.id === 'reverie_staff' ? 'A MYTHIC FOCUS, EARNED NOT BOUGHT' : card && card.id === 'vigil_bow' ? 'A MYTHIC BOW, EARNED NOT BOUGHT' : 'A MYTHIC OF THE REALM') + '</div>' +   // W693 \u2014 mythics are uncapped now; no "1 of 1"/"only in existence" claims
+          '<div class="rc-onlypill">\u25c6 MYTHIC \u00b7 TROPHY OF THE HUNT</div>' +
           '<div class="rc-source">FELLED: ' + esc(bossUpper) + '</div>' +
           '<div class="rc-stats">' + _megaStatBadges(card) + ((typeof WEAPON_MOVES !== 'undefined' && card && WEAPON_MOVES[card.id] && WEAPON_MOVES[card.id].indexOf('eclipse') !== -1) ? '<span class="eclipse-badge"><span class="glyph"></span>ECLIPSE \u00b7 STRIKE LANDS TWICE (\u00d72)</span>' : '') + '</div>' +
           '<div class="rc-flavor">' + esc(flavor) + '</div>' +
@@ -45078,7 +45118,7 @@
     // W396/W397 — co-op bosses for THIS rank (each renders in the gate matching
     // its own rank). Computed before the empty guard so a rank that has a co-op
     // boss but no solo boss still renders the co-op card instead of "No bosses".
-    const _coopForRank = Object.keys(COOP_BOSSES).filter(function (cid) { return COOP_BOSSES[cid].rank === effectiveRank; });
+    const _coopForRank = Object.keys(COOP_BOSSES).filter(function (cid) { return COOP_BOSSES[cid].rank === effectiveRank && !COOP_BOSSES[cid].special; });   // W693 — the members raid enters only via its gate, never a rank dungeon
     if (bossIds.length === 0 && _coopForRank.length === 0) {
       list.innerHTML = '<p class="dungeon-empty">No bosses await yet. Check back as more dungeons fill.</p>';
       list.classList.remove('bosses-list--cards');
@@ -45980,6 +46020,36 @@
       coopVictoryTitle:'THE COLONY KNEELS',
       coopDefeatTitle: 'THE KING NEVER SLEEPS',
     },
+    // W693 — THE GRINNING GOD: the members-only apex raid (Monarch / "state of god"
+    // homage — legally distinct, not a copy). Party of 2–5 (brutal below 5, but the
+    // goal never shrinks). Drops the three mythics (Nightfall/Reverie/Vigil) at ~1%
+    // each. `special:true` keeps it OUT of the rank-dungeon card list — it is summoned
+    // ONLY from the members gate (_openMembersRaid). Mirrors the server COOP_BOSS_CFG.
+    the_grinning_god: {
+      id:              'the_grinning_god',
+      name:            'The Grinning God',
+      rank:            'S',
+      artId:           'the_grinning_god',
+      dropSourceBoss:  'the_grinning_god',
+      special:         true,
+      membersOnly:     true,
+      brutalBelowFull: true,
+      minParty:        2,
+      maxParty:        5,
+      coopGoalSteps:   150000,
+      coopGoalFlights: 75,
+      coopMetric:      'both',
+      coopUnit:        'steps',
+      coopRewardSouls: 800,
+      coopWindowHours: 72,
+      statDomain:      'VIT',
+      flavorShort:     'A god that grins because it has already counted you.',
+      flavorLong:      'Behind the last seal waits a thing that was worshipped long before it was feared — a monarch of the deepest floors wearing a wide, patient smile, certain no party of hunters has ever been enough. It does not rage. It does not hurry. It simply outlasts. Five hunters, three days, and a mountain of ground covered together is the one thing its grin has never accounted for. Bring everyone; leave nothing in reserve.',
+      killCondShort:   'Up to 5 hunters: 150,000 steps + 75 flights in 72h',
+      killCondLong:    'Assemble a party of up to five members. Within 72 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
+      coopVictoryTitle:'THE GRIN FALLS',
+      coopDefeatTitle: 'IT WAS ALWAYS SMILING',
+    },
   };
   const COOP_PRIMARY_BOSS_ID = 'the_twin_maw';
 
@@ -46485,8 +46555,16 @@
     else { _coopSheet.friends = []; _coopSheet.error = (res && res.code) || 'ERROR'; }
     renderCoopSheet();
   }
-  async function _coopCreate(partnerUserId, partner2UserId) {
+  // W692 — takes an ARRAY of ally user_ids (1..4). The server (N-hunter model) accepts
+  // ally_user_ids[]; the Auth wrapper also dual-writes partner_user_id/partner2 for
+  // old-server compat. Callers: single-pick passes [uid]; the multi-select confirm
+  // passes the whole selection.
+  async function _coopCreate(allyUserIds) {
     const cfg = _coopSheet.cfg; if (!cfg) return;
+    const allies = (Array.isArray(allyUserIds) ? allyUserIds : [allyUserIds]).filter(Boolean);
+    const minAllies = Math.max(1, ((cfg.minParty | 0) || (cfg.partySize | 0) || 2) - 1);
+    const maxAllies = Math.max(minAllies, ((cfg.maxParty | 0) || (cfg.partySize | 0) || 2) - 1);
+    if (allies.length < minAllies || allies.length > maxAllies) return;   // client bound; server re-checks
     // W648 — entrance fee, checked BEFORE the network call so a broke hunter
     // gets an instant, clear answer (and no server round-trip).
     const fee = _coopEntranceFee(cfg);
@@ -46495,7 +46573,7 @@
     }
     _coopSheet.busy = true; _coopSheet.error = null; renderCoopSheet();   // W649 — a new attempt clears the stale refusal
     let res;
-    try { res = await Auth.coopBossCreate(partnerUserId, cfg.id, partner2UserId || undefined); } catch (_) { res = { ok: false }; }   // W677 — trio passes the 2nd ally
+    try { res = await Auth.coopBossCreate(cfg.id, allies); } catch (_) { res = { ok: false }; }   // W692 — ally array
     _coopSheet.busy = false;
     if (res && res.ok && res.instance) {
       _coopChargeFee(res.instance.id, cfg, 'summon');   // W648 — charge only on server-accepted create
@@ -46528,31 +46606,35 @@
     if (action === 'founder') { try { closeCoopSheet(); } catch (_) {} try { openFounder(); } catch (_) {} return; }   // W648 — cap-wall upsell → the Founder sheet
     if (action === 'close') { try { closeCoopSheet(); } catch (_) {} return; }   // W449 — defeat screen "Back to the Dungeon"
     if (action === 'pick-cancel') { _coopSheet.picking = false; renderCoopSheet(); return; }
-    if (action === 'pick') { const uid = btn.getAttribute('data-user-id'); _coopSheet.picking = false; if (uid) _coopCreate(uid); return; }
-    // W677 — trio multi-select: tap toggles a seat (max 2); Summon fires the create.
+    if (action === 'pick') { const uid = btn.getAttribute('data-user-id'); _coopSheet.picking = false; if (uid) _coopCreate([uid]); return; }   // W692 — array
+    // W677→W692 — multi-select: tap toggles a seat (cap = maxParty-1); Summon fires the
+    // create once the selection is within [minParty-1, maxParty-1].
     if (action === 'pick-toggle') {
       const uid = String(btn.getAttribute('data-user-id') || ''); if (!uid) return;
       const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : (_coopSheet.pickSel = []);
       const at = sel.indexOf(uid);
-      const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
+      const _cfg = _coopSheet.cfg || {};
+      const maxAllies = Math.max(1, ((_cfg.maxParty | 0) || (_cfg.partySize | 0) || 2) - 1);
       if (at !== -1) sel.splice(at, 1);
-      else if (sel.length < need) sel.push(uid);
-      else { try { showHabitToast('Two allies max — tap one to swap them out.'); } catch (_) {} }
+      else if (sel.length < maxAllies) sel.push(uid);
+      else { try { showHabitToast(maxAllies + (maxAllies === 1 ? ' ally' : ' allies') + ' max — tap one to swap them out.'); } catch (_) {} }
       renderCoopSheet(); return;
     }
     if (action === 'pick-confirm') {
       const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
-      const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
-      if (sel.length !== need) return;
+      const _cfg = _coopSheet.cfg || {};
+      const minAllies = Math.max(1, ((_cfg.minParty | 0) || (_cfg.partySize | 0) || 2) - 1);
+      const maxAllies = Math.max(minAllies, ((_cfg.maxParty | 0) || (_cfg.partySize | 0) || 2) - 1);
+      if (sel.length < minAllies || sel.length > maxAllies) return;
       _coopSheet.picking = false;
-      _coopCreate(sel[0], sel[1]); return;
+      _coopCreate(sel.slice()); return;
     }
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
     if (action === 'cancel' && inst.status === 'active') {
-      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for ' + ((inst.party_size === 3 || inst.partner2) ? 'all three hunters' : 'both hunters') + ' and the progress so far is lost.'); } catch (_) {}   // W677 — trio-aware
+      let ok = true; try { ok = window.confirm('Leave this hunt? It ends for ' + _coopHunterPhrase(inst) + ' and the progress so far is lost.'); } catch (_) {}   // W692 — N-hunter-aware
       if (!ok) return;
     }
     _coopSheet.busy = true; _coopSheet.error = null; renderCoopSheet();   // W649 — a new attempt clears the stale refusal
@@ -46572,10 +46654,33 @@
   }
 
   // ── Render ──
-  // W677 — every hunter on an instance EXCEPT the viewer (1 on a duo, 2 on a trio).
-  // The single client seam the pact/notify/fade/render paths fan out over.
+  // W692 — the viewer's OWN backend id, used to find their seat in an N-hunter party[]
+  // (every ally shares role 'ally', so role alone can't tell them apart). This MUST be
+  // the backend users.id — the JWT `sub` claim, which is what the server writes into
+  // party[].user_id — NOT Auth.getCurrentUser().sub (that stores the APPLE sub, a
+  // different id, so it would never match — W693 review, critical). getBackendUserId()
+  // decodes the raw stored JWT, so it also resolves for an EXPIRED session (identity,
+  // not authorization). Dev/guest stubs have no decodable JWT → fall back to the stub
+  // .sub, which is exactly what local stub co-op data keys on.
+  function _coopMyId() {
+    try {
+      if (window.Auth && typeof Auth.getBackendUserId === 'function') {
+        var bid = Auth.getBackendUserId();
+        if (bid) return bid;
+      }
+    } catch (_) {}
+    try { var u = window.Auth && Auth.getCurrentUser && Auth.getCurrentUser(); return (u && u.sub) || ''; } catch (_) { return ''; }
+  }
+  // W677→W692 — every hunter on an instance EXCEPT the viewer (1 on a duo … up to 4 on a
+  // 5-hunter raid). The single client seam the pact/notify/fade/render paths fan out over.
+  // Reads the N-hunter party[] roster (challenger first, then allies in seat order) when
+  // present; falls back to the legacy ≤3-seat challenger/partner/partner2 shape one release.
   function _coopOthers(inst) {
     if (!inst) return [];
+    if (Array.isArray(inst.party) && inst.party.length) {
+      var myId = _coopMyId();
+      return inst.party.filter(function (p) { return p && p.user_id !== myId; });
+    }
     const seats = [
       { p: inst.challenger, mine: inst.role === 'challenger' },
       { p: inst.partner, mine: inst.role === 'partner' },
@@ -46583,24 +46688,52 @@
     ];
     return seats.filter(function (s) { return s.p && !s.mine; }).map(function (s) { return s.p; });
   }
-  // W677 — is this instance an ACTIONABLE incoming summons for the viewer? True for
-  // an invited seat (partner OR partner2) on a pending hunt that the viewer hasn't
-  // answered yet. On duo rows `joined` is absent (undefined → not answered), so the
-  // v1 behavior is unchanged; on a trio, a seat that already answered stops counting
-  // as an invite (they're just waiting on the third hunter).
+  // W677→W692 — is this instance an ACTIONABLE incoming summons for the viewer? True for
+  // an invited ALLY seat on a pending hunt the viewer hasn't answered yet. Party-aware:
+  // find my own seat by user_id and require role 'ally' (the challenger never "invites"
+  // themself) + unanswered. Legacy partner/partner2 role fallback for old-shape responses.
   function _coopIsMyInvite(x) {
     if (!x || x.status !== 'pending') return false;
+    if (Array.isArray(x.party) && x.party.length) {
+      var myId = _coopMyId(); var mine = null;
+      for (var i = 0; i < x.party.length; i++) { if (x.party[i] && x.party[i].user_id === myId) { mine = x.party[i]; break; } }
+      return !!(mine && mine.role === 'ally' && !mine.joined);
+    }
     if (x.role === 'partner') return !(x.partner && x.partner.joined);
     if (x.role === 'partner2') return !(x.partner2 && x.partner2.joined);
     return false;
   }
   function _coopView(inst) {
     const ch = inst.challenger || {}; const pa = inst.partner || {};
-    const me = inst.role === 'partner' ? pa : inst.role === 'partner2' ? (inst.partner2 || {}) : ch;
+    var me;
+    // W692 — resolve MY seat from the party[] roster by user_id (role 'ally' can't
+    // distinguish seats 4/5); default to the challenger seat if I'm an observer.
+    if (Array.isArray(inst.party) && inst.party.length) {
+      var myId = _coopMyId(); me = null;
+      for (var i = 0; i < inst.party.length; i++) { if (inst.party[i] && inst.party[i].user_id === myId) { me = inst.party[i]; break; } }
+      if (!me) me = inst.party[0] || ch;
+    } else {
+      me = inst.role === 'partner' ? pa : inst.role === 'partner2' ? (inst.partner2 || {}) : ch;
+    }
     const others = _coopOthers(inst);
     // `them` stays the FIRST other hunter (every duo-era render spot keeps working);
-    // `others` carries the full ally list for trio-aware surfaces.
+    // `others` carries the full ally list for N-hunter surfaces.
     return { me: me, them: others[0] || {}, others: others };
+  }
+  // W692 — total hunters on an instance (challenger + allies). Party-aware, with the
+  // legacy party_size / partner2 shape as the fallback for an old-shape response.
+  function _coopPartySize(inst) {
+    if (!inst) return 2;
+    if (Array.isArray(inst.party) && inst.party.length) return inst.party.length;
+    if (typeof inst.party_size === 'number' && inst.party_size > 0) return inst.party_size;
+    return inst.partner2 ? 3 : 2;
+  }
+  // W692 — a party bigger than a duo (drives the "waiting on the whole party" copy).
+  function _coopIsMultiAlly(inst) { return _coopPartySize(inst) > 2; }
+  // W692 — "both hunters" for a duo, else "all N hunters".
+  function _coopHunterPhrase(inst) {
+    var n = _coopPartySize(inst);
+    return n <= 2 ? 'both hunters' : 'all ' + n + ' hunters';
   }
   function _coopFmtRemaining(ms) {
     if (typeof ms !== 'number' || ms <= 0) return 'Time is up';
@@ -46739,9 +46872,15 @@
     const _fee = _coopEntranceFee(cfg);
     const _bal = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0;
     const _brokeLocked = !_rankLocked && _fee > 0 && _bal < _fee;
-    // W677 — party-size-aware copy ('every hunter' scales to any size).
-    const _party = (cfg.partySize | 0) || 2;
-    const _partyNoun = _party === 3 ? 'three hunters' : 'two hunters';
+    // W677→W692 — party-size-aware copy. A RANGE boss (the members raid, 2–5) reads
+    // its bounds from minParty/maxParty; fixed duo/trio bosses fall back to partySize.
+    const _minParty = (cfg.minParty | 0) || (cfg.partySize | 0) || 2;
+    const _maxParty = (cfg.maxParty | 0) || (cfg.partySize | 0) || 2;
+    const _isRange = _maxParty > _minParty;
+    const _party = _maxParty;
+    const _partyNoun = _maxParty <= 2 ? 'two hunters' : _isRange ? ('up to ' + _maxParty + ' hunters') : (_maxParty + ' hunters');
+    // W693 — the members raid is brutal below a full party of 5; warn on the summon surface.
+    if (cfg.brutalBelowFull) note += '<div class="coop-note coop-note--warn">Below a full party of ' + _maxParty + ', The Grinning God is merciless — recruit all ' + (_maxParty - 1) + ' allies if you can. The goal never shrinks.</div>';
     const _feeFoot = _fee > 0
       ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.'
       : '✦ Members summon free · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.';
@@ -46751,7 +46890,7 @@
       : _brokeLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">NEED ' + (_fee - _bal) + ' MORE SOULS</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>'
-      : '<button class="coop-cta" data-coop-action="invite"' + dis + '>' + (_party === 3 ? 'RECRUIT TWO HUNTERS' : 'RECRUIT A HUNTER') + '</button>' +
+      : '<button class="coop-cta" data-coop-action="invite"' + dis + '>' + (_isRange ? 'RECRUIT YOUR PARTY' : _maxParty === 3 ? 'RECRUIT TWO HUNTERS' : 'RECRUIT A HUNTER') + '</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>';
     return (
       note +
@@ -46791,21 +46930,26 @@
     // on pending \u2014 an answered ally withdraws via the summons' Decline instead,
     // which stays reachable until they answer; after answering they are committed
     // unless the summoner cancels).
-    if (inst.party_size === 3 || inst.partner2) {
-      const seatRow = function (p, label) {
+    if (_coopIsMultiAlly(inst)) {
+      const seatRow = function (p) {
         const a = esc(_coopAlias((p && p.alias) || 'your ally'));
         return p && p.joined
-          ? '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> ' + (label || a + ' has answered') + '</div>'
+          ? '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> ' + a + ' has answered</div>'
           : '<div class="coop-partner-row"><span class="coop-dot coop-dot--wait"></span> Waiting for ' + a + ' to accept</div>';
       };
       const isSummoner = inst.role === 'challenger';
-      const rows = isSummoner
-        ? seatRow(inst.partner) + seatRow(inst.partner2)
-        : '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> You answered the summons</div>' +
-          seatRow(inst.role === 'partner' ? inst.partner2 : inst.partner);
+      // W692 — one wait-row PER ALLY seat (up to 4), each with its live answered state.
+      // The challenger is the summoner (implicitly present) so is never a wait-row; an
+      // answered ally sees "You answered" + a row for every OTHER ally.
+      const myId = _coopMyId();
+      const allies = (Array.isArray(inst.party) && inst.party.length)
+        ? inst.party.filter(function (p) { return p && p.role === 'ally'; })
+        : [inst.partner, inst.partner2].filter(Boolean);
+      let rows = isSummoner ? '' : '<div class="coop-partner-row"><span class="coop-dot coop-dot--live"></span> You answered the summons</div>';
+      allies.forEach(function (p) { if (p && p.user_id !== myId) rows += seatRow(p); });
       return (
         rows +
-        '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment BOTH allies join.</p>' +
+        '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment the full party joins.</p>' +
         _coopErrBlock() +
         (isSummoner ? '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL SUMMONS</button>' : '')
       );
@@ -46864,7 +47008,7 @@
           ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
           : _coopIsSleep(inst)
             ? 'combined steps + ' + _coopFmtSleep((inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes) || 0) + ' sleep'
-            : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + ((inst.party_size === 3 || inst.partner2) ? 'h once all three answer</div>' : 'h from when you join</div>') +   // W677 — trio clock starts on the FULL party
+            : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + (_coopIsMultiAlly(inst) ? 'h once the full party answers</div>' : 'h from when you join</div>') +   // W692 — the clock starts on the FULL party
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
@@ -46885,7 +47029,7 @@
         const joinDis = (broke ? ' disabled' : dis);
         const footer = broke
           ? 'You need ' + (fee - bal) + ' more souls to answer — the entrance fee is ' + fee + '.'
-          : ((inst.party_size === 3 || inst.partner2) ? 'The ' + hrs + '-hour hunt begins once the full party has answered.' : 'The ' + hrs + '-hour hunt begins the instant you accept.') +   // W677
+          : (_coopIsMultiAlly(inst) ? 'The ' + hrs + '-hour hunt begins once the full party has answered.' : 'The ' + hrs + '-hour hunt begins the instant you accept.') +   // W692
             (fee > 0 ? ' Entrance fee: ' + fee + ' souls.' : ' Members join free.');
         return '<div class="coopsm-ctas' + r4 + '">' +
           '<button class="coopsm-join" data-coop-action="join"' + joinDis + (broke ? ' style="opacity:.5;cursor:not-allowed"' : '') + '>' +
@@ -47087,9 +47231,11 @@
     const friends = _coopSheet.friends;
     if (friends === null) return _skelHtml('rows', 4); // W594 — skeleton rows instead of plain "Loading hunters..."
     const bossRank = (_coopSheet.cfg && _coopSheet.cfg.rank) ? _coopSheet.cfg.rank : 'E';
-    // W677 — trio bosses pick TWO allies (multi-select + a Summon confirm);
-    // duo bosses keep the v1 tap-to-summon single pick.
-    const need = Math.max(1, ((_coopSheet.cfg && _coopSheet.cfg.partySize) || 2) - 1);
+    // W677→W692 — party bounds: a range boss (the members raid, 2–5) uses multi-select
+    // across [minAllies, maxAllies]; a fixed duo keeps the v1 tap-to-summon single pick.
+    const _pcfg = _coopSheet.cfg || {};
+    const minAllies = Math.max(1, ((_pcfg.minParty | 0) || (_pcfg.partySize | 0) || 2) - 1);
+    const maxAllies = Math.max(minAllies, ((_pcfg.maxParty | 0) || (_pcfg.partySize | 0) || 2) - 1);
     const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
     let rows;
     if (!friends.length) {
@@ -47112,8 +47258,8 @@
         // \u2014 no pick action, locked styling, a "Needs X" note. The backend ALLY_RANK gate is
         // the real enforcement; this is the matching UX so the tap is never offered.
         if (_coopRankMeets(tier, bossRank)) {
-          // W677 \u2014 trio: tap toggles selection (checkmark), Summon confirms below.
-          if (need > 1) {
+          // W677\u2192W692 \u2014 multi-ally boss: tap toggles selection (checkmark), Summon confirms below.
+          if (maxAllies > 1) {
             const on = sel.indexOf(String(f.user_id)) !== -1;
             return '<button class="coop-friend' + (on ? ' coop-friend--selected' : '') + '" data-coop-action="pick-toggle" data-user-id="' + esc(f.user_id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
               '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
@@ -47134,12 +47280,20 @@
         '</div>';
       }).join('');
     }
-    const head = need > 1 ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + need) : 'SELECT YOUR ALLY';
-    const confirmBtn = need > 1
-      ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (sel.length === need ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
+    const _inRange = sel.length >= minAllies && sel.length <= maxAllies;
+    const head = maxAllies > 1 ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + maxAllies) : 'SELECT YOUR ALLY';
+    // W693 — live "brutal below a full party" nudge for the raid while under-full.
+    const warn = (_pcfg.brutalBelowFull && maxAllies > 1 && sel.length < maxAllies)
+      ? '<div class="coop-note coop-note--warn">' + (sel.length < minAllies
+          ? 'Pick at least ' + minAllies + ' to summon.'
+          : 'A full party of ' + (maxAllies + 1) + ' is far safer — ' + (maxAllies - sel.length) + ' seat' + ((maxAllies - sel.length) === 1 ? '' : 's') + ' still open.') + '</div>'
+      : '';
+    const confirmBtn = maxAllies > 1
+      ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (_inRange ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
       : '';
     return (
       '<div class="coop-picker-head">' + head + '</div>' +
+      warn +
       _coopErrBlock() +
       '<div class="coop-friend-list">' + rows + '</div>' +
       confirmBtn +
@@ -47357,11 +47511,16 @@
     // up to 2 distinct ally initials, from the dominant set
     const pool = pending.length ? pending : live;
     const inits = [];
+    // W692 — raw list instances carry no `.them` (that key is synthesized in _coopView);
+    // pull ally initials from the real N-hunter roster so the emblem shows true members.
     pool.forEach(function (x) {
-      let a = '';
-      try { a = _coopAlias((x.them && x.them.alias) || ''); } catch (_) { a = (x && x.them && x.them.alias) || ''; }
-      const ch = String(a || '').trim().charAt(0).toUpperCase();
-      if (ch && inits.length < 2 && inits.indexOf(ch) < 0) inits.push(ch);
+      let others = [];
+      try { others = _coopOthers(x) || []; } catch (_) { others = []; }
+      others.forEach(function (p) {
+        const a = _coopAlias((p && p.alias) || '');
+        const ch = String(a || '').trim().charAt(0).toUpperCase();
+        if (ch && inits.length < 2 && inits.indexOf(ch) < 0) inits.push(ch);
+      });
     });
     const emblem = el.querySelector('.pe-emblem');
     if (emblem) {
@@ -47752,7 +47911,9 @@
     // for an answered trio ally is the CHALLENGER — who never "accepts" anything).
     // Only ally seats carry `joined` (strict === false test; the challenger seat has
     // no joined key, and duo rows have none anywhere → duo falls through unchanged).
-    const outstanding = [inst.partner, inst.partner2]
+    // W692 — name EVERY still-outstanding ally (up to 4), sourced from the N-hunter
+    // roster (_coopOthers) not just the two legacy partner columns.
+    const outstanding = _coopOthers(inst)
       .filter(function (p) { return p && p.joined === false && p.user_id !== ((v.me && v.me.user_id) || ''); })
       .map(function (p) { return _coopAlias((p && p.alias) || 'ally'); });
     const waitName = outstanding.length ? outstanding.join(' and ') : ally;
@@ -48005,6 +48166,12 @@
     overlay.classList.remove('hidden');
     document.body.classList.add('bfs-locked');
     renderCoopSheet();
+  }
+  // W693 — the members gate → the Grinning God summon sheet (same overlay + recruit UI
+  // every co-op boss uses; the raid is just a `special` COOP_BOSSES entry). Reached from
+  // the #quests-gate-special members-tap handler once _GRINNING_GOD_LIVE flips true.
+  function _openMembersRaid() {
+    try { _coopOpenRecruit('the_grinning_god'); } catch (_) {}
   }
   try { window.__coopOpenDashboard = _coopOpenDashboard; } catch (_) {}
 

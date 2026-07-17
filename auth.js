@@ -1528,10 +1528,14 @@
   // create/join/decline/cancel/resolve lifecycle + list/detail reads.
   function coopBossList()      { return _authedFetch('GET',  '/v1/coop-boss'); }
   function coopBossGet(id)     { return _authedFetch('GET',  '/v1/coop-boss/' + encodeURIComponent(id)); }
-  // W677 — partner2UserId (optional) invites a SECOND ally: trio hunts. Omitted → duo (v1).
-  function coopBossCreate(partnerUserId, bossId, partner2UserId) {
-    var body = { partner_user_id: partnerUserId, boss_id: bossId };
-    if (partner2UserId) body.partner2_user_id = partner2UserId;
+  // W692 — N-hunter model: summon with an ARRAY of ally user_ids (1..4). The server
+  // reads ally_user_ids[]; we also dual-write partner_user_id/partner2_user_id so an
+  // older worker (mid-deploy) still accepts the create.
+  function coopBossCreate(bossId, allyUserIds) {
+    var allies = (Array.isArray(allyUserIds) ? allyUserIds : [allyUserIds]).filter(Boolean);
+    var body = { boss_id: bossId, ally_user_ids: allies.slice() };
+    if (allies[0]) body.partner_user_id = allies[0];
+    if (allies[1]) body.partner2_user_id = allies[1];
     return _authedFetch('POST', '/v1/coop-boss', body);
   }
   function coopBossJoin(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/join'); }
