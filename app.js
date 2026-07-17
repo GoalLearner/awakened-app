@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w700'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w701'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48828,8 +48828,14 @@
         if (!cell || !specialGrid.contains(cell)) return;
         const kind = cell.getAttribute('data-gate-special');
         if (kind === 'holiday') {
-          if (!_HOLIDAY_GATE_OPEN && typeof showHabitToast === 'function') {
-            showHabitToast('The Holiday Gate opens only during seasonal events — check back around the holidays.');
+          // W701 — a bottom toast clipped off both screen edges here (owner couldn't read
+          // it); use the centered tap-to-continue notice card so the message is fully visible.
+          if (!_HOLIDAY_GATE_OPEN) {
+            if (typeof showNoticeCard === 'function') {
+              showNoticeCard({ title: 'Holiday Gate', body: 'This gate opens only during seasonal events — check back around the holidays.' });
+            } else if (typeof showHabitToast === 'function') {
+              showHabitToast('The Holiday Gate opens only during seasonal events — check back around the holidays.');
+            }
           }
           // (when a holiday is live, open its dungeon here — owner wires content later)
           return;
@@ -48841,7 +48847,10 @@
             return;
           }
           if (!_GRINNING_GOD_LIVE) {
-            if (typeof showHabitToast === 'function') {
+            // W701 — centered notice card (was a clip-prone bottom toast).
+            if (typeof showNoticeCard === 'function') {
+              showNoticeCard({ title: 'The Grinning God', body: 'It stirs behind the seal — this raid arrives soon.' });
+            } else if (typeof showHabitToast === 'function') {
               showHabitToast('The Grinning God stirs behind the seal — this raid arrives soon.');
             }
             return;

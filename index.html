@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=575">
+  <link rel="stylesheet" href="styles.css?v=576">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -830,8 +830,11 @@
              with inline SVG emblems + a CSS treatment — no PNG gate art. -->
         <div id="quests-gate-special" class="gate-grid-special">
           <button class="gate-cell gate-cell--special gate-cell--holiday" type="button" data-gate-special="holiday" aria-label="Holiday gate — opens during seasonal events">
-            <!-- W699 — emblem + snowflake emoji removed (owner); the festive multi-light
-                 glow (.gate-cell--holiday) + the HOLIDAY pill carry it, no placeholder art. -->
+            <!-- W701 — KEEP the snowflake emblem (owner: "the background icon"); only the
+                 ❄ emoji in the lock overlay was removed. -->
+            <span class="gate-special-emblem" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1M12 2l2 2-2 2-2-2 2-2zM22 12l-2 2-2-2 2-2 2 2zM12 22l-2-2 2-2 2 2-2 2zM2 12l2-2 2 2-2 2-2-2z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
             <span class="gate-special-pill" data-special="holiday" aria-hidden="true">HOLIDAY</span>
             <div class="gate-cell-lock-overlay gate-special-closed" aria-hidden="true">
               <span class="gate-cell-lock-label">Opens during holidays</span>
@@ -3236,7 +3239,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1116"></script>
+  <script src="app.js?v=1117"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
