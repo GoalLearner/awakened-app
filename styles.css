@@ -32132,6 +32132,21 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .cph-count{ font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; letter-spacing:1.4px; color:#9090a8; text-transform:uppercase; margin-top:9px; display:flex; align-items:center; gap:7px; }
 .cph-pip{ width:6px; height:6px; border-radius:50%; background:#5ad6c8; box-shadow:0 0 8px #5ad6c8; }
 .cph-count b{ color:#f5f3fb; font-weight:800; }
+/* W716 — History button (top-left of The Pacts head, opposite the close) + the hunt-log rows. */
+.cph-histbtn{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 8px); right:60px; height:34px; padding:0 13px; border-radius:17px; border:1px solid rgba(90,214,200,.3); background:rgba(90,214,200,.06); color:#5ad6c8; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; display:flex; align-items:center; gap:6px; cursor:pointer; }
+.cph-histbtn:hover{ background:rgba(90,214,200,.12); color:#7fe6da; }
+.cph-histbtn svg{ opacity:.85; }
+.chh-list{ gap:9px; }
+.chh-row{ display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:14px; background:linear-gradient(180deg,#12122a,#0d0d20); border:1px solid rgba(255,255,255,.06); }
+.chh-row.chh-win{ border-color:rgba(52,211,153,.28); }
+.chh-row.chh-loss{ border-color:rgba(239,68,68,.24); }
+.chh-out{ flex:none; width:44px; font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:800; letter-spacing:1.2px; text-align:center; }
+.chh-win .chh-out{ color:#34d399; } .chh-loss .chh-out{ color:#ef4444; }
+.chh-mid{ flex:1; min-width:0; }
+.chh-boss{ font-family:"Cinzel",Georgia,serif; font-weight:700; font-size:15px; color:#f5f3fb; display:flex; align-items:center; gap:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chh-rank{ flex:none; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:800; letter-spacing:.5px; border:1px solid currentColor; border-radius:5px; padding:1px 5px; opacity:.9; }
+.chh-who{ font-size:11.5px; color:#9090a8; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chh-when{ flex:none; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:.5px; color:#6b6b86; }
 .cph-list{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px 16px 8px; display:flex; flex-direction:column; gap:13px; }
 /* W528 — "Accept all" bulk-join bar atop the Pacts dashboard (only when ≥2 pending invites). Teal to match the "summoned you" accent. */
 .cph-accept-all{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px 16px; border-radius:14px; border:1px solid rgba(90,214,200,.42); background:linear-gradient(180deg,rgba(90,214,200,.17),rgba(90,214,200,.06)); color:#8fe9de; font-family:inherit; font-weight:700; font-size:14px; letter-spacing:.04em; cursor:pointer; box-shadow:0 5px 20px rgba(90,214,200,.13); transition:filter .15s ease, transform .1s ease; }

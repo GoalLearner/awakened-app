@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w715'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w716'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5896,6 +5896,48 @@
     var m = _loadCoopKills(); var e = m[bossId] || { count: 0, last: null };
     e.count = (e.count || 0) + 1; e.last = new Date().toISOString();
     m[bossId] = e; _saveCoopKills(m);
+  }
+  // W716 — persistent co-op battle HISTORY (win + loss), with partner aliases, boss,
+  // rank + date. Owner ask: a re-viewable log on The Pacts screen so a hunter can see
+  // who they fought with and how each hunt ended (the kill map only counts wins-per-boss,
+  // never losses or partners). Newest-first, capped, deduped by hunt instance id so a
+  // resolve that fires more than once (reconcile + view) only logs a single row.
+  var _COOP_HIST_KEY = 'hb_coop_history';
+  var _COOP_HIST_CAP = 60;
+  function _loadCoopHistory() { try { var a = JSON.parse(localStorage.getItem(_COOP_HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function _pushCoopHistory(entry) {
+    if (!entry || !entry.id) return;
+    try {
+      var a = _loadCoopHistory();
+      for (var i = 0; i < a.length; i++) { if (a[i] && a[i].id === entry.id) return; }   // dedup by hunt id
+      a.unshift(entry);
+      if (a.length > _COOP_HIST_CAP) a.length = _COOP_HIST_CAP;
+      localStorage.setItem(_COOP_HIST_KEY, JSON.stringify(a));
+    } catch (e) { _logSwallow('coop_history:persist', e); }
+  }
+  // Build a history row from a resolved instance. `result` = 'win' | 'loss'. Reads the
+  // boss cfg (name/rank) + every ally's alias via _coopView (same source the victory/
+  // defeat screens use), so a trio logs all its partners.
+  function _coopHistoryEntry(inst, result) {
+    if (!inst || !inst.id) return null;
+    try {
+      var cfg = (typeof COOP_BOSSES === 'object' && COOP_BOSSES) ? COOP_BOSSES[inst.boss_id] : null;
+      var partners = [];
+      try {
+        var v = _coopView(inst);
+        var others = (v && v.others && v.others.length) ? v.others : (v && v.them ? [v.them] : []);
+        partners = others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); });
+      } catch (_) {}
+      return {
+        id: inst.id,
+        boss_id: inst.boss_id || null,
+        bossName: (cfg && cfg.name) || 'a boss',
+        rank: (cfg && cfg.rank) || '',
+        result: result === 'win' ? 'win' : 'loss',
+        partners: partners,
+        ts: Date.now(),
+      };
+    } catch (_) { return null; }
   }
   function _guildCoopSlainRows() {
     var m = _loadCoopKills(); var rows = [];
@@ -34809,6 +34851,24 @@
       } catch (_) { avatarLoaded = false; }
     }
 
+    // W716 — a MEMBER's equipped card background paints behind the Hunter Report, so the
+    // status symbol travels onto the shareable card (matches the board rows + profile
+    // card). Gated on membership + an equipped catalog bg; non-members / "Basic" keep the
+    // plain navy. Awaited like the avatar so the draw below has the bitmap ready.
+    let hrBgImg = null;
+    try {
+      const _cbMember = (typeof _founderOwned === 'function') && _founderOwned();
+      const _cbId = (_cbMember && typeof _cardBgEquipped === 'function') ? _cardBgEquipped() : '';
+      const _cbArt = (_cbId && typeof _cardBgArt === 'function') ? _cardBgArt(_cbId) : '';
+      if (_cbArt) {
+        const _bi = new Image();
+        _bi.crossOrigin = 'anonymous';
+        _bi.src = _cbArt;
+        await _bi.decode();
+        if (_bi.width) hrBgImg = _bi;
+      }
+    } catch (_) { hrBgImg = null; }
+
     const canvas = opts.canvas || document.createElement('canvas');
     canvas.width  = W * DPR;
     canvas.height = H * DPR;
@@ -34830,6 +34890,27 @@
     baseG.addColorStop(1,    '#030309');
     ctx.fillStyle = baseG;
     ctx.fillRect(0, 0, W, H);
+
+    // W716 — member card background: cover-fit + dimmed, then a readability scrim
+    // (lighter up top where the art shows, solid at the bottom under the stats/tagline).
+    // The rank/violet/vignette glows below still layer over it. Drawn here so it sits
+    // behind the frame, avatar arch and all text.
+    if (hrBgImg && hrBgImg.width) {
+      const _iw = hrBgImg.width, _ih = hrBgImg.height;
+      const _scale = Math.max(W / _iw, H / _ih);
+      const _dw = _iw * _scale, _dh = _ih * _scale;
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(hrBgImg, (W - _dw) / 2, (H - _dh) / 2, _dw, _dh);
+      ctx.restore();
+      const _scrim = ctx.createLinearGradient(0, 0, 0, H);
+      _scrim.addColorStop(0,    'rgba(5,5,16,0.52)');
+      _scrim.addColorStop(0.40, 'rgba(5,5,16,0.40)');
+      _scrim.addColorStop(0.62, 'rgba(5,5,16,0.74)');
+      _scrim.addColorStop(1,    'rgba(3,3,9,0.95)');
+      ctx.fillStyle = _scrim;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     // Top rank-color glow
     const topGlow = ctx.createRadialGradient(W/2, -120, 0, W/2, -120, W * 0.85);
@@ -47152,6 +47233,7 @@
    try {
     if (!inst || !inst.id) return;
     const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
+    try { _pushCoopHistory(_coopHistoryEntry(inst, 'win')); } catch (_) {}   // W716 — log the win (deduped by hunt id; before the award early-returns so a claim-elsewhere still records history)
     if (_loadCoopAwarded()[inst.id]) return;     // same-device guard (fast path)
     if (_coopClaimInFlight[inst.id]) return;     // a claim is already resolving for this hunt
     // W463.1 — durable exactly-once-per-user claim. New hunts carry inst.award
@@ -47252,6 +47334,7 @@
   function _awardCoopDefeat(inst) {
     if (!inst || !inst.id) return;
     const cfg = COOP_BOSSES[inst.boss_id]; if (!cfg) return;
+    try { _pushCoopHistory(_coopHistoryEntry(inst, 'loss')); } catch (_) {}   // W716 — log the loss (deduped by hunt id)
     const awarded = _loadCoopAwarded();
     if (awarded[inst.id]) return;            // this instance's outcome already handled here
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // a hunt resolves to ONE outcome — win XOR loss
@@ -48952,10 +49035,75 @@
     _coopDashLoad();
   }
 
+  // ── W716 — Co-op hunt HISTORY (read the hb_coop_history log written at resolve) ──
+  function _coopHistWhen(ts) {
+    const n = Date.now(); const d = Math.max(0, n - (ts || 0));
+    const min = Math.floor(d / 60000);
+    if (min < 1) return 'just now';
+    if (min < 60) return min + 'm ago';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + 'h ago';
+    const day = Math.floor(hr / 24);
+    if (day < 7) return day + 'd ago';
+    try {
+      const dt = new Date(ts);
+      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (_) { return Math.floor(day / 7) + 'w ago'; }
+  }
+  function _coopHistRowHtml(e) {
+    const win = e && e.result === 'win';
+    const who = (e && e.partners && e.partners.length) ? e.partners.map(esc).join(' & ') : 'an ally';
+    const rankPill = (e && e.rank)
+      ? '<span class="chh-rank" style="color:' + _lbRankColor(e.rank) + ';border-color:' + _lbRankColor(e.rank) + '">' + esc(e.rank) + '</span>'
+      : '';
+    return '<div class="chh-row chh-' + (win ? 'win' : 'loss') + '">' +
+      '<span class="chh-out">' + (win ? 'WON' : 'LOST') + '</span>' +
+      '<div class="chh-mid">' +
+        '<div class="chh-boss">' + esc((e && e.bossName) || 'a boss') + rankPill + '</div>' +
+        '<div class="chh-who">with ' + who + '</div>' +
+      '</div>' +
+      '<div class="chh-when">' + esc(_coopHistWhen(e && e.ts)) + '</div>' +
+    '</div>';
+  }
+  function _coopHistRender() {
+    const listEl = document.getElementById('coop-hist-list');
+    const emptyEl = document.getElementById('coop-hist-empty');
+    const countEl = document.getElementById('coop-hist-count');
+    if (!listEl) return;
+    const h = _loadCoopHistory();
+    if (!h.length) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.classList.remove('hidden');
+      if (countEl) countEl.innerHTML = '<span class="cph-pip" style="background:#5a5a78;box-shadow:none"></span>No hunts yet';
+      return;
+    }
+    if (emptyEl) emptyEl.classList.add('hidden');
+    let w = 0, l = 0;
+    for (let i = 0; i < h.length; i++) { if (h[i] && h[i].result === 'win') w++; else l++; }
+    if (countEl) countEl.innerHTML = '<span class="cph-pip"></span><b>' + w + '</b> won<span class="cph-sep">·</span>' + l + ' lost';
+    listEl.innerHTML = h.map(_coopHistRowHtml).join('');
+  }
+  function _coopHistOpen() {
+    const ov = document.getElementById('coop-hist-overlay');
+    if (!ov) return;
+    _coopHistRender();
+    ov.classList.remove('hidden');
+    try { document.body.classList.add('bfs-locked'); } catch (_) {}
+  }
+  function _coopHistClose() {
+    const ov = document.getElementById('coop-hist-overlay');
+    if (ov) ov.classList.add('hidden');
+    // The Pacts dashboard sits under the history sheet — keep the body lock if it's still open.
+    try { const dash = document.getElementById('coop-dash-overlay'); if (!dash || dash.classList.contains('hidden')) document.body.classList.remove('bfs-locked'); } catch (_) {}
+  }
   function _coopDashWireOnce() {
     if (_coopDashWired) return; _coopDashWired = true;
     const closeBtn = document.getElementById('coop-dash-close');
     if (closeBtn) closeBtn.addEventListener('click', _coopCloseDashboard);
+    const histBtn = document.getElementById('coop-dash-hist');   // W716 — open the hunt-history sheet
+    if (histBtn) histBtn.addEventListener('click', _coopHistOpen);
+    const histClose = document.getElementById('coop-hist-close');
+    if (histClose) histClose.addEventListener('click', _coopHistClose);
     const aaBtn = document.getElementById('coop-dash-accept-all');   // W572 — footer Accept-All (replaces Recruit)
     if (aaBtn) aaBtn.addEventListener('click', _coopDashAcceptAll);
     const listEl = document.getElementById('coop-dash-list');
