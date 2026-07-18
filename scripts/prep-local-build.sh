@@ -157,6 +157,15 @@ mkdir -p www/assets/backgrounds
 if compgen -G "assets/backgrounds/*.webp" > /dev/null; then
   cp assets/backgrounds/*.webp www/assets/backgrounds/
 fi
+# W717 — bust-portrait avatars (webp, W711). The leaderboard crest + profile
+# medallion resolve assets/busts/<name>-bust.webp via JS string concat, so the
+# missing-asset gate below (HTML/CSS scanner) can't see the reference — build 428
+# shipped with this dir omitted and every crest/medallion rendered blank. Ship all
+# 18 or the boards go faceless.
+mkdir -p www/assets/busts
+if compgen -G "assets/busts/*.webp" > /dev/null; then
+  cp assets/busts/*.webp www/assets/busts/
+fi
 echo "  www/ assembled."
 echo ""
 
