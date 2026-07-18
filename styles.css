@@ -30093,9 +30093,9 @@ button.guildhall-summary-tile:active {
 /* the medallion — circular, gold gradient frame, glowing rarity ring, gem mounts.
    W710 — enlarged (176→212px) so the avatar art is the hero of the profile card
    (owner: "make the cards larger to actually see the art… worth the value"). */
-.pc-med { position: relative; width: 212px; height: 212px; border-radius: 50%; flex: none;
+.pc-med { position: relative; width: 232px; height: 232px; border-radius: 50%; flex: none;
   background: linear-gradient(150deg, #ffe9b0, var(--pc-ring, #f5b842) 42%, #c08418);
-  padding: 4px; box-shadow: 0 0 40px rgba(245,184,66,0.42), inset 0 1px 0 rgba(255,255,255,0.28); }
+  padding: 4px; box-shadow: 0 0 44px rgba(245,184,66,0.44), inset 0 1px 0 rgba(255,255,255,0.28); }
 .pc-med-ring { position: absolute; inset: -13px; border-radius: 50%; border: 1px solid var(--pc-ring, #f5b842); opacity: 0.55;
   box-shadow: 0 0 30px rgba(245,184,66,0.22), inset 0 0 20px rgba(245,184,66,0.12); }
 @media (prefers-reduced-motion: no-preference) { .pc-med-ring { animation: pcRing 3.4s ease-in-out infinite; } }
@@ -30116,7 +30116,7 @@ button.guildhall-summary-tile:active {
   display: flex; align-items: center; justify-content: center;
   font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 25px; color: #07070f; line-height: 1;
   box-shadow: 0 0 20px var(--pc-rank), 0 4px 12px rgba(0,0,0,0.5); }
-.pc-med-floor { width: 236px; height: 24px; margin-top: 18px; border-radius: 50%;
+.pc-med-floor { width: 256px; height: 26px; margin-top: 18px; border-radius: 50%;
   background: radial-gradient(ellipse, rgba(245,184,66,0.40), transparent 70%); filter: blur(5px); }
 
 /* skin tag — signals the avatar is swappable / purchasable */
@@ -30971,16 +30971,20 @@ button.guildhall-summary-tile:active {
 
 /* W706 — the profile sheet wearing an equipped card background (heavy vertical
    scrim keeps every stat block readable over any art). */
-/* W710 — a member's equipped background is now a PROMINENT hero backdrop: the earned
-   scene shows strongly across the top (behind the enlarged medallion + name — the
-   "worth the value" showcase), then a scrim ramps up so every stat block below stays
-   readable. Free players keep the plain radial (no --painted class) — the funnel. */
+/* W710/W712 — a member's equipped background is a PROMINENT hero backdrop: the earned
+   scene shows STRONGLY across the top (owner: "you can barely see the background" — the
+   top scrim is now near-clear so the art, e.g. the founder sunrise, actually reads),
+   then a scrim ramps up so every stat block below stays readable. Free players keep the
+   plain radial (no --painted class) — the funnel. */
 #pc-sheet.pc--painted {
   background:
-    linear-gradient(180deg, rgba(7,7,15,0.28) 0%, rgba(7,7,15,0.42) 26%, rgba(7,7,15,0.80) 46%, rgba(7,7,15,0.95) 60%, #07070f 74%),
+    linear-gradient(180deg, rgba(7,7,15,0.10) 0%, rgba(7,7,15,0.14) 22%, rgba(7,7,15,0.34) 34%, rgba(7,7,15,0.74) 46%, rgba(7,7,15,0.93) 56%, #07070f 68%),
     var(--lb-row-art) center top / cover no-repeat,
     radial-gradient(135% 58% at 50% 0%, #12122c 0%, #07070f 58%);
 }
+/* legibility over the now-visible hero art */
+#pc-sheet.pc--painted .pc-alias { text-shadow: 0 2px 10px rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7); }
+#pc-sheet.pc--painted .pc-eyebrow, #pc-sheet.pc--painted .pc-swipe-hint { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 /* leader hero card: left group = crest + identity, so space-between keeps the
    big stat pinned right (W704 wrapper added in lbBuildRankList). */
 .lb-rank-leader-left {
