@@ -31251,20 +31251,22 @@ button.guildhall-summary-tile:active {
    will layer per-row art the same way via a --lb-row-bg custom property. */
 #lb-rank-sheet .lb-rank-row {
   gap: 10px; padding: 5px 12px; min-height: 30px; border-radius: 12px;
+  /* W708 — lighter right side so the row art actually reads (owner: "hit harder").
+     Dark left third keeps the name/class legible; the value gets its own shadow. */
   background:
-    linear-gradient(90deg, rgba(9,10,22,0.93) 0%, rgba(9,10,22,0.74) 42%, rgba(11,12,26,0.48) 100%),
+    linear-gradient(90deg, rgba(8,8,18,0.90) 0%, rgba(8,8,18,0.60) 40%, rgba(10,10,22,0.26) 74%, rgba(10,10,22,0.11) 100%),
     url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
-    rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.09);
+    rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
   font-size: 16px;
 }
 /* own-row keeps its gold identity over the texture */
 #lb-rank-sheet .lb-rank-row--me {
   background:
-    linear-gradient(90deg, rgba(48,33,7,0.86) 0%, rgba(38,27,9,0.70) 45%, rgba(26,20,11,0.44) 100%),
+    linear-gradient(90deg, rgba(46,32,7,0.86) 0%, rgba(40,28,9,0.56) 42%, rgba(30,22,11,0.24) 74%, rgba(26,20,11,0.11) 100%),
     url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
-    rgba(255,255,255,0.035);
-  border-color: rgba(245,158,11,0.55);
+    rgba(255,255,255,0.03);
+  border-color: rgba(245,158,11,0.60);
 }
 /* W705 review fix — crowned rows (.lb-rank-row--awakened, F100 finishers /
    completed collection) set their old flat gold wash with !important
@@ -31273,19 +31275,24 @@ button.guildhall-summary-tile:active {
    gold-tinted scrim so crowned rows stay textured like their neighbors. */
 #lb-rank-sheet .lb-rank-row--awakened {
   background:
-    linear-gradient(90deg, rgba(52,38,8,0.88) 0%, rgba(40,30,10,0.70) 45%, rgba(28,22,12,0.42) 100%),
+    linear-gradient(90deg, rgba(50,36,8,0.86) 0%, rgba(42,30,10,0.56) 42%, rgba(30,24,12,0.24) 74%, rgba(28,22,12,0.11) 100%),
     url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
-    rgba(255,255,255,0.035) !important;
+    rgba(255,255,255,0.03) !important;
 }
 /* W706 — a MEMBER's chosen card background paints their row (inline --lb-row-art
    from JS). !important so it also beats the --awakened gold wash — the chosen
    design IS the point. The left-heavy scrim keeps name/value contrast on any art. */
 #lb-rank-sheet .lb-rank-row--painted {
   background:
-    linear-gradient(90deg, rgba(6,6,15,0.94) 0%, rgba(6,6,15,0.80) 36%, rgba(6,6,15,0.38) 66%, rgba(6,6,15,0.12) 100%),
+    linear-gradient(90deg, rgba(5,5,13,0.90) 0%, rgba(5,5,13,0.58) 34%, rgba(5,5,13,0.18) 64%, rgba(5,5,13,0.02) 100%),
     var(--lb-row-art) center / cover no-repeat,
-    rgba(255,255,255,0.035) !important;
+    rgba(255,255,255,0.03) !important;
 }
+/* W708 — legibility over the now-visible art: value/name/class carry their own
+   shadow so they read on the brighter right side. */
+#lb-rank-sheet .lb-rank-value { text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.75); }
+#lb-rank-sheet .lb-rank-name  { text-shadow: 0 1px 3px rgba(0,0,0,0.85); }
+#lb-rank-sheet .lb-rank-class { text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 /* W707 — tighter rows (circle crest ~42px) so ~10 fit on one screen (owner ask) */
 #lb-rank-sheet .lb-rank-row { min-height: 52px; }
 #lb-rank-sheet .lb-rank-fill {
