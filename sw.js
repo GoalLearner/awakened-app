@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.019';
+const CACHE_VERSION = 'v6.020';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -24,6 +24,27 @@ const PRECACHE_ASSETS = [
   '/avatar-paladin.png',
   '/avatar-merchant.png',
   '/avatar-sage.png',
+  // W711 — head-and-shoulders BUST portraits for the leaderboard crest + profile
+  // medallion (8 class + 10 skin). Any user's board row can show a skin bust, so all 18
+  // are precached (~410KB). Full-body sprites above stay for battle/PvP/home.
+  '/assets/busts/avatar-base-bust.webp',
+  '/assets/busts/avatar-warrior-bust.webp',
+  '/assets/busts/avatar-ranger-bust.webp',
+  '/assets/busts/avatar-mage-bust.webp',
+  '/assets/busts/avatar-assassin-bust.webp',
+  '/assets/busts/avatar-paladin-bust.webp',
+  '/assets/busts/avatar-merchant-bust.webp',
+  '/assets/busts/avatar-sage-bust.webp',
+  '/assets/busts/avatar-skin-stardust-bust.webp',
+  '/assets/busts/avatar-skin-dawnbringer-bust.webp',
+  '/assets/busts/avatar-skin-nullprotocol-bust.webp',
+  '/assets/busts/avatar-skin-nullprotocol-2-bust.webp',
+  '/assets/busts/avatar-skin-emberforged-bust.webp',
+  '/assets/busts/avatar-skin-voidtouched-bust.webp',
+  '/assets/busts/avatar-skin-frostweaver-bust.webp',
+  '/assets/busts/avatar-skin-tempest-bust.webp',
+  '/assets/busts/avatar-skin-verdant-bust.webp',
+  '/assets/busts/avatar-skin-bloodmoon-bust.webp',
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',
   '/assets/tab-icons/tab-habits.png',

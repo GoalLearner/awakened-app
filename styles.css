@@ -30870,6 +30870,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
   background-size: 260% auto;         /* zoom the full-body sprite to a bust… */
   background-position: 50% 2%;        /* …anchored at the head */
 }
+/* W711 — a real bust portrait already frames head+shoulders in a square, so it fills the
+   circular well directly (no zoom). Overrides the full-body head-crop above. */
+.lb-crest-por--bust {
+  background-size: cover;
+  background-position: 50% 50%;
+}
 /* prestige ✦ on top of the ring + the Founder ✦ coin bottom-right */
 .lb-crest-star {
   position: absolute; top: -8px; left: 50%; transform: translateX(-50%);

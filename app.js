@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w714'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w715'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -42047,6 +42047,23 @@
   //   4. anything else / a stale cache row without the field → avatar-base.png
   // avatar_id is client-published untrusted data, so the PvP whitelist gate applies;
   // onerror falls back to the base portrait (an older build missing a newer skin file).
+  // W711 — dedicated head-and-shoulders BUST portraits for the crest + profile
+  // medallion. The battle/PvP/home art stays the full-body sprite (getAvatarSrc);
+  // only the small round "who is this" surfaces swap to a face-filling bust so the
+  // portrait reads at 48px instead of a zoomed torso-crop. Every class avatar + every
+  // skin has a bust (assets/busts/<name>-bust.webp); an unknown avatar_id (old client,
+  // unexpected value) returns '' → caller falls back to the full-body zoom, never blank.
+  const _BUST_AVATARS = new Set([
+    'avatar-base.png', 'avatar-warrior.png', 'avatar-ranger.png', 'avatar-mage.png',
+    'avatar-assassin.png', 'avatar-paladin.png', 'avatar-merchant.png', 'avatar-sage.png',
+    'avatar-skin-stardust.png', 'avatar-skin-dawnbringer.png', 'avatar-skin-nullprotocol.png',
+    'avatar-skin-nullprotocol-2.png', 'avatar-skin-emberforged.png', 'avatar-skin-voidtouched.png',
+    'avatar-skin-frostweaver.png', 'avatar-skin-tempest.png', 'avatar-skin-verdant.png',
+    'avatar-skin-bloodmoon.png',
+  ]);
+  function _bustSrc(file) {
+    return (file && _BUST_AVATARS.has(file)) ? 'assets/busts/' + file.replace(/\.png$/i, '') + '-bust.webp' : '';
+  }
   function _lbCrestHtml(row, isMe, extraClass, opts) {
     let file = '';
     try {
@@ -42086,9 +42103,14 @@
     // (avatar-base.png for anything unknown), so no <img> onerror is needed.
     // Structure: frame (circle, ring, NO overflow so the star + Founder coin hang past
     // its edge) > well (overflow:hidden circular clip) > por (the zoomed portrait).
+    // W711 — prefer the bust portrait (face fills the well); fall back to the full-body
+    // sprite with the old head-zoom crop (via .lb-crest-por default CSS) if no bust exists.
+    const _bust = _bustSrc(safe);
+    const _porSrc = _bust || safe;
+    const _porCls = _bust ? ' lb-crest-por--bust' : '';
     return '<span class="lb-crest-frame' + frameMod + '"' + ring + ' aria-hidden="true">' +
       '<span class="lb-crest-well">' +
-        '<span class="lb-crest-por" style="background-image:url(\'' + safe + '\')"></span>' +
+        '<span class="lb-crest-por' + _porCls + '" style="background-image:url(\'' + _porSrc + '\')"></span>' +
       '</span>' +
       star + fMark +
     '</span>';
@@ -44677,7 +44699,7 @@
       '<div class="pc-hero"><div class="pc-med-wrap">' +
         '<div class="pc-med"><span class="pc-med-ring"></span>' +
           '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
-          '<div class="pc-med-portrait"><img src="' + esc(avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +
+          '<div class="pc-med-portrait"><img src="' + esc(_bustSrc(avatar) || avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +   // W711 — bust portrait (fallback full-body)
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>DEFAULT SKIN</span></div>') + '</div>' +
@@ -44829,7 +44851,7 @@
     body.innerHTML =
       '<div class="wd-hero"><div class="pc-med"><span class="pc-med-ring"></span>' +
         '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
-        '<div class="pc-med-portrait"><img src="' + esc(getAvatarSrc()) + '" alt="" onerror="this.style.display=\'none\'"></div></div></div>' +
+        '<div class="pc-med-portrait"><img src="' + esc(_bustSrc(getAvatarSrc()) || getAvatarSrc()) + '" alt="" onerror="this.style.display=\'none\'"></div></div></div>' +   // W711 — bust portrait (fallback full-body)
       '<div class="wd-hero-name">' + esc(eq ? eq.name : 'Your Class') + '</div><div class="wd-hero-sub">Equipped Look</div>' +
       '<div class="wd-section-label"><span>YOUR LOOKS</span><span class="rule"></span></div>' +
       '<div class="wd-grid">' + tiles + '</div>' +
@@ -44920,7 +44942,7 @@
     _renderWardrobe();
     const src = getAvatarSrc();
     try { const home = document.getElementById('sc-avatar-img'); if (home) { home.src = src; _lastAvatarSrc = src; } } catch (_) {}
-    try { const sh = document.getElementById('pc-sheet'); if (sh && !sh.classList.contains('hidden')) { const im = sh.querySelector('.pc-med-portrait img'); if (im) im.src = src; } } catch (_) {}
+    try { const sh = document.getElementById('pc-sheet'); if (sh && !sh.classList.contains('hidden')) { const im = sh.querySelector('.pc-med-portrait img'); if (im) im.src = (_bustSrc(src) || src); } } catch (_) {}   // W711 — bust portrait (fallback full-body)
     try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}   // sync avatar_id
   }
   try { window.__openWardrobe = openWardrobe; } catch (_) {}
