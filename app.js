@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w712'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w713'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -42303,10 +42303,18 @@
       const isMe = myAlias && rec.alias === myAlias;
       const aliasDisplay = lbNormalizeAliasForDisplay(rec.alias);
       const weekLabel = lbFormatWeekRangeFromIso(rec.week_start, rec.week_end);
-      const rowClass = isMe ? 'lb-rank-row lb-rank-row--hof lb-rank-row--me' : 'lb-rank-row lb-rank-row--hof';
-      return '<div class="' + rowClass + '">' +
-        '<span class="lb-rank-pos">#' + (rec.rank || '?') + '</span>' +
-        _lbCrestHtml(rec, isMe, '') +   // W704 — rec.avatar_id rides the HoF read
+      // W713 — main-board parity: tier-colored ring + number, prestige ✦ / Founder mark
+      // on the crest, and a member's card background paints the row (was a default violet
+      // ring + grey #N + basic-only bg).
+      const _ring = _lbRankColor(rec.rankTier);
+      const _crestOpts = { ring: _ring, star: (rec.rankTier === 'S+' && (rec.prestige | 0) > 0), founderSeq: (rec.founderSeq | 0) };
+      let _bg = rec.card_bg || null;
+      if (isMe) { const _cb = _cardBgLocal(); if (_cb.set) _bg = _cb.id; }
+      const _paint = _cardBgPaintStyle(_bg);
+      const rowClass = 'lb-rank-row lb-rank-row--hof' + (isMe ? ' lb-rank-row--me' : '') + (_paint ? ' lb-rank-row--painted' : '');
+      return '<div class="' + rowClass + '"' + (_paint ? ' style="' + _paint + '"' : '') + '>' +
+        '<span class="lb-rank-pos lb-rankno" style="--rc:' + _ring + '">' + (rec.rank || '?') + '</span>' +
+        _lbCrestHtml(rec, isMe, '', _crestOpts) +   // W704 crest + W713 tier/founder opts
         '<span class="lb-rank-name">' +
           esc(aliasDisplay || '—') +
           (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +
@@ -42364,10 +42372,16 @@
       const mult = (typeof m.repeat_count === 'number' && m.repeat_count > 1)
         ? '<span class="lb-club-mult" title="Qualified ' + m.repeat_count + ' separate weeks">×' + m.repeat_count + '</span>'
         : '';
-      const rowClass = 'lb-rank-row lb-rank-row--club-100k' + (isMe ? ' lb-rank-row--me' : '');
-      return '<div class="' + rowClass + '">' +
-        '<span class="lb-rank-pos">#' + (m.rank || '?') + '</span>' +
-        _lbCrestHtml(m, isMe, '') +   // W704 — m.avatar_id rides the 100K Club read
+      // W713 — main-board parity (tier ring + number, prestige/founder crest, member bg).
+      const _ring = _lbRankColor(m.rankTier);
+      const _crestOpts = { ring: _ring, star: (m.rankTier === 'S+' && (m.prestige | 0) > 0), founderSeq: (m.founderSeq | 0) };
+      let _bg = m.card_bg || null;
+      if (isMe) { const _cb = _cardBgLocal(); if (_cb.set) _bg = _cb.id; }
+      const _paint = _cardBgPaintStyle(_bg);
+      const rowClass = 'lb-rank-row lb-rank-row--club-100k' + (isMe ? ' lb-rank-row--me' : '') + (_paint ? ' lb-rank-row--painted' : '');
+      return '<div class="' + rowClass + '"' + (_paint ? ' style="' + _paint + '"' : '') + '>' +
+        '<span class="lb-rank-pos lb-rankno" style="--rc:' + _ring + '">' + (m.rank || '?') + '</span>' +
+        _lbCrestHtml(m, isMe, '', _crestOpts) +   // W704 crest + W713 tier/founder opts
         '<span class="lb-rank-name">' +
           esc(aliasDisplay || '—') + mult +
           (weekLabel ? '<span class="lb-rank-row__weeks">' + esc(weekLabel) + '</span>' : '') +

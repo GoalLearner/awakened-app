@@ -71,6 +71,10 @@ interface MemberRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  // W713 — tier-colored crest ring + number, prestige ✦, Founder mark (main-board parity).
+  rank_tier: string | null;
+  prestige: number | null;
+  founder_seq: number | null;
 }
 
 interface MyRow {
@@ -135,7 +139,10 @@ export async function handleStep100kClub(
             ua.last_qualified_week_start  AS last_qualified_week_start,
             ua.unlocked_at                AS unlocked_at,
             pps.avatar_id                 AS avatar_id,
-            pps.card_bg                   AS card_bg
+            pps.card_bg                   AS card_bg,
+            pps.rank_tier                 AS rank_tier,
+            pps.prestige_level            AS prestige,
+            pps.founder_seq               AS founder_seq
      FROM user_accolades ua
      JOIN users u ON u.id = ua.user_id
      LEFT JOIN public_profile_summary pps ON pps.user_id = ua.user_id
@@ -161,6 +168,9 @@ export async function handleStep100kClub(
     unlocked_at: row.unlocked_at,
     avatar_id: row.avatar_id ?? null,   // W704 — row crest
     card_bg: row.card_bg ?? null,   // W706 — member card background
+    rankTier: row.rank_tier ?? null,       // W713 — tier-colored crest ring + number
+    prestige: row.prestige ?? 0,
+    founderSeq: row.founder_seq ?? 0,
   }));
 
   // Caller's membership row (if they're a member). Defensively

@@ -54,6 +54,11 @@ interface RecordRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  // W713 — rank-tier crest ring + number colour, prestige ✦, Founder mark (consistency
+  // with the main Steps board; these boards previously showed a default violet ring).
+  rank_tier: string | null;
+  prestige: number | null;
+  founder_seq: number | null;
 }
 
 interface MyBestRow {
@@ -163,7 +168,8 @@ export async function handleLeaderboardHallOfFame(
            )
      )
      SELECT u.alias AS alias, m.steps AS steps, m.week_start AS week_start,
-            pps.avatar_id AS avatar_id, pps.card_bg AS card_bg
+            pps.avatar_id AS avatar_id, pps.card_bg AS card_bg,
+            pps.rank_tier AS rank_tier, pps.prestige_level AS prestige, pps.founder_seq AS founder_seq
      FROM merged m
      JOIN users u ON u.id = m.user_id
      LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
@@ -181,6 +187,9 @@ export async function handleLeaderboardHallOfFame(
     week_end: weekEndFromStart(row.week_start),
     avatar_id: row.avatar_id ?? null,   // W704 — row crest
     card_bg: row.card_bg ?? null,   // W706 — member card background
+    rankTier: row.rank_tier ?? null,       // W713 — tier-colored crest ring + number
+    prestige: row.prestige ?? 0,
+    founderSeq: row.founder_seq ?? 0,
   }));
 
   // Caller's personal best record across all weeks. Two cheap

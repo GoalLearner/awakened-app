@@ -98,6 +98,7 @@ describe('GET /v1/leaderboard/hall-of-fame', () => {
       rank: 1, alias: 'Richie', steps: 104821, week_start: '2026-05-17', week_end: '2026-05-23',
       avatar_id: null,   // W704 — crest field rides the HoF rows
       card_bg: null,     // W706 — member card background rides the HoF rows
+      rankTier: null, prestige: 0, founderSeq: 0,   // W713 — tier ring + number, prestige/founder
     });
     expect(body.records[2].alias).toBe('Richie');         // same user, second appearance
     expect(body.records[2].week_start).toBe('2026-06-07'); // different week
