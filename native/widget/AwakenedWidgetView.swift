@@ -26,12 +26,9 @@ struct AwakenedWidgetView: View {
             // ── Global Steps-leaderboard position ──
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 if entry.lbRank > 0 {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(rankColor)
                     Text("#\(entry.lbRank)")
                         .font(.system(size: 20, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(rankColor)
                     Text("STEPS")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white.opacity(0.5))
@@ -69,19 +66,9 @@ struct AwakenedWidgetView: View {
                     }
                 }
             }
-            .frame(width: 78, height: 78)
-
-            // ── Rank badge (tier color) ──
-            Text(entry.rankTier.isEmpty ? "—" : entry.rankTier)
-                .font(.system(size: 12, weight: .black, design: .rounded))
-                .foregroundColor(rankColor)
-                .padding(.horizontal, 10).padding(.vertical, 3)
-                .background(
-                    Capsule().fill(rankColor.opacity(0.14))
-                        .overlay(Capsule().stroke(rankColor.opacity(0.55), lineWidth: 1))
-                )
+            .frame(width: 88, height: 88)
         }
-        .padding(10)
+        .padding(12)
     }
 
     // 6,200 → "6,200"; 12,340 → "12.3k"

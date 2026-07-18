@@ -5,10 +5,12 @@ author lives here as the version-controlled source of truth and is copied into
 the Xcode project during a one-time setup. `cap sync` does NOT touch these.
 
 ## widget/ — W718 Awakened home-screen widget
-Small home widget: global Steps-leaderboard position · today's step ring (live
-from HealthKit, fills to the day's goal + "GOAL ✓" cue on completion) · rank
-badge in its tier color. Game state is written by the app into a shared App
-Group; steps are read live inside the extension so the ring never goes stale.
+Small home widget: global Steps-leaderboard position (in the tier color) above
+today's step ring (live from HealthKit, fills to the day's goal + "GOAL ✓" cue
+on completion). Minimal by request — no letter badge, no trophy; the rank tier
+color rides on the `#N` number + ring. Game state is written by the app into a
+shared App Group; steps are read live inside the extension so the ring never
+goes stale.
 
 - `AwakenedWidget.swift` — WidgetKit target: bundle, widget, timeline provider,
   HealthKit step query, shared-state loader. → **AwakenedWidget** target.
