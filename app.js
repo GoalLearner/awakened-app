@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w717'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w718'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24197,6 +24197,7 @@
   // where a pending write can be lost to a kill/crash. (A debounce timer cannot
   // promise that; that is why this is a microtask.)
   function save() {
+    try { _pushWidgetState(); } catch (_) {}   // W718 — keep the home-screen widget fresh
     _saveDirty = true;
     if (_saveMicroScheduled) return;
     _saveMicroScheduled = true;
@@ -24230,8 +24231,58 @@
     window.addEventListener('beforeunload', saveFlush);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') saveFlush();
+      else { try { _pushWidgetState(); } catch (_) {} }   // W718 — refresh widget on foreground
     });
   } catch (_) {}
+
+  // ── W718 — Home-screen widget bridge ────────────────────────────────────
+  // Pushes glanceable game state (streak, rank tier + tier color, today's step
+  // goal, alias) into the shared App Group container so the native WidgetKit
+  // extension can render the small home widget. Steps are read LIVE from
+  // HealthKit inside the widget itself, so we deliberately do NOT send a step
+  // count here — a number written on sync would be stale within minutes and
+  // make the ring feel broken. No-ops on web and on any build whose native
+  // side lacks the WidgetBridge plugin (e.g. a build shipped before the widget
+  // target exists), so this is safe to ship ahead of the extension. The push
+  // is self-debounced (400ms) because save() — its primary caller — is hot.
+  function _widgetBridge() {
+    try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.WidgetBridge) || null; } catch (_) { return null; }
+  }
+  function _widgetStepGoalToday() {
+    try {
+      var g = 0;
+      (Array.isArray(habits) ? habits : []).forEach(function (h) {
+        if (!h || (typeof _isActiveHabit === 'function' && !_isActiveHabit(h))) return;
+        var n = parseInt(h.stepGoal, 10);
+        if (Number.isFinite(n) && n > 0) g += n;
+      });
+      return g;
+    } catch (_) { return 0; }
+  }
+  var _widgetPushT = null;
+  function _pushWidgetState() {
+    if (!_widgetBridge()) return;              // fast bail on web / no native plugin
+    if (_widgetPushT) return;                  // coalesce a burst of save() calls
+    _widgetPushT = setTimeout(function () {
+      _widgetPushT = null;
+      var wb = _widgetBridge(); if (!wb) return;
+      var tier = '', color = '#a78bfa', streak = 0, alias = '';
+      try { tier = (getRank(totalPoints) || {}).id || ''; } catch (_) {}
+      try { color = (typeof _LB_RANK_COLORS === 'object' && _LB_RANK_COLORS[tier]) || '#a78bfa'; } catch (_) {}
+      try { streak = (buildAchievementContext().maxStreak | 0); } catch (_) {}
+      try { alias = (typeof lbGetMyAlias === 'function' && lbGetMyAlias()) || ''; } catch (_) {}
+      try {
+        wb.setState({
+          streak: streak,
+          stepGoal: _widgetStepGoalToday(),
+          rankTier: tier,
+          rankColor: color,
+          alias: alias,
+          updatedAt: Date.now(),
+        });
+      } catch (_) {}
+    }, 400);
+  }
 
   // W659 — minimal test surface (mirrors the __test_* convention Leaderboard /
   // Health already expose). NOT referenced by any app code.
