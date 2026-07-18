@@ -56,6 +56,17 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { maybeGrantFounderMark } from '../lib/founder-mark';
+import { readEntitlements } from './iap-entitlements';
+
+// W706 — the member card-background catalog (ids only; art + achievement mapping
+// live client-side). Server-side this is a WHITELIST so an unknown/retired id can
+// never propagate cross-user, and equipping ANY of them requires membership
+// (validated at write time in the PUT handler). Keep in sync with the client's
+// CARD_BG_CATALOG.
+const CARD_BG_IDS = [
+  'bg-100k', 'bg-floor100', 'bg-srank', 'bg-splus', 'bg-boss500',
+  'bg-arena', 'bg-mega', 'bg-streak365', 'bg-god', 'bg-founder',
+] as const;
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 const ALLOWED_DIVISIONS = ['I', 'II', 'III'] as const;
@@ -122,6 +133,7 @@ interface PutBody {
   achievements?: unknown;
   arenaTitle?: unknown;
   avatarId?: unknown;
+  cardBg?: unknown;   // W706 — member card background id (null clears)
   power?: unknown;
   avgStepsPerDay?: unknown;
   combatant?: unknown;   // W440 — loadout snapshot for "Duel a Friend's Echo" (6 stats + weapon)
@@ -154,6 +166,7 @@ interface Validated {
   // verifiedStreakLabel: omitted key → preserve existing column; null →
   // deliberate "unequipped" clear; string → must be a whitelisted ID.
   arenaTitle: AchField<string>;
+  cardBg: AchField<string>;   // W706 — member card background (write-gated on membership)
   // Profile card (W-next) — same set/clear/preserve semantics.
   avatarId: AchField<string>;
   power: AchField<number>;
@@ -406,6 +419,20 @@ function validate(body: PutBody):
       return { ok: false, code: 'INVALID_AVATAR_ID', detail: 'avatarId must be a short id string or null.' };
     }
   }
+  // W706 — member card background. String must be a catalog id; null clears back
+  // to the basic card. Membership itself is checked in the handler (needs env) —
+  // a non-member's non-null value is coerced to null there, never a 4xx (an old
+  // client heartbeating a stale flex must not break the whole rank submit).
+  let cardBg: AchField<string> = { set: false, value: null };
+  if ('cardBg' in body && body.cardBg !== undefined) {
+    if (body.cardBg === null) {
+      cardBg = { set: true, value: null };
+    } else if (typeof body.cardBg === 'string' && (CARD_BG_IDS as readonly string[]).includes(body.cardBg)) {
+      cardBg = { set: true, value: body.cardBg };
+    } else {
+      return { ok: false, code: 'INVALID_CARD_BG', detail: 'cardBg must be a known background id or null.' };
+    }
+  }
   let power: AchField<number> = { set: false, value: null };
   if ('power' in body && body.power !== undefined) {
     if (isSafeInt(body.power, 0, POWER_MAX)) {
@@ -468,6 +495,7 @@ function validate(body: PutBody):
       achievements: achCheck.value,
       arenaTitle,
       avatarId,
+      cardBg,
       power,
       avgStepsPerDay,
       combatant,
@@ -541,6 +569,18 @@ export async function handlePublicProfileSummaryPut(
   const avgStepsSet = v.avgStepsPerDay.set ? 1 : 0;
   const combatantSet = v.combatant.set ? 1 : 0;
 
+  // W706 — the card background is a MEMBER perk, enforced server-side at write
+  // time: a non-member's non-null cardBg is coerced to a CLEAR (never a 4xx — the
+  // heartbeat must survive a lapsed subscription / stale client). Membership =
+  // premium OR Founder via the same readEntitlements every other perk gates on.
+  // Achievement eligibility for a SPECIFIC design stays client-side (same
+  // client-reported trust model as rank — cosmetic, no revenue exposure).
+  if (v.cardBg.set && v.cardBg.value !== null) {
+    const { member } = await readEntitlements(env, session.userId);
+    if (!member) v.cardBg = { set: true, value: null };
+  }
+  const cardBgSet = v.cardBg.set ? 1 : 0;
+
   await env.DB.prepare(
     `INSERT INTO public_profile_summary (
         user_id, rank_tier, rank_division, rank_label,
@@ -549,9 +589,9 @@ export async function handlePublicProfileSummaryPut(
         bosses_slain_total, ultra_rare_drops_total,
         verified_streak_label, achievements_updated_at,
         arena_title, avatar_id, power, avg_steps_per_day, combatant_json,
-        prestige_level
+        prestige_level, card_bg
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL,
-        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0), ?, ?)
+        COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?, ?, COALESCE(?, 0), COALESCE(?, 0), ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         rank_tier         = excluded.rank_tier,
         rank_division     = excluded.rank_division,
@@ -579,7 +619,8 @@ export async function handlePublicProfileSummaryPut(
         avatar_id               = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avatar_id END,
         power                   = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.power END,
         avg_steps_per_day       = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.avg_steps_per_day END,
-        combatant_json          = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.combatant_json END`,
+        combatant_json          = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.combatant_json END,
+        card_bg                 = CASE WHEN ? = 1 THEN ? ELSE public_profile_summary.card_bg END`,
   )
     .bind(
       // INSERT bindings (positional with the VALUES clause)
@@ -600,7 +641,8 @@ export async function handlePublicProfileSummaryPut(
       v.power.value,
       v.avgStepsPerDay.value,
       v.combatant.value,
-      v.prestige,   // W453 — appended last (the table's newest column → INSERT bind index 17)
+      v.prestige,   // W453 — appended with the table's newer columns
+      v.cardBg.value,   // W706 — card_bg (INSERT; member-gated above)
       // ON CONFLICT CASE WHEN sentinels (sentinel, then value)
       bossesSet, ach.bossesSlainTotal.value,
       dropsSet,  ach.ultraRareDropsTotal.value,
@@ -611,6 +653,7 @@ export async function handlePublicProfileSummaryPut(
       powerSet,  v.power.value,
       avgStepsSet, v.avgStepsPerDay.value,
       combatantSet, v.combatant.value,
+      cardBgSet, v.cardBg.value,   // W706 — card_bg CASE sentinel + value
     )
     .run();
 

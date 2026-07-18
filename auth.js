@@ -147,6 +147,11 @@
     // without this purge, account A's dismissal would silently rob account B's
     // ceremony on the same device (the hint short-circuits before the fetch).
     try { localStorage.removeItem('hb_recap_seen_week'); } catch (_) {}
+    // W706 — the equipped card background is per-account (member-gated). Purge it so
+    // account B on the same device can't inherit account A's members-only background
+    // (and re-publish it on B's heartbeat). Server re-validates membership anyway.
+    try { localStorage.removeItem('hb_card_bg'); } catch (_) {}
+    try { localStorage.removeItem('hb_founder_celebrated'); } catch (_) {}   // W698 — Founder celebration is per-account too
   }
 
   // W689 — owner-tag migration: devices that were ALREADY signed in before the

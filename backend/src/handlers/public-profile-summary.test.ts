@@ -273,15 +273,18 @@ describe('PUT /v1/users/me/public-profile-summary — validation (1z.190)', () =
     expect(calls[0]?.binds[9]).toBeNull();
     expect(calls[0]?.binds[10]).toBeNull();
     expect(calls[0]?.binds[11]).toBeNull();
-    // W453 — prestige is appended as the LAST INSERT bind (index 17);
-    // 0 for a non-S+ tier (coerced) and for pre-W453 clients (omitted).
+    // W453 — prestige INSERT bind (index 17); 0 for a non-S+ tier (coerced)
+    // and for pre-W453 clients (omitted).
     expect(calls[0]?.binds[17]).toBe(0);
-    // ON CONFLICT CASE WHEN sentinels shifted +1 (now 18, 20, 22, 24) —
-    // all 0 because no achievement fields were set.
-    expect(calls[0]?.binds[18]).toBe(0);
-    expect(calls[0]?.binds[20]).toBe(0);
-    expect(calls[0]?.binds[22]).toBe(0);
-    expect(calls[0]?.binds[24]).toBe(0);
+    // W706 — card_bg is now the LAST INSERT bind (index 18); null when unset.
+    expect(calls[0]?.binds[18]).toBeNull();
+    // ON CONFLICT CASE WHEN sentinels shifted +1 again by the W706 card_bg
+    // INSERT bind (now 19, 21, 23, 25) — all 0 because no achievement fields
+    // were set.
+    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[21]).toBe(0);
+    expect(calls[0]?.binds[23]).toBe(0);
+    expect(calls[0]?.binds[25]).toBe(0);
   });
 
   it('upserts a valid S+ summary with null division', async () => {
@@ -480,12 +483,12 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(calls[0]?.binds[9]).toBe(1);
     expect(calls[0]?.binds[10]).toBe('30-day MR streak');
     expect(calls[0]?.binds[11]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
-    // Sentinels shifted +1 by the appended prestige bind (now 18, 20, 22, 24)
-    // — all 1 since all fields set.
-    expect(calls[0]?.binds[18]).toBe(1);
-    expect(calls[0]?.binds[20]).toBe(1);
-    expect(calls[0]?.binds[22]).toBe(1);
-    expect(calls[0]?.binds[24]).toBe(1);
+    // Sentinels shifted +2 by the appended prestige + W706 card_bg binds
+    // (now 19, 21, 23, 25) — all 1 since all fields set.
+    expect(calls[0]?.binds[19]).toBe(1);
+    expect(calls[0]?.binds[21]).toBe(1);
+    expect(calls[0]?.binds[23]).toBe(1);
+    expect(calls[0]?.binds[25]).toBe(1);
   });
 
   it('partial achievement payload only marks present fields for update', async () => {
@@ -499,16 +502,17 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
       session,
     );
     const calls = db._calls();
-    // bossesSlainTotal set → sentinel 1, value 28 (all +1 from prestige bind)
-    expect(calls[0]?.binds[18]).toBe(1);
-    expect(calls[0]?.binds[19]).toBe(28);
+    // bossesSlainTotal set → sentinel 1, value 28 (all +2 from the prestige
+    // + W706 card_bg binds)
+    expect(calls[0]?.binds[19]).toBe(1);
+    expect(calls[0]?.binds[20]).toBe(28);
     // ultraRareDropsTotal NOT set → sentinel 0
-    expect(calls[0]?.binds[20]).toBe(0);
+    expect(calls[0]?.binds[21]).toBe(0);
     // verifiedStreakLabel NOT set → sentinel 0
-    expect(calls[0]?.binds[22]).toBe(0);
+    expect(calls[0]?.binds[23]).toBe(0);
     // achievements_updated_at: hasAny=true → sentinel 1 + stamped ts
-    expect(calls[0]?.binds[24]).toBe(1);
-    expect(calls[0]?.binds[25]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
+    expect(calls[0]?.binds[25]).toBe(1);
+    expect(calls[0]?.binds[26]).toBe(Date.UTC(2026, 4, 29, 12, 0, 0));
   });
 
   it('empty achievements object is treated as a no-op for the achievement surface', async () => {
@@ -523,11 +527,12 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     expect(json.achievementsUpdatedAt).toBeNull();
 
     const calls = db._calls();
-    // Every sentinel (shifted +1 by prestige → 18, 20, 22, 24) must be 0.
-    expect(calls[0]?.binds[18]).toBe(0);
-    expect(calls[0]?.binds[20]).toBe(0);
-    expect(calls[0]?.binds[22]).toBe(0);
-    expect(calls[0]?.binds[24]).toBe(0);
+    // Every sentinel (shifted +2 by prestige + W706 card_bg → 19, 21, 23, 25)
+    // must be 0.
+    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[21]).toBe(0);
+    expect(calls[0]?.binds[23]).toBe(0);
+    expect(calls[0]?.binds[25]).toBe(0);
   });
 
   it('explicit null verifiedStreakLabel marks the field for clear', async () => {
@@ -542,14 +547,15 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    // verifiedStreakLabel set (explicit null) → sentinel 1 + null value (+1 shift)
-    expect(calls[0]?.binds[22]).toBe(1);
-    expect(calls[0]?.binds[23]).toBeNull();
+    // verifiedStreakLabel set (explicit null) → sentinel 1 + null value
+    // (+2 shift: prestige + W706 card_bg)
+    expect(calls[0]?.binds[23]).toBe(1);
+    expect(calls[0]?.binds[24]).toBeNull();
     // Other counts NOT set → sentinel 0
-    expect(calls[0]?.binds[18]).toBe(0);
-    expect(calls[0]?.binds[20]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[21]).toBe(0);
     // hasAny=true → ach timestamp stamped
-    expect(calls[0]?.binds[24]).toBe(1);
+    expect(calls[0]?.binds[25]).toBe(1);
   });
 
   it('accepts zero bossesSlainTotal as a real submitted value (not a clear)', async () => {
@@ -564,18 +570,18 @@ describe('PUT /v1/users/me/public-profile-summary — achievements (1z.195)', ()
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[18]).toBe(1);
-    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(1);
+    expect(calls[0]?.binds[20]).toBe(0);
   });
 
   it('rank-only submit leaves CASE WHEN sentinels all zero (preserve existing achievement columns)', async () => {
     const db = makeDb();
     await handlePublicProfileSummaryPut(makeReq(validPayload), makeEnv(db), session);
     const calls = db._calls();
-    expect(calls[0]?.binds[18]).toBe(0);
-    expect(calls[0]?.binds[20]).toBe(0);
-    expect(calls[0]?.binds[22]).toBe(0);
-    expect(calls[0]?.binds[24]).toBe(0);
+    expect(calls[0]?.binds[19]).toBe(0);
+    expect(calls[0]?.binds[21]).toBe(0);
+    expect(calls[0]?.binds[23]).toBe(0);
+    expect(calls[0]?.binds[25]).toBe(0);
   });
 });
 
@@ -607,8 +613,8 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(calls.filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);
     expect(calls[0].sql).toContain('arena_title');
     expect(calls[0].binds[12]).toBe('asc_brawler');   // INSERT value
-    expect(calls[0].binds[26]).toBe(1);               // titleSet sentinel (+1 from prestige)
-    expect(calls[0].binds[27]).toBe('asc_brawler');   // CASE WHEN value
+    expect(calls[0].binds[27]).toBe(1);               // titleSet sentinel (+2: prestige + card_bg)
+    expect(calls[0].binds[28]).toBe('asc_brawler');   // CASE WHEN value
   });
 
   it('accepts null as a deliberate "unequipped" clear', async () => {
@@ -618,8 +624,8 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
     expect(calls[0].binds[12]).toBe(null);
-    expect(calls[0].binds[26]).toBe(1);               // set → clears the column (+1 from prestige)
-    expect(calls[0].binds[27]).toBe(null);
+    expect(calls[0].binds[27]).toBe(1);               // set → clears the column (+2: prestige + card_bg)
+    expect(calls[0].binds[28]).toBe(null);
   });
 
   it('preserves the existing title when the key is omitted (sentinel 0)', async () => {
@@ -628,7 +634,7 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
       makeReq(validPayload), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
-    expect(calls[0].binds[26]).toBe(0);               // not set → CASE preserves (+1 from prestige)
+    expect(calls[0].binds[27]).toBe(0);               // not set → CASE preserves (+2: prestige + card_bg)
   });
 
   it('rejects a non-whitelisted title id', async () => {
@@ -653,7 +659,8 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
 
 // W440 — combatant loadout snapshot for "Duel a Friend's Echo". The PUT validates it to the
 // sanitizeCombatant shape (6 stats clamped [0,200], weapon/name/avatar bounded) and stores it as
-// an opaque JSON string in combatant_json. INSERT value = bind[16]; ON CONFLICT set/value = 33/34.
+// an opaque JSON string in combatant_json. INSERT value = bind[16]; ON CONFLICT set/value = 35/36
+// (after the W453 prestige + W706 card_bg INSERT binds).
 describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -682,7 +689,7 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
     expect(calls[0].binds[16]).toBeNull();   // INSERT value null when unset
-    expect(calls[0].binds[34]).toBe(0);      // combatantSet sentinel → CASE preserves (+1 from prestige)
+    expect(calls[0].binds[35]).toBe(0);      // combatantSet sentinel → CASE preserves (+2: prestige + card_bg)
   });
 
   it('null combatant is a deliberate clear (sentinel 1, value null)', async () => {
@@ -692,8 +699,8 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
     expect(calls[0].binds[16]).toBeNull();
-    expect(calls[0].binds[34]).toBe(1);
-    expect(calls[0].binds[35]).toBeNull();
+    expect(calls[0].binds[35]).toBe(1);
+    expect(calls[0].binds[36]).toBeNull();
   });
 
   it('accepts a valid combatant and stores a sanitized JSON snapshot', async () => {
@@ -702,9 +709,9 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
       makeReq({ ...validPayload, combatant: goodCombatant }), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = (db as unknown as { _calls: () => { binds: unknown[] }[] })._calls();
-    expect(calls[0].binds[34]).toBe(1);                      // set (+1 from prestige)
+    expect(calls[0].binds[35]).toBe(1);                      // set (+2: prestige + card_bg)
     const stored = JSON.parse(String(calls[0].binds[16]));   // INSERT value
-    expect(stored).toEqual(JSON.parse(String(calls[0].binds[35])));   // INSERT == CASE value
+    expect(stored).toEqual(JSON.parse(String(calls[0].binds[36])));   // INSERT == CASE value
     expect(stored.weaponId).toBe('aetherspire_staff');
     expect(stored.stats).toEqual({ STR: 40, VIT: 55, INT: 120, FOCUS: 70, WILL: 60, WLT: 30 });
     expect(stored.avatar).toBe('avatar-sage.png');
@@ -725,5 +732,106 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(stored.stats.FOCUS).toBe(0);    // non-numeric → 0
     expect(stored.avatar).toBe('');        // path-traversal avatar rejected
     expect(stored.name.length).toBe(40);   // name bounded
+  });
+});
+
+// W706 — member card backgrounds. cardBg is validated against the server-side
+// CARD_BG_IDS whitelist (unknown id → 400 INVALID_CARD_BG) and MEMBERSHIP-gated
+// at write time: a non-member's non-null cardBg is coerced to a clear (still a
+// 200 — the rank heartbeat must survive a lapsed subscription / stale client).
+// Membership = premium OR Founder via readEntitlements, which probes
+// skin_entitlements (.all) + premium_subscriptions (.first) + founder_marks
+// (.first) BEFORE the upsert. Layout after W706: cardBg INSERT value = bind[18]
+// (the new LAST INSERT bind); ON CONFLICT set/value = 37/38.
+describe('PUT /v1/users/me/public-profile-summary — card background (W706)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2026, 6, 17, 12, 0, 0)));
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  // Like makeDb(), but founder_marks lookups resolve to the given row so
+  // readEntitlements derives member = premium OR founder. { seq: 2 } →
+  // lifetime member; premium_subscriptions still returns no row.
+  function makeFounderDb(founderRow: { seq: number } | null) {
+    const calls: CapturedCall[] = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          calls.push({ sql, binds: args });
+          return {
+            all:   async () => ({ results: [], success: true, meta: {} }),
+            first: async () => (/FROM founder_marks/.test(sql) ? founderRow : null),
+            run:   async () => ({ success: true, meta: { changes: 1 } }),
+          };
+        },
+      }),
+      _calls: () => calls,
+    } as unknown as D1Database & { _calls: () => CapturedCall[] };
+    return db;
+  }
+
+  // The entitlements probes run BEFORE the upsert for a non-null cardBg, so the
+  // profile INSERT is no longer guaranteed to be calls[0] — locate it by SQL.
+  const upsertOf = (calls: CapturedCall[]) =>
+    calls.find((c) => /INSERT INTO public_profile_summary/.test(c.sql));
+
+  it('member equips bg-founder → stored verbatim (insert + sentinel + value)', async () => {
+    const db = makeFounderDb({ seq: 2 });   // Founder mark → member = true
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: 'bg-founder' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    // The membership check ran (readEntitlements' premium probe fired).
+    expect(calls.some((c) => /premium_subscriptions/.test(c.sql))).toBe(true);
+    const upsert = upsertOf(calls);
+    expect(upsert).toBeDefined();
+    expect(upsert?.binds.length).toBe(39);        // 19 INSERT + 10 CASE pairs
+    expect(upsert?.binds[18]).toBe('bg-founder'); // INSERT value (last INSERT bind)
+    expect(upsert?.binds[37]).toBe(1);            // cardBgSet sentinel
+    expect(upsert?.binds[38]).toBe('bg-founder'); // CASE WHEN value
+  });
+
+  it('non-member equipping bg-100k is coerced to a clear — 200, never a 4xx', async () => {
+    const db = makeDb();   // no founder_marks row, no premium row → member = false
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: 'bg-100k' }), makeEnv(db), session);
+    expect(res.status).toBe(200);           // heartbeat survives a lapsed membership
+    const upsert = upsertOf(db._calls());
+    expect(upsert).toBeDefined();
+    expect(upsert?.binds[18]).toBeNull();   // INSERT value coerced to the clear
+    expect(upsert?.binds[37]).toBe(1);      // still set → clears the column
+    expect(upsert?.binds[38]).toBeNull();   // CASE WHEN value coerced
+  });
+
+  it('null cardBg clears without an entitlements check', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: null }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    const upsert = upsertOf(calls);
+    expect(upsert?.binds[18]).toBeNull();
+    expect(upsert?.binds[37]).toBe(1);      // set → deliberate clear
+    expect(upsert?.binds[38]).toBeNull();
+    // readEntitlements must NOT have run for a null cardBg: none of its probes
+    // (skin_entitlements / premium_subscriptions) appear anywhere, and the
+    // upsert is the FIRST DB call. The single founder_marks SELECT that remains
+    // is the W656 maybeGrantFounderMark fast-path AFTER the upsert — not an
+    // entitlements read (readEntitlements would have added a second one, plus
+    // the skin/premium probes, all BEFORE the upsert).
+    expect(calls.some((c) => /skin_entitlements|premium_subscriptions/.test(c.sql))).toBe(false);
+    expect(calls[0]?.sql).toMatch(/INSERT INTO public_profile_summary/);
+    expect(calls.filter((c) => /FROM founder_marks/.test(c.sql)).length).toBe(1);
+  });
+
+  it('rejects an unknown background id with 400 INVALID_CARD_BG', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: 'bg-hax' }), makeEnv(db), session);
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe('INVALID_CARD_BG');
+    expect(db._calls().length).toBe(0);
   });
 });

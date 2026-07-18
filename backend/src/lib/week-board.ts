@@ -18,6 +18,8 @@ interface RecordRow {
   steps: number;
   // W704 — avatar crest filename off public_profile_summary (null = never synced).
   avatar_id: string | null;
+  // W706 — member card background
+  card_bg: string | null;
 }
 
 interface MeRow {
@@ -46,14 +48,14 @@ export const MERGED_FOR_WEEK = `
 
 /** Top rows + the caller's placement for ONE week, off the merged view. */
 export async function readWeekBoard(env: Env, weekKey: string, userId: string): Promise<{
-  records: Array<{ rank: number; alias: string; steps: number; avatar_id: string | null }>;
+  records: Array<{ rank: number; alias: string; steps: number; avatar_id: string | null; card_bg: string | null }>;
   me: { rank: number; steps: number } | null;
   total: number;
 }> {
   const topResult = await env.DB.prepare(
     `${MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id,
-            pps.avatar_id AS avatar_id
+            pps.avatar_id AS avatar_id, pps.card_bg AS card_bg
        FROM merged m
        JOIN users u ON u.id = m.user_id
        LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
@@ -77,6 +79,7 @@ export async function readWeekBoard(env: Env, weekKey: string, userId: string): 
     alias: r.alias,
     steps: r.steps,
     avatar_id: r.avatar_id ?? null,   // W704 — row crest
+    card_bg: r.card_bg ?? null,   // W706 — member card background
   }));
   const mySteps = meResult && typeof meResult.my_steps === 'number' ? meResult.my_steps : null;
   const me = (mySteps && mySteps > 0)

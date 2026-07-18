@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w705'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w706'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24593,6 +24593,14 @@
     // replacing the old weekly-snapshot ÷ 7 derivation.
     let avgStepsLife = 0; try { avgStepsLife = lbGetSnapshot().avg_steps_per_day_lifetime | 0; } catch (_) {}
     payload.avgStepsPerDay = avgStepsLife;
+    // W706 — the equipped member card background rides the heartbeat, but ONLY
+    // when this device has an explicit local state ({set:true}): an unset device
+    // (fresh install / second device) OMITS the field so the server PRESERVES the
+    // published equip instead of silently clearing it. Explicit Basic sends null.
+    // The server is the enforcement point (member-gated; unknown ids 400).
+    let cardBgId = null, _cardBgSet = false;
+    try { const _cb = _cardBgLocal(); _cardBgSet = _cb.set; cardBgId = _cb.id; } catch (_) {}
+    if (_cardBgSet) payload.cardBg = cardBgId;
     // W440 — publish my COMBATANT snapshot (6 stats + weapon) so friends can "Duel my Echo".
     // Server re-validates it to the sanitizeCombatant shape (clamped stats, allowlisted weapon);
     // it carries no progression/currency/rank. Fold weapon + a stat-sum into the signature so a
@@ -24609,7 +24617,10 @@
       '|' + (avatarId || '') + '|' + powerLvl + '|' + avgStepsLife + '|' + combatantSig +
       // W453 — fold prestige into the submit signature so earning a new ✦ star
       // (which leaves rankLabel "S+" unchanged) still triggers a fresh heartbeat.
-      '|' + (payload.prestige | 0);
+      '|' + (payload.prestige | 0) +
+      // W706 — equip/clear → fresh heartbeat; the 'c:' marker keeps explicit-basic
+      // distinct from never-set (else a clear from a fresh device would gate-skip).
+      '|' + (_cardBgSet ? 'c:' + (cardBgId || '') : '');
     _prsLogBreadcrumb('public-achievements-summary-built', {
       bossesSlainTotal:        achievements.bossesSlainTotal,
       ultraRareDropsTotal:     achievements.ultraRareDropsTotal,
@@ -41843,6 +41854,94 @@
   try { window.showLoading = showLoading; window.hideLoading = hideLoading; } catch (_) {}
 
   // W704 — leaderboard avatar crest. Resolves a board row to a small portrait <img>:
+  // ── W706 — MEMBER CARD BACKGROUNDS ─────────────────────────────────────────
+  // The catalog of member-exclusive card backgrounds (Higgsfield-painted webp in
+  // assets/backgrounds/lb-bg-*.webp). Each design is UNLOCKED by an earned
+  // achievement (client-checked, same trust model as rank) and EQUIPPABLE only by
+  // a member (server-enforced at the profile-summary write — a non-member's equip
+  // is coerced to null server-side, so the picker gate here is UX, not security).
+  // Keep ids in sync with the backend CARD_BG_IDS whitelist.
+  const CARD_BG_CATALOG = [
+    { id: 'bg-100k',      name: 'The Hundred-K City', need: '100K Step Club' },
+    { id: 'bg-floor100',  name: 'The Summit',         need: 'Clear Floor 100' },
+    { id: 'bg-srank',     name: 'Stormbreaker',       need: 'Reach S Rank' },
+    { id: 'bg-splus',     name: 'Beyond the Peak',    need: 'S+ Prestige' },
+    { id: 'bg-boss500',   name: 'The Boneyard',       need: '500 Boss Kills' },
+    { id: 'bg-arena',     name: "Champion's Ring",    need: 'Awakened Arena Tier' },
+    { id: 'bg-mega',      name: 'The Vault',          need: 'Own a Mega-Rare' },
+    { id: 'bg-streak365', name: 'The Eternal Flame',  need: '365-Day Streak' },
+    { id: 'bg-god',       name: 'The Grinning Dark',  need: 'Defeat The Grinning God' },
+    { id: 'bg-founder',   name: "Founder's Dawn",     need: 'Founder — only 20 exist' },
+  ];
+  function _cardBgById(id) {
+    return CARD_BG_CATALOG.find(function (b) { return b.id === id; }) || null;
+  }
+  function _cardBgArt(id) {
+    return _cardBgById(id) ? 'assets/backgrounds/lb-bg-' + id.replace(/^bg-/, '') + '.webp' : '';
+  }
+  // Local equip state. THREE states matter (W706 review):
+  //   { set:false }            — never chosen on THIS device → the heartbeat OMITS
+  //                              cardBg (server preserves; a reinstall/2nd device
+  //                              must never silently clear a published equip)
+  //   { set:true, id:null }    — EXPLICIT "Basic" (stored as '') → sole truth for
+  //                              own display + an explicit null clear on the PUT
+  //   { set:true, id:'bg-x' }  — an equipped catalog design
+  // A non-member reads as { set:false } (display + payload fall back to the
+  // published value, which the server nulls on their next PUT) — but the stored
+  // key is kept so a re-subscribe restores the equip automatically.
+  function _cardBgLocal() {
+    try {
+      const raw = localStorage.getItem('hb_card_bg');
+      if (raw === null) return { set: false, id: null };
+      if (!_founderOwned()) return { set: false, id: null };
+      if (raw === '') return { set: true, id: null };
+      return _cardBgById(raw) ? { set: true, id: raw } : { set: false, id: null };
+    } catch (_) { return { set: false, id: null }; }
+  }
+  // The equipped background id for display (null = basic/unset).
+  function _cardBgEquipped() { return _cardBgLocal().id; }
+  // Inline paint fragment for a board row/card wearing `cardBg` (cross-user rows
+  // pass the backend's row.card_bg; own surfaces pass _cardBgEquipped()). Unknown
+  // ids render nothing — the row keeps the basic texture.
+  function _cardBgPaintStyle(cardBg) {
+    const art = cardBg ? _cardBgArt(cardBg) : '';
+    return art ? "--lb-row-art:url('" + art + "');" : '';
+  }
+  // Has the CURRENT user EARNED the design's achievement? Client-checked (same
+  // trust model as rank — cosmetic, no revenue exposure; membership itself is the
+  // server-enforced gate). Every branch guards its source so a picker open can
+  // never throw mid-render.
+  function _cardBgUnlocked(id) {
+    try {
+      switch (id) {
+        case 'bg-100k':      return accolades.has('step_100k_club');
+        case 'bg-floor100':  return typeof getAscentState === 'function' && (getAscentState().highestCleared | 0) >= 100;
+        case 'bg-srank': {
+          const r = (typeof getRank === 'function') ? getRank(totalPoints).id : '';
+          return r === 'S' || r === 'S+';
+        }
+        case 'bg-splus':     return getPrestigeLevel(totalPoints) >= 1;
+        case 'bg-boss500':   return (_publicAchievementsSummary().bossesSlainTotal | 0) >= 500;
+        case 'bg-arena':     return !!_pvpRating && (_pvpTier(_pvpRating.peakElo || _pvpRating.elo).name === 'Awakened' || _pvpRating.rank === 1);
+        case 'bg-mega':      return typeof getInventory === 'function' && Object.keys(CARDS).some(function (cid) {
+          return CARDS[cid].rarity === 'mythic' && (((getInventory().cards || {})[cid] || {}).count || 0) > 0;
+        });
+        case 'bg-streak365': return (buildAchievementContext().maxStreak | 0) >= 365;
+        case 'bg-god':       return ((_loadCoopKills()['the_grinning_god'] || {}).count | 0) > 0;
+        case 'bg-founder':   return !!(window.Auth && typeof Auth.founderSeq === 'function' && Auth.founderSeq() > 0);
+        default: return false;
+      }
+    } catch (_) { return false; }
+  }
+  // Equip/clear from the picker: persists locally (instant paint on own rows) and
+  // nudges the profile heartbeat so the server adopts it (member-validated there).
+  function _cardBgEquip(id) {
+    // '' = the EXPLICIT-basic sentinel (never removeItem — an absent key means
+    // "this device never chose", which the heartbeat must not turn into a clear).
+    try { localStorage.setItem('hb_card_bg', id || ''); } catch (_) {}
+    try { _maybeSubmitPublicRankSummary('card-bg-change'); } catch (_) {}
+  }
+
   //   1. MY row → local getAvatarSrc() (instant on wardrobe change, pre-sync — same
   //      local-first rule the title chip uses)
   //   2. row.avatar_id / row.avatarId (cross-user, published via the profile heartbeat;
@@ -41851,7 +41950,7 @@
   //   4. anything else / a stale cache row without the field → avatar-base.png
   // avatar_id is client-published untrusted data, so the PvP whitelist gate applies;
   // onerror falls back to the base portrait (an older build missing a newer skin file).
-  function _lbCrestHtml(row, isMe, extraClass) {
+  function _lbCrestHtml(row, isMe, extraClass, opts) {
     let file = '';
     try {
       if (isMe && typeof getAvatarSrc === 'function') file = getAvatarSrc();
@@ -41872,11 +41971,29 @@
     // images inside a hidden-at-insert container can stay unloaded after it opens
     // (verified in the browser preview). These are ~10 small bundled PNGs; eager is free.
     const frameMod = extraClass ? ' ' + extraClass.replace(/lb-crest--/g, 'lb-crest-frame--') : '';
-    return '<span class="lb-crest-frame' + frameMod + '" aria-hidden="true">' +
-      '<img class="lb-crest" src="' + esc(safe) + '" alt=""' +
-      ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">' +
+    // W706 — full handoff-21 crest anatomy: the frame carries an inline --rc ring
+    // color (rank-mapped; me=gold, medals silver/bronze), a prestige ✦ star on top
+    // and the Founder mark pinned bottom-right (both counter-rotated upright).
+    const o = opts || {};
+    const ring = o.ring ? ' style="--rc:' + o.ring + '"' : '';
+    const star = o.star
+      ? '<span class="lb-crest-star" aria-hidden="true">✦</span>' : '';
+    const fMark = (o.founderSeq | 0) > 0
+      ? '<span class="lb-crest-founder" title="Founder #' + (o.founderSeq | 0) + '">F</span>' : '';
+    // Structure (handoff-21): frame (rotated, ring, NO overflow — the star +
+    // Founder mark hang past its edge) > well (overflow:hidden portrait clip) > img.
+    return '<span class="lb-crest-frame' + frameMod + '"' + ring + ' aria-hidden="true">' +
+      '<span class="lb-crest-well">' +
+        '<img class="lb-crest" src="' + esc(safe) + '" alt=""' +
+        ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">' +
+      '</span>' +
+      star + fMark +
     '</span>';
   }
+  // W706 — the handoff-21 rank color map (E–S+), the single source for the hexagon
+  // rank badge tint + crest ring + gem hues on board rows.
+  const _LB_RANK_COLORS = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9', 'S+': '#e879f9' };
+  function _lbRankColor(tier) { return _LB_RANK_COLORS[tier] || '#a78bfa'; }
 
   // W705 — faint right-side sigil watermark on standard rows (the mock's wolf/
   // swords/shield marks). Keyed off the same tier ladder as the gem class label
@@ -42070,19 +42187,43 @@
       const _founderChip = _fSeq > 0
         ? '<span class="lb-rank-founder" title="Founder #' + _fSeq + '" aria-label="Founder number ' + _fSeq + '">✦</span>' : '';
       const _nameDisp = esc(displayAliases[i] || '—');
+      // W706 — handoff-21 anatomy: rank-mapped ring color (me=gold, medals
+      // silver/bronze), prestige ✦ + Founder mark ride ON the crest, and a
+      // member's chosen card background paints the row (own row reads the LOCAL
+      // equip for instant feedback; others read the published row.card_bg).
+      const _ring = isMe ? '#f5b842'
+        : (row.rank === 2) ? '#c8c6d8'
+        : (row.rank === 3) ? '#d59a52'
+        : _lbRankColor(row.rankTier);
+      const _crestOpts = { ring: _ring, star: (row.rankTier === 'S+' && _pNum > 0), founderSeq: _fSeq };
+      // Own row: an EXPLICIT local state (equip OR Basic) is sole truth — a Basic
+      // clear must not fall through to the stale published row.card_bg. A device
+      // that never chose falls back to the published value (multi-device).
+      let _bg = row.card_bg || null;
+      if (isMe) { const _cb = _cardBgLocal(); if (_cb.set) _bg = _cb.id; }
+      const _paint = _cardBgPaintStyle(_bg);
+      const _paintCls = _paint ? ' lb-rank-row--painted' : '';
 
       // #1 is enthroned as a hero card; the rest form the calm list below.
       if (row.rank === 1) {
         return '<div class="lb-rank-leader' + (isMe ? ' lb-rank-leader--me' : '') + '"' +
+          (_paint ? ' style="' + _paint + '"' : '') +   // W706 — leader's own chosen bg overrides the default citadel
           ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
           '<span class="lb-rank-leader-glow" aria-hidden="true"></span>' +
           '<span class="lb-rank-leader-row">' +
             // W704 \u2014 left group wraps crest + info so the leader card's
             // space-between keeps the stat pinned right.
             '<span class="lb-rank-leader-left">' +
-              _lbCrestHtml(row, isMe, 'lb-crest--leader') +
+              // W706 — the #1 pennant hangs off the hero crest (handoff-21).
+              '<span class="lb-crest-wrap"><span class="lb-pennant" aria-hidden="true">1</span>' +
+                _lbCrestHtml(row, isMe, 'lb-crest--leader', { ring: _ring }) +   // W706 — ring only; name line carries prestige/founder
+              '</span>' +
               '<span class="lb-rank-leader-info">' +
                 '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
+                // W706 — the roomy leader card keeps the RICH name-line indicators
+                // (prestige star COUNT + Founder #N chip); its crest gets ring-only
+                // opts (below) so nothing double-renders. Standard cramped rows do the
+                // opposite: mark on the crest, nothing on the name line.
                 '<span class="lb-rank-leader-name">' + _nameDisp + crown + pStar + _founderChip + '</span>' +
                 classLabel +
               '</span>' +
@@ -42095,16 +42236,18 @@
         '</div>';
       }
 
-      return '<div class="' + rankClass + _medal + (crown ? ' lb-rank-row--awakened' : '') + '"' +
-        ' style="--lb-fill:' + _pct + '%"' +
+      return '<div class="' + rankClass + _medal + (crown ? ' lb-rank-row--awakened' : '') + _paintCls + '"' +
+        ' style="--lb-fill:' + _pct + '%;' + _paint + '"' +
         ' data-profile-alias="' + esc(row.alias || '') + '"' + (row._sim ? ' data-profile-sim="1"' : '') + '>' +
         '<span class="lb-rank-fill" aria-hidden="true"></span>' +
         _lbSigilHtml(_lbTier) +   // W705 — faint tier sigil watermark, right side
-        '<span class="lb-rank-pos">' + (row.rank || '?') + '</span>' +
-        _lbCrestHtml(row, isMe, '') +
+        // W706 — hexagon rank badge, rank-color tinted (handoff-21 .rankno atom);
+        // the ✦ prestige + Founder mark moved ONTO the crest (crest opts above).
+        '<span class="lb-rank-pos lb-rankno" style="--rc:' + _ring + '">' + (row.rank || '?') + '</span>' +
+        _lbCrestHtml(row, isMe, '', _crestOpts) +
         '<span class="lb-rank-id">' +
           '<span class="lb-rank-name-row">' +
-            '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + pStar + _youPill + _founderChip +
+            '<span class="lb-rank-name">' + _nameDisp + '</span>' + crown + _youPill +
           '</span>' +
           classLabel +
         '</span>' +
@@ -42642,7 +42785,12 @@
     } catch (_) {}
     const rankTxt = (me && typeof me.rank === 'number' && me.rank > 0) ? String(me.rank) : '—';
     const valTxt  = me ? meta.formatValue(me.current_value) : '—';
-    return '<div class="lb-you-foot-row" data-profile-alias="' + esc(myAlias || '') + '">' +
+    // W706 — a below-top-10 member still sees their equipped background on THIS
+    // pinned row (local equip = instant, no server round-trip needed).
+    let _fPaint = ''; try { const _fcb = _cardBgLocal(); if (_fcb.id) _fPaint = _cardBgPaintStyle(_fcb.id); } catch (_) {}
+    return '<div class="lb-you-foot-row' + (_fPaint ? ' lb-rank-row--painted' : '') + '"' +
+        (_fPaint ? ' style="' + _fPaint + '"' : '') +
+        ' data-profile-alias="' + esc(myAlias || '') + '">' +
         '<span class="lb-rank-pos">' + rankTxt + '</span>' +
         _lbCrestHtml({}, true, 'lb-crest--foot') +   // W704 — own crest, local getAvatarSrc()
         '<span class="lb-rank-id">' +
@@ -43571,7 +43719,7 @@
     (Array.isArray(records) ? records : []).forEach(function (r) {
       // W704 — carry avatar_id (the archive read returns it) so the crest survives
       // this rebuild; harmless undefined for the recap consumer / older payloads.
-      rows.push({ alias: r.alias, steps: Number(r.steps) || 0, avatar_id: r.avatar_id || null, _sim: false });
+      rows.push({ alias: r.alias, steps: Number(r.steps) || 0, avatar_id: r.avatar_id || null, card_bg: r.card_bg || null, _sim: false });   // W706 — carry the member bg through the archive rebuild
     });
     if (me && me.steps > 0 && myAlias &&
         !rows.some(function (r) { return String(r.alias).toLowerCase() === myAlias.toLowerCase(); })) {
@@ -43989,7 +44137,7 @@
     const rows = merged.map(function (r) {
       // W704 — avatar_id rides through so archived real hunters wear their crest
       // (without it, only sim bots would resolve portraits — backwards).
-      return { rank: r.rank, alias: r.alias, current_value: r.steps, avatar_id: r.avatar_id || null, _sim: !!r._sim };
+      return { rank: r.rank, alias: r.alias, current_value: r.steps, avatar_id: r.avatar_id || null, card_bg: r.card_bg || null, _sim: !!r._sim };   // W706 — archived rows keep the member bg
     });
     const meRow = _wrFindMe(merged);
     const meForList = meRow ? { rank: meRow.rank, current_value: meRow.steps } : null;
@@ -44389,6 +44537,22 @@
     const founderBadge = _pcFounderSeq > 0
       ? '<span class="pc-founder" title="Founder #' + _pcFounderSeq + '">\u2726\u00A0FOUNDER #' + _pcFounderSeq + '</span>'
       : '';
+    // W706 — the member's equipped card background paints the profile hero.
+    // Own card: an explicit local state (equip OR Basic) is sole truth; a friend's
+    // card reads the published data.cardBg. setProperty/removeProperty (NOT a
+    // style-attribute wipe) so the drag-dismiss gesture's inline transform and
+    // any open/close animation styles survive the repaint.
+    let _pcBg = data.cardBg || null;
+    if (isOwn) { const _pcb = _cardBgLocal(); if (_pcb.set) _pcBg = _pcb.id; }
+    const _pcArt = _pcBg ? _cardBgArt(_pcBg) : '';
+    try {
+      const _pcSheet = document.getElementById('pc-sheet');
+      if (_pcSheet) {
+        _pcSheet.classList.toggle('pc--painted', !!_pcArt);
+        if (_pcArt) _pcSheet.style.setProperty('--lb-row-art', "url('" + _pcArt + "')");
+        else _pcSheet.style.removeProperty('--lb-row-art');
+      }
+    } catch (_) {}
     body.innerHTML =
       '<div class="pc-hero"><div class="pc-med-wrap">' +
         '<div class="pc-med"><span class="pc-med-ring"></span>' +
@@ -44468,6 +44632,10 @@
   async function _openProfileCard(alias, simRow) {
     const ov = document.getElementById('pc-overlay'), sh = document.getElementById('pc-sheet'), body = document.getElementById('pc-body');
     if (!ov || !sh || !body) return;
+    // W706 — clear any PREVIOUS card's painted background before the skeleton so a
+    // fast close+reopen never flashes the last hunter's art (the paint is re-applied
+    // by _renderProfileCard once THIS card's data resolves).
+    try { sh.classList.remove('pc--painted'); sh.style.removeProperty('--lb-row-art'); } catch (_) {}
     body.innerHTML = '<div class="pc-skeleton">Summoning…</div>';
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
     _pcOpenAlias = alias;
@@ -44545,6 +44713,7 @@
       '<div class="wd-hero-name">' + esc(eq ? eq.name : 'Your Class') + '</div><div class="wd-hero-sub">Equipped Look</div>' +
       '<div class="wd-section-label"><span>YOUR LOOKS</span><span class="rule"></span></div>' +
       '<div class="wd-grid">' + tiles + '</div>' +
+      _cardBgSectionHtml() +   // W706 — member card-background picker
       '<div class="wd-section-label"><span>SHOP</span><span class="rule"></span></div>' +
       '<div class="wd-grid wd-shop">' + shop + '</div>' +
       // W621 — pre-purchase Founder teaser in the shop. Gated exactly like the other
@@ -44563,6 +44732,40 @@
         : '') +
       '<div class="wd-shop-note">' + (iapOn ? 'Tap to preview, buy, or equip. Restore purchases from Settings.' : 'Premium skins — purchasable in a future update.') + '</div>';
   }
+  // W706 — the CARD BACKGROUND picker section (handoff-21 section 05). Tiles show
+  // the real art; states = equipped / unlocked (tap to equip) / locked-by-
+  // achievement (shows the requirement) / locked-for-non-members (MEMBERS chip →
+  // the Premium paywall). "Basic" clears back to the plain card. The server
+  // re-validates membership at write time — this gate is UX, not security.
+  function _cardBgSectionHtml() {
+    const isMember = _founderOwned();
+    const eq = _cardBgEquipped();
+    const tiles = CARD_BG_CATALOG.map(function (bg) {
+      const unlocked = _cardBgUnlocked(bg.id);
+      const isEq = eq === bg.id;
+      const usable = isMember && unlocked;
+      let badge = '';
+      if (isEq) badge = '<span class="wd-tile-tick">✓</span>';
+      else if (!isMember) badge = '<span class="cbg-chip cbg-chip--members">✦ MEMBERS</span>';
+      else if (!unlocked) badge = '<span class="cbg-chip cbg-chip--locked">🔒</span>';
+      return '<div class="cbg-tile' + (isEq ? ' is-equipped' : '') + (usable ? '' : ' is-locked') + '"' +
+        ' data-cbg="' + esc(bg.id) + '" data-cbg-usable="' + (usable ? '1' : '0') + '">' +
+        '<div class="cbg-art" style="background-image:url(\'' + _cardBgArt(bg.id) + '\')"></div>' +
+        badge +
+        '<span class="cbg-name">' + esc(bg.name) + '</span>' +
+        '<span class="cbg-need">' + (unlocked ? 'EARNED' : esc(bg.need.toUpperCase())) + '</span>' +
+      '</div>';
+    }).join('');
+    const basic = '<div class="cbg-tile cbg-tile--basic' + (eq === null ? ' is-equipped' : '') + '" data-cbg="" data-cbg-usable="1">' +
+      (eq === null ? '<span class="wd-tile-tick">✓</span>' : '') +
+      '<div class="cbg-art cbg-art--basic"></div>' +
+      '<span class="cbg-name">Basic</span><span class="cbg-need">DEFAULT</span></div>';
+    return '<div class="wd-section-label"><span>CARD BACKGROUND</span><span class="rule"></span></div>' +
+      (isMember ? '' :
+        '<div class="cbg-member-note">Card backgrounds are a <b>member</b> perk — earn them with achievements, wear them on every leaderboard.</div>') +
+      '<div class="cbg-grid">' + basic + tiles + '</div>';
+  }
+
   // W283 — premium skin preview lightbox (try-before-you-buy on a locked skin).
   function _wdPreviewSkin(id) {
     const sk = PREMIUM_SKINS.find((x) => x.id === id);
@@ -45001,6 +45204,24 @@
         }
         const tile = e.target && e.target.closest && e.target.closest('.wd-tile[data-skin]');
         if (tile) { _equipSkin(tile.getAttribute('data-skin')); return; }
+        // W706 — card-background tiles: usable → equip/clear + repaint; a
+        // non-member tap is the Premium funnel; locked-achievement tap explains.
+        const cbg = e.target && e.target.closest && e.target.closest('.cbg-tile[data-cbg]');
+        if (cbg) {
+          const id = cbg.getAttribute('data-cbg') || null;
+          if (cbg.getAttribute('data-cbg-usable') === '1') {
+            _cardBgEquip(id);
+            _renderWardrobe();
+            try { showHabitToast(id ? 'Card background equipped — it now flies on every board.' : 'Back to the basic card.'); } catch (_) {}
+          } else if (!_founderOwned()) {
+            try { closeWardrobe(); } catch (_) {}
+            try { openFounder(); } catch (_) {}
+          } else {
+            const def = _cardBgById(id);
+            try { if (def) showHabitToast('Locked — ' + def.need + '.'); } catch (_) {}
+          }
+          return;
+        }
         const prem = e.target && e.target.closest && e.target.closest('.wd-tile--premium[data-premium]');
         if (prem) {
           const pid = prem.getAttribute('data-premium');

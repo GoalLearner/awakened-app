@@ -69,6 +69,8 @@ interface MemberRow {
   unlocked_at: number;
   // W704 — avatar crest filename off public_profile_summary (null = never synced).
   avatar_id: string | null;
+  // W706 — member card background
+  card_bg: string | null;
 }
 
 interface MyRow {
@@ -132,7 +134,8 @@ export async function handleStep100kClub(
             ua.repeat_count               AS repeat_count,
             ua.last_qualified_week_start  AS last_qualified_week_start,
             ua.unlocked_at                AS unlocked_at,
-            pps.avatar_id                 AS avatar_id
+            pps.avatar_id                 AS avatar_id,
+            pps.card_bg                   AS card_bg
      FROM user_accolades ua
      JOIN users u ON u.id = ua.user_id
      LEFT JOIN public_profile_summary pps ON pps.user_id = ua.user_id
@@ -157,6 +160,7 @@ export async function handleStep100kClub(
     last_qualified_week_end:   weekEndFromStart(row.last_qualified_week_start),
     unlocked_at: row.unlocked_at,
     avatar_id: row.avatar_id ?? null,   // W704 — row crest
+    card_bg: row.card_bg ?? null,   // W706 — member card background
   }));
 
   // Caller's membership row (if they're a member). Defensively

@@ -43,6 +43,8 @@ interface TopRow {
   // W704 — synced avatar/skin filename for the row's crest (null = no pps row /
   // never synced; the client falls back to a default portrait).
   avatar_id: string | null;
+  // W706 — member card background
+  card_bg: string | null;
 }
 
 interface MyRow {
@@ -102,7 +104,8 @@ export async function handleLeaderboardTop(
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
-                pps.avatar_id AS avatar_id
+                pps.avatar_id AS avatar_id,
+                pps.card_bg AS card_bg
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -118,7 +121,8 @@ export async function handleLeaderboardTop(
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
-                pps.avatar_id AS avatar_id
+                pps.avatar_id AS avatar_id,
+                pps.card_bg AS card_bg
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
@@ -144,6 +148,7 @@ export async function handleLeaderboardTop(
     // W704 — avatar crest filename (snake_case per the board-row convention set by
     // friends-leaderboard/rank-band). null → client renders its default portrait.
     avatar_id: row.avatar_id ?? null,
+    card_bg: row.card_bg ?? null,   // W706 — member card background
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,

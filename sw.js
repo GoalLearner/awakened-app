@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.011';
+const CACHE_VERSION = 'v6.012';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -127,6 +127,18 @@ const PRECACHE_ASSETS = [
   // W705 — leaderboard painted strips (21KB total; offline boards keep their art)
   '/assets/backgrounds/lb-row-basic.webp',
   '/assets/backgrounds/lb-hero.webp',
+  // W706 — the 10 member card backgrounds (~225KB total; offline rows/cards keep
+  // their chosen art). Keep in sync with CARD_BG_CATALOG.
+  '/assets/backgrounds/lb-bg-100k.webp',
+  '/assets/backgrounds/lb-bg-floor100.webp',
+  '/assets/backgrounds/lb-bg-srank.webp',
+  '/assets/backgrounds/lb-bg-splus.webp',
+  '/assets/backgrounds/lb-bg-boss500.webp',
+  '/assets/backgrounds/lb-bg-arena.webp',
+  '/assets/backgrounds/lb-bg-mega.webp',
+  '/assets/backgrounds/lb-bg-streak365.webp',
+  '/assets/backgrounds/lb-bg-god.webp',
+  '/assets/backgrounds/lb-bg-founder.webp',
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
   '/assets/audio/arena_menu.m4a',

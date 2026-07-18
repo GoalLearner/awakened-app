@@ -185,7 +185,7 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
     const body = (await res.json()) as { metric: string; top: Array<{ rank: number; alias: string; current_value: number }>; me: { rank: number; current_value: number } | null };
     expect(body.metric).toBe('step_total');
     expect(body.top).toHaveLength(2);
-    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, bosses_slain: null, prestige: 5, rankTier: 'S+', founderSeq: null, avatar_id: null });   // W453 prestige + W656 founderSeq + W704 avatar_id flow through
+    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, bosses_slain: null, prestige: 5, rankTier: 'S+', founderSeq: null, avatar_id: null, card_bg: null });   // W453 prestige + W656 founderSeq + W704 avatar_id + W706 card_bg flow through
     expect(body.me).toEqual({ rank: 12, current_value: 1776 });
   });
 });
