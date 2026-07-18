@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w713'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w714'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12498,6 +12498,10 @@
     _arRenderTower();
     ov.classList.remove('hidden');
     ov.setAttribute('aria-hidden', 'false');
+    // W714 — pause the home screen's infinite glow/aura animations while the
+    // full-screen combat overlay occludes it (Rendell "phone hot af" fix; see
+    // .ar-overlay + body.combat-active in styles.css). Invisible, no scroll change.
+    try { document.body.classList.add('combat-active'); } catch (_) {}
     document.addEventListener('keydown', _arKeydown, true);
     // W295 — the First Awakened's opening challenge fires ONCE, here, the first
     // time the user actually enters the Arena (relocated from the post-splash
@@ -12523,6 +12527,7 @@
     try { _AUD.want = null; _audStopMusic(0.25); } catch (_) {}   // W243/W248 — music never outlives the Arena
     ov.classList.add('hidden');
     ov.setAttribute('aria-hidden', 'true');
+    try { document.body.classList.remove('combat-active'); } catch (_) {}   // W714 — resume home-screen animations
     document.removeEventListener('keydown', _arKeydown, true);
   }
   // EXIT acts as Back: from any sub-screen (vs / bossintro / fight / result)
@@ -19448,6 +19453,12 @@
   const LB_DAILY_RETENTION_DAYS = 30;
   const LB_STORAGE_KEY = 'hb_leaderboard';
   const LB_SLEEP_HOURS_THRESHOLD = 7; // matches Insomniac's kill condition
+  // W714 — a first-class WALK streak (consecutive days ≥ threshold steps), durable
+  // like the sleep streak. steps_daily is pruned to 30 days so a computed-only streak
+  // would evaporate; best_walk_streak persists. 6,000 = The Steel Wolf's kill condition
+  // (the E-rank walking boss), the app's canonical "you walked today" bar — parallel to
+  // the sleep threshold matching The Insomniac. Feeds the bg-streak30 member border.
+  const LB_WALK_STEPS_THRESHOLD = 6000;
 
   function loadLeaderboardState() {
     try {
@@ -19462,6 +19473,10 @@
         current_bedtime_streak:    raw.current_bedtime_streak    || 0,
         best_bedtime_streak:       raw.best_bedtime_streak       || 0,
         last_bedtime_eval_date:    raw.last_bedtime_eval_date    || null,
+        // W714 — walk streak (consecutive days ≥ LB_WALK_STEPS_THRESHOLD steps)
+        current_walk_streak:       raw.current_walk_streak       || 0,
+        best_walk_streak:          raw.best_walk_streak          || 0,
+        last_walk_eval_date:       raw.last_walk_eval_date       || null,
         best_7day_step_total:      raw.best_7day_step_total      || 0,
         best_7day_step_window_end: raw.best_7day_step_window_end || null,
         // v3 Phase 1z.125 — flights climbed daily map + best-week
@@ -19482,6 +19497,7 @@
         steps_daily: {}, sleep_hours_daily: {}, bedtime_daily: {},
         current_sleep_streak: 0, best_sleep_streak: 0, last_sleep_eval_date: null,
         current_bedtime_streak: 0, best_bedtime_streak: 0, last_bedtime_eval_date: null,
+        current_walk_streak: 0, best_walk_streak: 0, last_walk_eval_date: null,
         best_7day_step_total: 0, best_7day_step_window_end: null,
         flights_daily: {},
         best_7day_flights_total: 0, best_7day_flights_window_end: null,
@@ -19595,6 +19611,22 @@
     if (_stepDelta > 0) state.lifetime_steps_total = (state.lifetime_steps_total || 0) + _stepDelta;
     state.steps_daily[today] = next;
     lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
+
+    // W714 — walk streak. Steps accumulate through the day, so credit today ONCE, the
+    // moment it crosses the threshold (guard on last_walk_eval_date !== today so repeated
+    // intraday HealthKit updates don't double-count). A missed day isn't reset here (the
+    // day may still cross later) — instead the gap is caught when the NEXT qualifying day
+    // arrives with last_walk_eval_date older than yesterday. Mirrors the sleep-streak eval.
+    if (next >= LB_WALK_STEPS_THRESHOLD && state.last_walk_eval_date !== today) {
+      const _wprev = lbPrevDate(today);
+      state.current_walk_streak = (state.last_walk_eval_date === _wprev)
+        ? (state.current_walk_streak || 0) + 1
+        : 1;
+      if (state.current_walk_streak > (state.best_walk_streak || 0)) {
+        state.best_walk_streak = state.current_walk_streak;
+      }
+      state.last_walk_eval_date = today;
+    }
 
     const weekSum = lbSumCurrentWeekSteps(state.steps_daily);
     if (weekSum > state.best_7day_step_total) {
@@ -41871,6 +41903,18 @@
     { id: 'bg-mega',      name: 'The Vault',          need: 'Own a Mega-Rare' },
     { id: 'bg-streak365', name: 'The Eternal Flame',  need: '365-Day Streak' },
     { id: 'bg-god',       name: 'The Grinning Dark',  need: 'Defeat The Grinning God' },
+    // W714 — six rank-Gate borders (clear every SOLO boss of that rank; art escalates in
+    // intensity + is tinted the rank's color, E violet → S magenta) + three completion
+    // trophies (all 3 mega-rares, full Collection Log, a 30-day walk-or-sleep streak).
+    { id: 'bg-egate',     name: 'The E-Gate',         need: 'Clear every E-rank boss' },
+    { id: 'bg-dgate',     name: 'The D-Gate',         need: 'Clear every D-rank boss' },
+    { id: 'bg-cgate',     name: 'The C-Gate',         need: 'Clear every C-rank boss' },
+    { id: 'bg-bgate',     name: 'The B-Gate',         need: 'Clear every B-rank boss' },
+    { id: 'bg-agate',     name: 'The A-Gate',         need: 'Clear every A-rank boss' },
+    { id: 'bg-sgate',     name: 'The S-Gate',         need: 'Clear every S-rank boss' },
+    { id: 'bg-allmega',   name: 'The Full Vault',     need: 'Own all 3 Mega-Rares' },
+    { id: 'bg-collog',    name: 'The Complete Log',   need: 'Complete the Collection Log' },
+    { id: 'bg-streak30',  name: 'Thirty Days Sworn',  need: '30-Day Walk or Sleep Streak' },
     { id: 'bg-founder',   name: "Founder's Dawn",     need: 'Founder — only 20 exist' },
   ];
   function _cardBgById(id) {
@@ -41929,8 +41973,61 @@
         case 'bg-streak365': return (buildAchievementContext().maxStreak | 0) >= 365;
         case 'bg-god':       return ((_loadCoopKills()['the_grinning_god'] || {}).count | 0) > 0;
         case 'bg-founder':   return !!(window.Auth && typeof Auth.founderSeq === 'function' && Auth.founderSeq() > 0);
+        // W714 — own ALL mega-rares (vs bg-mega = own ANY one). Rarity-driven so it
+        // becomes "all N" automatically if a 4th mythic is ever added. Today: exactly 3
+        // (nightfall_blade, reverie_staff, vigil_bow).
+        case 'bg-allmega': {
+          if (typeof getInventory !== 'function') return false;
+          const inv = getInventory().cards || {};
+          const myth = Object.keys(CARDS).filter(function (cid) { return CARDS[cid].rarity === 'mythic'; });
+          return myth.length > 0 && myth.every(function (cid) { return ((inv[cid] || {}).count || 0) > 0; });
+        }
+        // W714 — Collection Log 100%: every discoverable relic owned. Sums have/total
+        // across the live tree, excluding the shared raid-pool node so the 3 mythics
+        // aren't double-counted. Locked-rank relics still count toward total, so this
+        // genuinely requires owning every relic in the game (incl. S-tier).
+        case 'bg-collog': {
+          if (typeof _buildCollectionTree !== 'function') return false;
+          const tree = _buildCollectionTree();
+          let have = 0, total = 0;
+          tree.forEach(function (d) {
+            (d.bosses || []).forEach(function (b) {
+              if (b.shared) return;
+              have += (b.have | 0); total += (b.total | 0);
+            });
+          });
+          return total > 0 && have === total;
+        }
+        // W714 — 30-day WALK streak (6,000+ steps/day, durable best_walk_streak) OR
+        // 30-day SLEEP streak (7h+ nights, best_sleep_streak). Honors the owner's
+        // "walking or sleeping" wording with two independent first-class signals.
+        case 'bg-streak30': {
+          const st = (typeof loadLeaderboardState === 'function') ? loadLeaderboardState() : {};
+          return (st.best_walk_streak | 0) >= 30 || (st.best_sleep_streak | 0) >= 30;
+        }
+        // W714 — Gate borders: clear every SOLO boss of that rank (coop bosses need a
+        // partner + A/S coop is unfair/absent, so solo-only is the fair reading).
+        case 'bg-egate':     return _gateSlain('E');
+        case 'bg-dgate':     return _gateSlain('D');
+        case 'bg-cgate':     return _gateSlain('C');
+        case 'bg-bgate':     return _gateSlain('B');
+        case 'bg-agate':     return _gateSlain('A');
+        case 'bg-sgate':     return _gateSlain('S');
         default: return false;
       }
+    } catch (_) { return false; }
+  }
+  // W714 — has the hunter felled every solo (non-coop) boss of `rank` at least once?
+  // Solo kills live in loadBosses()[id].kill_count (hb_bosses). coopOnly stub bosses are
+  // excluded (they're drop-source shells rendered from COOP_BOSSES, not the solo grid).
+  function _gateSlain(rank) {
+    try {
+      if (typeof loadBosses !== 'function' || typeof BOSSES === 'undefined') return false;
+      const solo = loadBosses() || {};
+      const ids = Object.keys(BOSSES).filter(function (id) {
+        return !BOSSES[id].coopOnly && BOSSES[id].rank === rank;
+      });
+      return ids.length > 0 && ids.every(function (id) { return ((solo[id] || {}).kill_count | 0) > 0; });
     } catch (_) { return false; }
   }
   // Equip/clear from the picker: persists locally (instant paint on own rows) and

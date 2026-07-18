@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.018';
+const CACHE_VERSION = 'v6.019';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -127,8 +127,8 @@ const PRECACHE_ASSETS = [
   // W705 — leaderboard painted strips (21KB total; offline boards keep their art)
   '/assets/backgrounds/lb-row-basic.webp',
   '/assets/backgrounds/lb-hero.webp',
-  // W706 — the 10 member card backgrounds (~225KB total; offline rows/cards keep
-  // their chosen art). Keep in sync with CARD_BG_CATALOG.
+  // W706 + W714 — the 19 member card backgrounds (offline rows/cards keep their
+  // chosen art). Keep in sync with CARD_BG_CATALOG.
   '/assets/backgrounds/lb-bg-100k.webp',
   '/assets/backgrounds/lb-bg-floor100.webp',
   '/assets/backgrounds/lb-bg-srank.webp',
@@ -139,6 +139,16 @@ const PRECACHE_ASSETS = [
   '/assets/backgrounds/lb-bg-streak365.webp',
   '/assets/backgrounds/lb-bg-god.webp',
   '/assets/backgrounds/lb-bg-founder.webp',
+  // W714 — six rank-Gate borders + three completion trophies.
+  '/assets/backgrounds/lb-bg-egate.webp',
+  '/assets/backgrounds/lb-bg-dgate.webp',
+  '/assets/backgrounds/lb-bg-cgate.webp',
+  '/assets/backgrounds/lb-bg-bgate.webp',
+  '/assets/backgrounds/lb-bg-agate.webp',
+  '/assets/backgrounds/lb-bg-sgate.webp',
+  '/assets/backgrounds/lb-bg-allmega.webp',
+  '/assets/backgrounds/lb-bg-collog.webp',
+  '/assets/backgrounds/lb-bg-streak30.webp',
   '/assets/audio/battle_loop.m4a',
   '/assets/audio/boss_loop.m4a',
   '/assets/audio/arena_menu.m4a',

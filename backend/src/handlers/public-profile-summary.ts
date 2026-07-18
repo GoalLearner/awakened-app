@@ -66,6 +66,11 @@ import { readEntitlements } from './iap-entitlements';
 const CARD_BG_IDS = [
   'bg-100k', 'bg-floor100', 'bg-srank', 'bg-splus', 'bg-boss500',
   'bg-arena', 'bg-mega', 'bg-streak365', 'bg-god', 'bg-founder',
+  // W714 — six rank-Gate borders + three completion trophies (all-megas, full
+  // Collection Log, 30-day walk-or-sleep streak). Unlock logic is client-side; the
+  // server only allow-lists the ids + enforces membership on equip.
+  'bg-egate', 'bg-dgate', 'bg-cgate', 'bg-bgate', 'bg-agate', 'bg-sgate',
+  'bg-allmega', 'bg-collog', 'bg-streak30',
 ] as const;
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;

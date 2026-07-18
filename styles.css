@@ -28904,8 +28904,20 @@ button.guildhall-summary-tile:active {
    THE ARENA — client-side 1v1 combat sim (cosmetic). Navy/gold + a
    cold-iron accent for the bot. All .ar-* scoped.
    ═══════════════════════════════════════════════════════════════════ */
-.ar-overlay { position: fixed; inset: 0; z-index: 12300; background: rgba(4,4,13,0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; align-items: stretch; justify-content: center; }
+/* W714 — Rendell "phone hot af in combat" fix. The old `backdrop-filter: blur(10px)`
+   is the single most GPU-expensive compositing op on iOS WebKit, and it re-sampled
+   the full viewport EVERY frame for the whole fight (motes / VFX / HP tweens keep the
+   region invalidated). It was also near-invisible under an 82%-opaque scrim. Dropped it
+   and bumped the scrim to 0.94 so the backdrop still reads solid — zero per-frame blur.
+   Paired with `body.combat-active` below, which freezes the ~8 infinite box-shadow/aura
+   animations on the home screen (#app) that keep repainting behind this overlay. */
+.ar-overlay { position: fixed; inset: 0; z-index: 12300; background: rgba(4,4,13,0.94); display: flex; align-items: stretch; justify-content: center; }
 .ar-overlay.hidden { display: none; }
+/* Combat is a full-screen opaque modal — the home screen underneath is fully occluded,
+   so pausing its animations is invisible but eliminates the sustained GPU repaint that
+   was heating the device. One style recalc on open/close; no layout/scroll change. */
+body.combat-active #app,
+body.combat-active #app * { animation-play-state: paused !important; }
 .ar-sheet { position: relative; width: 100%; max-width: 480px; background: linear-gradient(180deg, #0b0b20 0%, #04040d 62%, #020207 100%); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 80px rgba(0,0,0,0.6); }
 /* EXIT pill — INSIDE the safe area. The old corner X used top:14px which
    tucked it behind the iOS status bar / Dynamic Island = untappable.
