@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w706'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w707'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -41978,14 +41978,20 @@
     const ring = o.ring ? ' style="--rc:' + o.ring + '"' : '';
     const star = o.star
       ? '<span class="lb-crest-star" aria-hidden="true">✦</span>' : '';
+    // W707 — Founder mark is now the ✦ STAR coin (owner preferred the star over the 'F').
     const fMark = (o.founderSeq | 0) > 0
-      ? '<span class="lb-crest-founder" title="Founder #' + (o.founderSeq | 0) + '">F</span>' : '';
-    // Structure (handoff-21): frame (rotated, ring, NO overflow — the star +
-    // Founder mark hang past its edge) > well (overflow:hidden portrait clip) > img.
+      ? '<span class="lb-crest-founder" title="Founder #' + (o.founderSeq | 0) + '">✦</span>' : '';
+    // W707 — CIRCLE bust crest (reverted the W705 rotated diamond, which framed the
+    // torso — the full-body avatar art has the head in the top ~15%, so the diamond
+    // center-crop never showed a face). The portrait is a background layer zoomed to
+    // head+shoulders (background-size 260% / position 50% 2%, tuned against the real
+    // avatar art in a Playwright harness) on a dark well; `safe` is regex-validated
+    // (avatar-base.png for anything unknown), so no <img> onerror is needed.
+    // Structure: frame (circle, ring, NO overflow so the star + Founder coin hang past
+    // its edge) > well (overflow:hidden circular clip) > por (the zoomed portrait).
     return '<span class="lb-crest-frame' + frameMod + '"' + ring + ' aria-hidden="true">' +
       '<span class="lb-crest-well">' +
-        '<img class="lb-crest" src="' + esc(safe) + '" alt=""' +
-        ' onerror="this.onerror=null;this.src=\'avatar-base.png\'">' +
+        '<span class="lb-crest-por" style="background-image:url(\'' + safe + '\')"></span>' +
       '</span>' +
       star + fMark +
     '</span>';

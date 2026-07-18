@@ -30820,7 +30820,7 @@ button.guildhall-summary-tile:active {
 .lb-rank-row > .lb-rank-id,
 .lb-rank-row > .lb-rank-name,
 .lb-rank-row > .lb-rank-crown,
-.lb-rank-row > .lb-crest,
+.lb-rank-row > .lb-crest-frame,
 .lb-rank-row > .lb-rank-value { position: relative; }
 
 /* W704/W705 — leaderboard avatar crests, now DIAMOND-framed (the Rendell mock).
@@ -30833,58 +30833,57 @@ button.guildhall-summary-tile:active {
    (inline --rc from JS: rank-mapped, gold for me, silver/bronze medals) and has
    NO overflow so the prestige ✦ + Founder mark can hang past its edge; the WELL
    inside clips the counter-rotated portrait. */
+/* W707 — CIRCLE bust crest (reverted W705's rotated diamond). The full-body avatar
+   art is zoomed to a head+shoulders bust on a dark well; ring color = rank tier via
+   --rc (me=gold, medals silver/bronze). Prestige ✦ on top, Founder ✦ coin bottom-right. */
 .lb-crest-frame {
-  width: 44px; height: 44px; flex: 0 0 auto;
-  position: relative;
-  transform: rotate(45deg);
-  border: 1.5px solid var(--rc, rgba(167,139,250,0.6));
-  border-radius: 9px;
-  background: #14162a;
-  box-shadow: 0 0 12px rgba(0,0,0,0.5);
-  margin: 6px 7px;
+  width: 42px; height: 42px; flex: 0 0 auto;
+  position: relative; border-radius: 50%;
+  border: 2px solid var(--rc, rgba(167,139,250,0.75));
+  background: #0e1022;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.4);
+  margin: 3px 2px;
 }
 .lb-crest-well {
   position: absolute; inset: 0;
-  overflow: hidden; border-radius: 7px;
-  background: radial-gradient(circle at 50% 34%, rgba(80,70,140,0.5), #07070f 74%);
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+  overflow: hidden; border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(90,78,150,0.5), #07070f 74%);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
 }
-.lb-crest {
-  position: absolute; left: 50%; top: 50%;
-  width: 142%; height: 142%;
-  transform: translate(-50%, -50%) rotate(-45deg);
-  object-fit: cover;
+.lb-crest-por {
+  position: absolute; inset: 0;
+  background-repeat: no-repeat;
+  background-size: 260% auto;         /* zoom the full-body sprite to a bust… */
+  background-position: 50% 2%;        /* …anchored at the head */
 }
-/* prestige ✦ on top of the frame + the Founder mark bottom-right, both upright */
+/* prestige ✦ on top of the ring + the Founder ✦ coin bottom-right */
 .lb-crest-star {
-  position: absolute; top: -13px; left: 50%;
-  transform: translate(-50%, 0) rotate(-45deg);
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
   font-size: 11px; line-height: 1; color: #f5b842;
-  filter: drop-shadow(0 0 5px rgba(245,184,66,0.55));
+  filter: drop-shadow(0 0 5px rgba(245,184,66,0.6));
   z-index: 2; pointer-events: none;
 }
 .lb-crest-founder {
-  position: absolute; right: -8px; bottom: -8px;
-  width: 17px; height: 17px; border-radius: 50%;
-  transform: rotate(-45deg);
+  position: absolute; right: -2px; bottom: -2px;
+  width: 16px; height: 16px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; color: #2a1a02;
+  font-size: 9px; line-height: 1; color: #2a1a02;
   background: radial-gradient(circle at 40% 35%, #ffd574, #c08418);
   box-shadow: 0 0 0 2px #0a0a16, 0 0 8px rgba(245,184,66,0.45);
   z-index: 2; pointer-events: none;
 }
 .lb-rank-row--me .lb-crest-frame,
-.lb-you-foot-row .lb-crest-frame { border-color: rgba(245,184,66,0.9); }
+.lb-you-foot-row .lb-crest-frame { border-color: rgba(245,184,66,0.95); }
 /* medal rings echo the #2/#3 pos tints (JS also sets --rc to match) */
-.lb-rank-row--medal2 .lb-crest-frame { border-color: rgba(200,198,216,0.7); }
-.lb-rank-row--medal3 .lb-crest-frame { border-color: rgba(213,154,82,0.7); }
+.lb-rank-row--medal2 .lb-crest-frame { border-color: rgba(200,198,216,0.8); }
+.lb-rank-row--medal3 .lb-crest-frame { border-color: rgba(213,154,82,0.8); }
 .lb-crest-frame--leader {
-  width: 58px; height: 58px;
-  border-width: 2px; border-color: rgba(245,184,66,0.85); border-radius: 11px;
+  width: 60px; height: 60px;
+  border-width: 2.5px; border-color: rgba(245,184,66,0.9);
   box-shadow: 0 0 0 3px rgba(245,184,66,0.16), 0 0 22px rgba(245,184,66,0.4);
-  margin: 8px 10px 8px 8px;
+  margin: 2px 10px 2px 2px;
 }
-.lb-crest-frame--foot { width: 26px; height: 26px; margin: 3px 4px; border-width: 1px; }
+.lb-crest-frame--foot { width: 30px; height: 30px; margin: 2px 3px; border-width: 1.5px; }
 .lb-crest-frame--foot .lb-crest-star, .lb-crest-frame--foot .lb-crest-founder { display: none; }
 /* W706 — hero crest wrap + the #1 pennant (handoff-21) */
 .lb-crest-wrap { position: relative; flex: none; display: flex; align-items: center; }
@@ -30900,14 +30899,16 @@ button.guildhall-summary-tile:active {
 /* W706 — hexagon rank badge (handoff-21 .rankno atom), rank-tinted via --rc.
    Selector carries BOTH classes so it beats the later same-specificity
    `#lb-rank-sheet .lb-rank-pos` width/color rule (the element has both). */
+/* W707 — clean rank NUMERAL (the muddy hexagon plate read poorly; owner: "number
+   ranking doesn't look good"). A bold rank-tinted numeral, no plate — reads clearly
+   over the painted row and keeps rows tight. */
 #lb-rank-sheet .lb-rank-pos.lb-rankno {
-  width: 30px; height: 34px; flex: none;
+  width: 22px; height: auto; flex: none;
   display: flex; align-items: center; justify-content: center;
-  font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 13px;
-  color: var(--rc, #a78bfa); text-shadow: none;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(10,10,22,0.92));
-  box-shadow: inset 0 0 0 1.5px var(--rc, #666);
+  font-family: "JetBrains Mono", monospace; font-weight: 800; font-size: 16px;
+  color: var(--rc, #a78bfa);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+  clip-path: none; background: none; box-shadow: none;
 }
 
 /* W705 — faint tier-sigil watermark on the right edge of board rows (wolf /
@@ -31249,7 +31250,7 @@ button.guildhall-summary-tile:active {
    kill-log sheets, which must stay flat. Member-CHOSEN backgrounds (Phase B)
    will layer per-row art the same way via a --lb-row-bg custom property. */
 #lb-rank-sheet .lb-rank-row {
-  gap: 14px; padding: 13px 15px 14px; min-height: 30px; border-radius: 14px;
+  gap: 10px; padding: 5px 12px; min-height: 30px; border-radius: 12px;
   background:
     linear-gradient(90deg, rgba(9,10,22,0.93) 0%, rgba(9,10,22,0.74) 42%, rgba(11,12,26,0.48) 100%),
     url('assets/backgrounds/lb-row-basic.webp') center / cover no-repeat,
@@ -31285,8 +31286,8 @@ button.guildhall-summary-tile:active {
     var(--lb-row-art) center / cover no-repeat,
     rgba(255,255,255,0.035) !important;
 }
-/* W706 — taller rows fit the 44px diamond (bounding ~62px) — handoff-21 scale */
-#lb-rank-sheet .lb-rank-row { min-height: 62px; }
+/* W707 — tighter rows (circle crest ~42px) so ~10 fit on one screen (owner ask) */
+#lb-rank-sheet .lb-rank-row { min-height: 52px; }
 #lb-rank-sheet .lb-rank-fill {
   background: linear-gradient(90deg, rgba(245,184,66,0.055), rgba(245,184,66,0));
 }
