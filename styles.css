@@ -30837,7 +30837,7 @@ button.guildhall-summary-tile:active {
    art is zoomed to a head+shoulders bust on a dark well; ring color = rank tier via
    --rc (me=gold, medals silver/bronze). Prestige ✦ on top, Founder ✦ coin bottom-right. */
 .lb-crest-frame {
-  width: 42px; height: 42px; flex: 0 0 auto;
+  width: 48px; height: 48px; flex: 0 0 auto;   /* W709 — bigger crest for the taller rows */
   position: relative; border-radius: 50%;
   border: 2px solid var(--rc, rgba(167,139,250,0.75));
   background: #0e1022;
@@ -30872,14 +30872,13 @@ button.guildhall-summary-tile:active {
   box-shadow: 0 0 0 2px #0a0a16, 0 0 8px rgba(245,184,66,0.45);
   z-index: 2; pointer-events: none;
 }
-.lb-rank-row--me .lb-crest-frame,
-.lb-you-foot-row .lb-crest-frame { border-color: rgba(245,184,66,0.95); }
-/* medal rings echo the #2/#3 pos tints (JS also sets --rc to match) */
-.lb-rank-row--medal2 .lb-crest-frame { border-color: rgba(200,198,216,0.8); }
-.lb-rank-row--medal3 .lb-crest-frame { border-color: rgba(213,154,82,0.8); }
+/* W709 — the crest ring is ALWAYS the rank-tier color (--rc, set per row by JS),
+   for EVERY row incl. your own + medals. The old me=gold / medal silver-bronze ring
+   overrides are gone (owner: keep ring colour == rank, consistently). The me-row still
+   reads as yours via its gold ROW border/tint + YOU pill; #1 keeps a gold champion halo. */
 .lb-crest-frame--leader {
   width: 60px; height: 60px;
-  border-width: 2.5px; border-color: rgba(245,184,66,0.9);
+  border-width: 2.5px;   /* border-color inherits var(--rc) = the leader's tier */
   box-shadow: 0 0 0 3px rgba(245,184,66,0.16), 0 0 22px rgba(245,184,66,0.4);
   margin: 2px 10px 2px 2px;
 }
@@ -30982,9 +30981,7 @@ button.guildhall-summary-tile:active {
   position: relative; display: flex; align-items: center; gap: 11px; min-width: 0;
 }
 
-/* medal-tinted rank numbers for #2 / #3 (the throne is the hero card) */
-.lb-rank-row--medal2 .lb-rank-pos { color: #c8c6d8; text-shadow: 0 0 9px rgba(200,198,216,0.40); }
-.lb-rank-row--medal3 .lb-rank-pos { color: #d59a52; text-shadow: 0 0 9px rgba(213,154,82,0.40); }
+/* W709 — rank numbers are tier-colored (via .lb-rankno --rc); no medal recolor. */
 
 /* two-line identity cell: name on top, gem class-label below */
 .lb-rank-id {
@@ -31294,7 +31291,10 @@ button.guildhall-summary-tile:active {
 #lb-rank-sheet .lb-rank-name  { text-shadow: 0 1px 3px rgba(0,0,0,0.85); }
 #lb-rank-sheet .lb-rank-class { text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 /* W707 — tighter rows (circle crest ~42px) so ~10 fit on one screen (owner ask) */
-#lb-rank-sheet .lb-rank-row { min-height: 52px; }
+/* W709 — taller rows so the row ART is admirable, not a thin sliver (owner: "make
+   the cards larger to actually see the art"). ~8 rows/screen instead of 10 — the art
+   is the point now. */
+#lb-rank-sheet .lb-rank-row { min-height: 66px; padding: 8px 13px; }
 #lb-rank-sheet .lb-rank-fill {
   background: linear-gradient(90deg, rgba(245,184,66,0.055), rgba(245,184,66,0));
 }
@@ -31302,9 +31302,7 @@ button.guildhall-summary-tile:active {
   font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700;
   width: 24px; text-align: center; letter-spacing: 0; color: #5c5c74;
 }
-/* re-assert medal-tinted #2/#3 — the scoped .lb-rank-pos color must not win over them */
-#lb-rank-sheet .lb-rank-row--medal2 .lb-rank-pos { color: #c8c6d8; }
-#lb-rank-sheet .lb-rank-row--medal3 .lb-rank-pos { color: #d59a52; }
+/* W709 — no medal recolor: #2/#3 numbers stay their rank-tier color (.lb-rankno --rc). */
 #lb-rank-sheet .lb-rank-id > .lb-rank-name-row > .lb-rank-name {
   font-size: 16px; font-weight: 600; line-height: 1.05; color: #f5f3fb;
 }
@@ -31337,6 +31335,9 @@ button.guildhall-summary-tile:active {
 }
 #lb-rank-sheet .lb-you-foot-row .lb-rank-name { font-weight: 700; }
 #lb-rank-sheet .lb-you-foot-row .lb-rank-pos { color: #f5b842; font-weight: 800; }
+/* W709 — the pinned-YOU footer is its own gold card (below top-10 only); keep its
+   crest ring gold to match that card, unlike the in-list rows which use rank tier. */
+#lb-rank-sheet .lb-you-foot-row .lb-crest-frame { border-color: rgba(245,184,66,0.95); }
 #lb-rank-sheet .lb-you-foot-row .lb-rank-value {
   color: #f5b842; text-shadow: 0 0 12px rgba(245,184,66,0.45);
 }

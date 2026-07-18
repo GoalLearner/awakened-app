@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w708'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w709'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -42197,10 +42197,12 @@
       // silver/bronze), prestige ✦ + Founder mark ride ON the crest, and a
       // member's chosen card background paints the row (own row reads the LOCAL
       // equip for instant feedback; others read the published row.card_bg).
-      const _ring = isMe ? '#f5b842'
-        : (row.rank === 2) ? '#c8c6d8'
-        : (row.rank === 3) ? '#d59a52'
-        : _lbRankColor(row.rankTier);
+      // W709 — the ring + number color is ALWAYS the hunter's rank tier (E→S+), so it
+      // matches their profile-card rank badge everywhere (owner: "A-rank = red… make it
+      // consistent"). The old me=gold / #2=silver / #3=bronze overrides made a hunter a
+      // different color on their own row than on their card; placement is shown by the
+      // number itself + the #1 hero card, not by recolouring the tier.
+      const _ring = _lbRankColor(row.rankTier);
       const _crestOpts = { ring: _ring, star: (row.rankTier === 'S+' && _pNum > 0), founderSeq: _fSeq };
       // Own row: an EXPLICIT local state (equip OR Basic) is sole truth — a Basic
       // clear must not fall through to the stale published row.card_bg. A device
@@ -42225,7 +42227,8 @@
                 _lbCrestHtml(row, isMe, 'lb-crest--leader', { ring: _ring }) +   // W706 — ring only; name line carries prestige/founder
               '</span>' +
               '<span class="lb-rank-leader-info">' +
-                '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER' + _lbLeaderCtx) + '</span>' +
+                // W709 \u2014 owner: just "LEADER" (the "\u00b7 THIS WEEK" ctx wrapped to a 2nd line).
+                '<span class="lb-rank-leader-eyebrow">' + (isMe ? '\u2605 LEADER \u00b7 YOU' : '\u2605 LEADER') + '</span>' +
                 // W706 — the roomy leader card keeps the RICH name-line indicators
                 // (prestige star COUNT + Founder #N chip); its crest gets ring-only
                 // opts (below) so nothing double-renders. Standard cramped rows do the
