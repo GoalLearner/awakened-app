@@ -66,7 +66,13 @@ struct AwakenedWidgetView: View {
                     }
                 }
             }
-            .frame(width: 88, height: 88)
+            .frame(width: 82, height: 82)
+
+            // ── Brand wordmark ──
+            Text("AWAKENED")
+                .font(.system(size: 8, weight: .semibold))
+                .modifier(TrackingCompat(2))
+                .foregroundColor(Color(hexString: "#f5b842").opacity(0.65))
         }
         .padding(12)
     }
@@ -102,6 +108,15 @@ private extension View {
         } else {
             ZStack { AwakenedWidgetBackground(); self }
         }
+    }
+}
+
+// MARK: - Letter-spacing that degrades gracefully pre-iOS 16
+struct TrackingCompat: ViewModifier {
+    let value: CGFloat
+    init(_ v: CGFloat) { value = v }
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) { content.tracking(value) } else { content }
     }
 }
 
