@@ -5,7 +5,8 @@ author lives here as the version-controlled source of truth and is copied into
 the Xcode project during a one-time setup. `cap sync` does NOT touch these.
 
 ## widget/ — W718 Awakened home-screen widget
-Small home widget: streak flame · today's step ring (live from HealthKit) · rank
+Small home widget: global Steps-leaderboard position · today's step ring (live
+from HealthKit, fills to the day's goal + "GOAL ✓" cue on completion) · rank
 badge in its tier color. Game state is written by the app into a shared App
 Group; steps are read live inside the extension so the ring never goes stale.
 
@@ -26,10 +27,14 @@ native setup.
 
 ### Data contract (App Group `group.com.goallearner.awakened`, key `widgetState`)
 ```json
-{ "streak": 8, "stepGoal": 10000, "rankTier": "A", "rankColor": "#ef4444",
+{ "lbRank": 6, "stepGoal": 8000, "rankTier": "A", "rankColor": "#ef4444",
   "alias": "Richie", "updatedAt": 1784370000000 }
 ```
-Steps are NOT in the contract — the widget queries HealthKit for them.
+- `lbRank` — the user's DISPLAYED global Steps-board position (0 = unknown; app
+  persists it in `hb_lb_step_rank` on every Steps-board render). Board rank can't
+  be recomputed off-app, so the widget shows the last-seen value.
+- `stepGoal` — today's step goal; the ring fills toward it and tops out at 100%.
+- Steps are NOT in the contract — the widget queries HealthKit live for them.
 
 ## Phase 2 (later)
 - Lock-screen variants (`.accessoryCircular` / `.accessoryRectangular`) — same

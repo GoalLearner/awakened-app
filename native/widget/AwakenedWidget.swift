@@ -21,8 +21,8 @@ enum AwakenedShared {
 
 // MARK: - Game state (written by the app)
 struct AwakenedState {
-    var streak: Int = 0
-    var stepGoal: Int = 0
+    var lbRank: Int = 0        // global Steps-leaderboard position (0 = unknown)
+    var stepGoal: Int = 0      // today's step goal → the ring fills to this
     var rankTier: String = ""
     var rankColorHex: String = "#a78bfa"
 
@@ -34,7 +34,7 @@ struct AwakenedState {
         else { return AwakenedState() }
 
         var s = AwakenedState()
-        s.streak       = (obj["streak"]   as? NSNumber)?.intValue ?? (obj["streak"]   as? Int) ?? 0
+        s.lbRank       = (obj["lbRank"]   as? NSNumber)?.intValue ?? (obj["lbRank"]   as? Int) ?? 0
         s.stepGoal     = (obj["stepGoal"] as? NSNumber)?.intValue ?? (obj["stepGoal"] as? Int) ?? 0
         s.rankTier     = (obj["rankTier"]  as? String) ?? ""
         s.rankColorHex = (obj["rankColor"] as? String) ?? "#a78bfa"
@@ -45,7 +45,7 @@ struct AwakenedState {
 // MARK: - Timeline entry
 struct AwakenedEntry: TimelineEntry {
     let date: Date
-    let streak: Int
+    let lbRank: Int         // global Steps-board position (0 = unknown → line hidden)
     let steps: Int
     let stepGoal: Int
     let rankTier: String
@@ -75,20 +75,20 @@ private func fetchTodaySteps(_ completion: @escaping (Int?) -> Void) {
 // MARK: - Timeline provider
 struct AwakenedProvider: TimelineProvider {
     func placeholder(in context: Context) -> AwakenedEntry {
-        AwakenedEntry(date: Date(), streak: 8, steps: 6200, stepGoal: 10000,
+        AwakenedEntry(date: Date(), lbRank: 6, steps: 6200, stepGoal: 8000,
                       rankTier: "A", rankColorHex: "#ef4444", stepsKnown: true)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (AwakenedEntry) -> Void) {
         let s = AwakenedState.load()
-        completion(AwakenedEntry(date: Date(), streak: s.streak, steps: 0, stepGoal: s.stepGoal,
+        completion(AwakenedEntry(date: Date(), lbRank: s.lbRank, steps: 0, stepGoal: s.stepGoal,
                                  rankTier: s.rankTier, rankColorHex: s.rankColorHex, stepsKnown: false))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<AwakenedEntry>) -> Void) {
         let s = AwakenedState.load()
         fetchTodaySteps { steps in
-            let entry = AwakenedEntry(date: Date(), streak: s.streak, steps: steps ?? 0,
+            let entry = AwakenedEntry(date: Date(), lbRank: s.lbRank, steps: steps ?? 0,
                                       stepGoal: s.stepGoal, rankTier: s.rankTier,
                                       rankColorHex: s.rankColorHex, stepsKnown: steps != nil)
             // ~20-minute refresh hint. WidgetKit may stretch this under system

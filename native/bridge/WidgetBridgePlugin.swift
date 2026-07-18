@@ -39,7 +39,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         // Read fields explicitly (never dump `call.options` — it carries
         // Capacitor-internal keys). Missing fields fall back to safe defaults.
         var state: [String: Any] = [:]
-        state["streak"]    = call.getInt("streak") ?? 0
+        state["lbRank"]    = call.getInt("lbRank") ?? 0   // global Steps-board position (0 = unknown)
         state["stepGoal"]  = call.getInt("stepGoal") ?? 0
         state["rankTier"]  = call.getString("rankTier") ?? ""
         state["rankColor"] = call.getString("rankColor") ?? "#a78bfa"

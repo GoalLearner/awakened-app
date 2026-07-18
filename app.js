@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w718'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w719'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24259,6 +24259,15 @@
       return g;
     } catch (_) { return 0; }
   }
+  // The user's DISPLAYED position on the global Steps leaderboard (the
+  // sim-merged rank they actually see, persisted by lbBuildRankList on every
+  // Steps-board render — see hb_lb_step_rank). 0 = unknown (board never opened
+  // this install); the widget hides the line rather than showing a fake rank.
+  // Unlike steps (read live from HealthKit in the widget), the board rank can't
+  // be cheaply recomputed off-app, so the widget shows the last-seen value.
+  function _widgetStepRank() {
+    try { var r = parseInt(localStorage.getItem('hb_lb_step_rank') || '0', 10); return (Number.isFinite(r) && r > 0) ? r : 0; } catch (_) { return 0; }
+  }
   var _widgetPushT = null;
   function _pushWidgetState() {
     if (!_widgetBridge()) return;              // fast bail on web / no native plugin
@@ -24266,15 +24275,14 @@
     _widgetPushT = setTimeout(function () {
       _widgetPushT = null;
       var wb = _widgetBridge(); if (!wb) return;
-      var tier = '', color = '#a78bfa', streak = 0, alias = '';
+      var tier = '', color = '#a78bfa', alias = '';
       try { tier = (getRank(totalPoints) || {}).id || ''; } catch (_) {}
       try { color = (typeof _LB_RANK_COLORS === 'object' && _LB_RANK_COLORS[tier]) || '#a78bfa'; } catch (_) {}
-      try { streak = (buildAchievementContext().maxStreak | 0); } catch (_) {}
       try { alias = (typeof lbGetMyAlias === 'function' && lbGetMyAlias()) || ''; } catch (_) {}
       try {
         wb.setState({
-          streak: streak,
-          stepGoal: _widgetStepGoalToday(),
+          lbRank: _widgetStepRank(),           // global Steps-board position (0 = unknown)
+          stepGoal: _widgetStepGoalToday(),    // today's step goal → the widget ring fills to this
           rankTier: tier,
           rankColor: color,
           alias: alias,
@@ -42277,6 +42285,19 @@
   function lbBuildRankList(metric, top, me, stale_footer) {
     const meta = LB_METRIC_META[metric];
     if (!meta) return '';
+
+    // W718b — remember the user's DISPLAYED Steps-board position (post sim-merge,
+    // exactly what renders here) for the home widget. Only the real Steps board
+    // writes it; a change nudges the widget so the tile updates on board-open.
+    try {
+      if (metric === 'step_total' && me && typeof me.rank === 'number' && me.rank > 0) {
+        var _wr = String(me.rank | 0);
+        if (localStorage.getItem('hb_lb_step_rank') !== _wr) {
+          localStorage.setItem('hb_lb_step_rank', _wr);
+          if (typeof _pushWidgetState === 'function') _pushWidgetState();
+        }
+      }
+    } catch (_) {}
 
     if (!Array.isArray(top) || top.length === 0) {
       return (

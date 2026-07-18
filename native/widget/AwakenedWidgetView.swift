@@ -5,9 +5,15 @@ import SwiftUI
 struct AwakenedWidgetView: View {
     var entry: AwakenedEntry
 
+    // Ring fill = today's steps toward today's goal, clamped to [0,1] so it
+    // fills proportionally and tops out FULL exactly when the goal is met
+    // (e.g. an 8,000 goal → 4,000 steps = half ring, 8,000+ = full).
     private var progress: Double {
         guard entry.stepGoal > 0, entry.stepsKnown else { return 0 }
         return min(1.0, Double(entry.steps) / Double(entry.stepGoal))
+    }
+    private var goalMet: Bool {
+        entry.stepGoal > 0 && entry.stepsKnown && entry.steps >= entry.stepGoal
     }
     private var rankColor: Color { Color(hexString: entry.rankColorHex) }
 
@@ -17,15 +23,23 @@ struct AwakenedWidgetView: View {
 
     private var content: some View {
         VStack(spacing: 6) {
-            // ── Streak flame + count ──
+            // ── Global Steps-leaderboard position ──
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("🔥").font(.system(size: 14))
-                Text("\(entry.streak)")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
-                Text("DAY")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.white.opacity(0.5))
+                if entry.lbRank > 0 {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(rankColor)
+                    Text("#\(entry.lbRank)")
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                    Text("STEPS")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white.opacity(0.5))
+                } else {
+                    Text(entry.rankTier.isEmpty ? "AWAKENED" : "RANK \(entry.rankTier)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white.opacity(0.6))
+                }
             }
 
             // ── Today's step ring (live from HealthKit) ──
@@ -42,9 +56,17 @@ struct AwakenedWidgetView: View {
                     Text(entry.stepsKnown ? shortSteps(entry.steps) : "—")
                         .font(.system(size: 17, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
-                    Text("STEPS")
-                        .font(.system(size: 7.5, weight: .bold))
-                        .foregroundColor(.white.opacity(0.45))
+                    // Goal-met cue: the sub-label flips to "GOAL ✓" in the rank
+                    // color the moment today's steps reach the goal.
+                    if goalMet {
+                        Text("GOAL ✓")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundColor(rankColor)
+                    } else {
+                        Text("TODAY")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundColor(.white.opacity(0.45))
+                    }
                 }
             }
             .frame(width: 78, height: 78)
