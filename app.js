@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w726'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w727'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19545,7 +19545,11 @@
   // Date semantics: device-local time, same as bosses + sleep windows
   // (CLAUDE.md: notifications + sleep + leaderboard use device-local;
   // streak math for habits uses PT). 'YYYY-MM-DD' keys throughout.
-  const LB_DAILY_RETENTION_DAYS = 30;
+  const LB_DAILY_RETENTION_DAYS = 365;   // W726b — keep a YEAR of daily history so the Weekly
+                                         // Insights correlations have a statistically meaningful
+                                         // baseline (legit causation needs many days). Accumulates
+                                         // going forward; can't recover already-pruned days.
+                                         // ~1yr of small ints across the daily maps — sync-safe.
   const LB_STORAGE_KEY = 'hb_leaderboard';
   const LB_SLEEP_HOURS_THRESHOLD = 7; // matches Insomniac's kill condition
   // W714 — a first-class WALK streak (consecutive days ≥ threshold steps), durable
@@ -44315,12 +44319,12 @@
         const sl = sleepDaily[dk]; if (typeof sl !== 'number') return;
         (sl >= 7.5 ? rested : short).push(stepsDaily[dk] | 0);
       });
-      if (rested.length < 3 || short.length < 3) return null;
+      if (rested.length < 6 || short.length < 6) return null;   // W726b — need a real sample each side
       const r = _wiAvg(rested), s = _wiAvg(short);
       if (s <= 0 || r <= s) return null;
       const lift = Math.round(((r - s) / s) * 100);
       if (lift < 12) return null;
-      return { mode: 'sleep', liftPct: lift, restedAvg: r, shortAvg: s, score: lift + 8 };
+      return { mode: 'sleep', liftPct: lift, restedAvg: r, shortAvg: s, n: rested.length + short.length, score: lift + 8 };
     } catch (_) { return null; }
   }
   // Habit → steps: the "wow" coach insight. For each active habit, avg steps on
@@ -44341,7 +44345,7 @@
     try {
       if (!completions || typeof completions !== 'object') return null;
       const stepDays = _wiStepDaysInWindow(stepsDaily, startKey, endKey);
-      if (stepDays.length < 8) return null;
+      if (stepDays.length < 14) return null;   // W726b — a fortnight+ of steps before we claim causation
       const hs = (typeof habits !== 'undefined' && Array.isArray(habits))
         ? habits.filter(function (h) { return typeof _isActiveHabit === 'function' ? _isActiveHabit(h) : !!h; }) : [];
       let best = null;
@@ -44353,12 +44357,12 @@
           const arr = completions[dk];
           (Array.isArray(arr) && arr.indexOf(h.id) >= 0 ? done : miss).push(stepsDaily[dk] | 0);
         });
-        if (done.length < 4 || miss.length < 4) return;
+        if (done.length < 6 || miss.length < 6) return;   // W726b — ≥6 done AND ≥6 skipped for a real split
         const d = _wiAvg(done), m = _wiAvg(miss);
         if (m <= 0 || d <= m) return;
         const lift = Math.round(((d - m) / m) * 100);
         if (lift < 15) return;
-        if (!best || lift > best.liftPct) best = { mode: 'habit', habitName: h.name, liftPct: lift, doneAvg: d, missAvg: m, score: lift + 12 };
+        if (!best || lift > best.liftPct) best = { mode: 'habit', habitName: h.name, liftPct: lift, doneAvg: d, missAvg: m, n: done.length + miss.length, score: lift + 12 };
       });
       return best;
     } catch (_) { return null; }
@@ -44373,10 +44377,10 @@
         const wd = new Date(dk + 'T12:00:00').getDay();
         sum[wd] += v; cnt[wd] += 1; total += v; days += 1;
       });
-      if (days < 10) return null;
+      if (days < 14) return null;   // W726b — ≥2 weeks before a "power day" is trustworthy
       const overall = total / days; if (overall <= 0) return null;
       let bw = -1, ba = 0;
-      for (let i = 0; i < 7; i++) { if (cnt[i] >= 2) { const a = sum[i] / cnt[i]; if (a > ba) { ba = a; bw = i; } } }
+      for (let i = 0; i < 7; i++) { if (cnt[i] >= 3) { const a = sum[i] / cnt[i]; if (a > ba) { ba = a; bw = i; } } }   // W726b — ≥3 samples of that weekday
       if (bw < 0) return null;
       const lift = Math.round(((ba - overall) / overall) * 100);
       if (lift < 20) return null;
@@ -44454,7 +44458,10 @@
     // a runner-up rides a secondary strip. Peak/early only when nothing qualifies. ──
     try {
       const endKey = today;
-      const startKey = _wiDaysAgoKey(today, 30);
+      // W726b — correlations analyze the FULL retained history (up to a year), not a
+      // 30-day slice: legit causation needs a long baseline. _wiStepDaysInWindow keeps
+      // only the step-days that actually exist, so this is simply "all we have".
+      const startKey = _wiDaysAgoKey(today, 400);
       const cands = [];
       const sp = _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey); if (sp) cands.push(sp);
       const hp = _wiHabitPattern(completions, stepsDaily, startKey, endKey); if (hp) cands.push(hp);
@@ -44563,7 +44570,7 @@
         + '<div class="wi-compare">'
         + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">Rested · 7.5h+</span><span class="wi-cmp-val num">' + nf(pat.restedAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
-        + '<div class="wi-cmp-foot">avg steps per day</div></div>';
+        + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>';
     } else if (pat.mode === 'habit') {
       const missW = Math.max(6, Math.round(((pat.missAvg | 0) / Math.max(1, pat.doneAvg | 0)) * 100));
       heroInner =
@@ -44573,7 +44580,7 @@
         + '<div class="wi-compare">'
         + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">' + esc(pat.habitName) + ' days</span><span class="wi-cmp-val num">' + nf(pat.doneAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Other days</span><span class="wi-cmp-val num">' + nf(pat.missAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + missW + '%"></i></div></div>'
-        + '<div class="wi-cmp-foot">avg steps per day</div></div>';
+        + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>';
     } else if (pat.mode === 'powerday') {
       heroInner =
         '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your power day</div>'
