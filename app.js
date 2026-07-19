@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w725'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w726'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44325,6 +44325,18 @@
   }
   // Habit → steps: the "wow" coach insight. For each active habit, avg steps on
   // days it was done vs skipped; feature the biggest positive lift.
+  // A step-verified or movement habit IS its own step count, so correlating it
+  // with steps is a tautology ("you walk more on days you did your walk habit").
+  // Exclude those — the valuable insight is a NON-obvious habit → steps link
+  // (Meditate, Read, Strength). Owner-flagged W726.
+  function _wiIsStepTautologyHabit(h) {
+    try {
+      if (!h) return false;
+      if (parseInt(h.stepGoal, 10) > 0) return true;   // step-goal habit = literally steps
+      const n = String(h.name || '').toLowerCase();
+      return /\b(walk|walking|run|running|jog|jogging|steps?|cardio|hike|hiking|treadmill|stroll|10k)\b/.test(n);
+    } catch (_) { return false; }
+  }
   function _wiHabitPattern(completions, stepsDaily, startKey, endKey) {
     try {
       if (!completions || typeof completions !== 'object') return null;
@@ -44335,6 +44347,7 @@
       let best = null;
       hs.forEach(function (h) {
         if (!h || !h.id || !h.name) return;
+        if (_wiIsStepTautologyHabit(h)) return;   // W726 — skip walk/step habits (circular)
         const done = [], miss = [];
         stepDays.forEach(function (dk) {
           const arr = completions[dk];
