@@ -41400,10 +41400,8 @@
         const wasCollapsed = section.classList.contains('social-section--collapsed');
         section.classList.toggle('social-section--collapsed');
         toggle.setAttribute('aria-expanded', wasCollapsed ? 'true' : 'false');
-        try {
-          const key = toggle.getAttribute('data-collapsible-target');
-          if (key === 'friends') localStorage.setItem('hb_duels_friends_expanded', wasCollapsed ? '1' : '0');
-        } catch (_) {}
+        // W721 — dropped a write to hb_duels_friends_expanded here: write-only, never
+        // read (the Duels UI it served was removed).
       });
       socialPanel._collapseWired = true;
     }

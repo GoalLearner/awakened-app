@@ -28,9 +28,10 @@
   // To rotate (e.g., custom domain in v2.2+), edit here only.
   const BACKEND_URL = 'https://awakened-backend.richmondcampano93.workers.dev';
 
-  // Backend session JWT lifetime — matches BACKEND.md §4. 90 days
-  // total; client uses isJwtNearExpiry() to silently re-authorize
-  // via Apple when <14 days remain.
+  // Backend session JWT lifetime — matches BACKEND.md §4. 90 days total.
+  // (A hard 90-day expiry; there is no silent pre-expiry re-auth — the sign-in
+  // gate re-appears and a same-account Apple sign-in restores state. W721 removed
+  // the never-wired isJwtNearExpiry() that this comment used to advertise.)
   const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
   // Localhost dev-bypass JWT marker. Phase B's backend explicitly
@@ -171,17 +172,6 @@
 
   // True when JWT is within 14 days of expiry. Phase A stubs and
   // dev-stubs return false (no real backend session to refresh).
-  function isJwtNearExpiry() {
-    const u = readUser();
-    if (!u || !u.jwt_expires_at) return true;
-    if (u.jwt === LOCALHOST_DEV_STUB) return false;
-    if (u.jwt === GUEST_STUB) return false;   // W329 — no backend session to refresh
-    if (u.jwt === 'PHASE_A_STUB') return true;  // force re-auth
-    const nowMs = Date.now();
-    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-    return (u.jwt_expires_at - nowMs) < fourteenDaysMs;
-  }
-
   // Alias validation. Server has final say (Phase B); client-side
   // mirror for instant feedback in the gate UI.
   // Rules: 3–20 chars, [A-Za-z0-9 _-] only. No leading/trailing space.
@@ -1053,6 +1043,23 @@
   // alias and the existing CloudSync adopt-local path keeps all progress.
   function startGuest() {
     if (readUser()) return false; // respect any existing real/pending/guest state
+    // W721 — shared-device privacy: if a REAL account previously owned this device
+    // (hb_state_owner set) and has since signed out, the guest must NOT inherit that
+    // account's local game state (or alias). Purge before mounting. A genuinely-new
+    // guest has no hb_state_owner → untouched, so the guest→Apple "keep your
+    // progress" upgrade path is preserved. (Sign-out is intentionally NOT the purge
+    // point: re-signing into the SAME Apple account should keep its local state.)
+    try {
+      if (localStorage.getItem('hb_state_owner')) {
+        if (typeof window.__awakenedAccountSwitchPurge === 'function') {
+          window.__awakenedAccountSwitchPurge('guest');
+        }
+        // The purge keeps hb_state_owner + hb_name (it assumes a real account wrote
+        // them pre-purge); a guest owns neither, so clear them explicitly.
+        try { localStorage.removeItem('hb_state_owner'); } catch (_) {}
+        try { localStorage.removeItem('hb_name'); } catch (_) {}
+      }
+    } catch (_) {}
     writeUser({
       sub:            'guest-local',
       alias:          null,
@@ -1917,7 +1924,6 @@
     reportAppOpen,
     getJwt,
     clearUser,
-    isJwtNearExpiry,
     validateAlias,
     signInWithApple,
     completeSignIn,
