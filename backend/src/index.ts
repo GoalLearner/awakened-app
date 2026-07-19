@@ -31,6 +31,7 @@ import { handleLeaderboardLastWeek } from './handlers/leaderboard-last-week';
 import { handleLeaderboardRecapGet, handleLeaderboardRecapSeenPost } from './handlers/leaderboard-recap';
 import { handleLeaderboardArchiveGet } from './handlers/leaderboard-archive';
 import { handleStep100kClub } from './handlers/step-100k-club';
+import { handleInsightsWeekly } from './handlers/insights-weekly';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleAppOpenPost } from './handlers/app-open';
@@ -245,6 +246,9 @@ export default {
           } else if (path === '/v1/leaderboard/step-100k-club' && method === 'GET') {
             // v3 Phase 1z.52 — 100K Step Club roster (real users only).
             response = await handleStep100kClub(request, env, session);
+          } else if (path === '/v1/insights/weekly' && method === 'GET') {
+            // W723 — members-only weekly-step percentile for "Your Weekly Awakening".
+            response = await handleInsightsWeekly(request, env, session);
           } else if (path === '/v1/leaderboard/rank-band' && method === 'GET') {
             // W319 — "Hunters in your rank" cohort board. Ranks the caller's
             // rank_tier by power; reuses public_profile_summary (no new schema,
