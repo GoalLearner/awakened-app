@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w724'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w725'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44292,6 +44292,97 @@
     return (full ? _WI_DOW_FULL : _WI_DOW)[d];
   }
 
+  // ── W725 — the insight ENGINE. Each candidate returns a scored pattern or
+  // null; buildWeeklyInsights features the strongest. All computed over the
+  // 30-day steps window (steps_daily is pruned to 30d — the binding limit).
+  // Only days with a REAL steps entry are counted (absent ≠ 0). ──
+  function _wiDaysAgoKey(baseKey, n) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(baseKey || ''); if (!m) return baseKey;
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] - n));
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+  }
+  function _wiStepDaysInWindow(stepsDaily, startKey, endKey) {
+    const out = [];
+    for (const dk in stepsDaily) { if (dk >= startKey && dk <= endKey && typeof stepsDaily[dk] === 'number') out.push(dk); }
+    return out;
+  }
+  function _wiAvg(a) { return a.length ? Math.round(a.reduce(function (x, y) { return x + y; }, 0) / a.length) : 0; }
+  // Sleep → steps (7.5h+ nights). Score-weighted just under habit.
+  function _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey) {
+    try {
+      const rested = [], short = [];
+      _wiStepDaysInWindow(stepsDaily, startKey, endKey).forEach(function (dk) {
+        const sl = sleepDaily[dk]; if (typeof sl !== 'number') return;
+        (sl >= 7.5 ? rested : short).push(stepsDaily[dk] | 0);
+      });
+      if (rested.length < 3 || short.length < 3) return null;
+      const r = _wiAvg(rested), s = _wiAvg(short);
+      if (s <= 0 || r <= s) return null;
+      const lift = Math.round(((r - s) / s) * 100);
+      if (lift < 12) return null;
+      return { mode: 'sleep', liftPct: lift, restedAvg: r, shortAvg: s, score: lift + 8 };
+    } catch (_) { return null; }
+  }
+  // Habit → steps: the "wow" coach insight. For each active habit, avg steps on
+  // days it was done vs skipped; feature the biggest positive lift.
+  function _wiHabitPattern(completions, stepsDaily, startKey, endKey) {
+    try {
+      if (!completions || typeof completions !== 'object') return null;
+      const stepDays = _wiStepDaysInWindow(stepsDaily, startKey, endKey);
+      if (stepDays.length < 8) return null;
+      const hs = (typeof habits !== 'undefined' && Array.isArray(habits))
+        ? habits.filter(function (h) { return typeof _isActiveHabit === 'function' ? _isActiveHabit(h) : !!h; }) : [];
+      let best = null;
+      hs.forEach(function (h) {
+        if (!h || !h.id || !h.name) return;
+        const done = [], miss = [];
+        stepDays.forEach(function (dk) {
+          const arr = completions[dk];
+          (Array.isArray(arr) && arr.indexOf(h.id) >= 0 ? done : miss).push(stepsDaily[dk] | 0);
+        });
+        if (done.length < 4 || miss.length < 4) return;
+        const d = _wiAvg(done), m = _wiAvg(miss);
+        if (m <= 0 || d <= m) return;
+        const lift = Math.round(((d - m) / m) * 100);
+        if (lift < 15) return;
+        if (!best || lift > best.liftPct) best = { mode: 'habit', habitName: h.name, liftPct: lift, doneAvg: d, missAvg: m, score: lift + 12 };
+      });
+      return best;
+    } catch (_) { return null; }
+  }
+  // Power day: the weekday with the highest average steps vs the overall average.
+  function _wiPowerDay(stepsDaily, startKey, endKey) {
+    try {
+      const sum = [0, 0, 0, 0, 0, 0, 0], cnt = [0, 0, 0, 0, 0, 0, 0];
+      let total = 0, days = 0;
+      _wiStepDaysInWindow(stepsDaily, startKey, endKey).forEach(function (dk) {
+        const v = stepsDaily[dk] | 0;
+        const wd = new Date(dk + 'T12:00:00').getDay();
+        sum[wd] += v; cnt[wd] += 1; total += v; days += 1;
+      });
+      if (days < 10) return null;
+      const overall = total / days; if (overall <= 0) return null;
+      let bw = -1, ba = 0;
+      for (let i = 0; i < 7; i++) { if (cnt[i] >= 2) { const a = sum[i] / cnt[i]; if (a > ba) { ba = a; bw = i; } } }
+      if (bw < 0) return null;
+      const lift = Math.round(((ba - overall) / overall) * 100);
+      if (lift < 20) return null;
+      return { mode: 'powerday', dow: _WI_DOW_FULL[bw], liftPct: lift, avg: Math.round(ba), score: lift };
+    } catch (_) { return null; }
+  }
+  // Groundwork for a future momentum pattern: persist this week's total so
+  // trends can look back past the 30-day steps window. Local + synced (the one
+  // aggregate NOT recomputable after the daily map prunes). Capped to 52 weeks.
+  function _wiRecordWeek(weekStart, weekTotal) {
+    try {
+      let m = {}; try { m = JSON.parse(localStorage.getItem('hb_wi_weeks') || '{}') || {}; } catch (_) { m = {}; }
+      if (weekStart) m[weekStart] = weekTotal | 0;
+      const keys = Object.keys(m).sort();
+      while (keys.length > 52) { const k = keys.shift(); delete m[k]; }
+      localStorage.setItem('hb_wi_weeks', JSON.stringify(m));
+    } catch (_) {}
+  }
+
   // Assemble the whole model. Async — the percentile is a network read that
   // degrades to null (offline / non-member) so the screen still renders local.
   async function buildWeeklyInsights() {
@@ -44345,28 +44436,27 @@
     } catch (_) {}
     M.rank = { tier: tier, nextId: nextId };
 
-    // ── THE HIDDEN PATTERN — sleep→steps if derivable, else peak-day hero ──
+    // ── THE HIDDEN PATTERN — score every candidate over the 30-day window and
+    // feature the STRONGEST (habit correlation > sleep > power-day by weight);
+    // a runner-up rides a secondary strip. Peak/early only when nothing qualifies. ──
     try {
-      const rested = [], short = [];
-      days.forEach(function (ds) {
-        const st = stepsDaily[ds]; const sl = sleepDaily[ds];
-        if (typeof st !== 'number' || typeof sl !== 'number') return;
-        (sl >= 7.5 ? rested : short).push(st);
-      });
-      const avg = function (a) { return a.length ? Math.round(a.reduce(function (x, y) { return x + y; }, 0) / a.length) : 0; };
-      const rAvg = avg(rested), sAvg = avg(short);
-      if (rested.length && short.length && sAvg > 0 && rAvg > sAvg) {
-        M.pattern = { mode: 'sleep', liftPct: Math.round(((rAvg - sAvg) / sAvg) * 100), restedAvg: rAvg, shortAvg: sAvg };
-      }
+      const endKey = today;
+      const startKey = _wiDaysAgoKey(today, 30);
+      const cands = [];
+      const sp = _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey); if (sp) cands.push(sp);
+      const hp = _wiHabitPattern(completions, stepsDaily, startKey, endKey); if (hp) cands.push(hp);
+      const pp = _wiPowerDay(stepsDaily, startKey, endKey); if (pp) cands.push(pp);
+      cands.sort(function (a, b) { return (b.score || b.liftPct || 0) - (a.score || a.liftPct || 0); });
+      if (cands.length) { M.pattern = cands[0]; if (cands[1]) M.pattern2 = cands[1]; }
     } catch (_) {}
     if (!M.pattern) {
-      // A real "fiercest day" hero needs real steps behind it — 527 steps is
-      // not "you moved like the void." Below the bar → an honest early-week
-      // teaser instead of hollow superlatives.
+      // Nothing meaningful yet — a real "fiercest day" hero needs real steps
+      // (527 is not "the void"); below the bar → an honest early-week teaser.
       M.pattern = (peakSteps >= 8000)
         ? { mode: 'peak', dow: _wiDow(peakDay, true), steps: peakSteps }
         : { mode: 'early', daysElapsed: daysElapsed, activeDays: activeDays };
     }
+    try { _wiRecordWeek(weekStart, weekTotal); } catch (_) {}
 
     // ── DUNGEON — bosses this week (souls ledger) + best drop (drop ledger) ──
     let bossCount = 0;
@@ -44461,6 +44551,21 @@
         + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">Rested · 7.5h+</span><span class="wi-cmp-val num">' + nf(pat.restedAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
         + '<div class="wi-cmp-foot">avg steps per day</div></div>';
+    } else if (pat.mode === 'habit') {
+      const missW = Math.max(6, Math.round(((pat.missAvg | 0) / Math.max(1, pat.doneAvg | 0)) * 100));
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">On ' + esc(pat.habitName) + ' days</div>'
+        + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">+' + (pat.liftPct | 0) + '%</span><span class="wi-reveal-more">steps</span></div>'
+        + '<div class="wi-reveal-sub">than the days you skip it.</div></div>'
+        + '<div class="wi-compare">'
+        + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">' + esc(pat.habitName) + ' days</span><span class="wi-cmp-val num">' + nf(pat.doneAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
+        + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Other days</span><span class="wi-cmp-val num">' + nf(pat.missAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + missW + '%"></i></div></div>'
+        + '<div class="wi-cmp-foot">avg steps per day</div></div>';
+    } else if (pat.mode === 'powerday') {
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your power day</div>'
+        + '<div class="wi-reveal-big"><span class="wi-reveal-num wi-reveal-word foil-text">' + esc(pat.dow) + '</span></div>'
+        + '<div class="wi-reveal-sub"><b style="color:var(--wi-gold2)">+' + (pat.liftPct | 0) + '%</b> above your average — ' + esc(pat.dow) + 's are when you move most.</div></div>';
     } else if (pat.mode === 'peak') {
       const pk = (pat.steps | 0);
       const pkLine = pk >= 20000 ? 'you were unstoppable.' : pk >= 13000 ? 'you refused to be still.' : 'you kept the fire lit.';
@@ -44477,10 +44582,20 @@
         + (de > 0 ? ' Active <b style="color:var(--wi-gold2)">' + ad + ' of ' + de + '</b> days so far.' : '')
         + '</div></div>';
     }
+    // Runner-up pattern rides a compact "Also" strip so the screen shows depth.
+    let alsoHtml = '';
+    const p2 = M.pattern2;
+    if (p2) {
+      let t = '';
+      if (p2.mode === 'habit') t = 'On ' + esc(p2.habitName) + ' days · <b>+' + (p2.liftPct | 0) + '%</b> steps';
+      else if (p2.mode === 'sleep') t = 'Rested nights (7.5h+) · <b>+' + (p2.liftPct | 0) + '%</b> steps';
+      else if (p2.mode === 'powerday') t = esc(p2.dow) + ' is your power day · <b>+' + (p2.liftPct | 0) + '%</b>';
+      if (t) alsoHtml = '<div class="wi-also"><span class="wi-also-ic">✦</span> ' + t + '</div>';
+    }
     const heroHtml =
       '<section class="wi-hero"><div class="wi-hero-sky"><div class="wi-moon"></div>'
       + '<i class="wi-star a"></i><i class="wi-star b"></i><i class="wi-star c"></i><i class="wi-star d"></i><i class="wi-star e"></i></div>'
-      + '<div class="wi-hero-ey">✦ The Hidden Pattern ✦</div>' + heroInner + '</section>';
+      + '<div class="wi-hero-ey">✦ The Hidden Pattern ✦</div>' + heroInner + alsoHtml + '</section>';
 
     // ── Dungeon + loot ──
     let lootHtml = '';
@@ -59745,6 +59860,8 @@
                                // compound accrual was silently lost on reinstall/new device
       'hb_day_xp_ledger',      // W721 — sync today's soft-cap ledger so a mid-day restore
                                // can't reset the per-user daily XP cap (a 2nd-farm window)
+      'hb_wi_weeks',           // W725 — weekly step totals for Weekly Insights momentum;
+                               // the one aggregate NOT recomputable after the 30-day prune
       'hb_prs',
       'hb_shields',
       'hb_shield_milestone',

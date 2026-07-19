@@ -23660,6 +23660,14 @@ button.guildhall-summary-tile:active {
 #wi-overlay .wi-reveal-big { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-top: 6px; }
 #wi-overlay .wi-reveal-num { font-family: var(--wi-serif); font-weight: 900; font-size: 78px; line-height: 0.9; text-shadow: 0 0 44px rgba(245,158,11,0.4); }
 #wi-overlay .wi-reveal-more { font-family: var(--wi-serif); font-weight: 700; font-size: 24px; letter-spacing: 3px; color: var(--wi-gold2); text-transform: uppercase; }
+/* Power-day hero: the "number" is a weekday word — smaller so it fits. */
+#wi-overlay .wi-reveal-word { font-size: 50px; letter-spacing: 1px; }
+/* Runner-up pattern strip under the hero */
+#wi-overlay .wi-also { position: relative; margin: 26px auto 0; max-width: 300px; text-align: center; padding: 11px 14px; border-radius: 12px;
+  border: 1px solid rgba(245,158,11,0.22); background: rgba(245,158,11,0.05);
+  font-family: var(--wi-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--wi-t2); }
+#wi-overlay .wi-also b { color: var(--wi-gold2); }
+#wi-overlay .wi-also-ic { color: var(--wi-gold); margin-right: 4px; }
 #wi-overlay .wi-reveal-sub { margin-top: 12px; font-family: var(--wi-flavor); font-style: italic; font-size: 19px; line-height: 1.35; color: #d8d4e6; max-width: 290px; margin-left: auto; margin-right: auto; }
 #wi-overlay .wi-compare { position: relative; margin-top: 30px; display: flex; flex-direction: column; gap: 15px; }
 #wi-overlay .wi-cmp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
