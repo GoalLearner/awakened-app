@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w723'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w724'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44317,24 +44317,33 @@
       let pd = (typeof _wrPriorWeek === 'function') ? _wrPriorWeek(weekStart) : '';
       for (let i = 0; i < 7 && pd && pd < weekStart; i++) { lastTotal += (stepsDaily[pd] | 0); pd = _wiNextDate(pd); }
     } catch (_) {}
-    const wowPct = lastTotal > 0 ? Math.round(((weekTotal - lastTotal) / lastTotal) * 100) : null;
-    let peakDay = '', peakSteps = 0; const spark = [];
-    days.forEach(function (ds) { const s = stepsDaily[ds] | 0; spark.push({ dow: _wiDow(ds), steps: s }); if (s > peakSteps) { peakSteps = s; peakDay = ds; } });
-    let isPR = false; try { const we = state.best_7day_step_window_end || ''; isPR = !!(we && we >= weekStart); } catch (_) {}
+    let peakDay = '', peakSteps = 0, activeDays = 0; const spark = [];
+    days.forEach(function (ds) { const s = stepsDaily[ds] | 0; if (s > 0) activeDays++; spark.push({ dow: _wiDow(ds), steps: s }); if (s > peakSteps) { peakSteps = s; peakDay = ds; } });
+    const daysElapsed = days.length;
+    // "Mature" week = there's enough real movement to make superlatives + a WoW
+    // comparison honest. A partial early week (e.g. 527 steps on a Sunday) must
+    // NOT trigger mythic copy or a "-99% vs last week" against a full prior week.
+    const mature = weekTotal >= 8000;
+    const showWow = mature && lastTotal > 0;
+    const wowPct = showWow ? Math.round(((weekTotal - lastTotal) / lastTotal) * 100) : null;
+    let isPR = false; try { const we = state.best_7day_step_window_end || ''; isPR = !!(we && we >= weekStart && mature); } catch (_) {}
     let has100k = false; try { const a = (typeof accolades !== 'undefined' && accolades.get) ? accolades.get('step_100k_club') : null; has100k = !!(a && (a.unlocked_at | 0) >= weekMs); } catch (_) {}
+    M.meta = { daysElapsed: daysElapsed, activeDays: activeDays, mature: mature };
     M.steps = { total: weekTotal, wowPct: wowPct, peakDow: peakDay ? _wiDow(peakDay, true) : '', peakSteps: peakSteps, spark: spark, isPR: isPR, has100k: has100k };
 
-    // ── RANK (progress to next major rank; ETA-weeks deferred — no XP-rate source) ──
-    let tier = '', toNextPct = 0, nextId = '';
+    // ── RANK (tier only; the "% to next rank" bar was cut — owner: not the value here) ──
+    let tier = '', nextId = '';
     try {
       const rk = getRank(totalPoints) || {};
       tier = rk.id || '';
-      nextId = rk.next || '';
-      if (typeof rk.min === 'number' && typeof rk.max === 'number' && rk.max > rk.min) {
-        toNextPct = Math.max(0, Math.min(100, Math.round(((totalPoints - rk.min) / (rk.max - rk.min)) * 100)));
+      // rk.next is a threshold NUMBER, not a rank id — resolve the next tier's
+      // LETTER from RANKS (the old bar showed "12000-Rank", a bug).
+      if (typeof RANKS !== 'undefined' && Array.isArray(RANKS)) {
+        const ri = RANKS.findIndex(function (r) { return r.id === tier; });
+        if (ri >= 0 && RANKS[ri + 1]) nextId = RANKS[ri + 1].id || '';
       }
     } catch (_) {}
-    M.rank = { tier: tier, toNextPct: toNextPct, nextId: nextId };
+    M.rank = { tier: tier, nextId: nextId };
 
     // ── THE HIDDEN PATTERN — sleep→steps if derivable, else peak-day hero ──
     try {
@@ -44351,9 +44360,12 @@
       }
     } catch (_) {}
     if (!M.pattern) {
-      M.pattern = (peakSteps > 0)
+      // A real "fiercest day" hero needs real steps behind it — 527 steps is
+      // not "you moved like the void." Below the bar → an honest early-week
+      // teaser instead of hollow superlatives.
+      M.pattern = (peakSteps >= 8000)
         ? { mode: 'peak', dow: _wiDow(peakDay, true), steps: peakSteps }
-        : { mode: 'none' };
+        : { mode: 'early', daysElapsed: daysElapsed, activeDays: activeDays };
     }
 
     // ── DUNGEON — bosses this week (souls ledger) + best drop (drop ledger) ──
@@ -44397,17 +44409,22 @@
     const s = M.steps || {}, rk = M.rank || {}, pat = M.pattern || {}, dg = M.dungeon || {}, st = M.standing;
     const nf = function (n) { return (n | 0).toLocaleString('en-US'); };
 
-    // ── Standing (percentile from backend; soft copy on sparse/absent) ──
-    let percentileLine, standingSub = 'of all Hunters this week';
+    // ── Standing — lead with the VALUE, not the rank (owner). Percentile when
+    // the board's real; else fall back to this-week consistency (always honest,
+    // even on day 1). The rank gem stays as quiet identity; the "% to next
+    // rank" bar is gone. ──
+    const meta = M.meta || {};
+    let standHead, standingSub;
     if (st && st.global && !st.global.lowConfidence) {
-      percentileLine = '<b class="num">Top ' + (st.global.topPct | 0) + '%</b>';
+      standHead = '<b class="num">Top ' + (st.global.topPct | 0) + '%</b>';
+      standingSub = 'of all Hunters this week';
+    } else if ((meta.daysElapsed | 0) > 0) {
+      standHead = '<b class="num">' + (meta.activeDays | 0) + ' / ' + (meta.daysElapsed | 0) + '</b>';
+      standingSub = ((meta.activeDays | 0) >= (meta.daysElapsed | 0))
+        ? 'days active — a perfect run so far' : 'days active this week';
     } else {
-      percentileLine = '<b>Among the Awakened</b>'; standingSub = 'your standing this week';
+      standHead = '<b>A new week</b>'; standingSub = 'your standing takes shape';
     }
-    const nextTier = rk.nextId || '';
-    const trajMeta = nextTier
-      ? '<span class="wi-tm1">' + (rk.toNextPct | 0) + '% to ' + esc(nextTier) + '-Rank</span>'
-      : '<span class="wi-tm1">Peak rank reached</span>';
 
     // ── Step dominion ──
     const delta = (s.wowPct != null)
@@ -44445,12 +44462,20 @@
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
         + '<div class="wi-cmp-foot">avg steps per day</div></div>';
     } else if (pat.mode === 'peak') {
+      const pk = (pat.steps | 0);
+      const pkLine = pk >= 20000 ? 'you were unstoppable.' : pk >= 13000 ? 'you refused to be still.' : 'you kept the fire lit.';
       heroInner =
         '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your fiercest day</div>'
         + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">' + nf(pat.steps) + '</span><span class="wi-reveal-more">steps</span></div>'
-        + '<div class="wi-reveal-sub">' + esc(pat.dow || 'one day') + ', you refused to be still.</div></div>';
+        + '<div class="wi-reveal-sub">' + esc(pat.dow || 'one day') + ', ' + pkLine + '</div></div>';
     } else {
-      heroInner = '<div class="wi-hero-reveal"><div class="wi-reveal-sub">Your pattern is still taking shape. Keep moving, Hunter.</div></div>';
+      // Early week — honest teaser, no hollow superlatives on a handful of steps.
+      const ad = (pat.activeDays | 0), de = (pat.daysElapsed | 0);
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your pattern is forming</div>'
+        + '<div class="wi-reveal-sub">Insights sharpen as the week unfolds — move, sleep, and train, and the signal reveals itself.'
+        + (de > 0 ? ' Active <b style="color:var(--wi-gold2)">' + ad + ' of ' + de + '</b> days so far.' : '')
+        + '</div></div>';
     }
     const heroHtml =
       '<section class="wi-hero"><div class="wi-hero-sky"><div class="wi-moon"></div>'
@@ -44472,10 +44497,10 @@
         + lootHtml + '</div></section>'
       : '';
 
-    // ── Guild reflection ──
-    const reflection = (s.peakSteps | 0) > 0
+    // ── Guild reflection — the mythic line only when there's a real day behind it. ──
+    const reflection = ((M.meta && M.meta.mature) && (s.peakSteps | 0) >= 8000)
       ? esc(s.peakDow || 'This week') + ', you moved like the void itself — <b>' + nf(s.peakSteps) + ' steps</b> in a single day. The Guild sings of your name, Hunter.'
-      : 'The board is quiet, but the climb is yours to claim. The Guild watches, Hunter.';
+      : 'The week is young, Hunter — every step from here writes the legend. The Guild is watching.';
 
     return ''
       + '<div class="wi-scrim" data-wi-dismiss></div>'
@@ -44485,14 +44510,11 @@
       + '<header class="wi-header"><div class="wi-members-chip"><span class="wi-sp">✦</span> Members Only</div>'
       + '<h1 class="wi-title foil-text">Your&nbsp;Weekly<br>Awakening</h1>'
       + '<div class="wi-dateline">' + esc(M.weekLabel || '') + '</div></header>'
-      // Standing
+      // Standing — value headline; rank gem is quiet identity, no "% to rank" bar
       + '<section class="wi-standing"><div class="wi-stand-top"><div class="wi-gem"><div class="wi-in"><span class="wi-rk">' + esc(rk.tier || '—') + '</span></div></div>'
       + '<div class="wi-stand-flex"><div class="wi-stand-ey">Your Standing</div>'
-      + '<div class="wi-stand-big">' + percentileLine + (rk.tier ? '<span class="wi-rankchip">' + esc(rk.tier) + '-Rank</span>' : '') + '</div>'
-      + '<div class="wi-stand-sub">' + standingSub + '</div></div></div>'
-      + '<div class="wi-traj"><div class="wi-traj-row"><span class="wi-cap wi-cap-b">' + esc(rk.tier || '') + '</span>'
-      + '<div class="wi-traj-rail"><i class="wi-traj-fill" style="width:' + (rk.toNextPct | 0) + '%"></i></div>'
-      + '<span class="wi-cap wi-cap-a">' + esc(nextTier) + '</span></div><div class="wi-traj-meta">' + trajMeta + '</div></div></section>'
+      + '<div class="wi-stand-big">' + standHead + '</div>'
+      + '<div class="wi-stand-sub">' + standingSub + '</div></div></div></section>'
       // Step dominion
       + '<section class="wi-section"><div class="wi-eyebrow"><span class="wi-idx">✦</span> Step Dominion</div>'
       + '<div class="wi-band"><div class="wi-band-hero"><div class="wi-band-num num">' + nf(s.total) + '</div><div class="wi-band-unit">Steps<br>This Week</div>' + delta + '</div>'
@@ -44506,8 +44528,9 @@
       // Reflection
       + '<section class="wi-reflection"><div class="wi-ref-mark">“</div><p class="wi-ref-quote">' + reflection + '</p>'
       + '<div class="wi-ref-sign"><i></i><span>The First Awakened</span><i></i></div></section>'
-      // Share
-      + '<div class="wi-sharebar"><button class="wi-share" data-wi-share><span>Share to Guild</span></button></div>'
+      // Share + an always-reachable bottom close (belt-and-suspenders with the fixed ✕)
+      + '<div class="wi-sharebar"><button class="wi-share" data-wi-share><span>Share to Guild</span></button>'
+      + '<button class="wi-bottomclose" data-wi-dismiss>Close</button></div>'
       + '</div></div>';
   }
 

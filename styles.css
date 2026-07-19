@@ -23565,8 +23565,17 @@ button.guildhall-summary-tile:active {
 .wi-sheet { position: relative; width: 100%; max-width: 430px; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
   background: radial-gradient(120% 60% at 50% -6%, rgba(139,92,246,0.16), transparent 55%), linear-gradient(180deg, #13132a, #0b0b1c); }
 .wi-sheet::-webkit-scrollbar { display: none; }
-.wi-close { position: absolute; top: 14px; right: 14px; z-index: 4; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.12); background: rgba(12,12,26,0.7); color: #c8c6d8; font-size: 14px; }
+/* Close: FIXED (not absolute) so it never scrolls away, and pushed below the
+   notch/Dynamic Island via the safe-area inset — the old absolute+top:14px sat
+   under the status bar and vanished on scroll, trapping the user. */
+.wi-close { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 16px; z-index: 30; width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245,158,11,0.4);
+  background: rgba(12,12,26,0.82); color: #ffe6a8; font-size: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+.wi-close:active { transform: scale(0.94); }
+#wi-overlay .wi-bottomclose { display: block; width: 100%; margin-top: 14px; padding: 14px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; background: rgba(255,255,255,0.03);
+  font-family: var(--wi-mono); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--wi-t2); }
+#wi-overlay .wi-bottomclose:active { background: rgba(255,255,255,0.06); }
 #wi-overlay .wi-content { position: relative; padding: 30px 22px 40px; }
 #wi-overlay .num { font-variant-numeric: tabular-nums; }
 #wi-overlay .foil-text { background: linear-gradient(100deg, var(--wi-golddeep), var(--wi-gold2) 42%, #fff7e2 50%, var(--wi-gold2) 58%, var(--wi-gold) 82%, var(--wi-golddeep));
