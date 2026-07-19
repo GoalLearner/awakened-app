@@ -23668,6 +23668,21 @@ button.guildhall-summary-tile:active {
   font-family: var(--wi-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--wi-t2); }
 #wi-overlay .wi-also b { color: var(--wi-gold2); }
 #wi-overlay .wi-also-ic { color: var(--wi-gold); margin-right: 4px; }
+/* W728 — verified/logged split */
+#wi-overlay .wi-vbadge { display: flex; align-items: center; gap: 6px; width: fit-content; margin: 12px auto 0; padding: 5px 12px; border-radius: 999px;
+  font-family: var(--wi-mono); font-size: 9px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: #7ee0a8;
+  background: rgba(52,211,153,0.10); border: 1px solid rgba(52,211,153,0.40); box-shadow: 0 0 16px rgba(52,211,153,0.14); }
+#wi-overlay .wi-vbadge-ic { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; background: #34d399; color: #06281c; font-size: 9px; font-weight: 900; }
+#wi-overlay .wi-leak { position: relative; margin: 16px auto 0; max-width: 300px; text-align: center; font-family: var(--wi-flavor); font-style: italic; font-size: 15.5px; line-height: 1.4; color: #e7b48c; }
+#wi-overlay .wi-leak b { font-style: normal; font-family: var(--wi-mono); font-weight: 800; color: #f0a97b; }
+#wi-overlay .wi-leak-ic { color: #ef8a5a; font-weight: 900; margin-right: 3px; }
+#wi-overlay .wi-hero-div { position: relative; height: 1px; margin: 26px 0 20px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.30), transparent); }
+#wi-overlay .wi-logged { position: relative; text-align: center; }
+#wi-overlay .wi-logged-ey { font-family: var(--wi-mono); font-size: 9px; font-weight: 800; letter-spacing: 2.4px; text-transform: uppercase; color: var(--wi-t2); }
+#wi-overlay .wi-logged-line { margin-top: 9px; font-family: var(--wi-flavor); font-style: italic; font-size: 18px; line-height: 1.4; color: #d8d4e6; }
+#wi-overlay .wi-logged-line b { font-style: normal; }
+#wi-overlay .wi-lg-pct { font-family: var(--wi-mono); font-weight: 800; color: var(--wi-gold2); }
+#wi-overlay .wi-logged-sub { font-family: var(--wi-mono); font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; color: var(--wi-t3); text-transform: uppercase; }
 #wi-overlay .wi-reveal-sub { margin-top: 12px; font-family: var(--wi-flavor); font-style: italic; font-size: 19px; line-height: 1.35; color: #d8d4e6; max-width: 290px; margin-left: auto; margin-right: auto; }
 #wi-overlay .wi-compare { position: relative; margin-top: 30px; display: flex; flex-direction: column; gap: 15px; }
 #wi-overlay .wi-cmp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }

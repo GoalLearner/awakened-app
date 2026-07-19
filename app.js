@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w727'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w728'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44341,7 +44341,22 @@
       return /\b(walk|walking|run|running|jog|jogging|steps?|cardio|hike|hiking|treadmill|stroll|10k)\b/.test(n);
     } catch (_) { return false; }
   }
-  function _wiHabitPattern(completions, stepsDaily, startKey, endKey) {
+  // W728 — fraction of a habit's completions that were HealthKit-auto-verified
+  // (source starts 'healthkit' or === 'apple_health'). >0.5 → objective, not a
+  // self-reported check-box, so it does NOT belong in the "logged" pool.
+  function _wiHabitVerifiedFrac(habitId, doneDates, autoMap) {
+    try {
+      if (!autoMap || !doneDates || !doneDates.length) return 0;
+      let v = 0;
+      doneDates.forEach(function (dk) {
+        const rec = autoMap[dk] && autoMap[dk][habitId];
+        const src = rec && rec.source;
+        if (typeof src === 'string' && (src.indexOf('healthkit') === 0 || src === 'apple_health')) v++;
+      });
+      return v / doneDates.length;
+    } catch (_) { return 0; }
+  }
+  function _wiHabitPattern(completions, stepsDaily, startKey, endKey, autoMap) {
     try {
       if (!completions || typeof completions !== 'object') return null;
       const stepDays = _wiStepDaysInWindow(stepsDaily, startKey, endKey);
@@ -44352,12 +44367,16 @@
       hs.forEach(function (h) {
         if (!h || !h.id || !h.name) return;
         if (_wiIsStepTautologyHabit(h)) return;   // W726 — skip walk/step habits (circular)
-        const done = [], miss = [];
+        const done = [], miss = [], doneDates = [];
         stepDays.forEach(function (dk) {
           const arr = completions[dk];
-          (Array.isArray(arr) && arr.indexOf(h.id) >= 0 ? done : miss).push(stepsDaily[dk] | 0);
+          if (Array.isArray(arr) && arr.indexOf(h.id) >= 0) { done.push(stepsDaily[dk] | 0); doneDates.push(dk); }
+          else miss.push(stepsDaily[dk] | 0);
         });
         if (done.length < 6 || miss.length < 6) return;   // W726b — ≥6 done AND ≥6 skipped for a real split
+        // W728 — the LOGGED pool is SELF-REPORTED habits only. A HealthKit-verified
+        // habit is objective data (belongs to the verified side), not a check-box.
+        if (_wiHabitVerifiedFrac(h.id, doneDates, autoMap) > 0.5) return;
         const d = _wiAvg(done), m = _wiAvg(miss);
         if (m <= 0 || d <= m) return;
         const lift = Math.round(((d - m) / m) * 100);
@@ -44462,12 +44481,20 @@
       // 30-day slice: legit causation needs a long baseline. _wiStepDaysInWindow keeps
       // only the step-days that actually exist, so this is simply "all we have".
       const startKey = _wiDaysAgoKey(today, 400);
-      const cands = [];
-      const sp = _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey); if (sp) cands.push(sp);
-      const hp = _wiHabitPattern(completions, stepsDaily, startKey, endKey); if (hp) cands.push(hp);
-      const pp = _wiPowerDay(stepsDaily, startKey, endKey); if (pp) cands.push(pp);
-      cands.sort(function (a, b) { return (b.score || b.liftPct || 0) - (a.score || a.liftPct || 0); });
-      if (cands.length) { M.pattern = cands[0]; if (cands[1]) M.pattern2 = cands[1]; }
+      let autoMap = {}; try { autoMap = JSON.parse(localStorage.getItem('hb_completions_auto') || '{}') || {}; } catch (_) { autoMap = {}; }
+      // W728 — VERIFIED pool: objective HealthKit signals only (sleep, steps-by-
+      // weekday). Can't be gamed → carries the trust shield + may surface behavioral
+      // "leaks". Strongest becomes the hero.
+      const vCands = [];
+      const sp = _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey); if (sp) vCands.push(sp);
+      const pp = _wiPowerDay(stepsDaily, startKey, endKey); if (pp) vCands.push(pp);
+      vCands.sort(function (a, b) { return (b.score || b.liftPct || 0) - (a.score || a.liftPct || 0); });
+      if (vCands.length) { M.pattern = vCands[0]; M.pattern.verified = true; }
+      // W728 — LOGGED pool: self-reported habit → steps (HealthKit-verified habits
+      // filtered out inside). Only as honest as the user's logging, so it renders
+      // below the divider WITHOUT the verified shield.
+      const lp = _wiHabitPattern(completions, stepsDaily, startKey, endKey, autoMap);
+      if (lp) M.logged = lp;
     } catch (_) {}
     if (!M.pattern) {
       // Nothing meaningful yet — a real "fiercest day" hero needs real steps
@@ -44563,6 +44590,7 @@
     let heroInner;
     if (pat.mode === 'sleep') {
       const shortW = Math.max(6, Math.round(((pat.shortAvg | 0) / Math.max(1, pat.restedAvg | 0)) * 100));
+      const leakPct = Math.max(0, Math.round((((pat.restedAvg | 0) - (pat.shortAvg | 0)) / Math.max(1, pat.restedAvg | 0)) * 100));
       heroInner =
         '<div class="wi-hero-reveal"><div class="wi-reveal-kick">You move</div>'
         + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">+' + (pat.liftPct | 0) + '%</span><span class="wi-reveal-more">more</span></div>'
@@ -44570,7 +44598,8 @@
         + '<div class="wi-compare">'
         + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">Rested · 7.5h+</span><span class="wi-cmp-val num">' + nf(pat.restedAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
-        + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>';
+        + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>'
+        + (leakPct >= 10 ? '<div class="wi-leak"><span class="wi-leak-ic">↓</span> You lose about <b>' + leakPct + '%</b> of your movement on short-sleep nights.</div>' : '');
     } else if (pat.mode === 'habit') {
       const missW = Math.max(6, Math.round(((pat.missAvg | 0) / Math.max(1, pat.doneAvg | 0)) * 100));
       heroInner =
@@ -44602,20 +44631,25 @@
         + (de > 0 ? ' Active <b style="color:var(--wi-gold2)">' + ad + ' of ' + de + '</b> days so far.' : '')
         + '</div></div>';
     }
-    // Runner-up pattern rides a compact "Also" strip so the screen shows depth.
-    let alsoHtml = '';
-    const p2 = M.pattern2;
-    if (p2) {
-      let t = '';
-      if (p2.mode === 'habit') t = 'On ' + esc(p2.habitName) + ' days · <b>+' + (p2.liftPct | 0) + '%</b> steps';
-      else if (p2.mode === 'sleep') t = 'Rested nights (7.5h+) · <b>+' + (p2.liftPct | 0) + '%</b> steps';
-      else if (p2.mode === 'powerday') t = esc(p2.dow) + ' is your power day · <b>+' + (p2.liftPct | 0) + '%</b>';
-      if (t) alsoHtml = '<div class="wi-also"><span class="wi-also-ic">✦</span> ' + t + '</div>';
+    // W728 — VERIFIED trust shield on the hero (objective, HealthKit-sourced — can't
+    // be gamed). Only the verified pool (sleep / power-day) sets pat.verified.
+    const shieldHtml = (pat && pat.verified)
+      ? '<div class="wi-vbadge"><span class="wi-vbadge-ic">✓</span> Verified — from data you can’t fake</div>'
+      : '';
+    // W728 — "From your logs" secondary: the self-reported habit correlation, below a
+    // divider, with NO shield (only as honest as the user's own logging).
+    let loggedHtml = '';
+    const lg = M.logged;
+    if (lg && lg.mode === 'habit') {
+      loggedHtml = '<div class="wi-hero-div"></div>'
+        + '<div class="wi-logged"><div class="wi-logged-ey">From your logs</div>'
+        + '<div class="wi-logged-line">On <b>' + esc(lg.habitName) + '</b> days you move <b class="wi-lg-pct">+' + (lg.liftPct | 0) + '%</b> more'
+        + '<span class="wi-logged-sub"> · ' + (lg.n | 0) + ' logged days</span></div></div>';
     }
     const heroHtml =
       '<section class="wi-hero"><div class="wi-hero-sky"><div class="wi-moon"></div>'
       + '<i class="wi-star a"></i><i class="wi-star b"></i><i class="wi-star c"></i><i class="wi-star d"></i><i class="wi-star e"></i></div>'
-      + '<div class="wi-hero-ey">✦ The Hidden Pattern ✦</div>' + heroInner + alsoHtml + '</section>';
+      + '<div class="wi-hero-ey">✦ The Hidden Pattern ✦</div>' + shieldHtml + heroInner + loggedHtml + '</section>';
 
     // ── Dungeon + loot ──
     let lootHtml = '';
