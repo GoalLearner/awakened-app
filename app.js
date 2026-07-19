@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w720'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w721'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6436,13 +6436,6 @@
   }
 
   var _pfData = [], _pfTimer = null, _pfEl = null;
-  function _pfDefs() {
-    return '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
-      '<linearGradient id="pf-fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd574"/><stop offset=".5" stop-color="#ff7a3c"/><stop offset="1" stop-color="#e2531c"/></linearGradient>' +
-      '<linearGradient id="pf-fgi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6d5"/><stop offset="1" stop-color="#ffd574"/></linearGradient>' +
-      '<linearGradient id="pf-fgr" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb98a"/><stop offset=".55" stop-color="#e2531c"/><stop offset="1" stop-color="#7a2a14"/></linearGradient>' +
-      '</defs></svg>';
-  }
   function _pfSubInner() {
     var hottest = _pfData.reduce(function (m, d) { return Math.max(m, d.state === 'broken' ? 0 : d.streak); }, 0);
     var burning = _pfData.filter(function (d) { return d.state !== 'broken'; }).length;
@@ -8461,13 +8454,6 @@
     const base = ({ 2: 4, 3: 7, 4: 11, 5: 16 })[aiTierFor(floor)] || 4;
     return _ascentIsBoss(floor) ? Math.round(base * 1.5) : base;
   }
-  // Expected score (ELO) of the player vs a floor's implied rating.
-  function _ascentFloorRating(floor) { return 800 + floor * 14; }   // F1≈814 … F100≈2200
-  function _ascentRatingDelta(playerRating, floorRating, won) {
-    const expected = 1 / (1 + Math.pow(10, (floorRating - playerRating) / 400));
-    return Math.round(ASCENT_RATING_K * ((won ? 1 : 0) - expected));
-  }
-
   function arenaUnlockedTitles() {
     const st = getAscentState();
     return ARENA_TITLES.filter(t => _arenaTitleUnlocked(t, st));
@@ -10071,14 +10057,6 @@
     if (r >= 0.90) return { key: 'EVEN',    cls: 'even' };
     return { key: 'TOUGH', cls: 'tough' };
   }
-  function _ascTier(r) {
-    if (r < 1000) return { name: 'BRONZE',   color: '#b08d57' };
-    if (r < 1200) return { name: 'SILVER',   color: '#c8c6d8' };
-    if (r < 1400) return { name: 'GOLD',     color: '#f5b842' };
-    if (r < 1600) return { name: 'PLATINUM', color: '#5eead4' };
-    if (r < 1800) return { name: 'DIAMOND',  color: '#a78bfa' };
-    return { name: 'MASTER', color: '#ef4444' };
-  }
   function _ascPlayerPower() { try { return _arenaCombatProfile(_arenaPlayerStatline()).power; } catch (_) { return 0; } }
 
   // ── W268 — The Ascent: opening challenge + home climb tracker
@@ -10488,19 +10466,6 @@
               : 'They scrape the round, ' + round.bRoll + ' to ' + round.pRoll + '.';
   }
   // ── cinematic helpers (W215) ──────────────────────────────────────
-  function _arCountUp(el, from, to, dur) {
-    if (!el) return;
-    if (_arReduceMotion() || from === to) { el.textContent = to.toLocaleString('en-US'); return; }
-    const now0 = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    const start = now0();
-    const tick = () => {
-      const p = Math.min(1, (now0() - start) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(from + (to - from) * eased).toLocaleString('en-US');
-      if (p < 1) _arAfter(32, tick);
-    };
-    tick();
-  }
   // ── W222 fill modules (presentation only — real engine state) ─────
   // Tale of the Tape: role-by-role you-vs-foe (ATTACK/DEFENSE/EDGE), ×10
   // display, tap a row to expand your stat + relic breakdown + the matchup.
@@ -15204,7 +15169,9 @@
     if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
     // W645 — drop-only chase relics. Executor-safe: buyRelic re-checks this
     // gate before charging, so no stale/forged UI state can complete a buy.
-    if (DROP_ONLY_RELICS[card.id]) return { ok: false, reason: 'drop_only' };
+    // W721 — gate on rarity too (mirrors canSellRelic's _relicIsTrophy), so any
+    // FUTURE mythic auto-inherits the drop-only rule without touching the id list.
+    if (DROP_ONLY_RELICS[card.id] || _relicIsTrophy(card.id)) return { ok: false, reason: 'drop_only' };
     const price = relicBuyPrice(cardId);
     const entry = getInventory().cards[cardId] || _stubCard();
     const cap = STACK_CAPS[card.rarity] != null ? STACK_CAPS[card.rarity] : Infinity;
@@ -20248,7 +20215,7 @@
   // cap here just prevents accidental overflow from a corrupt local
   // state).
   const LB_CLIENT_CAPS = {
-    step_total:     200000,  // 200k steps in 7 days — far beyond any human
+    step_total:     150000,  // W721 — match backend METRIC_CAPS (W585 lowered 200k→150k)
     // W634 — sleep_streak / bedtime_streak / workout_streak / flights_climbed
     // caps removed with their retired boards (no longer submitted).
     // W292 BUGFIX — the Ascent tops out at floor 100 (mirrors backend
@@ -32120,7 +32087,9 @@
         try { localStorage.setItem(FIRST_COMPLETION_GUARD_KEY, '1'); _firstStepClaimed = true; } catch (_) {}
         if (_firstStepClaimed) {
           totalPoints += FIRST_COMPLETION_BONUS_XP;            // real rank XP (getRank reads totalPoints)
-          save();
+          save(); saveFlush();   // W721 — flush synchronously: the guard is already
+                                 // persisted, so an OS kill in the celebration tail
+                                 // must not strand the +XP behind a microtask-only save
           try { prUpdate('total_xp_lifetime', getPR('total_xp_lifetime').value + FIRST_COMPLETION_BONUS_XP); } catch (_) {}
           try { renderRank(); } catch (_) {}
           levelUpQueue.unshift({ type: 'first_win', habitName: habit ? habit.name : '', xp: FIRST_COMPLETION_BONUS_XP });
@@ -38895,14 +38864,6 @@
       return out;
     }
 
-    function schedLabel() {
-      if (hdSched === 'daily') return 'Every Day';
-      if (hdSched === 'ndays') return hdNdays + 'x / week';
-      if (!hdDays.length)     return 'Pick days…';
-      const abbr = ['M','T','W','T','F','S','S'];
-      return ALL_DAYS.filter(d => hdDays.includes(d)).map((d, _i) => abbr[ALL_DAYS.indexOf(d)]).join('');
-    }
-
     function render() {
       const content = document.getElementById('hd-content');
       content.innerHTML = '';
@@ -41147,12 +41108,6 @@
   // 1z.186 "preserve server order unless every friend has data"
   // policy still holds. No bosses-slain proxy. No alias-derived
   // rank. No client-side fabrication.
-  function _friendRankSortValue(friend) {
-    if (!friend) return null;
-    const v = Number(friend.rankSortValue);
-    return Number.isFinite(v) ? v : null;
-  }
-
   function _friendAvatarHtml(alias, variant, friend) {
     // v3 Phase 1z.207 — Guild Roster redesign. The circle now
     // ALWAYS holds the alias initial; the exact rank label (e.g.
@@ -48392,7 +48347,6 @@
   // covers it). Gated on an 'engaged' flag so users who never touch
   // co-op pay no network cost.
   // ════════════════════════════════════════════════════════════
-  function _coopEngaged() { try { return localStorage.getItem('hb_coop_engaged') === '1'; } catch (_) { return false; } }
   // W463 — persistent "has ever engaged co-op" flag: set when a hunt first goes
   // live on this device, NEVER auto-cleared. Keeps the background reconcile
   // running so a won hunt's drop always lands even on a backgrounded hunter whose
@@ -59389,6 +59343,10 @@
       'hb_ps_awarded',
       'hb_compound',
       'hb_compound_awarded',
+      'hb_compound_partial',   // W721 — was written+read but absent here: in-progress
+                               // compound accrual was silently lost on reinstall/new device
+      'hb_day_xp_ledger',      // W721 — sync today's soft-cap ledger so a mid-day restore
+                               // can't reset the per-user daily XP cap (a 2nd-farm window)
       'hb_prs',
       'hb_shields',
       'hb_shield_milestone',
