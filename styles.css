@@ -33540,44 +33540,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .aw-meta{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
 .aw-meta b{color:var(--text-secondary);font-weight:800;}
 
-/* ── STANDARDIZED CARD RECIPE (.aw-card) — shared with Relic Archive ─────── */
-.aw-card{border-radius:var(--radius-sm);background:var(--bg-card);border:1px solid var(--border);
-  overflow:hidden;position:relative;display:flex;flex-direction:column;
-  /* W592 — .aw-card renders as a <button> in the Armory; strip native button
-     chrome so iOS WKWebView doesn't paint its own gradient/padding over ours. */
-  -webkit-appearance:none;appearance:none;padding:0;margin:0;width:100%;
-  text-align:left;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.aw-card--equipped{border-color:rgba(245,158,11,.55);box-shadow:0 0 0 1px rgba(245,158,11,.12),0 6px 20px rgba(245,158,11,.10);}
-.aw-card--empty{border-style:dashed;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.015);cursor:pointer;}
-.aw-card--r-ultra{border-color:rgba(245,158,11,.40);box-shadow:0 0 0 1px rgba(245,158,11,.07),0 6px 18px rgba(245,158,11,.07);}
-.aw-card--r-mega{border-color:rgba(34,211,238,.40);box-shadow:0 0 0 1px rgba(34,211,238,.07),0 6px 18px rgba(34,211,238,.07);}
-.aw-card--r-rare{border-color:rgba(139,92,246,.34);}
-.aw-card--r-common{border-color:var(--border);}
-.aw-card__art{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;
-  background:
-    radial-gradient(72% 60% at 50% 34%, var(--glow,rgba(139,92,246,.22)), rgba(19,19,42,0) 72%),
-    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, rgba(255,255,255,0) 2px 9px),
-    linear-gradient(160deg,#26264d,#161636);
-  display:flex;align-items:center;justify-content:center;}
-.aw-card__art>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.aw-card__glyph{width:40px;height:40px;opacity:.55;filter:drop-shadow(0 0 8px var(--glow,transparent));}
-.aw-card__banner{position:absolute;top:0;left:0;right:0;z-index:3;height:24px;
-  display:flex;align-items:center;justify-content:space-between;padding:0 8px;
-  background:linear-gradient(180deg,rgba(9,9,20,.82),rgba(9,9,20,0));}
-.aw-card__id{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1px;color:#d6d8ea;text-transform:uppercase;
-  display:flex;align-items:center;gap:4px;}
-.aw-card__pwr{display:flex;align-items:baseline;gap:3px;}
-.aw-card__pwr .pn{font-family:var(--mono);font-size:14px;font-weight:800;line-height:1;color:var(--text-primary);text-shadow:0 1px 4px rgba(0,0,0,.7);}
-.aw-card__pwr .pl{font-family:var(--mono);font-size:7px;font-weight:800;letter-spacing:1px;color:rgba(255,255,255,.62);}
-.aw-card__body{padding:var(--sp-3) 11px 11px;display:flex;flex-direction:column;gap:6px;flex:1;}
-.aw-card__name{font-family:var(--sans);font-size:12.5px;font-weight:700;line-height:1.16;color:var(--text-primary);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.32em;}
-.aw-card__rarity{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--pc,var(--text-secondary));}
-.aw-card__empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;}
-.aw-card__empty .plus{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--text-tertiary);color:var(--text-secondary);
-  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:300;line-height:1;}
-.aw-card__empty .e1{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:1.6px;color:var(--text-secondary);text-transform:uppercase;}
-.aw-card__empty .e2{font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:.6px;color:var(--text-tertiary);text-transform:uppercase;}
 
 /* ── Equipment Build grid (v2, W606): 4×2 gear-cards; item names live in a
      caption strip BELOW the art (off it) so the whole grid keeps one baseline.
