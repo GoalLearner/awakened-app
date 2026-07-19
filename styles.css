@@ -23514,6 +23514,30 @@ button.guildhall-summary-tile:active {
 .guildhall-activity-row:first-child {
   border-top: 0;
 }
+/* W722 — collapsed boss-kill group ("<hunter> defeated N bosses" + inline expand) */
+.guildhall-boss-group { cursor: pointer; }
+.guildhall-boss-group:hover { background: rgba(239, 68, 68, 0.05); }
+.guildhall-boss-group-chev {
+  flex-shrink: 0;
+  color: var(--text-muted, #6b6b86);
+  font-size: 0.7rem;
+  transition: transform 0.18s ease;
+}
+.guildhall-boss-group--open .guildhall-boss-group-chev { transform: rotate(90deg); }
+.guildhall-boss-group-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 12px 9px 50px;
+}
+.guildhall-boss-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+.guildhall-boss-sub-name { color: #ef4444; font-weight: 600; }
 .guildhall-activity-icon {
   width: 28px;
   height: 28px;

@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w721'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w722'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7476,6 +7476,91 @@
     );
   }
 
+  // ── W722 — Guild feed: group a hunter's boss kills per day ──────────────
+  // A burst of "<hunter> defeated <boss>" rows floods the guild news, so all of
+  // a hunter's boss_kill events within one local-date section collapse into a
+  // single "<hunter> defeated N bosses" row that expands in place to list them
+  // (tap toggles; pure DOM, no re-render). 2+ kills collapse; a lone kill stays
+  // a normal row. Only the remote (backend) Guild feed is affected.
+  var _gbgSeq = 0;
+  var _gbgWired = false;
+  function _guildBossNameFromLabel(label) {
+    return String(label || '').replace(/^defeated\s+/i, '').trim() || 'a boss';
+  }
+  function _guildBossGroupRowHtml(g) {
+    const id       = 'gbg' + (++_gbgSeq);
+    const alias    = _displayAliasLower(g.alias || 'a hunter');
+    const time     = _guildhallFormatRelativeTs(g.ts);
+    const n        = g.bosses.length;
+    const iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--combat" aria-hidden="true">⚔</span>';
+    const sub = g.bosses.map(function (b) {
+      return '<div class="guildhall-boss-sub-row">' +
+               '<span class="guildhall-boss-sub-name">' + esc(b.name) + '</span>' +
+               '<span class="guildhall-activity-time">' + esc(_guildhallFormatRelativeTs(b.ts)) + '</span>' +
+             '</div>';
+    }).join('');
+    return (
+      '<div class="guildhall-activity-row guildhall-boss-group" data-boss-group="' + id + '" role="button" tabindex="0" aria-expanded="false">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>' + esc(alias) + '</strong> defeated ' +
+          '<span class="guildhall-activity-target guildhall-activity-target--combat">' + n + ' bosses</span>' +
+        '</div>' +
+        '<span class="guildhall-boss-group-chev" aria-hidden="true">▸</span>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>' +
+      '<div class="guildhall-boss-group-sub hidden" data-boss-sub="' + id + '">' + sub + '</div>'
+    );
+  }
+  // Coalesce a newest-first backend-event list into [{ts, html}], merging each
+  // (localDay, hunter) set of boss_kill events into one collapsed group row.
+  // Non-boss events and lone kills render as normal rows via _friendActivityRowHtml.
+  function _coalesceGuildBossKills(evs) {
+    const groups = {};
+    const out = [];
+    (evs || []).forEach(function (ev) {
+      let ts = (ev && ev.createdAt) ? Date.parse(ev.createdAt) : 0;
+      if (!Number.isFinite(ts)) ts = 0;
+      if (ev && ev.eventType === 'boss_kill') {
+        const aliasLower = _displayAliasLower((ev && ev.alias) || 'a hunter');
+        const key = (_localDateKey(new Date(ts)) || '') + '|' + aliasLower;
+        let g = groups[key];
+        if (!g) { g = groups[key] = { alias: ev.alias, ts: ts, bosses: [], firstEv: ev }; out.push({ _gk: key }); }
+        g.bosses.push({ name: _guildBossNameFromLabel(ev.eventLabel), ts: ts });
+        if (ts > g.ts) g.ts = ts;
+      } else {
+        out.push({ ts: ts, html: _friendActivityRowHtml(ev) });
+      }
+    });
+    return out.map(function (o) {
+      if (!o._gk) return o;
+      const g = groups[o._gk];
+      return (g.bosses.length >= 2)
+        ? { ts: g.ts, html: _guildBossGroupRowHtml(g) }
+        : { ts: g.ts, html: _friendActivityRowHtml(g.firstEv) };
+    });
+  }
+  // One-time delegated toggle for the collapsed boss-kill groups. Document-level
+  // + module-guarded so it survives the feed's innerHTML replacement and can
+  // never double-bind. Boss-group rows carry no other tap affordance, so there's
+  // no handler conflict.
+  function _gbgWire() {
+    if (_gbgWired) return;
+    _gbgWired = true;
+    try {
+      document.addEventListener('click', function (e) {
+        const row = e.target && e.target.closest && e.target.closest('.guildhall-boss-group');
+        if (!row) return;
+        const id = row.getAttribute('data-boss-group'); if (!id) return;
+        const sub = row.parentNode && row.parentNode.querySelector('[data-boss-sub="' + id + '"]');
+        if (!sub) return;
+        const nowHidden = sub.classList.toggle('hidden');
+        row.classList.toggle('guildhall-boss-group--open', !nowHidden);
+        row.setAttribute('aria-expanded', nowHidden ? 'false' : 'true');
+      });
+    } catch (_) {}
+  }
+
   // v3 Phase 1z.181 — Hunter Feed eligibility rule.
   //
   // The Hunter Feed is a "things I earned" notification feed, not a
@@ -7664,7 +7749,7 @@
       let normalized;
       if (Array.isArray(_friendsActivityCache)) {
         _selfFilterMode = _viewerAliasLower ? 'alias' : 'none';
-        normalized = _friendsActivityCache
+        const _feedEvs = _friendsActivityCache
           .filter(ev => ev && ev.createdAt)
           .filter(ev => {
             if (!_viewerAliasLower) return true;
@@ -7675,11 +7760,11 @@
               return false;
             }
             return true;
-          })
-          .map(ev => {
-            const ts = Date.parse(ev.createdAt);
-            return { ts: Number.isFinite(ts) ? ts : 0, html: _friendActivityRowHtml(ev) };
           });
+        // W722 — sort newest-first, then collapse each hunter's per-day boss
+        // kills into one expandable "defeated N bosses" row before rendering.
+        _feedEvs.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+        normalized = _coalesceGuildBossKills(_feedEvs);
       } else {
         // v3 Phase 1z.264 — Local fallback now returns [] for Guild
         // mode. Every hb_guild_activity entry is self-authored by
@@ -7740,6 +7825,7 @@
 
     const groups = _groupGuildActivityEntriesByDate(visible);
     body.innerHTML = _renderGuildActivityDateGroups(groups);
+    _gbgWire();   // W722 — enable tap-to-expand on collapsed boss-kill groups
 
     // Diagnostic breadcrumb — extended with the 1z.182 grouping
     // counts. Hunter keeps its 1z.181 eligibility fields; Guild
