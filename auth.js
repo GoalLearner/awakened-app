@@ -871,6 +871,32 @@
   //   { ok: true,  accolades: [...] }   (200 — may be empty array)
   //   { ok: false, code: 'EXPIRED' }    (401 — session gone, local cleared)
   //   { ok: false, code: 'RATE_LIMITED' | 'NETWORK' | 'ERROR' | ... }
+  // W723 — members-only Weekly Insights percentile (the one figure the client
+  // can't know: where you rank among other hunters). Returns { ok, me } where
+  // me is { weekTotal, rankTier, global, cohort } | null. Non-members get 403
+  // (the caller falls back to a local-only render / paywall).
+  async function fetchInsightsWeekly() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/insights/weekly', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+    } catch (e) {
+      return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
+    }
+    let data;
+    try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) return { ok: true, week: data.week, me: data.me || null };
+    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 403) return { ok: false, code: 'MEMBERS_ONLY' };
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: 'ERROR', detail: (data && data.detail) || 'Insights unavailable.' };
+  }
+
   async function fetchAccolades() {
     const u = readUser();
     const gate = _stubGate(u);
@@ -1940,6 +1966,8 @@
     // W657 — Week Recap ceremony (payload + server-side seen flag)
     fetchWeekRecap,
     markWeekRecapSeen,
+    // W723 — members-only Weekly Insights percentile
+    fetchInsightsWeekly,
     // W658 — archive week-flipper (one finished week's FINAL board)
     fetchLeaderboardArchive,
     // Weekly Steps Hall of Fame (v3 Phase 1z.36)

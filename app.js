@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w722'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w723'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34676,6 +34676,7 @@
       'wn-overlay',      // W362 - post-update What’s New sheet must defer day-beats
       'welcome-back-overlay', // W377 - day-2 welcome-back screen
       'wr-overlay',           // W657 - Week Recap ceremony (day-beats defer under it)
+      'wi-overlay',           // W723 - members-only Weekly Insights sheet
       'arena-overlay',        // W657 - never mount a beat over a live fight (Ascent/PvP)
     ];
     for (let i = 0; i < ids.length; i++) {
@@ -44266,6 +44267,296 @@
     });
     document.body.appendChild(overlay);
   }
+
+  // ══ W723 — Members-only "Your Weekly Awakening" insights screen ══════════
+  // Entry: a card in the Guild Hall (#social-panel). Members open the sheet;
+  // non-members hit the paywall. Assembled almost entirely from local data;
+  // only the Standing percentile comes from the backend (the one figure the
+  // client can't know). Live CURRENT-week-to-date.
+  const _WI_DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const _WI_DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const _WI_RARITY_RANK = { common: 0, rare: 1, ultra_rare: 2, mythic: 3 };
+  const _WI_RARITY_LABEL = { common: 'Common', rare: 'Rare', ultra_rare: 'Ultra', mythic: 'S+' };
+  function _wiWeekStartMs(weekStr) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStr || '');
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : 0;
+  }
+  function _wiNextDate(ds) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ds || ''); if (!m) return '';
+    const nx = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 1));
+    return nx.getUTCFullYear() + '-' + String(nx.getUTCMonth() + 1).padStart(2, '0') + '-' + String(nx.getUTCDate()).padStart(2, '0');
+  }
+  function _wiDow(ds, full) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ds || ''); if (!m) return '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3]).getDay();
+    return (full ? _WI_DOW_FULL : _WI_DOW)[d];
+  }
+
+  // Assemble the whole model. Async — the percentile is a network read that
+  // degrades to null (offline / non-member) so the screen still renders local.
+  async function buildWeeklyInsights() {
+    const M = { week: '', weekLabel: '', steps: {}, rank: {}, pattern: null, dungeon: {}, standing: null };
+    let state = {}; try { state = loadLeaderboardState() || {}; } catch (_) {}
+    const stepsDaily = (state && state.steps_daily) || {};
+    const sleepDaily = (state && state.sleep_hours_daily) || {};
+    const weekStart = (typeof lbGetCurrentWeekStartPT === 'function') ? lbGetCurrentWeekStartPT() : '';
+    const weekMs = _wiWeekStartMs(weekStart);
+    const today = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
+    M.week = weekStart;
+    try { M.weekLabel = (typeof lbFormatWeekRange === 'function') ? lbFormatWeekRange(weekStart) : weekStart; } catch (_) { M.weekLabel = weekStart; }
+
+    // Days of the current week so far (weekStart..today, ≤7).
+    const days = [];
+    let d = weekStart;
+    for (let i = 0; i < 7 && d; i++) { days.push(d); if (d === today) break; d = _wiNextDate(d); if (!d || d > today) break; }
+
+    // ── STEP DOMINION ──
+    let weekTotal = 0; try { weekTotal = (typeof lbSumCurrentWeekSteps === 'function') ? (lbSumCurrentWeekSteps(stepsDaily) | 0) : 0; } catch (_) {}
+    let lastTotal = 0;
+    try {
+      let pd = (typeof _wrPriorWeek === 'function') ? _wrPriorWeek(weekStart) : '';
+      for (let i = 0; i < 7 && pd && pd < weekStart; i++) { lastTotal += (stepsDaily[pd] | 0); pd = _wiNextDate(pd); }
+    } catch (_) {}
+    const wowPct = lastTotal > 0 ? Math.round(((weekTotal - lastTotal) / lastTotal) * 100) : null;
+    let peakDay = '', peakSteps = 0; const spark = [];
+    days.forEach(function (ds) { const s = stepsDaily[ds] | 0; spark.push({ dow: _wiDow(ds), steps: s }); if (s > peakSteps) { peakSteps = s; peakDay = ds; } });
+    let isPR = false; try { const we = state.best_7day_step_window_end || ''; isPR = !!(we && we >= weekStart); } catch (_) {}
+    let has100k = false; try { const a = (typeof accolades !== 'undefined' && accolades.get) ? accolades.get('step_100k_club') : null; has100k = !!(a && (a.unlocked_at | 0) >= weekMs); } catch (_) {}
+    M.steps = { total: weekTotal, wowPct: wowPct, peakDow: peakDay ? _wiDow(peakDay, true) : '', peakSteps: peakSteps, spark: spark, isPR: isPR, has100k: has100k };
+
+    // ── RANK (progress to next major rank; ETA-weeks deferred — no XP-rate source) ──
+    let tier = '', toNextPct = 0, nextId = '';
+    try {
+      const rk = getRank(totalPoints) || {};
+      tier = rk.id || '';
+      nextId = rk.next || '';
+      if (typeof rk.min === 'number' && typeof rk.max === 'number' && rk.max > rk.min) {
+        toNextPct = Math.max(0, Math.min(100, Math.round(((totalPoints - rk.min) / (rk.max - rk.min)) * 100)));
+      }
+    } catch (_) {}
+    M.rank = { tier: tier, toNextPct: toNextPct, nextId: nextId };
+
+    // ── THE HIDDEN PATTERN — sleep→steps if derivable, else peak-day hero ──
+    try {
+      const rested = [], short = [];
+      days.forEach(function (ds) {
+        const st = stepsDaily[ds]; const sl = sleepDaily[ds];
+        if (typeof st !== 'number' || typeof sl !== 'number') return;
+        (sl >= 7.5 ? rested : short).push(st);
+      });
+      const avg = function (a) { return a.length ? Math.round(a.reduce(function (x, y) { return x + y; }, 0) / a.length) : 0; };
+      const rAvg = avg(rested), sAvg = avg(short);
+      if (rested.length && short.length && sAvg > 0 && rAvg > sAvg) {
+        M.pattern = { mode: 'sleep', liftPct: Math.round(((rAvg - sAvg) / sAvg) * 100), restedAvg: rAvg, shortAvg: sAvg };
+      }
+    } catch (_) {}
+    if (!M.pattern) {
+      M.pattern = (peakSteps > 0)
+        ? { mode: 'peak', dow: _wiDow(peakDay, true), steps: peakSteps }
+        : { mode: 'none' };
+    }
+
+    // ── DUNGEON — bosses this week (souls ledger) + best drop (drop ledger) ──
+    let bossCount = 0;
+    try {
+      const led = (typeof _readSoulsLedger === 'function') ? (_readSoulsLedger() || []) : [];
+      bossCount = led.filter(function (e) { return e && (e.ts | 0) >= weekMs && (e.type === 'boss_kill' || e.type === 'coop_kill'); }).length;
+    } catch (_) {}
+    let bestDrop = null;
+    try {
+      const dl = (typeof _readDropLedger === 'function') ? (_readDropLedger() || []) : [];
+      dl.forEach(function (e) {
+        if (!e || (e.ts | 0) < weekMs) return;
+        const r = _WI_RARITY_RANK[e.rarity] != null ? _WI_RARITY_RANK[e.rarity] : -1;
+        if (r < 1) return;                          // only rare+ is a "flex"
+        if (!bestDrop || r > bestDrop._r || (r === bestDrop._r && (e.ts | 0) > (bestDrop._ts | 0))) {
+          bestDrop = { name: e.cardName || 'a relic', rarity: e.rarity, src: e.sourceLabel || '', _r: r, _ts: e.ts | 0 };
+        }
+      });
+    } catch (_) {}
+    M.dungeon = { bosses: bossCount, drop: bestDrop };
+
+    // ── STANDING — the one figure the client can't know (backend percentile) ──
+    try {
+      if (window.Auth && typeof Auth.fetchInsightsWeekly === 'function') {
+        const r = await Auth.fetchInsightsWeekly();
+        if (r && r.ok && r.me) M.standing = r.me;   // { weekTotal, rankTier, global, cohort }
+      }
+    } catch (_) {}
+
+    return M;
+  }
+
+  // Render the model into the ported "Your Weekly Awakening" markup. Classes
+  // are scoped under #wi-overlay in styles.css (device chrome stripped from the
+  // ClaudeDesign mock). Two soft-blocker sub-elements from the mock — the
+  // training-streak dots and the rank "~N weeks" ETA — are omitted in v1
+  // (no per-day workout log / no weekly-XP-rate source); everything shown is
+  // real data.
+  function _wiHtml(M) {
+    const s = M.steps || {}, rk = M.rank || {}, pat = M.pattern || {}, dg = M.dungeon || {}, st = M.standing;
+    const nf = function (n) { return (n | 0).toLocaleString('en-US'); };
+
+    // ── Standing (percentile from backend; soft copy on sparse/absent) ──
+    let percentileLine, standingSub = 'of all Hunters this week';
+    if (st && st.global && !st.global.lowConfidence) {
+      percentileLine = '<b class="num">Top ' + (st.global.topPct | 0) + '%</b>';
+    } else {
+      percentileLine = '<b>Among the Awakened</b>'; standingSub = 'your standing this week';
+    }
+    const nextTier = rk.nextId || '';
+    const trajMeta = nextTier
+      ? '<span class="wi-tm1">' + (rk.toNextPct | 0) + '% to ' + esc(nextTier) + '-Rank</span>'
+      : '<span class="wi-tm1">Peak rank reached</span>';
+
+    // ── Step dominion ──
+    const delta = (s.wowPct != null)
+      ? '<div class="wi-delta ' + (s.wowPct < 0 ? 'down' : '') + '">' + (s.wowPct < 0 ? '▼ ' : '▲ ') + Math.abs(s.wowPct) + '% <span>vs last week</span></div>'
+      : '';
+    let cohortLine = '';
+    if (st && st.cohort && !st.cohort.lowConfidence && rk.tier) {
+      cohortLine = '<div class="wi-pctl"><div class="wi-pctl-track"><i style="width:' + (st.cohort.beatPct | 0) + '%"></i></div>'
+        + '<div class="wi-pctl-cap">Outpaced <b>' + (st.cohort.beatPct | 0) + '%</b> of ' + esc(rk.tier) + '-Rank hunters</div></div>';
+    }
+    const foils = [];
+    if (s.isPR) foils.push('<div class="wi-foil"><span class="wi-fs">✦</span> New Personal Record</div>');
+    if (s.has100k) foils.push('<div class="wi-foil"><span class="wi-fs">✦</span> 100K Club Claimed</div>');
+    const foilsHtml = foils.length ? '<div class="wi-foils">' + foils.join('') + '</div>' : '';
+    const sparkMax = Math.max(1, ...(s.spark || []).map(function (b) { return b.steps | 0; }));
+    const sparkHtml = (s.spark || []).map(function (b) {
+      const peak = (b.steps | 0) === (s.peakSteps | 0) && (s.peakSteps | 0) > 0;
+      const h = Math.round(((b.steps | 0) / sparkMax) * 50) + 4;
+      return '<div class="wi-b' + (peak ? ' peak' : '') + '"><i style="height:' + h + 'px"></i><em>' + esc(b.dow) + '</em></div>';
+    }).join('');
+    const sparkCap = (s.peakSteps | 0) > 0
+      ? '<div class="wi-spark-cap"><div class="wi-sc1">Peak Day · ' + esc(s.peakDow || '') + '</div><div class="wi-sc2 num">' + nf(s.peakSteps) + '</div><div class="wi-sc3">steps in one day</div></div>'
+      : '';
+
+    // ── Hidden Pattern (signature) ──
+    let heroInner;
+    if (pat.mode === 'sleep') {
+      const shortW = Math.max(6, Math.round(((pat.shortAvg | 0) / Math.max(1, pat.restedAvg | 0)) * 100));
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">You move</div>'
+        + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">+' + (pat.liftPct | 0) + '%</span><span class="wi-reveal-more">more</span></div>'
+        + '<div class="wi-reveal-sub">on the days after a full night’s sleep.</div></div>'
+        + '<div class="wi-compare">'
+        + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">Rested · 7.5h+</span><span class="wi-cmp-val num">' + nf(pat.restedAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
+        + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
+        + '<div class="wi-cmp-foot">avg steps per day</div></div>';
+    } else if (pat.mode === 'peak') {
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your fiercest day</div>'
+        + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">' + nf(pat.steps) + '</span><span class="wi-reveal-more">steps</span></div>'
+        + '<div class="wi-reveal-sub">' + esc(pat.dow || 'one day') + ', you refused to be still.</div></div>';
+    } else {
+      heroInner = '<div class="wi-hero-reveal"><div class="wi-reveal-sub">Your pattern is still taking shape. Keep moving, Hunter.</div></div>';
+    }
+    const heroHtml =
+      '<section class="wi-hero"><div class="wi-hero-sky"><div class="wi-moon"></div>'
+      + '<i class="wi-star a"></i><i class="wi-star b"></i><i class="wi-star c"></i><i class="wi-star d"></i><i class="wi-star e"></i></div>'
+      + '<div class="wi-hero-ey">✦ The Hidden Pattern ✦</div>' + heroInner + '</section>';
+
+    // ── Dungeon + loot ──
+    let lootHtml = '';
+    if (dg.drop) {
+      lootHtml =
+        '<div class="wi-loot"><div class="wi-loot-art"><span class="wi-loot-rank">' + esc(_WI_RARITY_LABEL[dg.drop.rarity] || '★') + '</span><span class="wi-lg">✦</span></div>'
+        + '<div class="wi-loot-body"><div class="wi-loot-eb">Most Powerful Drop</div><div class="wi-loot-name">' + esc(dg.drop.name) + '</div>'
+        + (dg.drop.src ? '<div class="wi-loot-src">From · ' + esc(dg.drop.src) + '</div>' : '') + '</div></div>';
+    }
+    const dungeonHtml = (dg.bosses | 0) > 0
+      ? '<section class="wi-section"><div class="wi-eyebrow"><span class="wi-idx">✦</span> Dungeon Victories</div>'
+        + '<div class="wi-dungeon"><div class="wi-dg-head"><div class="wi-dg-count num">' + (dg.bosses | 0) + '</div>'
+        + '<div class="wi-dg-txt"><div class="wi-dg-t1">Bosses Defeated</div><div class="wi-dg-t2">' + ((dg.bosses | 0) >= 5 ? 'A relentless week of raids' : 'Steel met resolve') + '</div></div></div>'
+        + lootHtml + '</div></section>'
+      : '';
+
+    // ── Guild reflection ──
+    const reflection = (s.peakSteps | 0) > 0
+      ? esc(s.peakDow || 'This week') + ', you moved like the void itself — <b>' + nf(s.peakSteps) + ' steps</b> in a single day. The Guild sings of your name, Hunter.'
+      : 'The board is quiet, but the climb is yours to claim. The Guild watches, Hunter.';
+
+    return ''
+      + '<div class="wi-scrim" data-wi-dismiss></div>'
+      + '<div class="wi-sheet" role="dialog" aria-modal="true" aria-label="Your Weekly Awakening">'
+      + '<button class="wi-close" data-wi-dismiss aria-label="Close">✕</button>'
+      + '<div class="wi-content">'
+      + '<header class="wi-header"><div class="wi-members-chip"><span class="wi-sp">✦</span> Members Only</div>'
+      + '<h1 class="wi-title foil-text">Your&nbsp;Weekly<br>Awakening</h1>'
+      + '<div class="wi-dateline">' + esc(M.weekLabel || '') + '</div></header>'
+      // Standing
+      + '<section class="wi-standing"><div class="wi-stand-top"><div class="wi-gem"><div class="wi-in"><span class="wi-rk">' + esc(rk.tier || '—') + '</span></div></div>'
+      + '<div class="wi-stand-flex"><div class="wi-stand-ey">Your Standing</div>'
+      + '<div class="wi-stand-big">' + percentileLine + (rk.tier ? '<span class="wi-rankchip">' + esc(rk.tier) + '-Rank</span>' : '') + '</div>'
+      + '<div class="wi-stand-sub">' + standingSub + '</div></div></div>'
+      + '<div class="wi-traj"><div class="wi-traj-row"><span class="wi-cap wi-cap-b">' + esc(rk.tier || '') + '</span>'
+      + '<div class="wi-traj-rail"><i class="wi-traj-fill" style="width:' + (rk.toNextPct | 0) + '%"></i></div>'
+      + '<span class="wi-cap wi-cap-a">' + esc(nextTier) + '</span></div><div class="wi-traj-meta">' + trajMeta + '</div></div></section>'
+      // Step dominion
+      + '<section class="wi-section"><div class="wi-eyebrow"><span class="wi-idx">✦</span> Step Dominion</div>'
+      + '<div class="wi-band"><div class="wi-band-hero"><div class="wi-band-num num">' + nf(s.total) + '</div><div class="wi-band-unit">Steps<br>This Week</div>' + delta + '</div>'
+      + cohortLine + foilsHtml
+      + (sparkHtml ? '<div class="wi-spark"><div class="wi-spark-bars">' + sparkHtml + '</div>' + sparkCap + '</div>' : '')
+      + '</div></section>'
+      // Hidden pattern
+      + heroHtml
+      // Dungeon
+      + dungeonHtml
+      // Reflection
+      + '<section class="wi-reflection"><div class="wi-ref-mark">“</div><p class="wi-ref-quote">' + reflection + '</p>'
+      + '<div class="wi-ref-sign"><i></i><span>The First Awakened</span><i></i></div></section>'
+      // Share
+      + '<div class="wi-sharebar"><button class="wi-share" data-wi-share><span>Share to Guild</span></button></div>'
+      + '</div></div>';
+  }
+
+  function _wiDismiss() { try { const el = document.getElementById('wi-overlay'); if (el) el.remove(); } catch (_) {} }
+  function _wiShare(M) {
+    try {
+      const s = (M && M.steps) || {};
+      const txt = 'My Weekly Awakening — ' + ((s.total | 0).toLocaleString('en-US')) + ' steps'
+        + (M && M.rank && M.rank.tier ? ', ' + M.rank.tier + '-Rank' : '') + '. #Awakened';
+      if (navigator.share) { navigator.share({ title: 'Your Weekly Awakening', text: txt }).catch(function () {}); }
+      else if (typeof showHabitToast === 'function') showHabitToast('Recap ready to share.');
+    } catch (_) {}
+  }
+  function _wiPresent(M) {
+    if (document.getElementById('wi-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'wi-overlay';
+    overlay.className = 'wi-overlay';
+    overlay.innerHTML = _wiHtml(M);
+    overlay.addEventListener('click', function (e) {
+      const t = e.target;
+      if (t && t.closest && t.closest('[data-wi-share]')) { _wiShare(M); return; }
+      if (t && t.closest && t.closest('[data-wi-dismiss]')) { _wiDismiss(); }
+    });
+    document.body.appendChild(overlay);
+  }
+
+  // Entry from the Guild Hall. Members → build + present; non-members → paywall.
+  let _wiOpening = false;
+  async function openWeeklyInsights() {
+    try {
+      const isMember = (typeof _founderOwned === 'function') ? _founderOwned() : false;
+      if (!isMember) { try { if (typeof openFounder === 'function') openFounder(); } catch (_) {} return; }
+      if (_wiOpening || document.getElementById('wi-overlay')) return;
+      _wiOpening = true;
+      let M;
+      try { M = await buildWeeklyInsights(); } finally { _wiOpening = false; }
+      if (M) _wiPresent(M);
+    } catch (_) { _wiOpening = false; }
+  }
+  try { window.__wiDemo = function () { buildWeeklyInsights().then(_wiPresent); }; } catch (_) {}
+  // Delegated open — the Guild Hall entry card (#wi-entry) is static markup, so
+  // one document-level listener covers it whenever the panel is shown.
+  try {
+    document.addEventListener('click', function (e) {
+      const t = e.target;
+      if (t && t.closest && t.closest('[data-wi-open]')) { try { e.preventDefault(); } catch (_) {} openWeeklyInsights(); }
+    });
+  } catch (_) {}
 
   // One ceremony per finished week per session; server decides seen/eligible.
   let _wrShownForWeek = null;
