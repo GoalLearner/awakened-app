@@ -75,6 +75,24 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM coop_boss_participants WHERE instance_id NOT IN (SELECT id FROM coop_boss_instances)');
   await bestEffortDelete(env, 'DELETE FROM duels WHERE challenger_user_id = ? OR opponent_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM app_opens WHERE user_id = ?', uid); // 0027 retention rows
+  // W721 — user-id-keyed tables added after W383 that have no cascade and were
+  // never purged. Each its own guarded statement (a not-yet-migrated table can't
+  // break the rest). Why each matters:
+  //   premium_subscriptions (0030) — real-money record (Apple 5.1.1(v) retention)
+  //   device_tokens (0029)          — APNs tokens (privacy)
+  //   founder_marks (0031)          — frees the capped lifetime slot (cap 20) a
+  //                                   deleted founder would otherwise hold forever
+  //   raid_queue (0038)             — else the matchmaking cron can still pull a
+  //                                   deleted user into a hunt
+  //   coop_boss_awards (0026), pvp_ratings/pvp_queue/pvp_matches (0021)
+  await bestEffortDelete(env, 'DELETE FROM premium_subscriptions WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM device_tokens WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM founder_marks WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM raid_queue WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM coop_boss_awards WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM pvp_ratings WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM pvp_queue WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM pvp_matches WHERE p1_user_id = ? OR p2_user_id = ?', uid, uid);
 
   // ── Core deletion (MUST succeed) ──
   // user_state_snapshots has no FK on users.id (kept independent so the schema
