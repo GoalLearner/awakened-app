@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w729'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w730'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44438,7 +44438,7 @@
       if (bw < 0) return null;
       const lift = Math.round(((ba - overall) / overall) * 100);
       if (lift < 20) return null;
-      return { mode: 'powerday', dow: _WI_DOW_FULL[bw], liftPct: lift, avg: Math.round(ba), score: lift };
+      return { mode: 'powerday', dow: _WI_DOW_FULL[bw], liftPct: lift, avg: Math.round(ba), score: lift, n: days };
     } catch (_) { return null; }
   }
   // Groundwork for a future momentum pattern: persist this week's total so
@@ -44661,7 +44661,9 @@
       heroInner =
         '<div class="wi-hero-reveal"><div class="wi-reveal-kick">Your power day</div>'
         + '<div class="wi-reveal-big"><span class="wi-reveal-num wi-reveal-word foil-text">' + esc(pat.dow) + '</span></div>'
-        + '<div class="wi-reveal-sub"><b style="color:var(--wi-gold2)">+' + (pat.liftPct | 0) + '%</b> above your average — ' + esc(pat.dow) + 's are when you move most.</div></div>';
+        + '<div class="wi-reveal-sub"><b style="color:var(--wi-gold2)">+' + (pat.liftPct | 0) + '%</b> above your average — ' + esc(pat.dow) + 's are when you move most.</div>'
+        + ((pat.n | 0) > 0 ? '<div class="wi-window-note">across your last ' + (pat.n | 0) + ' days</div>' : '')
+        + '</div>';
     } else if (pat.mode === 'peak') {
       const pk = (pat.steps | 0);
       const pkLine = pk >= 20000 ? 'you were unstoppable.' : pk >= 13000 ? 'you refused to be still.' : 'you kept the fire lit.';
