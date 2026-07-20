@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w732'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w733'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7508,14 +7508,23 @@
       return _guildBossRankMap[String(name || '').toLowerCase().trim()] || '';
     } catch (_) { return ''; }
   }
+  // W733 — kill list ordered by rank, hardest → lowest (S+ … E), so same-rank
+  // bosses sit together and the toughest conquests lead. Newest-first within a
+  // tier as the tiebreak (matches the feed's overall recency order).
+  var _GUILD_RANK_ORDER = { 'S+': 7, S: 6, A: 5, B: 4, C: 3, D: 2, E: 1 };
   function _guildBossGroupRowHtml(g) {
     const id       = 'gbg' + (++_gbgSeq);
     const alias    = _displayAliasLower(g.alias || 'a hunter');
     const time     = _guildhallFormatRelativeTs(g.ts);
     const n        = g.bosses.length;
     const iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--combat" aria-hidden="true">⚔</span>';
-    const sub = g.bosses.map(function (b) {
-      const rk = _guildBossRankFromName(b.name);
+    const ordered = g.bosses.map(function (b) { return { name: b.name, ts: b.ts, rk: _guildBossRankFromName(b.name) }; })
+      .sort(function (a, b) {
+        const d = (_GUILD_RANK_ORDER[b.rk] || 0) - (_GUILD_RANK_ORDER[a.rk] || 0);
+        return d !== 0 ? d : ((b.ts | 0) - (a.ts | 0));
+      });
+    const sub = ordered.map(function (b) {
+      const rk = b.rk;
       const rkChip = rk
         ? '<span class="guildhall-boss-sub-rank" style="--rc:' + (typeof _lbRankColor === 'function' ? _lbRankColor(rk) : '#a78bfa') + '">' + esc(rk) + '</span>'
         : '';
