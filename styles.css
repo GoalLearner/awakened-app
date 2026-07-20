@@ -23324,9 +23324,12 @@ button.guildhall-summary-tile:active {
   font-size: 0.88rem;
   letter-spacing: 0.02em;
   color: var(--text-primary, #f3f4f6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* W734 — wrap long boss names to 2 lines instead of clipping with an
+     ellipsis; the old nowrap also swallowed the inline CO-OP tag. */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.25;
 }
 .guild-bosses-row {
   display: grid;
@@ -33196,7 +33199,13 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @media (prefers-reduced-motion:reduce){.review-pp,.review-pp-card{transition:none;}}
 
 /* W545 — CO-OP dungeon rows in the Kill Log (Bosses Slain sheet) */
-.guild-bosses-coop-tag{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:5px;font-size:8.5px;font-weight:800;letter-spacing:.1em;vertical-align:middle;color:#c4b5fd;background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.42);}
+.guild-bosses-coop-tag{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:5px;font-size:8.5px;font-weight:800;letter-spacing:.1em;vertical-align:middle;white-space:nowrap;color:#c4b5fd;background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.42);}
+/* W734 — key so the dot colors aren't a secret: yellow = solo, purple = co-op. */
+.guild-bosses-legend{display:flex;gap:16px;justify-content:flex-end;align-items:center;padding:0 6px 11px;}
+.guild-bosses-legend .gbl-item{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-secondary,#8e8e93);}
+.guild-bosses-legend .gbl-dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.guild-bosses-legend .gbl-dot--solo{background:#f5b842;box-shadow:0 0 6px rgba(245,184,66,.6);}
+.guild-bosses-legend .gbl-dot--coop{background:#8b5cf6;box-shadow:0 0 6px rgba(139,92,246,.6);}
 .guild-bosses-row--coop .guild-bosses-row-dot{background:#8b5cf6;box-shadow:0 0 7px rgba(139,92,246,.6);}
 
 /* ============================================================================
