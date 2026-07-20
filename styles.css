@@ -23552,6 +23552,21 @@ button.guildhall-summary-tile:active {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--rc, #a78bfa);
 }
+/* W735 — Hunter feed boss group: per-boss souls + a co-op tag in the expansion */
+.guildhall-boss-sub-souls {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px;
+  color: #f5b842;
+}
+.guildhall-boss-sub-coop {
+  display: inline-flex; align-items: center;
+  margin-left: 7px; padding: 0 5px; height: 14px;
+  border-radius: 4px; vertical-align: middle;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.6px;
+  color: #c4b5fd; background: rgba(139,92,246,0.14); border: 1px solid rgba(139,92,246,0.5);
+}
 
 /* ═══ W723 — Members-only "Your Weekly Awakening" (ClaudeDesign handoff 22, chrome stripped) ═══ */
 /* Guild Hall entry card */

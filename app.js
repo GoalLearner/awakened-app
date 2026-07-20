@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w734'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w735'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7626,6 +7626,66 @@
   // (partition step) so the spend / duel exclusion counts can ride
   // out into the diagnostic breadcrumb without a second pass.
 
+  // ── W735 — Hunter feed boss-victory rows (single + grouped) ─────────────
+  // One boss victory as a single row: solo → "You defeated X", co-op → "You
+  // cleared X", souls appended when earned. Reproduces the pre-W735 solo/co-op
+  // rows so a lone win looks unchanged.
+  function _hunterBossVictoryRowHtml(v) {
+    const time = _guildhallFormatRelativeTs(v.ts);
+    const iconHtml = _guildhallActivityIconHtml('boss_kill');
+    const verb = v.coop ? 'cleared' : 'defeated';
+    const souls = (v.souls | 0) > 0
+      ? ' <span class="guildhall-activity-target-sub">· +' + (v.souls | 0).toLocaleString('en-US') + ' souls</span>' : '';
+    return (
+      '<div class="guildhall-activity-row">' + iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>You</strong> ' + verb + ' ' +
+          '<span class="guildhall-activity-target guildhall-activity-target--gold">' + esc(v.name) + '</span>' + souls +
+        '</div>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>'
+    );
+  }
+  // Same-day boss victories collapse into one expandable row — mirrors the
+  // W722/W731 guild group (rank-ordered, per-boss rank chip) but hunter-flavored
+  // ("You defeated N bosses · +Σ souls") with per-boss souls + a co-op tag.
+  // Reuses the .guildhall-boss-group markup so _gbgWire()'s document-delegated
+  // toggle handles it with no new wiring.
+  function _hunterBossGroupRowHtml(g) {
+    const id = 'hbg' + (++_gbgSeq);
+    const time = _guildhallFormatRelativeTs(g.ts);
+    const n = g.bosses.length;
+    const iconHtml = '<span class="guildhall-activity-icon guildhall-activity-icon--combat" aria-hidden="true">⚔</span>';
+    const ordered = g.bosses.slice().sort(function (a, b) {
+      const d = (_GUILD_RANK_ORDER[b.rk] || 0) - (_GUILD_RANK_ORDER[a.rk] || 0);
+      return d !== 0 ? d : ((b.ts | 0) - (a.ts | 0));
+    });
+    const sub = ordered.map(function (b) {
+      const rkChip = b.rk
+        ? '<span class="guildhall-boss-sub-rank" style="--rc:' + (typeof _lbRankColor === 'function' ? _lbRankColor(b.rk) : '#a78bfa') + '">' + esc(b.rk) + '</span>' : '';
+      const coopTag = b.coop ? '<span class="guildhall-boss-sub-coop">CO-OP</span>' : '';
+      const souls = (b.souls | 0) > 0 ? '<span class="guildhall-boss-sub-souls">+' + (b.souls | 0).toLocaleString('en-US') + '</span>' : '';
+      return '<div class="guildhall-boss-sub-row">' +
+               '<span class="guildhall-boss-sub-name">' + rkChip + esc(b.name) + coopTag + '</span>' +
+               souls +
+             '</div>';
+    }).join('');
+    const totalStr = (g.totalSouls | 0) > 0
+      ? ' <span class="guildhall-activity-target-sub">· +' + (g.totalSouls | 0).toLocaleString('en-US') + ' souls</span>' : '';
+    return (
+      '<div class="guildhall-activity-row guildhall-boss-group" data-boss-group="' + id + '" role="button" tabindex="0" aria-expanded="false">' +
+        iconHtml +
+        '<div class="guildhall-activity-text">' +
+          '<strong>You</strong> defeated ' +
+          '<span class="guildhall-activity-target guildhall-activity-target--combat">' + n + ' bosses</span>' + totalStr +
+        '</div>' +
+        '<span class="guildhall-boss-group-chev" aria-hidden="true">▸</span>' +
+        '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
+      '</div>' +
+      '<div class="guildhall-boss-group-sub hidden" data-boss-sub="' + id + '">' + sub + '</div>'
+    );
+  }
+
   function _buildHunterFeedEntries(personalActivity, soulsRows) {
     const merged = [];
     const consumedSoulIds = new Set();
@@ -7653,47 +7713,83 @@
       eligibleSouls.push(s);
     }
 
-    // First pass: personal feats. For boss_kill rows, search for a
-    // same-window eligible souls boss_kill row and collapse.
+    // W735 — collect boss VICTORIES as structured records so same-day kills
+    // group into one "You defeated N bosses · +Σ souls" row (mirrors the W722
+    // guild feed), and each co-op win renders ONCE. Before W735 a co-op boss
+    // emitted BOTH a stray "defeated X" activity row AND a separate "cleared
+    // X · +souls" row — the redundancy the owner flagged. The co-op kill
+    // activity is now suppressed; the coop_kill souls row is the single record.
+    const bossVics = [];   // { ts, name, rk, souls, coop }
+    const _isCoopBossId = function (bid) { return !!(bid && typeof COOP_BOSSES === 'object' && COOP_BOSSES && COOP_BOSSES[bid]); };
+
+    // Pass 1: personal activity. Solo boss kills pair with a same-window
+    // boss_kill souls row (as before). A co-op boss-kill activity is SUPPRESSED
+    // — the coop_kill souls row in pass 2 is its canonical, souls-bearing record.
     for (const e of personalActivity) {
       if (!e || typeof e.ts !== 'number') continue;
       if (e.type === 'boss_kill') {
+        const eBossId = (e.payload && e.payload.bossId) || null;
+        if (_isCoopBossId(eBossId)) { continue; }   // folded into the coop_kill victory below
         let matchIdx = -1;
         for (let i = 0; i < eligibleSouls.length; i++) {
           const s = eligibleSouls[i];
           if (!s || consumedSoulIds.has(s.id)) continue;
           if (s.type !== 'boss_kill') continue;
           if (Math.abs((s.ts || 0) - (e.ts || 0)) > HUNTER_FEED_BOSS_COLLAPSE_WINDOW_MS) continue;
-          // Optional tighter match: if both carry a ref to the same
-          // boss id, prefer that exact pairing. The activity payload
-          // carries bossId; the souls hint is 'kill_<bossId>' which
-          // _classifySoulsEvent strips into entry.ref_id.
-          const eBossId = (e.payload && e.payload.bossId) || null;
           if (eBossId && s.ref_id && s.ref_id !== eBossId) continue;
-          matchIdx = i;
-          break;
+          matchIdx = i; break;
         }
-        if (matchIdx >= 0) {
-          const match = eligibleSouls[matchIdx];
-          consumedSoulIds.add(match.id);
-          collapsedBossKillCount++;
-          merged.push({
-            ts:   Math.max(e.ts || 0, match.ts || 0),
-            html: _hunterFeedCollapsedBossKillRow(e, match),
-          });
-          continue;
-        }
+        let souls = 0;
+        if (matchIdx >= 0) { const m = eligibleSouls[matchIdx]; consumedSoulIds.add(m.id); collapsedBossKillCount++; souls = m.delta || 0; }
+        const nm = (e.payload && e.payload.bossName) || 'a boss';
+        bossVics.push({ ts: e.ts || 0, name: nm, rk: _guildBossRankFromName(nm), souls: souls, coop: false });
+        continue;
       }
       merged.push({ ts: e.ts || 0, html: _guildhallRowHtml(e) });
     }
 
-    // Second pass: eligible souls rows not consumed by collapse.
+    // Pass 2: eligible souls not consumed. coop_kill → a co-op victory; a
+    // leftover boss_kill souls (kill whose activity was missing) → a solo
+    // victory; anything else (merchant bonus, etc.) → a normal souls row.
     for (const s of eligibleSouls) {
       if (!s || typeof s.ts !== 'number') continue;
       if (consumedSoulIds.has(s.id)) continue;
-      const rowHtml = (s.type === 'coop_kill') ? _hunterFeedCoopKillRow(s) : _hunterFeedSoulsRowHtml(s);   // W557 — co-op dungeon clears get a "You cleared X" row
-      merged.push({ ts: s.ts || 0, html: rowHtml });
+      if (s.type === 'coop_kill') {
+        const cfg = (typeof COOP_BOSSES === 'object' && COOP_BOSSES && s.ref_id) ? COOP_BOSSES[s.ref_id] : null;
+        const nm = (cfg && cfg.name) ? cfg.name : String(s.label || 'a dungeon').replace(/^cleared\s+/i, '');
+        bossVics.push({ ts: s.ts || 0, name: nm, rk: _guildBossRankFromName(nm), souls: s.delta || 0, coop: true });
+        continue;
+      }
+      if (s.type === 'boss_kill') {
+        const cfg = (typeof BOSSES === 'object' && BOSSES && s.ref_id) ? BOSSES[s.ref_id] : null;
+        const nm = (cfg && cfg.name) ? cfg.name : String(s.label || 'a boss').replace(/^defeated\s+/i, '');
+        bossVics.push({ ts: s.ts || 0, name: nm, rk: _guildBossRankFromName(nm), souls: s.delta || 0, coop: false });
+        continue;
+      }
+      merged.push({ ts: s.ts || 0, html: _hunterFeedSoulsRowHtml(s) });
     }
+
+    // Group boss victories by local calendar day (matches the feed's day
+    // sections + the W722 guild grouping): 2+ in a day → one expandable group
+    // row; a lone win stays a normal "defeated/cleared X · +souls" row.
+    (function () {
+      const byDay = {}; const order = [];
+      bossVics.forEach(function (v) {
+        const dk = (typeof _localDateKey === 'function' ? _localDateKey(new Date(v.ts || 0)) : '') || String(v.ts || 0);
+        if (!byDay[dk]) { byDay[dk] = []; order.push(dk); }
+        byDay[dk].push(v);
+      });
+      order.forEach(function (dk) {
+        const arr = byDay[dk];
+        if (arr.length >= 2) {
+          let ts = 0, totalSouls = 0;
+          arr.forEach(function (v) { if ((v.ts || 0) > ts) ts = v.ts || 0; totalSouls += (v.souls || 0); });
+          merged.push({ ts: ts, html: _hunterBossGroupRowHtml({ ts: ts, bosses: arr, totalSouls: totalSouls }) });
+        } else {
+          merged.push({ ts: arr[0].ts || 0, html: _hunterBossVictoryRowHtml(arr[0]) });
+        }
+      });
+    })();
 
     return {
       merged: merged,
