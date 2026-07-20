@@ -31925,6 +31925,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .coop-note--loss { color: #f3b0b0; background: rgba(120,40,40,0.18); border-color: rgba(220,120,120,0.35); }
 /* W693 — the members-raid "brutal below a full party" warning (amber, gate-of-god tone). */
 .coop-note--warn { color: #f4d58a; background: rgba(150,110,30,0.16); border-color: rgba(220,180,90,0.34); }
+/* W732 — members-only raid note (gold, "worth the membership" tone). */
+.coop-note--members { color: #ffd574; background: linear-gradient(180deg, rgba(245,158,11,0.14), rgba(245,158,11,0.05)); border-color: rgba(245,158,11,0.36); }
+.coop-note--members .coop-note-star { color: #f5b842; margin-right: 4px; }
 /* W694 — raid finder (matchmaking lobby): a searching state with a spinner + live count. */
 .coop-finder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 16px 20px; text-align: center; }
 .coop-finder-spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(220,180,90,0.25); border-top-color: #f4d58a; animation: coopFinderSpin 0.9s linear infinite; }
