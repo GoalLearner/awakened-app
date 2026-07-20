@@ -23538,6 +23538,17 @@ button.guildhall-summary-tile:active {
   font-size: 0.82rem;
 }
 .guildhall-boss-sub-name { color: #ef4444; font-weight: 600; }
+/* W731 — per-boss rank badge in the expanded kill list, tinted by rank tier (--rc) */
+.guildhall-boss-sub-rank {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 15px; padding: 0 4px; margin-right: 7px;
+  border-radius: 5px; vertical-align: middle;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+  color: var(--rc, #a78bfa);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--rc, #a78bfa);
+}
 
 /* ═══ W723 — Members-only "Your Weekly Awakening" (ClaudeDesign handoff 22, chrome stripped) ═══ */
 /* Guild Hall entry card */
