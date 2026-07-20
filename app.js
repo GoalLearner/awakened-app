@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w728'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w729'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -19372,6 +19372,23 @@
   // Strength Duel remains strength-only (intentionally).
   function evaluateIronWardenForDay(workoutData, dayDate) {
     if (!dayDate) return;
+    // W729 — record the day's VERIFIED Apple Health workout minutes into a daily
+    // map (mirrors steps_daily / sleep_hours_daily) so Weekly Insights can build a
+    // verified workout→steps pattern + training-day counts. Objective HealthKit
+    // data, not a self-reported check-box. Written before the engagement gate so
+    // it accrues for every user (accumulates going forward). Keeps the day's max.
+    try {
+      const _wm = (workoutData && typeof workoutData.totalMinutes === 'number') ? Math.round(workoutData.totalMinutes) : 0;
+      if (_wm > 0) {
+        const _ls = loadLeaderboardState();
+        if (!_ls.workout_daily) _ls.workout_daily = {};
+        if ((_ls.workout_daily[dayDate] | 0) < _wm) {
+          _ls.workout_daily[dayDate] = _wm;
+          lbPruneDailyMap(_ls.workout_daily, LB_DAILY_RETENTION_DAYS);
+          saveLeaderboardState(_ls);
+        }
+      }
+    } catch (_) {}
     const id = 'the_iron_warden';
     const cfg = BOSSES[id];
     if (!cfg) return;
@@ -19566,6 +19583,7 @@
         steps_daily:               raw.steps_daily               || {},
         sleep_hours_daily:         raw.sleep_hours_daily         || {},
         bedtime_daily:             raw.bedtime_daily             || {},
+        workout_daily:             raw.workout_daily             || {},   // W729 — HK workout minutes/day (verified)
         current_sleep_streak:      raw.current_sleep_streak      || 0,
         best_sleep_streak:         raw.best_sleep_streak         || 0,
         last_sleep_eval_date:      raw.last_sleep_eval_date      || null,
@@ -19593,7 +19611,7 @@
     } catch (e) {
       _logSwallow('loadLeaderboardState:parse', e);   // W491 — silently resets step/sleep streaks + lifetime totals
       return {
-        steps_daily: {}, sleep_hours_daily: {}, bedtime_daily: {},
+        steps_daily: {}, sleep_hours_daily: {}, bedtime_daily: {}, workout_daily: {},
         current_sleep_streak: 0, best_sleep_streak: 0, last_sleep_eval_date: null,
         current_bedtime_streak: 0, best_bedtime_streak: 0, last_bedtime_eval_date: null,
         current_walk_streak: 0, best_walk_streak: 0, last_walk_eval_date: null,
@@ -44327,6 +44345,23 @@
       return { mode: 'sleep', liftPct: lift, restedAvg: r, shortAvg: s, n: rested.length + short.length, score: lift + 8 };
     } catch (_) { return null; }
   }
+  // W729 — VERIFIED: HealthKit workout days vs non-workout days → steps. Objective
+  // (workout_daily is Apple-Health minutes), so it belongs to the verified pool.
+  function _wiWorkoutPattern(stepsDaily, workoutDaily, startKey, endKey) {
+    try {
+      if (!workoutDaily || typeof workoutDaily !== 'object') return null;
+      const stepDays = _wiStepDaysInWindow(stepsDaily, startKey, endKey);
+      if (stepDays.length < 14) return null;
+      const on = [], off = [];
+      stepDays.forEach(function (dk) { ((workoutDaily[dk] | 0) > 0 ? on : off).push(stepsDaily[dk] | 0); });
+      if (on.length < 6 || off.length < 6) return null;   // ≥6 training AND ≥6 rest days
+      const d = _wiAvg(on), m = _wiAvg(off);
+      if (m <= 0 || d <= m) return null;
+      const lift = Math.round(((d - m) / m) * 100);
+      if (lift < 15) return null;
+      return { mode: 'workout', liftPct: lift, doneAvg: d, missAvg: m, n: on.length + off.length, score: lift + 10 };
+    } catch (_) { return null; }
+  }
   // Habit → steps: the "wow" coach insight. For each active habit, avg steps on
   // days it was done vs skipped; feature the biggest positive lift.
   // A step-verified or movement habit IS its own step count, so correlating it
@@ -44426,6 +44461,7 @@
     let state = {}; try { state = loadLeaderboardState() || {}; } catch (_) {}
     const stepsDaily = (state && state.steps_daily) || {};
     const sleepDaily = (state && state.sleep_hours_daily) || {};
+    const workoutDaily = (state && state.workout_daily) || {};   // W729 — verified HK workout minutes/day
     const weekStart = (typeof lbGetCurrentWeekStartPT === 'function') ? lbGetCurrentWeekStartPT() : '';
     const weekMs = _wiWeekStartMs(weekStart);
     const today = (typeof getDeviceLocalDate === 'function') ? getDeviceLocalDate() : '';
@@ -44487,6 +44523,7 @@
       // "leaks". Strongest becomes the hero.
       const vCands = [];
       const sp = _wiSleepPattern(stepsDaily, sleepDaily, startKey, endKey); if (sp) vCands.push(sp);
+      const wp = _wiWorkoutPattern(stepsDaily, workoutDaily, startKey, endKey); if (wp) vCands.push(wp);
       const pp = _wiPowerDay(stepsDaily, startKey, endKey); if (pp) vCands.push(pp);
       vCands.sort(function (a, b) { return (b.score || b.liftPct || 0) - (a.score || a.liftPct || 0); });
       if (vCands.length) { M.pattern = vCands[0]; M.pattern.verified = true; }
@@ -44600,6 +44637,16 @@
         + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Short nights</span><span class="wi-cmp-val num">' + nf(pat.shortAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + shortW + '%"></i></div></div>'
         + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>'
         + (leakPct >= 10 ? '<div class="wi-leak"><span class="wi-leak-ic">↓</span> You lose about <b>' + leakPct + '%</b> of your movement on short-sleep nights.</div>' : '');
+    } else if (pat.mode === 'workout') {
+      const offW = Math.max(6, Math.round(((pat.missAvg | 0) / Math.max(1, pat.doneAvg | 0)) * 100));
+      heroInner =
+        '<div class="wi-hero-reveal"><div class="wi-reveal-kick">On training days</div>'
+        + '<div class="wi-reveal-big"><span class="wi-reveal-num foil-text num">+' + (pat.liftPct | 0) + '%</span><span class="wi-reveal-more">steps</span></div>'
+        + '<div class="wi-reveal-sub">than the days you don’t train.</div></div>'
+        + '<div class="wi-compare">'
+        + '<div class="wi-cmp-row wi-rested"><div class="wi-cmp-head"><span class="wi-cmp-label">Training days</span><span class="wi-cmp-val num">' + nf(pat.doneAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:100%"></i></div></div>'
+        + '<div class="wi-cmp-row wi-short"><div class="wi-cmp-head"><span class="wi-cmp-label">Rest days</span><span class="wi-cmp-val num">' + nf(pat.missAvg) + '</span></div><div class="wi-cmp-bar"><i style="width:' + offW + '%"></i></div></div>'
+        + '<div class="wi-cmp-foot">avg / day · across ' + (pat.n | 0) + ' days</div></div>';
     } else if (pat.mode === 'habit') {
       const missW = Math.max(6, Math.round(((pat.missAvg | 0) / Math.max(1, pat.doneAvg | 0)) * 100));
       heroInner =
