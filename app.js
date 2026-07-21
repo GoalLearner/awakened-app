@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w736'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w737'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33459,12 +33459,20 @@
           equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
           equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '';
 
-        // W736 — total PWR in the bottom-right corner of the art (owner ask:
-        // surface the aggregate power on every SELECT-<slot> card, not just the
-        // stat chips). Same _relicProfile power the sort already uses.
-        const tilePwr = (typeof _relicProfile === 'function') ? (_relicProfile(c).power | 0) : 0;
+        // W736 — total PWR (bottom-right). W737 — combat class (bottom-left):
+        // the dominant combat-triangle role (Melee/Ranger/Mage) so the owner can
+        // assemble class-focused sets at a glance. Both derive from the SAME
+        // _relicProfile the Items grid + PWR sort already use, so the
+        // SELECT-<slot> tile matches the rest of the app exactly.
+        const _prof = (typeof _relicProfile === 'function') ? _relicProfile(c) : null;
+        const tilePwr = _prof ? (_prof.power | 0) : 0;
         const pwrBadge = tilePwr > 0
           ? '<div class="build-picker-tile-pwr">' + tilePwr + '<span>PWR</span></div>'
+          : '';
+        const classBadge = (_prof && _prof.className)
+          ? '<div class="build-picker-tile-class" style="--cc:' + esc(_prof.classColor || '#a78bfa') + '">' +
+              '<svg viewBox="0 0 14 14" aria-hidden="true">' + (_prof.classGlyph || '') + '</svg>' +
+              '<span>' + esc(_prof.className) + '</span></div>'
           : '';
 
         return '<button class="build-picker-tile build-rarity--' + rarityShort +
@@ -33477,6 +33485,7 @@
                    artImg +
                    '<div class="build-picker-tile-rarity build-picker-tile-rarity--' + rarityShort + '">' + rarityLabel + '</div>' +
                    equippedBadge +
+                   classBadge +
                    pwrBadge +
                  '</div>' +
                  '<div class="build-picker-tile-name">' + esc(c.name) + '</div>' +

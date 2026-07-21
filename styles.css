@@ -18013,6 +18013,30 @@ body.reveal-locked { overflow: hidden; }
   color: rgba(245, 158, 11, 0.85);
   text-transform: uppercase;
 }
+/* W737 — combat class chip (Melee/Ranger/Mage) in the bottom-LEFT of the art;
+   tinted by the role color (--cc) via _relicProfile, mirroring the Items grid. */
+.build-picker-tile-class {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  padding: 4px 7px 4px 6px;
+  border-radius: 8px;
+  background: rgba(9, 9, 20, 0.72);
+  border: 1px solid color-mix(in srgb, var(--cc, #a78bfa) 55%, transparent);
+  color: var(--cc, #a78bfa);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+.build-picker-tile-class svg { width: 11px; height: 11px; display: block; flex: none; }
 
 /* Rarity chip in top-left of art (Common / Rare / Ultra) */
 .build-picker-tile-rarity {
