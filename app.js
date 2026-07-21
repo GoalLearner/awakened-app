@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w735'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w736'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33459,6 +33459,14 @@
           equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
           equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '';
 
+        // W736 — total PWR in the bottom-right corner of the art (owner ask:
+        // surface the aggregate power on every SELECT-<slot> card, not just the
+        // stat chips). Same _relicProfile power the sort already uses.
+        const tilePwr = (typeof _relicProfile === 'function') ? (_relicProfile(c).power | 0) : 0;
+        const pwrBadge = tilePwr > 0
+          ? '<div class="build-picker-tile-pwr">' + tilePwr + '<span>PWR</span></div>'
+          : '';
+
         return '<button class="build-picker-tile build-rarity--' + rarityShort +
                (equippedElsewhere ? ' build-picker-tile--equipped-elsewhere' : '') +
                (equippedHere      ? ' build-picker-tile--equipped-here'      : '') +
@@ -33469,6 +33477,7 @@
                    artImg +
                    '<div class="build-picker-tile-rarity build-picker-tile-rarity--' + rarityShort + '">' + rarityLabel + '</div>' +
                    equippedBadge +
+                   pwrBadge +
                  '</div>' +
                  '<div class="build-picker-tile-name">' + esc(c.name) + '</div>' +
                  statHtml +

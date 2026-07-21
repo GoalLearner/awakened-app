@@ -15346,6 +15346,10 @@ body.bfs-locked { overflow: hidden; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* W736 — in the centered flex card the line grew to its intrinsic nowrap
+     width and spilled OUT of the card (e.g. "THE FORGE OF TEN THOUSAND DAYS").
+     Cap it to the card so the ellipsis actually engages. */
+  max-width: 100%;
 }
 
 /* Mystery (undiscovered) card — richer than the old "?" placeholder.
@@ -17980,6 +17984,34 @@ body.reveal-locked { overflow: hidden; }
   justify-content: center;
   font-size: 2rem;
   color: rgba(255, 255, 255, 0.55);
+}
+
+/* W736 — total PWR badge, bottom-right of the art */
+.build-picker-tile-pwr {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffd574;
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: rgba(9, 9, 20, 0.72);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+.build-picker-tile-pwr span {
+  font-size: 0.44rem;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  color: rgba(245, 158, 11, 0.85);
+  text-transform: uppercase;
 }
 
 /* Rarity chip in top-left of art (Common / Rare / Ultra) */
