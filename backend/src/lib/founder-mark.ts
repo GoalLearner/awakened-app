@@ -12,8 +12,11 @@
  *
  * Server-authoritative + atomically capped so a modded client cannot mint slot #21+.
  * The kill total itself is client-reported (public_profile_summary.bosses_slain_total,
- * same client-authoritative trust model as rank); the cap of 20 bounds any abuse and
- * the reward is free, so there is no revenue exposure.
+ * same client-authoritative trust model as rank). W739 — because W698 tied LIFETIME
+ * MEMBERSHIP (a paid tier) to this mark, the "free reward, no revenue exposure" reasoning
+ * no longer holds: eligibility now also requires a server-controlled plausibility gate
+ * (account age + distinct active days, see isFounderMarkEligible) so the self-reported
+ * total can't be forged into an instant free membership. The cap of 20 remains the belt.
  */
 import type { Env } from '../env';
 
@@ -23,15 +26,46 @@ export const FOUNDER_MARK_CAP = 20;
 // client-reported public-profile total.
 export const FOUNDER_KILL_THRESHOLD = 50;
 
+// W739 SECURITY — plausibility gate. bosses_slain_total is CLIENT-reported, and W698
+// made a Founder mark confer lifetime membership (member = premium OR founder), so a
+// single crafted `PUT /public-profile-summary` with {bossesSlainTotal:50} could mint a
+// free membership instantly + burn a scarce founder slot. We can't server-verify solo
+// kills (single-player-authoritative), so we require SERVER-CONTROLLED signals a
+// fresh/forged account cannot fake: minimum account age AND minimum distinct app-open
+// days (app_opens = one server-written row per user per UTC day). 50 daily-cadence boss
+// kills legitimately span well over a week, so a genuine grinder always clears this bar;
+// an instant forge (new account, one request) does not. Tunable.
+export const FOUNDER_MIN_ACCOUNT_AGE_DAYS = 7;
+export const FOUNDER_MIN_ACTIVE_DAYS = 5;
+
 /** W698 — eligible = the caller's reported cumulative boss-kill total is >= 50.
- *  Sims/unknowns have no public_profile_summary row → total treated as 0 → ineligible. */
+ *  Sims/unknowns have no public_profile_summary row → total treated as 0 → ineligible.
+ *  W739 — plus a server-controlled plausibility gate (account age + active days) so the
+ *  client-reported total can't be forged into an instant free lifetime membership. */
 export async function isFounderMarkEligible(env: Env, userId: string): Promise<boolean> {
   const row = await env.DB.prepare(
     'SELECT bosses_slain_total FROM public_profile_summary WHERE user_id = ? LIMIT 1',
   )
     .bind(userId)
     .first<{ bosses_slain_total: number | null }>();
-  return !!(row && Number(row.bosses_slain_total ?? 0) >= FOUNDER_KILL_THRESHOLD);
+  if (!(row && Number(row.bosses_slain_total ?? 0) >= FOUNDER_KILL_THRESHOLD)) return false;
+
+  // W739 — account age (created_at is server-set at signup; never client-influenced).
+  const acct = await env.DB.prepare('SELECT created_at FROM users WHERE id = ? LIMIT 1')
+    .bind(userId)
+    .first<{ created_at: number | null }>();
+  const createdAt = Number(acct?.created_at ?? 0);
+  if (!createdAt || Date.now() - createdAt < FOUNDER_MIN_ACCOUNT_AGE_DAYS * 86_400_000) return false;
+
+  // W739 — server-recorded distinct active days (app_opens UPSERTs one row per UTC day).
+  const openDays = await env.DB.prepare(
+    'SELECT COUNT(DISTINCT date_utc) AS n FROM app_opens WHERE user_id = ?',
+  )
+    .bind(userId)
+    .first<{ n: number | null }>();
+  if (Number(openDays?.n ?? 0) < FOUNDER_MIN_ACTIVE_DAYS) return false;
+
+  return true;
 }
 
 /** Grant + publish the Founder mark for an eligible user, atomically capped.

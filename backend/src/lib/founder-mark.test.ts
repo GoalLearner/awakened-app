@@ -8,12 +8,19 @@ import { isFounderMarkEligible, maybeGrantFounderMark, FOUNDER_MARK_CAP, FOUNDER
 import type { Env } from '../env';
 
 /** opts: bossesSlain (public_profile_summary total; undefined = no row = sim),
- *  existingSeq (already-marked), markCount (current founder_marks count). */
+ *  existingSeq (already-marked), markCount (current founder_marks count),
+ *  accountAgeDays (users.created_at, default 30 = passes the W739 gate),
+ *  activeDays (distinct app_opens days, default 10 = passes). */
 function makeEnv(opts: {
   bossesSlain?: number; existingSeq?: number; markCount?: number;
+  accountAgeDays?: number; activeDays?: number;
 }): { env: Env; inserted: () => boolean } {
   let didInsert = false;
   let count = opts.markCount ?? 0;
+  // W739 — default the plausibility signals to PASSING so kill-count tests isolate
+  // the threshold; the security tests set accountAgeDays/activeDays explicitly.
+  const createdAt = Date.now() - (opts.accountAgeDays ?? 30) * 86_400_000;
+  const activeDays = opts.activeDays ?? 10;
   const db = {
     prepare: (sql: string) => ({
       bind: () => ({
@@ -25,6 +32,8 @@ function makeEnv(opts: {
           if (/bosses_slain_total FROM public_profile_summary/.test(sql)) {
             return opts.bossesSlain === undefined ? null : { bosses_slain_total: opts.bossesSlain };
           }
+          if (/created_at FROM users/.test(sql)) return { created_at: createdAt };
+          if (/COUNT\(DISTINCT date_utc\)[\s\S]*app_opens/.test(sql)) return { n: activeDays };
           return null;
         },
         run: async () => {
@@ -56,6 +65,21 @@ describe('isFounderMarkEligible (50 boss kills)', () => {
   it('SIM / no profile row → NOT eligible', async () => {
     const { env } = makeEnv({ bossesSlain: undefined });
     expect(await isFounderMarkEligible(env, 'sim-42')).toBe(false);
+  });
+
+  // W739 SECURITY — the plausibility gate: 50 kills is client-reported, so a
+  // fresh/forged account claiming 50 kills must NOT get the free membership.
+  it('50 kills but a brand-new account → NOT eligible (forge blocked)', async () => {
+    const { env } = makeEnv({ bossesSlain: 50, accountAgeDays: 0, activeDays: 0 });
+    expect(await isFounderMarkEligible(env, 'forger')).toBe(false);
+  });
+  it('50 kills, old account, but too few active days → NOT eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: 50, accountAgeDays: 30, activeDays: 1 });
+    expect(await isFounderMarkEligible(env, 'u1')).toBe(false);
+  });
+  it('50 kills, aged account, real activity → eligible', async () => {
+    const { env } = makeEnv({ bossesSlain: 50, accountAgeDays: 14, activeDays: 12 });
+    expect(await isFounderMarkEligible(env, 'u1')).toBe(true);
   });
 });
 

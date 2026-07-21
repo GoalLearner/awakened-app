@@ -859,7 +859,9 @@ export async function handleVerifiedEventsSubmit(
       if (changes > 0) inserted += 1;
       else duplicates += 1;
     } catch (err) {
-      errors.push({ index: i, reason: err instanceof Error ? err.message : 'INSERT_FAILED' });
+      // W739 SECURITY — don't echo raw D1 error text (table/column names) to the client.
+      console.error('verified-events insert failed:', err);
+      errors.push({ index: i, reason: 'INSERT_FAILED' });
     }
   }
 

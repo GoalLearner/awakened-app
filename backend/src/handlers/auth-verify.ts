@@ -95,8 +95,10 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
     const verified = await verifyAppleIdentityToken(body.identityToken, env);
     appleSub = verified.sub;
   } catch (err) {
-    const detail = err instanceof Error ? err.message : 'Token verification failed.';
-    return jsonError(401, 'APPLE_TOKEN_INVALID', detail);
+    // W739 SECURITY — static detail on this unauthenticated endpoint; log the real
+    // verifier error (JWKS/iss/aud/exp specifics) server-side only.
+    console.error('Apple identity token verification failed:', err);
+    return jsonError(401, 'APPLE_TOKEN_INVALID', 'Token verification failed.');
   }
 
   // Returning user lookup — match by apple_sub (stable across alias changes).

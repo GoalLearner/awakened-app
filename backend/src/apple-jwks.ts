@@ -139,6 +139,7 @@ export async function verifyAppleIdentityToken(
   const publicKey = await importJWK(jwk, 'RS256');
 
   const { payload } = await jwtVerify(token, publicKey, {
+    algorithms: ['RS256'],   // W739 — explicit alg pin (Apple signs RS256; blocks confusion)
     issuer: APPLE_ISSUER,
     audience: env.APPLE_BUNDLE_ID,
   });

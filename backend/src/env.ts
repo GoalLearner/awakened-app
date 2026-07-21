@@ -144,8 +144,8 @@ export interface Env {
    *  other friend-adjacent reads. */
   RL_HALL_READ: RateLimit;
   /** Weekly Insights (W723) — guards GET /v1/insights/weekly (members-only
-   *  percentile read). namespace_id 1024 in wrangler.toml. 30/min per user —
-   *  matches the other friend-adjacent reads. */
+   *  percentile read). namespace_id 1025 in wrangler.toml (W739 — moved off 1024,
+   *  which collided with RL_PVP_WRITE). 30/min per user. */
   RL_INSIGHTS_READ: RateLimit;
   /** Per-user retention tracking (owner-requested) — guards
    *  POST /v1/users/me/app-open. namespace_id 1020 in wrangler.toml. 6/min per

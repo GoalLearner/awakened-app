@@ -432,9 +432,11 @@ export default {
         }
       }
     } catch (err) {
-      const detail = err instanceof Error ? err.message : 'Internal server error.';
+      // W739 SECURITY — never return err.message to the client: an unhandled D1/SQL
+      // error can carry table/column/constraint names. Log the real error server-side
+      // (console.error → Workers logs); the client sees only a static detail.
       console.error(`Unhandled error on ${method} ${path}:`, err);
-      response = jsonError(500, 'INTERNAL', detail);
+      response = jsonError(500, 'INTERNAL', 'Internal server error.');
     }
 
     logRequest(method, path, response.status, Date.now() - startMs);

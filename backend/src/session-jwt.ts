@@ -74,6 +74,7 @@ export async function verifySessionJwt(
 ): Promise<SessionPayload> {
   const key = getKey(env);
   const { payload } = await jwtVerify(token, key, {
+    algorithms: ['HS256'],   // W739 — explicit alg pin (defense-in-depth vs alg confusion)
     issuer: ISSUER,
     audience: AUDIENCE,
   });

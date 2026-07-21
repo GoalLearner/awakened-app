@@ -835,3 +835,58 @@ describe('PUT /v1/users/me/public-profile-summary — card background (W706)', (
     expect(db._calls().length).toBe(0);
   });
 });
+
+// W739 SECURITY — a PREMIUM skin (avatar-skin-*) shown on the PUBLIC card must be OWNED
+// (skin_entitlements). A non-owner's paid-skin flex is coerced away at write time.
+describe('PUT /v1/users/me/public-profile-summary — premium-skin ownership (W739)', () => {
+  function makeSkinDb(ownedSkins: string[]) {
+    const calls: CapturedCall[] = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          calls.push({ sql, binds: args });
+          return {
+            all: async () => ({
+              results: /skin_entitlements/.test(sql) ? ownedSkins.map((s) => ({ skin_id: s })) : [],
+              success: true, meta: {},
+            }),
+            first: async () => null,
+            run: async () => ({ success: true, meta: { changes: 1 } }),
+          };
+        },
+      }),
+      _calls: () => calls,
+    } as unknown as D1Database & { _calls: () => CapturedCall[] };
+    return db;
+  }
+  const upsertOf = (calls: CapturedCall[]) =>
+    calls.find((c) => /INSERT INTO public_profile_summary/.test(c.sql));
+
+  it('unowned premium skin avatar_id is stripped', async () => {
+    const db = makeSkinDb([]);
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-bloodmoon.png' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls.some((c) => /skin_entitlements/.test(c.sql))).toBe(true);
+    expect(upsertOf(calls)?.binds.includes('avatar-skin-bloodmoon.png')).toBe(false);
+  });
+
+  it('owned premium skin avatar_id is kept verbatim', async () => {
+    const db = makeSkinDb(['avatar-skin-bloodmoon.png']);
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-bloodmoon.png' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(upsertOf(db._calls())?.binds.includes('avatar-skin-bloodmoon.png')).toBe(true);
+  });
+
+  it('a free class avatar is kept with no ownership probe', async () => {
+    const db = makeSkinDb([]);
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-mage.png' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    expect(calls.some((c) => /skin_entitlements/.test(c.sql))).toBe(false);
+    expect(upsertOf(calls)?.binds.includes('avatar-mage.png')).toBe(true);
+  });
+});

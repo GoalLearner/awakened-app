@@ -320,5 +320,7 @@ simple = { limit = 12, period = 60 }  # 12/min per user
 [[unsafe.bindings]]
 name = "RL_INSIGHTS_READ"
 type = "ratelimit"
-namespace_id = "1024"
+# W739 SECURITY — was "1024", colliding with RL_PVP_WRITE (both key on session.userId),
+# so the two shared one counter + conflicting limits. Moved to a unique id.
+namespace_id = "1025"
 simple = { limit = 30, period = 60 }  # 30/min per user

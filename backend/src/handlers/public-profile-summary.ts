@@ -580,9 +580,31 @@ export async function handlePublicProfileSummaryPut(
   // premium OR Founder via the same readEntitlements every other perk gates on.
   // Achievement eligibility for a SPECIFIC design stays client-side (same
   // client-reported trust model as rank — cosmetic, no revenue exposure).
-  if (v.cardBg.set && v.cardBg.value !== null) {
-    const { member } = await readEntitlements(env, session.userId);
-    if (!member) v.cardBg = { set: true, value: null };
+  // W739 SECURITY — a PREMIUM skin (avatar-skin-*) displayed on the PUBLIC card / PvP
+  // combatant must be OWNED. avatar_id/combatant.avatar are client-set and were never
+  // checked against skin_entitlements, so a non-owner could flex a paid skin on
+  // leaderboards/friends (the cross-user value of the purchase). Same coercion model as
+  // cardBg membership: read entitlements ONCE, quietly coerce an unowned/non-member
+  // value to the default — never a 4xx (a stale heartbeat must not break the submit).
+  const _avatarNeedsCheck =
+    v.avatarId.set && typeof v.avatarId.value === 'string' && /^avatar-skin-/i.test(v.avatarId.value);
+  const _combatantNeedsCheck =
+    v.combatant.set && typeof v.combatant.value === 'string' && /"avatar":"avatar-skin-/i.test(v.combatant.value);
+  if ((v.cardBg.set && v.cardBg.value !== null) || _avatarNeedsCheck || _combatantNeedsCheck) {
+    const ent = await readEntitlements(env, session.userId);
+    if (v.cardBg.set && v.cardBg.value !== null && !ent.member) v.cardBg = { set: true, value: null };
+    if (_avatarNeedsCheck && !ent.skins.includes(v.avatarId.value as string)) {
+      v.avatarId = { set: true, value: null };   // unowned paid skin → class default
+    }
+    if (_combatantNeedsCheck) {
+      try {
+        const cj = JSON.parse(v.combatant.value as string);
+        if (cj && typeof cj.avatar === 'string' && /^avatar-skin-/i.test(cj.avatar) && !ent.skins.includes(cj.avatar)) {
+          cj.avatar = '';
+          v.combatant = { set: true, value: JSON.stringify(cj) };
+        }
+      } catch { /* malformed JSON wouldn't have validated; leave as-is */ }
+    }
   }
   const cardBgSet = v.cardBg.set ? 1 : 0;
 
