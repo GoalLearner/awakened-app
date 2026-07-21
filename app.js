@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w737'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w738'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -44634,8 +44634,12 @@
     let weekTotal = 0; try { weekTotal = (typeof lbSumCurrentWeekSteps === 'function') ? (lbSumCurrentWeekSteps(stepsDaily) | 0) : 0; } catch (_) {}
     let lastTotal = 0;
     try {
+      // W738 — PACE-MATCHED comparison. Sum only the SAME number of elapsed days
+      // last week (days.length, not a full 7), so a partial current week isn't
+      // judged against a complete prior week — the phantom "▼46% vs last week"
+      // the owner caught (35,581 over 3 days vs a full ~65k week).
       let pd = (typeof _wrPriorWeek === 'function') ? _wrPriorWeek(weekStart) : '';
-      for (let i = 0; i < 7 && pd && pd < weekStart; i++) { lastTotal += (stepsDaily[pd] | 0); pd = _wiNextDate(pd); }
+      for (let i = 0; i < days.length && pd && pd < weekStart; i++) { lastTotal += (stepsDaily[pd] | 0); pd = _wiNextDate(pd); }
     } catch (_) {}
     let peakDay = '', peakSteps = 0, activeDays = 0; const spark = [];
     days.forEach(function (ds) { const s = stepsDaily[ds] | 0; if (s > 0) activeDays++; spark.push({ dow: _wiDow(ds), steps: s }); if (s > peakSteps) { peakSteps = s; peakDay = ds; } });
@@ -44759,7 +44763,7 @@
 
     // ── Step dominion ──
     const delta = (s.wowPct != null)
-      ? '<div class="wi-delta ' + (s.wowPct < 0 ? 'down' : '') + '">' + (s.wowPct < 0 ? '▼ ' : '▲ ') + Math.abs(s.wowPct) + '% <span>vs last week</span></div>'
+      ? '<div class="wi-delta ' + (s.wowPct < 0 ? 'down' : '') + '">' + (s.wowPct < 0 ? '▼ ' : '▲ ') + Math.abs(s.wowPct) + '% <span>vs last week’s pace</span></div>'
       : '';
     let cohortLine = '';
     if (st && st.cohort && !st.cohort.lowConfidence && rk.tier) {
