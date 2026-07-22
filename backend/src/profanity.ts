@@ -223,6 +223,12 @@ export function isProfane(alias: string): boolean {
 const RESERVED_ALIASES: ReadonlySet<string> = new Set([
   'adolf', 'stalin', 'mussolini', 'himmler', 'goebbels', 'mengele', 'polpot',
   'osama', 'binladen', 'saddam', 'isis', 'alqaeda',
+  // W745c — political/dictator figures (owner-requested). Exact match keeps collateral
+  // tiny: "trump" refuses "Trump" but not "Trumpet"; "lenin" not "Lenina".
+  'putin', 'trump', 'lenin',
+  // DELIBERATELY NOT 'hussein': it's a top-tier global given name/surname (hundreds of
+  // millions of real people) — even exact-match would refuse their real name for ~zero
+  // impersonation benefit, since 'saddam' already covers the dictator. Do not "helpfully" add.
 ]);
 
 /**

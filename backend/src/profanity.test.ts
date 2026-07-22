@@ -147,14 +147,14 @@ describe('isProfane', () => {
   describe('isReservedAlias — figure names (exact leet-folded match)', () => {
     it('flags the reserved names + their leet variants', () => {
       ['Adolf', 'Ad0lf', 'Stalin', 'St4lin', 'Mussolini', 'Isis', '1515', 'Osama',
-        'binLaden', 'Saddam', 'AlQaeda'].forEach((c) => {
+        'binLaden', 'Saddam', 'AlQaeda', 'Putin', 'Trump', 'Lenin'].forEach((c) => {
         expect(isReservedAlias(c)).toBe(true);
       });
     });
     it('does NOT match real names that merely CONTAIN a reserved token', () => {
       // The whole reason it's exact-match, not substring.
       ['Adolfo', 'Adolfina', 'Crisis', 'CrisisManager', 'Stalingrad', 'Isisco',
-        'Hussein', 'Osamu', 'StepLord', 'Zeus'].forEach((c) => {
+        'Hussein', 'Osamu', 'StepLord', 'Zeus', 'Trumpet', 'Lenina', 'Putina'].forEach((c) => {
         expect(isReservedAlias(c)).toBe(false);
       });
     });
