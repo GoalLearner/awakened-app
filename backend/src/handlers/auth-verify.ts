@@ -19,7 +19,7 @@
 import type { Env } from '../env';
 import { verifyAppleIdentityToken } from '../apple-jwks';
 import { issueSessionJwt } from '../session-jwt';
-import { isProfane } from '../profanity';
+import { isProfane, isReservedAlias } from '../profanity';
 import { generateAliasSuggestions } from '../alias-suggestions';
 import { jsonOk, jsonError } from '../lib/responses';
 
@@ -150,6 +150,21 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
   if (existing) {
     const jwt = await issueSessionJwt(existing.id, existing.alias, env);
     return jsonOk({ jwt, alias: existing.alias, isNewUser: false });
+  }
+
+  // W745 — reserved impersonation / hate-figure names (Adolf, Stalin, Isis, bin Laden…).
+  // Refuse as if the name were simply TAKEN rather than "content not allowed": a real Isis /
+  // Adolfo isn't accused of anything, and a troll gets no reaction. Placed AFTER the
+  // returning-user return so an existing account keeps working, and BEFORE the collision
+  // query. No suggestions — generateAliasSuggestions() derives from the input, and we must
+  // never echo "Hitler2"/"Adolf7" back. Client renders no chips when suggested is empty.
+  if (isReservedAlias(alias)) {
+    return jsonError(
+      409,
+      'ALIAS_TAKEN',
+      `The alias "${alias}" is already taken. Please choose another.`,
+      { suggested: [] },
+    );
   }
 
   // New user — check alias collision (case-insensitive).

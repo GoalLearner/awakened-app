@@ -8,7 +8,7 @@
  *   - "Assault" passes (no false-positive on benign-with-profane-stem)
  */
 import { describe, expect, it } from 'vitest';
-import { isProfane, _internals } from './profanity';
+import { isProfane, isReservedAlias, _internals } from './profanity';
 
 describe('isProfane', () => {
   describe('clean aliases pass', () => {
@@ -140,6 +140,27 @@ describe('isProfane', () => {
     const ok = ['St3ph3n', 'L1am', '5cott', 'Al1ce', 'Scott', 'Passenger', 'Classic', 'Cassie', 'StepLord'];
     ok.forEach((c) => {
       it(`allows "${c}"`, () => expect(isProfane(c)).toBe(false));
+    });
+  });
+
+  // W745 — reserved impersonation/hate-figure names → surfaced as "taken", NOT profanity.
+  describe('isReservedAlias — figure names (exact leet-folded match)', () => {
+    it('flags the reserved names + their leet variants', () => {
+      ['Adolf', 'Ad0lf', 'Stalin', 'St4lin', 'Mussolini', 'Isis', '1515', 'Osama',
+        'binLaden', 'Saddam', 'AlQaeda'].forEach((c) => {
+        expect(isReservedAlias(c)).toBe(true);
+      });
+    });
+    it('does NOT match real names that merely CONTAIN a reserved token', () => {
+      // The whole reason it's exact-match, not substring.
+      ['Adolfo', 'Adolfina', 'Crisis', 'CrisisManager', 'Stalingrad', 'Isisco',
+        'Hussein', 'Osamu', 'StepLord', 'Zeus'].forEach((c) => {
+        expect(isReservedAlias(c)).toBe(false);
+      });
+    });
+    it('reserved names are NOT flagged as profanity (they route to ALIAS_TAKEN instead)', () => {
+      // Adolf/Stalin/Isis must stay OUT of the profanity path so real people aren't accused.
+      ['Adolf', 'Stalin', 'Isis'].forEach((c) => expect(isProfane(c)).toBe(false));
     });
   });
 });

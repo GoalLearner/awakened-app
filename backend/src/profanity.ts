@@ -207,10 +207,41 @@ export function isProfane(alias: string): boolean {
   return false;
 }
 
+/**
+ * W745 — RESERVED aliases: impersonation / hate-figure names (Adolf, Stalin, Isis,
+ * bin Laden, …) that we refuse but which are ALSO real given names/surnames for real
+ * people (Adolfo, Isis-the-name, the surname Hussein). So instead of the accusatory
+ * "content not allowed" (isProfane), the caller returns the ordinary ALIAS_TAKEN
+ * response — the name is quietly unavailable, no one is called a slur, and a troll gets
+ * no reaction. Kept SEPARATE from PROFANITY_WORDS on purpose:
+ *   - profanity uses SUBSTRING match (catches "NaziBoy") + returns "not allowed";
+ *   - reserved uses EXACT leet-folded match + returns "taken".
+ * Exact match is the whole point: "adolf" refuses "Adolf"/"Ad0lf" but NOT "Adolfo";
+ * "isis" refuses "Isis"/"1515" but NOT "Crisis"; "stalin" not "Stalingrad".
+ * All entries lowercase a-z only (the deLeet-folded form). Extend freely.
+ */
+const RESERVED_ALIASES: ReadonlySet<string> = new Set([
+  'adolf', 'stalin', 'mussolini', 'himmler', 'goebbels', 'mengele', 'polpot',
+  'osama', 'binladen', 'saddam', 'isis', 'alqaeda',
+]);
+
+/**
+ * True if the alias IS a reserved figure/impersonation name (exact match on the
+ * leet-folded, alpha-only form). Caller should surface this as ALIAS_TAKEN, not as
+ * profanity. Non-substring by design so real names that merely CONTAIN one of these
+ * (Adolfo, Crisis, Stalingrad) are unaffected.
+ */
+export function isReservedAlias(alias: string): boolean {
+  const folded = deLeet(alias);
+  return folded.length > 0 && RESERVED_ALIASES.has(folded);
+}
+
 /** Exported for tests. */
 export const _internals = {
   lowerStripped,
   normalizeFull,
+  deLeet,
   PROFANITY_WORDS,
   NORMALIZED_WORDS,
+  RESERVED_ALIASES,
 };
