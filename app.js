@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w740'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w741'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14914,6 +14914,22 @@
     if (magic > top) { arch = 'magic'; top = magic; }
     const role = _RELIC_ROLES[arch];
     return { arch: arch, className: role.label, classColor: role.color, classGlyph: role.glyph, archLabel: role.label, power: Math.round(melee + ranged + magic) };
+  }
+  // W740 — an EQUIPPED relic's power including its own upgrade level (W494: +1 to the
+  // dominant stat per level). Reuses _relicProfile's exact weighted triangle by feeding
+  // it the effective (base + upgrade) bonuses, so the per-item PWR badge and the summed
+  // GEAR POWER both move when you upgrade a relic. Set bonuses are build-wide (not
+  // per-item) so they're folded into the aggregate separately, at the render site.
+  // Before W740 the Armory's headline GEAR POWER read base card stats ONLY, so it
+  // ignored relic upgrades + set bonuses even though the EQUIPMENT BONUSES panel below
+  // it — and real Ascent/PvP combat (_arenaPlayerStatline) — both count them.
+  function _equippedRelicPower(cardId, card) {
+    const lvl = (typeof getRelicLevel === 'function') ? getRelicLevel(cardId) : 0;
+    if (!lvl) { try { return _relicProfile(card).power | 0; } catch (_) { return 0; } }
+    const dom = _relicDominantStatKey(card);
+    const eff = Object.assign({}, (card && card.bonuses) || {});
+    if (dom) eff[dom] = (eff[dom] | 0) + lvl;
+    try { return _relicProfile({ bonuses: eff }).power | 0; } catch (_) { return 0; }
   }
   // Power of the currently-equipped item in each typed slot → the baseline a candidate's
   // "▲ vs equipped" delta compares against (0 = empty slot ⇒ pure equip gain).
@@ -33057,8 +33073,7 @@
 
       if (card && unlocked) {
         const rv = _RV[card.rarity] || 'common';
-        let _pwr = 0;
-        try { if (typeof _relicProfile === 'function') _pwr = _relicProfile(card).power | 0; } catch (_) {}
+        const _pwr = _equippedRelicPower(cardId, card);   // W740 — includes this relic's upgrade level
         gearPower += _pwr; equippedCount++;
         const art = card.art_path
           ? '<img src="' + esc(card.art_path) + '" alt="" draggable="false" loading="lazy" decoding="async">'
@@ -33095,6 +33110,14 @@
       }
     }
     grid.innerHTML = html;
+    // W740 — fold build-wide SET bonuses (W495) into GEAR POWER, weighted by the same
+    // triangle as every relic. Set bonuses aren't attributable to a single card, so they
+    // add to the aggregate only (never to a per-item PWR badge). Without this, completing
+    // a set raised your EQUIPMENT BONUSES + real combat power but left GEAR POWER frozen.
+    try {
+      const _setT = (typeof _activeSetBonuses === 'function') ? _activeSetBonuses().totals : null;
+      if (_setT) gearPower += _relicProfile({ bonuses: _setT }).power | 0;
+    } catch (_) {}
     // Feed the header Gear Power total + build meta (both live in the header now).
     try { const gp = document.getElementById('armory-gear-power'); if (gp) gp.textContent = gearPower; } catch (_) {}
     try { const bm = document.getElementById('armory-build-meta'); if (bm) bm.innerHTML = '<b>' + equippedCount + '</b> / ' + HUNTER_BUILD_SLOT_COUNT + ' Equipped'; } catch (_) {}
