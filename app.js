@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w746'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w747'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48470,6 +48470,36 @@
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
+    // W747 — battle emote. Enum key → local fly-in + log immediately (the sender's
+    // own feedback must not wait on the network), then fire-and-forget the push to
+    // the party. 30s per-key client cooldown on top of the server rate limit.
+    if (action === 'emote') {
+      const key = (btn && btn.getAttribute('data-emote')) || '';
+      const TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it' };
+      if (!TEXT[key] || inst.status !== 'active') return;
+      const now = Date.now();
+      if ((now - (_coopBattle.cool[key] || 0)) < 30000) return;
+      _coopBattle.cool[key] = now;
+      try {
+        const hero = document.querySelector('#coop-fs-overlay .bfs-hero');
+        if (hero) {
+          const e = document.createElement('div');
+          e.className = 'chd-emote-fly';
+          e.style.left = (12 + Math.random() * 40) + '%';
+          e.style.bottom = (30 + Math.random() * 20) + '%';
+          e.textContent = 'You: ' + TEXT[key];
+          hero.appendChild(e);
+          setTimeout(function () { try { e.remove(); } catch (_) {} }, 2500);
+        }
+      } catch (_) {}
+      _coopBattleLog('<b class="chd-gold">You</b>: ' + esc(TEXT[key]));
+      if (btn) { btn.classList.add('chd-cool'); setTimeout(function () { try { btn.classList.remove('chd-cool'); } catch (_) {} }, 30000); }
+      try { const lg = document.querySelector('#coop-fs-body .chd-log');
+        if (lg) lg.innerHTML = _coopBattle.logs.map(function (l) { return '<div class="chd-log-line"><span class="chd-t">' + esc(l.t) + '</span><span>' + l.html + '</span></div>'; }).join('');
+      } catch (_) {}
+      try { Auth.coopBossEmote(inst.id, key).catch(function () {}); } catch (_) {}
+      return;
+    }
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
     if (action === 'cancel' && inst.status === 'active') {
       let ok = true; try { ok = window.confirm('Leave this hunt? It ends for ' + _coopHunterPhrase(inst) + ' and the progress so far is lost.'); } catch (_) {}   // W692 — N-hunter-aware
@@ -48671,12 +48701,28 @@
     const isDefeat = !_coopSheet.picking && !!inst && inst.status === 'expired' && inst.result === 'defeat';
     const overlay = document.getElementById('coop-fs-overlay');
     if (overlay) overlay.classList.toggle('coop-overlay--defeat', isDefeat);
+    // W747 — battle-state hero layers only while a hunt is LIVE; every other
+    // state strips the battle chrome (phase filters must never bleed into the
+    // recruit/pending/victory/defeat renders).
+    const isBattle = !_coopSheet.picking && !_coopSheet.finding && !!inst && inst.status === 'active';
+    if (overlay) {
+      overlay.classList.toggle('coop-overlay--battle', isBattle);
+      if (!isBattle) overlay.classList.remove('chd-phase-2', 'chd-phase-3', 'chd-hit');
+    }
 
     if (_coopSheet.picking) { body.innerHTML = _coopPickerHtml(); return; }
     if (_coopSheet.finding) { body.innerHTML = _coopFinderHtml(); return; }   // W694 — raid finder (searching lobby)
     if (_coopSheet.loading && !_coopSheet.instance) { showLoading(body, 'hero'); return; } // W594 — skeleton instead of plain "Loading the hunt..."
     if (inst && inst.status === 'pending') { body.innerHTML = _coopPendingHtml(inst); return; }
-    if (inst && inst.status === 'active') { body.innerHTML = _coopActiveHtml(inst); return; }
+    if (inst && inst.status === 'active') {
+      // W747 — delta pass BEFORE the paint (logs/FX from what changed since the
+      // last poll), then the body, then the hero layers + async banked readout.
+      _coopBattleAfterPoll(inst);
+      body.innerHTML = _coopActiveHtml(inst);
+      _coopBattleSyncHero(inst);
+      _coopBattleQueryBanked(inst);
+      return;
+    }
     if (inst && inst.status === 'completed' && inst.result === 'success') { body.innerHTML = _coopVictoryHtml(inst); return; }
     if (isDefeat) { body.innerHTML = _coopDefeatHtml(inst); return; }
     body.innerHTML = _coopRecruitHtml(inst);
@@ -48950,55 +48996,302 @@
     );
   }
 
+  // ── W747 — the battle screen (ClaudeDesign handoff 24) ─────────────────────
+  // One shared render for EVERY co-op hunt: duo/trio/raid, steps/flights/both/
+  // sleep, members-only included. Session-scoped battle state (log lines, per-
+  // hunter prev values for strike detection, banked amount, hold-charge).
+  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0, charging: false, pending: 0, raf: 0, t0: 0, cool: {} };
+  function _coopBattleReset(instId) {
+    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0, charging: false, pending: 0, raf: 0, t0: 0, cool: {} };
+  }
+  const _N = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
+
+  // Roster in stable color order: me first (gold, c0), then allies (c1..c4).
+  function _coopBattleRoster(inst) {
+    const v = _coopView(inst);
+    const others = (v.others && v.others.length) ? v.others : (v.them ? [v.them] : []);
+    return [{ me: true, alias: 'You', raw: v.me }].concat(others.map(function (o) {
+      return { me: false, alias: _coopAlias((o && o.alias) || 'ally'), raw: o };
+    }));
+  }
+  // Primary metric value for a hunter (what the duel bar + shares count).
+  function _coopBattlePrimary(inst, who) {
+    return _coopUnit(inst) === 'flights' ? ((who && who.flights) || 0) : ((who && who.steps) || 0);
+  }
+  // { pct: primary progress 0-1, binding: min across streams (drives vitality
+  //   + phases — W686 house rule: the boss can't "break" while a stream is unmet) }
+  function _coopBattleProgress(inst) {
+    const cfg = _coopSheet.cfg || {};
+    const unit = _coopUnit(inst);
+    const pGoal = unit === 'flights' ? (inst.goal_flights || cfg.coopGoalFlights || 1) : (inst.goal_steps || cfg.coopGoalSteps || 1);
+    const pVal = unit === 'flights' ? (inst.combined_flights || 0) : (inst.combined_steps || 0);
+    const pct = Math.max(0, Math.min(1, pVal / pGoal));
+    let binding = pct;
+    if (_coopIsBoth(inst)) {
+      const fg = inst.goal_flights || cfg.coopGoalFlights || 0;
+      if (fg > 0) binding = Math.min(binding, Math.min(1, (inst.combined_flights || 0) / fg));
+    } else if (_coopIsSleep(inst)) {
+      const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
+      if (sg > 0) binding = Math.min(binding, Math.min(1, (inst.combined_sleep_minutes || 0) / sg));
+    }
+    return { pct: pct, binding: binding };
+  }
+  function _coopBattleLog(html) {
+    const t = new Date();
+    _coopBattle.logs.unshift({ t: String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'), html: html });
+    if (_coopBattle.logs.length > 3) _coopBattle.logs.length = 3;
+  }
+  // Damage number + slash/shake over the hero (layers live in index.html, so
+  // they survive body re-renders). All best-effort — FX must never throw.
+  function _coopBattleDmg(amt, who, crit) {
+    try {
+      const layer = document.getElementById('chd-dmg');
+      if (!layer) return;
+      const d = document.createElement('div');
+      d.className = 'chd-dmg ' + (who === 'you' ? 'chd-you' : 'chd-ally') + (crit ? ' chd-crit' : '');
+      d.style.left = (18 + Math.random() * 55) + '%';
+      d.style.top = (22 + Math.random() * 38) + '%';
+      d.style.fontSize = (crit ? 28 : 14 + Math.min(12, amt / 120)) + 'px';
+      d.textContent = '−' + _N(amt);
+      layer.appendChild(d);
+      setTimeout(function () { try { d.remove(); } catch (_) {} }, 1200);
+    } catch (_) {}
+  }
+  function _coopBattleHitFx() {
+    try {
+      const ov = document.getElementById('coop-fs-overlay');
+      if (ov) { ov.classList.remove('chd-hit'); void ov.offsetWidth; ov.classList.add('chd-hit'); }
+      const f = document.getElementById('chd-flash');
+      if (f) { f.classList.remove('chd-go'); void f.offsetWidth; f.classList.add('chd-go'); }
+    } catch (_) {}
+  }
+  // Poll-delta pass, called on every active render BEFORE the body paints:
+  // any hunter whose primary value rose since last time "struck" — log it,
+  // fly a damage number, ping their avatar. First sight of an instance seeds
+  // silently (no fake backlog) + announces the party instead.
+  function _coopBattleAfterPoll(inst) {
+    if (_coopBattle.instId !== inst.id) {
+      _coopBattleReset(inst.id);
+      const names = _coopBattleRoster(inst).filter(function (h) { return !h.me; }).map(function (h) { return esc(h.alias); });
+      _coopBattleLog('<b class="chd-vio">' + (_coopNameList(names) || 'Your party') + '</b> ' + (names.length === 1 ? 'is' : 'are') + ' hunting with you');
+      _coopBattleRoster(inst).forEach(function (h, i) {
+        _coopBattle.prev[h.me ? '__me' : ((h.raw && h.raw.user_id) || 'a' + i)] = _coopBattlePrimary(inst, h.raw);
+      });
+      return;
+    }
+    _coopBattleRoster(inst).forEach(function (h, i) {
+      const key = h.me ? '__me' : ((h.raw && h.raw.user_id) || 'a' + i);
+      const now = _coopBattlePrimary(inst, h.raw);
+      const prev = _coopBattle.prev[key] || 0;
+      const delta = now - prev;
+      _coopBattle.prev[key] = now;
+      if (delta > 0) {
+        const cls = h.me ? 'chd-gold' : 'chd-vio';
+        _coopBattleLog('<b class="' + cls + '">' + esc(h.alias) + '</b> struck for <b class="' + cls + '">' + _N(delta) + '</b>');
+        _coopBattleDmg(delta, h.me ? 'you' : 'ally', delta >= 800);
+        if (!h.me) _coopBattleHitFx();
+      }
+    });
+  }
+  // Hero-layer sync (overlay classes + kicker + vitality). Body-independent.
+  function _coopBattleSyncHero(inst) {
+    try {
+      const ov = document.getElementById('coop-fs-overlay');
+      if (!ov) return;
+      const cfg = _coopSheet.cfg || {};
+      const prog = _coopBattleProgress(inst);
+      const phase = prog.binding >= 0.9 ? 3 : prog.binding >= 0.75 ? 2 : 1;
+      ov.classList.toggle('chd-phase-2', phase === 2);
+      ov.classList.toggle('chd-phase-3', phase === 3);
+      const kick = document.getElementById('chd-kicker');
+      if (kick) kick.textContent = cfg.membersOnly ? 'MEMBERS-ONLY RAID · ' + String(cfg.rank || 'S') + '-RANK'
+                                                   : 'CO-OP HUNT · ' + String(cfg.rank || 'E') + '-RANK GATE';
+      const vit = Math.max(0, 1 - prog.binding);
+      const fill = document.getElementById('chd-vit-fill');
+      if (fill) fill.style.width = (vit * 100) + '%';
+      const pct = document.getElementById('chd-vit-pct');
+      if (pct) pct.textContent = Math.ceil(vit * 100) + '%';
+    } catch (_) {}
+  }
+  // Banked = the device's current window value minus what the server already
+  // counts for me — the amount the next strike will drive in. Async (health
+  // query); updates the button sub in place when it lands.
+  async function _coopBattleQueryBanked(inst) {
+    try {
+      const unit = _coopUnit(inst);
+      const device = await _coopQueryWindowValue(inst, unit);
+      const v = _coopView(inst);
+      const mine = _coopBattlePrimary(inst, v.me);
+      _coopBattle.banked = Math.max(0, Math.round((device || 0) - mine));
+      const el = document.getElementById('chd-banked');
+      if (el) el.textContent = _N(_coopBattle.banked);
+    } catch (_) {}
+  }
+
+  // W747 — hold-to-strike. The ring charge is power-up THEATER over the real
+  // submit: a release always drives the FULL banked amount (the server takes
+  // absolute stream totals — there is no partial submit), then reuses the same
+  // busy→submit→poll→re-render path as the old SYNC button, so the delta pass
+  // logs "You struck for N" from the server's own accepted numbers.
+  let _chdStrikeWired = false, _chdRaf = 0, _chdT0 = 0;
+  function _chdWireStrike() {
+    if (_chdStrikeWired) return;
+    _chdStrikeWired = true;
+    document.addEventListener('pointerdown', function (e) {
+      const btn = (e.target && e.target.closest) ? e.target.closest('.chd-strike') : null;
+      if (!btn || btn.disabled || _coopSheet.busy || _coopBattle.charging) return;
+      const inst = _coopSheet.instance;
+      if (!inst || inst.status !== 'active') return;
+      try { e.preventDefault(); } catch (_) {}
+      const lab = document.getElementById('chd-strike-lab');
+      if (_coopBattle.banked < 1) {
+        if (lab) {
+          lab.textContent = 'Nothing banked yet';
+          setTimeout(function () { try { if (!_coopBattle.charging && !_coopSheet.busy) lab.textContent = 'Hold to Strike'; } catch (_) {} }, 900);
+        }
+        return;
+      }
+      _coopBattle.charging = true; _coopBattle.pending = 0; _chdT0 = performance.now();
+      btn.classList.add('chd-charging');
+      (function loop(t) {
+        if (!_coopBattle.charging) return;
+        _coopBattle.pending = Math.min(_coopBattle.banked, Math.round((t - _chdT0) / 1.6));
+        const ring = document.getElementById('chd-ring');
+        if (ring) ring.style.width = (_coopBattle.banked > 0 ? (_coopBattle.pending / _coopBattle.banked * 100) : 0) + '%';
+        if (lab) lab.textContent = '+' + _N(_coopBattle.pending);
+        const sub = document.getElementById('chd-strike-sub');
+        if (sub) sub.textContent = _coopBattle.pending >= _coopBattle.banked ? 'Fully charged — release!' : 'Release to strike';
+        _chdRaf = requestAnimationFrame(loop);
+      })(_chdT0);
+    }, { passive: false });
+    function release() {
+      if (!_coopBattle.charging) return;
+      _coopBattle.charging = false;
+      try { cancelAnimationFrame(_chdRaf); } catch (_) {}
+      try {
+        const btn = document.querySelector('#coop-fs-body .chd-strike');
+        if (btn) btn.classList.remove('chd-charging');
+        const ring = document.getElementById('chd-ring');
+        if (ring) ring.style.width = '0%';
+      } catch (_) {}
+      const total = _coopBattle.banked;
+      _coopBattle.pending = 0;
+      if (total < 1) { renderCoopSheet(); return; }
+      _coopBattleHitFx();
+      const crit = total >= 800;
+      const chunks = Math.min(5, 1 + Math.floor(total / 280));
+      let left = total;
+      for (let i = 0; i < chunks; i++) {
+        const c = (i === chunks - 1) ? left : Math.round(total / chunks * (0.7 + Math.random() * 0.6));
+        left -= c;
+        (function (cc, ii) { setTimeout(function () { _coopBattleDmg(Math.max(1, cc), 'you', crit && ii === chunks - 1); }, ii * 110); })(c, i);
+      }
+      try {
+        const av = document.querySelector('#coop-fs-body .chd-av.chd-c0');
+        if (av) { av.classList.remove('chd-ping'); void av.offsetWidth; av.classList.add('chd-ping'); }
+      } catch (_) {}
+      _coopBattle.banked = 0;
+      _coopHandleAction('sync', null);
+    }
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+  }
+
   function _coopActiveHtml(inst) {
     const cfg = _coopSheet.cfg;
     const v = _coopView(inst);
-    const both = _coopIsBoth(inst);   // W447 — steps AND flights
-    const slp = _coopIsSleep(inst);   // W686 — steps AND sleep
     const dis = _coopSheet.busy ? ' disabled' : '';
-    const unit = _coopUnit(inst);   // W397 — 'steps' | 'flights' (primary)
-    const themAlias = esc(_coopAlias((v.them && v.them.alias) || 'ally'));
-    // one combined progress bar (combined / goal). fmt formats both numbers
-    // (default = locale integer; sleep passes the minutes→hours formatter).
-    const bar = function (combined, goal, label, fmt) {
-      const c = combined || 0, g = goal || Infinity;
-      const f = fmt || function (n) { return (n || 0).toLocaleString('en-US'); };
-      const pct = Math.max(0, Math.min(100, Math.round(c / g * 100)));
-      return '<div class="coop-combined">' +
-        '<div class="coop-combined-num">' + f(c) + ' <span>/ ' + f(goal || 0) + '</span></div>' +
-        '<div class="coop-bar"><div class="coop-bar-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="coop-combined-label">combined ' + esc(label) + '</div>' +
-      '</div>';
-    };
-    const stepGoal = inst.goal_steps || cfg.coopGoalSteps;
-    const bars = both
-      ? bar(inst.combined_steps, stepGoal, 'steps') + bar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'flights')
-      : slp
-        ? bar(inst.combined_steps, stepGoal, 'steps') + bar(inst.combined_sleep_minutes, inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes, 'sleep', _coopFmtSleep)
-        : bar(inst.combined_steps, stepGoal, unit);
-    // per-hunter split — for a dual hunt show both their streams ("N st · N fl";
-    // sleep raid: "N st · Nh slept")
-    const meSteps = (v.me && v.me.steps) || 0, themSteps = (v.them && v.them.steps) || 0;
-    const splitVal = function (who) {
-      const s = (who && who.steps) || 0;
-      if (both) return s.toLocaleString('en-US') + ' st · ' + ((who && who.flights) || 0).toLocaleString('en-US') + ' fl';
-      if (slp) return s.toLocaleString('en-US') + ' st · ' + _coopFmtSleep((who && who.sleep_minutes) || 0) + ' slept';
-      return s.toLocaleString('en-US');
-    };
-    // W677 — one split row per ALLY (1 on a duo, 2 on a trio).
-    const allyRows = (v.others || [v.them]).map(function (o) {
-      return '<div class="coop-split-row"><span class="coop-split-name">' + esc(_coopAlias((o && o.alias) || 'ally')) + '</span><span class="coop-split-val">' + splitVal(o) + '</span></div>';
+    const unit = _coopUnit(inst);
+    const roster = _coopBattleRoster(inst);
+    const prog = _coopBattleProgress(inst);
+    const phase = prog.binding >= 0.9 ? 3 : prog.binding >= 0.75 ? 2 : 1;
+    const pGoal = unit === 'flights' ? (inst.goal_flights || cfg.coopGoalFlights || 0) : (inst.goal_steps || cfg.coopGoalSteps || 0);
+    const pVal = unit === 'flights' ? (inst.combined_flights || 0) : (inst.combined_steps || 0);
+
+    // Phase tag mirrors the design's escalation copy.
+    const tag = phase === 3 ? '<span class="chd-phase-tag chd-p3">It Breaks — Finish It</span>'
+              : phase === 2 ? '<span class="chd-phase-tag chd-p2">It Falters</span>'
+              : '<span class="chd-phase-tag">Hunting</span>';
+
+    // Duel bar — one segment per hunter (clamped so the stack never overflows).
+    const total = roster.reduce(function (s, h) { return s + _coopBattlePrimary(inst, h.raw); }, 0);
+    let used = 0, segs = '';
+    roster.forEach(function (h, i) {
+      const val = _coopBattlePrimary(inst, h.raw);
+      const w = pGoal > 0 ? Math.min(Math.max(0, prog.pct * 100 - used), val / pGoal * 100) : 0;
+      segs += '<div class="chd-seg chd-c' + Math.min(i, 4) + '" style="left:' + used.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></div>';
+      used += w;
+    });
+    const legend = roster.map(function (h, i) {
+      return '<span class="chd-c' + Math.min(i, 4) + '"><i></i>' + esc(h.alias) + '</span>';
     }).join('');
+
+    // Secondary stream (both/sleep) — slim bar under the duel, binding-aware.
+    let second = '';
+    if (_coopIsBoth(inst)) {
+      const fg = inst.goal_flights || cfg.coopGoalFlights || 0;
+      const fv = inst.combined_flights || 0;
+      const fp = fg > 0 ? Math.min(100, fv / fg * 100) : 0;
+      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + _N(fv) + '</b> / ' + _N(fg) + ' combined flights</div>' +
+               '<div class="chd-sec-rail"><div class="chd-sec-fill" style="width:' + fp.toFixed(1) + '%"></div></div></div>';
+    } else if (_coopIsSleep(inst)) {
+      const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
+      const sv = inst.combined_sleep_minutes || 0;
+      const sp = sg > 0 ? Math.min(100, sv / sg * 100) : 0;
+      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + esc(_coopFmtSleep(sv)) + '</b> / ' + esc(_coopFmtSleep(sg)) + ' combined sleep</div>' +
+               '<div class="chd-sec-rail"><div class="chd-sec-fill" style="width:' + sp.toFixed(1) + '%"></div></div></div>';
+    }
+
+    // Party card — LEAD crown to the strict top contributor (ties: nobody).
+    let leadIdx = -1, leadVal = 0;
+    roster.forEach(function (h, i) {
+      const val = _coopBattlePrimary(inst, h.raw);
+      if (val > leadVal) { leadVal = val; leadIdx = i; }
+      else if (val === leadVal) leadIdx = -1;
+    });
+    const rows = roster.map(function (h, i) {
+      const c = Math.min(i, 4);
+      const val = _coopBattlePrimary(inst, h.raw);
+      const share = total > 0 ? Math.round(val / total * 100) : 0;
+      const initial = esc((h.me ? (localStorage.getItem('hb_name') || 'Y') : h.alias).charAt(0).toUpperCase());
+      return '<div class="chd-row">' +
+        '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
+        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown">Lead</span>' : '') + '</div>' +
+        '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
+        '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div></div>' +
+      '</div>';
+    }).join('');
+    const log = _coopBattle.logs.map(function (l) {
+      return '<div class="chd-log-line"><span class="chd-t">' + esc(l.t) + '</span><span>' + l.html + '</span></div>';
+    }).join('');
+
+    const unitWord = unit === 'flights' ? 'flights' : 'steps';
+    _chdWireStrike();   // W747 — idempotent; ensures the hold listeners exist
     return (
-      '<div class="coop-timer">' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</div>' +
-      bars +
-      '<div class="coop-split">' +
-        '<div class="coop-split-row"><span class="coop-split-name">You</span><span class="coop-split-val">' + splitVal(v.me) + '</span></div>' +
-        allyRows +
-      '</div>' +
-      '<button class="coop-cta" data-coop-action="sync"' + dis + '>' + (_coopSheet.busy ? 'SYNCING...' : ((both || slp) ? 'SYNC MY PROGRESS' : 'SYNC MY ' + esc(unit.toUpperCase()))) + '</button>' +
-      '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +   // W384
-      '<p class="coop-foot">Your progress syncs on its own while this is open. Tap to push yours now.</p>'
+      '<div class="chd-battle">' +
+        '<div class="chd-timer-row"><span>' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + ' left</span>' + tag + '</div>' +
+        '<div class="chd-big"><b>' + _N(pVal) + '</b><span>/ ' + _N(pGoal) + '</span></div>' +
+        '<div class="chd-duel">' + segs +
+          '<div class="chd-tick" data-l="FALTERS" style="left:75%"></div>' +
+          '<div class="chd-tick" data-l="BREAKS" style="left:90%"></div>' +
+          '<div class="chd-head" style="left:' + (prog.pct * 100).toFixed(1) + '%"></div>' +
+        '</div>' +
+        second +
+        '<div class="chd-legend">' + legend + '</div>' +
+        '<div class="chd-party">' + rows + '<div class="chd-log">' + log + '</div></div>' +
+        '<div class="chd-emotes">' +
+          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="rally">✦ Rally</button>' +
+          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="push">Push on</button>' +
+          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="finish">Finish it</button>' +
+        '</div>' +
+        '<button type="button" class="chd-strike" data-coop-strike="1"' + dis + '>' +
+          '<div class="chd-ring" id="chd-ring"></div>' +
+          '<span class="chd-lab" id="chd-strike-lab">' + (_coopSheet.busy ? 'Striking…' : 'Hold to Strike') + '</span>' +
+          '<span class="chd-sub" id="chd-strike-sub"><span id="chd-banked">' + _N(_coopBattle.banked) + '</span> ' + esc(unitWord) + ' banked</span>' +
+        '</button>' +
+        '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +
+        '<p class="chd-fineprint">Your ' + esc(unitWord) + ' sync on their own while this is open. Hold the strike button to drive them into the beast yourself.</p>' +
+      '</div>'
     );
   }
 
@@ -50160,6 +50453,29 @@
     renderCoopSheet();
     _coopRefresh();
   }
+  // W747 — DEV_BUILD-only preview hook for the battle screen (browser preview +
+  // design iteration). Inert in public builds (DEV_BUILD=false strips the hook).
+  if (DEV_BUILD) {
+    try {
+      window.__coopBattlePreview = function (over) {
+        const boss = (over && over.boss_id) || 'the_coursing_dread';
+        const cfg = COOP_BOSSES[boss] || {};
+        const me = (typeof _coopMyId === 'function' && _coopMyId()) || 'me';
+        const inst = Object.assign({
+          id: 'preview-1', boss_id: boss, boss_rank: cfg.rank || 'B',
+          status: 'active', role: 'challenger',
+          goal_steps: 18000, combined_steps: 13241,
+          time_remaining_ms: 6 * 3600e3 + 23 * 60e3 + 9000,
+          party: [
+            { user_id: me, alias: 'You', role: 'challenger', steps: 2797, joined: true },
+            { user_id: 'a1', alias: 'rendiesel', role: 'ally', steps: 10444, joined: true },
+          ],
+        }, over || {});
+        _coopOpenHuntDetail(inst, false);
+      };
+    } catch (_) {}
+  }
+
   // W577 — co-op boss card → the RECRUIT/invite flow directly. History: W394
   // routed card taps into the Pacts dashboard, then W572 replaced the
   // dashboard's Recruit button with Accept-All — which orphaned invite-sending

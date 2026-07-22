@@ -84,6 +84,8 @@ import {
   handleRaidFillTick,
   // W702 — background matchmaking sweep (cron drains the persistent raid queue).
   runRaidMatchmakeSweep,
+  // W747 — battle emotes (Rally / Push on / Finish it → APNs push to the party).
+  handleCoopBossEmote,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
 import {
@@ -394,6 +396,10 @@ export default {
           } else if (path === '/v1/coop-boss' && method === 'GET') {
             // List the caller's co-op hunts (both challenger + partner roles).
             response = await handleCoopBossList(request, env, session);
+          } else if (path === '/v1/coop-boss/emote' && method === 'POST') {
+            // W747 — battle emote: enum key only; server owns the text; pushes
+            // to every OTHER participant of the (active) hunt the caller is in.
+            response = await handleCoopBossEmote(request, env, session, ctx);
           } else if (path === '/v1/coop-boss/pacts' && method === 'GET') {
             // W664 Phase 2 — canonical per-friend co-op daily-streak "pacts"
             // computed from the durable instance history (so both friends agree).

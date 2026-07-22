@@ -1625,6 +1625,9 @@
   function coopBossJoin(id)    { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/join'); }
   function coopBossDecline(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/decline'); }
   function coopBossCancel(id)  { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/cancel'); }
+  // W747 — battle emote (Rally / Push on / Finish it). Enum key only; the server
+  // owns the display text + pushes it to the rest of the party.
+  function coopBossEmote(id, emote) { return _authedFetch('POST', '/v1/coop-boss/emote', { instanceId: id, emote: emote }); }
   function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
   function coopBossClaim(id)   { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/claim'); }   // W463.1 — atomic durable drop credit
   function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
@@ -2069,6 +2072,7 @@
     coopBossJoin,
     coopBossDecline,
     coopBossCancel,
+    coopBossEmote,   // W747
     coopBossResolve,
     coopBossClaim,
     coopBossStart,

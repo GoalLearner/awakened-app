@@ -14,6 +14,7 @@ import {
   handleRaidQueueJoin,
   handleRaidQueueLeave,
   handleRaidStart,
+  handleCoopBossEmote,
 } from './coop-boss';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -597,5 +598,51 @@ describe('W686 — steps+sleep dual metric (The Sleepless Crown)', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { instance: Record<string, unknown> };
     expect(body.instance.metric).toBe('steps_sleep');
+  });
+});
+
+// ── W747 — battle emotes (handoff 24) ────────────────────────────────────────
+describe('POST /v1/coop-boss/emote (W747)', () => {
+  const ACTIVE = { ...PENDING_ROW, status: 'active', partner_joined_at: '2026-07-12 01:00:00' };
+  const emoteReq = (body: unknown) =>
+    new Request('http://test/v1/coop-boss/emote', { method: 'POST', body: JSON.stringify(body) });
+
+  it('participant + known key → 200 ok (push path no-ops without APNs cfg)', async () => {
+    const db = makeDb({ instance: ACTIVE });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+  });
+
+  it('the invited seat can shout too', async () => {
+    const db = makeDb({ instance: ACTIVE });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'finish' }), makeEnv(db), session('u2'));
+    expect(res.status).toBe(200);
+  });
+
+  it('a NON-participant is refused (no spectator shouting)', async () => {
+    const db = makeDb({ instance: ACTIVE });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u9'));
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe('NOT_IN_HUNT');
+  });
+
+  it('an unknown emote key is refused (enum-only, no free text)', async () => {
+    const db = makeDb({ instance: ACTIVE });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'gg ez <script>' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EMOTE');
+  });
+
+  it('a pending (not yet live) hunt refuses emotes', async () => {
+    const db = makeDb({ instance: PENDING_ROW });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'push' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe('NOT_ACTIVE');
   });
 });

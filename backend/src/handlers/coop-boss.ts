@@ -1828,6 +1828,69 @@ async function matchmakeRaid(env: Env, bossId: string, ctx?: ExecutionContext): 
 // client watching. Every party it forms pushes its hunters via notifyHuntLive (inside
 // matchmakeRaid → formRaidInstance), so a walk-away member is told the instant their raid
 // goes live. Idempotent + bounded; never throws (a cron must not crash on one bad boss).
+// ── W747 — battle emotes (ClaudeDesign handoff 24) ──────────────────────────
+// The redesigned hunt screen has three canned battle cries (Rally / Push on /
+// Finish it). ENUM-ONLY by design: the client sends a key, the SERVER owns the
+// display text, so there is no free-text abuse surface at all. Delivery is an
+// APNs push to every OTHER participant (the app may be closed mid-hunt); the
+// sender sees a local fly-in. Rate limit: the shared RL_COOP_WRITE bucket
+// (20/min) PLUS the client's own 30s cooldown per button.
+const COOP_EMOTES: Record<string, string> = {
+  rally: 'Rally to me',
+  push: 'Push on',
+  finish: 'Finish it',
+};
+
+export async function handleCoopBossEmote(
+  request: Request,
+  env: Env,
+  session: SessionPayload,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+
+  let body: { instanceId?: unknown; emote?: unknown };
+  try {
+    body = (await request.json()) as { instanceId?: unknown; emote?: unknown };
+  } catch {
+    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
+  }
+  const instanceId = typeof body.instanceId === 'string' ? body.instanceId : '';
+  const emoteKey = typeof body.emote === 'string' ? body.emote : '';
+  const text = COOP_EMOTES[emoteKey];
+  if (!instanceId || !text) {
+    return jsonError(400, 'INVALID_EMOTE', 'instanceId and a known emote key are required.');
+  }
+
+  const inst = await loadInstance(env, instanceId);
+  if (!inst) return jsonError(404, 'NOT_FOUND', 'No such hunt.');
+  if (inst.status !== 'active') {
+    return jsonError(409, 'NOT_ACTIVE', 'That hunt is not live.');
+  }
+  const ids = participantIds(inst);
+  if (!ids.includes(session.userId)) {
+    // Same authz posture as every other instance route: you can only act on a
+    // hunt you are IN (no spectator shouting into someone else's raid).
+    return jsonError(403, 'NOT_IN_HUNT', 'You are not part of this hunt.');
+  }
+
+  if (ctx) {
+    for (const uid of ids) {
+      if (uid === session.userId) continue;
+      ctx.waitUntil(
+        notifyUser(env, uid, {
+          title: 'Battle Cry',
+          body: `${session.alias}: 「${text}」`,
+          type: 'coop_emote',
+          data: { bossId: inst.boss_id },
+        }),
+      );
+    }
+  }
+  return jsonOk({ ok: true });
+}
+
 export async function runRaidMatchmakeSweep(env: Env, ctx?: ExecutionContext): Promise<number> {
   let formed = 0;
   for (const bossId of Object.keys(COOP_BOSS_CFG)) {
