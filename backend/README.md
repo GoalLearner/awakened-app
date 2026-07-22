@@ -121,6 +121,47 @@ wrangler tail --status error
 
 ---
 
+## Backups + restore (W746)
+
+Two independent restore paths — both VERIFIED working 2026-07-22:
+
+**A. Time Travel (primary, prod).** D1 keeps 30 days of point-in-time history
+automatically. No file, no setup:
+
+```bash
+npx wrangler d1 time-travel info awakened-db                       # current bookmark
+npx wrangler d1 time-travel restore awakened-db --bookmark=<bm>    # roll back
+```
+
+**B. File export (secondary/offsite).** One script exports prod AND proves the
+export restores (chunk-split → wipe local dev D1 → restore from nothing →
+count-compare vs prod):
+
+```bash
+bash scripts/backup-and-verify.sh
+```
+
+Exports land in `~/Documents/awakened-backups/` — OUTSIDE the repo on purpose
+(they contain user emails/aliases; never commit one). Run it monthly-ish.
+
+Known caveat (why the script chunk-splits): `d1 execute` caps statements at
+~100KB, and a few `user_state_snapshots` rows inline JSON blobs bigger than
+that (they were written via bound params, which the cap doesn't apply to). The
+script quarantines those rows and restores everything else — safe, because
+snapshots are client-mirrored and re-upload on next app launch (self-healing).
+
+## Client error tracking (W746)
+
+Uncaught client JS errors are POSTed to `/v1/users/me/client-errors` (auth'd,
+rate-limited, 30-day self-pruning retention). Triage with:
+
+```bash
+npx wrangler d1 execute awakened-db --remote --command \
+  "SELECT created_at, build, path, message FROM client_errors ORDER BY created_at DESC LIMIT 50"
+```
+
+---
+
 ## Project layout
 
 ```
