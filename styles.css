@@ -33834,6 +33834,28 @@ body.combat-active #app * { animation-play-state: paused !important; }
   background:var(--gold-glow);border:1px solid rgba(245,158,11,.38);}
 .gp-num{font-family:var(--mono);font-size:19px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:.3px;font-variant-numeric:tabular-nums;text-shadow:0 0 12px var(--gold-glow);}
 .gp-label{font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.4px;color:var(--text-secondary);text-transform:uppercase;line-height:1.25;}
+/* W742 — Gear Power pill is tappable (opens the "how it's calculated" breakdown). */
+.gp-pill{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s ease,border-color .12s ease;}
+.gp-pill:hover,.gp-pill:focus-visible{border-color:rgba(245,158,11,.72);outline:none;}
+.gp-pill:active{transform:scale(.96);}
+.gp-info-dot{display:flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none;border-radius:50%;
+  border:1px solid rgba(245,158,11,.55);color:var(--gold);font-family:var(--serif);font-style:italic;font-weight:700;
+  font-size:10px;line-height:1;opacity:.85;}
+/* W742 — Gear Power breakdown rows (rendered inside the shared notice card). */
+.gp-info-formula{margin:11px 0;padding:9px 11px;border-radius:10px;background:rgba(245,158,11,.08);
+  border:1px solid rgba(245,158,11,.18);font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--text-secondary);}
+.gp-info-formula b{color:var(--gold);}
+.gp-info-rows{margin:11px 0 2px;display:flex;flex-direction:column;gap:5px;}
+.gp-info-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:12px;}
+.gp-info-name{color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gp-info-lvl{color:var(--gold);font-size:10px;font-weight:800;}
+.gp-info-val{color:var(--text-primary);font-weight:800;font-variant-numeric:tabular-nums;flex:none;}
+.gp-info-row--set .gp-info-name,.gp-info-row--set .gp-info-val{color:#a78bfa;}
+.gp-info-row--total{margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.13);}
+.gp-info-row--total .gp-info-name{color:var(--text-primary);font-weight:800;text-transform:uppercase;letter-spacing:1px;font-size:11px;}
+.gp-info-row--total .gp-info-val{color:var(--gold);font-size:16px;}
+.gp-info-foot{margin-top:11px;font-family:var(--flavor);font-style:italic;font-size:12.5px;color:var(--text-tertiary);}
+.gp-info-empty{margin:11px 0;color:var(--text-tertiary);font-size:13px;}
 .armory-title{font-family:var(--serif);font-size:29px;font-weight:800;letter-spacing:2.5px;line-height:1;margin:0;
   background:linear-gradient(180deg,#ffe6a8,var(--gold) 62%,#c17d0c);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .armory-sub{font-family:var(--flavor);font-style:italic;font-size:15px;font-weight:500;color:var(--text-secondary);letter-spacing:.2px;margin:9px 0 0;}

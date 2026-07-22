@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.4 is the next train. Carries: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.4-w741'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.4-w742'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14930,6 +14930,57 @@
     const eff = Object.assign({}, (card && card.bonuses) || {});
     if (dom) eff[dom] = (eff[dom] | 0) + lvl;
     try { return _relicProfile({ bonuses: eff }).power | 0; } catch (_) { return 0; }
+  }
+  // W742 — the per-item + set breakdown behind the Armory GEAR POWER pill. Mirrors the
+  // exact aggregation renderHunterBuildGrid uses, so `total` here always equals the pill.
+  function _gearPowerBreakdown() {
+    const rows = [];
+    let total = 0;
+    try {
+      const build = getHunterBuild();
+      const slots = (build && Array.isArray(build.slots)) ? build.slots : [];
+      for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
+        const cid = slots[i];
+        const card = cid ? CARDS[cid] : null;
+        if (!card) continue;
+        const p = _equippedRelicPower(cid, card);
+        rows.push({ name: card.name || 'Relic', power: p, lvl: (typeof getRelicLevel === 'function') ? getRelicLevel(cid) : 0 });
+        total += p;
+      }
+    } catch (_) {}
+    let setPower = 0;
+    try { setPower = _relicProfile({ bonuses: _activeSetBonuses().totals }).power | 0; } catch (_) {}
+    total += setPower;
+    return { rows: rows, setPower: setPower, total: total };
+  }
+  // W742 — "How Gear Power works" popup (tapping the Armory GEAR POWER pill). Explains the
+  // weighted combat-triangle + itemizes each equipped relic's contribution, its upgrade
+  // (+n), and the build-wide set bonus, so the number is fully legible.
+  function showGearPowerInfo() {
+    const bd = _gearPowerBreakdown();
+    let list;
+    if (bd.rows.length) {
+      const itemRows = bd.rows.map((r) =>
+        '<div class="gp-info-row"><span class="gp-info-name">' + esc(r.name) +
+          (r.lvl ? ' <span class="gp-info-lvl">+' + r.lvl + '</span>' : '') +
+        '</span><span class="gp-info-val">' + r.power + '</span></div>',
+      ).join('');
+      const setRow = bd.setPower
+        ? '<div class="gp-info-row gp-info-row--set"><span class="gp-info-name">Set bonus</span><span class="gp-info-val">+' + bd.setPower + '</span></div>'
+        : '';
+      list = '<div class="gp-info-rows">' + itemRows + setRow +
+        '<div class="gp-info-row gp-info-row--total"><span class="gp-info-name">Total</span><span class="gp-info-val">' + bd.total + '</span></div>' +
+        '</div>';
+    } else {
+      list = '<div class="gp-info-empty">Equip relics to build your Gear Power.</div>';
+    }
+    const body =
+      'A weighted measure of your build’s fighting strength — the very stats your hunter carries into the Ascent and PvP.' +
+      '<div class="gp-info-formula">Each relic’s stats count by combat role:<br>' +
+        '<b>STR</b> ×2.3 · <b>INT·VIT</b> ×1.15 · <b>FOCUS·WILL</b> ×1.15</div>' +
+      list +
+      '<div class="gp-info-foot">Upgrading relics and completing sets raises it.</div>';
+    showNoticeCard({ icon: '⚔️', amount: String(bd.total), title: 'How Gear Power works', bodyHtml: body, cta: 'Tap to close' });
   }
   // Power of the currently-equipped item in each typed slot → the baseline a candidate's
   // "▲ vs equipped" delta compares against (0 = empty slot ⇒ pure equip gain).
@@ -33575,6 +33626,18 @@
     const close   = document.getElementById('equipment-close');
     if (overlay) overlay.addEventListener('click', closeEquipmentPanel);
     if (close)   close.addEventListener('click', closeEquipmentPanel);
+
+    // W742 — tap the Gear Power pill → "how it's calculated" breakdown.
+    const gpPill = document.getElementById('armory-gp-pill');
+    if (gpPill) {
+      gpPill.addEventListener('click', () => { try { showGearPowerInfo(); } catch (_) {} });
+      gpPill.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          try { showGearPowerInfo(); } catch (_) {}
+        }
+      });
+    }
 
     // Build slot grid — delegated click handler routes to picker
     // or detail depending on slot state.
