@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w743'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w744'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49728,11 +49728,29 @@
       '<span class="cph-chev" aria-hidden="true"><svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></div>';
   }
 
+  // W744 — pretty party-name lists (commas + a single ampersand; no run-on "and…and…and").
+  // _coopNameList = full: "James" / "James & Galilea" / "James, Galilea & Rendiesel" /
+  // "James, Galilea, Rendiesel & Anthony". _coopNameListShort = compact for the TRUNCATING
+  // card title: caps at 2 shown then "& N more", so a 5-hunter roster never clips.
+  function _coopNameList(names) {
+    const a = (names || []).filter(Boolean);
+    if (a.length <= 1) return a[0] || '';
+    if (a.length === 2) return a[0] + ' & ' + a[1];
+    return a.slice(0, -1).join(', ') + ' & ' + a[a.length - 1];
+  }
+  function _coopNameListShort(names) {
+    const a = (names || []).filter(Boolean);
+    if (a.length <= 3) return _coopNameList(a);
+    return a.slice(0, 2).join(', ') + ' & ' + (a.length - 2) + ' more';
+  }
+
   function _coopHuntCardHtml(inst) {
     const v = _coopView(inst);
-    // W677 — name EVERY other hunter on the card chrome ("A and B" on a trio).
+    // W677 — name EVERY other hunter on the card chrome; W744 — pretty list, compact title.
     const others = (v.others && v.others.length) ? v.others : [v.them];
-    const ally = others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); }).join(' and ');
+    const allyNames = others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); });
+    const allyFull = _coopNameList(allyNames);    // full &-list (aria + waiting line)
+    const ally = _coopNameListShort(allyNames);   // compact title (caps at "& N more")
     const cfg = COOP_BOSSES[inst.boss_id] || COOP_BOSSES[COOP_PRIMARY_BOSS_ID] || { name: 'Co-op Boss', rank: 'E' };
     const bossName = cfg.name || 'Co-op Boss';
     const rank = String(inst.boss_rank || cfg.rank || 'E').toUpperCase();
@@ -49771,7 +49789,7 @@
         : _coopIsSleep(inst)
           ? '<div class="cph-prog-second">' + _coopFmtSleep(inst.combined_sleep_minutes || 0) + ' <span>/ ' + _coopFmtSleep(inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0) + '</span> Combined Sleep</div>' : '';
       const crit = _coopUrgency(inst.time_remaining_ms) === 'crit' ? ' cph-crit' : '';
-      return '<a class="cph-hunt cph-active' + crit + '" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc(ally + ', active co-op hunt against ' + bossName + '. Tap to open.') + '">' + top +
+      return '<a class="cph-hunt cph-active' + crit + '" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc(allyFull + ', active co-op hunt against ' + bossName + '. Tap to open.') + '">' + top +
         '<div class="cph-prog">' +
           '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span><span class="cph-pct">' + pct + '%</span></span>' + _coopTimePill(inst, false) + '</div>' +
           '<div class="cph-bar"><div class="cph-you" style="width:' + yw.toFixed(1) + '%"></div>' + allyBars + '</div>' +
@@ -49802,7 +49820,7 @@
     const outstanding = _coopOthers(inst)
       .filter(function (p) { return p && p.joined === false && p.user_id !== ((v.me && v.me.user_id) || ''); })
       .map(function (p) { return _coopAlias((p && p.alias) || 'ally'); });
-    const waitName = outstanding.length ? outstanding.join(' and ') : ally;
+    const waitName = outstanding.length ? _coopNameList(outstanding) : allyFull;
     return '<a class="cph-hunt cph-pending cph-wait" role="button" tabindex="0" data-coop-hunt="' + esc(inst.id) + '" aria-label="' + esc('Pact sent, waiting for ' + waitName + ' to accept.') + '">' + top +
       '<div class="cph-inv"><div class="cph-inv-meta"><span class="cph-inv-target">Waiting for <b>' + esc(waitName) + '</b> to accept</span><span class="cph-wait-pill">Pact Sent</span></div></div>' +
     '</a>';
