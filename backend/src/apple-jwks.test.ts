@@ -12,7 +12,9 @@ import type { Env } from './env';
 
 const noopRl = { limit: async () => ({ success: true }) };
 
-const mockEnv: Env = {
+// Only DB + APPLE_BUNDLE_ID are exercised here; cast past the (growing) Env
+// binding list rather than stub 30+ rate-limiters the rejection paths never touch.
+const mockEnv = {
   DB: {} as unknown as D1Database,
   JWT_SIGNING_KEY: 'test-key-not-used-here',
   APPLE_BUNDLE_ID: 'com.goallearner.awakened',
@@ -21,7 +23,7 @@ const mockEnv: Env = {
   RL_LEADERBOARD_SUBMIT: noopRl,
   RL_LEADERBOARD_TOP: noopRl,
   RL_ACCOUNT_DELETE: noopRl,
-};
+} as unknown as Env;
 
 describe('verifyAppleIdentityToken', () => {
   it('rejects an empty token', async () => {

@@ -9,7 +9,9 @@ import type { Env } from './env';
 
 const noopRl = { limit: async () => ({ success: true }) };
 
-const baseEnv: Env = {
+// Only DB + JWT_SIGNING_KEY are exercised here; cast past the (growing) Env
+// binding list rather than stub 30+ rate-limiters the round-trip never touches.
+const baseEnv = {
   DB: {} as unknown as D1Database,
   JWT_SIGNING_KEY: 'test-signing-key-32-bytes-or-more-for-hs256',
   APPLE_BUNDLE_ID: 'com.goallearner.awakened',
@@ -18,7 +20,7 @@ const baseEnv: Env = {
   RL_LEADERBOARD_SUBMIT: noopRl,
   RL_LEADERBOARD_TOP: noopRl,
   RL_ACCOUNT_DELETE: noopRl,
-};
+} as unknown as Env;
 
 describe('issueSessionJwt + verifySessionJwt', () => {
   it('round-trips: issued JWT verifies to the same userId + alias', async () => {
