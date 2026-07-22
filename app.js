@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w747'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w748'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48470,6 +48470,8 @@
     if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
     const inst = _coopSheet.instance;
     if (!inst) return;
+    // W748 — tap-to-strike: FX for the banked amount, then the plain sync path.
+    if (action === 'strike') { _coopBattleStrike(); return; }
     // W747 — battle emote. Enum key → local fly-in + log immediately (the sender's
     // own feedback must not wait on the network), then fire-and-forget the push to
     // the party. 30s per-key client cooldown on top of the server rate limit.
@@ -49000,9 +49002,9 @@
   // One shared render for EVERY co-op hunt: duo/trio/raid, steps/flights/both/
   // sleep, members-only included. Session-scoped battle state (log lines, per-
   // hunter prev values for strike detection, banked amount, hold-charge).
-  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0, charging: false, pending: 0, raf: 0, t0: 0, cool: {} };
+  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0, cool: {} };
   function _coopBattleReset(instId) {
-    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0, charging: false, pending: 0, raf: 0, t0: 0, cool: {} };
+    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0, cool: {} };
   }
   const _N = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
 
@@ -49128,73 +49130,40 @@
     } catch (_) {}
   }
 
-  // W747 — hold-to-strike. The ring charge is power-up THEATER over the real
-  // submit: a release always drives the FULL banked amount (the server takes
-  // absolute stream totals — there is no partial submit), then reuses the same
-  // busy→submit→poll→re-render path as the old SYNC button, so the delta pass
-  // logs "You struck for N" from the server's own accepted numbers.
-  let _chdStrikeWired = false, _chdRaf = 0, _chdT0 = 0;
-  function _chdWireStrike() {
-    if (_chdStrikeWired) return;
-    _chdStrikeWired = true;
-    document.addEventListener('pointerdown', function (e) {
-      const btn = (e.target && e.target.closest) ? e.target.closest('.chd-strike') : null;
-      if (!btn || btn.disabled || _coopSheet.busy || _coopBattle.charging) return;
-      const inst = _coopSheet.instance;
-      if (!inst || inst.status !== 'active') return;
-      try { e.preventDefault(); } catch (_) {}
+  // W748 — STRIKE is a plain tap (the W747 hold-charge ritual confused its first
+  // real user — the owner — so it's gone; owner's standing simple-UX rule). The
+  // FX stay: slash + shake + damage numbers for the banked amount, then the same
+  // busy→submit→poll→re-render path as the old SYNC button. Spam-safe by
+  // construction: the submit sends ABSOLUTE window totals (server takes max, no
+  // deltas), banked hits 0 after a strike, and the endpoint is rate-limited —
+  // repeat taps re-sync the same number and nothing more.
+  function _coopBattleStrike() {
+    const inst = _coopSheet.instance;
+    if (!inst || inst.status !== 'active' || _coopSheet.busy) return;
+    const total = _coopBattle.banked;
+    if (total < 1) {
       const lab = document.getElementById('chd-strike-lab');
-      if (_coopBattle.banked < 1) {
-        if (lab) {
-          lab.textContent = 'Nothing banked yet';
-          setTimeout(function () { try { if (!_coopBattle.charging && !_coopSheet.busy) lab.textContent = 'Hold to Strike'; } catch (_) {} }, 900);
-        }
-        return;
+      if (lab) {
+        lab.textContent = 'Nothing banked yet';
+        setTimeout(function () { try { if (!_coopSheet.busy) lab.textContent = 'Strike'; } catch (_) {} }, 900);
       }
-      _coopBattle.charging = true; _coopBattle.pending = 0; _chdT0 = performance.now();
-      btn.classList.add('chd-charging');
-      (function loop(t) {
-        if (!_coopBattle.charging) return;
-        _coopBattle.pending = Math.min(_coopBattle.banked, Math.round((t - _chdT0) / 1.6));
-        const ring = document.getElementById('chd-ring');
-        if (ring) ring.style.width = (_coopBattle.banked > 0 ? (_coopBattle.pending / _coopBattle.banked * 100) : 0) + '%';
-        if (lab) lab.textContent = '+' + _N(_coopBattle.pending);
-        const sub = document.getElementById('chd-strike-sub');
-        if (sub) sub.textContent = _coopBattle.pending >= _coopBattle.banked ? 'Fully charged — release!' : 'Release to strike';
-        _chdRaf = requestAnimationFrame(loop);
-      })(_chdT0);
-    }, { passive: false });
-    function release() {
-      if (!_coopBattle.charging) return;
-      _coopBattle.charging = false;
-      try { cancelAnimationFrame(_chdRaf); } catch (_) {}
-      try {
-        const btn = document.querySelector('#coop-fs-body .chd-strike');
-        if (btn) btn.classList.remove('chd-charging');
-        const ring = document.getElementById('chd-ring');
-        if (ring) ring.style.width = '0%';
-      } catch (_) {}
-      const total = _coopBattle.banked;
-      _coopBattle.pending = 0;
-      if (total < 1) { renderCoopSheet(); return; }
-      _coopBattleHitFx();
-      const crit = total >= 800;
-      const chunks = Math.min(5, 1 + Math.floor(total / 280));
-      let left = total;
-      for (let i = 0; i < chunks; i++) {
-        const c = (i === chunks - 1) ? left : Math.round(total / chunks * (0.7 + Math.random() * 0.6));
-        left -= c;
-        (function (cc, ii) { setTimeout(function () { _coopBattleDmg(Math.max(1, cc), 'you', crit && ii === chunks - 1); }, ii * 110); })(c, i);
-      }
-      try {
-        const av = document.querySelector('#coop-fs-body .chd-av.chd-c0');
-        if (av) { av.classList.remove('chd-ping'); void av.offsetWidth; av.classList.add('chd-ping'); }
-      } catch (_) {}
-      _coopBattle.banked = 0;
-      _coopHandleAction('sync', null);
+      return;
     }
-    window.addEventListener('pointerup', release);
-    window.addEventListener('pointercancel', release);
+    _coopBattleHitFx();
+    const crit = total >= 800;
+    const chunks = Math.min(5, 1 + Math.floor(total / 280));
+    let left = total;
+    for (let i = 0; i < chunks; i++) {
+      const c = (i === chunks - 1) ? left : Math.round(total / chunks * (0.7 + Math.random() * 0.6));
+      left -= c;
+      (function (cc, ii) { setTimeout(function () { _coopBattleDmg(Math.max(1, cc), 'you', crit && ii === chunks - 1); }, ii * 110); })(c, i);
+    }
+    try {
+      const av = document.querySelector('#coop-fs-body .chd-av.chd-c0');
+      if (av) { av.classList.remove('chd-ping'); void av.offsetWidth; av.classList.add('chd-ping'); }
+    } catch (_) {}
+    _coopBattle.banked = 0;
+    _coopHandleAction('sync', null);
   }
 
   function _coopActiveHtml(inst) {
@@ -49266,7 +49235,6 @@
     }).join('');
 
     const unitWord = unit === 'flights' ? 'flights' : 'steps';
-    _chdWireStrike();   // W747 — idempotent; ensures the hold listeners exist
     return (
       '<div class="chd-battle">' +
         '<div class="chd-timer-row"><span>' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + ' left</span>' + tag + '</div>' +
@@ -49284,13 +49252,12 @@
           '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="push">Push on</button>' +
           '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="finish">Finish it</button>' +
         '</div>' +
-        '<button type="button" class="chd-strike" data-coop-strike="1"' + dis + '>' +
-          '<div class="chd-ring" id="chd-ring"></div>' +
-          '<span class="chd-lab" id="chd-strike-lab">' + (_coopSheet.busy ? 'Striking…' : 'Hold to Strike') + '</span>' +
+        '<button type="button" class="chd-strike" data-coop-action="strike"' + dis + '>' +
+          '<span class="chd-lab" id="chd-strike-lab">' + (_coopSheet.busy ? 'Striking…' : 'Strike') + '</span>' +
           '<span class="chd-sub" id="chd-strike-sub"><span id="chd-banked">' + _N(_coopBattle.banked) + '</span> ' + esc(unitWord) + ' banked</span>' +
         '</button>' +
         '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +
-        '<p class="chd-fineprint">Your ' + esc(unitWord) + ' sync on their own while this is open. Hold the strike button to drive them into the beast yourself.</p>' +
+        '<p class="chd-fineprint">Your ' + esc(unitWord) + ' sync on their own while this is open. Tap STRIKE to drive the ' + esc(unitWord) + ' you’ve banked into the beast yourself.</p>' +
       '</div>'
     );
   }

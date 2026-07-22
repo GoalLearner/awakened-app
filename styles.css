@@ -34510,16 +34510,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
   font-family: ui-monospace, monospace; background: linear-gradient(180deg, #ffd574, var(--gold) 55%, #c17d0c);
   box-shadow: 0 10px 30px -8px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.5); transition: transform .15s; touch-action: none; }
 .chd-strike:active { transform: scale(.985); }
-.chd-strike .chd-ring { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.55), rgba(255,247,226,.75)); width: 0%; }
 .chd-strike .chd-lab { position: relative; z-index: 2; display: block; font-size: 14px; font-weight: 800; letter-spacing: 3px; color: #3b2503; text-transform: uppercase; }
 .chd-strike .chd-sub { position: relative; z-index: 2; display: block; margin-top: 3px; font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; color: rgba(59,37,3,.65); text-transform: uppercase; font-variant-numeric: tabular-nums; }
-.chd-strike.chd-charging { animation: chdChargeShake .3s infinite; }
-@keyframes chdChargeShake { 0%,100% { transform: scale(1.01); } 25% { transform: scale(1.012) translate(-1px,0); } 75% { transform: scale(1.012) translate(1px,0); } }
 .chd-strike[disabled] { background: linear-gradient(180deg,#2c2c4a,#1a1a33); box-shadow: none; cursor: default; }
 .chd-strike[disabled] .chd-lab { color: var(--text-secondary); } .chd-strike[disabled] .chd-sub { color: var(--text-tertiary); }
 .chd-fineprint { margin-top: 12px; padding: 0 12px; text-align: center; font-size: 12px; line-height: 1.55; color: var(--text-tertiary); }
 
 @media (prefers-reduced-motion: reduce) {
-  .chd-phase-3 .bfs-hero img, .chd-hit .bfs-hero img, .chd-vign, .chd-strike.chd-charging,
-  .chd-dmg, .chd-emote-fly, .chd-av.chd-ping, .chd-pulse { animation: none !important; }
+  .chd-phase-3 .bfs-hero img, .chd-hit .bfs-hero img, .chd-vign,   .chd-dmg, .chd-emote-fly, .chd-av.chd-ping, .chd-pulse { animation: none !important; }
 }
