@@ -126,4 +126,20 @@ describe('isProfane', () => {
       expect(normalizeFull('')).toBe('');
     });
   });
+
+  // W745 — leetspeak substitution must not be a bypass ("H1tler" is the whole point).
+  describe('leetspeak / symbol-substitution bypasses are blocked', () => {
+    const cases = ['H1tler', 'Hitl3r', 'N4zi', 'N1gger', 'N!gger', 'F4ggot', 'Sh1t', '5h1t', 'B1tch', '@sshole'];
+    cases.forEach((c) => {
+      it(`blocks "${c}"`, () => expect(isProfane(c)).toBe(true));
+    });
+  });
+
+  // W745 — the leet fold must NOT newly false-positive on benign names with digits.
+  describe('benign aliases with digits/leet still pass', () => {
+    const ok = ['St3ph3n', 'L1am', '5cott', 'Al1ce', 'Scott', 'Passenger', 'Classic', 'Cassie', 'StepLord'];
+    ok.forEach((c) => {
+      it(`allows "${c}"`, () => expect(isProfane(c)).toBe(false));
+    });
+  });
 });

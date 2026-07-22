@@ -143,6 +143,25 @@ function normalizeFull(input: string): string {
 }
 
 /**
+ * W745 — leetspeak fold: map the common digit/symbol letter-substitutions to
+ * letters, THEN strip to a-z. Closes the "H1tler" / "N1gger" / "F4ggot" / "Sh1t"
+ * bypass class that defeats both the raw and repeat-collapse checks (a determined
+ * troll who can't type "Hitler" just types "H1tler"). Safe against false positives
+ * for the same reason the rest of the list is: a benign alias only trips it if its
+ * de-leeted form actually CONTAINS a curated wordlist word, and short benign stems
+ * (like "ass") were deliberately excluded. "1" maps to "i" (the high-frequency case
+ * for these words: n1gger, h1tler); l-substitution is a rarer vector left to v2.
+ */
+const LEET_MAP: Readonly<Record<string, string>> = {
+  '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b',
+  '@': 'a', '$': 's', '!': 'i',
+};
+function deLeet(input: string): string {
+  const mapped = input.toLowerCase().replace(/./g, (c) => LEET_MAP[c] ?? c);
+  return mapped.replace(/[^a-z]/g, '');
+}
+
+/**
  * Precomputed normalized wordlist. Only entries that remain ≥3 chars
  * after normalizeFull are checked in full mode — shorter normalized
  * forms would over-match common letter sequences in benign aliases
@@ -168,11 +187,21 @@ export function isProfane(alias: string): boolean {
     if (stripped.includes(word)) return true;
   }
 
-  // Full mode: catches leetspeak / repeat-obfuscation variants.
+  // Full mode: catches repeat-obfuscation variants ("fuuuuck" → "fuk").
   const normalized = normalizeFull(alias);
-  if (normalized.length === 0) return false;
-  for (const word of NORMALIZED_WORDS) {
-    if (normalized.includes(word)) return true;
+  if (normalized.length > 0) {
+    for (const word of NORMALIZED_WORDS) {
+      if (normalized.includes(word)) return true;
+    }
+  }
+
+  // W745 Leet mode: catches digit/symbol letter-substitution ("H1tler", "N1gger",
+  // "F4ggot", "Sh1t") that survives both checks above.
+  const deleeted = deLeet(alias);
+  if (deleeted.length > 0) {
+    for (const word of PROFANITY_WORDS) {
+      if (deleeted.includes(word)) return true;
+    }
   }
 
   return false;
