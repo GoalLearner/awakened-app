@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w749'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w750'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48472,16 +48472,16 @@
     if (!inst) return;
     // W748 — tap-to-strike: FX for the banked amount, then the plain sync path.
     if (action === 'strike') { _coopBattleStrike(); return; }
-    // W747 — battle emote. Enum key → local fly-in + log immediately (the sender's
-    // own feedback must not wait on the network), then fire-and-forget the push to
-    // the party. 30s per-key client cooldown on top of the server rate limit.
+    // W747/W750 — battle emote. Enum key → local fly-in + log immediately (the
+    // sender's own feedback must not wait on the network), then the push to the
+    // party. ONE cry per 4h (persisted locally, ENFORCED server-side); on a 429
+    // the local clock re-syncs to the server's true remaining time.
     if (action === 'emote') {
       const key = (btn && btn.getAttribute('data-emote')) || '';
       const TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it' };
       if (!TEXT[key] || inst.status !== 'active') return;
-      const now = Date.now();
-      if ((now - (_coopBattle.cool[key] || 0)) < 30000) return;
-      _coopBattle.cool[key] = now;
+      if (_coopEmoteCooldownLeft() > 0) return;
+      try { localStorage.setItem(_COOP_EMOTE_TS_KEY, String(Date.now())); } catch (_) {}
       try {
         const hero = document.querySelector('#coop-fs-overlay .bfs-hero');
         if (hero) {
@@ -48495,11 +48495,23 @@
         }
       } catch (_) {}
       _coopBattleLog('<b class="chd-gold">You</b>: ' + esc(TEXT[key]));
-      if (btn) { btn.classList.add('chd-cool'); setTimeout(function () { try { btn.classList.remove('chd-cool'); } catch (_) {} }, 30000); }
+      try {
+        document.querySelectorAll('#coop-fs-body .chd-emote').forEach(function (b) {
+          b.classList.add('chd-cool'); b.disabled = true;
+        });
+      } catch (_) {}
       try { const lg = document.querySelector('#coop-fs-body .chd-log');
         if (lg) lg.innerHTML = _coopBattle.logs.map(function (l) { return '<div class="chd-log-line"><span class="chd-t">' + esc(l.t) + '</span><span>' + l.html + '</span></div>'; }).join('');
       } catch (_) {}
-      try { Auth.coopBossEmote(inst.id, key).catch(function () {}); } catch (_) {}
+      try {
+        Auth.coopBossEmote(inst.id, key).then(function (res) {
+          // Server refused (e.g. an earlier cry from another device): mirror ITS
+          // clock so the buttons free up exactly when the server will accept.
+          if (res && res.code === 'EMOTE_COOLDOWN' && typeof res.retry_after_ms === 'number') {
+            try { localStorage.setItem(_COOP_EMOTE_TS_KEY, String(Date.now() - (COOP_EMOTE_COOLDOWN_MS - res.retry_after_ms))); } catch (_) {}
+          }
+        }).catch(function () {});
+      } catch (_) {}
       return;
     }
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
@@ -49002,9 +49014,20 @@
   // One shared render for EVERY co-op hunt: duo/trio/raid, steps/flights/both/
   // sleep, members-only included. Session-scoped battle state (log lines, per-
   // hunter prev values for strike detection, banked amount, hold-charge).
-  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0, cool: {} };
+  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0 };
   function _coopBattleReset(instId) {
-    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0, cool: {} };
+    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0 };
+  }
+  // W750 — ONE battle cry per 4h per hunter (all three keys + all hunts share the
+  // budget; owner anti-spam call). localStorage so it survives restarts; the
+  // SERVER enforces the same window (coop_emote_cooldowns) — this is just UX.
+  const COOP_EMOTE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+  const _COOP_EMOTE_TS_KEY = 'hb_coop_emote_ts';
+  function _coopEmoteCooldownLeft() {
+    try {
+      const ts = Number(localStorage.getItem(_COOP_EMOTE_TS_KEY) || 0);
+      return Math.max(0, COOP_EMOTE_COOLDOWN_MS - (Date.now() - ts));
+    } catch (_) { return 0; }
   }
   const _N = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
 
@@ -49247,11 +49270,18 @@
         second +
         '<div class="chd-legend">' + legend + '</div>' +
         '<div class="chd-party">' + rows + '<div class="chd-log">' + log + '</div></div>' +
-        '<div class="chd-emotes">' +
-          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="rally">✦ Rally</button>' +
-          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="push">Push on</button>' +
-          '<button type="button" class="chd-emote" data-coop-action="emote" data-emote="finish">Finish it</button>' +
-        '</div>' +
+        (function () {
+          // W750 — the 4h battle-cry budget: inside the window all three render
+          // greyed + disabled (persisted, so re-opens and restarts stay locked).
+          const cd = _coopEmoteCooldownLeft();
+          const off = cd > 0 ? ' chd-cool' : '';
+          const dEm = cd > 0 ? ' disabled' : '';
+          return '<div class="chd-emotes">' +
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="rally"' + dEm + '>✦ Rally</button>' +
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="push"' + dEm + '>Push on</button>' +
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="finish"' + dEm + '>Finish it</button>' +
+          '</div>';
+        })() +
         '<button type="button" class="chd-strike" data-coop-action="strike"' + dis + '>' +
           '<span class="chd-lab" id="chd-strike-lab">' + (_coopSheet.busy ? 'Striking…' : 'Strike') + '</span>' +
           '<span class="chd-sub" id="chd-strike-sub"><span id="chd-banked">' + _N(_coopBattle.banked) + '</span> ' + esc(unitWord) + ' banked</span>' +

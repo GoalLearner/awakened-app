@@ -52,7 +52,7 @@ const TRIO_PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number }, sqlLog?: string[]) {
   // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
   const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
@@ -101,6 +101,10 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
             if (sql.includes('SELECT id FROM coop_boss_instances')) return null; // pair+boss dedupe: none
             if (sql.includes('SELECT * FROM coop_boss_instances')) {
               return opts.instance === undefined ? { ...PENDING_ROW } : opts.instance;
+            }
+            // W750 — battle-cry cooldown row (null = never sent).
+            if (sql.includes('FROM coop_emote_cooldowns')) {
+              return opts.emoteSentAt != null ? { sent_at: opts.emoteSentAt } : null;
             }
             return null;
           },
@@ -644,5 +648,25 @@ describe('POST /v1/coop-boss/emote (W747)', () => {
       emoteReq({ instanceId: 'inst-1', emote: 'push' }), makeEnv(db), session('u1'));
     expect(res.status).toBe(409);
     expect(((await res.json()) as { error: string }).error).toBe('NOT_ACTIVE');
+  });
+
+  // W750 — one battle cry per 4h (server-enforced; the greyed client buttons
+  // are UX, never the security).
+  it('a cry INSIDE the 4h window → 429 EMOTE_COOLDOWN with retry_after_ms', async () => {
+    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - 60 * 60 * 1000 }); // 1h ago
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string; retry_after_ms: number };
+    expect(body.error).toBe('EMOTE_COOLDOWN');
+    expect(body.retry_after_ms).toBeGreaterThan(2.9 * 60 * 60 * 1000);
+    expect(body.retry_after_ms).toBeLessThanOrEqual(3 * 60 * 60 * 1000);
+  });
+
+  it('a cry AFTER the window (4h+ ago) is accepted again', async () => {
+    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - (4 * 60 * 60 * 1000 + 60000) });
+    const res = await handleCoopBossEmote(
+      emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(200);
   });
 });

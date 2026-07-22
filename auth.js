@@ -1501,7 +1501,13 @@
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
-      return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
+      // W750 — preserve the server's own 429 code + retry payload (EMOTE_COOLDOWN
+      // carries retry_after_ms); every plain rate limit still reads RATE_LIMITED
+      // because that IS the server's error string for RL 429s.
+      return Object.assign(
+        { ok: false, code: (data && data.error) || 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' },
+        (data && typeof data.retry_after_ms === 'number') ? { retry_after_ms: data.retry_after_ms } : {}
+      );
     }
     if (res.status === 404) {
       return { ok: false, code: (data && data.error) || 'NOT_FOUND', detail: (data && data.detail) || 'Not found.' };

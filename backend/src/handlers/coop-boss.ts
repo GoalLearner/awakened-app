@@ -1840,6 +1840,10 @@ const COOP_EMOTES: Record<string, string> = {
   push: 'Push on',
   finish: 'Finish it',
 };
+// W750 — one battle cry per 4 HOURS per user (all three keys share the budget;
+// owner anti-spam call). Server-authoritative via coop_emote_cooldowns (0042);
+// the client mirrors it with greyed buttons but is never the enforcement.
+export const COOP_EMOTE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 export async function handleCoopBossEmote(
   request: Request,
@@ -1874,6 +1878,25 @@ export async function handleCoopBossEmote(
     // hunt you are IN (no spectator shouting into someone else's raid).
     return jsonError(403, 'NOT_IN_HUNT', 'You are not part of this hunt.');
   }
+
+  // W750 — one battle cry per 4h per user (shared across all keys + all hunts).
+  // Checked server-side so a modded client can't spam pushes at a party. The
+  // 429 carries retry_after_ms so the client can mirror the true remaining time.
+  const now = Date.now();
+  const cool = await env.DB.prepare('SELECT sent_at FROM coop_emote_cooldowns WHERE user_id = ?')
+    .bind(session.userId)
+    .first<{ sent_at: number | null }>();
+  const lastAt = Number(cool?.sent_at ?? 0);
+  if (lastAt && now - lastAt < COOP_EMOTE_COOLDOWN_MS) {
+    return jsonError(429, 'EMOTE_COOLDOWN', 'Your next battle cry is not ready yet.', {
+      retry_after_ms: COOP_EMOTE_COOLDOWN_MS - (now - lastAt),
+    });
+  }
+  await env.DB.prepare(
+    'INSERT INTO coop_emote_cooldowns (user_id, sent_at) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET sent_at = excluded.sent_at',
+  )
+    .bind(session.userId, now)
+    .run();
 
   if (ctx) {
     for (const uid of ids) {
