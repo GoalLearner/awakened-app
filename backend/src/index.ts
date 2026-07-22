@@ -35,6 +35,7 @@ import { handleInsightsWeekly } from './handlers/insights-weekly';
 import { handleAccountDelete } from './handlers/account-delete';
 import { handleUserStateGet, handleUserStatePost } from './handlers/user-state';
 import { handleAppOpenPost } from './handlers/app-open';
+import { handleClientErrorsPost } from './handlers/client-errors';
 import { handleAdminRetention } from './handlers/admin-retention';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
@@ -293,6 +294,9 @@ export default {
             // Per-user retention tracking (owner-requested) — fire-and-forget
             // lifecycle ping; UPSERTs one row per (user, UTC day). No reads.
             response = await handleAppOpenPost(request, env, session);
+          } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
+            // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
+            response = await handleClientErrorsPost(request, env, session);
           } else if (path === '/v1/users/me/accolades' && method === 'GET') {
             // v3 Phase 1z.27 — 100K Step Club + future accolade types.
             response = await handleUserAccoladesGet(request, env, session);

@@ -173,6 +173,11 @@ export interface Env {
    *  user: the client registers once per launch (+ on APNs token rotation), so
    *  6/min is far above legit usage and bounds a misbehaving client. */
   RL_PUSH_WRITE: RateLimit;
+  /** W746 — client error ingestion (POST /v1/users/me/client-errors). 6/min per
+   *  user: the client caps itself at a handful per session, so 6/min is far above
+   *  legit usage while stopping a crash-looping device from flooding D1.
+   *  namespace_id 1026 in wrangler.toml. */
+  RL_CLIENT_ERRORS: RateLimit;
   /** W637 — self-healing IAP reconcile (POST /v1/users/me/entitlements/reconcile).
    *  DEDICATED bucket (never shared) because the handler makes an external
    *  RevenueCat REST call; 12/min per user is far above legit usage (called after

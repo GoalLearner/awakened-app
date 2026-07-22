@@ -324,3 +324,11 @@ type = "ratelimit"
 # so the two shared one counter + conflicting limits. Moved to a unique id.
 namespace_id = "1025"
 simple = { limit = 30, period = 60 }  # 30/min per user
+
+# W746 — client error ingestion (POST /v1/users/me/client-errors). The client
+# self-caps per session; 6/min bounds a crash-looping device.
+[[unsafe.bindings]]
+name = "RL_CLIENT_ERRORS"
+type = "ratelimit"
+namespace_id = "1026"
+simple = { limit = 6, period = 60 }  # 6/min per user
