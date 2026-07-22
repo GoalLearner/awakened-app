@@ -106,6 +106,12 @@ export interface AppleIdentityPayload {
   /** Email address if user opted to share it on first authorization.
    * Apple shields the real email behind a relay address by default. */
   email?: string;
+  /** W740 — the `nonce` claim, echoed verbatim by Apple from the value the
+   * client set on the authorization request. A nonce-aware client sets it to
+   * SHA256(rawNonce); the backend re-derives that hash from the rawNonce it
+   * receives and requires a match (replay defence). Absent for pre-W740
+   * clients that never requested a nonce. */
+  nonce?: string;
 }
 
 /**
@@ -151,5 +157,6 @@ export async function verifyAppleIdentityToken(
   return {
     sub: payload.sub,
     email: typeof payload.email === 'string' ? payload.email : undefined,
+    nonce: typeof payload.nonce === 'string' ? payload.nonce : undefined,
   };
 }

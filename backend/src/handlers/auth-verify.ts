@@ -26,6 +26,19 @@ import { jsonOk, jsonError } from '../lib/responses';
 interface AuthVerifyBody {
   identityToken?: unknown;
   alias?: unknown;
+  /** W740 — the raw nonce a nonce-aware client generated for this sign-in. The
+   * client set the Apple request's `nonce` to SHA256(rawNonce); we re-hash this
+   * value and require it to equal the token's echoed `nonce` claim. */
+  nonce?: unknown;
+}
+
+/** W740 — lowercase-hex SHA-256, matching the client's crypto.subtle digest so the
+ * hash the client fed to Apple can be reproduced here from the raw nonce. */
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 interface UserRow {
@@ -91,14 +104,40 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
   // Verify the Apple identity token. Throws on any failure (bad
   // signature, wrong issuer/audience, expired, etc.).
   let appleSub: string;
+  let tokenNonce: string | undefined;
   try {
     const verified = await verifyAppleIdentityToken(body.identityToken, env);
     appleSub = verified.sub;
+    tokenNonce = verified.nonce;
   } catch (err) {
     // W739 SECURITY — static detail on this unauthenticated endpoint; log the real
     // verifier error (JWKS/iss/aud/exp specifics) server-side only.
     console.error('Apple identity token verification failed:', err);
     return jsonError(401, 'APPLE_TOKEN_INVALID', 'Token verification failed.');
+  }
+
+  // W740 SECURITY — Sign-in-with-Apple nonce binding (defence-in-depth vs identity-token
+  // replay). A nonce-aware client generates a random rawNonce, sets the Apple request's
+  // `nonce` to SHA256(rawNonce) — which Apple echoes verbatim into the token's `nonce`
+  // claim — and sends the rawNonce here. We re-derive SHA256(rawNonce) and require it to
+  // equal that claim, proving the token was minted for THIS sign-in (not captured and
+  // replayed). Backward-compatible: a token with NO `nonce` claim (a pre-W740 client that
+  // never requested one) skips the check entirely. Staged rollout: enforcement is gated on
+  // SIWA_NONCE_ENFORCE, because the native Apple flow can't be exercised off-device — until
+  // it is 'true', a mismatch is logged but allowed, so TestFlight can confirm clean matches
+  // before a convention error could ever lock anyone out.
+  if (typeof tokenNonce === 'string' && tokenNonce.length > 0) {
+    const rawNonce = typeof body.nonce === 'string' ? body.nonce : '';
+    const expected = rawNonce ? await sha256Hex(rawNonce) : '';
+    if (expected !== tokenNonce) {
+      const enforce = env.SIWA_NONCE_ENFORCE === 'true';
+      console.warn(
+        `SIWA nonce mismatch (enforce=${enforce}, rawNoncePresent=${rawNonce.length > 0}).`,
+      );
+      if (enforce) {
+        return jsonError(401, 'APPLE_NONCE_MISMATCH', 'Sign-in verification failed. Please try again.');
+      }
+    }
   }
 
   // Returning user lookup — match by apple_sub (stable across alias changes).

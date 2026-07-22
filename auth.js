@@ -197,6 +197,7 @@
   let _pendingIdentityToken = null;
   let _pendingAppleSub = null;
   let _pendingApplePayload = null; // { givenName, familyName, email } for UX pre-fill
+  let _pendingRawNonce = null;     // W740 — raw nonce; SHA256(it) is what we fed Apple
   const PENDING_LS_KEY = 'hb_apple_pending_v1';
   const PENDING_TTL_MS = 10 * 60 * 1000;  // 10 min — match Apple token lifetime
 
@@ -210,6 +211,7 @@
         t: _pendingIdentityToken,
         s: _pendingAppleSub,
         p: _pendingApplePayload,
+        n: _pendingRawNonce,        // W740 — survive the reload between authorize + completeSignIn
         e: Date.now() + PENDING_TTL_MS,
       }));
     } catch (_) {}
@@ -218,6 +220,7 @@
     _pendingIdentityToken = null;
     _pendingAppleSub = null;
     _pendingApplePayload = null;
+    _pendingRawNonce = null;
     try { localStorage.removeItem(PENDING_LS_KEY); } catch (_) {}
   }
   (function _restorePending() {
@@ -230,8 +233,35 @@
       _pendingIdentityToken = obj.t;
       _pendingAppleSub      = obj.s;
       _pendingApplePayload  = obj.p || null;
+      _pendingRawNonce      = obj.n || null;
     } catch (_) {}
   })();
+
+  // W740 — Sign-in-with-Apple nonce (identity-token replay defence). We generate a
+  // random rawNonce, feed Apple the SHA-256 of it as the request `nonce` (Apple echoes
+  // that hash verbatim into the token's `nonce` claim), and later send the rawNonce to
+  // /v1/auth/verify so the backend can re-derive the hash and confirm the token was
+  // minted for THIS sign-in. Returns null (→ sign in with no nonce, backend is
+  // backward-compatible) if WebCrypto is unavailable, so hashing can never block login.
+  function _randomHex(nBytes) {
+    const a = new Uint8Array(nBytes);
+    (self.crypto || window.crypto).getRandomValues(a);
+    return Array.from(a).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function _makeAppleNonce() {
+    try {
+      const subtle = (self.crypto || window.crypto).subtle;
+      if (!subtle) return null;
+      const raw = _randomHex(32);
+      const digest = await subtle.digest('SHA-256', new TextEncoder().encode(raw));
+      const hashed = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      return { raw, hashed };
+    } catch (_) {
+      return null;
+    }
+  }
 
   // True when an Apple identity token has been received but the alias
   // hasn't been claimed yet. Used by the gate to allow the app to mount
@@ -256,15 +286,20 @@
       // plugin; web/PWA users will see the gate UI's inline error.
       throw new Error('NATIVE_ONLY');
     }
+    // W740 — mint a fresh nonce for this attempt; pass SHA256(raw) to Apple.
+    const nonce = await _makeAppleNonce();
     let response;
     try {
       const result = await plugin.authorize({
         clientId: 'com.goallearner.awakened',
         redirectURI: '',
         scopes: 'name email',
-        // Random nonce; opaque to the client beyond round-tripping
-        // through Apple's signed identity token.
+        // CSRF state; opaque round-trip value (distinct from the nonce below).
         state: Math.random().toString(36).slice(2),
+        // W740 — Apple echoes this hash into the token's `nonce` claim; the backend
+        // re-derives it from the rawNonce we send to /v1/auth/verify. Omitted if
+        // WebCrypto was unavailable (backend stays backward-compatible).
+        ...(nonce ? { nonce: nonce.hashed } : {}),
       });
       response = result && result.response ? result.response : null;
     } catch (e) {
@@ -274,6 +309,7 @@
 
     _pendingIdentityToken = response.identityToken;
     _pendingAppleSub = response.user;
+    _pendingRawNonce = nonce ? nonce.raw : null;
     _pendingApplePayload = {
       givenName:  response.givenName || null,
       familyName: response.familyName || null,
@@ -325,6 +361,9 @@
         body: JSON.stringify({
           identityToken: _pendingIdentityToken,
           alias:         alias.trim(),
+          // W740 — raw nonce; backend checks SHA256(it) === token's nonce claim.
+          // Omitted when null so a no-nonce sign-in stays backward-compatible.
+          ...(_pendingRawNonce ? { nonce: _pendingRawNonce } : {}),
         }),
       });
     } catch (e) {
@@ -393,10 +432,11 @@
 
     if (res.status === 401) {
       // Apple token rejected by backend — clear in-memory cache,
-      // gate UI returns to Apple step.
+      // gate UI returns to Apple step. (A fresh nonce is minted on the retry.)
       _pendingIdentityToken = null;
       _pendingAppleSub = null;
       _pendingApplePayload = null;
+      _pendingRawNonce = null;
       return {
         ok: false,
         code: 'APPLE_TOKEN_INVALID',

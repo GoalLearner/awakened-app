@@ -73,6 +73,16 @@ export interface Env {
    * constant when unset. NOT a secret; the reconcile is read-only. */
   REVENUECAT_PUBLIC_KEY?: string;
 
+  /** W740 — Sign-in-with-Apple nonce enforcement toggle. When the string 'true',
+   * /v1/auth/verify REJECTS a sign-in whose token carries a `nonce` claim that does
+   * not match SHA256(rawNonce) from the request body. Any other value (or unset) =
+   * LOG-ONLY: a mismatch is console.warn'd but allowed, so the nonce-aware client
+   * build can be validated on a real device (the native Apple flow can't be exercised
+   * off-device) before enforcement can lock anyone out. Set with `wrangler secret put
+   * SIWA_NONCE_ENFORCE` (or a [vars] entry) once TestFlight logs show clean matches.
+   * NOT a secret — a plain feature flag. */
+  SIWA_NONCE_ENFORCE?: string;
+
   /** Admin metrics secret — gates GET /v1/admin/retention (per-user retention,
    * owner-requested). NOT a Sign-in-with-Apple route: the caller passes
    * `Authorization: Bearer <this value>`. FAIL CLOSED — if unset, the route 401s,

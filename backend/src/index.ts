@@ -223,6 +223,33 @@ export default {
             return withCors(response);
           }
 
+          // W740 SECURITY — session invalidation on account-delete. The session JWT is a
+          // stateless 90-day bearer token, so without this a DELETED account's token (or a
+          // stolen token the victim tries to kill by deleting their account) would stay valid
+          // until natural expiry. account-delete hard-removes the users row, and re-signup always
+          // mints a fresh userId (matched by apple_sub, which is gone after delete), so a deleted
+          // id is never reused. "users row gone → session dead" therefore turns account-delete
+          // into a real kill-switch for every outstanding token, keyed off the one delete that is
+          // guaranteed to succeed — no extra write on the delete path. Fails OPEN on a transient
+          // D1 error (degrades to the prior stateless behaviour) so a DB blip can never lock the
+          // entire userbase out.
+          try {
+            const alive = await env.DB.prepare('SELECT 1 FROM users WHERE id = ? LIMIT 1')
+              .bind(session.userId)
+              .first();
+            if (!alive) {
+              response = jsonError(
+                401,
+                'SESSION_REVOKED',
+                'This account no longer exists. Please sign in again.',
+              );
+              logRequest(method, path, response.status, Date.now() - startMs);
+              return withCors(response);
+            }
+          } catch (err) {
+            console.error('session existence check failed (allowing as stateless fallback):', err);
+          }
+
           if (path === '/v1/leaderboard/submit' && method === 'POST') {
             response = await handleLeaderboardSubmit(request, env, session);
           } else if (path === '/v1/leaderboard/top' && method === 'GET') {
