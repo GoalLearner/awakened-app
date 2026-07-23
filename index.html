@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=614">
+  <link rel="stylesheet" href="styles.css?v=615">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2269,6 +2269,12 @@
       <button id="guild-bosses-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
     </div>
     <div class="lb-rank-body">
+      <!-- W762 — two views: the lifetime KILL LOG codex + the chronological hunt HISTORY -->
+      <div class="gb-tabs" role="tablist" aria-label="Kill log views">
+        <button type="button" id="gb-tab-log" class="gb-tab active" role="tab" aria-selected="true">Kill Log</button>
+        <button type="button" id="gb-tab-hist" class="gb-tab" role="tab" aria-selected="false">History</button>
+      </div>
+      <div id="gb-pane-log">
       <!-- v3 Phase 1z.187 — Codex Ledger redesign (Claude Design
            "Kill Log.html" / Variation A). Ledger strip = TOTAL KILLS
            · BOSSES · TOP RANK in a gold-rimmed band. Subtitle moves
@@ -2295,6 +2301,17 @@
         <div id="guild-bosses-list" class="guild-bosses-list"></div>
       </div>
       <div id="guild-bosses-empty" class="guild-roster-empty hidden"></div>
+      </div>
+      <!-- W762 — Hunt History pane: chronological feed (solo + co-op), filterable -->
+      <div id="gb-pane-hist" hidden>
+        <div class="ghh-filters" role="group" aria-label="Filter hunts">
+          <button type="button" class="ghh-chip active" data-ghh-filter="all">All</button>
+          <button type="button" class="ghh-chip" data-ghh-filter="solo">Solo</button>
+          <button type="button" class="ghh-chip" data-ghh-filter="coop">Co-op</button>
+        </div>
+        <div id="guild-hunt-history-list" class="ghh-list"></div>
+        <div id="guild-hunt-history-empty" class="guild-roster-empty hidden"></div>
+      </div>
     </div>
   </div>
 
@@ -3290,7 +3307,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1177"></script>
+  <script src="app.js?v=1178"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

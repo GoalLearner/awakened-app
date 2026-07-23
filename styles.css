@@ -34848,3 +34848,70 @@ body.combat-active #app * { animation-play-state: paused !important; }
   .pkb-spot.atk-heavy .spr, .pkb-spot.atk-fast .spr, .pkb-spot.atk-blunt .spr,
   .pkb-spot.atk-ranged .spr, .pkb-spot.atk-magic .spr, .pkb-spot.atk-exe .spr { animation: none !important; filter: none !important; }
 }
+
+/* ── W762 · Kill Log tabs + Hunt History feed ─────────────────────────
+   Two views in the Bosses Slain sheet: the lifetime codex (existing) and
+   the chronological hunt feed (solo + co-op merged). Tabs mirror the
+   sheet's gold-on-navy language; rank squares reuse the tier palette. */
+.gb-tabs { display: flex; gap: 8px; margin: 2px 0 12px; }
+.gb-tab {
+  flex: 1; padding: 9px 0; border-radius: 10px;
+  border: 1px solid rgba(148, 163, 224, 0.18);
+  background: rgba(20, 24, 48, 0.6); color: #8b93b8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.gb-tab.active { color: #f5b842; border-color: rgba(245, 184, 66, 0.45); background: rgba(245, 184, 66, 0.08); }
+.ghh-filters { display: flex; gap: 6px; margin: 0 0 10px; }
+.ghh-chip {
+  padding: 5px 12px; border-radius: 999px;
+  border: 1px solid rgba(148, 163, 224, 0.18); background: transparent; color: #8b93b8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.ghh-chip.active { color: #5eead4; border-color: rgba(94, 234, 212, 0.4); background: rgba(94, 234, 212, 0.07); }
+.ghh-day {
+  margin: 12px 2px 6px; color: #6b7396;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+}
+.ghh-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 8px; border-radius: 12px;
+  border: 1px solid rgba(148, 163, 224, 0.12); background: rgba(18, 22, 44, 0.72);
+}
+.ghh-row--loss { opacity: 0.82; }
+.ghh-rank {
+  flex: none; width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 8px; border: 1px solid currentColor; color: #8b93b8;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; font-size: 0.8rem;
+}
+.ghh-rank[data-rank="E"] { color: #a78bfa; }
+.ghh-rank[data-rank="D"] { color: #38bdf8; }
+.ghh-rank[data-rank="C"] { color: #34d399; }
+.ghh-rank[data-rank="B"] { color: #f5b842; }
+.ghh-rank[data-rank="A"] { color: #f87171; }
+.ghh-rank[data-rank="S"] { color: #e879f9; }
+.ghh-main { flex: 1; min-width: 0; }
+.ghh-name {
+  display: flex; align-items: center; gap: 8px; color: #e7e9f4;
+  font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 700; font-size: 1.05rem; line-height: 1.15;
+}
+.ghh-mode {
+  flex: none; padding: 2px 7px; border-radius: 999px; border: 1px solid;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.12em;
+}
+.ghh-mode--solo { color: #f5b842; border-color: rgba(245, 184, 66, 0.4); }
+.ghh-mode--coop { color: #a78bfa; border-color: rgba(167, 139, 250, 0.4); }
+.ghh-sub { margin-top: 3px; color: #8b93b8; font-size: 0.74rem; }
+.ghh-dot { color: #4b5273; }
+.ghh-drop--mythic { color: #e879f9; }
+.ghh-drop--ultra_rare { color: #f5b842; }
+.ghh-drop--rare { color: #38bdf8; }
+.ghh-drop--common { color: #9aa3c4; }
+.ghh-right { flex: none; display: grid; gap: 2px; justify-items: end; text-align: right; }
+.ghh-res { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.14em; }
+.ghh-res--win { color: #5eead4; }
+.ghh-res--loss { color: #f87171; }
+.ghh-souls { color: #f5b842; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.66rem; font-weight: 700; }
+.ghh-time { color: #6b7396; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; }

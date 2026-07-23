@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w760'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w762'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5959,6 +5959,39 @@
       localStorage.setItem(_COOP_HIST_KEY, JSON.stringify(a));
     } catch (e) { _logSwallow('coop_history:persist', e); }
   }
+  // ── W762 — unified HUNT HISTORY (the Kill Log's second tab) ──
+  // Co-op rows come from the W716 hb_coop_history log above (win + loss + partners;
+  // backfills to when W716 shipped). SOLO kills only ever incremented counters, so
+  // per-hunt rows exist from W762 onward: _awardSingleShotKill pushes one row per
+  // kill (boss, rank, souls, drop, ts). Newest-first, capped; render merges both.
+  var _HUNT_HIST_KEY = 'hb_hunt_history';
+  var _HUNT_HIST_CAP = 120;
+  function _loadHuntHistory() { try { var a = JSON.parse(localStorage.getItem(_HUNT_HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function _pushHuntHistory(row) {
+    if (!row || !row.boss_id) return;
+    try {
+      var a = _loadHuntHistory();
+      a.unshift(row);
+      if (a.length > _HUNT_HIST_CAP) a.length = _HUNT_HIST_CAP;
+      localStorage.setItem(_HUNT_HIST_KEY, JSON.stringify(a));
+    } catch (e) { _logSwallow('hunt_history:persist', e); }
+  }
+  // W762 — the W716 co-op row is pushed BEFORE the award resolves (on purpose: a
+  // claim-elsewhere still logs history), so the drop can't ride the entry. When the
+  // claim later grants a relic, attach it to the already-logged row by hunt id.
+  function _annotateCoopHistoryDrop(instId, drop) {
+    if (!instId || !drop) return;
+    try {
+      var a = _loadCoopHistory();
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] && a[i].id === instId) {
+          if (!a[i].drop) { a[i].drop = drop; localStorage.setItem(_COOP_HIST_KEY, JSON.stringify(a)); }
+          return;
+        }
+      }
+    } catch (e) { _logSwallow('hunt_history:annotate', e); }
+  }
+
   // Build a history row from a resolved instance. `result` = 'win' | 'loss'. Reads the
   // boss cfg (name/rank) + every ally's alias via _coopView (same source the victory/
   // defeat screens use), so a trio logs all its partners.
@@ -5979,6 +6012,11 @@
         rank: (cfg && cfg.rank) || '',
         result: result === 'win' ? 'win' : 'loss',
         partners: partners,
+        // W762 — feed fields for the unified History tab. Souls = this hunter's
+        // OWN share (inst.reward_souls is already per-hunter, W648); losses pay 0.
+        mode: 'coop',
+        souls: result === 'win' ? (Number(inst.reward_souls) || (cfg && cfg.rewardSouls) || 0) : 0,
+        drop: null,   // annotated in by _annotateCoopHistoryDrop when the claim grants
         ts: Date.now(),
       };
     } catch (_) { return null; }
@@ -6884,9 +6922,108 @@
     const sheet   = document.getElementById('guild-bosses-sheet');
     if (!overlay || !sheet) return;
     try { renderBossesSlainSheet(); } catch (_) {}
+    try { _gbShowTab('log'); } catch (_) {}   // W762 — always open on the codex view
     overlay.classList.remove('hidden');
     sheet.classList.remove('hidden');
   }
+
+  // ── W762 — Hunt History tab (chronological feed: solo + co-op) ──
+  // Solo rows come from hb_hunt_history (recorded per-kill from W762 on);
+  // co-op rows from the W716 hb_coop_history log (wins AND losses, partners,
+  // per-hunter souls, drop annotated post-claim). Merged, newest-first,
+  // grouped by day, filterable All / Solo / Co-op.
+  var _ghhFilter = 'all';
+  function _ghhDayLabel(ts) {
+    var d = new Date(ts); var now = new Date();
+    var startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    if (ts >= startToday) return 'Today';
+    if (ts >= startToday - 86400000) return 'Yesterday';
+    var s = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return d.getFullYear() !== now.getFullYear() ? s + ', ' + d.getFullYear() : s;
+  }
+  function _ghhNormalizeRows() {
+    var rows = [];
+    try { _loadHuntHistory().forEach(function (r) { if (r && r.ts) rows.push(r); }); } catch (_) {}
+    try {
+      _loadCoopHistory().forEach(function (c) {
+        if (!c || !c.ts) return;
+        rows.push({
+          mode: 'coop', boss_id: c.boss_id, bossName: c.bossName || 'a boss',
+          rank: c.rank || '', result: c.result === 'loss' ? 'loss' : 'win',
+          souls: Number(c.souls) || 0, drop: c.drop || null,
+          partners: Array.isArray(c.partners) ? c.partners : [], ts: c.ts,
+        });
+      });
+    } catch (_) {}
+    rows.sort(function (x, y) { return (y.ts || 0) - (x.ts || 0); });
+    return rows;
+  }
+  function renderHuntHistory() {
+    var list = document.getElementById('guild-hunt-history-list');
+    var empty = document.getElementById('guild-hunt-history-empty');
+    if (!list) return;
+    var rows = _ghhNormalizeRows().filter(function (r) { return _ghhFilter === 'all' || r.mode === _ghhFilter; });
+    if (!rows.length) {
+      list.innerHTML = '';
+      if (empty) {
+        empty.classList.remove('hidden');
+        empty.textContent = _ghhFilter === 'coop'
+          ? 'No co-op hunts recorded yet — summon an ally from The Pacts.'
+          : 'No hunts recorded yet. From now on, every kill lands here the moment it happens.';
+      }
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+    var html = ''; var lastDay = '';
+    rows.forEach(function (r) {
+      var day = _ghhDayLabel(r.ts);
+      if (day !== lastDay) { html += '<div class="ghh-day">' + esc(day) + '</div>'; lastDay = day; }
+      var time = '';
+      try { time = new Date(r.ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (_) {}
+      var sub = '';
+      if (r.mode === 'coop' && r.partners && r.partners.length) sub += '<span class="ghh-with">with ' + esc(_coopNameList(r.partners)) + '</span>';
+      if (r.drop && r.drop.name) sub += (sub ? ' <span class="ghh-dot">·</span> ' : '') + '<span class="ghh-drop ghh-drop--' + esc(String(r.drop.rarity || 'rare')) + '">' + esc(r.drop.name) + '</span>';
+      html +=
+        '<div class="ghh-row' + (r.result === 'loss' ? ' ghh-row--loss' : '') + '">' +
+          '<span class="ghh-rank" data-rank="' + esc(String(r.rank || '').toUpperCase()) + '">' + esc(String(r.rank || '—').toUpperCase()) + '</span>' +
+          '<div class="ghh-main">' +
+            '<div class="ghh-name">' + esc(r.bossName || 'a boss') +
+              '<span class="ghh-mode ghh-mode--' + (r.mode === 'coop' ? 'coop' : 'solo') + '">' + (r.mode === 'coop' ? 'CO-OP' : 'SOLO') + '</span></div>' +
+            (sub ? '<div class="ghh-sub">' + sub + '</div>' : '') +
+          '</div>' +
+          '<div class="ghh-right">' +
+            '<span class="ghh-res ghh-res--' + (r.result === 'loss' ? 'loss' : 'win') + '">' + (r.result === 'loss' ? 'FELL' : 'SLAIN') + '</span>' +
+            ((r.souls || 0) > 0 ? '<span class="ghh-souls">+' + Number(r.souls).toLocaleString('en-US') + ' souls</span>' : '') +
+            '<span class="ghh-time">' + esc(time) + '</span>' +
+          '</div>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+  }
+  function _gbShowTab(which) {
+    var log = document.getElementById('gb-pane-log'), hist = document.getElementById('gb-pane-hist');
+    var tL = document.getElementById('gb-tab-log'), tH = document.getElementById('gb-tab-hist');
+    var isHist = which === 'hist';
+    if (log) log.hidden = isHist;
+    if (hist) hist.hidden = !isHist;
+    if (tL) { tL.classList.toggle('active', !isHist); tL.setAttribute('aria-selected', String(!isHist)); }
+    if (tH) { tH.classList.toggle('active', isHist); tH.setAttribute('aria-selected', String(isHist)); }
+    if (isHist) { try { renderHuntHistory(); } catch (_) {} }
+  }
+  (function _wireHuntHistoryTabs() {
+    try {
+      var tL = document.getElementById('gb-tab-log'), tH = document.getElementById('gb-tab-hist');
+      if (tL) tL.addEventListener('click', function () { _gbShowTab('log'); });
+      if (tH) tH.addEventListener('click', function () { _gbShowTab('hist'); });
+      document.querySelectorAll('.ghh-chip').forEach(function (ch) {
+        ch.addEventListener('click', function () {
+          _ghhFilter = ch.getAttribute('data-ghh-filter') || 'all';
+          document.querySelectorAll('.ghh-chip').forEach(function (c) { c.classList.toggle('active', c === ch); });
+          renderHuntHistory();
+        });
+      });
+    } catch (_) {}
+  })();
   function closeBossesSlainSheet() {
     const overlay = document.getElementById('guild-bosses-overlay');
     const sheet   = document.getElementById('guild-bosses-sheet');
@@ -19859,6 +19996,17 @@
     const _wltBonus_4 = wltKillBonusSouls(cfg.rank);
     if (_wltBonus_4 > 0) earnSouls(_wltBonus_4, 'wlt_bonus_kill_' + id);
     const dropped = rollBossDrop(id);
+    // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
+    // counters above stay the Kill Log tab's source — this is the chronology).
+    try {
+      _pushHuntHistory({
+        mode: 'solo', boss_id: id, bossName: (cfg && cfg.name) || 'a boss',
+        rank: (cfg && cfg.rank) || '', result: 'win',
+        souls: (reward || 0) + (_wltBonus_4 || 0),
+        drop: dropped ? { id: dropped.id, name: dropped.name, rarity: dropped.rarity } : null,
+        ts: Date.now(),
+      });
+    } catch (_) {}
     announceKillAndDrop(cfg, reward, dropped);
     // W541 — solo boss win → mark first-boss + arm the review pre-prompt (fires on modal close).
     _rvSet(_RV.firstBoss, '1');
@@ -48503,6 +48651,8 @@
         { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
         reward, dropInfo, { coop: true });   // W611 — flag co-op so the seen-key uses the co-op kill count
     } catch (_) {}
+    // W762 — attach the relic to this hunt's already-logged W716 history row.
+    try { if (dropInfo) _annotateCoopHistoryDrop(inst.id, { id: dropInfo.id, name: dropInfo.name, rarity: dropInfo.rarity }); } catch (_) {}
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
     try { _coopBumpKill(inst.boss_id); } catch (_) {}     // W545 — per-co-op-boss kill count for the Kill Log
     // W697 — co-op wins now post to the Guild Activity feed like a solo kill does (they
