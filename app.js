@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w752'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w753'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9063,6 +9063,15 @@
     // W306 — BiS signature finishers for the staff/bow (oathstrike-class: 1.95/0.88/cd3).
     cataclysm:  { name: 'Cataclysm',    gl: 'magic',  power: 1.95, acc: 0.88, cd: 3, desc: 'The heavens answer.' },
     heartseeker:{ name: 'Heartseeker',  gl: 'ranged', power: 1.95, acc: 0.88, cd: 3, desc: 'One arrow. One heart.' },
+    // ── W753 — EXECUTE line (one per archetype, W300 1:1 mirror philosophy) + two
+    // identity moves. exe = { thr, mult }: below thr of foe HP the move hits mult×
+    // harder — a knowingly-timed FINISHER (pairs with the W752 "It Breaks" phase).
+    // Modest on a healthy foe (0.95-1.0 power), monstrous in the kill window.
+    reckoning:    { name: 'Reckoning',     gl: 'sword',  power: 1.05, acc: 0.9,  cd: 2, exe: { thr: 0.30, mult: 2.0 }, desc: 'Ends what the fight began — brutal below 30%.' },
+    ruin:         { name: 'Ruin',          gl: 'magic',  power: 1.05, acc: 0.9,  cd: 2, exe: { thr: 0.30, mult: 2.0 }, desc: 'What is broken, breaks — brutal below 30%.' },
+    piercingshot: { name: 'Piercing Shot', gl: 'ranged', power: 1.05, acc: 0.95, cd: 2, exe: { thr: 0.30, mult: 2.2 }, desc: 'Through the crack in the armor — brutal below 30%.' },
+    rend:         { name: 'Rend',          gl: 'sword',  power: 0.9,  acc: 0.92, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'A ragged tear that keeps bleeding.' },
+    pinshot:      { name: 'Pinning Shot',  gl: 'ranged', power: 0.8,  acc: 0.9,  cd: 4, fx: { t: 'stun', dur: 1 }, desc: 'Pins the foe — they skip a turn.' },
   };
   // Weapon id → 4 move ids (the weapon names your kit). Unknown weapon → unarmed.
   const WEAPON_MOVES = {
@@ -9073,25 +9082,25 @@
     kilnforged_warblade:   ['searing', 'ember', 'bulwark', 'immolate'],     // W529 (was temper)
     ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
-    nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
-    duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],   // W529 melee combined stance (was temper)
+    nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper', 'reckoning'],      // W753 — +5th FINISHER slot
+    duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark', 'reckoning'],     // W529 stance · W753 +finisher
     aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
     wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
     // W686 — mythic caster weapons (The Sleepless Crown raid). Canonical class
     // kits — the mythic edge is the Σ42 budget + full attune coverage, mirroring
     // how the A-ultras already carry these kits. MUST mirror combat-core.js.
-    reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
-    vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],
+    reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon', 'ruin'],        // W753 — +5th FINISHER slot
+    vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble', 'piercingshot'],  // W753 — +5th FINISHER slot
     // W401 — co-op DROP weapons get their real kits. Without a WEAPON_MOVES entry
     // an equipped weapon silently falls back to the 'unarmed' kit (see _arenaPlayerKit),
     // so these high-stat co-op drops were stat-stick TRAPS in the Ascent. Kits match
     // each card's own special_effect text + class: mage=arcane, ranger=volley,
     // melee=duelist. No _WEAPON_ATTUNE entry, so they take no attune multiplier —
     // a notch below the canonical Nightfall/Duskforge, as intended for C/B/E tier.
-    twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],              // Twin Maw (E)
+    twin_fang_cleaver:     ['slash', 'cleave', 'rend', 'lunge'],               // Twin Maw (E) · W753 crush → rend (bleed identity)
     twofold_gaze:          ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
     bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
-    houndsfang_recurve:    ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'], // The Coursing Dread (C)
+    houndsfang_recurve:    ['arrowvolley', 'pinshot', 'flamearrow', 'tumble'],  // The Coursing Dread (C) · W753 snapshot → pin (control identity)
     coursing_houndcall:    ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
     the_long_pursuit:      ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
     the_monarchs_writ:     ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],   // The Hollow Monarch (B)
@@ -9381,7 +9390,11 @@
     const dodge = _arStatDodge(def.S);
     const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + (att.edge || 0) * 0.002);
     const cc = att.crit || 0.08;
-    const base = baseAtk * power * (att.typeEff || 1);
+    // W753 — execute-aware: below the threshold the move's true power is mult×,
+    // so the picker (and the lethal check above it) plays the kill window like a
+    // human reading "IT BREAKS — FINISH IT".
+    const exeM = (move.exe && def.hp / Math.max(1, def.maxHP) <= move.exe.thr) ? move.exe.mult : 1;
+    const base = baseAtk * power * exeM * (att.typeEff || 1);
     const dNon = base / (1 + (def.def * shred) / _DEF_SCALE) * takenM;
     const dCrit = base / (1 + (def.def * shred * (1 - _CRIT_PIERCE)) / _DEF_SCALE) * _CRIT_MULT;
     let perHit = (1 - cc) * dNon + cc * dCrit;
@@ -9622,6 +9635,13 @@
       const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
       const remBefore = side === 'p' ? sess.bHP : sess.pHP;
       const hits = move.hits || 1;
+      // W753 — EXECUTE moves: bonus damage while the DEFENDER is already deep in
+      // the red (move.exe = { thr, mult }: foe HP fraction ≤ thr → power × mult).
+      // Read from HP BEFORE the move (deterministic per-move, not per-sub-hit) and
+      // still bounded by the anti-one-shot cap below, so it can never delete a
+      // healthy bar — it's a FINISHING tool, pairing with the W752 "It Breaks"
+      // phase + finisher presentation.
+      const exeM = (move.exe && remBefore / Math.max(1, maxHPd) <= move.exe.thr) ? move.exe.mult : 1;
       let total = 0, anyLanded = false, anyCrit = false, missed = 0, dodged = 0, guardUsed = false;
       for (let h = 0; h < hits; h++) {
         const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + accBonus);
@@ -9629,7 +9649,7 @@
         if (dodge > 0 && sess.rng() < dodge) { dodged++; continue; }
         const crit = sess.rng() < critCh;
         const defEff = defBase * shred * (crit ? (1 - _CRIT_PIERCE) : 1);
-        let hit = baseAtk * power * typeEff / (1 + defEff / _DEF_SCALE);
+        let hit = baseAtk * power * exeM * typeEff / (1 + defEff / _DEF_SCALE);
         if (crit) { hit *= _CRIT_MULT; anyCrit = true; }   // crit skips takenMult (ignores Brace/DEF-up)
         else { hit *= takenM; }
         hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
@@ -9646,7 +9666,7 @@
         if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
         else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
         sess.dmgDealt[side] += effective;
-        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
+        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
       } else if (dodged && !missed) {
         events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' });
       } else {
@@ -10099,6 +10119,22 @@
       // T36 wire band + tier telegraph names
       ok('T36 wire band + telegraph', _arWireBand(48) && _arWireBand(52) && !_arWireBand(47) && !_arWireBand(53) &&
         AI_TIER_NAMES[aiTierFor(51)] === 'TACTICIAN' && AI_TIER_NAMES[aiTierFor(71)] === 'STRATEGIST' && AI_TIER_NAMES[aiTierFor(91)] === 'APEX');
+      // T37/T38 — W753 EXECUTE: below thr the evaluator sees exactly mult× the
+      // above-thr expectation (small atk keeps both sides of the ratio under the
+      // anti-one-shot cap); the boundary is inclusive (<= thr) and 1 above it.
+      {
+        const exeMv = lib('reckoning');
+        const attX = { atk: 12, S: { stun: 0, guard: 0, mods: [] }, edge: 0, typeEff: 1, crit: 0, attuned: 1 };
+        const defHi = { hp: 100, maxHP: 100, def: 30, S: { stun: 0, guard: 0, mods: [] } };
+        const defLo = { hp: 25,  maxHP: 100, def: 30, S: { stun: 0, guard: 0, mods: [] } };
+        const dHi = _aiExpectedDamage(attX, defHi, exeMv), dLo = _aiExpectedDamage(attX, defLo, exeMv);
+        ok('T37 execute window multiplies (mult× below thr)', dHi > 0 && Math.abs(dLo / dHi - exeMv.exe.mult) < 0.001);
+        const defEdge = { hp: 30, maxHP: 100, def: 30, S: { stun: 0, guard: 0, mods: [] } };
+        const defAbove = { hp: 31, maxHP: 100, def: 30, S: { stun: 0, guard: 0, mods: [] } };
+        ok('T38 execute boundary inclusive at thr, off above it',
+          Math.abs(_aiExpectedDamage(attX, defEdge, exeMv) / dHi - exeMv.exe.mult) < 0.001 &&
+          Math.abs(_aiExpectedDamage(attX, defAbove, exeMv) / dHi - 1) < 0.001);
+      }
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -11079,6 +11115,8 @@
             'sfx_hit_slice', 'sfx_hit_burst', 'sfx_hit_heavy', 'sfx_hit_magic', 'sfx_hit_arrow',
             // W303 — status/effect cues (drop-in)
             'sfx_heal', 'sfx_status_burn', 'sfx_status_stun', 'sfx_cauterize',
+            // W753 — execute + bleed one-shots (drop-in slots; synth until the files land)
+            'sfx_hit_execute', 'sfx_bleed_apply',
             // W250 — main-screen earned-moment cues (habit_check is a drop-in slot, absent today)
             'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting',
             // W260 — clutch-mode heartbeat (drop-in slot; synth lub-dub until generated)
@@ -11092,6 +11130,7 @@
     hp_drain: 0.16, ko: 0.9, boss_intro: 0.8, heartbeat: 0.55,
     hit_slice: 0.7, hit_burst: 0.72, hit_heavy: 0.78, hit_magic: 0.72, hit_arrow: 0.72,  // W301 — drop-in
     heal: 0.6, status_burn: 0.5, status_stun: 0.6, cauterize: 0.6,  // W303 — drop-in
+    hit_execute: 0.85, bleed_apply: 0.55,  // W753 — drop-in (Suno one-shots; synth until then)
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
   // W419 — music OFF by default (opt-in). Background-music loops autoplayed (Arena menu,
@@ -11240,6 +11279,13 @@
       case 'hp_drain':    _audSpend(0.05); _audOsc({ type: 'square', f0: 480, dur: 0.03, peak: 0.025, filter: { type: 'lowpass', f0: 900 } }); break;
       case 'heal':        _audSpend(0.34);
         [523, 659, 784].forEach((f, i) => _audOsc({ type: 'sine', f0: f, t: i * 0.07, dur: 0.16, peak: 0.08 })); break;
+      case 'hit_execute': _audSpend(0.5);   // W753 — the finishing blow: deep thud + low bell tail
+        _audNoise({ dur: 0.16, peak: 0.3, filter: { type: 'lowpass', f0: 1500, f1: 180 } });
+        _audOsc({ type: 'sine', f0: 82, f1: 30, dur: 0.55, peak: 0.5 });
+        _audOsc({ type: 'triangle', f0: 164, f1: 60, dur: 0.4, peak: 0.2, t: 0.05 }); break;
+      case 'bleed_apply': _audSpend(0.3);   // W753 — a wet, ragged tear
+        _audNoise({ dur: 0.2, peak: 0.16, filter: { type: 'bandpass', f0: 900, f1: 300, q: 1.6 } });
+        _audNoise({ t: 0.07, dur: 0.12, peak: 0.1, filter: { type: 'bandpass', f0: 500, f1: 220, q: 2 } }); break;
       case 'status_burn': _audSpend(0.3);
         for (let i = 0; i < 4; i++) _audNoise({ t: i * 0.05, dur: 0.04, peak: 0.07, filter: { type: 'bandpass', f0: 1800 + i * 400, q: 3 } }); break;
       case 'status_stun': _audSpend(0.2);
@@ -11720,13 +11766,18 @@
     const card = (mv) => {
       const onCd = s.cd[mv.id] > 0, cdn = s.cd[mv.id];
       const ty = _arMoveType(mv), A = _AR_MOVE_ACCENT[ty];
-      const extra = (mv.hits ? '<span class="val sup">×' + mv.hits + '</span>' : '') + (mv.prio ? '<span class="val sup">1ST</span>' : '');
+      // W753 — EXECUTE moves render as the full-width FINISHER slot (row 3);
+      // when the foe drops into the window it lights up (the W752 "It Breaks"
+      // phase made visible on a button).
+      const exeReady = !!(mv.exe && s.bMax > 0 && (s.bHP / s.bMax) <= mv.exe.thr);
+      const extra = (mv.hits ? '<span class="val sup">×' + mv.hits + '</span>' : '') + (mv.prio ? '<span class="val sup">1ST</span>' : '') +
+        (mv.exe ? '<span class="val sup exe-tag">×' + mv.exe.mult + ' ≤' + Math.round(mv.exe.thr * 100) + '%</span>' : '');
       let stat;
       if (onCd)                  stat = '<span class="stat"><span class="val sup">' + cdn + (cdn === 1 ? ' TURN' : ' TURNS') + '</span></span>';
       else if (ty === 'defense') stat = '<span class="stat"><span class="val sup">SUPPORT</span></span>';
       else                       stat = '<span class="stat"><span class="lab">' + A.lab + '</span><span class="val">' + Math.round((mv.power || 0) * 100) + '</span>' + extra + '</span>';
       const icon = onCd ? '<div class="cdnum">' + cdn + '</div>' : _arGlyph(mv.gl || 'sword', A.acc, 20);
-      return '<button class="ar-bmove' + (onCd ? ' cd' : '') + '" style="--acc:' + A.acc + ';--rgb:' + A.rgb + '"' +
+      return '<button class="ar-bmove' + (onCd ? ' cd' : '') + (mv.exe ? ' exe' + (exeReady && !onCd ? ' exe-ready' : '') : '') + '" style="--acc:' + A.acc + ';--rgb:' + A.rgb + '"' +
           (onCd ? ' data-ar="movecd"' : ' data-ar="move" data-move="' + mv.id + '"') + '>' +
         '<span class="iccol"><span class="ic">' + icon + '</span><span class="selbadge">Selected</span></span>' +
         '<span class="body"><span class="nm">' + esc(mv.name) + '</span><span class="desc">' + esc(mv.desc || '') + '</span>' + stat + '</span>' +
@@ -11969,7 +12020,7 @@
       const stage = _pkbEl('pkb-stage');
       if (stage) { stage.classList.add('critzoom'); _pkbAfter(420, () => stage.classList.remove('critzoom')); }
     }
-    try { _audCue(e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}
+    try { _audCue(e.exe ? 'hit_execute' : e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}   // W753 — the execute owns its impact
     // W752 — real Capacitor haptics (navigator.vibrate is a no-op in WKWebView):
     // LIGHT per hit, MEDIUM on a crit; the finisher beat adds HEAVY separately.
     try { _hapticTick(e.crit ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
@@ -12181,7 +12232,8 @@
       // status cue by engine-authored line content (event log is the truth)
       try {
         if (cau || tx.indexOf('refuses') !== -1) _audCue('cauterize');
-        else if (tx.indexOf('burning') !== -1 || tx.indexOf('bleeding') !== -1) _audCue('status_burn');
+        else if (tx.indexOf('bleeding') !== -1) _audCue('bleed_apply');   // W753 — wet tear, its own voice
+        else if (tx.indexOf('burning') !== -1) _audCue('status_burn');
         else if (tx.indexOf('stunned') !== -1 || tx.indexOf('armor shredded') !== -1 || tx.indexOf('reeling') !== -1) _audCue('status_stun');
         else _audCue('status_buff');     // atk up/down, braces, evasive, guards
       } catch (_) {}

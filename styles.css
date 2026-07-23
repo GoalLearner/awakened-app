@@ -34584,3 +34584,24 @@ body.combat-active #app * { animation-play-state: paused !important; }
   .pkb-stage.finisher { filter: none; }
   .pkb-plate .hp i.ghost { transition: none; }
 }
+
+/* == W753 -- the FINISHER slot (execute moves) ==
+   An exe move renders full-width under the 2x2 grid. Dormant = dark, banked
+   ember look; when the foe drops into the kill window (.exe-ready) it ignites:
+   crimson-gold edge pulse + brightened glyph. The pulse is the ONLY looping
+   animation and runs solely while the window is open (W714 overheating rule:
+   scoped, small, single element). */
+.ar-bmove.exe { grid-column: 1 / -1; min-height: 78px;
+  border: 1px solid rgba(239,68,68,0.28); background: linear-gradient(180deg, rgba(40,16,20,0.55), rgba(19,9,14,0.6)); }
+.ar-bmove.exe .exe-tag { color: #fda4af; }
+.ar-bmove.exe:not(.exe-ready):not(.cd) { filter: saturate(0.75); }
+.ar-bmove.exe.exe-ready { border-color: rgba(245,158,11,0.7);
+  background: linear-gradient(180deg, rgba(64,22,16,0.75), rgba(31,12,14,0.8));
+  animation: pkbExeReady 1.4s ease-in-out infinite; }
+.ar-bmove.exe.exe-ready .nm { color: #ffe6a8; text-shadow: 0 0 12px rgba(245,158,11,0.5); }
+@keyframes pkbExeReady {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.0), inset 0 0 14px rgba(239,68,68,0.12); }
+  50% { box-shadow: 0 0 18px 2px rgba(245,158,11,0.35), inset 0 0 20px rgba(239,68,68,0.22); } }
+@media (prefers-reduced-motion: reduce) {
+  .ar-bmove.exe.exe-ready { animation: none; box-shadow: 0 0 14px 2px rgba(245,158,11,0.3); }
+}

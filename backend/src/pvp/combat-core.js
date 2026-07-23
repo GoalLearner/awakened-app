@@ -98,6 +98,13 @@ const ARENA_MOVE_LIB = {
   quickshot:  { name: 'Quick Shot',   gl: 'ranged', power: 1.0,  acc: 0.95, cd: 0, desc: 'A clean shot.' },
   cataclysm:  { name: 'Cataclysm',    gl: 'magic',  power: 1.95, acc: 0.88, cd: 3, desc: 'The heavens answer.' },
   heartseeker:{ name: 'Heartseeker',  gl: 'ranged', power: 1.95, acc: 0.88, cd: 3, desc: 'One arrow. One heart.' },
+  // W753 — EXECUTE line (verbatim mirror of app.js): below exe.thr of foe HP the
+  // move hits exe.mult harder. + rend/pinshot identity moves.
+  reckoning:    { name: 'Reckoning',     gl: 'sword',  power: 1.05, acc: 0.9,  cd: 2, exe: { thr: 0.30, mult: 2.0 }, desc: 'Ends what the fight began — brutal below 30%.' },
+  ruin:         { name: 'Ruin',          gl: 'magic',  power: 1.05, acc: 0.9,  cd: 2, exe: { thr: 0.30, mult: 2.0 }, desc: 'What is broken, breaks — brutal below 30%.' },
+  piercingshot: { name: 'Piercing Shot', gl: 'ranged', power: 1.05, acc: 0.95, cd: 2, exe: { thr: 0.30, mult: 2.2 }, desc: 'Through the crack in the armor — brutal below 30%.' },
+  rend:         { name: 'Rend',          gl: 'sword',  power: 0.9,  acc: 0.92, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'A ragged tear that keeps bleeding.' },
+  pinshot:      { name: 'Pinning Shot',  gl: 'ranged', power: 0.8,  acc: 0.9,  cd: 4, fx: { t: 'stun', dur: 1 }, desc: 'Pins the foe — they skip a turn.' },
 };
 
 // weapon id → 4 move ids (verbatim ~6864)
@@ -109,17 +116,17 @@ const WEAPON_MOVES = {
   kilnforged_warblade:   ['searing', 'ember', 'bulwark', 'immolate'],     // W529 (was temper)
   ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
   vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
-  nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],
-  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],   // W529 melee combined stance (was temper)
+  nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper', 'reckoning'],      // W753 — +5th FINISHER slot
+  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark', 'reckoning'],     // W529 stance · W753 +finisher
   aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
   wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
   // W686 — mythic caster weapons (verbatim mirror of app.js).
-  reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
-  vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],
-  twin_fang_cleaver:     ['slash', 'cleave', 'crush', 'lunge'],
+  reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon', 'ruin'],        // W753 — +5th FINISHER slot
+  vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble', 'piercingshot'],  // W753 — +5th FINISHER slot
+  twin_fang_cleaver:     ['slash', 'cleave', 'rend', 'lunge'],               // W753 crush → rend (bleed identity)
   twofold_gaze:          ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
-  houndsfang_recurve:    ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
+  houndsfang_recurve:    ['arrowvolley', 'pinshot', 'flamearrow', 'tumble'],  // W753 snapshot → pin (control identity)
   coursing_houndcall:    ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   the_long_pursuit:      ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
   the_monarchs_writ:     ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
@@ -301,6 +308,9 @@ function _arExecMove(sess, side, move, events) {
     const accBonus = side === 'p' ? sess.pAccB : sess.bAccB;
     const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
     const remBefore = side === 'p' ? sess.bHP : sess.pHP;
+    // W753 — EXECUTE moves (verbatim mirror of app.js): bonus damage while the
+    // defender is already deep in the red; read pre-move, capped below.
+    const exeM = (move.exe && remBefore / Math.max(1, maxHPd) <= move.exe.thr) ? move.exe.mult : 1;
     const hits = move.hits || 1;
     let total = 0, anyLanded = false, anyCrit = false, missed = 0, dodged = 0, guardUsed = false;
     for (let h = 0; h < hits; h++) {
@@ -309,7 +319,7 @@ function _arExecMove(sess, side, move, events) {
       if (dodge > 0 && sess.rng() < dodge) { dodged++; continue; }
       const crit = sess.rng() < critCh;
       const defEff = defBase * shred * (crit ? (1 - _CRIT_PIERCE) : 1);
-      let hit = baseAtk * power * typeEff / (1 + defEff / _DEF_SCALE);
+      let hit = baseAtk * power * exeM * typeEff / (1 + defEff / _DEF_SCALE);
       if (crit) { hit *= _CRIT_MULT; anyCrit = true; }
       else { hit *= takenM; }
       hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
@@ -324,7 +334,7 @@ function _arExecMove(sess, side, move, events) {
       if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
       else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
       sess.dmgDealt[side] += effective;
-      events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, dmg: shown, move: move.name, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
+      events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, dmg: shown, move: move.name, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
     } else if (dodged && !missed) {
       events.push({ side, t: 'dodge', move: move.name, text: defName + ' dodges ' + move.name + '!' });
     } else {
