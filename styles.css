@@ -29712,8 +29712,18 @@ body.combat-active #app * { animation-play-state: paused !important; }
    feet stay on the platform — the spot grows upward from the row's bottom
    line). Width is the binding cap at phone width (~57vw). Bosses keep
    their +15% presence on top. */
-.pkb-spot.foe { width: min(57vw, 250px); height: min(51vw, 23.5vh, 220px); }
-.pkb-spot.foe.boss { width: min(64vw, 282px); height: min(57vw, 26.5vh, 248px); }
+.pkb-spot.foe { width: min(52vw, 228px); height: min(47vw, 21.5vh, 200px); }
+.pkb-spot.foe.boss { width: min(56vw, 250px); height: min(50vw, 23.5vh, 220px); }
+/* W756 — Pokémon-clean foe treatment (owner: "normal size, organized like the
+   Pokémon battles"). The foe art is a FULL-BLEED square painting (baked scenery,
+   art-pipeline house rule: no bg-removal) — displayed raw it reads as a giant
+   poster fused into the stage. A soft radial mask melts the painting's edges so
+   the CHARACTER pops as a discrete creature standing on its platform while the
+   tier background owns the scene. Composes with r-hit/crit tints + fa-unbound. */
+.pkb-spot.foe .spr img {
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 46%, #000 52%, rgba(0,0,0,0.55) 72%, transparent 92%);
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 46%, #000 52%, rgba(0,0,0,0.55) 72%, transparent 92%);
+}
 .pkb-spot.you { width: min(50vw, 214px); height: min(45vw, 21vh, 190px); margin-left: -10px; margin-bottom: -30px; z-index: 1; }
 /* short screens: tighter air gap so the band never overflows the stage */
 @media (max-height: 640px) { .pkb-stage { gap: clamp(6px, 4vh, 28px); } }
