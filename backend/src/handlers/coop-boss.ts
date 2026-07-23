@@ -147,6 +147,20 @@ const COOP_BOSS_CFG: Record<
   // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
   the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 72, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true, matchmaking: true },
 };
+// W761 — display names for push copy ("2/5 have answered The Grinning God…").
+// The client owns full boss presentation; this is JUST the name string, so a
+// summons nudge can say which beast the party is waiting on. Fallback: 'the hunt'.
+const COOP_BOSS_NAMES: Record<string, string> = {
+  the_twin_maw: 'The Twin Maw',
+  the_unresting_march: 'The Unresting March',
+  the_coursing_dread: 'The Coursing Dread',
+  the_hollow_monarch: 'The Hollow Monarch',
+  the_gaunt_wardens: 'The Gaunt Wardens',
+  the_sundered_choir: 'The Sundered Choir',
+  the_threefold_court: 'The Threefold Court',
+  the_sleepless_crown: 'The Sleepless Crown',
+  the_grinning_god: 'The Grinning God',
+};
 function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
 }
@@ -1077,9 +1091,75 @@ export async function handleCoopBossJoin(
           data: { bossId: refreshed.boss_id },
         }),
       );
+      // W761 — nudge the OTHER still-pending seats too (the "James fix"). The
+      // original summons push fires exactly once at create, so a seat whose
+      // device registered for push AFTER that moment never hears about the hunt
+      // again. Every answer now re-pings the holdouts with the filling count —
+      // social proof + a fresh deep-link. Naturally bounded: a seat can receive
+      // at most (party−2) of these across the whole pending life, and only
+      // while the hunt is still pending. type 'coop_invite' rides the same
+      // client deep-link path as the original summons.
+      const partyTotal = (refreshed.participants ?? []).length + 1;   // + challenger
+      const answered = partyTotal - stillOut;
+      const bossName = COOP_BOSS_NAMES[refreshed.boss_id] ?? 'the hunt';
+      for (const p of refreshed.participants ?? []) {
+        if (p.joined_at || p.user_id === session.userId) continue;
+        ctx.waitUntil(
+          notifyUser(env, p.user_id, {
+            title: 'The Party Waits',
+            body: `${answered}/${partyTotal} have answered ${bossName} — your seat is still open.`,
+            type: 'coop_invite',
+            data: { bossId: refreshed.boss_id },
+          }),
+        );
+      }
     }
   }
   return jsonOk({ ok: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
+}
+
+// ── W761 — 24h summons-reminder sweep (cron) ────────────────────────
+// One-time re-push for every seat that has sat unanswered on a still-pending
+// hunt for 24+ hours. Catches the seat that was token-less when the original
+// create-time push fired (fresh install / push-less build): by a day later the
+// invitee has usually opened the app once, so a token exists NOW even though
+// none did at summons time. reminded_at (0043) marks the seat BEFORE the push
+// so the every-2-minute cron can never double-send — a lost push is not
+// retried, mirroring the create-time best-effort semantics. LIMIT bounds a
+// worst-case backlog; the cron's cadence drains any remainder within minutes.
+export async function sweepPendingSummonsReminders(env: Env, ctx?: ExecutionContext): Promise<void> {
+  const due = await env.DB.prepare(
+    `SELECT p.instance_id, p.user_id, i.boss_id, u.alias AS challenger_alias
+       FROM coop_boss_participants p
+       JOIN coop_boss_instances i ON i.id = p.instance_id
+       JOIN users u ON u.id = i.challenger_user_id
+      WHERE i.status = 'pending'
+        AND p.joined_at IS NULL
+        AND p.reminded_at IS NULL
+        AND i.created_at < datetime('now', '-24 hours')
+      LIMIT 20`,
+  ).all<{ instance_id: string; user_id: string; boss_id: string; challenger_alias: string }>();
+
+  for (const row of due.results ?? []) {
+    // Mark FIRST, push second — the guarded UPDATE is the idempotency lock, so
+    // an overlapping cron tick that loses the race sends nothing.
+    const marked = await env.DB.prepare(
+      `UPDATE coop_boss_participants SET reminded_at = CURRENT_TIMESTAMP
+        WHERE instance_id = ? AND user_id = ? AND reminded_at IS NULL AND joined_at IS NULL`,
+    )
+      .bind(row.instance_id, row.user_id)
+      .run();
+    if (!(marked.meta && Number(marked.meta.changes) >= 1)) continue;
+    const bossName = COOP_BOSS_NAMES[row.boss_id] ?? 'a co-op hunt';
+    const push = notifyUser(env, row.user_id, {
+      title: 'The Summons Still Stands',
+      body: `${row.challenger_alias} summoned you to ${bossName} a day ago — your seat is still open.`,
+      type: 'coop_invite',
+      data: { bossId: row.boss_id },
+    });
+    if (ctx) ctx.waitUntil(push);
+    else await push;
+  }
 }
 
 // ── POST /v1/coop-boss/:id/decline — partner declines ───────────────

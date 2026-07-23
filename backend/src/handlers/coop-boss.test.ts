@@ -6,7 +6,11 @@
  * create and join, so a modded client cannot bypass it. Same hand-rolled
  * substring-routed D1 mock as the other handler tests.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+// W761 — capture pushes (the real notifyUser silently no-ops without APNs keys;
+// the spy lets the reminder tests assert exactly who got nudged).
+vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
+import { notifyUser } from '../lib/apns';
 import {
   handleCoopBossCreate,
   handleCoopBossGet,
@@ -15,7 +19,10 @@ import {
   handleRaidQueueLeave,
   handleRaidStart,
   handleCoopBossEmote,
+  sweepPendingSummonsReminders,
 } from './coop-boss';
+
+const mockNotify = vi.mocked(notifyUser);
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -668,5 +675,80 @@ describe('POST /v1/coop-boss/emote (W747)', () => {
     const res = await handleCoopBossEmote(
       emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
     expect(res.status).toBe(200);
+  });
+});
+
+// W761 — summons reminder nudges: (a) every answer re-pings the still-pending
+// seats, (b) the 24h cron sweep one-time-reminds seats that were token-less at
+// create (the "James case"), idempotent via the guarded reminded_at mark.
+describe('W761 — summons reminder nudges', () => {
+  beforeEach(() => mockNotify.mockClear());
+
+  it('an answer on a still-pending hunt nudges the OTHER unanswered seats (never the joiner)', async () => {
+    const db = makeDb({ instance: { ...TRIO_PENDING_ROW } });
+    const ctx = { waitUntil: (_p: Promise<unknown>) => {} } as unknown as ExecutionContext;
+    const res = await handleCoopBossJoin(
+      new Request('http://test/v1/coop-boss/inst-3/join', { method: 'POST' }),
+      makeEnv(db), session('u2'), 'inst-3', ctx,
+    );
+    expect(res.status).toBe(200);
+    const pushes = mockNotify.mock.calls.map((c) => ({ to: c[1], title: (c[2] as { title: string }).title, body: (c[2] as { body: string }).body }));
+    // Challenger hears "Ally Answered"; the unanswered u3 seat gets the party-waits nudge.
+    expect(pushes.some((p) => p.to === 'u1' && p.title === 'Ally Answered')).toBe(true);
+    const nudge = pushes.find((p) => p.title === 'The Party Waits');
+    expect(nudge?.to).toBe('u3');
+    expect(nudge?.body).toContain('The Threefold Court');
+    expect(nudge?.body).toMatch(/1\/3 have answered/);
+    // The joiner themself is never nudged.
+    expect(pushes.some((p) => p.to === 'u2')).toBe(false);
+  });
+
+  function sweepDb(rows: Array<Record<string, unknown>>, markChanges: number, sqlLog?: string[]) {
+    return {
+      prepare: (sql: string) => {
+        sqlLog?.push(sql);
+        return {
+          bind: () => ({
+            all: async () => ({ results: rows, success: true, meta: {} }),
+            run: async () => ({ success: true, meta: { changes: markChanges } }),
+            first: async () => null,
+          }),
+          // the sweep's SELECT is un-bound (no placeholders) — route .all here too
+          all: async () => ({ results: rows, success: true, meta: {} }),
+          run: async () => ({ success: true, meta: { changes: markChanges } }),
+          first: async () => null,
+        };
+      },
+    } as unknown as D1Database;
+  }
+
+  it('the 24h sweep marks reminded_at FIRST, then pushes each due seat with the boss name', async () => {
+    const log: string[] = [];
+    const db = sweepDb(
+      [
+        { instance_id: 'i-gg', user_id: 'u-james', boss_id: 'the_grinning_god', challenger_alias: 'Richie' },
+        { instance_id: 'i-tm', user_id: 'u-late', boss_id: 'the_twin_maw', challenger_alias: 'Richie' },
+      ],
+      1, log,
+    );
+    await sweepPendingSummonsReminders(makeEnv(db));
+    expect(mockNotify).toHaveBeenCalledTimes(2);
+    const first = mockNotify.mock.calls[0];
+    expect(first[1]).toBe('u-james');
+    expect((first[2] as { body: string }).body).toContain('The Grinning God');
+    expect((first[2] as { body: string }).body).toContain('a day ago');
+    expect((first[2] as { title: string }).title).toBe('The Summons Still Stands');
+    // idempotency lock: one guarded mark per due seat, before any push
+    expect(log.filter((s) => s.includes('SET reminded_at')).length).toBe(2);
+    expect(log.filter((s) => s.includes('reminded_at IS NULL') && s.includes('SELECT')).length).toBe(1);
+  });
+
+  it('a lost reminded_at race (0 changes) sends NOTHING — the overlapping cron tick already owns it', async () => {
+    const db = sweepDb(
+      [{ instance_id: 'i-gg', user_id: 'u-james', boss_id: 'the_grinning_god', challenger_alias: 'Richie' }],
+      0,
+    );
+    await sweepPendingSummonsReminders(makeEnv(db));
+    expect(mockNotify).not.toHaveBeenCalled();
   });
 });

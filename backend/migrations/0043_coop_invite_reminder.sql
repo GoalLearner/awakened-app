@@ -1,0 +1,12 @@
+-- 0043_coop_invite_reminder.sql
+-- W761 — one-time 24h reminder for unanswered co-op summons seats.
+--
+-- A summons pushes each invited seat ONCE at create time (W603/W677). A seat
+-- whose device token didn't exist yet at that moment (fresh install, push-less
+-- build — the "James case") never hears about the hunt again unless they happen
+-- to open the app. The cron sweep re-pushes such seats once after 24 hours;
+-- reminded_at marks the seat so the every-2-minute cron can never double-send.
+-- TEXT CURRENT_TIMESTAMP format, matching joined_at on the same table.
+--
+-- Migration discipline: never edit an applied file; forward-only add.
+ALTER TABLE coop_boss_participants ADD COLUMN reminded_at TEXT;
