@@ -34519,3 +34519,68 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) {
   .chd-phase-3 .bfs-hero img, .chd-hit .bfs-hero img, .chd-vign,   .chd-dmg, .chd-emote-fly, .chd-av.chd-ping, .chd-pulse { animation: none !important; }
 }
+
+/* == W752 -- battle juice overhaul (shared .pkb stage: Ascent + PvP) ==
+   Presentation-only additions to the fight: damage-ghost HP trail, foe
+   telegraph, weight-scaled knockback, crit zoom, finisher speedlines.
+   All transform/opacity (no layout thrash); every burst is event-driven
+   (W714 overheating rule: no new idle loops); FF scaling happens in JS. */
+
+/* -- damage-ghost HP trail -- */
+.pkb-plate .hp { position: relative; }
+.pkb-plate .hp i { position: relative; z-index: 1; }
+.pkb-plate .hp i.ghost { position: absolute; inset: 0; z-index: 0; border-radius: 4px;
+  background: rgba(255,226,178,0.55); box-shadow: none; animation: none;
+  transform-origin: left center; transform: scaleX(1);
+  transition: transform 0.52s cubic-bezier(0.2,0.8,0.2,1); }
+
+/* -- foe telegraph: lean back + red glint during the announce -- */
+.pkb-spot.telegraph .spr {
+  animation: pkbTelegraph 0.56s ease-in-out both; }
+@keyframes pkbTelegraph {
+  0% { transform: none; filter: none; }
+  45% { transform: translateY(-4px) scale(1.035); filter: drop-shadow(0 0 14px rgba(239,68,68,0.65)) brightness(1.12); }
+  100% { transform: none; filter: drop-shadow(0 0 8px rgba(239,68,68,0.35)); } }
+
+/* -- knockback with weight (--kb set per hit by JS) -- */
+.pkb-spot.kb-hit .spr { animation: pkbKbUp 0.44s cubic-bezier(0.2,0.7,0.3,1) both; }
+.pkb-spot.you.kb-hit .spr { animation-name: pkbKbDown; }
+@keyframes pkbKbUp {
+  0% { transform: none; }
+  28% { transform: translate(calc(var(--kb, 8px) * 0.5), calc(var(--kb, 8px) * -1)) rotate(1.2deg); }
+  62% { transform: translate(calc(var(--kb, 8px) * -0.12), calc(var(--kb, 8px) * 0.22)); }
+  100% { transform: none; } }
+@keyframes pkbKbDown {
+  0% { transform: none; }
+  28% { transform: translate(calc(var(--kb, 8px) * -0.5), var(--kb, 8px)) rotate(-1.2deg); }
+  62% { transform: translate(calc(var(--kb, 8px) * 0.12), calc(var(--kb, 8px) * -0.22)); }
+  100% { transform: none; } }
+
+/* -- crit zoom: the stage leans in -- */
+.pkb-stage { transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1); }
+.pkb-stage.critzoom { transform: scale(1.035); }
+
+/* -- finisher: saturate flash + radial speedlines before the KO cinematic -- */
+.pkb-stage.finisher { transition: filter 0.12s ease; filter: saturate(1.4) brightness(1.1) contrast(1.06); }
+.pkb-speedlines { position: absolute; inset: -12%; z-index: 9; pointer-events: none; opacity: 0;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 46%,
+      rgba(255,253,245,0) 0deg 9deg,
+      rgba(255,244,214,0.28) 9.6deg 10.8deg,
+      rgba(255,253,245,0) 11.4deg 21deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent 22%, #000 58%);
+  mask-image: radial-gradient(circle at 50% 46%, transparent 22%, #000 58%); }
+.pkb-speedlines.go { animation: pkbSpeedlines 0.66s ease-out both; }
+@keyframes pkbSpeedlines {
+  0% { opacity: 0; transform: scale(1.18) rotate(0deg); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1) rotate(7deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pkb-spot.telegraph .spr,
+  .pkb-spot.kb-hit .spr,
+  .pkb-speedlines.go { animation: none !important; }
+  .pkb-stage.critzoom { transform: none; }
+  .pkb-stage.finisher { filter: none; }
+  .pkb-plate .hp i.ghost { transition: none; }
+}

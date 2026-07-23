@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w751'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w752'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11646,6 +11646,7 @@
     if (S.stun > 0) h += '<span class="ar-st down">STUN</span>';
     return h;
   }
+  const _pkbGhostFrac = { p: 1, b: 1 };   // W752 — last-painted frac per side (damage-ghost trail)
   function _pkbSetHP(side, hp, animate) {
     const s = _arSess; if (!s) return;
     const max = side === 'p' ? s.pMax : s.bMax;
@@ -11656,6 +11657,28 @@
     bar.style.transitionDuration = animate ? Math.max(_PKB_T.drainMin, _pkbMs(_PKB_T.drain)) + 'ms' : '0ms';
     bar.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
     bar.className = frac > 0.5 ? 'ok' : frac >= 0.2 ? 'warn' : 'crit';
+    // W752 — fighting-game damage ghost: the pale trail holds at the PRE-hit level
+    // for a beat, then eases down to meet the bar, so the chunk you just took stays
+    // readable. Heals / snaps move it instantly (no trail on the way up).
+    try {
+      const ghost = _pkbEl('pkb-ghost-' + side);
+      if (ghost) {
+        const prev = _pkbGhostFrac[side];
+        if (animate && frac < prev) {
+          ghost.style.transitionDuration = '0ms';
+          ghost.style.transform = 'scaleX(' + prev.toFixed(4) + ')';
+          void ghost.offsetWidth;
+          ghost.style.transitionDuration = _pkbMs(520) + 'ms';
+          ghost.style.transitionDelay = _pkbMs(300) + 'ms';
+          ghost.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+        } else {
+          ghost.style.transitionDuration = '0ms';
+          ghost.style.transitionDelay = '0ms';
+          ghost.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+        }
+      }
+      _pkbGhostFrac[side] = frac;
+    } catch (_) {}
     num.innerHTML = v + '<span class="mx"> / ' + max + '</span>';
     // the classic quiet tick-down during the drain (skipped under FF — spam control).
     // W248 — with a generated drain SAMPLE present, one continuous play covers the
@@ -11941,11 +11964,45 @@
   function _pkbImpactFx(e, defSide, dmgShown) {
     // crit also gives the whole stage a quick nudge for weight
     if (e.crit) { const stage = _pkbEl('pkb-stage'); if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); } }
+    // W752 — crit zoom: the stage leans in for a beat on a crit (transform-only).
+    if (e.crit) {
+      const stage = _pkbEl('pkb-stage');
+      if (stage) { stage.classList.add('critzoom'); _pkbAfter(420, () => stage.classList.remove('critzoom')); }
+    }
     try { _audCue(e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(e.crit ? 18 : 10); } catch (_) {}
+    // W752 — real Capacitor haptics (navigator.vibrate is a no-op in WKWebView):
+    // LIGHT per hit, MEDIUM on a crit; the finisher beat adds HEAVY separately.
+    try { _hapticTick(e.crit ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
+    // W752 — knockback with WEIGHT: the defender is shoved back proportional to
+    // the chunk this hit took (4px poke → 16px haymaker), then rebounds.
+    try {
+      const s2 = _arSess;
+      const defMax = s2 ? (defSide === 'p' ? s2.pMax : s2.bMax) : 0;
+      const kb = 4 + Math.min(12, defMax > 0 ? (dmgShown / defMax) * 60 : 0);
+      const spot = _pkbEl('pkb-spot-' + defSide);
+      if (spot) {
+        spot.style.setProperty('--kb', kb.toFixed(1) + 'px');
+        spot.classList.remove('kb-hit'); void spot.offsetWidth; spot.classList.add('kb-hit');
+        _pkbAfter(460, () => { try { spot.classList.remove('kb-hit'); } catch (_) {} });
+      }
+    } catch (_) {}
     try { _pkbStrikeFx(defSide, e.gl, !!e.crit); } catch (_) {}            // W428 — attacker's signature strike
     try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_) {}    // W429 — defender's recoil + red flash + sparks
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
+  }
+  // W752 — finisher beat: the hit that ENDS a fighter gets a longer freeze, a
+  // saturate flash + speedlines on the stage, and a HEAVY haptic — the engine's
+  // defeat event then plays the existing KO cinematic on top. Presentation only.
+  function _pkbFinisherFx() {
+    try {
+      const stage = _pkbEl('pkb-stage'); if (!stage) return;
+      let sl = stage.querySelector('.pkb-speedlines');
+      if (!sl) { sl = document.createElement('div'); sl.className = 'pkb-speedlines'; stage.appendChild(sl); }
+      stage.classList.add('finisher');
+      sl.classList.remove('go'); void sl.offsetWidth; sl.classList.add('go');
+      _hapticTick('HEAVY');
+      _pkbAfter(700, () => { try { stage.classList.remove('finisher'); } catch (_) {} });
+    } catch (_) {}
   }
   // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
   // meters; the outcome is already decided by the engine. No rubber-banding —
@@ -12036,10 +12093,23 @@
         const run = () => { if (!_arSess) return; (i < chain.length) ? chain[i++](run) : _pkbDramaCheck(prevHm, next); };
         run();
       };
+      // W752 — telegraph: the FOE's announce beat also reads on its sprite (lean
+      // back + red glint) so the player sees the attack COMING, not just the text.
+      if (e.side === 'b') {
+        const foeSpot = _pkbEl('pkb-spot-b');
+        if (foeSpot) { foeSpot.classList.add('telegraph'); _pkbAfter(_PKB_T.announceHold, () => { try { foeSpot.classList.remove('telegraph'); } catch (_) {} }); }
+      }
+      // W752 — the hit that ENDS a fighter is a finisher: longer hit-stop +
+      // speedline flash + HEAVY haptic before the engine's own KO cinematic.
+      const willKO = (_pkbHPm[defSide] - (e.dmg || 0)) <= 0;
+      // W752 — hit-stop: a hard freeze between impact and drain (crits hold
+      // longer, finishers longest). The oldest trick in fighting games; all
+      // three durations scale under FF via _pkbAfter.
+      const hitstop = willKO ? 240 : e.crit ? 140 : 80;
       _pkbSay(used, _PKB_T.announceHold, () => {
         const atk = _pkbEl('pkb-spot-' + e.side);
         try { _audCue('lunge'); } catch (_) {}
-        if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe')); }
+        if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe', 'telegraph')); }
         _pkbAfter(_PKB_T.lunge, () => {
           if (hits > 1) {
             // MULTI-HIT: rapid sub-impacts (the weapon's identity), numbers
@@ -12051,16 +12121,24 @@
               _pkbImpactFx(e, defSide, h === hits - 1 ? (e.dmg || 0) - per * (hits - 1) : per);
               h += 1;
               if (h < hits) { _pkbAfter(_PKB_T.multiHit, sub); return; }
-              _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
-              _pkbSetHP(defSide, _pkbHPm[defSide], true);
-              _pkbAfter(_PKB_T.drain, aftermath);
+              if (willKO) _pkbFinisherFx();
+              _pkbAfter(hitstop, () => {
+                if (!_arSess) return;
+                _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+                _pkbSetHP(defSide, _pkbHPm[defSide], true);
+                _pkbAfter(_PKB_T.drain, aftermath);
+              });
             };
             sub();
           } else {
             _pkbImpactFx(e, defSide, e.dmg || 0);
-            _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
-            _pkbSetHP(defSide, _pkbHPm[defSide], true);
-            _pkbAfter(_PKB_T.drain, aftermath);
+            if (willKO) _pkbFinisherFx();
+            _pkbAfter(hitstop, () => {
+              if (!_arSess) return;
+              _pkbHPm[defSide] = Math.max(0, _pkbHPm[defSide] - (e.dmg || 0));
+              _pkbSetHP(defSide, _pkbHPm[defSide], true);
+              _pkbAfter(_PKB_T.drain, aftermath);
+            });
           }
         });
       });
@@ -12234,7 +12312,7 @@
           '<div class="pkb-row foe">' +
             '<div class="pkb-plate" id="pkb-plate-b">' +
               '<div class="nm">' + esc(m.bot.name) + '</div>' +
-              '<div class="hp"><i id="pkb-bar-b" class="ok"></i></div>' +
+              '<div class="hp"><i class="ghost" id="pkb-ghost-b"></i><i id="pkb-bar-b" class="ok"></i></div>' +
               '<div class="num" id="pkb-num-b"></div>' +
               '<div class="chips" id="pkb-chips-b"></div></div>' +
             '<div class="pkb-spot foe' + (isBoss ? ' boss' : '') + '" id="pkb-spot-b">' +
@@ -12247,7 +12325,7 @@
               '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div></div>' +
             '<div class="pkb-plate you" id="pkb-plate-p">' +
               '<div class="nm">YOU <span class="wpn">· ' + esc(s.weaponName) + '</span></div>' +
-              '<div class="hp"><i id="pkb-bar-p" class="ok"></i></div>' +
+              '<div class="hp"><i class="ghost" id="pkb-ghost-p"></i><i id="pkb-bar-p" class="ok"></i></div>' +
               '<div class="num" id="pkb-num-p"></div>' +
               '<div class="chips" id="pkb-chips-p"></div></div>' +
           '</div>' +
@@ -14027,7 +14105,7 @@
           '<div class="pkb-row foe">' +
             '<div class="pkb-plate" id="pkb-plate-b">' +
               '<div class="nm">' + esc(oppName) + '</div>' +
-              '<div class="hp"><i id="pkb-bar-b" class="ok"></i></div>' +
+              '<div class="hp"><i class="ghost" id="pkb-ghost-b"></i><i id="pkb-bar-b" class="ok"></i></div>' +
               '<div class="num" id="pkb-num-b"></div>' +
               '<div class="chips" id="pkb-chips-b"></div></div>' +
             '<div class="pkb-spot foe" id="pkb-spot-b">' +
@@ -14040,7 +14118,7 @@
               '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>') + '</div></div>' +
             '<div class="pkb-plate you" id="pkb-plate-p">' +
               '<div class="nm">YOU <span class="wpn">&middot; ' + esc(s.weaponName || '') + '</span></div>' +
-              '<div class="hp"><i id="pkb-bar-p" class="ok"></i></div>' +
+              '<div class="hp"><i class="ghost" id="pkb-ghost-p"></i><i id="pkb-bar-p" class="ok"></i></div>' +
               '<div class="num" id="pkb-num-p"></div>' +
               '<div class="chips" id="pkb-chips-p"></div></div>' +
           '</div>' +
@@ -50472,6 +50550,22 @@
           ],
         }, over || {});
         _coopOpenHuntDetail(inst, false);
+      };
+    } catch (_) {}
+  }
+
+  // W752 — DEV_BUILD-only battle preview: open the tower + start a REAL fight at
+  // floor N through the exact production path (matchup → VS → commit), skipping
+  // only the first-run cinematic. For browser preview + battle design iteration;
+  // inert in public builds.
+  if (DEV_BUILD) {
+    try {
+      window.__pkbPreview = function (floor) {
+        try { openArena(true); } catch (_) {}
+        setTimeout(function () {
+          try { _arStartFight(Math.max(1, Math.min(100, floor || 1))); } catch (_) {}
+          setTimeout(function () { try { _arCommitFight(); } catch (_) {} }, 700);
+        }, 500);
       };
     } catch (_) {}
   }
