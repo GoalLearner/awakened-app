@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w764'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w765'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47868,7 +47868,7 @@
       rank:            'E',
       artId:           'the_twin_maw',     // its own dedicated art (assets/bosses/the-twin-maw.png)
       dropSourceBoss:  'the_twin_maw',     // W375 — its own co-op-exclusive weapon pool
-      coopGoalSteps:   16000,
+      coopGoalSteps:   14000,   // W765 — owner tuned 16k→14k (must match backend COOP_BOSS_CFG)
       coopMetric:      'steps',
       coopUnit:        'steps',            // unit label shown in the hunt UI
       // W648 — normalized to HALF the solo kill table for the rank (the owner's
@@ -47880,8 +47880,8 @@
       statDomain:      'VIT',
       flavorShort:     'A beast with two heads, and no blind side.',
       flavorLong:      'It coils across the old border road, one head watching the way ahead, the other the way behind. No lone traveler slips past both. Hunt it with an ally, and split its gaze between you.',
-      killCondShort:   'Two hunters: 16,000 combined steps in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 16,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 14,000 combined steps in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 14,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
       coopVictoryTitle:'BOTH HEADS FALL',
       coopDefeatTitle: 'THE MAW STILL HUNGERS',
     },
@@ -50560,7 +50560,7 @@
     const top = _coopTopRowHtml(inst, ally, bossName, rank);
 
     if (inst.status === 'active') {
-      const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
+      const goal = inst.goal_steps || cfg.coopGoalSteps || 14000;
       const combined = Math.max(0, inst.combined_steps || 0);
       const mine = Math.max(0, (v.me && v.me.steps) || 0);
       // W686 review #13 — for DUAL hunts the headline % is the BINDING constraint
@@ -50603,7 +50603,7 @@
 
     // pending — an invite TO you (inline Decline / Accept Pact) or a pact YOU sent (waiting)
     if (_coopIsMyInvite(inst)) {   // W677 — either invited seat, unanswered
-      const goal = inst.goal_steps || cfg.coopGoalSteps || 16000;
+      const goal = inst.goal_steps || cfg.coopGoalSteps || 14000;
       const unit = _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
       return '<div class="cph-hunt cph-pending" data-coop-invite="' + esc(inst.id) + '">' + top +
         '<div class="cph-inv">' +

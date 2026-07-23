@@ -119,7 +119,7 @@ const COOP_BOSS_CFG: Record<
   string,
   { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean; matchmaking?: boolean }
 > = {
-  the_twin_maw:         { rank: 'E', goalSteps: 16000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },
+  the_twin_maw:         { rank: 'E', goalSteps: 14000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },   // W765 — owner tuned 16k→14k (entry-rank hunt was too steep for two casual hunters' day)
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
   // deliberately beyond one day's walking, humane across two). Reward = half
   // the solo D kill (100 → 50/hunter, the W648 split model).
