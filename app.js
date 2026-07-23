@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w756'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w757'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -9082,15 +9082,15 @@
     kilnforged_warblade:   ['searing', 'ember', 'bulwark', 'immolate'],     // W529 (was temper)
     ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
     vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
-    nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper', 'reckoning'],      // W753 — +5th FINISHER slot
-    duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark', 'reckoning'],     // W529 stance · W753 +finisher
+    nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],      // W757 — execute unlocks at MAX relic level
+    duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],     // W529 stance · W757 execute at MAX
     aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
     wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
     // W686 — mythic caster weapons (The Sleepless Crown raid). Canonical class
     // kits — the mythic edge is the Σ42 budget + full attune coverage, mirroring
     // how the A-ultras already carry these kits. MUST mirror combat-core.js.
-    reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon', 'ruin'],        // W753 — +5th FINISHER slot
-    vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble', 'piercingshot'],  // W753 — +5th FINISHER slot
+    reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],        // W757 — execute at MAX relic level
+    vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],  // W757 — execute at MAX relic level
     // W401 — co-op DROP weapons get their real kits. Without a WEAPON_MOVES entry
     // an equipped weapon silently falls back to the 'unarmed' kit (see _arenaPlayerKit),
     // so these high-stat co-op drops were stat-stick TRAPS in the Ascent. Kits match
@@ -9157,10 +9157,32 @@
     try { const b = getHunterBuild(); const id = b && b.slots ? b.slots[3] : null; const list = id && _WEAPON_ATTUNE[id]; if (list && list.indexOf(playerArch) !== -1) return _ATTUNED_MULT; } catch (_) {}
     return 1;
   }
+  // W757 -- the EXECUTE is a MAX-UPGRADE reward: any ULTRA-RARE+ weapon at relic
+  // level RELIC_UPGRADE_MAX unlocks its archetype's execute as a 5th move.
+  // (W753 shipped it unconditionally on the four flagships; W757 makes it an
+  // EARNED souls-sink reward on all 9 ultra+ weapons, flagships included.)
+  // Archetype derives from the kit's basic-attack glyph -- no per-weapon table.
+  function _weaponExecuteId(wid) {
+    const kit = wid && WEAPON_MOVES[wid];
+    if (!kit || !kit.length) return null;
+    const card = (typeof CARDS !== 'undefined') ? CARDS[wid] : null;
+    if (!card || card.slot !== 'weapon') return null;
+    if (card.rarity !== 'ultra_rare' && card.rarity !== 'mythic') return null;
+    const gl = (ARENA_MOVE_LIB[kit[0]] || {}).gl;
+    return gl === 'magic' ? 'ruin' : gl === 'ranged' ? 'piercingshot' : 'reckoning';
+  }
+  function _weaponExecuteUnlocked(wid) {
+    const exe = _weaponExecuteId(wid);
+    if (!exe) return false;
+    try { return getRelicLevel(wid) >= RELIC_UPGRADE_MAX; } catch (_) { return false; }
+  }
   function _arenaPlayerKit() {
     let wid = null;
     try { const b = getHunterBuild(); if (b && Array.isArray(b.slots)) wid = b.slots[3]; } catch (_) {}
-    const ids = (wid && WEAPON_MOVES[wid]) ? WEAPON_MOVES[wid] : WEAPON_MOVES.unarmed;
+    let ids = (wid && WEAPON_MOVES[wid]) ? WEAPON_MOVES[wid] : WEAPON_MOVES.unarmed;
+    // W757 -- a maxed ultra+ weapon has EARNED its execute.
+    const exe = (wid && _weaponExecuteUnlocked(wid)) ? _weaponExecuteId(wid) : null;
+    if (exe && ids.indexOf(exe) === -1) ids = ids.concat(exe);
     return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
   }
   // W237 tiered foe kits — early-route tricksters (F4–F5) carry a LESSER kit
@@ -10223,7 +10245,11 @@
     const prof = _arenaCombatProfile(sline);
     const player = { name: 'Hunter', attack: prof.attack, defense: prof.defense, edge: prof.edge, stats: sline, isBot: false };
     const playerArch = _arenaArchOf(player);
-    const kit = (WEAPON_MOVES[weaponId] || WEAPON_MOVES.unarmed).map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
+    let kitIds = (WEAPON_MOVES[weaponId] || WEAPON_MOVES.unarmed).slice();
+    // W757 -- the 'max' invest tier includes maxed relic upgrades, which now
+    // UNLOCK the ultra+ weapon's execute; lower tiers fight without it.
+    if (invest === 'max') { const ex = _weaponExecuteId(weaponId); if (ex && kitIds.indexOf(ex) === -1) kitIds.push(ex); }
+    const kit = kitIds.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
     const attuned = (_WEAPON_ATTUNE[weaponId] || []).indexOf(playerArch) !== -1 ? _ATTUNED_MULT : 1;
     let wins = 0, koWins = 0, toWins = 0, foePower = 0;
     const turnsArr = [], marginArr = [];
@@ -11909,6 +11935,10 @@
       '</svg></div><span class="orb"></span>' + _pkbBurst(9, embers);
   }
   const _PKB_FX = {
+    execute:{ cls: 'fx-execute', tint: '#f43f5e', edge: '#ffe6a8', html: '<span class="exe-veil"></span>' +
+      '<svg class="arc a1" width="210" height="170" viewBox="0 0 210 170" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path class="glow" d="M18 140 Q100 8 196 52"/><path d="M18 140 Q100 8 196 52"/></svg>' +
+      '<svg class="arc a2" width="210" height="170" viewBox="0 0 210 170" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path class="glow" d="M192 140 Q110 8 14 52"/><path d="M192 140 Q110 8 14 52"/></svg>' +
+      _pkbBurst(12) },
     sword:  { cls: 'fx-melee fx-sword', tint: '#f5b842', edge: '#fffdf5', html: '<svg class="arc" width="150" height="120" viewBox="0 0 150 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path class="glow" d="M14 96 Q70 6 138 40"/><path d="M14 96 Q70 6 138 40"/></svg>' + _pkbBurst(7) },
     dagger: { cls: 'fx-melee fx-dagger', tint: '#cfe8ff', edge: '#ffffff', html: '<svg class="arc a1" width="130" height="120" viewBox="0 0 130 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path d="M20 98 L112 22"/></svg><svg class="arc a2" width="130" height="120" viewBox="0 0 130 120" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%)"><path d="M112 98 L20 22"/></svg>' + _pkbBurst(6) },
     blunt:  { cls: 'fx-melee fx-blunt', tint: '#f5b842', edge: '#fffaf0', html: '<span class="shock"></span>' + _pkbBurst(8) },
@@ -11921,12 +11951,14 @@
   // Mount + play the strike effect at the defender's spot. defSide 'b' = foe (top, up);
   // 'p' = player (bottom -> .down-fx rotates the effect 180deg). Crit amps the burst + a
   // stage-wide white pop. The shake + damage number are owned by _pkbImpactFx (kept separate).
-  function _pkbStrikeFx(defSide, gl, crit) {
+  function _pkbStrikeFx(defSide, gl, crit, exe) {
     const stage = _pkbEl('pkb-stage'); if (!stage) return;
     let layer = stage.querySelector('.pkb-vfx');
     if (!layer) { layer = document.createElement('div'); layer.className = 'pkb-vfx'; stage.appendChild(layer); }
     layer.innerHTML = '';
-    const f = _PKB_FX[_PKB_GL_TO_FX[gl] || 'sword'] || _PKB_FX.sword;
+    // W757 -- an EXECUTE overrides the family effect with its signature: stage-dim
+    // veil + oversized crimson-gold cross-slash + a 12-shard burst.
+    const f = exe ? _PKB_FX.execute : (_PKB_FX[_PKB_GL_TO_FX[gl] || 'sword'] || _PKB_FX.sword);
     const root = document.createElement('div');
     root.className = 'pkb-strike ' + f.cls + (crit ? ' crit' : '') + (defSide === 'p' ? ' down-fx' : '');
     root.style.setProperty('--tint', f.tint);
@@ -12040,7 +12072,7 @@
         _pkbAfter(460, () => { try { spot.classList.remove('kb-hit'); } catch (_) {} });
       }
     } catch (_) {}
-    try { _pkbStrikeFx(defSide, e.gl, !!e.crit); } catch (_) {}            // W428 — attacker's signature strike
+    try { _pkbStrikeFx(defSide, e.gl, !!e.crit, !!e.exe); } catch (_) {}   // W428 strike · W757 execute signature
     try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_) {}    // W429 — defender's recoil + red flash + sparks
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
@@ -13348,7 +13380,11 @@
     let name = 'Hunter';
     try { if (typeof playerName === 'string' && playerName) name = playerName; } catch (_) {}
     let avatar = ''; try { avatar = _pvpSafeAvatar(getAvatarSrc()); } catch (_) {}
-    return { name: name, weaponId: weaponId, weaponName: weaponName, stats: stats, avatar: avatar };
+    // W757 -- the server appends the execute only when the owner EARNED it
+    // (maxed relic) AND validates weaponId against its own eligibility set,
+    // so the flag can't arm an ineligible weapon.
+    let exeMax = false; try { exeMax = _weaponExecuteUnlocked(weaponId); } catch (_) {}
+    return { name: name, weaponId: weaponId, weaponName: weaponName, stats: stats, avatar: avatar, exeMax: exeMax };
   }
   // PvP avatars are bare preset filenames (avatar-*.png / avatar-skin-*.png). An
   // OPPONENT's avatar is peer-supplied, so validate the exact shape before using it as
@@ -15534,7 +15570,11 @@
     if (base == null) return null;
     const lvl = (typeof fromLevel === 'number') ? fromLevel : getRelicLevel(cardId);
     if (lvl >= RELIC_UPGRADE_MAX) return null;
-    return base * Math.pow(RELIC_UPGRADE_COST_MULT, lvl);
+    const step = base * Math.pow(RELIC_UPGRADE_COST_MULT, lvl);
+    // W757 -- the level that UNLOCKS the special attack (ultra+ weapons) costs
+    // double: the finisher is the reward, the price says so.
+    if (lvl === RELIC_UPGRADE_MAX - 1 && _weaponExecuteId(cardId)) return step * 2;
+    return step;
   }
   // The single stat a relic leans into (argmax of its combat bonuses, WLT
   // excluded — WLT is reward-only and out of combat). Stable tie-break via the
@@ -19139,6 +19179,16 @@
         '<span class="cdu-level">' + level + ' / ' + RELIC_UPGRADE_MAX + '</span></div>' +
       '<div class="cdu-pips">' + pips + '</div>' +
       (level > 0 ? '<div class="cdu-current">+' + level + ' ' + domLabel + ' from upgrades</div>' : '') +
+      (function () {
+        // W757 -- tell the hunter WHY max matters: ultra+ weapons earn their
+        // archetype's special attack at max level.
+        const exeId = (typeof _weaponExecuteId === 'function') ? _weaponExecuteId(card.id) : null;
+        if (!exeId) return '';
+        const mv = ARENA_MOVE_LIB[exeId] || { name: exeId };
+        return atMax
+          ? '<div class="cdu-exe cdu-exe--on">\u2694 SPECIAL ATTACK UNLOCKED \u2014 <b>' + esc(mv.name) + '</b></div>'
+          : '<div class="cdu-exe">\u2694 MAX LEVEL unlocks <b>' + esc(mv.name) + '</b> \u2014 a special attack (\u00d7' + ((mv.exe && mv.exe.mult) || 2) + ' below ' + Math.round(((mv.exe && mv.exe.thr) || 0.3) * 100) + '%)</div>';
+      })() +
       btnHtml;
     box.classList.remove('hidden');
   }

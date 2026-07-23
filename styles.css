@@ -34615,3 +34615,39 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) {
   .ar-bmove.exe.exe-ready { animation: none; box-shadow: 0 0 14px 2px rgba(245,158,11,0.3); }
 }
+
+/* == W757 -- EXECUTE signature strike + relic-sheet unlock messaging == */
+
+/* the execute's stage-dim veil: a brief darkness so the cross-slash owns the
+   frame (event-driven one-shot; W714 rule respected) */
+.pkb-strike.fx-execute .exe-veil { position: absolute; left: 50%; top: 50%; width: 640px; height: 640px;
+  transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, rgba(8,4,10,0) 30%, rgba(8,4,10,0.55) 62%, rgba(8,4,10,0) 78%); }
+.pkb-strike.fx-execute.go .exe-veil { animation: pkbExeVeil 0.6s ease-out both; }
+@keyframes pkbExeVeil { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
+
+/* oversized crimson-gold cross arcs (draw-on like the family arcs, but bigger,
+   staggered, and edged in gold) */
+.pkb-strike.fx-execute .arc path { fill: none; stroke: var(--edge, #ffe6a8); stroke-width: 4.5;
+  stroke-linecap: round; stroke-dasharray: 300; stroke-dashoffset: 300; }
+.pkb-strike.fx-execute .arc path.glow { stroke: var(--tint, #f43f5e); stroke-width: 11; opacity: 0.6; filter: blur(3px); }
+.pkb-strike.fx-execute.go .arc.a1 path { animation: pkbExeArc 0.34s cubic-bezier(0.2,0.8,0.3,1) both; }
+.pkb-strike.fx-execute.go .arc.a2 path { animation: pkbExeArc 0.34s cubic-bezier(0.2,0.8,0.3,1) 0.12s both; }
+@keyframes pkbExeArc { 0% { stroke-dashoffset: 300; opacity: 0; } 12% { opacity: 1; }
+  70% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+
+/* shard burst inherits the shared .burst machinery; the execute just tints it */
+.pkb-strike.fx-execute .burst .sp { background: linear-gradient(180deg, #ffe6a8, #f43f5e); }
+.pkb-strike.fx-execute .burst .flash { background: radial-gradient(circle, #fff3d6, rgba(244,63,94,0.55) 55%, transparent 75%); }
+
+/* relic sheet: the unlock line (dormant) and the unlocked badge */
+.cdu-exe { margin-top: 8px; padding: 8px 11px; border-radius: 10px; font-family: ui-monospace, monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+  color: #fda4af; border: 1px solid rgba(244,63,94,0.3); background: rgba(244,63,94,0.07); }
+.cdu-exe b { color: #ffe6a8; }
+.cdu-exe--on { color: #ffe6a8; border-color: rgba(245,158,11,0.55); background: rgba(245,158,11,0.1);
+  box-shadow: 0 0 14px rgba(245,158,11,0.18); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pkb-strike.fx-execute.go .exe-veil, .pkb-strike.fx-execute.go .arc path { animation: none !important; opacity: 0.9; stroke-dashoffset: 0; }
+}

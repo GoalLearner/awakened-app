@@ -11,7 +11,7 @@ const A = CC.buildCombatant({ name: 'Alice', weaponId: 'nightfall_blade',
 const B = CC.buildCombatant({ name: 'Bob', weaponId: 'wraithwind_bow',
   stats: { STR: 6, VIT: 12, INT: 8, FOCUS: 11, WILL: 9, WLT: 3 } });
 
-ok('A kit has 5 moves (W753 finisher slot on the flagship)', A.kit.length === 5);
+ok('A kit has 4 moves (W757: the execute is EARNED at max relic, not innate)', A.kit.length === 4);
 ok('A is attuned to nightfall (×1.15)', A.attuned === CC._ATTUNED_MULT);
 ok('A profile non-zero', A.attack > 0 && A.defense > 0 && A.edge > 0);
 

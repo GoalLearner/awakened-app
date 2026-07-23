@@ -116,13 +116,13 @@ const WEAPON_MOVES = {
   kilnforged_warblade:   ['searing', 'ember', 'bulwark', 'immolate'],     // W529 (was temper)
   ten_thousand_step_blade:['flurry', 'quickstep', 'evade', 'thousand'],
   vessel_of_refusal:     ['wardstrike', 'refuse', 'willbreak', 'lastvow'],
-  nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper', 'reckoning'],      // W753 — +5th FINISHER slot
-  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark', 'reckoning'],     // W529 stance · W753 +finisher
+  nightfall_blade:       ['eclipse', 'oathstrike', 'immolate', 'temper'],      // W757 — execute unlocks at MAX relic level
+  duskforge_greatblade:  ['cleave', 'oathstrike', 'immolate', 'bulwark'],     // W529 stance · W757 execute at MAX
   aetherspire_staff:     ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],
   wraithwind_bow:        ['heartseeker', 'arrowvolley', 'flamearrow', 'quickshot'],
   // W686 — mythic caster weapons (verbatim mirror of app.js).
-  reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon', 'ruin'],        // W753 — +5th FINISHER slot
-  vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble', 'piercingshot'],  // W753 — +5th FINISHER slot
+  reverie_staff:         ['arcanebolt', 'cataclysm', 'immolate', 'siphon'],        // W757 — execute at MAX relic level
+  vigil_bow:             ['heartseeker', 'arrowvolley', 'flamearrow', 'tumble'],  // W757 — execute at MAX relic level
   twin_fang_cleaver:     ['slash', 'cleave', 'rend', 'lunge'],               // W753 crush → rend (bleed identity)
   twofold_gaze:          ['arcanebolt', 'immolate', 'cataclysm', 'siphon'],
   bothsight_longbow:     ['arrowvolley', 'snapshot', 'flamearrow', 'tumble'],
@@ -220,8 +220,29 @@ function _arenaSideOdds(c) {
 }
 
 // Build a kit (4 move objects) from a weapon id — pure (no getHunterBuild/CARDS).
-function kitForWeapon(weaponId) {
-  const ids = (weaponId && WEAPON_MOVES[weaponId]) ? WEAPON_MOVES[weaponId] : WEAPON_MOVES.unarmed;
+// W757 -- execute unlock (policy mirror of app.js). The server cannot read the
+// client's inventory, so the client publishes `exeMax` (earned = maxed relic)
+// and the server VALIDATES the weapon against this static ultra-rare+ set --
+// the flag can never arm an ineligible weapon. Archetype derives from the
+// kit's basic-attack glyph, same as the client.
+const EXECUTE_ELIGIBLE = new Set([
+  'titan_oathblade', 'nightfall_blade', 'duskforge_greatblade',
+  'aetherspire_staff', 'reverie_staff',
+  'wraithwind_bow', 'vigil_bow', 'bothsight_longbow', 'the_long_pursuit',
+]);
+function executeIdForWeapon(weaponId) {
+  if (!EXECUTE_ELIGIBLE.has(weaponId)) return null;
+  const kit = WEAPON_MOVES[weaponId];
+  if (!kit || !kit.length) return null;
+  const gl = (ARENA_MOVE_LIB[kit[0]] || {}).gl;
+  return gl === 'magic' ? 'ruin' : gl === 'ranged' ? 'piercingshot' : 'reckoning';
+}
+function kitForWeapon(weaponId, exeMax) {
+  let ids = (weaponId && WEAPON_MOVES[weaponId]) ? WEAPON_MOVES[weaponId] : WEAPON_MOVES.unarmed;
+  if (exeMax) {
+    const ex = executeIdForWeapon(weaponId);
+    if (ex && ids.indexOf(ex) === -1) ids = ids.concat(ex);
+  }
   return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
 }
 function attuneForWeapon(weaponId, arch) {
@@ -481,7 +502,7 @@ function buildCombatant(input) {
     attack: profile.attack, defense: profile.defense, edge: profile.edge, power: profile.power,
     stats, arch, weaponId,
     weaponName: String(input.weaponName || ''),
-    kit: kitForWeapon(weaponId),
+    kit: kitForWeapon(weaponId, !!input.exeMax),   // W757 -- earned execute (validated)
     attuned: attuneForWeapon(weaponId, arch),
     isBot: false,
   };
