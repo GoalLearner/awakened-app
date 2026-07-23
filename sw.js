@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.060';
+const CACHE_VERSION = 'v6.061';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -198,6 +198,11 @@ const PRECACHE_ASSETS = [
   '/assets/audio/sfx_hall_greeting.m4a',
   '/assets/audio/sfx_habit_check.m4a',
   '/assets/audio/sfx_heal.m4a',
+  // W755 — the battle's Suno one-shots (execute / finisher-freeze / bleed / heartbeat)
+  '/assets/audio/sfx_hit_execute.m4a',
+  '/assets/audio/sfx_finisher_stop.m4a',
+  '/assets/audio/sfx_bleed_apply.m4a',
+  '/assets/audio/sfx_heartbeat.m4a',
   '/assets/audio/sfx_status_burn.m4a',
   '/assets/audio/sfx_status_stun.m4a',
   '/assets/audio/sfx_cauterize.m4a',
