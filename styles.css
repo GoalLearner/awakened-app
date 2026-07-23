@@ -34915,3 +34915,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .ghh-res--loss { color: #f87171; }
 .ghh-souls { color: #f5b842; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.66rem; font-weight: 700; }
 .ghh-time { color: #6b7396; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; }
+
+/* W763 — the History tab's 7-day stats band (reuses the Kill Log ledger look). */
+.ghh-ledger { margin-bottom: 8px; }

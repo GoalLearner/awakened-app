@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=615">
+  <link rel="stylesheet" href="styles.css?v=616">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2304,6 +2304,24 @@
       </div>
       <!-- W762 — Hunt History pane: chronological feed (solo + co-op), filterable -->
       <div id="gb-pane-hist" hidden>
+        <!-- W763 — 7-day stats band (recomputes with the active filter) -->
+        <div id="ghh-ledger" class="guild-bosses-ledger ghh-ledger" hidden>
+          <div class="guild-bosses-ledger-stat">
+            <div id="ghh-stat-hunts" class="guild-bosses-ledger-val">0</div>
+            <div class="guild-bosses-ledger-lbl">HUNTS · 7D</div>
+          </div>
+          <div class="guild-bosses-ledger-sep" aria-hidden="true"></div>
+          <div class="guild-bosses-ledger-stat">
+            <div id="ghh-stat-rate" class="guild-bosses-ledger-val">—</div>
+            <div class="guild-bosses-ledger-lbl">WIN RATE</div>
+          </div>
+          <div class="guild-bosses-ledger-sep" aria-hidden="true"></div>
+          <div class="guild-bosses-ledger-stat">
+            <div id="ghh-stat-souls" class="guild-bosses-ledger-val">0</div>
+            <div class="guild-bosses-ledger-lbl">SOULS · 7D</div>
+          </div>
+        </div>
+        <p class="lb-rank-blurb guild-bosses-blurb">The last seven days of the hunt.</p>
         <div class="ghh-filters" role="group" aria-label="Filter hunts">
           <button type="button" class="ghh-chip active" data-ghh-filter="all">All</button>
           <button type="button" class="ghh-chip" data-ghh-filter="solo">Solo</button>
@@ -3307,7 +3325,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1178"></script>
+  <script src="app.js?v=1179"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
