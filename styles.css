@@ -34651,3 +34651,107 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) {
   .pkb-strike.fx-execute.go .exe-veil, .pkb-strike.fx-execute.go .arc path { animation: none !important; opacity: 0.9; stroke-dashoffset: 0; }
 }
+
+/* == W758 -- per-move CHARACTER choreography (attacker .spr keyframes) ==
+   The spot's simple lunge slide (W253) stays underneath as the base travel +
+   the reduced-motion fallback; these keyframes make the SPRITE perform the
+   move on top. Directions mirror: .you attacks up-right, .foe down-left.
+   All transform/filter only; every animation is an event-driven one-shot. */
+
+/* -- HEAVY (sword/burst): wind-up back, overhead chop through -- */
+.pkb-spot.you.atk-heavy .spr { animation: pkbAtkHeavyY 0.52s cubic-bezier(0.3,0,0.4,1) both; }
+.pkb-spot.foe.atk-heavy .spr { animation: pkbAtkHeavyF 0.52s cubic-bezier(0.3,0,0.4,1) both; }
+@keyframes pkbAtkHeavyY {
+  0% { transform: none; } 38% { transform: translate(-10px,4px) rotate(-9deg); }
+  56% { transform: translate(14px,-8px) rotate(10deg) scale(1.04); }
+  74% { transform: translate(8px,-4px) rotate(4deg); } 100% { transform: none; } }
+@keyframes pkbAtkHeavyF {
+  0% { transform: none; } 38% { transform: translate(10px,-4px) rotate(9deg); }
+  56% { transform: translate(-14px,8px) rotate(-10deg) scale(1.04); }
+  74% { transform: translate(-8px,4px) rotate(-4deg); } 100% { transform: none; } }
+
+/* -- FAST (dagger): blurred dash-step with an afterimage trail -- */
+.pkb-spot.you.atk-fast .spr { animation: pkbAtkFastY 0.34s cubic-bezier(0.2,0.9,0.3,1) both; }
+.pkb-spot.foe.atk-fast .spr { animation: pkbAtkFastF 0.34s cubic-bezier(0.2,0.9,0.3,1) both; }
+@keyframes pkbAtkFastY {
+  0% { transform: none; filter: none; }
+  30% { transform: translate(20px,-10px) skewX(-6deg); filter: drop-shadow(-10px 4px 0 rgba(207,232,255,0.35)) drop-shadow(-20px 8px 0 rgba(207,232,255,0.15)); }
+  60% { transform: translate(12px,-6px); filter: drop-shadow(-6px 2px 0 rgba(207,232,255,0.2)); }
+  100% { transform: none; filter: none; } }
+@keyframes pkbAtkFastF {
+  0% { transform: none; filter: none; }
+  30% { transform: translate(-20px,10px) skewX(6deg); filter: drop-shadow(10px -4px 0 rgba(207,232,255,0.35)) drop-shadow(20px -8px 0 rgba(207,232,255,0.15)); }
+  60% { transform: translate(-12px,6px); filter: drop-shadow(6px -2px 0 rgba(207,232,255,0.2)); }
+  100% { transform: none; filter: none; } }
+
+/* -- BLUNT (shield): crouch, then shoulder-CHARGE -- */
+.pkb-spot.you.atk-blunt .spr { animation: pkbAtkBluntY 0.46s cubic-bezier(0.35,0,0.3,1) both; }
+.pkb-spot.foe.atk-blunt .spr { animation: pkbAtkBluntF 0.46s cubic-bezier(0.35,0,0.3,1) both; }
+@keyframes pkbAtkBluntY {
+  0% { transform: none; } 34% { transform: translate(-4px,5px) scale(1.05,0.9); }
+  58% { transform: translate(16px,-7px) scale(0.97,1.05); }
+  76% { transform: translate(10px,-4px); } 100% { transform: none; } }
+@keyframes pkbAtkBluntF {
+  0% { transform: none; } 34% { transform: translate(4px,-5px) scale(1.05,0.9); }
+  58% { transform: translate(-16px,7px) scale(0.97,1.05); }
+  76% { transform: translate(-10px,4px); } 100% { transform: none; } }
+
+/* -- RANGED (bow): draw back + rise, loose, recoil kick -- no charging -- */
+.pkb-spot.you.atk-ranged .spr { animation: pkbAtkRangedY 0.46s ease-out both; }
+.pkb-spot.foe.atk-ranged .spr { animation: pkbAtkRangedF 0.46s ease-out both; }
+@keyframes pkbAtkRangedY {
+  0% { transform: none; } 40% { transform: translate(-8px,-2px) rotate(-3deg) scale(1.02); }
+  58% { transform: translate(-3px,-1px) rotate(2deg); }
+  70% { transform: translate(-6px,1px); } 100% { transform: none; } }
+@keyframes pkbAtkRangedF {
+  0% { transform: none; } 40% { transform: translate(8px,2px) rotate(3deg) scale(1.02); }
+  58% { transform: translate(3px,1px) rotate(-2deg); }
+  70% { transform: translate(6px,-1px); } 100% { transform: none; } }
+
+/* -- MAGIC (staff): levitate rise + palm-push on release -- */
+.pkb-spot.you.atk-magic .spr { animation: pkbAtkMagicY 0.5s ease-in-out both; }
+.pkb-spot.foe.atk-magic .spr { animation: pkbAtkMagicF 0.5s ease-in-out both; }
+@keyframes pkbAtkMagicY {
+  0% { transform: none; filter: none; }
+  42% { transform: translateY(-9px) scale(1.03); filter: drop-shadow(0 0 12px rgba(192,132,252,0.55)); }
+  62% { transform: translate(7px,-7px); filter: drop-shadow(0 0 8px rgba(192,132,252,0.35)); }
+  100% { transform: none; filter: none; } }
+@keyframes pkbAtkMagicF {
+  0% { transform: none; filter: none; }
+  42% { transform: translateY(-9px) scale(1.03); filter: drop-shadow(0 0 12px rgba(192,132,252,0.55)); }
+  62% { transform: translate(-7px,7px); filter: drop-shadow(0 0 8px rgba(192,132,252,0.35)); }
+  100% { transform: none; filter: none; } }
+
+/* -- EXECUTE: long crouch, then an explosive dash THROUGH the target line -- */
+.pkb-spot.you.atk-exe .spr { animation: pkbAtkExeY 0.62s cubic-bezier(0.4,0,0.2,1) both; }
+.pkb-spot.foe.atk-exe .spr { animation: pkbAtkExeF 0.62s cubic-bezier(0.4,0,0.2,1) both; }
+@keyframes pkbAtkExeY {
+  0% { transform: none; filter: none; }
+  40% { transform: translate(-12px,6px) scale(1.06,0.9); filter: drop-shadow(0 0 10px rgba(244,63,94,0.5)); }
+  50% { transform: translate(-12px,6px) scale(1.06,0.9); filter: drop-shadow(0 0 16px rgba(244,63,94,0.7)); }
+  64% { transform: translate(26px,-14px) skewX(-8deg); filter: drop-shadow(-14px 6px 0 rgba(244,63,94,0.4)) drop-shadow(-28px 12px 0 rgba(255,230,168,0.2)); }
+  80% { transform: translate(14px,-8px); filter: drop-shadow(-6px 3px 0 rgba(244,63,94,0.2)); }
+  100% { transform: none; filter: none; } }
+@keyframes pkbAtkExeF {
+  0% { transform: none; filter: none; }
+  40% { transform: translate(12px,-6px) scale(1.06,0.9); filter: drop-shadow(0 0 10px rgba(244,63,94,0.5)); }
+  50% { transform: translate(12px,-6px) scale(1.06,0.9); filter: drop-shadow(0 0 16px rgba(244,63,94,0.7)); }
+  64% { transform: translate(-26px,14px) skewX(8deg); filter: drop-shadow(14px -6px 0 rgba(244,63,94,0.4)) drop-shadow(28px -12px 0 rgba(255,230,168,0.2)); }
+  80% { transform: translate(-14px,8px); filter: drop-shadow(6px -3px 0 rgba(244,63,94,0.2)); }
+  100% { transform: none; filter: none; } }
+
+/* -- support stances: brace plants down; empower rises -- */
+.pkb-spot.st-brace .spr { animation: pkbStBrace 0.7s ease-out both; }
+@keyframes pkbStBrace {
+  0% { transform: none; } 30% { transform: translateY(5px) scale(1.06,0.92); }
+  70% { transform: translateY(3px) scale(1.04,0.95); } 100% { transform: none; } }
+.pkb-spot.st-rise .spr { animation: pkbStRise 0.7s ease-out both; }
+@keyframes pkbStRise {
+  0% { transform: none; } 35% { transform: translateY(-7px) scale(1.04); }
+  70% { transform: translateY(-4px) scale(1.02); } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pkb-spot .spr, .pkb-spot.st-brace .spr, .pkb-spot.st-rise .spr,
+  .pkb-spot.atk-heavy .spr, .pkb-spot.atk-fast .spr, .pkb-spot.atk-blunt .spr,
+  .pkb-spot.atk-ranged .spr, .pkb-spot.atk-magic .spr, .pkb-spot.atk-exe .spr { animation: none !important; filter: none !important; }
+}

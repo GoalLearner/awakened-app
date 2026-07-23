@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w757'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w758'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11904,6 +11904,21 @@
   // distinct hit cue so attacks stop sounding identical: sword = solid thwack,
   // dagger = fast light slice, burst = fiery whoosh, shield/blunt = heavy clang.
   // Crits keep their own bright cue; unknown families fall back to the sword baseline.
+  // W758 -- per-move CHARACTER choreography (owner: "animations for different
+  // moves instead of the one lunge"). The move's glyph family picks a BODY
+  // motion for the attacker sprite (.spr keyframes; the spot's simple lunge
+  // slide underneath is kept as the reduced-motion fallback):
+  //   heavy  (sword)         wind-up back, then an overhead chop
+  //   fast   (dagger)        a blurred dash-step with an afterimage trail
+  //   blunt  (shield)        crouch + shoulder-CHARGE
+  //   ranged (bow)           draw back, loose, recoil kick -- archers never charge
+  //   magic  (staff)         levitate rise + palm-push on release
+  //   exe    (any execute)   long crouch, then an explosive dash -- its own beat
+  // Wind-ups extend the pre-impact wait per family (FF-scaled via _pkbAfter).
+  const _PKB_ATK_FAM = { sword: 'heavy', dagger: 'fast', shield: 'blunt', ranged: 'ranged', burst: 'heavy', magic: 'magic' };
+  const _PKB_ATK_MS  = { heavy: 300, fast: 150, blunt: 240, ranged: 240, magic: 260, exe: 380 };
+  function _pkbAtkFam(e) { return e && e.exe ? 'exe' : (_PKB_ATK_FAM[e && e.gl] || 'heavy'); }
+
   function _arHitCueFor(gl) {
     switch (gl) {
       case 'dagger': return 'hit_slice';
@@ -12196,8 +12211,18 @@
       _pkbSay(used, _PKB_T.announceHold, () => {
         const atk = _pkbEl('pkb-spot-' + e.side);
         try { _audCue('lunge'); } catch (_) {}
-        if (atk) { atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe'); _pkbAfter(_PKB_T.lunge, () => atk.classList.remove('lunge-you', 'lunge-foe', 'telegraph')); }
-        _pkbAfter(_PKB_T.lunge, () => {
+        // W758 -- the character performs the MOVE, not just a step: family class
+        // on the spot (keyframes ride .spr), simple lunge slide kept beneath as
+        // the reduced-motion fallback. Impact waits for the wind-up's hit frame.
+        const fam = _pkbAtkFam(e);
+        const windup = Math.max(_PKB_T.lunge, _PKB_ATK_MS[fam] || _PKB_T.lunge);
+        if (atk) {
+          atk.classList.remove('atk-heavy', 'atk-fast', 'atk-blunt', 'atk-ranged', 'atk-magic', 'atk-exe');
+          void atk.offsetWidth;
+          atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe', 'atk-' + fam);
+          _pkbAfter(windup + 220, () => atk.classList.remove('lunge-you', 'lunge-foe', 'telegraph', 'atk-' + fam));
+        }
+        _pkbAfter(windup, () => {
           if (hits > 1) {
             // MULTI-HIT: rapid sub-impacts (the weapon's identity), numbers
             // stacking, ONE drain at the end, then the normal aftermath holds.
@@ -12259,6 +12284,16 @@
       const cau = tx.indexOf('cauterized; the') !== -1;
       // W431 — focus/powerup beat when a fighter buffs THEMSELVES (the self-buff lines carry
       // the caster's name + side; debuffs/DoTs name the defender, so they're excluded).
+      // W758 -- caster BODY language on self-buffs: defensive lines plant into a
+      // braced squat; empowering lines rise. Composes with the W431 aura FX.
+      try {
+        const spot = _pkbEl('pkb-spot-' + e.side);
+        if (spot && (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1 || tx.indexOf('refuses') !== -1)) {
+          spot.classList.add('st-brace'); _pkbAfter(700, () => { try { spot.classList.remove('st-brace'); } catch (_) {} });
+        } else if (spot && (tx.indexOf('attack up') !== -1 || tx.indexOf('evasive') !== -1)) {
+          spot.classList.add('st-rise'); _pkbAfter(700, () => { try { spot.classList.remove('st-rise'); } catch (_) {} });
+        }
+      } catch (_) {}
       try {
         if (tx.indexOf('attack up') !== -1) _pkbFocusFx(e.side, 'buff', '#f0904a', 'rgba(240,144,74,.5)');           // Focus/Temper — fury
         else if (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1) _pkbFocusFx(e.side, 'buff', '#7dd3fc', 'rgba(125,211,252,.5)');   // Brace/Guard
