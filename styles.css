@@ -15855,9 +15855,17 @@ body.reveal-locked { overflow: hidden; }
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
+  /* W760 — was align-items:center. A flex-CENTERED child taller than the
+     viewport clips at BOTH ends with no way to scroll back — the W757 unlock
+     banner + upgrade box made this card tall enough to shove the ✕ under the
+     iOS status bar (owner force-closed the app, build 446). flex-start + an
+     auto-margined child = short cards still center, tall cards scroll from the
+     top with the ✕ always reachable below the notch. */
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
 }
 .carddetail-overlay.hidden { display: none !important; }
 .carddetail-modal {
@@ -15870,6 +15878,7 @@ body.reveal-locked { overflow: hidden; }
   border-radius: 8px;
   padding: 22px 20px 18px;
   text-align: center;
+  margin: auto;   /* W760 — with the overlay's flex-start+scroll: centers when short, scrolls when tall */
 }
 .carddetail-overlay--rare .carddetail-modal {
   border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
@@ -15883,8 +15892,11 @@ body.reveal-locked { overflow: hidden; }
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 32px;
-  height: 32px;
+  /* W760 — was 32px: under Apple's 44pt minimum tap target, and the owner
+     couldn't reliably hit it (build 446). 40px visual + the ::before hitbox
+     below = a 56px effective target. */
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
@@ -15905,6 +15917,8 @@ body.reveal-locked { overflow: hidden; }
   line-height: 1;
 }
 .carddetail-close:hover { background: rgba(0, 0, 0, 0.78); border-color: rgba(255, 255, 255, 0.32); }
+/* W760 — invisible tap-target extender: taps within 8px of the ✕ still land on it. */
+.carddetail-close::before { content: ''; position: absolute; inset: -8px; border-radius: 999px; }
 .carddetail-art {
   width: 100%;
   /* 1:1 to match the 1254×1254 source art exactly. Was 5:4, which
@@ -29727,6 +29741,22 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .pkb-spot.you { width: min(50vw, 214px); height: min(45vw, 21vh, 190px); margin-left: -10px; margin-bottom: -30px; z-index: 1; }
 /* short screens: tighter air gap so the band never overflows the stage */
 @media (max-height: 640px) { .pkb-stage { gap: clamp(6px, 4vh, 28px); } }
+/* ── W760 — 5-move kits (the earned EXECUTE slot). The finisher row costs the
+   stage ~70px of height; reclaim it here so the FOE never overflows the top of
+   the stage (owner report, build 446: boss head off-screen behind the FLOOR
+   title). Tighter air gap + modestly shorter sprites + a slimmer exe row —
+   scoped to .has-exe so 4-move kits keep the W253/W756 proportions exactly. */
+.pkb.has-exe .pkb-stage { gap: clamp(4px, 2.4vh, 16px); }
+.pkb.has-exe .pkb-spot.foe { width: min(46vw, 200px); height: min(40vw, 17.4vh, 164px); }
+.pkb.has-exe .pkb-spot.foe.boss { width: min(50vw, 220px); height: min(43vw, 19vh, 182px); }
+.pkb.has-exe .pkb-spot.you { width: min(44vw, 188px); height: min(39vw, 17vh, 158px); margin-bottom: -24px; }
+.pkb.has-exe .ar-bmove.exe { padding-top: 8px; padding-bottom: 8px; }
+.pkb.has-exe .ar-bmove.exe .desc { line-height: 1.15; }
+@media (max-height: 700px) {
+  .pkb.has-exe .pkb-spot.foe { height: min(40vw, 17vh, 160px); }
+  .pkb.has-exe .pkb-spot.foe.boss { height: min(43vw, 18.5vh, 176px); }
+  .pkb.has-exe .pkb-spot.you { height: min(38vw, 16.5vh, 152px); }
+}
 .pkb-spot .plat { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 94%; height: 26%; border-radius: 50%; border: 1px solid; }
 /* soft contact shadow under each fighter */
 .pkb-spot::before { content: ''; position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); width: 70%; height: 16%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent 75%); }
