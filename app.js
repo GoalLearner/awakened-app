@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w763'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w764'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -822,7 +822,7 @@
       flavorLong:       'A god-forge sealed since the second age. Its doors part only for those who lift on the days they do not want to. Stop, and the forge cools. Continue, and the steel between you and the world grows thinner with every blow.',
       killCondShort:    '30+ workout minutes, 2 days back-to-back',
       killCondLong:     'Complete at least 30 verified workout minutes on two consecutive days inside the 2-day hunt window. Any qualifying Apple Health workout type counts. The day you engage counts from midnight — training already done today counts.',
-      failedCopy:       'The hammer fell silent. The forge sealed.',
+      failedCopy:       'The hammer went silent. The forge sealed.',
       // consecutiveDays = back-to-back days inside the window that must
       // hit the workoutMinutes threshold (W262 — was 5-of-7 qualifying
       // days). streakTarget mirrors it so _bossProgressNoun renders
@@ -888,7 +888,7 @@
       flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — to match him you must cover ground both flat and rising, two days running. Break stride once, and he leaves you behind.',
       killCondShort:    '10,000 steps + 5 flights, 2 days back-to-back',
       killCondLong:     'On two consecutive days inside the 2-day hunt window, reach BOTH 10,000 verified steps and 5 flights of stairs climbed. Miss either on either day and the march resets.',
-      failedCopy:       'You fell behind. The march went on without you.',
+      failedCopy:       'You dropped behind. The march went on without you.',
       dailyAllOf:       true,
       stepThreshold:    10000,
       flightThreshold:  5,
@@ -928,7 +928,7 @@
       flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It sits at the top of a long ascent, and answers only to those who make the climb in earnest — fifteen flights of stairs in a single day, no fewer.',
       killCondShort:    '15 flights of stairs in one day',
       killCondLong:     'Climb at least 15 verified flights of stairs in a single day inside the hunt window. One honest day of climbing and the anvil yields.',
-      failedCopy:       'The climb fell short. The anvil stayed sealed.',
+      failedCopy:       'The climb came up short. The anvil stayed sealed.',
       flightThreshold:  15,
       streakTarget:     1,
       cadence:          'daily',
@@ -951,7 +951,7 @@
       flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but all at once — body, will, and rest, held together without falter. Master every discipline for three days unbroken, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
       killCondShort:    '10k steps + 10 flights — both, 3 days back-to-back',
       killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach BOTH 10,000 verified steps and 10 flights of stairs climbed. Miss either on any day and the run resets to zero. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',
-      failedCopy:       'One day fell short, and the whole climb with it. The shadow keeps its crown.',
+      failedCopy:       'One day came up short, and the whole climb with it. The shadow keeps its crown.',
       dailyAllOf:       true,
       dropTable:        { mythic: 0.01, ultra_rare: 0.30 },
       stepThreshold:    10000,
@@ -7014,7 +7014,7 @@
             (sub ? '<div class="ghh-sub">' + sub + '</div>' : '') +
           '</div>' +
           '<div class="ghh-right">' +
-            '<span class="ghh-res ghh-res--' + (r.result === 'loss' ? 'loss' : 'win') + '">' + (r.result === 'loss' ? 'FELL' : 'SLAIN') + '</span>' +
+            '<span class="ghh-res ghh-res--' + (r.result === 'loss' ? 'loss' : 'win') + '">' + (r.result === 'loss' ? 'DEFEAT' : 'SLAIN') + '</span>' +
             ((r.souls || 0) > 0 ? '<span class="ghh-souls">+' + Number(r.souls).toLocaleString('en-US') + ' souls</span>' : '') +
             '<span class="ghh-time">' + esc(time) + '</span>' +
           '</div>' +
@@ -21534,7 +21534,7 @@
         break;
       case 'Sleep before midnight':
         middle =
-          "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you fell asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>" +
+          "<p>Awakened auto-checks Sleep before midnight when your sleep data shows you were asleep before 12 AM. There's no manual override — your bedtime is what it is. The system is honest with you, even when you might not want to be honest with yourself.</p>" +
           _HEALTH_SLEEP_DEVICE_NOTE;
         break;
       case 'Workout':
@@ -23872,7 +23872,7 @@
         { title: 'A whole week, {name}', body: "{daysGone} days gone and we still saved your spot. {rank} isn't where you belong. Come take it back." },
         { title: '{rivalName} thinks you quit', body: 'A week out will do that. One session says otherwise. Show up and shut it down.' },
         { title: 'We kept the light on', body: "{daysGone} days is a while, but your board's still here and so is {rank}. Ready when you are." },
-        { title: 'Your rank fell to {rank} 📉', body: "A week away moved the whole pack past you. It's a climb back — but you've done harder. Start now." },
+        { title: 'Your rank dropped to {rank} 📉', body: "A week away moved the whole pack past you. It's a climb back — but you've done harder. Start now." },
         { title: 'Come home, {name}', body: "It's been a week. No lecture — just your spot, waiting. Log one vow and you're back in it." },
         { title: 'Still time to answer', body: '{daysGone} days gone, {rank} on the board, {rivalName} out in front. One step back in changes everything.' },
         { title: '{rivalName} pulled way ahead', body: "A full week's head start. Big gap, not a wall. Get back in and start closing it tonight." },
@@ -24457,7 +24457,7 @@
     { minDays: 30, xp: 200, msg: 'Long road. Same destination. Welcome home, hunter.' },
     { minDays: 8,  xp: 100, msg: "You disappeared. You came back. That's the only metric that matters." },
     { minDays: 4,  xp: 50,  msg: 'A week away. The path waited.' },
-    { minDays: 1,  xp: 25,  msg: 'The hunter who returns is stronger than the one who never fell.' },
+    { minDays: 1,  xp: 25,  msg: 'The hunter who returns is stronger than the one who never stumbled.' },
   ];
 
   // Honest Day: 1 per calendar month per pack. Stored as date strings.
@@ -48749,12 +48749,12 @@
       showNoticeCard({
         icon:  '☠️',
         title: cfg.name + ' bested you',
-        body:  'The co-op hunt fell short before the window closed. Rally your ally and call again.',
+        body:  'The co-op hunt came up short before the window closed. Rally your ally and call again.',
         tone:  'loss',
       });
     } catch (_) {}
     try { playSfx('ar_lose'); } catch (_) {}
-    try { _coopLocalNotify('Defeated by ' + cfg.name, 'Your co-op hunt fell short. Rally your ally and call again.'); } catch (_) {}
+    try { _coopLocalNotify('Defeated by ' + cfg.name, 'Your co-op hunt came up short. Rally your ally and call again.'); } catch (_) {}
   }
 
   // Best-effort immediate local-notification (native only; no-op on web / when denied /
@@ -49231,7 +49231,7 @@
   function _coopRecruitHtml(inst) {
     const cfg = _coopSheet.cfg;
     let note = '';
-    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The hunt fell short last time \u2014 the goal went unmet before the window closed. Call again.</div>';
+    if (inst && inst.status === 'expired') note = '<div class="coop-note coop-note--loss">The hunt came up short last time \u2014 the goal went unmet before the window closed. Call again.</div>';
     else if (inst && inst.status === 'declined') note = '<div class="coop-note">That hunt ended before it began. Send a new call.</div>';
     else if (inst && inst.status === 'cancelled') note = '<div class="coop-note">That hunt was called off. Send a new call to go again.</div>';
     const dis = _coopSheet.busy ? ' disabled' : '';
@@ -49803,7 +49803,7 @@
     let youAlias = 'You'; try { const u = Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) youAlias = u.alias; } catch (_) {}
     const youInit = esc((String(youAlias).trim().charAt(0) || 'Y').toUpperCase());
     const kicker = cfg.coopDefeatTitle || 'THE QUARRY HOLDS';
-    const flavor = 'You and ' + esc(ally) + ' fell short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
+    const flavor = 'You and ' + esc(ally) + ' came up short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
     // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the per-hunter split
     // W686 — fmt formats the displayed numbers (sleep passes minutes→hours).
     const goalBar = function (combined, goal, label, metric, fmt) {
@@ -49839,7 +49839,7 @@
       '<div class="coopdf">' +
         '<div class="coopdf-verdict">' +
           '<div class="coopdf-kicker">' + esc(kicker) + '</div>' +
-          '<div class="coopdf-headline">The Hunt Fell Short</div>' +
+          '<div class="coopdf-headline">The Hunt Ran Out of Time</div>' +
           '<div class="coopdf-flavor">' + flavor + '</div>' +
         '</div>' +
         '<div class="coopdf-progress">' + bars + '</div>' +
@@ -51322,7 +51322,7 @@
   function showComebackScreen(item) {
     const overlay = document.getElementById('comeback-screen');
     if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
-    document.getElementById('cb-message').textContent = item.msg || 'The hunter who returns is stronger than the one who never fell.';
+    document.getElementById('cb-message').textContent = item.msg || 'The hunter who returns is stronger than the one who never stumbled.';
     document.getElementById('cb-xp').textContent      = '+' + item.xp + ' Resilience XP';
 
     overlay.classList.remove('hidden');
