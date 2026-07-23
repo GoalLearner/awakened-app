@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w758'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w759'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11770,8 +11770,27 @@
     const s = _arSess; if (!s) return;
     const el = _pkbEl('pkb-chips-' + side);
     if (!el) return;
-    el.innerHTML = _arBattleStatus(side === 'p' ? s.pS : s.bS);
+    const S = side === 'p' ? s.pS : s.bS;
+    el.innerHTML = _arBattleStatus(S);
     if (pulse) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+    // W759 — held STANCES while a defensive state is live (chips re-render on
+    // every state change, so this tracks apply AND expiry for free): the guard
+    // family plants the fighter into a lowered braced posture under a faint
+    // shield dome; pure evasion sways the stance instead. Classes ride the spot;
+    // attack/react keyframes ride .spr and win while they play, then settle
+    // back into the held stance underneath.
+    try {
+      const spot = _pkbEl('pkb-spot-' + side);
+      if (spot && S) {
+        const g = S.guard > 0 || (S.mods || []).some((x) => x.k === 'def' && x.mag < 0);
+        const ev = (S.mods || []).some((x) => x.k === 'dodge');
+        spot.classList.toggle('hold-guard', !!g);
+        spot.classList.toggle('hold-eva', !!ev && !g);
+        let dome = spot.querySelector('.pkb-dome');
+        if (g && !dome) { dome = document.createElement('span'); dome.className = 'pkb-dome'; spot.appendChild(dome); }
+        if (!g && dome) { try { dome.remove(); } catch (_) {} }
+      }
+    } catch (_) {}
   }
   // W531 — "Forged Plate" move accent (ClaudeDesign handoff). A move's combat TYPE
   // derives from its fx: self-buff / heal / cleanse → DEFENSE (teal · SUPPORT);
@@ -12005,12 +12024,27 @@
   function _pkbReactRing(n, cls) { let h = ''; for (let i = 0; i < n; i++) h += '<span class="' + cls + '" style="--a:' + Math.round(i * 360 / n) + 'deg"></span>'; return h; }
   function _pkbReactSpread(n, cls, span) { let h = ''; for (let i = 0; i < n; i++) h += '<span class="' + cls + '" style="--ex:' + Math.round((i - (n - 1) / 2) * (span / n)) + 'px"></span>'; return h; }
   const _PKB_HEX_SVG = '<svg viewBox="0 0 120 120"><polygon points="60,8 104,34 104,86 60,112 16,86 16,34" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 6" opacity=".9"/><polygon points="60,22 92,40 92,80 60,98 28,80 28,40" fill="none" stroke="#c084fc" stroke-width="1.2" opacity=".5"/></svg>';
+  // W759 — small inline particle glyphs for the status vocabulary below.
+  const _PKB_DOWN_SVG = '<svg width="10" height="18" viewBox="0 0 10 18"><path d="M5 17 L9 11 H6 V1 H4 V11 H1 Z" fill="var(--pc,#a78bfa)"/></svg>';
+  function _pkbReactStars(n) { let h = ''; for (let i = 0; i < n; i++) h += '<span class="rf-star" style="--a:' + Math.round(i * 360 / n) + 'deg;--id:' + (i * 0.12).toFixed(2) + 's">✦</span>'; return h; }
   const _PKB_REACT = {
     hit:    { html: _pkbReactRing(7, 'spk') },
     crit:   { html: '<span class="shockring"></span>' + _pkbReactRing(9, 'spk') },
     dodge:  { html: '<span class="ghost"></span><span class="swoosh"></span>' },   // the engine's DODGED! toast is the label
     resist: { html: '<span class="ward"></span><span class="hexring">' + _PKB_HEX_SVG + '</span>' },
     defeat: { html: _pkbReactSpread(7, 'ash', 70) },
+    // W759 — "every effect deserves an animation": victim-side status applies,
+    // per-tick DoT flinches, the heal renewal, and the stun-skip slump. Each is a
+    // body keyframe on .spr (see styles) + these particles in the .pkb-rfx overlay.
+    burn:   { html: _pkbReactSpread(6, 'rf-ember', 54) },
+    bleed:  { html: _pkbReactSpread(4, 'rf-drip', 40) },
+    stun:   { html: _pkbReactStars(5) },
+    shred:  { html: _pkbReactRing(6, 'rf-shard') },
+    sap:    { html: _pkbReactSpread(4, 'rf-down', 44).replace(/<span class="rf-down"([^>]*)><\/span>/g, '<span class="rf-down"$1>' + _PKB_DOWN_SVG + '</span>') },
+    dtickburn:  { html: _pkbReactSpread(3, 'rf-ember', 36) },
+    dtickbleed: { html: _pkbReactSpread(3, 'rf-drip', 30) },
+    mend:   { html: '<span class="mendring"></span>' + _pkbReactSpread(4, 'rf-cross', 48).replace(/<span class="rf-cross"([^>]*)><\/span>/g, '<span class="rf-cross"$1>+</span>') },
+    slump:  { html: _pkbReactStars(3) },
   };
   function _pkbReactFx(defSide, kind) {
     const spot = _pkbEl('pkb-spot-' + defSide); if (!spot) return;
@@ -12088,7 +12122,18 @@
       }
     } catch (_) {}
     try { _pkbStrikeFx(defSide, e.gl, !!e.crit, !!e.exe); } catch (_) {}   // W428 strike · W757 execute signature
-    try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_) {}    // W429 — defender's recoil + red flash + sparks
+    // W429 — defender's recoil + red flash + sparks. W759 — a defender with an
+    // ACTIVE guard (guard charge or def-up brace) reads the hit as an ABSORB:
+    // the braced flinch + ward dome (the 'resist' react) instead of the raw
+    // recoil. A crit punches through the read, and a killing blow keeps its
+    // full recoil + finisher. Damage numbers are untouched — presentation only.
+    try {
+      const sG = _arSess;
+      const dS = sG ? (defSide === 'p' ? sG.pS : sG.bS) : null;
+      const guarded = !!(dS && (dS.guard > 0 || (dS.mods || []).some((x) => x.k === 'def' && x.mag < 0)));
+      const lethal = (_pkbHPm[defSide] - (dmgShown || 0)) <= 0;
+      _pkbReactFx(defSide, e.crit ? 'crit' : (guarded && !lethal ? 'resist' : 'hit'));
+    } catch (_) { try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_2) {} }
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
   // W752 — finisher beat: the hit that ENDS a fighter gets a longer freeze, a
@@ -12266,6 +12311,9 @@
       _pkbSetHP(defSide, _pkbHPm[defSide], true);
       _pkbChips(defSide, true);
       try { _audCue('dot_tick'); } catch (_) {}
+      // W759 — the tick HURTS: a small flinch + a puff of embers (burn) or
+      // falling drips (bleed) on the afflicted fighter, every single tick.
+      try { _pkbReactFx(defSide, /bleed/i.test(e.text || '') ? 'dtickbleed' : 'dtickburn'); } catch (_) {}
       _pkbSay(e.text, _PKB_T.dotHold, () => _pkbDramaCheck(prevHm, next));
     } else if (e.t === 'heal') {
       const m2 = (e.text || '').match(/restores\s(\d+)\sHP/);
@@ -12277,7 +12325,10 @@
       const plate = _pkbEl('pkb-plate-' + e.side);
       if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
       try { _audCue('heal'); } catch (_) {}
-      try { _pkbFocusFx(e.side, 'charge', '#f5b842', 'rgba(245,184,66,.5)'); } catch (_) {}   // W431 — channel/restore
+      // W759 — heals read as RENEWAL, not a generic gold channel: teal-green
+      // charge aura + a body lift-breathe + floating crosses on the healed side.
+      try { _pkbFocusFx(e.side, 'charge', '#5eead4', 'rgba(94,234,212,.5)'); } catch (_) {}
+      try { _pkbReactFx(e.side, 'mend'); } catch (_) {}
       _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'fx') {
       const tx = e.text || '';
@@ -12308,12 +12359,31 @@
         else if (tx.indexOf('stunned') !== -1 || tx.indexOf('armor shredded') !== -1 || tx.indexOf('reeling') !== -1) _audCue('status_stun');
         else _audCue('status_buff');     // atk up/down, braces, evasive, guards
       } catch (_) {}
+      // W759 — the VICTIM answers ("every effect deserves an animation"): an
+      // affliction line plays a body reaction + particles on the fighter it
+      // LANDED on — the flip of the acting side, same convention as 'dot'
+      // events. Self-lines (braces/guards/refuses/attack-up/evasive) were
+      // already choreographed above (W758 stance + W431 aura) and cauterized
+      // means the affliction never took, so both skip this block.
+      try {
+        if (!cau) {
+          const vic = e.side === 'p' ? 'b' : 'p';
+          if (tx.indexOf('burning') !== -1) _pkbReactFx(vic, 'burn');
+          else if (tx.indexOf('bleeding') !== -1) _pkbReactFx(vic, 'bleed');
+          else if (tx.indexOf('stunned') !== -1 || tx.indexOf('already reeling') !== -1) _pkbReactFx(vic, 'stun');   // "already reeling" = re-stun attempt on a stunned foe
+          else if (tx.indexOf('armor shredded') !== -1) _pkbReactFx(vic, 'shred');
+          else if (tx.indexOf('attack down') !== -1) _pkbReactFx(vic, 'sap');   // the engine's exact atkDown line ("<name> — attack down.")
+        }
+      } catch (_) {}
       _pkbSay(e.text, _PKB_T.statusHold, () => {
         _pkbChips('p', true); _pkbChips('b', true);
         if (cau) _pkbToast('CAUTERIZED — NO EFFECT', 'cau', 'status', next);
         else next();
       });
     } else {   // stun-skip + anything unrecognized: significant — status hold
+      // W759 — the stunned fighter SLUMPS through their skipped turn (the skip
+      // event's side IS the stunned side; drooping stars ride the slump).
+      try { if (/stunned/i.test(e.text || '')) _pkbReactFx(e.side, 'slump'); } catch (_) {}
       _pkbSay(e.text || '…', _PKB_T.statusHold, next);
     }
   }

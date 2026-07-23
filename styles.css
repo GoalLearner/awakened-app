@@ -29862,6 +29862,69 @@ body.combat-active #app * { animation-play-state: paused !important; }
   .pkb-spot.r-hit .spr img, .pkb-spot.r-crit .spr img, .pkb-spot.r-hit .spr svg, .pkb-spot.r-crit .spr svg { animation: pkbReRed .18s ease-out both !important; }
 }
 
+/* ── W759 · "Every effect deserves an animation" — status / defense / heal choreography.
+   Victim-side APPLY reactions (burn/bleed/stun/shred/sap), per-tick DoT flinches, the
+   heal renewal, the stun-skip slump, plus HELD stances while a defensive state is live
+   (hold-guard posture + dome, hold-eva sway). Body keyframes ride .spr and particles
+   ride .pkb-rfx, exactly like the W429 react section above; the JS side fires these
+   from _pkbReactFx kinds + a stance sync in _pkbChips. ── */
+/* burn apply: singe shudder + heat flash; embers rise */
+.pkb-spot.r-burn .spr { animation: pkbReSinge .7s cubic-bezier(.36,.07,.19,.97) both; }
+.pkb-spot.r-burn .spr img, .pkb-spot.r-burn .spr svg { animation: pkbReBurnTint .7s ease-out both; }
+@keyframes pkbReSinge { 0% { transform: none; } 15% { transform: translateX(-3px) rotate(-1.5deg); } 30% { transform: translateX(3px) rotate(1.5deg); } 45% { transform: translateX(-2px); } 60% { transform: translateX(2px); } 100% { transform: none; } }
+@keyframes pkbReBurnTint { 0%, 100% { filter: none; } 30% { filter: sepia(.6) saturate(2.2) hue-rotate(-18deg) brightness(1.12); } }
+.pkb-rfx .rf-ember { position: absolute; left: calc(50% + var(--ex, 0px)); bottom: 26%; width: 5px; height: 5px; border-radius: 50%; background: #f0904a; box-shadow: 0 0 8px rgba(240,144,74,.9); opacity: 0; animation: rfEmberRise .8s ease-out both; animation-delay: var(--id, 0s); }
+@keyframes rfEmberRise { 0% { opacity: 0; transform: translateY(0) scale(.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-46px) scale(1); } }
+/* bleed apply: wound clutch + red flare; drips fall */
+.pkb-spot.r-bleed .spr { animation: pkbReClutch .7s cubic-bezier(.4,0,.6,1) both; }
+.pkb-spot.r-bleed .spr img, .pkb-spot.r-bleed .spr svg { animation: pkbReBleedTint .7s ease-out both; }
+@keyframes pkbReClutch { 0% { transform: none; } 25% { transform: translateY(4px) rotate(2deg) scaleY(.96); } 60% { transform: translateY(2px) rotate(1deg); } 100% { transform: none; } }
+@keyframes pkbReBleedTint { 0%, 100% { filter: none; } 30% { filter: saturate(1.6) contrast(1.1) drop-shadow(0 0 10px rgba(239,68,68,.55)); } }
+.pkb-rfx .rf-drip { position: absolute; left: calc(50% + var(--ex, 0px)); top: 38%; width: 4px; height: 9px; border-radius: 2px 2px 3px 3px; background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,.7); opacity: 0; animation: rfDripFall .7s ease-in both; animation-delay: var(--id, 0s); }
+@keyframes rfDripFall { 0% { opacity: 0; transform: translateY(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(34px); } }
+/* stun apply: dazed wobble + orbiting stars · stun-skip: the slump */
+.pkb-spot.r-stun .spr { animation: pkbReWobble .9s cubic-bezier(.45,.05,.55,.95) both; }
+@keyframes pkbReWobble { 0% { transform: rotate(0); } 20% { transform: rotate(4deg); } 40% { transform: rotate(-3.4deg); } 60% { transform: rotate(2.4deg); } 80% { transform: rotate(-1.6deg); } 100% { transform: rotate(0); } }
+.pkb-rfx .rf-star { position: absolute; left: 50%; top: 16%; color: #fde68a; font-size: 13px; text-shadow: 0 0 8px rgba(253,230,138,.8); opacity: 0; transform-origin: 0 34px; animation: rfStarOrbit 1s linear both; animation-delay: var(--id, 0s); }
+@keyframes rfStarOrbit { 0% { opacity: 0; transform: rotate(var(--a, 0deg)) translateX(16px); } 20% { opacity: 1; } 100% { opacity: 0; transform: rotate(calc(var(--a, 0deg) + 160deg)) translateX(18px); } }
+.pkb-spot.r-slump .spr { animation: pkbReSlump .8s ease-in-out both; }
+@keyframes pkbReSlump { 0% { transform: none; } 40% { transform: translateY(5px) rotate(-2.4deg) scaleY(.97); } 75% { transform: translateY(4px) rotate(-1.8deg); } 100% { transform: none; } }
+/* armor shred: the crunch + plate shards */
+.pkb-spot.r-shred .spr { animation: pkbReCrunch .6s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes pkbReCrunch { 0% { transform: none; } 30% { transform: scaleY(.92) translateY(3px); } 55% { transform: scaleY(.95) translateY(2px) rotate(-1deg); } 100% { transform: none; } }
+.pkb-rfx .rf-shard { position: absolute; left: 50%; top: 52%; width: 7px; height: 7px; background: #cbd5e1; clip-path: polygon(50% 0, 100% 60%, 20% 100%); opacity: 0; animation: rfShardFly .6s ease-out both; }
+@keyframes rfShardFly { 0% { opacity: 1; transform: rotate(var(--a, 0deg)) translateX(4px); } 100% { opacity: 0; transform: rotate(var(--a, 0deg)) translateX(40px); } }
+/* sap (attack-down): deflate + sinking violet arrows */
+.pkb-spot.r-sap .spr { animation: pkbReDeflate .8s ease-out both; }
+@keyframes pkbReDeflate { 0% { transform: none; } 40% { transform: scale(.965) translateY(3px); } 70% { transform: scale(.98) translateY(2px); } 100% { transform: none; } }
+.pkb-rfx .rf-down { position: absolute; left: calc(50% + var(--ex, 0px)); top: 22%; opacity: 0; animation: rfDownSink .8s ease-in both; animation-delay: var(--id, 0s); --pc: #a78bfa; }
+@keyframes rfDownSink { 0% { opacity: 0; transform: translateY(-6px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(26px); } }
+/* DoT tick: the small flinch (particles reuse rf-ember / rf-drip) */
+.pkb-spot.r-dtickburn .spr, .pkb-spot.r-dtickbleed .spr { animation: pkbReTickFlinch .4s ease-out both; }
+@keyframes pkbReTickFlinch { 0% { transform: none; } 30% { transform: translateX(-2px); } 60% { transform: translateX(2px); } 100% { transform: none; } }
+/* heal: renewal — lift-breathe + green glow, ring + rising crosses */
+.pkb-spot.r-mend .spr { animation: pkbReMend .9s cubic-bezier(.3,.9,.3,1) both; }
+.pkb-spot.r-mend .spr img, .pkb-spot.r-mend .spr svg { animation: pkbReMendTint .9s ease-out both; }
+@keyframes pkbReMend { 0% { transform: none; } 35% { transform: translateY(-5px) scale(1.03); } 70% { transform: translateY(-2px) scale(1.015); } 100% { transform: none; } }
+@keyframes pkbReMendTint { 0%, 100% { filter: none; } 40% { filter: brightness(1.14) drop-shadow(0 0 12px rgba(94,234,212,.5)); } }
+.pkb-rfx .mendring { position: absolute; left: 50%; top: 58%; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%; border: 2px solid rgba(94,234,212,.75); box-shadow: 0 0 18px rgba(94,234,212,.45); opacity: 0; animation: rfMendRing .9s ease-out both; }
+@keyframes rfMendRing { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
+.pkb-rfx .rf-cross { position: absolute; left: calc(50% + var(--ex, 0px)); bottom: 30%; color: #5eead4; font-weight: 800; font-size: 14px; text-shadow: 0 0 10px rgba(94,234,212,.8); opacity: 0; animation: rfCrossRise .9s ease-out both; animation-delay: var(--id, 0s); }
+@keyframes rfCrossRise { 0% { opacity: 0; transform: translateY(0) scale(.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px) scale(1.05); } }
+/* held stances: guard family plants under a faint dome; evasion sways */
+.pkb-spot.hold-guard .spr { transform: translateY(2px) scaleY(.985); }
+.pkb-spot .pkb-dome { position: absolute; left: 50%; top: 54%; width: 86%; height: 74%; transform: translate(-50%,-50%); border-radius: 50%; border: 1.6px solid rgba(125,211,252,.4); background: radial-gradient(ellipse at center, rgba(125,211,252,.10), transparent 68%); box-shadow: inset 0 0 22px rgba(125,211,252,.22); pointer-events: none; z-index: 1; animation: pkbDomePulse 2.4s ease-in-out infinite; }
+@keyframes pkbDomePulse { 0%, 100% { opacity: .55; } 50% { opacity: .95; } }
+.pkb-spot.hold-eva .spr { animation: pkbStanceSway 2.8s ease-in-out infinite alternate; }
+@keyframes pkbStanceSway { from { transform: translateX(-2px) rotate(-.6deg); } to { transform: translateX(2px) rotate(.6deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .pkb-rfx .rf-ember, .pkb-rfx .rf-drip, .pkb-rfx .rf-star, .pkb-rfx .rf-shard, .pkb-rfx .rf-down, .pkb-rfx .rf-cross, .pkb-rfx .mendring { display: none !important; }
+  .pkb-spot.r-burn .spr, .pkb-spot.r-bleed .spr, .pkb-spot.r-stun .spr, .pkb-spot.r-shred .spr, .pkb-spot.r-sap .spr,
+  .pkb-spot.r-dtickburn .spr, .pkb-spot.r-dtickbleed .spr, .pkb-spot.r-mend .spr, .pkb-spot.r-slump .spr { animation-duration: .001s !important; }
+  .pkb-spot.hold-eva .spr { animation: none !important; }
+  .pkb-spot .pkb-dome { animation: none !important; opacity: .55; }
+}
+
 /* ── W431 · Focus / Powerup VFX (ClaudeDesign) — the empower beat on a self-buff cast, on the
    CASTER's .pkb-spot (Ascent + PvP). Tinted via --pc/--pcg. Keyframes pkbFo*-prefixed. ── */
 /* charge: motes gather in, the actor swells, then a release burst */
