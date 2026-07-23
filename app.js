@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w753'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w754'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11116,7 +11116,7 @@
             // W303 — status/effect cues (drop-in)
             'sfx_heal', 'sfx_status_burn', 'sfx_status_stun', 'sfx_cauterize',
             // W753 — execute + bleed one-shots (drop-in slots; synth until the files land)
-            'sfx_hit_execute', 'sfx_bleed_apply',
+            'sfx_hit_execute', 'sfx_bleed_apply', 'sfx_finisher_stop',
             // W250 — main-screen earned-moment cues (habit_check is a drop-in slot, absent today)
             'sfx_habit_check', 'sfx_rank_up', 'sfx_achievement', 'sfx_stat_up', 'sfx_rare_drop', 'sfx_perfect_day', 'sfx_hall_greeting',
             // W260 — clutch-mode heartbeat (drop-in slot; synth lub-dub until generated)
@@ -11130,7 +11130,7 @@
     hp_drain: 0.16, ko: 0.9, boss_intro: 0.8, heartbeat: 0.55,
     hit_slice: 0.7, hit_burst: 0.72, hit_heavy: 0.78, hit_magic: 0.72, hit_arrow: 0.72,  // W301 — drop-in
     heal: 0.6, status_burn: 0.5, status_stun: 0.6, cauterize: 0.6,  // W303 — drop-in
-    hit_execute: 0.85, bleed_apply: 0.55,  // W753 — drop-in (Suno one-shots; synth until then)
+    hit_execute: 0.85, bleed_apply: 0.55, finisher_stop: 0.8,  // W753/W754 — drop-in (Suno one-shots; synth until then)
   };
   function _audSet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (_) { return def; } }
   // W419 — music OFF by default (opt-in). Background-music loops autoplayed (Arena menu,
@@ -11279,6 +11279,9 @@
       case 'hp_drain':    _audSpend(0.05); _audOsc({ type: 'square', f0: 480, dur: 0.03, peak: 0.025, filter: { type: 'lowpass', f0: 900 } }); break;
       case 'heal':        _audSpend(0.34);
         [523, 659, 784].forEach((f, i) => _audOsc({ type: 'sine', f0: f, t: i * 0.07, dur: 0.16, peak: 0.08 })); break;
+      case 'finisher_stop': _audSpend(0.5);   // W754 — the kill-freeze: air sucks out, a sub drop into silence
+        _audNoise({ dur: 0.22, peak: 0.14, filter: { type: 'bandpass', f0: 500, f1: 3800, q: 1.1 } });
+        _audOsc({ type: 'sine', f0: 220, f1: 38, dur: 0.34, peak: 0.34, t: 0.16 }); break;
       case 'hit_execute': _audSpend(0.5);   // W753 — the finishing blow: deep thud + low bell tail
         _audNoise({ dur: 0.16, peak: 0.3, filter: { type: 'lowpass', f0: 1500, f1: 180 } });
         _audOsc({ type: 'sine', f0: 82, f1: 30, dur: 0.55, peak: 0.5 });
@@ -12051,6 +12054,7 @@
       if (!sl) { sl = document.createElement('div'); sl.className = 'pkb-speedlines'; stage.appendChild(sl); }
       stage.classList.add('finisher');
       sl.classList.remove('go'); void sl.offsetWidth; sl.classList.add('go');
+      try { _audCue('finisher_stop'); } catch (_) {}   // W754 — the freeze has a voice
       _hapticTick('HEAVY');
       _pkbAfter(700, () => { try { stage.classList.remove('finisher'); } catch (_) {} });
     } catch (_) {}
