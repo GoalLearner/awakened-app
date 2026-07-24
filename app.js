@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w774'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w775'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -51141,12 +51141,64 @@
     renderCoopSheet();
     _coopMaybeShowQueue(cfg);   // W702 — if already queued for this raid, show the in-queue screen
   }
-  // W693 — the members gate → the Grinning God summon sheet (same overlay + recruit UI
-  // every co-op boss uses; the raid is just a `special` COOP_BOSSES entry). Reached from
-  // the #quests-gate-special members-tap handler once _GRINNING_GOD_LIVE flips true.
-  function _openMembersRaid() {
-    try { _coopOpenRecruit('the_grinning_god'); } catch (_) {}
+  // W693 → W775 — the members gate opens the MEMBERS HALL (a boss-card list),
+  // not the Grinning God recruit sheet directly (owner: more member bosses are
+  // coming; the gate is a category, not a shortcut). Cards derive from
+  // COOP_BOSSES entries flagged membersOnly:true — a future member boss appears
+  // here with zero extra wiring. Tapping a card routes into the SAME recruit
+  // sheet the old direct jump used (_coopOpenRecruit).
+  function _membersHallBosses() {
+    try {
+      return Object.values(COOP_BOSSES).filter(function (c) { return c && c.membersOnly; });
+    } catch (_) { return []; }
   }
+  function _membersHallCardHtml(cfg) {
+    var art = getBossArtPath(cfg.artId || cfg.id);
+    var party = (cfg.minParty || 2) + '–' + (cfg.maxParty || 5) + ' hunters';
+    var hours = (cfg.coopWindowHours || 24) + 'h';
+    return (
+      '<a class="mh-card" role="button" tabindex="0" data-mh-boss="' + esc(cfg.id) + '" aria-label="' + esc(cfg.name + ' — open the raid') + '">' +
+        '<img class="mh-art" src="' + esc(art) + '" alt="" onerror="this.style.display=\'none\'">' +
+        '<div class="mh-main">' +
+          '<div class="mh-name-row"><span class="mh-name">' + esc(cfg.name) + '</span>' +
+            '<span class="cph-rank cph-rank--' + esc(String(cfg.rank || 'S').toLowerCase()) + '">' + esc(String(cfg.rank || 'S').toUpperCase()) + '-RANK</span></div>' +
+          '<div class="mh-cond">' + esc(cfg.killCondShort || '') + '</div>' +
+          '<div class="mh-meta">' + esc(party) + ' · ' + esc(hours) + ' window</div>' +
+        '</div>' +
+        '<span class="mh-chev" aria-hidden="true">›</span>' +
+      '</a>'
+    );
+  }
+  function _closeMembersHall() {
+    var ov = document.getElementById('members-hall-overlay');
+    var sh = document.getElementById('members-hall-sheet');
+    if (ov) ov.classList.add('hidden');
+    if (sh) sh.classList.add('hidden');
+  }
+  function _openMembersRaid() {
+    var ov = document.getElementById('members-hall-overlay');
+    var sh = document.getElementById('members-hall-sheet');
+    var list = document.getElementById('members-hall-list');
+    if (!ov || !sh || !list) { try { _coopOpenRecruit('the_grinning_god'); } catch (_) {} return; }   // markup missing → old direct jump
+    list.innerHTML = _membersHallBosses().map(_membersHallCardHtml).join('') ||
+      '<div class="guild-roster-empty">The court is empty. New raids are being prepared.</div>';
+    if (sh.getAttribute('data-mh-wired') !== '1') {
+      sh.setAttribute('data-mh-wired', '1');
+      list.addEventListener('click', function (e) {
+        var card = e.target && e.target.closest ? e.target.closest('[data-mh-boss]') : null;
+        if (!card) return;
+        var bid = card.getAttribute('data-mh-boss');
+        _closeMembersHall();
+        try { _coopOpenRecruit(bid); } catch (_) {}
+      });
+      var closeBtn = document.getElementById('members-hall-close');
+      if (closeBtn) closeBtn.addEventListener('click', _closeMembersHall);
+      ov.addEventListener('click', _closeMembersHall);
+    }
+    ov.classList.remove('hidden');
+    sh.classList.remove('hidden');
+  }
+  try { window.__openMembersHall = _openMembersRaid; } catch (_) {}
   try { window.__coopOpenDashboard = _coopOpenDashboard; } catch (_) {}
 
   let questsGateExpanded = false;

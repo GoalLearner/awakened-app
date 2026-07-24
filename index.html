@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=618">
+  <link rel="stylesheet" href="styles.css?v=619">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2263,6 +2263,24 @@
        BOSSES SLAIN tile. Reads hb_bosses via loadBosses() and
        joins per-boss config from BOSSES{} for name/rank. -->
   <div id="guild-bosses-overlay" class="vn-overlay hidden"></div>
+  <!-- W775 — the Members Hall: the members gate now opens THIS boss list instead
+       of jumping straight into the Grinning God recruit sheet (owner: more member
+       bosses are coming). Cards derive from COOP_BOSSES entries flagged
+       membersOnly:true, so a future member boss appears here with zero wiring. -->
+  <div id="members-hall-overlay" class="vn-overlay hidden"></div>
+  <div id="members-hall-sheet" class="vn-sheet hidden">
+    <div class="vn-drag-handle"></div>
+    <div class="lb-rank-header">
+      <div class="lb-rank-eyebrow">✦ MEMBERS GATE</div>
+      <h2 class="lb-rank-title">The Inner Court</h2>
+      <button id="members-hall-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="lb-rank-body">
+      <p class="lb-rank-blurb guild-bosses-blurb">Raids reserved for members. More gates will open.</p>
+      <div id="members-hall-list"></div>
+    </div>
+  </div>
+
   <div id="guild-bosses-sheet" class="vn-sheet hidden">
     <div class="vn-drag-handle"></div>
     <div class="lb-rank-header">
@@ -3327,7 +3345,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1190"></script>
+  <script src="app.js?v=1191"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
