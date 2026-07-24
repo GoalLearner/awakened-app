@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w765'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w766'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10998,7 +10998,19 @@
           '<span class="fv' + (youLead ? '' : ' lead') + '">' + fv + '</span>' +
         '</div><div class="asc-tale-detail">' + detail + '</div></div>';
     });
-    const verdict = eff.key === 'super'
+    // W766 — the verdict tells BOTH truths: type matchup AND raw power. The old
+    // neutral branch said "An even match" whenever no type advantage existed —
+    // over a 4,255-vs-5,592 tape (F100, owner report) that read as a flat lie.
+    // ±12% total-power gap = material; inside the band the tape genuinely is close.
+    const pTot = (P.attack || 0) + (P.defense || 0) + (P.edge || 0);
+    const fTot = (F.attack || 0) + (F.defense || 0) + (F.edge || 0);
+    const gap = pTot > 0 ? (fTot - pTot) / pTot : 0;
+    const powerClause = gap > 0.12
+      ? ' They out-power you across the tape — every stat you close in the Armory counts.'
+      : gap < -0.12
+      ? ' And you out-power them across the tape.'
+      : '';
+    const typeLine = eff.key === 'super'
       ? (eff.tier === 'mild'
           ? 'Your style has the edge on the ' + esc(foeLabel) + ' — <b class="sup">' + esc(eff.label) + '</b>.'
           : 'Your style counters the ' + esc(foeLabel) + ' — <b class="sup">' + esc(eff.label) + '</b>.')
@@ -11006,7 +11018,10 @@
       ? (eff.tier === 'mild'
           ? 'The ' + esc(foeLabel) + ' resists your style — <b class="wk">' + esc(eff.label) + '</b>.'
           : 'The ' + esc(foeLabel) + ' counters your style — <b class="wk">' + esc(eff.label) + '</b>.')
-      : 'An even match — no type advantage either way.';
+      : (powerClause
+          ? 'No type advantage either way.'
+          : 'A dead-even match — no type advantage either way.');
+    const verdict = typeLine + powerClause;
     return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">TALE OF THE TAPE</span><span class="a dim">TAP A ROW</span></div>' +
       '<div class="asc-tale">' + rows + '<div class="asc-tale-read">' + verdict + '</div></div></div>';
   }
@@ -50953,6 +50968,17 @@
           try { _arStartFight(Math.max(1, Math.min(100, floor || 1))); } catch (_) {}
           setTimeout(function () { try { _arCommitFight(); } catch (_) {} }, 700);
         }, 500);
+      };
+      // W766 — sibling preview: render the Tale of the Tape for a MOCK matchup so
+      // the verdict/bars logic can be verified in a browser without climbing to a
+      // real prefight. p/f = {attack, defense, edge}; fArch = foe archKey.
+      window.__ascTalePreview = function (p, f, fArch) {
+        try {
+          return _ascTaleHtml({
+            player: Object.assign({ attack: 100, defense: 100, edge: 100 }, p),
+            bot: Object.assign({ attack: 100, defense: 100, edge: 100, archKey: fArch || 'neutral', name: 'Mock Foe' }, f),
+          });
+        } catch (e) { return 'ERR: ' + e.message; }
       };
     } catch (_) {}
   }
