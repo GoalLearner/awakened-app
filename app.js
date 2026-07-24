@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w770'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w771'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1927,7 +1927,23 @@
     // v2.0.1 Souls economy — engagement is the wager. Cost is rank-
     // scaled. Refused if the user can't afford; broke-state toast
     // tells them the exact gap.
-    const cost = engageCostSouls(cfg.rank);
+    let cost = engageCostSouls(cfg.rank);
+    // W771 — "your first hunt is on the house": a hunter who has NEVER engaged
+    // any boss gets their first engagement free, once. Removes the last excuse
+    // not to try the app's best moment; a new user won't wager scarce souls on
+    // a system they don't understand yet. One-shot flag; economy impact = one
+    // E-rank fee.
+    try {
+      if (cost > 0 && localStorage.getItem('hb_first_hunt_free_used') !== '1') {
+        const _all = loadBosses();
+        const _everHunted = Object.keys(_all).some(k => _all[k] && (_all[k].kill_count > 0 || _all[k].engaged === true || _all[k].engaged_at));
+        if (!_everHunted) {
+          cost = 0;
+          localStorage.setItem('hb_first_hunt_free_used', '1');
+          if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
+        }
+      }
+    } catch (_) {}
     const balance = getSoulsBalance();
     if (balance < cost) {
       try {
@@ -34297,6 +34313,98 @@
     });
   }
 
+  // ── W771 — FIRST STEPS starter path ──────────────────────────────
+  // A 6-row guided tour on the Status tab: each row deep-links to a feature,
+  // auto-detects completion from existing persistent signals (no new event
+  // plumbing), and pays a small souls reward on tap-to-claim. Dismissible;
+  // hides forever once dismissed or fully claimed. Existing users' signals
+  // are mostly already true → they harvest the rows and the strip retires
+  // itself. Owner intent: new users SEE the features before quitting.
+  const _FS_KEY = 'hb_first_steps_v1';
+  const _FS_REWARD = 15;
+  const _FS_STEPS = [
+    { id: 'habit',  label: 'Complete your first habit',   sub: 'Habits tab — tap a habit to check it off', tab: 'habits' },
+    { id: 'stats',  label: 'See what your habits build',  sub: 'Stats tab — six stats, fed by your habits', tab: 'stats' },
+    { id: 'gate',   label: 'Enter the E-Rank Gate',       sub: 'Co-op tab — your first boss hunt is free',  tab: 'quests' },
+    { id: 'battle', label: 'Win an Ascent battle',        sub: 'Status tab — THE ASCENT card starts the climb', tab: 'profile' },
+    { id: 'friend', label: 'Add a friend',                sub: 'Friends tab — hunts are better with allies', tab: 'social' },
+    { id: 'coop',   label: 'Start a co-op hunt',          sub: 'Team up on one goal — The Pacts', tab: 'quests' },
+  ];
+  function _fsLoad() {
+    try { const s = JSON.parse(localStorage.getItem(_FS_KEY) || '{}'); return { claimed: (s && s.claimed) || {}, dismissed: !!(s && s.dismissed) }; }
+    catch (_) { return { claimed: {}, dismissed: false }; }
+  }
+  function _fsSave(s) { try { localStorage.setItem(_FS_KEY, JSON.stringify(s)); } catch (_) {} }
+  function _fsStamp(flag) { try { localStorage.setItem('hb_fs_seen_' + flag, '1'); } catch (_) {} try { renderFirstSteps(); } catch (_) {} }
+  function _fsSignalMet(id) {
+    try {
+      switch (id) {
+        case 'habit': {
+          const c = JSON.parse(localStorage.getItem('hb_completions') || '{}');
+          for (const day in c) { if (Array.isArray(c[day]) ? c[day].length > 0 : c[day]) return true; }
+          return false;
+        }
+        case 'stats': return localStorage.getItem('hb_fs_seen_stats') === '1';
+        case 'gate':  return localStorage.getItem('hb_fs_seen_gate') === '1' || Object.keys(loadBosses()).length > 0;
+        case 'battle': {
+          const a = JSON.parse(localStorage.getItem(ARENA_V2_KEY) || '{}');
+          return ((a.highestCleared || 0) > 0) || ((a.wins || 0) > 0);
+        }
+        case 'friend': return !!(typeof _friendsCache === 'object' && _friendsCache && Array.isArray(_friendsCache.friends) && _friendsCache.friends.length > 0);
+        case 'coop':  return localStorage.getItem('hb_coop_ever') === '1';
+      }
+    } catch (_) {}
+    return false;
+  }
+  function renderFirstSteps() {
+    const host = document.getElementById('first-steps-strip');
+    if (!host) return;
+    const s = _fsLoad();
+    const allClaimed = _FS_STEPS.every(st => s.claimed[st.id]);
+    if (s.dismissed || allClaimed) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    const doneCount = _FS_STEPS.filter(st => s.claimed[st.id] || _fsSignalMet(st.id)).length;
+    let rows = '';
+    for (const st of _FS_STEPS) {
+      const claimed = !!s.claimed[st.id];
+      const met = claimed || _fsSignalMet(st.id);
+      rows += '<button type="button" class="fs-row' + (claimed ? ' fs-row--claimed' : met ? ' fs-row--ready' : '') + '" data-fs-step="' + st.id + '">' +
+        '<span class="fs-check">' + (claimed ? '✓' : met ? '!' : '') + '</span>' +
+        '<span class="fs-main"><span class="fs-label">' + st.label + '</span><span class="fs-sub">' + st.sub + '</span></span>' +
+        (claimed ? '<span class="fs-claimtag">DONE</span>' : met ? '<span class="fs-claimbtn">CLAIM +' + _FS_REWARD + '</span>' : '<span class="fs-go">›</span>') +
+      '</button>';
+    }
+    host.innerHTML =
+      '<div class="fs-head"><span class="fs-title">FIRST STEPS</span><span class="fs-count">' + doneCount + '/' + _FS_STEPS.length + '</span>' +
+      '<button type="button" class="fs-dismiss" aria-label="Dismiss First Steps">✕</button></div>' + rows;
+    host.classList.remove('hidden');
+  }
+  try { window.renderFirstSteps = renderFirstSteps; } catch (_) {}
+  function setupFirstSteps() {
+    const host = document.getElementById('first-steps-strip');
+    if (!host || host.getAttribute('data-fs-wired') === '1') return;
+    host.setAttribute('data-fs-wired', '1');
+    host.addEventListener('click', (e) => {
+      if (e.target.closest('.fs-dismiss')) {
+        const s = _fsLoad(); s.dismissed = true; _fsSave(s); renderFirstSteps();
+        return;
+      }
+      const row = e.target.closest('.fs-row[data-fs-step]');
+      if (!row) return;
+      const id = row.getAttribute('data-fs-step');
+      const st = _FS_STEPS.find(x => x.id === id);
+      const state = _fsLoad();
+      if (state.claimed[id]) return;
+      if (_fsSignalMet(id)) {
+        state.claimed[id] = true; _fsSave(state);
+        try { earnSouls(_FS_REWARD, 'first_steps_' + id); } catch (_) {}
+        try { if (typeof showHabitToast === 'function') showHabitToast('+' + _FS_REWARD + ' souls — ' + st.label); } catch (_) {}
+        renderFirstSteps();
+      } else if (st) {
+        switchTab(st.tab);   // not done yet → take them there
+      }
+    });
+  }
+
   function switchTab(tab) {
     // Close the boss full-screen modal on any tab change. The modal
     // overlays the Quests tab; leaving the tab (or re-entering it
@@ -34310,6 +34418,9 @@
     // TODAY" tile on the Habits tab, now that Daily Objectives owns
     // habit progress on this screen).
     try { document.body.dataset.activeTab = tab; } catch (_) {}
+    // W771 — First Steps signal stamps + strip refresh on Status entry.
+    if (tab === 'stats') { try { if (localStorage.getItem('hb_fs_seen_stats') !== '1') _fsStamp('stats'); } catch (_) {} }
+    if (tab === 'profile') { try { renderFirstSteps(); } catch (_) {} }
     // Exit reorder mode whenever we leave the habits tab
     document.getElementById('habit-list').classList.remove('reorder-mode');
     document.querySelectorAll('.tab-btn').forEach(b => { const _on = b.dataset.tab === tab; b.classList.toggle('active', _on); if (_on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); // W379 — expose active tab to assistive tech
@@ -51264,6 +51375,7 @@
         }
         currentDungeonRank = rank;
         questsGateExpanded = true;
+        try { if (localStorage.getItem('hb_fs_seen_gate') !== '1') _fsStamp('gate'); } catch (_) {}   // W771
         renderQuestsPanel();
       });
       // Keyboard: native <button> already dispatches click on Enter/
@@ -61996,6 +62108,7 @@
     setupPRDetailSheet();
     setupBossesPanel();
     setupQuestsGate();
+    try { setupFirstSteps(); renderFirstSteps(); } catch (_) {}   // W771 — First Steps starter path
     setupLeaderboardPreview();
     setupSoulsInfoModal();
     try { setupCombatTriangleModal(); } catch (_) {}
