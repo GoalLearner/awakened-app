@@ -636,17 +636,17 @@
         <img class="tab-icon" src="assets/tab-icons/tab-history.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">History</span>
       </button>
-      <button id="tab-quests"   class="tab-btn"        data-tab="quests"   aria-label="Dungeon">
+      <button id="tab-quests"   class="tab-btn"        data-tab="quests"   aria-label="Co-op">
         <img class="tab-icon" src="assets/tab-icons/tab-dungeon.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
-        <span class="tab-label">Dungeon</span>
+        <span class="tab-label">Co-op</span>
       </button>
       <button id="tab-items"    class="tab-btn"        data-tab="items"    aria-label="Items">
         <img class="tab-icon" src="assets/tab-icons/tab-items.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">Items</span>
       </button>
-      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Guild Hall">
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Friends">
         <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
-        <span class="tab-label">Guild</span>
+        <span class="tab-label">Friends</span>
       </button>
     </nav>
 
@@ -1030,7 +1030,7 @@
              screen readers; CSS keys off [data-active="true"]. -->
         <div class="guildhall-section-head">
           <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-title guildhall-section-title--solo">GUILD NOTIFICATIONS</div>
+            <div class="guildhall-section-title guildhall-section-title--solo">FRIEND NOTIFICATIONS</div>
           </div>
           <div class="guildhall-activity-filter" role="group" aria-label="Guild activity filter">
             <button type="button" id="guildhall-filter-hunter"
@@ -1041,7 +1041,7 @@
                     class="guildhall-activity-filter-btn"
                     data-filter="guild"
                     data-active="true"
-                    aria-pressed="true">Guild</button>
+                    aria-pressed="true">All</button>
           </div>
         </div>
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
@@ -2228,7 +2228,7 @@
   <div id="guild-roster-sheet" class="vn-sheet hidden">
     <div class="vn-drag-handle"></div>
     <div class="lb-rank-header">
-      <div class="lb-rank-eyebrow">GUILD MEMBERS</div>
+      <div class="lb-rank-eyebrow">FRIENDS</div>
       <h2 class="lb-rank-title">Roster</h2>
       <button id="guild-roster-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
     </div>
@@ -3325,7 +3325,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1183"></script>
+  <script src="app.js?v=1184"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

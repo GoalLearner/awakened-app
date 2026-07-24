@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w767'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w768'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4651,7 +4651,7 @@
     else { stCls = 'new'; stLabel = 'New relic'; }
     const isCoop = e.source === 'coop';
     const modeCls = isCoop ? 'coop' : 'dungeon';
-    const modeLabel = isCoop ? 'Co-op' : 'Dungeon';
+    const modeLabel = isCoop ? 'Co-op' : 'Solo';   // W768 — pairs with the renamed tabs (Solo/Co-op vocabulary)
     const modeIcon = isCoop ? _DH_COOP_SVG : _DH_DUNGEON_SVG;
     const name = esc(e.cardName || (card && card.name) || 'A relic');
     const boss = esc(String(e.sourceLabel || 'A hunt').toUpperCase());
@@ -34928,7 +34928,7 @@
       tip:  'A relic is earned, never bought. The system knows the difference.',
     },
     {
-      id: 'guild', glyph: 'guild', title: 'GUILD',
+      id: 'guild', glyph: 'guild', title: 'FRIENDS',   // W768 — tab renamed Guild→Friends
       body: 'No hunter climbs entirely unseen. By alias you may stand among others — to be witnessed, not to be measured against them. There are no duels here. The hunt is yours alone; the company is not.',
       tip:  'Be witnessed. Comparison was never the work.',
     },
@@ -49919,7 +49919,7 @@
     const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
     let rows;
     if (!friends.length) {
-      rows = '<div class="coop-note">No hunters yet. Add a friend from the Guild tab first.</div>';
+      rows = '<div class="coop-note">No hunters yet. Add a friend from the Friends tab first.</div>';
     } else {
       rows = friends.filter(function (f) { return f && f.user_id; }).map(function (f) {
         const tier = (typeof f.rankTier === 'string' && f.rankTier) ? f.rankTier : null;
@@ -50426,7 +50426,7 @@
       if (typeof showHabitToast === 'function') {
         if (ok && !fail) showHabitToast(ok === 1 ? 'Friend added.' : ok + ' hunters joined your guild.');
         else if (ok) showHabitToast('Accepted ' + ok + ' of ' + (ok + fail) + ' — the rest couldn’t be reached.');
-        else showHabitToast('Couldn’t accept right now. Try again from the Guild tab.');
+        else showHabitToast('Couldn’t accept right now. Try again from the Friends tab.');
       }
     } catch (_) {}
     _friendHideRequestBanner();
