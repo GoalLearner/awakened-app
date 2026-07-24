@@ -14610,7 +14610,10 @@ body.bfs-locked { overflow: hidden; }
 
 /* ── Items tab Pokédex ───────────────────────────────────────── */
 .pokedex {
-  padding: 22px 14px 40px;
+  /* W778 — top padding was 22px to breathe under the old RELIC ARCHIVE title
+     (removed in W773). With the Marketplace banner now leading the lens, that
+     was dead air between the Archive/Collection toggle and the first card. */
+  padding: 8px 14px 40px;
   max-width: 560px;
   margin: 0 auto;
 }
