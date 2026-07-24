@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.083';
+const CACHE_VERSION = 'v6.084';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -48,7 +48,6 @@ const PRECACHE_ASSETS = [
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',
   '/assets/tab-icons/tab-habits.png',
-  '/assets/tab-icons/tab-stats.png',
   '/assets/tab-icons/tab-history.png',
   '/assets/tab-icons/tab-dungeon.png',
   '/assets/tab-icons/tab-items.png',

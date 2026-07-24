@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w776'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w777'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -26600,7 +26600,6 @@
       const raw = (stats[stId].pts || 0) + direction * pts;
       stats[stId].pts = Math.max(0, direction > 0 ? Math.min(MAX_STAT_XP, raw) : raw);
       if (currentTab === 'profile') renderProfile();
-      if (currentTab === 'stats')   renderStats();
       return;
     }
 
@@ -26616,7 +26615,6 @@
       }
     });
     if (currentTab === 'profile') renderProfile();
-    if (currentTab === 'stats')   renderStats();
   }
 
   function checkStatBonuses() {
@@ -26758,7 +26756,6 @@
       if (!levelUpActive) drainLevelUpQueue();
     }
     if (currentTab === 'profile') renderProfile();
-    if (currentTab === 'stats')   renderStats();
   }
 
   function showClassChangePopup(cls) {
@@ -27131,7 +27128,6 @@
         }
         levelUpActive = false;
         if (currentTab === 'profile') renderProfile();
-        if (currentTab === 'stats')   renderStats();
         drainLevelUpQueue();
       }, { once: true });
     }
@@ -29034,7 +29030,6 @@
     checkStreakDanger();
     checkMorningRoutineNudge();
     if (currentTab === 'profile')      renderProfile();
-    if (currentTab === 'stats')        renderStats();
     if (currentTab === 'history')      renderHistory();
   }
 
@@ -29612,197 +29607,6 @@
     renderStatus();
   }
 
-  // W366 — ClaudeDesign "Stats Lower Panel" (recommended: Next Growth). One panel
-  // below TOTAL LEVEL: the non-maxed stat closest to its next level, a progress bar,
-  // and a theme-guidance line. Live stat data; tappable -> Habits tab.
-  const _NG_THEME = { STR: 'Strength', VIT: 'Vitality', INT: 'Learning', FOCUS: 'Focus', WILL: 'Discipline', WLT: 'Wealth' };
-  function _sgpRgba(hex, a) {
-    var h = String(hex || '#8b5cf6').replace('#', '');
-    var r = parseInt(h.substring(0, 2), 16) || 0, g = parseInt(h.substring(2, 4), 16) || 0, b = parseInt(h.substring(4, 6), 16) || 0;
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
-  }
-  function _buildNextGrowthPanel() {
-    var best = null;
-    STATS.forEach(function (st) {
-      var pts = (stats[st.id] && stats[st.id].pts) || 0;
-      var lv = statLevel(pts);
-      if (lv >= 20) return;
-      var needed = xpToNextLevel(lv);
-      if (needed <= 0) return;
-      var ptsInLv = pts - xpForLevel(lv);
-      var remaining = Math.max(0, needed - ptsInLv);
-      var pct = Math.max(0, Math.min(100, Math.round((ptsInLv / needed) * 100)));
-      if (!best || remaining < best.remaining || (remaining === best.remaining && pct > best.pct)) {
-        best = { st: st, lv: lv, remaining: remaining, pct: pct };
-      }
-    });
-    if (!best) return null; // every stat at Level 20
-    var st = best.st, nextLv = best.lv + 1, A = st.color || '#8b5cf6', pct = best.pct;
-    var theme = _NG_THEME[st.id] || st.name || st.label;
-    var nEst = Math.max(1, Math.ceil(best.remaining / 3));
-    var guide = (nEst <= 9)
-      ? 'Complete <b>' + nEst + ' ' + theme + '</b> habit' + (nEst !== 1 ? 's' : '') + ' to reach Level ' + nextLv + '.'
-      : 'Complete <b>' + theme + '</b> habits to reach Level ' + nextLv + '.';
-    var d = document.createElement('div');
-    d.className = 'stats-growth-panel';
-    d.setAttribute('role', 'button');
-    d.setAttribute('tabindex', '0');
-    d.setAttribute('aria-label', 'Next growth: ' + st.label + ' approaching Level ' + nextLv + '. Open Habits.');
-    d.innerHTML =
-      '<span class="sgp-wash" style="background:linear-gradient(90deg,' + _sgpRgba(A, 0.11) + ',transparent)"></span>' +
-      '<span class="sgp-emblem" style="background:radial-gradient(circle at 50% 36%,' + _sgpRgba(A, 0.18) + ' 0%,rgba(0,0,0,0.4) 74%);border:1px solid ' + _sgpRgba(A, 0.4) + ';box-shadow:inset 0 0 12px ' + _sgpRgba(A, 0.15) + ',0 0 12px ' + _sgpRgba(A, 0.13) + '"><img src="' + st.iconImg + '" alt="" /></span>' +
-      '<span class="sgp-body">' +
-        '<span class="sgp-eyebrow"><svg class="sgp-sigil" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0l1.4 3.6L10 5 6.4 6.4 5 10 3.6 6.4 0 5l3.6-1.4z" fill="#f5b842"/></svg>NEXT GROWTH</span>' +
-        '<span class="sgp-headline"><span class="sgp-stat" style="color:' + A + ';text-shadow:0 0 10px ' + _sgpRgba(A, 0.4) + '">' + esc(st.label) + '</span> is close to <b>Level ' + nextLv + '</b></span>' +
-        '<span class="sgp-bar"><span class="sgp-bar-fill" style="width:' + pct + '%;background:linear-gradient(90deg,' + _sgpRgba(A, 0.8) + ',' + A + ');box-shadow:0 0 8px ' + _sgpRgba(A, 0.67) + '"></span></span>' +
-        '<span class="sgp-guide">' + guide + '</span>' +
-      '</span>' +
-      '<svg class="sgp-chev" width="7" height="12" viewBox="0 0 7 12" aria-hidden="true"><path d="M1 1l5 5-5 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    d.addEventListener('click', function () { try { switchTab('habits'); } catch (_) {} });
-    return d;
-  }
-
-  function renderStats() {
-    const el = document.getElementById('stats-content');
-    el.innerHTML = '';
-
-    // ── Section label ──────────────────────────────────────
-    const lbl = document.createElement('div');
-    lbl.className = 'stats-section-label';
-    lbl.textContent = 'CHARACTER STATS';
-    el.appendChild(lbl);
-
-    // ── DOMINANT ALIGNMENT CARD (v2.1, removed v3 Phase 1x.3) ─
-    // Big retention play originally — surface the user's current
-    // class lean at the top of the Stats tab. Removed at user
-    // request: the CIVILIAN placeholder dominates pre-Awakened
-    // users' Stats view without earning the real-estate. Class
-    // identity still surfaces in the Status tab header + on
-    // Awakening / class-change celebration modals. The helper
-    // _buildAlignmentCard() stays defined for future surfaces.
-    // el.appendChild(_buildAlignmentCard());
-
-    // ── OSRS-style skills panel ────────────────────────────
-    // Compute the dominant stat for visual emphasis:
-    //   - Awakened (currentClass != CIVILIAN/SAGE): dominant = class's stat
-    //   - Civilian with progress: dominant = top stat by level (then XP)
-    //   - Sage / no progress: no dominant
-    let dominantStatId = (currentClass && currentClass !== 'CIVILIAN' && currentClass !== 'SAGE')
-                          ? currentClass : null;
-    if (!dominantStatId) {
-      const ranked = STATS.map(st => ({
-        id: st.id,
-        lv: statLevel(stats[st.id]?.pts || 0),
-        pts: stats[st.id]?.pts || 0,
-      })).sort((a, b) => (b.lv - a.lv) || (b.pts - a.pts));
-      if (ranked[0] && ranked[0].pts > 0) dominantStatId = ranked[0].id;
-    }
-
-    const panel = document.createElement('div');
-    panel.className = 'osrs-panel';
-
-    STATS.forEach(st => {
-      const stPts   = stats[st.id]?.pts || 0;
-      const level   = statLevel(stPts);
-      const isMaxed = level >= 20;
-      const levelXP = xpForLevel(level);
-      const ptsInLv = stPts - levelXP;
-      const needed  = xpToNextLevel(level);
-      const pct     = isMaxed ? 100 : Math.min(100, (ptsInLv / needed) * 100);
-      const isDom   = st.id === dominantStatId;
-
-      const cell = document.createElement('div');
-      cell.className = 'osrs-cell osrs-cell--' + st.id.toLowerCase() +
-                       (isDom ? ' osrs-cell--dominant' : '') +
-                       (isMaxed ? ' osrs-cell--maxed' : '');
-      // Expose the stat color as a CSS custom property so animations
-      // + per-stat color treatments can reference it without inline
-      // styles bloating every render.
-      cell.style.setProperty('--stat-color', st.color);
-      if (isMaxed) {
-        cell.style.borderColor = '#f59e0b';
-        cell.style.boxShadow   = 'inset 0 0 18px rgba(245,158,11,0.18), 0 0 16px rgba(245,158,11,0.30)';
-      } else if (isDom) {
-        cell.style.borderColor = st.color + '80';
-        cell.style.boxShadow   = 'inset 0 0 18px ' + st.color + '18, 0 0 12px ' + st.color + '22';
-      }
-      cell.addEventListener('click', () => openStatDetail(st.id));
-
-      // Accent top stripe
-      const stripe = document.createElement('div');
-      stripe.className = 'osrs-cell-stripe';
-      stripe.style.background = st.color;
-
-      // Icon — Stats tab tile cards. 32 CSS px, drawn from the custom art.
-      const icon = document.createElement('div');
-      icon.className = 'osrs-cell-icon';
-      icon.innerHTML = statIconHtml(st, { size: 32, eager: true });
-
-      // Abbrev label
-      const abbr = document.createElement('div');
-      abbr.className = 'osrs-cell-abbr';
-      abbr.style.color = isMaxed ? '#f59e0b' : st.color;
-      abbr.textContent = st.label + (isMaxed ? ' MAX' : isDom ? ' ★' : '');
-
-      // Stat subtitle (v2.1) — one-word identity beneath the abbr.
-      // Onboarding cue for casual users; hardcore users already know
-      // what STR/VIT/INT/FOCUS/WILL/WLT mean.
-      const subtitle = document.createElement('div');
-      subtitle.className = 'osrs-cell-subtitle';
-      subtitle.textContent = STAT_TAGLINES[st.id] || '';
-
-      // Level number (shows MAX crown at cap)
-      const lvNum = document.createElement('div');
-      lvNum.className = 'osrs-cell-level' + (isMaxed ? ' osrs-cell-level--max' : '');
-      lvNum.textContent = isMaxed ? '👑' : level;
-
-      // Thin progress bar (gold when maxed)
-      const track = document.createElement('div');
-      track.className = 'osrs-cell-track';
-      const fill = document.createElement('div');
-      fill.className = 'osrs-cell-fill';
-      fill.style.cssText = 'width:' + pct + '%;background:' + (isMaxed ? '#f59e0b' : st.color) + ';';
-      if (isMaxed) fill.style.boxShadow = '0 0 6px rgba(245,158,11,0.6)';
-      track.appendChild(fill);
-
-      cell.append(stripe, icon, abbr, subtitle, lvNum, track);
-      panel.appendChild(cell);
-    });
-
-    el.appendChild(panel);
-
-    // ── Total Level ────────────────────────────────────────
-    const totalLv   = STATS.reduce((sum, st) => sum + statLevel(stats[st.id]?.pts || 0), 0);
-    const isAllMaxed = totalLv >= 120;
-    const totalEl   = document.createElement('div');
-    totalEl.className = 'osrs-total-level' + (isAllMaxed ? ' osrs-total-level--maxed' : '');
-    totalEl.innerHTML = 'Total Level: <span class="osrs-total-num">' + totalLv + '</span>'
-      + ' <span class="osrs-total-max">/ 120</span>'
-      + (isAllMaxed ? ' <span class="osrs-total-crown">👑 FULLY AWAKENED</span>' : '');
-    el.appendChild(totalEl);
-    // W366 — ClaudeDesign Stats Lower Panel (Next Growth), below TOTAL LEVEL.
-    try { var _ngPanel = _buildNextGrowthPanel(); if (_ngPanel) el.appendChild(_ngPanel); } catch (_) {}
-
-    // ── Next Stat Bonus — consolidated into alignment card (v2.1) ──
-    // Previously a standalone section below the stat grid. The progress
-    // bar + reward + Lv current/target labels now live inside the
-    // alignment card at the top so the Stats tab has less visual
-    // weight. The "🏆 All stat bonuses unlocked!" maxed state still
-    // needs surfacing — render only when EVERY threshold is awarded.
-    const allMaxed = STATS.every(st => {
-      return STAT_BONUS_THRESHOLDS.every(thr => statBonuses.has(st.id + '_' + thr.level));
-    });
-    if (allMaxed) {
-      const doneEl = document.createElement('div');
-      doneEl.className = 'stats-next-bonus-section';
-      doneEl.innerHTML =
-        '<div class="stats-section-label" style="margin-top:24px">STAT BONUSES</div>' +
-        '<div class="nb-card nb-all-done"><span>🏆 All stat bonuses unlocked!</span></div>';
-      el.appendChild(doneEl);
-    }
-  }
-
-  // ── STATUS ────────────────────────────────────────────────
   function getClass(rankId) {
     const map = { 'E':'Civilian','D':'Civilian','C':'Apprentice Hunter','B':'Hunter','A':'Elite Hunter','S':'Shadow Monarch','S+':'The Awakened One' };
     return map[rankId] || 'Civilian';
@@ -34346,7 +34150,7 @@
   const _FS_REWARD = 15;
   const _FS_STEPS = [
     { id: 'habit',  label: 'Complete your first habit',   sub: 'Habits tab — tap a habit to check it off', tab: 'habits' },
-    { id: 'stats',  label: 'See what your habits build',  sub: 'Stats tab — six stats, fed by your habits', tab: 'stats' },
+    { id: 'stats',  label: 'See what your habits build',  sub: 'Status tab — tap a stat on your radar',   tab: 'profile' },
     { id: 'gate',   label: 'Enter the E-Rank Gate',       sub: 'Co-op tab — your first boss hunt is free',  tab: 'quests' },
     { id: 'battle', label: 'Win an Ascent battle',        sub: 'Status tab — THE ASCENT card starts the climb', tab: 'profile' },
     { id: 'friend', label: 'Add a friend',                sub: 'Friends tab — hunts are better with allies', tab: 'social' },
@@ -34441,14 +34245,12 @@
     // habit progress on this screen).
     try { document.body.dataset.activeTab = tab; } catch (_) {}
     // W771 — First Steps signal stamps + strip refresh on Status entry.
-    if (tab === 'stats') { try { if (localStorage.getItem('hb_fs_seen_stats') !== '1') _fsStamp('stats'); } catch (_) {} }
     if (tab === 'profile') { try { renderFirstSteps(); } catch (_) {} }
     // Exit reorder mode whenever we leave the habits tab
     document.getElementById('habit-list').classList.remove('reorder-mode');
     document.querySelectorAll('.tab-btn').forEach(b => { const _on = b.dataset.tab === tab; b.classList.toggle('active', _on); if (_on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); // W379 — expose active tab to assistive tech
     const profilePanel = document.getElementById('profile-panel');
     const habitsPanel  = document.getElementById('main-scroll');
-    const statsPanel   = document.getElementById('stats-panel');
     const histPanel    = document.getElementById('history-panel');
     const questsPanel  = document.getElementById('quests-panel');
     const itemsPanel   = document.getElementById('items-panel');
@@ -34457,7 +34259,6 @@
 
     profilePanel.classList.toggle('hidden', tab !== 'profile');
     habitsPanel.classList.toggle('hidden',  tab !== 'habits');
-    statsPanel.classList.toggle('hidden',   tab !== 'stats');
     histPanel.classList.toggle('hidden',    tab !== 'history');
     questsPanel.classList.toggle('hidden',  tab !== 'quests');
     itemsPanel.classList.toggle('hidden',   tab !== 'items');
@@ -34465,26 +34266,6 @@
     footer.style.display = tab === 'habits' ? '' : 'none';
 
     if (tab === 'profile')      renderProfile();
-    // v3 Phase 1z.130 — Stats tab is Character Stats only.
-    // renderLeaderboardPreview() previously painted the Global
-    // Rankings list inside Stats; that section is gone (moved to
-    // the standalone Global Rankings Hub opened from the header
-    // World Rank card). Calling the preview-render here would now
-    // be a no-op anyway (the #lb-preview-list element was removed
-    // from index.html), but skipping the call keeps the path clean.
-    if (tab === 'stats') {
-      renderStats();
-      // v3 Phase 1z.282 — First Stats-tab open fires the Stats
-      // coachmark. Storage key (hb_tour_stats_v1) guards re-show.
-      // Defer to next paint so renderStats() actually paints below
-      // the modal first; otherwise the modal opens over an empty
-      // tab on cold launch.
-      try {
-        setTimeout(function () {
-          try { showStatsCoachmark(); } catch (_) {}
-        }, 320);
-      } catch (_) {}
-    }
     if (tab === 'history')      renderHistory();
     // Quests tab: always re-greet the user with the gate. Reset the
     // expansion flag on every tab activation so re-entering the
@@ -34851,22 +34632,6 @@
     ]},
   ];
 
-  const FA_STATS_BEATS = [
-    { pose: 'idle', lines: [
-      'This is your Stats tab.',
-      'The app turns the habits you keep into six stats.',
-    ]},
-    { pose: 'pointing', lines: [
-      'Each stat is fed by different habits — workouts raise Strength, meditation raises Focus, reading raises Intelligence.',
-    ]},
-    { pose: 'scroll', lines: [
-      'Tap any stat to see what it means and exactly which habits raise it.',
-      'Your stats also power your character in Arena battles, over on the Status tab.',
-    ]},
-    { pose: 'nodding', lines: [
-      'Keep the habits. The stats follow.',
-    ]},
-  ];
 
   // W505 (IA) — first Items-tab open. Orients a new hunter to the two faces of
   // this tab: the Relic Archive (collection that feeds the build) and the souls
@@ -35338,15 +35103,6 @@
       beats: FA_QUESTS_BEATS,
       cta: 'I’M READY',
       storageKey: 'hb_tour_quests_v1',
-    });
-  }
-  function showStatsCoachmark() {
-    if (localStorage.getItem('hb_tour_stats_v1') === '1') return;
-    _faRunCoachmark({
-      context: 'stats',
-      beats: FA_STATS_BEATS,
-      cta: 'UNDERSTOOD',
-      storageKey: 'hb_tour_stats_v1',
     });
   }
   function showItemsCoachmark() {
@@ -37171,7 +36927,6 @@
 
   try {
     window.__showQuestsCoachmark      = showQuestsCoachmark;
-    window.__showStatsCoachmark       = showStatsCoachmark;
     window.__showFirstVowCoachmark    = showFirstVowCoachmark;
     window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
     window.__showFirstAwakenedRankUp  = showFirstAwakenedRankUp;
@@ -53794,6 +53549,11 @@
   function openStatDetail(statId) {
     const st     = STATS.find(s => s.id === statId);
     if (!st) return;
+    // W777 — First Steps "See what your habits build" used to complete on a
+    // Stats-TAB visit; the tab is gone, so OPENING a stat's detail (from the
+    // Status radar) is now the signal — a strictly better one, since it proves
+    // the user actually looked at what a stat means.
+    try { if (localStorage.getItem('hb_fs_seen_stats') !== '1') _fsStamp('stats'); } catch (_) {}
     const stPts  = stats[st.id]?.pts || 0;
     const level  = statLevel(stPts);
     const lvXP   = xpForLevel(level);

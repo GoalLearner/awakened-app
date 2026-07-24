@@ -17,12 +17,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=620">
+  <link rel="stylesheet" href="styles.css?v=621">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
   <link rel="preload" as="image" href="assets/tab-icons/tab-habits.png">
-  <link rel="preload" as="image" href="assets/tab-icons/tab-stats.png">
   <link rel="preload" as="image" href="assets/tab-icons/tab-history.png">
   <link rel="preload" as="image" href="assets/tab-icons/tab-dungeon.png">
   <link rel="preload" as="image" href="assets/tab-icons/tab-items.png">
@@ -628,10 +627,6 @@
         <img class="tab-icon" src="assets/tab-icons/tab-habits.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">Habits</span>
       </button>
-      <button id="tab-stats"    class="tab-btn"        data-tab="stats"    aria-label="Stats">
-        <img class="tab-icon" src="assets/tab-icons/tab-stats.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
-        <span class="tab-label">Stats</span>
-      </button>
       <button id="tab-history"  class="tab-btn"        data-tab="history"  aria-label="History">
         <img class="tab-icon" src="assets/tab-icons/tab-history.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">History</span>
@@ -665,10 +660,6 @@
          standalone Global Rankings Hub (#lb-hub-sheet) opened from the
          header World Rank card (#steps-card). Per-metric leaderboard
          sheets are unchanged — only the entry point moved. -->
-    <div id="stats-panel" class="tab-panel hidden" data-panel="stats">
-      <div id="stats-content" class="stats-content"></div>
-    </div>
-
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
       <!-- v3 Phase 1l — Daily Objectives section header removed.
@@ -3345,7 +3336,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1192"></script>
+  <script src="app.js?v=1193"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
