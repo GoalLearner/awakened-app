@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w768'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w769'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34696,45 +34696,42 @@
 
   // Dialogue beats — verbatim from ClaudeDesign 1z.282 spec.
   // Each beat: { pose, lines[] }. Pose changes mark beat boundaries.
+  // W769 — plain-spoken rewrite (owner): the guide explains tabs in normal
+  // language a brand-new user understands. The mythic register stays in the
+  // world (boss flavor, lore); the GUIDE talks like a person. Tab names match
+  // W768 (Co-op / Friends).
   const FA_QUESTS_BEATS = [
     { pose: 'idle', lines: [
-      'Hunter.',
-      'I was the first to finish.',
-      'The system learned to count from me.',
+      'This is the Co-op tab — boss hunts live here.',
+      'The gates are solo challenges, ranked E to S. The Pacts at the bottom are hunts you take on with friends.',
     ]},
     { pose: 'scroll', lines: [
-      'A boss is not slain by your stats.',
-      'It is a deed made real — done in the world, then proven to the system.',
-      'Read its condition before you engage.',
+      'A boss is a real-life goal: hit the target it asks for — steps, workouts, sleep — inside its time window, and the boss goes down.',
+      'Tap any gate to read exactly what it takes before you commit.',
     ]},
     { pose: 'pointing', lines: [
-      'Souls are the currency. The system asks payment to engage.',
-      'Win within the hunt’s window and they return — with the relic the boss kept.',
-      'Let the window close, and you lose only the fee. Never your progress.',
+      'Starting a hunt costs Souls — the currency you earn by playing.',
+      'Win and your Souls come back, plus a relic. Run out of time and you only lose the entry fee — never your progress.',
     ]},
     { pose: 'nodding', lines: [
-      'Those below are waiting.',
-      'Choose one. Read it. Engage when you are ready.',
-      'Now go.',
+      'Pick a gate that matches your rank. Read it. Start when you are ready.',
     ]},
   ];
 
   const FA_STATS_BEATS = [
     { pose: 'idle', lines: [
-      'Hunter.',
-      'The system has been watching what you do.',
+      'This is your Stats tab.',
+      'The app turns the habits you keep into six stats.',
     ]},
     { pose: 'pointing', lines: [
-      'These six marks are your shape.',
-      'Each is fed by the vows you keep — the body feeds strength, the still mind feeds focus.',
+      'Each stat is fed by different habits — workouts raise Strength, meditation raises Focus, reading raises Intelligence.',
     ]},
     { pose: 'scroll', lines: [
-      'Touch any mark to read what it means, and what feeds it.',
-      'They reveal your build. They do not do the work for you.',
+      'Tap any stat to see what it means and exactly which habits raise it.',
+      'Your stats also power your character in Arena battles, over on the Status tab.',
     ]},
     { pose: 'nodding', lines: [
-      'Know your shape, hunter.',
-      'Then go and earn it.',
+      'Keep the habits. The stats follow.',
     ]},
   ];
 
@@ -34745,20 +34742,17 @@
   // tabs (Stats, Quests, Items).
   const FA_ITEMS_BEATS = [
     { pose: 'idle', lines: [
-      'Hunter.',
-      'Every relic a boss kept now passes through here.',
+      'This is the Items tab.',
+      'Every relic you win from a boss lands here.',
     ]},
     { pose: 'scroll', lines: [
-      'This is your Archive — proof of what you have taken.',
-      'Equip a relic and its marks feed your build in the Arena.',
+      'Your Archive is the collection. Equip a relic and its stat bonuses power you up in battles.',
     ]},
     { pose: 'pointing', lines: [
-      'It is a Marketplace too. Souls buy the relics you have not yet earned —',
-      'or sell back the ones you no longer keep.',
+      'It is also a Marketplace — spend Souls on relics you have not won yet, or sell back ones you no longer need.',
     ]},
     { pose: 'nodding', lines: [
-      'Spend what you have won, hunter.',
-      'A relic unused is a deed half-finished.',
+      'Equip what you earn. A relic sitting in storage does nothing.',
     ]},
   ];
 
@@ -34772,9 +34766,9 @@
   // and use the toast normally.
   const FA_FIRST_VOW_BEATS = [
     { pose: 'nodding', lines: [
-      'You have chosen your first vows, hunter.',
-      'The system has recorded them.',
-      'Now keep them — that is the only thing that counts.',
+      'Your first habits are locked in.',
+      'Check them off on the Habits tab every day — that is how you earn XP and level up.',
+      'Show up daily. Everything else in this app grows from that.',
     ]},
   ];
 
@@ -34817,9 +34811,9 @@
   // same key so they never see a redundant welcome on next launch.
   const FA_WELCOME_BACK_BEATS = [
     { pose: 'idle', lines: [
-      'Hunter.',
-      'Your climb is in the record. I have read it.',
-      'I am the first who finished. You will hear from me again.',
+      'Welcome back, hunter.',
+      'All your progress is here — nothing was lost.',
+      'I will point out what is new as you go.',
     ]},
   ];
 
