@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=617">
+  <link rel="stylesheet" href="styles.css?v=618">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -908,18 +908,16 @@
       </div>
       <div class="pokedex" id="items-archive">
         <div class="pokedex-header">
-          <div class="pokedex-title-row">
-            <div class="pokedex-title">RELIC ARCHIVE</div>
+          <!-- W773 — the RELIC ARCHIVE title + DISCOVERED counter + progress bar +
+               flavor line are REMOVED (owner: the Collection Log already owns
+               completion, and the two counted different pools — 50/109 vs 33/73 —
+               so the pair read as contradictory). The lens toggle above labels the
+               view; the Marketplace affordance now leads the page. The "N NEW"
+               pill survives as a pill-only row (hidden unless fresh drops exist;
+               tappable → Drop History, W616). -->
+          <div class="pokedex-title-row pokedex-title-row--pill-only">
             <span id="archive-new-count" class="archive-new-count hidden" aria-live="polite">0 NEW</span>
-            <!-- W616 — the "Rewards" (Drop History) entry moved to the filter/sort
-                 row (between the archetype pills and PWR); see _pokedexFilterBarHtml.
-                 The "N NEW" pill here stays tappable → Drop History. -->
           </div>
-          <div class="pokedex-count">DISCOVERED <span id="pokedex-discovered">0</span> / <span id="pokedex-total">9</span><span id="pokedex-pct" class="pokedex-pct"></span></div>
-          <div class="pokedex-progress-bar">
-            <div id="pokedex-progress-fill" class="pokedex-progress-fill"></div>
-          </div>
-          <p class="archive-flavor">Every relic was earned through discipline.</p>
           <!-- W502 (IA) — the Marketplace had no labeled home: souls-spending was
                only an inline BUY/SELL chip on each relic, so a new player had no
                obvious "where do I spend souls" answer. This one-line affordance
@@ -3329,7 +3327,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=10"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1188"></script>
+  <script src="app.js?v=1189"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

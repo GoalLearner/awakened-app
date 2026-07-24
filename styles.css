@@ -34939,3 +34939,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .fs-claimbtn { flex: none; margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 800; letter-spacing: .06em; color: #1c1631; background: linear-gradient(180deg,#f7c95c,#e8a92f); border-radius: 999px; padding: 5px 10px; }
 .fs-claimtag { flex: none; margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: .66rem; letter-spacing: .1em; color: #5eead4; opacity: .8; }
 .fs-go { flex: none; margin-left: auto; color: var(--text-secondary, #9aa0b5); font-size: 1.05rem; }
+
+/* W773 — the Archive header is gone; this row now holds ONLY the "N NEW" pill
+   (hidden unless fresh drops exist). Collapses to nothing when the pill hides. */
+.pokedex-title-row--pill-only { margin-bottom: 2px; }
+.pokedex-title-row--pill-only .archive-new-count { margin-left: 0; }
