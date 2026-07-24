@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w769'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w770'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -51070,7 +51070,21 @@
     const userIdx = RANKS.findIndex(r => r.id === userRankId);
     const gateIdx = RANKS.findIndex(r => r.id === gateRankId);
     if (gateIdx < 0) return false;
-    return userIdx >= gateIdx;
+    if (userIdx >= gateIdx) return true;
+    // W770 — grandfather clause. Preview-walk (the pre-W770 soft-entry rule) let
+    // hunters fight above their rank, so a gate they EARNED access to — any kill
+    // or a live engagement on one of its bosses — stays open forever even though
+    // gates now hard-lock below rank. Without this, W770 would strand a mid-hunt
+    // streak behind a lock the hunter entered legally.
+    try {
+      const all = loadBosses();
+      for (const id in BOSSES) {
+        if (BOSSES[id].rank !== gateRankId) continue;
+        const st = all[id];
+        if (st && ((st.kill_count || 0) > 0 || st.engaged === true)) return true;
+      }
+    } catch (_) {}
+    return false;
   }
   try { window.isGateUnlocked = isGateUnlocked; } catch (_) {}
 
@@ -51172,39 +51186,32 @@
       gateView.classList.remove('hidden');
       dungeonView.classList.add('hidden');
 
-      // Apply locked-state to each cell based on user's current rank
-      // AND whether the rank has bosses (soft-entry rule, v2.0.1).
-      // Three states per cell:
-      //   1. unlocked            → no locked class, no preview class
-      //   2. locked + has-bosses → .gate-cell--preview (walkable, dim
-      //      art, no lock icon, "PREVIEW" affordance)
-      //   3. locked + no-bosses  → .gate-cell--locked (hard-locked,
-      //      lock icon visible, tap fires toast)
+      // W770 — two states per cell (owner: gates LOCK until the rank is earned;
+      // the pre-W770 "preview-walkable" third state is retired):
+      //   1. unlocked → no locked class
+      //   2. locked   → .gate-cell--locked (dimmed art + lock icon + "Reach X
+      //      rank" — VISIBLE, never hidden; the door you can't open yet is the
+      //      motivation). isGateUnlocked carries the grandfather clause.
       // Markup stays static — all decisions stamped here.
       const cells = gateView.querySelectorAll('.gate-cell[data-gate-rank]');
       cells.forEach(cell => {
         const r = cell.getAttribute('data-gate-rank');
         const unlocked = isGateUnlocked(r);
-        const hasContent = hasBossesAtRank(r);
-        const isPreview = !unlocked && hasContent;
-        const isHardLocked = !unlocked && !hasContent;
+        const isHardLocked = !unlocked;
 
         cell.classList.toggle('gate-cell--locked', isHardLocked);
-        cell.classList.toggle('gate-cell--preview', isPreview);
+        cell.classList.remove('gate-cell--preview');   // W770 — state retired; clear stale stamps
         // W676 — day-clear dim: an unlocked gate whose SOLO bosses are all cleared
         // for today greys out (still tappable). Co-op bosses don't count.
         const clearedToday = unlocked && _rankSoloClearedForDay(r);
         cell.classList.toggle('gate-cell--cleared', clearedToday);
 
-        // Aria label reflects state for screen readers. Preview gates
-        // are walkable but communicate the engagement gate to come.
+        // Aria label reflects state for screen readers (W770 — preview branch retired).
         let label;
         if (unlocked && clearedToday) {
           label = 'Enter ' + r + '-rank dungeon — all bosses cleared for today';
         } else if (unlocked) {
           label = 'Enter ' + r + '-rank dungeon';
-        } else if (isPreview) {
-          label = 'Preview ' + r + '-rank dungeon. Reach ' + r + ' rank to engage.';
         } else {
           label = r + '-rank dungeon, locked. Reach ' + r + ' rank to unlock.';
         }
@@ -51239,16 +51246,22 @@
         if (!cell || !grid.contains(cell)) return;
         const rank = cell.getAttribute('data-gate-rank');
         if (!rank) return;
-        // Soft-entry rule (v2.0.1): walk in if the rank is unlocked OR
-        // has bosses to preview. Locked-with-no-content stays toast-only.
-        if (!isGateEntryAllowed(rank)) {
-          if (typeof showHabitToast === 'function') {
+        // W770 — gates hard-lock until the rank is earned (the v2.0.1 preview-walk
+        // soft-entry rule is retired; isGateUnlocked carries the grandfather clause
+        // for gates with prior kills / a live hunt). A locked tap teaches instead of
+        // dead-ending: the centered notice card (W481) explains how ranks advance,
+        // in the plain W769 voice.
+        if (!isGateUnlocked(rank)) {
+          if (typeof showNoticeCard === 'function') {
+            showNoticeCard({
+              title: rank + '-Rank Gate — Locked',
+              body: 'Rank up to open this gate. You earn XP by completing your habits every day, and your rank climbs with your total XP. Reach ' + rank + ' rank and this gate opens for good.',
+            });
+          } else if (typeof showHabitToast === 'function') {
             showHabitToast('Reach ' + rank + ' rank to unlock');
           }
           return;
         }
-        // Entry allowed → expand. The dungeon-view render decides
-        // whether this is preview or live based on isGateUnlocked.
         currentDungeonRank = rank;
         questsGateExpanded = true;
         renderQuestsPanel();
