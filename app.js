@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w771'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w772'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7510,6 +7510,15 @@
   // 4s inflight gate prevents a rapid Hunter↔Guild filter flap
   // from firing parallel fetches.
   let _friendsActivityCache   = null; // null = never fetched; [] = empty result
+  // W772 — hydrate the feed from disk (≤14 days) so a cold launch paints
+  // FRIEND NOTIFICATIONS instantly; _refreshFriendsActivityCache still fires on
+  // render (lastFetchMs starts 0) and swaps in the live feed.
+  try {
+    const _faRaw = JSON.parse(localStorage.getItem('hb_friends_activity_cache_v1') || 'null');
+    if (_faRaw && Array.isArray(_faRaw.events) && (Date.now() - (_faRaw.ts || 0)) < 14 * 86400000) {
+      _friendsActivityCache = _faRaw.events;
+    }
+  } catch (_) {}
   let _friendsActivityInflight = false;
   let _friendsActivityLastFetchMs = 0;
   const _FRIENDS_ACTIVITY_REFRESH_MS = 4000;
@@ -41867,6 +41876,14 @@
 
   // In-memory cache refreshed each Social-tab activation.
   let _friendsCache = null;
+  // W772 — hydrate from the last-good disk snapshot (≤14 days) so a cold launch
+  // paints the roster instantly; the on-open fetch still runs and swaps in fresh.
+  try {
+    const _fcRaw = JSON.parse(localStorage.getItem('hb_friends_cache_v1') || 'null');
+    if (_fcRaw && Array.isArray(_fcRaw.friends) && (Date.now() - (_fcRaw.ts || 0)) < 14 * 86400000) {
+      _friendsCache = { ok: true, friends: _fcRaw.friends, _fromDisk: true };
+    }
+  } catch (_) {}
 
   // v3 Phase 1z.209 — lowercase alias display for the Social/
   // Guild/Hunter surfaces. The product rule is "visible aliases

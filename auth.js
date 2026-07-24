@@ -1549,7 +1549,12 @@
   // user_id, client_event_id, metadata_json, or rank_points.
   function fetchFriendsActivity(limit) {
     const n = (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) ? Math.floor(limit) : 30;
-    return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n));
+    // W772 — same disk snapshot as fetchFriends: last-good feed paints instantly
+    // on cold launch; the live fetch swaps in when the network answers.
+    return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n)).then(function (res) {
+      try { if (res && res.ok && Array.isArray(res.events)) localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ events: res.events, ts: Date.now() })); } catch (_) {}
+      return res;
+    });
   }
 
   // W270 — The Hall of the Awakened. submitHallFinish records the caller
@@ -1571,7 +1576,16 @@
     return _authedFetch('GET', '/v1/users/' + encodeURIComponent(alias) + '/profile');
   }
 
-  function fetchFriends()                       { return _authedFetch('GET',  '/v1/friends'); }
+  // W772 — persist the last-good roster to disk so a COLD launch paints the
+  // Friends tab instantly from cache (stale-while-revalidate) instead of holding
+  // skeletons hostage to the network. app.js hydrates hb_friends_cache_v1 at
+  // boot; the hb_ prefix rides the W689 sign-out purge automatically.
+  function fetchFriends() {
+    return _authedFetch('GET', '/v1/friends').then(function (res) {
+      try { if (res && res.ok && Array.isArray(res.friends)) localStorage.setItem('hb_friends_cache_v1', JSON.stringify({ friends: res.friends, ts: Date.now() })); } catch (_) {}
+      return res;
+    });
+  }
   function sendFriendRequest(alias)             { return _authedFetch('POST', '/v1/friends/request', { alias: alias }); }
   function acceptFriendRequest(friendshipId)    { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/accept'); }
   function declineFriendRequest(friendshipId)   { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/decline'); }
