@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w773'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w774'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7948,6 +7948,7 @@
     // X · +souls" row — the redundancy the owner flagged. The co-op kill
     // activity is now suppressed; the coop_kill souls row is the single record.
     const bossVics = [];   // { ts, name, rk, souls, coop }
+    const soulsMisc = [];  // W774 — leftover plain souls gains, coalesced per-day below
     const _isCoopBossId = function (bid) { return !!(bid && typeof COOP_BOSSES === 'object' && COOP_BOSSES && COOP_BOSSES[bid]); };
 
     // Pass 1: personal activity. Solo boss kills pair with a same-window
@@ -7994,7 +7995,7 @@
         bossVics.push({ ts: s.ts || 0, name: nm, rk: _guildBossRankFromName(nm), souls: s.delta || 0, coop: false });
         continue;
       }
-      merged.push({ ts: s.ts || 0, html: _hunterFeedSoulsRowHtml(s) });
+      soulsMisc.push(s);   // W774 — held for per-day coalescing (was a row per gain)
     }
 
     // Group boss victories by local calendar day (matches the feed's day
@@ -8015,6 +8016,31 @@
           merged.push({ ts: ts, html: _hunterBossGroupRowHtml({ ts: ts, bosses: arr, totalSouls: totalSouls }) });
         } else {
           merged.push({ ts: arr[0].ts || 0, html: _hunterBossVictoryRowHtml(arr[0]) });
+        }
+      });
+    })();
+
+    // W774 — coalesce the PLAIN souls gains per local day (owner: nine "+15
+    // souls · Souls earned" rows flooded the Hunter feed). Mirrors the boss-
+    // victory grouping above: 2+ gains in a day → ONE "+Σ souls · N gains" row
+    // stamped with the day's newest ts; a lone gain keeps its specific label
+    // ("Daily login", "Reclaimed Floor 87"). Boss/co-op kill souls never reach
+    // here (consumed into victory rows above), so nothing narrative is lost.
+    (function () {
+      const byDay = {}; const order = [];
+      soulsMisc.forEach(function (s) {
+        const dk = (typeof _localDateKey === 'function' ? _localDateKey(new Date(s.ts || 0)) : '') || String(s.ts || 0);
+        if (!byDay[dk]) { byDay[dk] = []; order.push(dk); }
+        byDay[dk].push(s);
+      });
+      order.forEach(function (dk) {
+        const arr = byDay[dk];
+        if (arr.length >= 2) {
+          let ts = 0, total = 0;
+          arr.forEach(function (s) { if ((s.ts || 0) > ts) ts = s.ts || 0; total += (s.delta || 0); });
+          merged.push({ ts: ts, html: _hunterFeedSoulsRowHtml({ ts: ts, delta: total, label: arr.length + ' gains' }) });
+        } else {
+          merged.push({ ts: arr[0].ts || 0, html: _hunterFeedSoulsRowHtml(arr[0]) });
         }
       });
     })();
