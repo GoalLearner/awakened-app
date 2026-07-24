@@ -34961,3 +34961,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .mh-meta { font-size: 11px; color: rgba(167, 165, 200, 0.75); margin-top: 3px;
   text-transform: uppercase; letter-spacing: 0.06em; }
 .mh-chev { color: rgba(167, 139, 250, 0.7); font-size: 22px; flex: none; }
+
+/* ── W776 · Mode-first boss cards — STAT/CADENCE/flavor removed; the mode strip
+   (SOLO gold · CO-OP/TRIO/RAID violet, matching the W734 Kill Log dot code) is
+   the one orienting fact, and the kill condition is the card's loud line. ── */
+.bcard-mode { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 999px; }
+.bcard-mode--solo { color: #f5b842; background: rgba(245, 184, 66, 0.10); border: 1px solid rgba(245, 184, 66, 0.35); }
+.bcard-mode--coop { color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.4); }
+.bcard .bcard-cond { font-size: 15px; font-weight: 700; color: #f3f0ff; line-height: 1.35; }

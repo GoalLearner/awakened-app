@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w775'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w776'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47216,17 +47216,11 @@
         '<div class="bcard-art">' +
           '<img alt="" draggable="false" data-boss-art-id="' + esc(id) + '" style="display:none">' +
         '</div>' +
-        // Region c: Stat strip — STAT · CADENCE
-        '<div class="bcard-stats">' +
-          '<span class="bcard-stat-label">STAT</span> ' +
-          '<span class="bcard-stat-value">' + esc(cfg.statDomain || '—') + '</span>' +
-          '<span class="bcard-stat-sep">·</span>' +
-          '<span class="bcard-stat-label">CADENCE</span> ' +
-          '<span class="bcard-stat-value">' + esc(cadenceLabel) + '</span>' +
-        '</div>' +
-        // Region d: Flavor — italic gray-purple
-        '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
-        // Region e: Kill condition
+        // Region c → W776: MODE strip (owner: "the most important thing is to see
+        // whether it is co-op or solo" — STAT and CADENCE were noise, and the
+        // flavor line is gone so the kill condition reads big and clear).
+        '<div class="bcard-stats"><span class="bcard-mode bcard-mode--solo">SOLO</span></div>' +
+        // Region e: Kill condition — now the card's loud line (.bcard-cond enlarged).
         '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
         // Region f: Progress — dots + streak label + kill count.
         // v3 Phase 1z.63 — flight-threshold bosses display cumulative
@@ -48324,11 +48318,21 @@
 
   // Boss card rendered inside the E-rank dungeon (data-coop-boss, NOT
   // data-boss, so the solo .bcard[data-boss] click path never sees it).
+  // W776 — the card's ONE orienting fact (owner: "the most important thing is to
+  // see whether it is co-op or solo — there is also trio"). Duo cfgs carry no
+  // partySize (default 2); trios partySize 3; the members raid has min/maxParty.
+  function _coopModeLabel(cfg) {
+    if ((cfg.maxParty | 0) > 3) return 'RAID · ' + ((cfg.minParty | 0) || 2) + '–' + (cfg.maxParty | 0) + ' HUNTERS';
+    var n = (cfg.partySize | 0) || 2;
+    if (n === 3) return 'TRIO · 3 HUNTERS';
+    return 'CO-OP · 2 HUNTERS';
+  }
   function buildCoopBossCardHTML(id) {
     const cfg = COOP_BOSSES[id];
     if (!cfg) return '';
     const imgId = cfg.artId || id;
     // W676 — co-op bosses stay LIT AT ALL TIMES (owner). The W662 ever-felled fade
+    // (helper below: _coopModeLabel — W776 mode-first card strip)
     // is removed here; the rank-gate day-clear fade is driven by SOLO bosses only,
     // so an unfinished (or fully-farmed) co-op hunt never dims anything.
     return (
@@ -48341,16 +48345,10 @@
         '<div class="bcard-art">' +
           '<img alt="" draggable="false" data-boss-art-id="' + esc(imgId) + '" style="display:none">' +
         '</div>' +
-        '<div class="bcard-stats">' +
-          '<span class="bcard-stat-label">STAT</span> ' +
-          '<span class="bcard-stat-value">' + esc(cfg.statDomain) + '</span>' +
-          '<span class="bcard-stat-sep">\u00B7</span>' +
-          '<span class="bcard-stat-label">HUNTERS</span> ' +
-          '<span class="bcard-stat-value">' + ((cfg.partySize | 0) || 2) + '</span>' +   // W677 — trio-aware
-        '</div>' +
-        '<div class="bcard-flavor">' + esc(cfg.flavorShort) + '</div>' +
+        // W776 — MODE strip replaces STAT · HUNTERS; flavor + the redundant
+        // "Requires N Hunters" bottom pill are gone (the mode line says it).
+        '<div class="bcard-stats"><span class="bcard-mode bcard-mode--coop">' + esc(_coopModeLabel(cfg)) + '</span></div>' +
         '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
-        '<div class="boss-archetype-pill" data-archetype="coop">Requires ' + ((cfg.partySize | 0) || 2) + ' Hunters</div>' +
       '</button>'
     );
   }
