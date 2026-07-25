@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w782'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w783'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47975,12 +47975,12 @@
       coopMetric:      'both',
       coopUnit:        'steps',
       coopRewardSouls: 800,
-      coopWindowHours: 72,
+      coopWindowHours: 80,   // W783 — owner: 72h -> 80h (new hunts only; live hunts keep their stored end time)
       statDomain:      'VIT',
       flavorShort:     'A god that grins because it has already counted you.',
       flavorLong:      'Behind the last seal waits a thing that was worshipped long before it was feared — a monarch of the deepest floors wearing a wide, patient smile, certain no party of hunters has ever been enough. It does not rage. It does not hurry. It simply outlasts. Five hunters, three days, and a mountain of ground covered together is the one thing its grin has never accounted for. Bring everyone; leave nothing in reserve.',
-      killCondShort:   'Up to 5 hunters: 150,000 steps + 75 flights in 72h',
-      killCondLong:    'Assemble a party of up to five members. Within 72 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
+      killCondShort:   'Up to 5 hunters: 150,000 steps + 75 flights in 80h',
+      killCondLong:    'Assemble a party of up to five members. Within 80 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
       coopVictoryTitle:'THE GRIN FALLS',
       coopDefeatTitle: 'IT WAS ALWAYS SMILING',
     },
@@ -49595,8 +49595,23 @@
       const fg = inst.goal_flights || cfg.coopGoalFlights || 0;
       const fv = inst.combined_flights || 0;
       const fp = fg > 0 ? Math.min(100, fv / fg * 100) : 0;
+      // W783 — PER-HUNTER flight segments (owner: "we can't see who has done what for
+      // the climbed flights — it's all just a green bar"). The steps rail has always
+      // been split by hunter; the flights rail was a single flat fill, so a dual-metric
+      // raid hid half its contribution story. Same colour ids (chd-cN) as the duel bar
+      // and the party rows, so one hunter reads as one colour across the whole screen.
+      // The backend already sends per-participant `flights` on dual-metric hunts, so
+      // this is presentation only. Widths clamp against the running total exactly like
+      // the primary rail, so the stack can never overflow the goal.
+      let fUsed = 0, fSegs = '';
+      roster.forEach(function (h, i) {
+        const fval = Math.max(0, (h.raw && h.raw.flights) || 0);
+        const w = fg > 0 ? Math.min(Math.max(0, fp - fUsed), fval / fg * 100) : 0;
+        fSegs += '<div class="chd-sec-seg chd-c' + Math.min(i, 4) + '" style="left:' + fUsed.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></div>';
+        fUsed += w;
+      });
       second = '<div class="chd-second"><div class="chd-sec-num"><b>' + _N(fv) + '</b> / ' + _N(fg) + ' combined flights</div>' +
-               '<div class="chd-sec-rail"><div class="chd-sec-fill" style="width:' + fp.toFixed(1) + '%"></div></div></div>';
+               '<div class="chd-sec-rail">' + fSegs + '</div></div>';
     } else if (_coopIsSleep(inst)) {
       const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
       const sv = inst.combined_sleep_minutes || 0;
@@ -49621,7 +49636,12 @@
         '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
         '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown">Lead</span>' : '') + '</div>' +
         '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
-        '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div></div>' +
+        '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div>' +
+          // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
+          // the primary stream (steps); this line is their own climbed flights, so the
+          // second goal stops being an anonymous team total.
+          (_coopIsBoth(inst) ? '<div class="chd-sub">' + _N((h.raw && h.raw.flights) || 0) + ' flights</div>' : '') +
+        '</div>' +
       '</div>';
     }).join('');
     const log = _coopBattle.logs.map(function (l) {

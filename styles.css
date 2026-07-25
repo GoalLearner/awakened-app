@@ -34546,7 +34546,19 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .chd-second { margin-top: 16px; }
 .chd-second .chd-sec-num { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 800; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .chd-second .chd-sec-num b { color: var(--text-primary); }
-.chd-sec-rail { margin-top: 6px; height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
+.chd-sec-rail { position: relative; margin-top: 6px; height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
+/* W783 — per-hunter segments on the SECOND stream (flights), same colour ids as
+   the duel bar + party rows so one hunter is one colour everywhere. Absolute
+   like .chd-seg; the rail's overflow:hidden keeps the rounded ends clean. */
+.chd-sec-seg { position: absolute; top: 0; bottom: 0; transition: width .7s cubic-bezier(.22,1,.36,1), left .7s cubic-bezier(.22,1,.36,1); }
+.chd-sec-seg.chd-c0 { background: linear-gradient(90deg, #c17d0c, var(--gold) 70%, #ffd574); }
+.chd-sec-seg.chd-c1 { background: linear-gradient(90deg, #6d28d9, var(--accent) 70%, #c4b5fd); }
+.chd-sec-seg.chd-c2 { background: linear-gradient(90deg, #0f766e, #14b8a6 70%, #5eead4); }
+.chd-sec-seg.chd-c3 { background: linear-gradient(90deg, #9f1239, #f43f5e 70%, #fda4af); }
+.chd-sec-seg.chd-c4 { background: linear-gradient(90deg, #075985, #0ea5e9 70%, #7dd3fc); }
+/* W783 — the party row's second-stream line (a hunter's own flights). */
+.chd-sub { margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+  letter-spacing: .6px; color: var(--text-tertiary, #6b6b86); text-transform: uppercase; }
 .chd-sec-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #0f766e, #5eead4); transition: width .7s cubic-bezier(.22,1,.36,1); }
 .chd-legend { margin-top: 14px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; font-family: ui-monospace, monospace;
   font-size: 9.5px; font-weight: 700; letter-spacing: 1.8px; color: var(--text-secondary); text-transform: uppercase; }

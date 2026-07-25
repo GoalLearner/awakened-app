@@ -142,10 +142,12 @@ const COOP_BOSS_CFG: Record<
   // W693 — THE GRINNING GOD: the members-only apex raid (homage to Solo Leveling's
   // Monarch/"state of god"). First N-hunter hunt (party 2–5; brutal below 5, but the
   // goal is FIXED regardless of party size — owner spec). 150,000 COMBINED steps AND
-  // 75 COMBINED flights across 3 days (72h). memberOnly gates BOTH the summoner and
+  // 75 COMBINED flights across an 80h window (W783 — owner widened it from 72h;
+  // unlike the Sleepless Crown this goal has no per-NIGHT coupling, so more clock is
+  // a clean difficulty easing rather than a silent rebalance). memberOnly gates BOTH the summoner and
   // every ally at create + join. Drops (client-side): the mythic-only table (Nightfall
   // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
-  the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 72, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true, matchmaking: true },
+  the_grinning_god:     { rank: 'S', goalSteps: 150000, goalFlights: 75, rewardSouls: 800, windowHours: 80, metric: 'both', minParty: 2, maxParty: 5, memberOnly: true, matchmaking: true },
 };
 // W761 — display names for push copy ("2/5 have answered The Grinning God…").
 // The client owns full boss presentation; this is JUST the name string, so a
