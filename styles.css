@@ -17237,6 +17237,12 @@ body.reveal-locked { overflow: hidden; }
   animation: equipment-modal-rise 0.35s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
 }
 .equipment-modal.hidden { display: none; }
+/* W780 — the modal is a column flex with align-items:center, so each section
+   sized to its OWN CONTENT and got centered: the gear grid filled the 343px
+   content box while EQUIPMENT BONUSES (283px) and SET BONUSES (284px) sat
+   inset with dead black gutters either side. Stretching the sections makes
+   every block share the modal's gutters — one consistent left/right edge. */
+.equipment-modal > .aw-section { align-self: stretch; }
 @keyframes equipment-modal-rise {
   from { opacity: 0; transform: translateY(20px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
