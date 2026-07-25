@@ -15190,29 +15190,14 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-tertiary);
   letter-spacing: 0.02em;
 }
-/* W502 (IA) — Marketplace label: names the souls-spending home on the Items tab. */
-.pokedex-market {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(245,184,66,0.22);
-  background: linear-gradient(180deg, rgba(245,184,66,0.08), rgba(245,184,66,0.02));
-}
-.pokedex-market-glyph { flex: none; color: var(--gold, #f5b842); font-size: 0.85rem; }
-.pokedex-market-text {
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text-secondary, #9ca3af);
-}
-.pokedex-market-text b {
-  color: var(--gold, #f5b842);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
+/* W779 — the Marketplace banner is removed (owner: simplest possible first
+   impression; souls-spending stays discoverable via the souls-badge modal's
+   "Ways to spend" CTA and each relic's BUY/SELL chip). The Armory CTA now
+   LEADS the Archive lens, so its 12px top margin re-opened the gap W778 just
+   closed — zeroed here to land back at 10px. Compound selector on purpose:
+   .armory-open-btn's `margin` shorthand is declared later in this file, so a
+   single-class rule would lose to it regardless of specificity intent. */
+.armory-open-btn.archive-armory-cta { margin-top: 0; }
 
 /* Armory CTA — secondary status line. .archive-armory-cta-text is
    the wrapper that stacks main + sub vertically so the existing
