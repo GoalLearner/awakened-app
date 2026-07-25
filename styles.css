@@ -32563,8 +32563,26 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* W677 — trio: the second ally's bar segment + legend swatch (distinguishable shade) */
 .cph-bar .cph-them--alt { filter: brightness(1.45) saturate(0.7); }
 .cph-leg.cph-them--alt .cph-sw { filter: brightness(1.45) saturate(0.7); }
-.cph-legend{ display:flex; align-items:center; gap:16px; margin-top:10px; }
-.cph-leg{ display:flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.6px; color:#9090a8; }
+/* W782 — the legend was a NON-WRAPPING flex row, so a 5-hunter raid pushed the
+   last hunter off the card edge. Now an auto-filling GRID: entries land in
+   aligned columns (organized, not a ragged wrap) and flow onto a second row when
+   the party is large. auto-fill (not auto-fit) keeps the column rhythm identical
+   whether it is a duo, a trio or a full raid.
+
+   COLUMN WIDTH is sized for a MATURE hunt, not an empty one (owner: "once the
+   steps start coming in it will really fill it up as well - steps as well as
+   names"). Measured inside the real 309px card interior with Grinning-God-scale
+   contributions (150,000 combined / 5 hunters): "You 42,150" = 77px, "rendiesel
+   29,844" = 115px, "shadowmonarch_k 48,392" = 152px. Empty-hunt entries ("james
+   0") are only ~36px and would have wrongly suggested 3 narrow columns - which
+   would then ellipse a TYPICAL name the moment real steps landed. 140px min =>
+   2 columns x ~149px here, which fits every realistic entry untruncated, and
+   still promotes to 3 columns on a wider viewport. */
+.cph-legend{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); align-items:center; gap:7px 10px; margin-top:10px; }
+.cph-leg{ display:flex; align-items:center; gap:6px; min-width:0; font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.6px; color:#9090a8; }
+/* the alias truncates inside its own column; the step count never gets pushed out */
+.cph-leg .cph-nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.cph-leg b{ flex:none; }
 .cph-leg .cph-sw{ width:8px; height:8px; border-radius:3px; }
 .cph-leg.cph-you .cph-sw{ background:#5ad6c8; box-shadow:0 0 7px #5ad6c8; }
 .cph-leg.cph-them .cph-sw{ background:#ff7a3c; box-shadow:0 0 7px #ff7a3c; }
