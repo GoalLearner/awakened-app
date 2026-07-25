@@ -34945,3 +34945,30 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .bcard-mode--solo { color: #f5b842; background: rgba(245, 184, 66, 0.10); border: 1px solid rgba(245, 184, 66, 0.35); }
 .bcard-mode--coop { color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.4); }
 .bcard .bcard-cond { font-size: 15px; font-weight: 700; color: #f3f0ff; line-height: 1.35; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   W781 — no rubber-band past the content edges (owner: "there's no point
+   in being able to scroll up when there's no more to scroll").
+
+   The six main tab panels already carried `overscroll-behavior: none`,
+   which is why they feel anchored — but every SHEET / MODAL / OVERLAY was
+   still `auto`, so leaderboards, the Kill Log, and the co-op + solo hunt
+   screens all bounced into empty space (and could drag the page behind
+   them). This matches those surfaces to the tab panels.
+
+   `none` (not `contain`): contain only stops the scroll CHAINING to the
+   parent, it still permits the element's own bounce — which is the exact
+   dead-space drag being reported. `none` also stops the chain.
+
+   Selected by NAMING CONVENTION (-overlay / -sheet / -modal / -body /
+   -list / -scroll / -grid) rather than a 50-selector list, so sheets added
+   later inherit the behavior for free. Safe to cast wide: the property is
+   INERT on anything that doesn't actually scroll. Y-axis only, so the
+   horizontal chip rows (#lib-chips, #lb-rank-tabs, #mv-sort) keep their
+   existing pan-x behavior untouched.
+   ══════════════════════════════════════════════════════════════════════ */
+[id$="-overlay"], [id$="-sheet"], [id$="-modal"], [id$="-body"],
+[id$="-list"], [id$="-scroll"], [id$="-grid"], [id$="-popup"],
+[class*="-body"], [class*="-scroll"], [class*="-sheet"] {
+  overscroll-behavior-y: none;
+}
