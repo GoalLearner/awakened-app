@@ -35002,3 +35002,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 [class*="-body"], [class*="-scroll"], [class*="-sheet"] {
   overscroll-behavior-y: none;
 }
+
+/* W785 — History tab stays out of the bar until 3 active days (see
+   _syncHistoryTab). display:none rather than visibility/opacity so the
+   remaining tabs re-flex to fill the width evenly at 5, then at 6. */
+.tab-btn--locked { display: none !important; }

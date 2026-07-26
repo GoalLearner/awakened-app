@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w784'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w785'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -32920,6 +32920,10 @@
   }
 
   function updateProgress() {
+    // W785 — updateProgress() fires after EVERY completion, so it is the natural
+    // place to re-check the History unlock: the tab can appear the moment a
+    // hunter's third active day lands, with its one-time nudge (live:true).
+    try { _syncHistoryTab({ live: true }); } catch (_) {}
     const todayHabits = habits.filter(isScheduledToday);
     const total = todayHabits.length;
     const done  = todayHabits.filter(h => isChecked(h.id)).length;
@@ -34162,6 +34166,57 @@
   }
   function _fsSave(s) { try { localStorage.setItem(_FS_KEY, JSON.stringify(s)); } catch (_) {} }
   function _fsStamp(flag) { try { localStorage.setItem('hb_fs_seen_' + flag, '1'); } catch (_) {} try { renderFirstSteps(); } catch (_) {} }
+
+  // ── W785 — History unlocks after 3 active days ───────────────────────────
+  // Owner: a brand-new user opening History sees a 46-row grid of BLANK squares
+  // — a wall of nothing that only becomes meaningful after a week. So the tab
+  // stays hidden until there's something in it worth looking at, then appears
+  // with a one-time nudge (History is also now the LAST tab).
+  //
+  // "Active day" reuses the app's EXISTING definition — a distinct calendar day
+  // with >=1 completion — the same expression that powers the DAYS ACTIVE stat
+  // and the W484 streak-shield milestones. Deliberately not a new parallel
+  // metric: one definition, three consumers.
+  //
+  // Existing hunters are unaffected: anyone past 3 days passes on first paint,
+  // and the unlock flag is stamped silently for them (no nudge for a tab they
+  // have always had).
+  const HISTORY_UNLOCK_DAYS = 3;
+  const _HIST_UNLOCK_KEY = 'hb_history_unlocked_v1';
+  function _historyActiveDays() {
+    try { return Object.keys(completions).filter(d => (completions[d] || []).length > 0).length; }
+    catch (_) { return 0; }   // unreadable state -> treat as new, tab stays hidden
+  }
+  function _historyUnlocked() {
+    try { if (localStorage.getItem(_HIST_UNLOCK_KEY) === '1') return true; } catch (_) {}
+    return _historyActiveDays() >= HISTORY_UNLOCK_DAYS;
+  }
+  // Show/hide the tab + fire the reveal nudge exactly once. Safe to call often.
+  function _syncHistoryTab(opts) {
+    try {
+      const btn = document.getElementById('tab-history');
+      if (!btn) return;
+      const unlocked = _historyUnlocked();
+      btn.classList.toggle('tab-btn--locked', !unlocked);
+      if (!unlocked) {
+        // Never strand the user on a tab that just became unreachable.
+        try { if (typeof currentTab !== 'undefined' && currentTab === 'history') switchTab('profile'); } catch (_) {}
+        return;
+      }
+      let firstTime = false;
+      try {
+        if (localStorage.getItem(_HIST_UNLOCK_KEY) !== '1') {
+          localStorage.setItem(_HIST_UNLOCK_KEY, '1');
+          firstTime = true;
+        }
+      } catch (_) {}
+      // Nudge only when it unlocks DURING play (opts.live), never on the silent
+      // boot-time stamp an existing hunter gets.
+      if (firstTime && opts && opts.live) {
+        try { showHabitToast('Your ledger is open — see it in History.'); } catch (_) {}
+      }
+    } catch (e) { _logSwallow('history_tab:sync', e); }
+  }
   function _fsSignalMet(id) {
     try {
       switch (id) {
@@ -61971,6 +62026,10 @@
     setupBossesPanel();
     setupQuestsGate();
     try { setupFirstSteps(); renderFirstSteps(); } catch (_) {}   // W771 — First Steps starter path
+    // W785 — settle the History tab's visibility on boot. No `live` flag: an
+    // existing hunter gets the tab silently (it is stamped unlocked, not
+    // announced), and a brand-new one simply never sees it yet.
+    try { _syncHistoryTab(); } catch (_) {}
     setupLeaderboardPreview();
     setupSoulsInfoModal();
     try { setupCombatTriangleModal(); } catch (_) {}
