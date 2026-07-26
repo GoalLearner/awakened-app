@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.090';
+const CACHE_VERSION = 'v6.091';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -473,20 +473,31 @@ self.addEventListener('fetch', e => {
   }
 
   // ── Cache-first for all other assets (CSS, JS, icons, etc.) ─
-  // ignoreSearch so versioned URLs like app.js?v=26 match the
-  // pre-cached app.js entry — keeps offline mode working even
-  // when the HTML requests a newer query-string version.
+  // W784 — EXACT match first (query string INCLUDED), ignoreSearch only as the
+  // OFFLINE fallback. The old order matched ignoreSearch FIRST, which meant a
+  // versioned request like app.js?v=1199 was satisfied by the previously cached
+  // /app.js no matter what the version said — so bumping ?v= never busted
+  // anything. Only a CACHE_VERSION change refreshed assets, and that lands one
+  // launch late (the outgoing worker still controls the first page load after an
+  // update), which is why a fresh TestFlight build could still paint the previous
+  // build's UI. Now:
+  //   • new version  -> exact miss -> network -> fresh code, cached under that URL
+  //   • same version -> exact hit  -> instant, no network
+  //   • offline      -> network throws -> ignoreSearch finds the precached copy
+  // so version bumps land immediately AND offline still works.
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true })
-      .then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res.ok) {
-            const cacheCopy = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, cacheCopy));
-          }
-          return res;
-        });
+    caches.match(e.request)
+      .then(exact => {
+        if (exact) return exact;
+        return fetch(e.request)
+          .then(res => {
+            if (res.ok) {
+              const cacheCopy = res.clone();
+              caches.open(CACHE_NAME).then(c => c.put(e.request, cacheCopy));
+            }
+            return res;
+          })
+          .catch(() => caches.match(e.request, { ignoreSearch: true }));
       })
   );
 });
