@@ -309,21 +309,21 @@
     return v;
   }
 
-  // W786 — relics logged (Collection Log board). Deterministic per bot, and
-  // CONSISTENT with the profile card a tap opens: a bot's card already shows
-  // bossesSlain + ultraRareDrops derived from its strength, so the collection
-  // count is derived from the same strength ordering. Range ~7-34 of 73, which
-  // reads as "ahead of a new hunter, well short of complete" — the board should
-  // give a real player something to climb toward, not an unreachable wall.
-  // Always >= the board's qualifying floor so a sim can never be filtered out
-  // and leave the board short.
+  // W787 — relics logged (Collection Log board). Owner: "I don't want any of the
+  // sims to have more than 5." Bots sit at 1-4 — never above the owner's 5-relic
+  // qualifying floor, so a REAL hunter who qualifies always outranks every bot,
+  // and the Collection race stays a race between real people. Varied rather than
+  // all-pinned-to-one-number so ten bots don't render as ten identical rows.
+  // Deterministic per bot, ordered by the same strength used for its profile card.
   function botRelicsCollected(bot) {
     const idx = BOTS.indexOf(bot);
     const strength = BOTS.length > 1 ? (1 - Math.max(0, idx) / (BOTS.length - 1)) : 0.5;
-    const rng = mulberry32(hashKey(bot.name + '|reliclog'));
-    let v = Math.round(7 + strength * 24 + rng() * 4);
-    if (v < 7) v = 7;
-    if (v > 34) v = 34;
+    // Monotonic in strength (no jitter) so the ladder spreads evenly across 1-4
+    // instead of bunching on one value, and so a bot's collection rank matches the
+    // strength ordering its profile card already shows.
+    let v = 1 + Math.round(strength * 3);   // 1..4
+    if (v < 1) v = 1;
+    if (v > 4) v = 4;
     return v;
   }
 
