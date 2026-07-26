@@ -903,12 +903,22 @@ export async function handleCoopBossList(
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
   const rows = await env.DB.prepare(
+    // W788 — LIVE hunts sort FIRST, resolved ones after. The old plain
+    // `ORDER BY updated_at DESC LIMIT 20` silently DROPPED a live hunt: resolving a
+    // hunt bumps its updated_at, so completed/expired rows float to the top and
+    // crowd out active ones. The owner's Grinning God raid (active, ~24h left) sat
+    // at position 21 behind 12 dead duo hunts and vanished from The Pacts entirely —
+    // it read as "cancelled" when the row was perfectly healthy. With 224 resolved
+    // rows against 9 live ones on that account, this was going to keep happening.
+    // Sorting by liveness first means a live hunt can never be evicted by a finished
+    // one; recency still orders within each group.
     `SELECT * FROM coop_boss_instances
       WHERE challenger_user_id = ?1
          OR partner_user_id = ?1
          OR partner2_user_id = ?1
          OR id IN (SELECT instance_id FROM coop_boss_participants WHERE user_id = ?1)
-      ORDER BY updated_at DESC
+      ORDER BY CASE WHEN status IN ('pending', 'active') THEN 0 ELSE 1 END,
+               updated_at DESC
       LIMIT ?2`,
   )
     .bind(session.userId, MAX_LIST)

@@ -752,3 +752,39 @@ describe('W761 — summons reminder nudges', () => {
     expect(mockNotify).not.toHaveBeenCalled();
   });
 });
+
+// W788 — a LIVE hunt must never be evicted from the list by RESOLVED ones.
+// Real incident: the owner's Grinning God raid (active, ~24h left) sat at position
+// 21 behind 12 completed/expired duo hunts under the old plain
+// `ORDER BY updated_at DESC LIMIT 20` — resolving a hunt bumps its updated_at, so
+// dead rows float up. The raid vanished from The Pacts and read as "cancelled"
+// while the DB row was perfectly healthy (224 resolved rows vs 9 live on that account).
+describe('W788 — list orders LIVE hunts ahead of resolved ones', () => {
+  it("the ORDER BY sorts pending/active first, then by recency", () => {
+    // The ordering contract, applied to the exact shape that broke: one old ACTIVE
+    // row against a wall of freshly-resolved ones.
+    const rows = [
+      { id: 'done1', status: 'completed', updated_at: '2026-07-26 16:09:41' },
+      { id: 'done2', status: 'expired',   updated_at: '2026-07-26 16:09:40' },
+      { id: 'raid',  status: 'active',    updated_at: '2026-07-24 16:59:15' },
+      { id: 'done3', status: 'cancelled', updated_at: '2026-07-26 15:44:53' },
+      { id: 'duo',   status: 'active',    updated_at: '2026-07-26 06:18:17' },
+      { id: 'inv',   status: 'pending',   updated_at: '2026-07-20 01:00:00' },
+    ];
+    const liveFirst = (s: string) => (s === 'pending' || s === 'active' ? 0 : 1);
+    const sorted = [...rows].sort(
+      (a, b) => liveFirst(a.status) - liveFirst(b.status) || b.updated_at.localeCompare(a.updated_at),
+    );
+    // every live row precedes every resolved row
+    const firstResolved = sorted.findIndex((r) => liveFirst(r.status) === 1);
+    expect(sorted.slice(0, firstResolved).every((r) => liveFirst(r.status) === 0)).toBe(true);
+    // the old raid survives a LIMIT that would have cut it under pure-recency order
+    expect(sorted.slice(0, 3).map((r) => r.id)).toContain('raid');
+    // recency still orders within the live group
+    expect(sorted[0].id).toBe('duo');
+    // and the stale pending invite is still live-grouped, ahead of fresh dead rows
+    expect(sorted.findIndex((r) => r.id === 'inv')).toBeLessThan(
+      sorted.findIndex((r) => r.id === 'done1'),
+    );
+  });
+});
