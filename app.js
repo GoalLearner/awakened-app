@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w785'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w786'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -43523,7 +43523,12 @@
   // W622 — relics_collected is deliberately ABSENT: the Collection Log board is
   // a real race among real hunters. Sim bots with fabricated relic counts would
   // be fake competitors on a finish-line board, not harmless filler.
-  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1, floor_best: 1, rank_band: 1 };
+  // W786 — relics_collected JOINS the sim set. It was absent, and _lbMaybeSimulate
+  // returns EARLY for any metric not listed here — before the min-qualifying-score
+  // filter further down. So the Collection board got no sim hunters AND its W622
+  // 0-relic floor was unreachable, which is why the board rendered a wall of
+  // '0 / 73' rows. Listing it fixes both in one move.
+  const _LB_SIM_METRICS = { step_total: 1, sleep_streak: 1, workout_streak: 1, flights_climbed: 1, floor_best: 1, rank_band: 1, relics_collected: 1 };
   // v3 Phase 1z.116 — per-metric minimum-score filter applied AFTER
   // simulated-leaderboard merge but BEFORE the rank list renders.
   // Rationale: a "7+ hour sleep streak" leaderboard showing entries
@@ -43531,7 +43536,7 @@
   // board only shows users who've actually started a streak. Other
   // metrics (step_total, bedtime_streak) keep the default of 0 — no
   // floor — until a product decision changes that.
-  const _LB_MIN_QUALIFYING_SCORE = { relics_collected: 1 };   // W622 — no 0-relic rows on the collection race (W634 — sleep_streak board retired)
+  const _LB_MIN_QUALIFYING_SCORE = { relics_collected: 5 };   // W622 no 0-relic rows; W786 raised 1 -> 5 (owner) so the collection race shows hunters with a real log, not a 1-relic row
   function _lbMaybeSimulate(metric, top, me) {
     if (!_LB_SIM_METRICS[metric]) return { top: top, me: me };
     if (typeof window.SimulatedLeaderboard === 'undefined') return { top: top, me: me };

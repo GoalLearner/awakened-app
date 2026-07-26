@@ -309,6 +309,24 @@
     return v;
   }
 
+  // W786 — relics logged (Collection Log board). Deterministic per bot, and
+  // CONSISTENT with the profile card a tap opens: a bot's card already shows
+  // bossesSlain + ultraRareDrops derived from its strength, so the collection
+  // count is derived from the same strength ordering. Range ~7-34 of 73, which
+  // reads as "ahead of a new hunter, well short of complete" — the board should
+  // give a real player something to climb toward, not an unreachable wall.
+  // Always >= the board's qualifying floor so a sim can never be filtered out
+  // and leave the board short.
+  function botRelicsCollected(bot) {
+    const idx = BOTS.indexOf(bot);
+    const strength = BOTS.length > 1 ? (1 - Math.max(0, idx) / (BOTS.length - 1)) : 0.5;
+    const rng = mulberry32(hashKey(bot.name + '|reliclog'));
+    let v = Math.round(7 + strength * 24 + rng() * 4);
+    if (v < 7) v = 7;
+    if (v > 34) v = 34;
+    return v;
+  }
+
   // ─── Main merge ───────────────────────────────────────────
   function mergeWithSimulated(realTop, realUserAlias, realUserValue, dateKey, metric) {
     metric = metric || 'step_total';
@@ -340,6 +358,9 @@
       } else if (metric === 'sleep_streak' || metric === 'bedtime_streak' || metric === 'workout_streak') {
         // v3 Phase 1z.118 — workout_streak joins the streak family.
         val = rollBotStreak(weekStartKey, bot, metric);
+      } else if (metric === 'relics_collected') {
+        // W786 — Collection Log board.
+        val = botRelicsCollected(bot);
       } else if (metric === 'rank_band') {
         // W319 — "Hunters in your rank" cohort. Bots use their intrinsic
         // realistic power (botPower) so the board value MATCHES the bot's
