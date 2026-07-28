@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w789'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w790'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46516,6 +46516,12 @@
       _renderFounder();
     } else if (r && r.code === 'CANCELLED') {
       _renderFounder();   // re-enable the buttons, no noise
+    } else if (r && r.code === 'NOT_SIGNED_IN') {
+      // W790 — guest sessions have no backend user to attach the subscription
+      // to (configurePurchases needs a real Apple sign-in). "Purchase failed"
+      // read as a payments bug to a tester; it's a sign-in prerequisite.
+      try { if (typeof showHabitToast === 'function') showHabitToast('Sign in with Apple first — a guest session can’t hold a membership'); } catch (_) {}
+      _renderFounder();
     } else {
       try { if (typeof showHabitToast === 'function') showHabitToast('Purchase failed. Please try again.'); } catch (_) {}
       _renderFounder();
@@ -54594,6 +54600,10 @@
         const res = await CloudSync.pushNow('manual');
         if (res && res.ok) {
           try { showHabitToast('Cloud backup complete'); } catch (_) {}
+        } else if (res && (res.code === 'GUEST_SKIP' || res.code === 'LOCAL_DEV_SKIP' || res.code === 'NOT_SIGNED_IN')) {
+          // W790 — a guest has no cloud account; the raw code read as a crash
+          // to a tester ("Backup failed: GUEST_SKIP"). Say what to do instead.
+          try { showHabitToast('Cloud backup needs an account — sign in with Apple to enable it'); } catch (_) {}
         } else {
           try { showHabitToast('Backup failed: ' + ((res && res.detail) || (res && res.code) || 'unknown')); } catch (_) {}
         }
