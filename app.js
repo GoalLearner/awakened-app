@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w791'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w792'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49501,8 +49501,10 @@
     }
     return { pct: pct, binding: binding };
   }
-  function _coopBattleLog(html) {
-    const t = new Date();
+  function _coopBattleLog(html, when) {
+    // W792 — `when` (a Date) lets a line carry its TRUE moment (e.g. the party
+    // announce shows the hunt's start time, not whenever you opened the sheet).
+    const t = (when instanceof Date && !isNaN(when.getTime())) ? when : new Date();
     _coopBattle.logs.unshift({ t: String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'), html: html });
     if (_coopBattle.logs.length > 3) _coopBattle.logs.length = 3;
   }
@@ -49538,7 +49540,11 @@
     if (_coopBattle.instId !== inst.id) {
       _coopBattleReset(inst.id);
       const names = _coopBattleRoster(inst).filter(function (h) { return !h.me; }).map(function (h) { return esc(h.alias); });
-      _coopBattleLog('<b class="chd-vio">' + (_coopNameList(names) || 'Your party') + '</b> ' + (names.length === 1 ? 'is' : 'are') + ' hunting with you');
+      // W792 — stamp the announce with the hunt's REAL start moment (owner: the
+      // chat box showed the current clock, which read as "the raid began just
+      // now" no matter when it actually started).
+      const startedAt = inst.starts_at ? new Date(Date.parse(inst.starts_at)) : null;
+      _coopBattleLog('<b class="chd-vio">' + (_coopNameList(names) || 'Your party') + '</b> ' + (names.length === 1 ? 'is' : 'are') + ' hunting with you', startedAt);
       _coopBattleRoster(inst).forEach(function (h, i) {
         _coopBattle.prev[h.me ? '__me' : ((h.raw && h.raw.user_id) || 'a' + i)] = _coopBattlePrimary(inst, h.raw);
       });
