@@ -30270,6 +30270,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .sc-am-cta { font-family:"JetBrains Mono",ui-monospace,monospace; font-size:9px; font-weight:800; letter-spacing:1.6px; }
 .sc-am-cta--gold { color:#f5b842; }
 .sc-am-cta--teal { color:#5eead4; }
+/* W795 — sealed ranked-PvP tile (queue locked until the player base grows) */
+.sc-am-tile--locked .sc-am-swords, .sc-am-tile--locked .sc-am-duel { opacity:.42; }
+.sc-am-tile--locked .sc-am-kick--teal { opacity:.6; }
+.sc-am-cta--locked { color:#8a8aa6; display:inline-flex; align-items:center; gap:5px; }
+.sc-am-lock { display:block; flex:none; }
 .sc-am-chev { display:block; flex:none; }
 /* PvP-disabled fallback — a single climb tile shouldn't stretch full-bleed. */
 .sc-arena-merged--solo .sc-am-tiles { justify-content:flex-start; }
@@ -32660,6 +32665,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .arena-entry::after { content: ""; position: absolute; inset: 0; border-radius: 16px; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(90,214,200,0.22), 0 0 22px rgba(90,214,200,0.12); animation: aePulse 3.4s ease-in-out infinite; }
 @keyframes aePulse { 0%,100% { opacity: 0.5; } 50% { opacity: 0.95; } }
 .arena-entry > * { position: relative; z-index: 1; }
+/* W795 — sealed ranked queue: still tappable (tap explains), but visually at rest */
+.arena-entry.ae-locked { opacity:.72; }
+.arena-entry.ae-locked::after { animation:none; opacity:.35; }
 .arena-entry .ae-ring { width: 48px; height: 48px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, var(--ae-ring), rgba(8,8,26,0.5) 72%); box-shadow: 0 0 0 1.6px var(--ae-tier), 0 0 14px var(--ae-glow); }
 .arena-entry .ae-ring .pvp-emblem { filter: drop-shadow(0 0 6px var(--ae-glow)); }
 .arena-entry .ae-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }

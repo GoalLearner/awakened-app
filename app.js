@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w794'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w795'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10704,8 +10704,12 @@
         '</span>' +
         '<span class="sc-am-foot"><span class="sc-am-cta sc-am-cta--gold">' + climbCta + '</span>' + chev('#f5b842') + '</span>' +
       '</button>';
+    // W795 — while the ranked queue is sealed the tile stays visible (a tease, not a
+    // hole in the layout) but reads LOCKED; the tap explains + points at the Ascent.
+    const _pvpLocked = (typeof PVP_RANKED_LOCKED !== 'undefined') && PVP_RANKED_LOCKED;
+    const lockGlyph = '<svg class="sc-am-lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8a8aa6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
     const duelTile = PVP_ENABLED ?
-      '<button class="sc-am-tile sc-am-tile--duel" id="sc-pvp-btn" type="button" aria-label="Ranked PvP - duel another hunter">' +
+      '<button class="sc-am-tile sc-am-tile--duel' + (_pvpLocked ? ' sc-am-tile--locked' : '') + '" id="sc-pvp-btn" type="button" aria-label="' + (_pvpLocked ? 'Ranked PvP - locked until more hunters join. Climb the Ascent meanwhile.' : 'Ranked PvP - duel another hunter') + '">' +
         '<span class="sc-am-tile-top">' +
           swords +
           '<span class="sc-am-tx">' +
@@ -10713,7 +10717,9 @@
             '<span class="sc-am-duel">Duel</span>' +
           '</span>' +
         '</span>' +
-        '<span class="sc-am-foot"><span class="sc-am-cta sc-am-cta--teal">FIGHT</span>' + chev('#5eead4') + '</span>' +
+        (_pvpLocked
+          ? '<span class="sc-am-foot"><span class="sc-am-cta sc-am-cta--locked">' + lockGlyph + 'SEALED</span></span>'
+          : '<span class="sc-am-foot"><span class="sc-am-cta sc-am-cta--teal">FIGHT</span>' + chev('#5eead4') + '</span>') +
       '</button>' : '';
     return '<div class="sc-arena-merged' + (PVP_ENABLED ? '' : ' sc-arena-merged--solo') + '">' +
         '<div class="sc-am-head">' +
@@ -13308,6 +13314,7 @@
   // [data-ar] handler via setupArena); then _pvpOpenLobby() swaps the tower body for the PvP hub.
   function openArenaPvP() {
     if (!PVP_ENABLED) return;
+    if (PVP_RANKED_LOCKED) { _pvpLockedNudge(); return; }   // W795 — sealed queue: explain + point at the Ascent
     try { openArena(true); } catch (_) { return; }   // true = skip the Ascent opening over the hub
     try { _pvpOpenLobby(); } catch (_) {}
   }
@@ -13436,7 +13443,7 @@
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
       else if (a === 'powerinfo') { try { _arOpenPowerBreakdown(); } catch (_) {} }   // W518 — habit→power thread keystone
-      else if (a === 'duel')      { if (PVP_ENABLED) { try { _pvpOpenLobby(); } catch (_) {} } }   // W404 — enter the PvP duel lobby (gated)
+      else if (a === 'duel')      { if (PVP_ENABLED) { if (PVP_RANKED_LOCKED) { _pvpLockedNudge(); } else { try { _pvpOpenLobby(); } catch (_) {} } } }   // W404 — enter the PvP duel lobby (gated); W795 — sealed while the queue lock is on
       else if (a === 'pvpcreate') { try { _pvpCreate(); } catch (_) {} }
       else if (a === 'pvpjoin')   { try { const el = document.getElementById('pvp-code-input'); _pvpJoin(el ? el.value : ''); } catch (_) {} }
       else if (a === 'pvpcopy')   { try { _pvpCopyCode(); } catch (_) {} }
@@ -13498,6 +13505,16 @@
   // migrations/0021_pvp.sql. See PVP_BUILD_REPORT.md for the go-live checklist.
   // ═══════════════════════════════════════════════════════════════
   const PVP_ENABLED = true;   // W409 — go-live: backend deployed (worker + DO + D1 migration) + ranked meta shipped
+  // W795 — RANKED QUEUE LOCK (owner, 2026-07-28): the player base is still too
+  // small for good ranked matches, so ranked duels are sealed BEHIND AN HONEST
+  // MESSAGE (not hidden — the tile stays visible as a tease) that redirects the
+  // energy to the Ascent. Friendly/Echo duels are NOT gated by this. Backend
+  // stays deployed + untouched; flip to false to re-open the queue, no rebuild
+  // of anything else needed.
+  const PVP_RANKED_LOCKED = true;
+  function _pvpLockedNudge() {
+    try { showHabitToast('⚔ The Arena is still gathering hunters — ranked duels open once enough rivals have awakened. Until then, the Tower is where legends train: climb the Ascent.'); } catch (_) {}
+  }
   const PvP = (function () {
     let ws = null, code = null, you = null;
     let pollTimer = null, pingTimer = null, reconnectTimer = null;
@@ -15068,6 +15085,11 @@
       standing = '<span class="ae-dot"></span><b>Placement ' + played + '/' + pl.need + '</b><span class="ae-sep">&middot;</span>Earn your rank';
     } else {
       standing = '<span class="ae-dot"></span>Ranked duels &middot; climb the ladder';
+    }
+    // W795 — sealed-queue standing overrides all three states above.
+    if ((typeof PVP_RANKED_LOCKED !== 'undefined') && PVP_RANKED_LOCKED) {
+      cls = ' ae-locked';
+      standing = '<span class="ae-dot"></span>Sealed — gathering hunters. Climb the Ascent.';
     }
     const chrome = ' style="--ae-tier:' + pal.c + ';--ae-glow:' + tint.glow + ';--ae-ring:' + tint.aura + '"';
     return '<button type="button" class="arena-entry' + cls + '" data-ar="duel"' + chrome + '>' +
