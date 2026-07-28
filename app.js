@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w792'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w793'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6021,7 +6021,24 @@
         var others = (v && v.others && v.others.length) ? v.others : (v && v.them ? [v.them] : []);
         partners = others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); });
       } catch (_) {}
+      // W793 — per-hunter contribution snapshot (val = primary metric) + the MVP
+      // (strict top contributor; ties crown nobody, same rule as the live sheet).
+      // Captured at resolve time because the server prunes old instances from the
+      // 20-row list; rows logged before W793 simply have no breakdown to expand.
+      var contrib = null, mvp = null, unit = 'steps';
+      try {
+        unit = _coopUnit(inst);
+        var roster = _coopBattleRoster(inst);
+        contrib = roster.map(function (h) { return { alias: h.alias, me: !!h.me, val: _coopBattlePrimary(inst, h.raw) }; });
+        var topI = -1, topV = 0;
+        contrib.forEach(function (c, i) {
+          if (c.val > topV) { topV = c.val; topI = i; }
+          else if (c.val === topV) topI = -1;
+        });
+        if (topI >= 0 && topV > 0) mvp = contrib[topI].alias;
+      } catch (_) {}
       return {
+        contrib: contrib, mvp: mvp, unit: unit,   // W793
         id: inst.id,
         boss_id: inst.boss_id || null,
         bossName: (cfg && cfg.name) || 'a boss',
@@ -16487,6 +16504,9 @@
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
 
+    // W793 — optional drop-luck multiplier (MVP carry bonus: 1.01/carried hunter).
+    // NEVER applies to mythic — the W703 flat-1% invariant holds (no pity/mercy/LUCK).
+    const _luck = (dropOpts && Number(dropOpts.luck) > 1) ? Math.min(1.25, Number(dropOpts.luck)) : 1;
     const rates = dropRatesFor(bossId);
     // Per-boss first-common protection (v3 Phase 1h). Falls back to
     // the legacy global flag only when no per-boss entry exists.
@@ -16520,20 +16540,21 @@
       const _order = ['mythic', 'ultra_rare', 'rare', 'common'];
       for (let _i = 0; _i < _order.length; _i++) {
         const _rar = _order[_i];
-        const _p = cfg.dropTable[_rar];
+        let _p = cfg.dropTable[_rar];
+        if (typeof _p === 'number' && _rar !== 'mythic') _p = _p * _luck;   // W793 — luck skips mythic
         if (typeof _p === 'number' && _p > 0 && pools[_rar] && pools[_rar].length) {
           _acc += _p;
           if (_r < _acc) { dropped = pickFromPool(pools[_rar]); break; }
         }
       }
     } else {
-    if (Math.random() < effectiveUltraRate && pools.ultra_rare.length) {
+    if (Math.random() < Math.min(1, effectiveUltraRate * _luck) && pools.ultra_rare.length) {
       dropped = pickFromPool(pools.ultra_rare);
       if (ultraHardForced) { fromPity = true; pityType = 'ultra_hard'; }
       else if (effectiveUltraRate > rates.ultra_rare) { fromPity = true; pityType = 'ultra_soft'; }
-    } else if (Math.random() < rates.rare && pools.rare.length) {
+    } else if (Math.random() < Math.min(1, rates.rare * _luck) && pools.rare.length) {
       dropped = pickFromPool(pools.rare);
-    } else if (Math.random() < commonRate && pools.common.length) {
+    } else if (Math.random() < Math.min(1, commonRate * _luck) && pools.common.length) {
       dropped = pickFromPool(pools.common);
     }
 
@@ -48636,10 +48657,29 @@
     // between guard-save and grant can't strand the drop. The atomic server claim
     // above already guarantees only this device grants, so granting first cannot
     // double-grant.
-    const reward = cfg.coopRewardSouls || 0;
+    // W793 — MVP carry bonus. If YOU are the strict top contributor (same tie
+    // rule as the sheet's crown: ties crown nobody), each hunter you carried is
+    // worth +1%: souls ×(1+0.01·carried) and non-mythic relic luck ×(1+0.01·carried).
+    // Client-side like every co-op drop (per the W463 award model).
+    let _mvpCarried = 0;
+    try {
+      const _roster = _coopBattleRoster(inst);
+      let _topI = -1, _topV = 0;
+      _roster.forEach(function (h, i) {
+        const v = _coopBattlePrimary(inst, h.raw);
+        if (v > _topV) { _topV = v; _topI = i; }
+        else if (v === _topV) _topI = -1;
+      });
+      if (_topI >= 0 && _topV > 0 && _roster[_topI].me) _mvpCarried = Math.max(0, _roster.length - 1);
+    } catch (_) {}
+    const _mvpMult = 1 + 0.01 * _mvpCarried;
+    const reward = Math.round((cfg.coopRewardSouls || 0) * _mvpMult);
     try { earnSouls(reward, 'coop_' + cfg.id); } catch (e) { _logSwallow('coopAward:earnSouls', e); }
     let dropInfo = null;
-    try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf', { source: 'coop', sourceName: cfg.name }); } catch (_) {}
+    try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf', { source: 'coop', sourceName: cfg.name, luck: _mvpMult }); } catch (_) {}
+    if (_mvpCarried > 0) {
+      try { showHabitToast('✦ Hunt MVP — +' + _mvpCarried + '% souls & relic luck for carrying ' + _mvpCarried + ' hunter' + (_mvpCarried === 1 ? '' : 's')); } catch (_) {}
+    }
     try {
       announceKillAndDrop(
         { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
@@ -49709,7 +49749,8 @@
       const initial = esc((h.me ? (localStorage.getItem('hb_name') || 'Y') : h.alias).charAt(0).toUpperCase());
       return '<div class="chd-row">' +
         '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
-        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown">Lead</span>' : '') + '</div>' +
+        // W793 — the crown is now MVP (tap → incentive explainer via the global [data-mvp-info] handler).
+        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + '</div>' +
         '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
         '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div>' +
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
@@ -50781,13 +50822,33 @@
     const rankPill = (e && e.rank)
       ? '<span class="chh-rank" style="color:' + _lbRankColor(e.rank) + ';border-color:' + _lbRankColor(e.rank) + '">' + esc(e.rank) + '</span>'
       : '';
-    return '<div class="chh-row chh-' + (win ? 'win' : 'loss') + '">' +
-      '<span class="chh-out">' + (win ? 'WON' : 'LOST') + '</span>' +
-      '<div class="chh-mid">' +
-        '<div class="chh-boss">' + esc((e && e.bossName) || 'a boss') + rankPill + '</div>' +
-        '<div class="chh-who">with ' + who + '</div>' +
-      '</div>' +
-      '<div class="chh-when">' + esc(_coopHistWhen(e && e.ts)) + '</div>' +
+    // W793 — rows logged with a contribution snapshot expand on tap into a
+    // per-hunter damage breakdown (val + share, MVP crowned). Pre-W793 rows
+    // have no snapshot → they render exactly as before, not tappable.
+    const hasContrib = !!(e && e.contrib && e.contrib.length);
+    let breakHtml = '';
+    if (hasContrib) {
+      let total = 0;
+      e.contrib.forEach(function (c) { total += (Number(c.val) || 0); });
+      const unitWord = e.unit === 'flights' ? 'flights' : 'steps';
+      breakHtml = '<div class="chh-break hidden">' + e.contrib.map(function (c) {
+        const share = total > 0 ? Math.round((Number(c.val) || 0) / total * 100) : 0;
+        const isMvp = !!(e.mvp && c.alias === e.mvp);
+        return '<div class="chh-bk-row' + (c.me ? ' chh-bk-me' : '') + '">' +
+          '<span class="chh-bk-name">' + esc(c.alias) + (isMvp ? '<span class="chh-mvp-chip" data-mvp-info>MVP</span>' : '') + '</span>' +
+          '<span class="chh-bk-num"><b>' + _N(Number(c.val) || 0) + '</b> ' + unitWord + ' · ' + share + '%</span>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+    return '<div class="chh-item">' +
+      '<div class="chh-row chh-' + (win ? 'win' : 'loss') + (hasContrib ? ' chh-tap" role="button" tabindex="0' : '') + '">' +
+        '<span class="chh-out">' + (win ? 'WON' : 'LOST') + '</span>' +
+        '<div class="chh-mid">' +
+          '<div class="chh-boss">' + esc((e && e.bossName) || 'a boss') + rankPill + '</div>' +
+          '<div class="chh-who">with ' + who + '</div>' +
+        '</div>' +
+        '<div class="chh-when">' + esc(_coopHistWhen(e && e.ts)) + '</div>' +
+      '</div>' + breakHtml +
     '</div>';
   }
   function _coopHistRender() {
@@ -50829,6 +50890,22 @@
     if (histBtn) histBtn.addEventListener('click', _coopHistOpen);
     const histClose = document.getElementById('coop-hist-close');
     if (histClose) histClose.addEventListener('click', _coopHistClose);
+    // W793 — tap a history row (with a contribution snapshot) to expand its breakdown.
+    const histList = document.getElementById('coop-hist-list');
+    if (histList) histList.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-mvp-info]')) return;   // chip → explainer, not toggle
+      const row = (e.target && e.target.closest) ? e.target.closest('.chh-row.chh-tap') : null;
+      if (!row) return;
+      const brk = row.parentElement && row.parentElement.querySelector('.chh-break');
+      if (brk) brk.classList.toggle('hidden');
+    });
+    // W793 — every MVP chip (history breakdown + live sheet) explains the incentive.
+    document.addEventListener('click', function (e) {
+      const chip = (e.target && e.target.closest) ? e.target.closest('[data-mvp-info]') : null;
+      if (!chip) return;
+      try { e.stopPropagation(); } catch (_) {}
+      try { showHabitToast('MVP = top contributor. Win as MVP: +1% souls & relic drop luck for every hunter you carried (5-hunter raid → +4%)'); } catch (_) {}
+    });
     const aaBtn = document.getElementById('coop-dash-accept-all');   // W572 — footer Accept-All (replaces Recruit)
     if (aaBtn) aaBtn.addEventListener('click', _coopDashAcceptAll);
     const listEl = document.getElementById('coop-dash-list');
