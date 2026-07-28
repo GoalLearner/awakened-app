@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w790'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w791'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -62586,7 +62586,39 @@
     setTimeout(function () { if (el && el.classList) { el.classList.remove('upd-arriving', 'upd-slidein'); el.classList.add('upd-resting'); } }, 900);
     try { localStorage.setItem('hb_update_banner_seen', dayKey); } catch (_) {}   // mark seen on show → once per Monday
   }
-  function _maybeShowUpdateBanner() {
+  // W791 — REAL version check (owner, from tester feedback: a fresh install saw
+  // "A new version has awakened" with nothing to update). The Monday banner now
+  // shows ONLY when the App Store's live version is NEWER than this build's
+  // APP_VERSION — new installs and hunters who update promptly never see it.
+  // Source: Apple's public iTunes lookup API (no backend, no auth). The store
+  // version is cached for 6h so a Monday of app-opens costs one fetch. FAIL
+  // CLOSED: lookup unreachable / malformed → no banner (a false "update me" is
+  // worse than a missed nudge — there's always next Monday).
+  function _updVersionNewer(store, local) {
+    var a = String(store || '').split('.'), b = String(local || '').split('.');
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      var x = parseInt(a[i], 10) || 0, y = parseInt(b[i], 10) || 0;
+      if (x !== y) return x > y;
+    }
+    return false;
+  }
+  async function _updFetchStoreVersion() {
+    try {
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('hb_store_version') || 'null'); } catch (_) {}
+      if (cached && cached.v && (Date.now() - (cached.t || 0)) < 6 * 3600 * 1000) return cached.v;
+      var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      if (ctl) setTimeout(function () { try { ctl.abort(); } catch (_) {} }, 8000);
+      var res = await fetch('https://itunes.apple.com/lookup?id=6764727990&t=' + Date.now(), ctl ? { signal: ctl.signal } : undefined);
+      if (!res || !res.ok) return null;
+      var data = await res.json();
+      var v = data && data.results && data.results[0] && data.results[0].version;
+      if (!v || typeof v !== 'string') return null;
+      try { localStorage.setItem('hb_store_version', JSON.stringify({ v: v, t: Date.now() })); } catch (_) {}
+      return v;
+    } catch (_) { return null; }
+  }
+  async function _maybeShowUpdateBanner() {
     try {
       if (new Date().getDay() !== 1) return;   // 1 = Monday (device-local; a UX nudge, not a game-day)
       // Review W679 #1 — never float over the What's New sheet (z 340 < banner
@@ -62597,6 +62629,11 @@
       var today = _updBannerDayKey();
       var seen = ''; try { seen = localStorage.getItem('hb_update_banner_seen') || ''; } catch (_) {}
       if (seen === today) return;               // already shown/dismissed this Monday
+      var storeV = await _updFetchStoreVersion();               // W791
+      if (!storeV || !_updVersionNewer(storeV, APP_VERSION)) return;
+      // Re-check the sheet guard — the async fetch may have raced What's New open.
+      wn = document.getElementById('wn-overlay');
+      if (wn && !wn.classList.contains('hidden')) return;
       _showUpdateBanner(today);
     } catch (_) {}
   }
