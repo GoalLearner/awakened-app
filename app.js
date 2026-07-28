@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.3 APPROVED + eligible for distribution 2026-07-13 → 2.4.5 is the next train (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.5-w793'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.5-w794'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16504,8 +16504,10 @@
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
 
-    // W793 — optional drop-luck multiplier (MVP carry bonus: 1.01/carried hunter).
-    // NEVER applies to mythic — the W703 flat-1% invariant holds (no pity/mercy/LUCK).
+    // W793 — optional drop-luck multiplier (MVP carry bonus: 1.01/carried hunter),
+    // capped 1.25×. W793.1 (owner, 2026-07-28): applies to EVERY rarity, mythic
+    // included — the sole sanctioned exception to the W703 no-luck rule (a 5-man
+    // raid MVP rolls mythic at 1.04%, not 1%). Pity/mercy still never touch mythic.
     const _luck = (dropOpts && Number(dropOpts.luck) > 1) ? Math.min(1.25, Number(dropOpts.luck)) : 1;
     const rates = dropRatesFor(bossId);
     // Per-boss first-common protection (v3 Phase 1h). Falls back to
@@ -16531,9 +16533,12 @@
     // W703 — INVARIANT: EVERY mega-rare (mythic) source lives ONLY on this dropTable
     // branch, and mythic is rolled FIRST, so a mega-rare is a FLAT 1% per kill (mythic
     // weight = 0.01 at all three sources: Erebus, The Sleepless Crown, The Grinning God)
-    // with NO pity / mercy / luck EVER (owner: these items are too powerful to soften).
-    // Keep it that way — never add a `mythic` key to the pity/mercy logic in the else
-    // branch below, and never give a mythic-dropping boss a non-dropTable config.
+    // with NO pity / mercy EVER (owner: these items are too powerful to soften).
+    // W793.1 — the ONE sanctioned luck exception (owner, 2026-07-28): the MVP
+    // carry-luck multiplier (_luck, capped 1.25×) DOES scale mythic — a 5-man raid
+    // MVP rolls mythic at 1.04%, not 1%. Everything else stands: never add a
+    // `mythic` key to the pity/mercy logic in the else branch below, and never give
+    // a mythic-dropping boss a non-dropTable config.
     if (cfg.dropTable) {
       const _r = Math.random();
       let _acc = 0;
@@ -16541,7 +16546,7 @@
       for (let _i = 0; _i < _order.length; _i++) {
         const _rar = _order[_i];
         let _p = cfg.dropTable[_rar];
-        if (typeof _p === 'number' && _rar !== 'mythic') _p = _p * _luck;   // W793 — luck skips mythic
+        if (typeof _p === 'number') _p = _p * _luck;   // W793.1 — MVP luck applies to ALL rarities, mythic included (owner override)
         if (typeof _p === 'number' && _p > 0 && pools[_rar] && pools[_rar].length) {
           _acc += _p;
           if (_r < _acc) { dropped = pickFromPool(pools[_rar]); break; }
@@ -50876,6 +50881,15 @@
     ov.classList.remove('hidden');
     try { document.body.classList.add('bfs-locked'); } catch (_) {}
   }
+  // W793 review — the MVP-chip explainer wires at LOAD, not inside _coopDashWireOnce:
+  // the live hunt sheet opens straight from the Dungeon tab, so a hunter can tap the
+  // chip without The Pacts dashboard (and its wireOnce) ever having run.
+  document.addEventListener('click', function (e) {
+    const chip = (e.target && e.target.closest) ? e.target.closest('[data-mvp-info]') : null;
+    if (!chip) return;
+    try { e.stopPropagation(); } catch (_) {}
+    try { showHabitToast('MVP = top contributor. Win as MVP: +1% souls & relic drop luck for every hunter you carried (5-hunter raid → +4%)'); } catch (_) {}
+  });
   function _coopHistClose() {
     const ov = document.getElementById('coop-hist-overlay');
     if (ov) ov.classList.add('hidden');
@@ -50898,13 +50912,6 @@
       if (!row) return;
       const brk = row.parentElement && row.parentElement.querySelector('.chh-break');
       if (brk) brk.classList.toggle('hidden');
-    });
-    // W793 — every MVP chip (history breakdown + live sheet) explains the incentive.
-    document.addEventListener('click', function (e) {
-      const chip = (e.target && e.target.closest) ? e.target.closest('[data-mvp-info]') : null;
-      if (!chip) return;
-      try { e.stopPropagation(); } catch (_) {}
-      try { showHabitToast('MVP = top contributor. Win as MVP: +1% souls & relic drop luck for every hunter you carried (5-hunter raid → +4%)'); } catch (_) {}
     });
     const aaBtn = document.getElementById('coop-dash-accept-all');   // W572 — footer Accept-All (replaces Recruit)
     if (aaBtn) aaBtn.addEventListener('click', _coopDashAcceptAll);
