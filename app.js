@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w796'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w797'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48288,8 +48288,30 @@
   try { window.openCoopSheet = openCoopSheet; } catch (_) {}
   try { window.closeCoopSheet = closeCoopSheet; } catch (_) {}
 
-  function _coopStartPolling() { if (_coopPollTimer) return; try { _coopPollTimer = setInterval(function () { _coopPollTick(); }, 60000); } catch (_) {} }
-  function _coopStopPolling() { if (_coopPollTimer) { try { clearInterval(_coopPollTimer); } catch (_) {} _coopPollTimer = null; } }
+  // W797 — CRUNCH-TIME cadence. The flat 60s poll lost the owner a hunt: a partner
+  // sat at goal with unsubmitted steps in the final minutes and nobody knew to sync.
+  // The sheet poll (which SUBMITS your own steps, not just reads) now tightens to
+  // every 15s once under 5 minutes remain, so a hunter merely watching the sheet
+  // auto-drives their banked steps in — no manual STRIKE needed to make the kill count.
+  function _coopPollDelay() {
+    try {
+      const rem = Number(_coopSheet.instance && _coopSheet.instance.time_remaining_ms);
+      if (isFinite(rem) && rem > 0 && rem < 5 * 60 * 1000) return 15000;
+    } catch (_) {}
+    return 60000;
+  }
+  function _coopStartPolling() {
+    if (_coopPollTimer) return;
+    try {
+      _coopPollTimer = setTimeout(async function () {
+        try { await _coopPollTick(); } catch (_) {}
+        // Re-arm at the cadence the fresh instance calls for — unless the tick
+        // itself stopped polling (hunt no longer active).
+        if (_coopPollTimer) { _coopPollTimer = null; _coopStartPolling(); }
+      }, _coopPollDelay());
+    } catch (_) {}
+  }
+  function _coopStopPolling() { if (_coopPollTimer) { try { clearTimeout(_coopPollTimer); } catch (_) {} _coopPollTimer = null; } }
 
   // ── W694/W702 — Raid finder (now an ASYNC persistent queue) ──
   // Tapping FIND A PARTY enqueues ONCE (POST /raid-queue). If a second member is already
@@ -49001,7 +49023,15 @@
       else { _coopSheet.error = (res && res.code) || 'ERROR'; renderCoopSheet(); }
       return;
     }
-    if (action === 'sync') { _coopSheet.busy = true; renderCoopSheet(); await _coopPollTick(); _coopSheet.busy = false; renderCoopSheet(); return; }
+    if (action === 'sync') {
+      // W797 — the await had NO timeout: one hung HealthKit/network promise left
+      // busy=true forever ("STRIKING…" wedged until force-close, owner's crunch-time
+      // report). Race a 15s ceiling and ALWAYS clear busy — a strike may never brick
+      // the button; worst case the next poll carries the same absolute totals.
+      _coopSheet.busy = true; renderCoopSheet();
+      try { await Promise.race([_coopPollTick(), new Promise(function (r) { setTimeout(r, 15000); })]); } catch (_) {}
+      _coopSheet.busy = false; renderCoopSheet(); return;
+    }
     const inst = _coopSheet.instance;
     if (!inst) return;
     // W748 — tap-to-strike: FX for the banked amount, then the plain sync path.
