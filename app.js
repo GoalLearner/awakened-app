@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w799'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w800'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6029,11 +6029,20 @@
       try {
         unit = _coopUnit(inst);
         var roster = _coopBattleRoster(inst);
-        contrib = roster.map(function (h) { return { alias: h.alias, me: !!h.me, val: _coopBattlePrimary(inst, h.raw) }; });
+        // W800 — share + MVP by damage score (both streams, goal-capped); val
+        // stays the primary stream for display, fl rides along on dual hunts.
+        var scores = _coopDamageScores(inst, roster);
+        var scoreSum = scores.reduce(function (s, v) { return s + v; }, 0);
+        contrib = roster.map(function (h, i) {
+          var c = { alias: h.alias, me: !!h.me, val: _coopBattlePrimary(inst, h.raw) };
+          if (_coopIsBoth(inst)) c.fl = (h.raw && h.raw.flights) || 0;
+          if (scoreSum > 0) c.share = Math.round(scores[i] / scoreSum * 100);
+          return c;
+        });
         var topI = -1, topV = 0;
-        contrib.forEach(function (c, i) {
-          if (c.val > topV) { topV = c.val; topI = i; }
-          else if (c.val === topV) topI = -1;
+        scores.forEach(function (v, i) {
+          if (v > topV) { topV = v; topI = i; }
+          else if (v === topV) topI = -1;
         });
         if (topI >= 0 && topV > 0) mvp = contrib[topI].alias;
       } catch (_) {}
@@ -48745,10 +48754,12 @@
     // Client-side like every co-op drop (per the W463 award model).
     let _mvpCarried = 0;
     try {
+      // W800 — MVP by damage SCORE (both streams, goal-normalized + capped),
+      // matching the crown the sheet shows. Same strict-top tie rule.
       const _roster = _coopBattleRoster(inst);
+      const _scores = _coopDamageScores(inst, _roster);
       let _topI = -1, _topV = 0;
-      _roster.forEach(function (h, i) {
-        const v = _coopBattlePrimary(inst, h.raw);
+      _scores.forEach(function (v, i) {
         if (v > _topV) { _topV = v; _topI = i; }
         else if (v === _topV) _topI = -1;
       });
@@ -49609,9 +49620,41 @@
       return { me: false, alias: _coopAlias((o && o.alias) || 'ally'), raw: o };
     }));
   }
-  // Primary metric value for a hunter (what the duel bar + shares count).
+  // Primary metric value for a hunter (what the duel bar + strike deltas count).
   function _coopBattlePrimary(inst, who) {
     return _coopUnit(inst) === 'flights' ? ((who && who.flights) || 0) : ((who && who.steps) || 0);
+  }
+  // W800 — DAMAGE scores (drive the % shares, the crown, and the W793 MVP award).
+  // Owner: on a dual-metric hunt the % counted ONLY steps, so 15 climbed flights
+  // earned zero damage; and a stream that has already hit its combined goal must
+  // CLOSE — excess past 150k steps / 75 flights is dead weight, not MVP fuel.
+  // Model: each required stream is worth its goal (streams normalized by goal, so
+  // 75 flights weighs the same as 150k steps); within a stream every hunter gets
+  // their pro-rata share of min(combined, goal). Single-stream hunts reduce to
+  // the old primary-value shares exactly.
+  function _coopDamageScores(inst, roster) {
+    roster = roster || _coopBattleRoster(inst);
+    const streams = [];
+    if (_coopIsBoth(inst)) {
+      streams.push({ get: function (h) { return (h.raw && h.raw.steps) || 0; }, goal: inst.goal_steps || 0 });
+      streams.push({ get: function (h) { return (h.raw && h.raw.flights) || 0; }, goal: inst.goal_flights || 0 });
+    } else if (_coopIsSleep(inst)) {
+      streams.push({ get: function (h) { return (h.raw && h.raw.steps) || 0; }, goal: inst.goal_steps || 0 });
+      streams.push({ get: function (h) { return (h.raw && h.raw.sleep_minutes) || 0; }, goal: inst.goal_sleep_minutes || 0 });
+    } else {
+      streams.push({ get: function (h) { return _coopBattlePrimary(inst, h.raw); }, goal: 0 });   // goal 0 = uncapped raw shares
+    }
+    const scores = roster.map(function () { return 0; });
+    streams.forEach(function (st) {
+      const vals = roster.map(st.get);
+      const comb = vals.reduce(function (s, v) { return s + (Number(v) > 0 ? Number(v) : 0); }, 0);
+      if (comb <= 0) return;
+      // counted = the stream's live weight: capped at goal (closed once hit).
+      const counted = st.goal > 0 ? Math.min(comb, st.goal) : comb;
+      const unitWeight = st.goal > 0 ? counted / st.goal : 1;   // 0..1 goal-units (1 for single-stream raw)
+      vals.forEach(function (v, i) { scores[i] += (Math.max(0, Number(v) || 0) / comb) * unitWeight; });
+    });
+    return scores;
   }
   // { pct: primary progress 0-1, binding: min across streams (drives vitality
   //   + phases — W686 house rule: the boss can't "break" while a stream is unmet) }
@@ -49815,27 +49858,34 @@
         fSegs += '<div class="chd-sec-seg chd-c' + Math.min(i, 4) + '" style="left:' + fUsed.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></div>';
         fUsed += w;
       });
-      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + _N(fv) + '</b> / ' + _N(fg) + ' combined flights</div>' +
+      // W800 — a stream that hit its goal CLOSES: value pins at the goal + a
+      // COMPLETE seal (excess no longer reads as still-needed progress).
+      const fDone = fg > 0 && fv >= fg;
+      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + _N(Math.min(fv, fg || fv)) + '</b> / ' + _N(fg) + ' combined flights' + (fDone ? '<span class="chd-stream-done">✓ COMPLETE</span>' : '') + '</div>' +
                '<div class="chd-sec-rail">' + fSegs + '</div></div>';
     } else if (_coopIsSleep(inst)) {
       const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
       const sv = inst.combined_sleep_minutes || 0;
       const sp = sg > 0 ? Math.min(100, sv / sg * 100) : 0;
-      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + esc(_coopFmtSleep(sv)) + '</b> / ' + esc(_coopFmtSleep(sg)) + ' combined sleep</div>' +
+      const sDone = sg > 0 && sv >= sg;   // W800
+      second = '<div class="chd-second"><div class="chd-sec-num"><b>' + esc(_coopFmtSleep(Math.min(sv, sg || sv))) + '</b> / ' + esc(_coopFmtSleep(sg)) + ' combined sleep' + (sDone ? '<span class="chd-stream-done">✓ COMPLETE</span>' : '') + '</div>' +
                '<div class="chd-sec-rail"><div class="chd-sec-fill" style="width:' + sp.toFixed(1) + '%"></div></div></div>';
     }
 
-    // Party card — LEAD crown to the strict top contributor (ties: nobody).
+    // Party card — MVP crown to the strict top contributor (ties: nobody).
+    // W800 — crown + shares run on _coopDamageScores (both streams, goal-capped),
+    // not the primary stream alone.
+    const dmgScores = _coopDamageScores(inst, roster);
+    const dmgTotal = dmgScores.reduce(function (s, v) { return s + v; }, 0);
     let leadIdx = -1, leadVal = 0;
-    roster.forEach(function (h, i) {
-      const val = _coopBattlePrimary(inst, h.raw);
-      if (val > leadVal) { leadVal = val; leadIdx = i; }
-      else if (val === leadVal) leadIdx = -1;
+    dmgScores.forEach(function (v, i) {
+      if (v > leadVal) { leadVal = v; leadIdx = i; }
+      else if (v === leadVal) leadIdx = -1;
     });
     const rows = roster.map(function (h, i) {
       const c = Math.min(i, 4);
       const val = _coopBattlePrimary(inst, h.raw);
-      const share = total > 0 ? Math.round(val / total * 100) : 0;
+      const share = dmgTotal > 0 ? Math.round(dmgScores[i] / dmgTotal * 100) : 0;
       const initial = esc((h.me ? (localStorage.getItem('hb_name') || 'Y') : h.alias).charAt(0).toUpperCase());
       return '<div class="chd-row">' +
         '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
@@ -49858,7 +49908,7 @@
     return (
       '<div class="chd-battle">' +
         '<div class="chd-timer-row"><span>' + esc(_coopFmtRemaining(inst.time_remaining_ms)) + '</span>' + tag + '</div>' +
-        '<div class="chd-big"><b>' + _N(pVal) + '</b><span>/ ' + _N(pGoal) + '</span></div>' +
+        '<div class="chd-big"><b>' + _N(pGoal > 0 ? Math.min(pVal, pGoal) : pVal) + '</b><span>/ ' + _N(pGoal) + '</span>' + (pGoal > 0 && pVal >= pGoal ? '<span class="chd-stream-done chd-stream-done--big">✓ COMPLETE</span>' : '') + '</div>' +
         '<div class="chd-duel">' + segs +
           '<div class="chd-tick" data-l="FALTERS" style="left:75%"></div>' +
           '<div class="chd-tick" data-l="BREAKS" style="left:90%"></div>' +
@@ -50922,11 +50972,15 @@
       e.contrib.forEach(function (c) { total += (Number(c.val) || 0); });
       const unitWord = e.unit === 'flights' ? 'flights' : 'steps';
       breakHtml = '<div class="chh-break hidden">' + e.contrib.map(function (c) {
-        const share = total > 0 ? Math.round((Number(c.val) || 0) / total * 100) : 0;
+        // W800 — prefer the stored damage-score share (both streams, goal-capped);
+        // W793-era rows carry no share → fall back to the primary-value split.
+        const share = (typeof c.share === 'number') ? c.share
+          : (total > 0 ? Math.round((Number(c.val) || 0) / total * 100) : 0);
         const isMvp = !!(e.mvp && c.alias === e.mvp);
+        const flPart = (typeof c.fl === 'number') ? ' + ' + _N(c.fl) + ' flights' : '';
         return '<div class="chh-bk-row' + (c.me ? ' chh-bk-me' : '') + '">' +
           '<span class="chh-bk-name">' + esc(c.alias) + (isMvp ? '<span class="chh-mvp-chip" data-mvp-info>MVP</span>' : '') + '</span>' +
-          '<span class="chh-bk-num"><b>' + _N(Number(c.val) || 0) + '</b> ' + unitWord + ' · ' + share + '%</span>' +
+          '<span class="chh-bk-num"><b>' + _N(Number(c.val) || 0) + '</b> ' + unitWord + flPart + ' · ' + share + '%</span>' +
         '</div>';
       }).join('') + '</div>';
     }

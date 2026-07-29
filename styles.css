@@ -32544,6 +32544,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .chh-bk-num{ flex:none; font-family:"JetBrains Mono",monospace; font-size:10.5px; color:#9090a8; font-variant-numeric:tabular-nums; }
 .chh-bk-num b{ color:#f5f3fb; }
 .chh-mvp-chip{ flex:none; font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; letter-spacing:1.2px; color:#ffd574; padding:2px 6px; border-radius:5px; border:1px solid rgba(245,158,11,.34); background:rgba(245,158,11,.08); text-transform:uppercase; cursor:pointer; }
+/* W800 — a co-op stream that hit its goal pins at the goal + seals COMPLETE */
+.chd-stream-done{ margin-left:8px; font-family:ui-monospace,monospace; font-size:9px; font-weight:800; letter-spacing:1.4px; color:#34d399; text-transform:uppercase; white-space:nowrap; }
+.chd-stream-done--big{ display:inline-block; vertical-align:middle; font-size:10.5px; margin-left:10px; }
 .cph-list{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px 16px 8px; display:flex; flex-direction:column; gap:13px; }
 /* W528 — "Accept all" bulk-join bar atop the Pacts dashboard (only when ≥2 pending invites). Teal to match the "summoned you" accent. */
 .cph-accept-all{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px 16px; border-radius:14px; border:1px solid rgba(90,214,200,.42); background:linear-gradient(180deg,rgba(90,214,200,.17),rgba(90,214,200,.06)); color:#8fe9de; font-family:inherit; font-weight:700; font-size:14px; letter-spacing:.04em; cursor:pointer; box-shadow:0 5px 20px rgba(90,214,200,.13); transition:filter .15s ease, transform .1s ease; }
