@@ -85,6 +85,8 @@ import {
   // W702 — background matchmaking sweep (cron drains the persistent raid queue).
   runRaidMatchmakeSweep,
   sweepPendingSummonsReminders,
+  // W798 — crunch-time "hunt nearly done, window closing" reminder sweep.
+  sweepCrunchTimeReminders,
   // W747 — battle emotes (Rally / Push on / Finish it → APNs push to the party).
   handleCoopBossEmote,
 } from './handlers/coop-boss';
@@ -497,6 +499,9 @@ export default {
       // W761 — one-time 24h reminder for unanswered summons seats (reminded_at
       // marks each seat, so this every-2-minute cadence can never double-send).
       ctx.waitUntil(sweepPendingSummonsReminders(env, ctx));
+      // W798 — one-time crunch push per hunt (≤30 min left + ≥80% done):
+      // crunch_reminded_at (0044) is the idempotency stamp.
+      ctx.waitUntil(sweepCrunchTimeReminders(env, ctx));
     }
   },
 } satisfies ExportedHandler<Env>;

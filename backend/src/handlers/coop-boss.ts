@@ -1174,6 +1174,59 @@ export async function sweepPendingSummonsReminders(env: Env, ctx?: ExecutionCont
   }
 }
 
+// ── W798 — crunch-time reminder sweep (cron) ────────────────────────
+// One-time push to EVERY seat of an active hunt that is ≤30 minutes from its
+// window closing AND ≥80% of the way to the kill — "so close, land it" (owner:
+// a hunt died at 94% because a partner didn't know their steps were unsynced).
+// crunch_reminded_at (0044) stamps the INSTANCE before the pushes fire — the
+// guarded UPDATE is the idempotency lock, so an overlapping tick sends nothing.
+// A hunt under 80% when it enters the window is re-checked every tick until
+// ends_at (the stamp only lands with the send), so a late surge still alerts.
+export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext): Promise<void> {
+  const due = await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE status = 'active'
+        AND crunch_reminded_at IS NULL
+        AND ends_at > datetime('now')
+        AND ends_at <= datetime('now', '+30 minutes')
+      LIMIT 10`,
+  ).all<CoopBossRow>();
+  const rows = due.results ?? [];
+  if (!rows.length) return;
+  const partsByInstance = await loadParticipants(env, rows.map((r) => r.id));
+  const progByInstance = await getCoopProgressForInstances(env, rows.map((r) => r.id));
+  for (const row of rows) {
+    row.participants = partsByInstance.get(row.id) ?? [];
+    const p = progByInstance.get(row.id) ?? emptyProgress();
+    // Progress fraction mirrors isGoalMet: min across every REQUIRED stream.
+    const metric = bossMetric(row.boss_id);
+    const frac = (v: number, g: number) => (g > 0 ? v / g : 0);
+    let pct: number;
+    if (metric === 'both') pct = Math.min(frac(combinedSteps(row, p), row.goal_steps), frac(combinedFlights(row, p), row.goal_flights || 0));
+    else if (metric === 'steps_sleep') pct = Math.min(frac(combinedSteps(row, p), row.goal_steps), frac(combinedSleep(row, p), row.goal_flights || 0));
+    else if (metric === 'flights') pct = frac(combinedFlights(row, p), row.goal_steps);
+    else pct = frac(combinedSteps(row, p), row.goal_steps);
+    if (pct < 0.8 || pct >= 1) continue;   // not close enough yet / already a win awaiting resolve
+    const marked = await env.DB.prepare(
+      `UPDATE coop_boss_instances SET crunch_reminded_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND crunch_reminded_at IS NULL AND status = 'active'`,
+    ).bind(row.id).run();
+    if (!(marked.meta && Number(marked.meta.changes) >= 1)) continue;
+    const bossName = COOP_BOSS_NAMES[row.boss_id] ?? 'Your co-op hunt';
+    const pctShown = Math.min(99, Math.floor(pct * 100));
+    for (const uid of participantIds(row)) {
+      const push = notifyUser(env, uid, {
+        title: 'The Hunt Nears Its End',
+        body: `${bossName} is at ${pctShown}% with under 30 minutes left — open the hunt and drive your steps home.`,
+        type: 'coop_invite',
+        data: { bossId: row.boss_id },
+      });
+      if (ctx) ctx.waitUntil(push);
+      else await push;
+    }
+  }
+}
+
 // ── POST /v1/coop-boss/:id/decline — partner declines ───────────────
 export async function handleCoopBossDecline(
   _request: Request,
