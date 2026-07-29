@@ -962,7 +962,28 @@ export async function handleCoopBossGet(
   const prog = await getCoopProgress(env, row.id);
   const aliasMap = await getAliasMap(env, participantIds(row));
   const award = await getViewerAward(env, row.id, session.userId);   // W463.1
-  return jsonOk({ ok: true, instance: serializeCoop(row, aliasMap, session.userId, prog, award) });
+  // W801 — the recent battle-cry tail rides the detail so every partner's log
+  // can replay it (ascending, capped at 6; senders are always participants so
+  // the aliasMap already covers them).
+  let recentEmotes: { user_id: string; alias: string | null; emote: string; created_at: string }[] = [];
+  try {
+    const em = await env.DB.prepare(
+      'SELECT user_id, emote, created_at FROM coop_emotes WHERE instance_id = ? ORDER BY id DESC LIMIT 6',
+    )
+      .bind(row.id)
+      .all<{ user_id: string; emote: string; created_at: string }>();
+    recentEmotes = (em.results ?? []).reverse().map((r) => ({
+      user_id: r.user_id,
+      alias: aliasMap.get(r.user_id) ?? null,
+      emote: r.emote,
+      created_at: r.created_at,
+    }));
+  } catch {
+    // Pre-0045 database or transient read failure — the detail must still serve.
+  }
+  const payload = serializeCoop(row, aliasMap, session.userId, prog, award);
+  payload.recent_emotes = recentEmotes;
+  return jsonOk({ ok: true, instance: payload });
 }
 
 // ── POST /v1/coop-boss/:id/join — partner accepts ───────────────────
@@ -2041,6 +2062,19 @@ export async function handleCoopBossEmote(
     'INSERT INTO coop_emote_cooldowns (user_id, sent_at) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET sent_at = excluded.sent_at',
   )
     .bind(session.userId, now)
+    .run();
+
+  // W801 — persist the cry so every partner's battle log can show it (the push
+  // alone evaporated; owner: "popped up on push but not in the message center").
+  // ISO timestamp (not CURRENT_TIMESTAMP) — iOS Safari can't Date.parse SQLite's
+  // space-separated datetime. Tail-pruned per instance so the table stays tiny.
+  await env.DB.prepare('INSERT INTO coop_emotes (instance_id, user_id, emote, created_at) VALUES (?, ?, ?, ?)')
+    .bind(instanceId, session.userId, emoteKey, new Date(now).toISOString())
+    .run();
+  await env.DB.prepare(
+    'DELETE FROM coop_emotes WHERE instance_id = ? AND id NOT IN (SELECT id FROM coop_emotes WHERE instance_id = ? ORDER BY id DESC LIMIT 12)',
+  )
+    .bind(instanceId, instanceId)
     .run();
 
   if (ctx) {

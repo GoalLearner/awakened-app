@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w800'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w801'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49056,7 +49056,7 @@
     // the local clock re-syncs to the server's true remaining time.
     if (action === 'emote') {
       const key = (btn && btn.getAttribute('data-emote')) || '';
-      const TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it' };
+      const TEXT = _COOP_EMOTE_TEXT;   // W801 — single source, shared with the server-tail replay
       if (!TEXT[key] || inst.status !== 'active') return;
       if (_coopEmoteCooldownLeft() > 0) return;
       try { localStorage.setItem(_COOP_EMOTE_TS_KEY, String(Date.now())); } catch (_) {}
@@ -49595,9 +49595,53 @@
   // One shared render for EVERY co-op hunt: duo/trio/raid, steps/flights/both/
   // sleep, members-only included. Session-scoped battle state (log lines, per-
   // hunter prev values for strike detection, banked amount, hold-charge).
-  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0 };
+  let _coopBattle = { instId: null, prev: {}, logs: [], banked: 0, emoteSeen: {} };
   function _coopBattleReset(instId) {
-    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0 };
+    _coopBattle = { instId: instId, prev: {}, logs: [], banked: 0, emoteSeen: {} };
+  }
+  // W801 — canonical emote key → battle-cry text (shared by the send path and
+  // the server-tail replay below; keep in lockstep with the backend COOP_EMOTES).
+  const _COOP_EMOTE_TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it' };
+  // W801 — replay the server-persisted battle cries into the log. The cry used
+  // to be push-only (owner: "popped up on push notifications but not in the
+  // message center") — nothing ever landed in a PARTNER's battle log, and even
+  // the sender's line died with the app. GET /:id now carries recent_emotes;
+  // merge each unseen one at its TRUE time (W792 pattern). Own cries are
+  // skipped: the send path already logs them on this device, and replaying
+  // would double the line.
+  function _coopBattleMergeEmotes(inst) {
+    const list = Array.isArray(inst.recent_emotes) ? inst.recent_emotes : [];
+    if (!list.length) return;
+    let meId = '';
+    try { const v = _coopView(inst); meId = (v.me && v.me.user_id) || ''; } catch (_) {}
+    if (!_coopBattle.emoteSeen) _coopBattle.emoteSeen = {};
+    list.forEach(function (e) {
+      if (!e || !e.emote) return;
+      if (meId && e.user_id === meId) return;
+      const key = (e.user_id || '') + '|' + (e.created_at || '');
+      if (_coopBattle.emoteSeen[key]) return;
+      _coopBattle.emoteSeen[key] = true;
+      const text = _COOP_EMOTE_TEXT[e.emote];
+      if (!text) return;
+      const who = _coopAlias(e.alias || 'ally');
+      const when = e.created_at ? new Date(Date.parse(e.created_at)) : null;
+      _coopBattleLog('<b class="chd-vio">' + esc(who) + '</b>: ' + esc(text), when);
+      // Fly-in only for a cry that JUST landed (sheet open) — not a stale replay.
+      if (when && !isNaN(when.getTime()) && (Date.now() - when.getTime()) < 90000) {
+        try {
+          const hero = document.querySelector('#coop-fs-overlay .bfs-hero');
+          if (hero) {
+            const el = document.createElement('div');
+            el.className = 'chd-emote-fly';
+            el.style.left = (12 + Math.random() * 40) + '%';
+            el.style.top = (35 + Math.random() * 25) + '%';
+            el.textContent = who + ': ' + text;
+            hero.appendChild(el);
+            setTimeout(function () { try { el.remove(); } catch (_) {} }, 2500);
+          }
+        } catch (_) {}
+      }
+    });
   }
   // W750 — ONE battle cry per 4h per hunter (all three keys + all hunts share the
   // budget; owner anti-spam call). localStorage so it survives restarts; the
@@ -49721,8 +49765,10 @@
       _coopBattleRoster(inst).forEach(function (h, i) {
         _coopBattle.prev[h.me ? '__me' : ((h.raw && h.raw.user_id) || 'a' + i)] = _coopBattlePrimary(inst, h.raw);
       });
+      _coopBattleMergeEmotes(inst);   // W801 — replay the persisted cry tail on first sight
       return;
     }
+    _coopBattleMergeEmotes(inst);     // W801 — pick up cries that landed since the last poll
     _coopBattleRoster(inst).forEach(function (h, i) {
       const key = h.me ? '__me' : ((h.raw && h.raw.user_id) || 'a' + i);
       const now = _coopBattlePrimary(inst, h.raw);
