@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w795'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w796'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13513,7 +13513,11 @@
   // of anything else needed.
   const PVP_RANKED_LOCKED = true;
   function _pvpLockedNudge() {
-    try { showHabitToast('⚔ The Arena is still gathering hunters — ranked duels open once enough rivals have awakened. Until then, the Tower is where legends train: climb the Ascent.'); } catch (_) {}
+    // W796 — full-card notice, not a truncating toast (readability).
+    try {
+      showSystemNotice('The Arena Is Sealed',
+        'Ranked duels open once enough rivals have <b>awakened</b> — the Arena is still gathering hunters.<br><br>Until then, the Tower is where legends train: <b>climb the Ascent</b>.');
+    } catch (_) {}
   }
   const PvP = (function () {
     let ws = null, code = null, you = null;
@@ -31137,6 +31141,32 @@
   // opts.sticky  — if true, NO auto-dismiss timer. Toast stays until the
   //                user taps it. Useful for important confirmations the
   //                user shouldn't miss (e.g., "✓ Reminder set for 9 AM").
+  // W796 — SYSTEM NOTICE modal. For explainer-length messages the one-line toast
+  // truncated into an unreadable ticker (owner: "user probably will go past it"),
+  // so anything longer than a status blip gets a proper centered card: eyebrow,
+  // title, full body, one OK. Backdrop tap / OK dismisses. z 99000 — above every
+  // overlay incl. the arena (the cinematic tier, see W551).
+  function showSystemNotice(title, body) {
+    try {
+      const old = document.getElementById('aw-notice'); if (old) old.remove();
+      const ov = document.createElement('div');
+      ov.id = 'aw-notice';
+      ov.innerHTML =
+        '<div class="awn-card" role="alertdialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+          '<div class="awn-eyebrow">✦ SYSTEM</div>' +
+          '<div class="awn-title">' + esc(title) + '</div>' +
+          '<div class="awn-body">' + body + '</div>' +
+          '<button type="button" class="awn-ok">UNDERSTOOD</button>' +
+        '</div>';
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov || (e.target.closest && e.target.closest('.awn-ok'))) {
+          ov.classList.add('awn-gone');
+          setTimeout(function () { try { ov.remove(); } catch (_) {} }, 240);
+        }
+      });
+      document.body.appendChild(ov);
+    } catch (_) {}
+  }
   function showHabitToast(msg, opts) {
     opts = opts || {};
     document.querySelectorAll('.habit-toast').forEach(t => t.remove());
@@ -50910,7 +50940,11 @@
     const chip = (e.target && e.target.closest) ? e.target.closest('[data-mvp-info]') : null;
     if (!chip) return;
     try { e.stopPropagation(); } catch (_) {}
-    try { showHabitToast('MVP = top contributor. Win as MVP: +1% souls & relic drop luck for every hunter you carried (5-hunter raid → +4%)'); } catch (_) {}
+    // W796 — full-card notice, not a truncating toast (readability).
+    try {
+      showSystemNotice('Hunt MVP',
+        'The MVP is the hunt’s <b>top contributor</b>.<br><br>Win as MVP and every hunter you carried is worth <b>+1% souls</b> and <b>+1% relic drop luck</b> — carry all four in a 5-hunter raid and claim <b>+4%</b>.');
+    } catch (_) {}
   });
   function _coopHistClose() {
     const ov = document.getElementById('coop-hist-overlay');

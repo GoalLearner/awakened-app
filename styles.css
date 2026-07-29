@@ -32668,6 +32668,23 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* W795 — sealed ranked queue: still tappable (tap explains), but visually at rest */
 .arena-entry.ae-locked { opacity:.72; }
 .arena-entry.ae-locked::after { animation:none; opacity:.35; }
+/* W796 — SYSTEM NOTICE modal (readable replacement for explainer-length toasts) */
+#aw-notice { position:fixed; inset:0; z-index:99000; display:flex; align-items:center; justify-content:center;
+  padding:28px; background:rgba(5,5,14,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  animation:awnIn .22s ease; }
+#aw-notice.awn-gone { opacity:0; transition:opacity .22s ease; }
+@keyframes awnIn { from { opacity:0; } to { opacity:1; } }
+.awn-card { width:100%; max-width:340px; border-radius:20px; padding:22px 20px 18px; text-align:center;
+  background:linear-gradient(165deg,#191936,#0d0d20); border:1px solid rgba(245,158,11,.32);
+  box-shadow:0 18px 60px rgba(0,0,0,.6), inset 0 0 40px rgba(245,158,11,.05); animation:awnPop .26s cubic-bezier(.2,1.4,.4,1); }
+@keyframes awnPop { from { transform:scale(.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+.awn-eyebrow { font-family:"JetBrains Mono",monospace; font-size:9.5px; font-weight:800; letter-spacing:2.4px; color:#ffd574; opacity:.85; }
+.awn-title { font-family:"Cinzel",Georgia,serif; font-weight:800; font-size:19px; color:#f5f3fb; margin-top:8px; }
+.awn-body { font-size:13.5px; line-height:1.6; color:#b9b7cc; margin-top:10px; }
+.awn-body b { color:#ffd574; font-weight:700; }
+.awn-ok { margin-top:16px; width:100%; padding:12px; border-radius:12px; border:1px solid rgba(245,158,11,.4);
+  background:rgba(245,158,11,.1); color:#ffd574; font-family:"JetBrains Mono",monospace; font-size:11.5px;
+  font-weight:800; letter-spacing:2px; cursor:pointer; }
 .arena-entry .ae-ring { width: 48px; height: 48px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, var(--ae-ring), rgba(8,8,26,0.5) 72%); box-shadow: 0 0 0 1.6px var(--ae-tier), 0 0 14px var(--ae-glow); }
 .arena-entry .ae-ring .pvp-emblem { filter: drop-shadow(0 0 6px var(--ae-glow)); }
 .arena-entry .ae-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
