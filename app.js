@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w797'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w799'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48635,7 +48635,10 @@
           const key = bundle || name || '__untagged';
           if (bySource[key] === undefined) {
             bySource[key] = 0;
-            appleSrc[key] = bundle ? /^com\.apple\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
+            // W799 — device-writes-only Apple test (trailing dot), matching
+            // _totalFromHealthSamples; manual samples are already dropped
+            // upstream in getSleepBetween, this keeps the two rules identical.
+            appleSrc[key] = bundle ? /^com\.apple\.health\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
           }
           bySource[key] += ov;
         }
@@ -58402,7 +58405,31 @@
     // "Richie's iPhone", so it's a contains-match). NOTE: the plugin's name
     // field is `source` — the old code read `sourceName` (doesn't exist);
     // bundleId always being present is why W347 still worked.
+    // W799 — MANUAL-ENTRY GUARD (owner found the cheat: type steps into the
+    // Health app and the game counts them — worse, W681 PREFERRED them as an
+    // "Apple source"). The plugin exposes no HKWasUserEntered, but the source
+    // bundle betrays the channel: hand-typed Health-app entries arrive as
+    // exactly `com.apple.Health`; real device recordings arrive as
+    // `com.apple.health.<device-UUID>` (lowercase, trailing dot). So the drop
+    // test is EXACT match on the lowercased bundle — a device bundle lowers to
+    // 'com.apple.health.<uuid>' and can never equal 'com.apple.health'.
+    // `com.apple.shortcuts` (Shortcuts "Log Health Sample", the scriptable fake)
+    // is dropped for the same reason. Third-party rings/watches (Oura, Garmin…)
+    // are NOT touched — ring-only users keep working (the W681 requirement).
+    // Applied at EVERY query boundary (steps/flights/energy via this totaler;
+    // sleep + workouts at their own query sites) so the same Health "Add Data"
+    // screen can't seal habits, extend streaks, or fell bosses via ANY metric.
+    // Residual (accepted, client-trust model): third-party writer apps, faked
+    // Watch workouts, phone-rockers. This closes the typed-number cheat.
+    function _isManualHealthSample(s) {
+      const b = String((s && s.sourceBundleId) || '').toLowerCase();
+      return b === 'com.apple.health' || b === 'com.apple.shortcuts';
+    }
+    function _dropManualEntries(samples) {
+      return (Array.isArray(samples) ? samples : []).filter(function (s) { return !_isManualHealthSample(s); });
+    }
     function _totalFromHealthSamples(samples) {
+      samples = _dropManualEntries(samples);   // W799 — before bucketing AND before the srcCount<=1 rawSum shortcut
       let rawSum = 0;
       const bySource = Object.create(null);
       const appleSrc = Object.create(null);
@@ -58418,7 +58445,9 @@
         if (bySource[key] === undefined) {
           bySource[key] = 0;
           srcCount++;
-          appleSrc[key] = bundle ? /^com\.apple\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
+          // W799 — Apple-ness = DEVICE writes only: prefix `com.apple.health.`
+          // WITH the trailing dot ('com.apple.Health' fails it even case-insensitively).
+          appleSrc[key] = bundle ? /^com\.apple\.health\./i.test(bundle) : /iphone|apple\s*watch/i.test(name);
         }
         bySource[key] += v;
       }
@@ -58647,7 +58676,7 @@
           limit: 0,
         });
 
-        let samples = (result && result.resultData) || [];
+        let samples = _dropManualEntries((result && result.resultData) || []);   // W799 — before sessionization
 
         // v3 Phase 1z.112 — diagnostic shape probe + one-shot fallback.
         // If the primary 36h window returned zero rows, retry once with
@@ -58680,7 +58709,7 @@
               endDate: now.toISOString(),
               limit: 0,
             });
-            const fbSamples = (fbResult && fbResult.resultData) || [];
+            const fbSamples = _dropManualEntries((fbResult && fbResult.resultData) || []);   // W799
             try {
               _bc('sleep-query-fallback-result', {
                 fallbackStartISO: fbStart.toISOString(),
@@ -58970,7 +58999,7 @@
           limit:      0,
         });
 
-        const samples = (result && result.resultData) || [];
+        const samples = _dropManualEntries((result && result.resultData) || []);   // W799 — a hand-typed workout must not seal
         _hkDebug('strength query result: ' + samples.length + ' raw workout sample(s) for today');
         if (_hkDebugEnabled() && samples.length > 0) {
           // Dump shape of first sample so we can confirm activity-type
@@ -59045,7 +59074,7 @@
           endDate:    end.toISOString(),
           limit:      0,
         });
-        const samples = (result && result.resultData) || [];
+        const samples = _dropManualEntries((result && result.resultData) || []);   // W799
         _hkDebug('any-workout query result: ' + samples.length + ' raw workout sample(s) for today');
         // Apply per-sample floor only — accept any activity type.
         const qualifying = samples.filter(s => {
@@ -59120,7 +59149,7 @@
           endDate:    endISO,
           limit:      0,
         });
-        const samples = (result && result.resultData) || [];
+        const samples = _dropManualEntries((result && result.resultData) || []);   // W799 — before byDate totals
         const asleep = samples.filter(s => s && s.sleepState === 'Asleep');
         const napFloorHours = HEALTHKIT_SLEEP_NAP_MIN_MINUTES / 60;
         const byDate = {};
@@ -59193,7 +59222,7 @@
           endDate:    endISO,
           limit:      0,
         });
-        const samples = (result && result.resultData) || [];
+        const samples = _dropManualEntries((result && result.resultData) || []);   // W799
         const qualifying = samples.filter(_isStrengthWorkoutSample).map(s => ({
           uuid:         (s && (s.uuid || s.UUID)) || null,
           startDate:    s && s.startDate || null,
@@ -59227,7 +59256,7 @@
           endDate:    endISO,
           limit:      0,
         });
-        const samples = (result && result.resultData) || [];
+        const samples = _dropManualEntries((result && result.resultData) || []);   // W799
         const qualifying = samples.filter(s => _workoutDurationMinutes(s) >= HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN).map(s => ({
           uuid:         (s && (s.uuid || s.UUID)) || null,
           startDate:    s && s.startDate || null,
