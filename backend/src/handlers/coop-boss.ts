@@ -2005,11 +2005,16 @@ const COOP_EMOTES: Record<string, string> = {
   rally: 'Rally to me',
   push: 'Push on',
   finish: 'Finish it',
+  // W802 — three more canned cries (owner request). Same enum-only contract.
+  update: 'Update your app',
+  gg: 'Good game',
+  luck: 'Good luck',
 };
-// W750 — one battle cry per 4 HOURS per user (all three keys share the budget;
-// owner anti-spam call). Server-authoritative via coop_emote_cooldowns (0042);
-// the client mirrors it with greyed buttons but is never the enforcement.
-export const COOP_EMOTE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+// W750 — one battle cry per hour per user (all keys share the budget). W802:
+// owner relaxed the original 4h window to 1h alongside the new cries.
+// Server-authoritative via coop_emote_cooldowns (0042); the client mirrors it
+// with greyed buttons but is never the enforcement.
+export const COOP_EMOTE_COOLDOWN_MS = 60 * 60 * 1000;
 
 export async function handleCoopBossEmote(
   request: Request,

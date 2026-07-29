@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w801'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w802'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49601,7 +49601,8 @@
   }
   // W801 — canonical emote key → battle-cry text (shared by the send path and
   // the server-tail replay below; keep in lockstep with the backend COOP_EMOTES).
-  const _COOP_EMOTE_TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it' };
+  const _COOP_EMOTE_TEXT = { rally: 'Rally to me', push: 'Push on', finish: 'Finish it',
+    update: 'Update your app', gg: 'Good game', luck: 'Good luck' };   // W802 — three more cries
   // W801 — replay the server-persisted battle cries into the log. The cry used
   // to be push-only (owner: "popped up on push notifications but not in the
   // message center") — nothing ever landed in a PARTNER's battle log, and even
@@ -49646,7 +49647,7 @@
   // W750 — ONE battle cry per 4h per hunter (all three keys + all hunts share the
   // budget; owner anti-spam call). localStorage so it survives restarts; the
   // SERVER enforces the same window (coop_emote_cooldowns) — this is just UX.
-  const COOP_EMOTE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+  const COOP_EMOTE_COOLDOWN_MS = 60 * 60 * 1000;   // W802 — 4h → 1h (keep in lockstep with the backend)
   const _COOP_EMOTE_TS_KEY = 'hb_coop_emote_ts';
   function _coopEmoteCooldownLeft() {
     try {
@@ -49973,6 +49974,10 @@
             '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="rally"' + dEm + '>✦ Rally</button>' +
             '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="push"' + dEm + '>Push on</button>' +
             '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="finish"' + dEm + '>Finish it</button>' +
+            // W802 — second row of cries (the .chd-emotes flex now wraps 3-up).
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="luck"' + dEm + '>Good luck</button>' +
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="gg"' + dEm + '>Good game</button>' +
+            '<button type="button" class="chd-emote' + off + '" data-coop-action="emote" data-emote="update"' + dEm + '>Update app</button>' +
           '</div>';
         })() +
         '<button type="button" class="chd-strike" data-coop-action="strike"' + dis + '>' +

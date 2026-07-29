@@ -657,24 +657,34 @@ describe('POST /v1/coop-boss/emote (W747)', () => {
     expect(((await res.json()) as { error: string }).error).toBe('NOT_ACTIVE');
   });
 
-  // W750 — one battle cry per 4h (server-enforced; the greyed client buttons
-  // are UX, never the security).
-  it('a cry INSIDE the 4h window → 429 EMOTE_COOLDOWN with retry_after_ms', async () => {
-    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - 60 * 60 * 1000 }); // 1h ago
+  // W750/W802 — one battle cry per HOUR (server-enforced; the greyed client
+  // buttons are UX, never the security).
+  it('a cry INSIDE the 1h window → 429 EMOTE_COOLDOWN with retry_after_ms', async () => {
+    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - 30 * 60 * 1000 }); // 30min ago
     const res = await handleCoopBossEmote(
       emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
     expect(res.status).toBe(429);
     const body = (await res.json()) as { error: string; retry_after_ms: number };
     expect(body.error).toBe('EMOTE_COOLDOWN');
-    expect(body.retry_after_ms).toBeGreaterThan(2.9 * 60 * 60 * 1000);
-    expect(body.retry_after_ms).toBeLessThanOrEqual(3 * 60 * 60 * 1000);
+    expect(body.retry_after_ms).toBeGreaterThan(29 * 60 * 1000);
+    expect(body.retry_after_ms).toBeLessThanOrEqual(30 * 60 * 1000);
   });
 
-  it('a cry AFTER the window (4h+ ago) is accepted again', async () => {
-    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - (4 * 60 * 60 * 1000 + 60000) });
+  it('a cry AFTER the window (1h+ ago) is accepted again', async () => {
+    const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - (60 * 60 * 1000 + 60000) });
     const res = await handleCoopBossEmote(
       emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
     expect(res.status).toBe(200);
+  });
+
+  // W802 — the three new cries are valid enum keys.
+  it('the W802 cries (update/gg/luck) are accepted', async () => {
+    for (const emote of ['update', 'gg', 'luck']) {
+      const db = makeDb({ instance: ACTIVE });
+      const res = await handleCoopBossEmote(
+        emoteReq({ instanceId: 'inst-1', emote }), makeEnv(db), session('u1'));
+      expect(res.status).toBe(200);
+    }
   });
 });
 

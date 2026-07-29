@@ -34641,8 +34641,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @keyframes chdLogIn { from { opacity: 0; transform: translateY(5px); } }
 
 /* -- emotes -- */
-.chd-emotes { margin-top: 14px; display: flex; gap: 9px; }
-.chd-emote { flex: 1; padding: 11px 0; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,.03);
+.chd-emotes { margin-top: 14px; display: flex; gap: 9px; flex-wrap: wrap; /* W802 — 6 cries wrap 3-up */ }
+.chd-emote { flex: 1 1 28%; padding: 11px 0; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,.03);
   font-family: ui-monospace, monospace; font-size: 10px; font-weight: 800; letter-spacing: 1.8px; color: var(--text-secondary);
   text-transform: uppercase; text-align: center; cursor: pointer; transition: all .18s; }
 .chd-emote:active { transform: scale(.94); }
