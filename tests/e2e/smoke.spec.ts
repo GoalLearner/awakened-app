@@ -1651,14 +1651,17 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
   });
 });
 
-// ── S · HealthKit source dedup prefers the Apple ecosystem (W681) ──────────
+// ── S · HealthKit source dedup prefers the Apple ecosystem (W681/W799) ─────
 // The Oura-inflation fix: a third-party ring's raw HealthKit samples run
 // ~15-30% over what the Apple Health app displays (wrist-motion "steps"),
 // and the old max-single-source rule let the ring win. Pin the picker via
 // the Health.__totalFromSamples test seam (pure function, real bundle):
-// Apple source preferred even when SMALLER; ring-only falls back to the
-// ring; one source sums; untagged samples keep the raw-sum fallback.
-test.describe('S · HealthKit source dedup (W681)', () => {
+// Apple DEVICE source preferred even when SMALLER; ring-only falls back to
+// the ring; one source sums; untagged samples keep the raw-sum fallback.
+// W799 — manual entries are DROPPED, not preferred: hand-typed Health-app
+// samples (bundle exactly com.apple.Health) and Shortcuts writes
+// (com.apple.shortcuts) never count; a manual-only sample set totals 0.
+test.describe('S · HealthKit source dedup (W681/W799)', () => {
   test('Apple-preferred totals across source mixes', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
@@ -1666,19 +1669,27 @@ test.describe('S · HealthKit source dedup (W681)', () => {
       const f = (window as any).Health.__totalFromSamples;
       const iphone = (v: number) => ({ value: v, sourceBundleId: 'com.apple.health.ABC', source: 'iPhone' });
       const oura = (v: number) => ({ value: v, sourceBundleId: 'com.ouraring.oura', source: 'Oura' });
+      const manual = (v: number) => ({ value: v, sourceBundleId: 'com.apple.Health', source: 'Health' });
       return {
         appleWinsEvenSmaller: f([iphone(6147), oura(8263)]),
         ringOnlyFallback: f([oura(4000), oura(2450)]),
         singleSourceSums: f([iphone(100), iphone(200)]),
         untaggedRawSum: f([{ value: 100 }, { value: 50 }]),
-        manualEntryIsApple: f([{ value: 5000, sourceBundleId: 'com.apple.Health', source: 'Health' }, oura(9000)]),
+        // W799 — the typed-in cheat: manual entries vanish from every mix.
+        manualEntryDropped: f([manual(5000), oura(9000)]),
+        manualOnlyIsZero: f([manual(5000)]),
+        shortcutsDropped: f([{ value: 7000, sourceBundleId: 'com.apple.shortcuts', source: 'Shortcuts' }, iphone(1200)]),
+        manualNeverBeatsDevice: f([manual(50000), iphone(6147)]),
       };
     });
     expect(results.appleWinsEvenSmaller).toBe(6147);
     expect(results.ringOnlyFallback).toBe(6450);
     expect(results.singleSourceSums).toBe(300);
     expect(results.untaggedRawSum).toBe(150);
-    expect(results.manualEntryIsApple).toBe(5000);
+    expect(results.manualEntryDropped).toBe(9000);
+    expect(results.manualOnlyIsZero).toBe(0);
+    expect(results.shortcutsDropped).toBe(1200);
+    expect(results.manualNeverBeatsDevice).toBe(6147);
   });
 });
 
