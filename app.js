@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w802'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w803'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1833,6 +1833,28 @@
     }
   }
   try { window.resolveBossHuntsAcrossWindow = resolveBossHuntsAcrossWindow; } catch (_) {}
+
+  // W803 — LIVE resolver tick (from Rendell's Furnace Knight report: "only
+  // completes at the end of the day"). The resolver used to fire ONLY on
+  // Habits-render / boss-detail-open / app-foreground — so a hunter who met the
+  // kill condition while the app sat open (or whose Watch workout / kcal synced
+  // a minute later) stared at HUNTING until their next app-open, usually the
+  // next morning. Now the 60s heartbeat re-resolves every 2nd tick, but only
+  // while the app is visible AND at least one solo hunt is engaged — idle users
+  // and closed apps pay nothing. The resolver is idempotent, so the extra ticks
+  // can only flip a hunt sooner, never twice.
+  let _bossResolveTickN = 0;
+  function _bossResolveTick() {
+    if ((++_bossResolveTickN % 2) !== 0) return;   // every 2 minutes
+    try { if (document.visibilityState !== 'visible') return; } catch (_) {}
+    let engaged = false;
+    try {
+      const m = loadBosses();
+      for (const k in m) { if (m[k] && m[k].engaged === true) { engaged = true; break; } }
+    } catch (_) {}
+    if (!engaged) return;
+    try { resolveBossHuntsAcrossWindow(); } catch (_) {}
+  }
 
   function loadBosses() {
     try { return JSON.parse(localStorage.getItem('hb_bosses') || '{}'); }
@@ -62711,7 +62733,7 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} }, 60_000);
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
