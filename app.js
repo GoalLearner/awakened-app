@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w804'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w805'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49962,15 +49962,30 @@
       if (v > leadVal) { leadVal = v; leadIdx = i; }
       else if (v === leadVal) leadIdx = -1;
     });
+    // W805 — pact-streak flame next to each ALLY with a live pact (owner: surface
+    // the flame in the hunt itself so hunters fight to keep it burning). Branded
+    // SVG flame (never the emoji, handoff-19 rule); risk gradient when today's
+    // win isn't banked yet — the chip itself says "secure it".
+    try { _pfEnsureDefs(); } catch (_) {}
     const rows = roster.map(function (h, i) {
       const c = Math.min(i, 4);
+      let pactChip = '';
+      if (!h.me && h.raw && h.raw.user_id) {
+        try {
+          const p = _coopPactFor(h.raw.user_id);
+          if (p && (p.streak | 0) > 0 && p.alive) {
+            pactChip = '<span class="chd-pfchip' + (p.securedToday ? '' : ' chd-pfrisk') + '" title="Pact streak">' +
+              _pfFlame(9, !p.securedToday) + (p.streak | 0) + '</span>';
+          }
+        } catch (_) {}
+      }
       const val = _coopBattlePrimary(inst, h.raw);
       const share = dmgTotal > 0 ? Math.round(dmgScores[i] / dmgTotal * 100) : 0;
       const initial = esc((h.me ? (localStorage.getItem('hb_name') || 'Y') : h.alias).charAt(0).toUpperCase());
       return '<div class="chd-row">' +
         '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
         // W793 — the crown is now MVP (tap → incentive explainer via the global [data-mvp-info] handler).
-        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + '</div>' +
+        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + pactChip + '</div>' +
         '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
         '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div>' +
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is

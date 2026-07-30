@@ -34625,6 +34625,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .chd-name { font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
 .chd-crown { font-family: ui-monospace, monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.2px; color: #ffd574;
   padding: 2.5px 7px; border-radius: 5px; border: 1px solid rgba(245,158,11,.34); background: rgba(245,158,11,.08); text-transform: uppercase; cursor: pointer; /* W793 — tap → MVP incentive explainer */ }
+/* W805 — pact-streak flame chip in the hunt roster (branded SVG, never the emoji) */
+.chd-pfchip { display: inline-flex; align-items: center; gap: 2.5px; margin-left: 7px; font-family: ui-monospace, monospace;
+  font-size: 10px; font-weight: 800; color: #ff8a3c; vertical-align: 1px; }
+.chd-pfchip .pf-flame { flex: none; }
+.chd-pfchip.chd-pfrisk { color: #e2531c; opacity: .85; }
 .chd-status { margin-top: 3px; display: flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace;
   font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: var(--text-tertiary); text-transform: uppercase; }
 .chd-pulse { width: 6px; height: 6px; border-radius: 50%; flex: none; background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,.8); animation: chdLiveP 1.8s infinite; }
