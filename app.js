@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186) → 2.4.6 is the next train, carrying W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.6-w803'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.6-w804'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16032,6 +16032,13 @@
   // raised sell too. They're now split: `_relicBaseValue` is the original valuation
   // (drives SELL, unchanged), and the buy price applies RELIC_BUY_MARKUP on top.
   const RELIC_BUY_MARKUP = 1.25;
+  // W804 — owner: the market squeezes RARE + ULTRA from both sides — buy +30% on
+  // top of the base markup, sell HALVED (0.25 → 0.125, a dupe pays back a quarter
+  // of its grind). Mythics keep their W289 economics (hand-priced 88k, 10% sell);
+  // commons are untradeable, so in practice this is every formula-priced relic.
+  function _relicSqueezed(card) { return !!(card && (card.rarity === 'ultra_rare' || card.rarity === 'rare')); }
+  const RELIC_SQUEEZE_BUY_MULT   = 1.30;
+  const RELIC_SQUEEZE_SELL_RATIO = RELIC_SELL_RATIO * 0.5;
   function _relicBaseValue(cardId) {
     const card = CARDS[cardId];
     if (!card || !_relicIsTradeable(cardId)) return null;
@@ -16052,7 +16059,9 @@
   function relicBuyPrice(cardId) {
     const base = _relicBaseValue(cardId);
     if (base == null) return null;
-    return Math.max(10, Math.round(base * RELIC_BUY_MARKUP / 10) * 10);   // +25% buy markup
+    const card = CARDS[cardId];
+    const mult = _relicSqueezed(card) ? RELIC_SQUEEZE_BUY_MULT : 1;   // W804
+    return Math.max(10, Math.round(base * RELIC_BUY_MARKUP * mult / 10) * 10);   // +25% buy markup (+30% more on rare/ultra)
   }
   function relicSellPrice(cardId) {
     const base = _relicBaseValue(cardId);
@@ -16061,7 +16070,9 @@
     // Erebus drop is a modest windfall, but the 88k buy is never a profitable flip.
     // NOTE: sell is on the ORIGINAL base (NOT the marked-up buy) so it stays put.
     const card = CARDS[cardId];
-    const ratio = (card && card.rarity === 'mythic') ? 0.10 : RELIC_SELL_RATIO;
+    const ratio = (card && card.rarity === 'mythic') ? 0.10
+                : _relicSqueezed(card) ? RELIC_SQUEEZE_SELL_RATIO   // W804 — rare/ultra sell halved
+                : RELIC_SELL_RATIO;
     return Math.max(10, Math.round(base * ratio / 10) * 10);
   }
 
