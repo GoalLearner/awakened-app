@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 is the next train, opening with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.7-w806'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.7-w807'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49967,6 +49967,16 @@
     // SVG flame (never the emoji, handoff-19 rule); risk gradient when today's
     // win isn't banked yet — the chip itself says "secure it".
     try { _pfEnsureDefs(); } catch (_) {}
+    // W807 — once the flights stream SEALS, each hunter's shown flights freeze at
+    // their counted (pro-rata) credit — the same scaling the W800 damage math uses
+    // — so the roster's flights always sum to the goal, never past it (owner:
+    // rendiesel read "94 FLIGHTS" on a sealed 75-flight raid).
+    let _flFactor = 1;
+    if (_coopIsBoth(inst)) {
+      const _fGoal = inst.goal_flights || cfg.coopGoalFlights || 0;
+      const _fComb = roster.reduce(function (s, h) { return s + ((h.raw && h.raw.flights) || 0); }, 0);
+      if (_fGoal > 0 && _fComb > _fGoal) _flFactor = _fGoal / _fComb;
+    }
     const rows = roster.map(function (h, i) {
       const c = Math.min(i, 4);
       let pactChip = '';
@@ -49991,7 +50001,7 @@
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
           // the primary stream (steps); this line is their own climbed flights, so the
           // second goal stops being an anonymous team total.
-          (_coopIsBoth(inst) ? '<div class="chd-sub">' + _N((h.raw && h.raw.flights) || 0) + ' flights</div>' : '') +
+          (_coopIsBoth(inst) ? '<div class="chd-sub">' + _N(Math.round(((h.raw && h.raw.flights) || 0) * _flFactor)) + ' flights</div>' : '') +
         '</div>' +
       '</div>';
     }).join('');
