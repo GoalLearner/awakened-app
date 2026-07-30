@@ -57,7 +57,11 @@
   'use strict';
 
   // ─── KILL SWITCH ──────────────────────────────────────────
-  const SIMULATE_USERS = true;
+  // W806 (owner, 2026-07-30, post-2.4.6 approval): sims OFF — the TestFlight
+  // cohort is big enough to test whether real players can fill the boards.
+  // Every merge site already guards on this flag, so flipping it empties the
+  // sim rows from all boards + Hall of Fame + weekly recap in one move.
+  const SIMULATE_USERS = false;
 
   // ─── HARD CAP — v3 Phase 1z.35 ────────────────────────────
   // No simulated weekly step total is ever allowed to exceed
