@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 is the next train, opening with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.7-w807'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.7-w808'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6058,6 +6058,7 @@
         contrib = roster.map(function (h, i) {
           var c = { alias: h.alias, me: !!h.me, val: _coopBattlePrimary(inst, h.raw) };
           if (_coopIsBoth(inst)) c.fl = (h.raw && h.raw.flights) || 0;
+          if (_coopIsSleep(inst)) c.sl = (h.raw && h.raw.sleep_minutes) || 0;   // W808 (review F3) — sleep leg was invisible in history
           if (scoreSum > 0) c.share = Math.round(scores[i] / scoreSum * 100);
           return c;
         });
@@ -49117,15 +49118,29 @@
       try { const lg = document.querySelector('#coop-fs-body .chd-log');
         if (lg) lg.innerHTML = _coopBattle.logs.map(function (l) { return '<div class="chd-log-line"><span class="chd-t">' + esc(l.t) + '</span><span>' + l.html + '</span></div>'; }).join('');
       } catch (_) {}
+      // W808 (review F2) — the lockout is stamped OPTIMISTICALLY above; if the
+      // server never counted the cry (network failure, RATE_LIMITED, NOT_ACTIVE,
+      // 5xx — anything but EMOTE_COOLDOWN), roll the hour back and re-enable the
+      // buttons so a failed cry doesn't eat the budget.
+      const _emoteRollback = function () {
+        try { localStorage.removeItem(_COOP_EMOTE_TS_KEY); } catch (_) {}
+        try {
+          document.querySelectorAll('#coop-fs-body .chd-emote').forEach(function (b) {
+            b.classList.remove('chd-cool'); b.disabled = false;
+          });
+        } catch (_) {}
+      };
       try {
         Auth.coopBossEmote(inst.id, key).then(function (res) {
           // Server refused (e.g. an earlier cry from another device): mirror ITS
           // clock so the buttons free up exactly when the server will accept.
           if (res && res.code === 'EMOTE_COOLDOWN' && typeof res.retry_after_ms === 'number') {
             try { localStorage.setItem(_COOP_EMOTE_TS_KEY, String(Date.now() - (COOP_EMOTE_COOLDOWN_MS - res.retry_after_ms))); } catch (_) {}
+          } else if (!res || !res.ok) {
+            _emoteRollback();   // W808 — server didn't count it
           }
-        }).catch(function () {});
-      } catch (_) {}
+        }).catch(_emoteRollback);
+      } catch (_) { _emoteRollback(); }
       return;
     }
     // W384 — leaving an ACTIVE hunt forfeits both hunters' in-window progress; confirm first.
@@ -49699,8 +49714,16 @@
     }));
   }
   // Primary metric value for a hunter (what the duel bar + strike deltas count).
+  // W808 (review F1) — the server is METRIC-GENERIC: for a flights-only boss
+  // (Hollow Monarch) each hunter's flights ride under the `steps` key and the
+  // total/goal under combined_steps/goal_steps; flights-NAMED keys exist only on
+  // isBoth hunts. The old `who.flights` read returned undefined → the whole
+  // battle screen (big number, shares, crown, MVP award, history snapshot)
+  // silently zeroed on flights hunts. Fall back to the generic keys.
   function _coopBattlePrimary(inst, who) {
-    return _coopUnit(inst) === 'flights' ? ((who && who.flights) || 0) : ((who && who.steps) || 0);
+    if (!who) return 0;
+    if (_coopUnit(inst) === 'flights') return (who.flights != null ? who.flights : who.steps) || 0;
+    return who.steps || 0;
   }
   // W800 — DAMAGE scores (drive the % shares, the crown, and the W793 MVP award).
   // Owner: on a dual-metric hunt the % counted ONLY steps, so 15 climbed flights
@@ -49739,8 +49762,9 @@
   function _coopBattleProgress(inst) {
     const cfg = _coopSheet.cfg || {};
     const unit = _coopUnit(inst);
-    const pGoal = unit === 'flights' ? (inst.goal_flights || cfg.coopGoalFlights || 1) : (inst.goal_steps || cfg.coopGoalSteps || 1);
-    const pVal = unit === 'flights' ? (inst.combined_flights || 0) : (inst.combined_steps || 0);
+    // W808 — flights-only hunts serialize under the generic steps-named keys (see _coopBattlePrimary).
+    const pGoal = unit === 'flights' ? (inst.goal_flights || inst.goal_steps || cfg.coopGoalFlights || cfg.coopGoalSteps || 1) : (inst.goal_steps || cfg.coopGoalSteps || 1);
+    const pVal = unit === 'flights' ? (inst.combined_flights != null ? inst.combined_flights : (inst.combined_steps || 0)) : (inst.combined_steps || 0);
     const pct = Math.max(0, Math.min(1, pVal / pGoal));
     let binding = pct;
     if (_coopIsBoth(inst)) {
@@ -49755,8 +49779,14 @@
   function _coopBattleLog(html, when) {
     // W792 — `when` (a Date) lets a line carry its TRUE moment (e.g. the party
     // announce shows the hunt's start time, not whenever you opened the sheet).
+    // W808 (review F5) — insert SORTED by that moment, newest first, instead of a
+    // blind unshift: a replayed W801 cry with an older timestamp used to jump to
+    // the top and the 3-line cap then evicted the genuinely newest line.
     const t = (when instanceof Date && !isNaN(when.getTime())) ? when : new Date();
-    _coopBattle.logs.unshift({ t: String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'), html: html });
+    const entry = { at: t.getTime(), t: String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'), html: html };
+    let i = 0;
+    while (i < _coopBattle.logs.length && (_coopBattle.logs[i].at || 0) > entry.at) i++;
+    _coopBattle.logs.splice(i, 0, entry);
     if (_coopBattle.logs.length > 3) _coopBattle.logs.length = 3;
   }
   // Damage number + slash/shake over the hero (layers live in index.html, so
@@ -49896,8 +49926,9 @@
     const roster = _coopBattleRoster(inst);
     const prog = _coopBattleProgress(inst);
     const phase = prog.binding >= 0.9 ? 3 : prog.binding >= 0.75 ? 2 : 1;
-    const pGoal = unit === 'flights' ? (inst.goal_flights || cfg.coopGoalFlights || 0) : (inst.goal_steps || cfg.coopGoalSteps || 0);
-    const pVal = unit === 'flights' ? (inst.combined_flights || 0) : (inst.combined_steps || 0);
+    // W808 — flights-only hunts serialize under the generic steps-named keys (see _coopBattlePrimary).
+    const pGoal = unit === 'flights' ? (inst.goal_flights || inst.goal_steps || cfg.coopGoalFlights || cfg.coopGoalSteps || 0) : (inst.goal_steps || cfg.coopGoalSteps || 0);
+    const pVal = unit === 'flights' ? (inst.combined_flights != null ? inst.combined_flights : (inst.combined_steps || 0)) : (inst.combined_steps || 0);
 
     // Phase tag mirrors the design's escalation copy.
     const tag = phase === 3 ? '<span class="chd-phase-tag chd-p3">It Breaks — Finish It</span>'
@@ -50001,7 +50032,11 @@
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
           // the primary stream (steps); this line is their own climbed flights, so the
           // second goal stops being an anonymous team total.
-          (_coopIsBoth(inst) ? '<div class="chd-sub">' + _N(Math.round(((h.raw && h.raw.flights) || 0) * _flFactor)) + ' flights</div>' : '') +
+          // W808 (review F4) — floor, not round: independent per-row rounding could sum
+          // PAST the sealed goal (two hunters at 47/94 on a 75 goal rounded to 38+38=76).
+          // Floor keeps the sum ≤ goal (may undershoot by ≤n−1 — honest, never inflated).
+          (_coopIsBoth(inst) ? '<div class="chd-sub">' + _N(Math.floor(((h.raw && h.raw.flights) || 0) * _flFactor)) + ' flights</div>' :
+           _coopIsSleep(inst) ? '<div class="chd-sub">' + esc(_coopFmtSleep((h.raw && h.raw.sleep_minutes) || 0)) + ' slept</div>' : '') +
         '</div>' +
       '</div>';
     }).join('');
@@ -51086,7 +51121,8 @@
         const share = (typeof c.share === 'number') ? c.share
           : (total > 0 ? Math.round((Number(c.val) || 0) / total * 100) : 0);
         const isMvp = !!(e.mvp && c.alias === e.mvp);
-        const flPart = (typeof c.fl === 'number') ? ' + ' + _N(c.fl) + ' flights' : '';
+        const flPart = (typeof c.fl === 'number') ? ' + ' + _N(c.fl) + ' flights'
+          : (typeof c.sl === 'number') ? ' + ' + _coopFmtSleep(c.sl) + ' slept' : '';   // W808 (review F3) — sleep leg now visible
         return '<div class="chh-bk-row' + (c.me ? ' chh-bk-me' : '') + '">' +
           '<span class="chh-bk-name">' + esc(c.alias) + (isMvp ? '<span class="chh-mvp-chip" data-mvp-info>MVP</span>' : '') + '</span>' +
           '<span class="chh-bk-num"><b>' + _N(Number(c.val) || 0) + '</b> ' + unitWord + flPart + ' · ' + share + '%</span>' +

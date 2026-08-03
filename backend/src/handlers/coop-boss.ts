@@ -1210,7 +1210,8 @@ export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext)
         AND crunch_reminded_at IS NULL
         AND ends_at > datetime('now')
         AND ends_at <= datetime('now', '+30 minutes')
-      LIMIT 10`,
+      ORDER BY ends_at ASC
+      LIMIT 25`,
   ).all<CoopBossRow>();
   const rows = due.results ?? [];
   if (!rows.length) return;
@@ -1235,10 +1236,12 @@ export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext)
     if (!(marked.meta && Number(marked.meta.changes) >= 1)) continue;
     const bossName = COOP_BOSS_NAMES[row.boss_id] ?? 'Your co-op hunt';
     const pctShown = Math.min(99, Math.floor(pct * 100));
+    // W808 (review F6) — metric-aware copy: "steps" on a flights-only boss read wrong.
+    const driveWord = metric === 'flights' ? 'flights' : 'steps';
     for (const uid of participantIds(row)) {
       const push = notifyUser(env, uid, {
         title: 'The Hunt Nears Its End',
-        body: `${bossName} is at ${pctShown}% with under 30 minutes left — open the hunt and drive your steps home.`,
+        body: `${bossName} is at ${pctShown}% with under 30 minutes left — open the hunt and drive your ${driveWord} home.`,
         type: 'coop_invite',
         data: { bossId: row.boss_id },
       });
