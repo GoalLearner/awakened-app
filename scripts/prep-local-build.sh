@@ -9,7 +9,7 @@
 #   1. Copy PWA files into www/                       (codemagic.yaml line 79)
 #   2. Wipe ios/App/App/public/ before cap sync       (codemagic.yaml line 418)
 #   3. cap sync ios                                   (codemagic.yaml line 433)
-#   4. Bump iOS deployment target to 14.0             (codemagic.yaml line 165)
+#   4. Bump iOS deployment target to 15.0             (codemagic.yaml line 165)
 #   5. pod install                                    (inside cap sync, but
 #                                                      we run again after bump)
 #   6. ITSAppUsesNonExemptEncryption=false in Info.plist (line 614)
@@ -228,18 +228,25 @@ fi
 npx cap sync ios
 echo ""
 
-# ── 4. Bump iOS deployment target to 14.0 ───────────────────────────
-echo "── [4/9] Bump iOS deployment target to 14.0 ──"
+# ── 4. Bump iOS deployment target to 15.0 ───────────────────────────
+# W814 — Apple ITMS-90068 on build 474: "Starting in Spring 2027, all iOS
+# apps must have a MinimumOSVersion of 15.0 or later." The app's
+# MinimumOSVersion derives from the App target's IPHONEOS_DEPLOYMENT_TARGET,
+# which this step previously pinned to 14.0 (and the pbxproj sed only
+# rewrote 13.0 → it could never LIFT an existing 14.0). Now: match ANY
+# current value and force 15.0. iOS 15 runs on every device iOS 14 did
+# except iPhone 6/6+ (which topped out at 12) — no real user is lost.
+echo "── [4/9] Bump iOS deployment target to 15.0 ──"
 if [ -f ios/App/Podfile ]; then
-  sed -i.bak "s/platform :ios, '[0-9.]*'/platform :ios, '14.0'/" ios/App/Podfile
+  sed -i.bak "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
   rm -f ios/App/Podfile.bak
   echo "  Podfile: $(grep "platform :ios" ios/App/Podfile)"
 fi
 if [ -f ios/App/App.xcodeproj/project.pbxproj ]; then
   # sed in-place differs between BSD (macOS) and GNU. BSD requires ''
   # after -i. We're macOS-only, so:
-  sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
-  echo "  project.pbxproj: $(grep -c "IPHONEOS_DEPLOYMENT_TARGET = 14.0" ios/App/App.xcodeproj/project.pbxproj) occurrences at 14.0"
+  sed -E -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g" ios/App/App.xcodeproj/project.pbxproj
+  echo "  project.pbxproj: $(grep -c "IPHONEOS_DEPLOYMENT_TARGET = 15.0" ios/App/App.xcodeproj/project.pbxproj) occurrences at 15.0"
 fi
 echo ""
 

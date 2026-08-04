@@ -251,29 +251,26 @@ workflows:
             npx cap add ios || true
           fi
 
-      - name: Bump iOS deployment target to 14.0 (v2.1 Phase A)
+      - name: Bump iOS deployment target to 15.0 (W814)
         script: |
-          # @capacitor-community/apple-sign-in v7.1.0 requires iOS
-          # 14.0+. Capacitor 6's default for new iOS scaffolds is
-          # 13.0. Without this step CocoaPods rejects the install
-          # with "CapacitorCommunityAppleSignIn required a higher
-          # minimum deployment target." See BACKEND.md §4.
-          #
-          # iOS 14 reached ~95% device adoption by mid-2026. Safe
-          # cutoff. Idempotent — sed is a no-op once the project is
-          # already at 14.0, so this step is safe to run on every
-          # build (including cached-ios incremental builds).
+          # W814 — Apple ITMS-90068 (build 474): Spring 2027 requires
+          # MinimumOSVersion >= 15.0 for all App Store uploads. This
+          # step previously set 14.0 (originally for the apple-sign-in
+          # pod's 14.0 floor); the sed now matches ANY current value so
+          # it can lift an existing 14.0, not just the 13.0 scaffold
+          # default. iOS 15 runs on every device iOS 14 did except the
+          # iPhone 6/6+ (which topped out at iOS 12). Idempotent.
           if [ -f ios/App/Podfile ]; then
-            sed -i.bak "s/platform :ios, '13.0'/platform :ios, '14.0'/" ios/App/Podfile
+            sed -i.bak "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
             rm -f ios/App/Podfile.bak
             echo "Podfile platform line:"
             grep "platform :ios" ios/App/Podfile
           fi
           if [ -f ios/App/App.xcodeproj/project.pbxproj ]; then
-            sed -i.bak "s/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g" ios/App/App.xcodeproj/project.pbxproj
+            sed -E -i.bak "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g" ios/App/App.xcodeproj/project.pbxproj
             rm -f ios/App/App.xcodeproj/project.pbxproj.bak
             echo "project.pbxproj deployment target occurrences:"
-            grep -c "IPHONEOS_DEPLOYMENT_TARGET = 14.0" ios/App/App.xcodeproj/project.pbxproj
+            grep -c "IPHONEOS_DEPLOYMENT_TARGET = 15.0" ios/App/App.xcodeproj/project.pbxproj
           fi
           # Re-run pod install with the corrected target. Earlier
           # cap add (above) likely failed at pod install; this is
