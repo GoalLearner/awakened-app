@@ -14,10 +14,10 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { computePacts, ptDayKey, type WinRow } from '../lib/pact-streak';
 
-// A single user's lifetime co-op WINS is tiny (needs a partner, a 24h fee-gated
-// hunt, and at most one streak-day/pair/day). This cap is a pure safety ceiling
-// far above any real total; if it were ever hit, the OLDEST wins would drop —
-// but reaching it is not physically plausible, so streak accuracy is unaffected.
+// A single user's lifetime STARTED co-op hunts is tiny (needs a partner and a
+// fee-gated multi-hour window). This cap is a pure safety ceiling far above any
+// real total; if it were ever hit, the OLDEST hunts would drop — but reaching it
+// is not physically plausible, so streak accuracy is unaffected.
 const MAX_WIN_ROWS = 5000;
 
 export async function handleCoopPacts(
@@ -35,14 +35,19 @@ export async function handleCoopPacts(
   // participant row (raid seats 4/5 have no legacy partner column). We fetch the
   // instance ids, then attach the FULL roster per win so computePacts credits a
   // pact with EVERY co-hunter, not just the two legacy columns.
+  // W813 — the pact is a COMMITMENT streak: every instance that actually BEGAN
+  // (starts_at stamped when the last seat accepted) counts toward the flame,
+  // win or lose. is_win rides along so computePacts can keep `total` (the Bond,
+  // "bosses defeated together") a wins-only stat.
   const rows = await env.DB.prepare(
-    `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id, i.resolved_at
+    `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id,
+            i.starts_at, i.resolved_at,
+            CASE WHEN i.status = 'completed' AND i.result = 'success' THEN 1 ELSE 0 END AS is_win
        FROM coop_boss_instances i
-      WHERE i.status = 'completed' AND i.result = 'success'
-        AND i.resolved_at IS NOT NULL
+      WHERE i.starts_at IS NOT NULL
         AND ( i.challenger_user_id = ?1
               OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?1) )
-      ORDER BY i.resolved_at DESC
+      ORDER BY i.starts_at DESC
       LIMIT ?2`,
   )
     .bind(session.userId, MAX_WIN_ROWS)

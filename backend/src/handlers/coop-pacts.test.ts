@@ -4,7 +4,8 @@
  * Read-only handler over coop_boss_instances. Same hand-rolled substring-routed
  * D1 mock shape as the other handler tests; the streak MATH is covered
  * exhaustively in lib/pact-streak.test.ts, so these assert the handler wiring:
- * auth rate-limit, the wins-only query, and the response envelope.
+ * auth rate-limit, the W813 attempts query (started hunts, win or lose), and
+ * the response envelope.
  */
 import { describe, expect, it } from 'vitest';
 import { handleCoopPacts } from './coop-pacts';
@@ -21,6 +22,10 @@ type Row = {
   party?: string[];
   boss_id: string;
   resolved_at: string;
+  // W813 — attempt anchor + outcome flag (rows without them exercise the legacy
+  // fallback: resolved_at as the day anchor, undefined is_win treated as a win).
+  starts_at?: string;
+  is_win?: number;
 };
 
 // W692 — the handler now issues TWO queries: the wins over coop_boss_instances, then
@@ -102,17 +107,36 @@ describe('GET /v1/coop-boss/pacts', () => {
     expect(body.error).toBe('RATE_LIMITED');
   });
 
-  it('queries only WINS the caller participated in (challenger or any participant seat)', async () => {
+  it('queries STARTED hunts the caller participated in (W813 — win or lose), with is_win riding along', async () => {
     const log: string[] = [];
     await handleCoopPacts(req(), makeEnv(makeDb([], log)), session('u1'));
     const sql = log.find((s) => s.includes('FROM coop_boss_instances'));
     expect(sql).toBeTruthy();
-    expect(sql).toMatch(/i\.status = 'completed' AND i\.result = 'success'/);
+    // W813 — the pact counts attempts: any instance that actually began.
+    expect(sql).toMatch(/i\.starts_at IS NOT NULL/);
+    expect(sql).not.toMatch(/WHERE i\.status = 'completed'/);
+    // …while the Bond still needs the outcome, so is_win is computed in-query.
+    expect(sql).toMatch(/CASE WHEN i\.status = 'completed' AND i\.result = 'success' THEN 1 ELSE 0 END AS is_win/);
+    expect(sql).toMatch(/ORDER BY i\.starts_at DESC/);
     // W692 — membership is challenger OR a participant row (raid seats 4/5 have no
     // legacy partner column), so the filter probes the participant table.
     expect(sql).toMatch(/i\.challenger_user_id = \?1/);
     expect(sql).toMatch(/EXISTS \(SELECT 1 FROM coop_boss_participants p WHERE p\.instance_id = i\.id AND p\.user_id = \?1\)/);
     expect(sql).toMatch(/SELECT i\.id, i\.challenger_user_id, i\.partner_user_id, i\.partner2_user_id/);
+  });
+
+  // W813 — a LOSS keeps the flame: attempted hunts extend the streak; only wins
+  // count toward the Bond (total).
+  it('a lost hunt extends the streak but not the Bond', async () => {
+    const rows: Row[] = [
+      { challenger_user_id: 'u1', partner_user_id: 'friendA', boss_id: 'the_twin_maw', starts_at: '2026-07-13T20:00:00Z', resolved_at: '2026-07-14 20:00:00', is_win: 1 },
+      { challenger_user_id: 'u1', partner_user_id: 'friendA', boss_id: 'the_twin_maw', starts_at: '2026-07-14T20:00:00Z', resolved_at: '2026-07-15 20:00:00', is_win: 0 },
+    ];
+    const res = await handleCoopPacts(req(), makeEnv(makeDb(rows)), session('u1'));
+    const body = (await res.json()) as { ok: boolean; pacts: Record<string, { streak: number; total: number; daysBonded: number }> };
+    expect(body.ok).toBe(true);
+    // Start days 7/13 + 7/14 (PT) are consecutive → streak 2; only one WIN → Bond 1.
+    expect(body.pacts['friendA']).toMatchObject({ streak: 2, total: 1, daysBonded: 2 });
   });
 
   // W677 — a TRIO win is one row but must credit the viewer's pact with BOTH

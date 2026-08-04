@@ -132,6 +132,45 @@ describe('computePacts', () => {
     expect(p.streak).toBe(3);
   });
 
+  // ── W813 — commitment streak: attempts (starts_at + is_win) drive the flame ──
+  const att = (other: string, starts_at: string, is_win: number, boss_id = 'the_twin_maw'): WinRow => ({
+    challenger_user_id: U,
+    partner_user_id: other,
+    boss_id,
+    resolved_at: null,
+    starts_at,
+    is_win,
+  });
+
+  it('W813: losses extend the streak; total (the Bond) counts only wins', () => {
+    const rows = [
+      att('friendA', '2026-07-12T20:00:00Z', 1),
+      att('friendA', '2026-07-13T20:00:00Z', 0),
+      att('friendA', '2026-07-14T20:00:00Z', 0),
+    ];
+    const p = computePacts(rows, U)['friendA'];
+    expect(p).toMatchObject({ streak: 3, best: 3, total: 1, daysBonded: 3, lastDay: '2026-07-14' });
+  });
+
+  it('W813: an all-loss pact still burns (streak alive, Bond 0)', () => {
+    const p = computePacts([att('friendA', '2026-07-14T20:00:00Z', 0)], U)['friendA'];
+    expect(p).toMatchObject({ streak: 1, best: 1, total: 0, daysBonded: 1 });
+  });
+
+  it('W813: starts_at supersedes resolved_at as the day anchor (multi-day raid credits its start day)', () => {
+    const row: WinRow = {
+      challenger_user_id: U,
+      partner_user_id: 'friendA',
+      boss_id: 'the_grinning_god',
+      starts_at: '2026-07-12T20:00:00Z',
+      resolved_at: '2026-07-15 04:00:00', // resolved 3 days later — must not move the day
+      is_win: 1,
+    };
+    const p = computePacts([row], U)['friendA'];
+    expect(p.lastDay).toBe('2026-07-12');
+    expect(p.lastWonAt).toBe(Date.UTC(2026, 6, 12, 20, 0, 0));
+  });
+
   it('skips rows with no resolved_at and rows where the viewer is not a participant', () => {
     const rows: WinRow[] = [
       win('friendA', '2026-07-14 20:00:00'),

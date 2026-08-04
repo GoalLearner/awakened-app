@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 is the next train, opening with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.7-w812'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.7-w813'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6215,7 +6215,9 @@
   function _coopPactFor(friendUserId) {
     if (!friendUserId) return null;
     var m = _loadCoopPacts(); var e = m[String(friendUserId)];
-    if (!e || !(e.total > 0)) return null;
+    // W813 — a pact exists once they've HUNTED together (daysBonded), even with
+    // zero wins yet (total counts only defeats — the Bond).
+    if (!e || !((e.total | 0) > 0 || (e.daysBonded | 0) > 0)) return null;
     var today = getPTDate();
     var alive = e.lastDay === today || e.lastDay === _pactPrevDay(today);
     return {
@@ -6247,7 +6249,7 @@
       var p = _coopPactFor(userId);
       var alias = (p && p.alias) || fallbackAlias || 'this hunter';
       if (!p) {
-        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Defeat a co-op dungeon boss with ' + alias + ' to start a daily Pact streak — team up every day to keep the flame alive.', tone: 'info' });
+        showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Enter a co-op hunt with ' + alias + ' to start a daily Pact streak — team up every day, win or lose, to keep the flame alive.', tone: 'info' });
         return;
       }
       var bossName = (p.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[p.lastBossId] && COOP_BOSSES[p.lastBossId].name) || null;
@@ -6262,40 +6264,75 @@
       showNoticeCard({ icon: p.alive ? '🔥' : '🤝', title: 'Pact with ' + alias, bodyHtml: lines.join('<br>'), tone: p.alive ? 'good' : 'info' });
     } catch (_) {}
   }
-  // Advance the DAILY pact with EVERY other participant when a co-op win is granted
-  // (called from _awardCoopKill, guarded once-per-instance by hb_coop_awarded — no
-  // double count). W677 — a trio win ticks BOTH pairwise pacts (owner: "counts for
-  // the flames for all three"). Ticks each pair's day-streak at most ONCE per PT day.
-  function _coopBumpPact(inst) {
+  // ── W813 — the pact is a COMMITMENT streak (owner rule change) ──────────────
+  // The day-tick fires when a hunt STARTS (every seat accepted → starts_at
+  // stamped), win or lose — entering the hunt together IS the pact. The WIN path
+  // (_coopBumpPact, from _awardCoopKill) now advances only the Bond (total =
+  // bosses defeated together) + last-hunt metadata. Server (GET /coop-boss/pacts)
+  // computes the same rule canonically; these local bumps are the optimistic
+  // mirror. Guarded once per instance via hb_coop_pact_started.
+  function _loadPactStarted() { try { return JSON.parse(localStorage.getItem('hb_coop_pact_started') || '{}') || {}; } catch (_) { return {}; } }
+  function _coopBumpPactStart(inst) {
     try {
-      if (!inst) return;
+      if (!inst || !inst.id || !inst.starts_at) return;
+      var st = inst.status;
+      if (st !== 'active' && st !== 'completed' && st !== 'expired') return;   // never actually ran (declined / pre-start cancel)
+      var g = _loadPactStarted();
+      if (g[inst.id]) return;
       var others = _coopOthers(inst);
       if (!others.length) return;
-      var nowMs = Date.now();
-      // Key the day off the WIN's RESOLVED day (parity with backfill), not this device's
-      // processing day — a late-processed award must not false-break a streak.
-      var today = (inst.resolved_at ? _pactDayKey(_coopTsToMs(inst.resolved_at)) : '') || getPTDate();
+      var startMs = _coopTsToMs(inst.starts_at) || Date.now();
+      // Key the day off the hunt's START day (parity with the server) — a
+      // late-observed instance must not tick this device's processing day.
+      var day = _pactDayKey(startMs) || getPTDate();
       var m = _loadCoopPacts(); var changed = false;
       others.forEach(function (other) {
         var fid = other && other.user_id; if (!fid) return;
         var key = String(fid);
         var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
-        if (e.lastDay === today) {
-          // second hunt SAME PT day — streak + daysBonded already ticked; only Bond + last-hunt refresh.
-        } else if (today > (e.lastDay || '')) {   // a NEWER day than the last counted (lexicographic == chronological)
+        if (e.lastDay === day) {
+          // second hunt SAME PT day — streak + daysBonded already ticked.
+        } else if (day > (e.lastDay || '')) {   // a NEWER day than the last counted (lexicographic == chronological)
           e.daysBonded = (e.daysBonded | 0) + 1;
-          e.streak = (e.lastDay && e.lastDay === _pactPrevDay(today)) ? ((e.streak | 0) + 1) : 1;   // consecutive vs reset
-          e.lastDay = today;
+          e.streak = (e.lastDay && e.lastDay === _pactPrevDay(day)) ? ((e.streak | 0) + 1) : 1;   // consecutive vs reset
+          e.lastDay = day;
         } else {
-          // today < lastDay: an OLDER win processed out of order — count the Bond but do
-          // NOT roll the day-streak backward (that would false-break a correct streak).
+          // day < lastDay: an OLDER hunt observed out of order — never roll the
+          // day-streak backward (the server sync repairs true history).
         }
         e.best = Math.max(e.best | 0, e.streak | 0);
-        e.total = (e.total | 0) + 1;
-        if (!e.firstWonAt) e.firstWonAt = nowMs;
-        e.lastWonAt = nowMs;
+        if (!e.firstWonAt) e.firstWonAt = startMs;
+        e.lastWonAt = Math.max(e.lastWonAt || 0, startMs);
         e.lastBossId = inst.boss_id || e.lastBossId || null;
         if (other && other.alias) e.alias = other.alias;   // display cache (alias can change; user_id is the key)
+        m[key] = e; changed = true;
+      });
+      if (changed) _saveCoopPacts(m);
+      g[inst.id] = 1;
+      var keys = Object.keys(g);
+      if (keys.length > 400) keys.slice(0, keys.length - 300).forEach(function (k) { delete g[k]; });   // bound the guard map
+      try { localStorage.setItem('hb_coop_pact_started', JSON.stringify(g)); } catch (_) {}
+    } catch (_) {}
+  }
+  // WIN path (called from _awardCoopKill, guarded once-per-instance by
+  // hb_coop_awarded): W813 — Bond + metadata only; the day ticked at start.
+  function _coopBumpPact(inst) {
+    try {
+      if (!inst) return;
+      try { _coopBumpPactStart(inst); } catch (_) {}   // safety: a resolve seen before any live poll still ticks its start day
+      var others = _coopOthers(inst);
+      if (!others.length) return;
+      var nowMs = Date.now();
+      var m = _loadCoopPacts(); var changed = false;
+      others.forEach(function (other) {
+        var fid = other && other.user_id; if (!fid) return;
+        var key = String(fid);
+        var e = m[key] || { streak: 0, best: 0, total: 0, daysBonded: 0, lastDay: '', firstWonAt: 0, lastWonAt: 0, lastBossId: null, alias: null };
+        e.total = (e.total | 0) + 1;
+        if (!e.firstWonAt) e.firstWonAt = nowMs;
+        e.lastWonAt = Math.max(e.lastWonAt || 0, nowMs);
+        e.lastBossId = inst.boss_id || e.lastBossId || null;
+        if (other && other.alias) e.alias = other.alias;
         m[key] = e; changed = true;
       });
       if (changed) _saveCoopPacts(m);
@@ -6316,16 +6353,20 @@
       Auth.coopBossList().then(function (res) {
         var list = (res && (res.instances || res.items || res.list)) || res;
         if (!Array.isArray(list)) return;
-        var awarded = {}; try { awarded = _loadCoopAwarded() || {}; } catch (_) {}
         var byFriend = {};
         list.forEach(function (it) {
-          if (!it || it.status !== 'completed' || it.result !== 'success' || !awarded[it.id]) return;
-          var t = _coopTsToMs(it.resolved_at || it.updated_at);
-          // W677 — a trio win seeds the pact with EACH other hunter on the instance.
+          // W813 — any hunt that actually BEGAN counts toward the flame (win or
+          // lose); the day anchors to the hunt's start. Wins ride a flag so the
+          // Bond (total) stays defeats-only.
+          if (!it || !it.starts_at) return;
+          if (it.status !== 'active' && it.status !== 'completed' && it.status !== 'expired') return;
+          var t = _coopTsToMs(it.starts_at);
+          var isWin = it.status === 'completed' && it.result === 'success';
+          // W677 — a trio hunt seeds the pact with EACH other hunter on the instance.
           _coopOthers(it).forEach(function (other) {
             var fid = other && other.user_id; if (!fid) return;
             (byFriend[fid] = byFriend[fid] || { times: [], alias: (other && other.alias) || null })
-              .times.push({ t: t, boss: it.boss_id });
+              .times.push({ t: t, boss: it.boss_id, win: isWin });
           });
         });
         var m = _loadCoopPacts(); var changed = false;
@@ -6354,9 +6395,10 @@
           if (lastDayK && lastDayK >= (curM.lastDay || '') && cur > (curM.streak | 0)) {   // raise the streak only
             curM.streak = cur; curM.lastDay = lastDayK;
           }
-          if (g.times.length > (curM.total | 0)) {   // metadata: only when the backfill truly knows more hunts
-            curM.total = g.times.length;
-            curM.lastWonAt = Math.max(curM.lastWonAt | 0, last.t || 0) || curM.lastWonAt;
+          var wins = 0; g.times.forEach(function (x) { if (x.win) wins++; });   // W813 — Bond counts defeats only
+          if (wins > (curM.total | 0) || days.length > 0) {   // metadata: upward-only refresh
+            if (wins > (curM.total | 0)) curM.total = wins;
+            curM.lastWonAt = Math.max(curM.lastWonAt || 0, last.t || 0) || curM.lastWonAt;
             curM.lastBossId = last.boss || curM.lastBossId;
             if (!curM.firstWonAt) curM.firstWonAt = (g.times[0] && g.times[0].t) || 0;
             if (g.alias) curM.alias = g.alias;
@@ -6494,7 +6536,7 @@
         alias: _coopAlias ? _coopAlias(f.alias || (p && p.alias)) : (f.alias || (p && p.alias) || 'hunter'),
         rank: rankLetter, tier: (rank || rankLetter), rc: _pfRankColor(rankLetter),
       };
-      if (p && p.total > 0) {
+      if (p && ((p.total | 0) > 0 || (p.daysBonded | 0) > 0)) {   // W813 — attempts forge the pact too
         base.streak = p.streak | 0; base.best = p.best | 0; base.total = p.total | 0; base.daysBonded = p.daysBonded | 0;
         base.firstWonAt = p.firstWonAt || null; base.lastBossId = p.lastBossId || null;
         base.state = p.securedToday ? 'safe' : (p.alive ? 'risk' : 'broken');
@@ -6573,10 +6615,10 @@
     var bossName = (d.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[d.lastBossId] && COOP_BOSSES[d.lastBossId].name) || 'a co-op boss';
     var since = d.firstWonAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d.firstWonAt)) : '—';
     var banner = risk
-      ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Clear one dungeon boss with ' + esc(d.alias) + ' before midnight.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
+      ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Enter one hunt with ' + esc(d.alias) + ' before midnight — win or lose, showing up keeps it lit.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
       : d.state === 'safe'
-        ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">Secured for today</div><div class="p">You both defeated ' + esc(bossName) + ' — the flame burns on.</div></div></div>'
-        : '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">The flame went cold</div><div class="p">Clear one dungeon boss together to light a new streak.</div></div></div>';
+        ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">Secured for today</div><div class="p">You answered the call together — ' + esc(bossName) + ' awaits, and the flame burns on.</div></div></div>'
+        : '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">The flame went cold</div><div class="p">Start one hunt together to light a new streak.</div></div></div>';
     var mile = tier.next
       ? '<div class="pf-miletop"><span class="l">Next tier</span><span class="r">' + tier.next + '</span></div><div class="pf-milebar"><div class="fill" style="width:' + Math.max(6, pct) + '%"></div></div><div class="pf-milecap"><b>' + toNext + ' more day' + (toNext === 1 ? '' : 's') + '</b> together to ignite the ' + tier.next.charAt(0) + tier.next.slice(1).toLowerCase() + ' tier.</div>'
       : '<div class="pf-miletop"><span class="l">Highest bond</span><span class="r">ETERNAL</span></div><div class="pf-milebar"><div class="fill" style="width:100%"></div></div><div class="pf-milecap">The eternal flame — no bond burns hotter.</div>';
@@ -6591,7 +6633,7 @@
         banner +
         '<div class="pf-stats"><div class="pf-stat"><div class="sv">' + (d.daysBonded | 0) + '</div><div class="sl">Days<br>Bonded</div></div><div class="pf-stat best"><div class="sv">' + (d.best | 0) + '</div><div class="sl">All-Time<br>Best Flame</div></div><div class="pf-stat"><div class="sv">' + (d.total | 0) + '</div><div class="sl">Bosses<br>Defeated</div></div></div>' +
         '<div class="pf-blockh"><span class="t">The Chain</span><span class="n">Last 14 days</span></div><div class="pf-chain">' + _pfChain(d) + '</div>' +
-        '<div class="pf-legend"><span class="l1"><i></i>Cleared together</span>' + (risk ? '<span class="l2"><i></i>Today — not yet</span>' : '') + '</div>' +
+        '<div class="pf-legend"><span class="l1"><i></i>Hunted together</span>' + (risk ? '<span class="l2"><i></i>Today — not yet</span>' : '') + '</div>' +
         '<div class="pf-mile">' + mile + '</div>' +
         '<button class="pf-cta ' + (risk || d.state === 'broken' ? 'pf-warn' : 'pf-safe') + '" data-pf-hunt>' + _PF_SWORD + (risk ? 'Enter Dungeon Together' : d.state === 'broken' ? 'Relight the Flame' : 'Hunt Again') + '</button>' +
       '</div>';
@@ -42290,7 +42332,7 @@
       }
       var _subHtml = _burning
         ? ('<b>' + _burning + '</b> bond' + (_burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + _hottest + 'd</b>')
-        : ('<b>' + friends.length + '</b> ' + (friends.length === 1 ? 'hunter' : 'hunters') + ' · clear a co-op dungeon together to light a flame');
+        : ('<b>' + friends.length + '</b> ' + (friends.length === 1 ? 'hunter' : 'hunters') + ' · hunt together to light a flame');
       parts.push('<div class="pf-scope">' +
         '<div class="pf-guild-sub">' + _subHtml + '</div>' +
         '<div class="pf-list">' + _pfRoster.map(function (d) { return _pfRowHtml(d, { guild: true }); }).join('') + '</div>' +
@@ -48588,6 +48630,7 @@
   function _coopAfterInstanceUpdate() {
     const inst = _coopSheet.instance;
     try { _coopSettleFees([inst]); } catch (_) {}   // W648 — refund a never-ran hunt / consume a started one
+    try { _coopBumpPactStart(inst); } catch (_) {}  // W813 — a STARTED hunt secures the pact day (win or lose)
     if (inst && (inst.status === 'pending' || inst.status === 'active')) _coopSetEngaged(true);
     // W695 — a PENDING open ("Summon & Fill") hunt runs the lobby poll (merges + fills);
     // any other state stops it.
@@ -50465,6 +50508,7 @@
         if (!inst) continue;
         if (inst.status === 'active') {
           liveRemains = true;
+          try { _coopBumpPactStart(inst); } catch (_) {}   // W813 — starting the hunt secures the pact day
           try { await _coopSubmitMySteps(inst); } catch (_) {}
           let r;
           try { r = await Auth.coopBossResolve(inst.id); } catch (_) { r = null; }
@@ -51035,6 +51079,7 @@
     const footEl = document.getElementById('coop-dash-foot');
     if (!listEl) return;
     const live = (Array.isArray(instances) ? instances : []).filter(function (x) { return x && (x.status === 'pending' || x.status === 'active'); });
+    live.forEach(function (x) { try { _coopBumpPactStart(x); } catch (_) {} });   // W813 — dashboard is often the first surface to see a hunt go active
     _coopDashInstances = live;
     if (!live.length) {
       listEl.innerHTML = '';

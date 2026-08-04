@@ -9,10 +9,17 @@
  * friends fetch the same numbers.
  *
  * The day math intentionally mirrors the client (app.js `_pactDayKey` /
- * `_pactPrevDay` / `_coopBackfillPacts`): a shared co-op WIN on a **Pacific**
+ * `_pactPrevDay` / `_coopBackfillPacts`): a shared co-op HUNT on a **Pacific**
  * calendar day advances the streak once per day; the streak returned here is the
  * run ending at the most recent day, and the client applies the alive/lit check
- * (last win today or yesterday) at read time.
+ * (last hunt today or yesterday) at read time.
+ *
+ * W813 (owner rule change) — the pact is a COMMITMENT streak, not a victory
+ * streak: any hunt the pair actually STARTED together (every seat accepted →
+ * starts_at stamped) keeps the flame burning, win or lose. The day anchor is
+ * the hunt's start day (`starts_at`), so a multi-day raid credits the day the
+ * pact was made and the flame lights the moment the hunt begins. Only `total`
+ * (the Bond — "bosses defeated together") still counts wins, via `is_win`.
  */
 
 /** Pacific ('America/Los_Angeles') 'YYYY-MM-DD' day key for a UTC epoch-ms value. */
@@ -70,27 +77,35 @@ export interface WinRow {
   participant_ids?: string[];
   boss_id: string | null;
   resolved_at: string | null;
+  // W813 — attempt anchor: when present it supersedes resolved_at as the streak
+  // day (the PT day the hunt STARTED — i.e. when both hunters committed).
+  starts_at?: string | null;
+  // W813 — SQLite 0/1 (or boolean). undefined = legacy wins-only caller, treated
+  // as a win so pre-W813 call sites keep their `total` semantics.
+  is_win?: number | boolean;
 }
 
 export interface PactAgg {
   streak: number; // current run ending at the most recent day (client applies alive check)
   best: number; // all-time longest consecutive-day run
-  total: number; // every co-op boss ever felled together (the Bond)
-  daysBonded: number; // distinct Pacific days cleared together
+  total: number; // every co-op boss ever defeated together (the Bond — WINS only, W813)
+  daysBonded: number; // distinct Pacific days hunted together (win or lose, W813)
   lastDay: string; // most recent PT day key ('' if none)
-  firstWonAt: number; // epoch ms of the first win (pact forged)
-  lastWonAt: number; // epoch ms of the most recent win
+  firstWonAt: number; // epoch ms of the first hunt together (pact forged)
+  lastWonAt: number; // epoch ms of the most recent hunt together
   lastBossId: string | null;
 }
 
 /**
- * Group a viewer's winning co-op instances by the OTHER participant and compute
- * the canonical daily-streak aggregate per pair. `rows` MUST already be filtered
- * to wins (status='completed' AND result='success') where the viewer is a
- * participant; ordering is irrelevant (sorted internally).
+ * Group a viewer's STARTED co-op instances by the OTHER participant and compute
+ * the canonical daily-streak aggregate per pair. W813: `rows` should be every
+ * instance the viewer participated in that actually began (starts_at NOT NULL),
+ * each carrying `is_win` — the streak counts attempts, `total` counts wins.
+ * (Legacy callers passing wins-only rows without `is_win` keep old semantics.)
+ * Ordering is irrelevant (sorted internally).
  */
 export function computePacts(rows: WinRow[], viewerUserId: string): Record<string, PactAgg> {
-  const groups = new Map<string, { ms: number; boss: string | null }[]>();
+  const groups = new Map<string, { ms: number; boss: string | null; win: boolean }[]>();
   for (const r of rows || []) {
     if (!r) continue;
     // W677/W692 — a win credits the viewer's pact with EVERY other hunter on the
@@ -105,15 +120,18 @@ export function computePacts(rows: WinRow[], viewerUserId: string): Record<strin
           : [r.challenger_user_id, r.partner_user_id];
     if (!participants.includes(viewerUserId)) continue; // defensive; the query guarantees membership
     const others = participants.filter((uid) => uid && uid !== viewerUserId);
-    const ms = sqliteUtcToMs(r.resolved_at);
-    if (!ms) continue; // unresolved / unparseable timestamp — can't place it on a day
+    // W813 — prefer the attempt anchor (start day); fall back to resolved_at for
+    // legacy wins-only callers.
+    const ms = sqliteUtcToMs(r.starts_at ?? r.resolved_at);
+    if (!ms) continue; // never started / unparseable timestamp — can't place it on a day
+    const win = r.is_win === undefined ? true : !!r.is_win;
     for (const other of others) {
       let g = groups.get(other);
       if (!g) {
         g = [];
         groups.set(other, g);
       }
-      g.push({ ms, boss: r.boss_id || null });
+      g.push({ ms, boss: r.boss_id || null, win });
     }
   }
 
@@ -140,7 +158,8 @@ export function computePacts(rows: WinRow[], viewerUserId: string): Record<strin
     out[other] = {
       streak: cur,
       best,
-      total: times.length,
+      // W813 — the Bond counts only bosses actually DEFEATED together.
+      total: times.reduce((n, t) => n + (t.win ? 1 : 0), 0),
       daysBonded: days.length,
       lastDay: days.length ? days[days.length - 1] : '',
       firstWonAt: times[0] ? times[0].ms : 0,
