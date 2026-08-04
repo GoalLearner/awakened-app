@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 is the next train, opening with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.7-w809'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.7-w810'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33125,7 +33125,49 @@
   //  - Week card: XP earned Sunday→today, day-of-week counter, bar
   //  - 30-day sparkline card: cumulative XP path + total + 7-day delta
   // Called from updateProgress() so it refreshes on every toggle/render.
+  // W810 — Home Header Vitals Row (ClaudeDesign Option B). Rendell: "have those
+  // trackers in Awakened as well from the Apple Health-synced data... so people
+  // don't need to keep swapping between apps." Steps + floors read the SAME
+  // W799-filtered, 5-min-cached Health queries the game verifies with; sleep is
+  // last night's verified total straight from the leaderboard state (zero extra
+  // HealthKit cost). The grid hides on web / no permission — the 42/44 habit
+  // count beside it still renders everywhere.
+  let _vitalsRowBusy = false;
+  async function updateVitalsRow() {
+    const grid = document.getElementById('vitals-grid');
+    if (!grid) return;
+    try {
+      if (typeof Health === 'undefined' || !Health.isAvailable || !Health.isAvailable() ||
+          Health.permissionStatus() !== 'granted') { grid.classList.add('hidden'); return; }
+      if (_vitalsRowBusy) return;
+      _vitalsRowBusy = true;
+      const [steps, flights] = await Promise.all([
+        Health.getStepsToday().catch(function () { return null; }),
+        (typeof Health.getFlightsClimbedToday === 'function' ? Health.getFlightsClimbedToday() : Promise.resolve(null)).catch(function () { return null; }),
+      ]);
+      _vitalsRowBusy = false;
+      // Sleep — latest recorded night from lb state (written by lbRecordSleepNight).
+      let sleepTxt = null;
+      try {
+        const daily = loadLeaderboardState().sleep_hours_daily || {};
+        const nights = Object.keys(daily).sort();
+        if (nights.length) {
+          const hrs = Number(daily[nights[nights.length - 1]]) || 0;
+          sleepTxt = Math.floor(hrs) + 'h ' + String(Math.round((hrs % 1) * 60)).padStart(2, '0') + 'm';
+        }
+      } catch (_) {}
+      const sEl = document.getElementById('hs-steps');
+      const fEl = document.getElementById('hs-flights');
+      const slEl = document.getElementById('hs-sleep');
+      // Failed reads leave the prior value in place — never flash "—" back in.
+      if (sEl && steps != null) sEl.textContent = _N(Math.max(0, steps | 0));
+      if (fEl && flights != null) fEl.textContent = _N(Math.max(0, flights | 0));
+      if (slEl && sleepTxt != null) slEl.textContent = sleepTxt;
+      grid.classList.remove('hidden');
+    } catch (_) { _vitalsRowBusy = false; }
+  }
   function updateHeaderMetrics() {
+    try { updateVitalsRow(); } catch (_) {}   // W810 — async, cache-backed, self-guarded
     // ── Rank class-affinity sub (top-right of rank card) ─────
     try {
       const subEl = document.getElementById('rank-class-sub');
@@ -62821,7 +62863,7 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { updateVitalsRow(); } catch (_) {} }, 60_000);
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
