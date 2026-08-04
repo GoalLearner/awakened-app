@@ -1,0 +1,24 @@
+diff --git a/node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift b/node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift
+index 0c5d95c..b2b8c47 100644
+--- a/node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift
++++ b/node_modules/@perfood/capacitor-healthkit/ios/Plugin/CapacitorHealthkitPlugin.swift
+@@ -320,7 +320,18 @@ public class CapacitorHealthkitPlugin: CAPPlugin {
+                 let sleepED = sample.endDate as NSDate
+                 let sleepInterval = sleepED.timeIntervalSince(sleepSD as Date)
+                 let sleepHoursBetweenDates = sleepInterval / 3600
+-                let sleepState = (sample.value == HKCategoryValueSleepAnalysis.inBed.rawValue) ? "InBed" : "Asleep"
++                // W812 (Awakened patch) — three-way mapping. The upstream binary mapping
++                // labeled AWAKE interruption samples "Asleep", inflating nights by the
++                // awake time (owner: 9h24m shown for a 5h55m night with 3h14m of wake-ups).
++                let sleepState: String
++                switch sample.value {
++                case HKCategoryValueSleepAnalysis.inBed.rawValue:
++                    sleepState = "InBed"
++                case HKCategoryValueSleepAnalysis.awake.rawValue:
++                    sleepState = "Awake"
++                default:
++                    sleepState = "Asleep"
++                }
+                 let constructedSample: [String: Any] = [
+                     "uuid": sample.uuid.uuidString,
+                     "timeZone": getTimeZoneString(sample: sample) as String,

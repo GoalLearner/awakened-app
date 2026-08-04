@@ -216,7 +216,7 @@
   const APP_VERSION = '2.4.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 is the next train, opening with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.7-w811'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.7-w812'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -59095,16 +59095,15 @@
           });
         } catch (_) {}
 
-        // v3 Phase 1z.110 — defensive sleep-state matching. Was
-        // `s.sleepState === 'Asleep'` (exact match). Plugin source
-        // confirms today that any non-InBed sample is labeled
-        // "Asleep", so the new exclude-only filter is semantically
-        // identical RIGHT NOW. But if the plugin ever emits modern
-        // stage labels (asleepCore / asleepDeep / asleepREM /
-        // asleepUnspecified) the exact-equals check would silently
-        // return 0 samples and orphan the Sleep habit. Excluding
-        // only 'InBed' is forward-compatible.
-        const asleepSamples = samples.filter(s => s && s.sleepState && s.sleepState !== 'InBed');
+        // v3 Phase 1z.110 — defensive sleep-state matching: exclude known
+        // non-sleep labels rather than exact-match 'Asleep', so future stage
+        // labels (asleepCore/Deep/REM) keep working.
+        // W812 — also exclude 'Awake': the patched plugin (patches/@perfood+
+        // capacitor-healthkit) now labels HKCategoryValueSleepAnalysis.awake
+        // samples "Awake" instead of folding them into "Asleep". The owner's
+        // fragmented night (5h55m asleep + 3h14m of wake-ups) read as 9h+
+        // because interruptions counted as sleep.
+        const asleepSamples = samples.filter(s => s && s.sleepState && s.sleepState !== 'InBed' && s.sleepState !== 'Awake');
 
         // v3 Phase 1z.114 — sessionize samples into discrete sleep
         // sessions, then select the main session ending today. This
