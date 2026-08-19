@@ -268,10 +268,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.4.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819: session refresh + SIWA reconnect + purge quarantine + Ascent cloud-sync/self-heal) → 2.4.9 is Train 1 "Honest Rails" (W820 release-gated Monday push + retirement-plan defusal; W821 entitlement hardening, guest error telemetry, quarantine recovery hooks, PT-correct weekly reset, full relic precache, honest LB error state). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.9-w821'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w822'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22054,6 +22054,21 @@
     // every day rank highest; configuration polish and settings-layer
     // additions rank lowest. Future maintainers: re-sort when you add
     // items, don't just append.
+    // W822 — covers the whole 2.4.4→2.5.0 span (the sheet was frozen at
+    // 2.4.3 while eleven trains shipped; updaters saw none of it).
+    '2.5.0': {
+      subtitle: 'Your vitals on the header, your climb under guard.',
+      items: [
+        { emoji: '', title: 'The Vitals Row',            description: "Verified steps, floors climbed, and last night's sleep now live right on the home header — no more swapping to the Health app to check your day." },
+        { emoji: '', title: 'Your climb is protected',   description: "Ascent progress now rides your cloud backup, and the Tower remembers: if your floor is ever lost, the server restores it on your next launch." },
+        { emoji: '', title: 'You stay signed in',        description: "Sessions renew themselves silently in the background. If one ever lapses, the gate greets you by name and one tap brings your hunter back — souls, streaks, and kill log intact." },
+        { emoji: '', title: 'Verified means verified',   description: "Only data your iPhone or Watch actually recorded counts toward habits, hunts, and the boards. Entries typed into the Health app are ignored — the rankings are real." },
+        { emoji: '', title: 'Pacts reward showing up',   description: "The Pact Flame now burns for commitment: enter a hunt together before midnight and the streak lives, win or lose. Only your Bond counts the bosses you actually brought down." },
+        { emoji: '', title: 'Hunt MVP',                  description: "Every co-op hunt crowns its top contributor — and carrying your party pays: +1% souls and relic luck for every hunter you carried." },
+        { emoji: '', title: 'The boards, honest',        description: "Global Rankings is now the true trio — Steps, Highest Floor, Collection — with your Ascent floor finally on the hub. Retired boards no longer haunt it." },
+        { emoji: '', title: 'All your streaks, one place', description: "Tap Best Streak on your Status card to open every streak you hold — Perfect Days, packs, and paths included." },
+      ],
+    },
     // W647 — covers the whole 2.4.2/2.4.3 train (2.4.2 shipped without an
     // entry, so updaters see all of it here).
     '2.4.3': {
@@ -22071,7 +22086,9 @@
     '2.3.2': {
       subtitle: 'The Arena, co-op hunts & a sharper climb.',
       items: [
-        { emoji: '', title: 'Ranked PvP — The Arena',     description: "Challenge real hunters in live, turn-based duels. Climb a seasonal rating ladder, earn promotions, and spar a friend's Echo whenever you like — a server-run battle, so you never wait on them to be online." },
+        // W822 (L3 honesty pass) — ranked queue is currently SEALED (W795);
+        // copy amended so a first-time reader isn't promised a live ladder.
+        { emoji: '', title: 'The Arena rises',            description: "Turn-based duels arrive — spar a friend's Echo anytime, server-run so you never wait on them to be online. The ranked ladder stands ready behind its seal and opens as the hunter ranks fill." },
         { emoji: '', title: 'Co-op Hunts',                 description: "Summon a guild ally and bring down a two-hunter boss together. Combine your verified steps and flights to defeat it within 24 hours — when it drops, both hunters claim souls and a relic." },
         { emoji: '', title: 'Prestige',                    description: "The climb no longer ends at S+. Every milestone beyond it now earns an ascending star, so even the very top still has somewhere to go." },
         { emoji: '', title: 'Perfect Day, reimagined',     description: "Complete every habit in a day and the celebration hits harder — sound, motion, and a seal that escalates the longer your perfect streak runs." },
@@ -22081,7 +22098,9 @@
     '2.2.1': {
       subtitle: 'Leaderboard feels alive.',
       items: [
-        { emoji: '', title: 'A populated leaderboard from day one', description: "The board now seeds a steady cast of hunters across every rank, so even a brand-new hunter sees a real-feeling field to climb. Top performers, mid-pack, and just-starting names all sit alongside real players." },
+        // W822 (L3 honesty pass) — sims were retired in W806; every name on
+        // the boards is a real hunter now. Copy amended to match.
+        { emoji: '', title: 'A living leaderboard',                 description: "The weekly steps board tracks every hunter's climb, Sunday through Saturday. Every name on it is a real person — no filler." },
         { emoji: '', title: 'Step totals that grow with the week',  description: "Every hunter's weekly step total accumulates day-by-day, Sunday through Saturday. No more values jumping around between sessions." },
       ],
     },
@@ -29116,7 +29135,9 @@
     overlay.addEventListener('click', closeStreaksSheet);
     if (closeBtn) closeBtn.addEventListener('click', closeStreaksSheet);
 
-    // Tap the 🔥 streak pill in the header to open the sheet.
+    // Tap the 🔥 streak pill in the header to open the sheet. (Legacy —
+    // #perfect-streak-display left the header in 1z.10; kept as a null-safe
+    // no-op in case the pill ever returns.)
     const pill = document.getElementById('perfect-streak-display');
     if (pill) {
       pill.addEventListener('click', openStreaksSheet);
@@ -29124,6 +29145,19 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStreaksSheet(); }
       });
     }
+    // W822 (Train 2, L2) — the real opener: the Status card's Best-Streak
+    // sigil tile ([data-open-streaks]). Delegated at document level because
+    // the status card rebuilds its innerHTML on every render.
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest && e.target.closest('[data-open-streaks]');
+      if (t) { try { openStreaksSheet(); } catch (_) {} }
+    });
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.closest && e.target.closest('[data-open-streaks]')) {
+        e.preventDefault();
+        try { openStreaksSheet(); } catch (_) {}
+      }
+    });
 
     // Swipe-down dismiss
     if (typeof attachSheetDismissGesture === 'function') {
@@ -30716,9 +30750,14 @@
             '<span class="sc-metric-val">' + totalPoints.toLocaleString() + '</span>' +
             '<span class="sc-metric-lbl">Total XP</span>' +
           '</div>' +
-          '<div class="sc-metric sc-metric--sigil">' +
+          // W822 (Train 2, L2) — the All-Streaks sheet's only opener died in
+          // 1z.10 when #perfect-streak-display left the header, orphaning the
+          // Perfect-Day + compound streak surfaces entirely. The Best-Streak
+          // sigil is its natural home; data-open-streaks is handled by a
+          // DELEGATED listener (this card re-renders, one-time bindings die).
+          '<div class="sc-metric sc-metric--sigil" data-open-streaks role="button" tabindex="0" aria-label="Best streak ' + maxStreak + ' days — tap for all streaks" style="cursor:pointer">' +
             '<span class="sc-metric-val">' + maxStreak + '</span>' +
-            '<span class="sc-metric-lbl">Best Streak</span>' +
+            '<span class="sc-metric-lbl">Best Streak ›</span>' +
           '</div>' +
           '<div class="sc-metric sc-metric--sigil">' +
             '<span class="sc-metric-val">' + (daysActive || 0) + '</span>' +
@@ -46311,7 +46350,9 @@
 
   async function openLeaderboardRanking(metric, opts) {
     const meta = LB_METRIC_META[metric];
-    if (!meta) return;
+    // W822 (L1) — a retired metric no longer strands the user in silence: any
+    // stale entry point (legacy data-lb-metric attr, old deep link) gets told.
+    if (!meta) { try { showHabitToast('That board has been retired.'); } catch (_) {} return; }
 
     // v3 Phase 1z.132 — track where the detail was opened from so
     // closeLeaderboardRanking can route the X tap back to the hub
@@ -46492,44 +46533,31 @@
     let snap;
     try { snap = lbGetSnapshot(); } catch (_) { snap = null; }
     snap = snap || {};
-    const nightWord   = n => n === 1 ? 'night' : 'nights';
-    const workoutWord = n => n === 1 ? 'day' : 'days';
-
+    // W822 (Train 2, L1) — the hub used to render SIX rows for the THREE
+    // boards that exist. sleep/workout/flights/rank_band were retired in W634
+    // (their LB_METRIC_META entries deleted), but their rows stayed: a tap
+    // closed the hub, openLeaderboardRanking early-returned on missing meta,
+    // and the user was silently stranded on the dashboard — 4 of 6 rows were
+    // dead ends. Meanwhile floor_best (a LIVE board) had no row at all and was
+    // reachable only via the metric switch inside the Steps sheet. The hub is
+    // now the honest Steps / Highest Floor / Collection trio the product ships.
     const walkIcon    = '<img src="assets/habit-icons/icon-walk.png" alt="" draggable="false" loading="lazy" decoding="async">';
-    const sleepIcon   = '<img src="assets/habit-icons/icon-sleep.png" alt="" draggable="false" loading="lazy" decoding="async">';
-    const workoutIcon = '<img src="assets/habit-icons/icon-strength.png" alt="" draggable="false" loading="lazy" decoding="async">';
-    // Flights uses an inline SVG matching the design's BootIcon —
-    // existing assets don't include a stair/flight glyph and we
-    // want the hub to ship without an asset roundtrip.
-    const flightsIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
-      '<path d="M3 19 H8 V14 H13 V9 H18 V4 H21 V19 H3 Z" fill="none" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>' +
-    '</svg>';
 
     const stepsVal    = _lbHubFmt(snap.steps_last_7_days);
     const stepsSub    = (snap.best_7day_step_total > 0)
       ? 'Best week: <b>' + _lbHubFmt(snap.best_7day_step_total) + '</b>'
       : 'Best week: —';
 
-    const sleepVal    = (snap.current_sleep_streak || 0);
-    const sleepSub    = 'Best: <b>' + (snap.best_sleep_streak || 0) + ' ' + nightWord(snap.best_sleep_streak || 0) + '</b>';
+    // Highest Floor — the Ascent board (live since W274, hub row new in W822).
+    let floorVal = 0;
+    try { floorVal = (getAscentState().highestCleared | 0); } catch (_) {}
+    const floorIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+      '<path d="M3 19 H8 V14 H13 V9 H18 V4 H21 V19 H3 Z" fill="none" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/>' +
+    '</svg>';
+    const floorSub = floorVal >= 100 ? 'Summit reached — <b>Floor 100</b>' : 'Your climb: <b>Floor ' + floorVal + '</b> / 100';
 
-    const workoutVal  = (snap.current_workout_streak || 0);
-    const workoutSub  = 'Best: <b>' + (snap.best_workout_streak || 0) + ' ' + workoutWord(snap.best_workout_streak || 0) + '</b>';
-
-    const flightsVal  = _lbHubFmt(snap.flights_this_week);
-    const flightsSub  = (snap.best_flights_week > 0)
-      ? 'Best week: <b>' + _lbHubFmt(snap.best_flights_week) + '</b>'
-      : 'Best week: —';
-
-    // W319 — "Hunters in your rank" cohort row (local power + rank label).
-    let rbPower = 0, rbRankLabel = '';
-    try { rbPower = Math.max(0, Math.round(_ascPlayerPower())); } catch (_) {}
-    try { const _di = getRankDivisionInfo(totalPoints); rbRankLabel = (_di && _di.fullLabel) || ''; } catch (_) {}
-    const rankIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 18 H20 M5 18 L7 9 L12 14 L17 7 L19 18 Z" fill="none" stroke="#f5b842" stroke-width="1.4" stroke-linejoin="round"/></svg>';
-    const rbSub = rbRankLabel ? ('Your rank: <b>' + esc(rbRankLabel) + '</b>') : 'Your cohort';
-
-    // W622 — the Collection Log race row. Gem glyph (inline SVG, matches the
-    // flights/rank inline style); value = unique relics currently in the log.
+    // W622 — the Collection Log race row. Gem glyph (inline SVG); value =
+    // unique relics currently in the log.
     let clHave = 0, clTotal = 0;
     try { const _cl = _lbRelicsLogStats(); clHave = _cl.have; clTotal = _cl.total; } catch (_) {}
     const relicIcon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
@@ -46538,12 +46566,9 @@
     const relicSub = 'Log: <b>' + clHave + ' / ' + clTotal + '</b>';
 
     list.innerHTML =
-      _lbHubBuildRow('step_total',     walkIcon,    stepsVal,   'steps this week',           stepsSub) +
-      _lbHubBuildRow('sleep_streak',   sleepIcon,   sleepVal,   'sleep streak · 7+ hr',      sleepSub) +
-      _lbHubBuildRow('workout_streak', workoutIcon, workoutVal, 'workout streak · 30+ min',  workoutSub) +
-      _lbHubBuildRow('flights_climbed', flightsIcon, flightsVal, 'flights this week',         flightsSub) +
-      _lbHubBuildRow('relics_collected', relicIcon,  _lbHubFmt(clHave), 'relics collected',    relicSub) +   // W622
-      _lbHubBuildRow('rank_band',      rankIcon,    _lbHubFmt(rbPower), 'hunters in your rank', rbSub);
+      _lbHubBuildRow('step_total',       walkIcon,  stepsVal,           'steps this week', stepsSub) +
+      _lbHubBuildRow('floor_best',       floorIcon, _lbHubFmt(floorVal), 'highest floor',   floorSub) +
+      _lbHubBuildRow('relics_collected', relicIcon, _lbHubFmt(clHave),  'relics collected', relicSub);
   }
   // v3 Phase 1z.132 — parent-aware close. When a detail leaderboard
   // sheet is opened from a hub row tap, _lbDetailReturnTarget is set

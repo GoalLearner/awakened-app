@@ -3342,7 +3342,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1236"></script>
+  <script src="app.js?v=1237"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3816,6 +3816,17 @@
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Field Manual</div>
               <div class="settings-v2-fsub">The system, plainly stated</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <!-- W822 (Train 2, L3) — What's New row restored. app.js has wired
+               #settings-whats-new-btn since the 1z.229 redesign deleted the
+               row; the id existed nowhere in markup, so the sheet was
+               unreachable outside the once-per-update auto-show. -->
+          <button id="settings-whats-new-btn" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">What's New</div>
+              <div class="settings-v2-fsub">Everything recent, in one sheet</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
