@@ -24810,6 +24810,18 @@ button.guildhall-summary-tile:active {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.11);
 }
+/* W828 (C4b) — armed state of the two-tap quarantine recovery button */
+.settings-v2 .settings-v2-btn--danger-armed {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.08);
+}
+.settings-quarantine-note {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  margin: 8px 2px 0;
+}
 .settings-v2 .settings-v2-btn--redtext {
   color: #f0596b;
   background: transparent;

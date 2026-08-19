@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=639">
+  <link rel="stylesheet" href="styles.css?v=640">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3361,7 +3361,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1242"></script>
+  <script src="app.js?v=1243"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3623,6 +3623,17 @@
             <button id="settings-account-signout" type="button" class="settings-v2-btn settings-v2-btn--ghost">Sign out</button>
             <button id="settings-restore-purchases" type="button" class="settings-v2-btn settings-v2-btn--ghost">Restore purchases</button>
           </div>
+
+          <!-- W828 (Train 2, C4b) — user-facing recovery for W818-quarantined
+               state. Hidden unless an hbq_ snapshot exists on this device
+               (quarantines are created only by an account switch, which
+               reloads the app, and expire at boot — so a boot-time check is
+               authoritative for the whole session). Two-tap confirm; the
+               restore hook reloads on success. -->
+          <div id="settings-quarantine-row" class="settings-v2-btnrow hidden">
+            <button id="settings-quarantine-restore" type="button" class="settings-v2-btn settings-v2-btn--ghost">Recover previous state</button>
+          </div>
+          <p id="settings-quarantine-note" class="settings-quarantine-note hidden">An earlier copy of this device's progress (from before the last account switch, <span id="settings-quarantine-when">—</span>) is held for 7 days. Recovering it replaces what's on the device now.</p>
 
         </div>
       </div>

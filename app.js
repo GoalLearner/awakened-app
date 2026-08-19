@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w827'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w828'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -55497,6 +55497,54 @@
     if (deleteBtn) {
       deleteBtn.addEventListener('click', openDeleteAccountModal);
     }
+
+    // W828 (Train 2, C4b) — user-facing "Recover previous state". The W818
+    // quarantine had only the W821 console hooks (support-only); a wiped user
+    // inside the 7-day window had no self-serve way back. Quarantines are
+    // created only by an account switch (which reloads) and expire at boot,
+    // so the set is fixed for this page load — one setup-time check suffices.
+    // Restore never touches hb_user / hb_state_owner (the hook filters them),
+    // so the current session survives; the hook reloads on success.
+    try {
+      const qRow  = document.getElementById('settings-quarantine-row');
+      const qBtn  = document.getElementById('settings-quarantine-restore');
+      const qNote = document.getElementById('settings-quarantine-note');
+      const qWhen = document.getElementById('settings-quarantine-when');
+      const snaps = (typeof window.__awakenedQuarantineList === 'function') ? window.__awakenedQuarantineList() : [];
+      if (qRow && qBtn && Array.isArray(snaps) && snaps.length) {
+        const latest = snaps.reduce((a, b) => (b.epoch > a.epoch ? b : a));
+        if (qWhen) { try { qWhen.textContent = new Date(latest.epoch).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch (_) {} }
+        qRow.classList.remove('hidden');
+        if (qNote) qNote.classList.remove('hidden');
+        let qArmed = false, qDisarm = null;
+        const disarm = () => {
+          qArmed = false;
+          qBtn.textContent = 'Recover previous state';
+          qBtn.classList.remove('settings-v2-btn--danger-armed');
+        };
+        qBtn.addEventListener('click', () => {
+          if (!qArmed) {
+            qArmed = true;
+            qBtn.textContent = 'Tap again to replace current progress';
+            qBtn.classList.add('settings-v2-btn--danger-armed');
+            clearTimeout(qDisarm);
+            qDisarm = setTimeout(disarm, 6000);
+            return;
+          }
+          clearTimeout(qDisarm);
+          qBtn.disabled = true;
+          qBtn.textContent = 'Recovering…';
+          let res = null;
+          try { res = window.__awakenedQuarantineRestore(latest.epoch, true); } catch (_) {}
+          if (!res || !res.restored) {
+            qBtn.disabled = false;
+            disarm();
+            try { showHabitToast('Nothing could be recovered from that snapshot.'); } catch (_) {}
+          }
+          // Success path: the restore hook reloads the page itself (~400ms).
+        });
+      }
+    } catch (e) { try { _logSwallow('quarantine:settings-row', e); } catch (_) {} }
 
     // v2.1 Phase D — Backup / Restore wiring
     const backupBtn   = document.getElementById('settings-account-backup');
