@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w826'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w827'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45949,7 +45949,7 @@
   // training-streak dots and the rank "~N weeks" ETA — are omitted in v1
   // (no per-day workout log / no weekly-XP-rate source); everything shown is
   // real data.
-  function _wiHtml(M) {
+  function _wiHtml(M, locked) {
     const s = M.steps || {}, rk = M.rank || {}, pat = M.pattern || {}, dg = M.dungeon || {}, st = M.standing;
     const nf = function (n) { return (n | 0).toLocaleString('en-US'); };
 
@@ -46090,6 +46090,15 @@
       ? esc(s.peakDow || 'This week') + ', you moved like the void itself — <b>' + nf(s.peakSteps) + ' steps</b> in a single day. The Guild sings of your name, Hunter.'
       : 'The week is young, Hunter — every step from here writes the legend. The Guild is watching.';
 
+    // W827 (Train 2, L12) — locked preview for non-members. The paywall used
+    // to be a blind jump to the Founder sheet; now the recap itself opens with
+    // Standing + Step Dominion readable (real value, all local data) and the
+    // deeper sections blurred behind a Founder CTA. Value first, then the ask.
+    const reflectionHtml =
+      '<section class="wi-reflection"><div class="wi-ref-mark">“</div><p class="wi-ref-quote">' + reflection + '</p>'
+      + '<div class="wi-ref-sign"><i></i><span>The First Awakened</span><i></i></div></section>';
+    const deepHtml = heroHtml + dungeonHtml + reflectionHtml;
+
     return ''
       + '<div class="wi-scrim" data-wi-dismiss></div>'
       + '<div class="wi-sheet" role="dialog" aria-modal="true" aria-label="Your Weekly Awakening">'
@@ -46109,15 +46118,16 @@
       + cohortLine + foilsHtml
       + (sparkHtml ? '<div class="wi-spark"><div class="wi-spark-bars">' + sparkHtml + '</div>' + sparkCap + '</div>' : '')
       + '</div></section>'
-      // Hidden pattern
-      + heroHtml
-      // Dungeon
-      + dungeonHtml
-      // Reflection
-      + '<section class="wi-reflection"><div class="wi-ref-mark">“</div><p class="wi-ref-quote">' + reflection + '</p>'
-      + '<div class="wi-ref-sign"><i></i><span>The First Awakened</span><i></i></div></section>'
+      // Hidden pattern + Dungeon + Reflection — blurred behind the CTA when locked
+      + (locked
+          ? '<div class="wi-lock-cta"><div class="wi-lock-cta-title">The rest of your recap awaits</div>'
+            + '<div class="wi-lock-cta-sub">Members see the full Weekly Awakening every week — your hidden pattern, dungeon victories, and the Guild\'s word.</div>'
+            + '<button class="wi-founder-btn" data-wi-founder type="button"><span class="wi-sp">✦</span> BECOME A FOUNDER</button></div>'
+            + '<div class="wi-locked-zone" aria-hidden="true">' + deepHtml + '</div>'
+          : deepHtml)
       // Share + an always-reachable bottom close (belt-and-suspenders with the fixed ✕)
-      + '<div class="wi-sharebar"><button class="wi-share" data-wi-share><span>Share to Guild</span></button>'
+      + '<div class="wi-sharebar">'
+      + (locked ? '' : '<button class="wi-share" data-wi-share><span>Share to Guild</span></button>')
       + '<button class="wi-bottomclose" data-wi-dismiss>Close</button></div>'
       + '</div></div>';
   }
@@ -46132,14 +46142,20 @@
       else if (typeof showHabitToast === 'function') showHabitToast('Recap ready to share.');
     } catch (_) {}
   }
-  function _wiPresent(M) {
+  function _wiPresent(M, locked) {
     if (document.getElementById('wi-overlay')) return;
     const overlay = document.createElement('div');
     overlay.id = 'wi-overlay';
-    overlay.className = 'wi-overlay';
-    overlay.innerHTML = _wiHtml(M);
+    overlay.className = 'wi-overlay' + (locked ? ' wi-overlay--locked' : '');
+    overlay.innerHTML = _wiHtml(M, locked);
     overlay.addEventListener('click', function (e) {
       const t = e.target;
+      if (t && t.closest && t.closest('[data-wi-founder]')) {
+        // W827 (L12) — locked preview's CTA hands off to the Founder sheet.
+        _wiDismiss();
+        setTimeout(function () { try { if (typeof openFounder === 'function') openFounder(); } catch (_) {} }, 80);
+        return;
+      }
       if (t && t.closest && t.closest('[data-wi-share]')) { _wiShare(M); return; }
       if (t && t.closest && t.closest('[data-wi-dismiss]')) { _wiDismiss(); }
     });
@@ -46151,12 +46167,16 @@
   async function openWeeklyInsights() {
     try {
       const isMember = (typeof _founderOwned === 'function') ? _founderOwned() : false;
-      if (!isMember) { try { if (typeof openFounder === 'function') openFounder(); } catch (_) {} return; }
       if (_wiOpening || document.getElementById('wi-overlay')) return;
       _wiOpening = true;
       let M;
       try { M = await buildWeeklyInsights(); } finally { _wiOpening = false; }
-      if (M) _wiPresent(M);
+      // W827 (Train 2, L12) — non-members used to get a blind jump to the
+      // Founder sheet; now they get the recap in a locked preview (Standing +
+      // Step Dominion visible, deeper sections blurred behind the Founder
+      // CTA). If the model somehow fails to build, the old direct route runs.
+      if (M) _wiPresent(M, !isMember);
+      else if (!isMember) { try { if (typeof openFounder === 'function') openFounder(); } catch (_) {} }
     } catch (_) { _wiOpening = false; }
   }
   try { window.__wiDemo = function () { buildWeeklyInsights().then(_wiPresent); }; } catch (_) {}
@@ -48054,11 +48074,19 @@
           const insufficient = cost > 0 && balance < cost;
           balanceEl.classList.toggle('bfs-souls-balance--insufficient', insufficient);
           if (insufficient) {
-            if (balanceLabelEl) balanceLabelEl.textContent = 'Need more souls';
+            // W827 (Train 2, L12) — the broke state was a dead end: it named
+            // the shortfall but never said how to earn souls. The readout is
+            // now a labelled gateway to the souls guide (wired in
+            // setupBossesPanel).
+            if (balanceLabelEl) balanceLabelEl.textContent = 'Need more souls — how to earn ›';
             balanceNumEl.textContent = balance.toLocaleString('en-US') + ' / ' + cost + ' needed';
+            balanceEl.setAttribute('role', 'button');
+            balanceEl.setAttribute('tabindex', '0');
           } else {
             if (balanceLabelEl) balanceLabelEl.textContent = 'Souls available';
             balanceNumEl.textContent = balance.toLocaleString('en-US');
+            balanceEl.removeAttribute('role');
+            balanceEl.removeAttribute('tabindex');
           }
         }
         // Swap blurb copy for the post-defeat state.
@@ -48106,17 +48134,19 @@
         const cur1 = Math.min(m.anyDropCurrent, m.anyDropTarget);
         const cur2 = Math.min(m.rareCurrent,    m.rareTarget);
         const cur3 = Math.min(m.ultraCurrent,   m.ultraHardTarget);
+        // W827 (Train 2, L12) — the reset rules lived only in title attrs,
+        // which never show on iOS (no hover). Inline them as visible subs.
         mercyEl.innerHTML =
-          '<div class="bfs-mercy-row" title="Any relic resets this.">' +
-            '<span class="bfs-mercy-label">Guaranteed relic</span>' +
+          '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">Guaranteed relic <span class="bfs-mercy-sub">any relic resets</span></span>' +
             '<span class="bfs-mercy-val">' + cur1 + ' / ' + m.anyDropTarget + '</span>' +
           '</div>' +
-          '<div class="bfs-mercy-row" title="Rare or Ultra resets this.">' +
-            '<span class="bfs-mercy-label">Rare mercy</span>' +
+          '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">Rare mercy <span class="bfs-mercy-sub">Rare or Ultra resets</span></span>' +
             '<span class="bfs-mercy-val">' + cur2 + ' / ' + m.rareTarget + '</span>' +
           '</div>' +
-          '<div class="bfs-mercy-row" title="Only Ultra resets this.">' +
-            '<span class="bfs-mercy-label">Ultra mercy</span>' +
+          '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">Ultra mercy <span class="bfs-mercy-sub">only Ultra resets</span></span>' +
             '<span class="bfs-mercy-val">' + cur3 + ' / ' + m.ultraHardTarget + '</span>' +
           '</div>';
       } catch (_) {
@@ -48408,6 +48438,23 @@
       engageBtn.addEventListener('click', () => {
         const id = engageBtn.getAttribute('data-boss-id');
         if (id) engageBoss(id);
+      });
+    }
+    // W827 (Train 2, L12) — broke-hunter routing: in the insufficient state
+    // the souls readout is a gateway to the souls guide (earn/spend). Close
+    // the boss sheet first so the surfaces don't stack (ledgerBtn pattern).
+    const soulsBalanceEl = document.getElementById('bfs-souls-balance');
+    if (soulsBalanceEl) {
+      const _bfsSoulsRoute = () => {
+        if (!soulsBalanceEl.classList.contains('bfs-souls-balance--insufficient')) return;
+        closeBossFullScreen();
+        setTimeout(() => { try { openSoulsInfoModal(); } catch (_) {} }, 80);
+      };
+      soulsBalanceEl.addEventListener('click', _bfsSoulsRoute);
+      soulsBalanceEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        _bfsSoulsRoute();
       });
     }
     const disengageBtn = document.getElementById('bfs-disengage-btn');
@@ -52681,7 +52728,13 @@
         // W811 — the Vitals Row grid (steps/floors/sleep) is a passive readout;
         // taps on it must NOT open Routine Progress (owner report). Only the
         // habit-count cluster keeps the tile tap.
-        if (t && t.closest && t.closest('#vitals-grid')) return;
+        // W827 (Train 2, L12) — but a silent swallow inside a role="button"
+        // tile read as a dead tap zone (audit). Answer the tap with what the
+        // readout IS instead of nothing — doubling as the W799 disclosure.
+        if (t && t.closest && t.closest('#vitals-grid')) {
+          try { showHabitToast('Verified vitals — steps, floors, and last night\'s sleep from your iPhone or Apple Watch. Hand-typed Health entries never count.'); } catch (_) {}
+          return;
+        }
         openPackProgressModal();
       });
       tile.addEventListener('keydown', e => {
