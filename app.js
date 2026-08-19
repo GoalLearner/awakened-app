@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w824'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w825'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -56901,9 +56901,12 @@
       })();
     }
 
-    // Skip → jump straight to commitment (1z.273G — index shifted from
-    // 4 to 5 to accommodate the inserted Training Week screen).
-    skip.addEventListener('click', () => show(5));
+    // W825 (Train 2, L7) — Skip used to jump straight to the Pact (show(5)),
+    // BYPASSING the Path screen: state.pack stayed null and the apply step
+    // silently defaulted to a 10-habit Morning Routine the user never chose
+    // or saw. Skip now lands on the Path screen (order[3]) — the one choice
+    // that decides what the app contains cannot be skipped past, only made.
+    skip.addEventListener('click', () => show(3));
 
     // Final "Enter Awakened" — commit everything, fade to black, then
     // hand off to the existing _completeOnboardingFinish so the
@@ -56940,6 +56943,20 @@
           const pack = getPackById(selectedPackId);
           if (pack && Array.isArray(pack.habits)) {
             pack.habits.forEach((i) => obSelected.add(i));
+          }
+          // W825 (Train 2, L7) — the FOCUS and INT WHY answers bias the Path
+          // to 'custom' (1z.251), and getPackById('custom') carries no habits,
+          // so those users entered the app with ZERO vows. Seed 3 starter
+          // vows matched to their stated why (library indices). A user whose
+          // why didn't bias to custom but who deliberately picked Forge Your
+          // Own keeps the empty First Vow quick-pick — that emptiness is
+          // chosen, not accidental.
+          if (obSelected.size === 0 && selectedPackId === 'custom') {
+            const whySeeds = {
+              FOCUS: [12, 14, 25],  // Meditate & Breathwork · No phone after waking · Plan tomorrow
+              INT:   [11, 13, 39],  // Read · Journal · Learn something new
+            };
+            (whySeeds[state.why] || []).forEach((i) => obSelected.add(i));
           }
         }
       } catch (e) { console.warn('[cin] commit failed', e); }
