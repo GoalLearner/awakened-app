@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.126';
+const CACHE_VERSION = 'v6.127';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -297,6 +297,44 @@ const PRECACHE_ASSETS = [
   // which the renderer cleanly handles by removing the <img> and showing
   // the emoji + rarity gradient placeholder. Add each card's path here
   // as its art lands on disk.
+  // W821 (Train 1, C6) — 34 relic arts had shipped to disk without their
+  // precache entries (the exact follow-up the app.js dropTable comment
+  // predicted), so those relics rendered blank offline / on a cold cache.
+  // Full catalog now precached; verified against assets/items/*.png.
+  '/assets/items/aetherspire-staff.png',
+  '/assets/items/amulet-of-the-endless-stair.png',
+  '/assets/items/anvilrest-cuirass.png',
+  '/assets/items/ascent-worn-cloak.png',
+  '/assets/items/band-of-the-roadkeeper.png',
+  '/assets/items/bothsight_longbow.png',
+  '/assets/items/charm-of-the-emberkeeper.png',
+  '/assets/items/coursing_houndcall.png',
+  '/assets/items/crown-of-eternal-night.png',
+  '/assets/items/crownpiercer.png',
+  '/assets/items/duskforge-the-anvils-verdict.png',
+  '/assets/items/forgewarden-gauntlets.png',
+  '/assets/items/greaves-of-the-umbral-throne.png',
+  '/assets/items/houndsfang_recurve.png',
+  '/assets/items/mantle-of-the-long-vigil.png',
+  '/assets/items/mantle-of-the-shadow-sovereign.png',
+  '/assets/items/nightcrown-of-the-climb.png',
+  '/assets/items/restplate-of-the-wanderer.png',
+  '/assets/items/skyward-vigil-ring.png',
+  '/assets/items/striders-of-the-tideless-road.png',
+  '/assets/items/the_antiphon_striders.png',
+  '/assets/items/the_choirmasters_vestment.png',
+  '/assets/items/the_discordant_crown.png',
+  '/assets/items/the_famished_circlet.png',
+  '/assets/items/the_gaunt_mantle.png',
+  '/assets/items/the_hollow_crown.png',
+  '/assets/items/the_long_pursuit.png',
+  '/assets/items/the_monarchs_writ.png',
+  '/assets/items/the_stairwalkers_treads.png',
+  '/assets/items/the_sundered_grips.png',
+  '/assets/items/the_wardens_vigil.png',
+  '/assets/items/twin_fang_cleaver.png',
+  '/assets/items/twofold_gaze.png',
+  '/assets/items/wraithwind-bow.png',
   '/assets/items/dream_woven_hood.png',
   '/assets/items/sleepwalkers_cloak.png',
   '/assets/items/pendant_of_the_wakeful.png',

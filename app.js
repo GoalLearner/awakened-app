@@ -268,10 +268,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.4.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 is the next train, opening with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '2.4.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819: session refresh + SIWA reconnect + purge quarantine + Ascent cloud-sync/self-heal) → 2.4.9 is Train 1 "Honest Rails" (W820 release-gated Monday push + retirement-plan defusal; W821 entitlement hardening, guest error telemetry, quarantine recovery hooks, PT-correct weekly reset, full relic precache, honest LB error state). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.8-w819'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.9-w821'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -290,29 +290,82 @@
   // message, and silently no-ops when signed out (the endpoint is authenticated).
   (function _armErrorReporter() {
     var sent = 0, seen = {};
+    // W821 (Train 1, C3) — the reporter was blind on the ENTIRE pre-sign-in
+    // surface: Auth.getJwt() returns the literal 'GUEST_STUB' for guests
+    // (truthy → passed the old `if (!jwt)` check → POSTed `Bearer GUEST_STUB`
+    // → silent 401), and genuinely signed-out users bailed. Worse, `sent++`
+    // and the dedupe mark ran BEFORE the jwt check, so unreportable errors
+    // burned the 5-per-session cap. Now: only 3-segment (real) JWTs send;
+    // stub/absent-session errors are BUFFERED locally (≤5, deduped) and
+    // flushed on the next boot that has a real session — so onboarding/guest
+    // crashes reach client_errors the moment the hunter signs in.
+    var PENDING_KEY = 'hb_pending_client_errors';
+    function _realJwt() {
+      try {
+        var j = (window.Auth && Auth.getJwt && Auth.getJwt()) || '';
+        return (typeof j === 'string' && j.split('.').length === 3) ? j : '';
+      } catch (_) { return ''; }
+    }
+    function _post(jwt, payload) {
+      var base = 'https://awakened-backend.richmondcampano93.workers.dev';
+      try { if (window.Auth && Auth.getBackendBase) base = Auth.getBackendBase() || base; } catch (_) {}
+      fetch(base + '/v1/users/me/client-errors', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + jwt, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(function () {});
+    }
+    function _stash(msg, stack) {
+      try {
+        var arr = [];
+        try { arr = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]') || []; } catch (_) {}
+        if (!Array.isArray(arr)) arr = [];
+        for (var i = 0; i < arr.length; i++) { if (arr[i] && arr[i].m === msg) return; }
+        arr.push({ m: msg, s: String(stack || '').slice(0, 2000), b: APP_BUILD_TAG, t: new Date().toISOString() });
+        if (arr.length > 5) arr = arr.slice(-5);
+        localStorage.setItem(PENDING_KEY, JSON.stringify(arr));
+      } catch (_) {}
+    }
+    function _flushPending(jwt) {
+      try {
+        var arr = [];
+        try { arr = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]') || []; } catch (_) {}
+        if (!Array.isArray(arr) || arr.length === 0) return;
+        localStorage.removeItem(PENDING_KEY);
+        for (var i = 0; i < arr.length && sent < 5; i++) {
+          var e = arr[i]; if (!e || !e.m) continue;
+          sent++;
+          _post(jwt, {
+            message: ('[pre-auth ' + (e.t || '?') + '] ' + e.m).slice(0, 500),
+            stack: String(e.s || '').slice(0, 2000),
+            build: e.b || APP_BUILD_TAG,
+            path: 'pre-auth',
+          });
+        }
+      } catch (_) {}
+    }
     function report(msg, stack) {
       try {
         if (!msg || sent >= 5) return;
         msg = String(msg).slice(0, 500);
         if (seen[msg]) return;
-        seen[msg] = 1; sent++;
-        var jwt = '';
-        try { jwt = (window.Auth && Auth.getJwt && Auth.getJwt()) || ''; } catch (_) {}
-        if (!jwt) return;
-        var base = 'https://awakened-backend.richmondcampano93.workers.dev';
-        try { if (window.Auth && Auth.getBackendBase) base = Auth.getBackendBase() || base; } catch (_) {}
-        fetch(base + '/v1/users/me/client-errors', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + jwt, 'content-type': 'application/json' },
-          body: JSON.stringify({
-            message: msg,
-            stack: String(stack || '').slice(0, 2000),
-            build: APP_BUILD_TAG,
-            path: String((location && location.hash) || '').slice(0, 120),
-          }),
-        }).catch(function () {});
+        seen[msg] = 1;
+        var jwt = _realJwt();
+        if (!jwt) { _stash(msg, stack); return; }   // W821 — buffer, don't burn the cap
+        _flushPending(jwt);
+        if (sent >= 5) return;
+        sent++;
+        _post(jwt, {
+          message: msg,
+          stack: String(stack || '').slice(0, 2000),
+          build: APP_BUILD_TAG,
+          path: String((location && location.hash) || '').slice(0, 120),
+        });
       } catch (_) {}
     }
+    // Flush any buffered pre-auth errors once Auth has loaded (auth.js is the
+    // next script; 3s comfortably clears boot without delaying anything).
+    try { setTimeout(function () { var j = _realJwt(); if (j) _flushPending(j); }, 3000); } catch (_) {}
     try {
       window.addEventListener('error', function (e) {
         try { report(e && e.message, e && e.error && e.error.stack); } catch (_) {}
@@ -360,14 +413,24 @@
         // prefix is invisible to every hb_ sweep, incl. this one). Boot
         // cleanup below drops quarantines older than 7 days.
         var qp = 'hbq_' + Date.now() + '_';
+        // W821 (Train 1, C4a) — QUOTA GUARD. The old copy-then-remove loop
+        // silently degraded to a hard delete when setItem hit the storage
+        // quota — i.e. exactly the heaviest accounts lost the W818 recovery
+        // window without a trace. Now: remove-then-copy per key (freeing the
+        // original first halves peak usage), and every copy failure is
+        // COUNTED and shouted so a degraded quarantine is at least visible
+        // in the console + the W689 client_errors mismatch report.
+        var qFailed = 0;
         doomed.forEach(function (k) {
-          try {
-            var v = localStorage.getItem(k);
-            if (v !== null) localStorage.setItem(qp + k, v);
-          } catch (_) {}   // quota overflow on the copy → fall through to remove (old behavior)
+          var v = null;
+          try { v = localStorage.getItem(k); } catch (_) {}
           try { localStorage.removeItem(k); } catch (_) {}
+          if (v !== null) {
+            try { localStorage.setItem(qp + k, v); } catch (_) { qFailed++; }
+          }
         });
-        console.warn('[Awakened] account switch — quarantined ' + doomed.length + ' state keys for ' + String(newSub || '').slice(0, 8) + '… (recoverable 7 days as ' + qp + '*)');
+        try { window.__awakenedQuarantineFailures = qFailed; } catch (_) {}
+        console.warn('[Awakened] account switch — quarantined ' + (doomed.length - qFailed) + '/' + doomed.length + ' state keys for ' + String(newSub || '').slice(0, 8) + '… (recoverable 7 days as ' + qp + '*)' + (qFailed ? ' — ' + qFailed + ' KEYS LOST TO QUOTA' : ''));
       } catch (_) {}
       return doomed.length;
     };
@@ -382,6 +445,43 @@
         }
       }
       _qDrop.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    } catch (_) {}
+    // W821 (Train 1, C4a) — RECOVERY HOOKS. W818 quarantined but gave no way
+    // back; a support case inside the 7-day window had no restore path. Both
+    // callable from Safari Web Inspector (device support) or the console:
+    //   __awakenedQuarantineList()            → [{epoch, when, keys}]
+    //   __awakenedQuarantineRestore(epoch)    → fills only keys absent locally
+    //   __awakenedQuarantineRestore(epoch, true) → full overwrite, then reload
+    try {
+      window.__awakenedQuarantineList = function () {
+        var snaps = {};
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('hbq_') === 0) {
+            var ep = Number(k.slice(4, k.indexOf('_', 4))) || 0;
+            if (!snaps[ep]) snaps[ep] = { epoch: ep, when: new Date(ep).toISOString(), keys: 0 };
+            snaps[ep].keys++;
+          }
+        }
+        return Object.keys(snaps).map(function (e) { return snaps[e]; });
+      };
+      window.__awakenedQuarantineRestore = function (epoch, overwrite) {
+        var qp = 'hbq_' + epoch + '_', restored = 0, skipped = 0, names = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(qp) === 0) names.push(k);
+        }
+        names.forEach(function (k) {
+          var orig = k.slice(qp.length);
+          if (orig.indexOf('hb_') !== 0) return;              // only ever restore hb_ keys
+          if (orig === 'hb_user' || orig === 'hb_state_owner') return;  // never resurrect a session/tag
+          if (!overwrite && localStorage.getItem(orig) !== null) { skipped++; return; }
+          try { localStorage.setItem(orig, localStorage.getItem(k)); restored++; } catch (_) { skipped++; }
+        });
+        console.warn('[Awakened] quarantine restore ' + epoch + ': ' + restored + ' restored, ' + skipped + ' skipped' + (overwrite ? ' (overwrite)' : ' (missing-only; pass true to overwrite)'));
+        if (restored > 0) { try { setTimeout(function () { window.location.reload(); }, 400); } catch (_) {} }
+        return { restored: restored, skipped: skipped };
+      };
     } catch (_) {}
   } catch (_) {}
   // W480 — lib/economy.js (the W471 extraction) defines AwakenedEconomy, which app.js
@@ -24359,6 +24459,32 @@
   // the current Sunday-Pacific leaderboard week, at WEEKLY_RESET_TIME device-
   // local. Pure function of lbGetCurrentWeekStartPT (reused, never recomputed)
   // so the whole decision is unit-testable on web. Optional nowMs for tests.
+  // W821 (Train 1, C5 — audit item G7) — the old version fed the PACIFIC
+  // week-key date into a DEVICE-LOCAL Date constructor, so "the final day of
+  // the board week" landed on the wrong local day for every non-PT hunter
+  // (an eastern-hemisphere user was pinged while the board still had a full
+  // PT day left). Fix: compute the true reset INSTANT (next Sunday 00:00
+  // America/Los_Angeles, DST-aware via an Intl offset probe), then fire at
+  // the last WEEKLY_RESET_TIME device-local that precedes it — correct in
+  // every timezone by construction. For PT devices this reduces to the old
+  // Saturday-10:00 behavior exactly.
+  function _ptMidnightMs(dateStr) {
+    // epoch ms of 00:00:00 America/Los_Angeles on 'YYYY-MM-DD'. Guess PST
+    // (UTC-8), read back the PT wall-clock that instant renders as, correct
+    // by the difference — lands exactly on PDT/PST including boundary days.
+    const y = +dateStr.slice(0, 4), mo = +dateStr.slice(5, 7), d = +dateStr.slice(8, 10);
+    let guess = Date.UTC(y, mo - 1, d, 8, 0, 0);
+    try {
+      const got = {};
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+      }).formatToParts(new Date(guess)).forEach(function (p) { got[p.type] = p.value; });
+      const gotMs = Date.UTC(+got.year, +got.month - 1, +got.day, (+got.hour) % 24, 0, 0);
+      guess += (Date.UTC(y, mo - 1, d, 0, 0, 0) - gotMs);
+    } catch (_) {}
+    return guess;
+  }
   function computeNextWeeklyResetDate(nowMs) {
     const ms = (typeof nowMs === 'number') ? nowMs : Date.now();
     let wk;
@@ -24366,10 +24492,19 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(wk)) return null;
     const tp = WEEKLY_RESET_TIME.split(':');
     const th = parseInt(tp[0], 10), tm = parseInt(tp[1], 10);
-    const fire = new Date(parseInt(wk.slice(0, 4), 10), parseInt(wk.slice(5, 7), 10) - 1, parseInt(wk.slice(8, 10), 10));
-    fire.setDate(fire.getDate() + 6);                       // Sunday + 6 = Saturday (final day)
-    fire.setHours(Number.isFinite(th) ? th : 10, Number.isFinite(tm) ? tm : 0, 0, 0);
-    if (fire.getTime() <= ms) fire.setDate(fire.getDate() + 7);  // this week's window passed -> next week
+    const hh = Number.isFinite(th) ? th : 10, mm2 = Number.isFinite(tm) ? tm : 0;
+    const plusDays = function (days) {
+      const dt = new Date(Date.UTC(+wk.slice(0, 4), +wk.slice(5, 7) - 1, +wk.slice(8, 10) + days));
+      return dt.toISOString().slice(0, 10);
+    };
+    const lastLocalFireBefore = function (resetMs) {
+      const f = new Date(resetMs);
+      f.setHours(hh, mm2, 0, 0);
+      while (f.getTime() >= resetMs) f.setDate(f.getDate() - 1);   // step back to the local day whose fire-time precedes the reset
+      return f;
+    };
+    let fire = lastLocalFireBefore(_ptMidnightMs(plusDays(7)));
+    if (fire.getTime() <= ms) fire = lastLocalFireBefore(_ptMidnightMs(plusDays(14)));  // this week's window passed -> next week
     return fire;
   }
 
@@ -29970,11 +30105,30 @@
     if (totalPoints === 0)                            return 'avatar-base.png';
     return AVATAR_FILES[currentClass] || 'avatar-base.png';
   }
+  // W821 (Train 1, C2 — the four skipped entitlement-audit findings, live-money
+  // path since IAP_ENABLED flipped in W628). Central rule: a skin file may
+  // render/equip only if it is the class default (''), one of the FREE
+  // AVATAR_SKINS, or a PREMIUM_SKINS file the entitlement set says is owned.
+  // Unknown files (e.g. a renamed art asset from an older build) fall back to
+  // the class default instead of a broken <img>.
+  function _skinFileAllowed(file) {
+    try {
+      if (!file) return true;
+      if (AVATAR_SKINS.some(function (s) { return s.file === file; })) return true;
+      const prem = PREMIUM_SKINS.find(function (s) { return s.file === file; });
+      if (prem) return isSkinOwned(prem.id);
+      return false;   // unknown/renamed file — never render a broken path
+    } catch (_) { return false; }
+  }
   function getAvatarSrc() {
     // W279 — an equipped cosmetic skin overrides the class default everywhere
     // the avatar renders (home portrait, profile card, arena, etc.).
+    // W821 — render-time validation only (no persist here: on a fresh device
+    // the entitlement cache may simply not have loaded yet — the repaint after
+    // refreshSkinEntitlements restores the skin). True revocation unequips in
+    // _enforceSkinOwnership after a DEFINITIVE entitlement fetch.
     const skin = getEquippedSkin();
-    if (skin) return skin;
+    if (skin && _skinFileAllowed(skin)) return skin;
     return _classDefaultAvatar();
   }
   // Tracks the last-rendered avatar so we only crossfade when class actually changes.
@@ -30049,7 +30203,27 @@
     try { localStorage.setItem(SKINS_CACHE_KEY, JSON.stringify({ skins: skins, at: Date.now() })); } catch (e) { _logSwallow('skins_cache:persist', e); }
   }
   function _hydrateOwnedSkinsFromCache() { const c = _skinsCacheRead(); if (c) _ownedSkins = new Set(c); }
+  // W821 (C2 finding "not loaded at init") — hydrate the ownership cache at
+  // BOOT, not first-wardrobe-open: getAvatarSrc's render guard and the tile
+  // states need it long before the wardrobe is ever opened.
+  try { _hydrateOwnedSkinsFromCache(); } catch (_) {}
   function isSkinOwned(skinId) { try { return _ownedSkins.has(skinId); } catch (_) { return false; } }
+  // W821 (C2 revocation half) — after a DEFINITIVE entitlement answer, an
+  // equipped premium skin the server no longer grants (refund, transfer)
+  // unequips to the class default and repaints the home portrait. Free skins
+  // and the class default are never touched.
+  function _enforceSkinOwnership() {
+    try {
+      const skin = getEquippedSkin();
+      if (!skin) return;
+      const prem = PREMIUM_SKINS.find(function (s) { return s.file === skin; });
+      if (!prem || isSkinOwned(prem.id)) return;
+      setEquippedSkin('');
+      try { console.warn('[Wardrobe] equipped skin ' + prem.id + ' is no longer owned — reverted to class default'); } catch (_) {}
+      try { const home = document.getElementById('sc-avatar-img'); if (home) { home.src = getAvatarSrc(); _lastAvatarSrc = home.src; } } catch (_) {}
+      try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+    } catch (_) {}
+  }
   async function refreshSkinEntitlements() {
     if (_skinsInFlight) return;
     if (!(window.Auth && typeof Auth.fetchEntitlements === 'function')) return;
@@ -30059,9 +30233,15 @@
       if (r && r.ok && Array.isArray(r.skins)) {
         _ownedSkins = new Set(r.skins);
         _skinsCacheWrite(r.skins);
+        _enforceSkinOwnership();   // W821 — refunds/transfers unequip once the server has spoken
         try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+      } else if (r && !r.ok) {
+        // W821 (C2 finding "silent catch") — a failed fetch is no longer
+        // invisible: log it (surfaced under hb_debug) so ownership staleness
+        // is diagnosable. Never throws; cache keeps serving.
+        _logSwallow('skins_entitlements:fetch', r.code || 'ERROR');
       }
-    } catch (_) {} finally { _skinsInFlight = false; }
+    } catch (e) { _logSwallow('skins_entitlements:fetch', e); } finally { _skinsInFlight = false; }
   }
   // W637 — throttled self-heal. Asks the backend to reconcile ownership against
   // RevenueCat's authoritative REST record (grants a purchase whose webhook was
@@ -44647,6 +44827,16 @@
       if (_LB_SIM_METRICS[metric]) {
         const simFallback = _lbMaybeSimulate(metric, [], null);
         const fallbackCount = (simFallback.top || []).length;
+        // W821 (Train 1, C7) — post-W806 (sims OFF) this "sim fallback"
+        // returns an EMPTY merge, which _lbCommitWeekList rendered as
+        // "Be the first to rank." — a network error dressed up as an empty
+        // board. Zero fallback rows → the honest error state instead; the
+        // sim-populated path below still serves if sims are ever re-enabled.
+        if (fallbackCount === 0) {
+          try { _bcLB('leaderboard-modal-render-final', { metric, dataSource: 'error-state', finalRowCount: 0, code: failCode }); } catch (_) {}
+          listEl.innerHTML = lbBuildErrorState(failCode);
+          return;
+        }
         try {
           _bcLB('leaderboard-modal-sim-fallback', {
             metric,
@@ -46760,6 +46950,15 @@
     if (sh) sh.classList.add('hidden');
   }
   function _equipSkin(file) {
+    // W821 (C2 finding "no ownership check on equip") — the wardrobe click
+    // handler passed any data-skin attribute straight through, so a crafted
+    // DOM node (or any markup slip that put data-skin on a premium tile)
+    // equipped unpaid skins. Every equip now passes the central guard.
+    if (!_skinFileAllowed(file || '')) {
+      try { showHabitToast('That skin is not yours to wear yet.'); } catch (_) {}
+      try { _renderWardrobe(); } catch (_) {}
+      return;
+    }
     setEquippedSkin(file || '');
     _renderWardrobe();
     const src = getAvatarSrc();
@@ -63074,7 +63273,12 @@
       // a subscription that renewed, lapsed, or was refunded while the app sat
       // in the background updates the member cache without waiting for the next
       // cold launch. _skinsInFlight dedupes; the backend rate-limits reads.
-      try { if (window.Auth && Auth.iapAvailable && Auth.iapAvailable()) refreshSkinEntitlements(); } catch (_) {}
+      // W821 (C2 finding "not loaded at init") — was gated on iapAvailable(),
+      // which is FALSE whenever the RevenueCat plugin isn't up (web preview,
+      // plugin init failure) even though fetchEntitlements is a plain backend
+      // call — so ownership could sit stale until a wardrobe open. Signed-in
+      // is the only real requirement; auth.js stub-gates guests itself.
+      try { refreshSkinEntitlements(); } catch (_) {}
       // W604 — register this device for remote push (friend requests / co-op
       // invites while the app is closed). Idempotent + self-gated (native +
       // signed-in + past onboarding); no-op on web.
