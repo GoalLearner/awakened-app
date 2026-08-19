@@ -163,16 +163,23 @@
         if (data.alias) cur.alias = data.alias;
         writeUser(cur);
         try { console.log('[Auth] session refreshed — good for 90 more days'); } catch (_) {}
+        try { localStorage.removeItem('hb_refresh_last_fail'); } catch (_) {}   // W816
         return { ok: true };
       }
       if (res.status === 401) {
         // Revoked, deleted, or beyond grace — a real sign-out.
+        // W816 — stamp the outcome BEFORE clearUser so a support/debug look at
+        // a gated device can tell "refresh tried and was refused (code X)"
+        // apart from "no token existed to refresh" (no stamp).
+        try { localStorage.setItem('hb_refresh_last_fail', JSON.stringify({ code: (data && data.error) || 'NOT_REFRESHABLE', status: 401, at: Date.now() })); } catch (_) {}
         clearUser();
         return { ok: false, code: (data && data.error) || 'NOT_REFRESHABLE' };
       }
       // 429 / 5xx / network weirdness: keep the session, try again later.
+      try { localStorage.setItem('hb_refresh_last_fail', JSON.stringify({ code: 'RETRY_LATER', status: res.status, at: Date.now() })); } catch (_) {}   // W816
       return { ok: false, code: 'RETRY_LATER' };
     } catch (_) {
+      try { localStorage.setItem('hb_refresh_last_fail', JSON.stringify({ code: 'NETWORK', at: Date.now() })); } catch (_) {}   // W816
       return { ok: false, code: 'NETWORK' };
     } finally {
       _refreshInFlight = false;
