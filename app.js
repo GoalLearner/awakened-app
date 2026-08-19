@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w828'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w829'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22059,10 +22059,12 @@
     // items, don't just append.
     // W822 — covers the whole 2.4.4→2.5.0 span (the sheet was frozen at
     // 2.4.3 while eleven trains shipped; updaters saw none of it).
+    // W829 — the Vitals Row item was removed WITH the feature (owner call,
+    // 2026-08-19: header vitals retired; W810/W811 reversed). What's New
+    // must never advertise a surface the build doesn't show.
     '2.5.0': {
-      subtitle: 'Your vitals on the header, your climb under guard.',
+      subtitle: 'Your climb under guard, your boards made honest.',
       items: [
-        { emoji: '', title: 'The Vitals Row',            description: "Verified steps, floors climbed, and last night's sleep now live right on the home header — no more swapping to the Health app to check your day." },
         { emoji: '', title: 'Your climb is protected',   description: "Ascent progress now rides your cloud backup, and the Tower remembers: if your floor is ever lost, the server restores it on your next launch." },
         { emoji: '', title: 'You stay signed in',        description: "Sessions renew themselves silently in the background. If one ever lapses, the gate greets you by name and one tap brings your hunter back — souls, streaks, and kill log intact." },
         { emoji: '', title: 'Verified means verified',   description: "Only data your iPhone or Watch actually recorded counts toward habits, hunts, and the boards. Entries typed into the Health app are ignored — the rankings are real." },
@@ -33540,49 +33542,12 @@
   //  - Week card: XP earned Sunday→today, day-of-week counter, bar
   //  - 30-day sparkline card: cumulative XP path + total + 7-day delta
   // Called from updateProgress() so it refreshes on every toggle/render.
-  // W810 — Home Header Vitals Row (ClaudeDesign Option B). Rendell: "have those
-  // trackers in Awakened as well from the Apple Health-synced data... so people
-  // don't need to keep swapping between apps." Steps + floors read the SAME
-  // W799-filtered, 5-min-cached Health queries the game verifies with; sleep is
-  // last night's verified total straight from the leaderboard state (zero extra
-  // HealthKit cost). The grid hides on web / no permission — the 42/44 habit
-  // count beside it still renders everywhere.
-  let _vitalsRowBusy = false;
-  async function updateVitalsRow() {
-    const grid = document.getElementById('vitals-grid');
-    if (!grid) return;
-    try {
-      if (typeof Health === 'undefined' || !Health.isAvailable || !Health.isAvailable() ||
-          Health.permissionStatus() !== 'granted') { grid.classList.add('hidden'); return; }
-      if (_vitalsRowBusy) return;
-      _vitalsRowBusy = true;
-      const [steps, flights] = await Promise.all([
-        Health.getStepsToday().catch(function () { return null; }),
-        (typeof Health.getFlightsClimbedToday === 'function' ? Health.getFlightsClimbedToday() : Promise.resolve(null)).catch(function () { return null; }),
-      ]);
-      _vitalsRowBusy = false;
-      // Sleep — latest recorded night from lb state (written by lbRecordSleepNight).
-      let sleepTxt = null;
-      try {
-        const daily = loadLeaderboardState().sleep_hours_daily || {};
-        const nights = Object.keys(daily).sort();
-        if (nights.length) {
-          const hrs = Number(daily[nights[nights.length - 1]]) || 0;
-          sleepTxt = Math.floor(hrs) + 'h ' + String(Math.round((hrs % 1) * 60)).padStart(2, '0') + 'm';
-        }
-      } catch (_) {}
-      const sEl = document.getElementById('hs-steps');
-      const fEl = document.getElementById('hs-flights');
-      const slEl = document.getElementById('hs-sleep');
-      // Failed reads leave the prior value in place — never flash "—" back in.
-      if (sEl && steps != null) sEl.textContent = _N(Math.max(0, steps | 0));
-      if (fEl && flights != null) fEl.textContent = _N(Math.max(0, flights | 0));
-      if (slEl && sleepTxt != null) slEl.textContent = sleepTxt;
-      grid.classList.remove('hidden');
-    } catch (_) { _vitalsRowBusy = false; }
-  }
+  // W829 — the W810 Vitals Row (updateVitalsRow + #vitals-grid) is REMOVED
+  // (owner call, 2026-08-19). It self-hid whenever the Health bridge didn't
+  // report granted, so most sessions never showed it; the owner chose removal
+  // over repair. The Health reads it consumed (getStepsToday /
+  // getFlightsClimbedToday / lb sleep state) all remain live for verification.
   function updateHeaderMetrics() {
-    try { updateVitalsRow(); } catch (_) {}   // W810 — async, cache-backed, self-guarded
     // ── Rank class-affinity sub (top-right of rank card) ─────
     try {
       const subEl = document.getElementById('rank-class-sub');
@@ -52725,16 +52690,9 @@
         // child action, not a tile tap.
         const t = e.target;
         if (t && t.closest && t.closest('button')) return;
-        // W811 — the Vitals Row grid (steps/floors/sleep) is a passive readout;
-        // taps on it must NOT open Routine Progress (owner report). Only the
-        // habit-count cluster keeps the tile tap.
-        // W827 (Train 2, L12) — but a silent swallow inside a role="button"
-        // tile read as a dead tap zone (audit). Answer the tap with what the
-        // readout IS instead of nothing — doubling as the W799 disclosure.
-        if (t && t.closest && t.closest('#vitals-grid')) {
-          try { showHabitToast('Verified vitals — steps, floors, and last night\'s sleep from your iPhone or Apple Watch. Hand-typed Health entries never count.'); } catch (_) {}
-          return;
-        }
+        // W829 — the W811/W827 #vitals-grid branch is gone with the Vitals
+        // Row itself (owner call): the whole tile is the routine-breakdown
+        // tap again, as it was pre-W810.
         openPackProgressModal();
       });
       tile.addEventListener('keydown', e => {
@@ -63499,7 +63457,7 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { updateVitalsRow(); } catch (_) {} }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} }, 60_000);
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

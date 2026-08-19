@@ -16942,22 +16942,8 @@ body.reveal-locked { overflow: hidden; }
 }
 .metric-card .rank-next.maxed { color: var(--gold-bright, var(--gold)); }
 /* ─── Today-strip (habits count + streak + souls) ───────────── */
-/* W810 — Home Header Vitals Row (ClaudeDesign Option B): 3-column steps /
-   floors / sleep grid inside the today-strip, + the souls pill promoted to
-   the top bar as a compact mini variant. Colors from the mock. */
-.vgrid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; min-width: 0; }
-.vgrid.hidden { display: none; }
-.vcol { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 1px 0; min-width: 0; }
-.vcol + .vcol { border-left: 1px solid rgba(255, 255, 255, 0.07); }
-.vcol .vv { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
-.vcol .vv svg { flex: none; }
-.vcol .vv b { font-weight: 800; }
-.vcol .vl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7.5px; font-weight: 700;
-  letter-spacing: 1.4px; color: var(--text-tertiary); }
-.vcol--st .vv { color: #4ade80; }
-.vcol--fl .vv { color: #7ea6d9; }
-.vcol--sl .vv { color: #a78bfa; }
+/* W829 — the W810 vitals grid rules (.vgrid/.vcol/.vv/.vl) are removed with
+   the feature (owner call). The souls mini-pill from that pass stays. */
 .souls-badge--mini { padding: 5px 9px; gap: 5px; font-size: 11px; }
 .souls-badge--mini .souls-balance { font-size: 11px; letter-spacing: 0.2px; }
 .souls-badge--mini .souls-icon { width: 12px; height: 12px; }

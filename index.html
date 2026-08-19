@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=640">
+  <link rel="stylesheet" href="styles.css?v=641">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -555,21 +555,16 @@
            #perfect-streak-display, #souls-badge so JS render-targets stay
            valid. The standalone #progress-bar is preserved in a hidden
            container below since updateProgress() writes to it. -->
-      <!-- W810 (ClaudeDesign Home Header · Vitals Row, Option B) — the habits
-           count now shares the row with a 3-column vitals grid (steps / floors /
-           sleep from the same W799-filtered Health reads the game verifies with).
-           The count cluster keeps its ids + tap → routine breakdown; the vitals
-           grid (#vitals-grid) is hidden on web / no Health permission. -->
+      <!-- W829 — the W810 Vitals Row (#vitals-grid: steps/floors/sleep) is
+           REMOVED (owner call, 2026-08-19). It self-hid whenever the Health
+           bridge didn't report granted, so most sessions never showed it;
+           the owner chose removal over repair. The count cluster keeps its
+           ids + tap → routine breakdown. -->
       <div id="today-strip" class="today-strip" role="button" tabindex="0" aria-label="Habits progress — tap for routine breakdown">
         <div class="today-strip-left">
           <span id="completed-count" class="today-strip-value">0</span>
           <span class="today-strip-divider">/</span>
           <span id="total-count" class="today-strip-target">0</span>
-        </div>
-        <div id="vitals-grid" class="vgrid hidden" aria-label="Today's device-verified activity">
-          <div class="vcol vcol--st"><span class="vv"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M1.5 9.5h10c0-2.2-2.2-2.8-3.8-3.4L5.8 4.7 3.4 5.2C2.2 6.2 1.5 7.8 1.5 9.5z" fill="none" stroke="#4ade80" stroke-width="1.1" stroke-linejoin="round"/><path d="M1.5 9.5c0 .8.5 1.3 1.3 1.3h7.4c.8 0 1.3-.5 1.3-1.3" stroke="#4ade80" stroke-width="1.1" fill="none"/></svg><b id="hs-steps">—</b></span><span class="vl">STEPS</span></div>
-          <div class="vcol vcol--fl"><span class="vv"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M1 10.5l3.4-5.6 2.1 3.2 1.7-2.4 3.8 4.8z" fill="none" stroke="#7ea6d9" stroke-width="1.1" stroke-linejoin="round"/></svg><b id="hs-flights">—</b></span><span class="vl">FLOORS</span></div>
-          <div class="vcol vcol--sl"><span class="vv"><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M10.8 8.2A4.6 4.6 0 015.1 2.3a4.6 4.6 0 105.7 5.9z" fill="none" stroke="#a78bfa" stroke-width="1.1" stroke-linejoin="round"/><path d="M10 2.4l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z" fill="#a78bfa"/></svg><b id="hs-sleep">—</b></span><span class="vl">SLEEP</span></div>
         </div>
         <div class="today-strip-right">
           <!-- v3 Phase 1z.10 polish pass —
@@ -3361,7 +3356,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1243"></script>
+  <script src="app.js?v=1244"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
