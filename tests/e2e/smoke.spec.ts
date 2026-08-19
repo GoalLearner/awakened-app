@@ -1284,20 +1284,24 @@ test.describe('N · Dungeon rank filter preserved (1z.117)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// O. Leaderboard preview — bedtime retired, workout streak in (1z.118)
+// O. Global Rankings Hub — the honest trio (W822, Train 2 L1)
 // ─────────────────────────────────────────────────────────────
-// Asserts the three cards in the dashboard's leaderboard preview
-// strip after the 1z.118 metric swap: step_total, sleep_streak,
-// workout_streak. The retired "bedtime_streak" / "Before-midnight
-// bedtime streak" card must NOT be present. Also exercises the
+// Asserts the hub renders EXACTLY the three live boards —
+// step_total, floor_best, relics_collected — in that order. The
+// W634-retired boards (sleep_streak, workout_streak,
+// flights_climbed, bedtime_streak) must have no rows: their old
+// rows were dead ends (tap closed the hub and stranded the user),
+// which W822 removed. Also exercises the
 // _lbComputeWorkoutStreakFromCompletions helper with seeded
-// completion data to confirm it derives current/best correctly.
+// completion data to confirm it derives current/best correctly
+// (the helper outlives the retired board — it feeds snapshot
+// fields other surfaces still read).
 test.describe('O · Workout streak leaderboard card (1z.118)', () => {
-  test('global rankings hub shows step_total + sleep_streak + workout_streak + flights_climbed; bedtime card gone', async ({ page }) => {
+  test('global rankings hub shows exactly step_total + floor_best + relics_collected; retired boards gone', async ({ page }) => {
     await freshAppForLedgerTest(page);
     // v3 Phase 1z.130 — Global Rankings moved out of the Stats tab
     // into a dedicated hub sheet opened from the World Rank card.
-    // The hub list is `#lb-hub-list` and contains 4 metric rows.
+    // The hub list is `#lb-hub-list`; W822 trimmed it to 3 rows.
     await page.evaluate(() => {
       const w = window as unknown as { openGlobalRankingsHub?: () => void };
       if (typeof w.openGlobalRankingsHub === 'function') {
@@ -1306,7 +1310,7 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     });
     await page.waitForFunction(() => {
       const list = document.getElementById('lb-hub-list');
-      return !!list && list.querySelectorAll('[data-lb-metric]').length >= 4;
+      return !!list && list.querySelectorAll('[data-lb-metric]').length >= 3;
     }, { timeout: 8_000 });
 
     const metrics = await page.evaluate(() => {
@@ -1317,11 +1321,9 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     });
 
     expect(metrics).not.toBeNull();
-    expect(metrics).toContain('step_total');
-    expect(metrics).toContain('sleep_streak');
-    expect(metrics).toContain('workout_streak');
-    expect(metrics).toContain('flights_climbed');
-    expect(metrics).not.toContain('bedtime_streak');
+    // Exact-match: order AND count — a resurrected retired row or a
+    // silently dropped live row both fail loudly.
+    expect(metrics).toEqual(['step_total', 'floor_best', 'relics_collected']);
 
     // Stats tab should NOT contain the legacy `#lb-preview-list`.
     const hasLegacy = await page.evaluate(() => !!document.getElementById('lb-preview-list'));
