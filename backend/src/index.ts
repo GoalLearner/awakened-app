@@ -24,6 +24,7 @@
 import type { Env } from './env';
 import { verifySessionJwt } from './session-jwt';
 import { handleAuthVerify } from './handlers/auth-verify';
+import { handleAuthRefresh } from './handlers/auth-refresh';
 import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
 import { handleLeaderboardTop } from './handlers/leaderboard-top';
 import { handleLeaderboardHallOfFame } from './handlers/hall-of-fame';
@@ -161,6 +162,12 @@ export default {
       // ── Public routes ──
       if (path === '/v1/auth/verify' && method === 'POST') {
         response = await handleAuthVerify(request, env);
+      }
+      // ── W815 — session refresh (self-authenticating: graced JWT verify inside).
+      // Lives BEFORE the strict Bearer gate, which would reject the expired-in-
+      // grace tokens this endpoint exists to rescue.
+      else if (path === '/v1/auth/refresh' && method === 'POST') {
+        response = await handleAuthRefresh(request, env);
       }
       // ── RevenueCat purchase webhook (W297 — public; shared-secret auth) ──
       // Called by RevenueCat's servers, not the app, so it has no session JWT;

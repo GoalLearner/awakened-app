@@ -115,10 +115,101 @@
     if (u.jwt === GUEST_STUB) return u;   // W329 — guest is always valid locally
     const nowMs = Date.now();
     if (typeof u.jwt_expires_at === 'number' && u.jwt_expires_at <= nowMs) {
+      // W815 — expiry is no longer an instant sign-out. Within the 30-day
+      // grace window the user stays "signed in" locally and the boot-time
+      // refresh (below) silently exchanges the token; the gate only returns
+      // for sessions dead longer than the grace (or revoked server-side —
+      // the refresh endpoint 401s and clearUser runs then). Before this,
+      // the whole launch cohort hit the 90-day cliff simultaneously and
+      // woke up to "Sign in to begin".
+      if (nowMs - u.jwt_expires_at <= REFRESH_GRACE_MS) {
+        return u;
+      }
       return null;
     }
     return u;
   }
+
+  // ── W815 — silent session refresh ────────────────────────────
+  // Exchanges the current JWT (valid, near-expiry, or ≤30d past expiry)
+  // for a fresh 90-day one via POST /v1/auth/refresh. Fires from the
+  // boot path below + on app foreground, throttled to ~daily unless the
+  // token is already expired (then every boot until rescued). On a 401
+  // (revoked / beyond grace) the local user is cleared so the gate shows.
+  const REFRESH_GRACE_MS  = 30 * 24 * 60 * 60 * 1000;  // keep in lockstep with backend REFRESH_GRACE_SECONDS
+  const REFRESH_AHEAD_MS  = 14 * 24 * 60 * 60 * 1000;  // start renewing 14 days out
+  const REFRESH_THROTTLE_MS = 20 * 60 * 60 * 1000;     // at most ~daily when not expired
+  const REFRESH_STAMP_KEY = 'hb_jwt_refresh_attempt_at';
+  let _refreshInFlight = false;
+
+  async function refreshSession() {
+    if (_refreshInFlight) return { ok: false, code: 'IN_FLIGHT' };
+    const u = readUser();
+    if (!u || !u.jwt) return { ok: false, code: 'NOT_SIGNED_IN' };
+    if (u.jwt === 'PHASE_A_STUB' || u.jwt === LOCALHOST_DEV_STUB || u.jwt === GUEST_STUB) {
+      return { ok: false, code: 'STUB_USER' };   // no backend session to renew
+    }
+    _refreshInFlight = true;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/auth/refresh', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      let data = null; try { data = await res.json(); } catch (_) {}
+      if (res.status === 200 && data && data.jwt) {
+        const cur = readUser() || u;
+        cur.jwt = data.jwt;
+        cur.jwt_expires_at = Date.now() + SESSION_TTL_MS;
+        if (data.alias) cur.alias = data.alias;
+        writeUser(cur);
+        try { console.log('[Auth] session refreshed — good for 90 more days'); } catch (_) {}
+        return { ok: true };
+      }
+      if (res.status === 401) {
+        // Revoked, deleted, or beyond grace — a real sign-out.
+        clearUser();
+        return { ok: false, code: (data && data.error) || 'NOT_REFRESHABLE' };
+      }
+      // 429 / 5xx / network weirdness: keep the session, try again later.
+      return { ok: false, code: 'RETRY_LATER' };
+    } catch (_) {
+      return { ok: false, code: 'NETWORK' };
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  function _maybeRefreshSession() {
+    try {
+      const u = readUser();
+      if (!u || !u.jwt || !u.sub) return;
+      if (u.jwt === 'PHASE_A_STUB' || u.jwt === LOCALHOST_DEV_STUB || u.jwt === GUEST_STUB) return;
+      if (typeof u.jwt_expires_at !== 'number') return;
+      const nowMs = Date.now();
+      const msLeft = u.jwt_expires_at - nowMs;
+      if (msLeft > REFRESH_AHEAD_MS) return;                      // plenty of runway
+      if (msLeft <= -REFRESH_GRACE_MS) return;                    // beyond rescue — gate handles it
+      const expired = msLeft <= 0;
+      if (!expired) {
+        // Near-expiry: throttle to ~daily. An EXPIRED token skips the
+        // throttle — every boot is a rescue attempt until one lands.
+        let last = 0; try { last = Number(localStorage.getItem(REFRESH_STAMP_KEY)) || 0; } catch (_) {}
+        if (nowMs - last < REFRESH_THROTTLE_MS) return;
+      }
+      try { localStorage.setItem(REFRESH_STAMP_KEY, String(nowMs)); } catch (_) {}
+      refreshSession();
+    } catch (_) {}
+  }
+
+  // Kick once at load (auth.js parses before app.js, so an in-grace expired
+  // session is usually rescued before the first authenticated call) and on
+  // every return to foreground.
+  try { _maybeRefreshSession(); } catch (_) {}
+  try {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') _maybeRefreshSession();
+    });
+  } catch (_) {}
 
   function getJwt() {
     const u = readUser();
@@ -2012,6 +2103,7 @@
     getCurrentUser,
     reportAppOpen,
     getJwt,
+    refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,
     validateAlias,
     signInWithApple,

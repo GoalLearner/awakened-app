@@ -64,6 +64,47 @@ export interface SessionPayload {
   alias: string;
 }
 
+// W815 — refresh grace window. A JWT whose signature is valid but whose exp
+// is within this many seconds PAST may still be exchanged for a fresh session
+// via POST /v1/auth/refresh (and ONLY there — every other route keeps the
+// strict verifier). Rationale: sessions are 90 days and the refresh path was
+// never wired, so the entire launch cohort hit hard expiry ~mid-Aug 2026 and
+// woke up to the sign-in gate. The grace window turns that cliff into a
+// silent recovery while keeping revocation intact (the refresh handler still
+// checks the user row exists — deleted accounts stay dead per W740).
+export const REFRESH_GRACE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
+/**
+ * W815 — verifier for the refresh endpoint only: identical to
+ * verifySessionJwt but tolerates exp up to REFRESH_GRACE_SECONDS in the
+ * past (jose clockTolerance). Signature, issuer, audience, and the
+ * dev-stub rejection are enforced exactly as in the strict verifier.
+ */
+export async function verifySessionJwtForRefresh(
+  token: string,
+  env: Env,
+): Promise<SessionPayload> {
+  const key = getKey(env);
+  const { payload } = await jwtVerify(token, key, {
+    algorithms: ['HS256'],
+    issuer: ISSUER,
+    audience: AUDIENCE,
+    clockTolerance: REFRESH_GRACE_SECONDS,
+  });
+  const sub = payload.sub;
+  const alias = payload.alias;
+  if (typeof sub !== 'string' || sub.length === 0) {
+    throw new Error('SESSION_JWT_MISSING_SUB');
+  }
+  if (typeof alias !== 'string' || alias.length === 0) {
+    throw new Error('SESSION_JWT_MISSING_ALIAS');
+  }
+  if (sub === 'localhost-dev-user' && alias === 'DevUser') {
+    throw new Error('LOCALHOST_DEV_STUB cannot reach production backend.');
+  }
+  return { userId: sub, alias };
+}
+
 /**
  * Verifies a session JWT. Validates signature, iss, aud, exp, and
  * rejects the LOCALHOST_DEV_STUB pattern explicitly.

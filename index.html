@@ -3336,13 +3336,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=60"></script>
+  <script src="auth.js?v=61"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1229"></script>
+  <script src="app.js?v=1230"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3808,7 +3808,7 @@
       <div class="settings-collapsible">
         <button id="settings-help-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="help">
           <span class="settings-collapsible-lbl">HELP &amp; ABOUT</span>
-          <span class="settings-collapsible-summary">v2.2.8</span>
+          <span class="settings-collapsible-summary" id="settings-ver-summary">v—</span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
         <div id="settings-help-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
@@ -3836,7 +3836,7 @@
           <div class="settings-v2-frow">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Version</div>
-              <div class="settings-v2-foot settings-ver-line" id="settings-app-ver">v2.2.8 · BUILD W395</div>
+              <div class="settings-v2-foot settings-ver-line" id="settings-app-ver">v—</div>
             </div>
           </div>
         </div>
