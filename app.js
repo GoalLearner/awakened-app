@@ -271,7 +271,7 @@
   const APP_VERSION = '2.4.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 is the next train, opening with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.8-w818'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.8-w819'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -63124,6 +63124,36 @@
       // wiped tower is rebuilt before floor_best is announced (stamp devices);
       // stampless devices heal from the submit response's server best instead.
       try { _ascentSelfHealFromStamps(); } catch (_) {}
+      // W819 — EMPTY-TOWER boot heal, throttle-proof. The W818 server-best heal
+      // rides lbSubmitAllMetrics, which the 5-min debounce (and the SW's
+      // stale-first-launch) can skip — the owner's first 480 boot submitted 0
+      // under old JS and consumed the window, so the heal never saw a response.
+      // If the tower is EMPTY and a real session exists, probe floor_best
+      // directly (fire-and-forget, once per boot, self-limiting: a healed or
+      // genuinely-new tower stops triggering after the first real clear).
+      try {
+        if ((getAscentState().highestCleared | 0) === 0 &&
+            window.Auth && typeof Auth.getCurrentUser === 'function' && Auth.getCurrentUser() &&
+            typeof Auth.submitLeaderboardSnapshot === 'function') {
+          Auth.submitLeaderboardSnapshot('floor_best', 0).then(function (resp) {
+            try {
+              const serverBest = Number(resp && resp.best_value) | 0;
+              const st = getAscentState();
+              if (resp && resp.ok && serverBest > (st.highestCleared | 0)) {
+                localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
+                st.highestCleared = Math.min(100, serverBest);
+                st.currentFloor = Math.min(100, st.highestCleared + 1);
+                st.wins = Math.max(st.wins | 0, st.highestCleared);
+                _persistAscentState(st);
+                try { console.log('[Ascent] W819 boot heal — rebuilt to floor ' + st.highestCleared); } catch (_) {}
+                try { showHabitToast('⚔ The Tower remembers — your climb has been restored to Floor ' + st.highestCleared); } catch (_) {}
+                try { Auth.submitLeaderboardSnapshot('floor_best', st.highestCleared | 0); } catch (_) {}
+                try { if (typeof updateHeaderMetrics === 'function') updateHeaderMetrics(); } catch (_) {}
+              }
+            } catch (_) {}
+          }).catch(function () {});
+        }
+      } catch (_) {}
       // v2.1.0 Phase C — fire the leaderboard snapshot submission
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
