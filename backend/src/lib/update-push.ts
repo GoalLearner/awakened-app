@@ -121,9 +121,40 @@ export async function runUpdatePushPage(
   }
 }
 
-/** Cron entry: gate to Monday 9 AM Pacific, then run one page. */
+// W820 (Train 1, R1a) — the broadcast used to fire EVERY Monday regardless of
+// whether an update existed (the client banner got the version check in W791;
+// the push never did). A weekly false alarm to a mostly-auto-updating cohort
+// is the #1 push-opt-out risk, so the cron now proceeds only when the App
+// Store's live release is RECENT (released within the last RELEASE_WINDOW_DAYS)
+// — i.e. only on Mondays that actually follow a release. FAIL CLOSED: lookup
+// unreachable/malformed → no broadcast (a skipped nudge costs nothing; a false
+// one costs the notification channel). Per-user build gating (skip hunters
+// already updated) lands with the Train-3 instrumentation (R1b).
+const APP_STORE_ID = '6764727990';
+const RELEASE_WINDOW_DAYS = 7;
+async function storeReleaseIsFresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&t=${Date.now()}`);
+    if (!res.ok) return false;
+    const data = (await res.json()) as { results?: { currentVersionReleaseDate?: string }[] };
+    const iso = data.results && data.results[0] && data.results[0].currentVersionReleaseDate;
+    if (!iso) return false;
+    const ageMs = Date.now() - Date.parse(iso);
+    return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= RELEASE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+/** Cron entry: gate to Monday 9 AM Pacific + a fresh App Store release, then
+ *  run one page. (The admin test-fire route calls runUpdatePushPage directly
+ *  and intentionally bypasses both gates.) */
 export async function runUpdatePushCron(env: Env): Promise<void> {
   const { dayKey, hour, weekday } = ptParts();
   if (weekday !== 1 || hour !== 9) return; // only the 9 AM PT runs proceed (DST handled by the 2h UTC cron window)
+  if (!(await storeReleaseIsFresh())) {
+    console.log(`[update-push] ${dayKey}: no App Store release in the last ${RELEASE_WINDOW_DAYS}d — broadcast skipped (W820)`);
+    return;
+  }
   await runUpdatePushPage(env, dayKey);
 }
