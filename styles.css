@@ -12599,6 +12599,13 @@ footer {
   color: var(--text-tertiary);
   margin-left: 2px;
 }
+/* W823 (L9a) — one-line orientation under the solo-hunts label */
+.bosses-section-sublabel {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin: 3px 2px 10px;
+  line-height: 1.45;
+}
 
 /* ── Quests-tab gate grid (v2.0.4) ──────────────────────────────
    3-column × 2-row grid of rank-tier gates (6 cells total — exactly

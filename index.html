@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=637">
+  <link rel="stylesheet" href="styles.css?v=638">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -102,7 +102,10 @@
         <!-- W329 — guest "try-it-first" entry. Starts a local session; the
              gate's guest branch mounts the full single-player loop. -->
         <button id="signin-guest-btn" type="button" class="signin-guest-btn">Try it first — no account needed</button>
-        <p class="signin-footnote">Only your alias and three Apple Health metrics (step total, sleep streak, bedtime streak) are sent. Everything else stays on your device.</p>
+        <!-- W823 (Train 2, L12 privacy-footnote) — the old note named two
+             boards retired in W634 and understated what the live boards use.
+             Keep in sync with what lbSubmitAllMetrics actually sends. -->
+        <p class="signin-footnote">Only your alias and your verified activity totals — steps, highest floor, collection count — are sent, to power the leaderboards. Everything else stays on your device.</p>
       </div>
       <div id="signin-step-alias" class="signin-step hidden">
         <div class="signin-brand">AWAKENED</div>
@@ -776,7 +779,12 @@
            markup but hidden by default; revealed only when the parent
            carries .gate-cell--locked. -->
       <div id="quests-gate-view" class="bosses-section">
-        <div class="bosses-section-label">DUNGEON BOSSES</div>
+        <!-- W823 (Train 2, L9a) — the tab is named "Co-op" but its default
+             view is the SOLO gate grid; the label now says so, and points at
+             The Pacts for the actual co-op surface. Renames are a separate
+             owner call — this is copy only. -->
+        <div class="bosses-section-label">DUNGEON BOSSES · SOLO HUNTS</div>
+        <div class="bosses-section-sublabel">Hunt alone through the rank gates — or scroll down to The Pacts to hunt together.</div>
         <div id="quests-gate-grid" class="gate-grid">
           <button class="gate-cell" type="button" data-gate-rank="E" aria-label="E-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-e-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
@@ -1079,7 +1087,9 @@
                kicker would be a duplicate. Count span preserved
                so renderFriendsSection keeps writing into it. -->
           <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-eyebrow">Co-op · Dungeon Streaks</div>
+            <!-- W823 (L9a) — this section IS the friends roster (W667); the
+                 eyebrow now says so instead of describing only the flames. -->
+            <div class="guildhall-section-eyebrow">Your Guild · Pact streaks</div>
             <div class="guildhall-section-title">Pact Flames
               <span id="social-friends-count" class="guildhall-section-count"></span>
             </div>
@@ -3342,7 +3352,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1237"></script>
+  <script src="app.js?v=1238"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

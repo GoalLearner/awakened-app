@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w822'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w823'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6776,7 +6776,10 @@
     return '<div class="pf-row ' + (d.state === 'risk' ? 'pf-risk' : '') + extraCls + '" role="button" tabindex="0"' + idAttrs + ' style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', ' + num + ' day flame">' +
       '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
       '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + '</div>' +
-        '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · ' + (d.total | 0) + ' defeated together</div></div>' +
+        // W823 (L11) — label the Bond explicitly: the row's big number counts
+        // hunts ENTERED (the W813 commitment streak) while this counts WINS;
+        // two denominators in one row need names.
+        '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · Bond: ' + (d.total | 0) + ' ' + ((d.total | 0) === 1 ? 'boss' : 'bosses') + ' slain together</div></div>' +
       '<div class="pf-streak"><div class="pf-streak-main"><span class="pf-num">' + num + '</span>' + _pfFlame(19, d.state !== 'safe') + '</div>' + tag + '</div>' +
       actions +
     '</div>';
@@ -6831,7 +6834,7 @@
   function _pfRowsInner() {
     return _pfData.length
       ? _pfData.map(_pfRowHtml).join('')
-      : '<div class="pf-empty">No pacts yet.<br>Defeat a co-op dungeon boss with a friend to light your first flame.</div>';
+      : '<div class="pf-empty">No pacts yet.<br>Enter a co-op hunt with a friend to light your first flame — win or lose, showing up together keeps it lit.</div>';   // W823 (L11) — W813 made pacts commitment-based; "Defeat" was stale
   }
   // W664 Phase 2 — when the server pact sync lands new numbers while the screen is
   // OPEN, refresh the list + header in place (skip if a detail sheet is open, so we
@@ -34745,10 +34748,14 @@
   const _FS_STEPS = [
     { id: 'habit',  label: 'Complete your first habit',   sub: 'Habits tab — tap a habit to check it off', tab: 'habits' },
     { id: 'stats',  label: 'See what your habits build',  sub: 'Status tab — tap a stat on your radar',   tab: 'profile' },
-    { id: 'gate',   label: 'Enter the E-Rank Gate',       sub: 'Co-op tab — your first boss hunt is free',  tab: 'quests' },
-    { id: 'battle', label: 'Win an Ascent battle',        sub: 'Status tab — THE ASCENT card starts the climb', tab: 'profile' },
+    // W823 (Train 2, L4) — the gate row claimed "your first boss hunt is
+    // free"; it costs 25 souls against the 35-soul starting grant. The row now
+    // teaches the economy instead of lying about it, and the battle row names
+    // the card the user will actually see (THE ARENA, with the Ascent inside).
+    { id: 'gate',   label: 'Enter the E-Rank Gate',       sub: 'Co-op tab — a hunt costs 25 souls; you start with 35',  tab: 'quests' },
+    { id: 'battle', label: 'Win an Ascent battle',        sub: 'Status tab — THE ARENA card holds the Ascent', tab: 'profile' },
     { id: 'friend', label: 'Add a friend',                sub: 'Friends tab — hunts are better with allies', tab: 'social' },
-    { id: 'coop',   label: 'Start a co-op hunt',          sub: 'Team up on one goal — The Pacts', tab: 'quests' },
+    { id: 'coop',   label: 'Start a co-op hunt',          sub: 'The Pacts, at the bottom of the Co-op tab — team up on one goal', tab: 'quests' },
   ];
   function _fsLoad() {
     try { const s = JSON.parse(localStorage.getItem(_FS_KEY) || '{}'); return { claimed: (s && s.claimed) || {}, dismissed: !!(s && s.dismissed) }; }
@@ -36637,7 +36644,10 @@
     ctx.fillRect(gridX + gridW * 0.06, gridY + gridH / 2 - 0.5, gridW * 0.88, 1);
     // 4 cells
     _hrDrawStatCell(ctx, gridX + gridW / 4, gridY + gridH / 4, 'TOTAL XP', _hrFmtNum(data.totalXP), true);
-    _hrDrawStatCell(ctx, gridX + gridW * 3 / 4, gridY + gridH / 4, 'DAY STREAK', _hrFmtNum(data.streak), false, 'flame');
+    // W823 (Train 2, L12) — data.streak is the longest single-HABIT streak;
+    // the home header's number is the PERFECT-DAY streak. Same label on two
+    // different numbers read as a bug in tester screenshots — name it truly.
+    _hrDrawStatCell(ctx, gridX + gridW * 3 / 4, gridY + gridH / 4, 'BEST HABIT STREAK', _hrFmtNum(data.streak), false, 'flame');
     _hrDrawStatCell(ctx, gridX + gridW / 4, gridY + gridH * 3 / 4, 'BOSSES SLAIN', _hrFmtNum(data.bosses), false);
     _hrDrawStatCell(ctx, gridX + gridW * 3 / 4, gridY + gridH * 3 / 4, 'SOULS', _hrFmtNum(data.souls), false, 'soul');
 
@@ -43136,7 +43146,7 @@
       // resolve it at render time rather than baking the strings in
       // here. This static fallback is only used if the dynamic path
       // is ever bypassed.
-      blurb: 'Resets every Sunday 12:00 AM UTC. Apple Health is the only source — no manual logging.',
+      blurb: 'Resets every Sunday 12:00 AM Pacific. Apple Health is the only source — no manual logging.',   // W823 (L8a) — said UTC while the live footer says Pacific; Pacific is correct (lbGetCurrentWeekStartPT)
       unit:  'steps',
       formatValue: n => (n || 0).toLocaleString('en-US'),
     },
