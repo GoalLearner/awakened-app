@@ -515,6 +515,22 @@
       try {
         const prevOwner = localStorage.getItem('hb_state_owner');
         if (prevOwner && prevOwner !== _pendingAppleSub) {
+          // W818 — report every owner-mismatch purge to client_errors (we have
+          // the fresh jwt in hand; keepalive survives the reload below). The
+          // Ascent-wipe incident fired this branch on a false positive and we
+          // only reconstructed it days later from D1 timestamps — never again.
+          try {
+            fetch(BACKEND_URL + '/v1/users/me/client-errors', {
+              method: 'POST',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.jwt },
+              body: JSON.stringify({
+                message: 'W689 account-switch purge fired: prev=' + String(prevOwner).slice(0, 8) + ' new=' + String(_pendingAppleSub).slice(0, 8) + ' isNewUser=' + !!data.isNewUser,
+                path: 'auth/completeSignIn',
+                build: (typeof window.__APP_BUILD_TAG === 'string') ? window.__APP_BUILD_TAG : 'unknown',
+              }),
+            }).catch(function () {});
+          } catch (_) {}
           if (window && typeof window.__awakenedAccountSwitchPurge === 'function') {
             window.__awakenedAccountSwitchPurge(_pendingAppleSub);
           }

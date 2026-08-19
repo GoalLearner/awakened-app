@@ -271,10 +271,11 @@
   const APP_VERSION = '2.4.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 is the next train, opening with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.8-w817'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.8-w818'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
+  try { window.__APP_BUILD_TAG = APP_BUILD_TAG; } catch (_) {}   // W818 — auth.js telemetry reads this
   // v3 Phase 1z.87 — boot-time version line so Safari devtools (or
   // any console inspector) can confirm which IPA the device is
   // actually running. Helps disambiguate "user has the fix" vs
@@ -350,11 +351,38 @@
           var k = localStorage.key(i);
           if (k && k.indexOf('hb_') === 0 && !KEEP[k]) doomed.push(k);
         }
-        doomed.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
-        console.warn('[Awakened] account switch — purged ' + doomed.length + ' state keys for ' + String(newSub || '').slice(0, 8) + '…');
+        // W818 — QUARANTINE, don't destroy. The Ascent-wipe incident: this
+        // purge fired on a FALSE-POSITIVE owner mismatch (a second Apple ID
+        // had tagged the device) and hard-deleted the real owner's entire
+        // local state. Cross-account privacy only requires the new account
+        // not SEE the old keys — renaming them out of the hb_ namespace
+        // achieves that while keeping a 7-day recovery window (the 'hbq_'
+        // prefix is invisible to every hb_ sweep, incl. this one). Boot
+        // cleanup below drops quarantines older than 7 days.
+        var qp = 'hbq_' + Date.now() + '_';
+        doomed.forEach(function (k) {
+          try {
+            var v = localStorage.getItem(k);
+            if (v !== null) localStorage.setItem(qp + k, v);
+          } catch (_) {}   // quota overflow on the copy → fall through to remove (old behavior)
+          try { localStorage.removeItem(k); } catch (_) {}
+        });
+        console.warn('[Awakened] account switch — quarantined ' + doomed.length + ' state keys for ' + String(newSub || '').slice(0, 8) + '… (recoverable 7 days as ' + qp + '*)');
       } catch (_) {}
       return doomed.length;
     };
+    // W818 — expire quarantined snapshots after 7 days (runs once per boot).
+    try {
+      var _qNow = Date.now(), _qDrop = [];
+      for (var qi = 0; qi < localStorage.length; qi++) {
+        var qk = localStorage.key(qi);
+        if (qk && qk.indexOf('hbq_') === 0) {
+          var qTs = Number(qk.slice(4, qk.indexOf('_', 4))) || 0;
+          if (_qNow - qTs > 7 * 24 * 60 * 60 * 1000) _qDrop.push(qk);
+        }
+      }
+      _qDrop.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    } catch (_) {}
   } catch (_) {}
   // W480 — lib/economy.js (the W471 extraction) defines AwakenedEconomy, which app.js
   // delegates ALL stat-level/XP math to. If a build/cache ever fails to ship it (the W480
@@ -9006,6 +9034,21 @@
   function _ascentMigrateIfNeeded() {
     try {
       if (localStorage.getItem(ARENA_V2_MIGRATED_KEY) === '1') return;
+      // W818 — NEVER clobber a real climb. The Ascent-wipe incident: the W689
+      // account-switch purge deleted the migrated FLAG together with everything
+      // else; the July cloud restore brought back neither (neither was in
+      // SNAPSHOT_KEYS), but on devices where hb_arena_v2 DID survive a
+      // flag-only loss, this branch overwrote a 100-floor climb with defaults.
+      // If v2 already holds real progress, adopt it: set the flag and return —
+      // and keep the equipped title (the removeItem below also destroyed a
+      // restored title on the same path).
+      try {
+        const existing = JSON.parse(localStorage.getItem(ARENA_V2_KEY) || 'null');
+        if (existing && ((existing.highestCleared | 0) > 0 || (existing.wins | 0) > 0)) {
+          localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
+          return;
+        }
+      } catch (_) {}
       // Mark migrated FIRST so a failure mid-migration cannot re-trigger a
       // wipe of an in-progress climb; getAscentState() defaults cleanly if
       // hb_arena_v2 is absent.
@@ -9047,6 +9090,33 @@
   }
   function _persistAscentState(st) {
     try { localStorage.setItem(ARENA_V2_KEY, JSON.stringify(st)); } catch (e) { _logSwallow('arena_state:persist', e); }
+    // W818 — the Ascent is cloud-synced now (SNAPSHOT_KEYS); every climb change
+    // marks the snapshot dirty so the next push carries the tower.
+    try { if (typeof CloudSync !== 'undefined' && CloudSync.markLocalStateChanged) CloudSync.markLocalStateChanged('ascent'); } catch (_) {}
+  }
+  // W818 — boot self-heal from the synced finish stamps. A device that carries
+  // hb_summit_finished_at (W553, in SNAPSHOT_KEYS since then) or a cached Hall
+  // finish, but whose hb_arena_v2 says otherwise, provably summited: rebuild.
+  // Runs before the +1200ms leaderboard submit so the boot announces the true
+  // floor. (Devices without stamps — pre-W553 summiteers — are healed by the
+  // server-best branch in lbSubmitAllMetrics instead.)
+  function _ascentSelfHealFromStamps() {
+    try {
+      let stamped = 0;
+      try { const raw = localStorage.getItem(_SUMMIT_FINISH_KEY); if (raw) { const t = Date.parse(raw); if (isFinite(t) && t > 0 && t <= Date.now()) stamped = t; } } catch (_) {}
+      if (!stamped) {
+        try { const h = JSON.parse(localStorage.getItem(_HALL_FINISH_KEY) || 'null'); if (h) stamped = 1; } catch (_) {}
+      }
+      if (!stamped) return;
+      const st = getAscentState();
+      if ((st.highestCleared | 0) >= 100) return;
+      localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
+      st.highestCleared = 100;
+      st.currentFloor = 100;
+      st.wins = Math.max(st.wins | 0, 100);
+      _persistAscentState(st);
+      try { console.log('[Ascent] W818 stamp self-heal — summit restored'); } catch (_) {}
+    } catch (e) { _logSwallow('ascent_stamp_heal', e); }
   }
   function ascentLivesLeft() {
     const st = getAscentState();
@@ -21432,6 +21502,32 @@
             ? { weeklySumSource: 'client_pacific_week_v1' }
             : undefined;
           const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized, submitOpts);
+          // W818 — ASCENT SELF-HEAL from the server's ratcheted best. The
+          // leaderboard MAX-keeps best_value, so a device whose local climb was
+          // destroyed (the W689-purge + never-synced-hb_arena_v2 incident)
+          // announces floor 0 and gets told its true best in the SAME response.
+          // Rebuild the local tower to the server's number: flag FIRST (so the
+          // migration guard can't reseed defaults), then state, then resubmit
+          // so current_value on the board recovers too. Server best is
+          // spoof-proof upward (it only ever came from this account's own
+          // past submits) and this never lowers anything local.
+          if (m === 'floor_best' && resp && resp.ok) {
+            try {
+              const serverBest = Number(resp.best_value) | 0;
+              const st = getAscentState();
+              if (serverBest > (st.highestCleared | 0)) {
+                localStorage.setItem(ARENA_V2_MIGRATED_KEY, '1');
+                st.highestCleared = Math.min(100, serverBest);
+                st.currentFloor = Math.min(100, st.highestCleared + 1);
+                st.wins = Math.max(st.wins | 0, st.highestCleared);
+                _persistAscentState(st);
+                try { if (typeof CloudSync !== 'undefined' && CloudSync.markLocalStateChanged) CloudSync.markLocalStateChanged('ascent_self_heal'); } catch (_) {}
+                try { console.log('[Ascent] W818 self-heal — rebuilt to floor ' + st.highestCleared + ' from server best'); } catch (_) {}
+                try { showHabitToast('⚔ The Tower remembers — your climb has been restored to Floor ' + st.highestCleared); } catch (_) {}
+                try { await window.Auth.submitLeaderboardSnapshot('floor_best', st.highestCleared | 0); } catch (_) {}
+              }
+            } catch (_) {}
+          }
           // v3 Phase 1z.127 — post-await result breadcrumb. Distinguishes
           // "attempted" (the existing -attempt event) from "persisted"
           // so future race-condition debugging has a definitive signal.
@@ -61741,6 +61837,15 @@
       'hb_onboarding_goal',       // W574 — Vertical Jump Program goal flag ('jump_program'|'default'); server mirrors it to the queryable users.onboarding_goal column
       'hb_jump_program_started',  // W575 — 14-day jump-cycle start anchor (device-local YYYY-MM-DD); cycleDays habits schedule off this
       'hb_summit_finished_at',    // W553 — local F100 finish stamp (offline-stable end anchor)
+      // W818 — THE ASCENT joins cloud sync (the wipe incident: hb_arena_v2 was
+      // never allowlisted, so a purge+restore rebuilt every key EXCEPT the
+      // tower). ORDER MATTERS: the migrated flag MUST precede hb_arena_v2 so a
+      // restore can never leave state-without-flag for _ascentMigrateIfNeeded
+      // to clobber (also hardened, W818 — belt and braces).
+      'hb_arena_v2_migrated',
+      'hb_arena_v2',
+      'hb_arena_title',           // equipped cosmetic title
+      'hb_hall_finish',           // Hall of the Awakened finish ordinal cache (summit proof)
       // Core progression
       'hb_habits',
       'hb_completions',
@@ -63015,6 +63120,10 @@
       try { Notif.reapplyCheckin(); } catch (_) {}
       try { Notif.reapplyMidDay(); } catch (_) {}
       try { Notif.reapplyWeeklyReset(); } catch (_) {}
+      // W818 — Ascent stamp self-heal BEFORE the boot leaderboard submit, so a
+      // wiped tower is rebuilt before floor_best is announced (stamp devices);
+      // stampless devices heal from the submit response's server best instead.
+      try { _ascentSelfHealFromStamps(); } catch (_) {}
       // v2.1.0 Phase C — fire the leaderboard snapshot submission
       // after main app mounts. Debounced via hb_lb_last_submit so a
       // hot relaunch within 5 min stays quiet.
