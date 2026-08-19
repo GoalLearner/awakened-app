@@ -172,7 +172,7 @@
         // a gated device can tell "refresh tried and was refused (code X)"
         // apart from "no token existed to refresh" (no stamp).
         try { localStorage.setItem('hb_refresh_last_fail', JSON.stringify({ code: (data && data.error) || 'NOT_REFRESHABLE', status: 401, at: Date.now() })); } catch (_) {}
-        clearUser();
+        _clearUserOn401(u.jwt);   // W817 — a SIWA reconnect may have written a fresh session while this was in flight
         return { ok: false, code: (data && data.error) || 'NOT_REFRESHABLE' };
       }
       // 429 / 5xx / network weirdness: keep the session, try again later.
@@ -251,6 +251,22 @@
     // (and re-publish it on B's heartbeat). Server re-validates membership anyway.
     try { localStorage.removeItem('hb_card_bg'); } catch (_) {}
     try { localStorage.removeItem('hb_founder_celebrated'); } catch (_) {}   // W698 — Founder celebration is per-account too
+  }
+
+  // W817 — 401-driven sign-out, RACE-PROOF. Every API helper that clears the
+  // session on a 401 must only do so if the token IT SENT is still the stored
+  // token. Otherwise this sequence wipes a FRESH session: boot fires the W815
+  // refresh AND (at +1200ms) a batch of authed calls; the refresh lands first
+  // and writes a new 90-day jwt; a still-in-flight call then 401s with the OLD
+  // token and a bare clearUser() destroys the brand-new session. Guarding on
+  // token identity makes the stale 401 a no-op. The sign-out button and
+  // account-delete paths keep calling clearUser() directly (unconditional).
+  function _clearUserOn401(usedJwt) {
+    try {
+      const cur = readUser();
+      if (cur && cur.jwt && usedJwt && cur.jwt !== usedJwt) return;   // newer session exists — stale 401
+    } catch (_) {}
+    clearUser();
   }
 
   // W689 — owner-tag migration: devices that were ALREADY signed in before the
@@ -629,7 +645,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -673,7 +689,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
@@ -713,7 +729,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
@@ -744,7 +760,7 @@
     if (res.status === 200 && data) {
       return { ok: true, recapSeenWeek: data.recap_seen_week || week };
     }
-    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }   // W817
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
 
@@ -781,7 +797,7 @@
         weeksAvailable: Array.isArray(data.weeks_available) ? data.weeks_available : [],
       };
     }
-    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }   // W817
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
@@ -813,7 +829,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
@@ -845,7 +861,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     return { ok: false, code: (data && data.code) || 'SERVER', detail: (data && data.detail) || ('HTTP ' + res.status) };
@@ -883,7 +899,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -935,7 +951,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -989,7 +1005,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -1029,7 +1045,7 @@
     let data;
     try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) return { ok: true, week: data.week, me: data.me || null };
-    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }   // W817
     if (res.status === 403) return { ok: false, code: 'MEMBERS_ONLY' };
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || 'Insights unavailable.' };
@@ -1061,7 +1077,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -1206,24 +1222,30 @@
   // The full single-player loop is local; a later Apple sign-in claims the
   // alias and the existing CloudSync adopt-local path keeps all progress.
   function startGuest() {
-    if (readUser()) return false; // respect any existing real/pending/guest state
+    // W817 — a DEAD real session (expired beyond the W815 grace: readUser()
+    // non-null but getUser() null) used to brick this button entirely — the
+    // early-return fired, the gate reloaded, and "Try it first" looped forever.
+    // A dead session is not state worth respecting: clear it and proceed.
+    const existing = readUser();
+    if (existing) {
+      const live = getUser();
+      const isDeadReal = !live && existing.jwt !== GUEST_STUB && existing.jwt !== LOCALHOST_DEV_STUB;
+      if (!isDeadReal) return false; // respect any live real/pending/guest state
+      clearUser();
+    }
     // W721 — shared-device privacy: if a REAL account previously owned this device
     // (hb_state_owner set) and has since signed out, the guest must NOT inherit that
-    // account's local game state (or alias). Purge before mounting. A genuinely-new
-    // guest has no hb_state_owner → untouched, so the guest→Apple "keep your
-    // progress" upgrade path is preserved. (Sign-out is intentionally NOT the purge
-    // point: re-signing into the SAME Apple account should keep its local state.)
-    try {
-      if (localStorage.getItem('hb_state_owner')) {
-        if (typeof window.__awakenedAccountSwitchPurge === 'function') {
-          window.__awakenedAccountSwitchPurge('guest');
-        }
-        // The purge keeps hb_state_owner + hb_name (it assumes a real account wrote
-        // them pre-purge); a guest owns neither, so clear them explicitly.
-        try { localStorage.removeItem('hb_state_owner'); } catch (_) {}
-        try { localStorage.removeItem('hb_name'); } catch (_) {}
-      }
-    } catch (_) {}
+    // account's local game state (or alias).
+    // W817 REVISION — the 90-day-cliff cohort made this purge CATASTROPHIC: the
+    // device's OWN owner, signed out by expiry, taps "Try it first" to get back to
+    // their data and the purge deletes their entire local state (kill log, souls,
+    // relics). On a signed-out device we cannot tell owner from stranger, and
+    // wiping the owner is strictly worse than a stranger browsing: KEEP the data
+    // and KEEP the hb_state_owner tag. The tag still does its W689 job — if a
+    // DIFFERENT Apple account later signs in, completeSignIn's mismatch purge
+    // fires exactly as before. (Guest-created progress on an owner-tagged device
+    // merges into the owner's local state — accepted; it cannot cross accounts.)
+
     writeUser({
       sub:            'guest-local',
       alias:          null,
@@ -1491,7 +1513,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -1536,7 +1558,7 @@
       };
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 413) {
@@ -1595,7 +1617,7 @@
       return Object.assign({ ok: true }, data || {});
     }
     if (res.status === 401) {
-      clearUser();
+      _clearUserOn401(u.jwt);   // W817 — no-op if a fresher session was written mid-flight
       return { ok: false, code: 'EXPIRED', detail: (data && data.detail) || 'Session expired.' };
     }
     if (res.status === 429) {
@@ -1949,7 +1971,7 @@
       _updateMemberCache(data);              // W651/W655 — membership (active premium subscription)
       return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, founderSeq: founderSeq() };
     }
-    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }   // W817
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
@@ -1974,7 +1996,7 @@
       _updateMemberCache(data);              // W651 — reconcile also refreshes the membership
       return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], premium: !!data.premium, member: !!data.member, founderSeq: founderSeq(), reconciled: (data.reconciled | 0) };
     }
-    if (res.status === 401) { clearUser(); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }   // W817
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }

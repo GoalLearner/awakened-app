@@ -29,6 +29,44 @@
     // onboarding's name screen can call completeSignIn() inline. The
     // legacy in-gate alias picker is no longer visible.
     if (typeof window.Auth.isApplePending === 'function' && window.Auth.isApplePending()) {
+      // W817 — THE SIWA BLACK HOLE FIX. For a brand-new device the cinematic
+      // onboarding's name screen calls completeSignIn(); but an EXISTING hunter
+      // (hb_habits present → onboarding never runs) had NO caller at all: the
+      // pending Apple token rotted for 10 minutes and the next launch showed
+      // the gate again — sign-in was a placebo for the whole 90-day-cliff
+      // cohort (builds ≤478). Fire the exchange here: returning users get
+      // their server alias back (submitted alias is ignored server-side);
+      // hard failures reload into a clean gate; network failures keep the
+      // pending token (10-min TTL) so the next foreground can retry.
+      try {
+        const hasExistingData = !!localStorage.getItem('hb_habits');
+        if (hasExistingData && typeof window.Auth.completeSignIn === 'function') {
+          (async () => {
+            let alias = '';
+            try { alias = localStorage.getItem('hb_name') || ''; } catch (_) {}
+            let r = await window.Auth.completeSignIn(alias || 'Hunter');
+            if (!r.ok && r.code === 'ALIAS_INVALID') r = await window.Auth.completeSignIn('Hunter');
+            if (r.ok) {
+              try { sessionStorage.removeItem('hb_w817_attempts'); } catch (_) {}
+              try { console.log('[Auth] W817 reconnect complete — signed back in as ' + r.alias); } catch (_) {}
+              try { window.location.reload(); } catch (_) {}
+            } else if (r.code !== 'NETWORK') {
+              // Hard failure (token invalid/expired/alias-collision). Clear the
+              // PERSISTED pending token too (completeSignIn only drops the
+              // in-memory copy on some paths) and cap reloads at 2 via a
+              // sessionStorage counter — without both, a survivable pending
+              // token would reload-loop forever.
+              try { console.warn('[Auth] W817 reconnect failed: ' + r.code); } catch (_) {}
+              try { localStorage.removeItem('hb_apple_pending_v1'); } catch (_) {}
+              let n = 0; try { n = Number(sessionStorage.getItem('hb_w817_attempts')) || 0; } catch (_) {}
+              if (n < 2) {
+                try { sessionStorage.setItem('hb_w817_attempts', String(n + 1)); } catch (_) {}
+                try { window.location.reload(); } catch (_) {}
+              }
+            }
+          })();
+        }
+      } catch (_) {}
       return false;
     }
     // v3 W329 — Guest "try-it-first" mount. A guest has a GUEST_STUB hb_user
@@ -233,7 +271,7 @@
   const APP_VERSION = '2.4.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 is the next train, opening with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.4.8-w816'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.4.8-w817'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
