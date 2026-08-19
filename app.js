@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w830'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w831'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20930,6 +20930,80 @@
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
     }
   }
+
+  // W831 — backfill the current board week's MISSED step days from HealthKit.
+  // steps_daily[<day>] is only ever written for TODAY (lbRecordStepsToday), so
+  // any day the app never read — Health blackout (W830), phone off, app not
+  // opened — stays 0 forever and the weekly board under-reports. The owner hit
+  // exactly this: reconnect restored today (~2k) while Sun/Mon/Tue (~28k) sat
+  // in HealthKit unread. Queries go through Health.getStepsBetween — the same
+  // W799 manual-entry-filtered, W681 source-deduped path as live reads — so
+  // backfilled days are exactly as cheat-proof as live ones. Deliberately NOT
+  // backfilled: walk streaks (W714 evals only on live threshold crossings;
+  // resurrecting streaks retroactively would contradict shown streak losses).
+  // Once per local day (stamped only after a granted-state run), plus after a
+  // Connect/self-heal grant since an ungranted boot run exits WITHOUT stamping.
+  let _lbBackfillBusy = false;
+  async function lbBackfillMissedStepDays() {
+    if (_lbBackfillBusy) return;
+    try {
+      if (typeof Health === 'undefined' || !Health.isAvailable() ||
+          typeof Health.permissionStatus !== 'function' ||
+          Health.permissionStatus() !== 'granted' ||
+          typeof Health.getStepsBetween !== 'function') return;
+      const today = getDeviceLocalDate();
+      try { if (localStorage.getItem('hb_lb_step_backfill_date') === today) return; } catch (_) {}
+      _lbBackfillBusy = true;
+      const weekStart = lbGetCurrentWeekStartPT();
+      const state = loadLeaderboardState();
+      // Missing/zero day keys strictly before today, inside the board week.
+      const missing = [];
+      let d = lbPrevDate(today);
+      for (let i = 0; i < 7 && d >= weekStart; i++) {
+        if (!((state.steps_daily[d] || 0) > 0)) missing.push(d);
+        const p = lbPrevDate(d);
+        if (p === d) break;
+        d = p;
+      }
+      let wrote = 0;
+      for (const key of missing) {
+        let steps = null;
+        try {
+          const s = new Date(key + 'T00:00:00');
+          const e = new Date(key + 'T00:00:00');
+          e.setDate(e.getDate() + 1);   // local-midnight bounds; setDate is DST-safe
+          steps = await Health.getStepsBetween(s.toISOString(), e.toISOString());
+        } catch (_) { steps = null; }
+        if (typeof steps === 'number' && Number.isFinite(steps) && steps > 0) {
+          const rounded = Math.round(steps);
+          state.steps_daily[key] = rounded;
+          // Mirror lbRecordStepsToday's lifetime accrual (prev is 0 here).
+          if (state.lifetime_steps_start_date) {
+            state.lifetime_steps_total = (state.lifetime_steps_total || 0) + rounded;
+            if (key < state.lifetime_steps_start_date) state.lifetime_steps_start_date = key;
+          }
+          wrote++;
+        }
+      }
+      if (wrote > 0) {
+        lbPruneDailyMap(state.steps_daily, LB_DAILY_RETENTION_DAYS);
+        const weekSum = lbSumCurrentWeekSteps(state.steps_daily);
+        if (weekSum > state.best_7day_step_total) {
+          state.best_7day_step_total = weekSum;
+          state.best_7day_step_window_end = today;
+        }
+        saveLeaderboardState(state);
+        // force=true — the board should be honest THIS session, not after
+        // the 5-min debounce window the boot submit just consumed.
+        try { lbSubmitAllMetricsDebounced(true); } catch (_) {}
+      }
+      try { localStorage.setItem('hb_lb_step_backfill_date', today); } catch (_) {}
+    } catch (_) {
+    } finally {
+      _lbBackfillBusy = false;
+    }
+  }
+  try { window.__lbBackfillSteps = lbBackfillMissedStepDays; } catch (_) {}   // QA hook
 
   // v3 Phase 1z.125 / 1z.139 — flights climbed weekly sum.
   // Mirrors lbSumCurrentWeekSteps exactly. 1z.139 fixes the
@@ -56171,6 +56245,11 @@
         if (status === 'unknown') {
           // First request — fires iOS native sheet.
           await Health.requestPermissions();
+          // W831 — a just-(re)connected device likely has unread days
+          // sitting in HealthKit (the W830 blackout case): pull the board
+          // week's missing days now so the leaderboard is honest without
+          // waiting for the next cold launch.
+          try { lbBackfillMissedStepDays(); } catch (_) {}
         } else {
           // 'denied' — iOS won't allow re-prompting. Deep-link to
           // Settings so the user can flip the Steps toggle manually.
@@ -63085,6 +63164,15 @@
         }
       }
     } catch (_) {}
+    // ── W831 — missed-day step backfill ──────────────────────
+    // Runs every cold launch (self-throttled to once per local day, and
+    // an ungranted run exits without stamping, so a mid-session grant —
+    // W830 self-heal above, or the Settings Connect button — still gets
+    // its backfill). Staggered at 5s: after the self-heal (900ms) and
+    // the upgrade-path prompts, and off the boot critical path. It
+    // reads the board week's zero days from HealthKit through the same
+    // W799-filtered path as live reads and force-submits if it wrote.
+    try { setTimeout(() => { try { lbBackfillMissedStepDays(); } catch (_) {} }, 5000); } catch (_) {}
     // ── v1.1.5 sleep auth upgrade-path ───────────────────────
     // Existing v1.1.5 step-grant users granted Steps before sleep was
     // added to the auth array. Fire once per cold launch (idempotent
