@@ -3352,7 +3352,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1238"></script>
+  <script src="app.js?v=1239"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3741,6 +3741,10 @@
               </span>
             </div>
             <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused. Tap the toggle to resume.</p>
+            <!-- W824 (Train 2, L5) — the W799 verified-only rule, disclosed
+                 where users will look when their numbers differ from the
+                 Health app. -->
+            <p class="settings-rem-note">Only data your iPhone or Apple Watch recorded counts — steps, floors, sleep, and workouts typed into the Health app by hand are ignored. That's what keeps the leaderboards real.</p>
 
             <button id="settings-health-manage-link" class="settings-v2-frow settings-v2-rowbtn" type="button">
               <span class="settings-v2-fname">Manage data access</span>
@@ -3754,7 +3758,9 @@
               <span class="settings-v2-fname">Status</span>
               <span class="settings-v2-fright"><span class="settings-v2-pill settings-v2-pill--neutral">Not connected</span></span>
             </div>
-            <p class="settings-rem-note">Connect Apple Health to auto-verify your Daily walk habit when you reach your step goal. Your data stays on your device.</p>
+            <!-- W824 (L5) — copy was stale-narrow (walk only); auto-verify
+                 covers steps, sleep, bedtime, workouts, and flights. -->
+            <p class="settings-rem-note">Connect Apple Health to auto-verify your habits — steps, sleep, workouts, and flights — the moment your device records them. Your data stays on your device; only totals you choose to rank with are sent.</p>
             <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
             <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
           </div>

@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w823'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w824'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -35466,19 +35466,39 @@
       body: 'A boss is a challenge made real — a deed done in the world, then proven to the system. Souls are the currency it asks to engage. Win within the hunt’s window and they return, with the relic the boss guarded. Fail the window and you lose only the fee.',
       tip:  'Read the condition before you engage. The system reads no excuses.',
     },
+    // W824 (Train 2, L6) — the two sections below contradicted shipped
+    // mechanics (relics HAVE armed you since gear power/set bonuses; the
+    // Marketplace sells rare/ultra relics; the Arena exists). Amended in
+    // voice, and four missing sections added: THE ASCENT, CO-OP · THE PACTS,
+    // THE DAY'S EDGE, and the verified-only rule folded into THE SYSTEM'S RULE.
     {
       id: 'relics', glyph: 'relics', title: 'RELICS · ARMORY',
-      body: 'What a boss guards, it surrenders on defeat. Relics gather in your armory, each marked by its rarity. For now they stand as proof of what you have done. In time, they will arm you for what is coming.',
-      tip:  'A relic is earned, never bought. The system knows the difference.',
+      body: 'What a boss guards, it surrenders on defeat. Relics gather in your armory, each marked by its rarity — and they arm you: equip your eight, and their power and set bonds carry into every fight. Some may be bought with souls in the Marketplace. The rarest never are.',
+      tip:  'The rarest relics are never sold. The chase is the point.',
+    },
+    {
+      id: 'ascent', glyph: 'rank', title: 'THE ASCENT',
+      body: 'One hundred floors stand between you and the summit, and your power on every one is drawn from your vows — stats and relics, nothing else. Two lives return each day. Fall, and the tower keeps what you cleared; the climb resumes where courage failed.',
+      tip:  'The tower does not test luck. It tests what your days have built.',
+    },
+    {
+      id: 'pacts', glyph: 'bosses', title: 'CO-OP · THE PACTS',
+      body: 'Some beasts are too great for one hunter. Summon allies, pool your verified steps, flights, and sleep, and bring the beast down inside its window. Enter a hunt with the same ally each day — win or lose — and a Pact Flame burns between you.',
+      tip:  'The flame rewards showing up. The Bond counts the kills.',
     },
     {
       id: 'guild', glyph: 'guild', title: 'FRIENDS',   // W768 — tab renamed Guild→Friends
-      body: 'No hunter climbs entirely unseen. By alias you may stand among others — to be witnessed, not to be measured against them. There are no duels here. The hunt is yours alone; the company is not.',
+      body: 'No hunter climbs entirely unseen. By alias you may stand among others — witnessed on the boards, and one day tested in the Arena, when its seal lifts. The hunt is yours; the company is not.',
       tip:  'Be witnessed. Comparison was never the work.',
     },
     {
+      id: 'boundary', glyph: 'rule', title: 'THE DAY’S EDGE',
+      body: 'The habit day turns at midnight Pacific — one clock for every hunter, so streaks and the weekly boards stay fair worldwide. Your vitals — steps, floors, sleep — read by your device’s own midnight. Two clocks, one rule each.',
+      tip:  'The board’s week ends Sunday, midnight Pacific. Spend the last day well.',
+    },
+    {
       id: 'rule', glyph: 'rule', title: 'THE SYSTEM’S RULE',
-      body: 'Hear the rule beneath all the others. Stats, souls, ranks, relics — these shape the hunt. They do not replace it. Verified behavior is the only proof; the system reads no other. The deed is the power. Everything else is only record.',
+      body: 'Hear the rule beneath all the others. Stats, souls, ranks, relics — these shape the hunt. They do not replace it. Verified behavior is the only proof; the system reads no other. What your iPhone or Watch recorded counts. What was typed into the Health app by hand does not — the system cannot be told, only shown. The deed is the power. Everything else is only record.',
       tip:  'Do the thing. The system believes nothing else.',
     },
   ];
