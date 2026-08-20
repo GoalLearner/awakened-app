@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.1-w839'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w840'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -24389,6 +24389,17 @@
         { title: 'That {streak}-day streak? Fragile now.', body: '{habit} still needs doing today. Save it before midnight does you in.' },
         { title: 'You vs. losing {streak} days', body: '{habit} is unchecked. Win this one — it takes almost no time.' },
       ],
+      // W840 (Train 3, R6) — shield-aware variants, used when the hunter has a
+      // Streak Shield armed. The old copy threatened doom the shield would
+      // absorb (growth audit: emotionally dishonest). Honest nuance: the
+      // Shield guards the ROUTINE streak; the habit's own chain is still the
+      // user's to keep — so urgency stays, doom goes.
+      streakRiskShielded: [
+        { title: '{habit}: Day {streak} still open', body: 'Your Shield guards the routine if today slips — but the {streak}-day chain is yours to keep. One tap.' },
+        { title: '{streak} days, and a Shield at your back', body: '{habit} is still unchecked. Finish it clean — save the Shield for a day that truly needs it.' },
+        { title: '{habit} before midnight', body: "Day {streak}. Your Shield stands ready, but done beats defended — close it out." },
+        { title: 'Keep {habit} whole', body: '{streak} days strong. The Shield can catch the routine — the chain itself is on you.' },
+      ],
       competitive: [
         { title: '{rivalName} is running away with it', body: "They're at {rivalSteps} steps. You're sitting on {mySteps}. Time to move. 🏃" },
         { title: '{aheadName} is {aheadGap} steps ahead', body: "That gap won't close on its own. Get out there and eat into it." },
@@ -24728,7 +24739,12 @@
           return String(a.habit.name).localeCompare(String(b.habit.name));
         });
         const top = candidates[0];
-        const r = _notifResolve(NOTIF.midday.streakRisk, { habit: top.habit.name, streak: top.streak }, top.streak);
+        // W840 (R6) — with a Shield armed, the doom copy was dishonest (the
+        // routine streak it threatens is exactly what the shield absorbs).
+        const shielded = (typeof streakShields === 'number' && streakShields > 0);
+        const r = _notifResolve(
+          shielded ? NOTIF.midday.streakRiskShielded : NOTIF.midday.streakRisk,
+          { habit: top.habit.name, streak: top.streak }, top.streak);
         if (r) return r;
       }
     } catch (_) {}
@@ -58760,6 +58776,10 @@
       }
     }
     async function reapplyMidDay() {
+      // W840 (R6) — the shield guard rides every midday reapply site (boot,
+      // day-change, completion toggles), so it re-arms and self-cancels in
+      // lockstep with the state it describes. Never let it block the check-in.
+      try { await scheduleShieldGuard(); } catch (_) {}
       return scheduleMidDayCheckin();
     }
     // W324 — weekly-reset reminder (Saturday 10 AM local). Mirrors the mid-day
@@ -58799,6 +58819,72 @@
     }
     async function reapplyWeeklyReset() {
       return scheduleWeeklyReset();
+    }
+
+    // ── W840 (Train 3, R6) — "Your Shield held the line" morning-after ping ──
+    // Shields consume automatically at rollover and surfaced ONLY as a
+    // next-open toast — "a textbook return trigger, currently silent" (growth
+    // audit). The rollover runs in-app, so the only way to reach a closed app
+    // is to schedule AHEAD: whenever a routine with a live streak is still
+    // unfinished today and a Shield is armed, arm a ping for tomorrow 08:30.
+    // Finish the routine → every reapply site cancels+reschedules and the
+    // condition fails, so the ping dies. Miss the day → the user wakes to the
+    // save instead of silence. Honest-Rest days schedule nothing (that absorb
+    // is a deliberate choice, not a save). ID 99993 — next slot in the
+    // reserved lane (99999..99994 are check-in/midday/weekly/comeback trio).
+    const SHIELD_GUARD_NOTIF_ID = 99993;
+    async function cancelShieldGuard() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: SHIELD_GUARD_NOTIF_ID }] }); } catch (_) {}
+    }
+    async function scheduleShieldGuard() {
+      await cancelShieldGuard();
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+      if (isDayOne()) return false;
+      if (!(typeof streakShields === 'number' && streakShields > 0)) return false;
+      // At-risk = a live compound streak (last kept YESTERDAY) still unfinished
+      // today, on a routine the shield would actually absorb.
+      let atRisk = null;
+      let atRiskCount = 0;
+      try {
+        const yest = prevDay(today);
+        for (const packId of FORGIVENESS_PACK_IDS) {
+          if (packId === 'custom' && _onPresetPack()) continue;
+          const cs = compoundStreaks[packId];
+          if (!cs || !cs.lastDate || !(cs.streak > 0)) continue;
+          if (cs.lastDate !== yest) continue;           // done today, or already broken/rolled
+          if (isHonestDay(packId, today)) continue;     // honest rest absorbs shield-free
+          atRiskCount++;
+          if (!atRisk || cs.streak > atRisk.streak) atRisk = { packId, streak: cs.streak };
+        }
+      } catch (_) {}
+      if (!atRisk) return false;
+      const hm = parseHM('08:30');
+      if (hm && isInQuietHours(hm)) return false;
+      try {
+        const fireAt = new Date();
+        fireAt.setDate(fireAt.getDate() + 1);
+        fireAt.setHours(8, 30, 0, 0);
+        const name = (atRisk.packId === 'custom') ? 'your routine' : ((getPackById(atRisk.packId) || {}).name || 'your routine');
+        const left = Math.max(0, streakShields - atRiskCount);
+        await p.schedule({
+          notifications: [{
+            id:    SHIELD_GUARD_NOTIF_ID,
+            title: 'Your Shield held the line',
+            body:  'A Shield saved the ' + atRisk.streak + '-day ' + name + ' streak — ' +
+                   left + ' left. The chain lives. Come seal today.',
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra: { kind: 'shield_guard' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('shield-guard schedule failed', e);
+        return false;
+      }
     }
 
     // ── W586 — Comeback / lapsed-user notifications ──────────────────────────
