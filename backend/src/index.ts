@@ -94,6 +94,8 @@ import {
 import { handleCoopPacts } from './handlers/coop-pacts';
 // W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
 import { sweepWinBackPushes } from './lib/win-back';
+// W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
+import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 import {
   // Push notifications v1 (W603) — device-token register/unregister.
   handleDeviceTokenRegister,
@@ -515,6 +517,11 @@ export default {
       // 10 AM PT hour inside the sweep; the win_back_pushes PK (0047) is the
       // per-(user, lapse) claim, so this cadence can never double-send.
       ctx.waitUntil(sweepWinBackPushes(env).then(() => undefined));
+      // W837 (Train 3, R3) — pact-flame-at-risk warning. Gated to the 7 PM PT
+      // hour inside the sweep; pact_flame_pushes (0048) is the per-(pair, day)
+      // claim. Both partners get the evening warning while entering a hunt
+      // can still save the flame.
+      ctx.waitUntil(sweepPactFlameRisk(env).then(() => undefined));
     }
   },
 } satisfies ExportedHandler<Env>;
