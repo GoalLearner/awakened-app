@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w832'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.0-w833'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -366,6 +366,9 @@
     // Flush any buffered pre-auth errors once Auth has loaded (auth.js is the
     // next script; 3s comfortably clears boot without delaying anything).
     try { setTimeout(function () { var j = _realJwt(); if (j) _flushPending(j); }, 3000); } catch (_) {}
+    // W833 — manual hook so subsystems can send diagnostic breadcrumbs through
+    // the same capped/deduped pipeline (first user: the step backfill).
+    try { window.__reportClientError = report; } catch (_) {}
     try {
       window.addEventListener('error', function (e) {
         try { report(e && e.message, e && e.error && e.error.stack); } catch (_) {}
@@ -12101,6 +12104,12 @@
           // regardless of the audio context (must NOT sit behind the `c` guard),
           // self-throttled + stub-gated inside Auth.reportAppOpen, fire-and-forget.
           try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen(); } catch (_) {}
+          // W833 — step backfill on resume too, not just the cold-boot +5s
+          // timer: an iOS warm resume re-enters here without ever re-running
+          // boot, and a user who opens the app for <5s can kill the timer
+          // before it fires. Self-guarded (once-per-day stamp, busy flag,
+          // granted check) so this is nearly free on every other resume.
+          try { if (typeof lbBackfillMissedStepDays === 'function') lbBackfillMissedStepDays(); } catch (_) {}
         }
       });
       // W526 — retention ping on initial launch (deferred ~1.5s so the session is
@@ -20965,7 +20974,8 @@
         if (p === d) break;
         d = p;
       }
-      let wrote = 0;
+      let wrote = 0, unresolved = 0;
+      const outcomes = [];   // W833 — per-day results for the diagnostic breadcrumb
       for (const key of missing) {
         let steps = null;
         try {
@@ -20974,15 +20984,22 @@
           e.setDate(e.getDate() + 1);   // local-midnight bounds; setDate is DST-safe
           steps = await Health.getStepsBetween(s.toISOString(), e.toISOString());
         } catch (_) { steps = null; }
-        if (typeof steps === 'number' && Number.isFinite(steps) && steps > 0) {
-          const rounded = Math.round(steps);
-          state.steps_daily[key] = rounded;
-          // Mirror lbRecordStepsToday's lifetime accrual (prev is 0 here).
-          if (state.lifetime_steps_start_date) {
-            state.lifetime_steps_total = (state.lifetime_steps_total || 0) + rounded;
-            if (key < state.lifetime_steps_start_date) state.lifetime_steps_start_date = key;
+        if (typeof steps === 'number' && Number.isFinite(steps)) {
+          outcomes.push(key + ':' + Math.round(steps));
+          if (steps > 0) {
+            const rounded = Math.round(steps);
+            state.steps_daily[key] = rounded;
+            // Mirror lbRecordStepsToday's lifetime accrual (prev is 0 here).
+            if (state.lifetime_steps_start_date) {
+              state.lifetime_steps_total = (state.lifetime_steps_total || 0) + rounded;
+              if (key < state.lifetime_steps_start_date) state.lifetime_steps_start_date = key;
+            }
+            wrote++;
           }
-          wrote++;
+        } else {
+          // W833 — null = plugin hiccup / query failure, NOT a real zero.
+          outcomes.push(key + ':null');
+          unresolved++;
         }
       }
       if (wrote > 0) {
@@ -20993,11 +21010,29 @@
           state.best_7day_step_window_end = today;
         }
         saveLeaderboardState(state);
-        // force=true — the board should be honest THIS session, not after
-        // the 5-min debounce window the boot submit just consumed.
-        try { lbSubmitAllMetricsDebounced(true); } catch (_) {}
+        // W833 — DIRECT submit (W819 pattern), not the debounced wrapper:
+        // force could still be dropped by the wrapper's in-flight guard if
+        // the boot submit is mid-POST, and the board should be honest THIS
+        // session. Also refresh the header so an open app shows the truth.
+        try { lbSubmitAllMetrics(); } catch (_) {}
+        try { updateHeaderMetrics(); } catch (_) {}
       }
-      try { localStorage.setItem('hb_lb_step_backfill_date', today); } catch (_) {}
+      // W833 — stamp the day ONLY when every queried day resolved to a real
+      // number. A null leaves the stamp unset, so the next boot or foreground
+      // resume retries instead of burning the whole day on one hiccup (the
+      // owner's build-484 first run produced exactly that: board stuck at
+      // today-only while HealthKit held the week).
+      if (unresolved === 0) {
+        try { localStorage.setItem('hb_lb_step_backfill_date', today); } catch (_) {}
+      }
+      // W833 — temporary diagnostics: surface what the backfill saw through
+      // the capped client_errors pipeline. Remove once the fleet looks clean.
+      try {
+        if (typeof window.__reportClientError === 'function') {
+          window.__reportClientError('[w833-backfill] missing=' + missing.join('|') +
+            ' results=' + outcomes.join('|') + ' wrote=' + wrote + ' unresolved=' + unresolved, '');
+        }
+      } catch (_) {}
     } catch (_) {
     } finally {
       _lbBackfillBusy = false;
