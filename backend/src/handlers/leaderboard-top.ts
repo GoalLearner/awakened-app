@@ -45,6 +45,11 @@ interface TopRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  // W844 (Train 4, E3) — the W276 parked cross-link, built now that real
+  // climbers hold the summit: the eternal Hall of the Awakened ordinal
+  // (1 = first ever to clear floor 100). Null for everyone unsummited; the
+  // client renders it as the prestige line on the Highest Floor board.
+  hall_ordinal: number | null;
 }
 
 interface MyRow {
@@ -96,7 +101,11 @@ export async function handleLeaderboardTop(
   // Top-N query. Uses idx_leaderboard_metric_week_value (weekly path)
   // or idx_leaderboard_metric_value (non-weekly) for index-only range
   // scan; no full-table sort.
-  // CROSS-LINK (parked): join hall_of_awakened to show finisher ordinal on the floor-100 crown — build when first real climber nears floor 100
+  // W844 (Train 4, E3) — the W276 cross-link, un-parked: hall_of_awakened
+  // joins onto every row so summiteers' Highest Floor entries carry their
+  // eternal ordinal ("THE 2ND TO AWAKEN"). LEFT JOIN — null for the
+  // unsummited, and the tiny table (one row per finisher, ever) makes the
+  // join cost negligible on every metric.
   const topResult = weekly
     ? await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
@@ -105,10 +114,12 @@ export async function handleLeaderboardTop(
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
                 pps.avatar_id AS avatar_id,
-                pps.card_bg AS card_bg
+                pps.card_bg AS card_bg,
+                hoa.ordinal AS hall_ordinal
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
+         LEFT JOIN hall_of_awakened hoa ON hoa.user_id = ls.user_id
          WHERE ls.metric = ? AND ls.week_start = ?
          ORDER BY ls.current_value DESC
          LIMIT ?`,
@@ -122,10 +133,12 @@ export async function handleLeaderboardTop(
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
                 pps.avatar_id AS avatar_id,
-                pps.card_bg AS card_bg
+                pps.card_bg AS card_bg,
+                hoa.ordinal AS hall_ordinal
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
+         LEFT JOIN hall_of_awakened hoa ON hoa.user_id = ls.user_id
          WHERE ls.metric = ?
          ORDER BY ls.current_value DESC
          LIMIT ?`,
@@ -149,6 +162,9 @@ export async function handleLeaderboardTop(
     // friends-leaderboard/rank-band). null → client renders its default portrait.
     avatar_id: row.avatar_id ?? null,
     card_bg: row.card_bg ?? null,   // W706 — member card background
+    // W844 (E3) — eternal Hall ordinal; null for unsummited hunters, and
+    // old clients simply ignore the extra field (forward compatible).
+    hall_ordinal: row.hall_ordinal ?? null,
   }));
 
   // Caller's row (if they've submitted this metric). For weekly metrics,
