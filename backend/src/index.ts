@@ -96,6 +96,14 @@ import { handleCoopPacts } from './handlers/coop-pacts';
 import { sweepWinBackPushes } from './lib/win-back';
 // W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
+// W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
+import {
+  handleAasaGet,
+  handleInviteLinkFallback,
+  handleInviteCodeGet,
+  handleInviteRedeem,
+  handleInviteRewardsClaim,
+} from './handlers/invites';
 import {
   // Push notifications v1 (W603) — device-token register/unregister.
   handleDeviceTokenRegister,
@@ -205,6 +213,20 @@ export default {
           }
         }
       }
+      // ── W842 (Train 4, G1) — universal-link plumbing (public, no auth) ──
+      // The AASA document iOS fetches to bind /i/* links to the app. Must be
+      // redirect-free JSON at both the .well-known and legacy root paths.
+      else if (
+        (path === '/.well-known/apple-app-site-association' || path === '/apple-app-site-association') &&
+        method === 'GET'
+      ) {
+        response = handleAasaGet();
+      }
+      // Invite-link browser fallback: recipients WITHOUT the app land here →
+      // App Store. Installed devices never hit this (iOS opens the app).
+      else if (path.startsWith('/i/') && method === 'GET') {
+        response = handleInviteLinkFallback();
+      }
       // ── Health check (uncached, no auth) ──
       else if (path === '/health' && method === 'GET') {
         response = Response.json({
@@ -310,6 +332,16 @@ export default {
             // Per-user retention tracking (owner-requested) — fire-and-forget
             // lifecycle ping; UPSERTs one row per (user, UTC day). No reads.
             response = await handleAppOpenPost(request, env, session);
+          } else if (path === '/v1/users/me/invite-code' && method === 'GET') {
+            // W842 (G1) — the caller's stable invite code + shareable URL.
+            response = await handleInviteCodeGet(request, env, session);
+          } else if (path === '/v1/invites/redeem' && method === 'POST') {
+            // W842 (G1) — once-ever redemption: attribution + pending
+            // friendship + the redeemer's souls grant.
+            response = await handleInviteRedeem(request, env, session, ctx);
+          } else if (path === '/v1/users/me/invite-rewards/claim' && method === 'POST') {
+            // W842 (G1) — inviter collects pending recruit rewards.
+            response = await handleInviteRewardsClaim(request, env, session);
           } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
             // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
             response = await handleClientErrorsPost(request, env, session);
