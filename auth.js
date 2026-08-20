@@ -2221,6 +2221,24 @@
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
 
+  // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
+  async function fetchWeeklyHunger() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/weekly-hunger', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) {
+        return { ok: true, week_start: data.week_start, boss_id: data.boss_id || null };
+      }
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+
   window.Auth = {
     getCurrentUser,
     reportAppOpen,
@@ -2228,6 +2246,8 @@
     fetchInviteCode,
     redeemInvite,
     claimInviteRewards,
+    // W845 — weekly hunger override
+    fetchWeeklyHunger,
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,

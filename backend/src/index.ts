@@ -96,6 +96,8 @@ import { handleCoopPacts } from './handlers/coop-pacts';
 import { sweepWinBackPushes } from './lib/win-back';
 // W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
+// W845 (Train 5, E2) — weekly-hunger owner override read.
+import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
   handleAasaGet,
@@ -342,6 +344,10 @@ export default {
           } else if (path === '/v1/users/me/invite-rewards/claim' && method === 'POST') {
             // W842 (G1) — inviter collects pending recruit rewards.
             response = await handleInviteRewardsClaim(request, env, session);
+          } else if (path === '/v1/weekly-hunger' && method === 'GET') {
+            // W845 (Train 5, E2) — owner override for the weekly hungered
+            // boss; null = the client's deterministic pick stands.
+            response = await handleWeeklyHungerGet(request, env, session);
           } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
             // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
             response = await handleClientErrorsPost(request, env, session);

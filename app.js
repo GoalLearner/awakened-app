@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.1-w844'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w845'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5212,6 +5212,126 @@
     const frac = wltSoulsBonusFraction();
     if (frac <= 0) return 0;
     return Math.floor(base * frac);
+  }
+
+  // ── W845 (Train 5, E2) — THE HUNGER: rotating weekly boss modifier ───────
+  // Each Pacific week (same Sunday anchor as the boards) one boss HUNGERS:
+  // 2× souls (a separate transparent ledger row, the WLT-bonus pattern —
+  // killRewardSouls stays pure) and +1% relic luck (rides the existing
+  // rollBossDrop luck option, the W793 MVP plumbing). Goals are UNTOUCHED —
+  // pure carrot, owner design 2026-08-19. The pick is DETERMINISTIC from the
+  // week key over the eligible catalog, so every device agrees with no
+  // server call; a server override (weekly_hunger_overrides, fetched at
+  // boot) lets the owner hand-pick a week. Mythic drop sources (the
+  // Grinning God, the summit) are EXCLUDED — a weekly spotlight would
+  // cheapen them.
+  const HUNGER_LUCK_MULT = 1.01;   // +1% relic luck on the hungered boss
+  const _HUNGER_OVERRIDE_KEY = 'hb_hunger_override';
+  function _ptWeekStartFor(ms) {
+    try {
+      const d = new Date(ms);
+      const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(d);
+      let wd = -1;
+      new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' })
+        .formatToParts(d).forEach(function (p) { if (p.type === 'weekday') wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.value); });
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+      if (!m || wd < 0) return dayKey;
+      const u = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) - wd * 86400000);
+      return u.getUTCFullYear() + '-' + String(u.getUTCMonth() + 1).padStart(2, '0') + '-' + String(u.getUTCDate()).padStart(2, '0');
+    } catch (_) { return null; }
+  }
+  // Eligible pool: every solo gate + co-op boss EXCEPT mythic drop sources
+  // (dropTable.mythic or an explicit mythic pool) and the coopOnly stubs
+  // (their live co-op cfg is considered under its own id). Sorted for a
+  // stable deterministic order on every device and build.
+  function _hungerPool() {
+    const out = [];
+    const seen = {};
+    const consider = function (id, cfg) {
+      if (!id || !cfg || seen[id]) return;
+      const dt = cfg.dropTable || {};
+      if (dt.mythic || (cfg.pool && cfg.pool.mythic)) return;   // mythic sources stay pristine
+      seen[id] = true; out.push(id);
+    };
+    try {
+      if (typeof BOSSES === 'object' && BOSSES) {
+        for (const id in BOSSES) { const c = BOSSES[id]; if (c && !c.coopOnly) consider(id, c); }
+      }
+      if (typeof COOP_BOSSES === 'object' && COOP_BOSSES) {
+        for (const id in COOP_BOSSES) {
+          const c = COOP_BOSSES[id];
+          if (!c || c.special) continue;   // the members raid enters no rotation (W693 gate rule)
+          const stub = (typeof BOSSES === 'object' && BOSSES && c.dropSourceBoss) ? BOSSES[c.dropSourceBoss] : null;
+          consider(id, Object.assign({}, stub || {}, c));
+        }
+      }
+    } catch (_) {}
+    out.sort();
+    return out;
+  }
+  function _hungerPickFor(weekKey) {
+    try {
+      const pool = _hungerPool();
+      if (!pool.length || !weekKey) return null;
+      let h = 5381;
+      const s = 'hunger:' + weekKey;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+      return pool[Math.abs(h) % pool.length];
+    } catch (_) { return null; }
+  }
+  function weeklyHungerWeekKey() {
+    try { return lbGetCurrentWeekStartPT(); } catch (_) { return _ptWeekStartFor(Date.now()); }
+  }
+  /** The hungered boss id for the CURRENT week (owner override wins). */
+  function weeklyHungerBossId() {
+    const wk = weeklyHungerWeekKey();
+    try {
+      const ov = JSON.parse(localStorage.getItem(_HUNGER_OVERRIDE_KEY) || 'null');
+      if (ov && ov.week === wk && typeof ov.boss_id === 'string' && ov.boss_id) return ov.boss_id;
+    } catch (_) {}
+    return _hungerPickFor(wk);
+  }
+  /** Week-aware pick for historical awards (co-op claims can land after the
+   *  week flips). Current week is override-aware; past weeks fall back to
+   *  the deterministic pick (override history isn't tracked — acceptable
+   *  drift on the rare hand-picked week). */
+  function weeklyHungerBossIdFor(weekKey) {
+    if (!weekKey) return null;
+    return weekKey === weeklyHungerWeekKey() ? weeklyHungerBossId() : _hungerPickFor(weekKey);
+  }
+  function isBossHungered(bossId) {
+    return !!bossId && weeklyHungerBossId() === bossId;
+  }
+  function _hungerBossName(bossId) {
+    try {
+      if (typeof COOP_BOSSES === 'object' && COOP_BOSSES && COOP_BOSSES[bossId]) return COOP_BOSSES[bossId].name;
+      if (typeof BOSSES === 'object' && BOSSES && BOSSES[bossId]) return BOSSES[bossId].name;
+    } catch (_) {}
+    return null;
+  }
+  /** SQLite/ISO timestamp → the PT week key it fell in (co-op starts_at). */
+  function _hungerWeekOfInstant(ts) {
+    try {
+      let s = String(ts || '').trim();
+      if (!s) return null;
+      if (!s.includes('T')) s = s.replace(' ', 'T');
+      if (!/[Zz]$|[+-]\d{2}:?\d{2}$/.test(s)) s += 'Z';
+      const ms = Date.parse(s);
+      return isFinite(ms) ? _ptWeekStartFor(ms) : null;
+    } catch (_) { return null; }
+  }
+  /** Boot: adopt/clear the owner's override for this week (fail → determinism). */
+  function _refreshHungerOverride() {
+    try {
+      if (!(window.Auth && typeof Auth.fetchWeeklyHunger === 'function')) return;
+      Auth.fetchWeeklyHunger().then(function (r) {
+        try {
+          if (!(r && r.ok)) return;
+          if (r.boss_id) localStorage.setItem(_HUNGER_OVERRIDE_KEY, JSON.stringify({ week: r.week_start, boss_id: r.boss_id }));
+          else localStorage.removeItem(_HUNGER_OVERRIDE_KEY);
+        } catch (_) {}
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
@@ -20386,9 +20506,13 @@
         // reward above, so failed hunts and engages never trigger.
         const _wltBonus_1 = _firstKill ? wltKillBonusSouls(cfg.rank) : 0;
         if (_wltBonus_1 > 0) earnSouls(_wltBonus_1, 'wlt_bonus_kill_' + id);
+        // W845 — THE HUNGER: 2× souls on the week's hungered boss, as its own
+        // transparent ledger row (the WLT-bonus pattern).
+        const _hungerBonus_1 = (_firstKill && isBossHungered(id)) ? killRewardSouls(cfg.rank) : 0;
+        if (_hungerBonus_1 > 0) earnSouls(_hungerBonus_1, 'hunger_kill_' + id);
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
-        const dropped = _firstKill ? rollBossDrop(id) : null;
+        const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
@@ -20495,7 +20619,10 @@
         // v3 Phase 1z.277D — WLT Merchant bonus (per-day boss path).
         const _wltBonus_3 = _firstKill ? wltKillBonusSouls(cfg.rank) : 0;
         if (_wltBonus_3 > 0) earnSouls(_wltBonus_3, 'wlt_bonus_kill_' + id);
-        const dropped = _firstKill ? rollBossDrop(id) : null;
+        // W845 — THE HUNGER (per-day boss path).
+        const _hungerBonus_3 = (_firstKill && isBossHungered(id)) ? killRewardSouls(cfg.rank) : 0;
+        if (_hungerBonus_3 > 0) earnSouls(_hungerBonus_3, 'hunger_kill_' + id);
+        const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
@@ -20597,14 +20724,17 @@
     // v3 Phase 1z.277D — WLT Merchant bonus (single-shot kill path).
     const _wltBonus_4 = wltKillBonusSouls(cfg.rank);
     if (_wltBonus_4 > 0) earnSouls(_wltBonus_4, 'wlt_bonus_kill_' + id);
-    const dropped = rollBossDrop(id);
+    // W845 — THE HUNGER (single-shot kill path).
+    const _hungerBonus_4 = isBossHungered(id) ? reward : 0;
+    if (_hungerBonus_4 > 0) earnSouls(_hungerBonus_4, 'hunger_kill_' + id);
+    const dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
     // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
     // counters above stay the Kill Log tab's source — this is the chronology).
     try {
       _pushHuntHistory({
         mode: 'solo', boss_id: id, bossName: (cfg && cfg.name) || 'a boss',
         rank: (cfg && cfg.rank) || '', result: 'win',
-        souls: (reward || 0) + (_wltBonus_4 || 0),
+        souls: (reward || 0) + (_wltBonus_4 || 0) + (_hungerBonus_4 || 0),   // W845 — history shows what was actually earned
         drop: dropped ? { id: dropped.id, name: dropped.name, rarity: dropped.rarity } : null,
         ts: Date.now(),
       });
@@ -47909,6 +48039,9 @@
       cornerLabel = '<span class="bcard-preview-label" aria-hidden="true">PREVIEW</span>';
     } else if (state.engaged === true) {
       cornerLabel = '<span class="bcard-hunting-label" aria-hidden="true">HUNTING</span>';
+    } else if (isBossHungered(id)) {
+      // W845 — THE HUNGER chip (HUNTING/PREVIEW own the slot when active).
+      cornerLabel = '<span class="bcard-hunger-label" aria-hidden="true">HUNGERS · 2×</span>';
     }
 
     // Cadence display: capitalize first letter for the stat strip.
@@ -48042,7 +48175,18 @@
       return;
     }
     list.classList.add('bosses-list--cards');
-    list.innerHTML = bossIds.map(buildBossCardHTML).join('');
+    // W845 — THE HUNGER banner: one System line naming the week's hungered
+    // boss, on every rank view (the chip on its card does the local work).
+    let _hungerBanner = '';
+    try {
+      const _hbId = weeklyHungerBossId();
+      const _hbName = _hbId ? _hungerBossName(_hbId) : null;
+      if (_hbName) {
+        _hungerBanner = '<div class="hunger-banner"><span class="hunger-banner-kicker">THE HUNGER</span>' +
+          'This week <b>' + esc(_hbName) + '</b> hungers — 2× souls · +1% relic luck.</div>';
+      }
+    } catch (_) {}
+    list.innerHTML = _hungerBanner + bossIds.map(buildBossCardHTML).join('');
     // W370 — co-op boss card(s) appended before the setBossImage loop so their
     // art wires too.
     try {
@@ -49104,6 +49248,7 @@
     return (
       '<button type="button" class="bcard bcard--coop bcard--dormant" data-coop-boss="' + id + '" aria-label="View ' + esc(cfg.name) + ' details">' +
         '<span class="bcard-coop-badge" aria-hidden="true">CO-OP</span>' +
+        (isBossHungered(id) ? '<span class="bcard-hunger-label bcard-hunger-label--coop" aria-hidden="true">HUNGERS · 2×</span>' : '') +   // W845
         '<div class="bcard-header">' +
           '<span class="bcard-rank-pill rank-badge" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + '</span>' +
           '<span class="' + _bossNameClass(cfg.name) + '">' + esc(cfg.name) + '</span>' +
@@ -49622,11 +49767,23 @@
       if (_topI >= 0 && _topV > 0 && _roster[_topI].me) _mvpCarried = Math.max(0, _roster.length - 1);
     } catch (_) {}
     const _mvpMult = 1 + 0.01 * _mvpCarried;
-    const reward = Math.round((cfg.coopRewardSouls || 0) * _mvpMult);
+    // W845 — THE HUNGER: 2× souls + 1% extra relic luck when THIS hunt's boss
+    // was the hungered one during the week the hunt STARTED (claims can land
+    // after the Sunday flip; the week-aware pick keeps late claims honest).
+    let _hungered = false;
+    try {
+      const _hWk = _hungerWeekOfInstant(inst.starts_at) || weeklyHungerWeekKey();
+      _hungered = weeklyHungerBossIdFor(_hWk) === inst.boss_id;
+    } catch (_) {}
+    const _hungerMult = _hungered ? 2 : 1;
+    const reward = Math.round((cfg.coopRewardSouls || 0) * _mvpMult * _hungerMult);
     try { earnSouls(reward, 'coop_' + cfg.id); } catch (e) { _logSwallow('coopAward:earnSouls', e); }
-    try { _annotateCoopHistorySouls(inst.id, reward); } catch (_) {}   // W809 — history shows what was ACTUALLY earned (MVP mult included)
+    try { _annotateCoopHistorySouls(inst.id, reward); } catch (_) {}   // W809 — history shows what was ACTUALLY earned (MVP + hunger mults included)
     let dropInfo = null;
-    try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf', { source: 'coop', sourceName: cfg.name, luck: _mvpMult }); } catch (_) {}
+    try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf', { source: 'coop', sourceName: cfg.name, luck: _mvpMult * (_hungered ? HUNGER_LUCK_MULT : 1) }); } catch (_) {}
+    if (_hungered) {
+      try { showHabitToast('The hunger is fed — 2× souls from ' + cfg.name + '.'); } catch (_) {}
+    }
     if (_mvpCarried > 0) {
       try { showHabitToast('✦ Hunt MVP — +' + _mvpCarried + '% souls & relic luck for carrying ' + _mvpCarried + ' hunter' + (_mvpCarried === 1 ? '' : 's')); } catch (_) {}
     }
@@ -63465,6 +63622,7 @@
         try { _refreshInviteUrl(); } catch (_) {}
         try { _tryRedeemPendingInvite(); } catch (_) {}
         try { _claimInviteRewards(); } catch (_) {}
+        try { _refreshHungerOverride(); } catch (_) {}   // W845 — owner's hand-picked week, if any
       }, 6500);
     } catch (_) {}
     // ── v1.1.5 sleep auth upgrade-path ───────────────────────

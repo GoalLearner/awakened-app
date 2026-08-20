@@ -13341,6 +13341,46 @@ footer {
   filter: none;
   opacity: 1;
 }
+/* W845 — THE HUNGER chip: the week's hungered boss wears it top-right
+   (gold, hungry). The co-op variant drops below the CO-OP badge. */
+.bcard-hunger-label {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #f5b842;
+  background: rgba(245, 184, 66, 0.12);
+  border: 1px solid rgba(245, 184, 66, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.35));
+}
+.bcard-hunger-label--coop { top: 30px; }
+/* W845 — the one-line System banner atop the dungeon card grid. */
+.hunger-banner {
+  grid-column: 1 / -1;
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #b8b8d4);
+  background: rgba(245, 184, 66, 0.07);
+  border: 1px solid rgba(245, 184, 66, 0.22);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0 0 4px;
+}
+.hunger-banner b { color: #f5b842; font-weight: 700; }
+.hunger-banner-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #f5b842;
+  margin-right: 8px;
+}
 .bcard-preview-label {
   position: absolute;
   top: 8px;

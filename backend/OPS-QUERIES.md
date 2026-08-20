@@ -151,6 +151,21 @@ SELECT ua.alias AS a, ub.alias AS b, pf.day_key
  ORDER BY pf.day_key DESC LIMIT 20;                                      -- flame warnings (W837)
 ```
 
+## 7 · Weekly Hunger override (W845)
+
+The rotation is deterministic client-side; set a row here ONLY to hand-pick
+a week (clients adopt it at boot). `week_start` = the PT-Sunday key, same as
+the boards. Delete the row to restore the deterministic pick.
+
+```sql
+INSERT OR REPLACE INTO weekly_hunger_overrides (week_start, boss_id, created_at)
+VALUES ('2026-08-23', 'the_twin_maw', strftime('%s','now')*1000);
+```
+
+```sql
+SELECT * FROM weekly_hunger_overrides ORDER BY week_start DESC LIMIT 5;
+```
+
 ## Notes
 
 - Sim users: exclude with `u.apple_sub NOT LIKE 'sim_test_%'` where it matters.
