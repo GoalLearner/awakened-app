@@ -16,6 +16,7 @@ interface MockState {
   tokensByUser: Record<string, string[]>;
   notified: string[]; // tokens APNs "received"
   casLoseOnce?: boolean; // simulate a concurrent run winning the claim
+  buildsByUser?: Record<string, string | null>; // W835 — latest app_opens.build per user
 }
 
 function makeEnv(state: MockState): Env {
@@ -50,11 +51,16 @@ function makeEnv(state: MockState): Env {
           return { success: true, meta: { changes: 1 } };
         },
         all: async () => {
-          if (/SELECT DISTINCT user_id FROM device_tokens/.test(sql)) {
+          if (/SELECT DISTINCT dt\.user_id/.test(sql)) {
+            // W835 page query: user_id + latest reported build subselect.
             const after = args[0] as string;
             const limit = args[1] as number;
             const page = state.users.filter((u) => u > after).slice(0, limit);
-            return { results: page.map((u) => ({ user_id: u })), success: true, meta: {} };
+            return {
+              results: page.map((u) => ({ user_id: u, build: (state.buildsByUser || {})[u] ?? null })),
+              success: true,
+              meta: {},
+            };
           }
           if (/FROM device_tokens/.test(sql)) {
             // notifyUser's per-user token read
@@ -123,8 +129,8 @@ describe('runUpdatePushPage', () => {
     expect(st.completed).toBe(1);
   });
 
-  it('full page (12) → advances cursor, NOT completed; second call takes the rest', async () => {
-    const users = Array.from({ length: 15 }, (_, i) => 'u' + String(i + 10)); // u10..u24, sorted
+  it('full page (50, W835 ceiling) → advances cursor, NOT completed; second call takes the rest', async () => {
+    const users = Array.from({ length: 55 }, (_, i) => 'u' + String(i + 10).padStart(3, '0')); // sorted
     const st: MockState = {
       cursor: '', completed: 0, sent: 0, users,
       tokensByUser: Object.fromEntries(users.map((u) => [u, []])), // no tokens → notifyUser no-ops
@@ -132,13 +138,65 @@ describe('runUpdatePushPage', () => {
     };
     const env = makeEnv(st);
     const r1 = await runUpdatePushPage(env, 'd1');
-    expect(r1.sent).toBe(12);
+    expect(r1.sent).toBe(50);
     expect(r1.completed).toBe(false);
-    expect(st.cursor).toBe(users[11]);
+    expect(st.cursor).toBe(users[49]);
     const r2 = await runUpdatePushPage(env, 'd1');
-    expect(r2.sent).toBe(3);
+    expect(r2.sent).toBe(5);
     expect(r2.completed).toBe(true);
-    expect(st.sent).toBe(15);
+    expect(st.sent).toBe(55);
+  });
+
+  // ── W835 (R1b) — per-user version gate ─────────────────────────────
+  it('skips users already on the store version; null/old/malformed builds still get the push', async () => {
+    const st: MockState = {
+      cursor: '', completed: 0, sent: 0,
+      users: ['u1', 'u2', 'u3', 'u4', 'u5'],
+      tokensByUser: {},
+      notified: [],
+      buildsByUser: {
+        u1: '2.5.0-w833',   // current → skipped
+        u2: '2.4.8-w817',   // older → sent
+        u3: null,           // pre-W834 client, never reported → sent
+        u4: 'garbage',      // unparseable → sent (fail open toward nudging)
+        u5: '2.5.1-w840',   // AHEAD of store (TestFlight) → skipped
+      },
+    };
+    const r = await runUpdatePushPage(makeEnv(st), 'd1', '2.5.0');
+    expect(r.ok).toBe(true);
+    expect(r.sent).toBe(3);
+    expect(r.skipped_current).toBe(2);
+    expect(r.completed).toBe(true);
+    expect(st.cursor).toBe('u5');   // skipped users still advance the cursor
+    expect(st.sent).toBe(3);        // sent_users counts actual sends only
+  });
+
+  it('no storeVersion (admin test-fire) → gate bypassed, everyone sent', async () => {
+    const st: MockState = {
+      cursor: '', completed: 0, sent: 0,
+      users: ['u1', 'u2'],
+      tokensByUser: {},
+      notified: [],
+      buildsByUser: { u1: '9.9.9-w999', u2: '9.9.9-w999' },
+    };
+    const r = await runUpdatePushPage(makeEnv(st), 'd1');
+    expect(r.sent).toBe(2);
+    expect(r.skipped_current).toBe(0);
+  });
+
+  it('an all-current page sends nothing but still advances and completes', async () => {
+    const st: MockState = {
+      cursor: '', completed: 0, sent: 0,
+      users: ['u1', 'u2'],
+      tokensByUser: {},
+      notified: [],
+      buildsByUser: { u1: '2.5.0-w830', u2: '2.5.0-w833' },
+    };
+    const r = await runUpdatePushPage(makeEnv(st), 'd1', '2.5.0');
+    expect(r.sent).toBe(0);
+    expect(r.skipped_current).toBe(2);
+    expect(r.completed).toBe(true);
+    expect(st.cursor).toBe('u2');
   });
 
   it('CAS claim lost (concurrent run) → sends nothing, reports LOST_CLAIM_RACE', async () => {
