@@ -92,6 +92,8 @@ import {
   handleCoopBossEmote,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
+// W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
+import { sweepWinBackPushes } from './lib/win-back';
 import {
   // Push notifications v1 (W603) — device-token register/unregister.
   handleDeviceTokenRegister,
@@ -509,6 +511,10 @@ export default {
       // W798 — one-time crunch push per hunt (≤30 min left + ≥80% done):
       // crunch_reminded_at (0044) is the idempotency stamp.
       ctx.waitUntil(sweepCrunchTimeReminders(env, ctx));
+      // W836 (Train 3, R2) — win-back push for lapsed hunters. Gated to the
+      // 10 AM PT hour inside the sweep; the win_back_pushes PK (0047) is the
+      // per-(user, lapse) claim, so this cadence can never double-send.
+      ctx.waitUntil(sweepWinBackPushes(env).then(() => undefined));
     }
   },
 } satisfies ExportedHandler<Env>;
