@@ -1,0 +1,160 @@
+# OPS-QUERIES — the live-ops SQL pack (W841 · Train 3, G3 + C3b)
+
+Copy-paste `wrangler d1` commands for reading the app's vital signs. Zero
+deploys — run from `backend/`. Every command is read-only.
+
+```
+npx wrangler d1 execute awakened-db --remote --command "<SQL>"
+```
+
+**Cadence (C3b):** run §1 at least weekly and at the start of any live-ops
+session. New `client_errors` rows = investigate BEFORE shipping anything new.
+(`[w833-backfill]` messages are diagnostics, not errors — they record what the
+step backfill saw; remove that telemetry once the fleet looks clean.)
+
+---
+
+## 1 · Weekly sweep — errors + silent breakage
+
+Client errors, last 7 days, grouped (who / what build / how often):
+
+```sql
+SELECT u.alias, ce.build, substr(ce.message,1,90) AS msg, COUNT(*) AS n,
+       MAX(datetime(ce.created_at/1000,'unixepoch')) AS last
+  FROM client_errors ce JOIN users u ON u.id = ce.user_id
+ WHERE ce.created_at > (strftime('%s','now') - 7*86400) * 1000
+ GROUP BY u.alias, ce.build, msg ORDER BY last DESC;
+```
+
+Health-blackout detector (the W830 incident, institutionalized): anyone
+OPENING the app days after their last step submit is reading 0 from Health.
+
+```sql
+SELECT u.alias, ls.current_value AS steps, ls.week_start,
+       date(ls.updated_at/1000,'unixepoch') AS last_submit,
+       (SELECT MAX(date_utc) FROM app_opens ao WHERE ao.user_id = u.id) AS last_open
+  FROM leaderboard_snapshots ls JOIN users u ON u.id = ls.user_id
+ WHERE ls.metric = 'step_total'
+   AND (SELECT MAX(date_utc) FROM app_opens ao WHERE ao.user_id = u.id)
+       > date(ls.updated_at/1000,'unixepoch','+2 days');
+```
+
+Ascent wipe check (current lags server best → W819 heal pending):
+
+```sql
+SELECT u.alias, ls.current_value, ls.best_value
+  FROM leaderboard_snapshots ls JOIN users u ON u.id = ls.user_id
+ WHERE ls.metric = 'floor_best' AND ls.current_value < ls.best_value;
+```
+
+## 2 · Retention & actives
+
+7-day actives by OPENS (⚠ the canonical active metric is SYNC recency — §5):
+
+```sql
+SELECT COUNT(DISTINCT user_id) AS active_7d FROM app_opens
+ WHERE date_utc >= date('now','-7 days');
+```
+
+Opens per day, last 14:
+
+```sql
+SELECT date_utc, COUNT(*) AS opens FROM app_opens
+ WHERE date_utc >= date('now','-14 days') GROUP BY date_utc ORDER BY date_utc DESC;
+```
+
+Per-user lifecycle (first/last open, days active):
+
+```sql
+SELECT u.alias, MIN(ao.date_utc) AS first_open, MAX(ao.date_utc) AS last_open,
+       COUNT(*) AS days_active
+  FROM app_opens ao JOIN users u ON u.id = ao.user_id
+ GROUP BY u.alias ORDER BY last_open DESC;
+```
+
+(The D1/D7/D30 rollup lives at `GET /v1/admin/retention` — needs
+`ADMIN_METRICS_SECRET`, an owner loose end.)
+
+## 3 · Build distribution (W834+)
+
+Who runs what — also the W835 Monday-push gate's source of truth. NULL build
+= pre-2.5.1 client (they get the update nudge; that's correct):
+
+```sql
+SELECT b.build, COUNT(*) AS users FROM (
+  SELECT a1.user_id,
+         (SELECT a2.build FROM app_opens a2
+           WHERE a2.user_id = a1.user_id AND a2.build IS NOT NULL
+           ORDER BY a2.date_utc DESC LIMIT 1) AS build
+    FROM app_opens a1 GROUP BY a1.user_id) b
+ GROUP BY b.build ORDER BY users DESC;
+```
+
+## 4 · Funnel (W834/W839, 90-day retention)
+
+Event totals, last 30 days (paywall_impression → purchase_attempt →
+purchase_completed is the money funnel; onboarding_complete is activation):
+
+```sql
+SELECT event, COUNT(*) AS n, COUNT(DISTINCT user_id) AS users
+  FROM funnel_events
+ WHERE created_at > (strftime('%s','now') - 30*86400) * 1000
+ GROUP BY event ORDER BY n DESC;
+```
+
+Onboarding path split:
+
+```sql
+SELECT detail AS path, COUNT(*) AS n FROM funnel_events
+ WHERE event = 'onboarding_complete' GROUP BY detail ORDER BY n DESC;
+```
+
+## 5 · Snapshot mining (G3 — user_state_snapshots)
+
+Actives by SYNC recency — the canonical metric (memory: never count actives
+by app_opens alone):
+
+```sql
+SELECT COUNT(*) AS synced_7d FROM user_state_snapshots
+ WHERE server_updated_at > (strftime('%s','now') - 7*86400) * 1000;
+```
+
+XP / shields / habit-count roster (envelope: `$.keys.hb_*` hold STRINGIFIED
+localStorage values, hence the json() re-parse for nested blobs):
+
+```sql
+SELECT u.alias,
+       CAST(json_extract(s.state_json,'$.keys.hb_points') AS INTEGER)  AS xp,
+       json_extract(s.state_json,'$.keys.hb_shields')                  AS shields,
+       json_array_length(json(json_extract(s.state_json,'$.keys.hb_habits'))) AS habits,
+       s.app_version, date(s.server_updated_at/1000,'unixepoch')       AS synced
+  FROM user_state_snapshots s JOIN users u ON u.id = s.user_id
+ ORDER BY xp DESC;
+```
+
+## 6 · Push ledgers (Train 3 audit trail)
+
+```sql
+SELECT * FROM push_broadcast_log ORDER BY day_key DESC LIMIT 5;          -- Monday broadcast pages
+```
+
+```sql
+SELECT u.alias, wb.lapse_open_date, datetime(wb.sent_at/1000,'unixepoch') AS sent
+  FROM win_back_pushes wb JOIN users u ON u.id = wb.user_id
+ ORDER BY wb.sent_at DESC LIMIT 20;                                      -- win-backs (W836)
+```
+
+```sql
+SELECT ua.alias AS a, ub.alias AS b, pf.day_key
+  FROM pact_flame_pushes pf
+  JOIN users ua ON ua.id = pf.user_a JOIN users ub ON ub.id = pf.user_b
+ ORDER BY pf.day_key DESC LIMIT 20;                                      -- flame warnings (W837)
+```
+
+## Notes
+
+- Sim users: exclude with `u.apple_sub NOT LIKE 'sim_test_%'` where it matters.
+- All `date_utc` / `date('now')` values are UTC day keys; board weeks are
+  PT-Sunday-anchored (`week_start`).
+- `wrangler d1 execute` occasionally throws a transient Cloudflare API error —
+  retry once before believing it.
