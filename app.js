@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.1-w840'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w843'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -402,6 +402,111 @@
     }
     try { window.__funnelEmit = funnelEmit; } catch (_) {}
   })();
+
+  // ── W843 (Train 4, G1) — universal-link invite loop, client side ────────
+  // Share URLs become the hunter's personal /i/<code> link (attributed, and
+  // it opens the app directly on installed devices once the Associated
+  // Domains entitlement ships). Recipients without the app get the server's
+  // 302 → App Store. Everything degrades to the bare store link when a code
+  // isn't available (guest, offline, first boot).
+  const AWAKENED_STORE_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+  function _inviteShareUrl() {
+    try {
+      const u = localStorage.getItem('hb_invite_url');
+      if (u && /^https:\/\/[^\s]+\/i\/[a-z0-9]{6,12}$/.test(u)) return u;
+    } catch (_) {}
+    return AWAKENED_STORE_URL;
+  }
+  function _refreshInviteUrl() {
+    try {
+      if (!(window.Auth && typeof Auth.fetchInviteCode === 'function')) return;
+      Auth.fetchInviteCode().then(function (r) {
+        if (r && r.ok && r.url) { try { localStorage.setItem('hb_invite_url', r.url); } catch (_) {} }
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  // Deep-link intake: warm resumes fire appUrlOpen; cold launches via a link
+  // surface it through getLaunchUrl. The code is STASHED first (hb_pending_
+  // invite_code) so a link tapped before sign-in survives the whole
+  // onboarding/SIWA flow and redeems on the first signed-in boot.
+  function _parseInviteCode(url) {
+    try {
+      const m = String(url || '').match(/\/i\/([23456789abcdefghjkmnpqrstuvwxyz]{6,12})(?:[?#]|$)/i);
+      return m ? m[1].toLowerCase() : null;
+    } catch (_) { return null; }
+  }
+  let _inviteRedeemBusy = false;
+  function _tryRedeemPendingInvite() {
+    try {
+      if (_inviteRedeemBusy) return;
+      const code = localStorage.getItem('hb_pending_invite_code');
+      if (!code) return;
+      if (!(window.Auth && typeof Auth.redeemInvite === 'function')) return;
+      _inviteRedeemBusy = true;
+      Auth.redeemInvite(code).then(function (r) {
+        _inviteRedeemBusy = false;
+        if (r && r.ok) {
+          try { localStorage.removeItem('hb_pending_invite_code'); } catch (_) {}
+          const souls = r.reward_souls || 50;
+          try { earnSouls(souls, 'invite_redeemed'); } catch (_) {}
+          try {
+            showNoticeCard({ icon: '🕯️', title: 'The call, answered', body: 'You entered through ' + (r.inviter_alias || 'a hunter') + '’s Gate — +' + souls + ' souls. Your guild request awaits their word.' });
+          } catch (_) { try { showHabitToast('+' + souls + ' souls — you answered the call.'); } catch (__) {} }
+          try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('invite_redeemed'); } catch (_) {}
+        } else if (r && (r.code === 'ALREADY_REDEEMED' || r.code === 'SELF_INVITE' ||
+                         r.code === 'CODE_NOT_FOUND' || r.code === 'TOO_ESTABLISHED' ||
+                         r.code === 'INVALID_CODE')) {
+          // Definitive refusals — clear the stash so we never re-ask.
+          try { localStorage.removeItem('hb_pending_invite_code'); } catch (_) {}
+          if (r.code === 'TOO_ESTABLISHED') {
+            try { showHabitToast('Invite rewards are for hunters new to the Gate.'); } catch (_) {}
+          }
+        }
+        // Transient (NETWORK / guest-stub gate) → keep the stash; the next
+        // boot or resume retries.
+      }).catch(function () { _inviteRedeemBusy = false; });
+    } catch (_) { _inviteRedeemBusy = false; }
+  }
+  function _armInviteDeepLinks() {
+    try {
+      const appPlug = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
+      if (!appPlug) return;
+      if (appPlug.addListener) {
+        appPlug.addListener('appUrlOpen', function (ev) {
+          const code = _parseInviteCode(ev && ev.url);
+          if (code) {
+            try { localStorage.setItem('hb_pending_invite_code', code); } catch (_) {}
+            _tryRedeemPendingInvite();
+          }
+        });
+      }
+      if (typeof appPlug.getLaunchUrl === 'function') {
+        appPlug.getLaunchUrl().then(function (r) {
+          const code = _parseInviteCode(r && r.url);
+          if (code) {
+            try { localStorage.setItem('hb_pending_invite_code', code); } catch (_) {}
+            _tryRedeemPendingInvite();
+          }
+        }).catch(function () {});
+      }
+    } catch (_) {}
+  }
+  // Inviter side: collect any pending recruit rewards (exactly-once server
+  // flip; the payout lands locally, coop_boss_awards-style).
+  function _claimInviteRewards() {
+    try {
+      if (!(window.Auth && typeof Auth.claimInviteRewards === 'function')) return;
+      Auth.claimInviteRewards().then(function (r) {
+        if (!(r && r.ok && r.claimed > 0)) return;
+        try { earnSouls(r.souls || 0, 'invite_recruits'); } catch (_) {}
+        const names = (r.recruits || []).slice(0, 3).join(', ');
+        try {
+          showNoticeCard({ icon: '🕯️', title: 'Your call was answered', body: (names || 'A hunter') + ' entered through your Gate. +' + (r.souls || 0) + ' souls.' });
+        } catch (_) {}
+        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('invite_reward_claimed', String(r.claimed)); } catch (_) {}
+      }).catch(function () {});
+    } catch (_) {}
+  }
 
   // ── W689 — cross-account bleed guard (scale-audit HIGH) ─────────────────
   // auth.js calls this when a DIFFERENT Apple account signs in on this device
@@ -37081,7 +37186,7 @@
   }
 
   async function _hrShareReport(data, canvas) {
-    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const APP_URL = _inviteShareUrl();   // W843 — the hunter's invite link (bare store link when no code yet)
     const TEXT = _hrShareCopy(data);
     try {
       const file = await _hrCanvasToFile(canvas);
@@ -37534,7 +37639,7 @@
   // Share an already-rendered canvas. Mirrors _hrShareReport's 3-tier
   // fallback but with boss-named copy (the viral hook).
   async function _bksShareCanvas(canvas, d) {
-    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const APP_URL = _inviteShareUrl();   // W843 — the hunter's invite link (bare store link when no code yet)
     const TEXT = _bksShareCopy(d);
     try {
       const file = await _bksCanvasToFile(canvas, 'awakened-kill.png');
@@ -37550,7 +37655,7 @@
 
   // Text-only fallback (also the path used when the canvas never renders).
   async function _bksShareText(d) {
-    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const APP_URL = _inviteShareUrl();   // W843 — the hunter's invite link (bare store link when no code yet)
     const TEXT = _bksShareCopy(d);
     if (navigator.share) {
       try { await navigator.share({ text: TEXT, url: APP_URL }); return { ok: true, mode: 'text' }; }
@@ -42932,7 +43037,7 @@
   // hunter name (so the friend can add them back) + the App Store link, via the
   // same navigator.share → clipboard fallback the boss-kill share cards use.
   async function _guildInviteShare() {
-    const APP_URL = 'https://apps.apple.com/app/awakened-habit-rpg/id6764727990';
+    const APP_URL = _inviteShareUrl();   // W843 — the hunter's invite link (bare store link when no code yet)
     let alias = '';
     try { alias = (lbGetMyAlias() || localStorage.getItem('hb_name') || '').trim(); } catch (_) {}
     const TEXT = alias
@@ -63337,6 +63442,20 @@
     // reads the board week's zero days from HealthKit through the same
     // W799-filtered path as live reads and force-submits if it wrote.
     try { setTimeout(() => { try { lbBackfillMissedStepDays(); } catch (_) {} }, 5000); } catch (_) {}
+    // ── W843 (Train 4, G1) — invite loop boot tasks ──────────
+    // Arm the universal-link listeners immediately (a cold launch VIA a
+    // link delivers its URL through getLaunchUrl in here), then the
+    // deferred network bits: refresh the share code, redeem any stashed
+    // invite, and collect pending recruit rewards. All self-guarded and
+    // stub-gated — a guest boot is a clean no-op for each.
+    try { _armInviteDeepLinks(); } catch (_) {}
+    try {
+      setTimeout(() => {
+        try { _refreshInviteUrl(); } catch (_) {}
+        try { _tryRedeemPendingInvite(); } catch (_) {}
+        try { _claimInviteRewards(); } catch (_) {}
+      }, 6500);
+    } catch (_) {}
     // ── v1.1.5 sleep auth upgrade-path ───────────────────────
     // Existing v1.1.5 step-grant users granted Steps before sleep was
     // added to the auth array. Fire once per cold launch (idempotent

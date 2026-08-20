@@ -317,6 +317,24 @@ echo "  applesignin entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.
 /usr/libexec/PlistBuddy -c "Add :aps-environment string production" "$ENTITLEMENTS" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENTITLEMENTS"
 echo "  aps-environment entitlement: $(/usr/libexec/PlistBuddy -c "Print :aps-environment" "$ENTITLEMENTS" | tr -d '\n')"
+# ── Associated Domains entitlement (W843, Train 4 G1 — universal links) ─────
+# OFF BY DEFAULT (the W604/W607 lesson: adding a capability under MANUAL
+# signing without regenerating the profile breaks the archive). Enable with:
+#   AWAKENED_APPLINKS=1 bash scripts/prep-local-build.sh <build>
+# ONLY after, in developer.apple.com → Identifiers → com.goallearner.awakened:
+#   1. tick Associated Domains, save
+#   2. regenerate + download the "Awakened App Store Manual" profile
+#   3. double-click it on the Mac so Xcode picks it up
+# The domain serves the AASA at /.well-known/apple-app-site-association
+# (verified live, W842) — iOS then opens /i/* invite links in-app.
+if [ "${AWAKENED_APPLINKS:-0}" = "1" ]; then
+  /usr/libexec/PlistBuddy -c "Add :com.apple.developer.associated-domains array" "$ENTITLEMENTS" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Add :com.apple.developer.associated-domains:0 string 'applinks:awakened-backend.richmondcampano93.workers.dev'" "$ENTITLEMENTS" 2>/dev/null || \
+  /usr/libexec/PlistBuddy -c "Set :com.apple.developer.associated-domains:0 'applinks:awakened-backend.richmondcampano93.workers.dev'" "$ENTITLEMENTS"
+  echo "  associated-domains entitlement: $(/usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "$ENTITLEMENTS" | tr -d '\n')"
+else
+  echo "  associated-domains: SKIPPED (set AWAKENED_APPLINKS=1 after the portal + profile regen — see comment)"
+fi
 echo ""
 
 # ── 8b. iOS AppIcon patch (Phase 1z.109) ────────────────────────────

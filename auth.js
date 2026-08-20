@@ -2170,9 +2170,64 @@
     } catch (_) { /* never let retention tracking break the app */ }
   }
 
+  // ── W843 (Train 4, G1) — universal-link invite loop ──────────────────────
+  // Three thin authed helpers over the W842 endpoints. All return {ok:...}
+  // envelopes in the house style; guests/stubs are gated out by _stubGate.
+  async function fetchInviteCode() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/users/me/invite-code', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, code: data.code, url: data.url };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function redeemInvite(inviteCode) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/invites/redeem', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt, 'content-type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) {
+        return { ok: true, inviter_alias: data.inviter_alias, reward_souls: data.reward_souls, friendship_created: data.friendship_created };
+      }
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function claimInviteRewards() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/users/me/invite-rewards/claim', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) {
+        return { ok: true, claimed: data.claimed | 0, souls: data.souls | 0, recruits: Array.isArray(data.recruits) ? data.recruits : [] };
+      }
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+
   window.Auth = {
     getCurrentUser,
     reportAppOpen,
+    // W843 — universal-link invite loop
+    fetchInviteCode,
+    redeemInvite,
+    claimInviteRewards,
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,
