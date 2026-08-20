@@ -1507,7 +1507,7 @@ export async function handleCoopBossResolve(
       }
     }
   } else if (expired) {
-    await env.DB.prepare(
+    const upd = await env.DB.prepare(
       `UPDATE coop_boss_instances
           SET status = 'expired', result = 'defeat',
               resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
@@ -1515,6 +1515,25 @@ export async function handleCoopBossResolve(
     )
       .bind(id)
       .run();
+    // W838 (Train 3, R4) — the loss used to be SILENT: the win path pushes
+    // every hunter (W662 above), but an expired hunt just flipped the row and
+    // said nothing — partners who weren't watching learned about the defeat
+    // days later (or never), which quietly kills the rematch loop. Same
+    // exactly-once mechanics as the win push: only the request that actually
+    // flipped the row (changes>0 under the status='active' guard) sends.
+    // The pact survives a loss (W813 commitment rule), so the copy says so —
+    // the emotional exit ramp is "strike again", not "you failed".
+    if (ctx && Number(upd?.meta?.changes ?? 0) > 0) {
+      const data = { bossId: row.boss_id, instanceId: id };
+      for (const uid of participantIds(row)) {
+        ctx.waitUntil(notifyUser(env, uid, {
+          title: 'The Hunt Ends',
+          body: `The ${row.boss_rank}-rank quarry slipped away this time. Your pact held — the flame still burns. Rally and strike again.`,
+          type: 'coop_lost',
+          data,
+        }));
+      }
+    }
   } else {
     // Still in progress — not an error, just not resolved yet.
     return jsonOk({

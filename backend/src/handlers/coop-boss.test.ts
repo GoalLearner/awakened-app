@@ -15,6 +15,7 @@ import {
   handleCoopBossCreate,
   handleCoopBossGet,
   handleCoopBossJoin,
+  handleCoopBossResolve,
   handleRaidQueueJoin,
   handleRaidQueueLeave,
   handleRaidStart,
@@ -796,5 +797,68 @@ describe('W788 — list orders LIVE hunts ahead of resolved ones', () => {
     expect(sorted.findIndex((r) => r.id === 'inv')).toBeLessThan(
       sorted.findIndex((r) => r.id === 'done1'),
     );
+  });
+});
+
+// W838 (Train 3, R4) — the hunt-lost push. The win path pushed every hunter
+// (W662); an EXPIRED hunt just flipped the row silently — partners who weren't
+// watching learned about the defeat days later or never.
+describe('W838 — expired hunt pushes the defeat to every hunter', () => {
+  beforeEach(() => mockNotify.mockClear());
+
+  const EXPIRED_ACTIVE = {
+    ...PENDING_ROW,
+    status: 'active',
+    partner_joined_at: '2026-07-12 01:00:00',
+    starts_at: '2026-07-12 01:00:00',
+    ends_at: '2026-07-15 00:00:00', // long past — the resolve must land on the expiry branch
+  };
+
+  function resolveReq(): Request {
+    return new Request('http://test/v1/coop-boss/inst-1/resolve', { method: 'POST' });
+  }
+
+  it('the flip (changes>0) sends coop_lost to BOTH hunters with the pact-survives copy', async () => {
+    const db = makeDb({ instance: EXPIRED_ACTIVE });
+    const ctx = { waitUntil: (_p: Promise<unknown>) => {} } as unknown as ExecutionContext;
+    const res = await handleCoopBossResolve(resolveReq(), makeEnv(db), session('u1'), 'inst-1', ctx);
+    expect(res.status).toBe(200);
+    const lost = mockNotify.mock.calls
+      .map((c) => ({ to: c[1] as string, ...(c[2] as { title: string; body: string; type: string }) }))
+      .filter((p) => p.type === 'coop_lost');
+    expect(lost.map((p) => p.to).sort()).toEqual(['u1', 'u2']);
+    expect(lost[0].title).toBe('The Hunt Ends');
+    expect(lost[0].body).toContain('E-rank quarry');
+    expect(lost[0].body).toContain('the flame still burns'); // W813 — a loss never kills the pact
+    expect(/\bfell(ed)?\b/i.test(lost[0].title + ' ' + lost[0].body)).toBe(false);
+  });
+
+  it('a lost flip race (changes=0) sends NOTHING — the request that flipped the row owns the push', async () => {
+    const base = makeDb({ instance: EXPIRED_ACTIVE });
+    const db = {
+      prepare: (sql: string) => {
+        const stmt = (base as unknown as { prepare: (s: string) => { bind: (...a: unknown[]) => Record<string, unknown> } }).prepare(sql);
+        if (/UPDATE coop_boss_instances/.test(sql)) {
+          return {
+            bind: (...a: unknown[]) => ({
+              ...stmt.bind(...a),
+              run: async () => ({ success: true, meta: { changes: 0 } }),
+            }),
+          };
+        }
+        return stmt;
+      },
+      batch: (base as unknown as { batch: (s: unknown[]) => Promise<unknown[]> }).batch,
+    } as unknown as D1Database;
+    const ctx = { waitUntil: (_p: Promise<unknown>) => {} } as unknown as ExecutionContext;
+    await handleCoopBossResolve(resolveReq(), makeEnv(db), session('u1'), 'inst-1', ctx);
+    expect(mockNotify.mock.calls.filter((c) => (c[2] as { type: string }).type === 'coop_lost').length).toBe(0);
+  });
+
+  it('without a ctx (no waitUntil available) the resolve still succeeds, just without pushes', async () => {
+    const db = makeDb({ instance: EXPIRED_ACTIVE });
+    const res = await handleCoopBossResolve(resolveReq(), makeEnv(db), session('u1'), 'inst-1');
+    expect(res.status).toBe(200);
+    expect(mockNotify.mock.calls.filter((c) => (c[2] as { type: string }).type === 'coop_lost').length).toBe(0);
   });
 });
