@@ -268,10 +268,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '2.5.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.0-w833'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w839'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -380,6 +380,27 @@
         } catch (_) {}
       });
     } catch (_) {}
+  })();
+
+  // ── W839 (Train 3, G4) — funnel event queue ─────────────────────────────
+  // Fire-and-forget product analytics: events queue locally and ride the next
+  // Auth.reportAppOpen ping (auth.js drains up to 10 per ping; the server's
+  // events_accepted count governs what leaves the queue, so nothing is lost
+  // to a throttled call). Emit sparingly — each event should answer a real
+  // funnel question (paywall conversion, activation), not narrate the UI.
+  (function _armFunnelQueue() {
+    function funnelEmit(e, d) {
+      try {
+        if (typeof e !== 'string' || !e) return;
+        var q = [];
+        try { q = JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]') || []; } catch (_) { q = []; }
+        if (!Array.isArray(q)) q = [];
+        q.push(d != null && d !== '' ? { e: e, d: String(d).slice(0, 200) } : { e: e });
+        if (q.length > 30) q = q.slice(-30);   // bounded — analytics never bloats storage
+        localStorage.setItem('hb_funnel_queue', JSON.stringify(q));
+      } catch (_) {}
+    }
+    try { window.__funnelEmit = funnelEmit; } catch (_) {}
   })();
 
   // ── W689 — cross-account bleed guard (scale-audit HIGH) ─────────────────
@@ -47250,9 +47271,19 @@
     _premiumBuyBusy = true;
     const btn = document.querySelector('[data-premium-buy="' + tier + '"]');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('purchase_attempt', tier); } catch (_) {}   // W839 (G4)
     let r;
     try { r = await Auth.purchasePremium(Auth.PREMIUM_PRODUCTS[tier]); } catch (_) { r = { ok: false, code: 'ERROR' }; }
     _premiumBuyBusy = false;
+    // W839 (G4) — funnel outcome: completed / received-pending / cancelled.
+    // Failures aren't emitted (client_errors already captures real breakage).
+    try {
+      if (typeof window.__funnelEmit === 'function') {
+        if (r && r.ok && r.member) window.__funnelEmit('purchase_completed', tier);
+        else if (r && r.ok) window.__funnelEmit('purchase_received_pending', tier);
+        else if (r && r.code === 'CANCELLED') window.__funnelEmit('purchase_cancelled', tier);
+      }
+    } catch (_) {}
     if (r && r.ok && r.member) {
       try { if (typeof showHabitToast === 'function') showHabitToast('✦ Welcome to Awakened Premium.'); } catch (_) {}
       try { if (typeof playSfx === 'function') playSfx('boss_victory'); } catch (_) {}
@@ -47295,6 +47326,9 @@
     _renderFounder();
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
     try { _refreshIapPrices(); } catch (_) {}   // localize the prices (repaints on land)
+    // W839 (G4) — a non-member seeing the priced offer is a paywall
+    // impression; a member opening their receipt is not.
+    try { if (!_founderOwned() && typeof window.__funnelEmit === 'function') window.__funnelEmit('paywall_impression'); } catch (_) {}
   }
   function closeFounder() {
     const ov = document.getElementById('founder-overlay'), sh = document.getElementById('founder-sheet');
@@ -57670,6 +57704,9 @@
     // v3 Phase 1j — lock the hunter name once full onboarding ends.
     try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
     if (selectedPackId) localStorage.setItem('hb_path', selectedPackId);
+    // W839 (G4) — activation beacon: onboarding finished, with the chosen
+    // path as detail (rides the next app-open ping once signed in).
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('onboarding_complete', selectedPackId || 'none'); } catch (_) {}
 
     // Build habits using per-habit configs stored in obConfig, falling back to defaults
     habits = [...obSelected].sort((a, b) => a - b).map(i => {

@@ -2136,11 +2136,37 @@
       const now = Date.now();
       if (now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
       _lastAppOpenReportMs = now;
+      // W839 (Train 3, G2 client) — the ping now CARRIES data: the running
+      // build tag (powers the W835 Monday-push version gate — users who
+      // report a current build stop getting the update nudge) and up to 10
+      // queued funnel events (G4; app.js's window.__funnelEmit appends to
+      // hb_funnel_queue). The server's events_accepted count is the clear
+      // contract: only accepted events leave the queue, so a rate-limited
+      // or failed call keeps them for the next ping. The queue is
+      // append-at-tail, so slicing the accepted count off the FRONT can
+      // never drop an event that arrived mid-flight.
+      var payload = { build: (typeof window.__APP_BUILD_TAG === 'string' ? window.__APP_BUILD_TAG : null) };
+      try {
+        var q = JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]');
+        if (Array.isArray(q) && q.length) payload.events = q.slice(0, 10);
+      } catch (_) {}
       fetch(BACKEND_URL + '/v1/users/me/app-open', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + u.jwt },
+        headers: { 'Authorization': 'Bearer ' + u.jwt, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
         keepalive: true,
-      }).catch(function () { /* fire-and-forget — a metrics ping must never surface to the user */ });
+      }).then(function (r) { return (r && r.ok) ? r.json() : null; })
+        .then(function (j) {
+          try {
+            var n = (j && typeof j.events_accepted === 'number') ? j.events_accepted : 0;
+            if (n > 0) {
+              var rest = [];
+              try { rest = JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]') || []; } catch (_) { rest = []; }
+              if (Array.isArray(rest)) localStorage.setItem('hb_funnel_queue', JSON.stringify(rest.slice(n)));
+            }
+          } catch (_) {}
+        })
+        .catch(function () { /* fire-and-forget — a metrics ping must never surface to the user */ });
     } catch (_) { /* never let retention tracking break the app */ }
   }
 
