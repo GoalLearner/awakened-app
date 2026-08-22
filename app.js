@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.1-w846'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w847'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13582,6 +13582,24 @@
     try { if (_AUD.musicLoop) _audStopMusic(0.5); } catch (_) {}
     try { _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); } catch (_) {}   // W544 — the bespoke First Awakened finale (Suno) carries the summit; victory_sting fallback if absent
     try { _hallRecordFinish(); } catch (_) {}   // W270 — claim the eternal ordinal in the Hall of the Awakened
+    // W847 (V1c) — the summit is the ladder's tier-3 peak. Arm ONCE (a
+    // post-summit tower revisit re-renders this screen; that's not the
+    // moment) — flushed when the hunter enters the Hall, ordinal on screen.
+    try {
+      if (!localStorage.getItem('hb_review_summit_armed')) {
+        localStorage.setItem('hb_review_summit_armed', '1');
+        var _sumOrd = null;
+        try {
+          var _fin = JSON.parse(localStorage.getItem(_HALL_FINISH_KEY) || 'null');
+          var _n = _fin && parseInt(_fin.ordinal, 10);
+          if (_n > 0) {
+            var _sfx = (_n % 100 >= 11 && _n % 100 <= 13) ? 'TH' : ['TH', 'ST', 'ND', 'RD'][_n % 10] || 'TH';
+            _sumOrd = _n + _sfx;
+          }
+        } catch (_) {}
+        _reviewArm('summit', { ordinal: _sumOrd });
+      }
+    } catch (_) {}
     const portrait = 'assets/coach/first-awakened-idle.png';
     _arSet(
       '<div class="fn-summit">' +
@@ -13730,6 +13748,9 @@
     _arView = 'hall';
     _arBodyMode(false);
     const finished = (getAscentState().highestCleared || 0) >= ASCENT_FLOORS;
+    // W847 (V1c) — the freshly summited hunter just entered the Hall, ordinal
+    // on screen: flush the tier-3 summit ask (no-op unless armed this session).
+    if (finished) { try { _reviewFlush(['summit']); } catch (_) {} }
     // W382 — self-heal the Hall finish. The summit clear records the eternal
     // ordinal via a one-time _arRenderSummit -> _hallRecordFinish POST; if that
     // happened OFFLINE the POST failed and the ordinal would be lost forever (no
@@ -18331,7 +18352,13 @@
   function _megaPointerTap() {
     try {
       if (_megaState === 'reveal' || _megaState === 'aftermath') { _megaFastForwardToSettled(); return; }
-      if (_megaState === 'settled') { closeCardRevealModal(); return; }
+      if (_megaState === 'settled') {
+        closeCardRevealModal();
+        // W847 (V1c) \u2014 the claim tap ends the 11s Eclipse Coronation: the
+        // single highest moment the app can stage. Tier-2 ladder ask.
+        try { _reviewFlush(['mythic']); } catch (_) {}
+        return;
+      }
       // cut / totality / forge \u2014 you cannot rush reverence
     } catch (_) {}
   }
@@ -18352,6 +18379,8 @@
     const overlay = document.getElementById('reveal-overlay');
     const stage = document.getElementById('sigil-bloom-stage');
     if (!overlay || !stage) return;
+    // W847 (V1c) — arm the tier-2 mythic ask; flushed by the claim tap.
+    try { _reviewArm('mythic', { relicName: (card && card.name) || 'a Mythic' }); } catch (_) {}
     _teardownMegaReveal();
     _buildMegaRevealDOM(card);
     try { const ia = document.getElementById('megaBladeArt'); if (ia) { const im = new Image(); im.onerror = function(){ ia.style.display = 'none'; }; im.src = (card && card.art_path) || 'assets/items/nightfall-blade-of-the-sovereign.png'; } } catch (_) {}
@@ -18878,12 +18907,32 @@
   // pattern) + added to CloudSync SNAPSHOT_KEYS so the one shot survives reinstall.
   // ════════════════════════════════════════════════════════════════════════
   var _RV = {
-    seen:      'hb_review_prompt_v1_seen',   // the ONE auto-prompt; once set, never auto-prompt again
+    seen:      'hb_review_prompt_v1_seen',   // LEGACY one-shot flag (pre-W847) — read once for migration, never written again
     firstBoss: 'hb_review_first_boss_done',
     firstCoop: 'hb_review_first_coop_done',
     pdayCount: 'hb_review_pday_count',
     pdayLast:  'hb_review_pday_last',
   };
+  // W847 (v3 Train V1) — ESCALATION LADDER replaces the once-ever shot.
+  // Owner-locked policy (2026-08-22): at most 3 asks per rolling 365 days
+  // (Apple's own SKStoreReviewController ceiling — the API is fire-and-forget,
+  // so WE keep the ledger), >=30d between asks, and each successive ask
+  // demands a BIGGER peak: ask 1 = tier 1+ (first boss / first co-op /
+  // perfect day), ask 2 = tier 2+ (rank-up C+, mythic claim), ask 3 = tier 3
+  // (the summit). "Not now" costs a 30-day cooldown but does NOT consume an
+  // ask — only tapping "Rate Awakened" (the native sheet actually firing)
+  // stamps the ledger. A shown-but-unanswered card stamps a 7-day soft
+  // spacing so an ignored prompt can't reappear at the next same-week peak.
+  var _RV2 = {
+    asks:      'hb_review_asks_v2',        // JSON array of unix-ms timestamps, pruned to 365d
+    notNow:    'hb_review_notnow_at',      // unix ms of the last "Not now"
+    lastShown: 'hb_review_shown_at',       // unix ms of the last pre-prompt render (device-local)
+  };
+  var _REVIEW_TIER = { boss: 1, coop: 1, perfectday: 1, rankup: 2, mythic: 2, summit: 3 };
+  var _REVIEW_MAX_ASKS_PER_YEAR = 3;
+  var _REVIEW_ASK_SPACING_MS   = 30 * 86400000;
+  var _REVIEW_NOTNOW_COOLDOWN_MS = 30 * 86400000;
+  var _REVIEW_SHOWN_SPACING_MS = 7 * 86400000;
   var _REVIEW_APP_ID = '6764727990';
   var _reviewPending = null;   // {trigger, ctx} armed by a celebration; fired on its close
   function _rvGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
@@ -18896,12 +18945,51 @@
     _rvSet(_RV.pdayLast, d);
     _rvSet(_RV.pdayCount, String(_reviewPerfectDayCount() + 1));
   }
+  // W847 — the ask ledger. Timestamps of asks that actually FIRED the native
+  // sheet, pruned to the rolling 365-day window on every read.
+  function _reviewAsks() {
+    try {
+      var arr = JSON.parse(_rvGet(_RV2.asks) || '[]');
+      if (!Array.isArray(arr)) arr = [];
+      var floor = Date.now() - 365 * 86400000;
+      arr = arr.filter(function (t) { return typeof t === 'number' && t > floor; });
+      return arr;
+    } catch (_) { return []; }
+  }
+  function _reviewConsumeAsk() {
+    try { var a = _reviewAsks(); a.push(Date.now()); _rvSet(_RV2.asks, JSON.stringify(a)); } catch (_) {}
+  }
+  // One-time migration: a pre-W847 user whose single shot was spent counts as
+  // ask 1 stamped NOW — conservative (they wait the full 30d before ask 2).
+  function _reviewMigrateLegacy() {
+    try {
+      if (_rvGet(_RV2.asks) !== null) return;
+      if (_rvGet(_RV.seen) === '1') _rvSet(_RV2.asks, JSON.stringify([Date.now()]));
+      else _rvSet(_RV2.asks, '[]');
+    } catch (_) {}
+  }
+  function _reviewEligible(trigger) {
+    _reviewMigrateLegacy();
+    var tier = _REVIEW_TIER[trigger] || 0;
+    if (!tier) return false;
+    var now = Date.now();
+    var asks = _reviewAsks();
+    if (asks.length >= _REVIEW_MAX_ASKS_PER_YEAR) return false;
+    if (asks.length && now - asks[asks.length - 1] < _REVIEW_ASK_SPACING_MS) return false;
+    var notNow = parseInt(_rvGet(_RV2.notNow), 10) || 0;
+    if (notNow && now - notNow < _REVIEW_NOTNOW_COOLDOWN_MS) return false;
+    var shown = parseInt(_rvGet(_RV2.lastShown), 10) || 0;
+    if (shown && now - shown < _REVIEW_SHOWN_SPACING_MS) return false;
+    // The ladder: each successive ask demands a bigger peak.
+    var requiredTier = asks.length === 0 ? 1 : asks.length === 1 ? 2 : 3;
+    return tier >= requiredTier;
+  }
   // A qualifying celebration just began — fire the pre-prompt when it CLOSES so
   // the milestone's own animation plays first and fully.
   function _reviewArm(trigger, ctx) {
-    // Priority: a co-op/boss win outranks a perfect day — never let a perfect-day
-    // arm clobber a still-pending boss/coop win (that would silently drop the moment).
-    if (trigger === 'perfectday' && _reviewPending && (_reviewPending.trigger === 'boss' || _reviewPending.trigger === 'coop')) return;
+    // Priority: never let a lower-tier arm clobber a still-pending higher- or
+    // equal-tier one (that would silently drop the bigger moment).
+    if (_reviewPending && (_REVIEW_TIER[_reviewPending.trigger] || 0) >= (_REVIEW_TIER[trigger] || 0)) return;
     _reviewPending = { trigger: trigger, ctx: ctx || {} };
   }
   function _reviewFlush(allowed) {
@@ -18911,13 +18999,13 @@
     setTimeout(function () { try { _maybeReviewPrompt(p.trigger, p.ctx); } catch (_) {} }, 480);   // short gap after the celebration clears
   }
   function _maybeReviewPrompt(trigger, ctx) {
-    if (_rvGet(_RV.seen)) return;                  // one shot already spent → never auto-prompt again
+    if (!_reviewEligible(trigger)) return;
     if (trigger === 'perfectday') {
-      // READY gate — never burn our one shot on a brand-new day-one perfect day.
+      // READY gate — never spend an ask on a brand-new day-one perfect day.
       var ready = _reviewDaysActive() >= 3 || _reviewPerfectDayCount() >= 2 || _rvGet(_RV.firstBoss) || _rvGet(_RV.firstCoop);
       if (!ready) return;
     }
-    _rvSet(_RV.seen, '1');                          // claim the one shot up front (idempotent)
+    _rvSet(_RV2.lastShown, String(Date.now()));     // soft spacing — an ignored card can't re-pester this week
     _showReviewPrePrompt(trigger, ctx);
   }
   // Native review sheet. No success/failure callback exists; fire-and-forget.
@@ -18932,6 +19020,8 @@
   function _reviewCTA() {
     // Native sheet on iOS; on web/PWA (plugin absent) fall back to the user-
     // initiated write-review composer. Both are compliant; neither gates on sentiment.
+    // W847 — THIS is the only place an ask is consumed: the sheet actually fired.
+    _reviewConsumeAsk();
     if (!_reviewRequestNative()) { try { window.open(_reviewWriteReviewUrl(), '_system'); } catch (_) {} }
   }
   function _reviewEmblem(kind) {
@@ -18944,6 +19034,10 @@
     boss:       { eyebrow: 'BOSS DEFEATED',   emblem: 'trophy',     head: function (c) { return 'You bested<br>' + esc(c.bossName || 'the boss'); }, sub: function (c) { return 'FIRST BOSS · RANK ' + esc(c.rank || '—'); }, emo: 'Few hunters make it this far.', why: 'A rating helps other hunters find the climb.' },
     coop:       { eyebrow: 'DUNGEON CLEARED', emblem: 'party',      head: function (c) { return 'Your guild cleared<br>' + esc(c.dungeonName || 'the dungeon'); }, sub: function (c) { return 'FIRST CO-OP WIN · ' + ((c.partySize || 2)) + ' HUNTERS'; }, emo: 'Stronger together.', why: 'A rating helps other hunters find their guild.' },
     perfectday: { eyebrow: 'VOWS SEALED',     emblem: 'shieldcheck', head: function () { return 'A flawless<br>day'; }, sub: function () { return 'FIRST PERFECT DAY · ALL VOWS KEPT'; }, emo: 'You did what others won’t.', why: 'A rating helps other hunters start theirs.' },
+    // W847 — the ladder's tier-2/3 peaks.
+    rankup:     { eyebrow: 'RANK ASCENDED',   emblem: 'trophy',      head: function (c) { return 'You reached<br>RANK ' + esc(c.rank || '—'); }, sub: function (c) { return 'THE CLIMB CONTINUES · ' + esc(c.rankLabel || ('RANK ' + (c.rank || '—'))); }, emo: 'Most never make it past E.', why: 'A rating helps other hunters find the climb.' },
+    mythic:     { eyebrow: 'A LEGEND CLAIMED', emblem: 'trophy',     head: function (c) { return 'You hold<br>' + esc(c.relicName || 'a Mythic'); }, sub: function () { return 'MYTHIC RELIC · MEGA-RARE'; }, emo: 'Forever marked. Few will ever see one.', why: 'A rating helps other hunters chase theirs.' },
+    summit:     { eyebrow: 'THE SUMMIT',      emblem: 'shieldcheck', head: function () { return 'Floor 100<br>is yours'; }, sub: function (c) { return c.ordinal ? ('THE ' + esc(String(c.ordinal)) + ' TO AWAKEN') : 'THE ASCENT · COMPLETE'; }, emo: 'The Tower has a new name on it.', why: 'A rating helps other hunters begin the climb.' },
   };
   function _reviewClose() { var ov = document.getElementById('review-pp-overlay'); if (ov) { ov.classList.add('closing'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 240); } }
   function _showReviewPrePrompt(trigger, ctx) {
@@ -18968,7 +19062,7 @@
     document.body.appendChild(ov);
     requestAnimationFrame(function () { ov.classList.add('on'); });
     var rate = ov.querySelector('#review-pp-rate'); if (rate) rate.addEventListener('click', function () { _reviewCTA(); _reviewClose(); });
-    var not = ov.querySelector('#review-pp-not'); if (not) not.addEventListener('click', function () { _reviewClose(); });   // close only — does nothing else
+    var not = ov.querySelector('#review-pp-not'); if (not) not.addEventListener('click', function () { _rvSet(_RV2.notNow, String(Date.now())); _reviewClose(); });   // W847 — 30d cooldown; never consumes an ask
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -18997,9 +19091,26 @@
     } catch (e) { _devToast(e); }
   }
   function _devResetReview() {
-    try { ['hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
-    _reviewPending = null; _devToast('Review one-shot reset');
+    try { ['hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last', 'hb_review_asks_v2', 'hb_review_notnow_at', 'hb_review_shown_at', 'hb_review_summit_armed'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
+    _reviewPending = null; _devToast('Review ladder reset');
   }
+  // W847 — QA hooks (console-reachable even with the dev panel dead):
+  //   __reviewPreview('boss'|'coop'|'perfectday'|'rankup'|'mythic'|'summit')
+  //     renders that pre-prompt variant with sample ctx, bypassing eligibility.
+  //   __reviewLadder() → current ladder state; __reviewLadder(true) resets it.
+  try {
+    window.__reviewPreview = function (trigger) {
+      _showReviewPrePrompt(trigger || 'boss', {
+        bossName: 'The Steel Wolf', rank: 'C', rankLabel: 'C II',
+        dungeonName: 'The Twin Maw', partySize: 2,
+        relicName: 'Nightfall, Blade of the Sovereign', ordinal: '3RD',
+      });
+    };
+    window.__reviewLadder = function (reset) {
+      if (reset) { _devResetReview(); return 'reset'; }
+      return { asks: _reviewAsks(), notNowAt: parseInt(_rvGet(_RV2.notNow), 10) || 0, shownAt: parseInt(_rvGet(_RV2.lastShown), 10) || 0, pending: _reviewPending };
+    };
+  } catch (_) {}
   function _devOpenPanel() {
     if (document.getElementById('dev-panel')) { _devClose(); return; }
     var rows = [
@@ -20514,6 +20625,17 @@
         // standard rate, less during first-common protection).
         const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
+        // W847 (V1a) — this verified-kill path (sleep bosses: the most common
+        // FIRST kill in the fleet) never armed the review or set firstBoss;
+        // only the single-shot path did. Mirror it exactly — the boss-result
+        // overlay's existing close flush handles the rest.
+        if (_firstKill) {
+          try {
+            _rvSet(_RV.firstBoss, '1');
+            var _rvRankN = ''; try { _rvRankN = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
+            _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankN || (cfg && cfg.rank) || '' });
+          } catch (_) {}
+        }
         // Re-render the Quests panel so the streak progress + kill
         // count update if user is currently looking at it.
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -20624,6 +20746,15 @@
         if (_hungerBonus_3 > 0) earnSouls(_hungerBonus_3, 'hunger_kill_' + id);
         const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
+        // W847 (V1a) — same firstBoss + review arm as the sleep path above:
+        // the step-boss (Steel Wolf) is the fleet's other most-common first kill.
+        if (_firstKill) {
+          try {
+            _rvSet(_RV.firstBoss, '1');
+            var _rvRankD = ''; try { _rvRankD = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
+            _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankD || (cfg && cfg.rank) || '' });
+          } catch (_) {}
+        }
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
         try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
         return;
@@ -28069,7 +28200,18 @@
     // Gold rain (S+)
     if (fx.rain) spawnGoldRain();
 
-    navigator.vibrate && navigator.vibrate(rank.id === 'S+' ? [100,50,100,50,200] : rank.id === 'S' ? [80,40,120] : [60,30,80]);
+    // W847 (V1d) — navigator.vibrate is a NO-OP in WKWebView; the app's biggest
+    // ceremony fired dead haptics on every iOS device. _hapticTick routes to
+    // real Capacitor Haptics (and keeps the vibrate fallback for web).
+    try { _hapticTick(isPrestige || rank.id === 'S+' ? 'success' : rank.id === 'S' ? 'heavy' : 'medium'); } catch (_) {}
+
+    // W847 (V1c) — rank-up is the ladder's tier-2 peak. Arm here; the flush
+    // fires when the WHOLE celebration chain (rank screen → First Awakened
+    // beat → Hunter Report → achievement toasts) has fully drained, via the
+    // queue-empty branches. E/D rank-ups stay ask-free — too early.
+    if (isPrestige || ['C', 'B', 'A', 'S', 'S+'].indexOf(rank.id) >= 0) {
+      try { _reviewArm('rankup', { rank: isPrestige ? 'S+' : rank.id, rankLabel: isPrestige ? ('PRESTIGE ' + prestigeLevel) : (rank.label || '') }); } catch (_) {}
+    }
 
     const dismiss = () => {
       screen.classList.add('ru-shake'); // clear any running shake
@@ -28369,6 +28511,9 @@
     if (levelUpActive) return;
     if (!levelUpQueue.length) {
       if (achQueue.length && !achPopupTimer) drainAchQueue();
+      // W847 — the whole celebration chain is spent; a pending tier-2 rank-up
+      // ask may now surface (no-op when nothing is armed or ineligible).
+      else if (!achQueue.length) { try { _reviewFlush(['rankup']); } catch (_) {} }
       return;
     }
     const item = levelUpQueue.shift();
@@ -28452,7 +28597,13 @@
   }
 
   function drainAchQueue() {
-    if (!achQueue.length) { achPopupTimer = null; return; }
+    if (!achQueue.length) {
+      achPopupTimer = null;
+      // W847 — achievement toasts were the last of the chain; a pending
+      // tier-2 rank-up ask may now surface (no-op when nothing is armed).
+      try { _reviewFlush(['rankup']); } catch (_) {}
+      return;
+    }
     const ach = achQueue.shift();
     showAchievementPopup(ach);
   }
@@ -62703,6 +62854,10 @@
       // W541 — App Store review pre-prompt: durable so the ONE auto-prompt + its
       // gating flags survive reinstall (re-sign restores them; we never re-prompt).
       'hb_review_prompt_v1_seen',
+      // W847 — the escalation ladder's ledger + cooldown ride along so the
+      // ≤3-asks-per-365d budget survives reinstall exactly like the old flag.
+      'hb_review_asks_v2',
+      'hb_review_notnow_at',
       'hb_review_first_boss_done',
       'hb_review_first_coop_done',
       'hb_review_pday_count',
