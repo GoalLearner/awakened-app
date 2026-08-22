@@ -315,6 +315,27 @@
   const PENDING_LS_KEY = 'hb_apple_pending_v1';
   const PENDING_TTL_MS = 10 * 60 * 1000;  // 10 min — match Apple token lifetime
 
+  // W846 — Galilea's device fired the W689 purge with new="null": on a REPEAT
+  // Apple sign-in the plugin can bridge a nil `user` across as the literal
+  // STRING "null" (truthy — it walks straight past every !sub guard), which
+  // then compared !== her real owner tag, quarantined her state, and wrote
+  // hb_state_owner="null" (arming a SECOND false purge for her next sign-in).
+  // Normalize junk subs to real null, and fall back to the identity token's
+  // own `sub` claim — Apple's authoritative copy of the same value, present
+  // in every token; `response.user` is only a convenience mirror of it.
+  function _normSub(s) {
+    if (typeof s !== 'string') return null;
+    const t = s.trim();
+    if (!t || t === 'null' || t === 'undefined') return null;
+    return t;
+  }
+  function _subFromIdentityToken(tok) {
+    try {
+      const b64 = String(tok).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return _normSub(JSON.parse(atob(b64)).sub);
+    } catch (_) { return null; }
+  }
+
   function _savePending() {
     try {
       if (!_pendingIdentityToken || !_pendingAppleSub) {
@@ -342,10 +363,14 @@
       const raw = localStorage.getItem(PENDING_LS_KEY);
       if (!raw) return;
       const obj = JSON.parse(raw);
-      if (!obj || !obj.t || !obj.s) { _clearPending(); return; }
+      if (!obj || !obj.t) { _clearPending(); return; }
       if (typeof obj.e === 'number' && Date.now() > obj.e) { _clearPending(); return; }
+      // W846 — a persisted record may carry the bridged "null" string; re-derive
+      // from the token itself before giving up on the record.
+      const _rs = _normSub(obj.s) || _subFromIdentityToken(obj.t);
+      if (!_rs) { _clearPending(); return; }
       _pendingIdentityToken = obj.t;
-      _pendingAppleSub      = obj.s;
+      _pendingAppleSub      = _rs;
       _pendingApplePayload  = obj.p || null;
       _pendingRawNonce      = obj.n || null;
     } catch (_) {}
@@ -381,6 +406,20 @@
   // hasn't been claimed yet. Used by the gate to allow the app to mount
   // (so the cinematic name screen can call completeSignIn() inline)
   // and by the cinematic to know when to make the backend call.
+  // W846 — heal devices the pre-fix bug already poisoned: a purge that fired
+  // with the bridged "null" sub also WROTE hb_state_owner="null", which would
+  // false-purge (re-quarantine) the freshly restored state on the very next
+  // real sign-in. Drop junk tags at boot; the next sign-in rewrites the real one.
+  (function _healJunkOwnerTag() {
+    try {
+      const t = localStorage.getItem('hb_state_owner');
+      if (t !== null && _normSub(t) === null) {
+        localStorage.removeItem('hb_state_owner');
+        console.warn('[auth] W846 — removed junk hb_state_owner tag:', JSON.stringify(t));
+      }
+    } catch (_) {}
+  })();
+
   function isApplePending() {
     return !!_pendingIdentityToken && !!_pendingAppleSub;
   }
@@ -422,7 +461,9 @@
     if (!response || !response.user || !response.identityToken) return null;
 
     _pendingIdentityToken = response.identityToken;
-    _pendingAppleSub = response.user;
+    // W846 — repeat sign-ins can bridge user as the string "null"; the token's
+    // sub claim is the authoritative fallback (present in every Apple token).
+    _pendingAppleSub = _normSub(response.user) || _subFromIdentityToken(response.identityToken);
     _pendingRawNonce = nonce ? nonce.raw : null;
     _pendingApplePayload = {
       givenName:  response.givenName || null,
@@ -459,7 +500,10 @@
         reason: '3–20 chars, letters/numbers/space/_/- only.',
       };
     }
-    if (!_pendingIdentityToken || !_pendingAppleSub) {
+    // W846 — re-derive the sub at use time; a bridged "null" STRING used to
+    // pass this guard and reach the W689 purge compare as a bogus new owner.
+    const _newSub = _normSub(_pendingAppleSub) || _subFromIdentityToken(_pendingIdentityToken);
+    if (!_pendingIdentityToken || !_newSub) {
       return {
         ok: false,
         code: 'NO_PENDING_TOKEN',
@@ -493,7 +537,7 @@
 
     if (res.status === 200 && data && data.jwt) {
       writeUser({
-        sub:            _pendingAppleSub,
+        sub:            _newSub,
         alias:          data.alias,
         jwt:            data.jwt,
         jwt_expires_at: Date.now() + SESSION_TTL_MS,
@@ -513,8 +557,11 @@
       // cloud (both directions of contamination). Same-account re-login matches
       // the tag and keeps everything.
       try {
-        const prevOwner = localStorage.getItem('hb_state_owner');
-        if (prevOwner && prevOwner !== _pendingAppleSub) {
+        // W846 — compare against the DERIVED sub (never a bridged junk string),
+        // and treat a junk prev tag ("null" written by the pre-W846 bug) as
+        // absent so it can't arm a second false purge.
+        const prevOwner = _normSub(localStorage.getItem('hb_state_owner'));
+        if (prevOwner && prevOwner !== _newSub) {
           // W818 — report every owner-mismatch purge to client_errors (we have
           // the fresh jwt in hand; keepalive survives the reload below). The
           // Ascent-wipe incident fired this branch on a false positive and we
@@ -525,19 +572,19 @@
               keepalive: true,
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.jwt },
               body: JSON.stringify({
-                message: 'W689 account-switch purge fired: prev=' + String(prevOwner).slice(0, 8) + ' new=' + String(_pendingAppleSub).slice(0, 8) + ' isNewUser=' + !!data.isNewUser,
+                message: 'W689 account-switch purge fired: prev=' + String(prevOwner).slice(0, 8) + ' new=' + String(_newSub).slice(0, 8) + ' isNewUser=' + !!data.isNewUser,
                 path: 'auth/completeSignIn',
                 build: (typeof window.__APP_BUILD_TAG === 'string') ? window.__APP_BUILD_TAG : 'unknown',
               }),
             }).catch(function () {});
           } catch (_) {}
           if (window && typeof window.__awakenedAccountSwitchPurge === 'function') {
-            window.__awakenedAccountSwitchPurge(_pendingAppleSub);
+            window.__awakenedAccountSwitchPurge(_newSub);
           }
-          try { localStorage.setItem('hb_state_owner', _pendingAppleSub); } catch (_) {}
+          try { localStorage.setItem('hb_state_owner', _newSub); } catch (_) {}
           try { window.location.reload(); } catch (_) {}
         } else {
-          localStorage.setItem('hb_state_owner', _pendingAppleSub);
+          localStorage.setItem('hb_state_owner', _newSub);
         }
       } catch (_) {}
       return { ok: true, alias: data.alias, isNewUser: !!data.isNewUser };
