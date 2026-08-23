@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.173';
+const CACHE_VERSION = 'v6.174';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -287,6 +287,37 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-forge-of-ten-thousand-days.png',
   '/assets/bosses/the-vow-keeper.png',
   '/assets/bosses/the-patient-flame.png',
+  // W877 — full boss-art catalog parity (the W821 relic lesson, same drift):
+  // every A/S/co-op portrait + summons plate that had landed on disk since
+  // the B-rank block above, plus the four v3 wave-1 portraits arriving in
+  // this commit (Starved Sentinel, Worldspine, Cloven Titan, Gray Pilgrim).
+  // Verified against assets/bosses/*.png — 38 files, all listed.
+  '/assets/bosses/erebus-the-shadow-sovereign.png',
+  '/assets/bosses/the-cloven-titan.png',
+  '/assets/bosses/the-coursing-dread.png',
+  '/assets/bosses/the-coursing-dread-summons.png',
+  '/assets/bosses/the-gaunt-wardens.png',
+  '/assets/bosses/the-gaunt-wardens-summons.png',
+  '/assets/bosses/the-gray-pilgrim.png',
+  '/assets/bosses/the-grinning-god.png',
+  '/assets/bosses/the-grinning-god-summons.png',
+  '/assets/bosses/the-hollow-monarch.png',
+  '/assets/bosses/the-hollow-monarch-summons.png',
+  '/assets/bosses/the-myrmidon-king.png',
+  '/assets/bosses/the-myrmidon-king-summons.png',
+  '/assets/bosses/the-sleepless-ascent.png',
+  '/assets/bosses/the-starved-sentinel.png',
+  '/assets/bosses/the-sundered-choir.png',
+  '/assets/bosses/the-sundered-choir-summons.png',
+  '/assets/bosses/the-threefold-court.png',
+  '/assets/bosses/the-threefold-court-summons.png',
+  '/assets/bosses/the-tideless-marcher.png',
+  '/assets/bosses/the-twin-maw.png',
+  '/assets/bosses/the-twin-maw-summons.png',
+  '/assets/bosses/the-unbroken-anvil.png',
+  '/assets/bosses/the-unresting-march.png',
+  '/assets/bosses/the-unresting-march-summons.png',
+  '/assets/bosses/the-worldspine.png',
   // Item-card illustrations. Only paths that EXIST on disk are listed
   // here. (Historical note: this list used to be kept strictly in-sync
   // with disk because the old cache.addAll() rejected the entire install
