@@ -20,6 +20,11 @@ interface RecordRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  // W875 — rank chrome (tier ring / prestige ✦ / Founder mark), same live-pps
+  // join the Hall of Fame uses; without these every archived row wears E.
+  rank_tier: string | null;
+  prestige: number | null;
+  founder_seq: number | null;
 }
 
 interface MeRow {
@@ -48,14 +53,16 @@ export const MERGED_FOR_WEEK = `
 
 /** Top rows + the caller's placement for ONE week, off the merged view. */
 export async function readWeekBoard(env: Env, weekKey: string, userId: string): Promise<{
-  records: Array<{ rank: number; alias: string; steps: number; avatar_id: string | null; card_bg: string | null }>;
+  records: Array<{ rank: number; alias: string; steps: number; avatar_id: string | null; card_bg: string | null;
+    rankTier: string | null; prestige: number; founderSeq: number }>;
   me: { rank: number; steps: number } | null;
   total: number;
 }> {
   const topResult = await env.DB.prepare(
     `${MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id,
-            pps.avatar_id AS avatar_id, pps.card_bg AS card_bg
+            pps.avatar_id AS avatar_id, pps.card_bg AS card_bg,
+            pps.rank_tier AS rank_tier, pps.prestige_level AS prestige, pps.founder_seq AS founder_seq
        FROM merged m
        JOIN users u ON u.id = m.user_id
        LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
@@ -80,6 +87,9 @@ export async function readWeekBoard(env: Env, weekKey: string, userId: string): 
     steps: r.steps,
     avatar_id: r.avatar_id ?? null,   // W704 — row crest
     card_bg: r.card_bg ?? null,   // W706 — member card background
+    rankTier: r.rank_tier ?? null,   // W875 — tier ring (hall-of-fame parity)
+    prestige: r.prestige ?? 0,
+    founderSeq: r.founder_seq ?? 0,
   }));
   const mySteps = meResult && typeof meResult.my_steps === 'number' ? meResult.my_steps : null;
   const me = (mySteps && mySteps > 0)
