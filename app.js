@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w861'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w862'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5796,6 +5796,282 @@
     window.__statusWindow = openStatusWindow;   // W861 QA
   } catch (_) {}
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // W862 (Wave 2 finale, S-tier #1) — ARISE: THE SHADOW ARMY
+  //
+  // Every solo boss you defeat can be raised as a shadow soldier. The kill
+  // opens a 48h EXTRACTION WINDOW: repeat 50% of that boss's verified kill
+  // condition inside it (cumulative across the window, same W799-filtered
+  // *Between helpers as live verification) and the boss rises in a
+  // full-screen ARISE ceremony — its existing art re-rendered as a
+  // violet-black silhouette (zero new assets).
+  //
+  // Power (OWNER-BLESSED 2026-08-22): each MARCHING shadow grants +1%
+  // Ascent power; slots scale with gate rank E=1 → S/S+=6; and shadows
+  // KNEEL AT THE THRESHOLD of every milestone floor (f % 10 === 0) — the
+  // same exemption as BLOOD STILL HOT, so every sim-verified wall
+  // (F100 = 43.9% at max build) is untouched by construction.
+  //
+  // Loyalty: any verified-activity day feeds the army. Three consecutive
+  // zero days and the shadows kneel DORMANT — bonus paused, NEVER deleted
+  // (no punishment beyond pause; one active day wakes them).
+  // ═══════════════════════════════════════════════════════════════════════
+  const SHADOWS_KEY = 'hb_shadows_v1';
+  const SHADOW_SLOTS = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, 'S+': 6 };
+  const SHADOW_WINDOW_MS = 48 * 3600 * 1000;
+  const SHADOW_DORMANT_DAYS = 3;
+  function _shLoad() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SHADOWS_KEY) || 'null') || {};
+      s.extracted = s.extracted || {};   // bossId → { at, name }
+      s.active    = Array.isArray(s.active) ? s.active : [];
+      s.windows   = s.windows || {};     // bossId → { killAt, until, lastCheck }
+      s.zeroDays  = s.zeroDays | 0;
+      s.dormant   = !!s.dormant;
+      s.loyaltyDay = s.loyaltyDay || null;
+      return s;
+    } catch (_) { return { extracted: {}, active: [], windows: {}, zeroDays: 0, dormant: false, loyaltyDay: null }; }
+  }
+  function _shSave(s) { try { localStorage.setItem(SHADOWS_KEY, JSON.stringify(s)); } catch (_) {} }
+  function _shSlots() {
+    try { return SHADOW_SLOTS[(getRank(totalPoints) || {}).id] || 1; } catch (_) { return 1; }
+  }
+  function _shadowActiveCount() {
+    try {
+      const s = _shLoad();
+      if (s.dormant) return 0;
+      return Math.min(s.active.length, _shSlots());
+    } catch (_) { return 0; }
+  }
+  /** Called at every solo kill site: opens (or refreshes) the 48h window. */
+  function _shadowOnBossKill(bossId) {
+    try {
+      const cfg = BOSSES[bossId]; if (!cfg || cfg.coopOnly) return;
+      const s = _shLoad();
+      if (s.extracted[bossId]) return;                       // one shadow per boss, forever
+      s.windows[bossId] = { killAt: Date.now(), until: Date.now() + SHADOW_WINDOW_MS, lastCheck: 0 };
+      _shSave(s);
+      try { showHabitToast('The System stirs: an extraction window opens. 48 hours.'); } catch (_) {}
+      try { renderShadowStrip(); } catch (_) {}
+    } catch (_) {}
+  }
+  /** 50%-of-kill-condition summary for the boss-sheet strip. */
+  function _shadowRiseCondText(cfg) {
+    const parts = [];
+    if (typeof cfg.stepThreshold === 'number')  parts.push(Math.ceil(cfg.stepThreshold * 0.5).toLocaleString('en-US') + ' steps');
+    if (typeof cfg.flightThreshold === 'number') parts.push(Math.ceil(cfg.flightThreshold * 0.5) + ' flights');
+    if (typeof cfg.workoutMinutes === 'number') parts.push(Math.ceil(cfg.workoutMinutes * 0.5) + ' workout min');
+    if (typeof cfg.sleepHours === 'number')     parts.push('one night of ' + (Math.round(cfg.sleepHours * 0.5 * 10) / 10) + 'h+ sleep');
+    return parts.length ? parts.join(' + ') : 'repeat half the trial';
+  }
+  /** Async: has the hunter repeated 50% of the condition inside the window? */
+  async function _shadowEvalWindow(bossId, w) {
+    const cfg = BOSSES[bossId]; if (!cfg) return false;
+    if (typeof Health === 'undefined' || !Health.isAvailable || !Health.isAvailable()) return false;
+    if (typeof Health.permissionStatus !== 'function' || Health.permissionStatus() !== 'granted') return false;
+    const sIso = new Date(w.killAt).toISOString();
+    const eIso = new Date(Math.min(Date.now(), w.until)).toISOString();
+    try {
+      if (typeof cfg.stepThreshold === 'number') {
+        const v = await Health.getStepsBetween(sIso, eIso);
+        if (!(typeof v === 'number' && v >= cfg.stepThreshold * 0.5)) return false;
+      }
+      if (typeof cfg.flightThreshold === 'number') {
+        const v = await Health.getFlightsClimbedBetween(sIso, eIso);
+        if (!(typeof v === 'number' && v >= cfg.flightThreshold * 0.5)) return false;
+      }
+      if (typeof cfg.workoutMinutes === 'number') {
+        const res = await Health.getStrengthWorkoutsBetween(sIso, eIso);
+        const list = Array.isArray(res) ? res : (res && res.workouts) || [];
+        let min = 0; list.forEach(function (x) { const m = (x && typeof x.duration_min === 'number') ? x.duration_min : 0; if (m > 0) min += m; });
+        if (!(min >= cfg.workoutMinutes * 0.5)) return false;
+      }
+      if (typeof cfg.sleepHours === 'number') {
+        const res = await Health.getSleepBetween(new Date(w.killAt - 12 * 3600 * 1000).toISOString(), eIso);
+        const byDate = (res && res.byDate) || {};
+        let ok = false;
+        Object.keys(byDate).forEach(function (k) { const e = byDate[k]; if (e && typeof e.totalAsleepHours === 'number' && e.totalAsleepHours >= cfg.sleepHours * 0.5) ok = true; });
+        if (!ok) return false;
+      }
+      return true;
+    } catch (_) { return false; }
+  }
+  let _shadowTickBusy = false;
+  function _shadowTick() {
+    if (_shadowTickBusy) return;
+    const s = _shLoad();
+    const ids = Object.keys(s.windows);
+    if (!ids.length) return;
+    const now = Date.now();
+    let dirty = false;
+    // Expire dead windows first (sync).
+    ids.forEach(function (id) {
+      const w = s.windows[id];
+      if (!w || w.until < now || s.extracted[id]) { delete s.windows[id]; dirty = true; }
+    });
+    if (dirty) _shSave(s);
+    const live = Object.keys(s.windows).filter(function (id) { return now - (s.windows[id].lastCheck || 0) > 5 * 60 * 1000; });
+    if (!live.length) return;
+    _shadowTickBusy = true;
+    (async function () {
+      try {
+        for (let i = 0; i < live.length; i++) {
+          const id = live[i];
+          const cur = _shLoad();
+          const w = cur.windows[id]; if (!w) continue;
+          w.lastCheck = Date.now(); cur.windows[id] = w; _shSave(cur);
+          const risen = await _shadowEvalWindow(id, w);
+          if (risen) _ariseCeremony(id);
+        }
+      } catch (_) {}
+      _shadowTickBusy = false;
+    })();
+  }
+  /** Loyalty: evaluated once per day-change against YESTERDAY's verified record. */
+  function _shadowLoyaltyTick() {
+    try {
+      const s = _shLoad();
+      if (!Object.keys(s.extracted).length) return;
+      const yKeys = _writDayKeysBack(1); const y = yKeys[0];
+      if (s.loyaltyDay === y) return;
+      s.loyaltyDay = y;
+      let fed = false;
+      try { if (Array.isArray(completions[y]) && completions[y].length > 0) fed = true; } catch (_) {}
+      if (!fed) {
+        try {
+          const ls = loadLeaderboardState();
+          ['steps_daily', 'flights_daily', 'sleep_hours_daily', 'workout_daily'].forEach(function (m) {
+            if ((Number((ls[m] || {})[y]) || 0) > 0) fed = true;
+          });
+        } catch (_) {}
+      }
+      if (fed) {
+        if (s.dormant) { try { showHabitToast('Your shadows rise from their knees. The army marches again.'); } catch (_) {} }
+        s.zeroDays = 0; s.dormant = false;
+      } else {
+        s.zeroDays = (s.zeroDays | 0) + 1;
+        if (s.zeroDays >= SHADOW_DORMANT_DAYS && !s.dormant) {
+          s.dormant = true;
+          try { showHabitToast('Your shadows kneel, unfed. They wait — they do not leave.'); } catch (_) {}
+        }
+      }
+      _shSave(s);
+    } catch (_) {}
+  }
+  /** The ARISE ceremony — black cut, the silhouette rises, the word lands. */
+  function _ariseCeremony(bossId) {
+    const cfg = BOSSES[bossId]; if (!cfg) return;
+    const s = _shLoad();
+    if (s.extracted[bossId]) return;
+    s.extracted[bossId] = { at: Date.now(), name: 'Shadow of ' + (cfg.name || 'the Slain') };
+    delete s.windows[bossId];
+    if (s.active.indexOf(bossId) === -1 && s.active.length < _shSlots()) s.active.push(bossId);
+    _shSave(s);
+    let reduced = false;
+    try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    if (reduced) { try { showHabitToast('ARISE — ' + s.extracted[bossId].name + ' joins your army.'); } catch (_) {} try { renderShadowStrip(); } catch (_) {} return; }
+    const ov = document.createElement('div');
+    ov.className = 'arise-overlay';
+    ov.innerHTML =
+      '<div class="arise-stage">' +
+        '<img class="arise-art" src="' + esc(getBossArtPath(bossId)) + '" alt="" onerror="this.style.display=\'none\'">' +
+        '<div class="arise-word"></div>' +
+        '<div class="arise-name"></div>' +
+        '<div class="arise-hint">TAP TO SEAL THE PACT</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    requestAnimationFrame(function () { ov.classList.add('on'); });
+    const word = ov.querySelector('.arise-word');
+    const nameEl = ov.querySelector('.arise-name');
+    setTimeout(function () {
+      try { _hapticTick('HEAVY'); } catch (_) {}
+      if (word) { word.textContent = 'ARISE.'; word.classList.add('slam'); }
+      try { playSfx('rank_fanfare'); } catch (_) {}
+    }, 1600);
+    setTimeout(function () {
+      if (nameEl) { nameEl.textContent = s.extracted[bossId].name + ' has joined your army.'; nameEl.classList.add('show'); }
+      try { _hapticTick('SUCCESS'); } catch (_) {}
+    }, 2700);
+    let done = false;
+    const seal = function () {
+      if (done) return; done = true;
+      ov.classList.remove('on');
+      setTimeout(function () { try { ov.remove(); } catch (_) {} }, 400);
+      try { renderShadowStrip(); } catch (_) {}
+      try { recordGuildActivity('boss_kill', { bossId: bossId, bossName: s.extracted[bossId].name, rank: cfg.rank || null, dayDate: getPTDate() }, 'shadow_arise_' + bossId); } catch (_) {}
+    };
+    ov.addEventListener('click', function () { if (Date.now() - (s.extracted[bossId].at || 0) > 2800) seal(); });
+    setTimeout(seal, 14000);   // failsafe
+  }
+  /** Roster sheet: march/rest toggles up to the rank slot cap. */
+  function openShadowRoster() {
+    try {
+      const old = document.getElementById('shadow-roster'); if (old) old.remove();
+      const s = _shLoad();
+      const slots = _shSlots();
+      const ids = Object.keys(s.extracted);
+      const rows = ids.length ? ids.map(function (id) {
+        const cfg = BOSSES[id] || {};
+        const marching = s.active.indexOf(id) !== -1;
+        return '<div class="shr-row">' +
+          '<img class="shr-art" src="' + esc(getBossArtPath(id)) + '" alt="" onerror="this.style.display=\'none\'">' +
+          '<div class="shr-main"><div class="shr-name">' + esc(s.extracted[id].name) + '</div>' +
+          '<div class="shr-sub">' + esc(cfg.rank || '?') + '-RANK SHADOW' + (s.dormant ? ' · KNEELING' : marching ? ' · MARCHING' : ' · AT REST') + '</div></div>' +
+          '<button type="button" class="shr-toggle' + (marching ? ' on' : '') + '" data-shadow-toggle="' + esc(id) + '">' + (marching ? 'MARCHING' : 'REST') + '</button>' +
+        '</div>';
+      }).join('') : '<div class="shr-empty">No shadows yet. Defeat a boss, then repeat half its trial within 48 hours — and command it to rise.</div>';
+      const ov = document.createElement('div');
+      ov.id = 'shadow-roster'; ov.className = 'sw-overlay';
+      ov.innerHTML =
+        '<div class="sw-window" role="dialog" aria-modal="true" aria-label="Shadow Army">' +
+          '<div class="sw-titlebar">SHADOW ARMY</div>' +
+          '<div class="shr-slots">' + Math.min(s.active.length, slots) + ' MARCHING · ' + slots + ' SLOT' + (slots === 1 ? '' : 'S') + ' AT YOUR RANK' + (s.dormant ? ' · THE ARMY KNEELS (unfed ' + s.zeroDays + ' days)' : '') + '</div>' +
+          rows +
+          '<div class="sw-foot">EACH MARCHING SHADOW: +1% ASCENT POWER.<br>SHADOWS KNEEL AT THE THRESHOLD OF MILESTONE FLOORS.</div>' +
+          '<button type="button" class="sw-close" aria-label="Close">CLOSE</button>' +
+        '</div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('on'); });
+      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov) { close(); return; }
+        const t = e.target.closest && e.target.closest('[data-shadow-toggle]');
+        if (!t) return;
+        const id = t.getAttribute('data-shadow-toggle');
+        const cur = _shLoad();
+        const i = cur.active.indexOf(id);
+        if (i !== -1) cur.active.splice(i, 1);
+        else if (cur.active.length < _shSlots()) cur.active.push(id);
+        else { try { showHabitToast('All ' + _shSlots() + ' slots march already. Rest one first.'); } catch (_) {} return; }
+        _shSave(cur);
+        openShadowRoster();   // re-render
+        try { renderShadowStrip(); } catch (_) {}
+      });
+      const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+    } catch (e) { _logSwallow('shadowRoster:open', e); }
+  }
+  /** The profile-card strip (delegated opener, like the Status Window). */
+  function renderShadowStrip() {
+    const host = document.getElementById('shadow-strip');
+    if (!host) return;
+    const s = _shLoad();
+    const n = Object.keys(s.extracted).length;
+    if (!n) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    const marching = _shadowActiveCount();
+    host.innerHTML = '<span class="shs-glyph" aria-hidden="true">◈</span> SHADOW ARMY · ' + n + ' RAISED · ' +
+      (s.dormant ? 'KNEELING' : marching + ' MARCHING (+' + marching + '%)') + ' ›';
+    host.classList.remove('hidden');
+  }
+  try {
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest && e.target.closest('[data-open-shadows]');
+      if (t) { e.preventDefault(); openShadowRoster(); }
+    });
+    // W862 QA — __shadows() state; __arise(bossId) forces the ceremony.
+    window.__shadows = function () { return _shLoad(); };
+    window.__arise = function (bossId) { _ariseCeremony(bossId || 'the_steel_wolf'); };
+  } catch (_) {}
+
   // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
   //
   // Replaces the 1z.164 souls-ledger pull. Per product direction,
@@ -10266,6 +10542,18 @@
       player.power   = player.attack + player.defense + player.edge;
       player.bloodHot = true;
     }
+    // W862 — THE SHADOW ARMY (owner-blessed): +1% per marching shadow on
+    // regular floors; shadows kneel at every milestone threshold, so the
+    // sim-verified walls never meet the army.
+    const _shN = (f % 10 !== 0) ? _shadowActiveCount() : 0;
+    if (_shN > 0) {
+      const _shM = 1 + 0.01 * _shN;
+      player.attack  = player.attack  * _shM;
+      player.defense = player.defense * _shM;
+      player.edge    = player.edge    * _shM;
+      player.power   = player.attack + player.defense + player.edge;
+      player.shadows = _shN;
+    }
     return {
       floor: f,
       advances: (f === st.currentFloor && st.highestCleared < ASCENT_FLOORS && f > st.highestCleared),
@@ -12314,6 +12602,10 @@
     const bloodHotChip = (m.player && m.player.bloodHot)
       ? '<div class="ar-bloodhot-chip">BLOOD STILL HOT · +10% POWER</div>'
       : '';
+    // W862 — the marching army's chip (violet, beside the crimson one).
+    const shadowChip = (m.player && m.player.shadows)
+      ? '<div class="ar-shadow-chip">SHADOW ARMY · +' + m.player.shadows + '% POWER</div>'
+      : '';
     // Deterministic (no dice) — safe to show before the fight is resolved.
     const playerArch = _arenaArchOf(m.player);
     const foeArch = m.bot.archKey || _arenaArchOf(m.bot);
@@ -12325,7 +12617,7 @@
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     _arSet(
       '<div class="ar-versus">' +
-        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' + bloodHotChip +
+        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' + bloodHotChip + shadowChip +
         '<div class="ar-vs-row">' +
           '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div>' +
             '<div style="margin-top:5px">' + _ascArchHtml(paLabel) + '</div></div>' +
@@ -21152,6 +21444,7 @@
         // W859 — THE WATCHER'S WRIT: +50% on writ-metric hunts (never stacks with Hunger).
         const _writBonus_1 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
         if (_writBonus_1 > 0) earnSouls(_writBonus_1, 'writ_bonus_kill_' + id);
+        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
         const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
@@ -21279,6 +21572,7 @@
         // W859 — THE WATCHER'S WRIT (per-day boss path; never stacks with Hunger).
         const _writBonus_3 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
         if (_writBonus_3 > 0) earnSouls(_writBonus_3, 'writ_bonus_kill_' + id);
+        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
         const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         // W847 (V1a) — same firstBoss + review arm as the sleep path above:
@@ -21397,6 +21691,7 @@
     // W859 — THE WATCHER'S WRIT (single-shot kill path; never stacks with Hunger).
     const _writBonus_4 = writKillBonusSouls(cfg, reward);
     if (_writBonus_4 > 0) earnSouls(_writBonus_4, 'writ_bonus_kill_' + id);
+    try { _shadowOnBossKill(id); } catch (_) {}   // W862 — ARISE extraction window
     const dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
     // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
     // counters above stay the Kill Log tab's source — this is the chronology).
@@ -31977,11 +32272,15 @@
         '<button type="button" class="sw-open-btn" data-open-statuswindow role="button" aria-label="Open your Status Window">' +
           '<span class="sw-open-glyph" aria-hidden="true">⟐</span> STATUS WINDOW' +
         '</button>' +
+        // W862 — the Shadow Army strip (renderShadowStrip fills it post-render;
+        // hidden until the first shadow rises).
+        '<button type="button" id="shadow-strip" class="shadow-strip hidden" data-open-shadows aria-label="Open your Shadow Army"></button>' +
         '<button type="button" class="bks-share-cta bks-share-cta--block sc-share-card-btn" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
       '</div>';
 
     requestAnimationFrame(() => {
       buildRadarChart();
+      try { renderShadowStrip(); } catch (_) {}   // W862 — the card just re-rendered; refill the army strip
     });
 
     // v3 Phase 1j — edit button only renders when name is not yet
@@ -49155,6 +49454,32 @@
     if (nameEl) nameEl.textContent = cfg.name;
     const rankLabel = document.getElementById('bfs-rank-label');
     if (rankLabel) rankLabel.textContent = cfg.rank + '-RANK BOSS';
+    // W862 — ARISE extraction status (element created on demand — the sheet
+    // is static markup; this line is new Wave-2 surface).
+    try {
+      let shl = document.getElementById('bfs-shadow-line');
+      if (!shl && rankLabel && rankLabel.parentNode) {
+        shl = document.createElement('div');
+        shl.id = 'bfs-shadow-line'; shl.className = 'bfs-shadow-line hidden';
+        rankLabel.parentNode.insertBefore(shl, rankLabel.nextSibling);
+      }
+      if (shl) {
+        const shState = _shLoad();
+        if (shState.extracted[id]) {
+          shl.textContent = '◈ SHADOW BOUND — ' + shState.extracted[id].name + ' marches with you.';
+          shl.classList.remove('hidden');
+        } else if (shState.windows[id]) {
+          const hrsLeft = Math.max(1, Math.ceil((shState.windows[id].until - Date.now()) / 3600000));
+          shl.textContent = '◈ EXTRACTION OPEN — ' + _shadowRiseCondText(cfg) + ' within ' + hrsLeft + 'h, and it rises.';
+          shl.classList.remove('hidden');
+        } else if (!cfg.coopOnly && (state.kill_count || 0) > 0) {
+          shl.textContent = '◈ Its shadow waits. Defeat it again to open an extraction window.';
+          shl.classList.remove('hidden');
+        } else {
+          shl.classList.add('hidden');
+        }
+      }
+    } catch (_) {}
 
     // v3 Phase 1z.277C — Archetype identity row + disclaimer.
     // Display-only. Hides the whole row when the boss has no
@@ -65016,8 +65341,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
