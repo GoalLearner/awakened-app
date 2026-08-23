@@ -1297,11 +1297,12 @@ test.describe('N · Dungeon rank filter preserved (1z.117)', () => {
 // (the helper outlives the retired board — it feeds snapshot
 // fields other surfaces still read).
 test.describe('O · Workout streak leaderboard card (1z.118)', () => {
-  test('global rankings hub shows exactly step_total + floor_best + relics_collected; retired boards gone', async ({ page }) => {
+  test('global rankings hub shows exactly step_total + floor_best + rank_band + relics_collected; retired boards gone', async ({ page }) => {
     await freshAppForLedgerTest(page);
     // v3 Phase 1z.130 — Global Rankings moved out of the Stats tab
     // into a dedicated hub sheet opened from the World Rank card.
-    // The hub list is `#lb-hub-list`; W822 trimmed it to 3 rows.
+    // The hub list is `#lb-hub-list`; W822 trimmed it to 3 rows, and
+    // W851 re-promoted rank_band (live board, backend never died) → 4.
     await page.evaluate(() => {
       const w = window as unknown as { openGlobalRankingsHub?: () => void };
       if (typeof w.openGlobalRankingsHub === 'function') {
@@ -1323,7 +1324,7 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     expect(metrics).not.toBeNull();
     // Exact-match: order AND count — a resurrected retired row or a
     // silently dropped live row both fail loudly.
-    expect(metrics).toEqual(['step_total', 'floor_best', 'relics_collected']);
+    expect(metrics).toEqual(['step_total', 'floor_best', 'rank_band', 'relics_collected']);
 
     // Stats tab should NOT contain the legacy `#lb-preview-list`.
     const hasLegacy = await page.evaluate(() => !!document.getElementById('lb-preview-list'));
