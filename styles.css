@@ -2974,6 +2974,22 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* W848 (V1e) — category tint: the toast's ring + eyebrow take the achievement
+   family's color (set via data-ach-cat on #ach-popup). Neutral 'general'
+   (stat bonuses, weekend warrior) keeps the violet default above. */
+.ach-popup[data-ach-cat="streaks"]  .ach-popup-card { border-color: rgba(249,115,22,0.55);  box-shadow: 0 0 40px rgba(249,115,22,0.22), 0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="streaks"]  .ach-popup-label { color: #f97316; }
+.ach-popup[data-ach-cat="habits"]   .ach-popup-card { border-color: rgba(74,222,128,0.5);   box-shadow: 0 0 40px rgba(74,222,128,0.2),  0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="habits"]   .ach-popup-label { color: #4ade80; }
+.ach-popup[data-ach-cat="class"]    .ach-popup-card { border-color: rgba(167,139,250,0.55); box-shadow: 0 0 40px rgba(167,139,250,0.22), 0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="class"]    .ach-popup-label { color: #a78bfa; }
+.ach-popup[data-ach-cat="packs"]    .ach-popup-card { border-color: rgba(126,166,217,0.5);  box-shadow: 0 0 40px rgba(126,166,217,0.2),  0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="packs"]    .ach-popup-label { color: #7ea6d9; }
+.ach-popup[data-ach-cat="lifetime"] .ach-popup-card { border-color: rgba(245,184,66,0.55);  box-shadow: 0 0 40px rgba(245,184,66,0.22),  0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="lifetime"] .ach-popup-label { color: #f5b842; }
+.ach-popup[data-ach-cat="rank"]     .ach-popup-card { border-color: rgba(229,72,77,0.5);    box-shadow: 0 0 40px rgba(229,72,77,0.2),    0 20px 60px rgba(0,0,0,0.6); }
+.ach-popup[data-ach-cat="rank"]     .ach-popup-label { color: #e5484d; }
+
 .ach-popup-label {
   font-size: 11px;
   font-weight: 700;

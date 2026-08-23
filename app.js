@@ -271,7 +271,7 @@
   const APP_VERSION = '2.5.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '2.5.1-w847'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '2.5.1-w848'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -11864,11 +11864,11 @@
     if (foe && foe.isBoss) {
       _arRenderBossIntro();
       try { playSfx('ar_boss_engage'); } catch (_) {}
-      try { if (navigator.vibrate) navigator.vibrate([40, 30, 60, 30, 90]); } catch (_) {}
+      try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     } else {
       _arRenderVs();
       try { playSfx('ar_engage'); } catch (_) {}
-      try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+      try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     }
   }
   // Start an interactive fight session (W229). Called from the FIGHT/CHALLENGE
@@ -13027,7 +13027,7 @@
     if (e.t === 'phase') {
       // W539 — THE FIRST AWAKENED UNBINDS, as a full cinematic (ClaudeDesign).
       try { _audStopMusic(0.45); } catch (_) {}
-      try { if (navigator.vibrate) navigator.vibrate([40, 50, 70, 60, 130]); } catch (_) {}
+      try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — F100 phase-2 unbind; was raw vibrate (iOS no-op)
       _faPlayUnbindCinematic(
         // onReveal (Beat 3) — make the battle behind the overlay phase-2-ready.
         () => {
@@ -13262,7 +13262,7 @@
         if (plate) plate.classList.add('ko');
         try { _pkbReactFx(loser, 'defeat'); } catch (_) {}   // W429 — the fall + dissolve-to-ash death
       }
-      try { if (navigator.vibrate) navigator.vibrate(drawn ? 18 : s.won ? 22 : [30, 40, 60]); } catch (_) {}
+      try { _hapticTick(drawn ? 'LIGHT' : s.won ? 'MEDIUM' : 'HEAVY'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
       try { _audCue('ko'); _audDuck(_pkbHoldMs(_PKB_T.koHold) + _PKB_T.ko); } catch (_) {}
       // KO resolution: crossfade the loop out, sting in (slot absent → silent). A draw
       // gets the neutral engage cue, not victory/defeat.
@@ -13833,7 +13833,7 @@
     );
     // sound + haptics (W280 — rating count-up + rating sfx removed with rating)
     try { playSfx(won ? (f.bossCleared ? 'boss_victory' : 'ar_win') : 'ar_lose'); } catch (_) {}
-    try { if (won && navigator.vibrate) navigator.vibrate(f.bossCleared ? 22 : 12); } catch (_) {}
+    try { if (won) _hapticTick(f.bossCleared ? 'MEDIUM' : 'LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
   }
 
   // ── titles ────────────────────────────────────────────────────────
@@ -15115,7 +15115,7 @@
     );
     try { const el = document.querySelector('.pvp-vs2'); if (el) { void el.offsetWidth; el.classList.add('play'); } } catch (_) {}
     try { _audUnlock(); playSfx('ar_engage'); } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+    try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     if (_pvpVsTimer) clearTimeout(_pvpVsTimer);
     _pvpVsTimer = setTimeout(function () { _pvpVsToBattle(); }, _PVP_VS_AUTOSTART_MS);   // safety fallback only — the primary start is the tap
   }
@@ -15401,7 +15401,7 @@
       const stingSlot = demote ? 'ascent_demote' : apex ? 'ascent_apex' : 'ascent_promote';
       if (!_audSting(stingSlot, 0.9)) playSfx(demote ? 'ar_lose' : apex ? 'boss_victory' : 'ar_win');   // fallback if the file hasn't decoded
     } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate(demote ? 12 : apex ? [30, 40, 60] : 22); } catch (_) {}
+    try { _hapticTick(demote ? 'LIGHT' : apex ? 'SUCCESS' : 'MEDIUM'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     if (_pvpCerTimer) clearTimeout(_pvpCerTimer);
     _pvpCerTimer = setTimeout(_pvpCerFinish, 6500);   // auto-advance if untouched
   }
@@ -15540,7 +15540,7 @@
       try { _pvpSetResultRematchUI(priorRematch === 'offered' ? 'offer' : 'waiting'); } catch (_) {}
     }
     try { playSfx(won ? 'ar_win' : draw ? 'ar_engage' : 'ar_lose'); } catch (_) {}
-    try { if (won && navigator.vibrate) navigator.vibrate(18); } catch (_) {}
+    try { if (won) _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     try { const c = document.querySelector('.pvp-rz-card'); if (c) { void c.offsetWidth; c.classList.add('play'); } } catch (_) {}
     if (ranked && _pvpEndRating) _arAfter(420, _pvpAnimElo);
     // NOTE: the WS stays OPEN on the result so a rematch offer can arrive; closed on leave.
@@ -17747,7 +17747,7 @@
     if (rarity !== 'rare' && rarity !== 'ultra_rare') return;
     try { _relicConfettiBurst(rarity); } catch (_) {}
     try { _relicChime(rarity); } catch (_) {}
-    try { navigator.vibrate && navigator.vibrate(rarity === 'ultra_rare' ? [40, 30, 80] : [30]); } catch (_) {}
+    try { _hapticTick(rarity === 'ultra_rare' ? 'SUCCESS' : 'MEDIUM'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -18067,14 +18067,16 @@
     try { _playSigilBloomSfx(rarity); } catch (_) {}
 
     // Haptics — light at ignite, ultra adds heavy at burst.
+    // W848 — was raw navigator.vibrate: the ENTIRE Sigil Bloom haptic score
+    // was a no-op on iOS. _hapticTick routes to real Capacitor Haptics.
     try {
-      const hapticAtIgnite = ultra ? [40, 30, 60] : [25];
+      const hapticAtIgnite = ultra ? 'MEDIUM' : 'LIGHT';
       _sigilBloomTimers.push(setTimeout(() => {
-        try { navigator.vibrate && navigator.vibrate(hapticAtIgnite); } catch (_) {}
+        try { _hapticTick(hapticAtIgnite); } catch (_) {}
       }, timings.ignite - 20));
       if (ultra) {
         _sigilBloomTimers.push(setTimeout(() => {
-          try { navigator.vibrate && navigator.vibrate([90]); } catch (_) {}
+          try { _hapticTick('HEAVY'); } catch (_) {}
         }, timings.burst));
       }
     } catch (_) {}
@@ -18254,7 +18256,12 @@
   function _megaHaptic(pattern, force) {
     try {
       if (!force) { let r = false; try { r = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {} if (r) return; }
-      if ('vibrate' in navigator) navigator.vibrate(pattern);
+      // W848 — the Eclipse Coronation's whole haptic score was raw
+      // navigator.vibrate = a no-op on iOS. Map the authored intensity onto
+      // real Capacitor impacts; the web fallback inside _hapticTick keeps a
+      // vibrate approximation for non-iOS.
+      const peak = Array.isArray(pattern) ? Math.max.apply(null, pattern) : (pattern | 0);
+      _hapticTick(Array.isArray(pattern) && pattern.length > 2 ? 'SUCCESS' : peak >= 60 ? 'HEAVY' : peak >= 30 ? 'MEDIUM' : 'LIGHT');
     } catch (_) {}
   }
   function _playMythicRevealSfx() {
@@ -27560,7 +27567,22 @@
         totalPoints += 2000;
       }
       save();
-      achQueue.push(...newlyUnlocked.filter(Boolean));
+      // W848 (V1e) — the four streak CAPSTONES (100/200/365/730 days) outgrew
+      // the 4-second toast: they get the full-screen milestone takeover
+      // (reclaiming the dormant perfect-day shell — already levelUpQueue-
+      // integrated, letter-reveal, particles, chime). Everything else keeps
+      // the toast, now tier-tinted by category.
+      const CAPSTONE_ACH = { iron_will: 1, streak_200: 1, streak_365: 1, streak_730: 1 };
+      const _capstones = newlyUnlocked.filter(a => a && CAPSTONE_ACH[a.id]);
+      const _toasts    = newlyUnlocked.filter(a => a && !CAPSTONE_ACH[a.id]);
+      if (_toasts.length) achQueue.push(..._toasts);
+      _capstones.forEach(a => {
+        levelUpQueue.push({ type: 'perfectday', milestone: {
+          day: 100, color: '#f5b842', title: String(a.name || '').toUpperCase(),
+          subtitle: a.desc || '', bonus: 0, bonusText: 'ACHIEVEMENT · SEALED FOREVER',
+          shake: true, letterReveal: true, extended: false, chime: true,
+        }, streakCount: 0 });
+      });
     }
   }
 
@@ -27759,7 +27781,7 @@
     popup.classList.remove('hidden');
     void card.offsetWidth;
     card.classList.add('cp-animate');
-    navigator.vibrate && navigator.vibrate([40, 25, 70, 25, 40]);
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
     let timer;
     const dismiss = () => {
       clearTimeout(timer);
@@ -27983,7 +28005,7 @@
     void overlay.offsetWidth;
     overlay.classList.add('awk-show');
     playAwakeningFanfare();
-    navigator.vibrate && navigator.vibrate([60, 40, 100, 40, 200]);
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — class awakening; was raw vibrate (iOS no-op)
 
     // Typewriter — start after the content fade-in finishes (~800ms)
     let typeIdx = 0;
@@ -28090,7 +28112,7 @@
     overlay.classList.remove('hidden');
     void overlay.offsetWidth;
     overlay.classList.add('cc-show');
-    navigator.vibrate && navigator.vibrate([30, 30, 30]);
+    try { _hapticTick('MEDIUM'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
 
     function commit(classKey) {
       const wasCivilian = (currentClass === 'CIVILIAN' || !currentClass);
@@ -28203,7 +28225,7 @@
     // W847 (V1d) — navigator.vibrate is a NO-OP in WKWebView; the app's biggest
     // ceremony fired dead haptics on every iOS device. _hapticTick routes to
     // real Capacitor Haptics (and keeps the vibrate fallback for web).
-    try { _hapticTick(isPrestige || rank.id === 'S+' ? 'success' : rank.id === 'S' ? 'heavy' : 'medium'); } catch (_) {}
+    try { _hapticTick(isPrestige || rank.id === 'S+' ? 'SUCCESS' : rank.id === 'S' ? 'HEAVY' : 'MEDIUM'); } catch (_) {}
 
     // W847 (V1c) — rank-up is the ladder's tier-2 peak. Arm here; the flush
     // fires when the WHOLE celebration chain (rank screen → First Awakened
@@ -28367,9 +28389,7 @@
     card.classList.add('sl-animate');
     setTimeout(() => { bar.style.width = '100%'; }, 80);
 
-    navigator.vibrate && navigator.vibrate(isMax
-      ? [40, 20, 80, 20, 120, 20, 200]
-      : bonusPts ? [40, 20, 80, 20, 120] : [40, 20, 60]);
+    try { _hapticTick(isMax ? 'SUCCESS' : bonusPts ? 'HEAVY' : 'MEDIUM'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
 
     let timer;
     const dismiss = () => {
@@ -28406,7 +28426,7 @@
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     try { playSfx('rank_fanfare'); } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate([40, 30, 70]); } catch (_) {}
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — First Mark; was raw vibrate (iOS no-op)
     const btn = overlay.querySelector('#first-win-cta');
     let done = false;
     function dismiss() {
@@ -28472,7 +28492,7 @@
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     try { playSfx('rank_fanfare'); } catch (_) {}
-    try { if (navigator.vibrate) navigator.vibrate([30, 20, 50]); } catch (_) {}
+    try { _hapticTick('MEDIUM'); } catch (_) {}   // W848 — welcome back; was raw vibrate (iOS no-op)
     const btn = overlay.querySelector('#welcome-back-cta');
     let done = false;
     function dismiss() {
@@ -28618,6 +28638,10 @@
     // against each other).
     try { playSfx('achievement'); } catch (_) {}
     const popup = document.getElementById('ach-popup');
+    // W848 (V1e) — tier-tint the toast by achievement category (CSS keys off
+    // the attribute); ad-hoc pushes (stat bonus, weekend warrior) fall back
+    // to the neutral look via 'general'.
+    try { popup.setAttribute('data-ach-cat', ach.category || 'general'); } catch (_) {}
     document.querySelector('.ach-popup-label').textContent = ach.label || 'ACHIEVEMENT UNLOCKED';
     // Use innerHTML + streakify so 🔥-keyed achievements ("Streak Hunter",
     // "Compound Month") render the custom flame icon. Other achievement
@@ -28628,7 +28652,7 @@
     document.getElementById('ach-popup-name').textContent = ach.name;
     document.getElementById('ach-popup-desc').textContent = ach.desc;
     popup.classList.remove('hidden');
-    navigator.vibrate && navigator.vibrate([60, 40, 80]);
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — achievement unlock; was raw vibrate (iOS no-op)
 
     const dismiss = () => {
       clearTimeout(achPopupTimer);
@@ -29932,7 +29956,9 @@
     // subtitle + bonus XP only. (Emoji-free pass.)
     emojiEl.innerHTML = '';
     subtEl.textContent  = ms.subtitle;
-    bonusEl.textContent = '+' + ms.bonus + ' XP Bonus Awarded';
+    // W848 (V1e) — capstone achievements reuse this shell with their own
+    // bottom line; the XP wording stays the default for real milestones.
+    bonusEl.textContent = ms.bonusText || ('+' + ms.bonus + ' XP Bonus Awarded');
     bonusEl.style.color = ms.color;
     bonusEl.classList.toggle('pd-bonus-xl', ms.day >= 100);
     titleEl.textContent = ms.letterReveal ? '' : ms.title;
@@ -33417,7 +33443,7 @@
         document.getElementById('rp-bar-fill').style.width = pct + '%';
       }, 60);
     });
-    navigator.vibrate && navigator.vibrate(8);
+    try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
   }
 
   function closeRankPopup() {
@@ -33545,7 +33571,10 @@
   // no-op in WKWebView — so try it first, fall back to vibrate on web. iOS
   // Haptics already respects the user's system haptic setting, so no app gate.
   function _hapticTick(kind) {
-    var k = kind || 'LIGHT';
+    // W848 — normalize case: Capacitor Haptics impact styles are the exact
+    // enums 'LIGHT'|'MEDIUM'|'HEAVY'; a lowercase kind would throw inside the
+    // try and silently fall to the (iOS-dead) vibrate path.
+    var k = String(kind || 'LIGHT').toUpperCase();
     try {
       var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
       if (H) { if (k === 'SUCCESS') H.notification({ type: 'SUCCESS' }); else H.impact({ style: k }); return; }
@@ -38489,7 +38518,7 @@
       _mvRenderSheet({ tick: true, roomMade: roomMade });
 
       if (roomMade) {
-        if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+        try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
         clearTimeout(_mvRoomMadeTimer);
         _mvRoomMadeTimer = setTimeout(function () {
           _mvRenderSheet({ tick: false, roomMade: false });
@@ -52915,7 +52944,7 @@
     void overlay.offsetWidth;
     overlay.classList.add('cb-show');
     playComebackChime();
-    navigator.vibrate && navigator.vibrate([40, 30, 80]);
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — comeback; was raw vibrate (iOS no-op)
 
     const dismiss = () => {
       overlay.classList.remove('cb-show');
@@ -52967,7 +52996,7 @@
     void overlay.offsetWidth;
     overlay.classList.add('cb-show');
     try { if (typeof playComebackChime === 'function') playComebackChime(); } catch (_) {}
-    try { navigator.vibrate && navigator.vibrate([30, 40, 90]); } catch (_) {}
+    try { _hapticTick('SUCCESS'); } catch (_) {}   // W848 — first verified; was raw vibrate (iOS no-op)
     const dismiss = function () {
       overlay.classList.remove('cb-show');
       overlay.classList.add('cb-hide');
@@ -54956,7 +54985,7 @@
     resetIdleTimer();
     startAutoScrollLoop();
 
-    navigator.vibrate && navigator.vibrate(50);
+    try { _hapticTick('MEDIUM'); } catch (_) {}   // W848 — drag pick-up; was raw vibrate (iOS no-op)
 
     if (isTouch) {
       document.addEventListener('touchmove',   onDragMove, { passive: false });
@@ -55049,7 +55078,7 @@
         habits.splice(target.before ? toIdx : toIdx + 1, 0, moved);
         save();
         didReorder = true;
-        navigator.vibrate && navigator.vibrate(15);
+        try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — reorder snap; was raw vibrate (iOS no-op)
       }
     }
 
@@ -55229,7 +55258,7 @@
       setTimeout(() => { bar.style.width = pct + '%'; }, 80);
     });
 
-    navigator.vibrate && navigator.vibrate(8);
+    try { _hapticTick('LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
   }
 
   function closeStatDetail() {
