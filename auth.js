@@ -2359,6 +2359,37 @@
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
 
+  // W871 — THE WORLDGATE: the whole server as one raid party.
+  async function fetchWorldgate() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/worldgate', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return data;
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function claimWorldgate() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/worldgate/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + u.jwt },
+        body: '{}',
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, first: !!data.first, souls: data.souls || 0 };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+
   // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
   async function fetchWeeklyHunger() {
     const u = readUser();
@@ -2394,6 +2425,9 @@
     submitTowerEvent,
     fetchTowerFriends,
     avengeTowerDefeat,
+    // W871 — the Worldgate
+    fetchWorldgate,
+    claimWorldgate,
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,

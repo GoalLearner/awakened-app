@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w870'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w871'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6657,6 +6657,58 @@
   }
   // W870 QA — __tower() cache dump; __tower(true) force-syncs.
   try { window.__tower = function (force) { if (force) _towerSync(true); return _towerCache(); }; } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W871 (Wave 2 Train B) — THE WORLDGATE, client half.
+  //
+  // The card sits atop every dungeon rank view: one HP bar the entire
+  // server drains together — the pool is the live sum of every hunter's
+  // weekly verified steps, so damage lands on every sync with no check-in.
+  // Slain → everyone above the claim floor collects the bounty once
+  // (client earns souls on the claim response, the co-op award model).
+  // Pushes and throne-break events phase in later (v1 scope discipline).
+  // ═══════════════════════════════════════════════════════════════════════
+  const WG_CACHE_KEY = 'hb_worldgate_v1';
+  const WG_TTL_MS = 10 * 60 * 1000;
+  function _wgCache() { try { return JSON.parse(localStorage.getItem(WG_CACHE_KEY) || 'null'); } catch (_) { return null; } }
+  function _worldgateSync(force) {
+    try {
+      const c = _wgCache();
+      if (!force && c && Date.now() - c.at < WG_TTL_MS) return;
+      if (!(window.Auth && typeof Auth.fetchWorldgate === 'function')) return;
+      Auth.fetchWorldgate().then(function (r) {
+        if (!(r && r.ok)) return;
+        try { localStorage.setItem(WG_CACHE_KEY, JSON.stringify({ at: Date.now(), week: r.week_start, hp: r.hp, pool: r.pool, status: r.status, my: r.my_damage, floor: r.claim_floor, souls: r.souls, claimable: r.claimable })); } catch (_) {}
+        // Auto-claim the bounty the moment it's ours to take.
+        if (r.claimable && typeof Auth.claimWorldgate === 'function') {
+          Auth.claimWorldgate().then(function (cl) {
+            if (!(cl && cl.ok && cl.first && cl.souls > 0)) return;
+            try { earnSouls(cl.souls, 'worldgate_' + r.week_start); } catch (_) {}
+            try { localStorage.setItem('hb_accolade_worldbreaker', String((parseInt(localStorage.getItem('hb_accolade_worldbreaker'), 10) || 0) + 1)); } catch (_) {}
+            try { _hapticTick('SUCCESS'); } catch (_) {}
+            try { showNoticeCard({ eyebrow: 'THE GATE BREAKS', title: 'The Worldgate is down', body: 'Every hunter’s verified steps brought it low — yours among them. +' + cl.souls + ' souls. One server, one monster, one kill.' }); } catch (_) {}
+          }).catch(function () {});
+        }
+        try { if (typeof currentTab !== 'undefined' && currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  function _worldgateCardHtml() {
+    const c = _wgCache();
+    if (!c) return '';
+    const pct = Math.max(0, Math.min(100, Math.round((c.pool / Math.max(1, c.hp)) * 100)));
+    const slain = c.status === 'slain';
+    return '<div class="wg-card' + (slain ? ' wg-slain' : '') + '">' +
+      '<div class="wg-kicker">THE WORLDGATE · EVERY HUNTER, ONE MONSTER</div>' +
+      (slain
+        ? '<div class="wg-line">The gate is DOWN. The whole server brought it low this week.</div>'
+        : '<div class="wg-line">' + c.pool.toLocaleString('en-US') + ' / ' + c.hp.toLocaleString('en-US') + ' verified steps struck</div>') +
+      '<div class="wg-bar"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="wg-sub">YOUR STRIKES: ' + (c.my || 0).toLocaleString('en-US') + (slain ? '' : ' · SHARE THE KILL AT ' + (c.floor || 15000).toLocaleString('en-US')) + '</div>' +
+    '</div>';
+  }
+  // W871 QA — __worldgate() cache; __worldgate(true) force-syncs.
+  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); return _wgCache(); }; } catch (_) {}
 
   // W868 QA — __break() state; __break('force', bossId) spawns an active break now.
   try {
@@ -50312,7 +50364,11 @@
           'This week <b>' + esc(_hbName) + '</b> hungers — 2× souls · +1% relic luck.</div>';
       }
     } catch (_) {}
-    list.innerHTML = _hungerBanner + bossIds.map(buildBossCardHTML).join('');
+    // W871 — THE WORLDGATE card (server-wide raid; renders from the 10-min
+    // cache, live values refresh via _worldgateSync).
+    let _wgCard = '';
+    try { _wgCard = _worldgateCardHtml(); } catch (_) {}
+    list.innerHTML = _wgCard + _hungerBanner + bossIds.map(buildBossCardHTML).join('');
     // W370 — co-op boss card(s) appended before the setBossImage loop so their
     // art wires too.
     try {
@@ -66313,7 +66369,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _towerSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

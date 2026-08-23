@@ -102,6 +102,8 @@ import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
 import { handleOathSwear, handleOathsMine, handleOathClaim } from './handlers/oaths';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
+// W871 (Wave 2 Train B) — THE WORLDGATE.
+import { handleWorldgateGet, handleWorldgateClaim } from './handlers/worldgate';
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
   handleAasaGet,
@@ -366,6 +368,11 @@ export default {
             response = await handleTowerFriendsGet(request, env, session);
           } else if (path === '/v1/tower/avenge' && method === 'POST') {
             response = await handleTowerAvengePost(request, env, session);
+          } else if (path === '/v1/worldgate' && method === 'GET') {
+            // W871 — one server, one monster.
+            response = await handleWorldgateGet(request, env, session);
+          } else if (path === '/v1/worldgate/claim' && method === 'POST') {
+            response = await handleWorldgateClaim(request, env, session);
           } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
             // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
             response = await handleClientErrorsPost(request, env, session);

@@ -2974,6 +2974,33 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W871 (Wave 2 Train B) — THE WORLDGATE card ──────────────────────── */
+.wg-card {
+  margin: 0 0 12px;
+  padding: 13px 15px 12px;
+  border: 1px solid rgba(183, 156, 255, 0.4);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.10), rgba(0, 0, 0, 0.22));
+}
+.wg-card.wg-slain { border-color: rgba(245, 184, 66, 0.55); }
+.wg-kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px; font-weight: 800; letter-spacing: 2px;
+  color: #b79cff; margin-bottom: 7px;
+}
+.wg-card.wg-slain .wg-kicker { color: #f5b842; }
+.wg-line { font-size: 12.5px; font-weight: 600; color: #efeaf9; font-variant-numeric: tabular-nums; }
+.wg-bar {
+  height: 7px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.08); margin: 8px 0 7px;
+}
+.wg-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c5cd6, #b79cff); transition: width 0.8s ease; }
+.wg-card.wg-slain .wg-bar span { background: linear-gradient(90deg, #f5b842, #ffe9b0); }
+.wg-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px; letter-spacing: 1.2px; color: #8f83b3;
+}
+
 /* ─── W870 (Wave 2 Train B) — Tower banners + echoes on the VS screen ─── */
 .ar-banner-chip {
   display: inline-block; margin: 6px auto 0 6px; padding: 4px 12px;
