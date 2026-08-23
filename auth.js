@@ -2314,6 +2314,51 @@
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
 
+  // W870 — THE TOWER REMEMBERS: shared Ascent memory.
+  async function submitTowerEvent(kind, floor) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/tower/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + u.jwt },
+        body: JSON.stringify({ kind: kind, floor: floor }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      return (res.status === 200 && data && data.ok) ? { ok: true } : { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function fetchTowerFriends() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/tower/friends', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, banners: data.banners || [], echoes: data.echoes || [], my_defeat: data.my_defeat || null, souls: data.avenge_souls || 40 };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function avengeTowerDefeat(eventId) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/tower/avenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + u.jwt },
+        body: JSON.stringify({ event_id: eventId }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, souls: data.souls || 40 };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+
   // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
   async function fetchWeeklyHunger() {
     const u = readUser();
@@ -2345,6 +2390,10 @@
     swearOath,
     fetchOaths,
     claimOath,
+    // W870 — the Tower Remembers
+    submitTowerEvent,
+    fetchTowerFriends,
+    avengeTowerDefeat,
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,

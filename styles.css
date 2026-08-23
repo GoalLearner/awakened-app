@@ -2974,6 +2974,22 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W870 (Wave 2 Train B) — Tower banners + echoes on the VS screen ─── */
+.ar-banner-chip {
+  display: inline-block; margin: 6px auto 0 6px; padding: 4px 12px;
+  border: 1px solid rgba(245, 184, 66, 0.55); border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.6px;
+  color: #f5b842; background: rgba(245, 184, 66, 0.10);
+  box-shadow: 0 0 14px rgba(245, 184, 66, 0.25);
+}
+.ar-echo-line {
+  margin: 8px auto 0; max-width: 84%;
+  font-family: 'Cormorant Garamond', 'Young Serif', serif;
+  font-style: italic; font-size: 13.5px; line-height: 1.5;
+  color: rgba(207, 194, 244, 0.85);
+}
+
 /* ─── W869 (Wave 2 Train B) — RED GATE state line ─────────────────────── */
 .bfs-redgate-line {
   margin: 7px 0 0;

@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w869'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w870'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6582,6 +6582,82 @@
     host.classList.remove('hidden');
     host.onclick = function () { try { switchTab('quests'); setTimeout(function () { try { openBossFullScreen(b.bossId); } catch (_) {} }, 300); } catch (_) {} };
   }
+  // ═══════════════════════════════════════════════════════════════════════
+  // W870 (Wave 2 Train B, S-tier #5 phase 1) — THE TOWER REMEMBERS
+  //
+  // Banners + echoes (Marks and shadow summons phase in later, per the
+  // judge order). Friends' rated clears plant weekly BANNERS — fighting a
+  // regular floor under one grants +1% power (milestone floors exempt, the
+  // house kneel rule). A friend's run-ending loss kneels as an ECHO for 7
+  // days; clearing that floor AVENGES them automatically: you earn souls
+  // (server-granted claim, client earns on ok), they regain a daily life +
+  // get the push. Client submits clears/defeats fire-and-forget from
+  // arenaFinalizeBattle; the 10-min-TTL cache renders the shared tower.
+  // ═══════════════════════════════════════════════════════════════════════
+  const TOWER_CACHE_KEY = 'hb_tower_friends_v1';
+  const TOWER_TTL_MS = 10 * 60 * 1000;
+  function _towerCache() { try { return JSON.parse(localStorage.getItem(TOWER_CACHE_KEY) || 'null'); } catch (_) { return null; } }
+  function _towerSync(force) {
+    try {
+      const c = _towerCache();
+      if (!force && c && Date.now() - c.at < TOWER_TTL_MS) return;
+      if (!(window.Auth && typeof Auth.fetchTowerFriends === 'function')) return;
+      Auth.fetchTowerFriends().then(function (r) {
+        if (!(r && r.ok)) return;
+        try { localStorage.setItem(TOWER_CACHE_KEY, JSON.stringify({ at: Date.now(), banners: r.banners, echoes: r.echoes, my_defeat: r.my_defeat, souls: r.souls })); } catch (_) {}
+        // My defeat was avenged → one-time notice + a bonus life TODAY.
+        try {
+          const d = r.my_defeat;
+          if (d && d.avenged_at && d.avenger_alias) {
+            const seenKey = 'hb_tower_avenged_seen_' + d.id;
+            if (!localStorage.getItem(seenKey)) {
+              localStorage.setItem(seenKey, '1');
+              localStorage.setItem('hb_tower_avenge_life', getDeviceLocalDate());
+              try { _hapticTick('SUCCESS'); } catch (_) {}
+              try { showNoticeCard({ eyebrow: 'AVENGED', title: d.avenger_alias + ' brought down Floor ' + d.floor, body: 'In your name. The Tower grants you another attempt today.' }); } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  function _towerBannerFor(floor) {
+    try {
+      const c = _towerCache(); if (!c) return null;
+      const b = (c.banners || []).filter(function (x) { return (x.floor | 0) === (floor | 0); })[0];
+      return b || null;
+    } catch (_) { return null; }
+  }
+  function _towerEchoFor(floor) {
+    try {
+      const c = _towerCache(); if (!c) return null;
+      return (c.echoes || []).filter(function (x) { return (x.floor | 0) === (floor | 0); })[0] || null;
+    } catch (_) { return null; }
+  }
+  /** Fire-and-forget submits from the battle commit point. */
+  function _towerOnFloorCleared(floor) {
+    try { if (window.Auth && Auth.submitTowerEvent) Auth.submitTowerEvent('clear', floor).catch(function () {}); } catch (_) {}
+    // Avenge any friend kneeling on this floor.
+    try {
+      const echo = _towerEchoFor(floor);
+      if (echo && window.Auth && Auth.avengeTowerDefeat) {
+        Auth.avengeTowerDefeat(echo.id).then(function (r) {
+          if (!(r && r.ok)) return;
+          try { earnSouls(r.souls || 40, 'tower_avenge_' + floor); } catch (_) {}
+          try { const n = (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) + 1; localStorage.setItem('hb_avenger_count', String(n)); } catch (_) {}
+          try { _hapticTick('SUCCESS'); } catch (_) {}
+          try { showHabitToast('⚔ You avenged ' + echo.alias + ' on Floor ' + floor + ' — +' + (r.souls || 40) + ' souls.'); } catch (_) {}
+          _towerSync(true);
+        }).catch(function () {});
+      }
+    } catch (_) {}
+  }
+  function _towerOnRunEnded(floor) {
+    try { if (window.Auth && Auth.submitTowerEvent) Auth.submitTowerEvent('defeat', floor).catch(function () {}); } catch (_) {}
+  }
+  // W870 QA — __tower() cache dump; __tower(true) force-syncs.
+  try { window.__tower = function (force) { if (force) _towerSync(true); return _towerCache(); }; } catch (_) {}
+
   // W868 QA — __break() state; __break('force', bossId) spawns an active break now.
   try {
     window.__break = function (op, bossId) {
@@ -11034,7 +11110,11 @@
   }
   function ascentLivesLeft() {
     const st = getAscentState();
-    return Math.max(0, _ascentDailyLivesCap() - st.dailyLosses);   // W620 — Infinity for Founders
+    // W870 — an avenged defeat grants ONE bonus attempt on the day the
+    // avenging lands (the credit key is stamped by the tower sync).
+    let bonus = 0;
+    try { if (localStorage.getItem('hb_tower_avenge_life') === getDeviceLocalDate()) bonus = 1; } catch (_) {}
+    return Math.max(0, _ascentDailyLivesCap() - st.dailyLosses + bonus);   // W620 — Infinity for Founders
   }
   // W618 — close the force-close life exploit. A rated Ascent fight only spent a life
   // when its LOSS was persisted at the KO beat (arenaFinalizeBattle); the whole
@@ -11365,6 +11445,19 @@
       player.edge    = player.edge    * _shM;
       player.power   = player.attack + player.defense + player.edge;
       player.shadows = _shN;
+    }
+    // W870 — a friend's banner on a regular floor lends +1% (milestone floors
+    // exempt — the house kneel rule). Sync fires here too (TTL-throttled).
+    try { _towerSync(); } catch (_) {}
+    if (f % 10 !== 0) {
+      const _bn = _towerBannerFor(f);
+      if (_bn) {
+        player.attack = player.attack * 1.01;
+        player.defense = player.defense * 1.01;
+        player.edge = player.edge * 1.01;
+        player.power = player.attack + player.defense + player.edge;
+        player.bannerAlias = _bn.alias;
+      }
     }
     return {
       floor: f,
@@ -12273,7 +12366,9 @@
         st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
         advanced = true; floorCleared = m.floor;
         if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+        try { _towerOnFloorCleared(m.floor); } catch (_) {}   // W870 — plant/avenge
       }
+      if (!won) { try { _towerOnRunEnded(m.floor); } catch (_) {} }   // W870 — kneel here
     } else if (won && m.floor <= st.highestCleared) {
       // W439 — Reclaim the Floor: the first won re-fight of a CLEARED floor TODAY pays a small
       // souls bounty (bounded by the per-floor-once-per-day guard + the global daily cap). Souls
@@ -13418,6 +13513,15 @@
     const shadowChip = (m.player && m.player.shadows)
       ? '<div class="ar-shadow-chip">SHADOW ARMY · +' + m.player.shadows + '% POWER</div>'
       : '';
+    // W870 — the Tower remembers your friends.
+    const bannerChip = (m.player && m.player.bannerAlias)
+      ? '<div class="ar-banner-chip">⚑ ' + esc(m.player.bannerAlias) + '’S BANNER · +1%</div>'
+      : '';
+    let echoLine = '';
+    try {
+      const _ec = _towerEchoFor(m.floor);
+      if (_ec) echoLine = '<div class="ar-echo-line">' + esc(_ec.alias) + ' knelt here this week. Win — and avenge them.</div>';
+    } catch (_) {}
     // Deterministic (no dice) — safe to show before the fight is resolved.
     const playerArch = _arenaArchOf(m.player);
     const foeArch = m.bot.archKey || _arenaArchOf(m.bot);
@@ -13429,7 +13533,7 @@
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     _arSet(
       '<div class="ar-versus">' +
-        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' + bloodHotChip + shadowChip +
+        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' + bloodHotChip + shadowChip + bannerChip + echoLine +
         '<div class="ar-vs-row">' +
           '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div>' +
             '<div style="margin-top:5px">' + _ascArchHtml(paLabel) + '</div></div>' +
@@ -66209,7 +66313,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _towerSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

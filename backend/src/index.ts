@@ -100,6 +100,8 @@ import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
 // W867 (Wave 2 Train B) — THE OATHBOUND mentor system.
 import { handleOathSwear, handleOathsMine, handleOathClaim } from './handlers/oaths';
+// W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
+import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
   handleAasaGet,
@@ -357,6 +359,13 @@ export default {
             response = await handleOathsMine(request, env, session);
           } else if (path === '/v1/oaths/claim' && method === 'POST') {
             response = await handleOathClaim(request, env, session);
+          } else if (path === '/v1/tower/events' && method === 'POST') {
+            // W870 — the Tower's shared memory (clears + defeats).
+            response = await handleTowerEventPost(request, env, session);
+          } else if (path === '/v1/tower/friends' && method === 'GET') {
+            response = await handleTowerFriendsGet(request, env, session);
+          } else if (path === '/v1/tower/avenge' && method === 'POST') {
+            response = await handleTowerAvengePost(request, env, session);
           } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
             // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
             response = await handleClientErrorsPost(request, env, session);
