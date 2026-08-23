@@ -2974,6 +2974,32 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W865 (Wave 2) — The Gray Pilgrim's Correspondence ───────────────── */
+.bfs-letters-line {
+  display: block; margin: 7px 0 0; padding: 0;
+  border: none; background: transparent; text-align: left;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 1px; color: #d9cfae;
+  cursor: pointer;
+}
+.bfs-letters-line.hidden { display: none; }
+.plw-unread { color: #f5b842; font-size: 8px; vertical-align: middle; }
+.plw-letter {
+  margin-bottom: 12px; padding: 11px 12px;
+  border: 1px solid rgba(217, 207, 174, 0.25); border-radius: 6px;
+  background: linear-gradient(170deg, rgba(217, 207, 174, 0.06), rgba(0, 0, 0, 0.1));
+}
+.plw-lore { border-color: rgba(245, 184, 66, 0.45); }
+.plw-head {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 1.8px;
+  color: #b3a884; margin-bottom: 7px;
+}
+.plw-body {
+  font-family: 'Cormorant Garamond', 'Young Serif', serif;
+  font-style: italic; font-size: 14.5px; line-height: 1.65;
+  color: #e9e2cd;
+}
+
 /* ─── W863/W864 (Wave 2) — Forge License button + Measuring Stone ─────── */
 .sw-forge {
   display: block; width: 100%; padding: 10px 0; margin-bottom: 8px;

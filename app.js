@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w864'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w865'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5973,6 +5973,176 @@
   }
   // W864 QA — __stone() forces a fresh measurement; __stone(true) forces a crack preview.
   try { window.__stone = function (crack) { if (crack) { _stoneCeremony('A', 'D', true); return; } try { localStorage.removeItem(STONE_KEY); } catch (_) {} _stoneTick(); }; } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W865 (Wave 2, S-tier #3 phase 1) — THE GRAY PILGRIM'S CORRESPONDENCE
+  //
+  // Owner-approved copy (PILGRIM-LETTERS.md, blessed 2026-08-22). The arc
+  // advances ONE letter per week the hunter ENGAGED the Pilgrim; each slot
+  // has CLEARED/MISSED variants (6 and 12 shared). A resolution is detected
+  // as the engaged→not-engaged transition on the_gray_pilgrim: kill_count
+  // moved → CLEARED, otherwise MISSED (a manual disengage reads as a miss —
+  // he counts reaching and stopping too). Letters splice the REAL week:
+  // {flights} from flights_daily, {clears} from kill_count.
+  //
+  // Delivery: the letter lands in the Correspondence drawer immediately and
+  // a local notification fires 2-6h later (id 99989; honors hb_notif_disabled
+  // + hb_notif_paused_until). Letter 6's side-task (10 verified flights in a
+  // single day) unlocks LORE PAGE I. Phase 2 (sealed friend-mail, portrait
+  // decay, the Monarch gate) phases in behind — letter 12's promise stands.
+  // ═══════════════════════════════════════════════════════════════════════
+  const PILGRIM_ID = 'the_gray_pilgrim';
+  const PL_ARC_KEY = 'hb_pilgrim_arc_v1';
+  const PL_NOTIF_ID = 99989;
+  const PILGRIM_LETTERS = [
+    { c: 'You met me on my first crossing of your sky, {name}. {flights} flights. I have walked past ten thousand doors and fewer than you think ever open. Yours did. I will pass this way again in seven days. Leave the light on. — G.P.',
+      m: 'You reached for me on my first crossing, {name}. {flights} flights of {target}. Most reach once and never again — the road forgets them politely. I do not think the road is finished with you. I will pass again. — G.P.' },
+    { c: 'Some believe I carry relics in this coat. I carry ledgers. {flights} flights this crossing — I wrote it down before your phone did. I have counted since before counting had a name. It is good to have something worth writing. — G.P.',
+      m: 'You stopped at {flights}. I counted. I always count. Do not mistake this for scolding — the ledger has no feelings. But I will tell you what I have learned in a thousand years of pages: the number that matters is never this week’s. It is next week’s. — G.P.' },
+    { c: 'Before your city there was a hill, and before the hill, a stair cut by hands nobody remembers. I walked it when it was new. Stairs outlive their makers, {name}. {flights} flights — you are building something that will outlive the ache. — G.P.',
+      m: 'I passed a ruin this week that was once the tallest tower on any horizon. Its builders stopped one week too early and called it finished. {flights} of {target}. The difference between a ruin and a tower is always the same seven days. — G.P.' },
+    { c: 'A question, and I ask it only of those who have kept pace: why do you climb? Do not answer me. Answer it at the top of the next stair, where the honest answers live. {flights} flights. You are becoming difficult to pass unnoticed. — G.P.',
+      m: 'I asked a hunter once why he climbed. He gave me a beautiful answer and never climbed again. I asked another; she said nothing and out-walked me for a decade. {flights} this week. Skip the beautiful answer. — G.P.' },
+    { c: 'I remember every hunter who kept my pace, and I confess I remember longer the ones who stopped. Not with judgment — with the particular ache of an unfinished page. {flights} more flights say you will not be one of mine. Prove the ledger right. — G.P.',
+      m: '{flights} of {target}. I once walked beside a hunter for six crossings, and on the seventh her door stayed dark. I still carry her page. It is the lightest thing in my coat and the heaviest. Leave the light on, {name}. — G.P.' },
+    { c: 'A request, which I have made of nine hunters in nine centuries: walk one road for me. Not for souls, not for the boards. Before I cross again — one single day of 10 flights, climbed in one turning of the sun. Do this and I will tell you what I was before I was gray. — G.P.',
+      m: null },   // letter 6 — shared text (side-task → LORE PAGE I)
+    { c: 'You have begun to look at my face, {name}. I feel it through the paper. Yes — the mask. No, it does not come off. It wears thin, though, near those who keep pace with me. {clears} crossings you have matched now. It has begun to notice you back. — G.P.',
+      m: '{flights} of {target}, and still you looked up as I passed — I felt it. Most look at the coat, the ledgers, the road. You looked at the mask. Careful, hunter. Things that are looked at long enough begin to look back. — G.P.' },
+    { c: 'You have met the Sovereign’s court by now — the Sentinel that starves, the mountain that walks. They do not write letters. They were made after fear was invented; I was made before. That is the entire difference between us, and it is why I use the door. — G.P.',
+      m: 'The Sovereign’s consorts asked about you. I told them nothing — your pages are mine, not theirs. But hear me: {flights} will not hold the attention of things that count in centuries. Give me a number worth defending. — G.P.' },
+    { c: 'An admission, and I will deny it if the System asks: I no longer cross your sky on schedule. I cross when I believe you will be on the stairs. A thousand years of appointments, and you have made me early. {flights} flights. Do not tell anyone. — G.P.',
+      m: 'I waited this week. I do not wait — understand, waiting is a thing I unlearned centuries ago, deliberately, at great cost. {flights} of {target}. You are re-teaching me a dangerous habit, {name}. See that it becomes worth the danger. — G.P.' },
+    { c: 'The mask cracked once before. One hunter, long ago, kept my pace for ten crossings, and on the tenth the porcelain sang like ice on a spring lake. She saw one eye. She never told anyone what color it was. You are at {clears}. The mask remembers ten. — G.P.',
+      m: '{flights}. The mask relaxed this week — I felt the hairline seams settle back. It prefers hunters who miss; it has worn me undisturbed for an age. Disappoint it. — G.P.' },
+    { c: 'I have run out of parables, {name}. This is what remains: {flights} flights, crossing {clears}, and an old thing on an old road who is no longer certain he wants to stay unseen. One more true week. That is all the mask can bear. — G.P.',
+      m: 'So close to the end of my paper, and you give me {flights} of {target}. Very well. I have waited longer for less. But know this — I have never written a twelfth letter. My hand is not steady. Make it necessary. — G.P.' },
+    { c: 'This is the last letter, because after it there is nothing left to write — only something left to see. One more road, walked my way: {target} flights before Sunday, and on the final day, open your door before dawn. Bring nothing. The mask and I will settle our old argument in front of you, and you will learn why the Tower has exactly one hundred floors and why I never climbed a single one. — G.P.',
+      m: null },   // letter 12 — shared text (phase 2 seeds the Monarch gate)
+  ];
+  const PL_LORE_1 = 'LORE PAGE I — WHAT HE WAS: He was the first architect of the Tower — the one who built the hundred floors, and the only one who never climbed them.';
+  function _plArc() {
+    try {
+      const a = JSON.parse(localStorage.getItem(PL_ARC_KEY) || 'null') || {};
+      a.index = a.index | 0;
+      a.kills = a.kills | 0;
+      a.wasEngaged = !!a.wasEngaged;
+      a.letters = Array.isArray(a.letters) ? a.letters : [];
+      a.unread = !!a.unread;
+      a.lore1 = !!a.lore1;
+      a.letter6At = a.letter6At || null;
+      return a;
+    } catch (_) { return { index: 0, kills: 0, wasEngaged: false, letters: [], unread: false, lore1: false, letter6At: null }; }
+  }
+  function _plSave(a) { try { localStorage.setItem(PL_ARC_KEY, JSON.stringify(a)); } catch (_) {} }
+  function _plWeekFlights() {
+    try {
+      const map = (loadLeaderboardState() || {}).flights_daily || {};
+      let t = 0; _writDayKeysBack(7).forEach(function (k) { t += Number(map[k]) || 0; });
+      try { t += Number(map[getDeviceLocalDate()]) || 0; } catch (_) {}
+      return Math.round(t);
+    } catch (_) { return 0; }
+  }
+  function _plCompose(idx, cleared) {
+    const slot = PILGRIM_LETTERS[idx]; if (!slot) return null;
+    const raw = (cleared || slot.m == null) ? slot.c : slot.m;
+    let clears = 0; try { clears = getBossState(PILGRIM_ID).kill_count | 0; } catch (_) {}
+    let target = 56; try { const c = BOSSES[PILGRIM_ID]; if (c && typeof c.flightThreshold === 'number') target = c.flightThreshold; } catch (_) {}
+    return raw
+      .replace(/\{name\}/g, (typeof playerName === 'string' && playerName) ? playerName : 'Hunter')
+      .replace(/\{flights\}/g, String(_plWeekFlights()))
+      .replace(/\{target\}/g, String(target))
+      .replace(/\{clears\}/g, String(clears));
+  }
+  function _plScheduleNotif() {
+    try {
+      if (localStorage.getItem('hb_notif_disabled') === '1') return;
+      const paused = parseInt(localStorage.getItem('hb_notif_paused_until') || '0', 10);
+      if (paused && Date.now() < paused) return;
+      const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+      if (!P || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+      const delayMs = (2 + Math.random() * 4) * 3600 * 1000;   // 2-6h — the letter takes time to arrive
+      P.schedule({ notifications: [{
+        id: PL_NOTIF_ID,
+        title: 'A letter was slipped beneath your door.',
+        body: '— G.P.',
+        schedule: { at: new Date(Date.now() + delayMs), allowWhileIdle: true },
+        extra: { kind: 'pilgrim_letter' },
+      }] }).catch(function () {});
+    } catch (_) {}
+  }
+  function _pilgrimTick() {
+    try {
+      const cfg = BOSSES[PILGRIM_ID]; if (!cfg) return;
+      const a = _plArc();
+      const st = getBossState(PILGRIM_ID);
+      const engagedNow = !!(st && st.engaged);
+      // Resolution = engaged last tick, not engaged now.
+      if (a.wasEngaged && !engagedNow && a.index < PILGRIM_LETTERS.length) {
+        const cleared = (st.kill_count | 0) > a.kills;
+        const text = _plCompose(a.index, cleared);
+        if (text) {
+          a.letters.push({ i: a.index, cleared: cleared, text: text, at: Date.now(), read: false });
+          if (a.index === 5) a.letter6At = Date.now();
+          a.index++; a.unread = true;
+          _plScheduleNotif();
+        }
+      }
+      a.kills = st.kill_count | 0;
+      a.wasEngaged = engagedNow;
+      // Letter-6 side task: one single day of 10+ verified flights after it arrived.
+      if (a.letter6At && !a.lore1) {
+        const map = (loadLeaderboardState() || {}).flights_daily || {};
+        const sinceKey = _localDateKey(new Date(a.letter6At));
+        Object.keys(map).forEach(function (k) {
+          if (k >= sinceKey && (Number(map[k]) || 0) >= 10) a.lore1 = true;
+        });
+        if (a.lore1) { a.unread = true; try { showHabitToast('The Pilgrim kept his word. A lore page waits in the Correspondence.'); } catch (_) {} }
+      }
+      _plSave(a);
+    } catch (_) {}
+  }
+  function openPilgrimDrawer() {
+    try {
+      const old = document.getElementById('pilgrim-drawer'); if (old) old.remove();
+      const a = _plArc();
+      const items = a.letters.slice().reverse().map(function (L) {
+        const d = new Date(L.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return '<div class="plw-letter">' +
+          '<div class="plw-head">LETTER ' + (L.i + 1) + ' · ' + esc(d) + (L.cleared ? ' · THE CROSSING WAS MET' : '') + '</div>' +
+          '<div class="plw-body">' + esc(L.text) + '</div>' +
+        '</div>';
+      }).join('');
+      const lore = a.lore1 ? '<div class="plw-letter plw-lore"><div class="plw-head">◈ ' + esc(PL_LORE_1.split(' — ')[0]) + '</div><div class="plw-body">' + esc(PL_LORE_1.split(': ')[1] || PL_LORE_1) + '</div></div>' : '';
+      const ov = document.createElement('div');
+      ov.id = 'pilgrim-drawer'; ov.className = 'sw-overlay';
+      ov.innerHTML =
+        '<div class="sw-window" role="dialog" aria-modal="true" aria-label="The Correspondence">' +
+          '<div class="sw-titlebar">THE CORRESPONDENCE</div>' +
+          (items || lore ? (lore + items) : '<div class="shr-empty">No letters yet. Engage the Gray Pilgrim — win or lose, he writes. He always writes.</div>') +
+          '<button type="button" class="sw-close" aria-label="Close">CLOSE THE DRAWER</button>' +
+        '</div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('on'); });
+      const cur = _plArc(); cur.unread = false; cur.letters.forEach(function (L) { L.read = true; }); _plSave(cur);
+      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+    } catch (e) { _logSwallow('pilgrimDrawer:open', e); }
+  }
+  try {
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest && e.target.closest('[data-open-pilgrim]');
+      if (t) { e.preventDefault(); openPilgrimDrawer(); }
+    });
+    // W865 QA — __pilgrim() state; __pilgrimLetter(n, cleared) injects a preview letter.
+    window.__pilgrim = function () { return _plArc(); };
+    window.__pilgrimLetter = function (n, cleared) {
+      const a = _plArc(); const idx = Math.max(0, Math.min(PILGRIM_LETTERS.length - 1, (n | 0) - 1));
+      a.letters.push({ i: idx, cleared: cleared !== false, text: _plCompose(idx, cleared !== false), at: Date.now(), read: false });
+      a.unread = true; if (idx === 5) a.letter6At = Date.now(); _plSave(a); openPilgrimDrawer();
+    };
+  } catch (_) {}
   // Delegated opener — the profile card re-renders (W822 lesson).
   try {
     document.addEventListener('click', function (e) {
@@ -49666,6 +49836,27 @@
         }
       }
     } catch (_) {}
+    // W865 — the Gray Pilgrim's Correspondence line (his sheet only).
+    try {
+      let pll = document.getElementById('bfs-letters-line');
+      if (id === PILGRIM_ID) {
+        if (!pll && rankLabel && rankLabel.parentNode) {
+          pll = document.createElement('button');
+          pll.id = 'bfs-letters-line'; pll.type = 'button';
+          pll.className = 'bfs-letters-line';
+          pll.setAttribute('data-open-pilgrim', '');
+          rankLabel.parentNode.insertBefore(pll, rankLabel.nextSibling);
+        }
+        if (pll) {
+          const a = _plArc();
+          pll.innerHTML = '✉ THE CORRESPONDENCE · ' + a.letters.length + ' letter' + (a.letters.length === 1 ? '' : 's') +
+            (a.unread ? ' <span class="plw-unread">●</span>' : '') + ' ›';
+          pll.classList.remove('hidden');
+        }
+      } else if (pll) {
+        pll.classList.add('hidden');
+      }
+    } catch (_) {}
 
     // v3 Phase 1z.277C — Archetype identity row + disclaimer.
     // Display-only. Hides the whole row when the boss has no
@@ -65527,8 +65718,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
