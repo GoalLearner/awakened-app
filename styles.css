@@ -2974,6 +2974,21 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W857 (Wave 2) — BLOOD STILL HOT chip on the VS screen ───────────── */
+.ar-bloodhot-chip {
+  display: inline-block;
+  margin: 6px auto 0;
+  padding: 4px 12px;
+  border: 1px solid rgba(229, 72, 77, 0.55);
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.6px;
+  color: #ff6b6f;
+  background: rgba(229, 72, 77, 0.10);
+  box-shadow: 0 0 14px rgba(229, 72, 77, 0.25);
+  animation: sys-crunch-breathe 2.2s ease-in-out infinite;
+}
+
 /* ─── W856 (Wave 2) — the crunch pulse: crimson breathing vignette ──────
    Sits UNDER the arena overlay (12300) and every modal — ambient menace,
    never an obstruction. pointer-events none; removed when crunch clears. */
