@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w868'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w869'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1765,6 +1765,11 @@
     state.engaged_at = null;
     state.hunt_started_at = null;
     state.hunt_expires_at = null;
+    // W869 — stash-then-clear: the kill sites run AFTER this clear, so the
+    // seal's payout reads the stamp, not the live flag. Expiry/disengage
+    // clears re-stamp it and no kill follows them, so it can't go stale.
+    state._was_red_gate = state.red_gate === true;
+    state.red_gate = false;
     // v3 Phase 1z.63 — also clear flight-progress cache. Used by the
     // Ascendant Colossus's window resolver to mirror live flights
     // count for the detail label. Each new hunt starts fresh.
@@ -2508,6 +2513,27 @@
     // boss's normal cadence (the leech is the clock that actually presses).
     if (_bkRematch) state.hunt_expires_at = _engageNow + BREAK_REMATCH_WINDOW_MS;
     state.last_hunt_outcome = null;
+    // W869 — RED GATE roll: ~7% of C-rank+ engages seal the gate behind you.
+    // Deterministic per engage instant (djb2 of boss + timestamp — no server,
+    // no re-roll by re-opening the sheet). Never on a break rematch (the
+    // leech is already the pressure), never below C (rookie gates stay safe
+    // rooms). Sealed = no disengage; the window expiry still frees you.
+    // Payout: kill pays DOUBLE souls (own ledger row) + a second drop
+    // roll when the first comes up empty.
+    state.red_gate = false;
+    try {
+      if (!_bkRematch && !cfg.coopOnly && ['C', 'B', 'A', 'S'].indexOf(cfg.rank) !== -1) {
+        let h = 5381; const s = 'redgate:' + bossId + ':' + _engageNow;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+        if (Math.abs(h) % 100 < 7) {
+          state.red_gate = true;
+          try { _hapticTick('HEAVY'); } catch (_) {}
+          setTimeout(function () {
+            try { showSystemNotice({ title: 'RED GATE', body: 'The gate seals behind you. There is no walking away from this one — clear it and the rewards are doubled, or let the window run out and it releases you. Nothing more is asked. Nothing less is accepted.' }); } catch (_) {}
+          }, 600);
+        }
+      }
+    } catch (_) {}
     // v3 Phase 1z.63 — defensive reset for the flight-progress mirror
     // even though _clearBossHuntFields already zeros it on the prior
     // hunt's close. Belt-and-braces against a partial-migration shape.
@@ -2536,6 +2562,14 @@
     if (!cfg) return false;
     const state = getBossState(bossId);
     if (state.engaged !== true) return true; // already disengaged
+    // W869 — RED GATE: the abandon door is chained from the outside. The
+    // hunt still ends naturally at window expiry (the gate spits you out,
+    // no extra penalty) — but you cannot walk away mid-seal.
+    if (state.red_gate === true) {
+      try { _hapticTick('HEAVY'); } catch (_) {}
+      try { showHabitToast('The gate is sealed from the outside. Clear it — or let the window run out.'); } catch (_) {}
+      return false;
+    }
     // v3 Phase 1z.43 — also clear hunt-window fields on manual stop.
     _clearBossHuntFields(state);
     // Streak doesn't survive disengagement — re-engaging starts fresh.
@@ -22222,10 +22256,14 @@
         // W859 — THE WATCHER'S WRIT: +50% on writ-metric hunts (never stacks with Hunger).
         const _writBonus_1 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
         if (_writBonus_1 > 0) earnSouls(_writBonus_1, 'writ_bonus_kill_' + id);
+        // W869 — RED GATE: the sealed hunt pays double + a mercy re-roll below.
+        const _rgBonus_1 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
+        if (_rgBonus_1 > 0) earnSouls(_rgBonus_1, 'red_gate_kill_' + id);
         if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
-        const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
+        let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
+        if (_firstKill && !dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869 — the seal's second roll
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         // W847 (V1a) — this verified-kill path (sleep bosses: the most common
         // FIRST kill in the fleet) never armed the review or set firstBoss;
@@ -22350,8 +22388,12 @@
         // W859 — THE WATCHER'S WRIT (per-day boss path; never stacks with Hunger).
         const _writBonus_3 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
         if (_writBonus_3 > 0) earnSouls(_writBonus_3, 'writ_bonus_kill_' + id);
+        // W869 — RED GATE double + mercy re-roll (per-day boss path).
+        const _rgBonus_3 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
+        if (_rgBonus_3 > 0) earnSouls(_rgBonus_3, 'red_gate_kill_' + id);
         if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
-        const dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
+        let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
+        if (_firstKill && !dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
         // W847 (V1a) — same firstBoss + review arm as the sleep path above:
         // the step-boss (Steel Wolf) is the fleet's other most-common first kill.
@@ -22469,8 +22511,12 @@
     // W859 — THE WATCHER'S WRIT (single-shot kill path; never stacks with Hunger).
     const _writBonus_4 = writKillBonusSouls(cfg, reward);
     if (_writBonus_4 > 0) earnSouls(_writBonus_4, 'writ_bonus_kill_' + id);
+    // W869 — RED GATE double + mercy re-roll (single-shot kill path).
+    const _rgBonus_4 = (state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
+    if (_rgBonus_4 > 0) earnSouls(_rgBonus_4, 'red_gate_kill_' + id);
     try { _shadowOnBossKill(id); } catch (_) {}   // W862 — ARISE extraction window
-    const dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
+    let dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
+    if (!dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869 — the seal's second roll
     // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
     // counters above stay the Kill Log tab's source — this is the chronology).
     try {
@@ -50237,6 +50283,23 @@
     if (nameEl) nameEl.textContent = cfg.name;
     const rankLabel = document.getElementById('bfs-rank-label');
     if (rankLabel) rankLabel.textContent = cfg.rank + '-RANK BOSS';
+    // W869 — RED GATE state line (created on demand, above the shadow line).
+    try {
+      let rgl = document.getElementById('bfs-redgate-line');
+      if (!rgl && rankLabel && rankLabel.parentNode) {
+        rgl = document.createElement('div');
+        rgl.id = 'bfs-redgate-line'; rgl.className = 'bfs-redgate-line hidden';
+        rankLabel.parentNode.insertBefore(rgl, rankLabel.nextSibling);
+      }
+      if (rgl) {
+        if (state.red_gate === true && state.engaged) {
+          rgl.textContent = '⛧ RED GATE — sealed from the outside. No abandoning; rewards doubled.';
+          rgl.classList.remove('hidden');
+        } else {
+          rgl.classList.add('hidden');
+        }
+      }
+    } catch (_) {}
     // W862 — ARISE extraction status (element created on demand — the sheet
     // is static markup; this line is new Wave-2 surface).
     try {

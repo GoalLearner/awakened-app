@@ -2974,6 +2974,15 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W869 (Wave 2 Train B) — RED GATE state line ─────────────────────── */
+.bfs-redgate-line {
+  margin: 7px 0 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 1px; color: #ff6b6f;
+  animation: sys-crunch-breathe 2s ease-in-out infinite;
+}
+.bfs-redgate-line.hidden { display: none; }
+
 /* ─── W868 (Wave 2 Train B) — DUNGEON BREAK banner ────────────────────── */
 .break-banner {
   display: flex; align-items: center; gap: 12px;
