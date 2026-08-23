@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w871'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w872'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6709,6 +6709,154 @@
   }
   // W871 QA — __worldgate() cache; __worldgate(true) force-syncs.
   try { window.__worldgate = function (force) { if (force) _worldgateSync(true); return _wgCache(); }; } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W872 (Wave 2 Train B, S-tier #4 batch 1) — THE SYSTEM STIRS
+  //
+  // ~20 UNDOCUMENTED triggers evaluated against verified local data. They
+  // are never advertised: the first a hunter learns of one is the System
+  // window announcing it is already complete — souls + a permanent title
+  // chip on the ANOMALIES shelf (Settings → Help & About, appears only
+  // after the first secret falls... is FOUND). At the 2nd / 5th / 8th
+  // secret the System's own voice GLITCHES mid-announcement — two words
+  // redact, a forbidden line flashes, the UI snaps clean — and the
+  // fragment logs to the shelf. Batch 2 is AUTHORED BELOW but dormant
+  // (STIRS_BATCH2_LIVE=false) per the binding judge rule: the secret layer
+  // must keep dripping after batch 1 is mined out. The Nameless community
+  // ARG ships with batch 2 (it needs server state for the discovery race).
+  // ═══════════════════════════════════════════════════════════════════════
+  const STIRS_KEY = 'hb_stirs_v1';           // { fired: {id: ts}, dawns: {date:1}, fragments: [i] }
+  const STIRS_BATCH2_LIVE = false;
+  const STIRS_SOULS = { 1: 30, 2: 60, 3: 120 };
+  const STIRS_FORBIDDEN = [
+    'the tower was not built to be climbed',
+    'the first architect still holds the door',
+    'one hundred floors. one hundred locks.',
+  ];
+  function _stirsCtx() {
+    const ls = loadLeaderboardState() || {};
+    const today = getDeviceLocalDate();
+    const val = function (map, k) { return Number((ls[map] || {})[k]) || 0; };
+    const back = _writDayKeysBack(30);
+    return { ls: ls, today: today, val: val, back: back, hour: new Date().getHours(), dom: new Date().getDate() };
+  }
+  const STIRS_TRIGGERS = [
+    // ── Batch 1 — LIVE ──
+    { id: 'the_long_day',      tier: 1, title: 'THE LONG DAY',        line: 'Twenty thousand verified steps in a single day. The road noticed.', check: function (c) { if (c.val('steps_daily', c.today) >= 20000) return true; for (let i = 0; i < 7; i++) { if (c.val('steps_daily', c.back[i]) >= 20000) return true; } return false; } },
+    { id: 'dawn_watch',        tier: 2, title: 'THE DAWN WATCH',      line: 'Five dawns in seven days, awake before the sun. The System keeps those hours too.', check: function (c) { const s = _stirsLoad(); let n = 0; const cut = c.back[6]; Object.keys(s.dawns || {}).forEach(function (d) { if (d >= cut) n++; }); return n >= 5; } },
+    { id: 'the_late_seal',     tier: 1, title: 'THE LATE SEAL',       line: 'Every vow kept, sealed in the last hour of the day. Discipline does not sleep early.', check: function (c) { if (c.hour < 23) return false; try { const th = habits.filter(isScheduledToday); return th.length > 0 && th.every(function (h) { return isChecked(h.id); }); } catch (_) { return false; } } },
+    { id: 'four_mondays',      tier: 2, title: 'THE MONDAY OATH',     line: 'Four Mondays running, iron in hand. Most surrender the first.', check: function (c) { let n = 0; for (let i = 0; i < 30; i++) { const k = c.back[i]; if (!k) break; const d = new Date(k + 'T12:00:00'); if (d.getDay() === 1) { if (c.val('workout_daily', k) >= 10) n++; else break; } } return n >= 4; } },
+    { id: 'triple_hunt',       tier: 1, title: 'THE TRIPLE HUNT',     line: 'Three gates engaged at once. Greed — or courage. The ledger does not distinguish.', check: function () { try { return countEngagedBosses() >= 3; } catch (_) { return false; } } },
+    { id: 'century_stair',     tier: 2, title: 'THE CENTURY STAIR',   line: 'One hundred verified flights in a week. The Pilgrim slowed down to watch.', check: function (c) { let t = c.val('flights_daily', c.today); for (let i = 0; i < 7; i++) t += c.val('flights_daily', c.back[i]); return t >= 100; } },
+    { id: 'seven_quiet',       tier: 2, title: 'SEVEN QUIET NIGHTS',  line: 'Seven nights of true rest, unbroken. The Insomniac cannot look at you.', check: function (c) { for (let i = 0; i < 7; i++) { if (c.val('sleep_hours_daily', c.back[i]) < 7) return false; } return true; } },
+    { id: 'ten_of_ten',        tier: 3, title: 'TEN OF TEN THOUSAND', line: 'Ten thousand steps, ten days unbroken. This is what the old texts meant by walking the path.', check: function (c) { for (let i = 0; i < 10; i++) { if (c.val('steps_daily', c.back[i]) < 10000) return false; } return true; } },
+    { id: 'soul_hoard',        tier: 1, title: 'THE HOARD',           line: 'Five thousand souls, unspent. The Marketplace whispers your name.', check: function () { try { return getSoulsBalance() >= 5000; } catch (_) { return false; } } },
+    { id: 'the_empty_purse',   tier: 1, title: 'THE EMPTY PURSE',     line: 'A fortune earned, and nothing held back. The System respects a spender.', check: function () { try { return getSoulsBalance() <= 5 && _souls && _souls.totalEarned >= 1000; } catch (_) { return false; } } },
+    { id: 'thirteenth_floor',  tier: 1, title: 'THE THIRTEENTH',      line: 'Floor thirteen, on the thirteenth. The Tower has a sense of humor. It is not a kind one.', check: function (c) { try { return c.dom === 13 && (getAscentState().highestCleared | 0) >= 13; } catch (_) { return false; } } },
+    { id: 'kill_before_dawn',  tier: 2, title: 'THE DAWNLESS KILL',   line: 'A boss brought down before seven bells. It never saw the morning. Neither did you.', check: function () { try { const all = loadBosses(); for (const k in all) { const d = all[k] && all[k].last_defeated_at; if (d) { const t = new Date(d); if (Date.now() - t.getTime() < 86400000 && t.getHours() < 7) return true; } } } catch (_) {} return false; } },
+    { id: 'echo_walker',       tier: 2, title: 'THE ECHO WALKER',     line: 'Three friends avenged in the Tower. They kneel no more, because you would not allow it.', check: function () { return (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) >= 3; } },
+    { id: 'oath_twice_kept',   tier: 2, title: 'OATH, TWICE KEPT',    line: 'Two rookies raised under your name. The Hall keeps a separate page for that.', check: function () { return (parseInt(localStorage.getItem('hb_oathkeeper_count'), 10) || 0) >= 2; } },
+    { id: 'shadow_legion',     tier: 2, title: 'THE LEGION',          line: 'Four shadows march behind you. That is no longer an army. That is a procession.', check: function () { try { return Object.keys(_shLoad().extracted).length >= 4; } catch (_) { return false; } } },
+    { id: 'half_the_vault',    tier: 3, title: 'HALF THE VAULT',      line: 'Fifty relics held at once. The Collection Log turns its pages for you now.', check: function () { try { const inv = getInventory(); let n = 0; for (const k in inv) { if (inv[k] && inv[k].count > 0) n++; } return n >= 50; } catch (_) { return false; } } },
+    { id: 'fortnight_flawless',tier: 3, title: 'THE FLAWLESS FORTNIGHT', line: 'Fourteen perfect days, unbroken. The System checked its own records twice.', check: function () { try { return typeof perfectStreak !== 'undefined' && perfectStreak && (perfectStreak.streak | 0) >= 14; } catch (_) { return false; } } },
+    { id: 'gray_correspondent',tier: 1, title: 'THE CORRESPONDENT',   line: 'Four letters kept. He notices hunters who keep his letters.', check: function () { try { return _plArc().letters.length >= 4; } catch (_) { return false; } } },
+    { id: 'break_slayer',      tier: 2, title: 'THE BREAKER OF TWO',  line: 'Two escaped bosses hunted down in the open. The gates are starting to hold their breath.', check: function () { return (parseInt(localStorage.getItem('hb_breaker_count'), 10) || 0) >= 2; } },
+    { id: 'writ_faithful',     tier: 2, title: 'THE WATCHER’S FAVORITE', line: 'Four Writs fulfilled. It has stopped writing your name in pencil.', check: function () { return (parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0) >= 4; } },
+    // ── Batch 2 — AUTHORED, DORMANT (flips live with the Nameless ARG) ──
+    { id: 'b2_steel_month',    tier: 3, batch2: true, title: 'THE STEEL MONTH',    line: 'Thirty days of walking, none below eight thousand. The road has started walking with you.', check: function (c) { for (let i = 0; i < 30; i++) { if (c.val('steps_daily', c.back[i]) < 8000) return false; } return true; } },
+    { id: 'b2_25k',            tier: 3, batch2: true, title: 'THE MARATHON GHOST', line: 'Twenty-five thousand steps in one turning of the sun. The Wraith filed a complaint.', check: function (c) { if (c.val('steps_daily', c.today) >= 25000) return true; for (let i = 0; i < 7; i++) { if (c.val('steps_daily', c.back[i]) >= 25000) return true; } return false; } },
+    { id: 'b2_twelve_gates',   tier: 3, batch2: true, title: 'TWELVE GATES DARK',  line: 'Twelve different bosses brought down. The dungeon is running out of rooms to hide in.', check: function () { try { const all = loadBosses(); let n = 0; for (const k in all) { if (all[k] && (all[k].kill_count | 0) > 0) n++; } return n >= 12; } catch (_) { return false; } } },
+    { id: 'b2_sleep_iron',     tier: 2, batch2: true, title: 'REST AND IRON',      line: 'Trained hard and slept seven, five days running. The Sleepless Ascent sends its regards.', check: function (c) { for (let i = 0; i < 5; i++) { if (c.val('workout_daily', c.back[i]) < 10 || c.val('sleep_hours_daily', c.back[i]) < 7) return false; } return true; } },
+    { id: 'b2_flight_50_day',  tier: 3, batch2: true, title: 'THE SKYWARD DAY',    line: 'Fifty flights in a single day. The Worldspine felt footsteps on its back.', check: function (c) { if (c.val('flights_daily', c.today) >= 50) return true; for (let i = 0; i < 7; i++) { if (c.val('flights_daily', c.back[i]) >= 50) return true; } return false; } },
+    { id: 'b2_tower_40',       tier: 2, batch2: true, title: 'THE FORTIETH LOCK',  line: 'Forty floors of the Tower, opened. Sixty locks remain. The architect counts with you.', check: function () { try { return (getAscentState().highestCleared | 0) >= 40; } catch (_) { return false; } } },
+    { id: 'b2_pact_30',        tier: 3, batch2: true, title: 'THE UNBROKEN PACT',  line: 'A thirty-day flame with one hunter. Most marriages hold less.', check: function () { try { const f = ((_friendsCache || {}).friends || []); for (let i = 0; i < f.length; i++) { const p = _coopPactFor(f[i].user_id); if (p && (p.streak | 0) >= 30) return true; } } catch (_) {} return false; } },
+    { id: 'b2_hoard_20k',      tier: 3, batch2: true, title: 'THE DRAGON’S PILLOW', line: 'Twenty thousand souls held at once. Things with wings have noticed.', check: function () { try { return getSoulsBalance() >= 20000; } catch (_) { return false; } } },
+  ];
+  function _stirsLoad() {
+    try { const s = JSON.parse(localStorage.getItem(STIRS_KEY) || 'null') || {}; s.fired = s.fired || {}; s.dawns = s.dawns || {}; s.fragments = s.fragments || []; return s; }
+    catch (_) { return { fired: {}, dawns: {}, fragments: [] }; }
+  }
+  function _stirsSave(s) { try { localStorage.setItem(STIRS_KEY, JSON.stringify(s)); } catch (_) {} }
+  function _stirsTick() {
+    try {
+      const s = _stirsLoad();
+      // Dawn tracking (feeds THE DAWN WATCH).
+      const now = new Date();
+      if (now.getHours() < 6) { const k = getDeviceLocalDate(); if (!s.dawns[k]) { s.dawns[k] = 1; const cut = _writDayKeysBack(14)[13]; Object.keys(s.dawns).forEach(function (d) { if (d < cut) delete s.dawns[d]; }); _stirsSave(s); } }
+      const ctx = _stirsCtx();
+      for (let i = 0; i < STIRS_TRIGGERS.length; i++) {
+        const t = STIRS_TRIGGERS[i];
+        if (t.batch2 && !STIRS_BATCH2_LIVE) continue;
+        if (s.fired[t.id]) continue;
+        let hit = false;
+        try { hit = !!t.check(ctx); } catch (_) { hit = false; }
+        if (!hit) continue;
+        s.fired[t.id] = Date.now();
+        const count = Object.keys(s.fired).length;
+        const glitch = (count === 2 || count === 5 || count === 8);
+        if (glitch) s.fragments.push(STIRS_FORBIDDEN[Math.min(STIRS_FORBIDDEN.length - 1, s.fragments.length)]);
+        _stirsSave(s);
+        const souls = STIRS_SOULS[t.tier] || 30;
+        try { earnSouls(souls, 'stirs_' + t.id); } catch (_) {}
+        try { _hapticTick('SUCCESS'); } catch (_) {}
+        try {
+          showSystemNotice({
+            title: 'HIDDEN QUEST COMPLETE — ' + t.title,
+            body: t.line + '\n+' + souls + ' souls. This quest appears in no list. It never did.' + (glitch ? '\n\n█████ ██ ███ — ' + STIRS_FORBIDDEN[s.fragments.length - 1] + ' — ██████' : ''),
+          });
+        } catch (_) {}
+        break;   // one revelation per tick — secrets don't queue
+      }
+      // Reveal the shelf row once anything has been found.
+      try {
+        const btn = document.getElementById('settings-anomalies-btn');
+        if (btn && Object.keys(s.fired).length > 0) btn.classList.remove('hidden');
+      } catch (_) {}
+    } catch (_) {}
+  }
+  /** ANOMALIES shelf sheet: found secrets + silhouetted unfound count + fragments. */
+  function openAnomaliesShelf() {
+    try {
+      const old = document.getElementById('anomalies-shelf'); if (old) old.remove();
+      const s = _stirsLoad();
+      const live = STIRS_TRIGGERS.filter(function (t) { return !t.batch2 || STIRS_BATCH2_LIVE; });
+      const found = live.filter(function (t) { return s.fired[t.id]; });
+      const rows = found.map(function (t) {
+        return '<div class="shr-row"><div class="shr-main"><div class="shr-name">' + esc(t.title) + '</div><div class="shr-sub">' + esc(t.line) + '</div></div></div>';
+      }).join('');
+      const hidden = live.length - found.length;
+      const frag = s.fragments.length
+        ? '<div class="plw-letter plw-lore"><div class="plw-head">◈ RECOVERED FRAGMENTS</div><div class="plw-body">' + s.fragments.map(esc).join('<br>') + '</div></div>'
+        : '';
+      const ov = document.createElement('div');
+      ov.id = 'anomalies-shelf'; ov.className = 'sw-overlay';
+      ov.innerHTML =
+        '<div class="sw-window" role="dialog" aria-modal="true" aria-label="Anomalies">' +
+          '<div class="sw-titlebar">ANOMALIES</div>' +
+          (rows || '<div class="shr-empty">Nothing recorded. And yet the shelf exists.</div>') +
+          (hidden > 0 ? '<div class="shr-slots">' + hidden + ' UNDOCUMENTED QUEST' + (hidden === 1 ? '' : 'S') + ' REMAIN UNFOUND</div>' : '') +
+          frag +
+          '<button type="button" class="sw-close" aria-label="Close">CLOSE</button>' +
+        '</div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('on'); });
+      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+    } catch (e) { _logSwallow('anomalies:open', e); }
+  }
+  try {
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest && e.target.closest('[data-open-anomalies]');
+      if (t) { e.preventDefault(); openAnomaliesShelf(); }
+    });
+    // W872 QA — __stirs() state; __stirs('fire', id) forces one; __stirs('tick') evaluates now.
+    window.__stirs = function (op, id) {
+      if (op === 'tick') { _stirsTick(); return _stirsLoad(); }
+      if (op === 'fire' && id) { const s = _stirsLoad(); delete s.fired[id]; _stirsSave(s); const t = STIRS_TRIGGERS.filter(function (x) { return x.id === id; })[0]; if (t) { const orig = t.check; t.check = function () { return true; }; _stirsTick(); t.check = orig; } return _stirsLoad(); }
+      return _stirsLoad();
+    };
+  } catch (_) {}
 
   // W868 QA — __break() state; __break('force', bossId) spawns an active break now.
   try {
@@ -66368,8 +66516,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

@@ -3362,7 +3362,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1277"></script>
+  <script src="app.js?v=1278"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3864,6 +3864,16 @@
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">What's New</div>
               <div class="settings-v2-fsub">Everything recent, in one sheet</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <!-- W872 — ANOMALIES shelf. Hidden until the first hidden quest is
+               found (_stirsTick reveals it); the shelf itself never advertises
+               what remains, only that something does. -->
+          <button id="settings-anomalies-btn" class="settings-v2-frow settings-v2-rowbtn hidden" type="button" data-open-anomalies>
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Anomalies</div>
+              <div class="settings-v2-fsub">Records that should not exist</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
