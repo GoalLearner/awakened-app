@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w867'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w868'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2476,6 +2476,15 @@
         if (typeof showHabitToast === 'function') showHabitToast('The altar has already paid for this hunt.');
       }
     } catch (_) {}
+    // W868 — the loose boss's rematch is always free (the leech is the price).
+    let _bkRematch = false;
+    try {
+      const _bk = _breakActive();
+      if (_bk && _bk.bossId === bossId) {
+        _bkRematch = true;
+        if (cost > 0) { cost = 0; if (typeof showHabitToast === 'function') showHabitToast('The rematch costs nothing. End the break.'); }
+      }
+    } catch (_) {}
     const balance = getSoulsBalance();
     if (balance < cost) {
       try {
@@ -2495,6 +2504,9 @@
     // run so the new hunt renders cleanly.
     state.hunt_started_at = _engageNow;
     state.hunt_expires_at = getBossHuntExpiresAtMs(cfg, _engageNow);
+    // W868 — a break rematch gets the generous 72h window regardless of the
+    // boss's normal cadence (the leech is the clock that actually presses).
+    if (_bkRematch) state.hunt_expires_at = _engageNow + BREAK_REMATCH_WINDOW_MS;
     state.last_hunt_outcome = null;
     // v3 Phase 1z.63 — defensive reset for the flight-progress mirror
     // even though _clearBossHuntFields already zeros it on the prior
@@ -4686,6 +4698,18 @@
     // AFTER persistSouls so balance_after reflects the new value.
     try { recordSoulsTransaction(amount, source); } catch (e) { _logSwallow('earnSouls:ledger', e); }
     refreshSoulsDisplay();
+    // W868 — DUNGEON BREAK leech: while a boss runs loose, it steals 5% of
+    // every soul you earn (its own visible spend row — the ledger stays
+    // honest). Guarded against recursion by the source prefix.
+    try {
+      if (typeof _breakActive === 'function' && String(source || '').indexOf('break_') !== 0) {
+        const b = _breakActive();
+        if (b) {
+          const skim = Math.floor(amount * 0.05);
+          if (skim > 0) spendSouls(skim, 'break_leech_' + b.bossId);
+        }
+      }
+    } catch (_) {}
   }
 
   function spendSouls(amount, sink) {
@@ -6447,6 +6471,90 @@
       if (t) { e.preventDefault(); openOathSheet(); }
     });
     window.__oaths = function () { return _oathsCache; };   // W867 QA
+  } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W868 (Wave 2 Train B, A-tier #7 pc 1) — DUNGEON BREAK
+  //
+  // Failure becomes live fiction: 24h after a LOST solo hunt (C-rank and
+  // above — the E gate stays a safe classroom), the boss ESCAPES its gate
+  // and squats on your home screen, leeching 5% of every soul you earn
+  // (its own visible ledger row) until you win the rematch. The rematch is
+  // generous where it counts: engage cost WAIVED, a fresh 72h window —
+  // but the leech runs until the boss is down. One break at a time. Win →
+  // BREAKER title tally + the original rewards through the normal kill
+  // path. (The 1.25× escalated-condition variant is deferred — threshold
+  // scaling cuts across six eval branches; the fiction holds without it:
+  // "it is weakened from its escape — but it knows you now.")
+  // ═══════════════════════════════════════════════════════════════════════
+  const BREAK_KEY = 'hb_break_v1';
+  const BREAK_DELAY_MS = 24 * 3600 * 1000;
+  const BREAK_REMATCH_WINDOW_MS = 72 * 3600 * 1000;
+  function _breakLoad() { try { return JSON.parse(localStorage.getItem(BREAK_KEY) || 'null'); } catch (_) { return null; } }
+  function _breakSave(b) { try { if (b) localStorage.setItem(BREAK_KEY, JSON.stringify(b)); else localStorage.removeItem(BREAK_KEY); } catch (_) {} }
+  function _breakActive() { const b = _breakLoad(); return (b && b.active) ? b : null; }
+  function _breakTick() {
+    try {
+      let b = _breakLoad();
+      // 1. Activation: pending → active after 24h.
+      if (b && !b.active && Date.now() - b.pendingAt >= BREAK_DELAY_MS) {
+        b.active = true; b.activeSince = Date.now();
+        _breakSave(b);
+        const cfg = BOSSES[b.bossId] || {};
+        try { _hapticTick('HEAVY'); } catch (_) {}
+        try { showSystemNotice({ title: 'DUNGEON BREAK', body: (cfg.name || 'The boss') + ' has broken out of its gate. It leeches 5% of every soul you earn while it runs loose. Hunt it down — the rematch is free.' }); } catch (_) {}
+      }
+      // 2. Resolution: a kill on the loose boss ends the break.
+      if (b && b.active) {
+        const st = getBossState(b.bossId);
+        const killedAt = st && st.last_defeated_at ? Date.parse(st.last_defeated_at) : 0;
+        if (killedAt && killedAt > b.activeSince) {
+          _breakSave(null);
+          try { const n = (parseInt(localStorage.getItem('hb_breaker_count'), 10) || 0) + 1; localStorage.setItem('hb_breaker_count', String(n)); } catch (_) {}
+          try { _hapticTick('SUCCESS'); } catch (_) {}
+          try { showNoticeCard({ eyebrow: 'BREAKER', title: 'The break is sealed', body: 'You hunted it down in the open. The gate takes it back — and remembers who put it there.' }); } catch (_) {}
+          try { renderBreakBanner(); } catch (_) {}
+          return;
+        }
+      }
+      // 3. Detection: a fresh un-marked loss on a C+ solo boss spawns a pending break.
+      if (!b) {
+        const all = loadBosses();
+        for (const id in all) {
+          const st = all[id]; if (!st) continue;
+          if (st.last_hunt_outcome !== 'expired') { if (st.break_marked) { st.break_marked = false; setBossState(id, st); } continue; }
+          if (st.break_marked) continue;
+          const cfg = BOSSES[id];
+          if (!cfg || cfg.coopOnly || cfg.rank === 'E' || cfg.rank === 'D') continue;   // rookies + early D climbs stay unhaunted
+          st.break_marked = true; setBossState(id, st);
+          _breakSave({ bossId: id, pendingAt: Date.now(), active: false });
+          break;   // one at a time
+        }
+      }
+      try { renderBreakBanner(); } catch (_) {}
+    } catch (_) {}
+  }
+  function renderBreakBanner() {
+    const host = document.getElementById('break-banner');
+    if (!host) return;
+    const b = _breakActive();
+    if (!b) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    const cfg = BOSSES[b.bossId] || {};
+    host.innerHTML =
+      '<img class="bb-art" src="' + esc(getBossArtPath(b.bossId)) + '" alt="" onerror="this.style.display=\'none\'">' +
+      '<div class="bb-main"><div class="bb-eyebrow">DUNGEON BREAK</div>' +
+      '<div class="bb-line">' + esc(cfg.name || 'A boss') + ' is loose. 5% of every soul you earn leaks to it.</div>' +
+      '<div class="bb-sub">THE REMATCH IS FREE · 72H WINDOW ›</div></div>';
+    host.classList.remove('hidden');
+    host.onclick = function () { try { switchTab('quests'); setTimeout(function () { try { openBossFullScreen(b.bossId); } catch (_) {} }, 300); } catch (_) {} };
+  }
+  // W868 QA — __break() state; __break('force', bossId) spawns an active break now.
+  try {
+    window.__break = function (op, bossId) {
+      if (op === 'force') { _breakSave({ bossId: bossId || 'the_furnace_knight', pendingAt: Date.now() - BREAK_DELAY_MS - 1, active: false }); _breakTick(); }
+      if (op === 'clear') { _breakSave(null); renderBreakBanner(); }
+      return _breakLoad();
+    };
   } catch (_) {}
 
   // W866 QA — __dd() state; __dd('start') forces the event; __dd('seal') seals today.
@@ -66037,8 +66145,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} try { _breakTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
