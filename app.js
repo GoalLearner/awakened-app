@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w875'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w876'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -57781,73 +57781,9 @@
     }, { once: true });
   }
 
-  // v3 Phase 1z.230 — Atmospheric "What's Coming · Combat Reveal" sheet.
-  // Lazy ember spawn keeps cost at zero while hidden. The sheet is a
-  // pure CSS scene (silhouettes, circle, rift, sigil); JS only manages
-  // the 16 ambient ember nodes on open, and removes them on close.
-  function _wcSpawnEmbers() {
-    const host = document.getElementById('wc-embers');
-    if (!host) return;
-    // Idempotent: clear any prior embers before respawning.
-    host.innerHTML = '';
-    const reduced = (() => {
-      try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-      catch (_) { return false; }
-    })();
-    if (reduced) return;  // CSS already disables ember keyframes; skip DOM cost.
-    const n = 16;
-    for (let i = 0; i < n; i++) {
-      const e = document.createElement('span');
-      e.className = 'wc-ember';
-      // Pseudo-random per-position values; pulled from i so the same set
-      // shows each open (Date.now / Math.random would be nondeterministic
-      // and harder to QA). Mix indices to break visual banding.
-      const seed = (i * 0x9E37 + 0x123) % 1000 / 1000;
-      const seed2 = ((i + 7) * 0x6BA1 + 0x9F) % 1000 / 1000;
-      const x   = 12 + seed * 76;            // % across
-      const dur = 6 + seed2 * 6;             // seconds
-      const dly = -seed * 12;                // seconds (negative → already in flight)
-      const sz  = 2 + seed2 * 2.4;
-      e.style.left  = x.toFixed(2) + '%';
-      e.style.bottom = (70 + seed * 120).toFixed(1) + 'px';
-      e.style.width  = sz.toFixed(1) + 'px';
-      e.style.height = sz.toFixed(1) + 'px';
-      e.style.animationDuration = dur.toFixed(2) + 's';
-      e.style.animationDelay    = dly.toFixed(2) + 's';
-      host.appendChild(e);
-    }
-  }
-  function _wcClearEmbers() {
-    const host = document.getElementById('wc-embers');
-    if (host) host.innerHTML = '';
-  }
-  function openWhatsComingSheet() {
-    const sheet   = document.getElementById('whats-coming-sheet');
-    const overlay = document.getElementById('whats-coming-overlay');
-    if (!sheet) return;
-    // Open the sheet first, then close Settings underneath so the
-    // transition feels continuous (the existing closeSettings runs
-    // its own fade-out independently).
-    if (overlay) overlay.classList.remove('hidden');
-    sheet.classList.remove('hidden');
-    // Defer ember spawn one frame so the opening transition starts
-    // without competing for layout/paint.
-    requestAnimationFrame(() => { try { _wcSpawnEmbers(); } catch (_) {} });
-    // Close Settings underneath. If Settings isn't open this is a no-op.
-    try {
-      const ss = document.getElementById('settings-sheet');
-      if (ss && !ss.classList.contains('hidden')) closeSettings();
-    } catch (_) {}
-  }
-  function closeWhatsComingSheet() {
-    const sheet   = document.getElementById('whats-coming-sheet');
-    const overlay = document.getElementById('whats-coming-overlay');
-    if (!sheet) return;
-    // Tear down embers immediately — no point animating during fade-out.
-    _wcClearEmbers();
-    sheet.classList.add('hidden');
-    if (overlay) overlay.classList.add('hidden');
-  }
+  // W876 — the 1z.230 "What's Coming · Combat Reveal" teaser (Settings row +
+  // atmospheric sheet) was removed at the owner's call: the combat it teased
+  // has shipped, so the promise read as stale.
 
   // ── BOTTOM-SHEET DISMISS GESTURE (reusable) ──────────────
   // Attaches swipe/drag-down-to-dismiss to a bottom sheet element.
@@ -66349,23 +66285,9 @@
       }
     }
 
-    // v3 Phase 1z.230 — Settings → "What's Coming" opens the atmospheric
-    // Combat Reveal sheet. Vibe-first, no CTA. Embers spawn on open and
-    // tear down on close so the page costs nothing while hidden.
-    //
-    // v3 Phase 1z.231 — promoted from a small bottom link to a top hero
-    // card (#settings-whats-coming-top). The old #settings-whats-coming-link
-    // ID is still wired here as a fallback in case cached HTML lingers.
+    // W876 — the 1z.230/1z.231 "What's Coming" wiring lived here; row and
+    // sheet are gone (see the removal note above the dismiss-gesture helper).
     {
-      const wcTop = document.getElementById('settings-whats-coming-top');
-      const wcBtn = document.getElementById('settings-whats-coming-link');
-      const onOpen = () => { try { openWhatsComingSheet(); } catch (_) {} };
-      if (wcTop) wcTop.addEventListener('click', onOpen);
-      if (wcBtn) wcBtn.addEventListener('click', onOpen);
-      const wcClose   = document.getElementById('whats-coming-close');
-      const wcOverlay = document.getElementById('whats-coming-overlay');
-      if (wcClose)   wcClose.addEventListener('click', closeWhatsComingSheet);
-      if (wcOverlay) wcOverlay.addEventListener('click', closeWhatsComingSheet);
       // v3 Phase 1z.282 — Field Manual entry point in Settings.
       // Clicking the row opens the Field Manual bottom sheet hosted
       // by The First Awakened. No state stored on Settings side —
@@ -66433,13 +66355,6 @@
             if (typeof showHabitToast === 'function') showHabitToast('Nothing to restore.');
           });
         } catch (_) {}
-      });
-      // ESC closes (web/dev); harmless on iOS.
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          const sheet = document.getElementById('whats-coming-sheet');
-          if (sheet && !sheet.classList.contains('hidden')) closeWhatsComingSheet();
-        }
       });
     }
 
