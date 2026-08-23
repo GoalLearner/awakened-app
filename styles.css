@@ -2974,6 +2974,19 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W858 (Wave 2) — the boss watches you back: hero parallax ──────────
+   Live tilt writes transform inline; this class is the no-gyro fallback
+   (a slow autonomous drift so the scene breathes on every device). The
+   1.06 overscan keeps edges hidden under shift. */
+#bfs-hero-img { will-change: transform; }
+.bfs-hero-drift {
+  animation: bfs-hero-drift 9s ease-in-out infinite alternate;
+}
+@keyframes bfs-hero-drift {
+  0%   { transform: translate3d(-4px, -2px, 0) scale(1.06); }
+  100% { transform: translate3d(4px, 3px, 0) scale(1.06); }
+}
+
 /* ─── W857 (Wave 2) — BLOOD STILL HOT chip on the VS screen ───────────── */
 .ar-bloodhot-chip {
   display: inline-block;

@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w857'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w858'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -48838,6 +48838,9 @@
       heroImg.alt = cfg.name;
       setBossImage(heroImg, id);
     }
+    // W858 — the boss watches you back (fresh listener per open; re-opens
+    // via refreshBossFullScreenIfOpen re-enter here, so stop first).
+    try { _bfsParallaxStop(); _bfsParallaxStart(); } catch (_) {}
 
     // Name + rank label
     const nameEl = document.getElementById('bfs-name');
@@ -49344,6 +49347,47 @@
     }
   }
 
+  // ── W858 (Wave 2, ACKNOWLEDGED pt 4) — the boss watches you back ────────
+  // Gyro parallax on the hunt sheet's hero art. NO permission prompt ever:
+  // a deviceorientation listener attaches on open, and only if events
+  // actually deliver does live tilt engage (Capacitor WKWebView delivers
+  // them without the Safari permission gate; where they don't arrive, a
+  // slow CSS drift keeps the scene breathing instead). The art renders at
+  // scale(1.06) overscan so the shift never reveals edges. Detached on
+  // close; reduced-motion gets a static scene; writes throttled to ~30Hz.
+  let _bfsTiltHandler = null;
+  function _bfsParallaxStart() {
+    const img = document.getElementById('bfs-hero-img');
+    if (!img) return;
+    let reduced = false;
+    try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    if (reduced) return;
+    img.classList.add('bfs-hero-drift');
+    let live = false, lastWrite = 0;
+    const h = function (e) {
+      const gx = (typeof e.gamma === 'number') ? e.gamma : null;
+      const gy = (typeof e.beta === 'number') ? e.beta : null;
+      if (gx == null || gy == null) return;
+      const now = Date.now();
+      if (now - lastWrite < 33) return;
+      lastWrite = now;
+      if (!live) { live = true; img.classList.remove('bfs-hero-drift'); }
+      const x = Math.max(-8, Math.min(8, -gx * 0.35));
+      const y = Math.max(-6, Math.min(6, -(gy - 45) * 0.22));   // ~45° = natural phone hold
+      img.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) scale(1.06)';
+    };
+    _bfsTiltHandler = h;
+    try { window.addEventListener('deviceorientation', h, true); } catch (_) {}
+  }
+  function _bfsParallaxStop() {
+    if (_bfsTiltHandler) {
+      try { window.removeEventListener('deviceorientation', _bfsTiltHandler, true); } catch (_) {}
+      _bfsTiltHandler = null;
+    }
+    const img = document.getElementById('bfs-hero-img');
+    if (img) { img.classList.remove('bfs-hero-drift'); img.style.transform = ''; }
+  }
+
   // Tracks the boss currently shown in the full-screen modal so
   // engage/disengage helpers can refresh the visible state without
   // each helper needing to re-resolve which boss is on screen.
@@ -49383,6 +49427,7 @@
     const overlay = document.getElementById('boss-fs-overlay');
     if (!overlay) return;
     if (overlay.classList.contains('hidden')) return;
+    try { _bfsParallaxStop(); } catch (_) {}   // W858 — release the gyro listener
     overlay.classList.add('hidden');
     document.body.classList.remove('bfs-locked');
     // Reset scroll position so re-opening starts from the top.
