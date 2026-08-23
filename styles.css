@@ -2974,6 +2974,36 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W855 (Wave 2) — ACKNOWLEDGED: the System seizes the device ────────
+   A hard CUT to pure black (no fade-in — the interruption IS the effect),
+   held above every surface including cinematics (99000 layer rule), then
+   the System's line types itself in terminal blue. .ack-out releases. */
+.ack-overlay {
+  position: fixed; inset: 0; z-index: 99500;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.38s ease;
+}
+.ack-overlay.ack-out { opacity: 0; pointer-events: none; }
+.ack-line {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 3px;
+  color: #8fb8e8;
+  text-shadow: 0 0 18px rgba(126, 166, 217, 0.55);
+  max-width: 82%;
+  text-align: center;
+  line-height: 1.8;
+  min-height: 1.8em;
+}
+.ack-line::after {
+  content: '▍';
+  color: rgba(143, 184, 232, 0.7);
+  animation: ack-caret 0.9s steps(1) infinite;
+}
+@keyframes ack-caret { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
 /* W848 (V1e) — category tint: the toast's ring + eyebrow take the achievement
    family's color (set via data-ach-cat on #ach-popup). Neutral 'general'
    (stat bonuses, weekend warrior) keeps the violet default above. */
