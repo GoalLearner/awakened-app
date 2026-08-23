@@ -2268,6 +2268,52 @@
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
 
+  // W867 — THE OATHBOUND: swear / read / claim.
+  async function swearOath(rookieUserId) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/oaths', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + u.jwt },
+        body: JSON.stringify({ rookie_user_id: rookieUserId }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, id: data.id, expires_at: data.expires_at };
+      return { ok: false, code: (data && data.error) || 'ERROR', reason: data && data.detail };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function fetchOaths() {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/oaths/mine', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + u.jwt },
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, oaths: data.oaths || [], souls: data.souls || 50 };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+  async function claimOath(oathId) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    try {
+      const res = await fetch(BACKEND_URL + '/v1/oaths/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + u.jwt },
+        body: JSON.stringify({ oath_id: oathId }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (res.status === 200 && data && data.ok) return { ok: true, first: !!data.first, souls: data.souls || 0 };
+      return { ok: false, code: (data && data.error) || 'ERROR' };
+    } catch (_) { return { ok: false, code: 'NETWORK' }; }
+  }
+
   // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
   async function fetchWeeklyHunger() {
     const u = readUser();
@@ -2295,6 +2341,10 @@
     claimInviteRewards,
     // W845 — weekly hunger override
     fetchWeeklyHunger,
+    // W867 — the Oathbound
+    swearOath,
+    fetchOaths,
+    claimOath,
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,

@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w866'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w867'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6299,6 +6299,156 @@
       '<div class="dd-progress">' + val.toLocaleString('en-US') + ' / ' + cmd.need.toLocaleString('en-US') + '</div>';
     host.classList.remove('hidden');
   }
+  // ═══════════════════════════════════════════════════════════════════════
+  // W867 (Wave 2 Train B) — THE OATHBOUND, client half.
+  //
+  // Backend: POST /v1/oaths (swear), GET /v1/oaths/mine, POST /v1/oaths/claim;
+  // fulfillment fires server-side when the rookie's profile mirror first
+  // reports a kill (migration 0051, worker a16cebdd). Client: a Status-tab
+  // strip for C+ mentors with eligible zero-kill friends (and for rookies
+  // under a live oath) → a sheet with SWEAR buttons + oath states; a boot
+  // sync that AUTO-CLAIMS fulfilled sides (server flips each claim flag
+  // exactly once — the co-op award model — so the local grant can't dupe).
+  // Identity matching is by alias (unique server-side); flat 50 souls/side.
+  // ═══════════════════════════════════════════════════════════════════════
+  let _oathsCache = null;   // { at, oaths[], souls }
+  function _oathMyAlias() {
+    try { const u = (window.Auth && Auth.getCurrentUser && Auth.getCurrentUser()) || null; if (u && u.alias) return u.alias; } catch (_) {}
+    return (typeof playerName === 'string' && playerName) || 'Hunter';
+  }
+  function _oathMentorEligible() {
+    try { return ['C', 'B', 'A', 'S', 'S+'].indexOf((getRank(totalPoints) || {}).id) !== -1; } catch (_) { return false; }
+  }
+  function _oathEligibleRookies() {
+    try {
+      if (!_oathMentorEligible()) return [];
+      const friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
+      const oaths = (_oathsCache && _oathsCache.oaths) || [];
+      return friends.filter(function (f) {
+        if (!f || !f.user_id) return false;
+        const kills = Number(f.bossesSlainTotal);
+        if (!(Number.isFinite(kills) && kills === 0)) return false;   // unknown ≠ zero
+        for (let i = 0; i < oaths.length; i++) {
+          const o = oaths[i];
+          if (o.status === 'pending' && o.rookie_alias === f.alias) return false;   // already under oath
+        }
+        return true;
+      });
+    } catch (_) { return []; }
+  }
+  function _oathBootSync() {
+    try {
+      if (!(window.Auth && typeof Auth.fetchOaths === 'function')) return;
+      Auth.fetchOaths().then(function (r) {
+        if (!(r && r.ok)) return;
+        _oathsCache = { at: Date.now(), oaths: r.oaths || [], souls: r.souls || 50 };
+        const me = _oathMyAlias();
+        (_oathsCache.oaths || []).forEach(function (o) {
+          if (o.status !== 'fulfilled') return;
+          const asMentor = o.mentor_alias === me && !o.mentor_claimed;
+          const asRookie = o.rookie_alias === me && !o.rookie_claimed;
+          if (!asMentor && !asRookie) return;
+          Auth.claimOath(o.id).then(function (c) {
+            if (!(c && c.ok && c.first && c.souls > 0)) return;
+            try { earnSouls(c.souls, 'oath_' + (asMentor ? 'keeper' : 'tempered') + '_' + o.id); } catch (_) {}
+            try { _hapticTick('SUCCESS'); } catch (_) {}
+            if (asMentor) {
+              try { const n = (parseInt(localStorage.getItem('hb_oathkeeper_count'), 10) || 0) + 1; localStorage.setItem('hb_oathkeeper_count', String(n)); } catch (_) {}
+              try { showNoticeCard({ eyebrow: 'OATHKEEPER', title: 'The oath is fulfilled', body: o.rookie_alias + ' took their first kill under your oath. +' + c.souls + ' souls. You believed first.' }); } catch (_) {}
+            } else {
+              try { localStorage.setItem('hb_tempered_by', o.mentor_alias || ''); } catch (_) {}
+              try { showNoticeCard({ eyebrow: 'TEMPERED', title: 'Tempered by ' + (o.mentor_alias || 'a hunter'), body: 'Your first kill, witnessed under an oath. +' + c.souls + ' souls. Carry the name that believed first.' }); } catch (_) {}
+            }
+            try { renderOathStrip(); } catch (_) {}
+          }).catch(function () {});
+        });
+        try { renderOathStrip(); } catch (_) {}
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  function renderOathStrip() {
+    const host = document.getElementById('oath-strip');
+    if (!host) return;
+    try {
+      const me = _oathMyAlias();
+      const oaths = (_oathsCache && _oathsCache.oaths) || [];
+      const myPendingAsRookie = oaths.filter(function (o) { return o.status === 'pending' && o.rookie_alias === me; })[0];
+      const rookies = _oathEligibleRookies();
+      const pendingAsMentor = oaths.filter(function (o) { return o.status === 'pending' && o.mentor_alias === me; });
+      if (myPendingAsRookie) {
+        const daysLeft = Math.max(1, Math.ceil((myPendingAsRookie.expires_at - Date.now()) / 86400000));
+        host.innerHTML = '⚔ OATHBOUND — ' + esc(myPendingAsRookie.mentor_alias) + ' believes your first kill comes. ' + daysLeft + 'd left ›';
+      } else if (rookies.length || pendingAsMentor.length) {
+        host.innerHTML = '⚔ THE OATHBOUND — ' +
+          (pendingAsMentor.length ? pendingAsMentor.length + ' oath' + (pendingAsMentor.length === 1 ? '' : 's') + ' sworn' : rookies.length + ' rookie' + (rookies.length === 1 ? '' : 's') + ' await an oath') + ' ›';
+      } else { host.classList.add('hidden'); host.innerHTML = ''; return; }
+      host.classList.remove('hidden');
+    } catch (_) { host.classList.add('hidden'); }
+  }
+  function openOathSheet() {
+    try {
+      const old = document.getElementById('oath-sheet'); if (old) old.remove();
+      const me = _oathMyAlias();
+      const oaths = (_oathsCache && _oathsCache.oaths) || [];
+      const mine = oaths.filter(function (o) { return o.mentor_alias === me || o.rookie_alias === me; });
+      const rookies = _oathEligibleRookies();
+      const oathRows = mine.map(function (o) {
+        const asMentor = o.mentor_alias === me;
+        const other = asMentor ? o.rookie_alias : o.mentor_alias;
+        const state = o.status === 'pending'
+          ? Math.max(1, Math.ceil((o.expires_at - Date.now()) / 86400000)) + 'd LEFT'
+          : o.status.toUpperCase();
+        return '<div class="shr-row"><div class="shr-main"><div class="shr-name">' + (asMentor ? 'Over ' : 'From ') + esc(other) + '</div>' +
+          '<div class="shr-sub">' + (asMentor ? 'YOU SWORE' : 'SWORN OVER YOU') + ' · ' + esc(state) + '</div></div></div>';
+      }).join('');
+      const rookieRows = rookies.map(function (f) {
+        return '<div class="shr-row"><div class="shr-main"><div class="shr-name">' + esc(f.alias) + '</div>' +
+          '<div class="shr-sub">ZERO KILLS · AWAITING A FIRST GATE</div></div>' +
+          '<button type="button" class="shr-toggle" data-oath-swear="' + esc(f.user_id) + '" data-oath-alias="' + esc(f.alias) + '">SWEAR</button></div>';
+      }).join('');
+      const ov = document.createElement('div');
+      ov.id = 'oath-sheet'; ov.className = 'sw-overlay';
+      ov.innerHTML =
+        '<div class="sw-window" role="dialog" aria-modal="true" aria-label="The Oathbound">' +
+          '<div class="sw-titlebar">THE OATHBOUND</div>' +
+          '<div class="shr-slots">SWEAR OVER A ZERO-KILL FRIEND · 14 DAYS · BOTH SIDES EARN ' + ((_oathsCache && _oathsCache.souls) || 50) + ' SOULS AT THEIR FIRST KILL</div>' +
+          (oathRows || '') + (rookieRows || '') +
+          (!oathRows && !rookieRows ? '<div class="shr-empty">No oaths, no waiting rookies. Befriend a hunter who has never taken a kill — then believe first.</div>' : '') +
+          '<div class="sw-foot">TWO OATHS AT A TIME. IDLE OATHS EXPIRE PENALTY-FREE.</div>' +
+          '<button type="button" class="sw-close" aria-label="Close">CLOSE</button>' +
+        '</div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('on'); });
+      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov) { close(); return; }
+        const t = e.target.closest && e.target.closest('[data-oath-swear]');
+        if (!t) return;
+        const uid = t.getAttribute('data-oath-swear');
+        const alias = t.getAttribute('data-oath-alias') || 'them';
+        t.disabled = true; t.textContent = 'SWEARING…';
+        Auth.swearOath(uid).then(function (r) {
+          if (r && r.ok) {
+            try { showHabitToast('The oath is sworn. ' + alias + ' has 14 days — and your belief.'); } catch (_) {}
+            _oathBootSync();
+            setTimeout(function () { try { openOathSheet(); } catch (_) {} }, 600);
+          } else {
+            t.disabled = false; t.textContent = 'SWEAR';
+            try { showHabitToast(r && r.code === 'OATH_CAP' ? 'Two oaths at a time. Keep the ones you have.' : 'The oath would not take. Try again.'); } catch (_) {}
+          }
+        }).catch(function () { t.disabled = false; t.textContent = 'SWEAR'; });
+      });
+      const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+    } catch (e) { _logSwallow('oathSheet:open', e); }
+  }
+  try {
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest && e.target.closest('[data-open-oaths]');
+      if (t) { e.preventDefault(); openOathSheet(); }
+    });
+    window.__oaths = function () { return _oathsCache; };   // W867 QA
+  } catch (_) {}
+
   // W866 QA — __dd() state; __dd('start') forces the event; __dd('seal') seals today.
   try {
     window.__dd = function (op) {
@@ -32795,12 +32945,15 @@
         // W862 — the Shadow Army strip (renderShadowStrip fills it post-render;
         // hidden until the first shadow rises).
         '<button type="button" id="shadow-strip" class="shadow-strip hidden" data-open-shadows aria-label="Open your Shadow Army"></button>' +
+        // W867 — the Oathbound strip (mentors with waiting rookies; rookies under oath).
+        '<button type="button" id="oath-strip" class="shadow-strip oath-strip hidden" data-open-oaths aria-label="Open the Oathbound"></button>' +
         '<button type="button" class="bks-share-cta bks-share-cta--block sc-share-card-btn" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
       '</div>';
 
     requestAnimationFrame(() => {
       buildRadarChart();
       try { renderShadowStrip(); } catch (_) {}   // W862 — the card just re-rendered; refill the army strip
+      try { renderOathStrip(); } catch (_) {}     // W867 — same for the Oathbound strip
     });
 
     // v3 Phase 1j — edit button only renders when name is not yet
@@ -65885,7 +66038,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _oathBootSync(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

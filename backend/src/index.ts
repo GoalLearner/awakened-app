@@ -98,6 +98,8 @@ import { sweepWinBackPushes } from './lib/win-back';
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 // W845 (Train 5, E2) — weekly-hunger owner override read.
 import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
+// W867 (Wave 2 Train B) — THE OATHBOUND mentor system.
+import { handleOathSwear, handleOathsMine, handleOathClaim } from './handlers/oaths';
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
   handleAasaGet,
@@ -348,6 +350,13 @@ export default {
             // W845 (Train 5, E2) — owner override for the weekly hungered
             // boss; null = the client's deterministic pick stands.
             response = await handleWeeklyHungerGet(request, env, session);
+          } else if (path === '/v1/oaths' && method === 'POST') {
+            // W867 — swear an oath over a zero-kill friend.
+            response = await handleOathSwear(request, env, session);
+          } else if (path === '/v1/oaths/mine' && method === 'GET') {
+            response = await handleOathsMine(request, env, session);
+          } else if (path === '/v1/oaths/claim' && method === 'POST') {
+            response = await handleOathClaim(request, env, session);
           } else if (path === '/v1/users/me/client-errors' && method === 'POST') {
             // W746 — uncaught-JS-error ingestion (30-day retention, self-pruning).
             response = await handleClientErrorsPost(request, env, session);

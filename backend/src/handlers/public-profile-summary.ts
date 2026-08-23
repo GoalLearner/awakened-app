@@ -57,6 +57,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { maybeGrantFounderMark } from '../lib/founder-mark';
 import { readEntitlements } from './iap-entitlements';
+import { resolveOathsOnFirstKill } from './oaths';   // W867 — Oathbound fulfillment
 
 // W706 — the member card-background catalog (ids only; art + achievement mapping
 // live client-side). Server-side this is a WHITELIST so an unknown/retired id can
@@ -691,6 +692,12 @@ export async function handlePublicProfileSummaryPut(
   // BEFORE we respond so the client's post-submit entitlements refetch sees it.
   // Never throws; fast-path is a single query once granted.
   await maybeGrantFounderMark(env, session.userId);
+
+  // W867 — THE OATHBOUND: a rookie's first kill just landed on the mirror →
+  // fulfill any live oath over them (single indexed read; no-op for the 99%).
+  if ((ach.bossesSlainTotal.value ?? 0) > 0) {
+    await resolveOathsOnFirstKill(env, session.userId);
+  }
 
   return jsonOk({
     ok: true,
