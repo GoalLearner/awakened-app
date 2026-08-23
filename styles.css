@@ -2974,6 +2974,32 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W859 (Wave 2) — THE WATCHER'S WRIT card ─────────────────────────── */
+.writ-card {
+  margin: 10px 16px 4px;
+  padding: 13px 15px 12px;
+  border: 1px solid rgba(126, 166, 217, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(126, 166, 217, 0.08), rgba(0, 0, 0, 0.15));
+}
+.writ-card.hidden { display: none !important; }
+.writ-card.writ-done { border-color: rgba(245, 184, 66, 0.5); }
+.writ-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.8px;
+  color: #8fb8e8; margin-bottom: 5px;
+}
+.writ-card.writ-done .writ-eyebrow { color: #f5b842; }
+.writ-name { font-weight: 800; font-size: 14px; letter-spacing: 0.4px; margin-bottom: 3px; }
+.writ-goal { font-size: 12px; color: var(--text-secondary, #b9b3c9); font-variant-numeric: tabular-nums; }
+.writ-bar {
+  height: 5px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.08); margin: 8px 0 7px;
+}
+.writ-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7ea6d9, #8fb8e8); transition: width 0.6s ease; }
+.writ-card.writ-done .writ-bar span { background: linear-gradient(90deg, #f5b842, #ffe9b0); }
+.writ-cite { font-size: 11.5px; font-style: italic; color: var(--text-tertiary, #8d879e); }
+
 /* ─── W858 (Wave 2) — the boss watches you back: hero parallax ──────────
    Live tilt writes transform inline; this class is the no-gyro fallback
    (a slow autonomous drift so the scene breathes on every device). The
