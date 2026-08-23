@@ -129,6 +129,10 @@ const COOP_BOSS_CFG: Record<
   // W447 — dual-condition (steps AND flights) co-op duo bosses.
   the_gaunt_wardens:    { rank: 'C', goalSteps: 10000, goalFlights: 6,  rewardSouls: 100, windowHours: 24, metric: 'both' },
   the_sundered_choir:   { rank: 'B', goalSteps: 12000, goalFlights: 10, rewardSouls: 200, windowHours: 24, metric: 'both' },
+  // W853 (v3 V3b) — the A-rank co-op gap (catalog jumped B→S). Duo, first
+  // 48h dual-metric window; goals sit between the Choir (12k/10 in 24h) and
+  // the raids. Reward = half the solo A kill (800 → 400), the W648 half-split.
+  the_cloven_titan:     { rank: 'A', goalSteps: 28000, goalFlights: 20, rewardSouls: 400, windowHours: 48, metric: 'both' },
   // W677 — first TRIO hunt (partySize 3: summoner + 2 hand-picked friends).
   // Owner spec: C-rank, 27,000 COMBINED steps. rewardSouls = floor(solo C 200 / 3)
   // = 66 per hunter (thirds split — the trio analog of the W648 duo half-split).
@@ -159,6 +163,7 @@ const COOP_BOSS_NAMES: Record<string, string> = {
   the_hollow_monarch: 'The Hollow Monarch',
   the_gaunt_wardens: 'The Gaunt Wardens',
   the_sundered_choir: 'The Sundered Choir',
+  the_cloven_titan: 'The Cloven Titan',
   the_threefold_court: 'The Threefold Court',
   the_sleepless_crown: 'The Sleepless Crown',
   the_grinning_god: 'The Grinning God',
