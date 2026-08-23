@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w849'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w850'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2229,6 +2229,17 @@
     }
     return n;
   }
+  // W850 (v3 V2a) — TRUE while the W771 first-hunt freebie is still
+  // unclaimed on a device that has never engaged any boss. Shared by the
+  // engage path, the boss-sheet button label, and the FIRST STEPS gate row.
+  function _firstHuntFreeAvailable() {
+    try {
+      if (localStorage.getItem('hb_first_hunt_free_used') === '1') return false;
+      const all = loadBosses();
+      return !Object.keys(all).some(k => all[k] && (all[k].kill_count > 0 || all[k].engaged === true || all[k].engaged_at));
+    } catch (_) { return false; }
+  }
+
   function isBossEngaged(id) {
     return getBossState(id).engaged === true;
   }
@@ -2278,16 +2289,16 @@
     // any boss gets their first engagement free, once. Removes the last excuse
     // not to try the app's best moment; a new user won't wager scarce souls on
     // a system they don't understand yet. One-shot flag; economy impact = one
-    // E-rank fee.
+    // E-rank fee. W850 (v3 V2a) — the eligibility check now lives in
+    // _firstHuntFreeAvailable so the engage button + FIRST STEPS can SHOW the
+    // freebie before the tap (it fired silently for a year; the audit that
+    // drove W823's "a hunt costs 25 souls" copy never found it).
     try {
-      if (cost > 0 && localStorage.getItem('hb_first_hunt_free_used') !== '1') {
-        const _all = loadBosses();
-        const _everHunted = Object.keys(_all).some(k => _all[k] && (_all[k].kill_count > 0 || _all[k].engaged === true || _all[k].engaged_at));
-        if (!_everHunted) {
-          cost = 0;
-          localStorage.setItem('hb_first_hunt_free_used', '1');
-          if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
-        }
+      if (cost > 0 && _firstHuntFreeAvailable()) {
+        cost = 0;
+        localStorage.setItem('hb_first_hunt_free_used', '1');
+        if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
+        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('first_hunt_engaged', bossId); } catch (_) {}   // W850 (V2c)
       }
     } catch (_) {}
     const balance = getSoulsBalance();
@@ -20638,6 +20649,7 @@
         // overlay's existing close flush handles the rest.
         if (_firstKill) {
           try {
+            try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
             _rvSet(_RV.firstBoss, '1');
             var _rvRankN = ''; try { _rvRankN = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
             _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankN || (cfg && cfg.rank) || '' });
@@ -20757,6 +20769,7 @@
         // the step-boss (Steel Wolf) is the fleet's other most-common first kill.
         if (_firstKill) {
           try {
+            try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
             _rvSet(_RV.firstBoss, '1');
             var _rvRankD = ''; try { _rvRankD = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
             _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankD || (cfg && cfg.rank) || '' });
@@ -20879,6 +20892,7 @@
     } catch (_) {}
     announceKillAndDrop(cfg, reward, dropped);
     // W541 — solo boss win → mark first-boss + arm the review pre-prompt (fires on modal close).
+    try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
     _rvSet(_RV.firstBoss, '1');
     try { var _rvRank = ''; try { _rvRank = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {} if (!_rvRank) _rvRank = (cfg && cfg.rank) || ''; _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRank }); } catch (_) {}
     // v3 Phase 1z.165 — Guild Hall feat row. Boss kills are per-day
@@ -35416,9 +35430,14 @@
     for (const st of _FS_STEPS) {
       const claimed = !!s.claimed[st.id];
       const met = claimed || _fsSignalMet(st.id);
+      // W850 (v3 V2a) — the gate row tells the truth for a brand-new hunter:
+      // their first hunt is FREE (W771, live all along), not 25 souls. The
+      // priced copy returns once the freebie is spent.
+      let _fsSub = st.sub;
+      if (st.id === 'gate') { try { if (_firstHuntFreeAvailable()) _fsSub = 'Co-op tab — your first hunt is free'; } catch (_) {} }
       rows += '<button type="button" class="fs-row' + (claimed ? ' fs-row--claimed' : met ? ' fs-row--ready' : '') + '" data-fs-step="' + st.id + '">' +
         '<span class="fs-check">' + (claimed ? '✓' : met ? '!' : '') + '</span>' +
-        '<span class="fs-main"><span class="fs-label">' + st.label + '</span><span class="fs-sub">' + st.sub + '</span></span>' +
+        '<span class="fs-main"><span class="fs-label">' + st.label + '</span><span class="fs-sub">' + _fsSub + '</span></span>' +
         (claimed ? '<span class="fs-claimtag">DONE</span>' : met ? '<span class="fs-claimbtn">CLAIM +' + _FS_REWARD + '</span>' : '<span class="fs-go">›</span>') +
       '</button>';
     }
@@ -36501,6 +36520,57 @@
   // Day 3 — fires once when the user opens the app on calendar
   // day 3 or later from origin. Skips if no active vow exists
   // (an all-archived user is functionally new again).
+  // ── W850 (v3 Train V2b) — the walk-to-the-gate guide ────────────────────
+  // Owner spec (2026-08-22): 2-3 messages, super simple, ONE plain tone, and
+  // the guide does the navigating. Fires once on day 0-2, only after the
+  // first vow is sealed and only while the W771 free first hunt is still
+  // unclaimed. The CTA lands the hunter INSIDE the recommended boss sheet:
+  // sleep habit → The Insomniac (7h sleep auto-verifies it), otherwise The
+  // Steel Wolf (6,000 verified steps — their phone is already counting).
+  const FA_FIRST_GATE_BEATS = [
+    { pose: 'speaking', lines: [
+      'You sealed your first vow.',
+      'One more thing to see — your first boss hunt. It is free.',
+    ] },
+    { pose: 'pointing', lines: [
+      'Your steps and sleep already count toward it. I will take you to the gate.',
+    ] },
+  ];
+  function _firstGateRecommendedBoss() {
+    try {
+      if (Array.isArray(habits) && habits.some(function (h) { return h && /sleep/i.test(String(h.name || '')); })) return 'the_insomniac';
+    } catch (_) {}
+    return 'the_steel_wolf';
+  }
+  function showFirstGateGuide() {
+    if (localStorage.getItem('hb_fg_guide_v1') === '1') return false;
+    if (typeof getDaysSinceOrigin !== 'function') return false;
+    const days = getDaysSinceOrigin();
+    if (typeof days !== 'number') return false;
+    if (days > 2) {
+      // Window lapsed — eager-mark so this check retires (Day-7 pattern).
+      try { localStorage.setItem('hb_fg_guide_v1', '1'); } catch (_) {}
+      return false;
+    }
+    if (!_firstHuntFreeAvailable()) return false;            // already at (or past) the gate
+    if (_reviewDaysActive() < 1) return false;               // first vow not sealed yet — the copy leans on it
+    if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
+    _faRunCoachmark({
+      context: 'firstgate',
+      beats: FA_FIRST_GATE_BEATS,
+      cta: 'TAKE ME TO THE GATE',
+      storageKey: 'hb_fg_guide_v1',
+      onDismiss: function () {
+        try {
+          const bossId = _firstGateRecommendedBoss();
+          try { switchTab('quests'); } catch (_) {}
+          setTimeout(function () { try { openBossFullScreen(bossId); } catch (_) {} }, 350);
+        } catch (_) {}
+      },
+    });
+    return true;
+  }
+
   function showDay3Coachmark() {
     if (localStorage.getItem('hb_tour_day3_v1') === '1') return false;
     if (typeof getDaysSinceOrigin !== 'function') return false;
@@ -36611,6 +36681,7 @@
     if (_maybeShowWelcomeBack()) return; // W367 — day-2 welcome-back screen is day-2-ONLY (cannot defer); must outrank the deferrable intro/milestones
     if (showWelcomeBackCoachmark()) return; // W363 — existing-user intro; was a separate +1500ms timer that raced this dispatcher
     if (showStreakLossCoachmark()) return;
+    if (showFirstGateGuide()) return;   // W850 — day-0-2 walk to the free first hunt; outranks the day-N check-ins (it expires fastest)
     if (showDay7Coachmark()) return;
     if (showDay3Coachmark()) return;
     if (typeof shouldShowDailyInsight === 'function' && shouldShowDailyInsight()) { showDailyInsight(); return; } // W361 — daily insight is the lowest-priority beat
@@ -36618,6 +36689,7 @@
 
   try {
     window.__showDay3Coachmark = showDay3Coachmark;
+    window.__showFirstGateGuide = showFirstGateGuide;   // W850 QA
     window.__showDay7Coachmark = showDay7Coachmark;
     window.__showStreakLossCoachmark = showStreakLossCoachmark;
     window.__maybeShowFirstAwakenedRetentionMoment = maybeShowFirstAwakenedRetentionMoment;
@@ -48639,9 +48711,13 @@
           // hunt" rather than "first engagement." Cost still applies.
           const huntedBefore = (state.kill_count || 0) > 0;
           const verb = huntedBefore ? 'HUNT AGAIN' : 'ENGAGE BOSS';
-          engageBtn.textContent = cost > 0
-            ? verb + ' — ' + cost + ' SOULS'
-            : verb;
+          // W850 (v3 V2a) — the W771 freebie fired silently AFTER the tap for
+          // a year; now the button says so BEFORE it (the whole point of a
+          // free first hunt is removing the fear of the wager).
+          const firstFree = !huntedBefore && cost > 0 && _firstHuntFreeAvailable();
+          engageBtn.textContent = firstFree
+            ? verb + ' — FIRST HUNT FREE'
+            : cost > 0 ? verb + ' — ' + cost + ' SOULS' : verb;
           // v3 Phase 1z.39 — visually soften the button when broke.
           // The existing engageBoss() guard already toasts the
           // precise "Need N souls. You have M." message; this just
@@ -48649,7 +48725,7 @@
           // self-discover the gate.
           let balance = 0;
           try { balance = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0; } catch (_) {}
-          engageBtn.classList.toggle('bfs-engage-btn--insufficient', cost > 0 && balance < cost);
+          engageBtn.classList.toggle('bfs-engage-btn--insufficient', !firstFree && cost > 0 && balance < cost);   // W850 — a free first hunt is never "insufficient"
         }
         // v3 Phase 1z.39 — populate the Souls balance readout above
         // the button. Reads from the single source of truth
