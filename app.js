@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w851'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w852'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1260,7 +1260,9 @@
       statDomain:       'STR',
     },
 
-    // ── v3 Phase W286 — S-rank dungeon: the SOLE apex. ONE boss. (W288: condition
+    // ── v3 Phase W286 — S-rank dungeon apex. (W852: no longer the sole S
+    // boss — the two consorts below complete the trio — but Erebus remains
+    // the ONLY source of the Mythic blade.) (W288: condition
     // changed to BOTH pillars — 10k steps + 10 flights — every day for 3 days, all
     // iPhone-native so the apex is not wearable-gated.) `dailyAllOf` routes it
     // through the shared multi-metric branch; `dropTable` drives its bespoke roll.
@@ -1285,6 +1287,58 @@
       cadence:          'daily',
       huntWindowDays:   3,
       statDomain:       'WILL',
+    },
+
+    // ── W852 (v3 Train V3a) — the S gate becomes a TRIO like every other
+    // rank (it shipped with ONE boss; the rank a hunter reaches at ~3 months
+    // was the emptiest room in the dungeon). Two consorts join the Sovereign:
+    // both drop from HIS regalia via the W693 `pool` override (his court
+    // carries his regalia; the blade he keeps — Nightfall stays Erebus-only,
+    // no new mythic sources). Boss portraits pending owner art — the W1z.80
+    // loader renders art-less gracefully (start-hidden, reveal on load), and
+    // the PNGs drop in at assets/bosses/<id-with-dashes>.png with no code
+    // change. Single-key dropTable follows the Grinning God precedent.
+    the_starved_sentinel: {
+      id:               'the_starved_sentinel',
+      name:             'The Starved Sentinel',
+      rank:             'S',
+      archetype:        'sustainer',
+      flavorShort:      'It has kept the long watch for centuries, and hungers for those who cannot.',
+      flavorLong:       'The Sovereign’s first consort keeps the watch he is too proud to keep — night after night, road after road. It does not respect effort spent in a single burst; it respects the ones who restore themselves in the dark and spend it all again by daylight. Hold the watch for three days unbroken, and it will open its hands.',
+      killCondShort:    '7h sleep + 8,000 steps — both, 3 days back-to-back',
+      killCondLong:     'On three consecutive days inside the 3-day hunt window, every day must reach BOTH 7 hours of verified sleep and 8,000 verified steps. Miss either on any day and the watch resets. Sleep tracking needs a wearable — this trial belongs to the wearable elite.',
+      failedCopy:       'The watch broke, and the Sentinel kept its regalia.',
+      dailyAllOf:       true,
+      sleepHours:       7,
+      stepThreshold:    8000,
+      consecutiveDays:  3,
+      streakTarget:     3,
+      cadence:          'daily',
+      huntWindowDays:   3,
+      dropTable:        { ultra_rare: 0.20 },
+      pool:             { ultra_rare: ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne'] },
+      statDomain:       'VIT',
+    },
+    the_worldspine: {
+      id:               'the_worldspine',
+      name:             'The Worldspine',
+      rank:             'S',
+      archetype:        'aggressor',
+      flavorShort:      'The mountain that walks. It is climbed in a day or not at all.',
+      flavorLong:       'The Sovereign’s second consort is not a creature but a burden — a mountain’s worth of ground and stairs pressed into a single turning of the sun. There is no pacing yourself against the Worldspine, no second day to make up the first. One dawn, one summit, everything at once.',
+      killCondShort:    '15,000 steps + 20 flights in one day',
+      killCondLong:     'In a single day inside the hunt window, reach BOTH 15,000 verified steps and 20 flights of stairs climbed. All iPhone-native — no wearable required. One colossal day, and the mountain kneels.',
+      failedCopy:       'The sun set with the summit still above you.',
+      dailyAllOf:       true,
+      stepThreshold:    15000,
+      flightThreshold:  20,
+      consecutiveDays:  1,
+      streakTarget:     1,
+      cadence:          'daily',
+      huntWindowDays:   1,
+      dropTable:        { ultra_rare: 0.20 },
+      pool:             { ultra_rare: ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne'] },
+      statDomain:       'STR',
     },
   };
 
