@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w855'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w856'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1677,6 +1677,62 @@
     const totalDays = Math.floor(totalHr / 24);
     return totalDays + 'd';
   }
+
+  // ── W856 (Wave 2, ACKNOWLEDGED pt 2) — the device gets a pulse ──────────
+  // When any live solo hunt enters its final 10% of window, the app itself
+  // becomes tense: a crimson edge vignette breathes at the screen borders
+  // and the phone ticks a soft double-tap heartbeat every 1.1s. Rails:
+  // haptics cap at 90s per app session (the vignette stays — menace without
+  // buzz fatigue), reduced-motion skips everything, and the whole surface
+  // clears the moment no hunt is in crunch (win, loss, or disengage).
+  // Checked by the existing 60s interval + a boot call — no new timers idle.
+  let _crunchHapticMs = 0;    // session haptic budget consumed (cap 90s)
+  let _crunchBeat = null;
+  function _sysCrunchActive() {
+    try {
+      const all = loadBosses();
+      for (const id in all) {
+        const st = all[id];
+        if (!st || !st.engaged) continue;
+        const cfg = BOSSES[id]; if (!cfg || cfg.coopOnly) continue;
+        const rem = _bossHuntRemainingMs(st, cfg);
+        if (rem == null || rem <= 0) continue;
+        const start = _bossHuntStartMs(st);
+        const exp = _bossHuntExpiresMs(st, cfg);
+        const total = exp - start;
+        if (total > 0 && rem < total * 0.10) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function _sysCrunchTick(force) {
+    let reduced = false;
+    try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    const active = force === true || (!reduced && force !== false && _sysCrunchActive());
+    let v = document.getElementById('sys-crunch-vignette');
+    if (active) {
+      if (!v) {
+        v = document.createElement('div');
+        v.id = 'sys-crunch-vignette';
+        v.className = 'sys-crunch-vignette';
+        v.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(v);
+        requestAnimationFrame(function () { try { v.classList.add('on'); } catch (_) {} });
+      }
+      if (!_crunchBeat && _crunchHapticMs < 90000 && !reduced) {
+        _crunchBeat = setInterval(function () {
+          _crunchHapticMs += 1100;
+          if (_crunchHapticMs >= 90000) { clearInterval(_crunchBeat); _crunchBeat = null; return; }
+          try { _hapticTick('LIGHT'); setTimeout(function () { try { _hapticTick('LIGHT'); } catch (_) {} }, 120); } catch (_) {}
+        }, 1100);
+      }
+    } else {
+      if (v) { v.classList.remove('on'); setTimeout(function () { try { v.remove(); } catch (_) {} }, 900); }
+      if (_crunchBeat) { clearInterval(_crunchBeat); _crunchBeat = null; }
+    }
+  }
+  // W856 QA — __crunchPreview(true|false) forces the state on/off.
+  try { window.__crunchPreview = function (on) { _sysCrunchTick(on !== false); }; } catch (_) {}
 
   // Enumerate device-local YYYY-MM-DD day keys that fall inside
   // the hunt window [startMs, endMs] inclusive. Used to walk
@@ -64548,7 +64604,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 — first crunch check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

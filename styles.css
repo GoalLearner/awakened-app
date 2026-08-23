@@ -2974,6 +2974,25 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W856 (Wave 2) — the crunch pulse: crimson breathing vignette ──────
+   Sits UNDER the arena overlay (12300) and every modal — ambient menace,
+   never an obstruction. pointer-events none; removed when crunch clears. */
+.sys-crunch-vignette {
+  position: fixed; inset: 0; z-index: 11900;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 30px rgba(178, 34, 48, 0.30);
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+.sys-crunch-vignette.on {
+  opacity: 1;
+  animation: sys-crunch-breathe 2.2s ease-in-out infinite;
+}
+@keyframes sys-crunch-breathe {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
 /* ─── W855 (Wave 2) — ACKNOWLEDGED: the System seizes the device ────────
    A hard CUT to pure black (no fade-in — the interruption IS the effect),
    held above every surface including cinematics (99000 layer rule), then
