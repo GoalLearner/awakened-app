@@ -2974,6 +2974,30 @@ footer {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── W866 (Wave 2 Train B) — THE DOUBLE DUNGEON card ─────────────────── */
+.dd-card {
+  margin: 10px 16px 4px;
+  padding: 13px 15px 12px;
+  border: 1px solid rgba(229, 72, 77, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(229, 72, 77, 0.07), rgba(0, 0, 0, 0.18));
+}
+.dd-card.hidden { display: none !important; }
+.dd-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.8px;
+  color: #ff8a8d; margin-bottom: 8px;
+}
+.dd-gazes { display: flex; gap: 14px; justify-content: center; margin-bottom: 9px; }
+.dd-eye { width: 34px; color: rgba(255, 255, 255, 0.28); }
+.dd-eye svg { width: 100%; height: auto; display: block; }
+.dd-eye--dark { color: rgba(255, 255, 255, 0.10); }
+.dd-eye--waiting { color: #f5b842; }
+.dd-eye--lit { color: #ff4d52; animation: sys-crunch-breathe 1.6s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(255, 77, 82, 0.7)); }
+.dd-line { font-size: 12px; font-weight: 600; color: #eee6ea; margin-bottom: 8px; }
+.dd-bar span { background: linear-gradient(90deg, #e5484d, #ff8a8d); }
+.dd-progress { font-size: 11px; color: var(--text-tertiary, #8d879e); font-variant-numeric: tabular-nums; }
+
 /* ─── W865 (Wave 2) — The Gray Pilgrim's Correspondence ───────────────── */
 .bfs-letters-line {
   display: block; margin: 7px 0 0; padding: 0;

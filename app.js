@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w865'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w866'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2465,6 +2465,15 @@
         cost = 0;
         localStorage.removeItem('hb_stone_free_engage');
         if (typeof showHabitToast === 'function') showHabitToast('The stone’s debt is paid — this hunt is free.');
+      }
+    } catch (_) {}
+    // W866 — the altar's gift (Double Dungeon completion): one free engage,
+    // the backup for zero-kill hunters who spent the W771 freebie on a loss.
+    try {
+      if (cost > 0 && localStorage.getItem('hb_dd_free_engage') === '1') {
+        cost = 0;
+        localStorage.removeItem('hb_dd_free_engage');
+        if (typeof showHabitToast === 'function') showHabitToast('The altar has already paid for this hunt.');
       }
     } catch (_) {}
     const balance = getSoulsBalance();
@@ -6141,6 +6150,161 @@
       const a = _plArc(); const idx = Math.max(0, Math.min(PILGRIM_LETTERS.length - 1, (n | 0) - 1));
       a.letters.push({ i: idx, cleared: cleared !== false, text: _plCompose(idx, cleared !== false), at: Date.now(), read: false });
       a.unread = true; if (idx === 5) a.letter6At = Date.now(); _plSave(a); openPilgrimDrawer();
+    };
+  } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W866 (Wave 2 Train B, A-tier #9) — THE FIRST GATE: THE DOUBLE DUNGEON
+  //
+  // The genre's most famous scene as the activation funnel. Eligibility:
+  // ZERO lifetime boss kills (solo + co-op) — that's 66% of the fleet.
+  // A 3-day narrated event: each day the First Awakened unseals ONE
+  // commandment (daily-total math ONLY, per the binding Wave-2 rule):
+  //   I.  WALK   — 4,000 verified steps today
+  //   II. CLIMB  — 5 verified flights today
+  //   III.ENDURE — 6,000 verified steps today
+  // A met commandment dims one statue's gaze. A broken one ignites the
+  // eyes and REPEATS the day — mercy, not punishment; the event never
+  // fails, it only waits. All three met → the ALTAR: a pre-paid first
+  // boss engage (hb_dd_free_engage — backup to the W771 freebie for
+  // hunters who engaged once, lost, and never returned) + the
+  // "Awakened at the Altar" accolade. Supersedes the W850 walk-to-the-
+  // gate guide (both fire from the same dispatcher; this one wins).
+  // Statue art pending owner MJ pipeline — the gazes are inline SVG.
+  // ═══════════════════════════════════════════════════════════════════════
+  const DD_KEY = 'hb_dd_v1';
+  const DD_COMMANDMENTS = [
+    { n: 'I',   verb: 'WALK',   metric: 'steps_daily',   need: 4000, line: 'FIRST COMMANDMENT: WALK — 4,000 verified steps before midnight.' },
+    { n: 'II',  verb: 'CLIMB',  metric: 'flights_daily', need: 5,    line: 'SECOND COMMANDMENT: CLIMB — 5 verified flights before midnight.' },
+    { n: 'III', verb: 'ENDURE', metric: 'steps_daily',   need: 6000, line: 'THIRD COMMANDMENT: ENDURE — 6,000 verified steps before midnight.' },
+  ];
+  function _ddLoad() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DD_KEY) || 'null');
+      if (!d) return null;
+      d.day = Math.max(0, Math.min(3, d.day | 0));
+      d.sealed = Array.isArray(d.sealed) ? d.sealed : [false, false, false];
+      return d;
+    } catch (_) { return null; }
+  }
+  function _ddSave(d) { try { localStorage.setItem(DD_KEY, JSON.stringify(d)); } catch (_) {} }
+  function _ddEligible() {
+    try {
+      if (_ddLoad()) return false;                          // already running / done
+      if (!localStorage.getItem('hb_welcomed')) return false;
+      const all = loadBosses();
+      for (const k in all) { if (all[k] && (all[k].kill_count | 0) > 0) return false; }
+      try { if (_coopKillTotal() > 0) return false; } catch (_) {}
+      return _reviewDaysActive() >= 1;                      // first vow sealed — same floor as the W850 guide
+    } catch (_) { return false; }
+  }
+  function _ddTodayVal(metric) {
+    try { return Number(((loadLeaderboardState() || {})[metric] || {})[getDeviceLocalDate()]) || 0; } catch (_) { return 0; }
+  }
+  /** Dispatcher entry — starts the event with the day-1 beat. Returns true if shown. */
+  function showDoubleDungeonStart() {
+    if (!_ddEligible()) return false;
+    const d = { day: 1, sealed: [false, false, false], dayDate: getDeviceLocalDate(), failedYesterday: false, done: false, startedAt: Date.now() };
+    _ddSave(d);
+    try { localStorage.setItem('hb_fg_guide_v1', '1'); } catch (_) {}   // the simple guide retires — this supersedes it
+    _faRunCoachmark({
+      context: 'doubledungeon',
+      beats: [
+        { pose: 'speaking', lines: ['A hidden gate has opened inside your first dungeon.', 'Three statues. Three commandments. One a day.'] },
+        { pose: 'pointing', lines: [DD_COMMANDMENTS[0].line, 'Meet it, and the first gaze goes dark. Break it, and the day repeats. The gate is patient.'] },
+      ],
+      cta: 'FACE THE STATUES',
+      storageKey: null,
+      onDismiss: function () { try { renderDoubleDungeonCard(); } catch (_) {} },
+    });
+    return true;
+  }
+  /** Called from the periodic ticks: seal checks + day advancement. */
+  function _ddTick() {
+    try {
+      const d = _ddLoad();
+      if (!d || d.done) return;
+      const today = getDeviceLocalDate();
+      const cIdx = d.day - 1;
+      const cmd = DD_COMMANDMENTS[cIdx]; if (!cmd) return;
+      // Day rolled?
+      if (d.dayDate !== today) {
+        if (d.sealed[cIdx]) {
+          // Yesterday's commandment was met → advance.
+          if (d.day >= 3) { _ddComplete(d); return; }
+          d.day++; d.dayDate = today; d.failedYesterday = false;
+          _ddSave(d);
+          try { showSystemNotice({ title: 'THE DOUBLE DUNGEON', body: DD_COMMANDMENTS[d.day - 1].line }); } catch (_) {}
+        } else {
+          // The eyes ignite; the day repeats.
+          d.dayDate = today; d.failedYesterday = true;
+          _ddSave(d);
+          try { showHabitToast('The statue’s eyes ignite. The day repeats — the gate is patient.'); } catch (_) {}
+        }
+        try { renderDoubleDungeonCard(); } catch (_) {}
+        return;
+      }
+      // Live seal check for today.
+      if (!d.sealed[cIdx] && _ddTodayVal(cmd.metric) >= cmd.need) {
+        d.sealed[cIdx] = true; d.failedYesterday = false;
+        _ddSave(d);
+        try { _hapticTick('SUCCESS'); } catch (_) {}
+        try { showHabitToast('The ' + (cIdx === 0 ? 'first' : cIdx === 1 ? 'second' : 'third') + ' gaze goes dark. Commandment ' + cmd.n + ' is met.'); } catch (_) {}
+        if (d.day >= 3) { _ddComplete(d); return; }
+        try { renderDoubleDungeonCard(); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+  function _ddComplete(d) {
+    d.done = true; _ddSave(d);
+    try { localStorage.setItem('hb_dd_free_engage', '1'); } catch (_) {}
+    try { localStorage.setItem('hb_accolade_altar', '1'); } catch (_) {}
+    try { renderDoubleDungeonCard(); } catch (_) {}
+    _faRunCoachmark({
+      context: 'doubledungeon-altar',
+      beats: [
+        { pose: 'nodding', lines: ['Three gazes, dark. The altar accepts you.', 'AWAKENED AT THE ALTAR — few ever were.'] },
+        { pose: 'pointing', lines: ['Beyond the altar waits your first true hunt. It is already paid for.', 'I will take you to it.'] },
+      ],
+      cta: 'ENTER THE FIRST GATE',
+      storageKey: null,
+      onDismiss: function () {
+        try {
+          const bossId = _firstGateRecommendedBoss();
+          try { switchTab('quests'); } catch (_) {}
+          setTimeout(function () { try { openBossFullScreen(bossId); } catch (_) {} }, 350);
+        } catch (_) {}
+      },
+    });
+  }
+  /** The Status-tab card: three gazes + today's commandment + live progress. */
+  function renderDoubleDungeonCard() {
+    const host = document.getElementById('dd-card');
+    if (!host) return;
+    const d = _ddLoad();
+    if (!d || d.done) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    const cIdx = d.day - 1;
+    const cmd = DD_COMMANDMENTS[cIdx];
+    const val = _ddTodayVal(cmd.metric);
+    const pct = Math.max(0, Math.min(100, Math.round((val / cmd.need) * 100)));
+    const eye = function (i) {
+      const stateCls = d.sealed[i] ? ' dd-eye--dark' : (i === cIdx && d.failedYesterday ? ' dd-eye--lit' : i === cIdx ? ' dd-eye--waiting' : '');
+      return '<span class="dd-eye' + stateCls + '" aria-hidden="true"><svg viewBox="0 0 32 18"><path d="M2 9 Q16 -4 30 9 Q16 22 2 9 Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="9" r="4.2" fill="currentColor"/></svg></span>';
+    };
+    host.innerHTML =
+      '<div class="dd-eyebrow">THE DOUBLE DUNGEON · DAY ' + d.day + ' OF 3' + (d.failedYesterday ? ' · THE DAY REPEATS' : '') + '</div>' +
+      '<div class="dd-gazes">' + eye(0) + eye(1) + eye(2) + '</div>' +
+      '<div class="dd-line">' + esc(cmd.line) + '</div>' +
+      '<div class="writ-bar dd-bar"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="dd-progress">' + val.toLocaleString('en-US') + ' / ' + cmd.need.toLocaleString('en-US') + '</div>';
+    host.classList.remove('hidden');
+  }
+  // W866 QA — __dd() state; __dd('start') forces the event; __dd('seal') seals today.
+  try {
+    window.__dd = function (op) {
+      if (op === 'start') { try { localStorage.removeItem(DD_KEY); } catch (_) {} showDoubleDungeonStart(); return _ddLoad(); }
+      if (op === 'seal') { const d = _ddLoad(); if (d) { d.sealed[d.day - 1] = true; _ddSave(d); if (d.day >= 3) _ddComplete(d); else renderDoubleDungeonCard(); } return _ddLoad(); }
+      return _ddLoad();
     };
   } catch (_) {}
   // Delegated opener — the profile card re-renders (W822 lesson).
@@ -37804,6 +37968,7 @@
   }
   function showFirstGateGuide() {
     if (localStorage.getItem('hb_fg_guide_v1') === '1') return false;
+    try { if (typeof _ddLoad === 'function' && _ddLoad()) return false; } catch (_) {}   // W866 — the Double Dungeon owns activation now
     if (typeof getDaysSinceOrigin !== 'function') return false;
     const days = getDaysSinceOrigin();
     if (typeof days !== 'number') return false;
@@ -37941,6 +38106,7 @@
     if (_maybeShowWelcomeBack()) return; // W367 — day-2 welcome-back screen is day-2-ONLY (cannot defer); must outrank the deferrable intro/milestones
     if (showWelcomeBackCoachmark()) return; // W363 — existing-user intro; was a separate +1500ms timer that raced this dispatcher
     if (showStreakLossCoachmark()) return;
+    if (showDoubleDungeonStart()) return;   // W866 — the 3-day Double Dungeon supersedes the simple guide
     if (showFirstGateGuide()) return;   // W850 — day-0-2 walk to the free first hunt; outranks the day-N check-ins (it expires fastest)
     if (showDay7Coachmark()) return;
     if (showDay3Coachmark()) return;
@@ -65718,8 +65884,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
