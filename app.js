@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w862'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w864'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2457,6 +2457,14 @@
         localStorage.setItem('hb_first_hunt_free_used', '1');
         if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
         try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('first_hunt_engaged', bossId); } catch (_) {}   // W850 (V2c)
+      }
+    } catch (_) {}
+    // W864 — the cracked Measuring Stone's debt: one free engage, consumed here.
+    try {
+      if (cost > 0 && localStorage.getItem('hb_stone_free_engage') === '1') {
+        cost = 0;
+        localStorage.removeItem('hb_stone_free_engage');
+        if (typeof showHabitToast === 'function') showHabitToast('The stone’s debt is paid — this hunt is free.');
       }
     } catch (_) {}
     const balance = getSoulsBalance();
@@ -5777,6 +5785,7 @@
           rows +
           '<div class="sw-fatigue sw-fatigue--' + fat.cls + '">CONDITION · ' + fat.label + '</div>' +
           '<div class="sw-foot">MEASURED FROM 30 DAYS OF VERIFIED RECORDS.<br>HAND-TYPED ENTRIES DO NOT EXIST HERE.</div>' +
+          '<button type="button" class="sw-forge" aria-label="Forge your License wallpaper">FORGE LICENSE — LOCK-SCREEN WALLPAPER</button>' +   // W863
           '<button type="button" class="sw-close" aria-label="Close">CLOSE WINDOW</button>' +
         '</div>';
       document.body.appendChild(ov);
@@ -5785,8 +5794,185 @@
       const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
       ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
       const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+      const forge = ov.querySelector('.sw-forge');
+      if (forge) forge.addEventListener('click', function () {
+        forge.disabled = true; forge.textContent = 'FORGING…';
+        _forgeLicense().then(function (ok) {
+          forge.disabled = false; forge.textContent = 'FORGE LICENSE — LOCK-SCREEN WALLPAPER';
+          if (ok) { try { showHabitToast('License forged. Save it, then set it as your Lock Screen.'); } catch (_) {} }
+        }).catch(function () { forge.disabled = false; forge.textContent = 'FORGE LICENSE — LOCK-SCREEN WALLPAPER'; });
+      });
     } catch (e) { _logSwallow('statusWindow:open', e); }
   }
+
+  // ── W863 (Wave 2, Hunter's License pt 2) — FORGE LICENSE ────────────────
+  // A 1179×2556 lock-screen wallpaper composed AROUND the iOS clock band
+  // (the top ~600px stays near-empty so the clock owns it): rank medallion,
+  // alias, latent grades, four verified stat cells, and the license footer.
+  // Canvas + share sheet (iOS cannot set wallpapers programmatically — the
+  // user saves to Photos and sets it, which iOS makes a two-tap flow).
+  // Reuses the Hunter Report's font loader, rank palette and share pattern.
+  async function _forgeLicense() {
+    try {
+      try { await _hrLoadFonts(); } catch (_) {}
+      const W = 1179, H = 2556;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const ctx = cv.getContext('2d');
+      let rankId = 'E'; try { rankId = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
+      const pal = _hrPaletteForRank(rankId);
+      const gold = '#f5b842';
+      // Field — deep navy vertical wash + corner vignettes.
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#070b18'); bg.addColorStop(0.5, '#0a1024'); bg.addColorStop(1, '#05070f');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+      const vg = ctx.createRadialGradient(W / 2, H * 0.62, 120, W / 2, H * 0.62, H * 0.75);
+      vg.addColorStop(0, 'rgba(126,166,217,0.05)'); vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+      // Clock band (y≈180–580) stays empty. Small wordmark just beneath it.
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(245,184,66,0.85)';
+      ctx.font = '600 34px "Cinzel", serif';
+      ctx.fillText('A W A K E N E D', W / 2, 700);
+      ctx.fillStyle = 'rgba(143,184,232,0.55)';
+      ctx.font = '800 22px "JetBrains Mono", monospace';
+      ctx.fillText('H U N T E R   L I C E N S E', W / 2, 748);
+      // Medallion.
+      const my = 1020, mr = 150;
+      ctx.beginPath(); ctx.arc(W / 2, my, mr, 0, Math.PI * 2);
+      ctx.strokeStyle = gold; ctx.lineWidth = 6; ctx.stroke();
+      ctx.beginPath(); ctx.arc(W / 2, my, mr - 14, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(245,184,66,0.35)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = (pal && pal.hue) || '#a78bfa';
+      ctx.font = '700 170px "Cinzel", serif';
+      ctx.fillText(rankId, W / 2, my + 62);
+      // Alias + class + prestige.
+      ctx.fillStyle = '#f4f0ff';
+      ctx.font = '700 84px "Cinzel", serif';
+      ctx.fillText(String((typeof playerName === 'string' && playerName) || 'Hunter').toUpperCase().slice(0, 14), W / 2, 1310);
+      let classLine = '';
+      try { classLine = (typeof currentClass === 'string' && currentClass) ? String(getClass(rankId) || currentClass) : String(getClass(rankId) || ''); } catch (_) {}
+      ctx.fillStyle = 'rgba(183,156,255,0.9)';
+      ctx.font = '800 30px "JetBrains Mono", monospace';
+      ctx.fillText((classLine || 'AWAKENED').toUpperCase() + ' · ' + rankId + ' RANK', W / 2, 1372);
+      // Latent grades row.
+      let readings = []; try { readings = _swReadings(); } catch (_) {}
+      const labels = ['ROAD', 'STAIR', 'QUIET', 'IRON'];
+      const gx0 = W / 2 - 330, gw = 220;
+      readings.forEach(function (r, i) {
+        const x = gx0 + i * gw;
+        ctx.fillStyle = 'rgba(143,184,232,0.55)';
+        ctx.font = '800 22px "JetBrains Mono", monospace';
+        ctx.fillText(labels[i] || '', x, 1490);
+        ctx.fillStyle = (r.grade === 'A' || r.grade === 'S') ? gold : '#8fb8e8';
+        ctx.font = '800 58px "JetBrains Mono", monospace';
+        ctx.fillText(r.grade, x, 1554);
+      });
+      // Divider.
+      ctx.strokeStyle = 'rgba(245,184,66,0.3)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(W / 2 - 380, 1620); ctx.lineTo(W / 2 + 380, 1620); ctx.stroke();
+      // Four verified cells.
+      let floors = 0, bosses = 0, streak = 0;
+      try { floors = getAscentState().highestCleared || 0; } catch (_) {}
+      try { const _d = _hrCollectData({}); bosses = _d.bosses || 0; streak = _d.streak || 0; } catch (_) {}
+      const cells = [
+        ['TOTAL XP', _hrFmtNum(totalPoints)],
+        ['BEST STREAK', String(streak || 0) + 'd'],
+        ['HIGHEST FLOOR', String(floors) + '/100'],
+        ['BOSSES SLAIN', _hrFmtNum(bosses)],
+      ];
+      cells.forEach(function (c, i) {
+        const cx = (i % 2 === 0) ? W / 2 - 240 : W / 2 + 240;
+        const cy = 1740 + Math.floor(i / 2) * 190;
+        ctx.fillStyle = i === 0 ? gold : '#e7ecf6';
+        ctx.font = '800 62px "JetBrains Mono", monospace';
+        ctx.fillText(c[1], cx, cy);
+        ctx.fillStyle = 'rgba(143,184,232,0.5)';
+        ctx.font = '800 22px "JetBrains Mono", monospace';
+        ctx.fillText(c[0], cx, cy + 44);
+      });
+      // Footer.
+      const dstr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+      ctx.fillStyle = 'rgba(143,184,232,0.45)';
+      ctx.font = '800 22px "JetBrains Mono", monospace';
+      ctx.fillText('VERIFIED BY THE SYSTEM · FORGED ' + dstr, W / 2, 2300);
+      ctx.fillStyle = 'rgba(245,184,66,0.5)';
+      ctx.font = '600 24px "Cinzel", serif';
+      ctx.fillText('THE CLIMB IS THE PROOF', W / 2, 2352);
+      try { localStorage.setItem('hb_license_rank', rankId); } catch (_) {}
+      // Share (file → Photos). Fall back to a data-URL open.
+      const file = await new Promise(function (resolve, reject) {
+        cv.toBlob(function (b) { if (!b) { reject(new Error('toBlob null')); return; } resolve(new File([b], 'awakened-hunter-license.png', { type: 'image/png' })); }, 'image/png', 0.95);
+      });
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        try { await navigator.share({ files: [file] }); return true; } catch (e) { if (e && e.name === 'AbortError') return false; }
+      }
+      try { const url = cv.toDataURL('image/png'); const w2 = window.open(); if (w2) { w2.document.write('<img src="' + url + '" style="width:100%">'); return true; } } catch (_) {}
+      return false;
+    } catch (e) { _logSwallow('forgeLicense', e); return false; }
+  }
+  try { window.__forgeLicense = _forgeLicense; } catch (_) {}   // W863 QA
+
+  // ── W864 (Wave 2, Hunter's License pt 3) — THE MEASURING STONE ──────────
+  // Once per calendar month (and only after 14+ active days of history) the
+  // stone measures your LATENT rank from 30 days of verified records. If the
+  // latent exceeds your gate rank by TWO OR MORE tiers, the stone CRACKS —
+  // "MEASUREMENT ERROR" — and the System settles the debt with one free
+  // engage. Quiet months stamp silently; the ceremony only plays on a crack
+  // or a latent change (a monthly popup nobody asked for is how you train
+  // people to ignore ceremonies).
+  const STONE_KEY = 'hb_stone_v1';
+  function _stoneTick() {
+    try {
+      const now = new Date();
+      const month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      let st = null; try { st = JSON.parse(localStorage.getItem(STONE_KEY) || 'null'); } catch (_) {}
+      if (st && st.month === month) return;
+      if (_reviewDaysActive() < 14) return;   // never judge a fresh install
+      const latent = _swLatent(_swReadings());
+      let gate = 'E'; try { gate = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
+      const order = ['E', 'D', 'C', 'B', 'A', 'S'];
+      const gap = order.indexOf(latent) - order.indexOf(gate === 'S+' ? 'S' : gate);
+      const cracked = gap >= 2;
+      const prevLatent = st && st.latent;
+      try { localStorage.setItem(STONE_KEY, JSON.stringify({ month: month, latent: latent, cracked: cracked })); } catch (_) {}
+      if (cracked) {
+        try { localStorage.setItem('hb_stone_free_engage', '1'); } catch (_) {}
+        _stoneCeremony(latent, gate, true);
+      } else if (prevLatent && prevLatent !== latent) {
+        _stoneCeremony(latent, gate, false);
+      }
+    } catch (_) {}
+  }
+  function _stoneCeremony(latent, gate, cracked) {
+    try {
+      const old = document.getElementById('stone-overlay'); if (old) old.remove();
+      const ov = document.createElement('div');
+      ov.id = 'stone-overlay'; ov.className = 'sw-overlay stone-overlay';
+      ov.innerHTML =
+        '<div class="stone-stage">' +
+          '<div class="stone-title">THE MEASURING STONE</div>' +
+          '<div class="stone-orb' + (cracked ? ' is-cracked' : '') + '"><span class="stone-letter">' + esc(latent) + '</span>' +
+            (cracked ? '<svg class="stone-crackline" viewBox="0 0 100 100" aria-hidden="true"><path d="M52 2 L46 30 L58 44 L44 60 L54 78 L48 98" fill="none" stroke="rgba(255,120,120,0.85)" stroke-width="2.2" stroke-linejoin="round"/></svg>' : '') +
+          '</div>' +
+          (cracked
+            ? '<div class="stone-verdict stone-verdict--err">MEASUREMENT ERROR</div>' +
+              '<div class="stone-line">Your body reads ' + esc(latent) + '. Your gate rank says ' + esc(gate) + '.<br>The stone was not built for hunters who outgrow their papers.</div>' +
+              '<div class="stone-reward">THE SYSTEM SETTLES ITS DEBT — YOUR NEXT ENGAGE IS FREE.</div>'
+            : '<div class="stone-verdict">LATENT · ' + esc(latent) + '</div>' +
+              '<div class="stone-line">The stone has re-measured you. It is satisfied — for now.</div>') +
+          '<button type="button" class="sw-close" aria-label="Close">ACCEPT THE MEASUREMENT</button>' +
+        '</div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('on'); });
+      try { _hapticTick(cracked ? 'HEAVY' : 'MEDIUM'); } catch (_) {}
+      if (cracked) { try { playSfx('rank_fanfare'); } catch (_) {} }
+      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+      const btn = ov.querySelector('.sw-close'); if (btn) btn.addEventListener('click', close);
+    } catch (e) { _logSwallow('stone:ceremony', e); }
+  }
+  // W864 QA — __stone() forces a fresh measurement; __stone(true) forces a crack preview.
+  try { window.__stone = function (crack) { if (crack) { _stoneCeremony('A', 'D', true); return; } try { localStorage.removeItem(STONE_KEY); } catch (_) {} _stoneTick(); }; } catch (_) {}
   // Delegated opener — the profile card re-renders (W822 lesson).
   try {
     document.addEventListener('click', function (e) {
@@ -65342,7 +65528,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
