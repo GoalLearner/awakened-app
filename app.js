@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w881'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w882'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5614,8 +5614,22 @@
     sleep:   { map: 'sleep_hours_daily', mode: 'days',   qualify: 7,   minMonth: 4, name: 'THE WRIT OF THE QUIET HOURS', verb: 'slept 7 hours', unit: 'nights of 7h+ sleep' },
     workout: { map: 'workout_daily',     mode: 'days',   qualify: 10,  minMonth: 4, name: 'THE WRIT OF THE IRON OATH',   verb: 'trained',       unit: 'workout days' },
   };
+  // W882 — every Wave-2 system stores its progression in localStorage, and NONE
+  // of those keys were in CloudSync's SNAPSHOT_KEYS allowlist (verified: 0 hits
+  // across the 90-key list). hb_souls IS allowlisted, so a reinstall restored
+  // the BALANCE while wiping the ledger of what had already been earned — the
+  // shadow army, the letter archive, and the stirs find-log all vanished, and
+  // the re-armed triggers then re-paid their souls. That is the exact
+  // hb_arena_v2 shape behind the W818 Ascent-wipe. Keys are allowlisted below;
+  // this marks the big state blobs dirty so a push is scheduled promptly.
+  // Scattered one-off counters are NOT individually marked — they ride the next
+  // push from any source (a snapshot always collects every allowlisted key), and
+  // ordinary play pushes constantly via souls/bosses/save.
+  function _w2Sync(reason) {
+    try { if (typeof CloudSync !== 'undefined' && CloudSync.markLocalStateChanged) CloudSync.markLocalStateChanged(reason); } catch (_) {}
+  }
   function _writRead() { try { return JSON.parse(localStorage.getItem(WRIT_KEY) || 'null'); } catch (_) { return null; } }
-  function _writWrite(w) { try { localStorage.setItem(WRIT_KEY, JSON.stringify(w)); } catch (_) {} }
+  function _writWrite(w) { try { localStorage.setItem(WRIT_KEY, JSON.stringify(w)); } catch (_) {} _w2Sync('writ'); }
   function _writDayKeysBack(n) {
     const out = [];
     const d = new Date();
@@ -6009,6 +6023,7 @@
       const cracked = gap >= 2;
       const prevLatent = st && st.latent;
       try { localStorage.setItem(STONE_KEY, JSON.stringify({ month: month, latent: latent, cracked: cracked })); } catch (_) {}
+      _w2Sync('measuring_stone');   // W882 — the stone has no save fn; mark here
       if (cracked) {
         try { localStorage.setItem('hb_stone_free_engage', '1'); } catch (_) {}
         _stoneCeremony(latent, gate, true);
@@ -6108,7 +6123,7 @@
       return a;
     } catch (_) { return { index: 0, kills: 0, wasEngaged: false, letters: [], unread: false, lore1: false, letter6At: null }; }
   }
-  function _plSave(a) { try { localStorage.setItem(PL_ARC_KEY, JSON.stringify(a)); } catch (_) {} }
+  function _plSave(a) { try { localStorage.setItem(PL_ARC_KEY, JSON.stringify(a)); } catch (_) {} _w2Sync('pilgrim'); }
   function _plWeekFlights() {
     try {
       const map = (loadLeaderboardState() || {}).flights_daily || {};
@@ -6252,7 +6267,7 @@
       return d;
     } catch (_) { return null; }
   }
-  function _ddSave(d) { try { localStorage.setItem(DD_KEY, JSON.stringify(d)); } catch (_) {} }
+  function _ddSave(d) { try { localStorage.setItem(DD_KEY, JSON.stringify(d)); } catch (_) {} _w2Sync('double_dungeon'); }
   function _ddEligible() {
     try {
       if (_ddLoad()) return false;                          // already running / done
@@ -6532,7 +6547,7 @@
   const BREAK_DELAY_MS = 24 * 3600 * 1000;
   const BREAK_REMATCH_WINDOW_MS = 72 * 3600 * 1000;
   function _breakLoad() { try { return JSON.parse(localStorage.getItem(BREAK_KEY) || 'null'); } catch (_) { return null; } }
-  function _breakSave(b) { try { if (b) localStorage.setItem(BREAK_KEY, JSON.stringify(b)); else localStorage.removeItem(BREAK_KEY); } catch (_) {} }
+  function _breakSave(b) { try { if (b) localStorage.setItem(BREAK_KEY, JSON.stringify(b)); else localStorage.removeItem(BREAK_KEY); } catch (_) {} _w2Sync('dungeon_break'); }
   function _breakActive() { const b = _breakLoad(); return (b && b.active) ? b : null; }
   function _breakTick() {
     try {
@@ -6783,7 +6798,7 @@
     try { const s = JSON.parse(localStorage.getItem(STIRS_KEY) || 'null') || {}; s.fired = s.fired || {}; s.dawns = s.dawns || {}; s.fragments = s.fragments || []; return s; }
     catch (_) { return { fired: {}, dawns: {}, fragments: [] }; }
   }
-  function _stirsSave(s) { try { localStorage.setItem(STIRS_KEY, JSON.stringify(s)); } catch (_) {} }
+  function _stirsSave(s) { try { localStorage.setItem(STIRS_KEY, JSON.stringify(s)); } catch (_) {} _w2Sync('stirs'); }
   function _stirsTick() {
     try {
       const s = _stirsLoad();
@@ -6928,7 +6943,7 @@
       return s;
     } catch (_) { return { extracted: {}, active: [], windows: {}, zeroDays: 0, dormant: false, loyaltyDay: null }; }
   }
-  function _shSave(s) { try { localStorage.setItem(SHADOWS_KEY, JSON.stringify(s)); } catch (_) {} }
+  function _shSave(s) { try { localStorage.setItem(SHADOWS_KEY, JSON.stringify(s)); } catch (_) {} _w2Sync('shadows'); }
   function _shSlots() {
     try { return SHADOW_SLOTS[(getRank(totalPoints) || {}).id] || 1; } catch (_) { return 1; }
   }
@@ -65268,6 +65283,39 @@
       'hb_lb_cache_step_total',
       'hb_lb_cache_sleep_streak',
       'hb_lb_cache_bedtime_streak',
+      // ── W882 — WAVE-2 PROGRESSION (v3 Trains A+B). ────────────────────────
+      // NONE of these were allowlisted when Wave 2 shipped, so a reinstall or
+      // device swap restored hb_souls (allowlisted since day one) while wiping
+      // every record of what had been earned: the shadow army, the 12-letter
+      // archive, the ANOMALIES find-log, lifetime tallies, and the banked free
+      // engages. Worse than loss — the stirs find-log gone means those triggers
+      // re-fire and re-PAY souls on a balance that survived, and an active
+      // Dungeon Break's 5% leech is escaped by reinstalling. Same shape as the
+      // hb_arena_v2 gap behind the W818 Ascent-wipe.
+      // All account-scoped PROGRESSION. Deliberately NOT here:
+      //   hb_worldgate_v1 / hb_tower_friends_v1 — 10-min server-read caches
+      //   every hb_healthkit_* status flag — DEVICE permission state (W830):
+      //     syncing one re-creates the Health blackout on a fresh install
+      //   hb_tower_avenged_seen_<id> — per-event dedupe, dynamic key names
+      // Old snapshots are unaffected: restoreState only writes keys present.
+      'hb_shadows_v1',            // ARISE roster + extraction windows + loyalty
+      'hb_pilgrim_arc_v1',        // the 12-letter arc + unread + lore unlocks
+      'hb_stirs_v1',              // hidden-quest find-log + fragments (re-pay guard)
+      'hb_writ_v1',               // the live Watcher's Writ
+      'hb_writ_seals',            // lifetime Writ seals
+      'hb_stone_v1',              // Measuring Stone month + latent rank
+      'hb_dd_v1',                 // Double Dungeon progress (day, seals, repeats)
+      'hb_break_v1',              // active Dungeon Break (leech state — see above)
+      'hb_avenger_count',         // lifetime tallies
+      'hb_oathkeeper_count',
+      'hb_breaker_count',
+      'hb_tempered_by',           // the mentor engraved on a rookie's first kill
+      'hb_accolade_altar',        // Awakened at the Altar
+      'hb_accolade_worldbreaker',
+      'hb_tower_avenge_life',     // today's avenged bonus life (stale date = no-op)
+      'hb_first_hunt_free_used',  // once-ever freebie consumed (W771/W850)
+      'hb_stone_free_engage',     // banked free engages — real, spendable credit
+      'hb_dd_free_engage',
       // Misc UI / app-state
       'hb_sound',
       'hb_sw_manual_update',
