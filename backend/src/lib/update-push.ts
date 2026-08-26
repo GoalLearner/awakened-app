@@ -181,7 +181,16 @@ export async function runUpdatePushPage(
 // one costs the notification channel). Per-user build gating (skip hunters
 // already updated) lands with the Train-3 instrumentation (R1b).
 const APP_STORE_ID = '6764727990';
-const RELEASE_WINDOW_DAYS = 7;
+// W880 — 7 → 8. The cron only runs Mondays 9:00–9:55 AM PT, so a release that
+// lands AFTER that window on a Monday (3.0.0 went live 10:10 AM PT on
+// 2026-08-24, ~15 min past the last run) has to wait a full week — and at the
+// next Monday's 9 AM it is 6d22h50m old, clearing the 7-day line by ~70
+// minutes. That margin is real but needlessly thin. Widening costs nothing on
+// the spam side: since W835 the PER-USER gate below already skips anyone whose
+// reported build is >= the store version, so a slightly-staler broadcast can
+// only ever reach hunters who genuinely have not updated — which is exactly
+// the audience. The freshness check is now the belt to W835's suspenders.
+const RELEASE_WINDOW_DAYS = 8;
 // W835 — the lookup now also surfaces the live store VERSION so the per-user
 // gate can compare against reported builds. fresh:false → no broadcast at all.
 async function storeRelease(): Promise<{ fresh: boolean; version: string | null }> {
