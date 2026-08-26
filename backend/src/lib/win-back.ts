@@ -12,6 +12,18 @@
  * double-send. A returned-then-lapsed hunter gets a NEW lapse anchor
  * (their fresh last-open date) and becomes eligible exactly once more.
  *
+ * W881 — the anchor used to come from an app_opens GROUP BY, which silently
+ * excluded anyone with ZERO open rows. That is not a rare edge: the client's
+ * launch ping fires ~1.5s after boot and no-ops when not yet signed in, so a
+ * hunter who signed up and never came back recorded no opens at all — and
+ * reaching exactly that person is the whole point of a win-back. The anchor
+ * now falls back to the account's creation date (epoch-ms; date() on a raw
+ * integer returns NULL in SQLite, hence /1000 + 'unixepoch'), so the signup
+ * itself counts as the last touch. The device-token EXISTS check still
+ * applies — W881 registers a token at onboarding completion, so these
+ * hunters now have one; anyone predating that fix stays unreachable until
+ * they open the app again, which no server change can alter.
+ *
  * Window rationale: <4 days is normal life, not a lapse; >30 days is cold —
  * a push into a month of silence reads as spam and risks the opt-out that
  * the whole Train-1/3 push discipline exists to avoid.
@@ -56,8 +68,12 @@ export async function sweepWinBackPushes(
     // are both UTC 'YYYY-MM-DD', so string compares are day-exact.
     const rows = await env.DB.prepare(
       `SELECT c.user_id AS user_id, c.last_open AS last_open
-         FROM (SELECT ao.user_id AS user_id, MAX(ao.date_utc) AS last_open
-                 FROM app_opens ao GROUP BY ao.user_id) c
+         FROM (SELECT u2.id AS user_id,
+                      COALESCE(
+                        (SELECT MAX(ao.date_utc) FROM app_opens ao WHERE ao.user_id = u2.id),
+                        date(u2.created_at / 1000, 'unixepoch')
+                      ) AS last_open
+                 FROM users u2) c
          JOIN users u ON u.id = c.user_id AND u.apple_sub NOT LIKE 'sim_test_%'
         WHERE c.last_open <= date('now', '-${WIN_BACK_MIN_DAYS} days')
           AND c.last_open >= date('now', '-${WIN_BACK_MAX_DAYS} days')
