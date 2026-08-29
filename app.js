@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w883'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w884'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5628,6 +5628,58 @@
   function _w2Sync(reason) {
     try { if (typeof CloudSync !== 'undefined' && CloudSync.markLocalStateChanged) CloudSync.markLocalStateChanged(reason); } catch (_) {}
   }
+  // W884 (3.0.1 A3) — breadcrumbs for the Wave-2 server writes.
+  //
+  // Every one of these shipped fire-and-forget as `.catch(function(){})`,
+  // which LOOKS defensive but catches nothing that matters: auth.js resolves
+  // these calls with {ok:false, code} on a 401/500/network failure instead of
+  // rejecting, so the catch never runs and the failure leaves no trace at all.
+  // That is exactly why an empty tower_events table is unreadable today —
+  // "nobody climbed a new floor" and "every submit failed" look identical from
+  // the outside. This makes the difference visible, permanently, for these and
+  // any future feature that writes through the same pattern.
+  //
+  // Throttled to ONCE PER TAG PER DAY: __reportClientError is capped at 5 per
+  // session and shared with real crash reports, so an unthrottled breadcrumb
+  // would evict the crashes it sits beside.
+  //
+  // The _stubGate codes are NOT failures — they mean auth.js correctly declined
+  // to call at all for a guest/stub/signed-out session — so they never report.
+  const _W2_EXPECTED_CODES = { NOT_SIGNED_IN: 1, LOCAL_DEV_SKIP: 1, GUEST_SKIP: 1, STUB_USER: 1 };
+  function _w2Once(kind, tag) {
+    // true the first time this (kind, tag) is seen on this device today.
+    try {
+      const k = 'hb_w2' + kind + '_' + tag;
+      const day = getDeviceLocalDate();
+      if (localStorage.getItem(k) === day) return false;
+      localStorage.setItem(k, day);
+      return true;
+    } catch (_) { return false; }
+  }
+  /** Watch a Wave-2 server write. Returns the SAME promise, so existing
+   *  .then() chains are unaffected — this only observes. */
+  function _w2Watch(tag, p, opts) {
+    try {
+      Promise.resolve(p).then(function (r) {
+        if (r && r.ok) {
+          // Positive signal, opt-in + throttled: "this write does land" is the
+          // other half of the diagnostic. Without it, silence is ambiguous.
+          if (opts && opts.emitOk && _w2Once('ok', tag)) {
+            try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('w2_write_ok', tag); } catch (_) {}
+          }
+          return;
+        }
+        const code = (r && r.code) || 'NO_RESULT';
+        if (_W2_EXPECTED_CODES[code]) return;
+        if (!_w2Once('fail', tag)) return;
+        try { if (typeof window.__reportClientError === 'function') window.__reportClientError('[w2-write] ' + tag + ' -> ' + code); } catch (_) {}
+      }, function (e) {
+        if (!_w2Once('fail', tag)) return;
+        try { if (typeof window.__reportClientError === 'function') window.__reportClientError('[w2-write] ' + tag + ' threw: ' + ((e && e.message) || 'unknown')); } catch (_) {}
+      });
+    } catch (_) {}
+    return p;
+  }
   function _writRead() { try { return JSON.parse(localStorage.getItem(WRIT_KEY) || 'null'); } catch (_) { return null; } }
   function _writWrite(w) { try { localStorage.setItem(WRIT_KEY, JSON.stringify(w)); } catch (_) {} _w2Sync('writ'); }
   function _writDayKeysBack(n) {
@@ -6432,7 +6484,7 @@
           const asMentor = o.mentor_alias === me && !o.mentor_claimed;
           const asRookie = o.rookie_alias === me && !o.rookie_claimed;
           if (!asMentor && !asRookie) return;
-          Auth.claimOath(o.id).then(function (c) {
+          _w2Watch('oath_claim', Auth.claimOath(o.id)).then(function (c) {   // W884
             if (!(c && c.ok && c.first && c.souls > 0)) return;
             try { earnSouls(c.souls, 'oath_' + (asMentor ? 'keeper' : 'tempered') + '_' + o.id); } catch (_) {}
             try { _hapticTick('SUCCESS'); } catch (_) {}
@@ -6511,7 +6563,7 @@
         const uid = t.getAttribute('data-oath-swear');
         const alias = t.getAttribute('data-oath-alias') || 'them';
         t.disabled = true; t.textContent = 'SWEARING…';
-        Auth.swearOath(uid).then(function (r) {
+        _w2Watch('oath_swear', Auth.swearOath(uid)).then(function (r) {   // W884
           if (r && r.ok) {
             try { showHabitToast('The oath is sworn. ' + alias + ' has 14 days — and your belief.'); } catch (_) {}
             _oathBootSync();
@@ -6662,12 +6714,12 @@
   }
   /** Fire-and-forget submits from the battle commit point. */
   function _towerOnFloorCleared(floor) {
-    try { if (window.Auth && Auth.submitTowerEvent) Auth.submitTowerEvent('clear', floor).catch(function () {}); } catch (_) {}
+    try { if (window.Auth && Auth.submitTowerEvent) _w2Watch('tower_clear', Auth.submitTowerEvent('clear', floor), { emitOk: true }); } catch (_) {}   // W884
     // Avenge any friend kneeling on this floor.
     try {
       const echo = _towerEchoFor(floor);
       if (echo && window.Auth && Auth.avengeTowerDefeat) {
-        Auth.avengeTowerDefeat(echo.id).then(function (r) {
+        _w2Watch('tower_avenge', Auth.avengeTowerDefeat(echo.id)).then(function (r) {   // W884
           if (!(r && r.ok)) return;
           try { earnSouls(r.souls || 40, 'tower_avenge_' + floor); } catch (_) {}
           try { const n = (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) + 1; localStorage.setItem('hb_avenger_count', String(n)); } catch (_) {}
@@ -6679,7 +6731,7 @@
     } catch (_) {}
   }
   function _towerOnRunEnded(floor) {
-    try { if (window.Auth && Auth.submitTowerEvent) Auth.submitTowerEvent('defeat', floor).catch(function () {}); } catch (_) {}
+    try { if (window.Auth && Auth.submitTowerEvent) _w2Watch('tower_defeat', Auth.submitTowerEvent('defeat', floor), { emitOk: true }); } catch (_) {}   // W884
   }
   // W870 QA — __tower() cache dump; __tower(true) force-syncs.
   try { window.__tower = function (force) { if (force) _towerSync(true); return _towerCache(); }; } catch (_) {}
@@ -6707,7 +6759,7 @@
         try { localStorage.setItem(WG_CACHE_KEY, JSON.stringify({ at: Date.now(), week: r.week_start, hp: r.hp, pool: r.pool, status: r.status, my: r.my_damage, floor: r.claim_floor, souls: r.souls, claimable: r.claimable })); } catch (_) {}
         // Auto-claim the bounty the moment it's ours to take.
         if (r.claimable && typeof Auth.claimWorldgate === 'function') {
-          Auth.claimWorldgate().then(function (cl) {
+          _w2Watch('worldgate_claim', Auth.claimWorldgate()).then(function (cl) {   // W884
             if (!(cl && cl.ok && cl.first && cl.souls > 0)) return;
             try { earnSouls(cl.souls, 'worldgate_' + r.week_start); } catch (_) {}
             try { localStorage.setItem('hb_accolade_worldbreaker', String((parseInt(localStorage.getItem('hb_accolade_worldbreaker'), 10) || 0) + 1)); } catch (_) {}

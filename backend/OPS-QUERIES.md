@@ -26,6 +26,33 @@ SELECT u.alias, ce.build, substr(ce.message,1,90) AS msg, COUNT(*) AS n,
  GROUP BY u.alias, ce.build, msg ORDER BY last DESC;
 ```
 
+Wave-2 write health (W884): are the fire-and-forget server writes actually
+landing? `[w2-write]` breadcrumbs are throttled to once per tag per device per
+day, and guest/signed-out sessions never report — so ANY row here is a real
+failure, and the tag names which write broke.
+
+```sql
+SELECT substr(ce.message, 1, 60) AS write_failure,
+       COUNT(*) AS n, COUNT(DISTINCT ce.user_id) AS hunters,
+       MAX(datetime(ce.created_at/1000,'unixepoch')) AS last
+  FROM client_errors ce
+ WHERE ce.message LIKE '[w2-write]%'
+   AND ce.created_at > (strftime('%s','now') - 14*86400) * 1000
+ GROUP BY write_failure ORDER BY n DESC;
+```
+
+The positive half — reading these two together is the whole diagnostic. For
+the tower: `w2_write_ok` rows but an empty `tower_events` means the SERVER is
+dropping them; no rows of either kind means nobody advanced a floor (the
+feature is starved, not broken); `[w2-write] tower_clear` failures mean the
+wiring itself is broken.
+
+```sql
+SELECT detail AS write_tag, COUNT(*) AS days, COUNT(DISTINCT user_id) AS hunters
+  FROM funnel_events WHERE event = 'w2_write_ok'
+ GROUP BY detail ORDER BY hunters DESC;
+```
+
 Health-blackout detector (the W830 incident, institutionalized): anyone
 OPENING the app days after their last step submit is reading 0 from Health.
 
