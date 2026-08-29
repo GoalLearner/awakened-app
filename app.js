@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w888'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w889'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2401,6 +2401,37 @@
   // W850 (v3 V2a) — TRUE while the W771 first-hunt freebie is still
   // unclaimed on a device that has never engaged any boss. Shared by the
   // engage path, the boss-sheet button label, and the FIRST STEPS gate row.
+  // W889 (3.0.1 B5) — ONE resolver for "will this engage be free, and why".
+  // FOUR different credits can zero an engage cost, and only the W771 freebie
+  // was ever visible BEFORE the tap. The cracked stone's debt, the altar's
+  // gift and the free break rematch were all consumed silently — the exact
+  // failure W850 documented for the freebie itself ("it fired silently for a
+  // year; the audit that drove W823's 'a hunt costs 25 souls' copy never found
+  // it"). A banked credit the hunter cannot see cannot change the decision it
+  // was minted to change: they read "25 SOULS", they have 11, they walk away
+  // from a hunt that was already paid for.
+  //
+  // The button AND the engage path both resolve through this function, so the
+  // label can never drift from what is actually charged — the W878 bug class
+  // (a surface asserting state that stopped being true) does not get a second
+  // outing. PRECEDENCE MIRRORS CONSUMPTION: first → stone → altar → rematch.
+  const _ENGAGE_FREE_LABEL = {
+    first:   'FIRST HUNT FREE',
+    stone:   'FREE — THE STONE’S DEBT',
+    altar:   'FREE — THE ALTAR’S GIFT',
+    rematch: 'FREE — END THE BREAK',
+  };
+  function _engageFreeReason(bossId, cfg) {
+    try {
+      if (!cfg || engageCostSouls(cfg.rank) <= 0) return null;   // already free by rank
+      if (_firstHuntFreeAvailable()) return 'first';
+      if (localStorage.getItem('hb_stone_free_engage') === '1') return 'stone';
+      if (localStorage.getItem('hb_dd_free_engage') === '1') return 'altar';
+      const _bk = _breakActive();
+      if (_bk && _bk.bossId === bossId) return 'rematch';
+    } catch (_) {}
+    return null;
+  }
   function _firstHuntFreeAvailable() {
     try {
       if (localStorage.getItem('hb_first_hunt_free_used') === '1') return false;
@@ -2462,26 +2493,25 @@
     // _firstHuntFreeAvailable so the engage button + FIRST STEPS can SHOW the
     // freebie before the tap (it fired silently for a year; the audit that
     // drove W823's "a hunt costs 25 souls" copy never found it).
+    // W889 — resolve WHY this engage is free through the SAME function the
+    // button label uses, so the two can never disagree. Each branch keeps its
+    // own credit consumption + toast; the rematch case is handled below
+    // because it also sets _bkRematch, which drives the 72h window.
+    const _freeReason = _engageFreeReason(bossId, cfg);
     try {
-      if (cost > 0 && _firstHuntFreeAvailable()) {
+      if (_freeReason === 'first') {
         cost = 0;
         localStorage.setItem('hb_first_hunt_free_used', '1');
         if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
         try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('first_hunt_engaged', bossId); } catch (_) {}   // W850 (V2c)
-      }
-    } catch (_) {}
-    // W864 — the cracked Measuring Stone's debt: one free engage, consumed here.
-    try {
-      if (cost > 0 && localStorage.getItem('hb_stone_free_engage') === '1') {
+      } else if (_freeReason === 'stone') {
+        // W864 — the cracked Measuring Stone's debt: one free engage.
         cost = 0;
         localStorage.removeItem('hb_stone_free_engage');
         if (typeof showHabitToast === 'function') showHabitToast('The stone’s debt is paid — this hunt is free.');
-      }
-    } catch (_) {}
-    // W866 — the altar's gift (Double Dungeon completion): one free engage,
-    // the backup for zero-kill hunters who spent the W771 freebie on a loss.
-    try {
-      if (cost > 0 && localStorage.getItem('hb_dd_free_engage') === '1') {
+      } else if (_freeReason === 'altar') {
+        // W866 — the altar's gift (Double Dungeon completion): the backup for
+        // zero-kill hunters who spent the W771 freebie on a loss.
         cost = 0;
         localStorage.removeItem('hb_dd_free_engage');
         if (typeof showHabitToast === 'function') showHabitToast('The altar has already paid for this hunt.');
@@ -51075,9 +51105,11 @@
           // W850 (v3 V2a) — the W771 freebie fired silently AFTER the tap for
           // a year; now the button says so BEFORE it (the whole point of a
           // free first hunt is removing the fear of the wager).
-          const firstFree = !huntedBefore && cost > 0 && _firstHuntFreeAvailable();
-          engageBtn.textContent = firstFree
-            ? verb + ' — FIRST HUNT FREE'
+          // W889 — was first-freebie only; now every banked credit shows.
+          const _freeLabel = _ENGAGE_FREE_LABEL[_engageFreeReason(bossId, cfg)] || null;
+          const firstFree = !!_freeLabel;
+          engageBtn.textContent = _freeLabel
+            ? verb + ' — ' + _freeLabel
             : cost > 0 ? verb + ' — ' + cost + ' SOULS' : verb;
           // v3 Phase 1z.39 — visually soften the button when broke.
           // The existing engageBoss() guard already toasts the
@@ -51099,7 +51131,9 @@
         if (balanceEl && balanceNumEl) {
           let balance = 0;
           try { balance = (typeof getSoulsBalance === 'function') ? getSoulsBalance() : 0; } catch (_) {}
-          const insufficient = cost > 0 && balance < cost;
+          // W889 — a banked credit means the readout must not read as a wall.
+          const _freeNow = !!_ENGAGE_FREE_LABEL[_engageFreeReason(bossId, cfg)];
+          const insufficient = !_freeNow && cost > 0 && balance < cost;
           balanceEl.classList.toggle('bfs-souls-balance--insufficient', insufficient);
           if (insufficient) {
             // W827 (Train 2, L12) — the broke state was a dead end: it named
@@ -51111,7 +51145,7 @@
             balanceEl.setAttribute('role', 'button');
             balanceEl.setAttribute('tabindex', '0');
           } else {
-            if (balanceLabelEl) balanceLabelEl.textContent = 'Souls available';
+            if (balanceLabelEl) balanceLabelEl.textContent = _freeNow ? 'This hunt is already paid for' : 'Souls available';
             balanceNumEl.textContent = balance.toLocaleString('en-US');
             balanceEl.removeAttribute('role');
             balanceEl.removeAttribute('tabindex');
