@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.1-w893'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.1-w894'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7208,6 +7208,45 @@
     return parts.length ? parts.join(' + ') : 'repeat half the trial';
   }
   /** Async: has the hunter repeated 50% of the condition inside the window? */
+  // W894 (3.0.1 C10) — the extraction window is measured on DAILY TOTALS.
+  //
+  // It used to ask HealthKit for [killAt, now] directly. That is a MID-DAY
+  // ANCHORED window, and it is the precise query shape this repo's own
+  // postmortem documents as silently failing (CLAUDE.md, the 1z.150 decision
+  // matrix): "@perfood queryHKitSampleType for stepCount with sub-day windows
+  // ... returns empty even when full-day windows succeed". The remedy recorded
+  // there is a DAY-ANCHORED DELTA, and the binding W799 rule is that every
+  // step/flight rule uses daily-total math. This one did not.
+  //
+  // Step and flight bosses are the majority of extractable kills, so ARISE —
+  // the flagship of the whole release — may never have raised a shadow from
+  // one, and nothing would have revealed it: shadows live only in
+  // localStorage, so there is no server signal to notice the silence. The new
+  // funnel emit at the ceremony exists to close that blind spot for good.
+  //
+  // Only effort AFTER the kill counts: the kill day contributes its verified
+  // daily total MINUS the steps already banked before killAt (one
+  // midnight-anchored query, the proven shape), and later days contribute
+  // their whole verified total straight from the leaderboard map.
+  async function _shadowMetricSince(mapKey, readFn, w) {
+    const endMs = Math.min(Date.now(), w.until);
+    const days = _huntWindowLocalDays(w.killAt, endMs);
+    if (!days.length) return 0;
+    let sum = 0;
+    for (let i = 0; i < days.length; i++) {
+      const dayTotal = _ddValFor(mapKey, days[i]);
+      if (i !== 0) { sum += dayTotal; continue; }
+      let pre = null;
+      try {
+        const midnight = new Date(days[i] + 'T00:00:00').getTime();
+        pre = await readFn(new Date(midnight).toISOString(), new Date(w.killAt).toISOString());
+      } catch (_) { pre = null; }
+      // Unreadable pre-kill portion → credit the kill day NOTHING rather than
+      // risk crediting a walk taken before the boss fell. The window has days left.
+      sum += (typeof pre === 'number') ? Math.max(0, dayTotal - pre) : 0;
+    }
+    return sum;
+  }
   async function _shadowEvalWindow(bossId, w) {
     const cfg = BOSSES[bossId]; if (!cfg) return false;
     if (typeof Health === 'undefined' || !Health.isAvailable || !Health.isAvailable()) return false;
@@ -7216,13 +7255,16 @@
     const eIso = new Date(Math.min(Date.now(), w.until)).toISOString();
     try {
       if (typeof cfg.stepThreshold === 'number') {
-        const v = await Health.getStepsBetween(sIso, eIso);
-        if (!(typeof v === 'number' && v >= cfg.stepThreshold * 0.5)) return false;
+        const v = await _shadowMetricSince('steps_daily', function (a, b) { return Health.getStepsBetween(a, b); }, w);
+        if (!(v >= cfg.stepThreshold * 0.5)) return false;
       }
       if (typeof cfg.flightThreshold === 'number') {
-        const v = await Health.getFlightsClimbedBetween(sIso, eIso);
-        if (!(typeof v === 'number' && v >= cfg.flightThreshold * 0.5)) return false;
+        const v = await _shadowMetricSince('flights_daily', function (a, b) { return Health.getFlightsClimbedBetween(a, b); }, w);
+        if (!(v >= cfg.flightThreshold * 0.5)) return false;
       }
+      // Workout + sleep below keep their list-based reads: those return SAMPLE
+      // LISTS rather than an aggregated count, which is not the shape the
+      // 1z.150 postmortem indicts. Worth a device check all the same.
       if (typeof cfg.workoutMinutes === 'number') {
         const res = await Health.getStrengthWorkoutsBetween(sIso, eIso);
         const list = Array.isArray(res) ? res : (res && res.workouts) || [];
@@ -7264,7 +7306,10 @@
           const w = cur.windows[id]; if (!w) continue;
           w.lastCheck = Date.now(); cur.windows[id] = w; _shSave(cur);
           const risen = await _shadowEvalWindow(id, w);
-          if (risen) _ariseCeremony(id);
+          if (risen) {
+            try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('arise_extracted', id); } catch (_) {}   // W894 — shadows are localStorage-only; this is the ONLY signal
+            _ariseCeremony(id);
+          }
         }
       } catch (_) {}
       _shadowTickBusy = false;
