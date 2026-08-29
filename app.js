@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w889'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w890'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6350,6 +6350,35 @@
     { n: 'II',  verb: 'CLIMB',  metric: 'flights_daily', need: 5,    line: 'SECOND COMMANDMENT: CLIMB — 5 verified flights before midnight.' },
     { n: 'III', verb: 'ENDURE', metric: 'steps_daily',   need: 6000, line: 'THIRD COMMANDMENT: ENDURE — 6,000 verified steps before midnight.' },
   ];
+  // W890 (3.0.1 B6) — CLIMB is the one commandment a hunter can be structurally
+  // unable to obey. WALK and ENDURE need only a phone in a pocket; flights need
+  // stairs, and plenty of hunters do not have any (ground-floor flat, wheelchair
+  // user, a week in a bungalow). For them commandment II repeats forever and the
+  // Double Dungeon — the funnel built to convert the 38 zero-kill profiles —
+  // becomes an unwinnable room with no exit and no explanation.
+  //
+  // After two repeats with a literal ZERO flights reading (short is not the same
+  // as impossible: 3 of 5 flights means try again, 0 of 5 twice means the stair
+  // is not there), the stair yields and asks for road instead. 8,000 steps is
+  // deliberately HARDER than either step commandment in the ritual (4,000 and
+  // 6,000), so this is mercy, not a shortcut — nobody will take it to dodge
+  // stairs they own.
+  const DD_ALT_CLIMB = {
+    n: 'II', verb: 'WALK', metric: 'steps_daily', need: 8000,
+    line: 'SECOND COMMANDMENT — THE STAIR IS SEALED TO YOU: WALK 8,000 verified steps before midnight.',
+  };
+  /** The commandment actually in force today (honours the W890 substitution). */
+  function _ddCmdFor(d) {
+    if (!d) return null;
+    const i = d.day - 1;
+    if (i === 1 && d.altClimb) return DD_ALT_CLIMB;
+    return DD_COMMANDMENTS[i];
+  }
+  /** True when the System genuinely cannot read this hunter's movement. */
+  function _ddHealthBlind() {
+    try { return (typeof Health.permissionStatus !== 'function') || Health.permissionStatus() !== 'granted'; }
+    catch (_) { return false; }
+  }
   function _ddLoad() {
     try {
       const d = JSON.parse(localStorage.getItem(DD_KEY) || 'null');
@@ -6400,7 +6429,7 @@
       if (!d || d.done) return;
       const today = getDeviceLocalDate();
       const cIdx = d.day - 1;
-      const cmd = DD_COMMANDMENTS[cIdx]; if (!cmd) return;
+      const cmd = _ddCmdFor(d); if (!cmd) return;   // W890 — may be the substituted commandment
       // Day rolled?
       if (d.dayDate !== today) {
         // W886 (3.0.1 B2) — RETRO-SEAL. d.sealed[] was only ever set by a LIVE
@@ -6422,11 +6451,27 @@
           // Yesterday's commandment was met → advance.
           if (d.day >= 3) { _ddComplete(d); return; }
           d.day++; d.dayDate = today; d.failedYesterday = false;
+          d.repeats = 0;   // W890 — a new commandment starts with a clean slate
           _ddSave(d);
-          try { showSystemNotice('THE DOUBLE DUNGEON', DD_COMMANDMENTS[d.day - 1].line); } catch (_) {}   // W874 — positional
+          try { showSystemNotice('THE DOUBLE DUNGEON', _ddCmdFor(d).line); } catch (_) {}   // W874 positional; W890 — announce the commandment actually in force
         } else {
           // The eyes ignite; the day repeats.
+          const _missed = _ddValFor(cmd.metric, d.dayDate);   // W890 — what the closed day actually read
           d.dayDate = today; d.failedYesterday = true;
+          d.repeats = (d.repeats | 0) + 1;
+          // W890 — the stair yields. Two repeats AND a literal zero reading means
+          // the metric is unavailable to this hunter, not merely unmet. The
+          // health guard matters: with Health disconnected EVERY metric reads
+          // zero, so without it we would hand a step target to someone whose
+          // steps cannot be read either — the card offers the repair instead.
+          if (cIdx === 1 && !d.altClimb && d.repeats >= 2 && _missed === 0 && !_ddHealthBlind()) {
+            d.altClimb = true;
+            _ddSave(d);
+            try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('dd_alt_granted', 'climb'); } catch (_) {}
+            try { showSystemNotice('THE STAIR IS SEALED', 'No stair answers you. The gate does not punish what it cannot offer.<br>' + esc(DD_ALT_CLIMB.line)); } catch (_) {}
+            try { renderDoubleDungeonCard(); } catch (_) {}
+            return;
+          }
           _ddSave(d);
           try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('dd_repeat', String(d.day)); } catch (_) {}   // W883 (A2) — detail = the commandment being repeated
           try { showHabitToast('The statue’s eyes ignite. The day repeats — the gate is patient.'); } catch (_) {}
@@ -6476,8 +6521,12 @@
     const d = _ddLoad();
     if (!d || d.done) { host.classList.add('hidden'); host.innerHTML = ''; return; }
     const cIdx = d.day - 1;
-    const cmd = DD_COMMANDMENTS[cIdx];
+    const cmd = _ddCmdFor(d);   // W890
     const val = _ddTodayVal(cmd.metric);
+    // W890 — with Health disconnected every commandment reads 0/N forever. A
+    // dead progress bar is not an honest surface: name the cause and hand over
+    // the repair, exactly as the W830 blackout taught.
+    const _blind = _ddHealthBlind();
     const pct = Math.max(0, Math.min(100, Math.round((val / cmd.need) * 100)));
     const eye = function (i) {
       const stateCls = d.sealed[i] ? ' dd-eye--dark' : (i === cIdx && d.failedYesterday ? ' dd-eye--lit' : i === cIdx ? ' dd-eye--waiting' : '');
@@ -6487,8 +6536,10 @@
       '<div class="dd-eyebrow">THE DOUBLE DUNGEON · DAY ' + d.day + ' OF 3' + (d.failedYesterday ? ' · THE DAY REPEATS' : '') + '</div>' +
       '<div class="dd-gazes">' + eye(0) + eye(1) + eye(2) + '</div>' +
       '<div class="dd-line">' + esc(cmd.line) + '</div>' +
-      '<div class="writ-bar dd-bar"><span style="width:' + pct + '%"></span></div>' +
-      '<div class="dd-progress">' + val.toLocaleString('en-US') + ' / ' + cmd.need.toLocaleString('en-US') + '</div>';
+      (_blind
+        ? '<div class="dd-progress">The System cannot see your movement. Reconnect Apple Health to continue — tap here.</div>'
+        : '<div class="writ-bar dd-bar"><span style="width:' + pct + '%"></span></div>' +
+          '<div class="dd-progress">' + val.toLocaleString('en-US') + ' / ' + cmd.need.toLocaleString('en-US') + '</div>');
     // W888 — the card was inert: no button, no handler, nothing to tap. A rookie
     // who dismissed the opening beat had no way back to it. Wired ONCE (guard
     // attribute) since this render runs on every tick.
@@ -6506,9 +6557,12 @@
   /** Re-run today's commandment beat on demand (the card tap). */
   function _ddReplayBeat() {
     const d = _ddLoad(); if (!d || d.done) return;
+    // W890 — when the System is blind, the useful action is the repair, not a
+    // restatement of a commandment it currently cannot verify.
+    if (_ddHealthBlind()) { try { openSettings(); } catch (_) {} return; }
     if (_isAnyHigherPriorityModalActive()) return;   // never mount over a live beat
     const cIdx = d.day - 1;
-    const cmd = DD_COMMANDMENTS[cIdx]; if (!cmd) return;
+    const cmd = _ddCmdFor(d); if (!cmd) return;
     const val = _ddTodayVal(cmd.metric);
     const sealed = !!d.sealed[cIdx];
     _faRunCoachmark({
