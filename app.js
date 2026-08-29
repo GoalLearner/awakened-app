@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.1-w898'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.1-w900'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -61465,6 +61465,11 @@
     // Stable plugin notification ID for the once-a-day digest. Picked from
     // a numeric range that won't collide with notifIdFor() habit hashes.
     const DIGEST_NOTIF_ID  = 1;
+    // W900 — the digest's one-shot lane (7 days), clear of every reserved id:
+    // comeback 99994-6, shield 99993, break 99992, pilgrim 99989, weekly 99997,
+    // midday 99998, check-in 99999.
+    const DIGEST_RUN_DAYS = 7;
+    const DIGEST_ID_BASE  = 99970;   // 99970..99976
 
     // Voice-coded copy keyed by primary stat. Used as a fallback for
     // habits that don't have a dedicated entry in HABIT_NOTIF_COPY (and
@@ -61888,7 +61893,11 @@
     // is the strongest morning hook); otherwise alternate competitive-standing vs
     // rally by day parity so consecutive mornings feel different. Defensive — a
     // missing signal never crashes the schedule call.
-    function composeDigest() {
+    // W900 (3.0.1 E18) — `off` is the day offset within the scheduled run
+    // (0 = today). It is folded into every variant salt so consecutive mornings
+    // do not repeat the same sentence.
+    function composeDigest(off) {
+      const _o = (off | 0);
       let name = 'Hunter';
       try { if (typeof playerName === 'string' && playerName.trim()) name = playerName.trim(); } catch (_) {}
       let count = 0;
@@ -61900,16 +61909,16 @@
       // Hot perfect-day streak → loss-aversion.
       let pstreak = 0;
       try { if (typeof perfectStreak === 'object' && perfectStreak && typeof perfectStreak.count === 'number') pstreak = perfectStreak.count; } catch (_) {}
-      if (pstreak >= 3) { const r = _notifResolve(NOTIF.digest.streakHot, { name: name, streak: pstreak }, pstreak); if (r) return r; }
+      if (pstreak >= 3) { const r = _notifResolve(NOTIF.digest.streakHot, { name: name, streak: pstreak }, pstreak + _o); if (r) return r; }
 
       // Competitive standing on even days when a rival sits above you.
       try {
         const ctx = _notifStepCtx();
-        if (ctx && ctx.aheadName && (_notifDayIndex() % 2 === 0)) { const r = _notifResolve(NOTIF.digest.competitive, ctx, 0); if (r) return r; }
+        if (ctx && ctx.aheadName && ((_notifDayIndex() + _o) % 2 === 0)) { const r = _notifResolve(NOTIF.digest.competitive, ctx, _o); if (r) return r; }
       } catch (_) {}
 
       // Default — rally.
-      const r = _notifResolve(NOTIF.digest.rally, { name: name, count: count }, count);
+      const r = _notifResolve(NOTIF.digest.rally, { name: name, count: count }, count + _o);
       return r || { title: 'Morning, ' + name, body: count + ' objectives due today. Start with one.' };
     }
 
@@ -61923,23 +61932,51 @@
       if (!p || !isNative()) return false;
       if (isDisabled() || isPaused()) return false;
       try {
-        await p.cancel({ notifications: [{ id: DIGEST_NOTIF_ID }] });
+        // W900 — clear the legacy repeating notification AND the one-shot lane.
+        const _clear = [{ id: DIGEST_NOTIF_ID }];
+        for (let i = 0; i < DIGEST_RUN_DAYS; i++) _clear.push({ id: DIGEST_ID_BASE + i });
+        await p.cancel({ notifications: _clear });
         // TIMEZONE: Capacitor's schedule.on.{hour,minute} is interpreted
         // by iOS as DEVICE-LOCAL time, not UTC and not the app's PT
         // anchor. That's the right behavior — a user in NYC who picks
         // 9:00 AM gets the notification at 9 AM Eastern, not 9 AM PT.
         // (Streak math elsewhere in the app DOES use PT — see getPTDate.
         //  These two are intentionally different concerns.)
-        const _dg = composeDigest();   // W586 — {title, body}
-        await p.schedule({
-          notifications: [{
-            id:    DIGEST_NOTIF_ID,
+        // W900 — THE DIGEST NO LONGER REPEATS ITSELF FOREVER.
+        //
+        // It used to register ONE notification with schedule.on{hour,minute} —
+        // an infinitely repeating trigger carrying a body composed ONCE, at
+        // schedule time. Re-composition only happened when the app was opened.
+        // So a hunter who stopped opening the app received the very same
+        // sentence — "Richie, 6 await today." — at 9 AM every morning for
+        // WEEKS. Habituation is how a notification channel dies, and this was
+        // the only touch in the day 8-30 window, aimed at people already
+        // drifting away.
+        //
+        // Now: seven dated one-shots, each composed with its own day offset so
+        // the voice rotates, re-armed on every app open (so an active hunter
+        // always has a full week of runway and notices nothing). If they stop
+        // opening it, the digest runs out after seven days and goes
+        // deliberately QUIET — handing the 8-30 day window to the server-side
+        // win-back push, which is personalised (W899) and rate-limited, rather
+        // than shouting the same line into an empty room.
+        const _now = Date.now();
+        const _notifs = [];
+        for (let i = 0; i < DIGEST_RUN_DAYS; i++) {
+          const fireAt = new Date(_now + i * 86400000);
+          fireAt.setHours(hm.h, hm.m, 0, 0);
+          if (fireAt.getTime() <= _now) continue;   // today's slot already passed
+          const _dg = composeDigest(i);   // W586 — {title, body}
+          _notifs.push({
+            id:    DIGEST_ID_BASE + i,
             title: _dg.title,
             body:  _dg.body,
-            schedule: { on: { hour: hm.h, minute: hm.m }, allowWhileIdle: true },
-            extra: { kind: 'digest' },
-          }],
-        });
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra: { kind: 'digest', dayOffset: i },
+          });
+        }
+        if (!_notifs.length) return false;
+        await p.schedule({ notifications: _notifs });
         return true;
       } catch (e) {
         console.warn('digest schedule failed', e);
@@ -62061,11 +62098,29 @@
         return false;
       }
     }
+    // W900 — keep a rolling 7-day digest horizon for anyone still opening the
+    // app, so the run never expires under an active hunter. Throttled to ONCE
+    // PER DEVICE-LOCAL DAY: reapplyMidDay also fires on every completion
+    // toggle, and re-cancelling + rescheduling seven notifications dozens of
+    // times a day would be pure churn for no behavioural gain.
+    let _digestArmedDay = '';
+    async function _rearmDigestRun() {
+      try {
+        const today = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate() : new Date().toDateString();
+        if (_digestArmedDay === today) return;
+        const t = localStorage.getItem(KEY_DIGEST_TIME);
+        if (!t) return;                    // never opted in — nothing to re-arm
+        _digestArmedDay = today;
+        await setDailyDigest(t);
+      } catch (_) {}
+    }
     async function reapplyMidDay() {
       // W840 (R6) — the shield guard rides every midday reapply site (boot,
       // day-change, completion toggles), so it re-arms and self-cancels in
       // lockstep with the state it describes. Never let it block the check-in.
       try { await scheduleShieldGuard(); } catch (_) {}
+      try { await _rearmDigestRun(); } catch (_) {}   // W900
       return scheduleMidDayCheckin();
     }
     // W324 — weekly-reset reminder (Saturday 10 AM local). Mirrors the mid-day
