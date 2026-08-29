@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.1-w895'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.1-w896'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5861,6 +5861,16 @@
     } catch (_) {}
   }
   /** The Status-tab card: name, progress bar, citation, bonus line. */
+  let _writExpandedOverride = false;   // W896 — session-scoped; the hunter asked to see it
+  /** W896 — is a time-critical event holding the top slot above the Writ? */
+  function _writOutranked() {
+    try {
+      if (_breakActive()) return true;              // a boss is loose and leeching NOW
+      const d = _ddLoad();
+      if (d && !d.done) return true;               // a commandment expires at midnight
+    } catch (_) {}
+    return false;
+  }
   function renderWritCard(w) {
     const host = document.getElementById('writ-card');
     if (!host) return;
@@ -5868,6 +5878,28 @@
     if (!w || w.none || w.week !== weeklyHungerWeekKey()) { host.classList.add('hidden'); host.innerHTML = ''; return; }
     const p = w.done ? w.target : writProgress(w);
     const pct = Math.max(0, Math.min(100, Math.round((p / Math.max(1, w.target)) * 100)));
+    // W896 (3.0.1 D14) — THE ONE-CARD RULE. A Dungeon Break and a live Double
+    // Dungeon both run on a clock; a Writ runs until Sunday. When one of those
+    // holds the top slot the Writ collapses to the one-line strip idiom already
+    // shipped for shadows and oaths, so a rookie's first screen is one thing to
+    // do rather than three competing ones. NOT hidden — the OSRS rule holds:
+    // the strip carries the live number and one tap restores the full card.
+    if (_writOutranked() && !_writExpandedOverride) {
+      host.innerHTML =
+        '<button type="button" class="writ-strip" data-writ-expand="1">' +
+          esc(w.done ? 'THE WATCHER’S WRIT · FULFILLED ›' :
+              'THE WATCHER’S WRIT · ' + p.toLocaleString('en-US') + ' / ' + w.target.toLocaleString('en-US') + ' ›') +
+        '</button>';
+      host.classList.remove('hidden');
+      host.onclick = function (e) {
+        if (e && e.target && e.target.closest && e.target.closest('[data-writ-expand]')) {
+          _writExpandedOverride = true;
+          try { renderWritCard(); } catch (_) {}
+        }
+      };
+      return;
+    }
+    host.onclick = null;
     host.innerHTML =
       '<div class="writ-eyebrow">THE WATCHER’S WRIT' + (w.done ? ' · FULFILLED' : '') + '</div>' +
       '<div class="writ-name">' + esc(w.name) + '</div>' +

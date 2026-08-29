@@ -3195,6 +3195,19 @@ footer {
   cursor: pointer;
 }
 .shadow-strip.hidden { display: none !important; }
+/* W896 — the Writ's collapsed form while a higher-priority event holds the
+   top slot. Same one-line strip idiom as .shadow-strip / .oath-strip, in the
+   Writ's gold. Tapping it restores the full card in place. */
+.writ-strip {
+  display: block; width: 100%;
+  margin: 0 0 8px; padding: 9px 0;
+  border: 1px solid rgba(245, 184, 66, 0.42); border-radius: 12px;
+  background: linear-gradient(160deg, rgba(245, 184, 66, 0.10), rgba(0, 0, 0, 0.12));
+  color: #f0c874;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1.8px;
+  cursor: pointer;
+}
 .shs-glyph { margin-right: 3px; }
 .ar-shadow-chip {
   display: inline-block; margin: 6px auto 0 6px; padding: 4px 12px;
