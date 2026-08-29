@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w885'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w886'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6330,9 +6330,10 @@
       return _reviewDaysActive() >= 1;                      // first vow sealed — same floor as the W850 guide
     } catch (_) { return false; }
   }
-  function _ddTodayVal(metric) {
-    try { return Number(((loadLeaderboardState() || {})[metric] || {})[getDeviceLocalDate()]) || 0; } catch (_) { return 0; }
+  function _ddValFor(metric, dayKey) {
+    try { return Number(((loadLeaderboardState() || {})[metric] || {})[dayKey]) || 0; } catch (_) { return 0; }
   }
+  function _ddTodayVal(metric) { return _ddValFor(metric, getDeviceLocalDate()); }
   /** Dispatcher entry — starts the event with the day-1 beat. Returns true if shown. */
   function showDoubleDungeonStart() {
     if (!_ddEligible()) return false;
@@ -6362,6 +6363,21 @@
       const cmd = DD_COMMANDMENTS[cIdx]; if (!cmd) return;
       // Day rolled?
       if (d.dayDate !== today) {
+        // W886 (3.0.1 B2) — RETRO-SEAL. d.sealed[] was only ever set by a LIVE
+        // check running while the app happened to be open (below), and the ticks
+        // that drive it fire at boot+8s and then once a minute. A hunter who
+        // walked their 4,000 steps AFTER closing the app for the day never had
+        // the check run at all — so the System told someone who had actually
+        // obeyed the commandment that "the day repeats". A false failure at the
+        // exact moment the app is asking a rookie to trust it.
+        // The closed day's verified total is already sitting in the leaderboard
+        // daily map (writProgress walks 8 days back over the same map), so
+        // re-check the day that just ended before declaring anything.
+        if (!d.sealed[cIdx] && _ddValFor(cmd.metric, d.dayDate) >= cmd.need) {
+          d.sealed[cIdx] = true;
+          try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('dd_sealed', String(d.day)); } catch (_) {}
+          try { showHabitToast('The ' + (cIdx === 0 ? 'first' : cIdx === 1 ? 'second' : 'third') + ' gaze goes dark. Commandment ' + cmd.n + ' was met.'); } catch (_) {}
+        }
         if (d.sealed[cIdx]) {
           // Yesterday's commandment was met → advance.
           if (d.day >= 3) { _ddComplete(d); return; }
@@ -23367,6 +23383,12 @@
     // already protects against).
     if (next !== prev) {
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      // W886 (3.0.1 B2) — seal on the DATA, not on a timer. The Double Dungeon
+      // ticks at boot+8s and then every 60s, so in a session shorter than a
+      // minute a commandment met mid-session went unsealed until the next
+      // launch. This is the choke point where a verified step total actually
+      // changes, so the gaze goes dark the instant it is earned.
+      try { _ddTick(); } catch (_) {}
     }
   }
 
@@ -23509,6 +23531,7 @@
       state.best_7day_flights_window_end = today;
     }
     saveLeaderboardState(state);
+    try { _ddTick(); } catch (_) {}   // W886 (3.0.1 B2) — CLIMB is commandment II; seal it the moment flights land
 
     // v3 Phase 1z.273M — Public flights_milestone_bucket events.
     // Choke point: every code path that records today's flights
