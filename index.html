@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=660">
+  <link rel="stylesheet" href="styles.css?v=661">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -662,11 +662,15 @@
       <!-- W771 — First Steps starter path: a 6-row guided tour of the app's
            features (complete a habit → stats → gate → battle → friend → co-op).
            Rendered by renderFirstSteps(); hidden once dismissed or fully claimed. -->
+      <!-- W888 — the DOUBLE DUNGEON card sits FIRST: it is the only card here
+           that is time-critical (a commandment expires at midnight) and it
+           targets the zero-kill cohort this release exists to convert. It is
+           hidden whenever no dungeon is running, so the cards below keep their
+           original position for everyone else. -->
+      <div id="dd-card" class="dd-card hidden"></div>
       <div id="first-steps-strip" class="fs-strip hidden"></div>
       <!-- W859 — THE WATCHER'S WRIT weekly bounty card (renderWritCard) -->
       <div id="writ-card" class="writ-card hidden"></div>
-      <!-- W866 — THE DOUBLE DUNGEON activation event (renderDoubleDungeonCard) -->
-      <div id="dd-card" class="dd-card hidden"></div>
       <!-- W868 — DUNGEON BREAK banner: the escaped boss squats here (renderBreakBanner) -->
       <div id="break-banner" class="break-banner hidden" role="button" tabindex="0" aria-label="Dungeon break — tap to hunt the escaped boss"></div>
       <div id="status-content" class="status-content"></div>
@@ -3362,7 +3366,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1292"></script>
+  <script src="app.js?v=1293"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

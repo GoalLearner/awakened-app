@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w887'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w888'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5789,7 +5789,17 @@
       const w = writEnsure();
       renderWritCard(w);
       if (!w || w.none) return;
-      if (!w.announced) {
+      // W888 (3.0.1 B4) — hold the reveal while a Double Dungeon is running.
+      // The DD owns a rookie's first three days, and writTick can otherwise fire
+      // a full WRIT system notice on the same launch as the DD coachmark — two
+      // System voices inside the first minute, at the one moment the app most
+      // needs to be legible. CRITICAL: the announced flag is NOT set here, so
+      // the writ is HELD, never consumed — it announces the moment the dungeon
+      // clears. writEnsure/writProgress are untouched, so the week still
+      // accrues and can even complete while held.
+      let _ddRunningNow = false;
+      try { const _ddw = _ddLoad(); _ddRunningNow = !!(_ddw && !_ddw.done); } catch (_) {}
+      if (!w.announced && !_ddRunningNow) {
         w.announced = true; _writWrite(w);
         try {
           if (typeof showSystemNotice === 'function') {
@@ -6449,7 +6459,42 @@
       '<div class="dd-line">' + esc(cmd.line) + '</div>' +
       '<div class="writ-bar dd-bar"><span style="width:' + pct + '%"></span></div>' +
       '<div class="dd-progress">' + val.toLocaleString('en-US') + ' / ' + cmd.need.toLocaleString('en-US') + '</div>';
+    // W888 — the card was inert: no button, no handler, nothing to tap. A rookie
+    // who dismissed the opening beat had no way back to it. Wired ONCE (guard
+    // attribute) since this render runs on every tick.
+    host.setAttribute('role', 'button');
+    host.setAttribute('tabindex', '0');
+    if (host.getAttribute('data-dd-wired') !== '1') {
+      host.setAttribute('data-dd-wired', '1');
+      host.addEventListener('click', function () { try { _ddReplayBeat(); } catch (_) {} });
+      host.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { _ddReplayBeat(); } catch (_) {} }
+      });
+    }
     host.classList.remove('hidden');
+  }
+  /** Re-run today's commandment beat on demand (the card tap). */
+  function _ddReplayBeat() {
+    const d = _ddLoad(); if (!d || d.done) return;
+    if (_isAnyHigherPriorityModalActive()) return;   // never mount over a live beat
+    const cIdx = d.day - 1;
+    const cmd = DD_COMMANDMENTS[cIdx]; if (!cmd) return;
+    const val = _ddTodayVal(cmd.metric);
+    const sealed = !!d.sealed[cIdx];
+    _faRunCoachmark({
+      context: 'doubledungeon-replay',
+      beats: [{
+        pose: sealed ? 'nodding' : 'pointing',
+        lines: [
+          cmd.line,
+          sealed
+            ? 'This gaze is already dark. Hold what you have until midnight.'
+            : val.toLocaleString('en-US') + ' of ' + cmd.need.toLocaleString('en-US') + ' so far. The gate is patient.',
+        ],
+      }],
+      cta: 'UNDERSTOOD',
+      storageKey: null,
+    });
   }
   // ═══════════════════════════════════════════════════════════════════════
   // W867 (Wave 2 Train B) — THE OATHBOUND, client half.
@@ -37557,6 +37602,7 @@
     } catch (_) {}
     return false;
   }
+  let _fsExpandedDuringDD = false;   // W888 — session-scoped; a DD lasts 3 days at most
   function renderFirstSteps() {
     const host = document.getElementById('first-steps-strip');
     if (!host) return;
@@ -37579,6 +37625,23 @@
         (claimed ? '<span class="fs-claimtag">DONE</span>' : met ? '<span class="fs-claimbtn">CLAIM +' + _FS_REWARD + '</span>' : '<span class="fs-go">›</span>') +
       '</button>';
     }
+    // W888 (3.0.1 B4) — a Double Dungeon and FIRST STEPS chase the same rookie
+    // on the same screen, and the DD is the one on a midnight clock. Collapse to
+    // the header while a dungeon runs. NOT hidden (OSRS rule): the header is one
+    // tap target that expands the rows back in place, and the choice is
+    // remembered for the session.
+    let _ddRunningFs = false;
+    try { const _ddf = _ddLoad(); _ddRunningFs = !!(_ddf && !_ddf.done); } catch (_) {}
+    if (_ddRunningFs && !_fsExpandedDuringDD) {
+      host.innerHTML =
+        '<button type="button" class="fs-head fs-head--tap" data-fs-expand="1" aria-label="Show First Steps">' +
+          '<span class="fs-title">FIRST STEPS</span>' +
+          '<span class="fs-count">' + doneCount + '/' + _FS_STEPS.length + '</span>' +
+          '<span class="fs-go">›</span>' +
+        '</button>';
+      host.classList.remove('hidden');
+      return;
+    }
     host.innerHTML =
       '<div class="fs-head"><span class="fs-title">FIRST STEPS</span><span class="fs-count">' + doneCount + '/' + _FS_STEPS.length + '</span>' +
       '<button type="button" class="fs-dismiss" aria-label="Dismiss First Steps">✕</button></div>' + rows;
@@ -37590,6 +37653,10 @@
     if (!host || host.getAttribute('data-fs-wired') === '1') return;
     host.setAttribute('data-fs-wired', '1');
     host.addEventListener('click', (e) => {
+      if (e.target.closest('[data-fs-expand]')) {   // W888 — expand back in place
+        _fsExpandedDuringDD = true; renderFirstSteps();
+        return;
+      }
       if (e.target.closest('.fs-dismiss')) {
         const s = _fsLoad(); s.dismissed = true; _fsSave(s); renderFirstSteps();
         return;
