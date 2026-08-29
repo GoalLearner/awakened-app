@@ -1139,6 +1139,18 @@
             <span class="social-invite-txt"><b>Invite a hunter</b><span>Send your name so a friend can add you</span></span>
             <span class="social-invite-chev" aria-hidden="true">›</span>
           </button>
+          <!-- W898 — the RECEIVING half of the invite loop. Redemption used to
+               fire only from a deep link, and the Associated Domains
+               entitlement was never enabled, so every /i/ link 302'd to the
+               App Store and the code died at the install boundary: zero
+               redemptions, ever. The share text now carries the code and this
+               is where it is spent. -->
+          <div class="guildhall-friend-add guildhall-friend-add--bottom">
+            <input id="social-invite-code" class="social-friend-input" type="text"
+                   placeholder="answered a call? enter code…" maxlength="12" autocomplete="off"
+                   autocorrect="off" autocapitalize="off" spellcheck="false">
+            <button id="social-invite-redeem" class="social-btn" type="button">ANSWER</button>
+          </div>
         </div>
       </section>
 
@@ -3373,7 +3385,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1301"></script>
+  <script src="app.js?v=1302"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
