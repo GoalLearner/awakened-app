@@ -19,12 +19,46 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { MERGED_FOR_WEEK } from '../lib/week-board';   // W892 — the erosion-proof per-week pool read
 
 export const WORLDGATE_CLAIM_FLOOR = 15000;   // weekly verified steps to share the kill
 export const WORLDGATE_SOULS = 200;
-const HP_PER_ACTIVE = 55000;                  // ~a week of honest steps per living hunter
-const HP_MIN = 400000;
 const CARRY_RATE = 0.05;
+
+// W892 (3.0.1 C11) — HP FROM WHAT THE FLEET ACTUALLY WALKS.
+//
+// The original formula was max(400_000, actives14d * 55_000). At 22 actives
+// that is 1.31M against real weekly pools of 250-400k, so the gate was roughly
+// 4x unwinnable — and production agreed: every gate ever created SURVIVED, zero
+// claims were ever paid, and "THE GATE BREAKS" has never fired for anyone. A
+// capstone event that cannot be won is a weekly reminder of futility.
+//
+// 55_000 assumed a week of honest steps per ACTIVE, but "active" counted anyone
+// who opened the app, while only 10-16 hunters actually submit steps in a given
+// week. The headcount and the step-producing population were never the same set.
+//
+// So: derive HP from the trailing median of real weekly pools instead of from a
+// headcount, and let it self-correct — a slump lowers the next median, a strong
+// run raises it. Backtested over 11 real weeks (see worldgate.test.ts): the old
+// formula breaks 0/7, this one breaks 4/7 (57%), inside the 50-80% target band,
+// with one week missing by 2,009 steps.
+const HP_MIN = 120_000;
+const HP_MEDIAN_FACTOR = 0.80;      // the fleet's median week should usually win
+const HP_STREAK_ESCALATOR = 0.15;   // +15% per consecutive win: victory must not become routine
+const HP_MEDIAN_WEEKS = 4;
+
+/** Pure HP math — exported so it can be tested without a database. */
+export function computeGateHp(pools: number[], slainStreak: number, carry: number): number {
+  const usable = (pools || []).filter((p) => typeof p === 'number' && p > 0).sort((a, b) => a - b);
+  let median = 0;
+  if (usable.length) {
+    const m = usable.length >> 1;
+    median = usable.length % 2 ? usable[m] : Math.round((usable[m - 1] + usable[m]) / 2);
+  }
+  const base = Math.max(HP_MIN, Math.round(HP_MEDIAN_FACTOR * median));
+  const escalated = Math.round(base * (1 + HP_STREAK_ESCALATOR * Math.max(0, slainStreak)));
+  return Math.max(1, escalated - Math.max(0, carry));
+}
 
 function ptWeekStartNow(): string {
   const now = new Date();
@@ -41,11 +75,45 @@ function ptWeekStartNow(): string {
 
 interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; }
 
+// W892 — was a raw SUM over leaderboard_snapshots. That table holds ONE row per
+// (user, metric) and is OVERWRITTEN IN PLACE as hunters submit in the new week,
+// so any read of a PAST week silently decays — the erosion trap week-board.ts
+// exists to document. ensureGate settles the PRIOR week with this function, so a
+// gate the fleet actually broke could be recorded as survived simply because a
+// few hunters had already synced into the new week before anyone opened the app.
+// MERGED_FOR_WEEK is the proven read: append-only weekly_step_records unioned
+// with not-yet-superseded snapshots, sims excluded.
 async function weeklyPool(env: Env, week: string): Promise<number> {
   const row = await env.DB.prepare(
-    "SELECT COALESCE(SUM(current_value), 0) AS pool FROM leaderboard_snapshots WHERE metric = 'step_total' AND week_start = ?",
+    `${MERGED_FOR_WEEK} SELECT COALESCE(SUM(steps), 0) AS pool FROM merged`,
   ).bind(week).first<{ pool: number }>();
   return row?.pool ?? 0;
+}
+
+/** Pools of the most recent COMPLETED weeks, newest first (durable table). */
+async function recentPools(env: Env, beforeWeek: string): Promise<number[]> {
+  const rows = await env.DB.prepare(
+    `SELECT week_start, SUM(steps) AS pool
+       FROM weekly_step_records
+      WHERE week_start < ?
+      GROUP BY week_start
+      ORDER BY week_start DESC
+      LIMIT ?`,
+  ).bind(beforeWeek, HP_MEDIAN_WEEKS).all<{ week_start: string; pool: number }>();
+  return (rows.results ?? []).map((r) => r.pool ?? 0);
+}
+
+/** How many gates in a row the fleet has broken (drives the escalator). */
+async function slainStreak(env: Env, beforeWeek: string): Promise<number> {
+  const rows = await env.DB.prepare(
+    'SELECT status FROM world_gates WHERE week_start < ? ORDER BY week_start DESC LIMIT 8',
+  ).bind(beforeWeek).all<{ status: string }>();
+  let n = 0;
+  for (const r of rows.results ?? []) {
+    if (r.status === 'slain') n++;
+    else break;
+  }
+  return n;
 }
 
 /** Get-or-create this week's gate; settle LAST week's gate on first sight. */
@@ -68,10 +136,9 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
         .bind(prior.week_start).run();
     }
   }
-  const actives = await env.DB.prepare(
-    'SELECT COUNT(DISTINCT user_id) AS n FROM app_opens WHERE date_utc >= ?',
-  ).bind(new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10)).first<{ n: number }>();
-  const hp = Math.max(HP_MIN, (actives?.n ?? 0) * HP_PER_ACTIVE) - carry;
+  // W892 — HP from the fleet's own trailing output, not a headcount.
+  const [pools, streak] = await Promise.all([recentPools(env, week), slainStreak(env, week)]);
+  const hp = computeGateHp(pools, streak, carry);
   try {
     await env.DB.prepare('INSERT INTO world_gates (week_start, hp, status, created_at) VALUES (?, ?, ?, ?)')
       .bind(week, hp, 'open', Date.now()).run();
