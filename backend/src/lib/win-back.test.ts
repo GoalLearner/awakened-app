@@ -4,7 +4,7 @@
  * substring-routed D1 mock (same pattern as update-push.test.ts).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sweepWinBackPushes, WIN_BACK_NOTIF } from './win-back';
+import { sweepWinBackPushes, winBackCopy, WIN_BACK_NOTIF } from './win-back';
 import type { Env } from '../env';
 
 interface MockState {
@@ -53,6 +53,43 @@ function makeEnv(state: MockState): Env {
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+describe('winBackCopy (W899)', () => {
+  it('points a hunter with ZERO kills at the Double Dungeon, not at "your vows"', () => {
+    // 38 of 57 profiles have never had a first kill; "rekindle the climb"
+    // means nothing to someone who has never climbed.
+    const c = winBackCopy('u-rookie', 'Marvin', 'E', 0);
+    expect(c.body).toMatch(/hidden gate|commandments/i);
+    expect(c.body).not.toMatch(/vows still stand/i);
+    expect(c.type).toBe('win_back');
+  });
+
+  it('personalises for a hunter who HAS killed', () => {
+    const c = winBackCopy('u-vet', 'Richie', 'A', 235);
+    expect(c.title + ' ' + c.body).toMatch(/Richie/);
+    expect(c.body).not.toMatch(/\{alias\}|\{rank\}/);
+  });
+
+  it('is deterministic per user, so the 4/20 baseline stays analysable', () => {
+    const a = winBackCopy('u-vet', 'Richie', 'A', 5);
+    const b = winBackCopy('u-vet', 'Richie', 'A', 5);
+    expect(a).toEqual(b);
+  });
+
+  it('falls back to "Hunter" and rank E when the profile is thin', () => {
+    const c = winBackCopy('u-x', null, null, 3);
+    expect(c.body + c.title).not.toMatch(/\{alias\}|\{rank\}|null/);
+  });
+
+  it('never uses the banned word', () => {
+    for (const kills of [0, 1, 50]) {
+      for (const id of ['a', 'bb', 'ccc', 'dddd']) {
+        const c = winBackCopy(id, 'X', 'B', kills);
+        expect((c.title + ' ' + c.body).toLowerCase()).not.toMatch(/fell(ed)?/);
+      }
+    }
+  });
+});
 
 describe('sweepWinBackPushes (W836)', () => {
   it('off-hour → no-op without touching the DB', async () => {
