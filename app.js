@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.0';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.0-w886'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.0-w887'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38858,6 +38858,31 @@
     if (typeof shouldShowDailyInsight === 'function' && shouldShowDailyInsight()) { showDailyInsight(); return; } // W361 — daily insight is the lowest-priority beat
   }
 
+  // W887 (3.0.1 B3) — chain the beat that What's New ate.
+  //
+  // The dispatcher fires ONCE per launch at boot+2.5s and simply returns when
+  // a blocking overlay is mounted — no retry. maybeAutoShowWhatsNew() runs on
+  // every post-update boot, so on that launch wn-overlay is up at 2.5s and the
+  // launch's beat is silently skipped. At roughly one open per day that costs a
+  // full day, and it lands hardest on exactly the wrong cohort: a lapsed
+  // zero-kill hunter's FIRST 3.0.0 open is guaranteed to be a post-update boot,
+  // so the Double Dungeon intro they were meant to receive is the beat that
+  // gets eaten.
+  //
+  // Chaining preserves one-beat-per-launch — it just runs that one beat after
+  // the changelog instead of dropping it. Deliberately NOT wired to the
+  // welcome-back screen: that overlay is CHOSEN BY the dispatcher (ladder
+  // step 2), so it IS the launch's beat, and re-invoking after it would stack
+  // a second one — the exact race W363 collapsed into this ladder.
+  let _retentionBeatChained = false;
+  function _chainRetentionBeatAfterWhatsNew() {
+    if (_retentionBeatChained) return;   // at most one chained retry per launch
+    _retentionBeatChained = true;
+    setTimeout(function () {
+      try { maybeShowFirstAwakenedRetentionMoment(); } catch (_) {}
+    }, 1200);   // the sheet's close transition, not the boot settle
+  }
+
   try {
     window.__showDay3Coachmark = showDay3Coachmark;
     window.__showFirstGateGuide = showFirstGateGuide;   // W850 QA
@@ -56046,13 +56071,17 @@
     if (!overlay || !sheet) return;
     // Only mark as seen when this was an auto-show (or manually-closed
     // auto-show). Manual opens from Settings don't update the flag.
-    if (sheet.dataset.wnAuto === '1') {
+    const _wasAuto = sheet.dataset.wnAuto === '1';   // W887 — capture before the reset below
+    if (_wasAuto) {
       const version = getLatestWhatsNewVersion();
       if (version) setStoredWhatsNewSeen(version);
     }
     overlay.classList.add('hidden');
     sheet.classList.add('hidden');
     sheet.dataset.wnAuto = '0';
+    // W887 — only the AUTO-show displaced a beat. A manual open from Settings
+    // stole nothing, so closing it must not spawn a coachmark mid-session.
+    if (_wasAuto) { try { _chainRetentionBeatAfterWhatsNew(); } catch (_) {} }
   }
 
   function setupWhatsNewSheet() {
