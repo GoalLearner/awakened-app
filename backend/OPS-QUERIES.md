@@ -109,6 +109,40 @@ SELECT detail AS path, COUNT(*) AS n FROM funnel_events
  WHERE event = 'onboarding_complete' GROUP BY detail ORDER BY n DESC;
 ```
 
+### The activation funnel (W883 — 3.0.1 Tranche A2)
+
+THE question this answers: of the hunters who reach the Double Dungeon, where
+do they fall out? Before W883 the funnel jumped straight from
+`onboarding_complete` to `first_boss_kill` with nothing in between, so
+"rookies never see the DD" and "they all stall on CLIMB" were
+indistinguishable. Read this ladder top to bottom — each rung should be a
+modest step down from the one above; a cliff names the problem.
+
+```sql
+SELECT event, COUNT(DISTINCT user_id) AS hunters, COUNT(*) AS n
+  FROM funnel_events
+ WHERE event IN ('onboarding_complete','dd_started','dd_sealed','dd_altar',
+                 'fg_guide_shown','first_hunt_engaged','first_boss_kill')
+   AND created_at > (strftime('%s','now') - 30*86400) * 1000
+ GROUP BY event
+ ORDER BY CASE event WHEN 'onboarding_complete' THEN 1 WHEN 'dd_started' THEN 2
+                     WHEN 'dd_sealed' THEN 3 WHEN 'dd_altar' THEN 4
+                     WHEN 'fg_guide_shown' THEN 5 WHEN 'first_hunt_engaged' THEN 6
+                     ELSE 7 END;
+```
+
+Which commandment loses them — `detail` is the day (1 WALK / 2 CLIMB /
+3 ENDURE). Compare seals against repeats at the same day: CLIMB (2) is the
+one with no alternate path, so a repeat spike there is the expected stall.
+
+```sql
+SELECT event, detail AS commandment,
+       COUNT(DISTINCT user_id) AS hunters, COUNT(*) AS n
+  FROM funnel_events
+ WHERE event IN ('dd_sealed','dd_repeat')
+ GROUP BY event, detail ORDER BY commandment, event;
+```
+
 ## 5 · Snapshot mining (G3 — user_state_snapshots)
 
 Actives by SYNC recency — the canonical metric (memory: never count actives
