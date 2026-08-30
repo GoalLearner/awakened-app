@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.1-w901'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.1-w902'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7119,14 +7119,14 @@
     { id: 'the_empty_purse',   tier: 1, title: 'THE EMPTY PURSE',     line: 'A fortune earned, and nothing held back. The System respects a spender.', check: function () { try { return getSoulsBalance() <= 5 && _souls && _souls.totalEarned >= 1000; } catch (_) { return false; } } },
     { id: 'thirteenth_floor',  tier: 1, title: 'THE THIRTEENTH',      line: 'Floor thirteen, on the thirteenth. The Tower has a sense of humor. It is not a kind one.', check: function (c) { try { return c.dom === 13 && (getAscentState().highestCleared | 0) >= 13; } catch (_) { return false; } } },
     { id: 'kill_before_dawn',  tier: 2, title: 'THE DAWNLESS KILL',   line: 'A boss brought down before seven bells. It never saw the morning. Neither did you.', check: function () { try { const all = loadBosses(); for (const k in all) { const d = all[k] && all[k].last_defeated_at; if (d) { const t = new Date(d); if (Date.now() - t.getTime() < 86400000 && t.getHours() < 7) return true; } } } catch (_) {} return false; } },
-    { id: 'echo_walker',       tier: 2, title: 'THE ECHO WALKER',     line: 'Three friends avenged in the Tower. They kneel no more, because you would not allow it.', check: function () { return (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) >= 3; } },
-    { id: 'oath_twice_kept',   tier: 2, title: 'OATH, TWICE KEPT',    line: 'Two rookies raised under your name. The Hall keeps a separate page for that.', check: function () { return (parseInt(localStorage.getItem('hb_oathkeeper_count'), 10) || 0) >= 2; } },
-    { id: 'shadow_legion',     tier: 2, title: 'THE LEGION',          line: 'Four shadows march behind you. That is no longer an army. That is a procession.', check: function () { try { return Object.keys(_shLoad().extracted).length >= 4; } catch (_) { return false; } } },
-    { id: 'half_the_vault',    tier: 3, title: 'HALF THE VAULT',      line: 'Fifty relics held at once. The Collection Log turns its pages for you now.', check: function () { try { const inv = getInventory(); let n = 0; for (const k in inv) { if (inv[k] && inv[k].count > 0) n++; } return n >= 50; } catch (_) { return false; } } },
+    { id: 'echo_walker',       tier: 2, title: 'THE ECHO WALKER',     line: 'A friend avenged in the Tower. They kneel no more, because you would not allow it.', check: function () { return (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) >= 1; } },   // W902 3->1
+    { id: 'oath_twice_kept',   tier: 2, title: 'OATH, TWICE KEPT',    line: 'A rookie raised under your name. The Hall keeps a separate page for that.', check: function () { return (parseInt(localStorage.getItem('hb_oathkeeper_count'), 10) || 0) >= 1; } },   // W902 2->1
+    { id: 'shadow_legion',     tier: 2, title: 'THE LEGION',          line: 'Two shadows march behind you. That is no longer an escort. That is the beginning of a procession.', check: function () { try { return Object.keys(_shLoad().extracted).length >= 2; } catch (_) { return false; } } },   // W902 4->2
+    { id: 'half_the_vault',    tier: 3, title: 'HALF THE VAULT',      line: 'Twenty-five relics held at once. The Collection Log turns its pages for you now.', check: function () { try { const inv = getInventory(); let n = 0; for (const k in inv) { if (inv[k] && inv[k].count > 0) n++; } return n >= 25; } catch (_) { return false; } } },   // W902 50->25
     { id: 'fortnight_flawless',tier: 3, title: 'THE FLAWLESS FORTNIGHT', line: 'Fourteen perfect days, unbroken. The System checked its own records twice.', check: function () { try { return typeof perfectStreak !== 'undefined' && perfectStreak && (perfectStreak.streak | 0) >= 14; } catch (_) { return false; } } },
     { id: 'gray_correspondent',tier: 1, title: 'THE CORRESPONDENT',   line: 'Four letters kept. He notices hunters who keep his letters.', check: function () { try { return _plArc().letters.length >= 4; } catch (_) { return false; } } },
-    { id: 'break_slayer',      tier: 2, title: 'THE BREAKER OF TWO',  line: 'Two escaped bosses hunted down in the open. The gates are starting to hold their breath.', check: function () { return (parseInt(localStorage.getItem('hb_breaker_count'), 10) || 0) >= 2; } },
-    { id: 'writ_faithful',     tier: 2, title: 'THE WATCHER’S FAVORITE', line: 'Four Writs fulfilled. It has stopped writing your name in pencil.', check: function () { return (parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0) >= 4; } },
+    { id: 'break_slayer',      tier: 2, title: 'THE BREAKER',  line: 'An escaped boss hunted down in the open. The gates are starting to hold their breath.', check: function () { return (parseInt(localStorage.getItem('hb_breaker_count'), 10) || 0) >= 1; } },   // W902 2->1
+    { id: 'writ_faithful',     tier: 2, title: 'THE WATCHER’S FAVORITE', line: 'Two Writs fulfilled. It has stopped writing your name in pencil.', check: function () { return (parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0) >= 2; } },   // W902 4->2
     // ── Batch 2 — AUTHORED, DORMANT (flips live with the Nameless ARG) ──
     { id: 'b2_steel_month',    tier: 3, batch2: true, title: 'THE STEEL MONTH',    line: 'Thirty days of walking, none below eight thousand. The road has started walking with you.', check: function (c) { for (let i = 0; i < 30; i++) { if (c.val('steps_daily', c.back[i]) < 8000) return false; } return true; } },
     { id: 'b2_25k',            tier: 3, batch2: true, title: 'THE MARATHON GHOST', line: 'Twenty-five thousand steps in one turning of the sun. The Wraith filed a complaint.', check: function (c) { if (c.val('steps_daily', c.today) >= 25000) return true; for (let i = 0; i < 7; i++) { if (c.val('steps_daily', c.back[i]) >= 25000) return true; } return false; } },
@@ -7142,6 +7142,27 @@
     catch (_) { return { fired: {}, dawns: {}, fragments: [] }; }
   }
   function _stirsSave(s) { try { localStorage.setItem(STIRS_KEY, JSON.stringify(s)); } catch (_) {} _w2Sync('stirs'); }
+  // W902 (3.0.1 F21) — SIX OF THE TWENTY TRIGGERS WERE UNREACHABLE.
+  //
+  // Not hard — impossible, at this fleet's size. echo_walker wanted 3 avenges
+  // when tower_events was empty in production; oath_twice_kept wanted 2
+  // fulfilled oaths when ONE has ever been sworn and none fulfilled;
+  // shadow_legion wanted 4 extractions sitting behind the W894 ARISE bug;
+  // break_slayer wanted 2 won rematches, each needing a lost C+ hunt first.
+  // A hidden-quest shelf whose back third cannot be reached is not mystery,
+  // it is dead weight — and the hunter never learns the difference.
+  //
+  // Thresholds lowered to what a real hunter can actually reach, with the copy
+  // rewritten to match the new numbers (the lines named the counts). The glitch
+  // beats move from finds 2/5/8 to 1/3/6, so the first discovery already
+  // glitches and the ARG's third fragment lands inside a plausible career
+  // rather than past its end.
+  //
+  // FAUCET: nil concern, and measured rather than assumed. Finds pay 30/60/120
+  // ONCE. Active non-outlier hunters earn ~13,077 souls/week between them, so
+  // even a burst of new finds is rounding error — and unlike the Writ and Red
+  // Gate proposals audited alongside this, nothing here is a recurring
+  // multiplier. Souls values are UNCHANGED.
   function _stirsTick() {
     try {
       const s = _stirsLoad();
@@ -7158,11 +7179,15 @@
         if (!hit) continue;
         s.fired[t.id] = Date.now();
         const count = Object.keys(s.fired).length;
-        const glitch = (count === 2 || count === 5 || count === 8);
+        const glitch = (count === 1 || count === 3 || count === 6);   // W902 — 2/5/8 put the ARG's last fragment beyond a realistic career
         if (glitch) s.fragments.push(STIRS_FORBIDDEN[Math.min(STIRS_FORBIDDEN.length - 1, s.fragments.length)]);
         _stirsSave(s);
         const souls = STIRS_SOULS[t.tier] || 30;
         try { earnSouls(souls, 'stirs_' + t.id); } catch (_) {}
+        // W902 — hidden quests were entirely unmeasured (localStorage only), so
+        // "nobody found it" and "nobody could" were indistinguishable. Now the
+        // discovery rate per trigger is readable.
+        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('stirs_found', t.id); } catch (_) {}
         try { _hapticTick('SUCCESS'); } catch (_) {}
         try {
           // W874 — positional args + <br> (the notice body renders as HTML).
