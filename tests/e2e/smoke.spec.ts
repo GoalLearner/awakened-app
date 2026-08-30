@@ -313,6 +313,41 @@ test.describe('E · Leaderboard sheet', () => {
 // F. Boss detail — Souls balance readout (Phase 1z.39)
 // ─────────────────────────────────────────────────────────────
 test.describe('F · Boss detail Souls readout', () => {
+  // W903 — THE REGRESSION TEST THIS FILE WAS MISSING.
+  //
+  // W889 referenced `bossId` inside openBossFullScreen, whose parameter is
+  // actually `id`. Every boss sheet threw "ReferenceError: Can't find variable:
+  // bossId" and simply never opened — the core loop of the app, dead — and it
+  // reached a real tester before anyone noticed.
+  //
+  // Nothing caught it: node --check only sees syntax, the economy suite is pure
+  // functions, and the sibling test below deliberately FAKES the overlay DOM
+  // ("driving the boss-card tap end-to-end ... is overkill for a smoke test"),
+  // so openBossFullScreen was never once executed in CI.
+  //
+  // This calls the real function for one boss of each shape and fails on any
+  // page error. Cheap, and it closes the exact hole.
+  test('openBossFullScreen runs clean for every boss shape (W903 regression)', async ({ page }) => {
+    const fatal = attachConsoleWatcher(page);
+    await freshApp(page);
+    const result = await page.evaluate(() => {
+      const out: { id: string; opened: boolean }[] = [];
+      const fn = (window as any).openBossFullScreen;
+      if (typeof fn !== 'function') return { missing: true, out };
+      // one per condition shape: steps, sleep, flights
+      for (const id of ['the_steel_wolf', 'the_insomniac', 'the_carouser']) {
+        fn(id);
+        const ov = document.getElementById('boss-fs-overlay');
+        out.push({ id, opened: !!ov && !ov.classList.contains('hidden') });
+        if (ov) ov.classList.add('hidden');
+      }
+      return { missing: false, out };
+    });
+    expect(result.missing).toBe(false);
+    for (const r of result.out) expect(r.opened, r.id + ' sheet should open').toBe(true);
+    expect(fatal, 'opening a boss sheet must raise no page errors').toEqual([]);
+  });
+
   test('SOULS AVAILABLE pill renders above the Engage button', async ({ page }) => {
     await freshApp(page);
     // The boss full-screen overlay markup is always in the DOM; the
