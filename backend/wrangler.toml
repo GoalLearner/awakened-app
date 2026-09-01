@@ -29,17 +29,23 @@ workers_dev = true
 # disable push. Secrets are preserved regardless, but this protects the var too.
 keep_vars = true
 
-# ── Cron triggers (routed by event.cron in src/index.ts scheduled()) ─────────
-# "*/5 16-17 * * 1" — W680 Monday "update available" push broadcast. Fires every 5
-#   minutes across the 16:00–17:59 UTC window on Mondays; the handler
+# ── Cron triggers (src/index.ts scheduled()) ─────────────────────────────────
+# "*/5 16-17 * * MON" — W680 Monday "update available" push broadcast. Fires every 5
+#   minutes across the 16:00–17:59 UTC window on Mondays; the job
 #   (src/lib/update-push.ts) only proceeds when it is 9 AM America/Los_Angeles, which
 #   the 2-hour window covers in BOTH DST phases (16 UTC = 9 AM PDT; 17 UTC = 9 AM PST) —
-#   the other hour's runs no-op. Each eligible run sends one bounded page.
+#   the other hour's runs leave one SKIP_GATE heartbeat row in cron_runs. Since W904 the
+#   job runs on EVERY trigger (self-gated), so the 2-minute sweep below also carries it
+#   inside the Monday window; each eligible run sends one bounded, CAS-claimed page.
 # "*/2 * * * *" — W702 raid-finder background matchmaking sweep (runRaidMatchmakeSweep):
 #   every 2 minutes, pairs queued members into raid parties so nobody has to babysit the
 #   finder screen. Tiny D1 sweep scoped to matchmaking bosses; well within the plan.
 [triggers]
-crons = ["*/5 16-17 * * 1", "*/2 * * * *"]
+# W904 — weekday is NAMED on purpose. Cloudflare numbers the day-of-week field
+# 1 = Sunday … 7 = Saturday (NOT POSIX 0-6): the original "*/5 16-17 * * 1" fired
+# every SUNDAY for seven weeks while the Monday gate in lib/update-push.ts silently
+# refused. src/lib/cron-config.test.ts pins this line and rejects bare numeric weekdays.
+crons = ["*/5 16-17 * * MON", "*/2 * * * *"]
 
 # ── D1 database binding ──────────────────────────────────────────
 # binding:       In-Worker variable name (accessed as env.DB from

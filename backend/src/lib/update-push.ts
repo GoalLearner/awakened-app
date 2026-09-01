@@ -2,17 +2,23 @@
  * update-push.ts — W680 Monday "update available" push broadcast.
  *
  * Pairs with the client's W679 in-app banner: the push pulls hunters who
- * DIDN'T open the app back in; the banner catches everyone who did. Fired by
- * the Worker cron (wrangler.toml: every 5 min across 16:00–17:59 UTC Mondays);
- * only the runs where it is 9 AM America/Los_Angeles proceed, which is
- * DST-proof (16 UTC = 9 AM PDT summers; 17 UTC = 9 AM PST winters — the other
- * hour's runs no-op on the gate).
+ * DIDN'T open the app back in; the banner catches everyone who did. Driven by
+ * the Worker's scheduled() handler on EVERY cron trigger since W904 — the
+ * dedicated every-5-minutes 16-17 UTC Monday trigger (weekday NAMED "MON":
+ * Cloudflare's "1" is Sunday, and that mistake silenced this job for seven
+ * weeks) plus the 2-minute
+ * sweep; runUpdatePushCron self-gates so only runs where it is 9 AM
+ * America/Los_Angeles on a Monday proceed, which is DST-proof (16 UTC = 9 AM
+ * PDT summers; 17 UTC = 9 AM PST winters). Every in-window decision is
+ * journaled to cron_runs (0054); the other hour's dedicated runs leave one
+ * SKIP_GATE heartbeat row so "did not fire" is distinguishable from "skipped".
  *
- * Fanout is PAGED to respect the free-plan subrequest budget: each eligible
- * cron run sends to at most PAGE_USERS distinct users (keyset pagination over
- * device_tokens.user_id), advancing push_broadcast_log.cursor until completed.
- * At 5-min spacing that is 12 eligible runs/Monday → 12 × PAGE_USERS users of
- * weekly capacity; runs that end a page short mark the day completed.
+ * Fanout is PAGED: each eligible run sends to at most PAGE_USERS distinct users
+ * (keyset pagination over device_tokens.user_id), advancing
+ * push_broadcast_log.cursor until completed. With both triggers inside the
+ * window that is up to ~42 eligible runs/Monday (12 dedicated + ~30 sweep);
+ * runs that end a page short mark the day completed, and later runs stop at
+ * the completed flag before touching the App Store lookup.
  *
  * Overlap-safe: the cursor advance is a compare-and-swap (WHERE cursor = old),
  * and the CLAIM happens BEFORE the sends — two overlapping runs can never send
@@ -25,8 +31,9 @@ import { notifyUser, pushConfigured } from './apns';
 // sized for the free plan's 50-subrequest budget; the account moved to Workers
 // Paid (1000/invocation) with the W80x scale work. Worst case per user is
 // ~1 token-read + 3 APNs posts + a prune (~5 subrequests) → 50 users ≈ 250,
-// comfortably under 1000 with the log I/O. Weekly capacity: 12 eligible cron
-// runs × 50 = 600 users/Monday (was 144).
+// comfortably under 1000 with the log I/O. Weekly capacity: 12 dedicated cron
+// runs × 50 = 600 users/Monday (was 144) — and since W904 the 2-minute sweep
+// carries the job too, so the practical ceiling is ~42 runs × 50.
 const PAGE_USERS = 50;
 
 export const UPDATE_PUSH_NOTIF = {
@@ -35,9 +42,9 @@ export const UPDATE_PUSH_NOTIF = {
   type: 'update_reminder',
 } as const;
 
-/** PT clock parts for "now". */
-function ptParts(): { dayKey: string; hour: number; weekday: number } {
-  const now = new Date();
+/** PT clock parts for "now" (W904: exported for the admin status route; the
+ *  clock is injectable for tests). */
+export function ptParts(now: Date = new Date()): { dayKey: string; hour: number; weekday: number } {
   const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(now);
   let hour = -1;
   let weekday = -1;
@@ -191,37 +198,197 @@ const APP_STORE_ID = '6764727990';
 // only ever reach hunters who genuinely have not updated — which is exactly
 // the audience. The freshness check is now the belt to W835's suspenders.
 const RELEASE_WINDOW_DAYS = 8;
-// W835 — the lookup now also surfaces the live store VERSION so the per-user
-// gate can compare against reported builds. fresh:false → no broadcast at all.
-async function storeRelease(): Promise<{ fresh: boolean; version: string | null }> {
+
+// W904 — the dedicated trigger, weekday NAMED on purpose. Cloudflare's cron
+// day-of-week field runs 1 = Sunday … 7 = Saturday (developers.cloudflare.com/
+// workers/configuration/cron-triggers), unlike POSIX cron's 0-6. The original
+// "*/5 16-17 * * 1" therefore fired every SUNDAY 9 AM PT from 2026-07-16 to
+// 2026-08-31: the handler ran, the Monday gate below correctly refused, and
+// nothing anywhere recorded it — push_broadcast_log stayed empty for the
+// entire life of the feature, including the five ungated Mondays before W820.
+// cron-config.test.ts pins this string against wrangler.toml and forbids bare
+// numeric weekdays; scheduled() no longer keys dispatch on it (index.ts).
+export const UPDATE_PUSH_CRON = '*/5 16-17 * * MON';
+
+export interface StoreRelease {
+  fresh: boolean;
+  version: string | null;
+  released_at: string | null;
+  age_days: number | null;
+  /** null when fresh; otherwise why not: STALE, HTTP_<status>, NO_RELEASE_DATE, FETCH_<message>. */
+  reason: string | null;
+  attempts: number;
+}
+
+// W835 — the lookup surfaces the live store VERSION so the per-user gate can
+// compare against reported builds. fresh:false → no broadcast at all.
+// W904 — two attempts (Apple's lookup is occasionally flaky from datacenter
+// egress) and a REASON on every non-fresh result, which the cron journals.
+// Exported for the admin status route. Still FAIL CLOSED.
+export async function storeRelease(): Promise<StoreRelease> {
+  const MAX_ATTEMPTS = 2;
+  let reason = 'UNKNOWN';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&t=${Date.now()}`, {
+        headers: { accept: 'application/json', 'user-agent': 'awakened-backend/update-push' },
+      });
+      if (!res.ok) {
+        reason = `HTTP_${res.status}`;
+        continue;
+      }
+      const data = (await res.json()) as {
+        results?: { currentVersionReleaseDate?: string; version?: string }[];
+      };
+      const r0 = data.results && data.results[0];
+      const iso = r0 && r0.currentVersionReleaseDate;
+      const version = (r0 && typeof r0.version === 'string' && r0.version) || null;
+      if (!iso) return { fresh: false, version, released_at: null, age_days: null, reason: 'NO_RELEASE_DATE', attempts: attempt };
+      const ageMs = Date.now() - Date.parse(iso);
+      const fresh = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= RELEASE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+      return {
+        fresh,
+        version,
+        released_at: iso,
+        age_days: Number.isFinite(ageMs) ? Math.round((ageMs / 86400000) * 100) / 100 : null,
+        reason: fresh ? null : 'STALE',
+        attempts: attempt,
+      };
+    } catch (e) {
+      reason = 'FETCH_' + (e instanceof Error ? e.message : String(e)).slice(0, 80);
+    }
+  }
+  return { fresh: false, version: null, released_at: null, age_days: null, reason, attempts: MAX_ATTEMPTS };
+}
+
+// W904 — cron_runs journal (migration 0054). `once` dedupes per (day,
+// decision) — and callers fold the REASON into the decision, so a Monday whose
+// lookup fails three different ways leaves three rows, not the first one only.
+// A quiet Monday costs a couple of rows rather than one per invocation; PAGE
+// actions are journaled individually. Never throws — the
+// journal must not be able to break the job it observes.
+async function journal(
+  env: Env,
+  cron: string | undefined,
+  dayKey: string,
+  decision: string,
+  detail: unknown,
+  once: boolean,
+): Promise<void> {
+  const job = 'update-push';
+  const det = detail === undefined ? null : JSON.stringify(detail).slice(0, 2000);
   try {
-    const res = await fetch(`https://itunes.apple.com/lookup?id=${APP_STORE_ID}&t=${Date.now()}`);
-    if (!res.ok) return { fresh: false, version: null };
-    const data = (await res.json()) as {
-      results?: { currentVersionReleaseDate?: string; version?: string }[];
-    };
-    const r0 = data.results && data.results[0];
-    const iso = r0 && r0.currentVersionReleaseDate;
-    if (!iso) return { fresh: false, version: null };
-    const ageMs = Date.now() - Date.parse(iso);
-    const fresh = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= RELEASE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-    return { fresh, version: (r0 && typeof r0.version === 'string' && r0.version) || null };
-  } catch {
-    return { fresh: false, version: null };
+    if (once) {
+      await env.DB.prepare(
+        `INSERT INTO cron_runs (job, cron, day_key, decision, detail)
+         SELECT ?, ?, ?, ?, ?
+          WHERE NOT EXISTS (SELECT 1 FROM cron_runs WHERE job = ? AND day_key = ? AND decision = ?)`,
+      )
+        .bind(job, cron ?? null, dayKey, decision, det, job, dayKey, decision)
+        .run();
+    } else {
+      await env.DB.prepare('INSERT INTO cron_runs (job, cron, day_key, decision, detail) VALUES (?, ?, ?, ?, ?)')
+        .bind(job, cron ?? null, dayKey, decision, det)
+        .run();
+    }
+  } catch (e) {
+    console.error('[update-push] journal failed', JSON.stringify({ dayKey, decision, error: e instanceof Error ? e.message : String(e) }));
   }
 }
 
-/** Cron entry: gate to Monday 9 AM Pacific + a fresh App Store release, then
- *  run one page with the per-user version gate (W835). (The admin test-fire
- *  route calls runUpdatePushPage directly and intentionally bypasses all
+/** Cron entry — W904: called on EVERY scheduled invocation and self-gated to
+ *  Monday 9 AM Pacific + a fresh App Store release, then one page with the
+ *  per-user version gate (W835). `cron` is the triggering expression, kept
+ *  for the journal so Monday's rows show WHICH trigger did the work. (The
+ *  admin test-fire route calls runUpdatePushPage directly and bypasses all
  *  three gates: day/hour, freshness, and per-user version.) */
-export async function runUpdatePushCron(env: Env): Promise<void> {
+export async function runUpdatePushCron(env: Env, cron?: string): Promise<void> {
   const { dayKey, hour, weekday } = ptParts();
-  if (weekday !== 1 || hour !== 9) return; // only the 9 AM PT runs proceed (DST handled by the 2h UTC cron window)
+  if (weekday !== 1 || hour !== 9) {
+    // Heartbeat for the dedicated trigger only (its off-hour runs, deduped to
+    // one row per day): proves the trigger fires on the day we believe it
+    // does. The 2-minute sweep is never journaled outside the window.
+    if (cron === UPDATE_PUSH_CRON) await journal(env, cron, dayKey, 'SKIP_GATE', { hour, weekday }, true);
+    return;
+  }
+  // Once the day is completed, the remaining in-window runs stop here — no
+  // lookup, no journal row (the PAGE rows already tell the story).
+  try {
+    const done = await env.DB.prepare('SELECT completed FROM push_broadcast_log WHERE day_key = ?')
+      .bind(dayKey)
+      .first<{ completed: number }>();
+    if (done && done.completed) return;
+  } catch {
+    /* fall through — runUpdatePushPage re-reads the ledger itself */
+  }
   const release = await storeRelease();
   if (!release.fresh) {
     console.log(`[update-push] ${dayKey}: no App Store release in the last ${RELEASE_WINDOW_DAYS}d — broadcast skipped (W820)`);
+    await journal(env, cron, dayKey, `SKIP_NOT_FRESH:${release.reason || 'UNKNOWN'}`, release, true);
     return;
   }
-  await runUpdatePushPage(env, dayKey, release.version || undefined);
+  const page = await runUpdatePushPage(env, dayKey, release.version || undefined);
+  // Reasons ride in the decision so the once-per-day dedupe keeps one row PER
+  // DISTINCT OUTCOME, not just the first outcome of the day.
+  const decision = !page.ok ? `PAGE_FAILED:${page.reason || 'UNKNOWN'}` : page.reason ? `PAGE_${page.reason}` : 'PAGE';
+  await journal(env, cron, dayKey, decision, { release, page }, decision !== 'PAGE');
+}
+
+/** W904 — read-only status for GET /v1/admin/update-push/status. Nothing here
+ *  sends: the PT clock and whether the gate is open right now, the live App
+ *  Store lookup (with its failure reason), the audience Monday's page would
+ *  target under the W835 per-user gate, the ledger tail, and the journal. */
+export async function updatePushStatus(env: Env): Promise<Record<string, unknown>> {
+  const pt = ptParts();
+  const release = await storeRelease();
+  // The ledger's cursor is a user id (keyset pagination) — project it to a flag
+  // so the payload carries no identifiers, matching the counts-only audience.
+  const ledger = await env.DB.prepare(
+    `SELECT day_key, cursor <> '' AS started, sent_users, completed, updated_at
+       FROM push_broadcast_log ORDER BY day_key DESC LIMIT 5`,
+  ).all();
+  // The journal table arrives by hand-applied migration (0054); if it is
+  // missing, say so by name instead of 500ing the whole readiness check.
+  let runs: unknown[] = [];
+  let journalTable: 'ok' | 'missing' = 'ok';
+  try {
+    const r = await env.DB.prepare(
+      'SELECT id, cron, day_key, ran_at, decision, detail FROM cron_runs WHERE job = ? ORDER BY id DESC LIMIT 25',
+    )
+      .bind('update-push')
+      .all();
+    runs = r.results ?? [];
+  } catch {
+    journalTable = 'missing';
+  }
+  // Audience preview — the page's own build subselect over every token-holding
+  // user, without cursor or sends.
+  const aud = await env.DB.prepare(
+    `SELECT dt.user_id AS user_id,
+            (SELECT ao.build FROM app_opens ao
+              WHERE ao.user_id = dt.user_id AND ao.build IS NOT NULL
+              ORDER BY ao.date_utc DESC LIMIT 1) AS build
+       FROM device_tokens dt
+      GROUP BY dt.user_id`,
+  ).all<{ user_id: string; build: string | null }>();
+  const rows = aud.results ?? [];
+  const wouldSend = release.version ? rows.filter((r) => !buildIsCurrent(r.build, release.version as string)).length : rows.length;
+  return {
+    now_utc: new Date().toISOString(),
+    pt,
+    gate_open_now: pt.weekday === 1 && pt.hour === 9,
+    cron: UPDATE_PUSH_CRON,
+    release_window_days: RELEASE_WINDOW_DAYS,
+    push_configured: pushConfigured(env),
+    release,
+    audience: {
+      token_users: rows.length,
+      would_send: wouldSend,
+      already_current: rows.length - wouldSend,
+      never_reported_build: rows.filter((r) => !r.build).length,
+    },
+    ledger: ledger.results ?? [],
+    journal_table: journalTable,
+    runs,
+  };
 }

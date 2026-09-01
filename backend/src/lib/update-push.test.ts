@@ -5,7 +5,7 @@
  * mocked global fetch (APNs) so the real apns.ts pipeline runs.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { runUpdatePushPage } from './update-push';
+import { runUpdatePushCron, runUpdatePushPage, storeRelease, UPDATE_PUSH_CRON } from './update-push';
 import type { Env } from '../env';
 
 interface MockState {
@@ -17,6 +17,7 @@ interface MockState {
   notified: string[]; // tokens APNs "received"
   casLoseOnce?: boolean; // simulate a concurrent run winning the claim
   buildsByUser?: Record<string, string | null>; // W835 — latest app_opens.build per user
+  cronRuns?: unknown[][]; // W904 — cron_runs journal rows (bind args: job, cron, day_key, decision, detail, ...)
 }
 
 function makeEnv(state: MockState): Env {
@@ -30,6 +31,10 @@ function makeEnv(state: MockState): Env {
           return null;
         },
         run: async () => {
+          if (/INSERT INTO cron_runs/.test(sql)) {
+            (state.cronRuns || (state.cronRuns = [])).push(args);
+            return { success: true, meta: { changes: 1 } };
+          }
           if (/INSERT OR IGNORE INTO push_broadcast_log/.test(sql)) {
             return { success: true, meta: { changes: 0 } };
           }
@@ -225,3 +230,165 @@ describe('runUpdatePushPage', () => {
     expect(r.completed).toBe(true);
   });
 });
+
+// ── W904 — the cron entry: PT gate, journal, lookup retry ───────────────
+// Background: the trigger "*/5 16-17 * * 1" fired every SUNDAY for seven weeks
+// (Cloudflare weekdays are 1 = Sunday); the gate refused correctly and nothing
+// recorded it. These pin the gate on the exact days involved and make every
+// outcome leave a row.
+function lookupResponse(version: string, releasedAt: string, status = 200): Response {
+  return new Response(JSON.stringify({ resultCount: 1, results: [{ version, currentVersionReleaseDate: releasedAt }] }), {
+    status,
+    headers: { 'content-type': 'text/javascript; charset=utf-8' },
+  });
+}
+function cronState(over: Partial<MockState> = {}): MockState {
+  return { cursor: '', completed: 0, sent: 0, users: ['u1', 'u2'], tokensByUser: {}, notified: [], cronRuns: [], ...over };
+}
+const decisionsOf = (st: MockState) => (st.cronRuns || []).map((r) => r[3]);
+const detailOf = (st: MockState, i = 0) => JSON.parse((st.cronRuns as unknown[][])[i][4] as string);
+
+describe('runUpdatePushCron (W904)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('SUNDAY 9 AM PT (the day the old trigger actually fired) → refuses without a lookup; only the dedicated trigger leaves a heartbeat', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-30T16:30:00Z')); // Sunday 9:30 AM PDT
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const st = cronState();
+    const env = makeEnv(st);
+    await runUpdatePushCron(env, '*/2 * * * *');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(decisionsOf(st)).toEqual([]);
+    await runUpdatePushCron(env, UPDATE_PUSH_CRON);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(decisionsOf(st)).toEqual(['SKIP_GATE']);
+    expect(st.cursor).toBe(''); // no page ran
+  });
+
+  it('MONDAY 9 AM PT + fresh release → runs the page under the version gate and journals PAGE', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:30:00Z')); // Monday 9:30 AM PDT — the run that should have happened
+    vi.stubGlobal('fetch', vi.fn(async () => lookupResponse('3.0.1', '2026-08-31T13:25:41Z')));
+    const st = cronState({ buildsByUser: { u1: '3.0.1-w903', u2: null } });
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(st.sent).toBe(1); // u1 is current; u2 never reported a build → nudged
+    expect(st.completed).toBe(1);
+    expect(decisionsOf(st)).toEqual(['PAGE']);
+    const detail = detailOf(st);
+    expect(detail.release.fresh).toBe(true);
+    expect(detail.release.version).toBe('3.0.1');
+    expect(detail.page.sent).toBe(1);
+    expect(detail.page.skipped_current).toBe(1);
+    expect((st.cronRuns as unknown[][])[0][1]).toBe('*/2 * * * *'); // journal names the trigger that did the work
+  });
+
+  it('MONDAY 10 AM PT (the second UTC hour in summer) → gate refuses, heartbeat only', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T17:30:00Z')); // Monday 10:30 AM PDT
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const st = cronState();
+    await runUpdatePushCron(makeEnv(st), UPDATE_PUSH_CRON);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(decisionsOf(st)).toEqual(['SKIP_GATE']);
+  });
+
+  it('winter MONDAY: 17:30Z is 9:30 AM PST → proceeds', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-12-07T17:30:00Z'));
+    vi.stubGlobal('fetch', vi.fn(async () => lookupResponse('3.1.0', '2026-12-05T12:00:00Z')));
+    const st = cronState();
+    await runUpdatePushCron(makeEnv(st), UPDATE_PUSH_CRON);
+    expect(decisionsOf(st)).toEqual(['PAGE']);
+    expect(st.completed).toBe(1);
+  });
+
+  it('MONDAY but a stale release → SKIP_NOT_FRESH with a reason, no page', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:30:00Z'));
+    vi.stubGlobal('fetch', vi.fn(async () => lookupResponse('3.0.0', '2026-08-01T12:00:00Z')));
+    const st = cronState();
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(st.cursor).toBe('');
+    expect(decisionsOf(st)).toEqual(['SKIP_NOT_FRESH:STALE']);
+    const detail = detailOf(st);
+    expect(detail.reason).toBe('STALE');
+    expect(detail.version).toBe('3.0.0');
+  });
+
+  it('day already completed → later in-window runs do not touch the lookup or the journal', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:40:00Z'));
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const st = cronState({ completed: 1, cursor: 'u2', sent: 2 });
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(decisionsOf(st)).toEqual([]);
+  });
+
+  it('lookup unreachable on both attempts → SKIP_NOT_FRESH with FETCH_ reason (fail closed, but visibly)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:30:00Z'));
+    const fetchMock = vi.fn().mockRejectedValue(new Error('socket hang up'));
+    vi.stubGlobal('fetch', fetchMock);
+    const st = cronState();
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(st.cursor).toBe('');
+    expect(decisionsOf(st)).toEqual(['SKIP_NOT_FRESH:FETCH_socket hang up']); // the reason is part of the once-key
+    const detail = detailOf(st);
+    expect(detail.reason).toBe('FETCH_socket hang up');
+    expect(detail.attempts).toBe(2);
+  });
+});
+
+describe('storeRelease (W904)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('retries once: a network failure then success is fresh', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:30:00Z'));
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce(lookupResponse('3.0.1', '2026-08-31T13:25:41Z'));
+    vi.stubGlobal('fetch', fetchMock);
+    const r = await storeRelease();
+    expect(r.fresh).toBe(true);
+    expect(r.attempts).toBe(2);
+    expect(r.version).toBe('3.0.1');
+    expect(r.age_days).toBeCloseTo(0.13, 2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('two HTTP failures → not fresh, HTTP_<status> reason', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('forbidden', { status: 403 })));
+    const r = await storeRelease();
+    expect(r).toMatchObject({ fresh: false, version: null, reason: 'HTTP_403', attempts: 2 });
+  });
+
+  it('a body with no release date → NO_RELEASE_DATE, version still surfaced', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ results: [{ version: '3.0.1' }] }), { status: 200 })));
+    const r = await storeRelease();
+    expect(r).toMatchObject({ fresh: false, version: '3.0.1', reason: 'NO_RELEASE_DATE', attempts: 1 });
+  });
+
+  it('leading whitespace in the body (what Apple actually returns) parses', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T16:30:00Z'));
+    const body = '\n\n\n' + JSON.stringify({ results: [{ version: '3.0.1', currentVersionReleaseDate: '2026-08-31T13:25:41Z' }] });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(body, { status: 200 })));
+    const r = await storeRelease();
+    expect(r.fresh).toBe(true);
+  });
+});
+

@@ -141,7 +141,7 @@ import { handlePreflight, withCors } from './lib/cors';
 export { MatchRoom } from './pvp/match-room';
 import { jsonError } from './lib/responses';
 import { timingSafeEqual } from './lib/timing-safe';
-import { runUpdatePushCron, runUpdatePushPage } from './lib/update-push';
+import { runUpdatePushCron, runUpdatePushPage, updatePushStatus, UPDATE_PUSH_CRON } from './lib/update-push';
 
 // Regex matchers for parameterized routes.
 // Capture group #1 is the row UUID. We accept the standard randomUUID()
@@ -219,6 +219,20 @@ export default {
           } else {
             response = Response.json(await runUpdatePushPage(env, day));
           }
+        }
+      }
+      // ── W904 — read-only status for the Monday update push (secret-gated, NO
+      // sends): PT clock + whether the gate is open now, the live App Store lookup
+      // with its failure reason, the audience Monday's page would target under the
+      // per-user version gate, the ledger tail, and the cron_runs journal. Same
+      // fail-closed auth as the test-fire above.
+      else if (path === '/v1/admin/update-push/status' && method === 'GET') {
+        const expected = env.ADMIN_METRICS_SECRET;
+        const provided = request.headers.get('authorization') || '';
+        if (!expected || !provided || !timingSafeEqual(provided, `Bearer ${expected}`)) {
+          response = jsonError(401, 'UNAUTHORIZED', 'Missing or invalid admin secret.');
+        } else {
+          response = Response.json(await updatePushStatus(env));
         }
       }
       // ── W842 (Train 4, G1) — universal-link plumbing (public, no auth) ──
@@ -558,17 +572,23 @@ export default {
   },
 
   // ── Cron triggers (wrangler.toml [triggers].crons) ──
-  //  • "*/5 16-17 * * 1"  → W680 Monday 9 AM PT "update available" push broadcast
+  //  • "*/5 16-17 * * MON" → W680 Monday 9 AM PT "update available" push broadcast
   //    (runUpdatePushCron self-gates to 9 AM America/Los_Angeles, DST-proof; one bounded
-  //    page per run — see lib/update-push.ts).
+  //    page per run — see lib/update-push.ts). W904: weekday NAMED — "1" is Sunday here.
   //  • "*/2 * * * *"      → W702 raid-finder background matchmaking sweep: drains the
   //    persistent raid queue into parties so members who queued and walked away get paired
-  //    (and push-notified) with nobody watching a lobby. Routed by event.cron so the
-  //    frequent sweep never runs the weekly broadcast and vice-versa.
+  //    (and push-notified) with nobody watching a lobby. The sweeps skip the update
+  //    trigger's runs; the update job itself runs on both and self-gates (W904).
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    if (event.cron === '*/5 16-17 * * 1') {
-      ctx.waitUntil(runUpdatePushCron(env));
-    } else {
+    // W904 — the update push runs on EVERY trigger and self-gates to Monday 9 AM
+    // PT inside lib/update-push.ts. Dispatch used to key on
+    // event.cron === '*/5 16-17 * * 1' — an expression that fires on SUNDAY under
+    // Cloudflare's 1 = Sunday weekday numbering — so the broadcast branch never
+    // ran on a Monday in seven weeks, and nothing recorded that it had not. The
+    // dedicated trigger (UPDATE_PUSH_CRON) stays as a journaled heartbeat; the
+    // sweeps keep their 2-minute cadence and skip only those heartbeat runs.
+    ctx.waitUntil(runUpdatePushCron(env, event.cron));
+    if (event.cron !== UPDATE_PUSH_CRON) {
       ctx.waitUntil(runRaidMatchmakeSweep(env, ctx));
       // W761 — one-time 24h reminder for unanswered summons seats (reminded_at
       // marks each seat, so this every-2-minute cadence can never double-send).
