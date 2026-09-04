@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=667">
+  <link rel="stylesheet" href="styles.css?v=668">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -679,8 +679,8 @@
       <div id="first-steps-strip" class="fs-strip hidden"></div>
       <div id="status-content" class="status-content"></div>
       <!-- W909 — the W905 System line and its panel are gone (owner: "not a fan of the
-           system break"). The Writ card lives on the Habits tab, the Oathbound strip on
-           Community, the Shadow Army strip on Co-op. Status is the hunter profile, full stop. -->
+           system break"). The Writ card lives on the Habits tab, the Shadow Army strip on
+           Co-op; the Oathbound went altogether in W910. Status is the hunter profile, full stop. -->
     </div>
 
     <!-- Stats panel -->
@@ -1057,9 +1057,6 @@
       <!-- W908 — "Your Weekly Awakening" (W723) REMOVED for good. Owner, 2026-09-04:
            "I want to get rid of your weekly awakening… honestly I am not a fan of it."
            Reduction means reduction: markup, JS and CSS deleted, never re-add. -->
-
-      <!-- W909 — THE OATHBOUND strip (mentor oaths) lives on Community now. -->
-      <button type="button" id="oath-strip" class="shadow-strip shadow-strip--tab oath-strip hidden" data-open-oaths aria-label="Open the Oathbound"></button>
 
       <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
            from hb_souls_ledger). Phase 1 reads on-device events only;
@@ -3405,13 +3402,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=72"></script>
+  <script src="auth.js?v=73"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1311"></script>
+  <script src="app.js?v=1312"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

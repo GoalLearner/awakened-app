@@ -3026,13 +3026,6 @@ footer {
 }
 .bfs-redgate-line.hidden { display: none; }
 
-/* ─── W867 (Wave 2 Train B) — THE OATHBOUND strip (gold variant) ──────── */
-.oath-strip {
-  border-color: rgba(245, 184, 66, 0.45) !important;
-  background: linear-gradient(160deg, rgba(245, 184, 66, 0.09), rgba(0, 0, 0, 0.12)) !important;
-  color: #f5b842 !important;
-}
-
 /* ─── W866 (Wave 2 Train B) — THE DOUBLE DUNGEON card ─────────────────── */
 .dd-card {
   margin: 10px 16px 4px;
@@ -3167,7 +3160,7 @@ footer {
 }
 .shadow-strip.hidden { display: none !important; }
 /* W896 — the Writ's collapsed form while a higher-priority event holds the
-   top slot. Same one-line strip idiom as .shadow-strip / .oath-strip, in the
+   top slot. Same one-line strip idiom as .shadow-strip, in the
    Writ's gold. Tapping it restores the full card in place. */
 .writ-strip {
   display: block; width: 100%;
@@ -35264,7 +35257,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-grant[data-armed="1"] { background: rgba(139,92,246,0.3); color: #f4f4fb; }
 .settings-board-blocks { padding: 4px 0; }
 
-/* W909 — the Shadow Army / Oathbound strips live on their tabs now (Co-op, Community);
+/* W909 — the Shadow Army strip lives on the Co-op tab now;
    the strip was sized for the inside of the Status card, so give it the tab gutter. */
 .shadow-strip--tab { width: calc(100% - 28px); margin: 10px 14px 4px; }
 #main-scroll > .writ-card { margin: 10px 14px 4px; }
