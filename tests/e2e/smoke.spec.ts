@@ -1827,3 +1827,33 @@ test.describe('U · Completions month-chunk archive (W690)', () => {
     expect(r.noStateDropsNothing).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────
+// Q. Community board (W907)
+// ─────────────────────────────────────────────
+test.describe('Q · Community board (W907)', () => {
+  test('the tab reads Community and the board section renders its quiet state', async ({ page }) => {
+    const fatal = attachConsoleWatcher(page);
+    await freshApp(page);
+    await expect(page.locator('#tab-social .tab-label')).toHaveText('Community');
+    await page.click('#tab-social');
+    await expect(page.locator('#board-section')).toBeVisible();
+    // The dev sign-in stub skips the server, so the board paints its empty
+    // state (or the sign-in prompt) rather than a skeleton forever.
+    await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+    await page.waitForTimeout(300);
+    expect(fatal, fatal.join('\n')).toHaveLength(0);
+  });
+
+  test('NEW TOPIC before consent opens the community rules sheet (Apple 1.2)', async ({ page }) => {
+    await freshApp(page);
+    await page.click('#tab-social');
+    await page.click('#board-new');
+    const sheet = page.locator('.board-sheet--rules');
+    await expect(sheet).toBeVisible();
+    // Scoped to the sheet: Settings also carries a (collapsed) "Community rules" row.
+    await expect(sheet.locator('.board-rules-title')).toHaveText(/community rules/i);
+    await expect(sheet.locator('[data-board-agree]')).toBeVisible();
+    await expect(sheet.getByText(/report what you see/i)).toBeVisible();
+  });
+});

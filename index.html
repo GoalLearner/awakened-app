@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=664">
+  <link rel="stylesheet" href="styles.css?v=665">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -647,9 +647,9 @@
         <img class="tab-icon" src="assets/tab-icons/tab-items.png"   alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">Items</span>
       </button>
-      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Friends">
+      <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Community">
         <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
-        <span class="tab-label">Friends</span>
+        <span class="tab-label">Community</span>
       </button>
       <button id="tab-history"  class="tab-btn"        data-tab="history"  aria-label="History">
         <img class="tab-icon" src="assets/tab-icons/tab-history.png" alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
@@ -1037,6 +1037,32 @@
            intentionally left in styles.css for this phase. Sweep
            in a future 1z.267C cleanup if desired. -->
 
+
+      <!-- W907 — THE COMMUNITY BOARD (Rendell's pitch; owner: "turn friends into
+           community"). One open forum: topics tagged improvement / bug / talk,
+           replies, named moderators. renderBoardSection() fills #board-body; the
+           topic, composer and rules sheets are built in JS (openBoardTopic /
+           openBoardComposer / openBoardRules). Apple 1.2: rules consent before the
+           first write, Report + Block on every post, the support email in the
+           rules sheet. -->
+      <section id="board-section" class="guildhall-section guildhall-section--board board-scope">
+        <div class="guildhall-section-head">
+          <div class="guildhall-section-headtxt">
+            <div class="guildhall-section-eyebrow">The Hall · every hunter</div>
+            <div class="guildhall-section-title">Community Board</div>
+          </div>
+          <button id="board-new" class="board-newbtn" type="button" data-board-new>+ NEW TOPIC</button>
+        </div>
+        <div id="board-tags" class="board-tags" role="tablist" aria-label="Filter topics">
+          <button class="board-tag" type="button" data-board-tag="" data-active="true">ALL</button>
+          <button class="board-tag board-tag--improvement" type="button" data-board-tag="improvement">IMPROVEMENT</button>
+          <button class="board-tag board-tag--bug" type="button" data-board-tag="bug">BUG</button>
+          <button class="board-tag board-tag--talk" type="button" data-board-tag="talk">TALK</button>
+        </div>
+        <div id="board-note" class="board-note hidden"></div>
+        <div id="board-body" class="board-body"></div>
+        <button id="board-more" class="board-more hidden" type="button" data-board-more>LOAD OLDER TOPICS</button>
+      </section>
 
       <!-- W723 — members-only Weekly Insights entry. Shown to everyone (the
            funnel); non-members tapping it hit the Founder paywall. -->
@@ -3393,13 +3419,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=71"></script>
+  <script src="auth.js?v=72"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1308"></script>
+  <script src="app.js?v=1309"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3928,6 +3954,22 @@
               <div class="settings-v2-foot settings-ver-line" id="settings-app-ver">v—</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- W907 — COMMUNITY (the board): blocked hunters + the rules -->
+      <div class="settings-collapsible">
+        <button id="settings-board-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="board">
+          <span class="settings-collapsible-lbl">COMMUNITY</span>
+          <span id="settings-board-summary" class="settings-collapsible-summary">Blocked hunters · rules</span>
+          <span class="settings-collapsible-chevron">›</span>
+        </button>
+        <div id="settings-board-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
+          <div id="settings-board-blocks" class="settings-board-blocks"><div class="settings-v2-fsub">Hunters you block on the board will show here.</div></div>
+          <button id="settings-board-rules" type="button" class="settings-legal-row" data-board-rules-open>
+            <span class="settings-legal-label">Community rules</span>
+            <span class="settings-legal-chevron" aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 

@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w906'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w907'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -439,7 +439,7 @@
   /** Appended to every share body so the code survives the App Store detour. */
   function _inviteCodeSuffix() {
     const c = _inviteCode();
-    return c ? ('\n\nNew to Awakened? Enter code ' + c + ' under Friends so the Gate knows I sent you.') : '';
+    return c ? ('\n\nNew to Awakened? Enter code ' + c + ' under Community so the Gate knows I sent you.') : '';
   }
   /** Redeem a hand-typed code. Reuses the deep-link path verbatim. */
   function _redeemTypedInviteCode(raw) {
@@ -25088,6 +25088,15 @@
     // v3 Train V1. The invite item deliberately names no souls amount (the
     // 50/50 figure is still owner-unconfirmed); THE HUNGER item names the
     // mechanic, not this week's boss (the banner does that live).
+    // W907 — 3.0.2 opens with the Community board (Friends → Community).
+    '3.0.2': {
+      subtitle: 'The Hall opens — every hunter, one board.',
+      items: [
+        { emoji: '', title: 'Community',              description: "The Friends tab is now Community. Open a topic — an improvement, a bug, or just talk — and every hunter can reply. Moderators keep it decent, and you can report or block anyone." },
+        { emoji: '', title: 'Every boss sheet opens', description: "A 3.0.1 bug closed every dungeon on tap. Fixed, and now tested on every build." },
+        { emoji: '', title: 'Status, simplified',     description: "The Status page is your hunter profile again. Notices fold into one System line under the card." },
+      ],
+    },
     '3.0.0': {
       subtitle: 'The System reaches out — and the world answers back.',
       items: [
@@ -38162,6 +38171,8 @@
     // Social tab — Guild Activity + Friends. Duels v1 (Phase 1x.1)
     // was permanently retired in 1z.279.
     if (tab === 'social') {
+      // W907 — the Community board renders first (owner: "turn friends into community").
+      if (typeof renderBoardSection === 'function') { try { renderBoardSection(); } catch (_) {} }
       // v3 Phase 1z.164 — Guild Activity (local-only feed)
       // renders ahead of friends so the Guild Hall has a
       // visible "Recent feats" card the moment the tab opens.
@@ -45947,6 +45958,595 @@
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // W907 — THE COMMUNITY BOARD (Friends → Community)
+  //
+  // Rendell's pitch, owner's call (2026-09-04): one open, server-wide forum.
+  // Hunters open TOPICS tagged improvement / bug / talk and REPLY; named
+  // moderators (the owner + whoever the owner grants) delete, hide and mute.
+  // This is the client half of the Apple 1.2 user-generated-content pillars:
+  // the RULES sheet (consent + the support email) gates the first write,
+  // every post carries Report and Block, and a muted hunter sees why the
+  // composer is locked.
+  //
+  // Data: Auth.board* (auth.js) → /v1/board/*; stale-while-revalidate on
+  // hb_board_cache_v1 exactly like the Friends roster. Sheets are built in
+  // JS one at a time (the pf-overlay idiom) and every textarea sits at the
+  // TOP of its sheet — the app has no keyboard-avoidance code, so a
+  // bottom-anchored composer would hide under the iOS keyboard.
+  // Design language: the Claude Design "Community Tab" handoff (rails,
+  // message rows, role chips, ticket cards), mapped onto the forum model.
+  // ═══════════════════════════════════════════════════════════════════════
+  const BOARD_RULES_VERSION = 1;
+  const BOARD_SUPPORT_EMAIL = 'richmondcampano93@gmail.com';
+  const BOARD_TITLE_MAX = 80;
+  const BOARD_BODY_MAX = 1000;
+  const BOARD_TAG_LABEL = { improvement: 'IMPROVEMENT', bug: 'BUG', talk: 'TALK' };
+  const BOARD_REASONS = [['harassment', 'Harassment'], ['spam', 'Spam'], ['offensive', 'Offensive'], ['other', 'Something else']];
+  let _boardCache = null;        // untagged list: { topics, next_cursor }
+  let _boardTagged = null;       // current tag's list: { topics, next_cursor, tag }
+  let _boardMe = null;           // { consented, muted_until, role }
+  let _boardTag = '';
+  let _boardInflight = false;
+  let _boardWired = false;
+  let _boardOpenedEmitted = false;
+  let _boardSheet = null;        // the one open sheet
+  let _boardTopicData = null;    // { topic, replies, next_cursor } for the open topic
+  let _boardAfterConsent = null;
+  const _boardHiddenAuthors = new Set();   // instant client-side hide after a block
+
+  function _boardHydrate() {
+    try {
+      const raw = localStorage.getItem('hb_board_cache_v1');
+      if (!raw) return;
+      const o = JSON.parse(raw);
+      if (o && Array.isArray(o.topics)) { _boardCache = { topics: o.topics, next_cursor: null }; if (o.me) _boardMe = o.me; }
+    } catch (_) {}
+  }
+  try { _boardHydrate(); } catch (_) {}
+
+  function _boardRel(ms) {
+    const d = Date.now() - Number(ms || 0);
+    if (!(d >= 0)) return '';
+    if (d < 60e3) return 'just now';
+    if (d < 3600e3) return Math.floor(d / 60e3) + 'm ago';
+    if (d < 86400e3) return Math.floor(d / 3600e3) + 'h ago';
+    if (d < 7 * 86400e3) return Math.floor(d / 86400e3) + 'd ago';
+    return _boardDate(ms);
+  }
+  function _boardDate(ms) {
+    try { return new Date(Number(ms)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (_) { return 'later'; }
+  }
+  function _boardTier(label) { const m = /^(S\+|S|A|B|C|D|E)/.exec(String(label || '').trim()); return m ? m[1] : 'E'; }
+  function _boardColor(tier) { try { return _pfRankColor(String(tier).replace('+', '')); } catch (_) { return '#a78bfa'; } }
+  function _boardIsMe(a) {
+    try { const me = lbGetMyAlias(); return !!(me && a && a.alias && String(me).toLowerCase() === String(a.alias).toLowerCase()); } catch (_) { return false; }
+  }
+  function _boardIsMod() { return !!(_boardMe && (_boardMe.role === 'owner' || _boardMe.role === 'mod')); }
+  function _boardConsented() {
+    if (_boardMe && _boardMe.consented) return true;
+    try { return localStorage.getItem('hb_board_consent_v1') === String(BOARD_RULES_VERSION); } catch (_) { return false; }
+  }
+  function _boardErrMsg(res) {
+    const code = (res && res.code) || '';
+    if (code === 'NOT_SIGNED_IN' || code === 'GUEST_SKIP' || code === 'EXPIRED') return 'Sign in with Apple first.';
+    if (code === 'LOCAL_DEV_SKIP' || code === 'STUB_USER') return 'Needs a real sign-in (dev build).';
+    if (code === 'RATE_LIMITED') return 'Slow down a little.';
+    if (code === 'NOT_MODERATOR') return 'Moderators only.';
+    if (code === 'NOT_OWNER') return 'Only the owner can do that.';
+    if (code === 'CANNOT_MUTE_MODERATOR') return 'Moderators cannot be muted.';
+    if (code === 'NETWORK') return 'Could not reach the Hall.';
+    return (res && res.detail) || 'That did not go through.';
+  }
+  function _boardEmit(name, detail) {
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit(name, detail); } catch (_) {}
+  }
+  function _boardToast(msg) { try { showHabitToast(msg); } catch (_) {} }
+
+  // ── author + rows ───────────────────────────────────────────────────────
+  function _boardAuthorHtml(a) {
+    a = a || {};
+    const tier = _boardTier(a.rank_label);
+    const col = _boardColor(tier);
+    const alias = String(a.alias || 'Hunter');
+    const initial = (alias.trim().charAt(0) || '?').toUpperCase();
+    const role = a.mod_role === 'owner' ? '<span class="board-role board-role--dev">DEV</span>'
+      : (a.is_mod ? '<span class="board-role board-role--mod">MOD</span>' : '');
+    const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
+    return '<span class="board-av" style="--bc:' + col + '">' + esc(initial) + '</span>' +
+      '<span class="board-who">' +
+        '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + '</button>' +
+        '<span class="board-tierchip" style="--bc:' + col + '">' + esc(tier) + '</span>' + role + founder +
+      '</span>';
+  }
+  function _boardTopicRowHtml(t) {
+    const tag = String(t.tag || 'talk');
+    const n = Number(t.reply_count) || 0;
+    return '<div class="board-row' + (t.hidden ? ' board-row--hidden' : '') + '" role="button" tabindex="0" data-board-open="' + esc(t.id) + '">' +
+      '<div class="board-row-top">' +
+        '<span class="board-tagpill board-tagpill--' + esc(tag) + '">' + (BOARD_TAG_LABEL[tag] || 'TALK') + '</span>' +
+        (t.hidden ? '<span class="board-hiddenpill">HIDDEN</span>' : '') +
+        '<span class="board-row-time">' + esc(_boardRel(t.last_activity_at)) + '</span>' +
+      '</div>' +
+      '<div class="board-row-title">' + esc(t.title || '') + '</div>' +
+      (t.preview ? '<div class="board-row-prev">' + esc(t.preview) + '</div>' : '') +
+      '<div class="board-row-foot">' + _boardAuthorHtml(t.author) +
+        '<span class="board-replies">' + n + ' ' + (n === 1 ? 'reply' : 'replies') + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── the section on the Community tab ───────────────────────────────────
+  function _boardCurrent() { return _boardTag ? _boardTagged : _boardCache; }
+  function _boardPaint() {
+    const body = document.getElementById('board-body'); if (!body) return;
+    const more = document.getElementById('board-more');
+    const cur = _boardCurrent();
+    const list = ((cur && cur.topics) || []).filter(function (t) { return !(t.author && _boardHiddenAuthors.has(t.author.author_id)); });
+    if (!list.length) {
+      body.innerHTML = '<div class="guildhall-activity-empty board-empty">No topics yet.' +
+        '<div class="guildhall-activity-empty-sub">' + (_boardTag ? 'Nothing under this tag so far.' : 'Start the first one — an idea, a bug, or just talk.') + '</div></div>';
+    } else {
+      body.innerHTML = list.map(_boardTopicRowHtml).join('');
+    }
+    if (more) more.classList.toggle('hidden', !(cur && cur.next_cursor));
+    _boardSyncNote();
+  }
+  function _boardSyncNote() {
+    const note = document.getElementById('board-note'); if (!note) return;
+    const until = _boardMe && _boardMe.muted_until;
+    if (until && Number(until) > Date.now()) { note.textContent = 'You are muted until ' + _boardDate(until) + '. You can still read.'; note.classList.remove('hidden'); }
+    else note.classList.add('hidden');
+  }
+  function _boardSignInPaint() {
+    const body = document.getElementById('board-body'); if (!body) return;
+    body.innerHTML = '<div class="guildhall-activity-empty board-empty">Sign in with Apple to read the board.' +
+      '<div class="guildhall-activity-empty-sub">Every hunter can post once they are signed in.</div></div>';
+  }
+  function _boardErrorPaint(detail) {
+    const body = document.getElementById('board-body'); if (!body) return;
+    body.innerHTML = '<div class="social-error">Could not load the board: ' + esc(detail || 'network') + '</div>';
+  }
+  async function renderBoardSection() {
+    const body = document.getElementById('board-body'); if (!body) return;
+    _boardWire();
+    if (!_boardOpenedEmitted) { _boardOpenedEmitted = true; _boardEmit('board_opened'); }
+    const tag = _boardTag;
+    const cur = _boardCurrent();
+    if (cur && cur.topics) _boardPaint();
+    else if (typeof showLoading === 'function') showLoading(body, 'rows', 4);
+    if (!(window.Auth && Auth.boardTopics)) { if (!cur) _boardErrorPaint('update pending'); return; }
+    if (_boardInflight) return;
+    _boardInflight = true;
+    let res;
+    try { res = await Auth.boardTopics(tag, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _boardInflight = false;
+    if (_boardTag !== tag) return;   // the filter moved while we were fetching
+    if (!res || !res.ok) {
+      if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP' || res.code === 'EXPIRED')) { _boardSignInPaint(); return; }
+      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) {
+        if (tag) _boardTagged = { topics: [], next_cursor: null, tag: tag }; else _boardCache = { topics: [], next_cursor: null };
+        _boardPaint(); return;
+      }
+      if (cur && cur.topics) return;   // never wipe a good paint on a failed refresh
+      _boardErrorPaint(res && (res.detail || res.code)); return;
+    }
+    const next = { topics: res.topics || [], next_cursor: res.next_cursor || null, tag: tag };
+    if (tag) _boardTagged = next; else _boardCache = next;
+    if (res.me) _boardMe = res.me;
+    _boardPaint();
+  }
+  function _boardSetTag(tag) {
+    _boardTag = tag || '';
+    document.querySelectorAll('#board-tags [data-board-tag]').forEach(function (b) {
+      b.setAttribute('data-active', (b.getAttribute('data-board-tag') || '') === _boardTag ? 'true' : 'false');
+    });
+    _boardTagged = null;
+    renderBoardSection();
+  }
+  async function _boardLoadMore() {
+    const cur = _boardCurrent();
+    if (!cur || !cur.next_cursor || _boardInflight) return;
+    const more = document.getElementById('board-more'); if (more) more.disabled = true;
+    _boardInflight = true;
+    let res; try { res = await Auth.boardTopics(_boardTag, cur.next_cursor); } catch (_) { res = null; }
+    _boardInflight = false; if (more) more.disabled = false;
+    if (!res || !res.ok) { _boardToast('Could not load more.'); return; }
+    cur.topics = cur.topics.concat(res.topics || []);
+    cur.next_cursor = res.next_cursor || null;
+    _boardPaint();
+  }
+
+  // ── sheets (one at a time; every textarea at the TOP) ───────────────────
+  function _boardSheetClose() {
+    if (!_boardSheet) return;
+    const el = _boardSheet; _boardSheet = null; _boardTopicData = null;
+    try { el.classList.remove('open'); } catch (_) {}
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+  }
+  function _boardSheetOpen(title, innerHtml, cls) {
+    _boardSheetClose();
+    const el = document.createElement('div');
+    el.className = 'board-scope board-sheet-wrap' + (cls ? ' ' + cls : '');
+    el.innerHTML =
+      '<div class="board-scrim" data-board-close></div>' +
+      '<section class="board-sheet" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+        '<header class="board-sheet-head">' +
+          '<button type="button" class="board-back" data-board-close aria-label="Close">‹</button>' +
+          '<span class="board-sheet-title">' + esc(title) + '</span>' +
+          '<span class="board-sheet-spacer"></span>' +
+        '</header>' +
+        '<div class="board-sheet-body">' + innerHtml + '</div>' +
+      '</section>';
+    document.body.appendChild(el);
+    _boardSheet = el;
+    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    return el;
+  }
+
+  // ── rules (consent) ─────────────────────────────────────────────────────
+  function _boardRulesHtml() {
+    return '<div class="board-rules">' +
+      '<div class="board-rules-eyebrow">✦ THE HALL</div>' +
+      '<h3 class="board-rules-title">Community rules</h3>' +
+      '<p>This board is every hunter, in the open. Before your first post, agree to these:</p>' +
+      '<ul>' +
+        '<li><b>Be decent.</b> No harassment, hate, threats, or slurs, toward anyone.</li>' +
+        '<li><b>No personal information.</b> Not yours, not anyone else&#39;s. No phone numbers, addresses, or real names people did not share themselves.</li>' +
+        '<li><b>Nothing objectionable.</b> Zero tolerance for abusive, sexual, or illegal content. Posts are filtered, and moderators remove what slips through.</li>' +
+        '<li><b>Report what you see.</b> Every post has Report and Block. Reports reach the moderators immediately and are reviewed within 24 hours.</li>' +
+        '<li><b>Moderators decide.</b> They can remove posts and mute hunters. Repeat offenders lose the board.</li>' +
+      '</ul>' +
+      '<p class="board-rules-contact">Questions, or a report the app cannot express: <a href="mailto:' + BOARD_SUPPORT_EMAIL + '?subject=Awakened%20Community">' + BOARD_SUPPORT_EMAIL + '</a></p>' +
+      '<button type="button" class="board-primary" data-board-agree>I AGREE</button>' +
+    '</div>';
+  }
+  function openBoardRules(then) {
+    _boardAfterConsent = typeof then === 'function' ? then : null;
+    _boardSheetOpen('Community rules', _boardRulesHtml(), 'board-sheet--rules');
+  }
+  async function _boardAgree(btn) {
+    if (btn) btn.disabled = true;
+    let res;
+    try { res = await Auth.boardConsent(BOARD_RULES_VERSION); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    const devOk = res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER');
+    if (!(res && res.ok) && !devOk) {
+      if (btn) btn.disabled = false;
+      _boardToast(_boardErrMsg(res));
+      return;
+    }
+    _boardMe = Object.assign({}, _boardMe || {}, { consented: true });
+    try { localStorage.setItem('hb_board_consent_v1', String(BOARD_RULES_VERSION)); } catch (_) {}
+    const then = _boardAfterConsent; _boardAfterConsent = null;
+    _boardSheetClose();
+    if (then) setTimeout(then, 280);
+  }
+
+  // ── composer ────────────────────────────────────────────────────────────
+  function _boardComposerHtml(kind, topicTitle) {
+    const isTopic = kind === 'topic';
+    return '<form class="board-compose" data-board-compose="' + esc(kind) + '">' +
+      (isTopic
+        ? '<div class="board-tagpick" role="radiogroup" aria-label="Topic tag">' +
+            ['talk', 'improvement', 'bug'].map(function (t, i) {
+              return '<button type="button" class="board-tag board-tag--' + t + '" data-board-pick="' + t + '" data-active="' + (i === 0 ? 'true' : 'false') + '">' + BOARD_TAG_LABEL[t] + '</button>';
+            }).join('') +
+          '</div>' +
+          '<input class="board-input" name="title" type="text" maxlength="' + BOARD_TITLE_MAX + '" placeholder="Title" autocomplete="off" autocapitalize="sentences" />'
+        : '<div class="board-compose-ctx">Replying to <b>' + esc(topicTitle || 'this topic') + '</b></div>') +
+      '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'What is on your mind? An idea, a bug, anything.' : 'Write your reply') + '"></textarea>' +
+      '<div class="board-compose-foot">' +
+        '<span class="board-count" data-board-count>0 / ' + BOARD_BODY_MAX + '</span>' +
+        '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TOPIC' : 'POST REPLY') + '</button>' +
+      '</div>' +
+      '<div class="board-compose-err hidden" data-board-err></div>' +
+    '</form>';
+  }
+  function openBoardComposer(kind, topicId, topicTitle) {
+    if (!_boardConsented()) { openBoardRules(function () { openBoardComposer(kind, topicId, topicTitle); }); return; }
+    if (_boardMe && _boardMe.muted_until && Number(_boardMe.muted_until) > Date.now()) { _boardToast('You are muted until ' + _boardDate(_boardMe.muted_until) + '.'); return; }
+    const el = _boardSheetOpen(kind === 'topic' ? 'New topic' : 'Reply', _boardComposerHtml(kind, topicTitle), 'board-sheet--compose');
+    el.dataset.topicId = topicId || '';
+    setTimeout(function () { try { const f = el.querySelector(kind === 'topic' ? 'input[name="title"]' : 'textarea'); if (f) f.focus(); } catch (_) {} }, 320);
+  }
+  async function _boardSubmit(form) {
+    const kind = form.getAttribute('data-board-compose');
+    const wrap = form.closest('.board-sheet-wrap');
+    const topicId = (wrap && wrap.dataset.topicId) || '';
+    const err = form.querySelector('[data-board-err]');
+    const btn = form.querySelector('button[type="submit"]');
+    const ta = form.querySelector('textarea[name="body"]');
+    const body = (ta && ta.value) || '';
+    const titleEl = form.querySelector('input[name="title"]');
+    const title = kind === 'topic' ? ((titleEl && titleEl.value) || '') : '';
+    const pick = form.querySelector('[data-board-pick][data-active="true"]');
+    const tag = pick ? pick.getAttribute('data-board-pick') : 'talk';
+    const showErr = function (m) { if (err) { err.textContent = m; err.classList.remove('hidden'); } };
+    if (err) err.classList.add('hidden');
+    if (kind === 'topic' && !title.trim()) { showErr('Give the topic a title.'); return; }
+    if (!body.trim()) { showErr('Say something first.'); return; }
+    if (btn) btn.disabled = true;
+    let res;
+    try {
+      res = kind === 'topic' ? await Auth.boardPostTopic(tag, title.trim(), body.trim()) : await Auth.boardReply(topicId, body.trim());
+    } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    if (btn) btn.disabled = false;
+    if (!res || !res.ok) {
+      const code = (res && res.code) || 'ERROR';
+      if (code === 'CONSENT_REQUIRED') { _boardMe = Object.assign({}, _boardMe || {}, { consented: false }); try { localStorage.removeItem('hb_board_consent_v1'); } catch (_) {} _boardSheetClose(); openBoardRules(function () { openBoardComposer(kind, topicId); }); return; }
+      if (code === 'MUTED') { _boardSheetClose(); _boardToast('You are muted right now. You can still read the board.'); _boardCache = null; renderBoardSection(); return; }
+      if (code === 'OBJECTIONABLE') { showErr('That contains language the board does not allow.'); return; }
+      if (code === 'RATE_LIMITED') { showErr('Slow down — a few posts a minute is plenty.'); return; }
+      showErr(_boardErrMsg(res)); return;
+    }
+    _boardEmit(kind === 'topic' ? 'topic_posted' : 'reply_posted', kind === 'topic' ? tag : '');
+    try { _hapticTick('SUCCESS'); } catch (_) {}
+    try { if (ta) ta.blur(); } catch (_) {}
+    _boardSheetClose();
+    _boardCache = null; _boardTagged = null;
+    if (kind === 'topic') { renderBoardSection(); _boardToast('Posted to the Hall.'); }
+    else { renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); }
+  }
+
+  // ── topic sheet ─────────────────────────────────────────────────────────
+  function _boardPostHtml(kind, p) {
+    p = p || {};
+    const mine = _boardIsMe(p.author);
+    const canMod = _boardIsMod();
+    const alias = (p.author && p.author.alias) || 'hunter';
+    return '<article class="board-post' + (kind === 'topic' ? ' board-post--topic' : '') + (p.hidden ? ' board-post--hidden' : '') + '"' +
+        ' data-board-post="' + esc(p.id || '') + '" data-board-kind="' + kind + '"' +
+        ' data-board-author="' + esc((p.author && p.author.author_id) || '') + '" data-board-alias="' + esc(alias) + '">' +
+      '<div class="board-post-head">' + _boardAuthorHtml(p.author) +
+        '<span class="board-post-time">' + esc(_boardRel(p.created_at)) + '</span>' +
+        (mine && !canMod ? '' : '<button type="button" class="board-dots" data-board-menu aria-label="Post options">···</button>') +
+      '</div>' +
+      (kind === 'topic' ? '<h3 class="board-post-title">' + esc(p.title || '') + '</h3>' : '') +
+      '<div class="board-post-body">' + esc(p.body || '').replace(/\n/g, '<br>') + '</div>' +
+      '<div class="board-menu hidden" data-board-menu-panel>' +
+        (mine ? '' :
+          '<div class="board-menu-row"><span class="board-menu-lbl">REPORT</span>' +
+            BOARD_REASONS.map(function (r) { return '<button type="button" class="board-chip" data-board-report="' + r[0] + '">' + r[1] + '</button>'; }).join('') +
+          '</div>' +
+          '<div class="board-menu-row"><button type="button" class="board-chip board-chip--warn" data-board-block>Block ' + esc(alias) + '</button></div>') +
+        (canMod ?
+          '<div class="board-menu-row board-menu-row--mod"><span class="board-menu-lbl">MOD</span>' +
+            '<button type="button" class="board-chip board-chip--danger" data-board-mod="delete">Delete</button>' +
+            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="hide">' + (p.hidden ? 'Unhide' : 'Hide') + '</button>' : '') +
+            (mine ? '' : '<button type="button" class="board-chip" data-board-mod="mute1">Mute 1d</button>' +
+              '<button type="button" class="board-chip" data-board-mod="mute7">Mute 7d</button>' +
+              '<button type="button" class="board-chip" data-board-mod="mute30">Mute 30d</button>') +
+          '</div>' : '') +
+      '</div>' +
+    '</article>';
+  }
+  function _boardTopicSheetHtml(d) {
+    const t = d.topic || {};
+    const n = d.replies.length;
+    return '<div class="board-topic-wrap">' +
+      '<div class="board-topic-tagrow">' +
+        '<span class="board-tagpill board-tagpill--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
+        (t.hidden ? '<span class="board-hiddenpill">HIDDEN · moderators only</span>' : '') +
+      '</div>' +
+      _boardPostHtml('topic', t) +
+      '<div class="board-replies-head">' + (n ? n + (n === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET') + '</div>' +
+      '<div class="board-replylist" data-board-replies>' + d.replies.map(function (r) { return _boardPostHtml('reply', r); }).join('') + '</div>' +
+      (d.next_cursor ? '<button type="button" class="board-more" data-board-more-replies>LOAD MORE REPLIES</button>' : '') +
+      '<div class="board-replybar"><button type="button" class="board-primary" data-board-reply>REPLY</button></div>' +
+    '</div>';
+  }
+  async function openBoardTopic(id) {
+    if (!id) return;
+    const el = _boardSheetOpen('Topic', '<div class="board-loading">' + (typeof _skelHtml === 'function' ? _skelHtml('rows', 3) : 'Loading…') + '</div>', 'board-sheet--topic');
+    el.dataset.topicId = id;
+    let res; try { res = await Auth.boardTopic(id, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    if (_boardSheet !== el) return;
+    const bodyEl = el.querySelector('.board-sheet-body'); if (!bodyEl) return;
+    if (!res || !res.ok) {
+      bodyEl.innerHTML = '<div class="social-error">' + esc(res && res.code === 'NOT_FOUND' ? 'This topic is gone.' : _boardErrMsg(res)) + '</div>';
+      return;
+    }
+    if (res.me) _boardMe = res.me;
+    _boardTopicData = { topic: res.topic, replies: res.replies || [], next_cursor: res.next_cursor || null };
+    bodyEl.innerHTML = _boardTopicSheetHtml(_boardTopicData);
+  }
+  async function _boardMoreReplies(btn) {
+    const d = _boardTopicData; if (!d || !d.next_cursor) return;
+    const id = _boardSheet && _boardSheet.dataset.topicId; if (!id) return;
+    btn.disabled = true;
+    let res; try { res = await Auth.boardTopic(id, d.next_cursor); } catch (_) { res = null; }
+    btn.disabled = false;
+    if (!res || !res.ok || _boardTopicData !== d) return;
+    const host = _boardSheet && _boardSheet.querySelector('[data-board-replies]');
+    (res.replies || []).forEach(function (r) { d.replies.push(r); if (host) host.insertAdjacentHTML('beforeend', _boardPostHtml('reply', r)); });
+    d.next_cursor = res.next_cursor || null;
+    if (!d.next_cursor) btn.remove();
+  }
+
+  // ── actions: report / block / moderation ───────────────────────────────
+  function _boardArm(btn, label) {
+    if (btn.getAttribute('data-armed') === '1') { btn.removeAttribute('data-armed'); btn.textContent = btn.getAttribute('data-orig') || btn.textContent; return true; }
+    const orig = btn.textContent;
+    btn.setAttribute('data-armed', '1'); btn.setAttribute('data-orig', orig); btn.textContent = label;
+    setTimeout(function () {
+      if (btn.getAttribute('data-armed') === '1') { btn.removeAttribute('data-armed'); btn.textContent = btn.getAttribute('data-orig') || orig; }
+    }, 6000);
+    return false;
+  }
+  async function _boardAct(action, postEl, extra) {
+    if (!postEl) return;
+    const id = postEl.getAttribute('data-board-post');
+    const kind = postEl.getAttribute('data-board-kind');
+    const authorId = postEl.getAttribute('data-board-author');
+    const alias = postEl.getAttribute('data-board-alias') || 'hunter';
+    const panel = postEl.querySelector('[data-board-menu-panel]');
+    let res;
+    try {
+      if (action === 'report') res = await Auth.boardReport(kind, id, extra);
+      else if (action === 'block') res = await Auth.boardBlock(authorId);
+      else if (action === 'delete') res = kind === 'topic' ? await Auth.boardModDeleteTopic(id) : await Auth.boardModDeleteReply(id);
+      else if (action === 'hide') res = await Auth.boardModHideTopic(id);
+      else if (action.indexOf('mute') === 0) res = await Auth.boardModMute(authorId, parseInt(action.slice(4), 10) || 1, '');
+    } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    if (!res || !res.ok) { _boardToast(_boardErrMsg(res)); return; }
+    try { _hapticTick('MEDIUM'); } catch (_) {}
+    if (panel) panel.classList.add('hidden');
+    if (action === 'report') {
+      _boardEmit('board_reported', kind);
+      _boardToast(res.auto_hidden ? 'Reported. Hidden pending review.' : (res.already ? 'You already reported this.' : 'Reported. The moderators will review it.'));
+      return;
+    }
+    if (action === 'block') {
+      _boardHiddenAuthors.add(authorId);
+      _boardToast('Blocked ' + alias + '. You will not see each other on the board.');
+      if (kind === 'topic') { _boardSheetClose(); _boardCache = null; _boardTagged = null; renderBoardSection(); }
+      else { postEl.remove(); }
+      return;
+    }
+    if (action === 'delete') {
+      _boardToast('Removed.');
+      if (kind === 'topic') { _boardSheetClose(); _boardCache = null; _boardTagged = null; renderBoardSection(); }
+      else { postEl.remove(); }
+      return;
+    }
+    if (action === 'hide') {
+      _boardToast(res.hidden ? 'Topic hidden from hunters.' : 'Topic visible again.');
+      _boardCache = null; _boardTagged = null; renderBoardSection();
+      openBoardTopic(id);
+      return;
+    }
+    if (action.indexOf('mute') === 0) { _boardToast('Muted ' + alias + ' until ' + _boardDate(res.until) + '.'); }
+  }
+
+  // ── Settings: blocked hunters ───────────────────────────────────────────
+  async function renderBoardBlocksSettings() {
+    const host = document.getElementById('settings-board-blocks'); if (!host) return;
+    if (!(window.Auth && Auth.boardBlocks)) return;
+    let res; try { res = await Auth.boardBlocks(); } catch (_) { res = null; }
+    if (!res || !res.ok) {
+      host.innerHTML = '<div class="settings-v2-fsub">' + ((res && (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP')) ? 'Sign in to manage blocked hunters.' : 'Hunters you block on the board will show here.') + '</div>';
+      return;
+    }
+    const list = res.blocks || [];
+    host.innerHTML = list.length
+      ? list.map(function (b) {
+          return '<div class="settings-v2-frow"><div class="settings-v2-fcol"><div class="settings-v2-fname">' + esc(b.alias || '') + '</div><div class="settings-v2-fsub">Blocked on the Community board</div></div>' +
+            '<span class="settings-v2-fright"><button type="button" class="social-btn social-btn--ghost" data-board-unblock="' + esc(b.user_id) + '">Unblock</button></span></div>';
+        }).join('')
+      : '<div class="settings-v2-fsub">No blocked hunters.</div>';
+  }
+  async function _boardUnblock(userId, btn) {
+    if (btn) btn.disabled = true;
+    let res; try { res = await Auth.boardUnblock(userId); } catch (_) { res = null; }
+    if (res && res.ok) { _boardHiddenAuthors.delete(userId); _boardCache = null; _boardTagged = null; _boardToast('Unblocked.'); }
+    else _boardToast(_boardErrMsg(res));
+    renderBoardBlocksSettings();
+  }
+
+  // ── owner: grant / remove moderator from a hunter's profile card ───────
+  async function _boardDecorateProfileCard(alias) {
+    if (!(_boardMe && _boardMe.role === 'owner')) return;
+    if (!alias || (typeof _pcIsOwnAlias === 'function' && _pcIsOwnAlias(alias))) return;
+    const body = document.getElementById('pc-body'); if (!body) return;
+    let mods = null;
+    try { const r = await Auth.boardModerators(); if (r && r.ok) mods = r.moderators || []; } catch (_) {}
+    if (!mods) return;
+    const isMod = mods.some(function (m) { return String(m.alias || '').toLowerCase() === String(alias).toLowerCase() && m.role === 'mod'; });
+    const old = body.querySelector('.board-grant'); if (old) old.remove();
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'board-grant';
+    btn.setAttribute('data-board-grant', alias);
+    btn.setAttribute('data-board-grant-remove', isMod ? '1' : '0');
+    btn.textContent = isMod ? '⚔ REMOVE MODERATOR' : '⚔ MAKE MODERATOR';
+    body.appendChild(btn);
+  }
+  async function _boardGrant(btn) {
+    const alias = btn.getAttribute('data-board-grant');
+    const remove = btn.getAttribute('data-board-grant-remove') === '1';
+    if (!_boardArm(btn, remove ? 'TAP AGAIN TO REMOVE' : 'TAP AGAIN TO GRANT')) return;
+    btn.disabled = true;
+    let res; try { res = await Auth.boardGrantModerator(alias, remove); } catch (_) { res = null; }
+    btn.disabled = false;
+    if (!res || !res.ok) { _boardToast(_boardErrMsg(res)); return; }
+    _boardToast(remove ? alias + ' is no longer a moderator.' : alias + ' is now a moderator.');
+    _boardDecorateProfileCard(alias);
+  }
+
+  // ── wiring (delegated, once) ────────────────────────────────────────────
+  function _boardWire() {
+    if (_boardWired) return; _boardWired = true;
+    document.addEventListener('click', function (e) {
+      const t = e.target; if (!t || !t.closest) return;
+      let el;
+      if ((el = t.closest('[data-board-close]'))) { e.preventDefault(); _boardSheetClose(); return; }
+      if ((el = t.closest('[data-board-agree]'))) { e.preventDefault(); _boardAgree(el); return; }
+      if ((el = t.closest('[data-board-new]'))) { e.preventDefault(); openBoardComposer('topic'); return; }
+      if ((el = t.closest('[data-board-tag]'))) { e.preventDefault(); _boardSetTag(el.getAttribute('data-board-tag') || ''); return; }
+      if ((el = t.closest('[data-board-pick]'))) {
+        e.preventDefault();
+        el.parentNode.querySelectorAll('[data-board-pick]').forEach(function (b) { b.setAttribute('data-active', b === el ? 'true' : 'false'); });
+        return;
+      }
+      if ((el = t.closest('[data-board-more]'))) { e.preventDefault(); _boardLoadMore(); return; }
+      if ((el = t.closest('[data-board-more-replies]'))) { e.preventDefault(); _boardMoreReplies(el); return; }
+      if ((el = t.closest('[data-board-reply]'))) {
+        e.preventDefault();
+        const tid = _boardSheet && _boardSheet.dataset.topicId;
+        const title = _boardTopicData && _boardTopicData.topic && _boardTopicData.topic.title;
+        openBoardComposer('reply', tid, title);
+        return;
+      }
+      if ((el = t.closest('[data-board-profile]'))) {
+        e.preventDefault(); e.stopPropagation();
+        const who = el.getAttribute('data-board-profile');
+        const wasSheet = !!_boardSheet;
+        _boardSheetClose();   // the profile card must never open underneath the board sheet
+        setTimeout(function () { try { _openProfileCard(who); } catch (_) {} }, wasSheet ? 240 : 0);
+        return;
+      }
+      if ((el = t.closest('[data-board-menu]'))) {
+        e.preventDefault();
+        const p = el.closest('[data-board-post]'); const panel = p && p.querySelector('[data-board-menu-panel]');
+        if (panel) panel.classList.toggle('hidden');
+        return;
+      }
+      if ((el = t.closest('[data-board-report]'))) { e.preventDefault(); _boardAct('report', el.closest('[data-board-post]'), el.getAttribute('data-board-report')); return; }
+      if ((el = t.closest('[data-board-block]'))) { e.preventDefault(); if (_boardArm(el, 'Tap again to block')) _boardAct('block', el.closest('[data-board-post]')); return; }
+      if ((el = t.closest('[data-board-mod]'))) {
+        e.preventDefault();
+        const a = el.getAttribute('data-board-mod');
+        if (a === 'hide' || _boardArm(el, 'Tap again')) _boardAct(a, el.closest('[data-board-post]'));
+        return;
+      }
+      if ((el = t.closest('[data-board-unblock]'))) { e.preventDefault(); _boardUnblock(el.getAttribute('data-board-unblock'), el); return; }
+      if ((el = t.closest('[data-board-grant]'))) { e.preventDefault(); _boardGrant(el); return; }
+      if ((el = t.closest('[data-board-rules-open]'))) { e.preventDefault(); openBoardRules(null); return; }
+      if ((el = t.closest('[data-board-open]'))) { e.preventDefault(); openBoardTopic(el.getAttribute('data-board-open')); return; }
+    });
+    document.addEventListener('submit', function (e) {
+      const f = e.target;
+      if (f && f.matches && f.matches('form[data-board-compose]')) { e.preventDefault(); _boardSubmit(f); }
+    });
+    document.addEventListener('input', function (e) {
+      const ta = e.target;
+      if (ta && ta.matches && ta.matches('.board-textarea')) {
+        const f = ta.closest('form'); const c = f && f.querySelector('[data-board-count]');
+        if (c) c.textContent = ta.value.length + ' / ' + BOARD_BODY_MAX;
+      }
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _boardSheet) _boardSheetClose(); });
+  }
+  try { _boardWire(); } catch (_) {}
+  // QA hooks
+  try {
+    window.__board = {
+      render: renderBoardSection, me: function () { return _boardMe; },
+      rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic,
+      settings: renderBoardBlocksSettings,
+    };
+  } catch (_) {}
+
   async function renderFriendsSection() {
     _ensureSocialMarkup();
     try { _coopServerSyncPacts(); } catch (_) {}   // W664 P2 — canonical server pacts (once/session; falls back to the v1 _coopBackfillPacts if the endpoint is unavailable; re-renders if numbers change)
@@ -50286,6 +50886,7 @@
     // friends in the background, repaint ONCE only if this hunter is an accepted friend AND the card
     // is still theirs (a fast close+reopen of another card must not repaint stale data).
     _renderProfileCard(data, _pcIsOwnAlias(alias));
+    try { _boardDecorateProfileCard(alias); } catch (_) {}   // W907 — owner-only Make/Remove moderator
     if (!_friendsCache && !_pcIsOwnAlias(alias) && !(data && data._sim) && window.Auth && Auth.fetchFriends) {
       Promise.resolve(Auth.fetchFriends()).then(function (fr) {
         if (!fr || !fr.ok) return;
@@ -58401,6 +59002,7 @@
     sheet.classList.remove('hidden');
     requestAnimationFrame(() => sheet.classList.add('ss-open'));
     try { _syncFounderEntry(); } catch (_) {}   // W441 — gate the Founder entry on live IAP (App Store 2.1)
+    try { renderBoardBlocksSettings(); } catch (_) {}   // W907 — the Community board's blocked-hunters list
     // v3 Phase 1m — render the notification VOICE PREVIEW with live
     // copy so the user sees what each system ping would say RIGHT NOW.
     try { renderNotifPreviewCards(); } catch (_) {}

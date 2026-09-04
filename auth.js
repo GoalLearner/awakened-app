@@ -1774,6 +1774,41 @@
   function declineFriendRequest(friendshipId)   { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/decline'); }
   function removeFriend(friendshipId)           { return _authedFetch('POST', '/v1/friends/' + encodeURIComponent(friendshipId) + '/remove'); }
 
+  // W907 — THE COMMUNITY BOARD. Every call rides _authedFetch: guests get GUEST_SKIP,
+  // 401 → EXPIRED, 4xx carry the server's error code in `code`. The untagged first
+  // page snapshots to hb_board_cache_v1 so a cold launch paints the board instantly
+  // (stale-while-revalidate, the W772 roster pattern; hb_ prefix rides the sign-out purge).
+  function boardTopics(tag, cursor) {
+    var q = [];
+    if (tag) q.push('tag=' + encodeURIComponent(tag));
+    if (cursor) q.push('cursor=' + encodeURIComponent(cursor));
+    return _authedFetch('GET', '/v1/board/topics' + (q.length ? '?' + q.join('&') : '')).then(function (res) {
+      try {
+        if (res && res.ok && !tag && !cursor && Array.isArray(res.topics)) {
+          localStorage.setItem('hb_board_cache_v1', JSON.stringify({ topics: res.topics, me: res.me || null, ts: Date.now() }));
+        }
+      } catch (_) {}
+      return res;
+    });
+  }
+  function boardTopic(id, cursor)                { return _authedFetch('GET', '/v1/board/topics/' + encodeURIComponent(id) + (cursor ? '?cursor=' + encodeURIComponent(cursor) : '')); }
+  function boardPostTopic(tag, title, body)      { return _authedFetch('POST', '/v1/board/topics', { tag: tag, title: title, body: body }); }
+  function boardReply(topicId, body)             { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(topicId) + '/replies', { body: body }); }
+  function boardReport(kind, id, reason)         { return _authedFetch('POST', '/v1/board/report', { kind: kind, id: id, reason: reason }); }
+  function boardBlock(userId)                    { return _authedFetch('POST', '/v1/board/block', { user_id: userId }); }
+  function boardUnblock(userId)                  { return _authedFetch('POST', '/v1/board/unblock', { user_id: userId }); }
+  function boardBlocks()                         { return _authedFetch('GET', '/v1/board/blocks'); }
+  function boardConsent(version)                 { return _authedFetch('POST', '/v1/board/consent', { version: version }); }
+  function boardModDeleteTopic(id)               { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/delete'); }
+  function boardModDeleteReply(id)               { return _authedFetch('POST', '/v1/board/replies/' + encodeURIComponent(id) + '/delete'); }
+  function boardModHideTopic(id)                 { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/hide'); }
+  function boardModMute(userId, days, reason)    { return _authedFetch('POST', '/v1/board/mute', { user_id: userId, days: days, reason: reason || '' }); }
+  function boardModUnmute(userId)                { return _authedFetch('POST', '/v1/board/unmute', { user_id: userId }); }
+  function boardReports()                        { return _authedFetch('GET', '/v1/board/reports'); }
+  function boardResolveReports(kind, id)         { return _authedFetch('POST', '/v1/board/reports/resolve', { kind: kind, id: id }); }
+  function boardModerators()                     { return _authedFetch('GET', '/v1/board/moderators'); }
+  function boardGrantModerator(alias, remove)    { return _authedFetch('POST', remove ? '/v1/board/moderators/remove' : '/v1/board/moderators', { alias: alias }); }
+
   // W603/W604 — push notifications. Register this device's APNs token so the
   // backend can push a friend-request / co-op-invite the moment it happens
   // (app closed). environment: 'production' for TestFlight/App Store builds,
@@ -2496,6 +2531,11 @@
     acceptFriendRequest,
     declineFriendRequest,
     removeFriend,
+    // W907 — Community board
+    boardTopics, boardTopic, boardPostTopic, boardReply, boardReport,
+    boardBlock, boardUnblock, boardBlocks, boardConsent,
+    boardModDeleteTopic, boardModDeleteReply, boardModHideTopic, boardModMute, boardModUnmute,
+    boardReports, boardResolveReports, boardModerators, boardGrantModerator,
     // Push notifications (W603/W604) — device-token register/unregister.
     registerPushToken,
     unregisterPushToken,

@@ -64,6 +64,7 @@ interface AuthorRow {
   rank_label: string | null;
   founder_seq: number | null;
   is_mod: number;
+  mod_role?: string | null;
 }
 
 interface TopicRow extends AuthorRow {
@@ -163,6 +164,8 @@ function authorOut(r: AuthorRow) {
     rank_label: r.rank_label || null,
     founder_seq: r.founder_seq ? Number(r.founder_seq) : 0,
     is_mod: !!Number(r.is_mod),
+    // 'owner' renders the gold DEV chip, 'mod' the violet MOD chip.
+    mod_role: r.mod_role === 'owner' || r.mod_role === 'mod' ? r.mod_role : null,
   };
 }
 
@@ -196,7 +199,7 @@ const AUTHOR_JOIN = `
      LEFT JOIN public_profile_summary pps ON pps.user_id = x.author_id
      LEFT JOIN board_moderators bm ON bm.user_id = x.author_id`;
 const AUTHOR_COLS = `x.author_id AS author_id, u.alias AS alias, pps.rank_label AS rank_label,
-            pps.founder_seq AS founder_seq, (bm.user_id IS NOT NULL) AS is_mod`;
+            pps.founder_seq AS founder_seq, (bm.user_id IS NOT NULL) AS is_mod, bm.role AS mod_role`;
 /** Symmetric block exclusion, bound twice with the caller's id. */
 const BLOCK_FILTER = `x.author_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
        AND x.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)`;
