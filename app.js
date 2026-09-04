@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.1';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.1-w903'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.1-w905'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5911,8 +5911,10 @@
     const host = document.getElementById('writ-card');
     if (!host) return;
     w = w || _writRead();
-    if (!w || w.none || w.week !== weeklyHungerWeekKey()) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    if (!w || w.none || w.week !== weeklyHungerWeekKey()) { host.classList.add('hidden'); host.innerHTML = ''; delete host.dataset.sys; try { renderSystemLine(); } catch (_) {} return; }
     const p = w.done ? w.target : writProgress(w);
+    host.dataset.sys = w.done ? 'WRIT FULFILLED' : 'WRIT ' + p.toLocaleString('en-US') + '/' + w.target.toLocaleString('en-US');   // W905
+    try { renderSystemLine(); } catch (_) {}
     const pct = Math.max(0, Math.min(100, Math.round((p / Math.max(1, w.target)) * 100)));
     // W896 (3.0.1 D14) — THE ONE-CARD RULE. A Dungeon Break and a live Double
     // Dungeon both run on a clock; a Writ runs until Sunday. When one of those
@@ -6730,9 +6732,14 @@
       } else if (rookies.length || pendingAsMentor.length) {
         host.innerHTML = '⚔ THE OATHBOUND — ' +
           (pendingAsMentor.length ? pendingAsMentor.length + ' oath' + (pendingAsMentor.length === 1 ? '' : 's') + ' sworn' : rookies.length + ' rookie' + (rookies.length === 1 ? '' : 's') + ' await an oath') + ' ›';
-      } else { host.classList.add('hidden'); host.innerHTML = ''; return; }
+      } else { host.classList.add('hidden'); host.innerHTML = ''; delete host.dataset.sys; try { renderSystemLine(); } catch (_) {} return; }
+      // W905 — the line's label: the rookie sees their mentor; a mentor sees a count.
+      host.dataset.sys = myPendingAsRookie
+        ? 'OATH · ' + myPendingAsRookie.mentor_alias
+        : (pendingAsMentor.length ? pendingAsMentor.length + ' OATH' + (pendingAsMentor.length === 1 ? '' : 'S') : rookies.length + ' ROOKIE' + (rookies.length === 1 ? '' : 'S'));
       host.classList.remove('hidden');
-    } catch (_) { host.classList.add('hidden'); }
+    } catch (_) { host.classList.add('hidden'); delete host.dataset.sys; }
+    try { renderSystemLine(); } catch (_) {}
   }
   function openOathSheet() {
     try {
@@ -6906,8 +6913,9 @@
     const host = document.getElementById('break-banner');
     if (!host) return;
     const b = _breakActive();
-    if (!b) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    if (!b) { host.classList.add('hidden'); host.innerHTML = ''; delete host.dataset.sys; try { renderSystemLine(); } catch (_) {} return; }
     const cfg = BOSSES[b.bossId] || {};
+    host.dataset.sys = 'BREAK · ' + (cfg.name || 'a boss is loose');   // W905 — the line's label
     host.innerHTML =
       '<img class="bb-art" src="' + esc(getBossArtPath(b.bossId)) + '" alt="" onerror="this.style.display=\'none\'">' +
       '<div class="bb-main"><div class="bb-eyebrow">DUNGEON BREAK</div>' +
@@ -6915,6 +6923,7 @@
       '<div class="bb-sub">THE REMATCH IS FREE · 72H WINDOW ›</div></div>';
     host.classList.remove('hidden');
     host.onclick = function () { try { switchTab('quests'); setTimeout(function () { try { openBossFullScreen(b.bossId); } catch (_) {} }, 300); } catch (_) {} };
+    try { renderSystemLine(); } catch (_) {}
   }
   // ═══════════════════════════════════════════════════════════════════════
   // W870 (Wave 2 Train B, S-tier #5 phase 1) — THE TOWER REMEMBERS
@@ -7580,12 +7589,62 @@
     if (!host) return;
     const s = _shLoad();
     const n = Object.keys(s.extracted).length;
-    if (!n) { host.classList.add('hidden'); host.innerHTML = ''; return; }
+    if (!n) { host.classList.add('hidden'); host.innerHTML = ''; delete host.dataset.sys; try { renderSystemLine(); } catch (_) {} return; }
     const marching = _shadowActiveCount();
+    host.dataset.sys = n + ' SHADOW' + (n === 1 ? '' : 'S') + (s.dormant ? ' KNEELING' : '');   // W905
     host.innerHTML = '<span class="shs-glyph" aria-hidden="true">◈</span> SHADOW ARMY · ' + n + ' RAISED · ' +
       (s.dormant ? 'KNEELING' : marching + ' MARCHING (+' + marching + '%)') + ' ›';
     host.classList.remove('hidden');
+    try { renderSystemLine(); } catch (_) {}
   }
+  // ═══════════════════════════════════════════════════════════════════════
+  // W905 — THE SYSTEM LINE. One line under the Hunter Profile that names every
+  // live notice (Break · Writ · Oath · Shadows) and expands on tap into the
+  // panel where the original cards render untouched. Each renderer above
+  // publishes `host.dataset.sys` when it shows and clears it when it hides;
+  // this only reads those labels, so there is exactly one source of truth
+  // per notice. Hidden entirely when nothing is live — a quiet Status page
+  // is the default, not the exception. Owner, 2026-09-04: "less is more."
+  // ═══════════════════════════════════════════════════════════════════════
+  const _SYS_HOSTS = ['break-banner', 'writ-card', 'oath-strip', 'shadow-strip'];
+  function renderSystemLine() {
+    const line = document.getElementById('system-line');
+    const panel = document.getElementById('system-panel');
+    if (!line || !panel) return;
+    const parts = [];
+    let urgent = false;
+    _SYS_HOSTS.forEach(function (id) {
+      const h = document.getElementById(id);
+      if (!h || h.classList.contains('hidden') || !h.dataset.sys) return;
+      parts.push(h.dataset.sys);
+      if (id === 'break-banner') urgent = true;   // a boss is loose and leeching NOW
+    });
+    if (!parts.length) {
+      line.classList.add('hidden'); panel.classList.add('hidden');
+      line.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const open = line.getAttribute('aria-expanded') === 'true';
+    line.classList.toggle('system-line--urgent', urgent);
+    line.innerHTML =
+      '<span class="sysl-glyph" aria-hidden="true">⟐</span>' +
+      '<span class="sysl-text">SYSTEM · ' + parts.map(esc).join(' · ') + '</span>' +
+      '<span class="sysl-chev" aria-hidden="true">' + (open ? '▾' : '›') + '</span>';
+    line.classList.remove('hidden');
+    panel.classList.toggle('hidden', !open);
+  }
+  try {
+    const _sysLine = document.getElementById('system-line');
+    if (_sysLine) {
+      _sysLine.addEventListener('click', function () {
+        const open = _sysLine.getAttribute('aria-expanded') === 'true';
+        _sysLine.setAttribute('aria-expanded', open ? 'false' : 'true');
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        renderSystemLine();
+      });
+    }
+    window.__systemLine = renderSystemLine;   // QA
+  } catch (_) {}
   try {
     document.addEventListener('click', function (e) {
       const t = e.target && e.target.closest && e.target.closest('[data-open-shadows]');
@@ -33865,12 +33924,10 @@
             '</div>' +
           '</div>';
         })() +
-        // 4 sigil tiles — TOTAL XP elevated in gold
-        '<div class="sc-metrics sc-metrics--sigil">' +
-          '<div class="sc-metric sc-metric--sigil sc-metric--primary">' +
-            '<span class="sc-metric-val">' + totalPoints.toLocaleString() + '</span>' +
-            '<span class="sc-metric-lbl">Total XP</span>' +
-          '</div>' +
+        // W905 — two sigil tiles. TOTAL XP and TODAY were deleted: the RANK tile in the
+        // header already shows the points and the header bar already shows today's
+        // count (owner: "less is more"). Reduction means reduction — not relocated.
+        '<div class="sc-metrics sc-metrics--sigil sc-metrics--two">' +
           // W822 (Train 2, L2) — the All-Streaks sheet's only opener died in
           // 1z.10 when #perfect-streak-display left the header, orphaning the
           // Perfect-Day + compound streak surfaces entirely. The Best-Streak
@@ -33884,10 +33941,6 @@
             '<span class="sc-metric-val">' + (daysActive || 0) + '</span>' +
             '<span class="sc-metric-lbl">Days Active</span>' +
           '</div>' +
-          '<div class="sc-metric sc-metric--sigil">' +
-            '<span class="sc-metric-val">' + todayDone + '/' + todaySched + '</span>' +
-            '<span class="sc-metric-lbl">Today</span>' +
-          '</div>' +
         '</div>' +
         // W861 (Wave 2, Hunter's License pt 1) — the manhwa STATUS WINDOW
         // opener. Delegated handler (data-open-statuswindow) — this card
@@ -33895,18 +33948,16 @@
         '<button type="button" class="sw-open-btn" data-open-statuswindow role="button" aria-label="Open your Status Window">' +
           '<span class="sw-open-glyph" aria-hidden="true">⟐</span> STATUS WINDOW' +
         '</button>' +
-        // W862 — the Shadow Army strip (renderShadowStrip fills it post-render;
-        // hidden until the first shadow rises).
-        '<button type="button" id="shadow-strip" class="shadow-strip hidden" data-open-shadows aria-label="Open your Shadow Army"></button>' +
-        // W867 — the Oathbound strip (mentors with waiting rookies; rookies under oath).
-        '<button type="button" id="oath-strip" class="shadow-strip oath-strip hidden" data-open-oaths aria-label="Open the Oathbound"></button>' +
-        '<button type="button" class="bks-share-cta bks-share-cta--block sc-share-card-btn" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
+        // W905 — the Shadow Army + Oathbound strips left this card for the static
+        // #system-panel under the profile (index.html); the share CTA is a text link.
+        '<button type="button" class="sc-share-link" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
       '</div>';
 
     requestAnimationFrame(() => {
       buildRadarChart();
-      try { renderShadowStrip(); } catch (_) {}   // W862 — the card just re-rendered; refill the army strip
+      try { renderShadowStrip(); } catch (_) {}   // W862 — refill the army strip (static host since W905)
       try { renderOathStrip(); } catch (_) {}     // W867 — same for the Oathbound strip
+      try { renderSystemLine(); } catch (_) {}    // W905 — recompose the one-line summary
     });
 
     // v3 Phase 1j — edit button only renders when name is not yet

@@ -35321,3 +35321,45 @@ body.combat-active #app * { animation-play-state: paused !important; }
    _syncHistoryTab). display:none rather than visibility/opacity so the
    remaining tabs re-flex to fill the width evenly at 5, then at 6. */
 .tab-btn--locked { display: none !important; }
+
+/* ─── W905 — THE SYSTEM LINE (Status page: "just the hunter profile") ───────
+   One line under the profile card; expands into the panel that hosts the
+   original Break / Writ / Oathbound / Shadow Army cards unchanged. */
+.system-line {
+  display: flex; align-items: center; gap: 8px;
+  width: calc(100% - 32px); margin: 8px 16px 0; padding: 10px 14px;
+  border: 1px solid rgba(126, 166, 217, 0.35); border-radius: 12px;
+  background: linear-gradient(160deg, rgba(126, 166, 217, 0.08), rgba(0, 0, 0, 0.12));
+  color: #8fb8e8; text-align: left; cursor: pointer;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1.8px;
+  -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent;
+}
+.system-line.hidden { display: none !important; }
+.system-line--urgent {
+  border-color: rgba(229, 72, 77, 0.55);
+  background: linear-gradient(160deg, rgba(229, 72, 77, 0.12), rgba(0, 0, 0, 0.14));
+  color: #ff8a8d;
+}
+.sysl-glyph { flex: none; }
+.sysl-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sysl-chev { flex: none; opacity: 0.8; }
+.system-panel { padding: 6px 0 2px; }
+.system-panel.hidden { display: none !important; }
+.system-panel .break-banner, .system-panel .writ-card { margin: 6px 16px 6px; }
+.system-panel .shadow-strip { width: calc(100% - 32px); margin: 0 16px 8px; }
+
+/* W905 — two sigil tiles (TOTAL XP + TODAY deleted: they duplicated the header). */
+.sc-card--profile .sc-metrics.sc-metrics--sigil.sc-metrics--two { grid-template-columns: repeat(2, 1fr); }
+
+/* W905 — the share CTA is a text link now, not a third button. */
+.sc-share-link {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin: 6px 0 2px; padding: 8px 0;
+  border: 0; background: transparent; color: rgba(245, 184, 66, 0.85); cursor: pointer;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase;
+  -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent;
+}
+.sc-share-link svg { width: 13px; height: 13px; }
+.sc-share-link:active { opacity: 0.7; }
