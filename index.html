@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=666">
+  <link rel="stylesheet" href="styles.css?v=667">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -674,27 +674,13 @@
            > FIRST STEPS (a self-paced tour).
            Each is hidden when not live, so a hunter with only one sees only
            that one, exactly where it has always been. -->
-      <!-- W868 — DUNGEON BREAK banner: the escaped boss squats here (renderBreakBanner) -->
       <div id="dd-card" class="dd-card hidden"></div>
       <!-- W859 — THE WATCHER'S WRIT card lives inside #system-panel since W905 -->
       <div id="first-steps-strip" class="fs-strip hidden"></div>
       <div id="status-content" class="status-content"></div>
-      <!-- W905 — THE SYSTEM LINE. Owner (2026-09-04): "I prefer how it was — just the
-           hunter profile. Less is more, especially for new users." Every notice the
-           Status page grew in Wave 2 (Dungeon Break, the Watcher's Writ, the Oathbound,
-           the Shadow Army) now folds into ONE line UNDER the profile; the line expands
-           on tap into the panel below, where the original cards render unchanged
-           (renderBreakBanner / renderWritCard / renderOathStrip / renderShadowStrip
-           still own their hosts). Nothing is hidden for good: one tap, same cards.
-           Only the rookie-days guides (First Steps, Double Dungeon) may sit ABOVE
-           the profile, and only while they run. -->
-      <button type="button" id="system-line" class="system-line hidden" aria-expanded="false" aria-controls="system-panel"></button>
-      <div id="system-panel" class="system-panel hidden">
-        <div id="break-banner" class="break-banner hidden" role="button" tabindex="0" aria-label="Dungeon break — tap to hunt the escaped boss"></div>
-        <div id="writ-card" class="writ-card hidden"></div>
-        <button type="button" id="oath-strip" class="shadow-strip oath-strip hidden" data-open-oaths aria-label="Open the Oathbound"></button>
-        <button type="button" id="shadow-strip" class="shadow-strip hidden" data-open-shadows aria-label="Open your Shadow Army"></button>
-      </div>
+      <!-- W909 — the W905 System line and its panel are gone (owner: "not a fan of the
+           system break"). The Writ card lives on the Habits tab, the Oathbound strip on
+           Community, the Shadow Army strip on Co-op. Status is the hunter profile, full stop. -->
     </div>
 
     <!-- Stats panel -->
@@ -705,6 +691,8 @@
          sheets are unchanged — only the entry point moved. -->
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
+      <!-- W909 — THE WATCHER'S WRIT (weekly bounty on your weakest habit metric) lives here now. -->
+      <div id="writ-card" class="writ-card hidden"></div>
       <!-- v3 Phase 1l — Daily Objectives section header removed.
            The top "X / Y HABITS TODAY" tile in .today-strip is the
            canonical habit-progress summary on this tab. Cards start
@@ -798,6 +786,8 @@
          Cards open the full-screen detail modal (#boss-fs-overlay)
          on tap. See CARDS.md for the card visual spec. -->
     <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
+      <!-- W909 — SHADOW ARMY strip (shadows rise from slain bosses and march in the Ascent). -->
+      <button type="button" id="shadow-strip" class="shadow-strip shadow-strip--tab hidden" data-open-shadows aria-label="Open your Shadow Army"></button>
       <!-- Default state — gate grid visible, dungeon-view hidden.
            Grid is 3 cols × 2 rows = 6 cells, exactly matching the 6
            rank tiers (E/D/C/B/A/S). Reads left-to-right top-to-bottom:
@@ -1067,6 +1057,9 @@
       <!-- W908 — "Your Weekly Awakening" (W723) REMOVED for good. Owner, 2026-09-04:
            "I want to get rid of your weekly awakening… honestly I am not a fan of it."
            Reduction means reduction: markup, JS and CSS deleted, never re-add. -->
+
+      <!-- W909 — THE OATHBOUND strip (mentor oaths) lives on Community now. -->
+      <button type="button" id="oath-strip" class="shadow-strip shadow-strip--tab oath-strip hidden" data-open-oaths aria-label="Open the Oathbound"></button>
 
       <!-- v3 Phase 1z.164 — Guild Activity section (local-only feed
            from hb_souls_ledger). Phase 1 reads on-device events only;
@@ -3418,7 +3411,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1310"></script>
+  <script src="app.js?v=1311"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
