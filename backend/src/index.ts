@@ -100,6 +100,26 @@ import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
 // W867 (Wave 2 Train B) — THE OATHBOUND mentor system.
 import { handleOathSwear, handleOathsMine, handleOathClaim } from './handlers/oaths';
+// W907 — THE COMMUNITY BOARD (topics / replies / report / block / consent / moderation).
+import {
+  handleBoardTopicsGet,
+  handleBoardTopicGet,
+  handleBoardTopicPost,
+  handleBoardReplyPost,
+  handleBoardReportPost,
+  handleBoardBlockPost,
+  handleBoardBlocksGet,
+  handleBoardConsentPost,
+  handleBoardTopicDelete,
+  handleBoardReplyDelete,
+  handleBoardTopicHide,
+  handleBoardMutePost,
+  handleBoardReportsGet,
+  handleBoardReportsResolve,
+  handleBoardModeratorsGet,
+  handleBoardModeratorGrant,
+  handleAdminBoardOwner,
+} from './handlers/board';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
 // W871 (Wave 2 Train B) — THE WORLDGATE.
@@ -159,6 +179,11 @@ const DUELS_RESOLVE_RE = /^\/v1\/duels\/([0-9a-fA-F-]{8,})\/resolve$/;
 // never shadow GET /:id.
 const COOP_BOSS_ACTION_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})\/(join|decline|cancel|resolve|claim|start|fill-tick)$/;   // W695 — start + fill-tick (open "Summon & Fill" hunts)
 const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
+// W907 — board topic routes: GET /:id, POST /:id/replies, POST /:id/delete, POST /:id/hide;
+// reply moderation POST /v1/board/replies/:id/delete. Exact /v1/board/* routes are
+// matched first so 'report', 'reports', 'moderators' can never be read as an id.
+const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide))?$/;
+const BOARD_REPLY_DELETE_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/delete$/;
 
 export default {
   async fetch(
@@ -233,6 +258,18 @@ export default {
           response = jsonError(401, 'UNAUTHORIZED', 'Missing or invalid admin secret.');
         } else {
           response = Response.json(await updatePushStatus(env));
+        }
+      }
+      // ── W907 — seat the Community board OWNER row once (secret-gated, no session).
+      // POST /v1/admin/board/owner?alias=<hunter> — the owner then grants moderators
+      // in-app. Same fail-closed auth as the admin routes above.
+      else if (path === '/v1/admin/board/owner' && method === 'POST') {
+        const expected = env.ADMIN_METRICS_SECRET;
+        const provided = request.headers.get('authorization') || '';
+        if (!expected || !provided || !timingSafeEqual(provided, `Bearer ${expected}`)) {
+          response = jsonError(401, 'UNAUTHORIZED', 'Missing or invalid admin secret.');
+        } else {
+          response = await handleAdminBoardOwner(request, env);
         }
       }
       // ── W842 (Train 4, G1) — universal-link plumbing (public, no auth) ──
@@ -368,6 +405,47 @@ export default {
             // W845 (Train 5, E2) — owner override for the weekly hungered
             // boss; null = the client's deterministic pick stands.
             response = await handleWeeklyHungerGet(request, env, session);
+          } else if (path === '/v1/board/topics' && method === 'GET') {
+            // W907 — THE COMMUNITY BOARD. Exact routes first; the two regexes below
+            // take /:id shapes. Every mutation is POST (CORS allows no DELETE).
+            response = await handleBoardTopicsGet(request, env, session);
+          } else if (path === '/v1/board/topics' && method === 'POST') {
+            response = await handleBoardTopicPost(request, env, session);
+          } else if (path === '/v1/board/report' && method === 'POST') {
+            response = await handleBoardReportPost(request, env, session, ctx);
+          } else if (path === '/v1/board/block' && method === 'POST') {
+            response = await handleBoardBlockPost(request, env, session, false);
+          } else if (path === '/v1/board/unblock' && method === 'POST') {
+            response = await handleBoardBlockPost(request, env, session, true);
+          } else if (path === '/v1/board/blocks' && method === 'GET') {
+            response = await handleBoardBlocksGet(request, env, session);
+          } else if (path === '/v1/board/consent' && method === 'POST') {
+            response = await handleBoardConsentPost(request, env, session);
+          } else if (path === '/v1/board/mute' && method === 'POST') {
+            response = await handleBoardMutePost(request, env, session, false);
+          } else if (path === '/v1/board/unmute' && method === 'POST') {
+            response = await handleBoardMutePost(request, env, session, true);
+          } else if (path === '/v1/board/reports' && method === 'GET') {
+            response = await handleBoardReportsGet(request, env, session);
+          } else if (path === '/v1/board/reports/resolve' && method === 'POST') {
+            response = await handleBoardReportsResolve(request, env, session);
+          } else if (path === '/v1/board/moderators' && method === 'GET') {
+            response = await handleBoardModeratorsGet(request, env, session);
+          } else if (path === '/v1/board/moderators' && method === 'POST') {
+            response = await handleBoardModeratorGrant(request, env, session, false);
+          } else if (path === '/v1/board/moderators/remove' && method === 'POST') {
+            response = await handleBoardModeratorGrant(request, env, session, true);
+          } else if (BOARD_TOPIC_RE.test(path)) {
+            const m = BOARD_TOPIC_RE.exec(path)!;
+            const topicId = m[1];
+            const action = m[2] || '';
+            if (!action && method === 'GET') response = await handleBoardTopicGet(request, env, session, topicId);
+            else if (action === 'replies' && method === 'POST') response = await handleBoardReplyPost(request, env, session, topicId);
+            else if (action === 'delete' && method === 'POST') response = await handleBoardTopicDelete(request, env, session, topicId);
+            else if (action === 'hide' && method === 'POST') response = await handleBoardTopicHide(request, env, session, topicId);
+            else response = jsonError(404, 'NOT_FOUND', 'No such route.');
+          } else if (BOARD_REPLY_DELETE_RE.test(path) && method === 'POST') {
+            response = await handleBoardReplyDelete(request, env, session, BOARD_REPLY_DELETE_RE.exec(path)![1]);
           } else if (path === '/v1/oaths' && method === 'POST') {
             // W867 — swear an oath over a zero-kill friend.
             response = await handleOathSwear(request, env, session);

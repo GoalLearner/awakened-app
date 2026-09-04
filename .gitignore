@@ -44,3 +44,7 @@ AWAKENED_GROWTH_PLAYBOOK.md
 GROWTH_RESEARCH.md
 GUEST_PATH_TEST_PLAN.md
 SPRINT-W397-W402.md
+
+# W907 — wrangler run from the repo ROOT autoconfigures a stray wrangler.jsonc here that
+# then hijacks deploys from backend/. Never commit one; always run wrangler from backend/.
+wrangler.jsonc

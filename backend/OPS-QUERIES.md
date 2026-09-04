@@ -234,3 +234,22 @@ SELECT * FROM weekly_hunger_overrides ORDER BY week_start DESC LIMIT 5;
   PT-Sunday-anchored (`week_start`).
 - `wrangler d1 execute` occasionally throws a transient Cloudflare API error —
   retry once before believing it.
+
+## 8. Community board (W907)
+
+Newest topics with author + state:
+
+    npx wrangler d1 execute awakened-db --remote --command "SELECT t.id, t.tag, substr(t.title,1,60) AS title, u.alias, t.reply_count, t.hidden_at IS NOT NULL AS hidden, t.deleted_at IS NOT NULL AS deleted, datetime(t.last_activity_at/1000,'unixepoch') AS last FROM board_topics t JOIN users u ON u.id=t.author_id ORDER BY t.last_activity_at DESC LIMIT 30;"
+
+Open reports (what the moderators' push pointed at):
+
+    npx wrangler d1 execute awakened-db --remote --command "SELECT r.id, r.target_kind, r.target_id, r.reason, u.alias AS reporter, datetime(r.created_at/1000,'unixepoch') AS at FROM board_reports r JOIN users u ON u.id=r.reporter_id WHERE r.resolved_at IS NULL ORDER BY r.created_at DESC;"
+
+Mutes and moderators:
+
+    npx wrangler d1 execute awakened-db --remote --command "SELECT u.alias, m.until, datetime(m.until/1000,'unixepoch') AS until_at, m.reason FROM board_mutes m JOIN users u ON u.id=m.user_id;"
+    npx wrangler d1 execute awakened-db --remote --command "SELECT u.alias, bm.role, datetime(bm.granted_at/1000,'unixepoch') AS since FROM board_moderators bm JOIN users u ON u.id=bm.user_id;"
+
+Emergency moderator delete from the CLI (the app has the same action):
+
+    npx wrangler d1 execute awakened-db --remote --command "UPDATE board_topics SET deleted_at=strftime('%s','now')*1000, deleted_by='ops', body='' WHERE id='<topic id>';"

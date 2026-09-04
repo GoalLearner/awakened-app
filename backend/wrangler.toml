@@ -338,3 +338,19 @@ name = "RL_CLIENT_ERRORS"
 type = "ratelimit"
 namespace_id = "1026"
 simple = { limit = 6, period = 60 }  # 6/min per user
+
+# W907 — Community board. Two dedicated buckets (the W463/W663 lesson: never
+# share a write bucket between an interactive tap and anything else).
+# namespace_id must be unique in this Worker (W739: 1024 once collided) —
+# 1027/1028 are the next free ids.
+[[unsafe.bindings]]
+name = "RL_BOARD_WRITE"
+type = "ratelimit"
+namespace_id = "1027"
+simple = { limit = 6, period = 60 }  # 6/min per user — topics, replies, reports, blocks, moderation
+
+[[unsafe.bindings]]
+name = "RL_BOARD_READ"
+type = "ratelimit"
+namespace_id = "1028"
+simple = { limit = 30, period = 60 }  # 30/min per user — board + topic reads

@@ -178,6 +178,10 @@ export interface Env {
    *  legit usage while stopping a crash-looping device from flooding D1.
    *  namespace_id 1026 in wrangler.toml. */
   RL_CLIENT_ERRORS: RateLimit;
+  /** W907 — Community board: dedicated write bucket (topics, replies, reports,
+   *  blocks, moderation) and a read bucket. Never shared with a background drain. */
+  RL_BOARD_WRITE: RateLimit;
+  RL_BOARD_READ: RateLimit;
   /** W637 — self-healing IAP reconcile (POST /v1/users/me/entitlements/reconcile).
    *  DEDICATED bucket (never shared) because the handler makes an external
    *  RevenueCat REST call; 12/min per user is far above legit usage (called after

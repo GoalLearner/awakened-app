@@ -99,9 +99,13 @@ export async function handleAccountDelete(
   // can evolve without coupling), so its cascade is manual.
   await deleteUserStateSnapshot(env, uid);
 
-  // This DELETE cascades to the 6 ON DELETE CASCADE tables (leaderboard_snapshots,
+  // This DELETE cascades to every ON DELETE CASCADE table: leaderboard_snapshots,
   // user_accolades, weekly_step_records, public_profile_summary,
-  // public_achievement_events, hall_of_awakened).
+  // public_achievement_events, hall_of_awakened, oaths (0051), tower_events
+  // (0052), world_gate_claims (0053), and the W907 board tables (0055:
+  // board_topics/replies as author, board_reports as reporter, board_blocks in
+  // both directions, board_mutes, board_moderators, board_consents) — a
+  // deleted hunter's posts leave everyone else's board with the same DELETE.
   await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(uid).run();
 
   return jsonOk({ deleted: true });
