@@ -48,6 +48,13 @@ export function tierIndex(t: string | null | undefined): number {
   return i < 0 ? 0 : i;
 }
 const PAGE = 20;
+// W913 — list sorts (v3 board): pinned topics lead the first page of every sort.
+const SORTS = ['latest', 'hot', 'unanswered'] as const;
+type Sort = (typeof SORTS)[number];
+const LATEST_CURSOR_RE = /^(\d{1,16})\|([0-9a-fA-F-]{8,})$/;
+const HOT_CURSOR_RE = /^(\d{1,9})\|(\d{1,16})\|([0-9a-fA-F-]{8,})$/;
+const PINNED_MAX = 5;
+const REPLIERS_MAX = 3;
 const REPLY_PAGE = 50;
 const REPORT_REASONS = new Set(['harassment', 'spam', 'offensive', 'other']);
 const ID_RE = /^[0-9a-fA-F-]{8,}$/;
@@ -88,7 +95,12 @@ interface TopicRow extends AuthorRow {
   reply_count: number;
   hidden_at: number | null;
   deleted_at: number | null;
+  up_count?: number;          // W913
+  pinned_at?: number | null;  // W913
 }
+
+interface Replier { alias: string; rank_label: string | null }
+interface TopicExtra { voted: boolean; repliers: Replier[] }
 
 interface ReplyRow extends AuthorRow {
   id: string;
@@ -192,7 +204,7 @@ function authorOut(r: AuthorRow) {
   };
 }
 
-function topicOut(r: TopicRow, full: boolean) {
+function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false, repliers: [] }) {
   return {
     id: r.id,
     tag: r.tag,
@@ -203,8 +215,51 @@ function topicOut(r: TopicRow, full: boolean) {
     last_activity_at: Number(r.last_activity_at),
     reply_count: Number(r.reply_count) || 0,
     hidden: r.hidden_at != null,
+    // W913 — upvotes, pins, and the last distinct repliers (avatar stack).
+    up_count: Number(r.up_count) || 0,
+    voted: !!extra.voted,
+    pinned: r.pinned_at != null,
+    repliers: extra.repliers,
     author: authorOut(r),
   };
+}
+
+const TOPIC_COLS = `x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at`;
+
+/** Which of these topics the caller upvoted. */
+async function votedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!ids.length) return out;
+  const rows = await env.DB.prepare(
+    `SELECT topic_id FROM board_votes WHERE user_id = ? AND topic_id IN (${ids.map(() => '?').join(',')})`,
+  ).bind(userId, ...ids).all<{ topic_id: string }>();
+  for (const r of rows.results ?? []) out.add(r.topic_id);
+  return out;
+}
+
+/** The last REPLIERS_MAX distinct visible repliers per topic, newest first (block-filtered). */
+async function repliersMap(env: Env, userId: string, ids: string[]): Promise<Map<string, Replier[]>> {
+  const out = new Map<string, Replier[]>();
+  if (!ids.length) return out;
+  const rows = await env.DB.prepare(
+    `SELECT r.topic_id AS topic_id, u.alias AS alias, pps.rank_label AS rank_label, MAX(r.created_at) AS last_at
+       FROM board_replies r
+       JOIN users u ON u.id = r.author_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = r.author_id
+      WHERE r.topic_id IN (${ids.map(() => '?').join(',')})
+        AND r.deleted_at IS NULL AND r.hidden_at IS NULL AND ${SIM_FILTER}
+        AND r.author_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+        AND r.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
+      GROUP BY r.topic_id, r.author_id
+      ORDER BY last_at DESC`,
+  ).bind(...ids, userId, userId).all<{ topic_id: string; alias: string; rank_label: string | null }>();
+  for (const r of rows.results ?? []) {
+    const list = out.get(r.topic_id) || [];
+    if (list.length >= REPLIERS_MAX) continue;
+    list.push({ alias: r.alias, rank_label: r.rank_label ?? null });
+    out.set(r.topic_id, list);
+  }
+  return out;
 }
 
 function replyOut(r: ReplyRow) {
@@ -249,36 +304,95 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const url = new URL(request.url);
   const tag = url.searchParams.get('tag') || '';
   if (tag && !isTag(tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug or talk.');
+  const sortRaw = url.searchParams.get('sort') || 'latest';
+  if (!(SORTS as readonly string[]).includes(sortRaw)) return jsonError(400, 'INVALID_SORT', 'sort must be latest, hot or unanswered.');
+  const sort = sortRaw as Sort;
   const cursorRaw = url.searchParams.get('cursor') || '';
-  let cAt = 0; let cId = '';
+  let cUp = 0; let cAt = 0; let cId = '';
   if (cursorRaw) {
-    const m = /^(\d{1,16})\|([0-9a-fA-F-]{8,})$/.exec(cursorRaw);
-    if (!m) return jsonError(400, 'INVALID_CURSOR', 'Bad cursor.');
-    cAt = Number(m[1]); cId = m[2];
+    if (sort === 'hot') {
+      const m = HOT_CURSOR_RE.exec(cursorRaw);
+      if (!m) return jsonError(400, 'INVALID_CURSOR', 'Bad cursor.');
+      cUp = Number(m[1]); cAt = Number(m[2]); cId = m[3];
+    } else {
+      const m = LATEST_CURSOR_RE.exec(cursorRaw);
+      if (!m) return jsonError(400, 'INVALID_CURSOR', 'Bad cursor.');
+      cAt = Number(m[1]); cId = m[2];
+    }
   }
   const me = await meState(env, session.userId);
   const modView = isModRole(me.role) ? 1 : 0;
-  const rows = await env.DB.prepare(
-    `SELECT x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at,
-            ${AUTHOR_COLS}
-       FROM board_topics x${AUTHOR_JOIN}
-      WHERE x.deleted_at IS NULL
+  const where = `x.deleted_at IS NULL
         AND ${SIM_FILTER}
         AND (? = 1 OR x.hidden_at IS NULL)
         AND (? = '' OR x.tag = ?)
-        AND ${BLOCK_FILTER}
-        AND (? = 0 OR x.last_activity_at < ? OR (x.last_activity_at = ? AND x.id < ?))
-      ORDER BY x.last_activity_at DESC, x.id DESC
+        AND ${BLOCK_FILTER}`;
+  const whereBinds = [modView, tag, tag, session.userId, session.userId];
+  const firstPage = !cursorRaw;
+
+  // W913 — pinned topics lead the first page of every sort; the keyset list excludes them.
+  let pinned: TopicRow[] = [];
+  if (firstPage) {
+    const p = await env.DB.prepare(
+      `SELECT ${TOPIC_COLS}, ${AUTHOR_COLS}
+         FROM board_topics x${AUTHOR_JOIN}
+        WHERE ${where}
+          AND x.pinned_at IS NOT NULL
+        ORDER BY x.pinned_at DESC
+        LIMIT ${PINNED_MAX}`,
+    ).bind(...whereBinds).all<TopicRow>();
+    pinned = p.results ?? [];
+  }
+  const cursorClause = sort === 'hot'
+    ? `(? = 0 OR x.up_count < ? OR (x.up_count = ? AND (x.last_activity_at < ? OR (x.last_activity_at = ? AND x.id < ?))))`
+    : `(? = 0 OR x.last_activity_at < ? OR (x.last_activity_at = ? AND x.id < ?))`;
+  const cursorBinds = sort === 'hot' ? [cursorRaw ? 1 : 0, cUp, cUp, cAt, cAt, cId] : [cursorRaw ? 1 : 0, cAt, cAt, cId];
+  const order = sort === 'hot' ? 'x.up_count DESC, x.last_activity_at DESC, x.id DESC' : 'x.last_activity_at DESC, x.id DESC';
+  const rows = await env.DB.prepare(
+    `SELECT ${TOPIC_COLS}, ${AUTHOR_COLS}
+       FROM board_topics x${AUTHOR_JOIN}
+      WHERE ${where}
+        AND x.pinned_at IS NULL${sort === 'unanswered' ? '\n        AND x.reply_count = 0' : ''}
+        AND ${cursorClause}
+      ORDER BY ${order}
       LIMIT ?`,
   )
-    .bind(modView, tag, tag, session.userId, session.userId, cAt ? 1 : 0, cAt, cAt, cId, PAGE + 1)
+    .bind(...whereBinds, ...cursorBinds, PAGE + 1)
     .all<TopicRow>();
   const list = rows.results ?? [];
   const page = list.slice(0, PAGE);
   const last = page[page.length - 1];
+  const all = pinned.concat(page);
+  const ids = all.map((r) => r.id);
+  const [voted, repliers] = await Promise.all([votedSet(env, session.userId, ids), repliersMap(env, session.userId, ids)]);
+
+  // Tag counts for the filter rail (visible topics, every tag) — first page only.
+  let counts: { all: number; improvement: number; bug: number; talk: number } | undefined;
+  if (firstPage) {
+    const c = await env.DB.prepare(
+      `SELECT x.tag AS tag, COUNT(*) AS n
+         FROM board_topics x${AUTHOR_JOIN}
+        WHERE ${where}
+        GROUP BY x.tag`,
+    ).bind(modView, '', '', session.userId, session.userId).all<{ tag: string; n: number }>();
+    counts = { all: 0, improvement: 0, bug: 0, talk: 0 };
+    for (const r of c.results ?? []) {
+      const n = Number(r.n) || 0;
+      if (isTag(r.tag)) counts[r.tag] = n;
+      counts.all += n;
+    }
+  }
+  let next_cursor: string | null = null;
+  if (list.length > PAGE && last) {
+    next_cursor = sort === 'hot'
+      ? `${Number(last.up_count) || 0}|${Number(last.last_activity_at)}|${last.id}`
+      : `${Number(last.last_activity_at)}|${last.id}`;
+  }
   return jsonOk({
-    topics: page.map((r) => topicOut(r, false)),
-    next_cursor: list.length > PAGE && last ? `${Number(last.last_activity_at)}|${last.id}` : null,
+    topics: all.map((r) => topicOut(r, false, { voted: voted.has(r.id), repliers: repliers.get(r.id) || [] })),
+    next_cursor,
+    sort,
+    counts,
     me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
   });
 }
@@ -292,7 +406,7 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
   const me = await meState(env, session.userId);
   const modView = isModRole(me.role) ? 1 : 0;
   const topic = await env.DB.prepare(
-    `SELECT x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at,
+    `SELECT ${TOPIC_COLS},
             ${AUTHOR_COLS}
        FROM board_topics x${AUTHOR_JOIN}
       WHERE x.id = ? AND x.deleted_at IS NULL AND ${SIM_FILTER}
@@ -319,8 +433,9 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
   const list = replies.results ?? [];
   const page = list.slice(0, REPLY_PAGE);
   const last = page[page.length - 1];
+  const [voted, repliers] = await Promise.all([votedSet(env, session.userId, [topicId]), repliersMap(env, session.userId, [topicId])]);
   return jsonOk({
-    topic: topicOut(topic, true),
+    topic: topicOut(topic, true, { voted: voted.has(topicId), repliers: repliers.get(topicId) || [] }),
     replies: page.map(replyOut),
     next_cursor: list.length > REPLY_PAGE && last ? String(Number(last.created_at)) : null,
     me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
@@ -503,6 +618,47 @@ export async function handleBoardTopicHide(_request: Request, env: Env, session:
   await env.DB.prepare('UPDATE board_topics SET hidden_at = ?, hidden_by = ? WHERE id = ?')
     .bind(hide ? Date.now() : null, hide ? session.userId : null, topicId).run();
   return jsonOk({ ok: true, hidden: hide });
+}
+
+// ── W913 — upvotes + pins ──────────────────────────────────────────────
+
+/** Toggle the caller's upvote on a topic. Sims are read-only; hidden topics only for moderators. */
+export async function handleBoardVotePost(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const me = await meState(env, session.userId);
+  if (me.sim) return jsonError(403, 'SIM_READ_ONLY', 'Simulated hunters cannot vote.');
+  const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at FROM board_topics WHERE id = ? LIMIT 1')
+    .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null }>();
+  if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  if (topic.hidden_at != null && !isModRole(me.role)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO board_votes (topic_id, user_id, created_at) VALUES (?, ?, ?)')
+    .bind(topicId, session.userId, Date.now()).run();
+  let voted = true;
+  if (!(ins.meta && ins.meta.changes)) {
+    await env.DB.prepare('DELETE FROM board_votes WHERE topic_id = ? AND user_id = ?').bind(topicId, session.userId).run();
+    voted = false;
+  }
+  // Recount from the truth table so the denormalised count can never drift.
+  await env.DB.prepare('UPDATE board_topics SET up_count = (SELECT COUNT(*) FROM board_votes WHERE topic_id = ?) WHERE id = ?')
+    .bind(topicId, topicId).run();
+  const row = await env.DB.prepare('SELECT up_count FROM board_topics WHERE id = ? LIMIT 1').bind(topicId).first<{ up_count: number }>();
+  return jsonOk({ ok: true, voted, up_count: Number(row?.up_count) || 0 });
+}
+
+/** Moderators pin / unpin a topic (toggle). Pinned topics lead the first page of every sort. */
+export async function handleBoardPinPost(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const gate = await modGate(env, session);
+  if ('deny' in gate) return gate.deny;
+  const row = await env.DB.prepare('SELECT pinned_at FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(topicId).first<{ pinned_at: number | null }>();
+  if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const pin = row.pinned_at == null;
+  await env.DB.prepare('UPDATE board_topics SET pinned_at = ?, pinned_by = ? WHERE id = ?')
+    .bind(pin ? Date.now() : null, pin ? session.userId : null, topicId).run();
+  return jsonOk({ ok: true, pinned: pin });
 }
 
 export async function handleBoardMutePost(request: Request, env: Env, session: SessionPayload, unmute: boolean): Promise<Response> {

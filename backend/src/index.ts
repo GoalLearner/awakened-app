@@ -49,6 +49,7 @@ import { handlePublicProfileGet } from './handlers/public-profile-get';
 import {
   handlePublicAchievementEventsPost,
   handleFriendsActivityGet,
+  handleFeedLikePost,
 } from './handlers/public-achievement-events';
 import {
   handleFriendsList,
@@ -119,6 +120,8 @@ import {
   handleBoardModeratorsGet,
   handleBoardModeratorGrant,
   handleAdminBoardOwner,
+  handleBoardVotePost,
+  handleBoardPinPost,
 } from './handlers/board';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
@@ -182,7 +185,9 @@ const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 // W907 — board topic routes: GET /:id, POST /:id/replies, POST /:id/delete, POST /:id/hide;
 // reply moderation POST /v1/board/replies/:id/delete. Exact /v1/board/* routes are
 // matched first so 'report', 'reports', 'moderators' can never be read as an id.
-const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide))?$/;
+const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin))?$/;
+// W913 — LIKE on a friend's public achievement event (toggle).
+const FEED_LIKE_RE = /^\/v1\/friends\/activity\/([A-Za-z0-9_:.-]{4,96})\/like$/;
 const BOARD_REPLY_DELETE_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/delete$/;
 
 export default {
@@ -443,6 +448,8 @@ export default {
             else if (action === 'replies' && method === 'POST') response = await handleBoardReplyPost(request, env, session, topicId);
             else if (action === 'delete' && method === 'POST') response = await handleBoardTopicDelete(request, env, session, topicId);
             else if (action === 'hide' && method === 'POST') response = await handleBoardTopicHide(request, env, session, topicId);
+            else if (action === 'vote' && method === 'POST') response = await handleBoardVotePost(request, env, session, topicId);   // W913
+            else if (action === 'pin' && method === 'POST') response = await handleBoardPinPost(request, env, session, topicId);     // W913
             else response = jsonError(404, 'NOT_FOUND', 'No such route.');
           } else if (BOARD_REPLY_DELETE_RE.test(path) && method === 'POST') {
             response = await handleBoardReplyDelete(request, env, session, BOARD_REPLY_DELETE_RE.exec(path)![1]);
@@ -498,6 +505,9 @@ export default {
             // newest events across accepted friends + self with
             // alias + rankLabel joined for one-roundtrip render.
             response = await handleFriendsActivityGet(request, env, session);
+          } else if (FEED_LIKE_RE.test(path) && method === 'POST') {
+            // W913 — LIKE a friend's feat (toggle); the feed read carries counts + likers.
+            response = await handleFeedLikePost(request, env, session, FEED_LIKE_RE.exec(path)![1]);
           } else if (path === '/v1/users/me/hall-of-awakened' && method === 'POST') {
             // W270 — The Hall of the Awakened. Records the caller as a
             // finisher of all 100 Ascent floors and assigns the eternal

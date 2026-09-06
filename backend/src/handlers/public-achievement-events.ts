@@ -1032,5 +1032,77 @@ export async function handleFriendsActivityGet(
     createdAt:   new Date(r.server_created_at).toISOString(),
   }));
 
-  return jsonOk({ ok: true, events });
+  // W913 — LIKES: count, whether the caller liked it, and the first likers'
+  // aliases (oldest first) so "multiple people like a person's achievement"
+  // is visible in one roundtrip.
+  const likeInfo = await feedLikes(env, session.userId, events.map((e) => e.id));
+  const out = events.map((e) => {
+    const l = likeInfo.get(e.id);
+    return { ...e, likes: l ? l.n : 0, liked: !!(l && l.mine), likers: l ? l.likers : [] };
+  });
+  return jsonOk({ ok: true, events: out });
+}
+
+interface LikeAgg { n: number; mine: boolean; likers: string[] }
+const LIKERS_MAX = 3;
+
+async function feedLikes(env: Env, userId: string, ids: string[]): Promise<Map<string, LikeAgg>> {
+  const out = new Map<string, LikeAgg>();
+  if (!ids.length) return out;
+  const rows = await env.DB.prepare(
+    `SELECT l.event_id AS event_id, l.user_id AS user_id, u.alias AS alias
+       FROM feed_likes l
+       JOIN users u ON u.id = l.user_id
+      WHERE l.event_id IN (${ids.map(() => '?').join(',')})
+      ORDER BY l.created_at ASC`,
+  ).bind(...ids).all<{ event_id: string; user_id: string; alias: string }>();
+  for (const r of rows.results ?? []) {
+    const agg = out.get(r.event_id) || { n: 0, mine: false, likers: [] };
+    agg.n += 1;
+    if (r.user_id === userId) agg.mine = true;
+    if (agg.likers.length < LIKERS_MAX) agg.likers.push(r.alias);
+    out.set(r.event_id, agg);
+  }
+  return out;
+}
+
+/**
+ * W913 — POST /v1/friends/activity/:id/like — toggle the caller's LIKE on a
+ * friend's public achievement event. Only events inside the caller's feed
+ * scope (an accepted friend's) can be liked; your own feats cannot.
+ */
+export async function handleFeedLikePost(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  eventId: string,
+): Promise<Response> {
+  const rl = await env.RL_PUBLIC_EVENTS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Too many likes. Try again in a minute.');
+  const ev = await env.DB.prepare(
+    `SELECT e.id AS id, e.user_id AS user_id
+       FROM public_achievement_events e
+      WHERE e.id = ?
+        AND e.user_id IN (
+             SELECT CASE WHEN f.requester_user_id = ?
+                         THEN f.recipient_user_id
+                         ELSE f.requester_user_id END
+               FROM friends f
+              WHERE f.status = 'accepted'
+                AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
+           )
+      LIMIT 1`,
+  ).bind(eventId, session.userId, session.userId, session.userId).first<{ id: string; user_id: string }>();
+  if (!ev) return jsonError(404, 'NOT_FOUND', 'No such feat in your feed.');
+  if (ev.user_id === session.userId) return jsonError(400, 'SELF_LIKE', 'You cannot like your own feat.');
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO feed_likes (event_id, user_id, created_at) VALUES (?, ?, ?)')
+    .bind(eventId, session.userId, Date.now()).run();
+  let liked = true;
+  if (!(ins.meta && ins.meta.changes)) {
+    await env.DB.prepare('DELETE FROM feed_likes WHERE event_id = ? AND user_id = ?').bind(eventId, session.userId).run();
+    liked = false;
+  }
+  const info = await feedLikes(env, session.userId, [eventId]);
+  const agg = info.get(eventId);
+  return jsonOk({ ok: true, liked, likes: agg ? agg.n : 0, likers: agg ? agg.likers : [] });
 }

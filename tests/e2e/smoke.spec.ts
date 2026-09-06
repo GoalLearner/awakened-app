@@ -1845,6 +1845,18 @@ test.describe('Q · Community board (W907)', () => {
     expect(fatal, fatal.join('\n')).toHaveLength(0);
   });
 
+  test('W913 — the BOARD | FRIENDS sub-nav swaps panes without leaving the tab', async ({ page }) => {
+    await page.click('[data-tab="social"]');
+    await expect(page.locator('#cm-pane-board')).toBeVisible();
+    await expect(page.locator('#cm-pane-friends')).toBeHidden();
+    await page.click('[data-cm-pane="friends"]');
+    await expect(page.locator('#cm-pane-friends')).toBeVisible();
+    await expect(page.locator('#guildhall-activity-section')).toBeVisible();
+    await expect(page.locator('#cm-pane-board')).toBeHidden();
+    await page.click('[data-cm-pane="board"]');
+    await expect(page.locator('#board-section')).toBeVisible();
+  });
+
   test('NEW TOPIC before consent opens the community rules sheet (Apple 1.2)', async ({ page }) => {
     await freshApp(page);
     await page.click('#tab-social');

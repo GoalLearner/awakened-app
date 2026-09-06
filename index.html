@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=670">
+  <link rel="stylesheet" href="styles.css?v=671">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -995,7 +995,7 @@
          Leaderboard cards no longer render here (renderLeaderboardPreview
          is still used by #lb-rank-sheet elsewhere; just not invoked
          from the social-tab branch). -->
-    <div id="social-panel" class="tab-panel hidden" data-panel="social">
+    <div id="social-panel" class="tab-panel hidden board-scope" data-panel="social">
 
       <!-- v3 Phase 1z.267B — Guild Hall summary widget removed.
            The HUNTERS / FEATS · 24H / BOSSES SLAIN tiles, the
@@ -1035,20 +1035,39 @@
            openBoardComposer / openBoardRules). Apple 1.2: rules consent before the
            first write, Report + Block on every post, the support email in the
            rules sheet. -->
+      <!-- W913 — COMMUNITY v3 (Claude Design handoff 27, "Community Board v3"). A
+           BOARD | FRIENDS sub-nav splits the tab into two panes: the board never
+           stacks the page again (W911's worry) and the friend feed keeps its own
+           room. Board pane = filter rail (tag counts) + sort (LATEST / HOT /
+           UNANSWERED) + the v3 topic rows (rune, pinned, unread bar, upvote,
+           replier stack). Friends pane = FRIEND ACTIVITY grouped day → hunter →
+           feats with LIKE (owner: "instead of cheer ... like, so you can see
+           multiple people like a person's achievement"). -->
+      <div id="cm-subnav" class="cm-subnav" role="tablist" aria-label="Community sections" data-pane="board">
+        <span class="cm-pill" aria-hidden="true"></span>
+        <button type="button" class="cm-sn" role="tab" data-cm-pane="board" data-active="true" aria-selected="true">BOARD</button>
+        <button type="button" class="cm-sn" role="tab" data-cm-pane="friends" data-active="false" aria-selected="false">FRIENDS <span id="cm-friends-badge" class="cm-bdg hidden">0</span></button>
+      </div>
+
+      <div id="cm-pane-board" class="cm-pane" data-active="true">
       <section id="board-section" class="guildhall-section guildhall-section--board board-scope">
-        <div class="guildhall-section-head">
-          <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-eyebrow">The Hall · every hunter</div>
-            <div class="guildhall-section-title">Community Board</div>
+        <div class="board-head">
+          <svg class="board-sigil" width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><path d="M35 4l27 15.5v31L35 66 8 50.5v-31z" fill="none" stroke="#f5b842" stroke-width="1.2"/><path d="M35 14l18 10.5v21L35 56 17 45.5v-21z" fill="none" stroke="#f5b842" stroke-width=".8"/><path d="M35 4v62M8 19.5l54 31M62 19.5l-54 31" stroke="#f5b842" stroke-width=".6"/></svg>
+          <div class="board-head-txt">
+            <div class="board-sub">The Hall · every hunter</div>
+            <h2 class="board-h2">Community Board</h2>
           </div>
-          <button id="board-new" class="board-newbtn" type="button" data-board-new>+ NEW TOPIC</button>
+          <button id="board-new" class="board-newbtn" type="button" data-board-new><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>NEW TOPIC</button>
         </div>
-        <!-- W911 — the tab shows only the 3 latest topics so the board never stacks the
-             page; tag filters + older pages live in the full-board sheet (VIEW ALL). -->
+        <div id="board-filters" class="board-filters" data-board-filters></div>
+        <div id="board-sortrow" class="board-sortrow" data-board-sortrow></div>
         <div id="board-note" class="board-note hidden"></div>
         <div id="board-body" class="board-body"></div>
         <button id="board-viewall" class="board-more hidden" type="button" data-board-viewall>VIEW ALL TOPICS ›</button>
       </section>
+      </div>
+
+      <div id="cm-pane-friends" class="cm-pane" data-active="false">
 
       <!-- W908 — "Your Weekly Awakening" (W723) REMOVED for good. Owner, 2026-09-04:
            "I want to get rid of your weekly awakening… honestly I am not a fan of it."
@@ -1075,11 +1094,12 @@
              the 1z.177 personal-feat allowlist so only the current
              user's own feats show. Buttons carry aria-pressed for
              screen readers; CSS keys off [data-active="true"]. -->
-        <div class="guildhall-section-head">
+        <div class="guildhall-section-head fa-head">
           <div class="guildhall-section-headtxt">
-            <div class="guildhall-section-title guildhall-section-title--solo">FRIEND NOTIFICATIONS</div>
+            <div id="fa-sub" class="board-sub">Friend feats</div>
+            <h2 class="board-h2">Friend Activity</h2>
           </div>
-          <div class="guildhall-activity-filter" role="group" aria-label="Guild activity filter">
+          <div class="guildhall-activity-filter fa-seg" role="group" aria-label="Friend activity filter">
             <button type="button" id="guildhall-filter-hunter"
                     class="guildhall-activity-filter-btn"
                     data-filter="hunter"
@@ -1091,6 +1111,7 @@
                     aria-pressed="true">All</button>
           </div>
         </div>
+        <div id="fa-tools" class="fa-tools"><span id="fa-tools-lbl">GROUPED BY HUNTER</span><button type="button" class="fa-seen" data-fa-seen>MARK ALL SEEN</button></div>
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
       </section>
 
@@ -1172,6 +1193,7 @@
           </div>
         </div>
       </section>
+      </div><!-- /cm-pane-friends (W913) -->
 
 
     </div>
@@ -3398,13 +3420,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=73"></script>
+  <script src="auth.js?v=74"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1314"></script>
+  <script src="app.js?v=1315"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

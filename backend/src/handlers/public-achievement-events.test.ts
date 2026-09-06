@@ -9,6 +9,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   handlePublicAchievementEventsPost,
   handleFriendsActivityGet,
+  handleFeedLikePost,
 } from './public-achievement-events';
 import type { Env } from '../env';
 
@@ -1745,5 +1746,81 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     const res = await handleFriendsActivityGet(req, makeEnv(db), session);
     const json = await res.json() as { events: unknown[] };
     expect(json.events.length).toBe(1);
+  });
+});
+
+// ── W913 — LIKES on friend feats ──────────────────────────────────────────
+describe('W913 — feed likes', () => {
+  interface LikeState { event: { id: string; user_id: string } | null; likes: Set<string>; aliases: Record<string, string> }
+  function likeDb(st: LikeState) {
+    const calls: CapturedCall[] = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => {
+          calls.push({ sql, binds });
+          return {
+            first: async () => {
+              if (/FROM public_achievement_events e\s+WHERE e\.id = \?/.test(sql)) {
+                return st.event && st.event.id === binds[0] ? st.event : null;
+              }
+              return null;
+            },
+            run: async () => {
+              if (/INSERT OR IGNORE INTO feed_likes/.test(sql)) {
+                const k = `${binds[0]}|${binds[1]}`; if (st.likes.has(k)) return { success: true, meta: { changes: 0 } };
+                st.likes.add(k); return { success: true, meta: { changes: 1 } };
+              }
+              if (/DELETE FROM feed_likes/.test(sql)) { st.likes.delete(`${binds[0]}|${binds[1]}`); return { success: true, meta: { changes: 1 } }; }
+              return { success: true, meta: { changes: 1 } };
+            },
+            all: async () => {
+              if (/FROM feed_likes l/.test(sql)) {
+                const ids = binds as string[];
+                const results = [...st.likes].map((k) => k.split('|')).filter(([e]) => ids.includes(e!))
+                  .map(([e, u]) => ({ event_id: e, user_id: u, alias: st.aliases[u!] || u }));
+                return { results, success: true, meta: {} };
+              }
+              if (/FROM public_achievement_events e/.test(sql)) {
+                return { results: st.event ? [{ id: st.event.id, user_id: st.event.user_id, event_type: 'boss_kill', event_key: 'k', event_label: 'defeated X', event_value: 1, rarity: 'D', server_created_at: NOW_UTC, alias: 'james', rank_label: 'B I' }] : [], success: true, meta: {} };
+              }
+              return { results: [], success: true, meta: {} };
+            },
+          };
+        },
+      }),
+      _calls: () => calls,
+    } as unknown as D1Database & { _calls: () => CapturedCall[] };
+    return db;
+  }
+  const like = (db: D1Database, id: string, opts: { rlWrite?: typeof okRl } = {}) =>
+    handleFeedLikePost(new Request('https://example.com/v1/friends/activity/' + id + '/like', { method: 'POST' }), makeEnv(db, opts), session, id);
+
+  it('toggles a like on and off and the feed carries likes / liked / likers', async () => {
+    const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(['evt-1|grub-uid']), aliases: { 'grub-uid': 'grubbadub', 'user-abc': 'Richie' } };
+    const on = (await (await like(likeDb(st), 'evt-1')).json()) as Record<string, unknown>;
+    expect(on).toMatchObject({ ok: true, liked: true, likes: 2 });
+    expect(on.likers).toEqual(['grubbadub', 'Richie']);
+    const feed = (await (await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity'), makeEnv(likeDb(st)), session)).json()) as { events: Array<Record<string, unknown>> };
+    expect(feed.events[0]).toMatchObject({ id: 'evt-1', likes: 2, liked: true, likers: ['grubbadub', 'Richie'] });
+    const off = (await (await like(likeDb(st), 'evt-1')).json()) as Record<string, unknown>;
+    expect(off).toMatchObject({ liked: false, likes: 1 });
+  });
+
+  it('cannot like your own feat, an event outside your feed 404s, a dry bucket 429s', async () => {
+    const own: LikeState = { event: { id: 'evt-2', user_id: 'user-abc' }, likes: new Set(), aliases: {} };
+    expect((await like(likeDb(own), 'evt-2')).status).toBe(400);
+    const none: LikeState = { event: null, likes: new Set(), aliases: {} };
+    expect((await like(likeDb(none), 'evt-3')).status).toBe(404);
+    const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
+    expect((await like(likeDb(st), 'evt-1', { rlWrite: denyRl })).status).toBe(429);
+  });
+
+  it('the scope query only admits accepted friends (the SQL carries the friends subquery)', async () => {
+    const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
+    const db = likeDb(st);
+    await like(db, 'evt-1');
+    const scope = db._calls().find((c) => /FROM public_achievement_events e/.test(c.sql))!;
+    expect(scope.sql).toMatch(/f\.status = 'accepted'/);
+    expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc']);
   });
 });

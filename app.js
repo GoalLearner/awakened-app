@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w912'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w913'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10303,6 +10303,200 @@
   // Coalesce a newest-first backend-event list into [{ts, html}], merging each
   // (localDay, hunter) set of boss_kill events into one collapsed group row.
   // Non-boss events and lone kills render as normal rows via _friendActivityRowHtml.
+  // ── W913 — FRIEND ACTIVITY v3: day → hunter → feats, with LIKES ───────────
+  // Owner (2026-09-06): "instead of cheer can we change that to like .. so you
+  // can see multiple people like a person's achievement." Every feat carries
+  // the like count, the first likers and whether you liked it (server truth,
+  // GET /v1/friends/activity); the tap is optimistic and the server wins.
+  let _faLastEvents = null;
+  let _faSeenTs = 0;
+  const _faOpenDays = new Set();
+  const _faOpenHunters = new Set();
+  let _faWired = false;
+  let _faDefaultsApplied = false;
+  try { _faSeenTs = Number(localStorage.getItem('hb_fa_seen_ts') || 0) || 0; } catch (_) {}
+  if (!_faSeenTs) { _faSeenTs = Date.now() - 86400000; try { localStorage.setItem('hb_fa_seen_ts', String(_faSeenTs)); } catch (_) {} }
+  const _FA_ICON = { boss_kill: ['⚔', 'combat'], rank_up: ['◆', 'rank'], step_milestone_bucket: ['⇈', 'step'], ultra_rare_drop: ['✦', 'ultra'], rare_item_drop: ['◆', 'rare'], step_100k_club_unlocked: ['⇈', 'club'], verified_streak: ['✦', 'verify'], verified_workout: ['✦', 'verify'], verified_sleep_7h: ['☾', 'verify'], flights_milestone_bucket: ['▲', 'flight'], arena_title_earned: ['❖', 'arenatitle'], perfect_day: ['★', 'perfect'] };
+  function _faTs(ev) { const t = ev && ev.createdAt ? Date.parse(ev.createdAt) : 0; return Number.isFinite(t) ? t : 0; }
+  function _faDayBucket(ts) {
+    const dayStart = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    const diff = Math.round((dayStart(new Date()) - dayStart(new Date(ts))) / 86400000);
+    if (diff <= 0) return { key: '0-today', label: 'TODAY', order: 0 };
+    if (diff === 1) return { key: '1-yesterday', label: 'YESTERDAY', order: 1 };
+    if (diff < 7) return { key: '2-week', label: 'THIS WEEK', order: 2 };
+    return { key: '3-earlier', label: 'EARLIER', order: 3 };
+  }
+  function _faParts(ev) {
+    const label = (typeof ev.eventLabel === 'string' && ev.eventLabel) ? ev.eventLabel : 'achieved a feat';
+    const parts = (typeof _friendActivityLabelParts === 'function') ? _friendActivityLabelParts(ev.eventType, label) : null;
+    return parts || { prefix: '', target: label, suffix: '', cls: 'social' };
+  }
+  function _faChipCls(cls) {
+    if (cls === 'combat') return 'bs';
+    if (cls === 'step' || cls === 'flight' || cls === 'club') return 'st';
+    if (cls === 'verify') return 'wk';
+    if (cls === 'rare' || cls === 'ultra') return 'it';
+    return 'rk';
+  }
+  const _FA_CAR = '<i class="fa-car" aria-hidden="true"><svg viewBox="0 0 11 7"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></i>';
+  function _faInitial(alias) { return (String(alias || '?').trim().charAt(0) || '?').toUpperCase(); }
+  function _faColor(rankLabel) { return _boardColor(_boardTier(rankLabel)); }
+  function _faLikeHtml(ev) {
+    const n = Number(ev.likes) || 0; const on = !!ev.liked;
+    const likers = Array.isArray(ev.likers) ? ev.likers : [];
+    const stack = likers.length ? '<span class="fa-likers" title="' + esc(likers.join(', ')) + '">' + likers.map(function (a) { return '<i>' + esc(_faInitial(a)) + '</i>'; }).join('') + '</span>' : '';
+    return '<span class="fa-likewrap">' + stack + (n ? '<span class="fa-like-n">' + n + '</span>' : '') +
+      '<button type="button" class="fa-like' + (on ? ' fa-like--on' : '') + '" data-fa-like="' + esc(ev.id || '') + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? '♥ LIKED' : '♡ LIKE') + '</button></span>';
+  }
+  function _faActHtml(ev) {
+    const p = _faParts(ev);
+    const ic = _FA_ICON[ev.eventType] || ['·', 'social'];
+    const ts = _faTs(ev);
+    return '<div class="fa-act' + (ts > _faSeenTs ? ' fa-act--new' : '') + '" data-fa-ev="' + esc(ev.id || '') + '">' +
+      '<span class="fa-ico fa-ico--' + ic[1] + '" aria-hidden="true">' + ic[0] + '</span>' +
+      '<span class="fa-act-txt">' + esc(p.prefix) + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + '</span>' +
+      '<span class="fa-t">' + esc(_guildhallFormatRelativeTs(ts)) + '</span>' +
+      _faLikeHtml(ev) +
+    '</div>';
+  }
+  function _faHunterChips(evs) {
+    const rest = []; let bosses = 0; let bossName = ''; let steps = null;
+    evs.forEach(function (ev) {
+      const p = _faParts(ev);
+      if (ev.eventType === 'boss_kill') { bosses++; bossName = p.target; return; }
+      if (ev.eventType === 'step_milestone_bucket') { const v = Number(ev.eventValue) || 0; if (!steps || v > steps.v) steps = { v: v, t: p.target }; return; }
+      rest.push({ cls: _faChipCls(p.cls), t: p.target + (p.verified ? ' ✓' : '') });
+    });
+    const out = [];
+    if (steps) out.push({ cls: 'st', t: steps.t });
+    if (bosses === 1) out.push({ cls: 'bs', t: bossName }); else if (bosses > 1) out.push({ cls: 'bs', t: bosses + ' bosses' });
+    return out.concat(rest).slice(0, 3).map(function (c) { return '<span class="fa-chip fa-chip--' + c.cls + '">' + esc(c.t) + '</span>'; }).join('');
+  }
+  function _faGroupedHtml(events) {
+    const days = {};
+    events.forEach(function (ev) {
+      const ts = _faTs(ev); const b = _faDayBucket(ts);
+      let day = days[b.key]; if (!day) day = days[b.key] = { key: b.key, label: b.label, order: b.order, hunters: {}, n: 0 };
+      const alias = String(ev.alias || 'a hunter'); const hk = alias.toLowerCase();
+      let h = day.hunters[hk]; if (!h) h = day.hunters[hk] = { alias: alias, rankLabel: ev.rankLabel || null, evs: [], latest: 0 };
+      h.evs.push(ev); day.n++; if (ts > h.latest) h.latest = ts;
+    });
+    const list = Object.keys(days).map(function (k) { return days[k]; }).sort(function (a, b) { return a.order - b.order; });
+    if (!_faDefaultsApplied && list.length) {
+      _faDefaultsApplied = true;
+      _faOpenDays.add(list[0].key);
+      const hs = Object.keys(list[0].hunters).map(function (k) { return list[0].hunters[k]; }).sort(function (a, b) { return b.latest - a.latest; });
+      if (hs[0]) _faOpenHunters.add(list[0].key + '|' + hs[0].alias.toLowerCase());
+    }
+    return list.map(function (day) {
+      const hunters = Object.keys(day.hunters).map(function (k) { return day.hunters[k]; }).sort(function (a, b) { return b.latest - a.latest; });
+      const open = _faOpenDays.has(day.key);
+      const stack = hunters.slice(0, 4).map(function (h) { return '<span class="fa-mini" style="--bc:' + _faColor(h.rankLabel) + '">' + esc(_faInitial(h.alias)) + '</span>'; }).join('');
+      return '<div class="fa-day' + (open ? ' fa-day--open' : '') + '">' +
+        '<button type="button" class="fa-dh" data-fa-day="' + esc(day.key) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<h3 class="fa-dh-h' + (day.order ? ' fa-dh-h--dim' : '') + '">' + day.label + '</h3>' +
+          '<span class="fa-sum"><span class="fa-stack">' + stack + '</span><span class="fa-cnt2">' + day.n + ' · ' + hunters.length + (hunters.length === 1 ? ' HUNTER' : ' HUNTERS') + '</span>' + _FA_CAR + '</span>' +
+        '</button>' +
+        '<div class="fa-dbody"' + (open ? '' : ' hidden') + '>' + hunters.map(function (h) {
+          const hkey = day.key + '|' + h.alias.toLowerCase();
+          const hopen = _faOpenHunters.has(hkey);
+          const col = _faColor(h.rankLabel);
+          const sorted = h.evs.slice().sort(function (a, b) { return _faTs(b) - _faTs(a); });
+          return '<div class="fa-hunter' + (hopen ? ' fa-hunter--open' : '') + '">' +
+            '<div class="fa-hh" role="button" tabindex="0" data-fa-hunter="' + esc(hkey) + '" aria-expanded="' + (hopen ? 'true' : 'false') + '">' +
+              '<span class="board-av" style="--bc:' + col + '">' + esc(_faInitial(h.alias)) + '</span>' +
+              '<div class="fa-hmain"><button type="button" class="fa-hn" data-board-profile="' + esc(h.alias) + '" style="--bc:' + col + '">' + esc(h.alias) + '</button><div class="fa-hs">' + _faHunterChips(sorted) + '</div></div>' +
+              '<div class="fa-hr2"><span class="fa-ago">' + esc(_guildhallFormatRelativeTs(h.latest)) + '</span><span class="fa-num">' + sorted.length + ' ' + _FA_CAR + '</span></div>' +
+            '</div>' +
+            '<div class="fa-acts"' + (hopen ? '' : ' hidden') + '>' + sorted.map(_faActHtml).join('') + '</div>' +
+          '</div>';
+        }).join('') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+  function _faSetBadge(n) {
+    const badge = document.getElementById('cm-friends-badge'); if (!badge) return;
+    badge.textContent = n > 99 ? '99+' : String(n); badge.classList.toggle('hidden', !(n > 0));
+  }
+  function _faSyncHeader(events) {
+    const sub = document.getElementById('fa-sub'); const lbl = document.getElementById('fa-tools-lbl'); const tools = document.getElementById('fa-tools');
+    const section = document.getElementById('guildhall-activity-section');
+    const allMode = _guildActivityFilter !== 'hunter';
+    if (section) section.classList.toggle('fa-mode-all', allMode);
+    if (!allMode) {
+      if (sub) sub.textContent = 'YOUR OWN FEATS';
+      if (lbl) lbl.textContent = 'GROUPED BY DAY';
+      if (tools) tools.classList.add('fa-tools--hunter');
+      return;
+    }
+    const evs = Array.isArray(events) ? events : [];
+    let fresh = 0; const hunters = {};
+    evs.forEach(function (ev) { if (_faTs(ev) > _faSeenTs) fresh++; hunters[String(ev.alias || '').toLowerCase()] = 1; });
+    const nh = Object.keys(hunters).length;
+    if (sub) sub.textContent = (fresh ? fresh + ' NEW · ' : '') + (nh ? nh + (nh === 1 ? ' HUNTER' : ' HUNTERS') : 'FRIEND FEATS');
+    if (lbl) lbl.textContent = 'GROUPED BY HUNTER';
+    if (tools) tools.classList.remove('fa-tools--hunter');
+    _faSetBadge(fresh);
+  }
+  function _faMarkSeen() {
+    _faSeenTs = Date.now(); try { localStorage.setItem('hb_fa_seen_ts', String(_faSeenTs)); } catch (_) {}
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    try { renderGuildActivity(); } catch (_) {}
+    _faSetBadge(0);
+  }
+  async function _faLike(btn) {
+    const id = btn.getAttribute('data-fa-like'); if (!id) return;
+    if (!(window.Auth && Auth.feedLike)) return;
+    const ev = (Array.isArray(_friendsActivityCache) ? _friendsActivityCache : []).find(function (e) { return e && e.id === id; });
+    if (!ev) return;
+    const wasOn = !!ev.liked; const wasN = Number(ev.likes) || 0; const wasLikers = Array.isArray(ev.likers) ? ev.likers.slice() : [];
+    let me = 'You'; try { const u = Auth.getCurrentUser(); if (u && u.alias) me = u.alias; } catch (_) {}
+    const apply = function (liked, likes, likers) {
+      ev.liked = liked; ev.likes = likes; if (likers) ev.likers = likers;
+      document.querySelectorAll('[data-fa-ev="' + id + '"] .fa-likewrap').forEach(function (w) { w.outerHTML = _faLikeHtml(ev); });
+    };
+    const opt = wasLikers.filter(function (a) { return a !== me; });
+    if (!wasOn && opt.length < 3) opt.push(me);
+    apply(!wasOn, Math.max(0, wasN + (wasOn ? -1 : 1)), opt);
+    if (!wasOn) { try { _hapticTick('LIGHT'); } catch (_) {} }
+    let res; try { res = await Auth.feedLike(id); } catch (_) { res = null; }
+    if (!res || !res.ok) {
+      apply(wasOn, wasN, wasLikers);
+      const code = res && res.code;
+      if (code && code !== 'GUEST_SKIP' && code !== 'LOCAL_DEV_SKIP' && code !== 'STUB_USER') {
+        try { showHabitToast(code === 'NOT_FOUND' ? 'That feat is not in your feed anymore.' : 'Could not like that right now.'); } catch (_) {}
+      }
+      return;
+    }
+    apply(!!res.liked, Number(res.likes) || 0, Array.isArray(res.likers) ? res.likers : null);
+    try { localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ events: _friendsActivityCache, ts: Date.now() })); } catch (_) {}
+  }
+  function _faWire() {
+    if (_faWired) return; _faWired = true;
+    document.addEventListener('click', function (e) {
+      const t = e.target; if (!t || !t.closest) return;
+      let el;
+      if ((el = t.closest('[data-fa-like]'))) { e.preventDefault(); e.stopPropagation(); _faLike(el); return; }
+      if ((el = t.closest('[data-fa-seen]'))) { e.preventDefault(); _faMarkSeen(); return; }
+      if ((el = t.closest('[data-fa-day]'))) {
+        e.preventDefault();
+        const k = el.getAttribute('data-fa-day'); const card = el.closest('.fa-day'); const body = card && card.querySelector('.fa-dbody');
+        const open = !_faOpenDays.has(k); if (open) _faOpenDays.add(k); else _faOpenDays.delete(k);
+        if (card) card.classList.toggle('fa-day--open', open); if (body) body.hidden = !open; el.setAttribute('aria-expanded', open ? 'true' : 'false');
+        return;
+      }
+      if ((el = t.closest('[data-fa-hunter]'))) {
+        if (t.closest('[data-board-profile]')) return;   // the name opens the profile card (board handler)
+        e.preventDefault();
+        const k = el.getAttribute('data-fa-hunter'); const row = el.closest('.fa-hunter'); const acts = row && row.querySelector('.fa-acts');
+        const open = !_faOpenHunters.has(k); if (open) _faOpenHunters.add(k); else _faOpenHunters.delete(k);
+        if (row) row.classList.toggle('fa-hunter--open', open); if (acts) acts.hidden = !open; el.setAttribute('aria-expanded', open ? 'true' : 'false');
+        return;
+      }
+    });
+  }
+  try { _faWire(); } catch (_) {}
+
   function _coalesceGuildBossKills(evs) {
     const groups = {};
     const out = [];
@@ -10675,6 +10869,7 @@
         // kills into one expandable "defeated N bosses" row before rendering.
         _feedEvs.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
         normalized = _coalesceGuildBossKills(_feedEvs);
+        _faLastEvents = _feedEvs;   // W913 — the v3 grouped renderer reads the raw events
       } else {
         // v3 Phase 1z.264 — Local fallback now returns [] for Guild
         // mode. Every hb_guild_activity entry is self-authored by
@@ -10684,6 +10879,7 @@
         // path surfaced the viewer's own events, which contradicted
         // the new Guild/Hunter separation.
         _selfFilterMode = 'local-fallback-empty';
+        _faLastEvents = [];
         if (Array.isArray(entries)) {
           // Count what we would have shown, for the breadcrumb.
           for (const e of entries) {
@@ -10714,6 +10910,7 @@
       } catch (_) {}
     }
 
+    try { _faSyncHeader(filterMode === 'hunter' ? null : _faLastEvents); } catch (_) {}   // W913 — eyebrow + FRIENDS badge
     if (visible.length === 0) {
       // W594 — on a truly-cold Guild open (never fetched, no local rows, backend
       // fetch in flight) show a skeleton instead of prematurely flashing the
@@ -10725,7 +10922,7 @@
       }
       const emptySub = (filterMode === 'hunter')
         ? 'Your rewards, drops, and milestones will appear here.'
-        : 'Guild activity will appear here.';
+        : "Your friends' feats will appear here.";
       body.innerHTML =
         '<div class="guildhall-activity-empty">The board is quiet.' +
           '<div class="guildhall-activity-empty-sub">' + esc(emptySub) + '</div>' +
@@ -10733,6 +10930,11 @@
       return;
     }
 
+    // W913 — All mode renders day → hunter → feats with LIKES; Hunter mode keeps the date groups.
+    if (filterMode !== 'hunter' && Array.isArray(_faLastEvents) && _faLastEvents.length) {
+      body.innerHTML = _faGroupedHtml(_faLastEvents);
+      return;
+    }
     const groups = _groupGuildActivityEntriesByDate(visible);
     body.innerHTML = _renderGuildActivityDateGroups(groups);
     _gbgWire();   // W722 — enable tap-to-expand on collapsed boss-kill groups
@@ -24736,8 +24938,9 @@
       subtitle: 'The Hall opens — every hunter, one board.',
       items: [
         { emoji: '', title: 'Community',              description: "The Friends tab is now Community. Open a topic — an improvement, a bug, or just talk — and every hunter can reply. Moderators keep it decent, and you can report or block anyone." },
+        { emoji: '', title: 'Likes and upvotes',      description: "Like a friend's feat and see who else liked it. Upvote topics on the board, sort by hot or unanswered, and follow the pinned ones." },
         { emoji: '', title: 'Every boss sheet opens', description: "A 3.0.1 bug closed every dungeon on tap. Fixed, and now tested on every build." },
-        { emoji: '', title: 'Status, simplified',     description: "The Status page is your hunter profile again. Notices fold into one System line under the card." },
+        { emoji: '', title: 'Status, simplified',     description: "The Status page is your hunter profile again." },
       ],
     },
     '3.0.0': {
@@ -45625,15 +45828,19 @@
   const BOARD_SUPPORT_EMAIL = 'richmondcampano93@gmail.com';
   const BOARD_TITLE_MAX = 80;
   const BOARD_BODY_MAX = 1000;
-  const BOARD_TAB_ROWS = 3;
+  const BOARD_TAB_ROWS = 6;      // W913 — the board has its own pane now; the page no longer stacks
   const BOARD_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'];
-  const BOARD_TAG_LABEL = { improvement: 'IMPROVEMENT', bug: 'BUG', talk: 'TALK' };
+  const BOARD_TAG_LABEL = { improvement: 'IDEA', bug: 'BUG', talk: 'TALK' };   // W913 — v3 names the improvement tag IDEA
+  const BOARD_SORTS = [['latest', 'LATEST'], ['hot', 'HOT'], ['unanswered', 'UNANSWERED']];
   const BOARD_REASONS = [['harassment', 'Harassment'], ['spam', 'Spam'], ['offensive', 'Offensive'], ['other', 'Something else']];
-  let _boardCache = null;        // untagged list: { topics, next_cursor }
-  let _boardTagged = null;       // the list sheet's tagged list: { topics, next_cursor, tag }
+  let _boardLists = {};          // W913 — `${tag}|${sort}` → { topics, next_cursor } (tab + full-board sheet share it)
+  let _boardCounts = null;       // W913 — { all, improvement, bug, talk } from the first page
   let _boardMe = null;           // { consented, muted_until, role, rank_tier, topic_min_tier, reply_min_tier }
-  let _boardTag = '';            // the list sheet's active tag
-  let _boardInflight = false;
+  let _boardTag = '';            // active tag rail
+  let _boardSort = 'latest';     // W913 — latest | hot | unanswered
+  let _boardSeen = {};           // W913 — topic id → last_activity_at seen (the unread bar)
+  let _boardFirstVisit = 0;
+  const _boardInflightKeys = new Set();
   let _boardWired = false;
   let _boardOpenedEmitted = false;
   let _boardSheet = null;        // the one open sheet
@@ -45646,9 +45853,15 @@
   function _boardHydrate() {
     try {
       const raw = localStorage.getItem('hb_board_cache_v1');
-      if (!raw) return;
-      const o = JSON.parse(raw);
-      if (o && Array.isArray(o.topics)) { _boardCache = { topics: o.topics, next_cursor: null }; if (o.me) _boardMe = o.me; }
+      if (raw) {
+        const o = JSON.parse(raw);
+        if (o && Array.isArray(o.topics)) { _boardLists['|latest'] = { topics: o.topics, next_cursor: null }; if (o.me) _boardMe = o.me; if (o.counts) _boardCounts = o.counts; }
+      }
+    } catch (_) {}
+    try { _boardSeen = JSON.parse(localStorage.getItem('hb_board_seen_v1') || '{}') || {}; } catch (_) { _boardSeen = {}; }
+    try {
+      _boardFirstVisit = Number(localStorage.getItem('hb_board_first_visit') || 0) || 0;
+      if (!_boardFirstVisit) { _boardFirstVisit = Date.now(); localStorage.setItem('hb_board_first_visit', String(_boardFirstVisit)); }
     } catch (_) {}
   }
   try { _boardHydrate(); } catch (_) {}
@@ -45749,21 +45962,88 @@
         '<span class="board-tierchip" style="--bc:' + col + '">' + esc(tier) + '</span>' + role + founder +
       '</span>';
   }
+  // ── W913 — v3 rows: rune + tag, PINNED, unread bar, hot ember, upvote, replier stack ──
+  function _boardKey(tag, sort) { return (tag || '') + '|' + (sort || 'latest'); }
+  function _boardCurrent() { return _boardLists[_boardKey(_boardTag, _boardSort)] || null; }
+  function _boardIsUnread(t) {
+    const seen = _boardSeen[t.id];
+    if (seen) return Number(seen) < Number(t.last_activity_at || 0);
+    return Number(t.created_at || 0) > _boardFirstVisit;
+  }
+  function _boardMarkSeen(id, at) {
+    if (!id) return;
+    _boardSeen[id] = Math.max(Number(_boardSeen[id] || 0), Number(at || 0) || Date.now());
+    try {
+      const keys = Object.keys(_boardSeen);
+      if (keys.length > 400) keys.sort(function (a, b) { return _boardSeen[a] - _boardSeen[b]; }).slice(0, keys.length - 400).forEach(function (k) { delete _boardSeen[k]; });
+      localStorage.setItem('hb_board_seen_v1', JSON.stringify(_boardSeen));
+    } catch (_) {}
+  }
+  function _boardIsHot(t) { return (Number(t.up_count) || 0) >= 5 || (Number(t.reply_count) || 0) >= 5; }
+  function _boardAvHtml(a, cls) {
+    a = a || {};
+    const col = _boardColor(_boardTier(a.rank_label));
+    const alias = String(a.alias || 'Hunter');
+    const crown = _hunterCrownHtml(a.mod_role === 'owner' ? 'owner' : (a.is_mod ? 'mod' : null), 'board-av-crown');
+    return '<span class="board-av' + (cls ? ' ' + cls : '') + '" style="--bc:' + col + '">' + esc((alias.trim().charAt(0) || '?').toUpperCase()) + crown + '</span>';
+  }
+  function _boardRepliersHtml(list) {
+    if (!list || !list.length) return '';
+    return '<span class="board-rs">' + list.map(function (r) {
+      return '<i style="--bc:' + _boardColor(_boardTier(r.rank_label)) + '">' + esc((String(r.alias || '?').trim().charAt(0) || '?').toUpperCase()) + '</i>';
+    }).join('') + '</span>';
+  }
   function _boardTopicRowHtml(t) {
     const tag = String(t.tag || 'talk');
     const n = Number(t.reply_count) || 0;
-    return '<div class="board-row' + (t.hidden ? ' board-row--hidden' : '') + '" role="button" tabindex="0" data-board-open="' + esc(t.id) + '">' +
-      '<div class="board-row-top">' +
-        '<span class="board-tagpill board-tagpill--' + esc(tag) + '">' + (BOARD_TAG_LABEL[tag] || 'TALK') + '</span>' +
-        (t.hidden ? '<span class="board-hiddenpill">HIDDEN</span>' : '') +
-        '<span class="board-row-time">' + esc(_boardRel(t.last_activity_at)) + '</span>' +
+    const up = Number(t.up_count) || 0;
+    const a = t.author || {};
+    const tier = _boardTier(a.rank_label); const col = _boardColor(tier);
+    const hot = _boardIsHot(t);
+    const cls = 'board-topic' + (t.pinned ? ' board-topic--pinned' : '') + (_boardIsUnread(t) ? ' board-topic--unread' : '') + (hot ? ' board-topic--hot' : '') + (t.hidden ? ' board-topic--hidden' : '');
+    return '<div class="' + cls + '" role="button" tabindex="0" data-board-open="' + esc(t.id) + '">' +
+      _boardAvHtml(a) +
+      '<div class="board-tb">' +
+        '<div class="board-tags"><span class="board-rune board-rune--' + esc(tag) + '"></span>' +
+          (t.pinned ? '<span class="board-tag board-tag--pin">PINNED</span>' : '') +
+          (t.hidden ? '<span class="board-tag board-tag--hidden">HIDDEN</span>' : '') +
+          '<span class="board-tag board-tag--' + esc(tag) + '">' + (BOARD_TAG_LABEL[tag] || 'TALK') + '</span>' +
+        '</div>' +
+        '<div class="board-tl">' + esc(t.title || '') + '</div>' +
+        (t.preview ? '<div class="board-ts">' + esc(t.preview) + '</div>' : '') +
+        '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(a.alias || 'hunter') + '</button>' +
+          '<span class="board-rk">' + esc(tier) + '</span><span class="board-dt">' + esc(_boardRel(t.last_activity_at)) + '</span></div>' +
       '</div>' +
-      '<div class="board-row-title">' + esc(t.title || '') + '</div>' +
-      (t.preview ? '<div class="board-row-prev">' + esc(t.preview) + '</div>' : '') +
-      '<div class="board-row-foot">' + _boardAuthorHtml(t.author) +
-        '<span class="board-replies">' + n + ' ' + (n === 1 ? 'reply' : 'replies') + '</span>' +
+      '<div class="board-tr">' +
+        '<button type="button" class="board-up' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id) + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + up + '</span></button>' +
+        '<span class="board-rep' + (n === 0 ? ' board-rep--zero' : (hot ? ' board-rep--hot' : '')) + '">' + _boardRepliersHtml(t.repliers) + n + '</span>' +
       '</div>' +
     '</div>';
+  }
+  function _boardFiltersHtml() {
+    const c = _boardCounts || {};
+    const cnt = function (k) { return (c[k] != null) ? ' <span class="board-f-n">' + (Number(c[k]) || 0) + '</span>' : ''; };
+    return [['', 'ALL', 'all'], ['improvement', 'IDEAS', 'improvement'], ['bug', 'BUGS', 'bug'], ['talk', 'TALK', 'talk']].map(function (f) {
+      return '<button type="button" class="board-f' + (f[0] ? ' board-f--' + f[0] : '') + '" data-board-tag="' + f[0] + '" data-active="' + (f[0] === _boardTag ? 'true' : 'false') + '">' + (f[0] ? '<i></i>' : '') + f[1] + cnt(f[2]) + '</button>';
+    }).join('');
+  }
+  function _boardTotal(shown) {
+    if (_boardSort === 'unanswered' || !_boardCounts) return shown;
+    const t = _boardTag ? (Number(_boardCounts[_boardTag]) || 0) : (Number(_boardCounts.all) || 0);
+    return Math.max(t, shown);
+  }
+  function _boardSortHtml() {
+    const cur = _boardCurrent();
+    const shown = cur && cur.topics ? _boardVisible(cur.topics).length : 0;
+    const total = (cur && cur.topics) ? _boardTotal(shown) : null;
+    return '<span class="board-sortseg" role="group" aria-label="Sort topics">' + BOARD_SORTS.map(function (o) {
+      return '<button type="button" class="board-sort" data-board-sort="' + o[0] + '" data-active="' + (o[0] === _boardSort ? 'true' : 'false') + '">' + o[1] + '</button>';
+    }).join('') + '</span>' + (total != null ? '<span class="board-total">' + total + (total === 1 ? ' TOPIC' : ' TOPICS') + '</span>' : '');
+  }
+  function _boardRailsPaint(root) {
+    root = root || document;
+    root.querySelectorAll('[data-board-filters]').forEach(function (el) { el.innerHTML = _boardFiltersHtml(); });
+    root.querySelectorAll('[data-board-sortrow]').forEach(function (el) { el.innerHTML = _boardSortHtml(); });
   }
   function _boardVisible(list) {
     return (list || []).filter(function (t) { return !(t.author && _boardHiddenAuthors.has(t.author.author_id)); });
@@ -45771,18 +46051,26 @@
 
   // ── the section on the Community tab (3 latest + VIEW ALL) ────────────
   function _boardPaint() {
+    _boardRailsPaint();
     const body = document.getElementById('board-body');
     if (body) {
-      const all = _boardVisible(_boardCache && _boardCache.topics);
-      const list = all.slice(0, BOARD_TAB_ROWS);
-      if (!list.length) {
-        body.innerHTML = '<div class="guildhall-activity-empty board-empty">No topics yet.' +
-          '<div class="guildhall-activity-empty-sub">Start the first one — an idea, a bug, or just talk.</div></div>';
+      const cur = _boardCurrent();
+      if (!cur || !cur.topics) {
+        if (typeof showLoading === 'function') showLoading(body, 'rows', 3);
       } else {
-        body.innerHTML = list.map(_boardTopicRowHtml).join('');
+        const all = _boardVisible(cur.topics);
+        const list = all.slice(0, BOARD_TAB_ROWS);
+        const railed = !!_boardTag || _boardSort !== 'latest';
+        body.innerHTML = list.length
+          ? list.map(_boardTopicRowHtml).join('')
+          : '<div class="guildhall-activity-empty board-empty">' + (railed ? 'Nothing on this rail yet.' : 'No topics yet.') +
+              '<div class="guildhall-activity-empty-sub">' + (railed ? 'Try another tag or sort.' : 'Start the first one — an idea, a bug, or just talk.') + '</div></div>';
+        const viewall = document.getElementById('board-viewall');
+        if (viewall) {
+          viewall.textContent = 'VIEW ALL ' + _boardTotal(all.length) + ' TOPICS ›';
+          viewall.classList.toggle('hidden', all.length === 0);
+        }
       }
-      const viewall = document.getElementById('board-viewall');
-      if (viewall) viewall.classList.toggle('hidden', all.length === 0);
       _boardSyncNote();
     }
     if (_boardListEl && _boardSheet === _boardListEl) _boardListPaint();
@@ -45808,49 +46096,58 @@
     const body = document.getElementById('board-body'); if (!body) return;
     body.innerHTML = '<div class="social-error">Could not load the board: ' + esc(detail || 'network') + '</div>';
   }
+  async function _boardFetch(tag, sort, cursor) {
+    if (!(window.Auth && Auth.boardTopics)) return { ok: false, code: 'NO_AUTH' };
+    let res; try { res = await Auth.boardTopics(tag, cursor, sort); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    return res || { ok: false, code: 'NETWORK' };
+  }
+  function _boardStore(tag, sort, res, append) {
+    const key = _boardKey(tag, sort);
+    const prev = _boardLists[key];
+    const topics = (append && prev && prev.topics ? prev.topics : []).concat(res.topics || []);
+    _boardLists[key] = { topics: topics, next_cursor: res.next_cursor || null };
+    if (res.counts) _boardCounts = res.counts;
+    if (res.me) _boardMe = res.me;
+  }
   async function renderBoardSection() {
     const body = document.getElementById('board-body'); if (!body) return;
     _boardWire();
     if (!_boardOpenedEmitted) { _boardOpenedEmitted = true; _boardEmit('board_opened'); }
-    if (_boardCache && _boardCache.topics) _boardPaint();
-    else if (typeof showLoading === 'function') showLoading(body, 'rows', 3);
-    if (!(window.Auth && Auth.boardTopics)) { if (!_boardCache) _boardErrorPaint('update pending'); return; }
-    if (_boardInflight) return;
-    _boardInflight = true;
-    let res;
-    try { res = await Auth.boardTopics('', ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
-    _boardInflight = false;
-    if (!res || !res.ok) {
-      if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP' || res.code === 'EXPIRED')) { _boardSignInPaint(); return; }
-      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) { _boardCache = { topics: [], next_cursor: null }; _boardPaint(); return; }
-      if (_boardCache && _boardCache.topics) return;   // never wipe a good paint on a failed refresh
-      _boardErrorPaint(res && (res.detail || res.code)); return;
-    }
-    _boardCache = { topics: res.topics || [], next_cursor: res.next_cursor || null };
-    if (res.me) _boardMe = res.me;
     _boardPaint();
+    if (!(window.Auth && Auth.boardTopics)) { if (!_boardCurrent()) _boardErrorPaint('update pending'); return; }
+    const tag = _boardTag, sort = _boardSort, key = _boardKey(tag, sort);
+    if (_boardInflightKeys.has(key)) return;
+    _boardInflightKeys.add(key);
+    const res = await _boardFetch(tag, sort, '');
+    _boardInflightKeys.delete(key);
+    if (!res.ok) {
+      if (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP' || res.code === 'EXPIRED') { _boardSignInPaint(); return; }
+      if (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER') { _boardStore(tag, sort, { topics: [], counts: { all: 0, improvement: 0, bug: 0, talk: 0 } }, false); _boardPaint(); return; }
+      if (_boardLists[key]) return;   // never wipe a good paint on a failed refresh
+      _boardErrorPaint(res.detail || res.code); return;
+    }
+    _boardStore(tag, sort, res, false);
+    if (tag === _boardTag && sort === _boardSort) _boardPaint();
   }
-
   // ── the full board (sheet): tag rails + every topic + older pages ──────
-  function _boardListCurrent() { return _boardTag ? _boardTagged : _boardCache; }
+  function _boardListCurrent() { return _boardCurrent(); }
   function _boardListHtml() {
-    return '<div class="board-tags" data-board-tags role="tablist" aria-label="Filter topics">' +
-      [['', 'ALL'], ['improvement', 'IMPROVEMENT'], ['bug', 'BUG'], ['talk', 'TALK']].map(function (t) {
-        return '<button type="button" class="board-tag' + (t[0] ? ' board-tag--' + t[0] : '') + '" data-board-tag="' + t[0] + '" data-active="' + (t[0] === _boardTag ? 'true' : 'false') + '">' + t[1] + '</button>';
-      }).join('') + '</div>' +
+    return '<div class="board-filters" data-board-filters></div>' +
+      '<div class="board-sortrow" data-board-sortrow></div>' +
       '<div class="board-body" data-board-list></div>' +
       '<button type="button" class="board-more hidden" data-board-more>LOAD OLDER TOPICS</button>';
   }
   function _boardListPaint() {
     const el = _boardListEl; if (!el) return;
+    _boardRailsPaint(el);
     const body = el.querySelector('[data-board-list]'); const more = el.querySelector('[data-board-more]');
-    const cur = _boardListCurrent();
+    const cur = _boardCurrent();
     if (!body) return;
     if (!cur || !cur.topics) { if (typeof showLoading === 'function') showLoading(body, 'rows', 4); if (more) more.classList.add('hidden'); return; }
     const list = _boardVisible(cur.topics);
     body.innerHTML = list.length
       ? list.map(_boardTopicRowHtml).join('')
-      : '<div class="guildhall-activity-empty board-empty">' + (_boardTag ? 'Nothing under this tag yet.' : 'No topics yet.') + '</div>';
+      : '<div class="guildhall-activity-empty board-empty">' + (_boardTag || _boardSort !== 'latest' ? 'Nothing on this rail yet.' : 'No topics yet.') + '</div>';
     if (more) more.classList.toggle('hidden', !cur.next_cursor);
   }
   function openBoardList() {
@@ -45860,52 +46157,58 @@
     if (head) head.insertAdjacentHTML('beforeend', '<button type="button" class="board-newbtn board-sheet-newbtn" data-board-new>+ NEW</button>');
     _boardListEl = el;
     _boardListPaint();
-    if (_boardTag) _boardFetchTag(_boardTag);
-  }
-  async function _boardFetchTag(tag) {
-    if (!(window.Auth && Auth.boardTopics) || _boardInflight) return;
-    _boardInflight = true;
-    let res; try { res = await Auth.boardTopics(tag, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
-    _boardInflight = false;
-    if (_boardTag !== tag) return;
-    if (!res || !res.ok) {
-      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) _boardTagged = { topics: [], next_cursor: null, tag: tag };
-      else { _boardToast(_boardErrMsg(res)); _boardTagged = _boardTagged || { topics: [], next_cursor: null, tag: tag }; }
-    } else {
-      _boardTagged = { topics: res.topics || [], next_cursor: res.next_cursor || null, tag: tag };
-      if (res.me) _boardMe = res.me;
-    }
-    _boardListPaint();
-  }
-  function _boardSetTag(tag) {
-    _boardTag = tag || '';
-    const el = _boardListEl; if (!el) return;
-    el.querySelectorAll('[data-board-tag]').forEach(function (b) {
-      b.setAttribute('data-active', (b.getAttribute('data-board-tag') || '') === _boardTag ? 'true' : 'false');
-    });
-    _boardTagged = null;
-    _boardListPaint();
-    if (_boardTag) _boardFetchTag(_boardTag);
-  }
-  async function _boardLoadMore(btn) {
-    const cur = _boardListCurrent();
-    if (!cur || !cur.next_cursor || _boardInflight) return;
-    if (btn) btn.disabled = true;
-    _boardInflight = true;
-    let res; try { res = await Auth.boardTopics(_boardTag, cur.next_cursor); } catch (_) { res = null; }
-    _boardInflight = false; if (btn) btn.disabled = false;
-    if (!res || !res.ok) { _boardToast('Could not load more.'); return; }
-    cur.topics = cur.topics.concat(res.topics || []);
-    cur.next_cursor = res.next_cursor || null;
-    _boardPaint();
+    renderBoardSection();
   }
 
+  function _boardSetTag(tag) { _boardTag = tag || ''; _boardPaint(); renderBoardSection(); }
+  function _boardSetSort(sort) { _boardSort = BOARD_SORTS.some(function (o) { return o[0] === sort; }) ? sort : 'latest'; _boardPaint(); renderBoardSection(); }
+  async function _boardLoadMore(btn) {
+    const cur = _boardCurrent(); const tag = _boardTag, sort = _boardSort;
+    if (!cur || !cur.next_cursor) return;
+    const key = 'more:' + _boardKey(tag, sort);
+    if (_boardInflightKeys.has(key)) return;
+    _boardInflightKeys.add(key); if (btn) btn.disabled = true;
+    const res = await _boardFetch(tag, sort, cur.next_cursor);
+    _boardInflightKeys.delete(key); if (btn) btn.disabled = false;
+    if (!res.ok) { _boardToast('Could not load more.'); return; }
+    _boardStore(tag, sort, res, true);
+    _boardPaint();
+  }
+  // ── W913 — upvotes (optimistic, server truth wins) ──────────────────────
+  function _boardApplyVote(id, voted, n) {
+    Object.keys(_boardLists).forEach(function (k) { (_boardLists[k].topics || []).forEach(function (t) { if (t.id === id) { t.voted = voted; t.up_count = n; } }); });
+    if (_boardTopicData && _boardTopicData.topic && _boardTopicData.topic.id === id) { _boardTopicData.topic.voted = voted; _boardTopicData.topic.up_count = n; }
+    document.querySelectorAll('[data-board-vote="' + id + '"]').forEach(function (b) {
+      b.classList.toggle('board-up--on', voted); b.setAttribute('aria-pressed', voted ? 'true' : 'false');
+      const c = b.querySelector('.board-up-n'); if (c) c.textContent = String(n);
+    });
+  }
+  async function _boardVote(el) {
+    const id = el.getAttribute('data-board-vote'); if (!id) return;
+    if (!(window.Auth && Auth.boardVote)) return;
+    const on = el.getAttribute('aria-pressed') !== 'true';
+    const nEl = el.querySelector('.board-up-n'); const before = Number(nEl && nEl.textContent) || 0;
+    _boardApplyVote(id, on, Math.max(0, before + (on ? 1 : -1)));
+    if (on) {
+      try { _hapticTick('LIGHT'); } catch (_) {}
+      try { const f = document.createElement('span'); f.className = 'board-up-fl'; f.textContent = '+1'; el.appendChild(f); setTimeout(function () { try { f.remove(); } catch (_) {} }, 700); } catch (_) {}
+    }
+    let res; try { res = await Auth.boardVote(id); } catch (_) { res = null; }
+    if (!res || !res.ok) {
+      _boardApplyVote(id, !on, before);
+      const code = res && res.code;
+      if (code === 'SIM_READ_ONLY') _boardToast('Simulated hunters cannot vote.');
+      else if (code && code !== 'GUEST_SKIP' && code !== 'LOCAL_DEV_SKIP' && code !== 'STUB_USER') _boardToast(_boardErrMsg(res));
+      return;
+    }
+    _boardApplyVote(id, !!res.voted, Number(res.up_count) || 0);
+  }
   // ── sheets (one at a time; every textarea at the TOP) ───────────────────
   function _boardSheetClose(opts) {
     if (!_boardSheet) return;
     const el = _boardSheet; _boardSheet = null; _boardTopicData = null;
     const wasList = el === _boardListEl;
-    if (wasList) { _boardListEl = null; _boardTag = ''; _boardTagged = null; }
+    if (wasList) { _boardListEl = null; }
     try { el.classList.remove('open'); } catch (_) {}
     setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
     // Back from a topic or composer that was opened from the full board → the board again.
@@ -45983,19 +46286,23 @@
   // ── composer ────────────────────────────────────────────────────────────
   function _boardComposerHtml(kind, topicTitle) {
     const isTopic = kind === 'topic';
+    const cats = [['improvement', 'IDEA', 'Something Awakened should do'], ['bug', 'BUG', 'Something broke'], ['talk', 'TALK', 'Anything for the Hall']];
+    const me = _boardMe || {};
     return '<form class="board-compose" data-board-compose="' + esc(kind) + '">' +
       (isTopic
-        ? '<div class="board-tagpick" role="radiogroup" aria-label="Topic tag">' +
-            ['talk', 'improvement', 'bug'].map(function (t, i) {
-              return '<button type="button" class="board-tag board-tag--' + t + '" data-board-pick="' + t + '" data-active="' + (i === 0 ? 'true' : 'false') + '">' + BOARD_TAG_LABEL[t] + '</button>';
+        ? '<div class="board-ssub">POSTING TO THE HALL AS <b>YOU · ' + esc(String(me.rank_tier || 'E')) + '</b></div>' +
+          '<div class="board-cats" role="radiogroup" aria-label="Topic tag">' +
+            cats.map(function (c, i) {
+              return '<button type="button" class="board-catb" data-board-pick="' + c[0] + '" data-active="' + (i === 0 ? 'true' : 'false') + '" role="radio" aria-checked="' + (i === 0 ? 'true' : 'false') + '">' +
+                '<span class="board-rune board-rune--' + c[0] + '"></span><span class="board-cl">' + c[1] + '</span><span class="board-cd">' + c[2] + '</span></button>';
             }).join('') +
           '</div>' +
           '<input class="board-input" name="title" type="text" maxlength="' + BOARD_TITLE_MAX + '" placeholder="Title" autocomplete="off" autocapitalize="sentences" />'
         : '<div class="board-compose-ctx">Replying to <b>' + esc(topicTitle || 'this topic') + '</b></div>') +
-      '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'What is on your mind? An idea, a bug, anything.' : 'Write your reply') + '"></textarea>' +
+      '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'Say more…' : 'Write your reply') + '"></textarea>' +
       '<div class="board-compose-foot">' +
         '<span class="board-count" data-board-count>0 / ' + BOARD_BODY_MAX + '</span>' +
-        '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TOPIC' : 'POST REPLY') + '</button>' +
+        '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TO THE HALL' : 'POST REPLY') + '</button>' +
       '</div>' +
       '<div class="board-compose-err hidden" data-board-err></div>' +
     '</form>';
@@ -46037,7 +46344,7 @@
     if (!res || !res.ok) {
       const code = (res && res.code) || 'ERROR';
       if (code === 'CONSENT_REQUIRED') { _boardMe = Object.assign({}, _boardMe || {}, { consented: false }); try { localStorage.removeItem('hb_board_consent_v1'); } catch (_) {} _boardSheetClose({ noReturn: true }); openBoardRules(function () { openBoardComposer(kind, topicId); }); return; }
-      if (code === 'MUTED') { _boardSheetClose(); _boardToast('You are muted right now. You can still read the board.'); _boardCache = null; renderBoardSection(); return; }
+      if (code === 'MUTED') { _boardSheetClose(); _boardToast('You are muted right now. You can still read the board.'); _boardLists = {}; renderBoardSection(); return; }
       if (code === 'RANK_TOO_LOW') { showErr((res && res.detail) || 'Your rank is too low for that.'); return; }
       if (code === 'OBJECTIONABLE') { showErr('That contains language the board does not allow.'); return; }
       if (code === 'RATE_LIMITED') { showErr('Slow down — a few posts a minute is plenty.'); return; }
@@ -46046,7 +46353,7 @@
     _boardEmit(kind === 'topic' ? 'topic_posted' : 'reply_posted', kind === 'topic' ? tag : '');
     try { _hapticTick('SUCCESS'); } catch (_) {}
     try { if (ta) ta.blur(); } catch (_) {}
-    _boardCache = null; _boardTagged = null;
+    _boardLists = {};
     if (kind === 'topic') { _boardSheetClose(); renderBoardSection(); _boardToast('Posted to the Hall.'); }
     else { _boardSheetClose({ noReturn: true }); renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); }
   }
@@ -46076,6 +46383,7 @@
           '<div class="board-menu-row board-menu-row--mod"><span class="board-menu-lbl">MOD</span>' +
             '<button type="button" class="board-chip board-chip--danger" data-board-mod="delete">Delete</button>' +
             (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="hide">' + (p.hidden ? 'Unhide' : 'Hide') + '</button>' : '') +
+            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="pin">' + (p.pinned ? 'Unpin' : 'Pin') + '</button>' : '') +
             (mine ? '' : '<button type="button" class="board-chip" data-board-mod="mute1">Mute 1d</button>' +
               '<button type="button" class="board-chip" data-board-mod="mute7">Mute 7d</button>' +
               '<button type="button" class="board-chip" data-board-mod="mute30">Mute 30d</button>') +
@@ -46089,8 +46397,11 @@
     const bar = _boardRankBar('reply');
     return '<div class="board-topic-wrap">' +
       '<div class="board-topic-tagrow">' +
-        '<span class="board-tagpill board-tagpill--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
+        '<span class="board-rune board-rune--' + esc(t.tag || 'talk') + '"></span>' +
+        '<span class="board-tag board-tag--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
+        (t.pinned ? '<span class="board-tag board-tag--pin">PINNED</span>' : '') +
         (t.hidden ? '<span class="board-hiddenpill">HIDDEN · moderators only</span>' : '') +
+        '<button type="button" class="board-up board-up--lg' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id || '') + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + (Number(t.up_count) || 0) + '</span></button>' +
       '</div>' +
       _boardPostHtml('topic', t) +
       '<div class="board-replies-head">' + (n ? n + (n === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET') + '</div>' +
@@ -46116,6 +46427,8 @@
     if (res.me) _boardMe = res.me;
     _boardTopicData = { topic: res.topic, replies: res.replies || [], next_cursor: res.next_cursor || null };
     bodyEl.innerHTML = _boardTopicSheetHtml(_boardTopicData);
+    _boardMarkSeen(id, res.topic && res.topic.last_activity_at);   // W913 — the unread bar clears
+    try { _boardPaint(); } catch (_) {}
   }
   async function _boardMoreReplies(btn) {
     const d = _boardTopicData; if (!d || !d.next_cursor) return;
@@ -46153,6 +46466,7 @@
       else if (action === 'block') res = await Auth.boardBlock(authorId);
       else if (action === 'delete') res = kind === 'topic' ? await Auth.boardModDeleteTopic(id) : await Auth.boardModDeleteReply(id);
       else if (action === 'hide') res = await Auth.boardModHideTopic(id);
+      else if (action === 'pin') res = await Auth.boardModPinTopic(id);   // W913
       else if (action.indexOf('mute') === 0) res = await Auth.boardModMute(authorId, parseInt(action.slice(4), 10) || 1, '');
     } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     if (!res || !res.ok) { _boardToast(_boardErrMsg(res)); return; }
@@ -46166,19 +46480,25 @@
     if (action === 'block') {
       _boardHiddenAuthors.add(authorId);
       _boardToast('Blocked ' + alias + '. You will not see each other on the board.');
-      if (kind === 'topic') { _boardSheetClose(); _boardCache = null; _boardTagged = null; renderBoardSection(); }
+      if (kind === 'topic') { _boardSheetClose(); _boardLists = {}; renderBoardSection(); }
       else { postEl.remove(); }
       return;
     }
     if (action === 'delete') {
       _boardToast('Removed.');
-      if (kind === 'topic') { _boardSheetClose(); _boardCache = null; _boardTagged = null; renderBoardSection(); }
+      if (kind === 'topic') { _boardSheetClose(); _boardLists = {}; renderBoardSection(); }
       else { postEl.remove(); }
       return;
     }
     if (action === 'hide') {
       _boardToast(res.hidden ? 'Topic hidden from hunters.' : 'Topic visible again.');
-      _boardCache = null; _boardTagged = null; renderBoardSection();
+      _boardLists = {}; renderBoardSection();
+      openBoardTopic(id);
+      return;
+    }
+    if (action === 'pin') {
+      _boardToast(res.pinned ? 'Pinned to the top of the Hall.' : 'Unpinned.');
+      _boardLists = {}; renderBoardSection();
       openBoardTopic(id);
       return;
     }
@@ -46205,7 +46525,7 @@
   async function _boardUnblock(userId, btn) {
     if (btn) btn.disabled = true;
     let res; try { res = await Auth.boardUnblock(userId); } catch (_) { res = null; }
-    if (res && res.ok) { _boardHiddenAuthors.delete(userId); _boardCache = null; _boardTagged = null; _boardToast('Unblocked.'); }
+    if (res && res.ok) { _boardHiddenAuthors.delete(userId); _boardLists = {}; _boardToast('Unblocked.'); }
     else _boardToast(_boardErrMsg(res));
     renderBoardBlocksSettings();
   }
@@ -46250,9 +46570,17 @@
       if ((el = t.closest('[data-board-new]'))) { e.preventDefault(); openBoardComposer('topic'); return; }
       if ((el = t.closest('[data-board-viewall]'))) { e.preventDefault(); openBoardList(); return; }
       if ((el = t.closest('[data-board-tag]'))) { e.preventDefault(); _boardSetTag(el.getAttribute('data-board-tag') || ''); return; }
+      if ((el = t.closest('[data-board-vote]'))) { e.preventDefault(); e.stopPropagation(); _boardVote(el); return; }   // W913
+      if ((el = t.closest('[data-board-sort]'))) { e.preventDefault(); _boardSetSort(el.getAttribute('data-board-sort') || 'latest'); return; }   // W913
+      if ((el = t.closest('[data-cm-pane]'))) { e.preventDefault(); _cmSetPane(el.getAttribute('data-cm-pane')); return; }   // W913
       if ((el = t.closest('[data-board-pick]'))) {
         e.preventDefault();
-        el.parentNode.querySelectorAll('[data-board-pick]').forEach(function (b) { b.setAttribute('data-active', b === el ? 'true' : 'false'); });
+        el.parentNode.querySelectorAll('[data-board-pick]').forEach(function (b) { const on = b === el; b.setAttribute('data-active', on ? 'true' : 'false'); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+        // W913 — the BUG card swaps in the report template as the placeholder.
+        try {
+          const f = el.closest('form'); const ta = f && f.querySelector('textarea[name="body"]');
+          if (ta && !ta.value) ta.placeholder = el.getAttribute('data-board-pick') === 'bug' ? 'Device · app version\nWhat happened\nSteps to reproduce' : 'Say more…';
+        } catch (_) {}
         return;
       }
       if ((el = t.closest('[data-board-more]'))) { e.preventDefault(); _boardLoadMore(el); return; }
@@ -46283,7 +46611,7 @@
       if ((el = t.closest('[data-board-mod]'))) {
         e.preventDefault();
         const a = el.getAttribute('data-board-mod');
-        if (a === 'hide' || _boardArm(el, 'Tap again')) _boardAct(a, el.closest('[data-board-post]'));
+        if (a === 'hide' || a === 'pin' || _boardArm(el, 'Tap again')) _boardAct(a, el.closest('[data-board-post]'));
         return;
       }
       if ((el = t.closest('[data-board-unblock]'))) { e.preventDefault(); _boardUnblock(el.getAttribute('data-board-unblock'), el); return; }
@@ -46305,12 +46633,27 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _boardSheet) _boardSheetClose(); });
   }
   try { _boardWire(); } catch (_) {}
+  // ── W913 — BOARD | FRIENDS sub-nav (two panes on the Community tab) ─────
+  let _cmPane = 'board';
+  function _cmSetPane(name) {
+    name = name === 'friends' ? 'friends' : 'board';
+    const changed = name !== _cmPane;
+    _cmPane = name;
+    const nav = document.getElementById('cm-subnav');
+    if (nav) {
+      nav.setAttribute('data-pane', name);
+      nav.querySelectorAll('[data-cm-pane]').forEach(function (b) { const on = b.getAttribute('data-cm-pane') === name; b.setAttribute('data-active', on ? 'true' : 'false'); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    }
+    ['board', 'friends'].forEach(function (k) { const el = document.getElementById('cm-pane-' + k); if (el) el.setAttribute('data-active', k === name ? 'true' : 'false'); });
+    if (changed) { try { _hapticTick('LIGHT'); } catch (_) {} }
+    if (name === 'friends') { try { renderGuildActivity(); } catch (_) {} try { renderFriendsSection(); } catch (_) {} }
+  }
   // QA hooks
   try {
     window.__board = {
       render: renderBoardSection, me: function () { return _boardMe; },
       rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic, list: openBoardList,
-      settings: renderBoardBlocksSettings,
+      settings: renderBoardBlocksSettings, pane: _cmSetPane, sort: _boardSetSort, tag: _boardSetTag,
     };
   } catch (_) {}
 
