@@ -16,6 +16,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
 interface ProfileRow {
+  board_role?: string | null;   // W912
   alias: string;
   rank_label: string | null;
   rank_tier: string | null;
@@ -77,6 +78,7 @@ export async function handlePublicProfileGet(
               WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_repeat,
             (SELECT best_value FROM user_accolades
               WHERE user_id = u.id AND accolade_type = 'step_100k_club' LIMIT 1) AS club_100k_best,
+            bm.role AS board_role,
             pr.elo AS arena_elo,
             pr.placement_games AS arena_pg,
             (SELECT COUNT(*) FROM pvp_ratings r2
@@ -84,6 +86,7 @@ export async function handlePublicProfileGet(
      FROM users u
      LEFT JOIN public_profile_summary pps ON pps.user_id = u.id
      LEFT JOIN pvp_ratings pr ON pr.user_id = u.id
+     LEFT JOIN board_moderators bm ON bm.user_id = u.id
      WHERE LOWER(u.alias) = LOWER(?)
      LIMIT 1`,
   )
@@ -119,6 +122,8 @@ export async function handlePublicProfileGet(
     avatarId: row.avatar_id,                       // null → client falls back to class default
     cardBg: row.card_bg ?? null,   // W706 — member card background
     founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
+    // W912 — the developer / moderator crown (board_moderators role), shown on the card.
+    boardRole: row.board_role === 'owner' || row.board_role === 'mod' ? row.board_role : null,
     arenaTitle: row.arena_title,
     bossesSlain: row.bosses_slain_total ?? 0,
     ultraRareDrops: row.ultra_rare_drops_total ?? 0,

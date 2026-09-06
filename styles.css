@@ -35267,3 +35267,10 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-sheet--list .board-body { margin-bottom: 10px; }
 .board-sheet-newbtn { margin-left: auto; }
 .board-gate-note { margin: 0 0 10px; font-family: var(--b-mono); font-size: 9.5px; letter-spacing: 0.6px; color: var(--b-ink2); }
+
+/* W912 — the developer / moderator crown (inline pixel SVG). */
+.hunter-crown { display: inline-flex; align-items: center; line-height: 0; vertical-align: middle; }
+.hunter-crown svg { width: 16px; height: 12px; filter: drop-shadow(0 0 4px rgba(246,223,28,0.45)); }
+.board-crown { margin-left: 1px; }
+.pc-crown { margin-top: 9px; }
+.pc-crown svg { width: 26px; height: 20px; filter: drop-shadow(0 0 8px rgba(246,223,28,0.5)); }

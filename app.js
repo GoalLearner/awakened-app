@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w911'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w912'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45700,6 +45700,39 @@
   }
   function _boardToast(msg) { try { showHabitToast(msg); } catch (_) {} }
 
+  // ── W912 — THE CROWN. The owner ("I want a crown for me and Rendell to signify
+  // that we are the developers / moderators") gets the pixel crown from his own
+  // sketch: gold with an M, drawn as crisp rects so it stays sharp at 12px and
+  // ships inline (no asset, no precache gate). One crown for owner and moderator;
+  // the title tooltip tells them apart.
+  const _CROWN_GRID = [
+    '.....LL.....',
+    '.L...GG...D.',
+    '.GG.GGGG.GD.',
+    '.GGGGGGGGGD.',
+    '.GGKGGGKGGD.',
+    '.GGKKGKKGGD.',
+    '.GGKGKGKGGD.',
+    '.GGKGGGKGGD.',
+    '.DDDDDDDDDD.',
+  ];
+  const _CROWN_COL = { L: '#fff7a8', G: '#f6df1c', D: '#c89a12', K: '#151515' };
+  let _crownSvgCache = '';
+  function _hunterCrownHtml(role, cls) {
+    if (role !== 'owner' && role !== 'mod') return '';
+    if (!_crownSvgCache) {
+      let rects = '';
+      _CROWN_GRID.forEach(function (row, y) {
+        for (let x = 0; x < row.length; x++) {
+          const c = row.charAt(x); if (c === '.') continue;
+          rects += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + _CROWN_COL[c] + '"/>';
+        }
+      });
+      _crownSvgCache = '<svg viewBox="0 0 12 9" shape-rendering="crispEdges" aria-hidden="true" focusable="false">' + rects + '</svg>';
+    }
+    return '<span class="hunter-crown' + (cls ? ' ' + cls : '') + '" title="' + (role === 'owner' ? 'Developer' : 'Moderator') + '">' + _crownSvgCache + '</span>';
+  }
+
   // ── author + rows ───────────────────────────────────────────────────────
   function _boardAuthorHtml(a) {
     a = a || {};
@@ -45707,8 +45740,8 @@
     const col = _boardColor(tier);
     const alias = String(a.alias || 'Hunter');
     const initial = (alias.trim().charAt(0) || '?').toUpperCase();
-    const role = a.mod_role === 'owner' ? '<span class="board-role board-role--dev">DEV</span>'
-      : (a.is_mod ? '<span class="board-role board-role--mod">MOD</span>' : '');
+    // W912 — the crown replaces the DEV / MOD text chips.
+    const role = _hunterCrownHtml(a.mod_role === 'owner' ? 'owner' : (a.is_mod ? 'mod' : null), 'board-crown');
     const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
     return '<span class="board-av" style="--bc:' + col + '">' + esc(initial) + '</span>' +
       '<span class="board-who">' +
@@ -49971,6 +50004,10 @@
       : '';
     // W656 \u2014 free Founder marker on the hunter card (own + any viewed profile;
     // founderSeq is published into public_profile_summary and read cross-user).
+    // W912 — the developer / moderator crown (server boardRole; your own card reads
+    // the board's live role since the local profile has no server row).
+    const _pcRole = data.boardRole || (isOwn && (typeof _boardMe !== 'undefined') && _boardMe ? _boardMe.role : null);
+    const crownBadge = (typeof _hunterCrownHtml === 'function') ? _hunterCrownHtml(_pcRole, 'pc-crown') : '';
     const _pcFounderSeq = (data.founderSeq | 0);
     const founderBadge = _pcFounderSeq > 0
       ? '<span class="pc-founder" title="Founder #' + _pcFounderSeq + '">\u2726\u00A0FOUNDER #' + _pcFounderSeq + '</span>'
@@ -49999,7 +50036,7 @@
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>DEFAULT SKIN</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + clubBadge + pcPrestige + founderBadge + '</div></div>' +
+      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div></div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
