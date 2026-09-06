@@ -1880,8 +1880,9 @@ test.describe('R · The Ledger sheet (W917)', () => {
     await expect(page.locator('#tab-history')).toHaveCount(0);
     await expect(page.locator('.tab-bar .tab-btn')).toHaveCount(5);
     await page.click('#tab-habits');
-    // A fresh hunter's ledger is still locked (W785) — the button is in the DOM, hidden.
-    await expect(page.locator('[data-ledger-open]')).toHaveCount(1);
+    // A brand-new hunter has no vows yet, so the Today's Vows header (and its LEDGER
+    // button) is not on the page; the sheet is reached through the QA hook here. The
+    // W785 unlock rule still gates it, so the key is stamped first.
     await page.evaluate(() => { localStorage.setItem('hb_history_unlocked_v1', '1'); (window as any).__ledger.open(); });
     const sheet = page.locator('.ledger-sheet');
     await expect(sheet).toBeVisible();
