@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w918'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w919'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6627,24 +6627,19 @@
   }
 
   // ── the Habits-tab card ──
+  // W919 (handoff 29) — the Habits-tab card is the compact row: emblem, boss,
+  // hunters this week, % down. One tap opens the full sheet.
   function _worldgateCardHtml() {
     const c = _wgCache();
     if (!c) return '';
     const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
-    const hunters = Number(c.hunters) || 0; const my = Number(c.my) || 0;
-    const avs = (Array.isArray(c.top) ? c.top : []).slice(0, 4).map(function (t, i) { return '<span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(t.alias)) + '</span>'; }).join('') +
-      (hunters > 4 ? '<span class="wg2-av wg2-av--more">+' + _wgFmt(hunters - 4) + '</span>' : '');
-    return '<div class="wg2-seclabel">The Worldgate<span class="wg2-ln"></span><span class="wg2-live' + (slain ? ' wg2-live--down' : '') + '"><i></i>' + (slain ? 'DOWN' : 'LIVE') + '</span></div>' +
-      '<div class="wg2' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
-        '<div class="wg2-top"><div class="wg2-mon" data-wg-mon>' + _WG_EMBLEM + '</div>' +
-          '<div class="wg2-title"><div class="wg2-name">' + esc(name) + '</div><div class="wg2-sub">' + (slain ? '<b>DOWN</b> · THE WHOLE SERVER BROKE IT' : '<b>' + _wgFmt(hunters) + '</b> HUNTERS THIS WEEK') + '</div></div>' +
-          '<div class="wg2-pct"><div class="wg2-pct-n">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</div><div class="wg2-pct-l">HP DOWN</div></div>' +
-        '</div>' +
-        '<div class="wg2-hp">' + _wgBarHtml(c, false) + '<div class="wg2-nums"><span><b>' + _wgFmt(c.pool) + '</b> struck</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
-        _wgLegendHtml(c) +
-        '<div class="wg2-foot"><div class="wg2-avs">' + avs + '</div><div class="wg2-foot-t"><b>Every step you walk is a strike.</b><br>' +
-          (my > 0 ? 'Your ' + _wgFmt(my) + ' strikes are in the bar — in gold.' : 'Walk today and your strikes join the bar — in gold.') + '</div><span class="wg2-chev">›</span></div>' +
-      '</div>';
+    const hunters = Number(c.hunters) || 0;
+    return '<div class="wg2-mini' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
+      '<span class="wg2-mon wg2-mon--mini" data-wg-mon>' + _WG_EMBLEM + '</span>' +
+      '<div class="wg2-mini-t"><div class="wg2-mini-n">' + esc(name) + '</div>' +
+        '<div class="wg2-mini-s">' + (slain ? 'WORLDGATE · DOWN · THE SERVER BROKE IT' : 'WORLDGATE · ' + _wgFmt(hunters) + (hunters === 1 ? ' HUNTER' : ' HUNTERS') + ' THIS WEEK') + '</div></div>' +
+      '<span class="wg2-mini-p">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</span>' +
+    '</div>';
   }
   // W915 — the card leads the Habits tab; hidden until the first sync lands.
   function renderWorldgateCard() {
@@ -31131,7 +31126,7 @@
       // v3 Phase 1p — "Achieved" relabeled "Milestones" (user-facing only;
       // internal mode key stays 'achievements' so storage / hg-ach-* CSS /
       // delegated handlers don't have to follow).
-      btn.textContent = mode === 'achievements' ? 'Milestones' : mode.charAt(0).toUpperCase() + mode.slice(1);
+      btn.textContent = ({ weekly: 'WEEK', monthly: 'MONTH', yearly: 'YEAR', achievements: 'MARKS' })[mode] || mode;   // W919 — handoff 29 labels
       btn.addEventListener('click', () => { histViewMode = mode; renderHistory(); });
       tabs.appendChild(btn);
     });
@@ -31281,9 +31276,14 @@
     // Tally stat sessions while we walk the rows — feeds TrainedThisWeek.
     const byStat = {};
     const byDay  = [0,0,0,0,0,0,0];
+    const schedByDay = [0,0,0,0,0,0,0];   // W919 — per-day scheduled count for the summary sentence
     let totalDone = 0, totalSched = 0;
 
-    activeHabits.forEach(habit => {
+    // W919 — rows grouped by pack (MORNING / LOCKED-IN / your own) when there is more than one group.
+    const _groups = _hgGroupHabits(activeHabits);
+    _groups.forEach(function (grp) {
+    if (_groups.length > 1) { const gh = document.createElement('div'); gh.className = 'hg-group'; gh.textContent = grp.name; wrap.appendChild(gh); }
+    grp.habits.forEach(habit => {
       const diff       = habit.difficulty || 'easy';
       const statId     = getHabitPrimaryStat(habit);
       const statColor  = getHabitStatColor(habit);
@@ -31318,6 +31318,8 @@
         '<span class="hg-label-accent" style="background:' + statColor + ';' +
           'box-shadow:0 0 6px ' + colorWithAlpha(statColor, 0.45) + ';"></span>' +
         '<span class="hg-label-name hg-label-name--wrap">' + esc(habitBaseName(habit)) + '</span>' +
+        // W919 — "N/M THIS WEEK": sealed over scheduled, past days + today.
+        '<span class="hg-label-sub">' + schedPast.filter(ds => (completions[ds] || []).includes(habit.id)).length + '/' + schedPast.length + ' THIS WEEK</span>' +
         // Auto-verified habits keep their single tiny blue indicator dot.
         (isAutoHabit ? '<span class="hg-label-auto" role="img" aria-label="Auto-verified via Apple Health" title="Auto-verified via Apple Health">AUTO</span>' : '');
       row.appendChild(label);
@@ -31332,7 +31334,7 @@
         const isAutoVer = isDone && typeof AUTO_VERIFY !== 'undefined' &&
                           AUTO_VERIFY.isAutoVerifiedOnDate(habit.id, ds);
 
-        if (isSched && !isFuture) totalSched++;
+        if (isSched && !isFuture) { totalSched++; schedByDay[i]++; }
         if (isDone && !isFuture)  totalDone++;
 
         if (isDone) {
@@ -31376,15 +31378,17 @@
       row.appendChild(badgeCol);
       wrap.appendChild(row);
     });
+    });
 
     // ── Legend strip ──────────────────────────────────────
     const legend = document.createElement('div');
     legend.className = 'hg-legend';
     legend.innerHTML =
-      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--done"></span>Trained</span>' +
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--done"></span>Sealed</span>' +
       '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--missed"><span class="hg-cell-miss-dot"></span></span>Missed</span>' +
       '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--pending"></span>Today</span>' +
-      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--off"></span>Off-day</span>';
+      '<span class="hg-legend-item"><span class="hg-legend-cell hg-legend-cell--off"></span>Off-day</span>' +
+      '<span class="hg-legend-item"><span class="hg-legend-dot-auto" aria-hidden="true"></span>Auto-sync</span>';
     wrap.appendChild(legend);
 
     el.appendChild(wrap);
@@ -31415,120 +31419,44 @@
     stats.dominant = sorted[0] || null;
     stats.second   = sorted[1] || null;
 
-    hgBuildTrainedThisWeek(el, stats);
-    hgBuildWeeklyReport(el, stats);
+    // W919 (handoff 29) — one summary card above the grid replaces the Trained
+    // This Week strip and the Weekly Report: sealed / scheduled, the strongest
+    // day, and a seven-bar spark of the week.
+    el.insertBefore(_hgSummaryCard(stats, schedByDay, byDay, dates, isCurr), wrap);
   }
-
-  // ── TRAINED THIS WEEK — stat-distribution strip ─────────
-  function hgBuildTrainedThisWeek(parent, stats) {
-    const STAT_ORDER = ['STR','VIT','INT','FOCUS','WILL','WLT'];
-    const maxCount = STAT_ORDER.reduce((m, s) => Math.max(m, stats.byStat[s] || 0), 0);
-
-    const card = document.createElement('div');
-    card.className = 'hg-trained';
-
-    const head = document.createElement('div');
-    head.className = 'hg-trained-head';
-    head.innerHTML =
-      '<span class="hg-trained-title">Trained This Week</span>' +
-      '<span class="hg-trained-meta">' + stats.totalDone + ' session' + (stats.totalDone === 1 ? '' : 's') + '</span>';
-    card.appendChild(head);
-
-    const bars = document.createElement('div');
-    bars.className = 'hg-trained-bars';
-    STAT_ORDER.forEach(sid => {
-      const st = STATS.find(s => s.id === sid);
-      const color = st ? st.color : '#8b5cf6';
-      const count = stats.byStat[sid] || 0;
-      const ratio = maxCount ? count / maxCount : 0;
-      const heightPct = count > 0 ? Math.max(10, Math.round(ratio * 100)) : 0;
-      const fillStyle = count > 0
-        ? 'height:' + heightPct + '%;background:linear-gradient(180deg,' +
-            colorWithAlpha(color, 0.95) + ' 0%,' + color + ' 60%,' +
-            colorWithAlpha(color, 0.7) + ' 100%);' +
-          'box-shadow:0 0 6px ' + colorWithAlpha(color, 0.4) + ';opacity:1;'
-        : 'height:0;opacity:0.25;';
-      const col = document.createElement('div');
-      col.className = 'hg-trained-col' + (count > 0 ? '' : ' hg-trained-col--empty');
-      col.innerHTML =
-        '<div class="hg-trained-bar"><div class="hg-trained-fill" style="' + fillStyle + '"></div></div>' +
-        '<div class="hg-trained-label">' + sid + '</div>' +
-        '<div class="hg-trained-count" style="' + (count > 0 ? 'color:' + color + ';' : '') + '">' + count + '</div>';
-      bars.appendChild(col);
-    });
-    card.appendChild(bars);
-
-    // Insight line — only show if we actually have data to talk about.
-    if (stats.dominant && stats.dominant[1] > 0) {
-      const insight = document.createElement('div');
-      insight.className = 'hg-trained-insight';
-      const d  = stats.dominant;
-      const dc = (STATS.find(s => s.id === d[0]) || {}).color || '#f59e0b';
-      let html = 'You leaned <span class="hg-trained-tag" style="color:' + dc +
-                 ';text-shadow:0 0 8px ' + colorWithAlpha(dc, 0.45) + ';">' + d[0] + '</span>';
-      if (stats.second && stats.second[1] > 0) {
-        const sc2 = (STATS.find(s => s.id === stats.second[0]) || {}).color || '#f59e0b';
-        html += ' + <span class="hg-trained-tag" style="color:' + sc2 +
-                ';text-shadow:0 0 8px ' + colorWithAlpha(sc2, 0.45) + ';">' + stats.second[0] + '</span>';
-      }
-      html += ' this week.';
-      insight.innerHTML = html;
-      card.appendChild(insight);
-    }
-
-    parent.appendChild(card);
+  function _hgGroupHabits(list) {
+    const groups = []; const seen = new Set();
+    try {
+      (PACKS || []).forEach(function (p) {
+        const hs = list.filter(function (h) { return !seen.has(h.id) && isHabitInPack(h, p.id); });
+        if (hs.length) { hs.forEach(function (h) { seen.add(h.id); }); groups.push({ name: String(p.name || p.id), habits: hs }); }
+      });
+    } catch (_) {}
+    const rest = list.filter(function (h) { return !seen.has(h.id); });
+    if (rest.length) groups.push({ name: groups.length ? 'Your own' : '', habits: rest });
+    return groups.length ? groups : [{ name: '', habits: list }];
   }
-
-  // ── WEEKLY REPORT — premium summary card ─────────────────
-  function hgBuildWeeklyReport(parent, stats) {
-    const card = document.createElement('div');
-    card.className = 'hg-report';
-
-    const head = document.createElement('div');
-    head.className = 'hg-report-head';
-    head.innerHTML =
-      '<span class="hg-report-title-row">' +
-        '<svg class="hg-report-star" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">' +
-          '<path d="M7 0L8.5 5.5L14 7L8.5 8.5L7 14L5.5 8.5L0 7L5.5 5.5z" fill="currentColor"/>' +
-        '</svg>' +
-        '<span class="hg-report-title">Weekly Report</span>' +
-      '</span>' +
-      '<span class="hg-report-range">' + esc(stats.range) + '</span>';
-    card.appendChild(head);
-
-    const body = document.createElement('div');
-    body.className = 'hg-report-body';
-    body.innerHTML =
-      '<div class="hg-report-hero">' +
-        '<div class="hg-report-pct">' + stats.completionPct + '<span class="hg-report-pct-sym">%</span></div>' +
-        '<div class="hg-report-pct-lbl">Completion</div>' +
-      '</div>' +
-      '<div class="hg-report-rows">' +
-        '<div class="hg-report-row"><span class="hg-report-row-lbl">Best Day</span><span class="hg-report-row-val hg-report-row-val--gold">' + esc(stats.bestDayFull) + '</span></div>' +
-        '<div class="hg-report-row"><span class="hg-report-row-lbl">Total Done</span><span class="hg-report-row-val">' + stats.totalDone + '</span></div>' +
-        '<div class="hg-report-row"><span class="hg-report-row-lbl">Best Streak</span><span class="hg-report-row-val">' + stats.bestStreak + 'd</span></div>' +
-      '</div>';
-    card.appendChild(body);
-
-    // Dominant-stat callout — only render when there's a real winner.
-    if (stats.dominant && stats.dominant[1] > 0) {
-      const d  = stats.dominant;
-      const dc = (STATS.find(s => s.id === d[0]) || {}).color || '#f59e0b';
-      const callout = document.createElement('div');
-      callout.className = 'hg-report-dom';
-      callout.style.cssText =
-        'background:linear-gradient(90deg,' + colorWithAlpha(dc, 0.12) + ' 0%,transparent 100%);' +
-        'border:0.5px solid ' + colorWithAlpha(dc, 0.35) + ';' +
-        'border-left:2px solid ' + dc + ';';
-      callout.innerHTML =
-        '<span class="hg-report-dom-lbl">Dominant</span>' +
-        '<span class="hg-report-dom-stat" style="color:' + dc +
-          ';text-shadow:0 0 10px ' + colorWithAlpha(dc, 0.45) + ';">' + d[0] + '</span>' +
-        '<span class="hg-report-dom-count">' + d[1] + ' session' + (d[1] === 1 ? '' : 's') + '</span>';
-      card.appendChild(callout);
+  function _hgSummaryCard(stats, schedByDay, byDay, dates, isCurr) {
+    const card = document.createElement('div'); card.className = 'hg-summary';
+    const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];   // Monday-first, like the grid
+    const max = Math.max(1, Math.max.apply(null, byDay));
+    const todayIdx = dates.indexOf(today);
+    let bi = 0; for (let i = 1; i < 7; i++) if (byDay[i] > byDay[bi]) bi = i;
+    let sentence;
+    if (stats.totalDone === 0) {
+      sentence = 'Nothing sealed yet this week.' + (isCurr && todayIdx >= 0 ? ' ' + DAY_FULL[todayIdx] + ' is still open.' : '');
+    } else {
+      sentence = '<b>' + DAY_FULL[bi] + '</b> was your strongest day — ' + byDay[bi] + ' of ' + Math.max(byDay[bi], schedByDay[bi] || 0) + '.' +
+        (isCurr && todayIdx >= 0 ? ' ' + DAY_FULL[todayIdx] + ' closes tonight.' : '');
     }
-
-    parent.appendChild(card);
+    const spark = byDay.map(function (v, i) {
+      const cls = (isCurr && i === todayIdx) ? 't' : (v === 0 ? 'f' : '');
+      return '<i class="' + cls + '" style="height:' + Math.max(3, Math.round(v / max * 100)) + '%"></i>';
+    }).join('');
+    card.innerHTML =
+      '<div><div class="hg-summary-big">' + stats.totalDone + '<small>/ ' + stats.totalSched + '</small></div></div>' +
+      '<div><div class="hg-summary-k">VOWS SEALED THIS WEEK</div><div class="hg-summary-d">' + sentence + '</div><div class="hg-spark">' + spark + '</div></div>';
+    return card;
   }
 
   // ── MONTHLY VIEW — per-habit mini calendar cards ─────────
@@ -32510,7 +32438,7 @@
     checkStreakDanger();
     checkMorningRoutineNudge();
     if (currentTab === 'profile')      renderProfile();
-    if (_ledgerOpen)                   renderHistory();   // W917 — the Ledger sheet, if open
+    if (_habitsView === 'ledger')      renderHistory();   // W919 — the Ledger view, if showing
   }
 
   // v3 Phase 1z.214 — short stable fingerprint for the visible
@@ -34371,25 +34299,18 @@
     const total = arr.length;
     const sealed = arr.reduce((n, h) => n + (isChecked(h.id) ? 1 : 0), 0);
     const pct = total > 0 ? Math.round((sealed / total) * 100) : 0;
-    // W917 — the LEDGER opens the history sheet (the History tab is gone). Hidden
-    // until the ledger unlocks, exactly the W785 rule the tab followed.
-    const _ledgerBtn =
-      '<button class="vows-ledger-btn' + (_historyUnlocked() ? '' : ' vows-ledger-btn--locked') + '" type="button" data-ledger-open aria-label="Open the Ledger">' +
-        '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
-          '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4"/>' +
-          '<path d="M3 8h14M7 2.5v3M13 2.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
-          '<path d="M6.5 11.5h2M11.5 11.5h2M6.5 14.5h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.6"/>' +
-        '</svg>' +
-        '<span>Ledger</span>' +
-      '</button>';
+    // W919 (handoff 29) — the header reads for the view: TODAY'S VOWS / Seal your
+    // vows, or WEEK N · THE LEDGER / Your grind, written. The TODAY | LEDGER
+    // segmented control sits under it, hidden until the ledger unlocks (W785).
+    const _ledgerMode = _habitsView === 'ledger';
+    hdr.classList.toggle('vows-header--ledger', _ledgerMode);
     hdr.innerHTML =
       '<div class="vows-header-row">' +
         '<div class="vows-header-titles">' +
-          '<div class="vows-header-kicker">TODAY’S VOWS</div>' +
-          '<div class="vows-header-title">Seal your vows</div>' +
+          '<div class="vows-header-kicker" data-vows-kicker>' + (_ledgerMode ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : 'TODAY’S VOWS') + '</div>' +
+          '<div class="vows-header-title" data-vows-title>' + (_ledgerMode ? 'Your grind, written' : 'Seal your vows') + '</div>' +
         '</div>' +
         '<div class="vows-header-actions">' +
-          _ledgerBtn +
           '<button class="vows-manage-btn" type="button" aria-label="Manage Vows">' +
             '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
               '<path d="M10 3.2 16.8 10 10 16.8 3.2 10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity="0.5"/>' +
@@ -34399,6 +34320,7 @@
           '</button>' +
         '</div>' +
       '</div>' +
+      _vowsSegHtml() +
       '<div class="vows-header-bar"><div id="vows-header-fill" class="vows-header-fill" style="width:' + pct + '%"></div></div>' +
       // W515 — compound-reward caption placeholder (filled by _renderVowsCompoundReward;
       // starts hidden so there's no empty gap before the routine projection paints).
@@ -34407,6 +34329,7 @@
     // this innerHTML is rebuilt; the prior button (and its listener) is discarded.
     var _mvBtn = hdr.querySelector('.vows-manage-btn');
     if (_mvBtn) _mvBtn.addEventListener('click', function () { try { openManageVows(); } catch (_) {} });
+    _applyHabitsView();   // W919 — a list rebuild must not drop the hunter out of the Ledger
   }
 
   // v3 Phase 1z.284 W192 — One-time List View introduction hint.
@@ -37800,12 +37723,12 @@
     try { if (unlockedAchievements && unlockedAchievements.size > 0) return true; } catch (_) {}
     return _historyActiveDays() >= HISTORY_UNLOCK_DAYS;
   }
-  // W917 — show/hide the LEDGER button + fire the reveal nudge exactly once. Safe to call often.
+  // W917/W919 — show/hide the LEDGER segment + fire the reveal nudge exactly once. Safe to call often.
   function _syncHistoryTab(opts) {
     try {
       const unlocked = _historyUnlocked();
-      document.querySelectorAll('[data-ledger-open]').forEach(function (b) { b.classList.toggle('vows-ledger-btn--locked', !unlocked); });
-      if (!unlocked) { if (_ledgerSheet) closeLedgerSheet(); return; }
+      document.querySelectorAll('[data-vows-seg]').forEach(function (sg) { sg.classList.toggle('vows-seg--locked', !unlocked); });
+      if (!unlocked) { if (_habitsView === 'ledger') _setHabitsView('today'); return; }
       let firstTime = false;
       try {
         if (localStorage.getItem(_HIST_UNLOCK_KEY) !== '1') {
@@ -37828,51 +37751,79 @@
       }
     } catch (e) { _logSwallow('history_tab:sync', e); }
   }
-  // ── W917 — THE LEDGER sheet. History left the tab bar (owner, 2026-09-06: "it
-  // shouldn't be its own tab"); the same Weekly / Monthly / Yearly / Milestones
-  // screen now slides up from the LEDGER button beside Manage. The renderer is
-  // untouched: #history-content is lifted into the sheet and returned on close.
-  let _ledgerSheet = null;
-  let _ledgerOpen = false;
-  function openLedgerSheet() {
-    if (!_historyUnlocked()) { try { showHabitToast('Your ledger opens after ' + HISTORY_UNLOCK_DAYS + ' active days.'); } catch (_) {} return; }
-    if (_ledgerSheet) return;
-    const content = document.getElementById('history-content'); if (!content) return;
-    const el = document.createElement('div');
-    el.className = 'board-scope board-sheet-wrap ledger-sheet';
-    el.innerHTML =
-      '<div class="board-scrim" data-ledger-close></div>' +
-      '<section class="board-sheet" role="dialog" aria-modal="true" aria-label="The Ledger">' +
-        '<header class="board-sheet-head">' +
-          '<button type="button" class="board-back" data-ledger-close aria-label="Close">‹</button>' +
-          '<span class="board-sheet-title">The Ledger</span>' +
-          '<span class="board-sheet-spacer"></span>' +
-        '</header>' +
-        '<div class="board-sheet-body" data-ledger-body></div>' +
-      '</section>';
-    document.body.appendChild(el);
-    el.querySelector('[data-ledger-body]').appendChild(content);
-    _ledgerSheet = el; _ledgerOpen = true;
-    try { renderHistory(); } catch (e) { _logSwallow('ledger:render', e); }
-    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
-    try { _hapticTick('LIGHT'); } catch (_) {}
-    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ledger_opened', String(histViewMode || '')); } catch (_) {}
+  // ── W919 — TODAY | LEDGER (Claude Design handoff 29). History left the tab bar
+  // in W917; now the ledger is a VIEW of the Habits tab, not a sheet: the same
+  // Weekly / Monthly / Yearly / Milestones screen renders in place of the vow
+  // list under the same header and the same Manage. #history-content is lifted
+  // into #ledger-view once; the renderer is untouched.
+  let _habitsView = 'today';   // 'today' | 'ledger' (session only)
+  function _hgWeekNum(ds) {
+    try {
+      const d = new Date(ds + 'T12:00:00');
+      const start = new Date(d.getFullYear(), 0, 1);
+      const dayOfYear = Math.floor((d - start) / 86400000) + 1;
+      return Math.ceil((dayOfYear + ((start.getDay() + 6) % 7)) / 7);
+    } catch (_) { return 0; }
   }
-  function closeLedgerSheet() {
-    const el = _ledgerSheet; if (!el) return;
-    _ledgerSheet = null; _ledgerOpen = false;
-    const content = el.querySelector('#history-content'); const home = document.getElementById('history-panel');
-    if (content && home) home.appendChild(content);
-    try { el.classList.remove('open'); } catch (_) {}
-    setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+  function _vowsSegHtml() {
+    const dow = (new Date().getDay() + 6) % 7;          // Monday = 0
+    const ringLen = 28.3; const off = (ringLen * (1 - (dow + 1) / 7)).toFixed(1);
+    const locked = !_historyUnlocked();
+    return '<div class="vows-seg' + (locked ? ' vows-seg--locked' : '') + '" data-vows-seg data-view="' + _habitsView + '" role="tablist" aria-label="Today or the Ledger">' +
+      '<button type="button" class="vows-sg" role="tab" data-vows-view="today" aria-selected="' + (_habitsView === 'today' ? 'true' : 'false') + '">TODAY</button>' +
+      '<button type="button" class="vows-sg" role="tab" data-vows-view="ledger" aria-selected="' + (_habitsView === 'ledger' ? 'true' : 'false') + '">LEDGER ' +
+        '<span class="vows-sg-wk"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-opacity=".25" stroke-width="2" fill="none"/><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="' + ringLen + '" stroke-dashoffset="' + off + '" stroke-linecap="round"/></svg>WK ' + _hgWeekNum(today) + '</span>' +
+      '</button>' +
+    '</div>';
+  }
+  function _ensureLedgerView() {
+    let host = document.getElementById('ledger-view');
+    if (host) return host;
+    const list = document.getElementById('habit-list'); if (!list || !list.parentNode) return null;
+    host = document.createElement('div'); host.id = 'ledger-view'; host.className = 'ledger-view hidden';
+    list.parentNode.insertBefore(host, list);
+    const content = document.getElementById('history-content');
+    if (content) host.appendChild(content);
+    return host;
+  }
+  function _applyHabitsView() {
+    const ledger = _habitsView === 'ledger';
+    const hdr = document.getElementById('vows-header');
+    if (hdr) {
+      hdr.classList.toggle('vows-header--ledger', ledger);
+      const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = ledger ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : 'TODAY’S VOWS';
+      const t = hdr.querySelector('[data-vows-title]'); if (t) t.textContent = ledger ? 'Your grind, written' : 'Seal your vows';
+      hdr.querySelectorAll('[data-vows-seg]').forEach(function (sg) { sg.setAttribute('data-view', _habitsView); });
+      hdr.querySelectorAll('[data-vows-view]').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-vows-view') === _habitsView ? 'true' : 'false'); });
+    }
+    ['habit-list', 'empty-state', 'fa-program-guide', 'listview-hint'].forEach(function (id) {
+      const el = document.getElementById(id); if (!el) return;
+      if (ledger) { if (!el.classList.contains('hidden')) { el.setAttribute('data-ledger-hid', '1'); el.classList.add('hidden'); } }
+      else if (el.getAttribute('data-ledger-hid') === '1') { el.removeAttribute('data-ledger-hid'); el.classList.remove('hidden'); }
+    });
+    const host = ledger ? _ensureLedgerView() : document.getElementById('ledger-view');
+    if (host) host.classList.toggle('hidden', !ledger);
+    const footer = document.getElementById('main-footer');
+    if (footer && typeof currentTab !== 'undefined' && currentTab === 'habits') footer.style.display = ledger ? 'none' : '';
+  }
+  function _setHabitsView(view) {
+    view = view === 'ledger' ? 'ledger' : 'today';
+    if (view === 'ledger' && !_historyUnlocked()) { try { showHabitToast('Your ledger opens after ' + HISTORY_UNLOCK_DAYS + ' active days.'); } catch (_) {} return; }
+    const changed = view !== _habitsView;
+    _habitsView = view;
+    _applyHabitsView();
+    if (view === 'ledger') {
+      try { renderHistory(); } catch (e) { _logSwallow('ledger:render', e); }
+      if (changed) { try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ledger_opened', String(histViewMode || '')); } catch (_) {} }
+    }
+    if (changed) { try { _hapticTick('LIGHT'); } catch (_) {} }
   }
   document.addEventListener('click', function (e) {
     const t = e.target; if (!t || !t.closest) return;
-    if (t.closest('[data-ledger-open]')) { e.preventDefault(); openLedgerSheet(); return; }
-    if (t.closest('[data-ledger-close]')) { e.preventDefault(); closeLedgerSheet(); }
+    const b = t.closest('[data-vows-view]');
+    if (b) { e.preventDefault(); _setHabitsView(b.getAttribute('data-vows-view')); }
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _ledgerSheet) closeLedgerSheet(); });
-  try { window.__ledger = { open: openLedgerSheet, close: closeLedgerSheet }; } catch (_) {}
+  try { window.__ledger = { open: function () { _setHabitsView('ledger'); }, close: function () { _setHabitsView('today'); }, view: function () { return _habitsView; } }; } catch (_) {}
   function _fsSignalMet(id) {
     try {
       switch (id) {
@@ -37999,7 +37950,7 @@
     questsPanel.classList.toggle('hidden',  tab !== 'quests');
     itemsPanel.classList.toggle('hidden',   tab !== 'items');
     socialPanel.classList.toggle('hidden',  tab !== 'social');
-    footer.style.display = tab === 'habits' ? '' : 'none';
+    footer.style.display = (tab === 'habits' && _habitsView !== 'ledger') ? '' : 'none';   // W919 — no Add button under the Ledger
     if (tab === 'habits') { try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }   // W915 — the Worldgate leads the Habits tab
 
     if (tab === 'profile')      renderProfile();

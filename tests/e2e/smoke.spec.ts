@@ -1874,21 +1874,22 @@ test.describe('Q · Community board (W907)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 // R. The Ledger sheet (W917) — History left the tab bar
 // ─────────────────────────────────────────────────────────────────────────
-test.describe('R · The Ledger sheet (W917)', () => {
-  test('the tab bar has no History tab; the LEDGER button on Habits opens the same screen as a sheet', async ({ page }) => {
+test.describe('R · The Ledger view (W917 → W919)', () => {
+  test('the tab bar has no History tab; LEDGER renders the same screen in place of the vow list', async ({ page }) => {
     await freshApp(page);
     await expect(page.locator('#tab-history')).toHaveCount(0);
     await expect(page.locator('.tab-bar .tab-btn')).toHaveCount(5);
     await page.click('#tab-habits');
-    // A brand-new hunter has no vows yet, so the Today's Vows header (and its LEDGER
-    // button) is not on the page; the sheet is reached through the QA hook here. The
-    // W785 unlock rule still gates it, so the key is stamped first.
+    // The W785 unlock rule still gates the ledger, so the key is stamped first;
+    // the QA hook flips the view the way the TODAY | LEDGER segment does.
     await page.evaluate(() => { localStorage.setItem('hb_history_unlocked_v1', '1'); (window as any).__ledger.open(); });
-    const sheet = page.locator('.ledger-sheet');
-    await expect(sheet).toBeVisible();
-    await expect(sheet.locator('#history-content .hg-view-tabs')).toBeVisible();
-    await expect(sheet.locator('.board-sheet-title')).toHaveText(/ledger/i);
+    const view = page.locator('#ledger-view');
+    await expect(view).toBeVisible();
+    await expect(view.locator('#history-content .hg-view-tabs')).toBeVisible();
+    await expect(view.locator('.hg-view-tab').first()).toHaveText('WEEK');
+    await expect(page.locator('#habit-list')).toBeHidden();
     await page.evaluate(() => (window as any).__ledger.close());
-    await expect(page.locator('#history-panel #history-content')).toHaveCount(1);
+    await expect(view).toBeHidden();
+    await expect(page.locator('#habit-list')).toBeVisible();
   });
 });
