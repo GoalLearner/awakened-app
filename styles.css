@@ -35280,17 +35280,3 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .hg-group::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
 .hg-label-sub { display: block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: .8px; color: #585a76; font-weight: 700; margin-top: 2px; }
 .hg-legend-dot-auto { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; box-shadow: 0 0 6px #60a5fa; margin-right: 5px; }
-/* the compact Worldgate row on the Habits tab */
-.wg2-mini {
-  margin: 8px 0 0; padding: 10px 12px; border-radius: 13px; display: flex; align-items: center; gap: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; color: var(--wg-ink); font-family: var(--wg-sans);
-  background: radial-gradient(90% 70% at 100% 0%, rgba(239,68,68,0.14), transparent 55%), var(--wg-card); border: 1px solid rgba(139,92,246,0.35); transition: transform .15s;
-}
-.wg2-mini:active { transform: scale(.985); }
-.wg2-mini.wg2--slain { background: radial-gradient(90% 70% at 100% 0%, rgba(245,184,66,0.16), transparent 55%), var(--wg-card); border-color: rgba(245,184,66,0.5); }
-.wg2-mon--mini { width: 34px; height: 34px; border-radius: 9px; }
-.wg2-mon--mini svg { width: 18px; height: 18px; }
-.wg2-mini-t { min-width: 0; }
-.wg2-mini-n { font-family: var(--wg-serif); font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wg2-mini-s { font-family: var(--wg-mono); font-size: 8px; letter-spacing: 1.4px; color: var(--wg-ink2); margin-top: 3px; font-weight: 700; }
-.wg2-mini-p { margin-left: auto; font-family: var(--wg-serif); font-size: 18px; color: var(--wg-red); font-weight: 700; flex: none; }
-.wg2--slain .wg2-mini-p { color: var(--wg-gold); }

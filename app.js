@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w919'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w919b'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6627,19 +6627,27 @@
   }
 
   // ── the Habits-tab card ──
-  // W919 (handoff 29) — the Habits-tab card is the compact row: emblem, boss,
-  // hunters this week, % down. One tap opens the full sheet.
+  // W919b — the owner keeps the BIG card on the Habits tab ("I do want that to remain");
+  // the compact row from handoff 29 was reverted the same day.
+  // ── the Habits-tab card ──
   function _worldgateCardHtml() {
     const c = _wgCache();
     if (!c) return '';
     const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
-    const hunters = Number(c.hunters) || 0;
-    return '<div class="wg2-mini' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
-      '<span class="wg2-mon wg2-mon--mini" data-wg-mon>' + _WG_EMBLEM + '</span>' +
-      '<div class="wg2-mini-t"><div class="wg2-mini-n">' + esc(name) + '</div>' +
-        '<div class="wg2-mini-s">' + (slain ? 'WORLDGATE · DOWN · THE SERVER BROKE IT' : 'WORLDGATE · ' + _wgFmt(hunters) + (hunters === 1 ? ' HUNTER' : ' HUNTERS') + ' THIS WEEK') + '</div></div>' +
-      '<span class="wg2-mini-p">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</span>' +
-    '</div>';
+    const hunters = Number(c.hunters) || 0; const my = Number(c.my) || 0;
+    const avs = (Array.isArray(c.top) ? c.top : []).slice(0, 4).map(function (t, i) { return '<span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(t.alias)) + '</span>'; }).join('') +
+      (hunters > 4 ? '<span class="wg2-av wg2-av--more">+' + _wgFmt(hunters - 4) + '</span>' : '');
+    return '<div class="wg2-seclabel">The Worldgate<span class="wg2-ln"></span><span class="wg2-live' + (slain ? ' wg2-live--down' : '') + '"><i></i>' + (slain ? 'DOWN' : 'LIVE') + '</span></div>' +
+      '<div class="wg2' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
+        '<div class="wg2-top"><div class="wg2-mon" data-wg-mon>' + _WG_EMBLEM + '</div>' +
+          '<div class="wg2-title"><div class="wg2-name">' + esc(name) + '</div><div class="wg2-sub">' + (slain ? '<b>DOWN</b> · THE WHOLE SERVER BROKE IT' : '<b>' + _wgFmt(hunters) + '</b> HUNTERS THIS WEEK') + '</div></div>' +
+          '<div class="wg2-pct"><div class="wg2-pct-n">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</div><div class="wg2-pct-l">HP DOWN</div></div>' +
+        '</div>' +
+        '<div class="wg2-hp">' + _wgBarHtml(c, false) + '<div class="wg2-nums"><span><b>' + _wgFmt(c.pool) + '</b> struck</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
+        _wgLegendHtml(c) +
+        '<div class="wg2-foot"><div class="wg2-avs">' + avs + '</div><div class="wg2-foot-t"><b>Every step you walk is a strike.</b><br>' +
+          (my > 0 ? 'Your ' + _wgFmt(my) + ' strikes are in the bar — in gold.' : 'Walk today and your strikes join the bar — in gold.') + '</div><span class="wg2-chev">›</span></div>' +
+      '</div>';
   }
   // W915 — the card leads the Habits tab; hidden until the first sync lands.
   function renderWorldgateCard() {
