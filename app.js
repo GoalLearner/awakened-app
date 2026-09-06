@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w910'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w911'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45609,28 +45609,36 @@
   // every post carries Report and Block, and a muted hunter sees why the
   // composer is locked.
   //
+  // W911 (owner, 2026-09-06): RANK GATES — only C-tier and better open topics,
+  // only D-tier and better reply (moderators exempt; the server enforces, the
+  // client explains). And the tab never stacks: it shows the 3 latest topics
+  // plus VIEW ALL, which opens the full board as a sheet with the tag rails
+  // and older pages.
+  //
   // Data: Auth.board* (auth.js) → /v1/board/*; stale-while-revalidate on
   // hb_board_cache_v1 exactly like the Friends roster. Sheets are built in
   // JS one at a time (the pf-overlay idiom) and every textarea sits at the
   // TOP of its sheet — the app has no keyboard-avoidance code, so a
   // bottom-anchored composer would hide under the iOS keyboard.
-  // Design language: the Claude Design "Community Tab" handoff (rails,
-  // message rows, role chips, ticket cards), mapped onto the forum model.
   // ═══════════════════════════════════════════════════════════════════════
   const BOARD_RULES_VERSION = 1;
   const BOARD_SUPPORT_EMAIL = 'richmondcampano93@gmail.com';
   const BOARD_TITLE_MAX = 80;
   const BOARD_BODY_MAX = 1000;
+  const BOARD_TAB_ROWS = 3;
+  const BOARD_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'];
   const BOARD_TAG_LABEL = { improvement: 'IMPROVEMENT', bug: 'BUG', talk: 'TALK' };
   const BOARD_REASONS = [['harassment', 'Harassment'], ['spam', 'Spam'], ['offensive', 'Offensive'], ['other', 'Something else']];
   let _boardCache = null;        // untagged list: { topics, next_cursor }
-  let _boardTagged = null;       // current tag's list: { topics, next_cursor, tag }
-  let _boardMe = null;           // { consented, muted_until, role }
-  let _boardTag = '';
+  let _boardTagged = null;       // the list sheet's tagged list: { topics, next_cursor, tag }
+  let _boardMe = null;           // { consented, muted_until, role, rank_tier, topic_min_tier, reply_min_tier }
+  let _boardTag = '';            // the list sheet's active tag
   let _boardInflight = false;
   let _boardWired = false;
   let _boardOpenedEmitted = false;
   let _boardSheet = null;        // the one open sheet
+  let _boardListEl = null;       // the open full-board sheet (when it is the open sheet)
+  let _boardReturnToList = false;
   let _boardTopicData = null;    // { topic, replies, next_cursor } for the open topic
   let _boardAfterConsent = null;
   const _boardHiddenAuthors = new Set();   // instant client-side hide after a block
@@ -45658,6 +45666,7 @@
     try { return new Date(Number(ms)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (_) { return 'later'; }
   }
   function _boardTier(label) { const m = /^(S\+|S|A|B|C|D|E)/.exec(String(label || '').trim()); return m ? m[1] : 'E'; }
+  function _boardTierIdx(t) { const i = BOARD_TIERS.indexOf(String(t || 'E').trim().toUpperCase()); return i < 0 ? 0 : i; }
   function _boardColor(tier) { try { return _pfRankColor(String(tier).replace('+', '')); } catch (_) { return '#a78bfa'; } }
   function _boardIsMe(a) {
     try { const me = lbGetMyAlias(); return !!(me && a && a.alias && String(me).toLowerCase() === String(a.alias).toLowerCase()); } catch (_) { return false; }
@@ -45667,6 +45676,13 @@
     if (_boardMe && _boardMe.consented) return true;
     try { return localStorage.getItem('hb_board_consent_v1') === String(BOARD_RULES_VERSION); } catch (_) { return false; }
   }
+  /** W911 — the rank bar for a write; null when the client cannot tell (server still enforces). */
+  function _boardRankBar(kind) {
+    if (!_boardMe || _boardIsMod()) return null;
+    const need = kind === 'topic' ? (_boardMe.topic_min_tier || 'C') : (_boardMe.reply_min_tier || 'D');
+    const mine = _boardMe.rank_tier || 'E';
+    return _boardTierIdx(mine) < _boardTierIdx(need) ? { need: need, mine: mine } : null;
+  }
   function _boardErrMsg(res) {
     const code = (res && res.code) || '';
     if (code === 'NOT_SIGNED_IN' || code === 'GUEST_SKIP' || code === 'EXPIRED') return 'Sign in with Apple first.';
@@ -45675,6 +45691,7 @@
     if (code === 'NOT_MODERATOR') return 'Moderators only.';
     if (code === 'NOT_OWNER') return 'Only the owner can do that.';
     if (code === 'CANNOT_MUTE_MODERATOR') return 'Moderators cannot be muted.';
+    if (code === 'RANK_TOO_LOW') return (res && res.detail) || 'Your rank is too low for that.';
     if (code === 'NETWORK') return 'Could not reach the Hall.';
     return (res && res.detail) || 'That did not go through.';
   }
@@ -45715,28 +45732,39 @@
       '</div>' +
     '</div>';
   }
+  function _boardVisible(list) {
+    return (list || []).filter(function (t) { return !(t.author && _boardHiddenAuthors.has(t.author.author_id)); });
+  }
 
-  // ── the section on the Community tab ───────────────────────────────────
-  function _boardCurrent() { return _boardTag ? _boardTagged : _boardCache; }
+  // ── the section on the Community tab (3 latest + VIEW ALL) ────────────
   function _boardPaint() {
-    const body = document.getElementById('board-body'); if (!body) return;
-    const more = document.getElementById('board-more');
-    const cur = _boardCurrent();
-    const list = ((cur && cur.topics) || []).filter(function (t) { return !(t.author && _boardHiddenAuthors.has(t.author.author_id)); });
-    if (!list.length) {
-      body.innerHTML = '<div class="guildhall-activity-empty board-empty">No topics yet.' +
-        '<div class="guildhall-activity-empty-sub">' + (_boardTag ? 'Nothing under this tag so far.' : 'Start the first one — an idea, a bug, or just talk.') + '</div></div>';
-    } else {
-      body.innerHTML = list.map(_boardTopicRowHtml).join('');
+    const body = document.getElementById('board-body');
+    if (body) {
+      const all = _boardVisible(_boardCache && _boardCache.topics);
+      const list = all.slice(0, BOARD_TAB_ROWS);
+      if (!list.length) {
+        body.innerHTML = '<div class="guildhall-activity-empty board-empty">No topics yet.' +
+          '<div class="guildhall-activity-empty-sub">Start the first one — an idea, a bug, or just talk.</div></div>';
+      } else {
+        body.innerHTML = list.map(_boardTopicRowHtml).join('');
+      }
+      const viewall = document.getElementById('board-viewall');
+      if (viewall) viewall.classList.toggle('hidden', all.length === 0);
+      _boardSyncNote();
     }
-    if (more) more.classList.toggle('hidden', !(cur && cur.next_cursor));
-    _boardSyncNote();
+    if (_boardListEl && _boardSheet === _boardListEl) _boardListPaint();
   }
   function _boardSyncNote() {
     const note = document.getElementById('board-note'); if (!note) return;
     const until = _boardMe && _boardMe.muted_until;
-    if (until && Number(until) > Date.now()) { note.textContent = 'You are muted until ' + _boardDate(until) + '. You can still read.'; note.classList.remove('hidden'); }
-    else note.classList.add('hidden');
+    if (until && Number(until) > Date.now()) { note.textContent = 'You are muted until ' + _boardDate(until) + '. You can still read.'; note.classList.remove('hidden'); return; }
+    const bar = _boardRankBar('topic');
+    if (bar) {
+      const replyBar = _boardRankBar('reply');
+      note.textContent = (replyBar ? 'Reach ' + replyBar.need + ' rank to reply · ' : '') + 'Reach ' + bar.need + ' rank to open a topic. You can read everything.';
+      note.classList.remove('hidden'); return;
+    }
+    note.classList.add('hidden');
   }
   function _boardSignInPaint() {
     const body = document.getElementById('board-body'); if (!body) return;
@@ -45751,46 +45779,88 @@
     const body = document.getElementById('board-body'); if (!body) return;
     _boardWire();
     if (!_boardOpenedEmitted) { _boardOpenedEmitted = true; _boardEmit('board_opened'); }
-    const tag = _boardTag;
-    const cur = _boardCurrent();
-    if (cur && cur.topics) _boardPaint();
-    else if (typeof showLoading === 'function') showLoading(body, 'rows', 4);
-    if (!(window.Auth && Auth.boardTopics)) { if (!cur) _boardErrorPaint('update pending'); return; }
+    if (_boardCache && _boardCache.topics) _boardPaint();
+    else if (typeof showLoading === 'function') showLoading(body, 'rows', 3);
+    if (!(window.Auth && Auth.boardTopics)) { if (!_boardCache) _boardErrorPaint('update pending'); return; }
     if (_boardInflight) return;
     _boardInflight = true;
     let res;
-    try { res = await Auth.boardTopics(tag, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    try { res = await Auth.boardTopics('', ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     _boardInflight = false;
-    if (_boardTag !== tag) return;   // the filter moved while we were fetching
     if (!res || !res.ok) {
       if (res && (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP' || res.code === 'EXPIRED')) { _boardSignInPaint(); return; }
-      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) {
-        if (tag) _boardTagged = { topics: [], next_cursor: null, tag: tag }; else _boardCache = { topics: [], next_cursor: null };
-        _boardPaint(); return;
-      }
-      if (cur && cur.topics) return;   // never wipe a good paint on a failed refresh
+      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) { _boardCache = { topics: [], next_cursor: null }; _boardPaint(); return; }
+      if (_boardCache && _boardCache.topics) return;   // never wipe a good paint on a failed refresh
       _boardErrorPaint(res && (res.detail || res.code)); return;
     }
-    const next = { topics: res.topics || [], next_cursor: res.next_cursor || null, tag: tag };
-    if (tag) _boardTagged = next; else _boardCache = next;
+    _boardCache = { topics: res.topics || [], next_cursor: res.next_cursor || null };
     if (res.me) _boardMe = res.me;
     _boardPaint();
   }
+
+  // ── the full board (sheet): tag rails + every topic + older pages ──────
+  function _boardListCurrent() { return _boardTag ? _boardTagged : _boardCache; }
+  function _boardListHtml() {
+    return '<div class="board-tags" data-board-tags role="tablist" aria-label="Filter topics">' +
+      [['', 'ALL'], ['improvement', 'IMPROVEMENT'], ['bug', 'BUG'], ['talk', 'TALK']].map(function (t) {
+        return '<button type="button" class="board-tag' + (t[0] ? ' board-tag--' + t[0] : '') + '" data-board-tag="' + t[0] + '" data-active="' + (t[0] === _boardTag ? 'true' : 'false') + '">' + t[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="board-body" data-board-list></div>' +
+      '<button type="button" class="board-more hidden" data-board-more>LOAD OLDER TOPICS</button>';
+  }
+  function _boardListPaint() {
+    const el = _boardListEl; if (!el) return;
+    const body = el.querySelector('[data-board-list]'); const more = el.querySelector('[data-board-more]');
+    const cur = _boardListCurrent();
+    if (!body) return;
+    if (!cur || !cur.topics) { if (typeof showLoading === 'function') showLoading(body, 'rows', 4); if (more) more.classList.add('hidden'); return; }
+    const list = _boardVisible(cur.topics);
+    body.innerHTML = list.length
+      ? list.map(_boardTopicRowHtml).join('')
+      : '<div class="guildhall-activity-empty board-empty">' + (_boardTag ? 'Nothing under this tag yet.' : 'No topics yet.') + '</div>';
+    if (more) more.classList.toggle('hidden', !cur.next_cursor);
+  }
+  function openBoardList() {
+    _boardReturnToList = false;
+    const el = _boardSheetOpen('Community Board', _boardListHtml(), 'board-sheet--list');
+    const head = el.querySelector('.board-sheet-head');
+    if (head) head.insertAdjacentHTML('beforeend', '<button type="button" class="board-newbtn board-sheet-newbtn" data-board-new>+ NEW</button>');
+    _boardListEl = el;
+    _boardListPaint();
+    if (_boardTag) _boardFetchTag(_boardTag);
+  }
+  async function _boardFetchTag(tag) {
+    if (!(window.Auth && Auth.boardTopics) || _boardInflight) return;
+    _boardInflight = true;
+    let res; try { res = await Auth.boardTopics(tag, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
+    _boardInflight = false;
+    if (_boardTag !== tag) return;
+    if (!res || !res.ok) {
+      if (res && (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER')) _boardTagged = { topics: [], next_cursor: null, tag: tag };
+      else { _boardToast(_boardErrMsg(res)); _boardTagged = _boardTagged || { topics: [], next_cursor: null, tag: tag }; }
+    } else {
+      _boardTagged = { topics: res.topics || [], next_cursor: res.next_cursor || null, tag: tag };
+      if (res.me) _boardMe = res.me;
+    }
+    _boardListPaint();
+  }
   function _boardSetTag(tag) {
     _boardTag = tag || '';
-    document.querySelectorAll('#board-tags [data-board-tag]').forEach(function (b) {
+    const el = _boardListEl; if (!el) return;
+    el.querySelectorAll('[data-board-tag]').forEach(function (b) {
       b.setAttribute('data-active', (b.getAttribute('data-board-tag') || '') === _boardTag ? 'true' : 'false');
     });
     _boardTagged = null;
-    renderBoardSection();
+    _boardListPaint();
+    if (_boardTag) _boardFetchTag(_boardTag);
   }
-  async function _boardLoadMore() {
-    const cur = _boardCurrent();
+  async function _boardLoadMore(btn) {
+    const cur = _boardListCurrent();
     if (!cur || !cur.next_cursor || _boardInflight) return;
-    const more = document.getElementById('board-more'); if (more) more.disabled = true;
+    if (btn) btn.disabled = true;
     _boardInflight = true;
     let res; try { res = await Auth.boardTopics(_boardTag, cur.next_cursor); } catch (_) { res = null; }
-    _boardInflight = false; if (more) more.disabled = false;
+    _boardInflight = false; if (btn) btn.disabled = false;
     if (!res || !res.ok) { _boardToast('Could not load more.'); return; }
     cur.topics = cur.topics.concat(res.topics || []);
     cur.next_cursor = res.next_cursor || null;
@@ -45798,14 +45868,25 @@
   }
 
   // ── sheets (one at a time; every textarea at the TOP) ───────────────────
-  function _boardSheetClose() {
+  function _boardSheetClose(opts) {
     if (!_boardSheet) return;
     const el = _boardSheet; _boardSheet = null; _boardTopicData = null;
+    const wasList = el === _boardListEl;
+    if (wasList) { _boardListEl = null; _boardTag = ''; _boardTagged = null; }
     try { el.classList.remove('open'); } catch (_) {}
     setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+    // Back from a topic or composer that was opened from the full board → the board again.
+    if (!wasList && _boardReturnToList && !(opts && opts.noReturn)) { _boardReturnToList = false; setTimeout(openBoardList, 280); }
   }
   function _boardSheetOpen(title, innerHtml, cls) {
-    _boardSheetClose();
+    const openingFromList = !!(_boardSheet && _boardSheet === _boardListEl);
+    if (_boardSheet) {
+      const prev = _boardSheet; _boardSheet = null; _boardTopicData = null;
+      if (prev === _boardListEl) _boardListEl = null;
+      try { prev.classList.remove('open'); } catch (_) {}
+      setTimeout(function () { try { prev.remove(); } catch (_) {} }, 260);
+    }
+    if (openingFromList) _boardReturnToList = true;
     const el = document.createElement('div');
     el.className = 'board-scope board-sheet-wrap' + (cls ? ' ' + cls : '');
     el.innerHTML =
@@ -45827,6 +45908,8 @@
 
   // ── rules (consent) ─────────────────────────────────────────────────────
   function _boardRulesHtml() {
+    const topicBar = (_boardMe && _boardMe.topic_min_tier) || 'C';
+    const replyBar = (_boardMe && _boardMe.reply_min_tier) || 'D';
     return '<div class="board-rules">' +
       '<div class="board-rules-eyebrow">✦ THE HALL</div>' +
       '<h3 class="board-rules-title">Community rules</h3>' +
@@ -45835,6 +45918,7 @@
         '<li><b>Be decent.</b> No harassment, hate, threats, or slurs, toward anyone.</li>' +
         '<li><b>No personal information.</b> Not yours, not anyone else&#39;s. No phone numbers, addresses, or real names people did not share themselves.</li>' +
         '<li><b>Nothing objectionable.</b> Zero tolerance for abusive, sexual, or illegal content. Posts are filtered, and moderators remove what slips through.</li>' +
+        '<li><b>Earn your voice.</b> Opening a topic takes ' + esc(topicBar) + ' rank; replying takes ' + esc(replyBar) + ' rank. Everyone can read. Hunt first, then speak.</li>' +
         '<li><b>Report what you see.</b> Every post has Report and Block. Reports reach the moderators immediately and are reviewed within 24 hours.</li>' +
         '<li><b>Moderators decide.</b> They can remove posts and mute hunters. Repeat offenders lose the board.</li>' +
       '</ul>' +
@@ -45859,7 +45943,7 @@
     _boardMe = Object.assign({}, _boardMe || {}, { consented: true });
     try { localStorage.setItem('hb_board_consent_v1', String(BOARD_RULES_VERSION)); } catch (_) {}
     const then = _boardAfterConsent; _boardAfterConsent = null;
-    _boardSheetClose();
+    _boardSheetClose({ noReturn: !!then });
     if (then) setTimeout(then, 280);
   }
 
@@ -45886,6 +45970,11 @@
   function openBoardComposer(kind, topicId, topicTitle) {
     if (!_boardConsented()) { openBoardRules(function () { openBoardComposer(kind, topicId, topicTitle); }); return; }
     if (_boardMe && _boardMe.muted_until && Number(_boardMe.muted_until) > Date.now()) { _boardToast('You are muted until ' + _boardDate(_boardMe.muted_until) + '.'); return; }
+    const bar = _boardRankBar(kind);
+    if (bar) {
+      _boardToast((kind === 'topic' ? 'Opening a topic takes ' : 'Replying takes ') + bar.need + ' rank. You are ' + bar.mine + ' — hunt on.');
+      return;
+    }
     const el = _boardSheetOpen(kind === 'topic' ? 'New topic' : 'Reply', _boardComposerHtml(kind, topicTitle), 'board-sheet--compose');
     el.dataset.topicId = topicId || '';
     setTimeout(function () { try { const f = el.querySelector(kind === 'topic' ? 'input[name="title"]' : 'textarea'); if (f) f.focus(); } catch (_) {} }, 320);
@@ -45914,8 +46003,9 @@
     if (btn) btn.disabled = false;
     if (!res || !res.ok) {
       const code = (res && res.code) || 'ERROR';
-      if (code === 'CONSENT_REQUIRED') { _boardMe = Object.assign({}, _boardMe || {}, { consented: false }); try { localStorage.removeItem('hb_board_consent_v1'); } catch (_) {} _boardSheetClose(); openBoardRules(function () { openBoardComposer(kind, topicId); }); return; }
+      if (code === 'CONSENT_REQUIRED') { _boardMe = Object.assign({}, _boardMe || {}, { consented: false }); try { localStorage.removeItem('hb_board_consent_v1'); } catch (_) {} _boardSheetClose({ noReturn: true }); openBoardRules(function () { openBoardComposer(kind, topicId); }); return; }
       if (code === 'MUTED') { _boardSheetClose(); _boardToast('You are muted right now. You can still read the board.'); _boardCache = null; renderBoardSection(); return; }
+      if (code === 'RANK_TOO_LOW') { showErr((res && res.detail) || 'Your rank is too low for that.'); return; }
       if (code === 'OBJECTIONABLE') { showErr('That contains language the board does not allow.'); return; }
       if (code === 'RATE_LIMITED') { showErr('Slow down — a few posts a minute is plenty.'); return; }
       showErr(_boardErrMsg(res)); return;
@@ -45923,10 +46013,9 @@
     _boardEmit(kind === 'topic' ? 'topic_posted' : 'reply_posted', kind === 'topic' ? tag : '');
     try { _hapticTick('SUCCESS'); } catch (_) {}
     try { if (ta) ta.blur(); } catch (_) {}
-    _boardSheetClose();
     _boardCache = null; _boardTagged = null;
-    if (kind === 'topic') { renderBoardSection(); _boardToast('Posted to the Hall.'); }
-    else { renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); }
+    if (kind === 'topic') { _boardSheetClose(); renderBoardSection(); _boardToast('Posted to the Hall.'); }
+    else { _boardSheetClose({ noReturn: true }); renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); }
   }
 
   // ── topic sheet ─────────────────────────────────────────────────────────
@@ -45964,6 +46053,7 @@
   function _boardTopicSheetHtml(d) {
     const t = d.topic || {};
     const n = d.replies.length;
+    const bar = _boardRankBar('reply');
     return '<div class="board-topic-wrap">' +
       '<div class="board-topic-tagrow">' +
         '<span class="board-tagpill board-tagpill--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
@@ -45973,7 +46063,10 @@
       '<div class="board-replies-head">' + (n ? n + (n === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET') + '</div>' +
       '<div class="board-replylist" data-board-replies>' + d.replies.map(function (r) { return _boardPostHtml('reply', r); }).join('') + '</div>' +
       (d.next_cursor ? '<button type="button" class="board-more" data-board-more-replies>LOAD MORE REPLIES</button>' : '') +
-      '<div class="board-replybar"><button type="button" class="board-primary" data-board-reply>REPLY</button></div>' +
+      '<div class="board-replybar">' +
+        (bar ? '<div class="board-gate-note">REPLYING TAKES ' + esc(bar.need) + ' RANK · YOU ARE ' + esc(bar.mine) + '</div>' : '') +
+        '<button type="button" class="board-primary" data-board-reply>REPLY</button>' +
+      '</div>' +
     '</div>';
   }
   async function openBoardTopic(id) {
@@ -46122,13 +46215,14 @@
       if ((el = t.closest('[data-board-close]'))) { e.preventDefault(); _boardSheetClose(); return; }
       if ((el = t.closest('[data-board-agree]'))) { e.preventDefault(); _boardAgree(el); return; }
       if ((el = t.closest('[data-board-new]'))) { e.preventDefault(); openBoardComposer('topic'); return; }
+      if ((el = t.closest('[data-board-viewall]'))) { e.preventDefault(); openBoardList(); return; }
       if ((el = t.closest('[data-board-tag]'))) { e.preventDefault(); _boardSetTag(el.getAttribute('data-board-tag') || ''); return; }
       if ((el = t.closest('[data-board-pick]'))) {
         e.preventDefault();
         el.parentNode.querySelectorAll('[data-board-pick]').forEach(function (b) { b.setAttribute('data-active', b === el ? 'true' : 'false'); });
         return;
       }
-      if ((el = t.closest('[data-board-more]'))) { e.preventDefault(); _boardLoadMore(); return; }
+      if ((el = t.closest('[data-board-more]'))) { e.preventDefault(); _boardLoadMore(el); return; }
       if ((el = t.closest('[data-board-more-replies]'))) { e.preventDefault(); _boardMoreReplies(el); return; }
       if ((el = t.closest('[data-board-reply]'))) {
         e.preventDefault();
@@ -46141,7 +46235,7 @@
         e.preventDefault(); e.stopPropagation();
         const who = el.getAttribute('data-board-profile');
         const wasSheet = !!_boardSheet;
-        _boardSheetClose();   // the profile card must never open underneath the board sheet
+        _boardSheetClose({ noReturn: true });   // the profile card must never open underneath the board sheet
         setTimeout(function () { try { _openProfileCard(who); } catch (_) {} }, wasSheet ? 240 : 0);
         return;
       }
@@ -46182,7 +46276,7 @@
   try {
     window.__board = {
       render: renderBoardSection, me: function () { return _boardMe; },
-      rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic,
+      rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic, list: openBoardList,
       settings: renderBoardBlocksSettings,
     };
   } catch (_) {}

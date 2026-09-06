@@ -35261,3 +35261,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
    the strip was sized for the inside of the Status card, so give it the tab gutter. */
 .shadow-strip--tab { width: calc(100% - 28px); margin: 10px 14px 4px; }
 #main-scroll > .writ-card { margin: 10px 14px 4px; }
+
+/* W911 — full-board sheet: tag rails at the top, then the same rows as the tab. */
+.board-sheet--list .board-tags { padding: 0 0 10px; }
+.board-sheet--list .board-body { margin-bottom: 10px; }
+.board-sheet-newbtn { margin-left: auto; }
+.board-gate-note { margin: 0 0 10px; font-family: var(--b-mono); font-size: 9.5px; letter-spacing: 0.6px; color: var(--b-ink2); }

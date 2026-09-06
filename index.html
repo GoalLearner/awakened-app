@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=668">
+  <link rel="stylesheet" href="styles.css?v=669">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1043,15 +1043,11 @@
           </div>
           <button id="board-new" class="board-newbtn" type="button" data-board-new>+ NEW TOPIC</button>
         </div>
-        <div id="board-tags" class="board-tags" role="tablist" aria-label="Filter topics">
-          <button class="board-tag" type="button" data-board-tag="" data-active="true">ALL</button>
-          <button class="board-tag board-tag--improvement" type="button" data-board-tag="improvement">IMPROVEMENT</button>
-          <button class="board-tag board-tag--bug" type="button" data-board-tag="bug">BUG</button>
-          <button class="board-tag board-tag--talk" type="button" data-board-tag="talk">TALK</button>
-        </div>
+        <!-- W911 — the tab shows only the 3 latest topics so the board never stacks the
+             page; tag filters + older pages live in the full-board sheet (VIEW ALL). -->
         <div id="board-note" class="board-note hidden"></div>
         <div id="board-body" class="board-body"></div>
-        <button id="board-more" class="board-more hidden" type="button" data-board-more>LOAD OLDER TOPICS</button>
+        <button id="board-viewall" class="board-more hidden" type="button" data-board-viewall>VIEW ALL TOPICS ›</button>
       </section>
 
       <!-- W908 — "Your Weekly Awakening" (W723) REMOVED for good. Owner, 2026-09-04:
@@ -3408,7 +3404,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1312"></script>
+  <script src="app.js?v=1313"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

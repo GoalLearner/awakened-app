@@ -37,6 +37,16 @@ export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
 export const AUTO_HIDE_REPORTS = 3;
 export const MUTE_MAX_DAYS = 30;
+// W911 — RANK GATES (owner, 2026-09-06): only C-tier and better open topics; only
+// D-tier and better reply. Moderators are exempt. Rank comes from the hunter's own
+// public_profile_summary mirror; a hunter with no mirror yet reads as E.
+export const TIER_ORDER = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
+export const TOPIC_MIN_TIER = 'C';
+export const REPLY_MIN_TIER = 'D';
+export function tierIndex(t: string | null | undefined): number {
+  const i = (TIER_ORDER as readonly string[]).indexOf(String(t || 'E').trim().toUpperCase());
+  return i < 0 ? 0 : i;
+}
 const PAGE = 20;
 const REPLY_PAGE = 50;
 const REPORT_REASONS = new Set(['harassment', 'spam', 'offensive', 'other']);
@@ -56,6 +66,7 @@ interface Me {
   muted_until: number | null;
   role: Role;
   sim: boolean;
+  rank_tier: string | null;
 }
 
 interface AuthorRow {
@@ -128,16 +139,19 @@ async function meState(env: Env, userId: string): Promise<Me> {
     .bind(userId).first<{ role: string }>();
   const user = await env.DB.prepare('SELECT apple_sub FROM users WHERE id = ? LIMIT 1')
     .bind(userId).first<{ apple_sub: string }>();
+  const prof = await env.DB.prepare('SELECT rank_tier FROM public_profile_summary WHERE user_id = ? LIMIT 1')
+    .bind(userId).first<{ rank_tier: string | null }>();
   return {
     consented: !!consent && Number(consent.version) >= BOARD_RULES_VERSION,
     muted_until: mute ? Number(mute.until) : null,
     role: mod && (mod.role === 'owner' || mod.role === 'mod') ? (mod.role as Role) : null,
     sim: !!user && typeof user.apple_sub === 'string' && user.apple_sub.startsWith('sim_test_'),
+    rank_tier: prof && typeof prof.rank_tier === 'string' ? prof.rank_tier : null,
   };
 }
 
-/** The write gate every posting route shares: rate limit → sim → consent → mute. */
-async function writeGate(env: Env, session: SessionPayload): Promise<{ me: Me } | { deny: Response }> {
+/** The write gate every posting route shares: rate limit → sim → consent → mute → rank. */
+async function writeGate(env: Env, session: SessionPayload, kind: 'topic' | 'reply'): Promise<{ me: Me } | { deny: Response }> {
   const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
   if (!rl.success) return { deny: jsonError(429, 'RATE_LIMITED', 'Slow down.') };
   const me = await meState(env, session.userId);
@@ -145,6 +159,15 @@ async function writeGate(env: Env, session: SessionPayload): Promise<{ me: Me } 
   if (!me.consented) return { deny: jsonError(403, 'CONSENT_REQUIRED', 'Read and accept the community rules first.') };
   if (me.muted_until) {
     return { deny: jsonError(403, 'MUTED', 'You are muted.', { muted_until: me.muted_until }) };
+  }
+  // W911 — rank gate (moderators exempt).
+  const need = kind === 'topic' ? TOPIC_MIN_TIER : REPLY_MIN_TIER;
+  if (!isModRole(me.role) && tierIndex(me.rank_tier) < tierIndex(need)) {
+    return {
+      deny: jsonError(403, 'RANK_TOO_LOW',
+        kind === 'topic' ? `Reach ${need} rank to open a topic.` : `Reach ${need} rank to reply.`,
+        { need, rank_tier: me.rank_tier || 'E' }),
+    };
   }
   return { me };
 }
@@ -256,7 +279,7 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   return jsonOk({
     topics: page.map((r) => topicOut(r, false)),
     next_cursor: list.length > PAGE && last ? `${Number(last.last_activity_at)}|${last.id}` : null,
-    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION },
+    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
   });
 }
 
@@ -300,7 +323,7 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
     topic: topicOut(topic, true),
     replies: page.map(replyOut),
     next_cursor: list.length > REPLY_PAGE && last ? String(Number(last.created_at)) : null,
-    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION },
+    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
   });
 }
 
@@ -321,7 +344,7 @@ export async function handleBoardConsentPost(request: Request, env: Env, session
 }
 
 export async function handleBoardTopicPost(request: Request, env: Env, session: SessionPayload): Promise<Response> {
-  const gate = await writeGate(env, session);
+  const gate = await writeGate(env, session, 'topic');
   if ('deny' in gate) return gate.deny;
   const body = await readJson<{ tag?: unknown; title?: unknown; body?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
@@ -342,7 +365,7 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
 
 export async function handleBoardReplyPost(request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
   if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
-  const gate = await writeGate(env, session);
+  const gate = await writeGate(env, session, 'reply');
   if ('deny' in gate) return gate.deny;
   const body = await readJson<{ body?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');

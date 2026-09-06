@@ -21,6 +21,8 @@ import {
   handleBoardTopicPost,
   handleBoardTopicsGet,
   textIsClean,
+  TOPIC_MIN_TIER,
+  REPLY_MIN_TIER,
   AUTO_HIDE_REPORTS,
   BODY_MAX,
 } from './board';
@@ -31,6 +33,7 @@ const mockNotify = vi.mocked(notifyUser);
 
 interface State {
   users: Record<string, { alias: string; apple_sub: string }>;
+  ranks: Record<string, string>;   // W911 — public_profile_summary.rank_tier per user
   consents: Set<string>;
   mutes: Record<string, number>;
   mods: Record<string, 'owner' | 'mod'>;
@@ -50,6 +53,8 @@ function fresh(): State {
       'u-y': { alias: 'Minn', apple_sub: 'apple-4' },
       'u-sim': { alias: 'shadowmonarch_k', apple_sub: 'sim_test_alpha' },
     },
+    // W911 — Richie A, Rendell S, Guake C (can open topics), Minn D (can reply, not open), sim E
+    ranks: { 'u-me': 'A', 'u-ren': 'S', 'u-x': 'C', 'u-y': 'D', 'u-sim': 'E' },
     consents: new Set(['u-me', 'u-ren', 'u-x', 'u-y', 'u-sim']),
     mutes: {},
     mods: {},
@@ -78,6 +83,9 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             }
             if (/SELECT user_id FROM board_moderators WHERE role = 'owner'/.test(sql)) {
               const o = Object.keys(st.mods).find((k) => st.mods[k] === 'owner'); return o ? { user_id: o } : null;
+            }
+            if (/SELECT rank_tier FROM public_profile_summary/.test(sql)) {
+              const t = st.ranks[binds[0] as string]; return t ? { rank_tier: t } : null;
             }
             if (/SELECT apple_sub FROM users/.test(sql)) {
               const u = st.users[binds[0] as string]; return u ? { apple_sub: u.apple_sub } : null;
@@ -385,5 +393,37 @@ describe('moderation authz', () => {
     expect((await json(again)).error).toBe('OWNER_EXISTS');
     const same = await handleAdminBoardOwner(get('/v1/admin/board/owner?alias=richie'), makeEnv(st));
     expect(same.status).toBe(200);
+  });
+});
+
+describe('rank gates (W911)', () => {
+  it('constants: topics need C, replies need D', () => {
+    expect(TOPIC_MIN_TIER).toBe('C'); expect(REPLY_MIN_TIER).toBe('D');
+  });
+  it('an E-rank hunter can neither open a topic nor reply; the error names the bar', async () => {
+    const st = fresh(); st.ranks['u-y'] = 'E';
+    const t = await postTopic(st, me); const id = t.body.id as string;
+    const open = await postTopic(st, y);
+    expect(open.status).toBe(403); expect(open.body.error).toBe('RANK_TOO_LOW'); expect(open.body.need).toBe('C'); expect(open.body.rank_tier).toBe('E');
+    const r = await handleBoardReplyPost(post(`/v1/board/topics/${id}/replies`, { body: 'hi' }), makeEnv(st), y, id);
+    expect(r.status).toBe(403); expect((await json(r)).need).toBe('D');
+  });
+  it('a D-rank hunter can reply but not open; a C-rank hunter can do both', async () => {
+    const st = fresh();
+    const t = await postTopic(st, me); const id = t.body.id as string;
+    expect((await postTopic(st, y)).body.error).toBe('RANK_TOO_LOW');   // Minn is D
+    expect((await handleBoardReplyPost(post(`/v1/board/topics/${id}/replies`, { body: 'ok' }), makeEnv(st), y, id)).status).toBe(200);
+    expect((await postTopic(st, x)).status).toBe(200);                  // Guake is C
+  });
+  it('a hunter with no profile mirror reads as E; a moderator is exempt', async () => {
+    const st = fresh(); delete st.ranks['u-y'];
+    expect((await postTopic(st, y)).body.error).toBe('RANK_TOO_LOW');
+    st.mods['u-y'] = 'mod';
+    expect((await postTopic(st, y)).status).toBe(200);
+  });
+  it('the list tells the client its rank and the two bars', async () => {
+    const st = fresh();
+    const res = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), y));
+    expect(res.me).toMatchObject({ rank_tier: 'D', topic_min_tier: 'C', reply_min_tier: 'D' });
   });
 });
