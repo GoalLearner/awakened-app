@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w917'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w918'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6406,6 +6406,15 @@
   // escape notification in lane 99992 (a lane kept reserved so nothing reuses it).
   // W915 — the Watcher's Writ is gone for good; its keys go too, so a cloud restore
   // never resurrects a bounty the app no longer knows how to read.
+  // W918 — Streak Shields are gone; their keys go too, and the W840 morning-after
+  // ping (id 99993) is cancelled once so no device wakes to a shield that no longer exists.
+  function _w918CleanupShields() {
+    ['hb_shields', 'hb_shield_milestone', 'hb_shield_notices'].forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    try {
+      const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
+      if (P && P.cancel) P.cancel({ notifications: [{ id: 99993 }] }).catch(function () {});
+    } catch (_) {}
+  }
   function _w915CleanupWrit() {
     try { localStorage.removeItem('hb_writ_v1'); } catch (_) {}
     try { localStorage.removeItem('hb_writ_seals'); } catch (_) {}
@@ -26054,10 +26063,13 @@
   let personalRecords  = {}; // prId → { value, meta, lastUpdated }
 
   // ── STREAK FORGIVENESS ─────────────────────────────────
-  // Layer 1: Shields earned per 14 DAYS ACTIVE (W484), max 3, a single global pool
-  let streakShields    = 0;  // W484 — a SINGLE global pool (0..SHIELD_MAX): earned from days-active, spent to protect ANY routine
-  let shieldMilestoneClaimed = -1; // W484 — highest 14-days-active milestone already credited (-1 = needs first-run seeding, done lazily so past days never retroactively flood shields)
-  let pendingShieldNotices = []; // [{ packId, absorbedDate, streak, remaining }] — banners to show on next open
+  // W918 — Streak Shields (W484/W512/W840) DELETED. Owner, 2026-09-06: "I kind of
+  // want to get rid of the streak shields ... not worth it at this moment in time."
+  // Reduction means reduction: the earn, the auto-absorb at rollover, the pill,
+  // the chips, the info modal, the morning-after push, the keys. Honest Days and
+  // Comebacks stay. A missed day now breaks a routine streak unless it was an
+  // Honest Day.
+  // (was) Layer 1: Shields earned per 14 DAYS ACTIVE (W484), max 3, a single global pool
   // Layer 2: Honest Day — explicit user-chosen rest, 1/month/pack
   let honestDays       = {}; // packId → ['YYYY-MM-DD', ...] — every Honest Rest day ever
   // Layer 3: Resilience — pending comeback flag + tracking
@@ -27196,17 +27208,6 @@
         { title: 'That {streak}-day streak? Fragile now.', body: '{habit} still needs doing today. Save it before midnight does you in.' },
         { title: 'You vs. losing {streak} days', body: '{habit} is unchecked. Win this one — it takes almost no time.' },
       ],
-      // W840 (Train 3, R6) — shield-aware variants, used when the hunter has a
-      // Streak Shield armed. The old copy threatened doom the shield would
-      // absorb (growth audit: emotionally dishonest). Honest nuance: the
-      // Shield guards the ROUTINE streak; the habit's own chain is still the
-      // user's to keep — so urgency stays, doom goes.
-      streakRiskShielded: [
-        { title: '{habit}: Day {streak} still open', body: 'Your Shield guards the routine if today slips — but the {streak}-day chain is yours to keep. One tap.' },
-        { title: '{streak} days, and a Shield at your back', body: '{habit} is still unchecked. Finish it clean — save the Shield for a day that truly needs it.' },
-        { title: '{habit} before midnight', body: "Day {streak}. Your Shield stands ready, but done beats defended — close it out." },
-        { title: 'Keep {habit} whole', body: '{streak} days strong. The Shield can catch the routine — the chain itself is on you.' },
-      ],
       competitive: [
         { title: '{rivalName} is running away with it', body: "They're at {rivalSteps} steps. You're sitting on {mySteps}. Time to move. 🏃" },
         { title: '{aheadName} is {aheadGap} steps ahead', body: "That gap won't close on its own. Get out there and eat into it." },
@@ -27546,12 +27547,7 @@
           return String(a.habit.name).localeCompare(String(b.habit.name));
         });
         const top = candidates[0];
-        // W840 (R6) — with a Shield armed, the doom copy was dishonest (the
-        // routine streak it threatens is exactly what the shield absorbs).
-        const shielded = (typeof streakShields === 'number' && streakShields > 0);
-        const r = _notifResolve(
-          shielded ? NOTIF.midday.streakRiskShielded : NOTIF.midday.streakRisk,
-          { habit: top.habit.name, streak: top.streak }, top.streak);
+        const r = _notifResolve(NOTIF.midday.streakRisk, { habit: top.habit.name, streak: top.streak }, top.streak);
         if (r) return r;
       }
     } catch (_) {}
@@ -27931,8 +27927,6 @@
   function getMissingMorningHabits()    { return getMissingPackHabits('morning'); }
 
   // ── STREAK FORGIVENESS — helpers ─────────────────────────
-  const SHIELD_THRESHOLD = 14;  // W484 — distinct DAYS ACTIVE (a day with >=1 completion) to earn one shield (was: consecutive routine-completion days)
-  const SHIELD_MAX       = 3;
   const COMEBACK_TIERS = [
     { minDays: 30, xp: 200, msg: 'Long road. Same destination. Welcome home, hunter.' },
     { minDays: 8,  xp: 100, msg: "You disappeared. You came back. That's the only metric that matters." },
@@ -27961,43 +27955,15 @@
     return true;
   }
 
-  // W484 — Shield earning is ENGAGEMENT-based, not routine-streak-based: one shield per 14
-  // distinct DAYS ACTIVE (a day with >=1 completion), up to SHIELD_MAX in a single GLOBAL pool,
-  // to reward simply showing up. Called from check() after each completion. Idempotent via
-  // shieldMilestoneClaimed (the highest 14-day-active milestone already credited); a milestone
-  // reached while at cap is still consumed (so there's no retroactive flood once you spend one).
-  function tryEarnActivityShield() {
-    const daysActive = Object.keys(completions).filter(d => (completions[d] || []).length > 0).length;
-    const milestones = Math.floor(daysActive / SHIELD_THRESHOLD);
-    if (shieldMilestoneClaimed < 0) {        // first run of the new system — seed, never grant retroactively for days already lived
-      shieldMilestoneClaimed = milestones;
-      save();
-      return false;
-    }
-    if (milestones <= shieldMilestoneClaimed) return false;
-    let earned = false;
-    while (shieldMilestoneClaimed < milestones) {
-      shieldMilestoneClaimed++;
-      if (streakShields < SHIELD_MAX) { streakShields += 1; earned = true; }
-    }
-    save();
-    if (earned) {
-      try { renderCompoundProgress(); } catch (_) {}
-      // W481 centered tap-to-continue card (a milestone reward worth reading).
-      try { showNoticeCard({ icon: '🛡️', title: 'Streak Shield earned', body: 'You’ve been active ' + (shieldMilestoneClaimed * SHIELD_THRESHOLD) + '+ days. It will guard a routine streak if you ever slip a day.' }); } catch (_) {}
-    }
-    return earned;
-  }
-
   // Day rollover — runs on init and on day-change. For each bonus pack
   // with an active streak, walks any missed days between lastDate and
-  // yesterday, absorbing each via Honest Day or Shield. If absorption
-  // fails, the streak breaks and a comeback flag is queued.
+  // yesterday, absorbing each via Honest Day. Otherwise the streak breaks
+  // and a comeback flag is queued. (W918: the Shield absorb is gone.)
   function processStreakRollover() {
     FORGIVENESS_PACK_IDS.forEach(packId => {   // W482 — includes 'custom' so a missed custom day consumes a shield / Honest-Rest, same as a pack
       // W482 review fix — a custom streak is DORMANT while the user is on a preset pack (the custom
-      // compound is latched off then). Don't roll it over: leave it frozen — preserve earned shields,
-      // no shield-used toasts, no break — for a routine they aren't currently running. It resets
+      // compound is latched off then). Don't roll it over: leave it frozen — no break — for a
+      // routine they aren't currently running. It resets
       // naturally on the next custom award if there was a real gap.
       if (packId === 'custom' && _onPresetPack()) return;
       const cs = compoundStreaks[packId];
@@ -28012,19 +27978,6 @@
       while (cursor < today && i++ < safety) {
         // Absorb via Honest Day
         if (isHonestDay(packId, cursor)) {
-          cs.lastDate = cursor;
-          cursor = nextDay(cursor);
-          continue;
-        }
-        // Absorb via Shield
-        if (streakShields > 0) {   // W484 — single global shield pool
-          streakShields -= 1;
-          pendingShieldNotices.push({
-            packId,
-            absorbedDate: cursor,
-            streak:       cs.streak,
-            remaining:    streakShields,
-          });
           cs.lastDate = cursor;
           cursor = nextDay(cursor);
           continue;
@@ -28073,27 +28026,6 @@
     if (!levelUpActive) drainLevelUpQueue();
   }
 
-  // Show queued shield notices as toasts on app open (one per packId batch)
-  function flushPendingShieldNotices() {
-    if (!pendingShieldNotices.length) return;
-    const byPack = {};
-    pendingShieldNotices.forEach(n => {
-      if (!byPack[n.packId]) byPack[n.packId] = n;
-      byPack[n.packId].count = (byPack[n.packId].count || 0) + 1;
-    });
-    pendingShieldNotices = [];
-    save();
-    Object.values(byPack).forEach((n, i) => {
-      const pack = getPackById(n.packId);
-      // W482 — the custom pack's display name ('Make Your Own') reads oddly inline; call a
-      // self-built routine "Your routine" in the shield-used notice (matches the W479 nudge).
-      const name = (n.packId === 'custom') ? 'Your routine' : (pack ? pack.name : n.packId);
-      const msg  = 'Shield used. ' + name + ' streak protected. ' + n.remaining + ' shield' + (n.remaining === 1 ? '' : 's') + ' remaining.';
-      // Stagger so multiple don't pile on each other
-      setTimeout(() => { if (typeof showHabitToast === 'function') showHabitToast(msg, { duration: 4500 }); }, 400 + i * 1800);
-    });
-  }
-
   // ── STORAGE ───────────────────────────────────────────────
   function load() {
     try {
@@ -28139,9 +28071,6 @@
       compoundAwarded  = JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}');
       compoundPartial  = JSON.parse(localStorage.getItem('hb_compound_partial') || '{}'); // W459
       personalRecords  = JSON.parse(localStorage.getItem('hb_prs')               || '{}');
-      streakShields    = JSON.parse(localStorage.getItem('hb_shields')           || '0');
-      shieldMilestoneClaimed = JSON.parse(localStorage.getItem('hb_shield_milestone') || '-1'); // W484 — -1 if absent -> seeded lazily in tryEarnActivityShield (no retroactive flood)
-      pendingShieldNotices = JSON.parse(localStorage.getItem('hb_shield_notices') || '[]');
       honestDays       = JSON.parse(localStorage.getItem('hb_honest_days')       || '{}');
       pendingComeback  = JSON.parse(localStorage.getItem('hb_pending_comeback')  || 'null');
       lastActiveDate   = localStorage.getItem('hb_last_active') || null;
@@ -28192,12 +28121,8 @@
       if (!_isObj(personalRecords))        personalRecords = {};
       // W484 — migrate the old per-pack shield object -> a single global number (sum the pools;
       // practically a user only ever held shields in one routine), clamp to the cap.
-      if (_isObj(streakShields)) streakShields = Object.values(streakShields).reduce((a, b) => a + (Number(b) || 0), 0);
-      streakShields = Math.max(0, Math.min(SHIELD_MAX, Math.floor(Number(streakShields) || 0)));
-      if (typeof shieldMilestoneClaimed !== 'number' || !Number.isFinite(shieldMilestoneClaimed)) shieldMilestoneClaimed = -1;
       if (!_isObj(honestDays))             honestDays = {};
       if (!_isObj(dayXpLedger) || typeof dayXpLedger.raw !== 'number') dayXpLedger = { date: null, raw: 0 }; // W461
-      if (!Array.isArray(pendingShieldNotices)) pendingShieldNotices = [];
       if (!Array.isArray(streakBreakLog))       streakBreakLog = [];
 
       // W460 — grandfather the First Step guard. The First Step bonus (a real
@@ -28405,9 +28330,6 @@
       localStorage.setItem('hb_compound_awarded',  JSON.stringify(compoundAwarded));
       localStorage.setItem('hb_compound_partial',  JSON.stringify(compoundPartial)); // W459
       localStorage.setItem('hb_prs',               JSON.stringify(personalRecords));
-      localStorage.setItem('hb_shields',           JSON.stringify(streakShields));
-      localStorage.setItem('hb_shield_milestone',  JSON.stringify(shieldMilestoneClaimed));
-      localStorage.setItem('hb_shield_notices',    JSON.stringify(pendingShieldNotices));
       localStorage.setItem('hb_honest_days',       JSON.stringify(honestDays));
       localStorage.setItem('hb_pending_comeback',  JSON.stringify(pendingComeback));
       if (lastActiveDate) localStorage.setItem('hb_last_active', lastActiveDate);
@@ -32001,12 +31923,9 @@
       today = newDate;
       streakDangerDismissed = false; // reset for new day
       // Streak Forgiveness: process the missed-day window now that we
-      // know yesterday is locked in. Shields/Honest Days absorb missed
-      // days; otherwise the streak breaks and a comeback flag is set.
+      // know yesterday is locked in. Honest Days absorb missed days;
+      // otherwise the streak breaks and a comeback flag is set.
       if (typeof processStreakRollover === 'function') processStreakRollover();
-      if (typeof flushPendingShieldNotices === 'function') {
-        setTimeout(flushPendingShieldNotices, 800);
-      }
       checkClassChange();
       render();
       // Rebuild today's notification schedule under the new date —
@@ -34452,18 +34371,6 @@
     const total = arr.length;
     const sealed = arr.reduce((n, h) => n + (isChecked(h.id) ? 1 : 0), 0);
     const pct = total > 0 ? Math.round((sealed / total) * 100) : 0;
-    // W512 — surface earned Streak Shields here (owner: they were only visible
-    // buried in the Routine Progress modal). A gold shield pill sits beside Manage
-    // ONLY when ≥1 shield is held (no clutter at zero). data-shield-info routes the
-    // tap to openShieldInfoModal via the existing global delegated handler.
-    const _shieldN = (typeof streakShields === 'number' ? streakShields : 0);
-    const _shieldPill = _shieldN > 0
-      ? '<button class="vows-shield-pill" type="button" data-shield-info="global" ' +
-          'aria-label="' + _shieldN + ' Streak Shield' + (_shieldN === 1 ? '' : 's') + ' — tap to learn more">' +
-          '<span class="vows-shield-glyph" aria-hidden="true">🛡️</span>' +
-          '<span class="vows-shield-count">' + _shieldN + '</span>' +
-        '</button>'
-      : '';
     // W917 — the LEDGER opens the history sheet (the History tab is gone). Hidden
     // until the ledger unlocks, exactly the W785 rule the tab followed.
     const _ledgerBtn =
@@ -34482,7 +34389,7 @@
           '<div class="vows-header-title">Seal your vows</div>' +
         '</div>' +
         '<div class="vows-header-actions">' +
-          _shieldPill + _ledgerBtn +
+          _ledgerBtn +
           '<button class="vows-manage-btn" type="button" aria-label="Manage Vows">' +
             '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
               '<path d="M10 3.2 16.8 10 10 16.8 3.2 10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity="0.5"/>' +
@@ -36597,7 +36504,7 @@
       }
     }
 
-    if (!wasDone) { checkCompoundEffect(id); checkCustomRoutineCompound(); tryEarnActivityShield(); }
+    if (!wasDone) { checkCompoundEffect(id); checkCustomRoutineCompound(); }
     renderRank();
     updateProgress();
     checkPerfectDay();
@@ -45023,14 +44930,6 @@
         openHonestDayModal(honest.getAttribute('data-honest-pack'));
         return;
       }
-      // Shield info chip
-      const shield = t.closest('[data-shield-info]');
-      if (shield) {
-        e.preventDefault();
-        e.stopPropagation();
-        openShieldInfoModal();
-        return;
-      }
       // Skip if the bolt was tapped (its handler runs first)
       if (t.closest('[data-bonus-info]')) return;
       const row = t.closest('[data-pack-add]');
@@ -45110,24 +45009,6 @@
     if (overlay) overlay.addEventListener('click', closeHonestDayModal);
   }
 
-  // ── SHIELD INFO modal ────────────────────────────────────
-  function openShieldInfoModal() {
-    document.getElementById('shield-overlay').classList.remove('hidden');
-    document.getElementById('shield-modal').classList.remove('hidden');
-  }
-  function closeShieldInfoModal() {
-    document.getElementById('shield-overlay').classList.add('hidden');
-    document.getElementById('shield-modal').classList.add('hidden');
-  }
-  function setupShieldInfoModal() {
-    const close = document.getElementById('sm-close');
-    const ok    = document.getElementById('sm-ok');
-    const ov    = document.getElementById('shield-overlay');
-    if (close) close.addEventListener('click', closeShieldInfoModal);
-    if (ok)    ok.addEventListener('click', closeShieldInfoModal);
-    if (ov)    ov.addEventListener('click', closeShieldInfoModal);
-  }
-
   // ── BONUS INFO POPUP ─────────────────────────────────────
   // Tapping the ⚡ on any pack progress row opens this popup. It explains
   // the Compound Effect XP tier formula AND the ROI rationale for both
@@ -45136,12 +45017,7 @@
     const ov = document.getElementById('bonus-info-overlay');
     const md = document.getElementById('bonus-info-modal');
     if (!ov || !md) return;
-    // Populate live shield + honest-day counts so users see their current state
-    const shieldEl = document.getElementById('bi-shield-counts');
-    if (shieldEl) {
-      // W484 — shields are a single global pool now (earned from days-active), so show one count.
-      shieldEl.innerHTML = '<span class="bi-stat-pill">🛡️ ' + (streakShields || 0) + '/' + SHIELD_MAX + ' shields</span>';
-    }
+    // Populate live honest-day counts so users see their current state
     const honestEl = document.getElementById('bi-honest-counts');
     if (honestEl) {
       const mrUsed = getHonestDayUsesThisMonth('morning');
@@ -56431,10 +56307,6 @@
     const awarded = compoundAwarded[packId] === today;
     const cs      = compoundStreaks[packId];
     const streak  = cs && cs.streak > 0 && cs.lastDate === today ? cs.streak : 0;
-    const shieldCount = streakShields || 0;   // W484 — single global pool
-    const shieldChip  = shieldCount > 0
-      ? '<span class="cp-prog-shield" data-shield-info="custom" role="button" tabindex="0" aria-label="Streak Shields">🛡️ ' + shieldCount + '</span>'
-      : '';
     const honestAvailable = streak > 0 && !awarded && canMarkHonestDayToday(packId);
     const honestChip = honestAvailable
       ? '<span class="cp-prog-honest" data-honest-pack="custom" role="button" tabindex="0" aria-label="Mark today as Honest Rest">🌙 Rest</span>'
@@ -56446,7 +56318,7 @@
       '</span>' +
       '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">' + xpIconHtml({ size: 22 }) + '</button>' +
       (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' ' + streakIconHtml({ size: 14 }) + '</span>' : '') +
-      shieldChip + honestChip +
+      honestChip +
       _compoundXpMeterHtml(packId, awarded) +
     '</div>';
   }
@@ -56538,11 +56410,6 @@
       const addPill = hasMissing
         ? '<span class="cp-prog-add">+ ' + missingCount + ' missing</span>'
         : '';
-      // Streak Shield indicator — show when ≥1 shield held for this pack
-      const shieldCount = streakShields || 0;   // W484 — single global pool
-      const shieldChip  = shieldCount > 0
-        ? '<span class="cp-prog-shield" data-shield-info="' + esc(packId) + '" role="button" tabindex="0" aria-label="Streak Shields">🛡️ ' + shieldCount + '</span>'
-        : '';
       // Honest Day chip — only when streak active, not completed today, all habits in,
       // and an Honest Day is still available this month
       const honestAvailable = streak > 0 && !awarded && !hasMissing &&
@@ -56567,7 +56434,6 @@
         // Tappable bolt → opens the Bonus Info popup explaining the formula + ROI
         '<button class="cp-prog-bolt" data-bonus-info aria-label="About the Compound Effect Bonus">' + xpIconHtml({ size: 22 }) + '</button>' +
         (streak > 0 ? '<span class="cp-prog-streak">Day ' + streak + ' ' + streakIconHtml({ size: 14 }) + '</span>' : '') +
-        shieldChip +
         honestChip +
         addPill +
         _compoundXpMeterHtml(packId, awarded) +
@@ -62642,10 +62508,6 @@
       } catch (_) {}
     }
     async function reapplyMidDay() {
-      // W840 (R6) — the shield guard rides every midday reapply site (boot,
-      // day-change, completion toggles), so it re-arms and self-cancels in
-      // lockstep with the state it describes. Never let it block the check-in.
-      try { await scheduleShieldGuard(); } catch (_) {}
       try { await _rearmDigestRun(); } catch (_) {}   // W900
       return scheduleMidDayCheckin();
     }
@@ -62686,72 +62548,6 @@
     }
     async function reapplyWeeklyReset() {
       return scheduleWeeklyReset();
-    }
-
-    // ── W840 (Train 3, R6) — "Your Shield held the line" morning-after ping ──
-    // Shields consume automatically at rollover and surfaced ONLY as a
-    // next-open toast — "a textbook return trigger, currently silent" (growth
-    // audit). The rollover runs in-app, so the only way to reach a closed app
-    // is to schedule AHEAD: whenever a routine with a live streak is still
-    // unfinished today and a Shield is armed, arm a ping for tomorrow 08:30.
-    // Finish the routine → every reapply site cancels+reschedules and the
-    // condition fails, so the ping dies. Miss the day → the user wakes to the
-    // save instead of silence. Honest-Rest days schedule nothing (that absorb
-    // is a deliberate choice, not a save). ID 99993 — next slot in the
-    // reserved lane (99999..99994 are check-in/midday/weekly/comeback trio).
-    const SHIELD_GUARD_NOTIF_ID = 99993;
-    async function cancelShieldGuard() {
-      const p = plugin();
-      if (!p || !isNative()) return;
-      try { await p.cancel({ notifications: [{ id: SHIELD_GUARD_NOTIF_ID }] }); } catch (_) {}
-    }
-    async function scheduleShieldGuard() {
-      await cancelShieldGuard();
-      const p = plugin();
-      if (!p || !isNative()) return false;
-      if (isDisabled() || isPaused()) return false;
-      if (isDayOne()) return false;
-      if (!(typeof streakShields === 'number' && streakShields > 0)) return false;
-      // At-risk = a live compound streak (last kept YESTERDAY) still unfinished
-      // today, on a routine the shield would actually absorb.
-      let atRisk = null;
-      let atRiskCount = 0;
-      try {
-        const yest = prevDay(today);
-        for (const packId of FORGIVENESS_PACK_IDS) {
-          if (packId === 'custom' && _onPresetPack()) continue;
-          const cs = compoundStreaks[packId];
-          if (!cs || !cs.lastDate || !(cs.streak > 0)) continue;
-          if (cs.lastDate !== yest) continue;           // done today, or already broken/rolled
-          if (isHonestDay(packId, today)) continue;     // honest rest absorbs shield-free
-          atRiskCount++;
-          if (!atRisk || cs.streak > atRisk.streak) atRisk = { packId, streak: cs.streak };
-        }
-      } catch (_) {}
-      if (!atRisk) return false;
-      const hm = parseHM('08:30');
-      if (hm && isInQuietHours(hm)) return false;
-      try {
-        const fireAt = new Date();
-        fireAt.setDate(fireAt.getDate() + 1);
-        fireAt.setHours(8, 30, 0, 0);
-        const name = (atRisk.packId === 'custom') ? 'your routine' : ((getPackById(atRisk.packId) || {}).name || 'your routine');
-        const left = Math.max(0, streakShields - atRiskCount);
-        await p.schedule({
-          notifications: [{
-            id:    SHIELD_GUARD_NOTIF_ID,
-            title: 'Your Shield held the line',
-            body:  'A Shield saved the ' + atRisk.streak + '-day ' + name + ' streak — ' +
-                   left + ' left. The chain lives. Come seal today.',
-            schedule: { at: fireAt, allowWhileIdle: true },
-            extra: { kind: 'shield_guard' },
-          }],
-        });
-        return true;
-      } catch (e) {
-        console.warn('shield-guard schedule failed', e);
-        return false;
-      }
     }
 
     // ── W586 — Comeback / lapsed-user notifications ──────────────────────────
@@ -66346,9 +66142,6 @@
       'hb_wi_weeks',           // W725 — weekly step totals for Weekly Insights momentum;
                                // the one aggregate NOT recomputable after the 30-day prune
       'hb_prs',
-      'hb_shields',
-      'hb_shield_milestone',
-      'hb_shield_notices',
       'hb_honest_days',
       'hb_pending_comeback',
       'hb_last_active',
@@ -67396,7 +67189,6 @@
     // time on next app open. Don't drop any."
     try { setTimeout(() => processRevealQueue(), 800); } catch (_) {}
     setupHonestDayModal();
-    setupShieldInfoModal();
     setupOriginStorySheet();
     migrateOriginStoriesIfNeeded();
     // v3: rewrite story text using the new tightened templates while
@@ -67410,7 +67202,6 @@
     // notices as toasts, then check for comeback opportunity if the user
     // has a pending break flag.
     processStreakRollover();
-    setTimeout(() => flushPendingShieldNotices(), 800);
     // W339/W361 — the Day-2 welcome-back payoff now fires via the unified
     // early-journey dispatcher (one beat per open), not its own timer.
     migratePRsIfNeeded();
@@ -67655,7 +67446,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

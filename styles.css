@@ -13845,25 +13845,8 @@ footer {
    STREAK FORGIVENESS — chips, modals, comeback screen
    ═══════════════════════════════════════════════════════════════ */
 
-/* Shield + Honest Day chips on pack progress rows */
-.cp-prog-shield {
-  flex-shrink: 0;
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 3px 7px;
-  border-radius: 100px;
-  background: rgba(96, 165, 250, 0.18);
-  border: 1px solid rgba(96, 165, 250, 0.55);
-  color: #93c5fd;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.18s ease, border-color 0.18s ease;
-}
-.cp-prog-shield:hover  { background: rgba(96, 165, 250, 0.28); border-color: rgba(96, 165, 250, 0.75); }
-.cp-prog-shield:active { transform: scale(0.96); }
 
+/* Honest Day chip on pack progress rows */
 .cp-prog-honest {
   flex-shrink: 0;
   font-size: 0.66rem;
@@ -13883,8 +13866,7 @@ footer {
 .cp-prog-honest:active { transform: scale(0.96); }
 
 /* Honest Day modal */
-.honest-overlay,
-.shield-overlay {
+.honest-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.62);
@@ -13894,11 +13876,9 @@ footer {
   justify-content: center;
   padding: 24px;
 }
-.honest-overlay.hidden,
-.shield-overlay.hidden { display: none !important; }
+.honest-overlay.hidden { display: none !important; }
 
-.honest-modal,
-.shield-modal {
+.honest-modal {
   position: fixed;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -13907,10 +13887,8 @@ footer {
   max-width: 360px;
   pointer-events: none;
 }
-.honest-modal.hidden,
-.shield-modal.hidden { display: none !important; }
-.hm-card,
-.sm-card {
+.honest-modal.hidden { display: none !important; }
+.hm-card {
   background: var(--bg-raised);
   border: 1.5px solid rgba(167, 139, 250, 0.40);
   border-radius: 18px;
@@ -13920,24 +13898,23 @@ footer {
   box-shadow: 0 0 36px rgba(0,0,0,0.5), 0 0 24px rgba(167, 139, 250, 0.15);
   animation: hm-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.sm-card { border-color: rgba(96, 165, 250, 0.40); box-shadow: 0 0 36px rgba(0,0,0,0.5), 0 0 24px rgba(96, 165, 250, 0.18); position: relative; }
 @keyframes hm-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
-.hm-icon, .sm-icon  { font-size: 2.4rem; margin-bottom: 8px; line-height: 1; }
-.hm-title, .sm-title {
+.hm-icon  { font-size: 2.4rem; margin-bottom: 8px; line-height: 1; }
+.hm-title {
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 12px;
   letter-spacing: 0.02em;
 }
-.hm-body, .sm-body {
+.hm-body {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.55;
   margin-bottom: 18px;
 }
-.hm-body b, .sm-body b { color: var(--text-primary); font-weight: 700; }
+.hm-body b { color: var(--text-primary); font-weight: 700; }
 
 .hm-actions { display: flex; gap: 8px; }
 .hm-btn {
@@ -13965,19 +13942,6 @@ footer {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.sm-close {
-  position: absolute;
-  top: 10px; right: 10px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: var(--text-secondary);
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  font-family: inherit;
-  cursor: pointer;
-  font-size: 0.85rem;
-  -webkit-appearance: none;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    COMEBACK — full-screen welcome-back celebration
@@ -31944,22 +31908,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .vows-manage-btn:active {
   color: var(--text-primary); border-color: var(--border-accent); background: var(--accent-glow);
 }
-/* W512 — Streak Shield pill beside Manage in the vows header. */
 .vows-header-actions { flex: none; display: inline-flex; align-items: flex-end; gap: 7px; }
-.vows-shield-pill {
-  flex: none; display: inline-flex; align-items: center; gap: 4px;
-  margin-bottom: 3px; padding: 7px 9px; border-radius: 10px;
-  background: var(--gold-glow, rgba(245,184,66,0.16)); border: 1px solid var(--gold, #f5b842);
-  color: var(--gold-light, #f7c558); cursor: pointer;
-  font-family: inherit; -webkit-appearance: none; appearance: none;
-  transition: filter .15s, background .15s;
-}
-.vows-shield-glyph { display: block; flex: none; font-size: 12px; line-height: 1; }
-.vows-shield-count {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.4px; line-height: 1;
-}
-.vows-shield-pill:active { filter: brightness(1.15); }
 
 /* ──────────────────────────────
    W337 · First Mark — activation celebration on the first-ever completion.
