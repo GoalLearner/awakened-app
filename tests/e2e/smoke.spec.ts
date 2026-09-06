@@ -1870,3 +1870,24 @@ test.describe('Q · Community board (W907)', () => {
     await expect(sheet.getByText(/report what you see/i)).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// R. The Ledger sheet (W917) — History left the tab bar
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('R · The Ledger sheet (W917)', () => {
+  test('the tab bar has no History tab; the LEDGER button on Habits opens the same screen as a sheet', async ({ page }) => {
+    await freshApp(page);
+    await expect(page.locator('#tab-history')).toHaveCount(0);
+    await expect(page.locator('.tab-bar .tab-btn')).toHaveCount(5);
+    await page.click('#tab-habits');
+    // A fresh hunter's ledger is still locked (W785) — the button is in the DOM, hidden.
+    await expect(page.locator('[data-ledger-open]')).toHaveCount(1);
+    await page.evaluate(() => { localStorage.setItem('hb_history_unlocked_v1', '1'); (window as any).__ledger.open(); });
+    const sheet = page.locator('.ledger-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('#history-content .hg-view-tabs')).toBeVisible();
+    await expect(sheet.locator('.board-sheet-title')).toHaveText(/ledger/i);
+    await page.evaluate(() => (window as any).__ledger.close());
+    await expect(page.locator('#history-panel #history-content')).toHaveCount(1);
+  });
+});

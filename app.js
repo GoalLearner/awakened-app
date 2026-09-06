@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w916'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w917'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -32591,7 +32591,7 @@
     checkStreakDanger();
     checkMorningRoutineNudge();
     if (currentTab === 'profile')      renderProfile();
-    if (currentTab === 'history')      renderHistory();
+    if (_ledgerOpen)                   renderHistory();   // W917 — the Ledger sheet, if open
   }
 
   // v3 Phase 1z.214 — short stable fingerprint for the visible
@@ -34464,6 +34464,17 @@
           '<span class="vows-shield-count">' + _shieldN + '</span>' +
         '</button>'
       : '';
+    // W917 — the LEDGER opens the history sheet (the History tab is gone). Hidden
+    // until the ledger unlocks, exactly the W785 rule the tab followed.
+    const _ledgerBtn =
+      '<button class="vows-ledger-btn' + (_historyUnlocked() ? '' : ' vows-ledger-btn--locked') + '" type="button" data-ledger-open aria-label="Open the Ledger">' +
+        '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
+          '<rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4"/>' +
+          '<path d="M3 8h14M7 2.5v3M13 2.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+          '<path d="M6.5 11.5h2M11.5 11.5h2M6.5 14.5h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.6"/>' +
+        '</svg>' +
+        '<span>Ledger</span>' +
+      '</button>';
     hdr.innerHTML =
       '<div class="vows-header-row">' +
         '<div class="vows-header-titles">' +
@@ -34471,7 +34482,7 @@
           '<div class="vows-header-title">Seal your vows</div>' +
         '</div>' +
         '<div class="vows-header-actions">' +
-          _shieldPill +
+          _shieldPill + _ledgerBtn +
           '<button class="vows-manage-btn" type="button" aria-label="Manage Vows">' +
             '<svg class="vows-manage-glyph" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
               '<path d="M10 3.2 16.8 10 10 16.8 3.2 10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity="0.5"/>' +
@@ -37882,18 +37893,12 @@
     try { if (unlockedAchievements && unlockedAchievements.size > 0) return true; } catch (_) {}
     return _historyActiveDays() >= HISTORY_UNLOCK_DAYS;
   }
-  // Show/hide the tab + fire the reveal nudge exactly once. Safe to call often.
+  // W917 — show/hide the LEDGER button + fire the reveal nudge exactly once. Safe to call often.
   function _syncHistoryTab(opts) {
     try {
-      const btn = document.getElementById('tab-history');
-      if (!btn) return;
       const unlocked = _historyUnlocked();
-      btn.classList.toggle('tab-btn--locked', !unlocked);
-      if (!unlocked) {
-        // Never strand the user on a tab that just became unreachable.
-        try { if (typeof currentTab !== 'undefined' && currentTab === 'history') switchTab('profile'); } catch (_) {}
-        return;
-      }
+      document.querySelectorAll('[data-ledger-open]').forEach(function (b) { b.classList.toggle('vows-ledger-btn--locked', !unlocked); });
+      if (!unlocked) { if (_ledgerSheet) closeLedgerSheet(); return; }
       let firstTime = false;
       try {
         if (localStorage.getItem(_HIST_UNLOCK_KEY) !== '1') {
@@ -37904,20 +37909,63 @@
       // Nudge only when it unlocks DURING play (opts.live), never on the silent
       // boot-time stamp an existing hunter gets.
       if (firstTime && opts && opts.live) {
-        // W826 (L10) — when the unlock arrived via a first achievement rather
-        // than the 3rd active day, point the first History visit at the
-        // Milestones view (the thing they just earned) instead of the weekly
-        // grid W785 was shielding them from.
+        // W826 (L10) — an unlock via a first achievement lands the first visit on
+        // the Milestones view (the thing they just earned), not the sparse grid.
         const viaAchievement = _historyActiveDays() < HISTORY_UNLOCK_DAYS;
         if (viaAchievement) { try { histViewMode = 'achievements'; } catch (_) {} }
         try {
           showHabitToast(viaAchievement
-            ? 'Milestone unlocked — see it in History.'
-            : 'Your ledger is open — see it in History.');
+            ? 'Milestone unlocked — open the Ledger on Habits to see it.'
+            : 'Your ledger is open — tap LEDGER on Habits.');
         } catch (_) {}
       }
     } catch (e) { _logSwallow('history_tab:sync', e); }
   }
+  // ── W917 — THE LEDGER sheet. History left the tab bar (owner, 2026-09-06: "it
+  // shouldn't be its own tab"); the same Weekly / Monthly / Yearly / Milestones
+  // screen now slides up from the LEDGER button beside Manage. The renderer is
+  // untouched: #history-content is lifted into the sheet and returned on close.
+  let _ledgerSheet = null;
+  let _ledgerOpen = false;
+  function openLedgerSheet() {
+    if (!_historyUnlocked()) { try { showHabitToast('Your ledger opens after ' + HISTORY_UNLOCK_DAYS + ' active days.'); } catch (_) {} return; }
+    if (_ledgerSheet) return;
+    const content = document.getElementById('history-content'); if (!content) return;
+    const el = document.createElement('div');
+    el.className = 'board-scope board-sheet-wrap ledger-sheet';
+    el.innerHTML =
+      '<div class="board-scrim" data-ledger-close></div>' +
+      '<section class="board-sheet" role="dialog" aria-modal="true" aria-label="The Ledger">' +
+        '<header class="board-sheet-head">' +
+          '<button type="button" class="board-back" data-ledger-close aria-label="Close">‹</button>' +
+          '<span class="board-sheet-title">The Ledger</span>' +
+          '<span class="board-sheet-spacer"></span>' +
+        '</header>' +
+        '<div class="board-sheet-body" data-ledger-body></div>' +
+      '</section>';
+    document.body.appendChild(el);
+    el.querySelector('[data-ledger-body]').appendChild(content);
+    _ledgerSheet = el; _ledgerOpen = true;
+    try { renderHistory(); } catch (e) { _logSwallow('ledger:render', e); }
+    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ledger_opened', String(histViewMode || '')); } catch (_) {}
+  }
+  function closeLedgerSheet() {
+    const el = _ledgerSheet; if (!el) return;
+    _ledgerSheet = null; _ledgerOpen = false;
+    const content = el.querySelector('#history-content'); const home = document.getElementById('history-panel');
+    if (content && home) home.appendChild(content);
+    try { el.classList.remove('open'); } catch (_) {}
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+  }
+  document.addEventListener('click', function (e) {
+    const t = e.target; if (!t || !t.closest) return;
+    if (t.closest('[data-ledger-open]')) { e.preventDefault(); openLedgerSheet(); return; }
+    if (t.closest('[data-ledger-close]')) { e.preventDefault(); closeLedgerSheet(); }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _ledgerSheet) closeLedgerSheet(); });
+  try { window.__ledger = { open: openLedgerSheet, close: closeLedgerSheet }; } catch (_) {}
   function _fsSignalMet(id) {
     try {
       switch (id) {
@@ -38034,7 +38082,6 @@
     document.querySelectorAll('.tab-btn').forEach(b => { const _on = b.dataset.tab === tab; b.classList.toggle('active', _on); if (_on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); // W379 — expose active tab to assistive tech
     const profilePanel = document.getElementById('profile-panel');
     const habitsPanel  = document.getElementById('main-scroll');
-    const histPanel    = document.getElementById('history-panel');
     const questsPanel  = document.getElementById('quests-panel');
     const itemsPanel   = document.getElementById('items-panel');
     const socialPanel  = document.getElementById('social-panel');
@@ -38042,7 +38089,6 @@
 
     profilePanel.classList.toggle('hidden', tab !== 'profile');
     habitsPanel.classList.toggle('hidden',  tab !== 'habits');
-    histPanel.classList.toggle('hidden',    tab !== 'history');
     questsPanel.classList.toggle('hidden',  tab !== 'quests');
     itemsPanel.classList.toggle('hidden',   tab !== 'items');
     socialPanel.classList.toggle('hidden',  tab !== 'social');
@@ -38050,7 +38096,6 @@
     if (tab === 'habits') { try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }   // W915 — the Worldgate leads the Habits tab
 
     if (tab === 'profile')      renderProfile();
-    if (tab === 'history')      renderHistory();
     // Quests tab: always re-greet the user with the gate. Reset the
     // expansion flag on every tab activation so re-entering the
     // dungeon is an intentional act, not a stale-state continuation.
