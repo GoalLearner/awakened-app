@@ -35413,3 +35413,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .fa-like:active { transform: scale(.94); }
 .fa-like--on { background: var(--b-gold); color: #0a0a18; }
 .fa-act--new .fa-act-txt::after { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--b-vio-lt); margin-left: 6px; vertical-align: middle; box-shadow: 0 0 6px rgba(167,139,250,0.8); }
+
+/* W914 — the spam guard: LOCKED pill, the composer's live cooldown note. */
+.board-tag--lock { color: var(--b-ink2); border: 1px solid rgba(255,255,255,0.22); padding: 2px 6px; }
+.board-compose-note { margin-top: 8px; font-family: var(--b-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 1.2px; color: var(--b-gold); }
+.board-compose-note.hidden { display: none !important; }

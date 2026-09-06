@@ -122,6 +122,8 @@ import {
   handleAdminBoardOwner,
   handleBoardVotePost,
   handleBoardPinPost,
+  handleBoardTopicLock,
+  handleBoardPurgePost,
 } from './handlers/board';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
@@ -185,7 +187,7 @@ const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 // W907 — board topic routes: GET /:id, POST /:id/replies, POST /:id/delete, POST /:id/hide;
 // reply moderation POST /v1/board/replies/:id/delete. Exact /v1/board/* routes are
 // matched first so 'report', 'reports', 'moderators' can never be read as an id.
-const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin))?$/;
+const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin|lock))?$/;
 // W913 — LIKE on a friend's public achievement event (toggle).
 const FEED_LIKE_RE = /^\/v1\/friends\/activity\/([A-Za-z0-9_:.-]{4,96})\/like$/;
 const BOARD_REPLY_DELETE_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/delete$/;
@@ -415,7 +417,7 @@ export default {
             // take /:id shapes. Every mutation is POST (CORS allows no DELETE).
             response = await handleBoardTopicsGet(request, env, session);
           } else if (path === '/v1/board/topics' && method === 'POST') {
-            response = await handleBoardTopicPost(request, env, session);
+            response = await handleBoardTopicPost(request, env, session, ctx);
           } else if (path === '/v1/board/report' && method === 'POST') {
             response = await handleBoardReportPost(request, env, session, ctx);
           } else if (path === '/v1/board/block' && method === 'POST') {
@@ -426,6 +428,9 @@ export default {
             response = await handleBoardBlocksGet(request, env, session);
           } else if (path === '/v1/board/consent' && method === 'POST') {
             response = await handleBoardConsentPost(request, env, session);
+          } else if (path === '/v1/board/purge' && method === 'POST') {
+            // W914 — moderators wipe a hunter's last N hours after a spam burst.
+            response = await handleBoardPurgePost(request, env, session);
           } else if (path === '/v1/board/mute' && method === 'POST') {
             response = await handleBoardMutePost(request, env, session, false);
           } else if (path === '/v1/board/unmute' && method === 'POST') {
@@ -445,7 +450,8 @@ export default {
             const topicId = m[1];
             const action = m[2] || '';
             if (!action && method === 'GET') response = await handleBoardTopicGet(request, env, session, topicId);
-            else if (action === 'replies' && method === 'POST') response = await handleBoardReplyPost(request, env, session, topicId);
+            else if (action === 'replies' && method === 'POST') response = await handleBoardReplyPost(request, env, session, topicId, ctx);
+            else if (action === 'lock' && method === 'POST') response = await handleBoardTopicLock(request, env, session, topicId);   // W914
             else if (action === 'delete' && method === 'POST') response = await handleBoardTopicDelete(request, env, session, topicId);
             else if (action === 'hide' && method === 'POST') response = await handleBoardTopicHide(request, env, session, topicId);
             else if (action === 'vote' && method === 'POST') response = await handleBoardVotePost(request, env, session, topicId);   // W913

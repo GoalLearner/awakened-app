@@ -29,13 +29,36 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
-import { isProfane } from '../profanity';
+import { isProfaneWord } from '../profanity';
 
 export const BOARD_RULES_VERSION = 1;
 export const BOARD_TAGS = ['improvement', 'bug', 'talk'] as const;
 export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
 export const AUTO_HIDE_REPORTS = 3;
+
+// ── W914 — THE SPAM GUARD (owner: "prevent people from spamming the board").
+// Every number is a knob. Moderators are exempt from all of it.
+export const SPAM = {
+  TOPICS_PER_DAY: 3,
+  TOPIC_COOLDOWN_MS: 10 * 60 * 1000,
+  REPLIES_PER_DAY: 30,
+  REPLY_COOLDOWN_MS: 20 * 1000,
+  REPLIES_PER_TOPIC_PER_HOUR: 5,
+  DUPLICATE_WINDOW_MS: 7 * 86400 * 1000,
+  DUPLICATE_LOOKBACK: 10,
+  BODY_MIN: 8,
+  MIN_LETTERS: 3,
+  STRIKES_TO_MUTE: 5,
+  STRIKE_WINDOW_MS: 86400 * 1000,
+  STRIKE_MUTE_MS: 86400 * 1000,
+  HIDDEN_TO_MUTE: 2,
+  HIDDEN_WINDOW_MS: 7 * 86400 * 1000,
+  HIDDEN_MUTE_MS: 7 * 86400 * 1000,
+  PURGE_MAX_HOURS: 168,
+} as const;
+const DAY_MS = 86400 * 1000;
+const HOUR_MS = 3600 * 1000;
 export const MUTE_MAX_DAYS = 30;
 // W911 — RANK GATES (owner, 2026-09-06): only C-tier and better open topics; only
 // D-tier and better reply. Moderators are exempt. Rank comes from the hunter's own
@@ -97,6 +120,7 @@ interface TopicRow extends AuthorRow {
   deleted_at: number | null;
   up_count?: number;          // W913
   pinned_at?: number | null;  // W913
+  locked_at?: number | null;  // W914
 }
 
 interface Replier { alias: string; rank_label: string | null }
@@ -119,13 +143,38 @@ function clampText(v: unknown, max: number): string | null {
   return t.length > max ? t.slice(0, max) : t;
 }
 
-/** Per-token profanity: true when the text is clean. */
+/** Per-word profanity (W914: word-aware — "second", "Japan", "grape" are words, not slurs): true when the text is clean. */
 export function textIsClean(text: string): boolean {
-  if (text.length <= 20 && isProfane(text)) return false;
-  for (const tok of text.split(/\s+/)) {
-    if (tok && isProfane(tok)) return false;
-  }
+  const toks = text.split(/\s+/).filter(Boolean);
+  for (const tok of toks) { if (isProfaneWord(tok)) return false; }
+  // spaced-out obfuscation ("f u c k") — short texts only, joined
+  if (text.length <= 20 && toks.length > 1 && isProfaneWord(toks.join(''))) return false;
   return true;
+}
+
+// ── W914 — junk + repeat helpers (exported for the tests) ───────────────
+const URL_RE = /(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|io|app|co|gg|me|ly|xyz|info|dev|ai|us|uk|ca|tv|cc|link|site|online|shop|store|biz)\b/i;
+const EMAIL_RE = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+/** A run of 9–15 digits with phone punctuation between them reads as a phone number. */
+export function looksLikePhone(text: string): boolean {
+  const runs = text.match(/\+?[\d\s().-]{9,}/g) || [];
+  return runs.some((r) => { const d = (r.match(/\d/g) || []).length; return d >= 9 && d <= 15; });
+}
+export function junkReason(text: string, kind: 'title' | 'body'): { code: string; detail: string } | null {
+  if (kind === 'body') {
+    const letters = (text.match(/\p{L}/gu) || []).length;
+    if (text.trim().length < SPAM.BODY_MIN || letters < SPAM.MIN_LETTERS) {
+      return { code: 'TOO_SHORT', detail: `Say a little more — at least ${SPAM.BODY_MIN} characters.` };
+    }
+  }
+  if (EMAIL_RE.test(text)) return { code: 'LINKS_NOT_ALLOWED', detail: 'Emails are not allowed on the board.' };
+  if (URL_RE.test(text)) return { code: 'LINKS_NOT_ALLOWED', detail: 'Links are not allowed on the board.' };
+  if (looksLikePhone(text)) return { code: 'LINKS_NOT_ALLOWED', detail: 'Phone numbers are not allowed on the board.' };
+  return null;
+}
+/** Case, spacing and punctuation do not make a post different. */
+export function normText(s: string): string {
+  return String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 function isTag(v: unknown): v is Tag {
@@ -159,6 +208,19 @@ async function meState(env: Env, userId: string): Promise<Me> {
     role: mod && (mod.role === 'owner' || mod.role === 'mod') ? (mod.role as Role) : null,
     sim: !!user && typeof user.apple_sub === 'string' && user.apple_sub.startsWith('sim_test_'),
     rank_tier: prof && typeof prof.rank_tier === 'string' ? prof.rank_tier : null,
+  };
+}
+
+/** What the client learns about itself on every read (W914 adds the spam knobs it preflights with). */
+function meOut(me: Me) {
+  return {
+    consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION,
+    rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER,
+    limits: {
+      topics_per_day: SPAM.TOPICS_PER_DAY, topic_cooldown_ms: SPAM.TOPIC_COOLDOWN_MS,
+      replies_per_day: SPAM.REPLIES_PER_DAY, reply_cooldown_ms: SPAM.REPLY_COOLDOWN_MS,
+      replies_per_topic_per_hour: SPAM.REPLIES_PER_TOPIC_PER_HOUR, body_min: SPAM.BODY_MIN,
+    },
   };
 }
 
@@ -219,12 +281,13 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
     up_count: Number(r.up_count) || 0,
     voted: !!extra.voted,
     pinned: r.pinned_at != null,
+    locked: r.locked_at != null,   // W914
     repliers: extra.repliers,
     author: authorOut(r),
   };
 }
 
-const TOPIC_COLS = `x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at`;
+const TOPIC_COLS = `x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at`;
 
 /** Which of these topics the caller upvoted. */
 async function votedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
@@ -393,7 +456,7 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
     next_cursor,
     sort,
     counts,
-    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
+    me: meOut(me),
   });
 }
 
@@ -438,7 +501,7 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
     topic: topicOut(topic, true, { voted: voted.has(topicId), repliers: repliers.get(topicId) || [] }),
     replies: page.map(replyOut),
     next_cursor: list.length > REPLY_PAGE && last ? String(Number(last.created_at)) : null,
-    me: { consented: me.consented, muted_until: me.muted_until, role: me.role, rules_version: BOARD_RULES_VERSION, rank_tier: me.rank_tier || 'E', topic_min_tier: TOPIC_MIN_TIER, reply_min_tier: REPLY_MIN_TIER },
+    me: meOut(me),
   });
 }
 
@@ -458,7 +521,94 @@ export async function handleBoardConsentPost(request: Request, env: Env, session
   return jsonOk({ ok: true, consented: true, version });
 }
 
-export async function handleBoardTopicPost(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+// ── W914 — the spam guard: junk → caps/cooldowns → repeats; every rejection is a strike ──
+async function autoMute(env: Env, userId: string, until: number, reason: string, now: number): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO board_mutes (user_id, until, by_user_id, reason, created_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET until = MAX(board_mutes.until, excluded.until), by_user_id = excluded.by_user_id,
+                                         reason = excluded.reason, created_at = excluded.created_at`,
+  ).bind(userId, until, 'system', reason, now).run();
+}
+async function pushMods(env: Env, exceptUserId: string, title: string, body: string, type: string, data: Record<string, string>, ctx?: ExecutionContext): Promise<void> {
+  const mods = await env.DB.prepare('SELECT user_id FROM board_moderators').bind().all<{ user_id: string }>();
+  const push = async () => {
+    for (const m of mods.results ?? []) {
+      if (m.user_id === exceptUserId) continue;
+      await notifyUser(env, m.user_id, { title, body, type, data });
+    }
+  };
+  if (ctx) ctx.waitUntil(push()); else await push();
+}
+/** Record a strike; at SPAM.STRIKES_TO_MUTE inside the window the hunter is muted for a day. Returns muted_until or null. */
+async function strike(env: Env, userId: string, code: string, now: number, ctx?: ExecutionContext): Promise<number | null> {
+  await env.DB.prepare('INSERT INTO board_strikes (user_id, reason, created_at) VALUES (?, ?, ?)').bind(userId, code, now).run();
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM board_strikes WHERE user_id = ? AND created_at > ?')
+    .bind(userId, now - SPAM.STRIKE_WINDOW_MS).first<{ n: number }>();
+  const n = Number(row?.n) || 0;
+  if (n < SPAM.STRIKES_TO_MUTE) return null;
+  const until = now + SPAM.STRIKE_MUTE_MS;
+  await autoMute(env, userId, until, `auto: spam (${n} rejected posts in a day)`, now);
+  await pushMods(env, userId, 'Spam guard', `A hunter was muted for a day after ${n} rejected posts. Open the Community board to review.`, 'board_spam', { user_id: userId }, ctx);
+  return until;
+}
+async function spamGate(
+  env: Env, session: SessionPayload, me: Me, kind: 'topic' | 'reply', topicId: string,
+  title: string, text: string, ctx?: ExecutionContext,
+): Promise<{ deny: Response } | null> {
+  if (isModRole(me.role)) return null;
+  const now = Date.now();
+  const reject = async (status: number, code: string, detail: string, extra?: Record<string, unknown>) => {
+    const mutedUntil = await strike(env, session.userId, code, now, ctx);
+    if (mutedUntil) return { deny: jsonError(403, 'MUTED', 'Too many rejected posts — you are muted for a day.', { muted_until: mutedUntil, auto: true }) };
+    return { deny: jsonError(status, code, detail, extra) };
+  };
+  // 1. junk — links, emails, phone numbers, nothing-posts
+  const junk = (title ? junkReason(title, 'title') : null) || junkReason(text, 'body');
+  if (junk) return reject(400, junk.code, junk.detail);
+  // 2. caps + cooldowns
+  if (kind === 'topic') {
+    const rows = await env.DB.prepare('SELECT created_at FROM board_topics WHERE author_id = ? AND created_at > ? ORDER BY created_at DESC')
+      .bind(session.userId, now - DAY_MS).all<{ created_at: number }>();
+    const list = (rows.results ?? []).map((r) => Number(r.created_at));
+    if (list.length && now - list[0]! < SPAM.TOPIC_COOLDOWN_MS) {
+      return reject(429, 'COOLDOWN', 'Give it a few minutes before the next topic.', { retry_after_ms: SPAM.TOPIC_COOLDOWN_MS - (now - list[0]!) });
+    }
+    if (list.length >= SPAM.TOPICS_PER_DAY) {
+      return reject(429, 'TOO_MANY_TOPICS_TODAY', `${SPAM.TOPICS_PER_DAY} topics a day is the limit.`, { retry_after_ms: list[list.length - 1]! + DAY_MS - now });
+    }
+  } else {
+    const rows = await env.DB.prepare('SELECT created_at, topic_id FROM board_replies WHERE author_id = ? AND created_at > ? ORDER BY created_at DESC')
+      .bind(session.userId, now - DAY_MS).all<{ created_at: number; topic_id: string }>();
+    const list = rows.results ?? [];
+    if (list.length && now - Number(list[0]!.created_at) < SPAM.REPLY_COOLDOWN_MS) {
+      return reject(429, 'COOLDOWN', 'Give it a moment before the next reply.', { retry_after_ms: SPAM.REPLY_COOLDOWN_MS - (now - Number(list[0]!.created_at)) });
+    }
+    if (list.length >= SPAM.REPLIES_PER_DAY) {
+      return reject(429, 'TOO_MANY_REPLIES_TODAY', `${SPAM.REPLIES_PER_DAY} replies a day is the limit.`, { retry_after_ms: Number(list[list.length - 1]!.created_at) + DAY_MS - now });
+    }
+    const onTopic = list.filter((r) => r.topic_id === topicId && now - Number(r.created_at) < HOUR_MS);
+    if (onTopic.length >= SPAM.REPLIES_PER_TOPIC_PER_HOUR) {
+      return reject(429, 'TOPIC_FLOOD', `${SPAM.REPLIES_PER_TOPIC_PER_HOUR} replies an hour on one topic is the limit — let others speak.`, { retry_after_ms: Number(onTopic[onTopic.length - 1]!.created_at) + HOUR_MS - now });
+    }
+  }
+  // 3. repeats — the same text as anything this hunter posted in the last week
+  const since = now - SPAM.DUPLICATE_WINDOW_MS;
+  const [pt, pr] = await Promise.all([
+    env.DB.prepare('SELECT title, body FROM board_topics WHERE author_id = ? AND created_at > ? ORDER BY created_at DESC LIMIT ?')
+      .bind(session.userId, since, SPAM.DUPLICATE_LOOKBACK).all<{ title: string; body: string }>(),
+    env.DB.prepare('SELECT body FROM board_replies WHERE author_id = ? AND created_at > ? ORDER BY created_at DESC LIMIT ?')
+      .bind(session.userId, since, SPAM.DUPLICATE_LOOKBACK).all<{ body: string }>(),
+  ]);
+  const seen = new Set<string>();
+  for (const r of pt.results ?? []) { seen.add(normText(`${r.title || ''} ${r.body || ''}`)); seen.add(normText(r.body || '')); }
+  for (const r of pr.results ?? []) seen.add(normText(r.body || ''));
+  seen.delete('');
+  const cand = kind === 'topic' ? [normText(`${title} ${text}`), normText(text)] : [normText(text)];
+  if (cand.some((c) => c && seen.has(c))) return reject(400, 'DUPLICATE', 'You already posted this.');
+  return null;
+}
+
+export async function handleBoardTopicPost(request: Request, env: Env, session: SessionPayload, ctx?: ExecutionContext): Promise<Response> {
   const gate = await writeGate(env, session, 'topic');
   if ('deny' in gate) return gate.deny;
   const body = await readJson<{ tag?: unknown; title?: unknown; body?: unknown }>(request);
@@ -469,6 +619,8 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
   if (!title) return jsonError(400, 'MISSING_TITLE', 'Give the topic a title.');
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
   if (!textIsClean(title) || !textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
+  const spam = await spamGate(env, session, gate.me, 'topic', '', title, text, ctx);   // W914
+  if (spam) return spam.deny;
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
@@ -478,7 +630,7 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
   return jsonOk({ ok: true, id, created_at: now });
 }
 
-export async function handleBoardReplyPost(request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+export async function handleBoardReplyPost(request: Request, env: Env, session: SessionPayload, topicId: string, ctx?: ExecutionContext): Promise<Response> {
   if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   const gate = await writeGate(env, session, 'reply');
   if ('deny' in gate) return gate.deny;
@@ -487,10 +639,13 @@ export async function handleBoardReplyPost(request: Request, env: Env, session: 
   const text = clampText(body.body, BODY_MAX);
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
   if (!textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
-  const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at FROM board_topics WHERE id = ? LIMIT 1')
-    .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null }>();
+  const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at, locked_at FROM board_topics WHERE id = ? LIMIT 1')
+    .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null; locked_at: number | null }>();
   if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   if (topic.hidden_at != null && !isModRole(gate.me.role)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  if (topic.locked_at != null && !isModRole(gate.me.role)) return jsonError(403, 'TOPIC_LOCKED', 'This topic is locked.');   // W914
+  const spam = await spamGate(env, session, gate.me, 'reply', topicId, '', text, ctx);   // W914
+  if (spam) return spam.deny;
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
@@ -532,6 +687,23 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
       .bind(now, id).run();
     autoHidden = !!(upd.meta && Number(upd.meta.changes) >= 1);
   }
+  // W914 — a hunter whose posts keep getting auto-hidden is muted for a week (moderators never).
+  let autoMuted = false;
+  if (autoHidden) {
+    const since = now - SPAM.HIDDEN_WINDOW_MS;
+    const h = await env.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM board_topics WHERE author_id = ? AND hidden_by = 'auto' AND hidden_at > ?)
+            + (SELECT COUNT(*) FROM board_replies WHERE author_id = ? AND hidden_by = 'auto' AND hidden_at > ?) AS n`,
+    ).bind(target.author_id, since, target.author_id, since).first<{ n: number }>();
+    if ((Number(h?.n) || 0) >= SPAM.HIDDEN_TO_MUTE) {
+      const targetMod = await env.DB.prepare('SELECT role FROM board_moderators WHERE user_id = ? LIMIT 1')
+        .bind(target.author_id).first<{ role: string }>();
+      if (!targetMod) {
+        await autoMute(env, target.author_id, now + SPAM.HIDDEN_MUTE_MS, `auto: reports (${Number(h?.n)} posts hidden in a week)`, now);
+        autoMuted = true;
+      }
+    }
+  }
   if (fresh) {
     // Every moderator hears about every report — that is the 1.2 "timely
     // response" mechanism. notifyUser never throws.
@@ -541,7 +713,7 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
         if (m.user_id === session.userId) continue;
         await notifyUser(env, m.user_id, {
           title: 'Board report',
-          body: `A ${kind} was reported for ${reason}${autoHidden ? ' and is now hidden' : ''}. Open the Community board to review it.`,
+          body: `A ${kind} was reported for ${reason}${autoHidden ? ' and is now hidden' : ''}${autoMuted ? '; the author is muted for a week' : ''}. Open the Community board to review it.`,
           type: 'board_report',
           data: { kind, id },
         });
@@ -549,7 +721,7 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
     };
     if (ctx) ctx.waitUntil(push()); else await push();
   }
-  return jsonOk({ ok: true, already: !fresh, reports: n, auto_hidden: autoHidden });
+  return jsonOk({ ok: true, already: !fresh, reports: n, auto_hidden: autoHidden, auto_muted: autoMuted });
 }
 
 export async function handleBoardBlockPost(request: Request, env: Env, session: SessionPayload, unblock: boolean): Promise<Response> {
@@ -659,6 +831,46 @@ export async function handleBoardPinPost(_request: Request, env: Env, session: S
   await env.DB.prepare('UPDATE board_topics SET pinned_at = ?, pinned_by = ? WHERE id = ?')
     .bind(pin ? Date.now() : null, pin ? session.userId : null, topicId).run();
   return jsonOk({ ok: true, pinned: pin });
+}
+
+// ── W914 — moderator tools: LOCK a topic, PURGE a hunter's recent posts ──
+export async function handleBoardTopicLock(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const gate = await modGate(env, session);
+  if ('deny' in gate) return gate.deny;
+  const row = await env.DB.prepare('SELECT locked_at FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(topicId).first<{ locked_at: number | null }>();
+  if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const lock = row.locked_at == null;
+  await env.DB.prepare('UPDATE board_topics SET locked_at = ?, locked_by = ? WHERE id = ?')
+    .bind(lock ? Date.now() : null, lock ? session.userId : null, topicId).run();
+  return jsonOk({ ok: true, locked: lock });
+}
+
+/** Soft-delete everything a hunter posted in the last N hours (default 24, max 168). One tap after a spam burst. */
+export async function handleBoardPurgePost(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const gate = await modGate(env, session);
+  if ('deny' in gate) return gate.deny;
+  const body = await readJson<{ user_id?: unknown; hours?: unknown }>(request);
+  const target = body && typeof body.user_id === 'string' && USER_ID_RE.test(body.user_id) ? body.user_id : null;
+  if (!target) return jsonError(400, 'INVALID_TARGET', 'user_id required.');
+  if (target === session.userId) return jsonError(400, 'SELF_PURGE', 'Delete your own posts one by one.');
+  const hours = body && Number.isInteger(body.hours) ? Number(body.hours) : 24;
+  if (hours < 1 || hours > SPAM.PURGE_MAX_HOURS) return jsonError(400, 'INVALID_HOURS', `hours must be 1–${SPAM.PURGE_MAX_HOURS}.`);
+  const targetMod = await env.DB.prepare('SELECT role FROM board_moderators WHERE user_id = ? LIMIT 1')
+    .bind(target).first<{ role: string }>();
+  if (targetMod) return jsonError(403, 'CANNOT_PURGE_MODERATOR', 'Moderators cannot be purged.');
+  const now = Date.now();
+  const since = now - hours * HOUR_MS;
+  const t = await env.DB.prepare('UPDATE board_topics SET deleted_at = ?, deleted_by = ? WHERE author_id = ? AND created_at > ? AND deleted_at IS NULL')
+    .bind(now, session.userId, target, since).run();
+  const r = await env.DB.prepare("UPDATE board_replies SET deleted_at = ?, deleted_by = ?, body = '' WHERE author_id = ? AND created_at > ? AND deleted_at IS NULL")
+    .bind(now, session.userId, target, since).run();
+  await env.DB.prepare(
+    `UPDATE board_topics SET reply_count = (SELECT COUNT(*) FROM board_replies r WHERE r.topic_id = board_topics.id AND r.deleted_at IS NULL)
+      WHERE id IN (SELECT DISTINCT topic_id FROM board_replies WHERE author_id = ? AND created_at > ?)`,
+  ).bind(target, since).run();
+  return jsonOk({ ok: true, topics: Number(t.meta?.changes) || 0, replies: Number(r.meta?.changes) || 0 });
 }
 
 export async function handleBoardMutePost(request: Request, env: Env, session: SessionPayload, unmute: boolean): Promise<Response> {

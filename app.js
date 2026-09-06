@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w913b'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w914'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -46006,6 +46006,7 @@
       '<div class="board-tb">' +
         '<div class="board-tags"><span class="board-rune board-rune--' + esc(tag) + '"></span>' +
           (t.pinned ? '<span class="board-tag board-tag--pin">PINNED</span>' : '') +
+          (t.locked ? '<span class="board-tag board-tag--lock">LOCKED</span>' : '') +
           (t.hidden ? '<span class="board-tag board-tag--hidden">HIDDEN</span>' : '') +
           '<span class="board-tag board-tag--' + esc(tag) + '">' + (BOARD_TAG_LABEL[tag] || 'TALK') + '</span>' +
         '</div>' +
@@ -46206,6 +46207,7 @@
   // ── sheets (one at a time; every textarea at the TOP) ───────────────────
   function _boardSheetClose(opts) {
     if (!_boardSheet) return;
+    _boardComposeStop();
     const el = _boardSheet; _boardSheet = null; _boardTopicData = null;
     const wasList = el === _boardListEl;
     if (wasList) { _boardListEl = null; }
@@ -46255,6 +46257,7 @@
         '<li><b>No personal information.</b> Not yours, not anyone else&#39;s. No phone numbers, addresses, or real names people did not share themselves.</li>' +
         '<li><b>Nothing objectionable.</b> Zero tolerance for abusive, sexual, or illegal content. Posts are filtered, and moderators remove what slips through.</li>' +
         '<li><b>Earn your voice.</b> Opening a topic takes ' + esc(topicBar) + ' rank; replying takes ' + esc(replyBar) + ' rank. Everyone can read. Hunt first, then speak.</li>' +
+        '<li><b>No spam.</b> A few topics a day, a breather between posts, no links, no repeats. Rejected posts count as strikes, and strikes become a mute.</li>' +
         '<li><b>Report what you see.</b> Every post has Report and Block. Reports reach the moderators immediately and are reviewed within 24 hours.</li>' +
         '<li><b>Moderators decide.</b> They can remove posts and mute hunters. Repeat offenders lose the board.</li>' +
       '</ul>' +
@@ -46300,6 +46303,7 @@
           '<input class="board-input" name="title" type="text" maxlength="' + BOARD_TITLE_MAX + '" placeholder="Title" autocomplete="off" autocapitalize="sentences" />'
         : '<div class="board-compose-ctx">Replying to <b>' + esc(topicTitle || 'this topic') + '</b></div>') +
       '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'Say more…' : 'Write your reply') + '"></textarea>' +
+      '<div class="board-compose-note hidden" data-board-note></div>' +
       '<div class="board-compose-foot">' +
         '<span class="board-count" data-board-count>0 / ' + BOARD_BODY_MAX + '</span>' +
         '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TO THE HALL' : 'POST REPLY') + '</button>' +
@@ -46307,6 +46311,99 @@
       '<div class="board-compose-err hidden" data-board-err></div>' +
     '</form>';
   }
+  // ── W914 — THE SPAM GUARD, client half. The server is the truth (caps,
+  // cooldowns, repeats, junk, strikes); the app mirrors the same checks against
+  // a local ledger of what THIS device posted so the answer is instant and a
+  // hunter never burns a strike by accident. Moderators are exempt.
+  const BOARD_LIMITS_DEFAULT = { topics_per_day: 3, topic_cooldown_ms: 600000, replies_per_day: 30, reply_cooldown_ms: 20000, replies_per_topic_per_hour: 5, body_min: 8 };
+  let _boardPosts = [];   // [{ kind, ts, topicId, norms: [] }] — last 7 days, this device
+  try { _boardPosts = JSON.parse(localStorage.getItem('hb_board_posts_v1') || '[]') || []; if (!Array.isArray(_boardPosts)) _boardPosts = []; } catch (_) { _boardPosts = []; }
+  function _boardLimits() { return Object.assign({}, BOARD_LIMITS_DEFAULT, (_boardMe && _boardMe.limits) || {}); }
+  function _boardNorm(t) { return String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+  function _boardPostsPrune() {
+    const cut = Date.now() - 7 * 86400000;
+    _boardPosts = _boardPosts.filter(function (p) { return p && p.ts > cut; }).slice(-100);
+  }
+  function _boardPostsRecord(kind, topicId, title, body) {
+    const norms = kind === 'topic' ? [_boardNorm(title + ' ' + body), _boardNorm(body)] : [_boardNorm(body)];
+    _boardPosts.push({ kind: kind, ts: Date.now(), topicId: topicId || '', norms: norms.filter(Boolean) });
+    _boardPostsPrune();
+    try { localStorage.setItem('hb_board_posts_v1', JSON.stringify(_boardPosts)); } catch (_) {}
+  }
+  const _BOARD_URL_RE = /(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|io|app|co|gg|me|ly|xyz|info|dev|ai|us|uk|ca|tv|cc|link|site|online|shop|store|biz)\b/i;
+  const _BOARD_EMAIL_RE = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+  function _boardLooksLikePhone(text) {
+    const runs = String(text).match(/\+?[\d\s().-]{9,}/g) || [];
+    return runs.some(function (r) { const d = (r.match(/\d/g) || []).length; return d >= 9 && d <= 15; });
+  }
+  function _boardJunk(text, kind) {
+    const L = _boardLimits();
+    if (kind === 'body') {
+      const letters = (String(text).match(/\p{L}/gu) || []).length;
+      if (String(text).trim().length < L.body_min || letters < 3) return 'Say a little more — at least ' + L.body_min + ' characters.';
+    }
+    if (_BOARD_EMAIL_RE.test(text)) return 'Emails are not allowed on the board.';
+    if (_BOARD_URL_RE.test(text)) return 'Links are not allowed on the board.';
+    if (_boardLooksLikePhone(text)) return 'Phone numbers are not allowed on the board.';
+    return null;
+  }
+  function _boardWait(ms) {
+    ms = Math.max(0, Number(ms) || 0);
+    const s = Math.ceil(ms / 1000);
+    if (s < 60) return s + ' s';
+    const m = Math.ceil(s / 60);
+    if (m < 60) return m + ' min';
+    const h = Math.floor(m / 60), rm = m % 60;
+    return h + ' h' + (rm ? ' ' + rm + ' min' : '');
+  }
+  function _boardWaitMsg(kind, code, ms, detail) {
+    const L = _boardLimits(); const w = _boardWait(ms);
+    if (code === 'COOLDOWN') return kind === 'topic' ? 'Next topic in ' + w + '.' : 'You can reply again in ' + w + '.';
+    if (code === 'TOO_MANY_TOPICS_TODAY') return L.topics_per_day + ' topics a day is the limit. Next one in ' + w + '.';
+    if (code === 'TOO_MANY_REPLIES_TODAY') return L.replies_per_day + ' replies a day is the limit. More in ' + w + '.';
+    if (code === 'TOPIC_FLOOD') return L.replies_per_topic_per_hour + ' replies an hour on one topic — let others speak. Again in ' + w + '.';
+    return detail || 'Slow down.';
+  }
+  /** null when the post may go; else { code, msg, retry_after_ms }. Empty text = caps only. */
+  function _boardPreflight(kind, topicId, title, body) {
+    if (_boardIsMod()) return null;
+    _boardPostsPrune();
+    const L = _boardLimits(); const now = Date.now();
+    const mine = _boardPosts.filter(function (p) { return p.kind === kind && now - p.ts < 86400000; }).sort(function (a, b) { return b.ts - a.ts; });
+    const out = function (code, ms) { return { code: code, retry_after_ms: ms, msg: _boardWaitMsg(kind, code, ms) }; };
+    if (kind === 'topic') {
+      if (mine.length && now - mine[0].ts < L.topic_cooldown_ms) return out('COOLDOWN', L.topic_cooldown_ms - (now - mine[0].ts));
+      if (mine.length >= L.topics_per_day) return out('TOO_MANY_TOPICS_TODAY', mine[mine.length - 1].ts + 86400000 - now);
+    } else {
+      if (mine.length && now - mine[0].ts < L.reply_cooldown_ms) return out('COOLDOWN', L.reply_cooldown_ms - (now - mine[0].ts));
+      if (mine.length >= L.replies_per_day) return out('TOO_MANY_REPLIES_TODAY', mine[mine.length - 1].ts + 86400000 - now);
+      const onTopic = mine.filter(function (p) { return p.topicId === topicId && now - p.ts < 3600000; });
+      if (onTopic.length >= L.replies_per_topic_per_hour) return out('TOPIC_FLOOD', onTopic[onTopic.length - 1].ts + 3600000 - now);
+    }
+    if (body) {
+      const junk = (title ? _boardJunk(title, 'title') : null) || _boardJunk(body, 'body');
+      if (junk) return { code: 'JUNK', msg: junk };
+      const cand = kind === 'topic' ? [_boardNorm(title + ' ' + body), _boardNorm(body)] : [_boardNorm(body)];
+      const seen = {}; _boardPosts.forEach(function (p) { (p.norms || []).forEach(function (n) { seen[n] = 1; }); });
+      if (cand.some(function (c) { return c && seen[c]; })) return { code: 'DUPLICATE', msg: 'You already posted this.' };
+    }
+    return null;
+  }
+  // the composer's live note: "Next topic in 9 min" with the button disabled until it is time
+  let _boardComposeTimer = null;
+  function _boardComposeTick() {
+    const form = _boardSheet && _boardSheet.querySelector('form[data-board-compose]');
+    if (!form) { _boardComposeStop(); return; }
+    const kind = form.getAttribute('data-board-compose');
+    const wrap = form.closest('.board-sheet-wrap'); const topicId = (wrap && wrap.dataset.topicId) || '';
+    const note = form.querySelector('[data-board-note]'); const btn = form.querySelector('button[type="submit"]');
+    const pf = _boardPreflight(kind, topicId, '', '');
+    if (note) { note.textContent = pf ? pf.msg.toUpperCase() : ''; note.classList.toggle('hidden', !pf); }
+    if (btn) btn.disabled = !!pf;
+  }
+  function _boardComposeStart() { _boardComposeStop(); _boardComposeTick(); _boardComposeTimer = setInterval(_boardComposeTick, 1000); }
+  function _boardComposeStop() { if (_boardComposeTimer) { clearInterval(_boardComposeTimer); _boardComposeTimer = null; } }
+
   function openBoardComposer(kind, topicId, topicTitle) {
     if (!_boardConsented()) { openBoardRules(function () { openBoardComposer(kind, topicId, topicTitle); }); return; }
     if (_boardMe && _boardMe.muted_until && Number(_boardMe.muted_until) > Date.now()) { _boardToast('You are muted until ' + _boardDate(_boardMe.muted_until) + '.'); return; }
@@ -46317,6 +46414,7 @@
     }
     const el = _boardSheetOpen(kind === 'topic' ? 'New topic' : 'Reply', _boardComposerHtml(kind, topicTitle), 'board-sheet--compose');
     el.dataset.topicId = topicId || '';
+    _boardComposeStart();   // W914 — live cooldown note
     setTimeout(function () { try { const f = el.querySelector(kind === 'topic' ? 'input[name="title"]' : 'textarea'); if (f) f.focus(); } catch (_) {} }, 320);
   }
   async function _boardSubmit(form) {
@@ -46335,6 +46433,8 @@
     if (err) err.classList.add('hidden');
     if (kind === 'topic' && !title.trim()) { showErr('Give the topic a title.'); return; }
     if (!body.trim()) { showErr('Say something first.'); return; }
+    const pf = _boardPreflight(kind, topicId, kind === 'topic' ? title.trim() : '', body.trim());   // W914
+    if (pf) { showErr(pf.msg); return; }
     if (btn) btn.disabled = true;
     let res;
     try {
@@ -46347,9 +46447,15 @@
       if (code === 'MUTED') { _boardSheetClose(); _boardToast('You are muted right now. You can still read the board.'); _boardLists = {}; renderBoardSection(); return; }
       if (code === 'RANK_TOO_LOW') { showErr((res && res.detail) || 'Your rank is too low for that.'); return; }
       if (code === 'OBJECTIONABLE') { showErr('That contains language the board does not allow.'); return; }
+      // W914 — the spam guard's answers
+      if (code === 'COOLDOWN' || code === 'TOO_MANY_TOPICS_TODAY' || code === 'TOO_MANY_REPLIES_TODAY' || code === 'TOPIC_FLOOD') { showErr(_boardWaitMsg(kind, code, res.retry_after_ms, res.detail)); return; }
+      if (code === 'DUPLICATE') { showErr('You already posted this.'); return; }
+      if (code === 'LINKS_NOT_ALLOWED' || code === 'TOO_SHORT') { showErr((res && res.detail) || 'The board does not allow that.'); return; }
+      if (code === 'TOPIC_LOCKED') { _boardSheetClose({ noReturn: true }); _boardToast('This topic is locked.'); _boardLists = {}; renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); return; }
       if (code === 'RATE_LIMITED') { showErr('Slow down — a few posts a minute is plenty.'); return; }
       showErr(_boardErrMsg(res)); return;
     }
+    _boardPostsRecord(kind, topicId, kind === 'topic' ? title.trim() : '', body.trim());   // W914 — the local ledger the preflight reads
     _boardEmit(kind === 'topic' ? 'topic_posted' : 'reply_posted', kind === 'topic' ? tag : '');
     try { _hapticTick('SUCCESS'); } catch (_) {}
     try { if (ta) ta.blur(); } catch (_) {}
@@ -46384,6 +46490,8 @@
             '<button type="button" class="board-chip board-chip--danger" data-board-mod="delete">Delete</button>' +
             (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="hide">' + (p.hidden ? 'Unhide' : 'Hide') + '</button>' : '') +
             (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="pin">' + (p.pinned ? 'Unpin' : 'Pin') + '</button>' : '') +
+            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="lock">' + (p.locked ? 'Unlock' : 'Lock') + '</button>' : '') +
+            (mine ? '' : '<button type="button" class="board-chip board-chip--danger" data-board-mod="purge">Remove 24h</button>') +
             (mine ? '' : '<button type="button" class="board-chip" data-board-mod="mute1">Mute 1d</button>' +
               '<button type="button" class="board-chip" data-board-mod="mute7">Mute 7d</button>' +
               '<button type="button" class="board-chip" data-board-mod="mute30">Mute 30d</button>') +
@@ -46400,6 +46508,7 @@
         '<span class="board-rune board-rune--' + esc(t.tag || 'talk') + '"></span>' +
         '<span class="board-tag board-tag--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
         (t.pinned ? '<span class="board-tag board-tag--pin">PINNED</span>' : '') +
+        (t.locked ? '<span class="board-tag board-tag--lock">LOCKED</span>' : '') +
         (t.hidden ? '<span class="board-hiddenpill">HIDDEN · moderators only</span>' : '') +
         '<button type="button" class="board-up board-up--lg' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id || '') + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + (Number(t.up_count) || 0) + '</span></button>' +
       '</div>' +
@@ -46408,8 +46517,10 @@
       '<div class="board-replylist" data-board-replies>' + d.replies.map(function (r) { return _boardPostHtml('reply', r); }).join('') + '</div>' +
       (d.next_cursor ? '<button type="button" class="board-more" data-board-more-replies>LOAD MORE REPLIES</button>' : '') +
       '<div class="board-replybar">' +
-        (bar ? '<div class="board-gate-note">REPLYING TAKES ' + esc(bar.need) + ' RANK · YOU ARE ' + esc(bar.mine) + '</div>' : '') +
-        '<button type="button" class="board-primary" data-board-reply>REPLY</button>' +
+        (t.locked && !_boardIsMod()
+          ? '<div class="board-gate-note">THIS TOPIC IS LOCKED · NO MORE REPLIES</div>'
+          : (bar ? '<div class="board-gate-note">REPLYING TAKES ' + esc(bar.need) + ' RANK · YOU ARE ' + esc(bar.mine) + '</div>' : '') +
+            '<button type="button" class="board-primary" data-board-reply>REPLY</button>') +
       '</div>' +
     '</div>';
   }
@@ -46467,6 +46578,8 @@
       else if (action === 'delete') res = kind === 'topic' ? await Auth.boardModDeleteTopic(id) : await Auth.boardModDeleteReply(id);
       else if (action === 'hide') res = await Auth.boardModHideTopic(id);
       else if (action === 'pin') res = await Auth.boardModPinTopic(id);   // W913
+      else if (action === 'lock') res = await Auth.boardModLockTopic(id);   // W914
+      else if (action === 'purge') res = await Auth.boardModPurge(authorId, 24);   // W914
       else if (action.indexOf('mute') === 0) res = await Auth.boardModMute(authorId, parseInt(action.slice(4), 10) || 1, '');
     } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     if (!res || !res.ok) { _boardToast(_boardErrMsg(res)); return; }
@@ -46494,6 +46607,19 @@
       _boardToast(res.hidden ? 'Topic hidden from hunters.' : 'Topic visible again.');
       _boardLists = {}; renderBoardSection();
       openBoardTopic(id);
+      return;
+    }
+    if (action === 'lock') {
+      _boardToast(res.locked ? 'Topic locked. No more replies.' : 'Topic unlocked.');
+      _boardLists = {}; renderBoardSection();
+      openBoardTopic(id);
+      return;
+    }
+    if (action === 'purge') {
+      _boardToast('Removed ' + (res.topics | 0) + ' topics and ' + (res.replies | 0) + ' replies from ' + alias + '.');
+      _boardLists = {};
+      if (kind === 'topic') { _boardSheetClose(); renderBoardSection(); }
+      else { postEl.remove(); renderBoardSection(); }
       return;
     }
     if (action === 'pin') {
@@ -46611,7 +46737,7 @@
       if ((el = t.closest('[data-board-mod]'))) {
         e.preventDefault();
         const a = el.getAttribute('data-board-mod');
-        if (a === 'hide' || a === 'pin' || _boardArm(el, 'Tap again')) _boardAct(a, el.closest('[data-board-post]'));
+        if (a === 'hide' || a === 'pin' || a === 'lock' || _boardArm(el, 'Tap again')) _boardAct(a, el.closest('[data-board-post]'));
         return;
       }
       if ((el = t.closest('[data-board-unblock]'))) { e.preventDefault(); _boardUnblock(el.getAttribute('data-board-unblock'), el); return; }
@@ -46654,6 +46780,7 @@
       render: renderBoardSection, me: function () { return _boardMe; },
       rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic, list: openBoardList,
       settings: renderBoardBlocksSettings, pane: _cmSetPane, sort: _boardSetSort, tag: _boardSetTag,
+      preflight: _boardPreflight, posts: function () { return _boardPosts; },   // W914
     };
   } catch (_) {}
 

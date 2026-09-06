@@ -22,6 +22,11 @@ import {
   handleBoardTopicsGet,
   handleBoardVotePost,
   handleBoardPinPost,
+  handleBoardTopicLock,
+  handleBoardPurgePost,
+  junkReason,
+  normText,
+  SPAM,
   textIsClean,
   TOPIC_MIN_TIER,
   REPLY_MIN_TIER,
@@ -39,9 +44,10 @@ interface State {
   consents: Set<string>;
   mutes: Record<string, number>;
   mods: Record<string, 'owner' | 'mod'>;
-  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null }>;
+  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null }>;
   votes: Set<string>;     // W913 — `${topic}|${user}`
-  replies: Record<string, { topic_id: string; deleted_at: number | null }>;
+  replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string }>;
+  strikes: { user_id: string; created_at: number }[];   // W914
   reports: Set<string>;   // `${kind}|${id}|${reporter}`
   blocks: Set<string>;    // `${blocker}|${blocked}`
   calls: { sql: string; binds: unknown[] }[];
@@ -66,6 +72,7 @@ function fresh(): State {
     reports: new Set(),
     blocks: new Set(),
     votes: new Set(),
+    strikes: [],
     calls: [],
   };
 }
@@ -100,8 +107,18 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               return hit ? { id: hit[0], alias: hit[1].alias } : null;
             }
             if (/SELECT 1 AS one FROM users/.test(sql)) return st.users[binds[0] as string] ? { one: 1 } : null;
-            if (/SELECT id, hidden_at, deleted_at FROM board_topics/.test(sql)) {
-              const t = st.topics[binds[0] as string]; return t ? { id: binds[0], hidden_at: t.hidden_at, deleted_at: t.deleted_at } : null;
+            if (/SELECT id, hidden_at, deleted_at(, locked_at)? FROM board_topics/.test(sql)) {
+              const t = st.topics[binds[0] as string]; return t ? { id: binds[0], hidden_at: t.hidden_at, deleted_at: t.deleted_at, locked_at: t.locked_at ?? null } : null;
+            }
+            if (/SELECT locked_at FROM board_topics/.test(sql)) {
+              const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { locked_at: t.locked_at ?? null } : null;
+            }
+            if (/SELECT COUNT\(\*\) AS n FROM board_strikes/.test(sql)) {
+              return { n: st.strikes.filter((k) => k.user_id === binds[0] && k.created_at > (binds[1] as number)).length };
+            }
+            if (/hidden_by = 'auto' AND hidden_at >/.test(sql)) {
+              const n = Object.values(st.topics).filter((t) => t.author_id === binds[0] && t.hidden_by === 'auto' && (t.hidden_at || 0) > (binds[1] as number)).length;
+              return { n };
             }
             if (/SELECT id, author_id, hidden_at FROM board_topics/.test(sql)) {
               const t = st.topics[binds[0] as string];
@@ -141,7 +158,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
           run: async () => {
             if (/INSERT INTO board_consents/.test(sql)) { st.consents.add(binds[0] as string); return ok(1); }
             if (/INSERT INTO board_topics/.test(sql)) {
-              st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: null };
+              st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: null, created_at: binds[5] as number, title: binds[3] as string, body: binds[4] as string };
               return ok(1);
             }
             if (/INSERT OR IGNORE INTO board_votes/.test(sql)) {
@@ -154,13 +171,27 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/UPDATE board_topics SET pinned_at/.test(sql)) {
               const t = st.topics[binds[2] as string]; if (t) t.pinned_at = binds[0] as number | null; return ok(1);
             }
-            if (/INSERT INTO board_replies/.test(sql)) { st.replies[binds[0] as string] = { topic_id: binds[1] as string, deleted_at: null }; return ok(1); }
+            if (/INSERT INTO board_replies/.test(sql)) { st.replies[binds[0] as string] = { topic_id: binds[1] as string, deleted_at: null, author_id: binds[2] as string, body: binds[3] as string, created_at: binds[4] as number }; return ok(1); }
+            if (/INSERT INTO board_strikes/.test(sql)) { st.strikes.push({ user_id: binds[0] as string, created_at: binds[2] as number }); return ok(1); }
+            if (/UPDATE board_topics SET locked_at/.test(sql)) { const t = st.topics[binds[2] as string]; if (t) t.locked_at = binds[0] as number | null; return ok(1); }
+            if (/UPDATE board_topics SET deleted_at = \?, deleted_by = \? WHERE author_id/.test(sql)) {
+              let n = 0; for (const t of Object.values(st.topics)) if (t.author_id === binds[2] && (t.created_at || 0) > (binds[3] as number) && t.deleted_at == null) { t.deleted_at = binds[0] as number; n++; }
+              return ok(n);
+            }
+            if (/UPDATE board_replies SET deleted_at = \?, deleted_by = \?, body = '' WHERE author_id/.test(sql)) {
+              let n = 0; for (const r of Object.values(st.replies)) if (r.author_id === binds[2] && (r.created_at || 0) > (binds[3] as number) && r.deleted_at == null) { r.deleted_at = binds[0] as number; r.body = ''; n++; }
+              return ok(n);
+            }
+            if (/UPDATE board_topics SET reply_count = \(SELECT COUNT/.test(sql)) {
+              for (const [id, t] of Object.entries(st.topics)) t.reply_count = Object.values(st.replies).filter((r) => r.topic_id === id && r.deleted_at == null).length;
+              return ok(1);
+            }
             if (/UPDATE board_topics SET reply_count = reply_count \+ 1/.test(sql)) { const t = st.topics[binds[1] as string]; if (t) { t.reply_count++; t.last_activity_at = binds[0] as number; } return ok(1); }
             if (/INSERT OR IGNORE INTO board_reports/.test(sql)) {
               const k = `${binds[0]}|${binds[1]}|${binds[2]}`; if (st.reports.has(k)) return ok(0); st.reports.add(k); return ok(1);
             }
             if (/SET hidden_at = \?, hidden_by = 'auto'/.test(sql)) {
-              const t = st.topics[binds[1] as string]; if (t && t.hidden_at == null) { t.hidden_at = binds[0] as number; return ok(1); } return ok(0);
+              const t = st.topics[binds[1] as string]; if (t && t.hidden_at == null) { t.hidden_at = binds[0] as number; t.hidden_by = 'auto'; return ok(1); } return ok(0);
             }
             if (/INSERT OR IGNORE INTO board_blocks/.test(sql)) { st.blocks.add(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/DELETE FROM board_blocks/.test(sql)) { st.blocks.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
@@ -179,6 +210,26 @@ function makeEnv(st: State, rlWriteOk = true): Env {
           },
           all: async () => {
             if (/SELECT user_id FROM board_moderators/.test(sql)) return { results: Object.keys(st.mods).map((user_id) => ({ user_id })), success: true, meta: {} };
+            if (/SELECT created_at FROM board_topics WHERE author_id/.test(sql)) {
+              const results = Object.values(st.topics).filter((t) => t.author_id === binds[0] && (t.created_at || 0) > (binds[1] as number))
+                .map((t) => ({ created_at: t.created_at || 0 })).sort((a, b) => b.created_at - a.created_at);
+              return { results, success: true, meta: {} };
+            }
+            if (/SELECT created_at, topic_id FROM board_replies WHERE author_id/.test(sql)) {
+              const results = Object.values(st.replies).filter((r) => r.author_id === binds[0] && (r.created_at || 0) > (binds[1] as number))
+                .map((r) => ({ created_at: r.created_at || 0, topic_id: r.topic_id })).sort((a, b) => b.created_at - a.created_at);
+              return { results, success: true, meta: {} };
+            }
+            if (/SELECT title, body FROM board_topics WHERE author_id/.test(sql)) {
+              const results = Object.values(st.topics).filter((t) => t.author_id === binds[0] && (t.created_at || 0) > (binds[1] as number))
+                .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)).slice(0, binds[2] as number).map((t) => ({ title: t.title || '', body: t.body || '' }));
+              return { results, success: true, meta: {} };
+            }
+            if (/SELECT body FROM board_replies WHERE author_id/.test(sql)) {
+              const results = Object.values(st.replies).filter((r) => r.author_id === binds[0] && (r.created_at || 0) > (binds[1] as number))
+                .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)).slice(0, binds[2] as number).map((r) => ({ body: r.body || '' }));
+              return { results, success: true, meta: {} };
+            }
             if (/SELECT topic_id FROM board_votes/.test(sql)) {
               const uid = binds[0] as string;
               const results = [...st.votes].filter((k) => k.endsWith(`|${uid}`)).map((k) => ({ topic_id: k.split('|')[0] }));
@@ -201,7 +252,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               if (unanswered) entries = entries.filter(([, t]) => !t.reply_count);
               if (/ORDER BY x\.up_count DESC/.test(sql)) entries.sort((a, b) => (b[1].up_count || 0) - (a[1].up_count || 0));
               const results = entries
-                .map(([id, t]) => ({ id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
+                .map(([id, t]) => ({ id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, locked_at: t.locked_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
               return { results, success: true, meta: {} };
             }
             return { results: [], success: true, meta: {} };
@@ -447,7 +498,7 @@ describe('rank gates (W911)', () => {
     const st = fresh();
     const t = await postTopic(st, me); const id = t.body.id as string;
     expect((await postTopic(st, y)).body.error).toBe('RANK_TOO_LOW');   // Minn is D
-    expect((await handleBoardReplyPost(post(`/v1/board/topics/${id}/replies`, { body: 'ok' }), makeEnv(st), y, id)).status).toBe(200);
+    expect((await handleBoardReplyPost(post(`/v1/board/topics/${id}/replies`, { body: 'Count me in for this one.' }), makeEnv(st), y, id)).status).toBe(200);   // W914 — 'ok' is now TOO_SHORT
     expect((await postTopic(st, x)).status).toBe(200);                  // Guake is C
   });
   it('a hunter with no profile mirror reads as E; a moderator is exempt', async () => {
@@ -530,5 +581,179 @@ describe('W913 — the v3 board: votes, pins, sorts and counts', () => {
     expect(first.counts).toEqual({ all: 2, improvement: 0, bug: 0, talk: 2 });
     const later = await json(await handleBoardTopicsGet(get('/v1/board/topics?cursor=5%7Cdeadbeef-0000'), makeEnv(st), x));
     expect(later.counts).toBeUndefined();
+  });
+});
+
+// ── W914 — THE SPAM GUARD ──────────────────────────────────────────────────
+function backdate(st: State, ms: number) {
+  // every stored topic / reply / strike moves `ms` into the past — the clock the guard reads is Date.now()
+  for (const t of Object.values(st.topics)) { if (t.created_at) t.created_at -= ms; }
+  for (const r of Object.values(st.replies)) { if (r.created_at) r.created_at -= ms; }
+  for (const k of st.strikes) k.created_at -= ms;
+}
+async function reply(st: State, who: SessionPayload, topicId: string, text: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  const r = await handleBoardReplyPost(post('/x', { body: text }), makeEnv(st), who, topicId, ctx);
+  return { status: r.status, body: await json(r) };
+}
+
+describe('W914 — spam guard: junk', () => {
+  it('helpers: links, emails, phone numbers and nothing-posts are junk; prose is not', () => {
+    expect(junkReason('check https://example.com now', 'body')!.code).toBe('LINKS_NOT_ALLOWED');
+    expect(junkReason('visit awakened.app for more', 'body')!.code).toBe('LINKS_NOT_ALLOWED');
+    expect(junkReason('mail me at richie@example.com please', 'body')!.detail).toMatch(/Emails/);
+    expect(junkReason('call 415-555-0199 tonight', 'body')!.detail).toMatch(/Phone/);
+    expect(junkReason('aaaaaaaaaa', 'body')).toBeNull();   // letters, long enough
+    expect(junkReason('12345678', 'body')!.code).toBe('TOO_SHORT');   // no letters
+    expect(junkReason('hi', 'body')!.code).toBe('TOO_SHORT');
+    expect(junkReason('floor 45 - 50 - 55 - 60 was rough, e.g. the Warden', 'body')).toBeNull();
+    expect(junkReason('Steps doubled after last update', 'title')).toBeNull();
+    expect(normText('  Buy NOW!!!  ')).toBe(normText('buy now'));
+  });
+
+  it('rejects a link, an email, and a one-word post; a moderator may post a link', async () => {
+    const st = fresh();
+    expect((await postTopic(st, me, { body: 'see https://spam.example.com' })).body.error).toBe('LINKS_NOT_ALLOWED');
+    expect((await postTopic(st, me, { body: 'ping me at a@b.co' })).body.error).toBe('LINKS_NOT_ALLOWED');
+    expect((await postTopic(st, me, { body: 'ok' })).body.error).toBe('TOO_SHORT');
+    st.mods['u-me'] = 'owner';
+    expect((await postTopic(st, me, { body: 'see https://spam.example.com' })).status).toBe(200);
+  });
+});
+
+describe('W914 — spam guard: caps and cooldowns', () => {
+  it('a second topic inside the cooldown is refused with retry_after_ms; after it, three a day is the cap', async () => {
+    const st = fresh();
+    expect((await postTopic(st, me)).status).toBe(200);
+    const second = await postTopic(st, me, { body: 'Another thought entirely, different words.' });
+    expect(second.status).toBe(429); expect(second.body.error).toBe('COOLDOWN');
+    expect(Number(second.body.retry_after_ms)).toBeGreaterThan(0);
+    backdate(st, SPAM.TOPIC_COOLDOWN_MS + 1000);
+    expect((await postTopic(st, me, { body: 'Another thought entirely, different words.' })).status).toBe(200);
+    backdate(st, SPAM.TOPIC_COOLDOWN_MS + 1000);
+    expect((await postTopic(st, me, { body: 'A third thought, still fresh and different.' })).status).toBe(200);
+    backdate(st, SPAM.TOPIC_COOLDOWN_MS + 1000);
+    const fourth = await postTopic(st, me, { body: 'A fourth thought that should not pass today.' });
+    expect(fourth.status).toBe(429); expect(fourth.body.error).toBe('TOO_MANY_TOPICS_TODAY');
+    backdate(st, 86400000);
+    expect((await postTopic(st, me, { body: 'A fourth thought, but it is tomorrow now.' })).status).toBe(200);
+  });
+
+  it('replies: 20 s cooldown, then 5 an hour on one topic, then 30 a day; moderators are exempt', async () => {
+    const st = fresh();
+    const t = (await postTopic(st, ren)).body as { id: string };
+    expect((await reply(st, x, t.id, 'First reply with enough words.')).status).toBe(200);
+    const quick = await reply(st, x, t.id, 'Another reply, hot on the heels of the first.');
+    expect(quick.status).toBe(429); expect(quick.body.error).toBe('COOLDOWN');
+    for (let i = 2; i <= 5; i++) { backdate(st, SPAM.REPLY_COOLDOWN_MS + 1000); expect((await reply(st, x, t.id, `Reply number ${i} on the same topic.`)).status).toBe(200); }
+    backdate(st, SPAM.REPLY_COOLDOWN_MS + 1000);
+    const flood = await reply(st, x, t.id, 'Reply number six on the same topic.');
+    expect(flood.status).toBe(429); expect(flood.body.error).toBe('TOPIC_FLOOD');
+    st.mods['u-x'] = 'mod';
+    expect((await reply(st, x, t.id, 'A moderator is never throttled here.')).status).toBe(200);
+  });
+});
+
+describe('W914 — spam guard: repeats and strikes', () => {
+  it('the same text again (case, spacing, punctuation aside) is a DUPLICATE', async () => {
+    const st = fresh();
+    expect((await postTopic(st, me, { body: 'Buy now, hunters!!!' })).status).toBe(200);
+    backdate(st, SPAM.TOPIC_COOLDOWN_MS + 1000);
+    const dup = await postTopic(st, me, { title: 'Totally new title', body: '  buy   now hunters ' });
+    expect(dup.status).toBe(400); expect(dup.body.error).toBe('DUPLICATE');
+    const t = (await postTopic(st, ren)).body as { id: string };
+    expect((await reply(st, x, t.id, 'Great point, well said.')).status).toBe(200);
+    backdate(st, SPAM.REPLY_COOLDOWN_MS + 1000);
+    expect((await reply(st, x, t.id, 'GREAT point — well said!')).body.error).toBe('DUPLICATE');
+  });
+
+  it('five rejected writes in a day mute the hunter for a day and push the moderators', async () => {
+    const st = fresh();
+    st.mods['u-ren'] = 'mod';
+    for (let i = 1; i <= 4; i++) {
+      const r = await postTopic(st, me, { body: 'https://spam.example.com/' + i });
+      expect(r.body.error).toBe('LINKS_NOT_ALLOWED');
+    }
+    expect(st.strikes.length).toBe(4);
+    const fifth = await postTopic(st, me, { body: 'https://spam.example.com/5' });
+    expect(fifth.status).toBe(403); expect(fifth.body.error).toBe('MUTED'); expect(fifth.body.auto).toBe(true);
+    expect(Number(fifth.body.muted_until)).toBeGreaterThan(Date.now());
+    expect(st.mutes['u-me']).toBeGreaterThan(Date.now());
+    expect(mockNotify).toHaveBeenCalledTimes(1);
+    expect((mockNotify.mock.calls[0]![2] as { type: string }).type).toBe('board_spam');
+    // muted now — the write gate refuses before the guard even runs
+    expect((await postTopic(st, me, { body: 'A perfectly innocent post now.' })).body.error).toBe('MUTED');
+  });
+
+  it('two auto-hidden posts in a week mute the author for a week; the report push says so', async () => {
+    const st = fresh();
+    st.mods['u-ren'] = 'mod';
+    const a = (await postTopic(st, x)).body as { id: string };
+    backdate(st, SPAM.TOPIC_COOLDOWN_MS + 1000);
+    const b = (await postTopic(st, x, { body: 'Another post that will also be reported.' })).body as { id: string };
+    const report = (who: SessionPayload, id: string) => handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), who, ctx);
+    for (const who of [me, ren, y]) await report(who, a.id);
+    expect(st.topics[a.id]!.hidden_by).toBe('auto');
+    expect(st.mutes['u-x']).toBeUndefined();
+    mockNotify.mockClear();
+    for (const who of [me, ren]) await report(who, b.id);
+    const last = await json(await report(y, b.id));
+    expect(last.auto_hidden).toBe(true); expect(last.auto_muted).toBe(true);
+    expect(st.mutes['u-x']).toBeGreaterThan(Date.now() + 6 * 86400000);
+    const lastPush = mockNotify.mock.calls[mockNotify.mock.calls.length - 1]!;
+    expect(String((lastPush[2] as { body: string }).body)).toMatch(/muted for a week/);
+  });
+});
+
+describe('W914 — moderator tools: lock and purge', () => {
+  it('only moderators lock; a locked topic refuses hunter replies but not moderators; the list carries locked', async () => {
+    const st = fresh();
+    const t = (await postTopic(st, ren)).body as { id: string };
+    expect((await handleBoardTopicLock(get('/x'), makeEnv(st), x, t.id)).status).toBe(403);
+    st.mods['u-me'] = 'owner';
+    expect(await json(await handleBoardTopicLock(get('/x'), makeEnv(st), me, t.id))).toMatchObject({ ok: true, locked: true });
+    const refused = await reply(st, x, t.id, 'Trying to reply to a locked topic.');
+    expect(refused.status).toBe(403); expect(refused.body.error).toBe('TOPIC_LOCKED');
+    expect((await reply(st, me, t.id, 'A moderator can still add a closing note.')).status).toBe(200);
+    const list = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((list.topics as Array<{ id: string; locked: boolean }>).find((r) => r.id === t.id)!.locked).toBe(true);
+    expect((await json(await handleBoardTopicLock(get('/x'), makeEnv(st), me, t.id))).locked).toBe(false);
+    expect((await reply(st, x, t.id, 'Open again, replying works.')).status).toBe(200);
+  });
+
+  it('purge soft-deletes a hunter\'s last 24 h (topics + replies), recounts, and is moderator-only', async () => {
+    const st = fresh();
+    const host = (await postTopic(st, ren)).body as { id: string };
+    const spam = (await postTopic(st, x, { body: 'A topic that is about to be purged.' })).body as { id: string };
+    expect((await reply(st, x, host.id, 'A reply that is about to be purged.')).status).toBe(200);
+    expect(st.topics[host.id]!.reply_count).toBe(1);
+    expect((await handleBoardPurgePost(post('/v1/board/purge', { user_id: 'u-x' }), makeEnv(st), x)).status).toBe(403);
+    st.mods['u-me'] = 'owner';
+    expect((await json(await handleBoardPurgePost(post('/v1/board/purge', { user_id: 'u-me' }), makeEnv(st), me))).error).toBe('SELF_PURGE');
+    expect((await json(await handleBoardPurgePost(post('/v1/board/purge', { user_id: 'u-x', hours: 999 }), makeEnv(st), me))).error).toBe('INVALID_HOURS');
+    const out = await json(await handleBoardPurgePost(post('/v1/board/purge', { user_id: 'u-x' }), makeEnv(st), me));
+    expect(out).toMatchObject({ ok: true, topics: 1, replies: 1 });
+    expect(st.topics[spam.id]!.deleted_at).not.toBeNull();
+    expect(st.topics[host.id]!.reply_count).toBe(0);
+    st.mods['u-ren'] = 'mod';
+    expect((await json(await handleBoardPurgePost(post('/v1/board/purge', { user_id: 'u-ren' }), makeEnv(st), me))).error).toBe('CANNOT_PURGE_MODERATOR');
+  });
+
+  it('the list tells the client the spam knobs', async () => {
+    const st = fresh();
+    const res = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((res.me as { limits: Record<string, number> }).limits).toEqual({
+      topics_per_day: 3, topic_cooldown_ms: 600000, replies_per_day: 30, reply_cooldown_ms: 20000, replies_per_topic_per_hour: 5, body_min: 8,
+    });
+  });
+});
+
+describe('W914 — prose profanity is word-aware', () => {
+  it('ordinary words that merely contain a root pass; slurs, compounds, leet and spaced-out forms fail', () => {
+    for (const ok of ['second try', 'connect the boss', 'a Japan trip', 'raccoon', 'grape juice', 'ashtray', 'pistol', 'analysis', 'the economy', 'icon', 'therapeutic', 'class pass', 'Lancashire', 'Count me in for this one.']) {
+      expect(textIsClean(ok), ok).toBe(true);
+    }
+    for (const bad of ['fucking hell', 'bullshit', 'you cunt', 'Sh1t', 'F4ggot', 'f u c k', 'raped', 'raping', 'dumb retard', 'go to hell asshole']) {
+      expect(textIsClean(bad), bad).toBe(false);
+    }
   });
 });

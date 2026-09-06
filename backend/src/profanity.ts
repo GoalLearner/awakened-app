@@ -242,6 +242,40 @@ export function isReservedAlias(alias: string): boolean {
   return folded.length > 0 && RESERVED_ALIASES.has(folded);
 }
 
+// ── W914 — PROSE mode for the Community board. isProfane() is an ALIAS filter:
+// substring match on a normalizer that collapses repeats, so "coon" becomes "con"
+// and every prose word containing it ("second", "connect", "economy") reads as a
+// slur; "rape" hits "grape", "sht" hits "ashtray", "jap" hits "Japan". A board
+// post is many ordinary words, so this variant is word-aware:
+//   ≥5-letter entries  → anywhere in the word (nigger, faggot, asshole, bastard …)
+//   4-letter big-six   → anywhere (fuck, shit, cunt, slut, dick, cock: "bullshit")
+//   other 4-letter     → the word itself or with a plain suffix (rapes, raped, raping)
+//   ≤3-letter entries  → the whole word only (jap, kkk, and the collapsed "con")
+// Leet and repeat-collapsed forms go through the same rules.
+const PROSE_COMPOUND: ReadonlySet<string> = new Set(['fuck', 'shit', 'cunt', 'slut', 'dick', 'cock']);
+const PROSE_SUFFIXES: ReadonlyArray<string> = ['s', 'es', 'ed', 'er', 'ers', 'ing', 'in', 'a', 'az', 'head', 'heads', 'hole', 'holes', 'face', 'faces', 'wad', 'wads', 'bag', 'bags', 'tard', 'tards', 'boy', 'boys'];
+function matchesProseWord(hay: string, w: string): boolean {
+  if (!hay || !w) return false;
+  if (w.length >= 5) return hay.includes(w);
+  if (w.length <= 3) return hay === w;
+  if (PROSE_COMPOUND.has(w)) return hay.includes(w);
+  if (hay === w) return true;
+  const stem = w.endsWith('e') ? w.slice(0, -1) : w;
+  for (const suf of PROSE_SUFFIXES) { if (hay === w + suf || hay === stem + suf) return true; }
+  return false;
+}
+/** True when ONE prose word is a slur or obscenity (see the rules above). */
+export function isProfaneWord(token: string): boolean {
+  const stripped = lowerStripped(token);
+  if (stripped.length === 0) return false;
+  for (const w of PROFANITY_WORDS) { if (matchesProseWord(stripped, w)) return true; }
+  const normalized = normalizeFull(token);
+  for (const w of NORMALIZED_WORDS) { if (matchesProseWord(normalized, w)) return true; }
+  const deleeted = deLeet(token);
+  for (const w of PROFANITY_WORDS) { if (matchesProseWord(deleeted, w)) return true; }
+  return false;
+}
+
 /** Exported for tests. */
 export const _internals = {
   lowerStripped,

@@ -1808,6 +1808,9 @@
   function boardVote(id)                         { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/vote'); }
   function boardModPinTopic(id)                  { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/pin'); }
   function feedLike(eventId)                     { return _authedFetch('POST', '/v1/friends/activity/' + encodeURIComponent(eventId) + '/like'); }
+  // W914 — spam guard moderator tools: lock a topic (toggle), purge a hunter's last N hours.
+  function boardModLockTopic(id)                 { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/lock'); }
+  function boardModPurge(userId, hours)          { return _authedFetch('POST', '/v1/board/purge', { user_id: userId, hours: hours || 24 }); }
   function boardModMute(userId, days, reason)    { return _authedFetch('POST', '/v1/board/mute', { user_id: userId, days: days, reason: reason || '' }); }
   function boardModUnmute(userId)                { return _authedFetch('POST', '/v1/board/unmute', { user_id: userId }); }
   function boardReports()                        { return _authedFetch('GET', '/v1/board/reports'); }
@@ -2493,6 +2496,7 @@
     boardModDeleteTopic, boardModDeleteReply, boardModHideTopic, boardModMute, boardModUnmute,
     boardReports, boardResolveReports, boardModerators, boardGrantModerator,
     boardVote, boardModPinTopic, feedLike,   // W913
+    boardModLockTopic, boardModPurge,        // W914
     // Push notifications (W603/W604) — device-token register/unregister.
     registerPushToken,
     unregisterPushToken,
