@@ -1846,7 +1846,8 @@ test.describe('Q · Community board (W907)', () => {
   });
 
   test('W913 — the BOARD | FRIENDS sub-nav swaps panes without leaving the tab', async ({ page }) => {
-    await page.click('[data-tab="social"]');
+    await freshApp(page);
+    await page.click('#tab-social');
     await expect(page.locator('#cm-pane-board')).toBeVisible();
     await expect(page.locator('#cm-pane-friends')).toBeHidden();
     await page.click('[data-cm-pane="friends"]');
