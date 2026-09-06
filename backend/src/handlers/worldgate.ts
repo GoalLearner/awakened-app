@@ -20,9 +20,14 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { MERGED_FOR_WEEK } from '../lib/week-board';   // W892 — the erosion-proof per-week pool read
+import { notifyUser } from '../lib/apns';   // W916 — the rally horn
 
 export const WORLDGATE_CLAIM_FLOOR = 15000;   // weekly verified steps to share the kill
 export const WORLDGATE_SOULS = 200;
+// W916 — v2 read-side knobs (handoff 28: "more interactive and involving the users").
+export const WORLDGATE_TOP = 5;          // top strikers shown in the sheet
+export const WORLDGATE_WALL_MAX = 60;    // Kill Wall names returned (≥ claim floor)
+export const WORLDGATE_RECENT = 6;       // latest strikers (by last verified sync)
 const CARRY_RATE = 0.05;
 
 // W892 (3.0.1 C11) — HP FROM WHAT THE FLEET ACTUALLY WALKS.
@@ -147,6 +152,15 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
   return gate as GateRow;
 }
 
+/** Accepted friends of the caller — the caller's "guild" for the Worldgate. */
+const FRIENDS_OF = `SELECT CASE WHEN f.requester_user_id = ?2 THEN f.recipient_user_id ELSE f.requester_user_id END
+                      FROM friends f
+                     WHERE f.status = 'accepted' AND (f.requester_user_id = ?2 OR f.recipient_user_id = ?2)`;
+
+function ptDayNow(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+}
+
 export async function handleWorldgateGet(
   _request: Request,
   env: Env,
@@ -169,12 +183,101 @@ export async function handleWorldgateGet(
   const claimed = await env.DB.prepare(
     'SELECT 1 FROM world_gate_claims WHERE week_start = ? AND user_id = ?',
   ).bind(week, session.userId).first();
+  const myDamage = mine?.current_value ?? 0;
+
+  // ── W916 — the v2 read side: who is striking, your guild's share, the top
+  // strikers + your placement, the Kill Wall, the latest strikers. All from the
+  // merged weekly view (sims excluded), one round trip each, no new schema.
+  const agg = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT (SELECT COUNT(*) FROM merged) AS hunters,
+            (SELECT COALESCE(SUM(steps), 0) FROM merged WHERE user_id IN (${FRIENDS_OF})) AS guild_steps,
+            (SELECT COUNT(*) FROM merged WHERE user_id IN (${FRIENDS_OF})) AS guild_hunters,
+            (SELECT COUNT(*) FROM merged WHERE steps > ?3) AS above,
+            (SELECT COUNT(*) FROM merged WHERE steps >= ?4) AS wall_count`,
+  ).bind(week, session.userId, myDamage, WORLDGATE_CLAIM_FLOOR)
+    .first<{ hunters: number; guild_steps: number; guild_hunters: number; above: number; wall_count: number }>();
+  const topRows = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT u.alias AS alias, m.steps AS steps, pps.rank_tier AS rank_tier, (m.user_id = ?2) AS me
+       FROM merged m
+       JOIN users u ON u.id = m.user_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
+      ORDER BY m.steps DESC, u.alias ASC
+      LIMIT ?3`,
+  ).bind(week, session.userId, WORLDGATE_TOP).all<{ alias: string; steps: number; rank_tier: string | null; me: number }>();
+  const wallRows = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT u.alias AS alias, m.steps AS steps
+       FROM merged m
+       JOIN users u ON u.id = m.user_id
+      WHERE m.steps >= ?2
+      ORDER BY m.steps DESC, u.alias ASC
+      LIMIT ?3`,
+  ).bind(week, WORLDGATE_CLAIM_FLOOR, WORLDGATE_WALL_MAX).all<{ alias: string; steps: number }>();
+  const recentRows = await env.DB.prepare(
+    `SELECT u.alias AS alias, ls.current_value AS steps, ls.updated_at AS at
+       FROM leaderboard_snapshots ls
+       JOIN users u ON u.id = ls.user_id
+      WHERE ls.metric = 'step_total' AND ls.week_start = ?1 AND ls.current_value > 0
+        AND u.apple_sub NOT LIKE 'sim_test_%'
+      ORDER BY ls.updated_at DESC
+      LIMIT ?2`,
+  ).bind(week, WORLDGATE_RECENT).all<{ alias: string; steps: number; at: number }>();
+  const rallied = await env.DB.prepare('SELECT sent FROM world_gate_rallies WHERE user_id = ? AND day = ?')
+    .bind(session.userId, ptDayNow()).first<{ sent: number }>();
+
   return jsonOk({
     ok: true, week_start: week, hp: gate.hp, pool, status: gate.status,
-    my_damage: mine?.current_value ?? 0,
+    my_damage: myDamage,
     claim_floor: WORLDGATE_CLAIM_FLOOR, souls: WORLDGATE_SOULS,
-    claimable: gate.status === 'slain' && !claimed && (mine?.current_value ?? 0) >= WORLDGATE_CLAIM_FLOOR,
+    claimable: gate.status === 'slain' && !claimed && myDamage >= WORLDGATE_CLAIM_FLOOR,
+    claimed: !!claimed,
+    hunters: Number(agg?.hunters) || 0,
+    guild: { steps: Number(agg?.guild_steps) || 0, hunters: Number(agg?.guild_hunters) || 0 },
+    my_rank: myDamage > 0 ? (Number(agg?.above) || 0) + 1 : null,
+    top: (topRows.results ?? []).map((r) => ({ alias: r.alias, steps: Number(r.steps) || 0, rank_tier: r.rank_tier ?? null, me: !!Number(r.me) })),
+    wall: (wallRows.results ?? []).map((r) => ({ alias: r.alias, steps: Number(r.steps) || 0 })),
+    wall_count: Number(agg?.wall_count) || 0,
+    recent: (recentRows.results ?? []).map((r) => ({ alias: r.alias, steps: Number(r.steps) || 0, at: Number(r.at) || 0 })),
+    rallied_today: !!rallied,
   });
+}
+
+/**
+ * W916 — POST /v1/worldgate/rally: the rally horn. Once a day, every accepted
+ * friend gets a push saying how far the gate is down. notifyUser never throws.
+ */
+export async function handleWorldgateRally(
+  _request: Request,
+  env: Env,
+  session: SessionPayload,
+  ctx?: ExecutionContext,
+): Promise<Response> {
+  const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const day = ptDayNow();
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO world_gate_rallies (user_id, day, sent, created_at) VALUES (?, ?, 0, ?)')
+    .bind(session.userId, day, Date.now()).run();
+  if (!(ins.meta && Number(ins.meta.changes) >= 1)) return jsonOk({ ok: true, already: true, sent: 0 });
+  const week = ptWeekStartNow();
+  const gate = await ensureGate(env, week);
+  const pool = await weeklyPool(env, week);
+  const pct = Math.max(0, Math.min(100, Math.round((pool / Math.max(1, gate.hp)) * 100)));
+  const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f(id)`)
+    .bind(session.userId).all<{ id: string }>();
+  const ids = (friends.results ?? []).map((r) => r.id);
+  await env.DB.prepare('UPDATE world_gate_rallies SET sent = ? WHERE user_id = ? AND day = ?').bind(ids.length, session.userId, day).run();
+  const body = gate.status === 'slain'
+    ? `${session.alias} sounds the horn: the Worldgate is DOWN this week. Come collect your share.`
+    : `${session.alias} rallies you: the Worldgate is ${pct}% down. Every verified step you walk is a strike.`;
+  const push = async () => {
+    for (const id of ids) {
+      await notifyUser(env, id, { title: 'The Worldgate', body, type: 'worldgate_rally', data: { week } });
+    }
+  };
+  if (ctx) ctx.waitUntil(push()); else await push();
+  return jsonOk({ ok: true, already: false, sent: ids.length });
 }
 
 export async function handleWorldgateClaim(

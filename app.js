@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w915'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w916'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6536,15 +6536,49 @@
   // ═══════════════════════════════════════════════════════════════════════
   const WG_CACHE_KEY = 'hb_worldgate_v1';
   const WG_TTL_MS = 10 * 60 * 1000;
+  // ── W916 — THE WORLDGATE v2 (Claude Design handoff 28). Owner: "making it more
+  // interactive and involving the users." One card at the top of Habits, one
+  // full sheet behind it: who is striking, your guild's share and yours in the
+  // bar, a STRIKE button that pushes your unsynced steps, the top strikers, the
+  // Kill Wall, a rally horn for your guild, a share card. Every number is the
+  // server's (GET /v1/worldgate) — nothing on screen is simulated.
+  const WG_BOSSES = ['The Ashen Warden', 'The Hollow Sovereign', 'The Pale Colossus', 'The Grave Tyrant', 'The Salt Leviathan', 'The Thornwood King', 'The Cinder Matriarch', 'The Drowned Abbot'];
+  const _WG_EMBLEM = '<svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M14 3 24 9v10L14 25 4 19V9z" stroke="currentColor" stroke-width="1.6"/><path d="M9 14c1.5-3 8.5-3 10 0-1.5 3-8.5 3-10 0z" fill="currentColor"/><circle cx="14" cy="14" r="1.6" fill="#fff"/></svg>';
+  let _wgSheet = null; let _wgTab = 'feed'; let _wgSeg = null; let _wgStriking = false; let _wgWired = false;
   function _wgCache() { try { return JSON.parse(localStorage.getItem(WG_CACHE_KEY) || 'null'); } catch (_) { return null; } }
-  function _worldgateSync(force) {
+  function _wgFmt(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+  function _wgPct(c) { return Math.max(0, Math.min(100, (Number(c.pool) || 0) / Math.max(1, Number(c.hp) || 1) * 100)); }
+  function _wgPhase(c) { return Math.min(4, Math.floor(_wgPct(c) / 25) + 1); }
+  /** The week's world boss — a name per PT week, deterministic on every device. */
+  function _wgBossName(week) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(week || ''));
+    const n = m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / (7 * 86400000)) : 0;
+    return WG_BOSSES[((n % WG_BOSSES.length) + WG_BOSSES.length) % WG_BOSSES.length];
+  }
+  function _wgLocalWeekSteps() { try { const sn = lbGetSnapshot(); return Number(sn && sn.steps_last_7_days) || 0; } catch (_) { return 0; } }
+  function _wgPending(c) { return Math.max(0, _wgLocalWeekSteps() - (Number(c && c.my) || 0)); }
+  function _wgMyAlias() { try { return String(lbGetMyAlias() || localStorage.getItem('hb_name') || '').trim(); } catch (_) { return ''; } }
+  function _wgIsMe(alias) { const me = _wgMyAlias().toLowerCase(); return !!me && String(alias || '').toLowerCase() === me; }
+  function _wgInitial(alias) { return (String(alias || '?').trim().charAt(0) || '?').toUpperCase(); }
+  function _wgRel(ms) { try { return _guildhallFormatRelativeTs(Number(ms) || 0); } catch (_) { return ''; } }
+  function _wgToast(msg) { try { showHabitToast(msg); } catch (_) {} }
+
+  async function _worldgateSync(force) {
     try {
-      const c = _wgCache();
-      if (!force && c && Date.now() - c.at < WG_TTL_MS) return;
-      if (!(window.Auth && typeof Auth.fetchWorldgate === 'function')) return;
-      Auth.fetchWorldgate().then(function (r) {
-        if (!(r && r.ok)) return;
-        try { localStorage.setItem(WG_CACHE_KEY, JSON.stringify({ at: Date.now(), week: r.week_start, hp: r.hp, pool: r.pool, status: r.status, my: r.my_damage, floor: r.claim_floor, souls: r.souls, claimable: r.claimable })); } catch (_) {}
+      const prev = _wgCache();
+      if (!force && prev && Date.now() - prev.at < WG_TTL_MS) return false;
+      if (!(window.Auth && typeof Auth.fetchWorldgate === 'function')) return false;
+      const r = await Auth.fetchWorldgate();
+      if (!(r && r.ok)) return false;
+      try {
+        localStorage.setItem(WG_CACHE_KEY, JSON.stringify({
+          at: Date.now(), week: r.week_start, hp: r.hp, pool: r.pool, status: r.status, my: r.my_damage, floor: r.claim_floor, souls: r.souls,
+          claimable: r.claimable, claimed: !!r.claimed,
+          hunters: r.hunters | 0, guild: r.guild || { steps: 0, hunters: 0 }, my_rank: r.my_rank || null,
+          top: Array.isArray(r.top) ? r.top : [], wall: Array.isArray(r.wall) ? r.wall : [], wall_count: r.wall_count | 0,
+          recent: Array.isArray(r.recent) ? r.recent : [], rallied: !!r.rallied_today,
+        }));
+      } catch (_) {}
         // Auto-claim the bounty the moment it's ours to take.
         if (r.claimable && typeof Auth.claimWorldgate === 'function') {
           _w2Watch('worldgate_claim', Auth.claimWorldgate()).then(function (cl) {   // W884
@@ -6555,35 +6589,270 @@
             try { showNoticeCard({ eyebrow: 'THE GATE BREAKS', title: 'The Worldgate is down', body: 'Every hunter’s verified steps brought it low — yours among them. +' + cl.souls + ' souls. One server, one monster, one kill.' }); } catch (_) {}
           }).catch(function () {});
         }
-        try { renderWorldgateCard(); } catch (_) {}   // W915 — the card lives on the Habits tab
-      }).catch(function () {});
-    } catch (_) {}
+      try { renderWorldgateCard(); } catch (_) {}
+      try { _wgSheetPaint(); } catch (_) {}
+      // The bar moved since you last looked — a strike lands on screen.
+      try { if (prev && prev.week === r.week_start && Number(r.pool) > Number(prev.pool)) _wgFlash(Number(r.pool) - Number(prev.pool), (r.my_damage | 0) - (prev.my | 0)); } catch (_) {}
+      return true;
+    } catch (_) { return false; }
   }
+
+  // ── the HP bar (card + sheet share it): all hunters · your guild · you, in gold ──
+  function _wgBarHtml(c, tall) {
+    const hp = Math.max(1, Number(c.hp) || 1);
+    const my = Math.max(0, Number(c.my) || 0);
+    const guild = Math.max(0, (c.guild && Number(c.guild.steps)) || 0);
+    const others = Math.max(0, (Number(c.pool) || 0) - my - guild);
+    const w = function (v) { return Math.max(0, Math.min(100, v / hp * 100)); };
+    return '<div class="wg2-track' + (tall ? ' wg2-track--tall' : '') + '" data-wg-track>' +
+      '<div class="wg2-seg wg2-seg--others" data-wg-seg="others" style="width:' + w(others).toFixed(2) + '%"></div>' +
+      '<div class="wg2-seg wg2-seg--guild" data-wg-seg="guild" style="width:' + w(guild).toFixed(2) + '%"></div>' +
+      '<div class="wg2-seg wg2-seg--you" data-wg-seg="you" style="width:' + (my > 0 ? Math.max(w(my), 0.9) : 0).toFixed(2) + '%"></div>' +
+      '<div class="wg2-flash" data-wg-flash></div>' +
+      [25, 50, 75].map(function (pp) { return '<div class="wg2-phase" style="left:' + pp + '%">' + (tall ? '<i>PH ' + (pp / 25 + 1) + '</i>' : '') + '</div>'; }).join('') +
+    '</div>';
+  }
+  function _wgLegendHtml(c) {
+    const g = (c.guild && Number(c.guild.hunters)) || 0;
+    return '<div class="wg2-legend"><span class="wg2-lg--o"><i></i>ALL HUNTERS</span>' + (g ? '<span class="wg2-lg--g"><i></i>YOUR GUILD</span>' : '') + '<span class="wg2-lg--y"><i></i>YOU</span></div>';
+  }
+
+  // ── the Habits-tab card ──
   function _worldgateCardHtml() {
     const c = _wgCache();
     if (!c) return '';
-    const pct = Math.max(0, Math.min(100, Math.round((c.pool / Math.max(1, c.hp)) * 100)));
-    const slain = c.status === 'slain';
-    return '<div class="wg-card' + (slain ? ' wg-slain' : '') + '">' +
-      '<div class="wg-kicker">THE WORLDGATE · EVERY HUNTER, ONE MONSTER</div>' +
-      (slain
-        ? '<div class="wg-line">The gate is DOWN. The whole server brought it low this week.</div>'
-        : '<div class="wg-line">' + c.pool.toLocaleString('en-US') + ' / ' + c.hp.toLocaleString('en-US') + ' verified steps struck</div>') +
-      '<div class="wg-bar"><span style="width:' + pct + '%"></span></div>' +
-      '<div class="wg-sub">YOUR STRIKES: ' + (c.my || 0).toLocaleString('en-US') + (slain ? '' : ' · SHARE THE KILL AT ' + (c.floor || 15000).toLocaleString('en-US')) + '</div>' +
-    '</div>';
+    const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
+    const hunters = Number(c.hunters) || 0; const my = Number(c.my) || 0;
+    const avs = (Array.isArray(c.top) ? c.top : []).slice(0, 4).map(function (t, i) { return '<span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(t.alias)) + '</span>'; }).join('') +
+      (hunters > 4 ? '<span class="wg2-av wg2-av--more">+' + _wgFmt(hunters - 4) + '</span>' : '');
+    return '<div class="wg2-seclabel">The Worldgate<span class="wg2-ln"></span><span class="wg2-live' + (slain ? ' wg2-live--down' : '') + '"><i></i>' + (slain ? 'DOWN' : 'LIVE') + '</span></div>' +
+      '<div class="wg2' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
+        '<div class="wg2-top"><div class="wg2-mon" data-wg-mon>' + _WG_EMBLEM + '</div>' +
+          '<div class="wg2-title"><div class="wg2-name">' + esc(name) + '</div><div class="wg2-sub">' + (slain ? '<b>DOWN</b> · THE WHOLE SERVER BROKE IT' : '<b>' + _wgFmt(hunters) + '</b> HUNTERS THIS WEEK') + '</div></div>' +
+          '<div class="wg2-pct"><div class="wg2-pct-n">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</div><div class="wg2-pct-l">HP DOWN</div></div>' +
+        '</div>' +
+        '<div class="wg2-hp">' + _wgBarHtml(c, false) + '<div class="wg2-nums"><span><b>' + _wgFmt(c.pool) + '</b> struck</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
+        _wgLegendHtml(c) +
+        '<div class="wg2-foot"><div class="wg2-avs">' + avs + '</div><div class="wg2-foot-t"><b>Every step you walk is a strike.</b><br>' +
+          (my > 0 ? 'Your ' + _wgFmt(my) + ' strikes are in the bar — in gold.' : 'Walk today and your strikes join the bar — in gold.') + '</div><span class="wg2-chev">›</span></div>' +
+      '</div>';
   }
-  // W915 — the card leads the Habits tab (owner: "put the worldgate right here on the
-  // habits tab", where the Writ stood). Paints from the 10-min cache; hidden until the
-  // first sync lands, so the tab keeps its shape for a fresh install.
+  // W915 — the card leads the Habits tab; hidden until the first sync lands.
   function renderWorldgateCard() {
     const host = document.getElementById('worldgate-card'); if (!host) return;
     let html = ''; try { html = _worldgateCardHtml(); } catch (_) { html = ''; }
     host.innerHTML = html;
     host.classList.toggle('hidden', !html);
   }
-  // W871 QA — __worldgate() cache; __worldgate(true) force-syncs.
-  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); try { renderWorldgateCard(); } catch (_) {} return _wgCache(); }; } catch (_) {}
+
+  // ── the sheet ──
+  function _wgSegInfoHtml(c) {
+    if (!_wgSeg) return '<div class="wg2-seginfo"></div>';
+    const my = Number(c.my) || 0; const gs = (c.guild && Number(c.guild.steps)) || 0; const gh = (c.guild && Number(c.guild.hunters)) || 0;
+    const others = Math.max(0, (Number(c.pool) || 0) - my - gs);
+    const oh = Math.max(0, (Number(c.hunters) || 0) - gh - (my > 0 ? 1 : 0));
+    const m = { others: ['#6d3fd9', _wgFmt(oh) + (oh === 1 ? ' other hunter' : ' other hunters'), others], guild: ['#a78bfa', 'Your guild · ' + _wgFmt(gh) + (gh === 1 ? ' hunter' : ' hunters'), gs], you: ['#f5b842', 'You · walk more, the gold grows', my] }[_wgSeg];
+    if (!m) return '<div class="wg2-seginfo"></div>';
+    return '<div class="wg2-seginfo wg2-seginfo--show"><i style="background:' + m[0] + '"></i><span>' + esc(m[1]) + '</span><b>' + _wgFmt(m[2]) + ' strikes</b></div>';
+  }
+  function _wgFeedHtml(c) {
+    const list = Array.isArray(c.recent) ? c.recent : [];
+    if (!list.length) return '<div class="wg2-empty">No strikes yet this week. Yours could be the first.</div>';
+    return '<div class="wg2-feed">' + list.map(function (r, i) {
+      const me = _wgIsMe(r.alias);
+      return '<div class="wg2-fi' + (me ? ' wg2-fi--you' : '') + '"><span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(r.alias)) + '</span>' +
+        '<div class="wg2-who"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(r.alias) + '">' + esc(r.alias) + '</button> struck the gate<small>' + esc(_wgRel(r.at)) + '</small></div>' +
+        '<span class="wg2-amt">' + _wgFmt(r.steps) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function _wgRankRow(pos, h, max) {
+    return '<div class="wg2-ri' + (h.me ? ' wg2-ri--me' : '') + '"><span class="wg2-pos">' + esc(String(pos)) + '</span><span class="wg2-av wg2-av--' + (h.me ? 'me' : String(Math.abs(String(h.alias || '').length) % 4)) + '">' + esc(_wgInitial(h.alias)) + '</span>' +
+      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(h.alias) + '</button><small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
+      '<span class="wg2-amt">' + _wgFmt(h.steps) + '</span><div class="wg2-bar"><i style="width:' + Math.max(2, Math.min(100, (Number(h.steps) || 0) / max * 100)).toFixed(1) + '%"></i></div></div>';
+  }
+  function _wgRankHtml(c) {
+    const top = Array.isArray(c.top) ? c.top : [];
+    if (!top.length) return '<div class="wg2-empty">No strikes yet this week.</div>';
+    const max = Math.max(1, Number(top[0].steps) || 1);
+    let rows = top.map(function (h, i) { return _wgRankRow(i + 1, h, max); }).join('');
+    if (!top.some(function (h) { return h.me; }) && (Number(c.my) || 0) > 0 && c.my_rank) rows += _wgRankRow('#' + c.my_rank, { alias: _wgMyAlias() || 'You', steps: c.my, me: true }, max);
+    return '<div class="wg2-rank">' + rows + '</div>';
+  }
+  function _wgKillHtml(c) {
+    const my = Number(c.my) || 0; const floor = Number(c.floor) || 15000; const ok = my >= floor;
+    const wall = Array.isArray(c.wall) ? c.wall : []; const wc = Number(c.wall_count) || 0;
+    return '<div class="wg2-rw">' +
+      '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--g">★</span><div class="wg2-t">Named on the Kill Wall<small>Strike ' + _wgFmt(floor) + '+ steps before Sunday. Your name stands beside every hunter who did.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (ok ? 'IN' : _wgFmt(floor - my) + ' TO GO') + '</span></div>' +
+      '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--v">◆</span><div class="wg2-t">The bounty · ' + _wgFmt(c.souls || 200) + ' souls each<small>When the gate falls, every hunter on the Kill Wall collects it once. It lands on its own the next time you open the app.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (c.claimed ? 'PAID' : (ok ? 'IN' : 'NOT YET')) + '</span></div>' +
+      '<div class="wg2-wall"><div class="wg2-wall-k">THE KILL WALL · ' + _wgFmt(wc) + (wc === 1 ? ' HUNTER' : ' HUNTERS') + '</div>' +
+        (wall.length ? '<div class="wg2-wall-names">' + wall.map(function (w) { return '<button type="button" class="wg2-chip' + (_wgIsMe(w.alias) ? ' wg2-chip--me' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(w.alias) + '</button>'; }).join('') + '</div>'
+                     : '<div class="wg2-empty">No names yet. The first hunter past ' + _wgFmt(floor) + ' carves it.</div>') +
+      '</div></div>';
+  }
+  function _wgSheetHtml(c) {
+    const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
+    const my = Number(c.my) || 0; const floor = Number(c.floor) || 15000; const left = Math.max(0, floor - my);
+    const pending = _wgPending(c);
+    const gh = (c.guild && Number(c.guild.hunters)) || 0;
+    const ringLen = 219.9; const ringOff = ringLen * (1 - Math.min(1, my / Math.max(1, floor)));
+    const youText = slain
+      ? (my >= floor ? '<b>You are on the Kill Wall.</b> <span>' + (c.claimed ? 'Your share is collected.' : 'Your share of the kill lands on its own.') + '</span>'
+                     : '<b>' + _wgFmt(my) + '</b> strikes landed. <span>The gate is down; the Kill Wall asked ' + _wgFmt(floor) + '.</span>')
+      : (left > 0 ? '<b>' + _wgFmt(my) + '</b> strikes landed. <span>Walk <b class="wg2-ink">' + _wgFmt(left) + '</b> more to be named on the Kill Wall.</span>'
+                  : '<b>Kill Wall secured.</b> <span>Keep striking — every step brings it down faster.</span>');
+    let strikeBtn = '';
+    if (!slain) {
+      if (_wgStriking) strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold wg2-btn--done" disabled>STRIKING…</button>';
+      else if (pending > 0) strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold" data-wg-strike>⚡ STRIKE ' + _wgFmt(pending) + ' STEPS</button>';
+      else strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold wg2-btn--done" disabled>✓ EVERY STEP IS IN · HEALTH SYNCS THE REST</button>';
+    }
+    return '<div class="wg2-hero"><div class="wg2-mon wg2-mon--big" data-wg-mon>' + _WG_EMBLEM + '</div><h1 class="wg2-h1">' + esc(name) + '</h1>' +
+        '<div class="wg2-tag">' + (slain ? 'WORLD BOSS · DOWN' : 'WORLD BOSS · PHASE ' + _wgPhase(c) + ' OF 4') + '</div>' +
+        '<p class="wg2-lore">One monster stands before all of us. <b>Every verified step</b> any hunter walks lands as one strike on its HP. When it falls, every hunter on the Kill Wall shares the kill.</p></div>' +
+      '<div class="wg2-hpbig"><div class="wg2-hpbig-n">' + _wgFmt(c.pool) + '<small>/ ' + _wgFmt(c.hp) + '</small></div><div class="wg2-hpbig-l">STRIKES LANDED · ' + _wgFmt(c.hunters) + (Number(c.hunters) === 1 ? ' HUNTER' : ' HUNTERS') + '</div></div>' +
+      '<div class="wg2-hp wg2-hp--sheet">' + _wgBarHtml(c, true) + '<div class="wg2-nums"><span><b>' + pct.toFixed(1) + '%</b> down</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
+      '<div class="wg2-legend-wrap">' + _wgLegendHtml(c) + '</div>' + _wgSegInfoHtml(c) +
+      '<div class="wg2-how"><div class="wg2-st wg2-st--walk"><div class="wg2-ico">⇈</div><div class="wg2-k">WALK</div><div class="wg2-d">Steps count from your phone</div></div><span class="wg2-arr">›</span>' +
+        '<div class="wg2-st"><div class="wg2-ico">✓</div><div class="wg2-k">VERIFY</div><div class="wg2-d">Health sync confirms them</div></div><span class="wg2-arr">›</span>' +
+        '<div class="wg2-st wg2-st--strike"><div class="wg2-ico">⚡</div><div class="wg2-k">STRIKE</div><div class="wg2-d">1 step = 1 HP off the gate</div></div></div>' +
+      '<div class="wg2-you"><div class="wg2-ring"><svg width="82" height="82" viewBox="0 0 82 82"><circle cx="41" cy="41" r="35" stroke="rgba(255,255,255,0.07)" stroke-width="6" fill="none"/><circle cx="41" cy="41" r="35" stroke="#f5b842" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="' + ringLen + '" stroke-dashoffset="' + ringOff.toFixed(1) + '"/></svg><div class="wg2-rv"><b>' + _wgFmt(my) + '</b><small>YOUR STRIKES</small></div></div>' +
+        '<div><div class="wg2-k wg2-k--gold">YOUR PART OF THE KILL</div><div class="wg2-v">' + youText + '</div>' + strikeBtn + '</div></div>' +
+      '<div class="wg2-tabs">' + [['feed', 'RECENT STRIKES'], ['rank', 'TOP HUNTERS'], ['kill', 'THE KILL']].map(function (t) { return '<button type="button" class="wg2-tab" data-wg-tab="' + t[0] + '" data-active="' + (t[0] === _wgTab ? 'true' : 'false') + '">' + t[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="wg2-pane">' + (_wgTab === 'feed' ? _wgFeedHtml(c) : (_wgTab === 'rank' ? _wgRankHtml(c) : _wgKillHtml(c))) + '</div>' +
+      '<div class="wg2-rally">' +
+        (gh ? '<button type="button" class="wg2-btn wg2-btn--ghost' + (c.rallied ? ' wg2-btn--done' : '') + '" data-wg-rally' + (c.rallied ? ' disabled' : '') + '>' + (c.rallied ? '✓ RALLIED TODAY' : '📣 RALLY YOUR GUILD') + '</button>' : '') +
+        '<button type="button" class="wg2-btn wg2-btn--ghost" data-wg-share>⇪ SHARE PROGRESS</button>' +
+      '</div>';
+  }
+  function _wgSheetPaint() {
+    const el = _wgSheet; if (!el) return;
+    const body = el.querySelector('[data-wg-body]'); if (!body) return;
+    const c = _wgCache(); if (!c) return;
+    const st = body.scrollTop;
+    body.innerHTML = _wgSheetHtml(c);
+    body.scrollTop = st;
+  }
+  function openWorldgateSheet(seg) {
+    const c = _wgCache();
+    if (!c) { _worldgateSync(true); _wgToast('The gate is still loading — try again in a moment.'); return; }
+    if (seg) _wgSeg = seg;
+    if (_wgSheet) { _wgSheetPaint(); return; }
+    const el = document.createElement('div');
+    el.className = 'wg-scope wg2-sheet-wrap';
+    el.innerHTML = '<div class="wg2-scrim" data-wg-close></div>' +
+      '<section class="wg2-sheet" role="dialog" aria-modal="true" aria-label="The Worldgate">' +
+        '<header class="wg2-sh-head"><span class="wg2-eyebrow">THE WORLDGATE · ONE MONSTER, ALL OF US</span><button type="button" class="wg2-close" data-wg-close aria-label="Close">✕</button></header>' +
+        '<div class="wg2-sh-body" data-wg-body></div>' +
+      '</section>';
+    document.body.appendChild(el); _wgSheet = el;
+    _wgSheetPaint();
+    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('worldgate_opened', String(c.status || '')); } catch (_) {}
+    _worldgateSync(true);   // fresh numbers while it slides up
+  }
+  function closeWorldgateSheet() {
+    const el = _wgSheet; if (!el) return;
+    _wgSheet = null; _wgSeg = null;
+    try { el.classList.remove('open'); } catch (_) {}
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+  }
+
+  // ── fx: the bar flashes where the strike landed, the monster shakes at yours ──
+  function _wgFlash(delta, myDelta) {
+    const c = _wgCache(); if (!c) return;
+    document.querySelectorAll('[data-wg-track]').forEach(function (t) {
+      const f = t.querySelector('[data-wg-flash]');
+      if (f) { f.style.left = _wgPct(c).toFixed(2) + '%'; f.style.transition = 'none'; f.style.opacity = '0.9'; requestAnimationFrame(function () { f.style.transition = 'opacity .9s'; f.style.opacity = '0'; }); }
+      const host = t.parentNode; if (!host) return;
+      const pop = document.createElement('span');
+      pop.className = 'wg2-pop' + (myDelta > 0 ? ' wg2-pop--g' : '');
+      pop.textContent = '+' + _wgFmt(myDelta > 0 ? myDelta : delta) + (myDelta > 0 ? ' YOU' : '');
+      pop.style.left = Math.min(86, Math.max(4, _wgPct(c) - 6)).toFixed(0) + '%';
+      host.appendChild(pop);
+      setTimeout(function () { try { pop.remove(); } catch (_) {} }, 1400);
+    });
+    if (myDelta > 0) document.querySelectorAll('[data-wg-mon]').forEach(function (m) { m.classList.remove('wg2-shake'); void m.offsetWidth; m.classList.add('wg2-shake'); });
+  }
+
+  // ── actions ──
+  async function _wgStrike() {
+    if (_wgStriking) return;
+    const before = _wgCache(); if (!before) return;
+    _wgStriking = true; _wgSheetPaint();
+    try { if (typeof lbSubmitAllMetricsDebounced === 'function') lbSubmitAllMetricsDebounced(true); } catch (_) {}
+    try { _hapticTick('MEDIUM'); } catch (_) {}
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('worldgate_strike', String(_wgPending(before))); } catch (_) {}
+    await new Promise(function (r) { setTimeout(r, 2600); });
+    try { await _worldgateSync(true); } catch (_) {}
+    _wgStriking = false;
+    const after = _wgCache();
+    const gained = (after && before) ? (Number(after.my) || 0) - (Number(before.my) || 0) : 0;
+    if (gained > 0) { _wgToast('+' + _wgFmt(gained) + ' strikes landed. The gold in the bar just grew.'); try { _hapticTick('SUCCESS'); } catch (_) {} }
+    else _wgToast('Your steps are already in. Health syncs the rest as you walk.');
+    _wgSheetPaint(); renderWorldgateCard();
+  }
+  async function _wgRally(btn) {
+    if (btn) btn.disabled = true;
+    let r; try { r = await Auth.rallyWorldgate(); } catch (_) { r = null; }
+    if (!r || !r.ok) {
+      if (btn) btn.disabled = false;
+      _wgToast(r && (r.code === 'GUEST_SKIP' || r.code === 'NOT_SIGNED_IN') ? 'Sign in with Apple to rally your guild.' : 'Could not sound the horn right now.');
+      return;
+    }
+    const c = _wgCache(); if (c) { c.rallied = true; try { localStorage.setItem(WG_CACHE_KEY, JSON.stringify(c)); } catch (_) {} }
+    _wgToast(r.already ? 'You already rallied your guild today.' : (r.sent ? 'Rally horn sent to ' + r.sent + (r.sent === 1 ? ' hunter.' : ' hunters.') : 'No guild to rally yet — add a hunter first.'));
+    try { _hapticTick('SUCCESS'); } catch (_) {}
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('worldgate_rally', String(r.sent | 0)); } catch (_) {}
+    _wgSheetPaint();
+  }
+  async function _wgShare() {
+    const c = _wgCache(); if (!c) return;
+    const name = _wgBossName(c.week); const pct = _wgPct(c).toFixed(1);
+    const url = (typeof _inviteShareUrl === 'function') ? _inviteShareUrl() : '';
+    const text = (c.status === 'slain'
+      ? 'The Worldgate is DOWN — the whole Awakened server brought ' + name + ' low this week.'
+      : 'The Worldgate — ' + name + ' — is ' + pct + '% down in Awakened.') +
+      ' My ' + _wgFmt(c.my) + ' strikes are in it. Every verified step counts.' + ((typeof _inviteCodeSuffix === 'function') ? _inviteCodeSuffix() : '');
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('share_opened', 'worldgate'); } catch (_) {}
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Awakened', text: text, url: url || undefined }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(text + (url ? '\n' + url : '')); _wgToast('Progress copied — paste to send it'); }
+    catch (_) { _wgToast('Sharing is not supported on this device'); }
+  }
+  function _wgWire() {
+    if (_wgWired) return; _wgWired = true;
+    document.addEventListener('click', function (e) {
+      const t = e.target; if (!t || !t.closest) return;
+      let el;
+      if ((el = t.closest('[data-wg-close]'))) { e.preventDefault(); closeWorldgateSheet(); return; }
+      if ((el = t.closest('[data-wg-profile]'))) {
+        e.preventDefault(); e.stopPropagation();
+        const who = el.getAttribute('data-wg-profile'); const had = !!_wgSheet;
+        closeWorldgateSheet();
+        setTimeout(function () { try { _openProfileCard(who); } catch (_) {} }, had ? 240 : 0);
+        return;
+      }
+      if ((el = t.closest('[data-wg-tab]'))) { e.preventDefault(); _wgTab = el.getAttribute('data-wg-tab') || 'feed'; _wgSheetPaint(); return; }
+      if ((el = t.closest('[data-wg-strike]'))) { e.preventDefault(); _wgStrike(); return; }
+      if ((el = t.closest('[data-wg-rally]'))) { e.preventDefault(); _wgRally(el); return; }
+      if ((el = t.closest('[data-wg-share]'))) { e.preventDefault(); _wgShare(); return; }
+      if ((el = t.closest('[data-wg-seg]'))) {
+        e.preventDefault(); e.stopPropagation();
+        const seg = el.getAttribute('data-wg-seg');
+        _wgSeg = (_wgSeg === seg && _wgSheet) ? null : seg;
+        if (_wgSheet) _wgSheetPaint(); else openWorldgateSheet(seg);
+        return;
+      }
+      if ((el = t.closest('[data-wg-open]'))) { e.preventDefault(); openWorldgateSheet(null); return; }
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _wgSheet) closeWorldgateSheet(); });
+  }
+  try { _wgWire(); } catch (_) {}
+  // W871 QA — __worldgate() cache; __worldgate(true) force-syncs; __worldgate.open() the sheet.
+  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); try { renderWorldgateCard(); } catch (_) {} return _wgCache(); }; window.__worldgate.open = openWorldgateSheet; window.__worldgate.close = closeWorldgateSheet; } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════════════
   // W872 (Wave 2 Train B, S-tier #4 batch 1) — THE SYSTEM STIRS

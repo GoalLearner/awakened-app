@@ -2387,6 +2387,8 @@
       return { ok: false, code: (data && data.error) || 'ERROR' };
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
+  // W916 — the rally horn: once a day, every accepted friend is pushed about the gate.
+  function rallyWorldgate() { return _authedFetch('POST', '/v1/worldgate/rally'); }
 
   // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
   async function fetchWeeklyHunger() {
@@ -2422,6 +2424,7 @@
     // W871 — the Worldgate
     fetchWorldgate,
     claimWorldgate,
+    rallyWorldgate,   // W916
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     clearUser,
