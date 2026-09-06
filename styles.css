@@ -35388,6 +35388,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .fa-hmain { min-width: 0; flex: 1; }
 .fa-hn { padding: 0; border: 0; background: transparent; font-family: var(--b-mono); font-size: 12px; font-weight: 800; letter-spacing: .6px; color: var(--bc, #a78bfa); cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .fa-hs { margin-top: 3px; display: flex; gap: 5px; flex-wrap: wrap; }
+/* W913b — the chips summarize a COLLAPSED hunter; once the feats are open they would
+   repeat the same three things (owner, build 500: "kind of redundant"). */
+.fa-hunter--open .fa-hs { display: none; }
 .fa-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: var(--b-ink2); white-space: nowrap; }
 .fa-chip--st, .fa-c--st { color: #4ade80; } .fa-chip--bs, .fa-c--bs { color: #fca5a5; } .fa-chip--it, .fa-c--it { color: #60a5fa; } .fa-chip--wk, .fa-c--wk { color: #34d399; } .fa-chip--rk, .fa-c--rk { color: var(--b-vio-lt); }
 .fa-hr2 { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
