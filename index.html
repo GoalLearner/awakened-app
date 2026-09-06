@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=673">
+  <link rel="stylesheet" href="styles.css?v=674">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -670,17 +670,15 @@
       <!-- W896 — the one-card ladder, highest-priority first:
            BREAK (a boss is loose and leeching, right now)
            > DOUBLE DUNGEON (a commandment expires at midnight)
-           > WRIT (a week-long bounty)
            > FIRST STEPS (a self-paced tour).
            Each is hidden when not live, so a hunter with only one sees only
            that one, exactly where it has always been. -->
       <div id="dd-card" class="dd-card hidden"></div>
-      <!-- W859 — THE WATCHER'S WRIT card lives inside #system-panel since W905 -->
       <div id="first-steps-strip" class="fs-strip hidden"></div>
       <div id="status-content" class="status-content"></div>
       <!-- W909 — the W905 System line and its panel are gone (owner: "not a fan of the
-           system break"). The Writ card lives on the Habits tab, the Shadow Army strip on
-           Co-op; the Oathbound went altogether in W910. Status is the hunter profile, full stop. -->
+           system break"). The Shadow Army strip lives on Co-op; the Oathbound went
+           altogether in W910 and the Writ in W915. Status is the hunter profile, full stop. -->
     </div>
 
     <!-- Stats panel -->
@@ -691,8 +689,10 @@
          sheets are unchanged — only the entry point moved. -->
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
-      <!-- W909 — THE WATCHER'S WRIT (weekly bounty on your weakest habit metric) lives here now. -->
-      <div id="writ-card" class="writ-card hidden"></div>
+      <!-- W915 — THE WORLDGATE (one server, one monster) leads the Habits tab, where the
+           Watcher's Writ stood until the owner cut it (2026-09-06). renderWorldgateCard()
+           fills it from the 10-min cache; hidden until the first sync lands. -->
+      <div id="worldgate-card" class="wg-host hidden"></div>
       <!-- v3 Phase 1l — Daily Objectives section header removed.
            The top "X / Y HABITS TODAY" tile in .today-strip is the
            canonical habit-progress summary on this tab. Cards start
@@ -3426,7 +3426,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1317"></script>
+  <script src="app.js?v=1318"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.2';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.2-w914'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.2-w915'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5621,36 +5621,10 @@
     } catch (_) {}
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // W859 (Wave 2, A-tier) — THE WATCHER'S WRIT
-  //
-  // Every PT week the System reads your trailing 28 days of VERIFIED data
-  // (the four lb daily maps — all 30d-retained), names the metric you have
-  // quietly starved (lowest last-7d vs 28d ratio, with an activity floor so
-  // brand-new users are never hounded), and issues a personally-authored
-  // bounty: a target ~1.4× your own recent baseline, due by Sunday's reset.
-  //
-  // Rewards (faucet-audited, the binding Wave-2 rule):
-  //  - Completion pays rank-scaled souls (E 40 → S 400) + one Writ Seal.
-  //  - Solo kills of bosses whose condition uses the Writ metric pay +50%
-  //    as a separate transparent ledger row (writ_bonus_kill_<id>).
-  //  - NEVER stacks with THE HUNGER: a boss both hungered and writ-matched
-  //    pays ONLY the Hunger row (100% > 50%) — the judges' 3×-week nightmare
-  //    is impossible by construction. Ceiling: ~7 writ-matched C kills/week
-  //    = +350 bonus souls — under one extra daily kill. Acceptable.
-  //
-  // Everything is deterministic client-side from local verified data — no
-  // backend, no cron, no new sync keys (the writ re-derives after reinstall).
-  // ═══════════════════════════════════════════════════════════════════════
-  const WRIT_KEY = 'hb_writ_v1';
-  const WRIT_SEALS_KEY = 'hb_writ_seals';
-  const WRIT_COMPLETION_SOULS = { E: 40, D: 60, C: 120, B: 200, A: 300, S: 400, 'S+': 400 };
-  const WRIT_METRICS = {
-    steps:   { map: 'steps_daily',       mode: 'sum',    minMonth: 20000, name: 'THE WRIT OF THE LONG ROAD',      verb: 'walked',        unit: 'steps' },
-    flights: { map: 'flights_daily',     mode: 'sum',    minMonth: 20,    name: 'THE WRIT OF THE SKYWARD STAIR',  verb: 'climbed',       unit: 'flights' },
-    sleep:   { map: 'sleep_hours_daily', mode: 'days',   qualify: 7,   minMonth: 4, name: 'THE WRIT OF THE QUIET HOURS', verb: 'slept 7 hours', unit: 'nights of 7h+ sleep' },
-    workout: { map: 'workout_daily',     mode: 'days',   qualify: 10,  minMonth: 4, name: 'THE WRIT OF THE IRON OATH',   verb: 'trained',       unit: 'workout days' },
-  };
+  // W915 — THE WATCHER'S WRIT (W859/W896) is gone for good. Owner, 2026-09-06:
+  // "I want to get rid of The watcher's writ" — reduction means reduction: the
+  // weekly bounty, its reveal, its kill bonus, its seals, its card and its keys.
+  // The day-key helper it was born with stays below; five other modules read it.
   // W882 — every Wave-2 system stores its progression in localStorage, and NONE
   // of those keys were in CloudSync's SNAPSHOT_KEYS allowlist (verified: 0 hits
   // across the 90-key list). hb_souls IS allowlisted, so a reinstall restored
@@ -5717,207 +5691,13 @@
     } catch (_) {}
     return p;
   }
-  function _writRead() { try { return JSON.parse(localStorage.getItem(WRIT_KEY) || 'null'); } catch (_) { return null; } }
-  function _writWrite(w) { try { localStorage.setItem(WRIT_KEY, JSON.stringify(w)); } catch (_) {} _w2Sync('writ'); }
+  /** Day keys yesterday-backwards (today excluded) — shared by the Status Window, the Stone, the Stirs and the Letters. */
   function _writDayKeysBack(n) {
     const out = [];
     const d = new Date();
     for (let i = 1; i <= n; i++) { const x = new Date(d); x.setDate(d.getDate() - i); out.push(_localDateKey(x)); }
     return out;   // yesterday backwards — today is excluded from baselines
   }
-  function _writMetricStats(m) {
-    const ls = loadLeaderboardState();
-    const map = (ls && ls[m.map]) || {};
-    const days28 = _writDayKeysBack(28), days7 = days28.slice(0, 7);
-    const val = function (k) { return Number(map[k]) || 0; };
-    if (m.mode === 'sum') {
-      let t28 = 0, t7 = 0, lastDay = null;
-      days28.forEach(function (k) { const v = val(k); t28 += v; if (v > 0 && (!lastDay || k > lastDay)) lastDay = k; });
-      days7.forEach(function (k) { t7 += val(k); });
-      return { month: t28, week: t7, avg7: t7 / 7, ratio: t28 > 0 ? (t7 / 7) / (t28 / 28) : 1, lastDay: lastDay };
-    }
-    let q28 = 0, q7 = 0, lastDay = null;
-    days28.forEach(function (k) { if (val(k) >= m.qualify) { q28++; if (!lastDay || k > lastDay) lastDay = k; } });
-    days7.forEach(function (k) { if (val(k) >= m.qualify) q7++; });
-    return { month: q28, week: q7, avg7: q7 / 7, ratio: q28 > 0 ? (q7 / 7) / (q28 / 28) : 1, lastDay: lastDay };
-  }
-  function _writCitation(key, st) {
-    const m = WRIT_METRICS[key];
-    if (!st.lastDay) return 'The record shows nothing this month. I noticed.';
-    const d = new Date(st.lastDay + 'T12:00:00');
-    const day = d.getDate();
-    const sfx = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : ['th', 'st', 'nd', 'rd'][day % 10] || 'th';
-    return 'You have not ' + m.verb + ' since the ' + day + sfx + '. I counted.';
-  }
-  /** Pick or return this week's writ. {week, none} when no metric qualifies. */
-  function writEnsure() {
-    const wk = weeklyHungerWeekKey();
-    const cur = _writRead();
-    if (cur && cur.week === wk) return cur;
-    let pick = null, pickStats = null;
-    try {
-      Object.keys(WRIT_METRICS).forEach(function (key) {
-        const m = WRIT_METRICS[key];
-        const st = _writMetricStats(m);
-        if (st.month < m.minMonth) return;              // activity floor — never hound a cold metric
-        if (!pick || st.ratio < pickStats.ratio) { pick = key; pickStats = st; }
-      });
-    } catch (_) {}
-    let w;
-    if (!pick) {
-      w = { week: wk, none: true };
-    } else {
-      const m = WRIT_METRICS[pick];
-      let target;
-      if (m.mode === 'sum') {
-        target = Math.max(1, Math.ceil((pickStats.avg7 * 7 * 1.4)));
-        if (pick === 'steps') target = Math.max(7000, Math.ceil(target / 500) * 500);
-        if (pick === 'flights') target = Math.max(7, target);
-      } else {
-        target = Math.max(2, Math.min(6, Math.ceil(pickStats.week * 1.4) || 2));
-      }
-      w = {
-        week: wk, metric: pick, mode: m.mode, qualify: m.qualify || 0,
-        target: target, name: m.name, unit: m.unit,
-        cite: _writCitation(pick, pickStats), done: false, announced: false,
-      };
-    }
-    _writWrite(w);
-    return w;
-  }
-  /** Progress THIS week from the metric's daily map (PT-week lexicographic). */
-  function writProgress(w) {
-    if (!w || w.none) return 0;
-    try {
-      const m = WRIT_METRICS[w.metric]; if (!m) return 0;
-      const ls = loadLeaderboardState();
-      const map = (ls && ls[m.map]) || {};
-      let dateStr = getDeviceLocalDate(), sum = 0, q = 0;
-      for (let i = 0; i < 8 && dateStr >= w.week; i++) {
-        const v = Number(map[dateStr]) || 0;
-        sum += v;
-        if (v >= (w.qualify || 0)) q++;
-        const prev = lbPrevDate(dateStr);
-        if (prev === dateStr) break;
-        dateStr = prev;
-      }
-      return w.mode === 'sum' ? sum : q;
-    } catch (_) { return 0; }
-  }
-  /** +50% solo-kill bonus while the writ metric matches — Hunger always wins. */
-  function writKillBonusSouls(cfg, base) {
-    try {
-      if (!cfg || !base) return 0;
-      const w = _writRead();
-      if (!w || w.none || w.done || w.week !== weeklyHungerWeekKey()) return 0;
-      if (isBossHungered(cfg.id)) return 0;   // NEVER stack with THE HUNGER
-      const match =
-        (w.metric === 'steps'   && typeof cfg.stepThreshold  === 'number') ||
-        (w.metric === 'flights' && typeof cfg.flightThreshold === 'number') ||
-        (w.metric === 'sleep'   && typeof cfg.sleepHours     === 'number') ||
-        (w.metric === 'workout' && typeof cfg.workoutMinutes === 'number');
-      return match ? Math.floor(base * 0.5) : 0;
-    } catch (_) { return 0; }
-  }
-  /** Reveal (once/week, System voice) + completion check. Cheap; called from
-   *  updateProgress + the 60s interval + boot. */
-  function writTick() {
-    try {
-      const w = writEnsure();
-      renderWritCard(w);
-      if (!w || w.none) return;
-      // W888 (3.0.1 B4) — hold the reveal while a Double Dungeon is running.
-      // The DD owns a rookie's first three days, and writTick can otherwise fire
-      // a full WRIT system notice on the same launch as the DD coachmark — two
-      // System voices inside the first minute, at the one moment the app most
-      // needs to be legible. CRITICAL: the announced flag is NOT set here, so
-      // the writ is HELD, never consumed — it announces the moment the dungeon
-      // clears. writEnsure/writProgress are untouched, so the week still
-      // accrues and can even complete while held.
-      let _ddRunningNow = false;
-      try { const _ddw = _ddLoad(); _ddRunningNow = !!(_ddw && !_ddw.done); } catch (_) {}
-      if (!w.announced && !_ddRunningNow) {
-        w.announced = true; _writWrite(w);
-        try {
-          if (typeof showSystemNotice === 'function') {
-            // W874 — positional args + <br> (the notice body renders as HTML).
-            showSystemNotice(
-              "THE WATCHER'S WRIT",
-              esc(w.name) + ' — ' + w.target.toLocaleString('en-US') + ' ' + esc(w.unit) + ' before Sunday.<br>' + esc(w.cite) + '<br>Hunts of this discipline pay half again in souls all week.'
-            );
-          }
-        } catch (_) {}
-      }
-      if (w.done) return;
-      const p = writProgress(w);
-      if (p >= w.target) {
-        w.done = true; _writWrite(w);
-        let seals = 0;
-        try { seals = (parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0) + 1; localStorage.setItem(WRIT_SEALS_KEY, String(seals)); } catch (_) {}
-        let rankId = 'E'; try { rankId = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
-        const pay = WRIT_COMPLETION_SOULS[rankId] || 40;
-        try { earnSouls(pay, 'writ_complete_' + w.week); } catch (_) {}
-        try { _hapticTick('SUCCESS'); } catch (_) {}
-        try {
-          if (typeof showNoticeCard === 'function') {
-            showNoticeCard({ eyebrow: 'WRIT FULFILLED', title: w.name, body: 'The Watcher strikes it from the ledger. +' + pay + ' souls. Seal ' + seals + ' earned.' });
-          } else { showHabitToast('WRIT FULFILLED — +' + pay + ' souls.'); }
-        } catch (_) {}
-        renderWritCard(w);
-      }
-    } catch (_) {}
-  }
-  /** The Status-tab card: name, progress bar, citation, bonus line. */
-  let _writExpandedOverride = false;   // W896 — session-scoped; the hunter asked to see it
-  /** W896 — is a time-critical event holding the top slot above the Writ? */
-  function _writOutranked() {
-    try {
-      const d = _ddLoad();
-      if (d && !d.done) return true;               // a commandment expires at midnight
-    } catch (_) {}
-    return false;
-  }
-  function renderWritCard(w) {
-    const host = document.getElementById('writ-card');
-    if (!host) return;
-    w = w || _writRead();
-    if (!w || w.none || w.week !== weeklyHungerWeekKey()) { host.classList.add('hidden'); host.innerHTML = ''; return; }
-    const p = w.done ? w.target : writProgress(w);
-    const pct = Math.max(0, Math.min(100, Math.round((p / Math.max(1, w.target)) * 100)));
-    // W896 (3.0.1 D14) — THE ONE-CARD RULE. A live Double Dungeon runs on a
-    // clock; a Writ runs until Sunday. While the Dungeon holds the rookie's
-    // attention the Writ collapses to the one-line strip idiom already shipped
-    // for shadows and oaths, so a first week is one thing to do rather than two
-    // competing ones. NOT hidden: the strip carries the live number and one tap
-    // restores the full card. (W909: the Dungeon Break clause is gone with the
-    // mechanic; the card itself lives on the Habits tab now.)
-    if (_writOutranked() && !_writExpandedOverride) {
-      host.innerHTML =
-        '<button type="button" class="writ-strip" data-writ-expand="1">' +
-          esc(w.done ? 'THE WATCHER’S WRIT · FULFILLED ›' :
-              'THE WATCHER’S WRIT · ' + p.toLocaleString('en-US') + ' / ' + w.target.toLocaleString('en-US') + ' ›') +
-        '</button>';
-      host.classList.remove('hidden');
-      host.onclick = function (e) {
-        if (e && e.target && e.target.closest && e.target.closest('[data-writ-expand]')) {
-          _writExpandedOverride = true;
-          try { renderWritCard(); } catch (_) {}
-        }
-      };
-      return;
-    }
-    host.onclick = null;
-    host.innerHTML =
-      '<div class="writ-eyebrow">THE WATCHER’S WRIT' + (w.done ? ' · FULFILLED' : '') + '</div>' +
-      '<div class="writ-name">' + esc(w.name) + '</div>' +
-      '<div class="writ-goal">' + p.toLocaleString('en-US') + ' / ' + w.target.toLocaleString('en-US') + ' ' + esc(w.unit) + ' · before Sunday</div>' +
-      '<div class="writ-bar"><span style="width:' + pct + '%"></span></div>' +
-      (w.done ? '' : '<div class="writ-cite">“' + esc(w.cite) + '”</div>');
-    host.classList.toggle('writ-done', !!w.done);
-    host.classList.remove('hidden');
-  }
-  // W859 QA — __writ() state dump; __writ(true) re-picks this week from scratch.
-  try { window.__writ = function (repick) { if (repick) { try { localStorage.removeItem(WRIT_KEY); } catch (_) {} } const w = writEnsure(); return { writ: w, progress: writProgress(w), seals: parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0 }; }; } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════════════
   // W861 (Wave 2, Hunter's License pt 1) — THE STATUS WINDOW
@@ -6624,6 +6404,12 @@
   // no free 72h rematch, no escape notification, no banner. This stub only cleans up
   // what an older build may have left on a device: the leech state key and a pending
   // escape notification in lane 99992 (a lane kept reserved so nothing reuses it).
+  // W915 — the Watcher's Writ is gone for good; its keys go too, so a cloud restore
+  // never resurrects a bounty the app no longer knows how to read.
+  function _w915CleanupWrit() {
+    try { localStorage.removeItem('hb_writ_v1'); } catch (_) {}
+    try { localStorage.removeItem('hb_writ_seals'); } catch (_) {}
+  }
   function _w909CleanupBreak() {
     try { localStorage.removeItem('hb_break_v1'); } catch (_) {}
     try {
@@ -6769,7 +6555,7 @@
             try { showNoticeCard({ eyebrow: 'THE GATE BREAKS', title: 'The Worldgate is down', body: 'Every hunter’s verified steps brought it low — yours among them. +' + cl.souls + ' souls. One server, one monster, one kill.' }); } catch (_) {}
           }).catch(function () {});
         }
-        try { if (typeof currentTab !== 'undefined' && currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+        try { renderWorldgateCard(); } catch (_) {}   // W915 — the card lives on the Habits tab
       }).catch(function () {});
     } catch (_) {}
   }
@@ -6787,8 +6573,17 @@
       '<div class="wg-sub">YOUR STRIKES: ' + (c.my || 0).toLocaleString('en-US') + (slain ? '' : ' · SHARE THE KILL AT ' + (c.floor || 15000).toLocaleString('en-US')) + '</div>' +
     '</div>';
   }
+  // W915 — the card leads the Habits tab (owner: "put the worldgate right here on the
+  // habits tab", where the Writ stood). Paints from the 10-min cache; hidden until the
+  // first sync lands, so the tab keeps its shape for a fresh install.
+  function renderWorldgateCard() {
+    const host = document.getElementById('worldgate-card'); if (!host) return;
+    let html = ''; try { html = _worldgateCardHtml(); } catch (_) { html = ''; }
+    host.innerHTML = html;
+    host.classList.toggle('hidden', !html);
+  }
   // W871 QA — __worldgate() cache; __worldgate(true) force-syncs.
-  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); return _wgCache(); }; } catch (_) {}
+  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); try { renderWorldgateCard(); } catch (_) {} return _wgCache(); }; } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════════════
   // W872 (Wave 2 Train B, S-tier #4 batch 1) — THE SYSTEM STIRS
@@ -6839,7 +6634,6 @@
     { id: 'half_the_vault',    tier: 3, title: 'HALF THE VAULT',      line: 'Twenty-five relics held at once. The Collection Log turns its pages for you now.', check: function () { try { const inv = getInventory(); let n = 0; for (const k in inv) { if (inv[k] && inv[k].count > 0) n++; } return n >= 25; } catch (_) { return false; } } },   // W902 50->25
     { id: 'fortnight_flawless',tier: 3, title: 'THE FLAWLESS FORTNIGHT', line: 'Fourteen perfect days, unbroken. The System checked its own records twice.', check: function () { try { return typeof perfectStreak !== 'undefined' && perfectStreak && (perfectStreak.streak | 0) >= 14; } catch (_) { return false; } } },
     { id: 'gray_correspondent',tier: 1, title: 'THE CORRESPONDENT',   line: 'Four letters kept. He notices hunters who keep his letters.', check: function () { try { return _plArc().letters.length >= 4; } catch (_) { return false; } } },
-    { id: 'writ_faithful',     tier: 2, title: 'THE WATCHER’S FAVORITE', line: 'Two Writs fulfilled. It has stopped writing your name in pencil.', check: function () { return (parseInt(localStorage.getItem(WRIT_SEALS_KEY), 10) || 0) >= 2; } },   // W902 4->2
     // ── Batch 2 — AUTHORED, DORMANT (flips live with the Nameless ARG) ──
     { id: 'b2_steel_month',    tier: 3, batch2: true, title: 'THE STEEL MONTH',    line: 'Thirty days of walking, none below eight thousand. The road has started walking with you.', check: function (c) { for (let i = 0; i < 30; i++) { if (c.val('steps_daily', c.back[i]) < 8000) return false; } return true; } },
     { id: 'b2_25k',            tier: 3, batch2: true, title: 'THE MARATHON GHOST', line: 'Twenty-five thousand steps in one turning of the sun. The Wraith filed a complaint.', check: function (c) { if (c.val('steps_daily', c.today) >= 25000) return true; for (let i = 0; i < 7; i++) { if (c.val('steps_daily', c.back[i]) >= 25000) return true; } return false; } },
@@ -22949,9 +22743,6 @@
         // transparent ledger row (the WLT-bonus pattern).
         const _hungerBonus_1 = (_firstKill && isBossHungered(id)) ? killRewardSouls(cfg.rank) : 0;
         if (_hungerBonus_1 > 0) earnSouls(_hungerBonus_1, 'hunger_kill_' + id);
-        // W859 — THE WATCHER'S WRIT: +50% on writ-metric hunts (never stacks with Hunger).
-        const _writBonus_1 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
-        if (_writBonus_1 > 0) earnSouls(_writBonus_1, 'writ_bonus_kill_' + id);
         // W869 — RED GATE: the sealed hunt pays double + a mercy re-roll below.
         const _rgBonus_1 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_1 > 0) earnSouls(_rgBonus_1, 'red_gate_kill_' + id);
@@ -23081,9 +22872,6 @@
         // W845 — THE HUNGER (per-day boss path).
         const _hungerBonus_3 = (_firstKill && isBossHungered(id)) ? killRewardSouls(cfg.rank) : 0;
         if (_hungerBonus_3 > 0) earnSouls(_hungerBonus_3, 'hunger_kill_' + id);
-        // W859 — THE WATCHER'S WRIT (per-day boss path; never stacks with Hunger).
-        const _writBonus_3 = _firstKill ? writKillBonusSouls(cfg, reward) : 0;
-        if (_writBonus_3 > 0) earnSouls(_writBonus_3, 'writ_bonus_kill_' + id);
         // W869 — RED GATE double + mercy re-roll (per-day boss path).
         const _rgBonus_3 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_3 > 0) earnSouls(_rgBonus_3, 'red_gate_kill_' + id);
@@ -23204,9 +22992,6 @@
     // W845 — THE HUNGER (single-shot kill path).
     const _hungerBonus_4 = isBossHungered(id) ? reward : 0;
     if (_hungerBonus_4 > 0) earnSouls(_hungerBonus_4, 'hunger_kill_' + id);
-    // W859 — THE WATCHER'S WRIT (single-shot kill path; never stacks with Hunger).
-    const _writBonus_4 = writKillBonusSouls(cfg, reward);
-    if (_writBonus_4 > 0) earnSouls(_writBonus_4, 'writ_bonus_kill_' + id);
     // W869 — RED GATE double + mercy re-roll (single-shot kill path).
     const _rgBonus_4 = (state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
     if (_rgBonus_4 > 0) earnSouls(_rgBonus_4, 'red_gate_kill_' + id);
@@ -34660,7 +34445,7 @@
   // next: showSystemNotice removed #aw-notice, showNoticeCard removed every
   // .notice-card-wrap. That was survivable when one feature spoke; Wave 2 gave
   // the System seventeen mouths and no turn-taking. The boot+8s pass alone runs
-  // writTick and _stirsTick synchronously alongside async oath, worldgate and
+  // _stirsTick synchronously alongside async oath, worldgate and
   // tower syncs — so an OATHKEEPER fulfilment ("your rookie took their first
   // kill under your oath") could be wiped 200ms later by a worldgate claim and
   // never be seen at all. The souls were granted either way; the moment they
@@ -37993,6 +37778,7 @@
     itemsPanel.classList.toggle('hidden',   tab !== 'items');
     socialPanel.classList.toggle('hidden',  tab !== 'social');
     footer.style.display = tab === 'habits' ? '' : 'none';
+    if (tab === 'habits') { try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }   // W915 — the Worldgate leads the Habits tab
 
     if (tab === 'profile')      renderProfile();
     if (tab === 'history')      renderHistory();
@@ -51517,11 +51303,8 @@
           'This week <b>' + esc(_hbName) + '</b> hungers — 2× souls · +1% relic luck.</div>';
       }
     } catch (_) {}
-    // W871 — THE WORLDGATE card (server-wide raid; renders from the 10-min
-    // cache, live values refresh via _worldgateSync).
-    let _wgCard = '';
-    try { _wgCard = _worldgateCardHtml(); } catch (_) {}
-    list.innerHTML = _wgCard + _hungerBanner + bossIds.map(buildBossCardHTML).join('');
+    // W915 — the Worldgate card moved to the top of the Habits tab (it used to lead every dungeon rank view).
+    list.innerHTML = _hungerBanner + bossIds.map(buildBossCardHTML).join('');
     // W370 — co-op boss card(s) appended before the setBossImage loop so their
     // art wires too.
     try {
@@ -66340,8 +66123,6 @@
       'hb_shadows_v1',            // ARISE roster + extraction windows + loyalty
       'hb_pilgrim_arc_v1',        // the 12-letter arc + unread + lore unlocks
       'hb_stirs_v1',              // hidden-quest find-log + fragments (re-pay guard)
-      'hb_writ_v1',               // the live Watcher's Writ
-      'hb_writ_seals',            // lifetime Writ seals
       'hb_stone_v1',              // Measuring Stone month + latent rank
       'hb_dd_v1',                 // Double Dungeon progress (day, seals, repeats)
       'hb_avenger_count',         // lifetime tallies
@@ -67559,8 +67340,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { writTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W859 writ + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,
