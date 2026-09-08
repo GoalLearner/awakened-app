@@ -1935,13 +1935,15 @@ test.describe('T · Segmented switch (W922)', () => {
     await expect(page.locator('#cl-lens.seg .seg-btn[data-on="1"]')).toHaveCount(1);
     await expect(page.locator('.cl-slider')).toHaveCount(0);
     // Community — the sub-nav and the HUNTER | ALL switch
-    await page.click('#tab-social');
+    // DOM-level taps from here on: the First Awakened coachmark (#fa-coachmark-overlay) sits over the
+    // tab bar after the first Items open and intercepts Playwright's hit-test (smoke-suite precedent).
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
     await expect(page.locator('#cm-subnav.seg .seg-btn[data-active="true"]')).toHaveCount(1);
     await expect(page.locator('.cm-pill')).toHaveCount(0);
-    await page.click('[data-cm-pane="friends"]');
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
     const fa = page.locator('.guildhall-activity-filter.seg');
     await expect(fa).toHaveAttribute('data-mode', 'guild');
-    await page.click('#guildhall-filter-hunter');
+    await page.evaluate(() => document.getElementById('guildhall-filter-hunter')!.click());
     await expect(fa).toHaveAttribute('data-mode', 'hunter');
     await expect(page.locator('.seg-btn[data-active="true"]#guildhall-filter-hunter')).toHaveCount(1);
   });
