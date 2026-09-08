@@ -127,7 +127,8 @@ test.describe('W · Settings sheet', () => {
 // X. W927 — the comparison window + EQUIP at the relic reveal
 // ─────────────────────────────────────────────────────────────
 test.describe('X · Reveal compare + equip (W927)', () => {
-  const seed = (worn: string | null) => () => {
+  // NOTE: init scripts are serialized — the worn id must travel as the argument, not a closure.
+  const seed = (worn: string | null) => {
     try {
       localStorage.setItem('hb_inventory', JSON.stringify({
         cards: {
@@ -143,7 +144,7 @@ test.describe('X · Reveal compare + equip (W927)', () => {
   async function openReveal(page: Page, worn: string | null) {
     await page.emulateMedia({ reducedMotion: 'reduce' });   // the sigil bloom reveals the card at once
     await freshApp(page);
-    await page.addInitScript(seed(worn));   // registered AFTER freshApp's script so it wins on the reload
+    await page.addInitScript(seed, worn);   // registered AFTER freshApp's script so it wins on the reload
     await page.reload();
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
     await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); (window as any).__loadInventory(); (window as any).__processRevealQueue(); });
