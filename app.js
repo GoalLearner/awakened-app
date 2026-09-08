@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w925'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w926'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40899,12 +40899,20 @@
   // fa-managevows.jsx spec.
   // ════════════════════════════════════════════════════════════════════
 
+  // W926 — MY ORDER (Grubbadub on the board, 2026-09-08: "manually sort my habits,
+  // not just alphabetically or by streak"). The list order IS the hb_habits array
+  // order; this pill shows it with ▲▼ arrows that splice the array. Apple Health
+  // vows stay a group at the top (owner call) — the stable auto-verify partition
+  // on save keeps that so, and the arrows never cross the group line.
   const MV_SORTS = [
+    { id: 'custom', label: 'My order' },
     { id: 'az',     label: 'A–Z' },
     { id: 'streak', label: 'Streak' },
     { id: 'quiet',  label: 'Quietest' },
   ];
-  let _mvSort = 'az';
+  let _mvSort = 'custom';
+  try { const _ms = localStorage.getItem('hb_mv_sort'); if (_ms && MV_SORTS.some(function (x) { return x.id === _ms; })) _mvSort = _ms; } catch (_) {}
+  let _mvEdges = null;   // W926 — per-render group edges (which arrows are disabled)
   let _mvConfirmId = null;   // habit id currently in confirm state
   let _mvReleasingId = null; // habit id currently animating out
   let _mvRoomMadeTimer = null;
@@ -40966,6 +40974,7 @@
   function _mvSortedActive() {
     const arr = (Array.isArray(habits) ? habits : []).filter(_isActiveHabit);
     const copy = arr.slice();
+    if (_mvSort === 'custom') return copy;   // W926 — the list order itself
     if (_mvSort === 'az') {
       copy.sort(function (a, b) {
         return String(a.name || '').localeCompare(String(b.name || ''));
@@ -40987,6 +40996,42 @@
       });
     }
     return copy;
+  }
+
+  // ── W926 — MY ORDER: move a vow one place within its group ─────────────────
+  function _mvHealthGroup(h) { try { return typeof isHealthAutoVerifiableHabit === 'function' && !!isHealthAutoVerifiableHabit(h); } catch (_) { return false; } }
+  function _mvOrderMeta() {
+    const active = (Array.isArray(habits) ? habits : []).filter(_isActiveHabit);
+    const health = active.filter(_mvHealthGroup);
+    const rest = active.filter(function (h) { return !_mvHealthGroup(h); });
+    const firstUp = new Set(); const lastDown = new Set();
+    [health, rest].forEach(function (g) { if (g.length) { firstUp.add(String(g[0].id)); lastDown.add(String(g[g.length - 1].id)); } });
+    return { active: active, health: health, rest: rest, firstUp: firstUp, lastDown: lastDown };
+  }
+  function _mvMove(habitId, dir) {
+    if (!Array.isArray(habits)) return;
+    const meta = _mvOrderMeta();
+    const key = String(habitId);
+    const group = meta.health.some(function (h) { return String(h.id) === key; }) ? meta.health : meta.rest;
+    const gi = group.findIndex(function (h) { return String(h.id) === key; });
+    const ni = gi + (dir < 0 ? -1 : 1);
+    if (gi < 0 || ni < 0 || ni >= group.length) return;   // a group edge — the arrow was disabled anyway
+    const a = habits.indexOf(group[gi]); const b = habits.indexOf(group[ni]);
+    if (a < 0 || b < 0) return;
+    habits[a] = group[ni]; habits[b] = group[gi];   // swap the two positions; everything else stays put
+    save();
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    _mvRenderSheet();
+    try { if (typeof renderHabits === 'function') renderHabits({ skipSideEffects: true }); } catch (_) {}
+  }
+  function _mvArrowsHtml(id) {
+    const e = _mvEdges || _mvOrderMeta();
+    const upDis = e.firstUp.has(String(id)) ? ' disabled' : '';
+    const dnDis = e.lastDown.has(String(id)) ? ' disabled' : '';
+    return '<div class="mv-row-arrows">' +
+      '<button class="mv-row-arrow" type="button" data-mv-up="' + esc(id) + '" aria-label="Move up"' + upDis + '>▲</button>' +
+      '<button class="mv-row-arrow" type="button" data-mv-down="' + esc(id) + '" aria-label="Move down"' + dnDis + '>▼</button>' +
+    '</div>';
   }
 
   function _mvStatColor(statId) {
@@ -41034,6 +41079,7 @@
               '<span class="mv-row-last">' + esc(last) + '</span>' +
             '</div>' +
           '</div>' +
+          (_mvSort === 'custom' && !isConfirm ? _mvArrowsHtml(id) : '') +   // W926
           (isConfirm ? '' :
             '<button class="mv-row-releasebtn" type="button" data-mv-release="' + esc(id) + '"' +
               ' aria-label="Release ' + esc(h.name || '') + '">Release</button>'
@@ -41165,6 +41211,7 @@
           const id = b.getAttribute('data-mv-sort');
           if (id && id !== _mvSort) {
             _mvSort = id;
+            try { localStorage.setItem('hb_mv_sort', id); } catch (_) {}   // W926 — remembered
             _mvRenderSheet();
           }
         });
@@ -41172,8 +41219,17 @@
     }
 
     // List
+    _mvEdges = _mvOrderMeta();   // W926
     const rows = _mvSortedActive();
-    let html = rows.map(_mvRowHtml).join('');
+    let html;
+    if (_mvSort === 'custom' && _mvEdges.health.length && _mvEdges.rest.length) {
+      // W926 — two groups: Apple Health vows always lead; your own vows follow.
+      html = '<div class="mv-group-kicker">Synced by Apple Health · always first</div>' + _mvEdges.health.map(_mvRowHtml).join('') +
+             '<div class="mv-group-kicker">Your vows</div>' + _mvEdges.rest.map(_mvRowHtml).join('');
+    } else {
+      html = rows.map(_mvRowHtml).join('');
+    }
+    if (_mvSort === 'custom' && rows.length > 1) html = '<p class="mv-order-hint">Tap the arrows to set the order of your list.</p>' + html;
     if (rows.length === 1) {
       html += '<p class="mv-single-line">One vow remains. Release it and the system waits anew.</p>';
     }
@@ -41199,6 +41255,13 @@
       b.addEventListener('click', function () {
         const id = b.getAttribute('data-mv-confirm');
         if (id) _mvReleaseHabit(id);
+      });
+    });
+    bodyEl.querySelectorAll('[data-mv-up],[data-mv-down]').forEach(function (b) {   // W926
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        const up = b.hasAttribute('data-mv-up');
+        _mvMove(b.getAttribute(up ? 'data-mv-up' : 'data-mv-down'), up ? -1 : 1);
       });
     });
   }
@@ -41267,6 +41330,7 @@
     overlay.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', _mvKeydown, true);
     clearTimeout(_mvRoomMadeTimer);
+    try { if (typeof renderHabits === 'function') renderHabits({ skipSideEffects: true }); } catch (_) {}   // W926 — the list shows the order you just set
   }
   function _mvKeydown(e) {
     if (e.key === 'Escape') closeManageVows();

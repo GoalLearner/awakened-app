@@ -1976,3 +1976,32 @@ test.describe('U · Auto-seen friend feats (W923)', () => {
     expect(stamped).toBeLessThan(60_000);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// V. W926 — MY ORDER: arrows on Manage Vows set the real list order
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('V · My order (W926)', () => {
+  test('arrows reorder the list; the group edges are disabled; the Habits tab follows', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => {
+      localStorage.setItem('hb_habits', JSON.stringify([
+        { id: 'h-read', name: 'Read', emoji: '📖', difficulty: 'easy', type: 'build', primaryStat: 'INT' },
+        { id: 'h-stretch', name: 'Stretch', emoji: '🧘', difficulty: 'easy', type: 'build', primaryStat: 'VIT' },
+        { id: 'h-journal', name: 'Journal', emoji: '📓', difficulty: 'easy', type: 'build', primaryStat: 'FOCUS' },
+      ]));
+      localStorage.setItem('hb_first_completion_bonus_v1', '1');
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); (window as any).__openManageVows(); });
+    await expect(page.locator('.mv-sortpill.is-active')).toHaveText(/my order/i);
+    await expect(page.locator('.mv-row-arrow')).toHaveCount(6);
+    await expect(page.locator('[data-mv-up="h-read"]')).toBeDisabled();
+    await expect(page.locator('[data-mv-down="h-journal"]')).toBeDisabled();
+    await page.locator('[data-mv-down="h-read"]').click();
+    const order = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: { id: string }) => h.id));
+    expect(order).toEqual(['h-stretch', 'h-read', 'h-journal']);
+    await page.evaluate(() => (window as any).__closeManageVows());
+    await expect(page.locator('#habit-list .habit-item').first()).toHaveAttribute('data-id', 'h-stretch');
+  });
+});

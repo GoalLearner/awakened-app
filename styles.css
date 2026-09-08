@@ -35256,3 +35256,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .coop-sib--on { border-color: rgba(139,92,246,0.6); background: rgba(139,92,246,0.18); color: #fff; }
 .coop-sib i { font-style: normal; font-size: 8px; letter-spacing: 1.2px; color: #4ade80; }
 .coop-sib i.coop-sib-wait { color: #f5b842; }
+
+/* W926 — MY ORDER: arrows on the Manage Vows rows + the two group kickers */
+.mv-row-arrows { display: flex; flex-direction: column; gap: 2px; flex: none; margin-right: 6px; }
+.mv-row-arrow { width: 30px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: #9aa0bd; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; line-height: 1; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: background .12s, color .12s; }
+.mv-row-arrow:active { background: rgba(139,92,246,0.22); border-color: rgba(139,92,246,0.55); color: #fff; }
+.mv-row-arrow[disabled] { opacity: .22; pointer-events: none; }
+.mv-group-kicker { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: #585a76; margin: 12px 2px 6px; }
+.mv-order-hint { font-size: 11.5px; color: #8488a8; margin: 0 2px 4px; }
