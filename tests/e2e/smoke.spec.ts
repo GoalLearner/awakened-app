@@ -1917,3 +1917,32 @@ test.describe('S · Community badge (W921)', () => {
     await expect(page.locator('.fa-likers')).toHaveCount(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// T. W922 — one segmented switch: every pane switcher is `.seg` > `.seg-btn`
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('T · Segmented switch (W922)', () => {
+  test('Today|Ledger, the Ledger range, Archive|Collection and Board|Friends all share the recipe', async ({ page }) => {
+    await freshApp(page);
+    // Habits — the TODAY | LEDGER switch only exists once the ledger unlocks (W785).
+    await page.evaluate(() => { localStorage.setItem('hb_history_unlocked_v1', '1'); (window as any).__ledger.open(); });
+    const range = page.locator('#history-content .hg-view-tabs.seg.seg--4');
+    await expect(range).toBeVisible();
+    await expect(range.locator('.seg-btn[aria-selected="true"]')).toHaveCount(1);
+    await expect(range.locator('.seg-btn').first()).toHaveText('WEEK');
+    // Items — one lens on, no old slider element
+    await page.click('#tab-items');
+    await expect(page.locator('#cl-lens.seg .seg-btn[data-on="1"]')).toHaveCount(1);
+    await expect(page.locator('.cl-slider')).toHaveCount(0);
+    // Community — the sub-nav and the HUNTER | ALL switch
+    await page.click('#tab-social');
+    await expect(page.locator('#cm-subnav.seg .seg-btn[data-active="true"]')).toHaveCount(1);
+    await expect(page.locator('.cm-pill')).toHaveCount(0);
+    await page.click('[data-cm-pane="friends"]');
+    const fa = page.locator('.guildhall-activity-filter.seg');
+    await expect(fa).toHaveAttribute('data-mode', 'guild');
+    await page.click('#guildhall-filter-hunter');
+    await expect(fa).toHaveAttribute('data-mode', 'hunter');
+    await expect(page.locator('.seg-btn[data-active="true"]#guildhall-filter-hunter')).toHaveCount(1);
+  });
+});
