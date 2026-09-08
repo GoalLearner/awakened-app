@@ -1,4 +1,8 @@
 -- 0059_coop_seat_target.sql
+-- ⚠ SUPERSEDED the same night by W925 (owner: hunters may run several co-op hunts
+-- at once, so EVERY accepted invite becomes its own hunt — a multi-pick summons now
+-- fans out into one duo instance per friend). The column stays (applied to remote
+-- 2026-09-08) but nothing writes or reads it.
 -- W924 — FIRST TO ANSWER JOINS (Rendell, 2026-09-08: "see if you can select
 -- multiple at a time to bypass this screen").
 --

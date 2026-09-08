@@ -16,7 +16,7 @@ import {
   handleCoopBossDecline,
   handleCoopBossGet,
   handleCoopBossJoin,
-  DUO_CANDIDATES_MAX,
+  DUO_FANOUT_MAX,
   handleCoopBossResolve,
   handleRaidQueueJoin,
   handleRaidQueueLeave,
@@ -290,13 +290,13 @@ describe('W677 — trio create validation', () => {
     expect(body.error).toBe('MISSING_PARTNER');
   });
 
-  it('W924 — a duo with a second ally is a FIRST-TO-ANSWER summons now, not PARTY_SIZE', async () => {
+  it('W925 — a duo with a second ally FANS OUT into two summons (two guarded inserts), not PARTY_SIZE', async () => {
     const sqlLog: string[] = [];
     const res = await handleCoopBossCreate(
       trioReq({ partner_user_id: 'u2', partner2_user_id: 'u3', boss_id: 'the_twin_maw' }),
       makeEnv(makeDb({}, sqlLog)), session('u1'));
     expect(res.status).not.toBe(400);
-    expect(sqlLog.find((q) => q.includes('INSERT INTO coop_boss_instances'))).toContain('seat_target');
+    expect(sqlLog.filter((q) => q.includes('INSERT INTO coop_boss_instances')).length).toBe(2);
   });
 
   it('400 DUPLICATE_ALLY when both trio seats name the same friend', async () => {
@@ -865,60 +865,26 @@ describe('W838 — expired hunt pushes the defeat to every hunter', () => {
   });
 });
 
-// ── W924 — FIRST TO ANSWER JOINS (a duo summoned to several friends) ──────────
-describe('W924 — first-to-answer duo summons', () => {
-  // A pending duo with THREE candidate seats (u2/u3/u4), none answered. The mock
-  // roster derives from the legacy columns, so the candidate rows are listed here.
-  const CANDIDATE_ROW = {
-    ...PENDING_ROW,
-    id: 'inst-fta',
-    seat_target: 1,
-    partner2_user_id: null,
-    partner_joined_at: null,
-    partner2_joined_at: null,
-  };
-  function candidateDb(joined: Record<string, boolean>, sqlLog?: string[], opts: { instance?: Record<string, unknown> | null } = {}) {
-    const base = makeDb({ instance: opts.instance === undefined ? CANDIDATE_ROW : opts.instance, running: 0 }, sqlLog) as unknown as { prepare: (sql: string) => { bind: (...a: unknown[]) => { all: () => Promise<unknown>; first: () => Promise<unknown>; run: () => Promise<unknown> } }; batch: (s: unknown[]) => Promise<unknown> };
-    const origPrepare = base.prepare;
-    base.prepare = (sql: string) => {
-      const stmt = origPrepare(sql);
-      return {
-        bind: (...args: unknown[]) => {
-          const bound = stmt.bind(...args);
-          return {
-            ...bound,
-            all: async () => {
-              if (sql.includes('FROM coop_boss_participants') && opts.instance !== null) {
-                const iid = (args[0] as string) ?? 'inst-fta';
-                return { results: Object.keys(joined).map((uid) => ({ instance_id: iid, user_id: uid, joined_at: joined[uid] ? '2026-09-08 00:00:00' : null })), success: true, meta: {} };
-              }
-              return bound.all();
-            },
-          };
-        },
-      };
-    };
-    return base as unknown as D1Database;
-  }
+// ── W925 — a duo summons FANS OUT: one hunt per picked friend ──────────────
+describe('W925 — fan-out duo summons', () => {
   const createWith = (allies: string[], boss = 'the_twin_maw') => new Request('http://test/v1/coop-boss', {
     method: 'POST', body: JSON.stringify({ ally_user_ids: allies, boss_id: boss }),
   });
 
-  it('a duo may be summoned to several friends: seat_target 1 rides on the insert, one candidate row per friend', async () => {
+  it('three friends → three guarded instance inserts, each with exactly one participant row and one summons push', async () => {
+    mockNotify.mockClear();
     const sqlLog: string[] = [];
-    const db = makeDb({ instance: null, running: 0 }, sqlLog);
-    const res = await handleCoopBossCreate(createWith(['u2', 'u3', 'u4']), makeEnv(db), session('u1'));
-    // the mock cannot read back the fresh UUID → INTERNAL after the guarded insert ran
-    expect([200, 500]).toContain(res.status);
-    const insert = sqlLog.find((q) => q.includes('INSERT INTO coop_boss_instances'))!;
-    expect(insert).toContain('seat_target');
-    const participantInserts = sqlLog.filter((q) => q.includes('INSERT OR IGNORE INTO coop_boss_participants'));
-    expect(participantInserts.length).toBe(3);
+    const res = await handleCoopBossCreate(createWith(['u2', 'u3', 'u4']), makeEnv(makeDb({ running: 0 }, sqlLog)), session('u1'));
+    expect([200, 500]).toContain(res.status);   // the mock cannot read back fresh UUIDs; the writes are what matter
+    expect(sqlLog.filter((q) => q.includes('INSERT INTO coop_boss_instances')).length).toBe(3);
+    expect(sqlLog.filter((q) => q.includes('INSERT OR IGNORE INTO coop_boss_participants')).length).toBe(3);
+    const inserts = sqlLog.filter((q) => q.includes('INSERT INTO coop_boss_instances'));
+    for (const q of inserts) expect(q).not.toContain('seat_target');
   });
 
-  it('400 PARTY_SIZE past the candidate cap; a trio keeps its exact bounds', async () => {
-    const db = makeDb({ instance: null, running: 0 });
-    const many = Array.from({ length: DUO_CANDIDATES_MAX + 1 }, (_, i) => 'u' + (i + 2));
+  it('400 PARTY_SIZE past the fan-out cap; a trio keeps its exact party bounds', async () => {
+    const db = makeDb({ running: 0 });
+    const many = Array.from({ length: DUO_FANOUT_MAX + 1 }, (_, i) => 'u' + (i + 2));
     const res = await handleCoopBossCreate(createWith(many), makeEnv(db), session('u1'));
     expect(res.status).toBe(400);
     expect((await res.json() as { error: string }).error).toBe('PARTY_SIZE');
@@ -927,41 +893,15 @@ describe('W924 — first-to-answer duo summons', () => {
     expect((await trio.json() as { error: string }).error).toBe('PARTY_SIZE');
   });
 
-  it("the first candidate's answer activates on seat_target, settles partner_user_id on them and releases the rest", async () => {
-    const sqlLog: string[] = [];
-    const db = candidateDb({ u2: false, u3: false, u4: false }, sqlLog);
-    const res = await handleCoopBossJoin(new Request('http://test/j', { method: 'POST' }), makeEnv(db), session('u3'), 'inst-fta');
-    expect(res.status).toBe(200);
-    const activate = sqlLog.find((q) => q.includes("SET status = 'active'"))!;
-    expect(activate).toContain('>= seat_target');
-    expect(activate).toContain('partner_user_id = ?');
-    const release = sqlLog.find((q) => q.includes('DELETE FROM coop_boss_participants') && q.includes('joined_at IS NULL'));
-    expect(release).toBeTruthy();
-  });
-
-  it('a candidate who answers after the seat was taken gets 409 PARTY_FILLED', async () => {
-    const activeRow = { ...CANDIDATE_ROW, status: 'active', partner_user_id: 'u3', partner_joined_at: '2026-09-08 00:00:00', starts_at: '2026-09-08 00:00:00', ends_at: '2026-09-09 00:00:00' };
-    const db = candidateDb({ u3: true }, undefined, { instance: activeRow });
-    const res = await handleCoopBossJoin(new Request('http://test/j', { method: 'POST' }), makeEnv(db), session('u4'), 'inst-fta');
+  it('a free hunter at the cap is refused on every fanned hunt → the specific CAP_REACHED comes back', async () => {
+    const res = await handleCoopBossCreate(createWith(['u2', 'u3']), makeEnv(makeDb({ running: 3 })), session('u1'));
     expect(res.status).toBe(409);
-    expect((await res.json() as { error: string }).error).toBe('PARTY_FILLED');
+    expect((await res.json() as { error: string }).error).toBe('CAP_REACHED');
   });
 
-  it('one candidate declining releases only their seat; the summons stays pending for the others', async () => {
+  it('a single ally is a plain summons: one insert, no fan-out payload', async () => {
     const sqlLog: string[] = [];
-    const db = candidateDb({ u2: false, u3: false }, sqlLog);
-    const res = await handleCoopBossDecline(new Request('http://test/d', { method: 'POST' }), makeEnv(db), session('u2'), 'inst-fta');
-    expect(res.status).toBe(200);
-    expect((await res.json() as { left_seat?: boolean }).left_seat).toBe(true);
-    expect(sqlLog.some((q) => q.includes("SET status = ?") && q.includes('resolved_at'))).toBe(false);
-    expect(sqlLog.some((q) => q.includes('DELETE FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2'))).toBe(true);
-  });
-
-  it('the LAST candidate declining ends the summons like a lone ally always has', async () => {
-    const sqlLog: string[] = [];
-    const db = candidateDb({ u2: false }, sqlLog);
-    const res = await handleCoopBossDecline(new Request('http://test/d', { method: 'POST' }), makeEnv(db), session('u2'), 'inst-fta');
-    expect(res.status).toBe(200);
-    expect(sqlLog.some((q) => q.includes('SET status = ?, resolved_at = CURRENT_TIMESTAMP'))).toBe(true);
+    await handleCoopBossCreate(createWith(['u2']), makeEnv(makeDb({ running: 0 }, sqlLog)), session('u1'));
+    expect(sqlLog.filter((q) => q.includes('INSERT INTO coop_boss_instances')).length).toBe(1);
   });
 });

@@ -35248,3 +35248,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .seg--sm { display: inline-grid; }
 .seg--sm .seg-btn { min-width: 64px; padding: 0 10px; }
 @media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
+
+/* W925 — YOUR HUNTS strip on the co-op sheet (a fanned-out summons makes several hunts) */
+.coop-sibs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
+.coop-sibs-lbl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1.6px; color: #585a76; margin-right: 2px; }
+.coop-sib { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #9aa0bd; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.coop-sib--on { border-color: rgba(139,92,246,0.6); background: rgba(139,92,246,0.18); color: #fff; }
+.coop-sib i { font-style: normal; font-size: 8px; letter-spacing: 1.2px; color: #4ade80; }
+.coop-sib i.coop-sib-wait { color: #f5b842; }
