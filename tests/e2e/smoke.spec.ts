@@ -69,7 +69,7 @@ test.beforeEach(async ({ page }) => {
 /**
  * Reset SW + caches so each test boots fresh. Seeds the localStorage
  * keys that gate onboarding + first-run cloud-restore prompts so the
- * tests land directly on the Status tab. Does NOT seed hb_user — we
+ * tests land directly on the Habits tab (W920 — the landing tab). Does NOT seed hb_user — we
  * rely on the dev sign-in path to populate that, exercising the real
  * mount sequence.
  */
@@ -185,9 +185,13 @@ test.describe('A · App boots', () => {
 // B. Status tab
 // ─────────────────────────────────────────────────────────────
 test.describe('B · Status tab', () => {
-  test('default-active and renders Hunter Profile content', async ({ page }) => {
+  test('Habits is the landing tab; Status is one tap away and renders Hunter Profile content', async ({ page }) => {
     await freshApp(page);
-    // Status (#tab-profile) is the default active tab.
+    // W920 — the app opens on Habits; Status is no longer the default tab.
+    await expect(page.locator('#tab-habits.active')).toBeVisible();
+    await expect(page.locator('#main-scroll')).toBeVisible();
+    await expect(page.locator('#profile-panel')).toBeHidden();
+    await page.locator('#tab-profile').click();
     await expect(page.locator('#tab-profile.active')).toBeVisible();
     // Hunter Profile banner uses a serif `Hunter Profile` title with
     // letterspacing — match case-insensitively to be resilient to

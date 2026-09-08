@@ -631,11 +631,11 @@
          removed via remove.bg (or similar) if dark/white squares appear
          behind them. The CSS can't make non-transparent PNG pixels see-through. -->
     <nav class="tab-bar" aria-label="Main">
-      <button id="tab-profile"  class="tab-btn active" data-tab="profile"  aria-label="Status" aria-current="page">
+      <button id="tab-profile"  class="tab-btn"        data-tab="profile"  aria-label="Status">
         <img class="tab-icon" src="assets/tab-icons/tab-status.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">Status</span>
       </button>
-      <button id="tab-habits"   class="tab-btn"        data-tab="habits"   aria-label="Habits">
+      <button id="tab-habits"   class="tab-btn active" data-tab="habits"   aria-label="Habits" aria-current="page">
         <img class="tab-icon" src="assets/tab-icons/tab-habits.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
         <span class="tab-label">Habits</span>
       </button>
@@ -654,7 +654,8 @@
     </nav>
 
     <!-- Profile panel (status card only) -->
-    <div id="profile-panel" class="tab-panel" data-panel="profile">
+    <!-- W920 — Habits is the landing tab (owner + Rendell, 2026-09-07); Status is one tap away. -->
+    <div id="profile-panel" class="tab-panel hidden" data-panel="profile">
       <!-- W771 — First Steps starter path: a 6-row guided tour of the app's
            features (complete a habit → stats → gate → battle → friend → co-op).
            Rendered by renderFirstSteps(); hidden once dismissed or fully claimed. -->
@@ -684,7 +685,7 @@
          header World Rank card (#steps-card). Per-metric leaderboard
          sheets are unchanged — only the entry point moved. -->
     <!-- Habits panel -->
-    <main id="main-scroll" class="tab-panel hidden" data-panel="habits">
+    <main id="main-scroll" class="tab-panel" data-panel="habits">
       <!-- W915 — THE WORLDGATE (one server, one monster) leads the Habits tab, where the
            Watcher's Writ stood until the owner cut it (2026-09-06). renderWorldgateCard()
            fills it from the 10-min cache; hidden until the first sync lands. -->
@@ -3396,7 +3397,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1324"></script>
+  <script src="app.js?v=1325"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
