@@ -34962,8 +34962,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 #guildhall-activity-section { margin-top: 4px; }
 .fa-head { align-items: flex-end; padding-top: 14px; }
 .fa-tools { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; font-family: var(--b-mono); font-size: 9px; letter-spacing: 1.2px; color: var(--b-ink3); }
-.fa-seen { border: 0; background: transparent; padding: 4px 0; color: var(--b-vio-lt); font-family: var(--b-mono); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
-.fa-tools--hunter .fa-seen { display: none; }
 .fa-mode-all .guildhall-activity-body { background: none; border: 0; padding: 0; box-shadow: none; }
 .fa-day { margin: 10px 0 0; border-radius: 14px; border: 1px solid rgba(139,92,246,0.3); background: var(--b-card); overflow: hidden; }
 .fa-dh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }

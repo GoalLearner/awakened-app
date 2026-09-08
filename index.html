@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=681">
+  <link rel="stylesheet" href="styles.css?v=682">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1111,7 +1111,7 @@
                     aria-pressed="true">ALL</button>
           </div>
         </div>
-        <div id="fa-tools" class="fa-tools"><span id="fa-tools-lbl">GROUPED BY HUNTER</span><button type="button" class="fa-seen" data-fa-seen>MARK ALL SEEN</button></div>
+        <div id="fa-tools" class="fa-tools"><span id="fa-tools-lbl">GROUPED BY HUNTER</span></div><!-- W923 — seen is automatic; MARK ALL SEEN deleted -->
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
       </section>
 
@@ -3397,7 +3397,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1327"></script>
+  <script src="app.js?v=1328"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

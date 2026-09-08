@@ -1948,3 +1948,31 @@ test.describe('T · Segmented switch (W922)', () => {
     await expect(page.locator('.seg-btn[data-active="true"]#guildhall-filter-hunter')).toHaveCount(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// U. W923 — friend feats mark themselves seen; MARK ALL SEEN is gone
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('U · Auto-seen friend feats (W923)', () => {
+  test('a fresh friend feat counts as NEW, then clears on its own after a few seconds on screen', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        const now = Date.now();
+        localStorage.setItem('hb_fa_seen_ts', String(now - 6 * 3600e3));
+        localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ ts: now, events: [
+          { id: 'u-e1', alias: 'RenDIESEL', rankLabel: 'S I', eventType: 'boss_kill', eventKey: 'glass_strider', eventLabel: 'defeated The Glass Strider', eventValue: 1, rarity: null, createdAt: new Date(now - 3600e3).toISOString(), likes: 0, liked: false, likers: [], likedAt: null },
+        ] }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    await expect(page.locator('.fa-seen')).toHaveCount(0);
+    await expect(page.locator('#fa-sub')).toContainText('1 NEW');
+    await expect(page.locator('#cm-friends-badge')).toBeVisible();
+    // ~4 s on screen → seen, no tap
+    await expect(page.locator('#fa-sub')).not.toContainText('NEW', { timeout: 10_000 });
+    await expect(page.locator('#cm-friends-badge')).toBeHidden();
+    const stamped = await page.evaluate(() => Date.now() - (window as any).__fa.seenTs());
+    expect(stamped).toBeLessThan(60_000);
+  });
+});
