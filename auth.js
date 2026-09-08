@@ -1795,7 +1795,7 @@
   }
   function boardTopic(id, cursor)                { return _authedFetch('GET', '/v1/board/topics/' + encodeURIComponent(id) + (cursor ? '?cursor=' + encodeURIComponent(cursor) : '')); }
   function boardPostTopic(tag, title, body)      { return _authedFetch('POST', '/v1/board/topics', { tag: tag, title: title, body: body }); }
-  function boardReply(topicId, body)             { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(topicId) + '/replies', { body: body }); }
+  function boardReply(topicId, body, parentId)   { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(topicId) + '/replies', parentId ? { body: body, parent_reply_id: parentId } : { body: body }); }   // W929 — parentId = answer a top-level reply
   function boardReport(kind, id, reason)         { return _authedFetch('POST', '/v1/board/report', { kind: kind, id: id, reason: reason }); }
   function boardBlock(userId)                    { return _authedFetch('POST', '/v1/board/block', { user_id: userId }); }
   function boardUnblock(userId)                  { return _authedFetch('POST', '/v1/board/unblock', { user_id: userId }); }
@@ -1806,6 +1806,10 @@
   function boardModHideTopic(id)                 { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/hide'); }
   // W913 — upvote toggle (any hunter), pin toggle (moderators), LIKE toggle on a friend's feat.
   function boardVote(id)                         { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/vote'); }
+  // W929 — thread v4: upvote a reply (toggle), edit your own reply, follow a topic (toggle; pushed on new replies).
+  function boardReplyVote(id)                    { return _authedFetch('POST', '/v1/board/replies/' + encodeURIComponent(id) + '/vote'); }
+  function boardReplyEdit(id, body)              { return _authedFetch('POST', '/v1/board/replies/' + encodeURIComponent(id) + '/edit', { body: body }); }
+  function boardFollow(id)                       { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/follow'); }
   function boardModPinTopic(id)                  { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/pin'); }
   function feedLike(eventId)                     { return _authedFetch('POST', '/v1/friends/activity/' + encodeURIComponent(eventId) + '/like'); }
   // W914 — spam guard moderator tools: lock a topic (toggle), purge a hunter's last N hours.
@@ -2504,6 +2508,7 @@
     boardVote, boardModPinTopic, feedLike,   // W913
     boardModLockTopic, boardModPurge,        // W914
     communityUnseen,                         // W921
+    boardReplyVote, boardReplyEdit, boardFollow,   // W929
     // Push notifications (W603/W604) — device-token register/unregister.
     registerPushToken,
     unregisterPushToken,

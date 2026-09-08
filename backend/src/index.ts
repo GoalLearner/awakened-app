@@ -125,6 +125,9 @@ import {
   handleBoardTopicLock,
   handleBoardPurgePost,
   handleCommunityUnseenGet,   // W921
+  handleBoardReplyVotePost,   // W929
+  handleBoardReplyEdit,       // W929
+  handleBoardFollowPost,      // W929
 } from './handlers/board';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
@@ -188,10 +191,10 @@ const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 // W907 — board topic routes: GET /:id, POST /:id/replies, POST /:id/delete, POST /:id/hide;
 // reply moderation POST /v1/board/replies/:id/delete. Exact /v1/board/* routes are
 // matched first so 'report', 'reports', 'moderators' can never be read as an id.
-const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin|lock))?$/;
+const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin|lock|follow))?$/;   // W929 — follow
 // W913 — LIKE on a friend's public achievement event (toggle).
 const FEED_LIKE_RE = /^\/v1\/friends\/activity\/([A-Za-z0-9_:.-]{4,96})\/like$/;
-const BOARD_REPLY_DELETE_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/delete$/;
+const BOARD_REPLY_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/(delete|vote|edit)$/;   // W929 — vote + edit join delete
 
 export default {
   async fetch(
@@ -460,9 +463,13 @@ export default {
             else if (action === 'hide' && method === 'POST') response = await handleBoardTopicHide(request, env, session, topicId);
             else if (action === 'vote' && method === 'POST') response = await handleBoardVotePost(request, env, session, topicId);   // W913
             else if (action === 'pin' && method === 'POST') response = await handleBoardPinPost(request, env, session, topicId);     // W913
+            else if (action === 'follow' && method === 'POST') response = await handleBoardFollowPost(request, env, session, topicId);   // W929
             else response = jsonError(404, 'NOT_FOUND', 'No such route.');
-          } else if (BOARD_REPLY_DELETE_RE.test(path) && method === 'POST') {
-            response = await handleBoardReplyDelete(request, env, session, BOARD_REPLY_DELETE_RE.exec(path)![1]);
+          } else if (BOARD_REPLY_RE.test(path) && method === 'POST') {
+            const rm = BOARD_REPLY_RE.exec(path)!;
+            if (rm[2] === 'delete') response = await handleBoardReplyDelete(request, env, session, rm[1]);
+            else if (rm[2] === 'vote') response = await handleBoardReplyVotePost(request, env, session, rm[1]);   // W929
+            else response = await handleBoardReplyEdit(request, env, session, rm[1]);   // W929
           } else if (path === '/v1/oaths' && method === 'POST') {
             // W867 — swear an oath over a zero-kill friend.
             response = await handleOathSwear(request, env, session);

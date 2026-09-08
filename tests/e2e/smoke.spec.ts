@@ -1873,6 +1873,74 @@ test.describe('Q · Community board (W907)', () => {
     await expect(sheet.locator('[data-board-agree]')).toBeVisible();
     await expect(sheet.getByText(/report what you see/i)).toBeVisible();
   });
+
+  // W929 — Forum Thread v4: the thread renders from a mocked topic (the dev
+  // sign-in stub never reaches the server), sorted, nested, with the bar.
+  test('W929 — the thread: OP card, TOP | NEWEST sort, one level of sub-replies, the bell and the bar', async ({ page }) => {
+    await freshApp(page);
+    await page.click('#tab-social');
+    await page.evaluate(() => {
+      const T0 = Date.now() - 3 * 86400000;
+      const au = (alias: string, rank: string, id: string) => ({ author_id: id, alias, rank_label: rank, founder_seq: 0, is_mod: false, mod_role: null });
+      (window as any).Auth.boardTopic = async () => ({
+        ok: true, following: false, next_cursor: null,
+        me: { consented: true, role: null, rank_tier: 'A', topic_min_tier: 'C', reply_min_tier: 'D' },
+        topic: { id: 'aaaaaaaa-0001', tag: 'improvement', title: 'App Ideas', body: 'Feel free to post any feedback here.', created_at: T0, last_activity_at: T0 + 5000, reply_count: 3, up_count: 4, voted: true, pinned: false, locked: false, hidden: false, repliers: [], author: au('RenDIESEL', 'S', 'u-ren') },
+        replies: [
+          { id: 'bbbbbbbb-0001', body: 'Make equipping items more intuitive.', created_at: T0 + 1000, hidden: false, parent_reply_id: null, up_count: 3, voted: false, edited_at: null, author: au('Grubbadub', 'D', 'u-g') },
+          { id: 'bbbbbbbb-0002', body: '@Grubbadub the comparison window is a great one.', created_at: T0 + 2000, hidden: false, parent_reply_id: 'bbbbbbbb-0001', up_count: 2, voted: false, edited_at: T0 + 2500, author: au('RenDIESEL', 'S', 'u-ren') },
+          { id: 'bbbbbbbb-0003', body: 'I would like to manually sort my habits.', created_at: T0 + 3000, hidden: false, parent_reply_id: null, up_count: 1, voted: false, edited_at: null, author: au('Grubbadub', 'D', 'u-g') },
+        ],
+      });
+      (window as any).__board.open('aaaaaaaa-0001');
+    });
+    const sheet = page.locator('.board-sheet--topic');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('.board-sheet-sub')).toHaveText('IDEAS · 3 REPLIES · 2 HUNTERS');
+    await expect(sheet.locator('.board-op .board-op-title')).toHaveText('App Ideas');
+    await expect(sheet.locator('.board-op .board-pill--op')).toBeVisible();
+    await expect(sheet.locator('.board-op [data-board-vote]')).toHaveClass(/board-up--on/);
+    await expect(sheet.locator('.board-rhead-n')).toHaveText('3 REPLIES');
+    await expect(sheet.locator('.board-rp')).toHaveCount(2);
+    await expect(sheet.locator('.board-subrp')).toHaveCount(1);
+    await expect(sheet.locator('.board-subrp .board-pill--op')).toBeVisible();
+    await expect(sheet.locator('.board-subrp .board-edited')).toHaveText(/EDITED/);
+    await expect(sheet.locator('.board-subrp .board-at')).toHaveText('@Grubbadub');
+    await expect(sheet.locator('.board-subtoggle')).toHaveText(/1 REPLY/);
+    // TOP: the 3-vote reply leads; NEWEST: the later one leads.
+    await expect(sheet.locator('.board-rp').first()).toHaveAttribute('data-board-post', 'bbbbbbbb-0001');
+    await page.click('[data-board-rsort="new"]');
+    await expect(sheet.locator('.board-rp').first()).toHaveAttribute('data-board-post', 'bbbbbbbb-0003');
+    // fold the sub-replies, then the bell and the bar are there
+    await page.click('.board-subtoggle');
+    await expect(sheet.locator('[data-board-subs]')).toBeHidden();
+    await expect(sheet.locator('[data-board-follow]')).toBeVisible();
+    await expect(sheet.locator('.board-cbar')).toBeVisible();
+    await expect(sheet.locator('.board-cbar-ph')).toHaveText('Add to the discussion…');
+  });
+
+  test('W929 — a board row carries its last-reply line', async ({ page }) => {
+    await freshApp(page);
+    await page.click('#tab-social');
+    await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+    await page.evaluate(() => {
+      const now = Date.now();
+      const au = (alias: string, rank: string, id: string) => ({ author_id: id, alias, rank_label: rank, founder_seq: 0, is_mod: false, mod_role: null });
+      (window as any).Auth.boardTopics = async () => ({
+        ok: true, next_cursor: null, counts: { all: 2, improvement: 1, bug: 0, talk: 1 },
+        topics: [
+          { id: 'aaaaaaaa-0001', tag: 'improvement', title: 'App Ideas', preview: 'Feel free', created_at: now - 3 * 86400000, last_activity_at: now - 5 * 3600000, reply_count: 5, up_count: 4, voted: false, pinned: false, locked: false, hidden: false, repliers: [{ alias: 'Grubbadub', rank_label: 'D' }], last_reply: { alias: 'Grubbadub', rank_label: 'D', at: now - 5 * 3600000 }, author: au('RenDIESEL', 'S', 'u-ren') },
+          { id: 'aaaaaaaa-0002', tag: 'talk', title: 'First post', preview: 'Hope you all enjoy', created_at: now - 3 * 86400000, last_activity_at: now - 3 * 86400000, reply_count: 0, up_count: 0, voted: false, pinned: false, locked: false, hidden: false, repliers: [], last_reply: null, author: au('Richie', 'A', 'u-me') },
+        ],
+      });
+      (window as any).__board.render();
+    });
+    const rows = page.locator('#board-body .board-topic');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0).locator('.board-last b')).toHaveText('Grubbadub');
+    await expect(rows.nth(0).locator('.board-last-arrow')).toHaveText('replied · 5h ago');
+    await expect(rows.nth(1).locator('.board-last--none')).toHaveText(/No replies yet/);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

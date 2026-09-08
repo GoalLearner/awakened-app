@@ -123,7 +123,7 @@ interface TopicRow extends AuthorRow {
   locked_at?: number | null;  // W914
 }
 
-interface Replier { alias: string; rank_label: string | null }
+interface Replier { alias: string; rank_label: string | null; last_at?: number }
 interface TopicExtra { voted: boolean; repliers: Replier[] }
 
 interface ReplyRow extends AuthorRow {
@@ -132,6 +132,10 @@ interface ReplyRow extends AuthorRow {
   body: string;
   created_at: number;
   hidden_at: number | null;
+  // W929 — thread v4
+  parent_reply_id?: string | null;
+  up_count?: number;
+  edited_at?: number | null;
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────
@@ -283,6 +287,10 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
     pinned: r.pinned_at != null,
     locked: r.locked_at != null,   // W914
     repliers: extra.repliers,
+    // W929 — the board row's "last reply" line: the newest replier + when.
+    last_reply: extra.repliers && extra.repliers[0]
+      ? { alias: extra.repliers[0].alias, rank_label: extra.repliers[0].rank_label, at: Number(extra.repliers[0].last_at) || 0 }
+      : null,
     author: authorOut(r),
   };
 }
@@ -315,23 +323,39 @@ async function repliersMap(env: Env, userId: string, ids: string[]): Promise<Map
         AND r.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
       GROUP BY r.topic_id, r.author_id
       ORDER BY last_at DESC`,
-  ).bind(...ids, userId, userId).all<{ topic_id: string; alias: string; rank_label: string | null }>();
+  ).bind(...ids, userId, userId).all<{ topic_id: string; alias: string; rank_label: string | null; last_at: number }>();
   for (const r of rows.results ?? []) {
     const list = out.get(r.topic_id) || [];
     if (list.length >= REPLIERS_MAX) continue;
-    list.push({ alias: r.alias, rank_label: r.rank_label ?? null });
+    list.push({ alias: r.alias, rank_label: r.rank_label ?? null, last_at: Number(r.last_at) || 0 });
     out.set(r.topic_id, list);
   }
   return out;
 }
 
-function replyOut(r: ReplyRow) {
+/** W929 — which of these replies the caller upvoted. */
+async function replyVotedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!ids.length) return out;
+  const rows = await env.DB.prepare(
+    `SELECT reply_id FROM board_reply_votes WHERE user_id = ? AND reply_id IN (${ids.map(() => '?').join(',')})`,
+  ).bind(userId, ...ids).all<{ reply_id: string }>();
+  for (const r of rows.results ?? []) out.add(r.reply_id);
+  return out;
+}
+
+function replyOut(r: ReplyRow, voted = false) {
   return {
     id: r.id,
     body: r.body,
     created_at: Number(r.created_at),
     hidden: r.hidden_at != null,
     author: authorOut(r),
+    // W929 — thread v4
+    parent_reply_id: r.parent_reply_id || null,
+    up_count: Number(r.up_count) || 0,
+    voted: !!voted,
+    edited_at: r.edited_at ? Number(r.edited_at) : null,
   };
 }
 
@@ -481,7 +505,7 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
     .first<TopicRow>();
   if (!topic) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   const replies = await env.DB.prepare(
-    `SELECT x.id, x.topic_id, x.body, x.created_at, x.hidden_at,
+    `SELECT x.id, x.topic_id, x.body, x.created_at, x.hidden_at, x.parent_reply_id, x.up_count, x.edited_at,
             ${AUTHOR_COLS}
        FROM board_replies x${AUTHOR_JOIN}
       WHERE x.topic_id = ? AND x.deleted_at IS NULL AND ${SIM_FILTER}
@@ -496,11 +520,17 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
   const list = replies.results ?? [];
   const page = list.slice(0, REPLY_PAGE);
   const last = page[page.length - 1];
-  const [voted, repliers] = await Promise.all([votedSet(env, session.userId, [topicId]), repliersMap(env, session.userId, [topicId])]);
+  const [voted, repliers, rvoted, follow] = await Promise.all([
+    votedSet(env, session.userId, [topicId]),
+    repliersMap(env, session.userId, [topicId]),
+    replyVotedSet(env, session.userId, page.map((r) => r.id)),   // W929
+    env.DB.prepare('SELECT 1 AS f FROM board_follows WHERE topic_id = ? AND user_id = ? LIMIT 1').bind(topicId, session.userId).first<{ f: number }>(),
+  ]);
   return jsonOk({
     topic: topicOut(topic, true, { voted: voted.has(topicId), repliers: repliers.get(topicId) || [] }),
-    replies: page.map(replyOut),
+    replies: page.map((r) => replyOut(r, rvoted.has(r.id))),
     next_cursor: list.length > REPLY_PAGE && last ? String(Number(last.created_at)) : null,
+    following: !!follow,   // W929 — the bell
     me: meOut(me),
   });
 }
@@ -627,6 +657,8 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
     `INSERT INTO board_topics (id, author_id, tag, title, body, created_at, last_activity_at, reply_count)
      VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
   ).bind(id, session.userId, body.tag, title, text, now, now).run();
+  // W929 — the author follows their own topic (pushed on every reply until they unfollow).
+  await env.DB.prepare('INSERT OR IGNORE INTO board_follows (topic_id, user_id, created_at) VALUES (?, ?, ?)').bind(id, session.userId, now).run();
   return jsonOk({ ok: true, id, created_at: now });
 }
 
@@ -634,7 +666,7 @@ export async function handleBoardReplyPost(request: Request, env: Env, session: 
   if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   const gate = await writeGate(env, session, 'reply');
   if ('deny' in gate) return gate.deny;
-  const body = await readJson<{ body?: unknown }>(request);
+  const body = await readJson<{ body?: unknown; parent_reply_id?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const text = clampText(body.body, BODY_MAX);
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
@@ -644,17 +676,113 @@ export async function handleBoardReplyPost(request: Request, env: Env, session: 
   if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   if (topic.hidden_at != null && !isModRole(gate.me.role)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   if (topic.locked_at != null && !isModRole(gate.me.role)) return jsonError(403, 'TOPIC_LOCKED', 'This topic is locked.');   // W914
+  // W929 — a reply may answer a TOP-LEVEL reply of this topic (one level of nesting).
+  let parentId: string | null = null;
+  if (typeof body.parent_reply_id === 'string' && body.parent_reply_id) {
+    if (!ID_RE.test(body.parent_reply_id)) return jsonError(400, 'BAD_PARENT', 'That reply is not on this topic.');
+    const parent = await env.DB.prepare('SELECT id, topic_id, parent_reply_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
+      .bind(body.parent_reply_id).first<{ id: string; topic_id: string; parent_reply_id: string | null; deleted_at: number | null }>();
+    if (!parent || parent.deleted_at != null || parent.topic_id !== topicId || parent.parent_reply_id) {
+      return jsonError(400, 'BAD_PARENT', 'That reply is not on this topic.');
+    }
+    parentId = parent.id;
+  }
   const spam = await spamGate(env, session, gate.me, 'reply', topicId, '', text, ctx);   // W914
   if (spam) return spam.deny;
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
-    'INSERT INTO board_replies (id, topic_id, author_id, body, created_at) VALUES (?, ?, ?, ?, ?)',
-  ).bind(id, topicId, session.userId, text, now).run();
+    'INSERT INTO board_replies (id, topic_id, author_id, body, created_at, parent_reply_id) VALUES (?, ?, ?, ?, ?, ?)',
+  ).bind(id, topicId, session.userId, text, now, parentId).run();
   await env.DB.prepare(
     'UPDATE board_topics SET reply_count = reply_count + 1, last_activity_at = ? WHERE id = ?',
   ).bind(now, topicId).run();
-  return jsonOk({ ok: true, id, created_at: now });
+  // W929 — replying follows the topic; every other follower hears about this reply.
+  await env.DB.prepare('INSERT OR IGNORE INTO board_follows (topic_id, user_id, created_at) VALUES (?, ?, ?)').bind(topicId, session.userId, now).run();
+  await pushFollowers(env, topicId, session.userId, session.alias, text, ctx);
+  return jsonOk({ ok: true, id, created_at: now, parent_reply_id: parentId });
+}
+
+/** W929 — push everyone following a topic (except the replier and anyone in a block with them). */
+async function pushFollowers(env: Env, topicId: string, replierId: string, replierAlias: string, text: string, ctx?: ExecutionContext): Promise<void> {
+  const followers = await env.DB.prepare(
+    `SELECT user_id FROM board_follows
+      WHERE topic_id = ? AND user_id != ?
+        AND user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
+        AND user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)`,
+  ).bind(topicId, replierId, replierId, replierId).all<{ user_id: string }>();
+  const list = followers.results ?? [];
+  if (!list.length) return;
+  const t = await env.DB.prepare('SELECT title FROM board_topics WHERE id = ? LIMIT 1').bind(topicId).first<{ title: string }>();
+  const title = (t && t.title) ? String(t.title).slice(0, 60) : 'A topic you follow';
+  const snippet = text.length > 90 ? text.slice(0, 87) + '…' : text;
+  const push = async () => {
+    for (const f of list) {
+      await notifyUser(env, f.user_id, { title, body: `${replierAlias}: ${snippet}`, type: 'board_reply', data: { topicId } });
+    }
+  };
+  if (ctx) ctx.waitUntil(push()); else await push();
+}
+
+/** W929 — upvote a reply (toggle). Same shape as the topic vote; recounted from the truth table. */
+export async function handleBoardReplyVotePost(_request: Request, env: Env, session: SessionPayload, replyId: string): Promise<Response> {
+  if (!ID_RE.test(replyId)) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const me = await meState(env, session.userId);
+  if (me.sim) return jsonError(403, 'SIM_READ_ONLY', 'Simulated hunters cannot vote.');
+  const row = await env.DB.prepare('SELECT id, topic_id, hidden_at, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
+    .bind(replyId).first<{ id: string; topic_id: string; hidden_at: number | null; deleted_at: number | null }>();
+  if (!row || row.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  if (row.hidden_at != null && !isModRole(me.role)) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO board_reply_votes (reply_id, user_id, created_at) VALUES (?, ?, ?)')
+    .bind(replyId, session.userId, Date.now()).run();
+  let voted = true;
+  if (!(ins.meta && ins.meta.changes)) {
+    await env.DB.prepare('DELETE FROM board_reply_votes WHERE reply_id = ? AND user_id = ?').bind(replyId, session.userId).run();
+    voted = false;
+  }
+  await env.DB.prepare('UPDATE board_replies SET up_count = (SELECT COUNT(*) FROM board_reply_votes WHERE reply_id = ?) WHERE id = ?')
+    .bind(replyId, replyId).run();
+  const c = await env.DB.prepare('SELECT up_count FROM board_replies WHERE id = ? LIMIT 1').bind(replyId).first<{ up_count: number }>();
+  return jsonOk({ ok: true, voted, up_count: Number(c?.up_count) || 0 });
+}
+
+/** W929 — a hunter edits their OWN reply (marked EDITED). Same text rules as posting. */
+export async function handleBoardReplyEdit(request: Request, env: Env, session: SessionPayload, replyId: string): Promise<Response> {
+  if (!ID_RE.test(replyId)) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const body = await readJson<{ body?: unknown }>(request);
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
+  const text = clampText(body.body, BODY_MAX);
+  if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
+  if (!textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
+  const row = await env.DB.prepare('SELECT author_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
+    .bind(replyId).first<{ author_id: string; deleted_at: number | null }>();
+  if (!row || row.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  if (row.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own reply.');
+  const now = Date.now();
+  await env.DB.prepare('UPDATE board_replies SET body = ?, edited_at = ? WHERE id = ?').bind(text, now, replyId).run();
+  return jsonOk({ ok: true, edited_at: now });
+}
+
+/** W929 — follow / unfollow a topic (toggle). Followers are pushed on every new reply. */
+export async function handleBoardFollowPost(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at FROM board_topics WHERE id = ? LIMIT 1')
+    .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null }>();
+  if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const ins = await env.DB.prepare('INSERT OR IGNORE INTO board_follows (topic_id, user_id, created_at) VALUES (?, ?, ?)')
+    .bind(topicId, session.userId, Date.now()).run();
+  let following = true;
+  if (!(ins.meta && ins.meta.changes)) {
+    await env.DB.prepare('DELETE FROM board_follows WHERE topic_id = ? AND user_id = ?').bind(topicId, session.userId).run();
+    following = false;
+  }
+  return jsonOk({ ok: true, following });
 }
 
 export async function handleBoardReportPost(request: Request, env: Env, session: SessionPayload, ctx?: ExecutionContext): Promise<Response> {
@@ -756,8 +884,15 @@ export async function handleBoardBlocksGet(_request: Request, env: Env, session:
 
 export async function handleBoardTopicDelete(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
   if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
-  const gate = await modGate(env, session);
-  if ('deny' in gate) return gate.deny;
+  // W929 — the author may delete their own topic; moderators may delete any.
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const me = await meState(env, session.userId);
+  if (!isModRole(me.role)) {
+    const own = await env.DB.prepare('SELECT author_id FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1').bind(topicId).first<{ author_id: string }>();
+    if (!own) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+    if (own.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only delete your own topic.');
+  }
   const upd = await env.DB.prepare(
     "UPDATE board_topics SET deleted_at = ?, deleted_by = ?, body = '' WHERE id = ? AND deleted_at IS NULL",
   ).bind(Date.now(), session.userId, topicId).run();
@@ -767,11 +902,14 @@ export async function handleBoardTopicDelete(_request: Request, env: Env, sessio
 
 export async function handleBoardReplyDelete(_request: Request, env: Env, session: SessionPayload, replyId: string): Promise<Response> {
   if (!ID_RE.test(replyId)) return jsonError(404, 'NOT_FOUND', 'No such reply.');
-  const gate = await modGate(env, session);
-  if ('deny' in gate) return gate.deny;
-  const row = await env.DB.prepare('SELECT topic_id FROM board_replies WHERE id = ? AND deleted_at IS NULL LIMIT 1')
-    .bind(replyId).first<{ topic_id: string }>();
+  // W929 — the author may delete their own reply; moderators may delete any.
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const me = await meState(env, session.userId);
+  const row = await env.DB.prepare('SELECT topic_id, author_id FROM board_replies WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(replyId).first<{ topic_id: string; author_id?: string }>();
   if (!row) return jsonError(404, 'NOT_FOUND', 'No such reply.');
+  if (!isModRole(me.role) && row.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only delete your own reply.');
   await env.DB.prepare("UPDATE board_replies SET deleted_at = ?, deleted_by = ?, body = '' WHERE id = ?")
     .bind(Date.now(), session.userId, replyId).run();
   await env.DB.prepare('UPDATE board_topics SET reply_count = MAX(0, reply_count - 1) WHERE id = ?')

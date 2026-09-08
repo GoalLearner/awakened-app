@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w928'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w929'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -45989,7 +45989,11 @@
   let _boardSheet = null;        // the one open sheet
   let _boardListEl = null;       // the open full-board sheet (when it is the open sheet)
   let _boardReturnToList = false;
-  let _boardTopicData = null;    // { topic, replies, next_cursor } for the open topic
+  let _boardTopicData = null;    // { topic, replies, next_cursor, following } for the open topic
+  let _boardSeenRc = {};         // W929 — topic id → reply_count when last opened (the row's "N NEW")
+  let _boardRSort = 'top';       // W929 — TOP | NEWEST | OLDEST for the open thread (top | new | old)
+  const _boardSubsClosed = new Set();   // W929 — top-level reply ids whose sub-replies are folded
+  let _boardHlId = '';           // W929 — the reply to glow + scroll to once the thread repaints
   let _boardAfterConsent = null;
   const _boardHiddenAuthors = new Set();   // instant client-side hide after a block
 
@@ -46002,6 +46006,7 @@
       }
     } catch (_) {}
     try { _boardSeen = JSON.parse(localStorage.getItem('hb_board_seen_v1') || '{}') || {}; } catch (_) { _boardSeen = {}; }
+    try { _boardSeenRc = JSON.parse(localStorage.getItem('hb_board_seen_rc_v1') || '{}') || {}; } catch (_) { _boardSeenRc = {}; }   // W929
     try {
       _boardFirstVisit = Number(localStorage.getItem('hb_board_first_visit') || 0) || 0;
       if (!_boardFirstVisit) { _boardFirstVisit = Date.now(); localStorage.setItem('hb_board_first_visit', String(_boardFirstVisit)); }
@@ -46113,7 +46118,7 @@
     if (seen) return Number(seen) < Number(t.last_activity_at || 0);
     return Number(t.created_at || 0) > _boardFirstVisit;
   }
-  function _boardMarkSeen(id, at) {
+  function _boardMarkSeen(id, at, rc) {
     if (!id) return;
     _boardSeen[id] = Math.max(Number(_boardSeen[id] || 0), Number(at || 0) || Date.now());
     try {
@@ -46121,6 +46126,30 @@
       if (keys.length > 400) keys.sort(function (a, b) { return _boardSeen[a] - _boardSeen[b]; }).slice(0, keys.length - 400).forEach(function (k) { delete _boardSeen[k]; });
       localStorage.setItem('hb_board_seen_v1', JSON.stringify(_boardSeen));
     } catch (_) {}
+    // W929 — the reply count you last saw → the row's "2 NEW".
+    if (rc != null) {
+      _boardSeenRc[id] = Number(rc) || 0;
+      try {
+        Object.keys(_boardSeenRc).forEach(function (k) { if (!(k in _boardSeen)) delete _boardSeenRc[k]; });
+        localStorage.setItem('hb_board_seen_rc_v1', JSON.stringify(_boardSeenRc));
+      } catch (_) {}
+    }
+  }
+  /** W929 — replies since you last opened the topic: N, or -1 when it is unread but the count is unknown. */
+  function _boardNewCount(t) {
+    const rc = _boardSeenRc[t.id];
+    if (rc != null) return Math.max(0, (Number(t.reply_count) || 0) - (Number(rc) || 0));
+    return _boardIsUnread(t) ? -1 : 0;
+  }
+  /** W929 — the row's last-reply line: who replied last and when, and how many replies are new to you. */
+  function _boardLastHtml(t) {
+    const lr = t.last_reply;
+    if (!lr || !lr.alias) return '<div class="board-last board-last--none"><span class="board-last-arrow">No replies yet — be the first</span></div>';
+    const n = _boardNewCount(t);
+    return '<div class="board-last">' + _boardAvHtml(lr, 'board-av--xs') + '<b>' + esc(lr.alias) + '</b>' +
+      '<span class="board-last-arrow">replied · ' + esc(_boardRel(lr.at)) + '</span>' +
+      (n ? '<span class="board-last-new">' + (n > 0 ? n + ' NEW' : 'NEW') + '</span>' : '') +
+    '</div>';
   }
   function _boardIsHot(t) { return (Number(t.up_count) || 0) >= 5 || (Number(t.reply_count) || 0) >= 5; }
   function _boardAvHtml(a, cls) {
@@ -46157,6 +46186,7 @@
         (t.preview ? '<div class="board-ts">' + esc(t.preview) + '</div>' : '') +
         '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(a.alias || 'hunter') + '</button>' +
           '<span class="board-rk">' + esc(tier) + '</span><span class="board-dt">' + esc(_boardRel(t.last_activity_at)) + '</span></div>' +
+        _boardLastHtml(t) +   // W929
       '</div>' +
       '<div class="board-tr">' +
         '<button type="button" class="board-up' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id) + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + up + '</span></button>' +
@@ -46359,7 +46389,7 @@
     // Back from a topic or composer that was opened from the full board → the board again.
     if (!wasList && _boardReturnToList && !(opts && opts.noReturn)) { _boardReturnToList = false; setTimeout(openBoardList, 280); }
   }
-  function _boardSheetOpen(title, innerHtml, cls) {
+  function _boardSheetOpen(title, innerHtml, cls, opts) {
     const openingFromList = !!(_boardSheet && _boardSheet === _boardListEl);
     if (_boardSheet) {
       const prev = _boardSheet; _boardSheet = null; _boardTopicData = null;
@@ -46375,8 +46405,10 @@
       '<section class="board-sheet" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
         '<header class="board-sheet-head">' +
           '<button type="button" class="board-back" data-board-close aria-label="Close">‹</button>' +
-          '<span class="board-sheet-title">' + esc(title) + '</span>' +
+          '<span class="board-sheet-tt"><span class="board-sheet-title">' + esc(title) + '</span>' +
+            (opts && opts.sub != null ? '<span class="board-sheet-sub" data-board-sub>' + esc(opts.sub) + '</span>' : '') + '</span>' +   // W929 — "IDEAS · 5 REPLIES · 3 HUNTERS"
           '<span class="board-sheet-spacer"></span>' +
+          ((opts && opts.right) || '') +   // W929 — the bell
         '</header>' +
         '<div class="board-sheet-body">' + innerHtml + '</div>' +
       '</section>';
@@ -46430,10 +46462,14 @@
   }
 
   // ── composer ────────────────────────────────────────────────────────────
-  function _boardComposerHtml(kind, topicTitle) {
+  function _boardComposerHtml(kind, topicTitle, opts) {
     const isTopic = kind === 'topic';
+    const isEdit = kind === 'edit';   // W929 — editing your own reply
     const cats = [['improvement', 'IDEA', 'Something Awakened should do'], ['bug', 'BUG', 'Something broke'], ['talk', 'TALK', 'Anything for the Hall']];
     const me = _boardMe || {};
+    const prefill = isEdit ? String((opts && opts.body) || '') : ((opts && opts.replyTo) ? '@' + String(opts.replyTo).replace(/\s+/g, '') + ' ' : '');
+    const ctx = isEdit ? 'Editing your reply on <b>' + esc(topicTitle || 'this topic') + '</b>'
+      : ((opts && opts.replyTo) ? 'Replying to <b class="board-at">@' + esc(opts.replyTo) + '</b>' : 'Replying to <b>' + esc(topicTitle || 'this topic') + '</b>');
     return '<form class="board-compose" data-board-compose="' + esc(kind) + '">' +
       (isTopic
         ? '<div class="board-ssub">POSTING TO THE HALL AS <b>YOU · ' + esc(String(me.rank_tier || 'E')) + '</b></div>' +
@@ -46444,12 +46480,12 @@
             }).join('') +
           '</div>' +
           '<input class="board-input" name="title" type="text" maxlength="' + BOARD_TITLE_MAX + '" placeholder="Title" autocomplete="off" autocapitalize="sentences" />'
-        : '<div class="board-compose-ctx">Replying to <b>' + esc(topicTitle || 'this topic') + '</b></div>') +
-      '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'Say more…' : 'Write your reply') + '"></textarea>' +
+        : '<div class="board-compose-ctx">' + ctx + '</div>') +
+      '<textarea class="board-textarea" name="body" maxlength="' + BOARD_BODY_MAX + '" rows="6" placeholder="' + (isTopic ? 'Say more…' : 'Add to the discussion…') + '">' + esc(prefill) + '</textarea>' +
       '<div class="board-compose-note hidden" data-board-note></div>' +
       '<div class="board-compose-foot">' +
-        '<span class="board-count" data-board-count>0 / ' + BOARD_BODY_MAX + '</span>' +
-        '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TO THE HALL' : 'POST REPLY') + '</button>' +
+        '<span class="board-count" data-board-count>' + prefill.length + ' / ' + BOARD_BODY_MAX + '</span>' +
+        '<button type="submit" class="board-primary board-primary--sm">' + (isTopic ? 'POST TO THE HALL' : (isEdit ? 'SAVE' : 'POST REPLY')) + '</button>' +
       '</div>' +
       '<div class="board-compose-err hidden" data-board-err></div>' +
     '</form>';
@@ -46547,23 +46583,32 @@
   function _boardComposeStart() { _boardComposeStop(); _boardComposeTick(); _boardComposeTimer = setInterval(_boardComposeTick, 1000); }
   function _boardComposeStop() { if (_boardComposeTimer) { clearInterval(_boardComposeTimer); _boardComposeTimer = null; } }
 
-  function openBoardComposer(kind, topicId, topicTitle) {
-    if (!_boardConsented()) { openBoardRules(function () { openBoardComposer(kind, topicId, topicTitle); }); return; }
+  function openBoardComposer(kind, topicId, topicTitle, opts) {
+    if (!_boardConsented()) { openBoardRules(function () { openBoardComposer(kind, topicId, topicTitle, opts); }); return; }
     if (_boardMe && _boardMe.muted_until && Number(_boardMe.muted_until) > Date.now()) { _boardToast('You are muted until ' + _boardDate(_boardMe.muted_until) + '.'); return; }
     const bar = _boardRankBar(kind);
     if (bar) {
       _boardToast((kind === 'topic' ? 'Opening a topic takes ' : 'Replying takes ') + bar.need + ' rank. You are ' + bar.mine + ' — hunt on.');
       return;
     }
-    const el = _boardSheetOpen(kind === 'topic' ? 'New topic' : 'Reply', _boardComposerHtml(kind, topicTitle), 'board-sheet--compose');
+    const el = _boardSheetOpen(kind === 'topic' ? 'New topic' : (kind === 'edit' ? 'Edit reply' : 'Reply'), _boardComposerHtml(kind, topicTitle, opts), 'board-sheet--compose');
     el.dataset.topicId = topicId || '';
+    el.dataset.parentId = (opts && opts.parentId) || '';   // W929 — answering a top-level reply
+    el.dataset.editId = (opts && opts.editId) || '';       // W929 — editing your own reply
     _boardComposeStart();   // W914 — live cooldown note
-    setTimeout(function () { try { const f = el.querySelector(kind === 'topic' ? 'input[name="title"]' : 'textarea'); if (f) f.focus(); } catch (_) {} }, 320);
+    setTimeout(function () {
+      try {
+        const f = el.querySelector(kind === 'topic' ? 'input[name="title"]' : 'textarea'); if (!f) return;
+        f.focus(); try { f.setSelectionRange(f.value.length, f.value.length); } catch (_) {}
+      } catch (_) {}
+    }, 320);
   }
   async function _boardSubmit(form) {
     const kind = form.getAttribute('data-board-compose');
     const wrap = form.closest('.board-sheet-wrap');
     const topicId = (wrap && wrap.dataset.topicId) || '';
+    const parentId = (wrap && wrap.dataset.parentId) || '';   // W929
+    const editId = (wrap && wrap.dataset.editId) || '';       // W929
     const err = form.querySelector('[data-board-err]');
     const btn = form.querySelector('button[type="submit"]');
     const ta = form.querySelector('textarea[name="body"]');
@@ -46576,12 +46621,18 @@
     if (err) err.classList.add('hidden');
     if (kind === 'topic' && !title.trim()) { showErr('Give the topic a title.'); return; }
     if (!body.trim()) { showErr('Say something first.'); return; }
-    const pf = _boardPreflight(kind, topicId, kind === 'topic' ? title.trim() : '', body.trim());   // W914
-    if (pf) { showErr(pf.msg); return; }
+    if (kind === 'edit') {   // W929 — an edit is not a new post: only the junk rules apply
+      const junk = _boardJunk(body.trim(), 'body'); if (junk) { showErr(junk); return; }
+    } else {
+      const pf = _boardPreflight(kind, topicId, kind === 'topic' ? title.trim() : '', body.trim());   // W914
+      if (pf) { showErr(pf.msg); return; }
+    }
     if (btn) btn.disabled = true;
     let res;
     try {
-      res = kind === 'topic' ? await Auth.boardPostTopic(tag, title.trim(), body.trim()) : await Auth.boardReply(topicId, body.trim());
+      res = kind === 'topic' ? await Auth.boardPostTopic(tag, title.trim(), body.trim())
+        : kind === 'edit' ? await Auth.boardReplyEdit(editId, body.trim())
+        : await Auth.boardReply(topicId, body.trim(), parentId || undefined);
     } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     if (btn) btn.disabled = false;
     if (!res || !res.ok) {
@@ -46596,80 +46647,205 @@
       if (code === 'LINKS_NOT_ALLOWED' || code === 'TOO_SHORT') { showErr((res && res.detail) || 'The board does not allow that.'); return; }
       if (code === 'TOPIC_LOCKED') { _boardSheetClose({ noReturn: true }); _boardToast('This topic is locked.'); _boardLists = {}; renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); return; }
       if (code === 'RATE_LIMITED') { showErr('Slow down — a few posts a minute is plenty.'); return; }
+      if (code === 'BAD_PARENT') { showErr('That reply is gone. Post yours on the topic instead.'); wrap.dataset.parentId = ''; return; }   // W929
+      if (code === 'NOT_ALLOWED' || code === 'NOT_FOUND') { showErr((res && res.detail) || 'That post is not yours to change.'); return; }   // W929
       showErr(_boardErrMsg(res)); return;
+    }
+    try { _hapticTick('SUCCESS'); } catch (_) {}
+    try { if (ta) ta.blur(); } catch (_) {}
+    if (kind === 'edit') {   // W929
+      _boardSheetClose({ noReturn: true }); _boardToast('Reply updated · marked EDITED.');
+      setTimeout(function () { openBoardTopic(topicId, { highlight: editId }); }, 300);
+      return;
     }
     _boardPostsRecord(kind, topicId, kind === 'topic' ? title.trim() : '', body.trim());   // W914 — the local ledger the preflight reads
     _boardEmit(kind === 'topic' ? 'topic_posted' : 'reply_posted', kind === 'topic' ? tag : '');
-    try { _hapticTick('SUCCESS'); } catch (_) {}
-    try { if (ta) ta.blur(); } catch (_) {}
     _boardLists = {};
     if (kind === 'topic') { _boardSheetClose(); renderBoardSection(); _boardToast('Posted to the Hall.'); }
-    else { _boardSheetClose({ noReturn: true }); renderBoardSection(); setTimeout(function () { openBoardTopic(topicId); }, 300); }
+    else { _boardSheetClose({ noReturn: true }); renderBoardSection(); _boardToast('Posted.'); setTimeout(function () { openBoardTopic(topicId, { highlight: res.id || '' }); }, 300); }
   }
 
-  // ── topic sheet ─────────────────────────────────────────────────────────
-  function _boardPostHtml(kind, p) {
-    p = p || {};
-    const mine = _boardIsMe(p.author);
-    const canMod = _boardIsMod();
-    const alias = (p.author && p.author.alias) || 'hunter';
-    return '<article class="board-post' + (kind === 'topic' ? ' board-post--topic' : '') + (p.hidden ? ' board-post--hidden' : '') + '"' +
-        ' data-board-post="' + esc(p.id || '') + '" data-board-kind="' + kind + '"' +
-        ' data-board-author="' + esc((p.author && p.author.author_id) || '') + '" data-board-alias="' + esc(alias) + '">' +
-      '<div class="board-post-head">' + _boardAuthorHtml(p.author) +
-        '<span class="board-post-time">' + esc(_boardRel(p.created_at)) + '</span>' +
-        (mine && !canMod ? '' : '<button type="button" class="board-dots" data-board-menu aria-label="Post options">···</button>') +
-      '</div>' +
-      (kind === 'topic' ? '<h3 class="board-post-title">' + esc(p.title || '') + '</h3>' : '') +
-      '<div class="board-post-body">' + esc(p.body || '').replace(/\n/g, '<br>') + '</div>' +
-      '<div class="board-menu hidden" data-board-menu-panel>' +
-        (mine ? '' :
-          '<div class="board-menu-row"><span class="board-menu-lbl">REPORT</span>' +
-            BOARD_REASONS.map(function (r) { return '<button type="button" class="board-chip" data-board-report="' + r[0] + '">' + r[1] + '</button>'; }).join('') +
-          '</div>' +
-          '<div class="board-menu-row"><button type="button" class="board-chip board-chip--warn" data-board-block>Block ' + esc(alias) + '</button></div>') +
-        (canMod ?
-          '<div class="board-menu-row board-menu-row--mod"><span class="board-menu-lbl">MOD</span>' +
-            '<button type="button" class="board-chip board-chip--danger" data-board-mod="delete">Delete</button>' +
-            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="hide">' + (p.hidden ? 'Unhide' : 'Hide') + '</button>' : '') +
-            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="pin">' + (p.pinned ? 'Unpin' : 'Pin') + '</button>' : '') +
-            (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="lock">' + (p.locked ? 'Unlock' : 'Lock') + '</button>' : '') +
-            (mine ? '' : '<button type="button" class="board-chip board-chip--danger" data-board-mod="purge">Remove 24h</button>') +
-            (mine ? '' : '<button type="button" class="board-chip" data-board-mod="mute1">Mute 1d</button>' +
-              '<button type="button" class="board-chip" data-board-mod="mute7">Mute 7d</button>' +
-              '<button type="button" class="board-chip" data-board-mod="mute30">Mute 30d</button>') +
-          '</div>' : '') +
-      '</div>' +
-    '</article>';
+  // ── W929 — FORUM THREAD v4 (Claude Design handoff 27, "Forum Thread v4") ──
+  // The thread grew up: an OP card, replies as cards with their own upvotes,
+  // one level of sub-replies (REPLY on a reply), @mentions, TOP | NEWEST |
+  // OLDEST, a bell that follows the topic (pushed on new replies), a bottom
+  // composer bar, and a ⋯ popover with Edit / Delete on your own posts. The
+  // composer stays a sheet with the textarea at the TOP — the app has no
+  // keyboard avoidance. Deliberately not ported: the "+2 souls" reward and the
+  // long-press menu (the ⋯ is enough on a phone).
+  const _BOARD_REPLY_ICON = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M5 3 2 6l3 3M2.5 6H8a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const _BOARD_BELL_ICON = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2a4 4 0 0 0-4 4v2.5L2.5 11h11L12 8.5V6a4 4 0 0 0-4-4zM6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+  /** Escaped body text with @mentions in violet mono and line breaks kept. */
+  function _boardFmt(text) {
+    return esc(String(text || '')).replace(/(^|[\s(])(@[\p{L}\p{N}_]{2,24})/gu, '$1<span class="board-at">$2</span>').replace(/\n/g, '<br>');
   }
-  function _boardTopicSheetHtml(d) {
-    const t = d.topic || {};
-    const n = d.replies.length;
-    const bar = _boardRankBar('reply');
-    return '<div class="board-topic-wrap">' +
-      '<div class="board-topic-tagrow">' +
-        '<span class="board-rune board-rune--' + esc(t.tag || 'talk') + '"></span>' +
-        '<span class="board-tag board-tag--' + esc(t.tag || 'talk') + '">' + (BOARD_TAG_LABEL[t.tag] || 'TALK') + '</span>' +
+  function _boardPillsHtml(a, opId) {
+    const aid = a && a.author_id;
+    return ((aid && opId && aid === opId) ? '<span class="board-pill board-pill--op">OP</span>' : '') +
+      (_boardIsMe(a) ? '<span class="board-pill board-pill--you">YOU</span>' : '');
+  }
+  /** The who-row of a post: avatar (crown for devs/mods), name, rank, OP / YOU pills, time (· EDITED), ⋯. */
+  function _boardWhoHtml(a, p, opts) {
+    a = a || {}; opts = opts || {};
+    const tier = _boardTier(a.rank_label); const col = _boardColor(tier);
+    const alias = String(a.alias || 'Hunter');
+    const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
+    return '<div class="board-pwho">' + _boardAvHtml(a, opts.sub ? 'board-av--sm' : 'board-av--md') +
+      '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + '</button>' +
+      '<span class="board-prank">' + esc(tier) + '</span>' + founder + _boardPillsHtml(a, opts.opId) +
+      '<span class="board-ptime">' + esc(_boardRel(p.created_at)) + (p.edited_at ? '<span class="board-edited">· EDITED</span>' : '') + '</span>' +
+      '<button type="button" class="board-dots" data-board-menu aria-label="Post options">···</button>' +
+    '</div>';
+  }
+  /** The ⋯ popover: Edit / Delete on your own post, Copy, Block + Report on others', the MOD row for moderators. */
+  function _boardMenuHtml(kind, p, mine, canMod) {
+    const alias = (p.author && p.author.alias) || 'hunter';
+    let rows = '';
+    if (mine) {
+      rows += (kind === 'reply' ? '<button type="button" class="board-menu-item" data-board-edit>✎ Edit</button>' : '') +
+        '<button type="button" class="board-menu-item board-menu-item--d" data-board-del>🗑 Delete</button><div class="board-menu-sep"></div>';
+    }
+    rows += '<button type="button" class="board-menu-item" data-board-copy>⧉ Copy text</button>';
+    if (!mine) {
+      rows += '<button type="button" class="board-menu-item" data-board-block>◌ Block ' + esc(alias) + '</button>' +
+        '<button type="button" class="board-menu-item board-menu-item--d" data-board-report-open>⚑ Report</button>' +
+        '<div class="board-menu-row hidden" data-board-report-row>' + BOARD_REASONS.map(function (r) { return '<button type="button" class="board-chip" data-board-report="' + r[0] + '">' + r[1] + '</button>'; }).join('') + '</div>';
+    }
+    if (canMod) {
+      const modChips =
+        (mine ? '' : '<button type="button" class="board-chip board-chip--danger" data-board-mod="delete">Delete</button>') +
+        (kind === 'topic' ? '<button type="button" class="board-chip" data-board-mod="hide">' + (p.hidden ? 'Unhide' : 'Hide') + '</button>' +
+          '<button type="button" class="board-chip" data-board-mod="pin">' + (p.pinned ? 'Unpin' : 'Pin') + '</button>' +
+          '<button type="button" class="board-chip" data-board-mod="lock">' + (p.locked ? 'Unlock' : 'Lock') + '</button>' : '') +
+        (mine ? '' : '<button type="button" class="board-chip board-chip--danger" data-board-mod="purge">Remove 24h</button>' +
+          '<button type="button" class="board-chip" data-board-mod="mute1">Mute 1d</button>' +
+          '<button type="button" class="board-chip" data-board-mod="mute7">Mute 7d</button>' +
+          '<button type="button" class="board-chip" data-board-mod="mute30">Mute 30d</button>');
+      if (modChips) rows += '<div class="board-menu-sep"></div><div class="board-menu-row board-menu-row--mod"><span class="board-menu-lbl">MOD</span>' + modChips + '</div>';
+    }
+    return '<div class="board-menu hidden" data-board-menu-panel>' + rows + '</div>';
+  }
+  /** The OP card. */
+  function _boardOpHtml(t) {
+    const a = t.author || {}; const mine = _boardIsMe(a); const canMod = _boardIsMod();
+    const tag = String(t.tag || 'talk');
+    return '<article class="board-op' + (t.hidden ? ' board-op--hidden' : '') + '" data-board-post="' + esc(t.id || '') + '" data-board-kind="topic"' +
+        ' data-board-author="' + esc(a.author_id || '') + '" data-board-alias="' + esc(a.alias || 'hunter') + '">' +
+      _boardWhoHtml(a, t, { opId: a.author_id }) +
+      '<div class="board-cat board-cat--' + esc(tag) + '"><i class="board-rune board-rune--' + esc(tag) + '"></i>' + (BOARD_TAG_LABEL[tag] || 'TALK') +
         (t.pinned ? '<span class="board-tag board-tag--pin">PINNED</span>' : '') +
         (t.locked ? '<span class="board-tag board-tag--lock">LOCKED</span>' : '') +
         (t.hidden ? '<span class="board-hiddenpill">HIDDEN · moderators only</span>' : '') +
-        '<button type="button" class="board-up board-up--lg' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id || '') + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + (Number(t.up_count) || 0) + '</span></button>' +
       '</div>' +
-      _boardPostHtml('topic', t) +
-      '<div class="board-replies-head">' + (n ? n + (n === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET') + '</div>' +
-      '<div class="board-replylist" data-board-replies>' + d.replies.map(function (r) { return _boardPostHtml('reply', r); }).join('') + '</div>' +
+      '<h2 class="board-op-title">' + esc(t.title || '') + '</h2>' +
+      '<p class="board-ptext">' + _boardFmt(t.body) + '</p>' +
+      '<div class="board-pfoot">' +
+        '<button type="button" class="board-up' + (t.voted ? ' board-up--on' : '') + '" data-board-vote="' + esc(t.id || '') + '" aria-pressed="' + (t.voted ? 'true' : 'false') + '" aria-label="Upvote">▲ <span class="board-up-n">' + (Number(t.up_count) || 0) + '</span></button>' +
+        '<button type="button" class="board-act" data-board-reply-to="" data-name="' + esc(a.alias || '') + '">' + _BOARD_REPLY_ICON + 'REPLY</button>' +
+        '<span class="board-sp"></span>' +
+        '<button type="button" class="board-act" data-board-share>SHARE</button>' +
+      '</div>' +
+      _boardMenuHtml('topic', t, mine, canMod) +
+    '</article>';
+  }
+  /** A reply card; top-level cards carry their sub-replies (one level) behind a fold. */
+  function _boardReplyHtml(r, opId, subs, isSub) {
+    const a = r.author || {}; const mine = _boardIsMe(a); const canMod = _boardIsMod();
+    const parent = isSub ? String(r.parent_reply_id || '') : String(r.id || '');
+    let subsHtml = '';
+    if (!isSub && subs && subs.length) {
+      const open = !_boardSubsClosed.has(r.id);
+      const seen = {}; const stack = [];
+      subs.forEach(function (x) { const al = (x.author && x.author.alias) || '?'; if (!seen[al] && stack.length < 3) { seen[al] = 1; stack.push(_boardAvHtml(x.author)); } });
+      subsHtml = '<button type="button" class="board-subtoggle" data-board-subtoggle="' + esc(r.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<span class="board-stack">' + stack.join('') + '</span>' + subs.length + (subs.length === 1 ? ' REPLY' : ' REPLIES') +
+          '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>' +
+        '</button>' +
+        '<div class="board-subs' + (open ? '' : ' hidden') + '" data-board-subs>' + subs.map(function (x) { return _boardReplyHtml(x, opId, null, true); }).join('') + '</div>';
+    }
+    return '<article class="' + (isSub ? 'board-subrp' : 'board-rp') + (mine ? ' board-rp--mine' : '') + (r.hidden ? ' board-rp--hidden' : '') + (_boardHlId && _boardHlId === r.id ? ' board-rp--hl' : '') + '"' +
+        ' data-board-post="' + esc(r.id || '') + '" data-board-kind="reply" data-board-author="' + esc(a.author_id || '') + '" data-board-alias="' + esc(a.alias || 'hunter') + '">' +
+      _boardWhoHtml(a, r, { opId: opId, sub: isSub }) +
+      '<p class="board-ptext">' + _boardFmt(r.body) + '</p>' +
+      '<div class="board-pfoot">' +
+        '<button type="button" class="board-up' + (r.voted ? ' board-up--on' : '') + '" data-board-rvote="' + esc(r.id || '') + '" aria-pressed="' + (r.voted ? 'true' : 'false') + '" aria-label="Upvote reply">▲ <span class="board-up-n">' + (Number(r.up_count) || 0) + '</span></button>' +
+        '<button type="button" class="board-act" data-board-reply-to="' + esc(parent) + '" data-name="' + esc(a.alias || '') + '">' + _BOARD_REPLY_ICON + 'REPLY</button>' +
+      '</div>' +
+      _boardMenuHtml('reply', r, mine, canMod) +
+      subsHtml +
+    '</article>';
+  }
+  /** Flat server page → top-level replies (sorted by the seg) + their sub-replies (oldest first). A sub whose parent is gone stands on its own. */
+  function _boardThreadGroups(d) {
+    const all = (d.replies || []).filter(function (r) { return !(r.author && _boardHiddenAuthors.has(r.author.author_id)); });
+    const byId = {}; all.forEach(function (r) { byId[r.id] = r; });
+    const subs = {}; const tops = [];
+    all.forEach(function (r) {
+      const pid = r.parent_reply_id;
+      if (pid && byId[pid] && !byId[pid].parent_reply_id) (subs[pid] = subs[pid] || []).push(r);
+      else tops.push(r);
+    });
+    const ups = function (r) { return Number(r.up_count) || 0; };
+    if (_boardRSort === 'new') tops.sort(function (a, b) { return b.created_at - a.created_at; });
+    else if (_boardRSort === 'old') tops.sort(function (a, b) { return a.created_at - b.created_at; });
+    else tops.sort(function (a, b) { return (ups(b) - ups(a)) || (a.created_at - b.created_at); });
+    Object.keys(subs).forEach(function (k) { subs[k].sort(function (a, b) { return a.created_at - b.created_at; }); });
+    return { tops: tops, subs: subs };
+  }
+  function _boardRepliesHtml(d) {
+    const g = _boardThreadGroups(d); const opId = d.topic && d.topic.author && d.topic.author.author_id;
+    return g.tops.map(function (r) { return _boardReplyHtml(r, opId, g.subs[r.id] || [], false); }).join('');
+  }
+  function _boardRepliesRender() {
+    const d = _boardTopicData; if (!d || !_boardSheet) return;
+    const host = _boardSheet.querySelector('[data-board-replies]'); if (host) host.innerHTML = _boardRepliesHtml(d);
+    _boardThreadHead(d);
+  }
+  /** Header sub-line "IDEAS · 5 REPLIES · 3 HUNTERS", the replies kicker, and the bell state. */
+  function _boardThreadHead(d) {
+    const el = _boardSheet; if (!el) return;
+    const t = d.topic || {};
+    const total = Math.max((d.replies || []).length, Number(t.reply_count) || 0);
+    const who = {}; if (t.author && t.author.alias) who[t.author.alias] = 1;
+    (d.replies || []).forEach(function (r) { if (r.author && r.author.alias) who[r.author.alias] = 1; });
+    const hunters = Object.keys(who).length;
+    const label = t.tag === 'improvement' ? 'IDEAS' : (t.tag === 'bug' ? 'BUGS' : 'TALK');
+    const sub = el.querySelector('[data-board-sub]');
+    if (sub) sub.textContent = label + ' · ' + total + (total === 1 ? ' REPLY' : ' REPLIES') + ' · ' + hunters + (hunters === 1 ? ' HUNTER' : ' HUNTERS');
+    const rc = el.querySelector('[data-board-rcount]'); if (rc) rc.textContent = total ? total + (total === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET';
+    const bell = el.querySelector('[data-board-follow]');
+    if (bell) { bell.classList.remove('hidden'); bell.classList.toggle('board-bell--on', !!d.following); bell.setAttribute('aria-pressed', d.following ? 'true' : 'false'); }
+  }
+  function _boardTopicSheetHtml(d) {
+    const t = d.topic || {};
+    return '<div class="board-thread">' +
+      _boardOpHtml(t) +
+      '<div class="board-rhead"><span class="board-rhead-n" data-board-rcount></span>' +
+        '<div class="board-rsort" role="tablist" aria-label="Sort replies">' + [['top', 'TOP'], ['new', 'NEWEST'], ['old', 'OLDEST']].map(function (o) {
+          const on = o[0] === _boardRSort;
+          return '<button type="button" role="tab" data-board-rsort="' + o[0] + '" data-active="' + (on ? 'true' : 'false') + '" aria-selected="' + (on ? 'true' : 'false') + '">' + o[1] + '</button>';
+        }).join('') + '</div>' +
+      '</div>' +
+      '<div class="board-replies" data-board-replies>' + _boardRepliesHtml(d) + '</div>' +
       (d.next_cursor ? '<button type="button" class="board-more" data-board-more-replies>LOAD MORE REPLIES</button>' : '') +
-      '<div class="board-replybar">' +
-        (t.locked && !_boardIsMod()
-          ? '<div class="board-gate-note">THIS TOPIC IS LOCKED · NO MORE REPLIES</div>'
-          : (bar ? '<div class="board-gate-note">REPLYING TAKES ' + esc(bar.need) + ' RANK · YOU ARE ' + esc(bar.mine) + '</div>' : '') +
-            '<button type="button" class="board-primary" data-board-reply>REPLY</button>') +
+    '</div>';
+  }
+  /** The bottom bar: "Add to the discussion…" → the composer; the lock / rank gate reads here instead. */
+  function _boardCompHtml(d) {
+    const t = d.topic || {}; const bar = _boardRankBar('reply');
+    const locked = !!(t.locked && !_boardIsMod());
+    const gate = locked ? 'THIS TOPIC IS LOCKED · NO MORE REPLIES' : (bar ? 'REPLYING TAKES ' + bar.need + ' RANK · YOU ARE ' + bar.mine : '');
+    return '<div class="board-comp" data-board-comp>' +
+      '<div class="board-cbar' + (gate ? ' board-cbar--gate' : '') + '" role="button" tabindex="0" data-board-reply-to="" data-name="' + esc((t.author && t.author.alias) || '') + '"' + (locked ? ' aria-disabled="true"' : '') + '>' +
+        '<span class="board-cbar-ph">' + (gate ? esc(gate) : 'Add to the discussion…') + '</span>' +
+        '<span class="board-send" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h9M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
       '</div>' +
     '</div>';
   }
-  async function openBoardTopic(id) {
+  async function openBoardTopic(id, opts) {
     if (!id) return;
-    const el = _boardSheetOpen('Topic', '<div class="board-loading">' + (typeof _skelHtml === 'function' ? _skelHtml('rows', 3) : 'Loading…') + '</div>', 'board-sheet--topic');
+    const el = _boardSheetOpen('Topic', '<div class="board-loading">' + (typeof _skelHtml === 'function' ? _skelHtml('rows', 3) : 'Loading…') + '</div>', 'board-sheet--topic',
+      { sub: '', right: '<button type="button" class="board-bell hidden" data-board-follow aria-pressed="false" aria-label="Follow this topic">' + _BOARD_BELL_ICON + '</button>' });
     el.dataset.topicId = id;
     let res; try { res = await Auth.boardTopic(id, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     if (_boardSheet !== el) return;
@@ -46679,9 +46855,18 @@
       return;
     }
     if (res.me) _boardMe = res.me;
-    _boardTopicData = { topic: res.topic, replies: res.replies || [], next_cursor: res.next_cursor || null };
+    _boardTopicData = { topic: res.topic, replies: res.replies || [], next_cursor: res.next_cursor || null, following: !!res.following };
+    _boardHlId = (opts && opts.highlight) || '';
     bodyEl.innerHTML = _boardTopicSheetHtml(_boardTopicData);
-    _boardMarkSeen(id, res.topic && res.topic.last_activity_at);   // W913 — the unread bar clears
+    const sec = el.querySelector('.board-sheet');
+    if (sec && !sec.querySelector('[data-board-comp]')) sec.insertAdjacentHTML('beforeend', _boardCompHtml(_boardTopicData));
+    _boardThreadHead(_boardTopicData);
+    _boardMarkSeen(id, res.topic && res.topic.last_activity_at, res.topic && res.topic.reply_count);   // W913 — the unread bar clears; W929 — and the "N NEW"
+    if (_boardHlId) {
+      const hl = bodyEl.querySelector('[data-board-post="' + _boardHlId + '"]');
+      if (hl) { try { hl.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} setTimeout(function () { try { hl.classList.remove('board-rp--hl'); } catch (_) {} }, 1800); }
+      _boardHlId = '';
+    }
     try { _boardPaint(); } catch (_) {}
   }
   async function _boardMoreReplies(btn) {
@@ -46691,10 +46876,111 @@
     let res; try { res = await Auth.boardTopic(id, d.next_cursor); } catch (_) { res = null; }
     btn.disabled = false;
     if (!res || !res.ok || _boardTopicData !== d) return;
-    const host = _boardSheet && _boardSheet.querySelector('[data-board-replies]');
-    (res.replies || []).forEach(function (r) { d.replies.push(r); if (host) host.insertAdjacentHTML('beforeend', _boardPostHtml('reply', r)); });
+    (res.replies || []).forEach(function (r) { d.replies.push(r); });
     d.next_cursor = res.next_cursor || null;
+    _boardRepliesRender();
     if (!d.next_cursor) btn.remove();
+  }
+  /** A reply left the thread (deleted): drop it, keep its sub-replies as their own (the server does the same). */
+  function _boardThreadDrop(id) {
+    const d = _boardTopicData; if (!d) return;
+    const before = d.replies.length;
+    d.replies = d.replies.filter(function (r) { return r.id !== id; });
+    if (d.topic && d.replies.length < before) d.topic.reply_count = Math.max(0, (Number(d.topic.reply_count) || 0) - 1);
+    _boardRepliesRender();
+  }
+  // reply upvotes (optimistic, server truth wins — same shape as the topic vote)
+  function _boardApplyRVote(id, voted, n) {
+    const d = _boardTopicData; if (d) d.replies.forEach(function (r) { if (r.id === id) { r.voted = voted; r.up_count = n; } });
+    document.querySelectorAll('[data-board-rvote="' + id + '"]').forEach(function (b) {
+      b.classList.toggle('board-up--on', voted); b.setAttribute('aria-pressed', voted ? 'true' : 'false');
+      const c = b.querySelector('.board-up-n'); if (c) c.textContent = String(n);
+    });
+  }
+  async function _boardReplyVote(el) {
+    const id = el.getAttribute('data-board-rvote'); if (!id) return;
+    if (!(window.Auth && Auth.boardReplyVote)) return;
+    const on = el.getAttribute('aria-pressed') !== 'true';
+    const nEl = el.querySelector('.board-up-n'); const before = Number(nEl && nEl.textContent) || 0;
+    _boardApplyRVote(id, on, Math.max(0, before + (on ? 1 : -1)));
+    if (on) {
+      try { _hapticTick('LIGHT'); } catch (_) {}
+      try { const f = document.createElement('span'); f.className = 'board-up-fl'; f.textContent = '+1'; el.appendChild(f); setTimeout(function () { try { f.remove(); } catch (_) {} }, 700); } catch (_) {}
+    }
+    let res; try { res = await Auth.boardReplyVote(id); } catch (_) { res = null; }
+    if (!res || !res.ok) {
+      _boardApplyRVote(id, !on, before);
+      const code = res && res.code;
+      if (code === 'SIM_READ_ONLY') _boardToast('Simulated hunters cannot vote.');
+      else if (code && code !== 'GUEST_SKIP' && code !== 'LOCAL_DEV_SKIP' && code !== 'STUB_USER') _boardToast(_boardErrMsg(res));
+      return;
+    }
+    _boardApplyRVote(id, !!res.voted, Number(res.up_count) || 0);
+  }
+  // the bell — follow / unfollow (optimistic)
+  async function _boardFollow(el) {
+    const d = _boardTopicData; const id = _boardSheet && _boardSheet.dataset.topicId; if (!d || !id) return;
+    if (!(window.Auth && Auth.boardFollow)) return;
+    const paint = function (on) { d.following = on; el.classList.toggle('board-bell--on', on); el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
+    const on = !d.following; paint(on);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    let res; try { res = await Auth.boardFollow(id); } catch (_) { res = null; }
+    if (!res || !res.ok) {
+      paint(!on);
+      const code = res && res.code;
+      if (code && code !== 'GUEST_SKIP' && code !== 'LOCAL_DEV_SKIP' && code !== 'STUB_USER') _boardToast(_boardErrMsg(res));
+      return;
+    }
+    paint(!!res.following);
+    _boardToast(d.following ? 'Following · you will be pinged on new replies.' : 'Unfollowed.');
+  }
+  function _boardSetRSort(v) {
+    _boardRSort = (v === 'new' || v === 'old') ? v : 'top';
+    if (_boardSheet) _boardSheet.querySelectorAll('[data-board-rsort]').forEach(function (b) { const on = b.getAttribute('data-board-rsort') === _boardRSort; b.setAttribute('data-active', on ? 'true' : 'false'); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    _boardRepliesRender();
+    try { _hapticTick('LIGHT'); } catch (_) {}
+  }
+  function _boardSubsToggle(btn) {
+    const id = btn.getAttribute('data-board-subtoggle'); if (!id) return;
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    if (open) _boardSubsClosed.delete(id); else _boardSubsClosed.add(id);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const host = btn.parentNode && btn.parentNode.querySelector('[data-board-subs]'); if (host) host.classList.toggle('hidden', !open);
+  }
+  // share / copy — no web address for a topic exists, so the text itself travels
+  async function _boardCopyText(text, msg) {
+    let ok = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); ok = true; } } catch (_) {}
+    if (!ok) {
+      try {
+        const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); ok = !!document.execCommand('copy'); ta.remove();
+      } catch (_) {}
+    }
+    _boardToast(ok ? (msg || 'Copied.') : 'Could not copy.');
+  }
+  async function _boardShare() {
+    const t = _boardTopicData && _boardTopicData.topic; if (!t) return;
+    const text = (t.title || 'A topic') + '\n' + String(t.body || '').slice(0, 240) + '\n\nOn the Community board in Awakened: Habit RPG.';
+    try { if (navigator.share) { await navigator.share({ title: t.title || 'Awakened', text: text }); return; } } catch (err) { if (err && err.name === 'AbortError') return; }
+    _boardCopyText(text, 'Topic copied.');
+  }
+  function _boardCopy(postEl) {
+    if (!postEl) return;
+    const id = postEl.getAttribute('data-board-post'); const kind = postEl.getAttribute('data-board-kind');
+    const d = _boardTopicData; let text = '';
+    if (d && kind === 'topic' && d.topic) text = (d.topic.title || '') + '\n' + (d.topic.body || '');
+    else if (d) { const r = d.replies.filter(function (x) { return x.id === id; })[0]; if (r) text = r.body || ''; }
+    if (!text) { const pt = postEl.querySelector('.board-ptext'); text = (pt && pt.textContent) || ''; }
+    const panel = postEl.querySelector('[data-board-menu-panel]'); if (panel) panel.classList.add('hidden');
+    _boardCopyText(text, 'Copied.');
+  }
+  function _boardEditStart(postEl) {
+    if (!postEl) return;
+    const id = postEl.getAttribute('data-board-post'); const d = _boardTopicData; if (!d) return;
+    const r = d.replies.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+    const tid = _boardSheet && _boardSheet.dataset.topicId;
+    openBoardComposer('edit', tid, d.topic && d.topic.title, { editId: id, body: r.body || '' });
   }
 
   // ── actions: report / block / moderation ───────────────────────────────
@@ -46737,13 +47023,13 @@
       _boardHiddenAuthors.add(authorId);
       _boardToast('Blocked ' + alias + '. You will not see each other on the board.');
       if (kind === 'topic') { _boardSheetClose(); _boardLists = {}; renderBoardSection(); }
-      else { postEl.remove(); }
+      else { _boardRepliesRender(); }   // W929 — every reply by them folds away
       return;
     }
     if (action === 'delete') {
       _boardToast('Removed.');
       if (kind === 'topic') { _boardSheetClose(); _boardLists = {}; renderBoardSection(); }
-      else { postEl.remove(); }
+      else { _boardThreadDrop(id); _boardLists = {}; }   // W929
       return;
     }
     if (action === 'hide') {
@@ -46834,6 +47120,10 @@
     document.addEventListener('click', function (e) {
       const t = e.target; if (!t || !t.closest) return;
       let el;
+      // W929 — a tap anywhere else closes an open ⋯ popover
+      if (_boardSheet && !t.closest('[data-board-menu]') && !t.closest('[data-board-menu-panel]')) {
+        _boardSheet.querySelectorAll('[data-board-menu-panel]:not(.hidden)').forEach(function (x) { x.classList.add('hidden'); });
+      }
       if ((el = t.closest('[data-board-close]'))) { e.preventDefault(); _boardSheetClose(); return; }
       if ((el = t.closest('[data-board-agree]'))) { e.preventDefault(); _boardAgree(el); return; }
       if ((el = t.closest('[data-board-new]'))) { e.preventDefault(); openBoardComposer('topic'); return; }
@@ -46854,11 +47144,23 @@
       }
       if ((el = t.closest('[data-board-more]'))) { e.preventDefault(); _boardLoadMore(el); return; }
       if ((el = t.closest('[data-board-more-replies]'))) { e.preventDefault(); _boardMoreReplies(el); return; }
-      if ((el = t.closest('[data-board-reply]'))) {
+      // W929 — thread v4
+      if ((el = t.closest('[data-board-rvote]'))) { e.preventDefault(); e.stopPropagation(); _boardReplyVote(el); return; }
+      if ((el = t.closest('[data-board-rsort]'))) { e.preventDefault(); _boardSetRSort(el.getAttribute('data-board-rsort')); return; }
+      if ((el = t.closest('[data-board-subtoggle]'))) { e.preventDefault(); _boardSubsToggle(el); return; }
+      if ((el = t.closest('[data-board-follow]'))) { e.preventDefault(); _boardFollow(el); return; }
+      if ((el = t.closest('[data-board-share]'))) { e.preventDefault(); _boardShare(); return; }
+      if ((el = t.closest('[data-board-edit]'))) { e.preventDefault(); _boardEditStart(el.closest('[data-board-post]')); return; }
+      if ((el = t.closest('[data-board-del]'))) { e.preventDefault(); if (_boardArm(el, 'Tap again to delete')) _boardAct('delete', el.closest('[data-board-post]')); return; }
+      if ((el = t.closest('[data-board-copy]'))) { e.preventDefault(); _boardCopy(el.closest('[data-board-post]')); return; }
+      if ((el = t.closest('[data-board-report-open]'))) { e.preventDefault(); const row = el.parentNode.querySelector('[data-board-report-row]'); if (row) row.classList.toggle('hidden'); return; }
+      if ((el = t.closest('[data-board-reply-to], [data-board-reply]'))) {
         e.preventDefault();
+        if (el.getAttribute('aria-disabled') === 'true') { _boardToast('This topic is locked.'); return; }
         const tid = _boardSheet && _boardSheet.dataset.topicId;
         const title = _boardTopicData && _boardTopicData.topic && _boardTopicData.topic.title;
-        openBoardComposer('reply', tid, title);
+        const parent = el.getAttribute('data-board-reply-to') || '';
+        openBoardComposer('reply', tid, title, parent ? { parentId: parent, replyTo: el.getAttribute('data-name') || '' } : null);
         return;
       }
       if ((el = t.closest('[data-board-profile]'))) {
@@ -46872,7 +47174,11 @@
       if ((el = t.closest('[data-board-menu]'))) {
         e.preventDefault();
         const p = el.closest('[data-board-post]'); const panel = p && p.querySelector('[data-board-menu-panel]');
-        if (panel) panel.classList.toggle('hidden');
+        if (panel) {   // W929 — one popover at a time
+          const wasHidden = panel.classList.contains('hidden');
+          document.querySelectorAll('[data-board-menu-panel]').forEach(function (x) { x.classList.add('hidden'); });
+          if (wasHidden) panel.classList.remove('hidden');
+        }
         return;
       }
       if ((el = t.closest('[data-board-report]'))) { e.preventDefault(); _boardAct('report', el.closest('[data-board-post]'), el.getAttribute('data-board-report')); return; }
@@ -46971,6 +47277,7 @@
       rules: openBoardRules, compose: openBoardComposer, open: openBoardTopic, list: openBoardList,
       settings: renderBoardBlocksSettings, pane: _cmSetPane, sort: _boardSetSort, tag: _boardSetTag,
       preflight: _boardPreflight, posts: function () { return _boardPosts; },   // W914
+      rsort: _boardSetRSort,   // W929
     };
   } catch (_) {}
 
@@ -62945,6 +63252,15 @@
         // W680 — Monday update-reminder push: the tap's whole job is the App
         // Store listing (same opener as the W679 banner). Return — no tab nav.
         if (type === 'update_reminder') { try { _updOpenStore(); } catch (_) {} return; }
+        // W929 — a reply on a topic you follow → that thread, on the Community tab.
+        if (type === 'board_reply' && data && data.topicId) {
+          const s0 = document.getElementById('tab-social'); if (s0) s0.click();
+          setTimeout(function () {
+            try { if (typeof _cmSetPane === 'function') _cmSetPane('board'); } catch (_) {}
+            try { if (typeof openBoardTopic === 'function') openBoardTopic(String(data.topicId)); } catch (_) {}
+          }, 400);
+          return;
+        }
         if (type === 'coop_invite' || type === 'coop_joined' || type === 'coop_complete') {
           const bossId = data && data.bossId;   // W662 — coop_complete taps open the resolved hunt (re-pulls instances)
           if (bossId && typeof openCoopSheet === 'function') { openCoopSheet(bossId); return; }

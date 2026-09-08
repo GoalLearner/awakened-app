@@ -25,6 +25,10 @@ import {
   handleBoardTopicLock,
   handleBoardPurgePost,
   handleCommunityUnseenGet,
+  handleBoardReplyDelete,
+  handleBoardReplyVotePost,
+  handleBoardReplyEdit,
+  handleBoardFollowPost,
   UNSEEN_DEFAULT_MS,
   UNSEEN_MAX_MS,
   junkReason,
@@ -49,11 +53,13 @@ interface State {
   mods: Record<string, 'owner' | 'mod'>;
   topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null }>;
   votes: Set<string>;     // W913 — `${topic}|${user}`
-  replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string }>;
+  replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string; parent_reply_id?: string | null; edited_at?: number | null }>;
   strikes: { user_id: string; created_at: number }[];   // W914
   reports: Set<string>;   // `${kind}|${id}|${reporter}`
   blocks: Set<string>;    // `${blocker}|${blocked}`
   feedLikes: { owner: string; liker: string; at: number }[];   // W921 — likes on feats, by owner
+  replyVotes: Set<string>;   // W929 — `${reply}|${user}`
+  follows: Set<string>;      // W929 — `${topic}|${user}`
   calls: { sql: string; binds: unknown[] }[];
 }
 
@@ -78,6 +84,8 @@ function fresh(): State {
     votes: new Set(),
     strikes: [],
     feedLikes: [],
+    replyVotes: new Set(),
+    follows: new Set(),
     calls: [],
   };
 }
@@ -89,6 +97,27 @@ function makeEnv(st: State, rlWriteOk = true): Env {
         st.calls.push({ sql, binds });
         const api = {
           first: async () => {
+            // W929 — thread v4 reads
+            if (/SELECT id, topic_id, parent_reply_id, deleted_at FROM board_replies/.test(sql)) {
+              const r = st.replies[binds[0] as string]; return r ? { id: binds[0], topic_id: r.topic_id, parent_reply_id: r.parent_reply_id ?? null, deleted_at: r.deleted_at } : null;
+            }
+            if (/SELECT id, topic_id, hidden_at, deleted_at FROM board_replies/.test(sql)) {
+              const r = st.replies[binds[0] as string]; return r ? { id: binds[0], topic_id: r.topic_id, hidden_at: null, deleted_at: r.deleted_at } : null;
+            }
+            if (/SELECT author_id, deleted_at FROM board_replies/.test(sql)) {
+              const r = st.replies[binds[0] as string]; return r ? { author_id: r.author_id, deleted_at: r.deleted_at } : null;
+            }
+            if (/SELECT topic_id, author_id FROM board_replies/.test(sql)) {
+              const r = st.replies[binds[0] as string]; return r && r.deleted_at == null ? { topic_id: r.topic_id, author_id: r.author_id } : null;
+            }
+            if (/SELECT author_id FROM board_topics WHERE id = \? AND deleted_at IS NULL/.test(sql)) {
+              const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { author_id: t.author_id } : null;
+            }
+            if (/SELECT up_count FROM board_replies/.test(sql)) {
+              return { up_count: [...st.replyVotes].filter((k) => k.startsWith(`${binds[0]}|`)).length };
+            }
+            if (/SELECT 1 AS f FROM board_follows/.test(sql)) return st.follows.has(`${binds[0]}|${binds[1]}`) ? { f: 1 } : null;
+            if (/SELECT title FROM board_topics/.test(sql)) { const t = st.topics[binds[0] as string]; return t ? { title: t.title || 'T' } : null; }
             // W921 — the three unseen COUNTs
             if (/FROM board_topics t\s+JOIN users u/.test(sql)) {
               const [since, me] = binds as [number, string];
@@ -178,6 +207,13 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             return null;
           },
           run: async () => {
+            // W929 — thread v4 writes
+            if (/INSERT OR IGNORE INTO board_reply_votes/.test(sql)) { const k = `${binds[0]}|${binds[1]}`; if (st.replyVotes.has(k)) return ok(0); st.replyVotes.add(k); return ok(1); }
+            if (/DELETE FROM board_reply_votes/.test(sql)) { st.replyVotes.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
+            if (/UPDATE board_replies SET up_count/.test(sql)) return ok(1);
+            if (/INSERT OR IGNORE INTO board_follows/.test(sql)) { const k = `${binds[0]}|${binds[1]}`; if (st.follows.has(k)) return ok(0); st.follows.add(k); return ok(1); }
+            if (/DELETE FROM board_follows/.test(sql)) { st.follows.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
+            if (/UPDATE board_replies SET body = \?, edited_at/.test(sql)) { const r = st.replies[binds[2] as string]; if (r) { r.body = binds[0] as string; r.edited_at = binds[1] as number; } return ok(1); }
             if (/INSERT INTO board_consents/.test(sql)) { st.consents.add(binds[0] as string); return ok(1); }
             if (/INSERT INTO board_topics/.test(sql)) {
               st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: null, created_at: binds[5] as number, title: binds[3] as string, body: binds[4] as string };
@@ -193,7 +229,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/UPDATE board_topics SET pinned_at/.test(sql)) {
               const t = st.topics[binds[2] as string]; if (t) t.pinned_at = binds[0] as number | null; return ok(1);
             }
-            if (/INSERT INTO board_replies/.test(sql)) { st.replies[binds[0] as string] = { topic_id: binds[1] as string, deleted_at: null, author_id: binds[2] as string, body: binds[3] as string, created_at: binds[4] as number }; return ok(1); }
+            if (/INSERT INTO board_replies/.test(sql)) { st.replies[binds[0] as string] = { topic_id: binds[1] as string, deleted_at: null, author_id: binds[2] as string, body: binds[3] as string, created_at: binds[4] as number, parent_reply_id: (binds[5] as string | null) ?? null }; return ok(1); }
             if (/INSERT INTO board_strikes/.test(sql)) { st.strikes.push({ user_id: binds[0] as string, created_at: binds[2] as number }); return ok(1); }
             if (/UPDATE board_topics SET locked_at/.test(sql)) { const t = st.topics[binds[2] as string]; if (t) t.locked_at = binds[0] as number | null; return ok(1); }
             if (/UPDATE board_topics SET deleted_at = \?, deleted_by = \? WHERE author_id/.test(sql)) {
@@ -231,6 +267,15 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             return ok(1);
           },
           all: async () => {
+            if (/SELECT user_id FROM board_follows/.test(sql)) {
+              const results = [...st.follows].filter((k) => k.startsWith(`${binds[0]}|`)).map((k) => k.split('|')[1]).filter((u) => u !== binds[1]).map((user_id) => ({ user_id }));
+              return { results, success: true, meta: {} };
+            }
+            if (/SELECT reply_id FROM board_reply_votes/.test(sql)) {
+              const uid = binds[0] as string;
+              const results = [...st.replyVotes].filter((k) => k.endsWith(`|${uid}`)).map((k) => ({ reply_id: k.split('|')[0] }));
+              return { results, success: true, meta: {} };
+            }
             if (/SELECT user_id FROM board_moderators/.test(sql)) return { results: Object.keys(st.mods).map((user_id) => ({ user_id })), success: true, meta: {} };
             if (/SELECT created_at FROM board_topics WHERE author_id/.test(sql)) {
               const results = Object.values(st.topics).filter((t) => t.author_id === binds[0] && (t.created_at || 0) > (binds[1] as number))
@@ -830,5 +875,75 @@ describe('W921 · community unseen counts', () => {
     const limited = makeEnv(st, true);
     (limited as unknown as { RL_BOARD_READ: { limit: () => Promise<{ success: boolean }> } }).RL_BOARD_READ = { limit: async () => ({ success: false }) };
     expect((await unseen(limited, me, T0)).status).toBe(429);
+  });
+});
+
+// ── W929 — FORUM THREAD v4: reply votes, nesting, own edit/delete, follows ──
+describe('W929 · thread v4', () => {
+  const T0 = Date.now() - 60_000;
+  function withTopic(st: State) {
+    st.topics['aaaaaaaa-0001'] = { author_id: 'u-ren', hidden_at: null, deleted_at: null, reply_count: 1, last_activity_at: T0, created_at: T0, title: 'App Ideas', body: 'B' };
+    st.replies['bbbbbbbb-0001'] = { topic_id: 'aaaaaaaa-0001', deleted_at: null, author_id: 'u-x', created_at: T0 + 1, body: 'top-level' };
+    st.replies['bbbbbbbb-0002'] = { topic_id: 'aaaaaaaa-0001', deleted_at: null, author_id: 'u-y', created_at: T0 + 2, body: 'a sub reply', parent_reply_id: 'bbbbbbbb-0001' };
+  }
+  const post = (env: Env, who: SessionPayload, body: Record<string, unknown>) =>
+    handleBoardReplyPost(new Request('https://x/v1/board/topics/aaaaaaaa-0001/replies', { method: 'POST', body: JSON.stringify(body) }), env, who, 'aaaaaaaa-0001');
+
+  it('a reply may answer a top-level reply of the same topic; never a sub-reply, never another topic', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    const okRes = await post(env, me, { body: 'answering the top-level reply here', parent_reply_id: 'bbbbbbbb-0001' });
+    expect(okRes.status).toBe(200);
+    expect((await okRes.json() as { parent_reply_id: string }).parent_reply_id).toBe('bbbbbbbb-0001');
+    const bad = await post(env, me, { body: 'answering a sub reply is one level too deep', parent_reply_id: 'bbbbbbbb-0002' });
+    expect((await bad.json() as { error: string }).error).toBe('BAD_PARENT');
+    st.replies['bbbbbbbb-0003'] = { topic_id: 'aaaaaaaa-0002', deleted_at: null, author_id: 'u-x', created_at: T0, body: 'elsewhere' };
+    const wrong = await post(env, me, { body: 'answering a reply from another topic', parent_reply_id: 'bbbbbbbb-0003' });
+    expect((await wrong.json() as { error: string }).error).toBe('BAD_PARENT');
+  });
+
+  it('a reply follows the topic for the replier and pushes every other follower (never the replier)', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    st.follows.add('aaaaaaaa-0001|u-ren'); st.follows.add('aaaaaaaa-0001|u-x');
+    mockNotify.mockClear();
+    const res = await post(env, me, { body: 'a fresh reply that should reach the followers' });
+    expect(res.status).toBe(200);
+    expect(st.follows.has('aaaaaaaa-0001|u-me')).toBe(true);
+    const pushed = mockNotify.mock.calls.filter((c) => (c[2] as { type: string }).type === 'board_reply').map((c) => c[1]);
+    expect(pushed.sort()).toEqual(['u-ren', 'u-x']);
+    expect((mockNotify.mock.calls.find((c) => c[1] === 'u-ren')![2] as unknown as { title: string; data: { topicId: string } }).data.topicId).toBe('aaaaaaaa-0001');
+  });
+
+  it('a reply upvote toggles and recounts', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    const on = await handleBoardReplyVotePost(new Request('https://x', { method: 'POST' }), env, me, 'bbbbbbbb-0001');
+    expect(await on.json()).toMatchObject({ ok: true, voted: true, up_count: 1 });
+    const off = await handleBoardReplyVotePost(new Request('https://x', { method: 'POST' }), env, me, 'bbbbbbbb-0001');
+    expect(await off.json()).toMatchObject({ ok: true, voted: false, up_count: 0 });
+  });
+
+  it('only the author edits or deletes their reply; a moderator may still delete', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    const editReq = (body: string) => new Request('https://x', { method: 'POST', body: JSON.stringify({ body }) });
+    const stranger = await handleBoardReplyEdit(editReq('trying to edit someone else'), env, me, 'bbbbbbbb-0001');
+    expect((await stranger.json() as { error: string }).error).toBe('NOT_ALLOWED');
+    const own = await handleBoardReplyEdit(editReq('the author fixes a typo here'), env, x, 'bbbbbbbb-0001');
+    expect(own.status).toBe(200);
+    expect(st.replies['bbbbbbbb-0001'].body).toBe('the author fixes a typo here');
+    expect(st.replies['bbbbbbbb-0001'].edited_at).toBeTruthy();
+    const delStranger = await handleBoardReplyDelete(new Request('https://x', { method: 'POST' }), env, me, 'bbbbbbbb-0002');
+    expect((await delStranger.json() as { error: string }).error).toBe('NOT_ALLOWED');
+    const delOwn = await handleBoardReplyDelete(new Request('https://x', { method: 'POST' }), env, y, 'bbbbbbbb-0002');
+    expect(delOwn.status).toBe(200);
+    st.mods['u-ren'] = 'mod';
+    const delMod = await handleBoardReplyDelete(new Request('https://x', { method: 'POST' }), env, ren, 'bbbbbbbb-0001');
+    expect(delMod.status).toBe(200);
+  });
+
+  it('the bell toggles a follow', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    const on = await handleBoardFollowPost(new Request('https://x', { method: 'POST' }), env, me, 'aaaaaaaa-0001');
+    expect(await on.json()).toMatchObject({ ok: true, following: true });
+    const off = await handleBoardFollowPost(new Request('https://x', { method: 'POST' }), env, me, 'aaaaaaaa-0001');
+    expect(await off.json()).toMatchObject({ ok: true, following: false });
   });
 });
