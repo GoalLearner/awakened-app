@@ -1002,7 +1002,8 @@ export async function handleFriendsActivityGet(
     )
     .all<FeedRow>();
 
-  const events = (results.results ?? [])
+  const rows = results.results ?? [];
+  const events = rows
     // W389 — drop floor-contradicting 'earned the title' orphans: a write-once
     // arena_title_earned event whose required Ascent floor exceeds the hunter's
     // current floor_best (e.g. a reinstall / multi-device desync — the exact
@@ -1035,32 +1036,40 @@ export async function handleFriendsActivityGet(
   // W913 — LIKES: count, whether the caller liked it, and the first likers'
   // aliases (oldest first) so "multiple people like a person's achievement"
   // is visible in one roundtrip.
-  const likeInfo = await feedLikes(env, session.userId, events.map((e) => e.id));
+  // W921 — your OWN feats carry every liker (up to LIKERS_OWN_MAX) plus the
+  // newest like's time, so the client can show "who liked this" and mark the
+  // ones you have not seen yet. Friends' feats keep the short list.
+  const ownIds = new Set(rows.filter((r) => r.user_id === session.userId).map((r) => r.id));
+  const likeInfo = await feedLikes(env, session.userId, events.map((e) => e.id), ownIds);
   const out = events.map((e) => {
     const l = likeInfo.get(e.id);
-    return { ...e, likes: l ? l.n : 0, liked: !!(l && l.mine), likers: l ? l.likers : [] };
+    return { ...e, likes: l ? l.n : 0, liked: !!(l && l.mine), likers: l ? l.likers : [], likedAt: l ? l.latest : null };
   });
   return jsonOk({ ok: true, events: out });
 }
 
-interface LikeAgg { n: number; mine: boolean; likers: string[] }
+interface LikeAgg { n: number; mine: boolean; likers: string[]; latest: number | null }
 const LIKERS_MAX = 3;
+const LIKERS_OWN_MAX = 12;   // W921
 
-async function feedLikes(env: Env, userId: string, ids: string[]): Promise<Map<string, LikeAgg>> {
+async function feedLikes(env: Env, userId: string, ids: string[], ownIds?: Set<string>): Promise<Map<string, LikeAgg>> {
   const out = new Map<string, LikeAgg>();
   if (!ids.length) return out;
   const rows = await env.DB.prepare(
-    `SELECT l.event_id AS event_id, l.user_id AS user_id, u.alias AS alias
+    `SELECT l.event_id AS event_id, l.user_id AS user_id, u.alias AS alias, l.created_at AS created_at
        FROM feed_likes l
        JOIN users u ON u.id = l.user_id
       WHERE l.event_id IN (${ids.map(() => '?').join(',')})
       ORDER BY l.created_at ASC`,
-  ).bind(...ids).all<{ event_id: string; user_id: string; alias: string }>();
+  ).bind(...ids).all<{ event_id: string; user_id: string; alias: string; created_at?: number }>();
   for (const r of rows.results ?? []) {
-    const agg = out.get(r.event_id) || { n: 0, mine: false, likers: [] };
+    const agg = out.get(r.event_id) || { n: 0, mine: false, likers: [], latest: null };
     agg.n += 1;
     if (r.user_id === userId) agg.mine = true;
-    if (agg.likers.length < LIKERS_MAX) agg.likers.push(r.alias);
+    const cap = ownIds && ownIds.has(r.event_id) ? LIKERS_OWN_MAX : LIKERS_MAX;
+    if (agg.likers.length < cap) agg.likers.push(r.alias);
+    const at = Number(r.created_at);
+    if (Number.isFinite(at) && at > 0 && (agg.latest === null || at > agg.latest)) agg.latest = at;
     out.set(r.event_id, agg);
   }
   return out;

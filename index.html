@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=679">
+  <link rel="stylesheet" href="styles.css?v=680">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -649,6 +649,7 @@
       </button>
       <button id="tab-social"   class="tab-btn"        data-tab="social"   aria-label="Community">
         <img class="tab-icon" src="assets/tab-icons/tab-social.png"  alt="" width="32" height="32" draggable="false" loading="eager" decoding="async">
+        <span id="tab-social-badge" class="tab-badge hidden" aria-live="polite">0</span><!-- W921 — new topics / replies to yours / likes on your feats -->
         <span class="tab-label">Community</span>
       </button>
     </nav>
@@ -1045,7 +1046,7 @@
            multiple people like a person's achievement"). -->
       <div id="cm-subnav" class="cm-subnav" role="tablist" aria-label="Community sections" data-pane="board">
         <span class="cm-pill" aria-hidden="true"></span>
-        <button type="button" class="cm-sn" role="tab" data-cm-pane="board" data-active="true" aria-selected="true">BOARD</button>
+        <button type="button" class="cm-sn" role="tab" data-cm-pane="board" data-active="true" aria-selected="true">BOARD <span id="cm-board-badge" class="cm-bdg hidden">0</span></button>
         <button type="button" class="cm-sn" role="tab" data-cm-pane="friends" data-active="false" aria-selected="false">FRIENDS <span id="cm-friends-badge" class="cm-bdg hidden">0</span></button>
       </div>
 
@@ -3391,13 +3392,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=76"></script>
+  <script src="auth.js?v=77"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1325"></script>
+  <script src="app.js?v=1326"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -35055,10 +35055,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .fa-ico--combat { color: #fca5a5; } .fa-ico--step, .fa-ico--flight, .fa-ico--club { color: #4ade80; } .fa-ico--verify { color: #34d399; } .fa-ico--rare, .fa-ico--ultra { color: #60a5fa; } .fa-ico--rank, .fa-ico--arenatitle, .fa-ico--perfect { color: var(--b-vio-lt); }
 .fa-t { font-family: var(--b-mono); font-size: 9px; color: var(--b-ink3); }
 .fa-likewrap { display: inline-flex; align-items: center; gap: 5px; flex: none; }
-.fa-likers { display: flex; }
-.fa-likers i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #100e24; margin-left: -6px; background: #1a1836; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-family: var(--b-serif); font-size: 7.5px; font-weight: 700; color: var(--b-gold); }
-.fa-likers i:first-child { margin-left: 0; }
-.fa-like-n { font-family: var(--b-mono); font-size: 9px; font-weight: 800; color: var(--b-gold); }
+.fa-like-n { font-family: var(--b-mono); font-size: 9px; font-weight: 800; color: var(--b-gold); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.3); }
 .fa-like { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 7px; border: 1px solid rgba(245,184,66,0.45); color: var(--b-gold); font-family: var(--b-mono); font-size: 8px; font-weight: 800; letter-spacing: 1.2px; background: rgba(245,184,66,0.08); cursor: pointer; flex: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: all .15s; }
 .fa-like:active { transform: scale(.94); }
 .fa-like--on { background: var(--b-gold); color: #0a0a18; }
@@ -35280,3 +35277,20 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .hg-group::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
 .hg-label-sub { display: block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; letter-spacing: .8px; color: #585a76; font-weight: 700; margin-top: 2px; }
 .hg-legend-dot-auto { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; box-shadow: 0 0 6px #60a5fa; margin-right: 5px; }
+
+/* W921 — the Community tab badge + LIKES ON YOUR FEATS (Hunter view) */
+.tab-btn { position: relative; }
+.tab-badge { position: absolute; top: 1px; left: calc(50% + 7px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #ef4444; color: #fff; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 800; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px #0a0a18, 0 0 10px rgba(239,68,68,0.55); pointer-events: none; z-index: 2; }
+.tab-badge.hidden { display: none !important; }
+.fa-ol { margin: 0 0 10px; border: 1px solid rgba(245,184,66,0.28); border-radius: 12px; background: linear-gradient(180deg, rgba(245,184,66,0.07), rgba(245,184,66,0.02)); overflow: hidden; }
+.fa-ol-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; background: transparent; border: none; color: inherit; font-family: inherit; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.fa-ol-t { font-family: var(--b-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px; color: var(--b-gold); }
+.fa-ol-new { font-family: var(--b-mono); font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: var(--b-gold); color: #0a0a18; margin-right: 6px; }
+.fa-ol--open > .fa-ol-h .fa-car { transform: rotate(180deg); }
+.fa-ol-body { border-top: 1px solid rgba(245,184,66,0.16); padding: 4px 12px 8px; }
+.fa-ol-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
+.fa-ol-row:last-child { border-bottom: none; }
+.fa-ol-row--new::before { content: ''; position: absolute; left: -12px; top: 50%; width: 3px; height: 60%; transform: translateY(-50%); background: var(--b-gold); border-radius: 0 2px 2px 0; }
+.fa-ol-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fa-ol-who { font-size: 11px; color: var(--b-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-ol-n { font-family: var(--b-mono); font-size: 10px; font-weight: 800; color: var(--b-gold); flex: none; }

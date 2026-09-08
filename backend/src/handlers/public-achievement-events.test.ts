@@ -1777,7 +1777,7 @@ describe('W913 — feed likes', () => {
               if (/FROM feed_likes l/.test(sql)) {
                 const ids = binds as string[];
                 const results = [...st.likes].map((k) => k.split('|')).filter(([e]) => ids.includes(e!))
-                  .map(([e, u]) => ({ event_id: e, user_id: u, alias: st.aliases[u!] || u }));
+                  .map(([e, u], i) => ({ event_id: e, user_id: u, alias: st.aliases[u!] || u, created_at: 1_700_000_000_000 + i }));
                 return { results, success: true, meta: {} };
               }
               if (/FROM public_achievement_events e/.test(sql)) {
@@ -1802,6 +1802,7 @@ describe('W913 — feed likes', () => {
     expect(on.likers).toEqual(['grubbadub', 'Richie']);
     const feed = (await (await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity'), makeEnv(likeDb(st)), session)).json()) as { events: Array<Record<string, unknown>> };
     expect(feed.events[0]).toMatchObject({ id: 'evt-1', likes: 2, liked: true, likers: ['grubbadub', 'Richie'] });
+    expect(feed.events[0].likedAt).toBe(1_700_000_000_001);   // W921 — the newest like's time
     const off = (await (await like(likeDb(st), 'evt-1')).json()) as Record<string, unknown>;
     expect(off).toMatchObject({ liked: false, likes: 1 });
   });

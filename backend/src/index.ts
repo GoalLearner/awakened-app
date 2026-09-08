@@ -124,6 +124,7 @@ import {
   handleBoardPinPost,
   handleBoardTopicLock,
   handleBoardPurgePost,
+  handleCommunityUnseenGet,   // W921
 } from './handlers/board';
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
@@ -412,6 +413,9 @@ export default {
             // W845 (Train 5, E2) — owner override for the weekly hungered
             // boss; null = the client's deterministic pick stands.
             response = await handleWeeklyHungerGet(request, env, session);
+          } else if (path === '/v1/community/unseen' && method === 'GET') {
+            // W921 — the Community tab badge: new topics / replies to yours / likes on your feats since `since`.
+            response = await handleCommunityUnseenGet(request, env, session);
           } else if (path === '/v1/board/topics' && method === 'GET') {
             // W907 — THE COMMUNITY BOARD. Exact routes first; the two regexes below
             // take /:id shapes. Every mutation is POST (CORS allows no DELETE).

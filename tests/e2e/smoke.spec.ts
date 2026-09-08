@@ -1897,3 +1897,23 @@ test.describe('R · The Ledger view (W917 → W919)', () => {
     await expect(page.locator('#habit-list')).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// S. W921 — the Community badge (new topics / replies to yours / likes on your feats)
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('S · Community badge (W921)', () => {
+  test('hidden by default; counts paint on the tab icon; tapping Community clears it', async ({ page }) => {
+    await freshApp(page);
+    const badge = page.locator('#tab-social-badge');
+    await expect(badge).toBeHidden();
+    await page.evaluate(() => (window as any).__cm.unseen({ board: { topics: 2, replies: 1 }, likes: 1 }));
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText('4');
+    await page.click('#tab-social');
+    await expect(badge).toBeHidden();
+    // landing on the BOARD pane clears its own count too
+    await expect(page.locator('#cm-board-badge')).toBeHidden();
+    // the liker initials are gone for good — the count is the signal now
+    await expect(page.locator('.fa-likers')).toHaveCount(0);
+  });
+});

@@ -1811,6 +1811,9 @@
   // W914 — spam guard moderator tools: lock a topic (toggle), purge a hunter's last N hours.
   function boardModLockTopic(id)                 { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/lock'); }
   function boardModPurge(userId, hours)          { return _authedFetch('POST', '/v1/board/purge', { user_id: userId, hours: hours || 24 }); }
+  // W921 — what is new for you on the Community tab since `since` (epoch ms): topics by others,
+  // replies to YOUR topics, likes on YOUR feats. Feeds the badge on the tab icon.
+  function communityUnseen(since)                { return _authedFetch('GET', '/v1/community/unseen' + (since ? '?since=' + encodeURIComponent(String(Math.floor(since))) : '')); }
   function boardModMute(userId, days, reason)    { return _authedFetch('POST', '/v1/board/mute', { user_id: userId, days: days, reason: reason || '' }); }
   function boardModUnmute(userId)                { return _authedFetch('POST', '/v1/board/unmute', { user_id: userId }); }
   function boardReports()                        { return _authedFetch('GET', '/v1/board/reports'); }
@@ -2500,6 +2503,7 @@
     boardReports, boardResolveReports, boardModerators, boardGrantModerator,
     boardVote, boardModPinTopic, feedLike,   // W913
     boardModLockTopic, boardModPurge,        // W914
+    communityUnseen,                         // W921
     // Push notifications (W603/W604) — device-token register/unregister.
     registerPushToken,
     unregisterPushToken,

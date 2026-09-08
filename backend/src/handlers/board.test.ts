@@ -24,6 +24,9 @@ import {
   handleBoardPinPost,
   handleBoardTopicLock,
   handleBoardPurgePost,
+  handleCommunityUnseenGet,
+  UNSEEN_DEFAULT_MS,
+  UNSEEN_MAX_MS,
   junkReason,
   normText,
   SPAM,
@@ -50,6 +53,7 @@ interface State {
   strikes: { user_id: string; created_at: number }[];   // W914
   reports: Set<string>;   // `${kind}|${id}|${reporter}`
   blocks: Set<string>;    // `${blocker}|${blocked}`
+  feedLikes: { owner: string; liker: string; at: number }[];   // W921 — likes on feats, by owner
   calls: { sql: string; binds: unknown[] }[];
 }
 
@@ -73,6 +77,7 @@ function fresh(): State {
     blocks: new Set(),
     votes: new Set(),
     strikes: [],
+    feedLikes: [],
     calls: [],
   };
 }
@@ -84,6 +89,23 @@ function makeEnv(st: State, rlWriteOk = true): Env {
         st.calls.push({ sql, binds });
         const api = {
           first: async () => {
+            // W921 — the three unseen COUNTs
+            if (/FROM board_topics t\s+JOIN users u/.test(sql)) {
+              const [since, me] = binds as [number, string];
+              const n = Object.values(st.topics).filter((t) => (t.created_at || 0) > since && t.author_id !== me && t.deleted_at == null && t.hidden_at == null
+                && !st.users[t.author_id].apple_sub.startsWith('sim_test_') && !st.blocks.has(`${me}|${t.author_id}`) && !st.blocks.has(`${t.author_id}|${me}`)).length;
+              return { n };
+            }
+            if (/FROM board_replies r\s+JOIN board_topics t/.test(sql)) {
+              const [since, me] = binds as [number, string];
+              const n = Object.values(st.replies).filter((r) => (r.created_at || 0) > since && r.deleted_at == null && r.author_id !== me
+                && st.topics[r.topic_id] && st.topics[r.topic_id].author_id === me && st.topics[r.topic_id].deleted_at == null && !st.blocks.has(`${me}|${r.author_id}`)).length;
+              return { n };
+            }
+            if (/FROM feed_likes l\s+JOIN public_achievement_events e/.test(sql)) {
+              const [since, me] = binds as [number, string];
+              return { n: st.feedLikes.filter((l) => l.at > since && l.owner === me && l.liker !== me).length };
+            }
             if (/FROM board_consents/.test(sql)) return st.consents.has(binds[0] as string) ? { version: 1 } : null;
             if (/FROM board_mutes/.test(sql)) {
               const u = st.mutes[binds[0] as string];
@@ -755,5 +777,58 @@ describe('W914 — prose profanity is word-aware', () => {
     for (const bad of ['fucking hell', 'bullshit', 'you cunt', 'Sh1t', 'F4ggot', 'f u c k', 'raped', 'raping', 'dumb retard', 'go to hell asshole']) {
       expect(textIsClean(bad), bad).toBe(false);
     }
+  });
+});
+
+// ── W921 — GET /v1/community/unseen (the Community tab badge) ─────────────
+describe('W921 · community unseen counts', () => {
+  const unseen = (env: Env, who: SessionPayload, since?: number) =>
+    handleCommunityUnseenGet(new Request('https://x/v1/community/unseen' + (since !== undefined ? '?since=' + since : '')), env, who);
+  const T0 = Date.now() - 60_000;   // real clock — the handler clamps `since` to the last 30 days
+
+  it('counts other hunters\' new topics, replies to MY topics and likes on MY feats — never my own writes', async () => {
+    const st = fresh(); const env = makeEnv(st);
+    st.topics['t-mine'] = { author_id: 'u-me', hidden_at: null, deleted_at: null, reply_count: 2, last_activity_at: T0 + 50, created_at: T0 + 10 };
+    st.topics['t-ren'] = { author_id: 'u-ren', hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: T0 + 20, created_at: T0 + 20 };
+    st.topics['t-old'] = { author_id: 'u-ren', hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: T0 - 5, created_at: T0 - 5 };
+    st.topics['t-hidden'] = { author_id: 'u-x', hidden_at: T0 + 30, deleted_at: null, reply_count: 0, last_activity_at: T0 + 30, created_at: T0 + 30 };
+    st.topics['t-sim'] = { author_id: 'u-sim', hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: T0 + 40, created_at: T0 + 40 };
+    st.replies['r-ren'] = { topic_id: 't-mine', deleted_at: null, author_id: 'u-ren', created_at: T0 + 50 };
+    st.replies['r-me'] = { topic_id: 't-mine', deleted_at: null, author_id: 'u-me', created_at: T0 + 60 };
+    st.replies['r-elsewhere'] = { topic_id: 't-ren', deleted_at: null, author_id: 'u-x', created_at: T0 + 70 };
+    st.feedLikes.push({ owner: 'u-me', liker: 'u-ren', at: T0 + 80 }, { owner: 'u-me', liker: 'u-x', at: T0 + 90 }, { owner: 'u-me', liker: 'u-me', at: T0 + 95 }, { owner: 'u-ren', liker: 'u-me', at: T0 + 99 });
+    const res = await unseen(env, me, T0);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { board: { topics: number; replies: number }; likes: number; total: number; since: number };
+    expect(body.board).toEqual({ topics: 1, replies: 1 });   // t-ren only; r-ren only
+    expect(body.likes).toBe(2);
+    expect(body.total).toBe(4);
+    expect(body.since).toBe(T0);
+  });
+
+  it('a blocked hunter\'s topics and replies do not count', async () => {
+    const st = fresh(); const env = makeEnv(st);
+    st.blocks.add('u-me|u-ren');
+    st.topics['t-mine'] = { author_id: 'u-me', hidden_at: null, deleted_at: null, reply_count: 1, last_activity_at: T0 + 50, created_at: T0 + 10 };
+    st.topics['t-ren'] = { author_id: 'u-ren', hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: T0 + 20, created_at: T0 + 20 };
+    st.replies['r-ren'] = { topic_id: 't-mine', deleted_at: null, author_id: 'u-ren', created_at: T0 + 50 };
+    const body = await (await unseen(env, me, T0)).json() as { board: { topics: number; replies: number }; total: number };
+    expect(body.board).toEqual({ topics: 0, replies: 0 });
+    expect(body.total).toBe(0);
+  });
+
+  it('since defaults to 3 days back, is clamped to 30 days and never runs ahead of now; the read is rate limited', async () => {
+    const st = fresh(); const env = makeEnv(st);
+    const now = Date.now();
+    const dflt = await (await unseen(env, me)).json() as { since: number };
+    expect(now - dflt.since).toBeGreaterThanOrEqual(UNSEEN_DEFAULT_MS - 50);
+    expect(now - dflt.since).toBeLessThan(UNSEEN_DEFAULT_MS + 5000);
+    const old = await (await unseen(env, me, 1)).json() as { since: number };
+    expect(now - old.since).toBeLessThan(UNSEEN_MAX_MS + 5000);
+    const future = await (await unseen(env, me, now + 999_999)).json() as { since: number };
+    expect(future.since).toBeLessThanOrEqual(Date.now());
+    const limited = makeEnv(st, true);
+    (limited as unknown as { RL_BOARD_READ: { limit: () => Promise<{ success: boolean }> } }).RL_BOARD_READ = { limit: async () => ({ success: false }) };
+    expect((await unseen(limited, me, T0)).status).toBe(429);
   });
 });

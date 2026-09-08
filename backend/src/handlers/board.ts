@@ -966,6 +966,52 @@ export async function handleBoardModeratorGrant(request: Request, env: Env, sess
 
 /** Admin bootstrap (ADMIN_METRICS_SECRET-gated in index.ts, no session): seat
  *  the one owner row by alias. Refuses to seat a second owner. */
+// ── W921 — what is new for YOU since you last opened the Community tab ─────
+// Rendell (2026-09-07): "there's nothing to show that there's new posts —
+// someone would just need to stumble upon Community rather than being directed
+// to it." The client stamps `since` when the tab is tapped and paints the count
+// on the tab icon. Three cheap COUNTs: topics by others, replies by others on
+// YOUR topics, likes by others on YOUR feats. Never your own writes.
+export const UNSEEN_DEFAULT_MS = 3 * DAY_MS;
+export const UNSEEN_MAX_MS = 30 * DAY_MS;
+
+export async function handleCommunityUnseenGet(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_BOARD_READ.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const now = Date.now();
+  const raw = Number(new URL(request.url).searchParams.get('since'));
+  let since = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : now - UNSEEN_DEFAULT_MS;
+  if (since < now - UNSEEN_MAX_MS) since = now - UNSEEN_MAX_MS;
+  if (since > now) since = now;
+  const me = session.userId;
+  const topics = await env.DB.prepare(
+    `SELECT COUNT(*) AS n
+       FROM board_topics t
+       JOIN users u ON u.id = t.author_id
+      WHERE t.created_at > ? AND t.author_id != ?
+        AND t.deleted_at IS NULL AND t.hidden_at IS NULL
+        AND u.apple_sub NOT LIKE 'sim_test_%'
+        AND t.author_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+        AND t.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)`,
+  ).bind(since, me, me, me).first<{ n: number }>();
+  const replies = await env.DB.prepare(
+    `SELECT COUNT(*) AS n
+       FROM board_replies r
+       JOIN board_topics t ON t.id = r.topic_id
+      WHERE r.created_at > ? AND t.author_id = ? AND r.author_id != ?
+        AND r.deleted_at IS NULL AND t.deleted_at IS NULL
+        AND r.author_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)`,
+  ).bind(since, me, me, me).first<{ n: number }>();
+  const likes = await env.DB.prepare(
+    `SELECT COUNT(*) AS n
+       FROM feed_likes l
+       JOIN public_achievement_events e ON e.id = l.event_id
+      WHERE l.created_at > ? AND e.user_id = ? AND l.user_id != ?`,
+  ).bind(since, me, me).first<{ n: number }>();
+  const nt = Number(topics?.n) || 0, nr = Number(replies?.n) || 0, nl = Number(likes?.n) || 0;
+  return jsonOk({ ok: true, since, now, board: { topics: nt, replies: nr }, likes: nl, total: nt + nr + nl });
+}
+
 export async function handleAdminBoardOwner(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const alias = (url.searchParams.get('alias') || '').trim();

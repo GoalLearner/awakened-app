@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w920'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w921'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10136,7 +10136,7 @@
       _paeLog('guild-friends-activity-fetch-ok', {
         backendEventCount: res.events.length,
       });
-      try { if (_guildActivityFilter === 'guild') renderGuildActivity(); } catch (_) {}
+      try { renderGuildActivity(); } catch (_) {}   // W921 — either view: Hunter holds the likes card now
     } else {
       _paeLog('guild-friends-activity-fetch-error', {
         code: (res && res.code) || 'UNKNOWN',
@@ -10419,8 +10419,9 @@
   function _faLikeHtml(ev) {
     const n = Number(ev.likes) || 0; const on = !!ev.liked;
     const likers = Array.isArray(ev.likers) ? ev.likers : [];
-    const stack = likers.length ? '<span class="fa-likers" title="' + esc(likers.join(', ')) + '">' + likers.map(function (a) { return '<i>' + esc(_faInitial(a)) + '</i>'; }).join('') + '</span>' : '';
-    return '<span class="fa-likewrap">' + stack + (n ? '<span class="fa-like-n">' + n + '</span>' : '') +
+    // W921 — a count, not a pile of initials (owner: "just the number 2 would be sufficient").
+    const count = n ? '<span class="fa-like-n" title="' + esc(likers.join(', ')) + '">' + n + '</span>' : '';
+    return '<span class="fa-likewrap">' + count +
       '<button type="button" class="fa-like' + (on ? ' fa-like--on' : '') + '" data-fa-like="' + esc(ev.id || '') + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? '♥ LIKED' : '♡ LIKE') + '</button></span>';
   }
   function _faActHtml(ev) {
@@ -10491,7 +10492,9 @@
   }
   function _faSetBadge(n) {
     const badge = document.getElementById('cm-friends-badge'); if (!badge) return;
-    badge.textContent = n > 99 ? '99+' : String(n); badge.classList.toggle('hidden', !(n > 0));
+    let likesNew = 0; try { likesNew = _faLikesNewCount(); } catch (_) {}   // W921
+    const total = (Number(n) || 0) + likesNew;
+    badge.textContent = total > 99 ? '99+' : String(total); badge.classList.toggle('hidden', !(total > 0));
   }
   function _faSyncHeader(events) {
     const sub = document.getElementById('fa-sub'); const lbl = document.getElementById('fa-tools-lbl'); const tools = document.getElementById('fa-tools');
@@ -10546,12 +10549,91 @@
     apply(!!res.liked, Number(res.likes) || 0, Array.isArray(res.likers) ? res.likers : null);
     try { localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ events: _friendsActivityCache, ts: Date.now() })); } catch (_) {}
   }
+  // ── W921 — LIKES ON YOUR FEATS ────────────────────────────────────────────
+  // Owner (2026-09-07): "User doesn't see when a post has been liked ... the best
+  // place is the hunter tab ... group them together and have them collapse and
+  // expand." The feed already carries your own feats (with every liker and the
+  // newest like's time since W921); this card lists the liked ones, one row per
+  // feat, names inline, a NEW mark on likes you have not seen. Seen = the card
+  // was on screen for a few seconds.
+  let _faLikesSeenTs = 0;
+  try { _faLikesSeenTs = Number(localStorage.getItem('hb_fa_likes_seen_ts') || 0) || 0; } catch (_) {}
+  let _faLikesOpen = true;
+  try { _faLikesOpen = localStorage.getItem('hb_fa_likes_open') !== '0'; } catch (_) {}
+  let _faLikesSeenTimer = null;
+  function _faSelfAliasLower() {
+    try { const u = (window.Auth && typeof Auth.getCurrentUser === 'function') ? Auth.getCurrentUser() : null; return (u && typeof u.alias === 'string' && u.alias) ? _displayAliasLower(u.alias) : null; } catch (_) { return null; }
+  }
+  function _faLikedAt(ev) { const t = Number(ev && ev.likedAt); return Number.isFinite(t) && t > 0 ? t : 0; }
+  function _faOwnLiked() {
+    const me = _faSelfAliasLower(); if (!me) return [];
+    return (Array.isArray(_friendsActivityCache) ? _friendsActivityCache : [])
+      .filter(function (ev) { return ev && (Number(ev.likes) || 0) > 0 && typeof ev.alias === 'string' && _displayAliasLower(ev.alias) === me; })
+      .sort(function (a, b) { return (_faLikedAt(b) || _faTs(b)) - (_faLikedAt(a) || _faTs(a)); });
+  }
+  function _faLikesNewCount() { return _faOwnLiked().filter(function (ev) { return _faLikedAt(ev) > _faLikesSeenTs; }).length; }
+  function _faOwnLikesHtml() {
+    const evs = _faOwnLiked(); if (!evs.length) return '';
+    let total = 0; let fresh = 0;
+    evs.forEach(function (ev) { total += Number(ev.likes) || 0; if (_faLikedAt(ev) > _faLikesSeenTs) fresh++; });
+    const open = _faLikesOpen || fresh > 0;
+    const rows = evs.slice(0, 12).map(function (ev) {
+      const p = _faParts(ev); const ic = _FA_ICON[ev.eventType] || ['·', 'social'];
+      const likers = Array.isArray(ev.likers) ? ev.likers : []; const n = Number(ev.likes) || 0;
+      const names = likers.slice(0, 3).join(', ') + (n > 3 ? ' +' + (n - 3) : '');
+      const isNew = _faLikedAt(ev) > _faLikesSeenTs;
+      return '<div class="fa-ol-row' + (isNew ? ' fa-ol-row--new' : '') + '" data-fa-ev="' + esc(ev.id || '') + '">' +
+        '<span class="fa-ico fa-ico--' + ic[1] + '" aria-hidden="true">' + ic[0] + '</span>' +
+        '<span class="fa-ol-main">' +
+          '<span class="fa-act-txt">' + esc(p.prefix) + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + '</span>' +
+          '<span class="fa-ol-who">' + esc(names) + '</span>' +
+        '</span>' +
+        '<span class="fa-ol-n">♥ ' + n + '</span>' +
+        '<span class="fa-t">' + esc(_guildhallFormatRelativeTs(_faLikedAt(ev) || _faTs(ev))) + '</span>' +
+      '</div>';
+    }).join('');
+    return '<div class="fa-ol' + (open ? ' fa-ol--open' : '') + '">' +
+      '<button type="button" class="fa-ol-h" data-fa-ol aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        '<span class="fa-ol-t">♥ LIKES ON YOUR FEATS</span>' +
+        '<span class="fa-sum">' + (fresh ? '<span class="fa-ol-new">' + fresh + ' NEW</span>' : '') + '<span class="fa-cnt2">' + total + (total === 1 ? ' LIKE' : ' LIKES') + '</span>' + _FA_CAR + '</span>' +
+      '</button>' +
+      '<div class="fa-ol-body"' + (open ? '' : ' hidden') + '>' + rows + '</div>' +
+    '</div>';
+  }
+  // The NEW marks stay for this paint; a few seconds on screen counts as seen.
+  function _faLikesMarkSeen() {
+    if (_faLikesSeenTimer) clearTimeout(_faLikesSeenTimer);
+    _faLikesSeenTimer = setTimeout(function () {
+      _faLikesSeenTimer = null; _faLikesSeenTs = Date.now();
+      try { localStorage.setItem('hb_fa_likes_seen_ts', String(_faLikesSeenTs)); } catch (_) {}
+      try { _faSetBadge(_faFreshFriendCount()); } catch (_) {}   // the FRIENDS pill keeps its fresh-feats count
+    }, 4000);
+  }
+  // Friends' feats newer than the last MARK ALL SEEN (never your own).
+  function _faFreshFriendCount() {
+    const me = _faSelfAliasLower(); let n = 0;
+    (Array.isArray(_friendsActivityCache) ? _friendsActivityCache : []).forEach(function (ev) {
+      if (!ev || !ev.createdAt) return;
+      if (me && typeof ev.alias === 'string' && _displayAliasLower(ev.alias) === me) return;
+      if (_faTs(ev) > _faSeenTs) n++;
+    });
+    return n;
+  }
   function _faWire() {
     if (_faWired) return; _faWired = true;
     document.addEventListener('click', function (e) {
       const t = e.target; if (!t || !t.closest) return;
       let el;
       if ((el = t.closest('[data-fa-like]'))) { e.preventDefault(); e.stopPropagation(); _faLike(el); return; }
+      if ((el = t.closest('[data-fa-ol]'))) {   // W921 — collapse / expand the likes card
+        e.preventDefault();
+        const card = el.closest('.fa-ol'); const body = card && card.querySelector('.fa-ol-body');
+        _faLikesOpen = !(card && card.classList.contains('fa-ol--open'));
+        if (card) card.classList.toggle('fa-ol--open', _faLikesOpen); if (body) body.hidden = !_faLikesOpen;
+        el.setAttribute('aria-expanded', _faLikesOpen ? 'true' : 'false');
+        try { localStorage.setItem('hb_fa_likes_open', _faLikesOpen ? '1' : '0'); } catch (_) {}
+        return;
+      }
       if ((el = t.closest('[data-fa-seen]'))) { e.preventDefault(); _faMarkSeen(); return; }
       if ((el = t.closest('[data-fa-day]'))) {
         e.preventDefault();
@@ -10986,6 +11068,14 @@
     }
 
     try { _faSyncHeader(filterMode === 'hunter' ? null : _faLastEvents); } catch (_) {}   // W913 — eyebrow + FRIENDS badge
+    // W921 — LIKES ON YOUR FEATS leads the Hunter view (from the server feed, which
+    // carries your own feats); refresh the feed here too so the card stays current.
+    let _ownLikes = '';
+    if (filterMode === 'hunter') {
+      try { _ownLikes = _faOwnLikesHtml(); } catch (_) { _ownLikes = ''; }
+      try { _refreshFriendsActivityCache(); } catch (_) {}
+      try { if (_faLikesNewCount()) _faLikesMarkSeen(); } catch (_) {}
+    }
     if (visible.length === 0) {
       // W594 — on a truly-cold Guild open (never fetched, no local rows, backend
       // fetch in flight) show a skeleton instead of prematurely flashing the
@@ -10998,7 +11088,7 @@
       const emptySub = (filterMode === 'hunter')
         ? 'Your rewards, drops, and milestones will appear here.'
         : "Your friends' feats will appear here.";
-      body.innerHTML =
+      body.innerHTML = _ownLikes +
         '<div class="guildhall-activity-empty">The board is quiet.' +
           '<div class="guildhall-activity-empty-sub">' + esc(emptySub) + '</div>' +
         '</div>';
@@ -11011,7 +11101,7 @@
       return;
     }
     const groups = _groupGuildActivityEntriesByDate(visible);
-    body.innerHTML = _renderGuildActivityDateGroups(groups);
+    body.innerHTML = _ownLikes + _renderGuildActivityDateGroups(groups);
     _gbgWire();   // W722 — enable tap-to-expand on collapsed boss-kill groups
 
     // Diagnostic breadcrumb — extended with the 1z.182 grouping
@@ -37981,6 +38071,7 @@
     // Social tab — Guild Activity + Friends. Duels v1 (Phase 1x.1)
     // was permanently retired in 1z.279.
     if (tab === 'social') {
+      try { _cmMarkSeen(); } catch (_) {}   // W921 — the badge clears the moment the tab is tapped
       // W907 — the Community board renders first (owner: "turn friends into community").
       if (typeof renderBoardSection === 'function') { try { renderBoardSection(); } catch (_) {} }
       // v3 Phase 1z.164 — Guild Activity (local-only feed)
@@ -46708,7 +46799,54 @@
     ['board', 'friends'].forEach(function (k) { const el = document.getElementById('cm-pane-' + k); if (el) el.setAttribute('data-active', k === name ? 'true' : 'false'); });
     if (changed) { try { _hapticTick('LIGHT'); } catch (_) {} }
     if (name === 'friends') { try { renderGuildActivity(); } catch (_) {} try { renderFriendsSection(); } catch (_) {} }
+    try { _cmPaintBadges(); } catch (_) {}   // W921
   }
+  // ── W921 — THE COMMUNITY BADGE ────────────────────────────────────────────
+  // Rendell (2026-09-07): "there's nothing to show that there's new posts —
+  // someone would just need to stumble upon Community rather than being directed
+  // to it." A count rides on the tab icon: topics by others, replies to YOUR
+  // topics, likes on YOUR feats since you last opened the tab. It clears the
+  // moment the tab is tapped (owner). Inside, the BOARD pill keeps its own count
+  // until that pane is open; FRIENDS already had one (fresh feats + unseen likes).
+  let _cmSeenTs = 0;
+  try { _cmSeenTs = Number(localStorage.getItem('hb_cm_seen_ts') || 0) || 0; } catch (_) {}
+  if (!_cmSeenTs) { _cmSeenTs = Date.now() - 3 * 86400000; try { localStorage.setItem('hb_cm_seen_ts', String(_cmSeenTs)); } catch (_) {} }
+  let _cmUnseen = { topics: 0, replies: 0, likes: 0 };
+  let _cmUnseenAt = 0; let _cmUnseenInflight = false;
+  const _CM_UNSEEN_GATE_MS = 5 * 60 * 1000;
+  function _cmPaintBadges() {
+    const onTab = (typeof currentTab !== 'undefined' && currentTab === 'social');
+    const nb = (_cmUnseen.topics || 0) + (_cmUnseen.replies || 0);
+    const total = nb + (_cmUnseen.likes || 0);
+    const tb = document.getElementById('tab-social-badge');
+    if (tb) { tb.textContent = total > 99 ? '99+' : String(total); tb.classList.toggle('hidden', !(total > 0) || onTab); }
+    const bb = document.getElementById('cm-board-badge');
+    if (bb) { bb.textContent = nb > 99 ? '99+' : String(nb); bb.classList.toggle('hidden', !(nb > 0) || _cmPane === 'board'); }
+  }
+  function _cmApplyUnseen(u) {
+    const b = (u && u.board) || u || {};
+    _cmUnseen = { topics: Number(b.topics) || 0, replies: Number(b.replies) || 0, likes: Number(u && u.likes) || 0 };
+    _cmPaintBadges();
+  }
+  async function _cmUnseenSync(force) {
+    if (!(window.Auth && typeof Auth.communityUnseen === 'function')) return;
+    let user = null; try { user = Auth.getCurrentUser(); } catch (_) { user = null; }
+    if (!user || !user.jwt) return;
+    const now = Date.now();
+    if (_cmUnseenInflight || (!force && (now - _cmUnseenAt) < _CM_UNSEEN_GATE_MS)) return;
+    _cmUnseenInflight = true; _cmUnseenAt = now;
+    let res = null; try { res = await Auth.communityUnseen(_cmSeenTs); } catch (_) { res = null; }
+    _cmUnseenInflight = false;
+    if (res && res.ok) _cmApplyUnseen(res);
+  }
+  function _cmMarkSeen() {
+    _cmSeenTs = Date.now(); try { localStorage.setItem('hb_cm_seen_ts', String(_cmSeenTs)); } catch (_) {}
+    _cmUnseen = { topics: 0, replies: 0, likes: 0 };
+    _cmPaintBadges();
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { try { _cmUnseenSync(false); } catch (_) {} } });
+  try { window.__cm = { unseen: _cmApplyUnseen, sync: _cmUnseenSync, seen: _cmMarkSeen, state: function () { return { seen: _cmSeenTs, unseen: _cmUnseen }; } }; } catch (_) {}
+
   // QA hooks
   try {
     window.__board = {
@@ -67074,6 +67212,7 @@
     // announced), and a brand-new one simply never sees it yet.
     try { _syncHistoryTab(); } catch (_) {}
     try { renderWorldgateCard(); } catch (_) {}   // W920 — Habits is the landing tab: paint the gate from its cache at once, not at the 8s beat
+    setTimeout(function () { try { _cmUnseenSync(true); } catch (_) {} }, 2500);   // W921 — the Community badge
     setupLeaderboardPreview();
     setupSoulsInfoModal();
     try { setupCombatTriangleModal(); } catch (_) {}
@@ -67405,7 +67544,7 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 60_000);
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} try { _cmUnseenSync(false); } catch (_) {} }, 60_000);
     try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
