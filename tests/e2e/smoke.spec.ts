@@ -1983,13 +1983,17 @@ test.describe('U · Auto-seen friend feats (W923)', () => {
 test.describe('V · My order (W926)', () => {
   test('arrows reorder the list; the group edges are disabled; the Habits tab follows', async ({ page }) => {
     await freshApp(page);
-    await page.evaluate(() => {
-      localStorage.setItem('hb_habits', JSON.stringify([
-        { id: 'h-read', name: 'Read', emoji: '📖', difficulty: 'easy', type: 'build', primaryStat: 'INT' },
-        { id: 'h-stretch', name: 'Stretch', emoji: '🧘', difficulty: 'easy', type: 'build', primaryStat: 'VIT' },
-        { id: 'h-journal', name: 'Journal', emoji: '📓', difficulty: 'easy', type: 'build', primaryStat: 'FOCUS' },
-      ]));
-      localStorage.setItem('hb_first_completion_bonus_v1', '1');
+    // freshApp's init script re-seeds hb_habits = [] on every navigation; register this
+    // one AFTER it so it runs later and wins on the reload.
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'h-read', name: 'Read', emoji: '📖', difficulty: 'easy', type: 'build', primaryStat: 'INT' },
+          { id: 'h-stretch', name: 'Stretch', emoji: '🧘', difficulty: 'easy', type: 'build', primaryStat: 'VIT' },
+          { id: 'h-journal', name: 'Journal', emoji: '📓', difficulty: 'easy', type: 'build', primaryStat: 'FOCUS' },
+        ]));
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+      } catch (_) {}
     });
     await page.reload();
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
