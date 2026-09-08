@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w923'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w924'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -53481,13 +53481,28 @@
   // passes the whole selection.
   // W695 — fillFromFinder ("Summon & Fill"): open the unfilled seats to the raid finder;
   // valid with 1..(maxAllies-1) picked friends (a full pick summons closed instead).
+  // W924 — FIRST TO ANSWER JOINS (Rendell, 2026-09-08: "select multiple at a time to
+  // bypass this screen"). A duo summons can go out to several friends at once; the
+  // first to answer takes the seat, the rest are released. Server knob mirrors this.
+  const COOP_DUO_CANDIDATES_MAX = 5;
+  function _coopFirstToAnswer(cfg) {
+    const c = cfg || {};
+    const maxAllies = Math.max(1, ((c.maxParty | 0) || (c.partySize | 0) || 2) - 1);
+    return maxAllies === 1 && !c.matchmaking;
+  }
+  function _coopPickCap(cfg) {
+    const c = cfg || {};
+    const minAllies = Math.max(1, ((c.minParty | 0) || (c.partySize | 0) || 2) - 1);
+    const maxAllies = Math.max(minAllies, ((c.maxParty | 0) || (c.partySize | 0) || 2) - 1);
+    return _coopFirstToAnswer(c) ? COOP_DUO_CANDIDATES_MAX : maxAllies;
+  }
   async function _coopCreate(allyUserIds, fillFromFinder) {
     const cfg = _coopSheet.cfg; if (!cfg) return;
     const allies = (Array.isArray(allyUserIds) ? allyUserIds : [allyUserIds]).filter(Boolean);
     const minAllies = Math.max(1, ((cfg.minParty | 0) || (cfg.partySize | 0) || 2) - 1);
     const maxAllies = Math.max(minAllies, ((cfg.maxParty | 0) || (cfg.partySize | 0) || 2) - 1);
     const fill = !!fillFromFinder && !!cfg.matchmaking && allies.length >= 1 && allies.length < maxAllies;
-    if (!fill && (allies.length < minAllies || allies.length > maxAllies)) return;   // client bound; server re-checks
+    if (!fill && (allies.length < minAllies || allies.length > _coopPickCap(cfg))) return;   // client bound; server re-checks (W924 — duo candidates)
     // W648 — entrance fee, checked BEFORE the network call so a broke hunter
     // gets an instant, clear answer (and no server round-trip).
     const fee = _coopEntranceFee(cfg);
@@ -53580,18 +53595,17 @@
       const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : (_coopSheet.pickSel = []);
       const at = sel.indexOf(uid);
       const _cfg = _coopSheet.cfg || {};
-      const maxAllies = Math.max(1, ((_cfg.maxParty | 0) || (_cfg.partySize | 0) || 2) - 1);
+      const cap = _coopPickCap(_cfg);   // W924 — a duo takes up to 5 candidates (first to answer joins)
       if (at !== -1) sel.splice(at, 1);
-      else if (sel.length < maxAllies) sel.push(uid);
-      else { try { showHabitToast(maxAllies + (maxAllies === 1 ? ' ally' : ' allies') + ' max — tap one to swap them out.'); } catch (_) {} }
+      else if (sel.length < cap) sel.push(uid);
+      else { try { showHabitToast(cap + (cap === 1 ? ' ally' : ' hunters') + ' max — tap one to swap them out.'); } catch (_) {} }
       renderCoopSheet(); return;
     }
     if (action === 'pick-confirm') {
       const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
       const _cfg = _coopSheet.cfg || {};
       const minAllies = Math.max(1, ((_cfg.minParty | 0) || (_cfg.partySize | 0) || 2) - 1);
-      const maxAllies = Math.max(minAllies, ((_cfg.maxParty | 0) || (_cfg.partySize | 0) || 2) - 1);
-      if (sel.length < minAllies || sel.length > maxAllies) return;
+      if (sel.length < minAllies || sel.length > _coopPickCap(_cfg)) return;   // W924
       _coopSheet.picking = false;
       _coopCreate(sel.slice()); return;
     }
@@ -53717,6 +53731,12 @@
       // W648 — keep the summons sheet up and show WHY, instead of a blind refresh.
       _coopSheet.error = res.code; renderCoopSheet();
     }
+    else if (res && !res.ok && res.code === 'PARTY_FILLED') {
+      // W924 — someone answered first; this summons is gone. Say so, then refresh.
+      try { showHabitToast(_coopErrText('PARTY_FILLED')); } catch (_) {}
+      _coopSheet.instance = null; _coopSheet.pinnedId = null;
+      _coopRefresh();
+    }
     else { _coopRefresh(); }
   }
 
@@ -53814,6 +53834,7 @@
     switch (code) {
       case 'NOT_FRIENDS': return 'You can only co-op with an accepted friend.';
       case 'ALREADY_ACTIVE': return 'You already have a hunt going with that hunter.';
+      case 'PARTY_FILLED': return 'Another hunter answered first — that seat is taken.';   // W924
       case 'SELF_PARTNER': return 'Pick a friend other than yourself.';
       case 'ALLY_RANK': {   // W483 — invited ally below the boss's rank
         const r = (_coopSheet.cfg && _coopSheet.cfg.rank) ? _coopSheet.cfg.rank : '';
@@ -54095,9 +54116,11 @@
       allies.forEach(function (p) { if (p && p.user_id !== myId) rows += seatRow(p); });
       return (
         rows +
-        '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment the full party joins.</p>' +
+        (inst.seat_target
+          ? '<p class="coop-lead">The first to answer takes the seat — the ' + _coopWindowHrs(inst) + '-hour hunt begins the moment they join. The others are released.</p>'
+          : '<p class="coop-lead">The ' + _coopWindowHrs(inst) + '-hour hunt begins the moment the full party joins.</p>') +
         _coopErrBlock() +
-        (isSummoner ? '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>CANCEL SUMMONS</button>' : '')
+        (isSummoner ? '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>' + (inst.seat_target ? 'CANCEL INVITES' : 'CANCEL SUMMONS') + '</button>' : '')
       );
     }
     return (
@@ -54154,13 +54177,14 @@
           ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
           : _coopIsSleep(inst)
             ? 'combined steps + ' + _coopFmtSleep((inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes) || 0) + ' sleep'
-            : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + (_coopIsMultiAlly(inst) ? 'h once the full party answers</div>' : 'h from when you join</div>') +   // W692 — the clock starts on the FULL party
+            : 'combined ' + esc(_coopUnit(inst))) + '</b> · ' + hrs + (inst.seat_target ? 'h from when you join · first to answer takes the seat</div>' : _coopIsMultiAlly(inst) ? 'h once the full party answers</div>' : 'h from when you join</div>') +   // W924   // W692 — the clock starts on the FULL party
         '<div class="coopsm-pact-split">' +
           '<span class="coopsm-who">You</span>' +
           '<div class="coopsm-bar"><div class="coopsm-me"></div><div class="coopsm-them"></div></div>' +
           // W677 — the party preview names EVERY other hunter (summoner + the other ally on a trio).
           '<span class="coopsm-who">' + esc((v.others && v.others.length)
-            ? v.others.map(function (o) { return _coopAlias((o && o.alias) || 'ally'); }).join(' · ')
+            ? v.others.filter(function (o) { return !inst.seat_target || !o || !o.role || o.role === 'challenger'; })   // W924 — candidates aren't party
+                .map(function (o) { return _coopAlias((o && o.alias) || 'ally'); }).join(' · ')
             : _coopAlias((v.them && v.them.alias) || 'ally')) + '</span>' +
         '</div>' +
       '</div>' +
@@ -54774,6 +54798,9 @@
     const _pcfg = _coopSheet.cfg || {};
     const minAllies = Math.max(1, ((_pcfg.minParty | 0) || (_pcfg.partySize | 0) || 2) - 1);
     const maxAllies = Math.max(minAllies, ((_pcfg.maxParty | 0) || (_pcfg.partySize | 0) || 2) - 1);
+    // W924 — a duo goes out to several friends at once; the first to answer joins.
+    const firstToAnswer = _coopFirstToAnswer(_pcfg);
+    const pickCap = _coopPickCap(_pcfg);
     const sel = Array.isArray(_coopSheet.pickSel) ? _coopSheet.pickSel : [];
     let rows;
     if (!friends.length) {
@@ -54806,7 +54833,7 @@
         const _invitable = _isMemberBoss ? (f.member === true) : _coopRankMeets(tier, bossRank);
         if (_invitable) {
           // W677\u2192W692 \u2014 multi-ally boss: tap toggles selection (checkmark), Summon confirms below.
-          if (maxAllies > 1) {
+          if (maxAllies > 1 || firstToAnswer) {
             const on = sel.indexOf(String(f.user_id)) !== -1;
             return '<button class="coop-friend' + (on ? ' coop-friend--selected' : '') + '" data-coop-action="pick-toggle" data-user-id="' + esc(f.user_id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
               '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + '</span>' +
@@ -54827,17 +54854,25 @@
         '</div>';
       }).join('');
     }
-    const _inRange = sel.length >= minAllies && sel.length <= maxAllies;
-    const head = maxAllies > 1 ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + maxAllies) : 'SELECT YOUR ALLY';
+    const _inRange = sel.length >= minAllies && sel.length <= pickCap;
+    const head = firstToAnswer
+      ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + pickCap)
+      : maxAllies > 1 ? ('SELECT YOUR ALLIES · ' + sel.length + '/' + maxAllies) : 'SELECT YOUR ALLY';
+    const ftaNote = firstToAnswer
+      ? '<div class="coop-note">Pick everyone you’d hunt with. The first to answer takes the seat; the rest are released.</div>'
+      : '';
     // W693 — live "brutal below a full party" nudge for the raid while under-full.
     const warn = (_pcfg.brutalBelowFull && maxAllies > 1 && sel.length < maxAllies)
       ? '<div class="coop-note coop-note--warn">' + (sel.length < minAllies
           ? 'Pick at least ' + minAllies + ' to summon.'
           : 'A full party of ' + (maxAllies + 1) + ' is far safer — ' + (maxAllies - sel.length) + ' seat' + ((maxAllies - sel.length) === 1 ? '' : 's') + ' still open.') + '</div>'
       : '';
-    const confirmBtn = maxAllies > 1
-      ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (_inRange ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
-      : '';
+    const confirmBtn = firstToAnswer
+      ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (_inRange ? '' : ' disabled') + '>' +
+          (sel.length > 1 ? 'SUMMON ' + sel.length + ' · FIRST TO ANSWER JOINS' : 'SUMMON THE HUNT') + '</button>'
+      : maxAllies > 1
+        ? '<button class="coop-cta" data-coop-action="pick-confirm"' + (_inRange ? '' : ' disabled') + '>SUMMON THE PARTY</button>'
+        : '';
     // W695 — "Summon & Fill": with an UNDER-full pick on a matchmaking boss, offer to
     // open the remaining seats to the raid finder (friends answer first, then the
     // finder pours hunters in until the party hits 5 or the leader starts early).
@@ -54854,6 +54889,7 @@
     return (
       '<div class="coop-picker-head">' + head + '</div>' +
       membersNote +
+      ftaNote +
       warn +
       _coopErrBlock() +
       '<div class="coop-friend-list">' + rows + '</div>' +
@@ -62792,7 +62828,7 @@
         // W680 — Monday update-reminder push: the tap's whole job is the App
         // Store listing (same opener as the W679 banner). Return — no tab nav.
         if (type === 'update_reminder') { try { _updOpenStore(); } catch (_) {} return; }
-        if (type === 'coop_invite' || type === 'coop_joined' || type === 'coop_complete') {
+        if (type === 'coop_invite' || type === 'coop_joined' || type === 'coop_complete' || type === 'coop_filled') {   // W924 — released candidate
           const bossId = data && data.bossId;   // W662 — coop_complete taps open the resolved hunt (re-pulls instances)
           if (bossId && typeof openCoopSheet === 'function') { openCoopSheet(bossId); return; }
           const q = document.getElementById('tab-quests'); if (q) { q.click(); return; }

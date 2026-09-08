@@ -226,6 +226,10 @@ interface CoopBossRow {
   // the hunt is READY: matchmaking pours solos in / merges open hunts; activates at
   // fill_target or on the leader's explicit start.
   fill_target: number | null;
+  // W924 — FIRST TO ANSWER: a duo summoned with several candidates. How many allies
+  // must answer to activate (1); the rest are released at activation. NULL = every
+  // invited seat must answer (trio/raid/legacy duo).
+  seat_target: number | null;
   status: string;
   result: string | null;
   starts_at: string | null;
@@ -470,6 +474,9 @@ function serializeCoop(
     // W695 — open ("Summon & Fill") hunts carry their intended size so the client can
     // render filled seats vs open seats + the leader's START NOW affordance.
     ...(row.fill_target ? { fill_target: row.fill_target } : {}),
+    // W924 — first-to-answer duo: the client renders every candidate as a wait-row
+    // while pending, and knows the party settles to seat_target + 1.
+    ...(row.seat_target ? { seat_target: row.seat_target } : {}),
     // W677 — party size rides along so the client renders the right roster without
     // sniffing for a partner2 key.
     party_size: participantIds(row).length,
@@ -611,6 +618,9 @@ export async function validateBossInstanceForUser(
 }
 
 // ── POST /v1/coop-boss — create (invite a friend) ───────────────────
+// W924 — how many friends a duo summons may go out to at once (first to answer joins).
+export const DUO_CANDIDATES_MAX = 5;
+
 export async function handleCoopBossCreate(
   request: Request,
   env: Env,
@@ -667,7 +677,14 @@ export async function handleCoopBossCreate(
         : `This hunt needs at least ${minParty} hunters — pick ${minAllies} allies.`,
     );
   }
-  if (allies.length > maxAllies) {
+  // W924 — a FIXED DUO may go out to several friends at once: the first to answer
+  // takes the seat, the rest are released (seat_target = 1). Trios and raids keep
+  // their exact party bounds.
+  const firstToAnswer = maxAllies === 1 && !cfg.matchmaking && allies.length > 1;
+  if (firstToAnswer && allies.length > DUO_CANDIDATES_MAX) {
+    return jsonError(400, 'PARTY_SIZE', `Invite up to ${DUO_CANDIDATES_MAX} hunters — the first to answer joins you.`);
+  }
+  if (!firstToAnswer && allies.length > maxAllies) {
     return jsonError(
       400,
       'PARTY_SIZE',
@@ -676,6 +693,7 @@ export async function handleCoopBossCreate(
         : `This hunt takes at most ${maxParty} hunters — pick up to ${maxAllies} allies.`,
     );
   }
+  const seatTarget = firstToAnswer ? 1 : null;
   if (allies.includes(session.userId)) {
     return jsonError(400, 'SELF_PARTNER', 'You cannot co-op with yourself.');
   }
@@ -811,7 +829,8 @@ export async function handleCoopBossCreate(
 
   const id = crypto.randomUUID();
   const partner1 = allies[0];
-  const partner2 = allies[1] ?? null; // dual-write legacy columns for old clients
+  // W924 — a first-to-answer duo writes NO partner2 (its legacy columns settle at activation).
+  const partner2 = firstToAnswer ? null : (allies[1] ?? null); // dual-write legacy columns for old clients
 
   // W674/W692 — atomic guarded insert (the race backstop). Re-checks BOTH guards —
   // no live instance for this boss containing the summoner + any invited ally, AND,
@@ -827,9 +846,9 @@ export async function handleCoopBossCreate(
   const insertSql =
     `INSERT INTO coop_boss_instances
        (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
-        goal_steps, goal_flights, reward_souls, fill_target, status)
+        goal_steps, goal_flights, reward_souls, fill_target, seat_target, status)
      SELECT ${IP(id)}, ${IP(bossId)}, ${IP(cfg.rank)}, ${IP(session.userId)}, ${IP(partner1)}, ${IP(partner2)},
-            ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, ${IP(fillTarget)}, 'pending'
+            ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, ${IP(fillTarget)}, ${IP(seatTarget)}, 'pending'
       WHERE NOT EXISTS ( ${dupSelect(IP)} )
         AND ( ${IP(member ? 1 : 0)} = 1 OR (
               SELECT COUNT(*) FROM coop_boss_instances
@@ -1009,6 +1028,10 @@ export async function handleCoopBossJoin(
   const parts = row.participants ?? [];
   const mySeat = parts.find((p) => p.user_id === session.userId);
   if (!mySeat) {
+    // W924 — a released candidate (someone else answered first) gets the real reason.
+    if (row.seat_target && row.status !== 'pending' && row.challenger_user_id !== session.userId) {
+      return jsonError(409, 'PARTY_FILLED', 'Another hunter answered first — the party is full.');
+    }
     return jsonError(403, 'FORBIDDEN', 'Only the invited hunter can join this hunt.');
   }
   if (row.status !== 'pending') {
@@ -1077,18 +1100,46 @@ export async function handleCoopBossJoin(
   // W695 — an OPEN ("Summon & Fill") hunt does NOT activate when the invited friends
   // have all answered: it becomes READY and the raid finder fills its remaining seats
   // (activation happens at fill_target, or on the leader's explicit /start).
-  joinStmts.push(
-    env.DB
-      .prepare(
-        `UPDATE coop_boss_instances
-            SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ? AND status = 'pending'
-            AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NULL)
-            AND (fill_target IS NULL
-                 OR (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?) >= fill_target)`,
-      )
-      .bind(startsAt, endsAt, id, id, id),
-  );
+  if (row.seat_target) {
+    // W924 — FIRST TO ANSWER: activate the moment `seat_target` allies have answered
+    // (1 for a duo), settle the legacy partner column on the hunter who actually
+    // answered, then release every still-unanswered candidate. Both statements are
+    // guarded on the same batch's state, so a raced second answer (the batch after
+    // this one) finds the hunt active, stamps nothing, and is told PARTY_FILLED below.
+    joinStmts.push(
+      env.DB
+        .prepare(
+          `UPDATE coop_boss_instances
+              SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP,
+                  partner_user_id = ?, partner_joined_at = CURRENT_TIMESTAMP, partner2_user_id = NULL, partner2_joined_at = NULL
+            WHERE id = ? AND status = 'pending'
+              AND (SELECT COUNT(*) FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NOT NULL) >= seat_target`,
+        )
+        .bind(startsAt, endsAt, session.userId, id, id),
+    );
+    joinStmts.push(
+      env.DB
+        .prepare(
+          `DELETE FROM coop_boss_participants
+            WHERE instance_id = ?1 AND joined_at IS NULL
+              AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'active')`,
+        )
+        .bind(id),
+    );
+  } else {
+    joinStmts.push(
+      env.DB
+        .prepare(
+          `UPDATE coop_boss_instances
+              SET status = 'active', starts_at = ?, ends_at = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND status = 'pending'
+              AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ? AND joined_at IS NULL)
+              AND (fill_target IS NULL
+                   OR (SELECT COUNT(*) + 1 FROM coop_boss_participants WHERE instance_id = ?) >= fill_target)`,
+        )
+        .bind(startsAt, endsAt, id, id, id),
+    );
+  }
   await env.DB.batch(joinStmts);
   // W694 review — joining a hunt of this boss ends any raid-finder search for it
   // (inverse of the finder's "already on a live hunt" gate). Best-effort, OUTSIDE the
@@ -1099,7 +1150,28 @@ export async function handleCoopBossJoin(
 
   const refreshed = await loadInstance(env, id);
   if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back joined instance.');
+  // W924 — my answer lost the race: the hunt went active on someone else and my
+  // candidate row was released in that batch.
+  if (row.seat_target && !(refreshed.participants ?? []).some((p) => p.user_id === session.userId)) {
+    return jsonError(409, 'PARTY_FILLED', 'Another hunter answered first — the party is full.');
+  }
   const aliasMap = await getAliasMap(env, participantIds(refreshed));
+  // W924 — tell the released candidates the seat is taken (their summons is gone).
+  if (ctx && row.seat_target && refreshed.status === 'active') {
+    const kept = new Set(participantIds(refreshed));
+    const bossName = COOP_BOSS_NAMES[refreshed.boss_id] ?? 'the hunt';
+    for (const p of parts) {
+      if (kept.has(p.user_id) || p.user_id === session.userId) continue;
+      ctx.waitUntil(
+        notifyUser(env, p.user_id, {
+          title: 'The Seat Was Taken',
+          body: `${session.alias} answered ${bossName} first — that summons is closed.`,
+          type: 'coop_filled',
+          data: { bossId: refreshed.boss_id },
+        }),
+      );
+    }
+  }
   // W603 — push the moment the hunt goes LIVE to every participant except the joiner.
   // W692 — an EARLIER answer (seats still open) instead tells the summoner how many
   // hunters are still awaited.
@@ -1272,6 +1344,39 @@ export async function handleCoopBossDecline(
   const rlDecline = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rlDecline.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const row = await loadInstance(env, id);
+  // W924 — a first-to-answer candidate declines ALONE: the other candidates keep
+  // their summons; the hunt ends only when the last one has declined.
+  if (row && row.seat_target && !row.fill_target && row.status === 'pending' && row.challenger_user_id !== session.userId) {
+    const mine = (row.participants ?? []).find((p) => p.user_id === session.userId);
+    if (!mine) return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
+    const others = (row.participants ?? []).filter((p) => p.user_id !== session.userId).length;
+    if (others > 0) {
+      await env.DB.batch([
+        env.DB
+          .prepare(
+            `DELETE FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2
+               AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'pending')`,
+          )
+          .bind(id, session.userId),
+        // keep the legacy partner column pointing at a live candidate for old readers
+        env.DB
+          .prepare(
+            `UPDATE coop_boss_instances
+                SET partner_user_id = CASE WHEN partner_user_id = ?2
+                      THEN COALESCE((SELECT user_id FROM coop_boss_participants WHERE instance_id = ?1 AND user_id != ?2 ORDER BY created_at ASC LIMIT 1), partner_user_id)
+                      ELSE partner_user_id END,
+                    updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?1 AND status = 'pending'`,
+          )
+          .bind(id, session.userId),
+      ]);
+      const refreshed = await loadInstance(env, id);
+      if (!refreshed) return jsonError(500, 'INTERNAL', 'Failed to read back instance.');
+      const aliasMap = await getAliasMap(env, participantIds(refreshed));
+      return jsonOk({ ok: true, left_seat: true, instance: serializeCoop(refreshed, aliasMap, session.userId, emptyProgress()) });
+    }
+    // the last candidate → the summons ends, exactly as a lone ally's decline always has
+  }
   if (row && row.fill_target && row.status === 'pending' && row.challenger_user_id !== session.userId) {
     const mine = (row.participants ?? []).find((p) => p.user_id === session.userId);
     if (!mine) return jsonError(403, 'FORBIDDEN', 'You are not part of this co-op hunt.');
