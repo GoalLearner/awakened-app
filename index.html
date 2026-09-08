@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=684">
+  <link rel="stylesheet" href="styles.css?v=685">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3397,7 +3397,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1331"></script>
+  <script src="app.js?v=1332"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -4074,6 +4074,13 @@
       <p id="reveal-card-flavor" class="reveal-card-flavor">—</p>
       <div id="reveal-card-stats" class="reveal-card-stats"></div>
     </div>
+    <!-- W927 — the comparison window (Grubbadub: "compare new item vs equipped item") +
+         EQUIP / KEEP right at the reveal. Hidden until the sigil bloom reveals the card. -->
+    <div id="reveal-compare" class="reveal-compare"></div>
+    <div id="reveal-actions" class="reveal-actions hidden">
+      <button id="reveal-equip" type="button" class="bro-btn bro-btn--primary" data-act="equip"></button>
+      <button id="reveal-keep" type="button" class="bro-btn bro-btn--ghost hidden" data-act="keep"></button>
+    </div>
     <div class="reveal-continue-hint">TAP TO CONTINUE</div>
   </div>
 
@@ -4092,6 +4099,8 @@
            the discovery hook that tells a player this piece is part of a set. -->
       <div id="carddetail-set" class="carddetail-set hidden"></div>
       <div id="carddetail-stats" class="carddetail-stats"></div>
+      <!-- W927 — current-vs-new comparison for an owned relic with a slot. -->
+      <div id="carddetail-compare" class="carddetail-compare"></div>
       <!-- W494 — Relic Upgrade row. Hidden unless the relic is owned + upgradeable.
            Shows LV n / max, the next-level cost (+1 to the dominant stat), and an
            UPGRADE button. Filled by openCardDetailModal; handler in setupCardDetailModal. -->

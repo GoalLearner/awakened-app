@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w926'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w927'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18625,13 +18625,17 @@
   // Before W740 the Armory's headline GEAR POWER read base card stats ONLY, so it
   // ignored relic upgrades + set bonuses even though the EQUIPMENT BONUSES panel below
   // it — and real Ascent/PvP combat (_arenaPlayerStatline) — both count them.
-  function _equippedRelicPower(cardId, card) {
-    const lvl = (typeof getRelicLevel === 'function') ? getRelicLevel(cardId) : 0;
-    if (!lvl) { try { return _relicProfile(card).power | 0; } catch (_) { return 0; } }
-    const dom = _relicDominantStatKey(card);
+  // W927 — effective bonuses = base + the upgrade level on the dominant stat (level 0 ⇒ base).
+  // Shared by the power number AND the per-stat comparison so both always agree.
+  function _relicEffectiveBonuses(cardId, card) {
     const eff = Object.assign({}, (card && card.bonuses) || {});
+    const lvl = (typeof getRelicLevel === 'function' && cardId) ? (getRelicLevel(cardId) | 0) : 0;
+    const dom = lvl ? _relicDominantStatKey(card) : null;
     if (dom) eff[dom] = (eff[dom] | 0) + lvl;
-    try { return _relicProfile({ bonuses: eff }).power | 0; } catch (_) { return 0; }
+    return eff;
+  }
+  function _equippedRelicPower(cardId, card) {
+    try { return _relicProfile({ bonuses: _relicEffectiveBonuses(cardId, card) }).power | 0; } catch (_) { return 0; }
   }
   // W742 — the per-item + set breakdown behind the Armory GEAR POWER pill. Mirrors the
   // exact aggregation renderHunterBuildGrid uses, so `total` here always equals the pill.
@@ -18692,9 +18696,63 @@
     for (let i = 0; i < EQUIPMENT_SLOTS.length; i++) {
       const cid = build.slots[i];
       const card = cid ? CARDS[cid] : null;
-      map[EQUIPMENT_SLOTS[i].key] = card ? _relicProfile(card).power : 0;
+      map[EQUIPMENT_SLOTS[i].key] = card ? _equippedRelicPower(cid, card) : 0;   // W927 — one power number
     }
     return map;
+  }
+  // ── W927 — THE COMPARISON WINDOW (Grubbadub on the board, 2026-09-08: "compare new
+  // item vs equipped item"). One data function + one renderer for every surface: the
+  // relic reveal, the Archive card chip, the card detail modal, the boss-result card.
+  // state: noslot | equipped (this card is what's worn) | empty | up | down | even
+  const _RCMP_STATS = ['str', 'vit', 'int', 'focus', 'will', 'wlt'];
+  function relicCompare(card) {
+    if (!card) return { state: 'noslot', slotIndex: -1 };
+    const slotKey = getCardEquipmentSlot(card);
+    const slotIndex = (slotKey != null && EQUIPMENT_SLOT_INDEX[slotKey] != null) ? EQUIPMENT_SLOT_INDEX[slotKey] : -1;
+    if (slotIndex < 0) return { state: 'noslot', slotIndex: -1 };
+    const slotLabel = EQUIPMENT_SLOTS[slotIndex].label;
+    let curId = null; try { curId = getHunterBuild().slots[slotIndex] || null; } catch (_) { curId = null; }
+    const cur = curId ? (CARDS[curId] || null) : null;
+    const newPower = _equippedRelicPower(card.id, card);
+    const curPower = cur ? _equippedRelicPower(curId, cur) : 0;
+    const nb = _relicEffectiveBonuses(card.id, card); const cb = cur ? _relicEffectiveBonuses(curId, cur) : {};
+    const stats = _RCMP_STATS.map(function (k) { const c = cb[k] | 0, n = nb[k] | 0; return { k: k, label: k.toUpperCase(), cur: c, nu: n, d: n - c }; });
+    const delta = newPower - curPower;
+    const state = (curId === card.id) ? 'equipped' : !cur ? 'empty' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'even';
+    return { state: state, id: card.id, name: card.name || '', slotKey: slotKey, slotIndex: slotIndex, slotLabel: slotLabel, curId: curId, cur: cur, newPower: newPower, curPower: curPower, delta: delta, stats: stats };
+  }
+  // 'line' = the one-line chip (the Archive's "▲ +7 vs Equipped"); 'strip' = the full window.
+  function relicCompareHtml(cmp, variant) {
+    if (!cmp || cmp.state === 'noslot') return '';
+    const line = cmp.state === 'equipped' ? '<span class="pdx-delta pdx-delta--best">★ Equipped · Best</span>'
+      : cmp.state === 'empty' ? '<span class="pdx-delta pdx-delta--gain">▲ +' + cmp.newPower + ' Equip Gain</span>'
+      : cmp.state === 'up' ? '<span class="pdx-delta pdx-delta--up">▲ +' + cmp.delta + ' vs Equipped</span>'
+      : cmp.state === 'down' ? '<span class="pdx-delta pdx-delta--down">▼ ' + cmp.delta + ' vs Equipped</span>'
+      : '<span class="pdx-delta pdx-delta--down">= Even vs Equipped</span>';
+    if (variant !== 'strip') return line;
+    if (cmp.state === 'equipped') {
+      return '<div class="rcmp rcmp--equipped"><div class="rcmp-kicker">' + esc(cmp.slotLabel) + ' · EQUIPPED</div><div class="rcmp-power">' + line + '</div></div>';
+    }
+    const empty = cmp.state === 'empty';
+    const statsHtml = cmp.stats.map(function (st) {
+      const cls = st.d > 0 ? 'rcmp-stat--up' : st.d < 0 ? 'rcmp-stat--down' : 'rcmp-stat--0';
+      const txt = st.d > 0 ? '+' + st.d : st.d < 0 ? '−' + Math.abs(st.d) : '·';
+      return '<span class="rcmp-stat ' + cls + '" title="' + esc(st.label) + ' ' + st.cur + ' → ' + st.nu + '">' + esc(st.label) + '<b>' + txt + '</b></span>';
+    }).join('');
+    return '<div class="rcmp rcmp--' + esc(cmp.state) + '">' +
+      '<div class="rcmp-kicker">' + esc(cmp.slotLabel) + (empty ? ' · SLOT EMPTY' : ' · VS EQUIPPED') + '</div>' +
+      '<div class="rcmp-head">' +
+        '<div class="rcmp-side rcmp-side--cur"><span class="rcmp-tag">' + (empty ? 'SLOT' : 'WEARING') + '</span>' +
+          '<span class="rcmp-name">' + (empty ? 'Empty' : esc(cmp.cur.name || '')) + '</span>' +
+          '<span class="rcmp-pwr">' + cmp.curPower + '<i>PWR</i></span></div>' +
+        '<span class="rcmp-arrow" aria-hidden="true">›</span>' +
+        '<div class="rcmp-side rcmp-side--new"><span class="rcmp-tag">NEW</span>' +
+          '<span class="rcmp-name">' + esc(cmp.name || '') + '</span>' +
+          '<span class="rcmp-pwr">' + cmp.newPower + '<i>PWR</i></span></div>' +
+      '</div>' +
+      '<div class="rcmp-stats">' + statsHtml + '</div>' +
+      '<div class="rcmp-power">' + line + '</div>' +
+    '</div>';
   }
   // Archive filter/sort state (W450): which archetype is active + whether to sort by power.
   let _pokedexArch = 'all';     // 'all' | 'melee' | 'ranged' | 'magic'
@@ -21228,10 +21286,12 @@
         const slotLabel = (evt.drop.slot || '').toUpperCase();
         const sourceLabel = evt.bossName ? ('From ' + evt.bossName.toUpperCase()) : '';
         const newPill = evt.drop.wasFirst ? '<span class="bro-relic-new">NEW</span>' : '';
+        let cmpChip = '';   // W927 — "▲ +7 vs Equipped" on the result card (the reveal carries the full window)
+        try { const cc = CARDS && CARDS[evt.drop.cardId]; if (cc) cmpChip = relicCompareHtml(relicCompare(cc), 'line'); } catch (_) { cmpChip = ''; }
         metaEl.innerHTML =
           (slotLabel  ? '<span class="bro-relic-slot">' + slotLabel + '</span>' : '') +
           (sourceLabel ? '<span class="bro-relic-source">· ' + sourceLabel + '</span>' : '') +
-          newPill;
+          newPill + cmpChip;
       }
       const statsEl = document.getElementById('bro-relic-stats');
       if (statsEl) {
@@ -21757,6 +21817,7 @@
     openCardRevealModal(card);
   }
 
+  let _revealCardId = null;   // W927 — the relic on screen, for EQUIP at the reveal
   function openCardRevealModal(card) {
     const overlay = document.getElementById('reveal-overlay');
     if (!overlay) return;
@@ -21847,6 +21908,29 @@
     document.getElementById('reveal-card-flavor').textContent = card.flavor || '';
     const revealStats = document.getElementById('reveal-card-stats');
     if (revealStats) revealStats.innerHTML = cardStatBadgesHtml(card);
+    // W927 — the comparison window + EQUIP / KEEP, right where the relic appears.
+    _revealCardId = card.id;
+    try {
+      const cmp = relicCompare(card);
+      const host = document.getElementById('reveal-compare');
+      if (host) host.innerHTML = relicCompareHtml(cmp, 'strip');
+      const actions = document.getElementById('reveal-actions');
+      const eq = document.getElementById('reveal-equip'); const keep = document.getElementById('reveal-keep');
+      if (actions && eq && keep) {
+        if (cmp.state === 'noslot' || cmp.state === 'equipped') { actions.classList.add('hidden'); }
+        else {
+          actions.classList.remove('hidden');
+          const better = cmp.state === 'empty' || cmp.state === 'up';
+          if (better) {
+            eq.textContent = cmp.state === 'empty' ? 'EQUIP' : 'EQUIP · +' + cmp.delta; eq.setAttribute('data-act', 'equip');
+            keep.classList.add('hidden');
+          } else {
+            eq.textContent = 'KEEP ' + String(cmp.cur.name || '').toUpperCase(); eq.setAttribute('data-act', 'keep');
+            keep.textContent = 'EQUIP ANYWAY'; keep.setAttribute('data-act', 'equip'); keep.classList.remove('hidden');
+          }
+        }
+      }
+    } catch (_) {}
 
     overlay.classList.remove('hidden');
     // Force reflow so the .reveal-overlay--showing class triggers
@@ -21897,7 +21981,8 @@
     //   2nd tap (card revealed) → close modal.
     //   Common-drop fallback (no .reveal-overlay--sigil class) closes
     //   on first tap as before.
-    overlay.addEventListener('click', () => {
+    overlay.addEventListener('click', (e) => {
+      if (e && e.target && e.target.closest && e.target.closest('.reveal-actions')) return;   // W927 — the buttons never fall through to dismiss
       if (!overlay.classList.contains('reveal-overlay--showing')) return;
       if (overlay.classList.contains('reveal-overlay--mythic')) { try { _megaPointerTap(); } catch (_) {} return; }   // W296
       const isSigil = overlay.classList.contains('reveal-overlay--sigil');
@@ -21922,6 +22007,31 @@
       // ESC always closes — bloom mid-flight or not.
       closeCardRevealModal();
     });
+    // W927 — EQUIP / KEEP at the reveal. One delegated handler; the primary is always the recommended action.
+    const actions = document.getElementById('reveal-actions');
+    if (actions) actions.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-act]'); if (!b) return;
+      e.stopPropagation();
+      if (b.getAttribute('data-act') === 'equip') _revealEquip(); else closeCardRevealModal();
+    });
+  }
+  function _revealEquip() {
+    const card = _revealCardId ? CARDS[_revealCardId] : null;
+    if (!card) { closeCardRevealModal(); return; }
+    let cmp; try { cmp = relicCompare(card); } catch (_) { cmp = null; }
+    if (!cmp || cmp.slotIndex < 0) { closeCardRevealModal(); return; }
+    const res = equipBuildItem(cmp.slotIndex, card.id);
+    if (res && res.ok) {
+      const prev = res.prevCardId && CARDS[res.prevCardId];
+      try { showHabitToast(card.name + (prev ? ' equipped — replaced ' + prev.name + '.' : ' equipped to ' + cmp.slotLabel + '.')); } catch (_) {}
+      try { _markRelicSeen(card.id); } catch (_) {}
+      try { refreshEquipmentModalIfOpen(); } catch (_) {}
+      try { refreshArmoryCTAStatus(); } catch (_) {}
+      try { _hapticTick('LIGHT'); } catch (_) {}
+    } else {
+      try { showHabitToast(res && res.error === 'DUPLICATE' ? 'That relic is already equipped.' : 'Could not equip that relic here.'); } catch (_) {}
+    }
+    closeCardRevealModal();
   }
 
   // ── v3 Phase 1g — Relic Archive helpers ───────────────────
@@ -22396,7 +22506,6 @@
     };
 
     const collapsed = loadPokedexCollapsed();
-    const eqPwrBySlot = _equippedPowerBySlot();   // W450 — baseline for the "vs equipped" deltas
 
     const sectionsHtml = sections.map(s => {
       const sectionCards = allIds
@@ -22481,13 +22590,9 @@
           const artFoot =
             '<div class="pdx-artfoot">' +
               '<span class="pdx-class" style="--cc:' + esc(prof.classColor) + '"><svg viewBox="0 0 14 14" aria-hidden="true">' + prof.classGlyph + '</svg>' + esc(prof.className) + '</span>' +
-              '<span class="pdx-pwr"><span class="pn">' + prof.power + '</span><span class="pl">PWR</span></span>' +
+              '<span class="pdx-pwr"><span class="pn">' + _equippedRelicPower(c.id, c) + '</span><span class="pl">PWR</span></span>' +   // W927 — upgrade-inclusive, same as the Armory
             '</div>';
-          const eqP = eqPwrBySlot[slotKey] || 0;
-          let deltaHtml;
-          if (isEq) deltaHtml = '<span class="pdx-delta pdx-delta--best">★ Equipped · Best</span>';
-          else if (eqP === 0) deltaHtml = '<span class="pdx-delta pdx-delta--gain">▲ +' + prof.power + ' Equip Gain</span>';
-          else { const d = prof.power - eqP; deltaHtml = d > 0 ? '<span class="pdx-delta pdx-delta--up">▲ +' + d + ' vs Equipped</span>' : d < 0 ? '<span class="pdx-delta pdx-delta--down">▼ ' + d + ' vs Equipped</span>' : '<span class="pdx-delta pdx-delta--down">= Even vs Equipped</span>'; }
+          const deltaHtml = relicCompareHtml(relicCompare(c), 'line');   // W927 — the shared comparison
           const pMeter = '<div class="pdx-pmeter"><i style="width:' + Math.max(4, Math.min(100, prof.power)) + '%;background:' + esc(prof.classColor) + '"></i></div>';
           return '<div class="pokedex-cell">' + (
             '<button class="pokedex-card pokedex-card--' + c.rarity + (isEq ? ' pokedex-card--equipped' : '') + newCls + '" type="button" data-card-id="' + esc(c.id) + '">' +
@@ -22815,6 +22920,9 @@
     }
     const cdStats = document.getElementById('carddetail-stats');
     if (cdStats) cdStats.innerHTML = cardStatBadgesHtml(card);
+    // W927 — the comparison window for an owned relic that fits a slot
+    const cdCmp = document.getElementById('carddetail-compare');
+    if (cdCmp) { try { cdCmp.innerHTML = (entry && entry.discovered && card.slot) ? relicCompareHtml(relicCompare(card), 'strip') : ''; } catch (_) { cdCmp.innerHTML = ''; } }
     _fillCardDetailUpgrade(card, entry); // W494 — relic upgrade row
     const acqEl = document.getElementById('carddetail-acquired');
     if (acqEl) acqEl.textContent = entry.first_acquired_date
@@ -22837,7 +22945,10 @@
         equipBtn.classList.remove('carddetail-equip-btn--primary');
         equipBtn.classList.add('carddetail-equip-btn--unequip');
       } else {
-        equipBtn.textContent = 'EQUIP TO BUILD';
+        // W927 — name the slot, or what this replaces
+        let label = 'EQUIP TO BUILD';
+        try { const cmp = relicCompare(card); label = cmp.state === 'empty' ? 'EQUIP TO ' + cmp.slotLabel : (cmp.cur ? 'REPLACE ' + String(cmp.cur.name || '').toUpperCase() : label); } catch (_) {}
+        equipBtn.textContent = label;
         equipBtn.classList.add('carddetail-equip-btn--primary');
         equipBtn.classList.remove('carddetail-equip-btn--unequip');
       }

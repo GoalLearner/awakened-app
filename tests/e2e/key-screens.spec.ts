@@ -122,3 +122,53 @@ test.describe('W · Settings sheet', () => {
     expect(overlayBlocks).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// X. W927 — the comparison window + EQUIP at the relic reveal
+// ─────────────────────────────────────────────────────────────
+test.describe('X · Reveal compare + equip (W927)', () => {
+  const seed = (worn: string | null) => () => {
+    try {
+      localStorage.setItem('hb_inventory', JSON.stringify({
+        cards: {
+          pups_hood: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
+          the_famished_circlet: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
+          milestone_cowl: { discovered: true, count: 1, first_acquired_date: '2026-09-08', upgrade_level: 0 },
+        },
+        reveal_queue: ['milestone_cowl'],
+      }));
+      localStorage.setItem('hb_hunter_build', JSON.stringify({ slots: [worn, null, null, null, null, null, null, null], updated_at: new Date().toISOString() }));
+    } catch (_) {}
+  };
+  async function openReveal(page: Page, worn: string | null) {
+    await page.emulateMedia({ reducedMotion: 'reduce' });   // the sigil bloom reveals the card at once
+    await freshApp(page);
+    await page.addInitScript(seed(worn));   // registered AFTER freshApp's script so it wins on the reload
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); (window as any).__loadInventory(); (window as any).__processRevealQueue(); });
+    await expect(page.locator('#reveal-overlay.reveal-overlay--showing')).toBeVisible({ timeout: 10_000 });
+  }
+
+  test('a stronger drop reads EQUIP · +7 with the stat deltas, and EQUIP wears it', async ({ page }) => {
+    await openReveal(page, 'pups_hood');
+    await expect(page.locator('#reveal-equip')).toHaveText('EQUIP · +7');
+    await expect(page.locator('#reveal-keep')).toBeHidden();
+    await expect(page.locator('#reveal-compare .rcmp-stat--up')).toHaveCount(2);
+    await expect(page.locator('#reveal-compare .rcmp-stat--down')).toHaveCount(1);
+    await page.evaluate(() => document.getElementById('reveal-equip')!.click());
+    await expect(page.locator('#reveal-overlay')).toBeHidden({ timeout: 5_000 });
+    const slot0 = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_hunter_build') || '{}').slots[0]);
+    expect(slot0).toBe('milestone_cowl');
+  });
+
+  test('a weaker drop defaults to KEEP the worn relic, with EQUIP ANYWAY beside it', async ({ page }) => {
+    await openReveal(page, 'the_famished_circlet');
+    await expect(page.locator('#reveal-equip')).toHaveText(/^KEEP /);
+    await expect(page.locator('#reveal-keep')).toHaveText('EQUIP ANYWAY');
+    await page.evaluate(() => document.getElementById('reveal-equip')!.click());
+    await expect(page.locator('#reveal-overlay')).toBeHidden({ timeout: 5_000 });
+    const slot0 = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_hunter_build') || '{}').slots[0]);
+    expect(slot0).toBe('the_famished_circlet');
+  });
+});
