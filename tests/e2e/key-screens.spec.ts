@@ -173,3 +173,54 @@ test.describe('X · Reveal compare + equip (W927)', () => {
     expect(slot0).toBe('the_famished_circlet');
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Y. W928 — equip in one tap: a filled slot opens the SWAP picker
+// ─────────────────────────────────────────────────────────────
+test.describe('Y · Armory swap picker (W928)', () => {
+  test('filled slot → SWAP HELM picker with the worn relic pinned; one tap swaps; SWAP/UNEQUIP on the worn tile', async ({ page }) => {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_inventory', JSON.stringify({
+          cards: {
+            pups_hood: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
+            milestone_cowl: { discovered: true, count: 1, first_acquired_date: '2026-09-08', upgrade_level: 0 },
+          },
+          reveal_queue: [],
+        }));
+        localStorage.setItem('hb_hunter_build', JSON.stringify({ slots: ['pups_hood', null, null, null, null, null, null, null], updated_at: new Date().toISOString() }));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); document.getElementById('tab-items')!.click(); });
+    await expect(page.locator('#tab-items.active')).toBeVisible();
+    await page.evaluate(() => document.getElementById('armory-open-btn')!.click());
+    await expect(page.locator('#armory-gear-power')).toHaveText('6', { timeout: 10_000 });
+    await expect(page.locator('.gear-card--locked')).toHaveCount(0);
+    // the filled HELM slot opens the picker in SWAP mode
+    await page.evaluate(() => (document.querySelector('.gear-card[data-slot-index="0"]') as HTMLElement).click());
+    await expect(page.locator('#build-picker-title')).toHaveText('SWAP HELM');
+    const first = page.locator('#build-picker-grid .build-picker-tile').first();
+    await expect(first).toHaveAttribute('data-card-id', 'pups_hood');
+    await expect(first.locator('.build-picker-tile-badge')).toHaveText('EQUIPPED');
+    await expect(page.locator('.build-picker-tile[data-card-id="milestone_cowl"] .pdx-delta--up')).toHaveText('▲ +7 vs Equipped');
+    // one tap swaps
+    await page.evaluate(() => (document.querySelector('.build-picker-tile[data-card-id="milestone_cowl"]') as HTMLElement).click());
+    await expect(page.locator('#build-picker-sheet')).toBeHidden();
+    await expect(page.locator('#armory-gear-power')).toHaveText('13');
+    await expect(page.locator('#archive-armory-cta-sub')).toContainText('Gear Power 13');
+    // the worn tile → detail sheet with SWAP + UNEQUIP; SWAP returns to the picker
+    await page.evaluate(() => (document.querySelector('.gear-card[data-slot-index="0"]') as HTMLElement).click());
+    await page.evaluate(() => (document.querySelector('.build-picker-tile[data-card-id="milestone_cowl"]') as HTMLElement).click());
+    await expect(page.locator('#build-detail-sheet')).toBeVisible();
+    await expect(page.locator('#build-picker-sheet')).toBeHidden();
+    await page.evaluate(() => document.getElementById('build-detail-swap')!.click());
+    await expect(page.locator('#build-picker-sheet')).toBeVisible();
+    await expect(page.locator('#build-detail-sheet')).toBeHidden();
+    await page.evaluate(() => (document.querySelector('.build-picker-tile[data-card-id="milestone_cowl"]') as HTMLElement).click());
+    await page.evaluate(() => document.getElementById('build-detail-unequip')!.click());
+    await expect(page.locator('#armory-gear-power')).toHaveText('0');
+  });
+});

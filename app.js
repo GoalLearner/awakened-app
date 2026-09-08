@@ -271,7 +271,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w927'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w928'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -18577,24 +18577,6 @@
     return -1;
   }
 
-  // Build Power — simple deterministic sum, per v3 spec.
-  //   common = 1   rare = 3   ultra_rare = 7
-  function getItemBuildPower(card) {
-    if (!card) return 0;
-    if (card.rarity === 'ultra_rare' || card.rarity === 'ultra-rare' || card.rarity === 'ultra') return 7;
-    if (card.rarity === 'rare') return 3;
-    return 1;
-  }
-  function aggregateBuildPower() {
-    const build = getHunterBuild();
-    let total = 0;
-    for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
-      const cid = build.slots[i];
-      if (cid && CARDS[cid]) total += getItemBuildPower(CARDS[cid]);
-    }
-    return total;
-  }
-
   // ── W450 (ClaudeDesign "Armory · Class & Power") — per-relic ROLE + POWER ──
   // A relic's role is its DOMINANT side of the combat triangle — NOT its dominant single stat.
   // The triangle (same as the Ascent/PvP via _arenaCombatProfile):
@@ -18889,10 +18871,8 @@
       unlockedSlots:     getUnlockedBuildSlots,
       requiredRank:      getRequiredRankForBuildSlot,
       isSlotUnlocked:    isBuildSlotUnlocked,
-      buildPower:        aggregateBuildPower,
       dominantPath:      getBuildDominantPath,
       equippedCount:     countEquippedBuildItems,
-      itemPower:         getItemBuildPower,
       migrate:           migrateEquipmentToHunterBuild,
       migrateTyped:      migrateGenericBuildToEquipmentBuild,
       SLOT_COUNT:        HUNTER_BUILD_SLOT_COUNT,
@@ -22194,7 +22174,7 @@
     let equipped = 0;
     let total = (typeof HUNTER_BUILD_SLOT_COUNT === 'number') ? HUNTER_BUILD_SLOT_COUNT : 6;
     try {
-      if (typeof aggregateBuildPower === 'function') power = aggregateBuildPower();
+      if (typeof _gearPowerBreakdown === 'function') power = _gearPowerBreakdown().total | 0;   // W928 — the Armory pill's exact number
       if (typeof countEquippedBuildItems === 'function') equipped = countEquippedBuildItems();
     } catch (_) {}
     sub.textContent = 'Gear Power ' + power + ' · ' + equipped + ' / ' + total + ' Equipped';
@@ -23002,10 +22982,6 @@
           const targetIdx = (slotKey != null) ? EQUIPMENT_SLOT_INDEX[slotKey] : -1;
           if (typeof targetIdx !== 'number' || targetIdx < 0) {
             try { showHabitToast(card.name + " can't be equipped — missing slot type."); } catch (_) {}
-          } else if (!isBuildSlotUnlocked(targetIdx)) {
-            const req = getRequiredRankForBuildSlot(targetIdx);
-            const slotDef = EQUIPMENT_SLOTS[targetIdx];
-            try { showHabitToast('Reach ' + req + ' Rank to unlock ' + slotDef.label + '.'); } catch (_) {}
           } else {
             const res = equipBuildItem(targetIdx, cardId);
             const slotDef = EQUIPMENT_SLOTS[targetIdx];
@@ -37225,8 +37201,7 @@
     const grid = document.getElementById('hunter-build-grid');
     if (!grid) return;
     const build = getHunterBuild();
-    const rank  = (typeof getRank === 'function') ? getRank(totalPoints || 0) : { id: 'E' };
-    const unlockedCount = getUnlockedBuildSlots(rank.id);
+    // W928 — every slot is open (all 8 unlock at E); the "Reach E" locked card is gone.
 
     // W606 — Armory v2 (ClaudeDesign handoff 13): 4×2 .gear-card grid. Slot + PWR
     // overlay ON the art; the item NAME sits in a caption strip BELOW the art
@@ -37236,14 +37211,12 @@
     const _RV = { common: 'common', rare: 'rare', ultra_rare: 'ultra', mythic: 'mega' };
     let html = '', gearPower = 0, equippedCount = 0;
     for (let i = 0; i < HUNTER_BUILD_SLOT_COUNT; i++) {
-      const unlocked   = i < unlockedCount;
       const cardId     = build.slots[i];
       const card       = cardId ? CARDS[cardId] : null;
-      const requiredRank = getRequiredRankForBuildSlot(i);
       const slotDef    = EQUIPMENT_SLOTS[i] || { key: 'slot', label: 'SLOT ' + (i + 1) };
       const slotLabel  = esc(slotDef.label);
 
-      if (card && unlocked) {
+      if (card) {
         const rv = _RV[card.rarity] || 'common';
         const _pwr = _equippedRelicPower(cardId, card);   // W740 — includes this relic's upgrade level
         gearPower += _pwr; equippedCount++;
@@ -37258,16 +37231,6 @@
                     '<span class="gear-card__pwr"><span class="n">' + _pwr + '</span><span class="u">PWR</span></span>' +
                   '</div>' +
                   '<div class="gear-card__name">' + esc(card.name) + '</div>' +
-                '</button>';
-      } else if (!unlocked) {
-        // Locked slot (all 8 unlock at E today; safety fallback).
-        html += '<button class="gear-card gear-card--locked" type="button" data-slot-index="' + i + '" ' +
-                'aria-label="' + slotLabel + ' — locked, reach ' + requiredRank + ' rank">' +
-                  '<div class="gear-card__thumb">' +
-                    '<span class="gear-card__slot">' + slotLabel + '</span>' +
-                    '<span class="gear-card__lock" aria-hidden="true">🔒</span>' +
-                  '</div>' +
-                  '<div class="gear-card__name gear-card__name--muted">Reach ' + esc(requiredRank) + '</div>' +
                 '</button>';
       } else {
         // Empty unlocked slot.
@@ -37297,52 +37260,11 @@
 
   // ─── Build summary renderer ─────────────────────────────────
   function renderHunterBuildSummary() {
-    // v3 Phase 1z.212 — BUILD SUMMARY card removed from the
-    // Armory modal. The function survives as the single trigger
-    // point for the chained EQUIPMENT BONUSES render so the five
-    // existing call sites (boot, equip, unequip, picker, modal
-    // open) all keep working without per-site changes. The
-    // summary DOM lookup early-returns silently when the
-    // container is absent.
+    // W928 — the BUILD SUMMARY card's dead markup is gone (its rarity-scale GEAR
+    // POWER and the "LOCKED SLOTS · n awaiting rank-up" row — every slot opens at
+    // E). The function survives as the one trigger for the chained EQUIPMENT
+    // BONUSES render so the existing call sites keep working.
     try { renderHunterBuildBonuses(); } catch (_) {}
-    const el = document.getElementById('hunter-build-summary');
-    if (!el) return;
-    const power      = aggregateBuildPower();
-    const dominant   = getBuildDominantPath();
-    const equippedCt = countEquippedBuildItems();
-    const rank  = (typeof getRank === 'function') ? getRank(totalPoints || 0) : { id: 'E' };
-    const unlockedCount = getUnlockedBuildSlots(rank.id);
-    const lockedCount   = HUNTER_BUILD_SLOT_COUNT - unlockedCount;
-
-    const dominantTxt = dominant
-      ? (typeof STAT_TAGLINES !== 'undefined' && STAT_TAGLINES[dominant]
-          ? dominant + ' · ' + STAT_TAGLINES[dominant]
-          : dominant)
-      : 'BALANCED';
-
-    el.innerHTML =
-      '<div class="hbs-row hbs-row--power">' +
-        '<span class="hbs-label">GEAR POWER</span>' +
-        '<span class="hbs-val hbs-val--power">' + power + '</span>' +
-      '</div>' +
-      '<div class="hbs-row">' +
-        '<span class="hbs-label">DOMINANT PATH</span>' +
-        '<span class="hbs-val">' + esc(dominantTxt) + '</span>' +
-      '</div>' +
-      '<div class="hbs-row">' +
-        '<span class="hbs-label">EQUIPPED</span>' +
-        '<span class="hbs-val">' + equippedCt + ' / ' + unlockedCount + '</span>' +
-      '</div>' +
-      (lockedCount > 0
-        ? '<div class="hbs-row hbs-row--hint">' +
-            '<span class="hbs-label">LOCKED SLOTS</span>' +
-            '<span class="hbs-val hbs-val--muted">' + lockedCount + ' awaiting rank-up</span>' +
-          '</div>'
-        : '');
-    // v3 Phase 1z.212 — bonuses chain moved to the top of the
-    // function (above the summary-element early-return) so the
-    // EQUIPMENT BONUSES card still refreshes after the BUILD
-    // SUMMARY container was removed from the Armory modal.
   }
 
   // ─── v3 Phase 1z.211 — Equipment bonuses summary ────────────
@@ -37570,9 +37492,9 @@
   try { window.renderHunterBuildBonuses = renderHunterBuildBonuses; } catch (_) {}
 
   // ─── Item picker ────────────────────────────────────────────
-  // Opens when user taps an empty unlocked build slot. Shows
-  // discovered items as a grid; tap any to equip into the slot
-  // that opened the picker.
+  // Opens when the user taps ANY build slot (W928 — a filled slot opens it in
+  // SWAP mode with the worn relic pinned first). Shows discovered items for
+  // that slot type; tap any to equip it there.
   function openBuildPicker(slotIndex) {
     _buildPickerSlotIndex = slotIndex;
     const overlay = document.getElementById('build-picker-overlay');
@@ -37585,10 +37507,15 @@
     // etc, and the sub line restates the choice. Picker filters to
     // only show cards whose typed slot matches this slot.
     const slotDef = EQUIPMENT_SLOTS[slotIndex] || { key: null, label: 'RELIC' };
+    // W928 — what is worn here now (SWAP mode when something is)
+    const curId = getHunterBuild().slots[slotIndex] || null;
+    const cur = curId ? (CARDS[curId] || null) : null;
     const title = document.getElementById('build-picker-title');
-    if (title) title.textContent = 'SELECT ' + slotDef.label;
+    if (title) title.textContent = (cur ? 'SWAP ' : 'SELECT ') + slotDef.label;
     const sub = document.getElementById('build-picker-sub');
-    if (sub) sub.textContent = 'Choose your ' + slotDef.label.toLowerCase() + ' from your collection.';
+    if (sub) sub.textContent = cur
+      ? 'Wearing ' + cur.name + ' · ' + _equippedRelicPower(curId, cur) + ' PWR. Tap another relic to swap it in.'
+      : 'Choose your ' + slotDef.label.toLowerCase() + ' from your collection.';
 
     // Build the list of discovered cards FOR THIS SLOT TYPE. Sort
     // by rarity then name.
@@ -37598,10 +37525,11 @@
       .filter(c => inv.cards[c.id] && inv.cards[c.id].discovered)
       .filter(c => getCardEquipmentSlot(c) === slotDef.key)
       .sort((a, b) => {
-        // W587 — highest POWER first so the user instantly sees the best item to
-        // equip. Rarity + name only break ties.
-        const pa = (typeof _relicProfile === 'function') ? _relicProfile(a).power : 0;
-        const pb = (typeof _relicProfile === 'function') ? _relicProfile(b).power : 0;
+        // W928 — the worn relic leads; W587 — then highest POWER first so the user
+        // instantly sees the best item to equip. Rarity + name only break ties.
+        if (a.id === curId) return -1; if (b.id === curId) return 1;
+        const pa = _equippedRelicPower(a.id, a);
+        const pb = _equippedRelicPower(b.id, b);
         if (pa !== pb) return pb - pa;
         const order = { ultra_rare: 0, rare: 1, common: 2 };
         const ra = order[a.rarity] != null ? order[a.rarity] : 9;
@@ -37622,9 +37550,8 @@
       const RARITY_SHORT = { ultra_rare: 'u', rare: 'r', common: 'c' };
       const RARITY_BADGE = { ultra_rare: 'ULTRA', rare: 'RARE', common: 'COMMON' };
       grid.innerHTML = discovered.map(c => {
-        const equippedSlot = getBuildSlotIndexForCard(c.id);
-        const equippedElsewhere = equippedSlot >= 0 && equippedSlot !== slotIndex;
-        const equippedHere      = equippedSlot === slotIndex;
+        // W928 — a relic fits exactly one slot, so it can only ever be worn HERE.
+        const equippedHere = getBuildSlotIndexForCard(c.id) === slotIndex;
         const rarityShort = RARITY_SHORT[c.rarity] || 'c';
         const rarityLabel = RARITY_BADGE[c.rarity] || 'COMMON';
         const artImg = c.art_path
@@ -37650,9 +37577,7 @@
         // ELSEWHERE wins over plain rarity tag (top-left). We render
         // the rarity tag on the LEFT and the equipped tag on the
         // RIGHT so they never overlap.
-        const equippedBadge =
-          equippedHere      ? '<div class="build-picker-tile-badge">EQUIPPED</div>' :
-          equippedElsewhere ? '<div class="build-picker-tile-badge build-picker-tile-badge--elsewhere">SLOT ' + (equippedSlot + 1) + '</div>' : '';
+        const equippedBadge = equippedHere ? '<div class="build-picker-tile-badge">EQUIPPED</div>' : '';
 
         // W736 — total PWR (bottom-right). W737 — combat class (bottom-left):
         // the dominant combat-triangle role (Melee/Ranger/Mage) so the owner can
@@ -37660,7 +37585,7 @@
         // _relicProfile the Items grid + PWR sort already use, so the
         // SELECT-<slot> tile matches the rest of the app exactly.
         const _prof = (typeof _relicProfile === 'function') ? _relicProfile(c) : null;
-        const tilePwr = _prof ? (_prof.power | 0) : 0;
+        const tilePwr = _equippedRelicPower(c.id, c);   // W928 — upgrade-inclusive, the Armory's number
         const pwrBadge = tilePwr > 0
           ? '<div class="build-picker-tile-pwr">' + tilePwr + '<span>PWR</span></div>'
           : '';
@@ -37670,12 +37595,11 @@
               '<span>' + esc(_prof.className) + '</span></div>'
           : '';
 
+        let cmpChip = '';   // W928 — "▲ +7 vs Equipped" under every candidate (the worn tile wears the badge instead)
+        try { if (!equippedHere) cmpChip = relicCompareHtml(relicCompare(c), 'line'); } catch (_) { cmpChip = ''; }
         return '<button class="build-picker-tile build-rarity--' + rarityShort +
-               (equippedElsewhere ? ' build-picker-tile--equipped-elsewhere' : '') +
-               (equippedHere      ? ' build-picker-tile--equipped-here'      : '') +
-               '" type="button" data-card-id="' + esc(c.id) + '"' +
-               (equippedElsewhere ? ' aria-label="Already equipped in slot ' + (equippedSlot + 1) + '"' : '') +
-               '>' +
+               (equippedHere ? ' build-picker-tile--equipped-here' : '') +
+               '" type="button" data-card-id="' + esc(c.id) + '">' +
                  '<div class="build-picker-tile-art-wrap">' +
                    artImg +
                    '<div class="build-picker-tile-rarity build-picker-tile-rarity--' + rarityShort + '">' + rarityLabel + '</div>' +
@@ -37684,6 +37608,7 @@
                    pwrBadge +
                  '</div>' +
                  '<div class="build-picker-tile-name">' + esc(c.name) + '</div>' +
+                 cmpChip +
                  statHtml +
                '</button>';
       }).join('');
@@ -37770,19 +37695,9 @@
         const slotIndex = parseInt(btn.getAttribute('data-slot-index'), 10);
         if (isNaN(slotIndex)) return;
 
-        if (!isBuildSlotUnlocked(slotIndex)) {
-          const req = getRequiredRankForBuildSlot(slotIndex);
-          const slotDef = EQUIPMENT_SLOTS[slotIndex] || { label: 'this slot' };
-          try { showHabitToast('Reach ' + req + ' Rank to unlock ' + slotDef.label + '.'); } catch (_) {}
-          return;
-        }
-        const build  = getHunterBuild();
-        const cardId = build.slots[slotIndex];
-        if (cardId && CARDS[cardId]) {
-          openBuildItemDetail(slotIndex);
-        } else {
-          openBuildPicker(slotIndex);
-        }
+        // W928 — one tap, one sheet: a filled slot opens the picker in SWAP mode
+        // (the worn relic is pinned first; tapping it opens the detail sheet).
+        openBuildPicker(slotIndex);
       });
     }
 
@@ -37804,6 +37719,9 @@
         if (_buildPickerSlotIndex < 0) return;
         const card = CARDS[cardId];
         if (!card) return;
+        if (getHunterBuild().slots[_buildPickerSlotIndex] === cardId) {   // W928 — the worn tile → its detail sheet (never two sheets at once)
+          const i = _buildPickerSlotIndex; closeBuildPicker(); openBuildItemDetail(i); return;
+        }
         const res = equipBuildItem(_buildPickerSlotIndex, cardId);
         if (res.ok) {
           if (res.prevCardId && CARDS[res.prevCardId]) {
@@ -37817,8 +37735,6 @@
           if (currentTab === 'items') renderPokedex();
         } else if (res.code === 'DUPLICATE') {
           try { showHabitToast(card.name + ' is already equipped in slot ' + (res.existingSlot + 1) + '.'); } catch (_) {}
-        } else if (res.code === 'LOCKED') {
-          try { showHabitToast('Slot locked — reach ' + res.requiredRank + ' Rank.'); } catch (_) {}
         } else if (res.code === 'WRONG_SLOT') {
           // Shouldn't happen — picker is slot-filtered — but guard.
           try { showHabitToast(card.name + " doesn't fit that slot."); } catch (_) {}
@@ -37826,10 +37742,7 @@
       });
     }
 
-    // Detail sheet wiring — UNEQUIP only (REPLACE dropped). The
-    // user can re-equip a different relic by tapping the (now
-    // empty) slot, which routes through openBuildPicker the same
-    // way as a first-time equip.
+    // Detail sheet wiring — SWAP (W928: back to the picker for this slot) + UNEQUIP.
     const detailOverlay = document.getElementById('build-detail-overlay');
     const detailClose   = document.getElementById('build-detail-close');
     const detailSheet   = document.getElementById('build-detail-sheet');
@@ -37839,6 +37752,11 @@
     if (detailSheet && typeof attachSheetDismissGesture === 'function') {
       attachSheetDismissGesture(detailSheet, detailOverlay, closeBuildItemDetail, {});
     }
+    const swapBtn = document.getElementById('build-detail-swap');
+    if (swapBtn) swapBtn.addEventListener('click', () => {   // W928
+      const i = _buildDetailSlotIndex; if (i < 0) return;
+      closeBuildItemDetail(); openBuildPicker(i);
+    });
     if (unequipBtn) {
       unequipBtn.addEventListener('click', () => {
         const slotIndex = _buildDetailSlotIndex;

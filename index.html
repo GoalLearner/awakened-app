@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=685">
+  <link rel="stylesheet" href="styles.css?v=686">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2093,10 +2093,9 @@
     <p id="build-picker-empty" class="build-picker-empty hidden">No relics discovered yet. Defeat bosses to drop your first relic.</p>
   </div>
 
-  <!-- Build slot detail sheet — opens when user taps an EQUIPPED
-       slot. Shows the equipped item's art + name + rarity, with a
-       single UNEQUIP action. To swap relics: unequip, then tap the
-       now-empty slot to open the picker. -->
+  <!-- Build slot detail sheet — opens from the picker's worn tile. Shows the
+       equipped item's art + name + rarity with SWAP (back to the picker for
+       this slot) and UNEQUIP. W928 — a filled slot opens the picker directly. -->
   <div id="build-detail-overlay" class="build-detail-overlay hidden"></div>
   <div id="build-detail-sheet" class="build-detail-sheet hidden" role="dialog" aria-labelledby="build-detail-name">
     <div class="vn-drag-handle"></div>
@@ -2109,6 +2108,7 @@
     <p id="build-detail-flavor" class="build-detail-flavor">—</p>
     <div id="build-detail-stats" class="build-detail-stats"></div>
     <div class="build-detail-actions">
+      <button id="build-detail-swap" class="build-detail-btn build-detail-btn--swap" type="button">SWAP</button>
       <button id="build-detail-unequip" class="build-detail-btn build-detail-btn--unequip" type="button">UNEQUIP</button>
     </div>
   </div>
@@ -3397,7 +3397,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1332"></script>
+  <script src="app.js?v=1333"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
