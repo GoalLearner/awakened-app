@@ -2169,3 +2169,37 @@ test.describe('Y · The Hunger points at its mark (W932)', () => {
     await expect(inGate.locator('em')).toContainText('ON THIS FLOOR');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Z. W933 — the Worldgate card leads the Co-op hub; the header pulse rides every tab
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('Z · Worldgate placement (W933)', () => {
+  test('pulse in the header on Habits, no card there; the big card on the Co-op hub; the pulse opens the sheet', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_worldgate_v1', JSON.stringify({
+          at: Date.now(), week: '2026-09-06', hp: 334875, pool: 102825, status: 'live', my: 13831, floor: 0, souls: 0,
+          claimable: false, claimed: false, hunters: 5, guild: { steps: 0, hunters: 0 }, my_rank: 3,
+          top: [{ alias: 'Grubbadub', steps: 40000 }, { alias: 'RenDIESEL', steps: 30000 }], wall: [], wall_count: 0, recent: [], rallied: false,
+        }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    const pulse = page.locator('#wg-pulse');
+    await expect(pulse).toBeVisible();
+    await expect(pulse.locator('.wg-pulse-name')).not.toBeEmpty();
+    await expect(pulse.locator('.wg-pulse-pct')).toHaveText('30.7%');
+    await expect(pulse.locator('.wg-pulse-you')).toHaveCount(1);
+    await expect(page.locator('#main-scroll #worldgate-card')).toHaveCount(0);
+    await page.evaluate(() => document.getElementById('tab-quests')!.click());
+    const card = page.locator('#quests-gate-view #worldgate-card');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.wg2-pct-n')).toHaveText('30.7%');
+    await expect(card.locator('.wg2-sub')).toContainText('5');
+    await expect(pulse).toBeHidden();   // the hub shows the big card, so the pulse steps aside
+    await page.evaluate(() => document.getElementById('tab-habits')!.click());
+    await expect(pulse).toBeVisible();
+    await page.evaluate(() => (document.getElementById('wg-pulse') as HTMLElement).click());
+    await expect(page.locator('.wg2-sheet-wrap')).toHaveCount(1);
+  });
+});
