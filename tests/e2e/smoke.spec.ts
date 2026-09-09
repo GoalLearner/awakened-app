@@ -2097,3 +2097,37 @@ test.describe('W · Sign-in gate (W930)', () => {
     expect(hasIsGuest).toBe('function');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// X. W931 — Friend Activity day groups start folded; a tap opens one
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('X · Friend Activity folded by default (W931)', () => {
+  test('TODAY and YESTERDAY both render closed; tapping TODAY opens it with its hunters still folded', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        const now = Date.now();
+        localStorage.setItem('hb_fa_seen_ts', String(now));
+        const ev = (id: string, alias: string, rank: string, agoMs: number) => ({ id, alias, rankLabel: rank, eventType: 'boss_kill', eventKey: 'glass_strider', eventLabel: 'defeated The Glass Strider', eventValue: 1, rarity: null, createdAt: new Date(now - agoMs).toISOString(), likes: 0, liked: false, likers: [], likedAt: null });
+        localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ ts: now, events: [
+          ev('x-e1', 'Grubbadub', 'D I', 30 * 60e3),
+          ev('x-e2', 'Anthony', 'C I', 3 * 3600e3),
+          ev('x-e3', 'RenDIESEL', 'S I', 30 * 3600e3),
+        ] }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    const days = page.locator('.fa-day');
+    await expect(days).toHaveCount(2);
+    await expect(page.locator('.fa-day--open')).toHaveCount(0);
+    await expect(page.locator('.fa-dh[aria-expanded="true"]')).toHaveCount(0);
+    await expect(page.locator('.fa-dbody:not([hidden])')).toHaveCount(0);
+    await page.locator('.fa-dh').first().click();
+    await expect(days.first()).toHaveClass(/fa-day--open/);
+    await expect(days.first().locator('.fa-dbody')).toBeVisible();
+    await expect(days.first().locator('.fa-hunter')).toHaveCount(2);
+    await expect(days.first().locator('.fa-hunter--open')).toHaveCount(0);
+    await expect(days.nth(1)).not.toHaveClass(/fa-day--open/);
+  });
+});
