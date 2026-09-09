@@ -35385,3 +35385,14 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-last-arrow { color: var(--b-ink3); font-family: var(--b-mono); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .board-last-new { margin-left: auto; flex: none; font-family: var(--b-mono); font-size: 8px; letter-spacing: 1px; color: var(--b-vio-lt); font-weight: 800; white-space: nowrap; }
 .board-last--none { color: var(--b-ink3); }
+
+/* ═══ W932 — THE HUNGER points at its mark: gate + hunt type, tappable ═══ */
+.hunger-banner--go { appearance: none; -webkit-appearance: none; width: 100%; text-align: left; font: inherit; font-size: 0.72rem; line-height: 1.4; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .2s; }
+.hunger-banner--go:active { background: rgba(245, 184, 66, 0.14); }
+.hunger-banner--hub { margin: 0 0 12px; }
+.hunger-banner--hub.hidden { display: none !important; }
+.hunger-where { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.14em; color: var(--text-secondary, #b8b8d4); }
+.hunger-rank { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--rank-color, #a78bfa); color: var(--rank-color, #a78bfa); background: var(--rank-color-bg, rgba(139, 92, 246, 0.12)); }
+.hunger-kind { color: var(--text-secondary, #b8b8d4); }
+.hunger-where em { font-style: normal; color: #f5b842; margin-left: auto; white-space: nowrap; }
+.bcard--hunger-flash { outline: 2px solid #f5b842; outline-offset: 2px; box-shadow: 0 0 26px rgba(245, 184, 66, 0.5) !important; }

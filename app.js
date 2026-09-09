@@ -263,7 +263,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w931'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w932'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5587,6 +5587,30 @@
       if (typeof BOSSES === 'object' && BOSSES && BOSSES[bossId]) return BOSSES[bossId].name;
     } catch (_) {}
     return null;
+  }
+  /** W932 — the week's mark with its GATE and hunt type. Owner (2026-09-08):
+   *  "make sure the user knows the rank of the special dungeon boss — I didn't
+   *  know and had to look for it." { id, name, rank, coop, party, kind } */
+  function _hungerMark() {
+    const id = weeklyHungerBossId(); if (!id) return null;
+    let cfg = null; let coop = false;
+    try {
+      if (typeof COOP_BOSSES === 'object' && COOP_BOSSES && COOP_BOSSES[id]) { cfg = COOP_BOSSES[id]; coop = true; }
+      else if (typeof BOSSES === 'object' && BOSSES && BOSSES[id]) cfg = BOSSES[id];
+    } catch (_) {}
+    if (!cfg || !cfg.name) return null;
+    const party = coop ? (Number(cfg.partySize) || 2) : 1;
+    const kind = party >= 5 ? 'RAID' : (party === 3 ? 'TRIO HUNT' : (party === 2 ? 'DUO HUNT' : 'SOLO HUNT'));
+    return { id: id, name: String(cfg.name), rank: String(cfg.rank || 'E'), coop: coop, party: party, kind: kind };
+  }
+  /** W932 — the banner body shared by the hub line and the in-gate line. */
+  function _hungerBannerInner(hm, where) {
+    return '<span class="hunger-banner-kicker">THE HUNGER</span>' +
+      'This week <b>' + esc(hm.name) + '</b> hungers — 2× souls · +1% relic luck.' +
+      '<span class="hunger-where"><span class="hunger-rank" data-rank="' + esc(hm.rank) + '">' + esc(hm.rank) + '-RANK' + (where === 'here' ? '' : ' GATE') + '</span>' +
+        '<span class="hunger-kind">· ' + hm.kind + '</span>' +
+        '<em>' + (where === 'here' ? 'ON THIS FLOOR' : 'GO') + ' ›</em>' +
+      '</span>';
   }
   /** SQLite/ISO timestamp → the PT week key it fell in (co-op starts_at). */
   function _hungerWeekOfInstant(ts) {
@@ -25199,7 +25223,7 @@
       subtitle: 'The System reaches out — and the world answers back.',
       items: [
         { emoji: '', title: 'Bring a hunter',            description: "Your share cards now carry a real invite link. A friend who joins through it becomes your first pact — and you both earn souls the moment they answer the call." },
-        { emoji: '', title: 'THE HUNGER',                description: "Each week one gate hungers: double souls and sharper relic luck on that boss until Sunday's reset. The banner on the Co-op tab names the week's mark." },
+        { emoji: '', title: 'THE HUNGER',                description: "Each week one gate hungers: double souls and sharper relic luck on that boss until Sunday's reset. The banner on the Co-op tab names the week's mark and its gate — tap it to go straight to the boss." },
         { emoji: '', title: 'You can feel it now',       description: "Every ceremony finally lands on iPhone — rank-ups, relic reveals, the mythic coronation, achievements. The System's touch was silent before; it isn't anymore." },
         { emoji: '', title: 'Capstones take the screen', description: "Iron Will, The 200, The 365, and Two Years In no longer settle for a passing toast — they take the whole screen, letter by letter, sealed forever." },
         { emoji: '', title: 'A Shield speaks up',        description: "When a Shield saves your chain overnight, the morning notification says so — and the midday warning knows the difference between danger and a guarded streak." },
@@ -51996,11 +52020,10 @@
     // boss, on every rank view (the chip on its card does the local work).
     let _hungerBanner = '';
     try {
-      const _hbId = weeklyHungerBossId();
-      const _hbName = _hbId ? _hungerBossName(_hbId) : null;
-      if (_hbName) {
-        _hungerBanner = '<div class="hunger-banner"><span class="hunger-banner-kicker">THE HUNGER</span>' +
-          'This week <b>' + esc(_hbName) + '</b> hungers — 2× souls · +1% relic luck.</div>';
+      const _hm = _hungerMark();   // W932 — names the mark's gate + hunt type; a tap goes to the card
+      if (_hm) {
+        _hungerBanner = '<button type="button" class="hunger-banner hunger-banner--go" data-hunger-go="' + esc(_hm.id) + '" data-hunger-rank="' + esc(_hm.rank) + '" aria-label="Go to ' + esc(_hm.name) + '">' +
+          _hungerBannerInner(_hm, _hm.rank === effectiveRank ? 'here' : 'gate') + '</button>';
       }
     } catch (_) {}
     // W915 — the Worldgate card moved to the top of the Habits tab (it used to lead every dungeon rank view).
@@ -56638,12 +56661,50 @@
         cell.setAttribute('aria-label', label);
       });
       _renderSpecialGates(gateView);   // W691 — holiday + members raid gate states
+      try { _hungerHubPaint(gateView); } catch (_) {}   // W932 — the week's mark + its gate, before a door is picked
     }
     // W564 — keep the Dungeon-tab Pacts entry in sync when the gate view renders:
     // paint from cache immediately, then refresh from the live pact list.
     if (!questsGateExpanded) { try { _pactsEntryRender(); _coopRefreshBadge(); } catch (_) {} }
   }
   try { window.renderQuestsPanel = renderQuestsPanel; } catch (_) {}
+  // ── W932 — THE HUNGER points at its mark ────────────────────────────────
+  // The hub line names the week's boss AND its gate; the in-gate banner adds
+  // the hunt type; tapping either walks the hunter to the card (through the
+  // gate cell's own handler, so the lock rule and first-steps stamp still run).
+  function _hungerHubPaint(gateView) {
+    const el = gateView && gateView.querySelector('#hunger-hub'); if (!el) return;
+    const hm = _hungerMark();
+    if (!hm) { el.classList.add('hidden'); return; }
+    el.setAttribute('data-hunger-go', hm.id); el.setAttribute('data-hunger-rank', hm.rank);
+    el.setAttribute('aria-label', 'Go to ' + hm.name + ' in the ' + hm.rank + '-rank gate');
+    el.innerHTML = _hungerBannerInner(hm, 'gate');
+    el.classList.remove('hidden');
+  }
+  function _hungerGo(bossId, rank) {
+    if (!bossId || !rank) return;
+    const scrollTo = function () {
+      const card = document.querySelector('[data-boss="' + bossId + '"], [data-coop-boss="' + bossId + '"]');
+      if (!card) return false;
+      try { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { try { card.scrollIntoView(); } catch (_2) {} }
+      card.classList.add('bcard--hunger-flash');
+      setTimeout(function () { try { card.classList.remove('bcard--hunger-flash'); } catch (_) {} }, 1800);
+      return true;
+    };
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    if (questsGateExpanded && currentDungeonRank === rank) { scrollTo(); return; }
+    const cell = document.querySelector('.gate-cell[data-gate-rank="' + rank + '"]');
+    if (!cell) return;
+    if (questsGateExpanded) { questsGateExpanded = false; renderQuestsPanel(); }   // back to the hub so the cell handler is the one path in
+    cell.click();   // locked → the cell's notice card; open → currentDungeonRank = rank + render
+    setTimeout(scrollTo, 120);
+  }
+  document.addEventListener('click', function (e) {
+    const t = e.target; if (!t || !t.closest) return;
+    const el = t.closest('[data-hunger-go]'); if (!el) return;
+    e.preventDefault();
+    _hungerGo(el.getAttribute('data-hunger-go'), el.getAttribute('data-hunger-rank'));
+  });
   // v3 Phase 1z.117 — test surfaces for the dungeon rank-filter
   // regression (renderBossesPanel called without a rank from boss
   // kill/streak paths dumping every boss into the active dungeon).

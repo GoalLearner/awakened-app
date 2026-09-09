@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=688">
+  <link rel="stylesheet" href="styles.css?v=689">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -804,6 +804,9 @@
              owner call — this is copy only. -->
         <div class="bosses-section-label">DUNGEON BOSSES · SOLO HUNTS</div>
         <div class="bosses-section-sublabel">Hunt alone through the rank gates — or scroll down to The Pacts to hunt together.</div>
+        <!-- W932 — THE HUNGER on the hub: the week's mark AND its gate, painted by
+             _hungerHubPaint; a tap walks to the boss card. -->
+        <button type="button" id="hunger-hub" class="hunger-banner hunger-banner--go hunger-banner--hub hidden" data-hunger-go="" data-hunger-rank=""></button>
         <div id="quests-gate-grid" class="gate-grid">
           <button class="gate-cell" type="button" data-gate-rank="E" aria-label="E-rank dungeon">
             <img class="gate-cell-img" src="assets/gates/gate-e-rank.png" alt="" draggable="false" loading="lazy" decoding="async">
@@ -3395,7 +3398,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1336"></script>
+  <script src="app.js?v=1337"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

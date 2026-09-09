@@ -2131,3 +2131,41 @@ test.describe('X · Friend Activity folded by default (W931)', () => {
     await expect(days.nth(1)).not.toHaveClass(/fa-day--open/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Y. W932 — THE HUNGER names its gate + hunt type, and a tap walks to the boss
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('Y · The Hunger points at its mark (W932)', () => {
+  test('hub line names the boss, its gate and the hunt type; tapping enters that gate; the in-gate banner says ON THIS FLOOR', async ({ page }) => {
+    // Pin the week's mark to the E-rank duo (the E gate is always open) via the
+    // owner-override key, keyed by the same Pacific-Sunday week key the app uses.
+    await page.addInitScript(() => {
+      try {
+        const d = new Date();
+        const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(d);
+        let wd = -1;
+        new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).formatToParts(d)
+          .forEach((p) => { if (p.type === 'weekday') wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.value); });
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey)!;
+        const u = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) - wd * 86400000);
+        const week = u.getUTCFullYear() + '-' + String(u.getUTCMonth() + 1).padStart(2, '0') + '-' + String(u.getUTCDate()).padStart(2, '0');
+        localStorage.setItem('hb_hunger_override', JSON.stringify({ week, boss_id: 'the_twin_maw' }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    await page.evaluate(() => document.getElementById('tab-quests')!.click());
+    const hub = page.locator('#hunger-hub');
+    await expect(hub).toBeVisible();
+    await expect(hub).toContainText('The Twin Maw');
+    await expect(hub.locator('.hunger-rank')).toHaveText('E-RANK GATE');
+    await expect(hub.locator('.hunger-kind')).toContainText('DUO HUNT');
+    await expect(hub.locator('em')).toContainText('GO');
+    await page.evaluate(() => (document.getElementById('hunger-hub') as HTMLElement).click());
+    await expect(page.locator('#quests-dungeon-view')).toBeVisible();
+    await expect(page.locator('#dungeon-header-text')).toContainText(/E-RANK/i);
+    const inGate = page.locator('#bosses-list .hunger-banner--go');
+    await expect(inGate).toBeVisible();
+    await expect(inGate.locator('.hunger-rank')).toHaveText('E-RANK');
+    await expect(inGate.locator('em')).toContainText('ON THIS FLOOR');
+  });
+});
