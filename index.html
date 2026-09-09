@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=687">
+  <link rel="stylesheet" href="styles.css?v=688">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -93,19 +93,17 @@
       <div id="signin-step-apple" class="signin-step">
         <div class="signin-brand">AWAKENED</div>
         <h1 class="signin-title">Sign in to begin</h1>
-        <p class="signin-blurb">Claim your hunter identity and climb the global leaderboard.</p>
+        <p class="signin-blurb">Claim your hunter identity, keep your progress in the cloud, and climb the global leaderboard.</p>
         <button id="signin-apple-btn" type="button" class="signin-apple-btn" aria-label="Sign in with Apple">
           <span class="signin-apple-logo" aria-hidden="true"></span>
           <span class="signin-apple-text">Sign in with Apple</span>
         </button>
         <div id="signin-apple-error" class="signin-error" role="alert"></div>
-        <!-- W329 — guest "try-it-first" entry. Starts a local session; the
-             gate's guest branch mounts the full single-player loop. -->
-        <button id="signin-guest-btn" type="button" class="signin-guest-btn">Try it first — no account needed</button>
-        <!-- W827 (Train 2, L12) — guest mode had NO warning that progress is
-             device-only. Honest terms up front; the promise is real (a later
-             sign-in adopts local progress via the CloudSync adopt-local path). -->
-        <p class="signin-guest-note">Guest progress lives only on this device — deleting the app deletes it, and the leaderboards stay closed. Sign in later and everything you've earned comes with you.</p>
+        <!-- W930 — the W329 "Try it first" guest entry is gone (owner call,
+             2026-09-08): every new install signs in with Apple. Guests could not
+             be reached by any retention lever (no push token, no cloud save, no
+             board) and left no trace in the funnel. Existing guest sessions keep
+             playing through the gate's isGuest() branch + the Settings claim CTA. -->
         <!-- W823 (Train 2, L12 privacy-footnote) — the old note named two
              boards retired in W634 and understated what the live boards use.
              Keep in sync with what lbSubmitAllMetrics actually sends. -->
@@ -3391,13 +3389,13 @@
     <div class="haptic-flash" id="pday-hapFlash"></div>
   </div>
 
-  <script src="auth.js?v=78"></script>
+  <script src="auth.js?v=79"></script>
   <!-- v3 Phase 1s — client-side simulated hunters for the Steps leaderboard.
        Loaded BEFORE app.js so window.SimulatedLeaderboard is available when
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1334"></script>
+  <script src="app.js?v=1335"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

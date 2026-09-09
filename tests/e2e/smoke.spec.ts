@@ -2077,3 +2077,23 @@ test.describe('V · My order (W926)', () => {
     await expect(page.locator('#habit-list .habit-item').first()).toHaveAttribute('data-id', 'h-stretch');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// W. W930 — the sign-in gate offers Sign in with Apple only (guest entry deleted)
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('W · Sign-in gate (W930)', () => {
+  test('no "Try it first" guest button or note; the existing-guest claim path remains', async ({ page }) => {
+    await freshApp(page);
+    // The gate markup is in the DOM whether or not it is showing.
+    await expect(page.locator('#signin-gate')).toHaveCount(1);
+    await expect(page.locator('#signin-apple-btn')).toHaveCount(1);
+    await expect(page.locator('#signin-guest-btn')).toHaveCount(0);
+    await expect(page.locator('.signin-guest-note')).toHaveCount(0);
+    await expect(page.locator('#guest-claim-apple')).toHaveCount(1);
+    await expect(page.locator('#guest-claim-cancel')).toHaveCount(1);
+    const hasStartGuest = await page.evaluate(() => typeof (window as any).Auth.startGuest);
+    expect(hasStartGuest).toBe('undefined');
+    const hasIsGuest = await page.evaluate(() => typeof (window as any).Auth.isGuest);
+    expect(hasIsGuest).toBe('function');
+  });
+});

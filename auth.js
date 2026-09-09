@@ -1278,47 +1278,10 @@
     return true;
   }
 
-  // v3 W329 — Guest "try-it-first". Writes a GUEST_STUB hb_user with NO
-  // alias, so the sign-in gate mounts the app via its dedicated guest branch
-  // (not the alias pass) and every server helper no-ops through _stubGate.
-  // Native-ALLOWED (the whole point). Never overwrites an existing session.
-  // The full single-player loop is local; a later Apple sign-in claims the
-  // alias and the existing CloudSync adopt-local path keeps all progress.
-  function startGuest() {
-    // W817 — a DEAD real session (expired beyond the W815 grace: readUser()
-    // non-null but getUser() null) used to brick this button entirely — the
-    // early-return fired, the gate reloaded, and "Try it first" looped forever.
-    // A dead session is not state worth respecting: clear it and proceed.
-    const existing = readUser();
-    if (existing) {
-      const live = getUser();
-      const isDeadReal = !live && existing.jwt !== GUEST_STUB && existing.jwt !== LOCALHOST_DEV_STUB;
-      if (!isDeadReal) return false; // respect any live real/pending/guest state
-      clearUser();
-    }
-    // W721 — shared-device privacy: if a REAL account previously owned this device
-    // (hb_state_owner set) and has since signed out, the guest must NOT inherit that
-    // account's local game state (or alias).
-    // W817 REVISION — the 90-day-cliff cohort made this purge CATASTROPHIC: the
-    // device's OWN owner, signed out by expiry, taps "Try it first" to get back to
-    // their data and the purge deletes their entire local state (kill log, souls,
-    // relics). On a signed-out device we cannot tell owner from stranger, and
-    // wiping the owner is strictly worse than a stranger browsing: KEEP the data
-    // and KEEP the hb_state_owner tag. The tag still does its W689 job — if a
-    // DIFFERENT Apple account later signs in, completeSignIn's mismatch purge
-    // fires exactly as before. (Guest-created progress on an owner-tagged device
-    // merges into the owner's local state — accepted; it cannot cross accounts.)
-
-    writeUser({
-      sub:            'guest-local',
-      alias:          null,
-      jwt:            GUEST_STUB,
-      jwt_expires_at: Date.now() + (1000 * 60 * 60 * 24 * 365 * 10),
-      signed_in_date: deviceLocalDate(),
-      is_guest:       true,
-    });
-    return true;
-  }
+  // W930 — startGuest() (W329 "Try it first") was deleted with its button:
+  // every new install signs in with Apple. A guest session that already exists
+  // on a device is still recognised by isGuest() (GUEST_STUB jwt, no alias) so
+  // it keeps mounting locally and can claim an alias from Settings.
   function isGuest() {
     try { const u = readUser(); return !!(u && u.jwt === GUEST_STUB); } catch (_) { return false; }
   }
@@ -2534,7 +2497,6 @@
     raidQueueStatus,
     devSignInIfLocalhost,
     isLocalhostDev,
-    startGuest,
     isGuest,
     isNative,
     BACKEND_URL,
