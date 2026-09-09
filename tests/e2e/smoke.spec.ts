@@ -2136,7 +2136,7 @@ test.describe('X · Friend Activity folded by default (W931)', () => {
 // Y. W932 — THE HUNGER names its gate + hunt type, and a tap walks to the boss
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('Y · The Hunger points at its mark (W932)', () => {
-  test('hub line names the boss, its gate and the hunt type; tapping enters that gate; the in-gate banner says ON THIS FLOOR', async ({ page }) => {
+  test('hub line names the boss, its gate and the hunt type; tapping enters that gate; the banner reads once (W934)', async ({ page }) => {
     // Pin the week's mark to the E-rank duo (the E gate is always open) via the
     // owner-override key, keyed by the same Pacific-Sunday week key the app uses.
     await page.addInitScript(() => {
@@ -2163,18 +2163,17 @@ test.describe('Y · The Hunger points at its mark (W932)', () => {
     await page.evaluate(() => (document.getElementById('hunger-hub') as HTMLElement).click());
     await expect(page.locator('#quests-dungeon-view')).toBeVisible();
     await expect(page.locator('#dungeon-header-text')).toContainText(/E-RANK/i);
-    const inGate = page.locator('#bosses-list .hunger-banner--go');
-    await expect(inGate).toBeVisible();
-    await expect(inGate.locator('.hunger-rank')).toHaveText('E-RANK');
-    await expect(inGate.locator('em')).toContainText('ON THIS FLOOR');
+    // W934 — the banner reads once, on the hub; inside the gate only the cards remain.
+    await expect(page.locator('#bosses-list .hunger-banner--go')).toHaveCount(0);
+    await expect(page.locator('#bosses-list [data-boss]').first()).toBeVisible();
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
 // Z. W933 — the Worldgate card leads the Co-op hub; the header pulse rides every tab
 // ─────────────────────────────────────────────────────────────────────────
-test.describe('Z · Worldgate placement (W933)', () => {
-  test('pulse in the header on Habits, no card there; the big card on the Co-op hub; the pulse opens the sheet', async ({ page }) => {
+test.describe('Z · Worldgate placement (W933 → W934)', () => {
+  test('the header pulse is the one Worldgate surface: no card on Habits or Co-op; the pulse opens the sheet', async ({ page }) => {
     await page.addInitScript(() => {
       try {
         localStorage.setItem('hb_worldgate_v1', JSON.stringify({
@@ -2190,16 +2189,14 @@ test.describe('Z · Worldgate placement (W933)', () => {
     await expect(pulse.locator('.wg-pulse-name')).not.toBeEmpty();
     await expect(pulse.locator('.wg-pulse-pct')).toHaveText('30.7%');
     await expect(pulse.locator('.wg-pulse-you')).toHaveCount(1);
-    await expect(page.locator('#main-scroll #worldgate-card')).toHaveCount(0);
+    // W934 — no card anywhere; the pulse rides every tab and opens the sheet.
+    await expect(page.locator('#worldgate-card')).toHaveCount(0);
     await page.evaluate(() => document.getElementById('tab-quests')!.click());
-    const card = page.locator('#quests-gate-view #worldgate-card');
-    await expect(card).toBeVisible();
-    await expect(card.locator('.wg2-pct-n')).toHaveText('30.7%');
-    await expect(card.locator('.wg2-sub')).toContainText('5');
-    await expect(pulse).toBeHidden();   // the hub shows the big card, so the pulse steps aside
-    await page.evaluate(() => document.getElementById('tab-habits')!.click());
+    await expect(page.locator('#quests-gate-view')).toBeVisible();
+    await expect(page.locator('#worldgate-card')).toHaveCount(0);
     await expect(pulse).toBeVisible();
     await page.evaluate(() => (document.getElementById('wg-pulse') as HTMLElement).click());
     await expect(page.locator('.wg2-sheet-wrap')).toHaveCount(1);
+    await expect(page.locator('.wg2-sheet-wrap .wg2-eyebrow')).toContainText('THE WORLDGATE');
   });
 });

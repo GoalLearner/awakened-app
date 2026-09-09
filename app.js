@@ -263,7 +263,7 @@
   const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w933'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.3-w934'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5603,13 +5603,13 @@
     const kind = party >= 5 ? 'RAID' : (party === 3 ? 'TRIO HUNT' : (party === 2 ? 'DUO HUNT' : 'SOLO HUNT'));
     return { id: id, name: String(cfg.name), rank: String(cfg.rank || 'E'), coop: coop, party: party, kind: kind };
   }
-  /** W932 — the banner body shared by the hub line and the in-gate line. */
-  function _hungerBannerInner(hm, where) {
+  /** W932 — the hub line's body (W934: the in-gate copy of it is gone). */
+  function _hungerBannerInner(hm) {
     return '<span class="hunger-banner-kicker">THE HUNGER</span>' +
       'This week <b>' + esc(hm.name) + '</b> hungers — 2× souls · +1% relic luck.' +
-      '<span class="hunger-where"><span class="hunger-rank" data-rank="' + esc(hm.rank) + '">' + esc(hm.rank) + '-RANK' + (where === 'here' ? '' : ' GATE') + '</span>' +
+      '<span class="hunger-where"><span class="hunger-rank" data-rank="' + esc(hm.rank) + '">' + esc(hm.rank) + '-RANK GATE</span>' +
         '<span class="hunger-kind">· ' + hm.kind + '</span>' +
-        '<em>' + (where === 'here' ? 'ON THIS FLOOR' : 'GO') + ' ›</em>' +
+        '<em>GO ›</em>' +
       '</span>';
   }
   /** SQLite/ISO timestamp → the PT week key it fell in (co-op starts_at). */
@@ -6614,7 +6614,7 @@
             try { showNoticeCard({ eyebrow: 'THE GATE BREAKS', title: 'The Worldgate is down', body: 'Every hunter’s verified steps brought it low — yours among them. +' + cl.souls + ' souls. One server, one monster, one kill.' }); } catch (_) {}
           }).catch(function () {});
         }
-      try { renderWorldgateCard(); } catch (_) {}
+      try { renderWorldgatePulse(); } catch (_) {}
       try { _wgSheetPaint(); } catch (_) {}
       // The bar moved since you last looked — a strike lands on screen.
       try { if (prev && prev.week === r.week_start && Number(r.pool) > Number(prev.pool)) _wgFlash(Number(r.pool) - Number(prev.pool), (r.my_damage | 0) - (prev.my | 0)); } catch (_) {}
@@ -6642,39 +6642,11 @@
     return '<div class="wg2-legend"><span class="wg2-lg--o"><i></i>ALL HUNTERS</span>' + (g ? '<span class="wg2-lg--g"><i></i>YOUR GUILD</span>' : '') + '<span class="wg2-lg--y"><i></i>YOU</span></div>';
   }
 
-  // ── the Habits-tab card ──
-  // W919b — the owner keeps the BIG card on the Habits tab ("I do want that to remain");
-  // the compact row from handoff 29 was reverted the same day.
-  // ── the Habits-tab card ──
-  function _worldgateCardHtml() {
-    const c = _wgCache();
-    if (!c) return '';
-    const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
-    const hunters = Number(c.hunters) || 0; const my = Number(c.my) || 0;
-    const avs = (Array.isArray(c.top) ? c.top : []).slice(0, 4).map(function (t, i) { return '<span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(t.alias)) + '</span>'; }).join('') +
-      (hunters > 4 ? '<span class="wg2-av wg2-av--more">+' + _wgFmt(hunters - 4) + '</span>' : '');
-    return '<div class="wg2-seclabel">The Worldgate<span class="wg2-ln"></span><span class="wg2-live' + (slain ? ' wg2-live--down' : '') + '"><i></i>' + (slain ? 'DOWN' : 'LIVE') + '</span></div>' +
-      '<div class="wg2' + (slain ? ' wg2--slain' : '') + '" role="button" tabindex="0" data-wg-open aria-label="Open the Worldgate">' +
-        '<div class="wg2-top"><div class="wg2-mon" data-wg-mon>' + _WG_EMBLEM + '</div>' +
-          '<div class="wg2-title"><div class="wg2-name">' + esc(name) + '</div><div class="wg2-sub">' + (slain ? '<b>DOWN</b> · THE WHOLE SERVER BROKE IT' : '<b>' + _wgFmt(hunters) + '</b> HUNTERS THIS WEEK') + '</div></div>' +
-          '<div class="wg2-pct"><div class="wg2-pct-n">' + (slain ? '100%' : pct.toFixed(1) + '%') + '</div><div class="wg2-pct-l">HP DOWN</div></div>' +
-        '</div>' +
-        '<div class="wg2-hp">' + _wgBarHtml(c, false) + '<div class="wg2-nums"><span><b>' + _wgFmt(c.pool) + '</b> struck</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
-        _wgLegendHtml(c) +
-        '<div class="wg2-foot"><div class="wg2-avs">' + avs + '</div><div class="wg2-foot-t"><b>Every step you walk is a strike.</b><br>' +
-          (my > 0 ? 'Your ' + _wgFmt(my) + ' strikes are in the bar — in gold.' : 'Walk today and your strikes join the bar — in gold.') + '</div><span class="wg2-chev">›</span></div>' +
-      '</div>';
-  }
-  // W933 — the card leads the Co-op hub (W915–W932: the Habits tab); hidden until
-  // the first sync lands. The header pulse repaints with it.
-  function renderWorldgateCard() {
-    try { renderWorldgatePulse(); } catch (_) {}
-    const host = document.getElementById('worldgate-card'); if (!host) return;
-    let html = ''; try { html = _worldgateCardHtml(); } catch (_) { html = ''; }
-    host.innerHTML = html;
-    host.classList.toggle('hidden', !html);
-  }
-  // ── W933 — the pulse: one line under the header's today strip, on every tab ──
+  // ── W934 — the Worldgate CARD is gone (owner, 2026-09-09: "I change my mind
+  // on the worldgate card on the co-op … let's remove it"). It led the Habits
+  // tab W915–W932 and the Co-op hub for one build (W933). Outside the sheet the
+  // header pulse below is the one Worldgate surface.
+  // ── W933 — the pulse: one line under the header's today strip, on every tab (W934: the only card-like surface) ──
   // Live dot · the boss · a thin HP bar (everyone in violet, YOU in gold) · HP down.
   function _worldgatePulseHtml() {
     const c = _wgCache(); if (!c) return '';
@@ -6688,11 +6660,6 @@
       '<span class="wg-pulse-bar" aria-hidden="true"><i style="width:' + w(rest) + '%"></i><i class="wg-pulse-you" style="width:' + (my > 0 ? Math.max(Number(w(my)), 1.2).toFixed(2) : '0') + '%"></i></span>' +
       '<span class="wg-pulse-pct">' + (slain ? 'DOWN' : pct.toFixed(1) + '%') + '</span>' +
       '<span class="wg-pulse-chev" aria-hidden="true">›</span>';
-  }
-  /** W933 — the pulse steps aside while the Co-op hub (and its big card) is on screen. */
-  function _wgPulseQuiet(quiet) {
-    const el = document.getElementById('wg-pulse'); if (!el) return;
-    el.classList.toggle('wg-pulse--off', !!quiet);
   }
   function renderWorldgatePulse() {
     const el = document.getElementById('wg-pulse'); if (!el) return;
@@ -6847,7 +6814,7 @@
     const gained = (after && before) ? (Number(after.my) || 0) - (Number(before.my) || 0) : 0;
     if (gained > 0) { _wgToast('+' + _wgFmt(gained) + ' strikes landed. The gold in the bar just grew.'); try { _hapticTick('SUCCESS'); } catch (_) {} }
     else _wgToast('Your steps are already in. Health syncs the rest as you walk.');
-    _wgSheetPaint(); renderWorldgateCard();
+    _wgSheetPaint(); renderWorldgatePulse();
   }
   async function _wgRally(btn) {
     if (btn) btn.disabled = true;
@@ -6909,7 +6876,7 @@
   }
   try { _wgWire(); } catch (_) {}
   // W871 QA — __worldgate() cache; __worldgate(true) force-syncs; __worldgate.open() the sheet.
-  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); try { renderWorldgateCard(); } catch (_) {} return _wgCache(); }; window.__worldgate.open = openWorldgateSheet; window.__worldgate.close = closeWorldgateSheet; } catch (_) {}
+  try { window.__worldgate = function (force) { if (force) _worldgateSync(true); try { renderWorldgatePulse(); } catch (_) {} return _wgCache(); }; window.__worldgate.open = openWorldgateSheet; window.__worldgate.close = closeWorldgateSheet; } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════════════
   // W872 (Wave 2 Train B, S-tier #4 batch 1) — THE SYSTEM STIRS
@@ -38144,8 +38111,7 @@
     itemsPanel.classList.toggle('hidden',   tab !== 'items');
     socialPanel.classList.toggle('hidden',  tab !== 'social');
     footer.style.display = (tab === 'habits' && _habitsView !== 'ledger') ? '' : 'none';   // W919 — no Add button under the Ledger
-    if (tab === 'habits' || tab === 'quests') { try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }   // W933 — the card leads the Co-op hub; the pulse rides the header on every tab
-    try { _wgPulseQuiet(tab === 'quests' && !questsGateExpanded); } catch (_) {}   // W933 — never the same boss twice on one screen
+    if (tab === 'habits' || tab === 'quests') { try { renderWorldgatePulse(); } catch (_) {} try { _worldgateSync(); } catch (_) {} }   // W933/W934 — the pulse rides the header on every tab; these two tabs also refresh it
 
     if (tab === 'profile')      renderProfile();
     // Quests tab: always re-greet the user with the gate. Reset the
@@ -52048,16 +52014,10 @@
     list.classList.add('bosses-list--cards');
     // W845 — THE HUNGER banner: one System line naming the week's hungered
     // boss, on every rank view (the chip on its card does the local work).
-    let _hungerBanner = '';
-    try {
-      const _hm = _hungerMark();   // W932 — names the mark's gate + hunt type; a tap goes to the card
-      if (_hm) {
-        _hungerBanner = '<button type="button" class="hunger-banner hunger-banner--go" data-hunger-go="' + esc(_hm.id) + '" data-hunger-rank="' + esc(_hm.rank) + '" aria-label="Go to ' + esc(_hm.name) + '">' +
-          _hungerBannerInner(_hm, _hm.rank === effectiveRank ? 'here' : 'gate') + '</button>';
-      }
-    } catch (_) {}
+    // W934 — THE HUNGER banner reads ONCE, on the Co-op hub (owner: "redundant to
+    // have the hunger banner displayed twice"); inside a gate the card's HUNGERS · 2× chip is the mark.
     // W915 — the Worldgate card moved to the top of the Habits tab (it used to lead every dungeon rank view).
-    list.innerHTML = _hungerBanner + bossIds.map(buildBossCardHTML).join('');
+    list.innerHTML = bossIds.map(buildBossCardHTML).join('');
     // W370 — co-op boss card(s) appended before the setBossImage loop so their
     // art wires too.
     try {
@@ -56641,7 +56601,6 @@
     const dungeonView = document.getElementById('quests-dungeon-view');
     if (!gateView || !dungeonView) return;
 
-    try { if (typeof currentTab !== 'undefined' && currentTab === 'quests') _wgPulseQuiet(!questsGateExpanded); } catch (_) {}   // W933
     if (questsGateExpanded) {
       gateView.classList.add('hidden');
       dungeonView.classList.remove('hidden');
@@ -56709,7 +56668,7 @@
     if (!hm) { el.classList.add('hidden'); return; }
     el.setAttribute('data-hunger-go', hm.id); el.setAttribute('data-hunger-rank', hm.rank);
     el.setAttribute('aria-label', 'Go to ' + hm.name + ' in the ' + hm.rank + '-rank gate');
-    el.innerHTML = _hungerBannerInner(hm, 'gate');
+    el.innerHTML = _hungerBannerInner(hm);
     el.classList.remove('hidden');
   }
   function _hungerGo(bossId, rank) {
@@ -67785,7 +67744,7 @@
     // existing hunter gets the tab silently (it is stamped unlocked, not
     // announced), and a brand-new one simply never sees it yet.
     try { _syncHistoryTab(); } catch (_) {}
-    try { renderWorldgateCard(); } catch (_) {}   // W920 — Habits is the landing tab: paint the gate from its cache at once, not at the 8s beat
+    try { renderWorldgatePulse(); } catch (_) {}   // W920/W934 — paint the Worldgate pulse from its cache at once, not at the 8s beat
     setTimeout(function () { try { _cmUnseenSync(true); } catch (_) {} }, 2500);   // W921 — the Community badge
     setupLeaderboardPreview();
     setupSoulsInfoModal();
@@ -68119,7 +68078,7 @@
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
     setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} try { _cmUnseenSync(false); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgateCard(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    try { setTimeout(function () { try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgatePulse(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

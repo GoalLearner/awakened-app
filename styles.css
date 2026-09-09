@@ -34878,9 +34878,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* W909 — the Shadow Army strip lives on the Co-op tab now;
    the strip was sized for the inside of the Status card, so give it the tab gutter. */
 .shadow-strip--tab { width: calc(100% - 28px); margin: 10px 14px 4px; }
-/* W933 — the Worldgate card leads the Co-op hub (W915–W932: the Habits tab). */
-#quests-gate-view > .wg-host { margin: 0 0 14px; }
-.wg-host.hidden { display: none !important; }
 
 /* W911 — full-board sheet: rails at the top, then the same rows as the tab. */
 .board-sheet--list .board-body { margin-bottom: 10px; }
@@ -35065,16 +35062,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
   --wg-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
 }
 @keyframes wg2-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-.wg2-seclabel { font-family: var(--wg-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 2.4px; color: #6b6c8c; text-transform: uppercase; padding: 8px 2px 0; display: flex; align-items: center; gap: 9px; }
-.wg2-ln { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.10), transparent); }
-.wg2-live { margin-left: auto; display: flex; align-items: center; gap: 5px; color: var(--wg-red); font-size: 9px; letter-spacing: 1.5px; }
-.wg2-live i { width: 5px; height: 5px; border-radius: 50%; background: var(--wg-red); box-shadow: 0 0 8px var(--wg-red); animation: wg2-pulse 1.6s infinite; }
-.wg2-live--down { color: var(--wg-gold); } .wg2-live--down i { background: var(--wg-gold); box-shadow: 0 0 8px var(--wg-gold); animation: none; }
-.wg2 { margin: 10px 0 0; border-radius: 16px; position: relative; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; color: var(--wg-ink); font-family: var(--wg-sans);
   background: radial-gradient(90% 70% at 100% 0%, rgba(239,68,68,0.16), transparent 55%), var(--wg-card); border: 1px solid rgba(139,92,246,0.42); box-shadow: 0 0 24px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.05); transition: transform .15s, border-color .2s; }
-.wg2:active { transform: scale(.985); }
-.wg2--slain { background: radial-gradient(90% 70% at 100% 0%, rgba(245,184,66,0.18), transparent 55%), var(--wg-card); border-color: rgba(245,184,66,0.55); }
-.wg2-top { display: flex; align-items: center; gap: 12px; padding: 13px 14px 0; }
 .wg2-mon { width: 52px; height: 52px; border-radius: 14px; flex: none; position: relative; color: var(--wg-red); display: flex; align-items: center; justify-content: center;
   background: radial-gradient(circle at 50% 40%, rgba(239,68,68,0.35), rgba(239,68,68,0.05) 70%); border: 1px solid rgba(239,68,68,0.55); box-shadow: 0 0 18px rgba(239,68,68,0.3), inset 0 0 12px rgba(239,68,68,0.2); }
 .wg2-mon svg { width: 28px; height: 28px; filter: drop-shadow(0 0 6px rgba(239,68,68,0.8)); }
@@ -35084,14 +35072,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg2-mon--big svg { width: 60px; height: 60px; }
 @keyframes wg2-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
 .wg2-shake { animation: wg2-shake .4s; }
-.wg2-title { min-width: 0; }
-.wg2-name { font-family: var(--wg-serif); font-size: 15.5px; font-weight: 700; letter-spacing: .4px; line-height: 1.12; }
-.wg2-sub { font-family: var(--wg-mono); font-size: 9px; font-weight: 700; letter-spacing: 1.6px; color: var(--wg-ink2); margin-top: 5px; }
-.wg2-sub b { color: var(--wg-red); } .wg2--slain .wg2-sub b { color: var(--wg-gold); }
-.wg2-pct { margin-left: auto; text-align: right; flex: none; }
-.wg2-pct-n { font-family: var(--wg-serif); font-size: 24px; font-weight: 700; color: var(--wg-red); text-shadow: 0 0 14px rgba(239,68,68,0.35); line-height: 1; }
-.wg2--slain .wg2-pct-n { color: var(--wg-gold); text-shadow: 0 0 14px rgba(245,184,66,0.35); }
-.wg2-pct-l { font-family: var(--wg-mono); font-size: 8px; letter-spacing: 1.5px; color: var(--wg-ink3); font-weight: 700; margin-top: 3px; }
 /* HP bar */
 .wg2-hp { margin: 12px 14px 0; position: relative; }
 .wg2-track { height: 14px; border-radius: 7px; background: #0b0a1a; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; position: relative; }
@@ -35119,15 +35099,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg2-pop--g { color: var(--wg-gold); }
 @keyframes wg2-rise { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-34px); } }
 /* card foot */
-.wg2-foot { margin: 12px 0 0; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.18); }
-.wg2-avs { display: flex; flex: none; }
 .wg2-av { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #100e24; margin-left: -7px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--wg-serif); font-size: 9px; font-weight: 700; color: #fff; flex: none; }
-.wg2-av:first-child { margin-left: 0; }
 .wg2-av--0 { background: #6d28d9; } .wg2-av--1 { background: #9d174d; } .wg2-av--2 { background: #0f766e; } .wg2-av--3 { background: #b45309; } .wg2-av--me { background: #6d28d9; box-shadow: 0 0 0 1.5px var(--wg-gold); }
-.wg2-av--more { background: #1c1b36; color: var(--wg-ink2); font-family: var(--wg-mono); font-size: 8px; width: auto; padding: 0 6px; border-radius: 11px; }
-.wg2-foot-t { font-size: 11.5px; color: var(--wg-ink2); line-height: 1.35; min-width: 0; }
-.wg2-foot-t b { color: var(--wg-ink); font-weight: 600; }
-.wg2-chev { margin-left: auto; color: var(--wg-vio-lt); flex: none; font-size: 20px; line-height: 1; }
+.wg2-av:first-child { margin-left: 0; }
 /* sheet */
 .wg2-sheet-wrap { position: fixed; inset: 0; z-index: 12240; pointer-events: none; color: var(--wg-ink); font-family: var(--wg-sans); }
 .wg2-scrim { position: absolute; inset: 0; background: rgba(4,4,12,0.72); opacity: 0; transition: opacity .28s ease; }
@@ -35399,7 +35373,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 
 /* ═══ W933 — THE WORLDGATE pulse: one line under the today strip, on every tab ═══ */
 .wg-pulse { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0 0 10px; padding: 7px 11px; border-radius: 10px; border: 1px solid rgba(239, 68, 68, 0.28); background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(139, 92, 246, 0.06)); color: var(--wg-ink); font-family: var(--wg-sans); text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: background .2s; }
-.wg-pulse.hidden, .wg-pulse--off { display: none !important; }
+.wg-pulse.hidden { display: none !important; }
 .wg-pulse:active { background: rgba(239, 68, 68, 0.14); }
 .wg-pulse--down { border-color: rgba(245, 184, 66, 0.4); background: linear-gradient(90deg, rgba(245, 184, 66, 0.10), rgba(139, 92, 246, 0.06)); }
 .wg-pulse-live { display: inline-flex; flex: none; }

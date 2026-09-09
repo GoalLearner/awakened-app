@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=690">
+  <link rel="stylesheet" href="styles.css?v=691">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -587,7 +587,7 @@
       <div class="progress-track hidden-compat"><div id="progress-bar" class="progress-fill"></div></div>
       <!-- W933 — THE WORLDGATE pulse: one line on every tab (boss · HP bar with your
            strikes in gold · HP down). renderWorldgatePulse() paints it from the cache;
-           a tap opens the Worldgate sheet. -->
+           a tap opens the Worldgate sheet. W934: the only Worldgate surface outside the sheet. -->
       <button type="button" id="wg-pulse" class="wg-pulse wg-scope hidden" data-wg-open aria-label="Open the Worldgate"></button>
 
       <!-- Status pill row — populated by updateStatusPills() in JS -->
@@ -689,8 +689,8 @@
          sheets are unchanged — only the entry point moved. -->
     <!-- Habits panel -->
     <main id="main-scroll" class="tab-panel" data-panel="habits">
-      <!-- W933 — the Worldgate card led this tab from W915 to W932; it now leads the
-           Co-op hub, and the header carries a one-line pulse on every tab. -->
+      <!-- W933/W934 — the Worldgate card led this tab from W915 to W932 and the Co-op hub
+           for one build; the card is gone, and the header carries a one-line pulse on every tab. -->
       <!-- v3 Phase 1l — Daily Objectives section header removed.
            The top "X / Y HABITS TODAY" tile in .today-strip is the
            canonical habit-progress summary on this tab. Cards start
@@ -800,11 +800,6 @@
            markup but hidden by default; revealed only when the parent
            carries .gate-cell--locked. -->
       <div id="quests-gate-view" class="bosses-section">
-        <!-- W933 — THE WORLDGATE (one server, one monster) leads the Co-op hub (owner,
-             2026-09-08, "option B": the boss lives with the hunts; the Habits tab gets its
-             first screen back). renderWorldgateCard() fills it from the 10-min cache;
-             hidden until the first sync lands. -->
-        <div id="worldgate-card" class="wg-host wg-scope hidden"></div>
         <!-- W823 (Train 2, L9a) — the tab is named "Co-op" but its default
              view is the SOLO gate grid; the label now says so, and points at
              The Pacts for the actual co-op surface. Renames are a separate
@@ -3405,7 +3400,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1338"></script>
+  <script src="app.js?v=1339"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
