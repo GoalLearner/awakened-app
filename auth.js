@@ -2190,12 +2190,17 @@
   // limits, so this is belt-and-suspenders). Skips guest / local-dev / not-signed-in
   // users via _stubGate (no real backend session to authenticate with).
   let _lastAppOpenReportMs = 0;
-  function reportAppOpen() {
+  function reportAppOpen(opts) {
     try {
       const u = readUser();
       if (_stubGate(u)) return;
       const now = Date.now();
-      if (now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
+      // W935 — opts.force sends the queued funnel events NOW instead of waiting
+      // out the 5-minute throttle: the Apple Health answer is recorded in a new
+      // hunter's first minutes, and most of them are gone by minute two. Safe to
+      // repeat: app_opens is one row per user per UTC day, RL_APP_OPEN is 6/min.
+      const force = !!(opts && opts.force);
+      if (!force && now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
       _lastAppOpenReportMs = now;
       // W839 (Train 3, G2 client) — the ping now CARRIES data: the running
       // build tag (powers the W835 Monday-push version gate — users who

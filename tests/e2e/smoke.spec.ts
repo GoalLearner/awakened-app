@@ -2200,3 +2200,97 @@ test.describe('Z · Worldgate placement (W933 → W934)', () => {
     await expect(page.locator('.wg2-sheet-wrap .wg2-eyebrow')).toContainText('THE WORLDGATE');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AA. W935 — Apple Health is asked of every hunter, walk habit or not
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AA · Apple Health prompt on every path (W935)', () => {
+  async function seedAndPrompt(page: Page, habits: unknown[]) {
+    await freshApp(page);
+    await page.addInitScript((h) => {
+      try {
+        localStorage.setItem('hb_habits', JSON.stringify(h));
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.removeItem('hb_healthkit_prompted');
+      } catch (_) {}
+    }, habits);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    return page.evaluate(async () => {
+      const w = window as any;
+      const s = document.getElementById('awakened-splash'); if (s) s.remove();
+      // Web has no HealthKit: stub the native bridge on the shared Health object
+      // and drive the real prompt path.
+      w.Health.isAvailable = () => true;
+      w.Health.permissionStatus = () => 'unknown';
+      localStorage.removeItem('hb_healthkit_prompted');
+      await w.autoVerifyWalk();
+      const t = document.querySelector('#hk-preprompt-overlay .hk-preprompt-title');
+      return {
+        title: t ? t.textContent : null,
+        picker: !!document.getElementById('hk-preprompt-stepgoal'),
+        queue: localStorage.getItem('hb_funnel_queue') || '',
+      };
+    });
+  }
+
+  test('a Make Your Own hunter with no walk habit is asked to connect Apple Health', async ({ page }) => {
+    const r = await seedAndPrompt(page, [
+      { id: 'h-workout', name: 'Workout', emoji: '🏋️', difficulty: 'hard', type: 'build', primaryStat: 'STR' },
+    ]);
+    expect(r.title).toBe('Connect Apple Health');
+    expect(r.picker).toBe(false);
+    expect(r.queue).toContain('health_prompt_shown');
+    expect(r.queue).toContain('no_walk');
+  });
+
+  test('a hunter with the Daily walk habit still sees the walk copy and the step-goal picker', async ({ page }) => {
+    const r = await seedAndPrompt(page, [
+      { id: 'h-walk', name: 'Daily walk', emoji: '🚶', difficulty: 'easy', type: 'build', primaryStat: 'VIT', stepGoal: 8000 },
+    ]);
+    expect(r.title).toMatch(/Auto-verify your/);
+    expect(r.picker).toBe(true);
+    expect(r.queue).toContain('health_prompt_shown');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AB. W935 — a rejected step upload is a failure, never recorded as sent
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AB · Honest step uploads (W935)', () => {
+  test('a rate-limited step upload leaves the throttle unset; a landed one records the value sent', async ({ page }) => {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        const d = new Date();
+        const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: { [k]: 4321 } }));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      let stepReply: any = { ok: false, code: 'RATE_LIMITED' };
+      const calls: string[] = [];
+      w.Auth.submitLeaderboardSnapshot = async (m: string) => { calls.push(m); return m === 'step_total' ? stepReply : { ok: true, best_value: 0 }; };
+      localStorage.removeItem('hb_lb_last_submit');
+      localStorage.removeItem('hb_lb_last_step_submitted');
+      const direct = await w.Leaderboard.submitAllMetrics();
+      w.Leaderboard.submitAllMetricsDebounced(true);
+      await wait(400);
+      const afterReject = { stamp: localStorage.getItem('hb_lb_last_submit'), sent: localStorage.getItem('hb_lb_last_step_submitted') };
+      stepReply = { ok: true, best_value: 4321 };
+      w.Leaderboard.submitAllMetricsDebounced(true);
+      await wait(400);
+      return { direct, calls, afterReject, afterLand: { stamp: localStorage.getItem('hb_lb_last_submit'), sent: localStorage.getItem('hb_lb_last_step_submitted') } };
+    });
+    expect(r.calls).toContain('step_total');
+    expect(r.direct).toBe(false);
+    expect(r.afterReject.stamp).toBeNull();
+    expect(r.afterReject.sent).toBeNull();
+    expect(r.afterLand.stamp).not.toBeNull();
+    expect(r.afterLand.sent).toBe('4321');
+  });
+});

@@ -111,11 +111,17 @@ type = "ratelimit"
 namespace_id = "1001"
 simple = { limit = 10, period = 60 }  # 10/min per IP
 
+# W935 — was 2/min. Every client submit is a 3-POST batch (step_total +
+# floor_best + relics_collected) and an empty-tower launch adds a floor probe,
+# so 2/min rejected one metric per batch at random. A rejected step_total was
+# recorded as sent and never retried, silently keeping hunters off the weekly
+# board (Soph + Minn, week of 2026-09-06). The sanity caps and the elapsed-days
+# plausibility check in leaderboard-submit.ts are the real abuse guard.
 [[unsafe.bindings]]
 name = "RL_LEADERBOARD_SUBMIT"
 type = "ratelimit"
 namespace_id = "1002"
-simple = { limit = 2, period = 60 }   # 2/min per user (≈ spec's 12/hour)
+simple = { limit = 12, period = 60 }  # 12/min per user
 
 [[unsafe.bindings]]
 name = "RL_LEADERBOARD_TOP"

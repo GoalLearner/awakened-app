@@ -260,10 +260,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '3.0.3';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.3-w934'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w935'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -554,6 +554,8 @@
         hb_state_owner: 1,        // auth.js overwrites with the new sub after purge
         hb_debug_healthkit: 1,    // device-scoped debug flag
         hb_healthkit_prompted: 1, // device-level HealthKit pre-prompt (iOS perm is per-device)
+        hb_hk_answered_v1: 1,     // W935 — device-level: this device answered the Apple Health pre-prompt
+        hb_hk_first_read_v1: 1,   // W935 — device-level: the first step read after that answer was reported
         // W830 — the REST of the device-scoped HealthKit permission family.
         // hb_healthkit_status is the plugin's ONLY notion of "granted"
         // (Apple hides read-auth status, so it's tracked locally). Purging
@@ -24654,6 +24656,26 @@
     const cap = LB_CLIENT_CAPS[metric] || 0;
     return Math.min(Math.floor(n), cap);
   }
+  // W935 — a step upload that did not land is retried, never recorded as sent.
+  // Retryable: rate limit, network, server error, a thrown call. Not retryable:
+  // signed out, expired, dev stubs, invalid input. Three tries a session at most.
+  let _lbSubmitRetryN = 0;
+  let _lbSubmitRetryTimer = null;
+  let _lbLastSent = null;   // { steps, sig } of the last submit whose step value LANDED
+  const _LB_RETRY_DELAYS_MS = [15000, 60000, 180000];
+  const _LB_NO_RETRY = { NOT_SIGNED_IN: 1, GUEST_SKIP: 1, LOCAL_DEV_SKIP: 1, STUB_USER: 1, EXPIRED: 1, INVALID_METRIC: 1, INVALID_VALUE: 1 };
+  function _lbScheduleSubmitRetry(code) {
+    try {
+      if (code && _LB_NO_RETRY[code]) return;
+      if (_lbSubmitRetryTimer || _lbSubmitRetryN >= _LB_RETRY_DELAYS_MS.length) return;
+      const delay = _LB_RETRY_DELAYS_MS[_lbSubmitRetryN++];
+      _lbSubmitRetryTimer = setTimeout(function () {
+        _lbSubmitRetryTimer = null;
+        try { lbSubmitAllMetricsDebounced(true); } catch (_) {}
+      }, delay);
+    } catch (_) {}
+  }
+
   async function lbSubmitAllMetrics() {
     try {
       if (typeof window.Auth === 'undefined' ||
@@ -24716,6 +24738,7 @@
         : function () {};
       const flagOn = (typeof LEADERBOARD_WORKOUT_BACKEND_ENABLED !== 'undefined') &&
                      !!LEADERBOARD_WORKOUT_BACKEND_ENABLED;
+      const results = {};   // W935 — per-metric outcome, so a rejected step value is never reported as sent
       await Promise.all(metrics.map(async ([m, v]) => {
         const sanitized = lbSanitizeValue(m, v);
         try {
@@ -24747,6 +24770,7 @@
             ? { weeklySumSource: 'client_pacific_week_v1' }
             : undefined;
           const resp = await window.Auth.submitLeaderboardSnapshot(m, sanitized, submitOpts);
+          results[m] = { ok: !!(resp && resp.ok === true), code: (resp && resp.code) || '', value: sanitized };
           // W818 — ASCENT SELF-HEAL from the server's ratcheted best. The
           // leaderboard MAX-keeps best_value, so a device whose local climb was
           // destroyed (the W689-purge + never-synced-hb_arena_v2 incident)
@@ -24777,7 +24801,9 @@
           // "attempted" (the existing -attempt event) from "persisted"
           // so future race-condition debugging has a definitive signal.
           try {
-            const ok = !!(resp && (resp.ok === true || resp.success === true || (typeof resp === 'object' && !resp.error)));
+            // W935 — auth.js failures carry `code`, never `error`, so the old
+            // `!resp.error` test logged every RATE_LIMITED / NETWORK reply as ok.
+            const ok = !!(resp && resp.ok === true);
             _bcSubmit('leaderboard-submit-metric-result', {
               metric: m,
               value: sanitized,
@@ -24788,6 +24814,7 @@
         } catch (_) {
           try {
             _bcSubmit('leaderboard-submit-metric-failed', { metric: m });
+            results[m] = { ok: false, code: 'THROWN', value: sanitized };
           } catch (_) {}
           try {
             _bcSubmit('leaderboard-submit-metric-result', {
@@ -24815,7 +24842,19 @@
       // (auth gate, allZero defensive guard) leave the throttle unset
       // so the next call (typically lbRecordStepsToday when HK lands)
       // can break through without waiting for a foreground transition.
-      return true;
+      // W935 — truthy ONLY when the step value actually landed. Before, a
+      // rejected step upload still returned true, the wrapper stamped the
+      // throttle and recorded the steps as sent, and nothing retried: the
+      // hunter stayed off the board (Soph + Minn, week of 2026-09-06).
+      const stepRes = results.step_total;
+      const stepOk = !!(stepRes && stepRes.ok);
+      if (stepOk) {
+        _lbSubmitRetryN = 0;
+        _lbLastSent = { steps: (snap && snap.steps_last_7_days) || 0, sig: _lbSubmitSignature(snap) };
+      } else {
+        _lbScheduleSubmitRetry(stepRes ? stepRes.code : '');
+      }
+      return stepOk;
     } catch (_) {}
     return false;
   }
@@ -24860,9 +24899,12 @@
   // trigger (which calls debounced when HK step data lands) can't
   // race with the existing cold-launch / visibilitychange triggers.
   let _lbSubmitInFlight = false;
+  let _lbSubmitPending = false;   // W935 — a request that arrives mid-flight runs once afterwards
   function lbSubmitAllMetricsDebounced(force) {
     try {
-      if (_lbSubmitInFlight) return;
+      // W935 — was a silent return: HealthKit steps that landed during the boot
+      // submit were dropped until the next foreground.
+      if (_lbSubmitInFlight) { _lbSubmitPending = true; return; }
       const lastStr = localStorage.getItem('hb_lb_last_submit');
       const last    = lastStr ? parseInt(lastStr, 10) : 0;
       if (!force && Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
@@ -24883,14 +24925,24 @@
               localStorage.setItem('hb_lb_last_submit', String(Date.now()));
               // W346 — remember the step value we just submitted so the foreground
               // catch-up can tell when local steps have advanced past the board.
-              const _lbS = lbGetSnapshot();
-              localStorage.setItem('hb_lb_last_step_submitted', String((_lbS && _lbS.steps_last_7_days) || 0));
-              localStorage.setItem('hb_lb_last_submit_sig', _lbSubmitSignature(_lbS));
+              // W935 — the value that was SENT (captured before the POST), not a
+              // fresh snapshot: steps that landed mid-flight must still count as unsent.
+              const _sent = _lbLastSent || { steps: 0, sig: '' };
+              localStorage.setItem('hb_lb_last_step_submitted', String(_sent.steps || 0));
+              localStorage.setItem('hb_lb_last_submit_sig', _sent.sig || '');
             } catch (e) { _logSwallow('lb_submit_sig:persist', e); }
           }
         })
         .catch(() => {})
-        .then(() => { _lbSubmitInFlight = false; });
+        .then(() => {
+          _lbSubmitInFlight = false;
+          // W935 — replay the one request that arrived mid-flight; forced only
+          // when the local steps have moved past what the board holds.
+          if (_lbSubmitPending) {
+            _lbSubmitPending = false;
+            try { lbSubmitAllMetricsDebounced(_lbStepsAdvancedSinceSubmit()); } catch (_) {}
+          }
+        });
     } catch (_) {
       _lbSubmitInFlight = false;
     }
@@ -65302,17 +65354,26 @@
     overlay.className = 'modal-overlay';
     overlay.innerHTML =
       '<div class="modal-card hk-preprompt-card">' +
-        '<h2 class="hk-preprompt-title">Auto-verify your ' + (hasAnySleep ? 'Habits' : 'Walk') + '</h2>' +
-        '<p class="hk-preprompt-body">' +
-          'Awakened can use Apple Health to mark the Daily walk habit complete ' +
-          'when you reach <button type="button" id="hk-preprompt-goal-btn" class="hk-preprompt-goal-btn">' +
-            initialGoal.toLocaleString() + '+ steps' +
-          '</button> &mdash; no tap needed.' +
-        '</p>' +
+        (walk
+          ? '<h2 class="hk-preprompt-title">Auto-verify your ' + (hasAnySleep ? 'Habits' : 'Walk') + '</h2>' +
+            '<p class="hk-preprompt-body">' +
+              'Awakened can use Apple Health to mark the Daily walk habit complete ' +
+              'when you reach <button type="button" id="hk-preprompt-goal-btn" class="hk-preprompt-goal-btn">' +
+                initialGoal.toLocaleString() + '+ steps' +
+              '</button> &mdash; no tap needed.' +
+            '</p>'
+          // W935 — no walk habit (the Make Your Own path): the same neutral
+          // one-button sheet, saying what Apple Health does in the game.
+          : '<h2 class="hk-preprompt-title">Connect Apple Health</h2>' +
+            '<p class="hk-preprompt-body">' +
+              'Awakened reads your steps, sleep and workouts from Apple Health. They power the ' +
+              'weekly Steps board, the Worldgate and your boss hunts, and they complete your ' +
+              'habits for you &mdash; no tap needed.' +
+            '</p>') +
         // Inline chip picker — collapsed by default, opens when the
         // step-goal value above is tapped. Reuses .habit-edit-stepgoal-*
         // styles for visual consistency with the Edit Habit modal.
-        '<div id="hk-preprompt-stepgoal" class="habit-edit-stepgoal hk-preprompt-stepgoal" hidden>' +
+        (walk ? '<div id="hk-preprompt-stepgoal" class="habit-edit-stepgoal hk-preprompt-stepgoal" hidden>' +
           '<div class="habit-edit-stepgoal-chips">' +
             '<button class="habit-edit-stepgoal-chip" data-preset="8000"  type="button">8,000</button>' +
             '<button class="habit-edit-stepgoal-chip" data-preset="10000" type="button">10,000</button>' +
@@ -65323,7 +65384,7 @@
             '<button id="hk-preprompt-stepgoal-save"   class="habit-edit-stepgoal-save"   type="button">Save</button>' +
             '<button id="hk-preprompt-stepgoal-cancel" class="habit-edit-stepgoal-cancel" type="button">Cancel</button>' +
           '</div>' +
-        '</div>' +
+        '</div>' : '') +   // W935 — the step-goal picker only exists with a walk habit
         (sleepLine ? '<p class="hk-preprompt-body">' + sleepLine + '</p>' : '') +
         '<p class="hk-preprompt-body hk-preprompt-privacy">' +
           dataLabel + ' stay on your device. Awakened never sees them leave your phone.' +
@@ -65342,6 +65403,8 @@
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
+    // W935 — which prompt a hunter saw (walk copy or the no-walk copy).
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_shown', walk ? 'walk' : 'no_walk'); } catch (_) {}
 
     const close = () => {
       try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
@@ -65356,59 +65419,62 @@
     // their choice reflected before they Continue to the system sheet.
     const goalBtn  = document.getElementById('hk-preprompt-goal-btn');
     const picker   = document.getElementById('hk-preprompt-stepgoal');
-    const chipGrp  = picker.querySelector('.habit-edit-stepgoal-chips');
-    const customRow= document.getElementById('hk-preprompt-stepgoal-custom');
-    const customIn = document.getElementById('hk-preprompt-stepgoal-input');
-    const customSave = document.getElementById('hk-preprompt-stepgoal-save');
-    const customCancel = document.getElementById('hk-preprompt-stepgoal-cancel');
+    // W935 — the step-goal picker exists only when there is a walk habit.
+    if (goalBtn && picker) {
+      const chipGrp  = picker.querySelector('.habit-edit-stepgoal-chips');
+      const customRow= document.getElementById('hk-preprompt-stepgoal-custom');
+      const customIn = document.getElementById('hk-preprompt-stepgoal-input');
+      const customSave = document.getElementById('hk-preprompt-stepgoal-save');
+      const customCancel = document.getElementById('hk-preprompt-stepgoal-cancel');
 
-    const refreshChipState = () => {
-      const cur = walk ? getHabitStepGoal(walk) : initialGoal;
-      const isCustom = !HEALTHKIT_WALK_PRESETS.includes(cur);
-      picker.querySelectorAll('.habit-edit-stepgoal-chip').forEach(chip => {
-        const p = chip.dataset.preset;
-        const active = (p === 'custom') ? isCustom : (parseInt(p, 10) === cur);
-        chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+      const refreshChipState = () => {
+        const cur = walk ? getHabitStepGoal(walk) : initialGoal;
+        const isCustom = !HEALTHKIT_WALK_PRESETS.includes(cur);
+        picker.querySelectorAll('.habit-edit-stepgoal-chip').forEach(chip => {
+          const p = chip.dataset.preset;
+          const active = (p === 'custom') ? isCustom : (parseInt(p, 10) === cur);
+          chip.classList.toggle('habit-edit-stepgoal-chip--active', active);
+        });
+        goalBtn.textContent = cur.toLocaleString() + '+ steps';
+      };
+      refreshChipState();
+
+      goalBtn.addEventListener('click', () => {
+        picker.hidden = !picker.hidden;
       });
-      goalBtn.textContent = cur.toLocaleString() + '+ steps';
-    };
-    refreshChipState();
 
-    goalBtn.addEventListener('click', () => {
-      picker.hidden = !picker.hidden;
-    });
+      chipGrp.addEventListener('click', (e) => {
+        const chip = e.target.closest('.habit-edit-stepgoal-chip');
+        if (!chip) return;
+        const p = chip.dataset.preset;
+        if (p === 'custom') {
+          customRow.classList.remove('hidden');
+          customIn.value = walk ? String(getHabitStepGoal(walk)) : String(initialGoal);
+          setTimeout(() => customIn.focus(), 50);
+          return;
+        }
+        const n = parseInt(p, 10);
+        if (!Number.isFinite(n)) return;
+        // Persist only if the user actually has the walk habit (they
+        // should — the pre-prompt is gated on findWalkHabit() returning
+        // truthy in autoVerifyWalk, but be defensive).
+        if (walk) setHabitStepGoal(walk, n);
+        customRow.classList.add('hidden');
+        refreshChipState();
+      });
 
-    chipGrp.addEventListener('click', (e) => {
-      const chip = e.target.closest('.habit-edit-stepgoal-chip');
-      if (!chip) return;
-      const p = chip.dataset.preset;
-      if (p === 'custom') {
-        customRow.classList.remove('hidden');
-        customIn.value = walk ? String(getHabitStepGoal(walk)) : String(initialGoal);
-        setTimeout(() => customIn.focus(), 50);
-        return;
-      }
-      const n = parseInt(p, 10);
-      if (!Number.isFinite(n)) return;
-      // Persist only if the user actually has the walk habit (they
-      // should — the pre-prompt is gated on findWalkHabit() returning
-      // truthy in autoVerifyWalk, but be defensive).
-      if (walk) setHabitStepGoal(walk, n);
-      customRow.classList.add('hidden');
-      refreshChipState();
-    });
-
-    const commitCustom = () => {
-      const parsed = parseInt(customIn.value, 10);
-      const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
-      const n = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
-      if (walk) setHabitStepGoal(walk, n);
-      customRow.classList.add('hidden');
-      refreshChipState();
-    };
-    customSave.addEventListener('click', commitCustom);
-    customIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
-    customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
+      const commitCustom = () => {
+        const parsed = parseInt(customIn.value, 10);
+        const fallback = Number.isFinite(parsed) ? parsed : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
+        const n = Math.max(HEALTHKIT_WALK_THRESHOLD_MIN, Math.min(HEALTHKIT_WALK_THRESHOLD_MAX, fallback));
+        if (walk) setHabitStepGoal(walk, n);
+        customRow.classList.add('hidden');
+        refreshChipState();
+      };
+      customSave.addEventListener('click', commitCustom);
+      customIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitCustom(); });
+      customCancel.addEventListener('click', () => { customRow.classList.add('hidden'); });
+    }
 
     // ── Continue wiring ──────────────────────────────────────
     // v3 Phase 1z.77 — App Store Review 5.1.1(iv) compliance.
@@ -65421,6 +65487,12 @@
       close();
       const result = await Health.requestPermissions();
       console.log('[Health] permission result:', result);
+      // W935 — record the answer and send it NOW: most new hunters leave within
+      // two minutes, and queued funnel events otherwise wait for the next open.
+      try {
+        localStorage.setItem('hb_hk_answered_v1', '1');
+        if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_answered', String(result || 'unknown'));
+      } catch (_) {}
       if (result === 'granted') {
         // Try to verify immediately — if user has already walked today
         // OR slept past their goal last night OR completed a strength
@@ -65428,7 +65500,11 @@
         autoVerifyWalk();
         autoVerifySleep();
         autoVerifyStrengthTraining();
+        // W935 — and put the whole week on the board this session, not just
+        // today (Settings > Connect already did this; the pre-prompt did not).
+        try { lbBackfillMissedStepDays(); } catch (_) {}
       }
+      try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ force: true }); } catch (_) {}
     });
   }
 
@@ -65640,11 +65716,13 @@
     const status = Health.permissionStatus();
     _addHealthVerifyBreadcrumb('walk-perm-status', { status, hasHabit: !!walk });
 
-    // First-encounter path: show pre-prompt only when the user has the
-    // walk habit (the prompt's whole purpose is to enable auto-verify
-    // for that habit). Don't query HealthKit yet.
+    // First-encounter path. W935 — shown to EVERY hunter, not only those with
+    // the walk habit. 'Make Your Own' (62% of new hunters since June) seeds no
+    // Daily walk, so those hunters were never asked and could never reach the
+    // Steps board, the Worldgate or a step boss. The copy adapts when there is
+    // no walk habit. Don't query HealthKit yet.
     if (status === 'unknown') {
-      if (walk && localStorage.getItem('hb_healthkit_prompted') !== '1') {
+      if (localStorage.getItem('hb_healthkit_prompted') !== '1') {
         showHealthKitPreprompt();
       }
       _addHealthVerifyBreadcrumb('walk-bail-unknown-perm');
@@ -65663,6 +65741,16 @@
     //      already-checked + opted-out.
     const steps = await Health.getStepsToday();
     _addHealthVerifyBreadcrumb('walk-steps', { steps: steps == null ? null : Number(steps) });
+    // W935 — the first step read after the pre-prompt was answered on this
+    // device. iOS resolves the permission call even on Don't Allow, so
+    // 'granted' alone is ambiguous; zero steps on the first read is the tell.
+    try {
+      if (localStorage.getItem('hb_hk_answered_v1') === '1' && localStorage.getItem('hb_hk_first_read_v1') !== '1') {
+        localStorage.setItem('hb_hk_first_read_v1', '1');
+        if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_first_read', steps == null ? 'null' : (Number(steps) > 0 ? 'steps' : 'zero'));
+        if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ force: true });
+      }
+    } catch (_) {}
     if (steps == null) {
       // v3 Phase 1z.8 — still backfill yesterday even if today's
       // fetch failed (yesterday uses its own getStepsBetween query).
