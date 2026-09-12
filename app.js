@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w939'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w940'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2537,7 +2537,8 @@
       if (_freeReason === 'first') {
         cost = 0;
         localStorage.setItem('hb_first_hunt_free_used', '1');
-        if (typeof showHabitToast === 'function') showHabitToast('Your first hunt is on the house.');
+        // W940 — the onboarding pact's free engage explains itself on screen.
+        if (typeof showHabitToast === 'function' && !(typeof needsOnboarding !== 'undefined' && needsOnboarding === true)) showHabitToast('Your first hunt is on the house.');
         try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('first_hunt_engaged', bossId); } catch (_) {}   // W850 (V2c)
       } else if (_freeReason === 'stone') {
         // W864 — the cracked Measuring Stone's debt: one free engage.
@@ -2603,7 +2604,11 @@
     state.step_progress = 0;
     setBossState(bossId, state);
     try {
-      if (typeof showHabitToast === 'function') {
+      // W940 — the onboarding pact engages the Steel Wolf and says so on its own
+      // screen; the confirmation toast would only surface behind it. A hunter
+      // who taps ENGAGE themselves, first day or not, still gets it.
+      const _inOnboarding = (typeof needsOnboarding !== 'undefined' && needsOnboarding === true);
+      if (typeof showHabitToast === 'function' && !_inOnboarding) {
         showHabitToast('Now hunting ' + cfg.name + '.' + (cost > 0 ? ' -' + cost + ' souls.' : ''));
       }
     } catch (_) {}
@@ -6997,6 +7002,9 @@
         // "nobody found it" and "nobody could" were indistinguishable. Now the
         // discovery rate per trigger is readable.
         try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('stirs_found', t.id); } catch (_) {}
+        // W940 — the souls land and the quest is recorded (it shows on the
+        // Anomalies shelf); on a hunter's first day it is not announced.
+        if (_newHunterQuiet()) break;
         try { _hapticTick('SUCCESS'); } catch (_) {}
         try {
           // W874 — positional args + <br> (the notice body renders as HTML).
@@ -7130,7 +7138,8 @@
       if (s.extracted[bossId]) return;                       // one shadow per boss, forever
       s.windows[bossId] = { killAt: Date.now(), until: Date.now() + SHADOW_WINDOW_MS, lastCheck: 0 };
       _shSave(s);
-      try { showHabitToast('The System stirs: an extraction window opens. 48 hours.'); } catch (_) {}
+      // W940 — the window still opens; a first-day hunter just isn't told yet.
+      if (!_newHunterQuiet()) { try { showHabitToast('The System stirs: an extraction window opens. 48 hours.'); } catch (_) {} }
       try { renderShadowStrip(); } catch (_) {}
     } catch (_) {}
   }
@@ -11248,7 +11257,8 @@
     _souls.lastDailyBonusDate = today;
     persistSouls();
     try {
-      if (typeof showHabitToast === 'function') {
+      // W940 — granted either way; announced only after a hunter's first day.
+      if (typeof showHabitToast === 'function' && !_newHunterQuiet()) {
         showHabitToast('+' + SOULS_DAILY_BONUS + ' souls (daily bonus)');
       }
     } catch (_) {}
@@ -31050,6 +31060,9 @@
   }
 
   function showStatLevelUp(item) {
+    // W940 — on a hunter's first day the level (and any bonus XP) is still
+    // applied; the modal is skipped and the celebration queue moves on.
+    if (_newHunterQuiet()) { levelUpActive = false; drainLevelUpQueue(); return; }
     const { stat, level, bonusPts } = item;
     const isMax = level >= 20;
     // v3 Phase 1z.278B — Stat-up chime GATED to bonus-threshold levels
@@ -31141,6 +31154,33 @@
     if (!overlay) { levelUpActive = false; drainLevelUpQueue(); return; }
     const xpEl = document.getElementById('first-win-xp');
     if (xpEl) xpEl.textContent = '+' + ((item && item.xp) || 0) + ' XP';
+    // W940 — on a hunter's first day this is the ONE celebration, so it names
+    // what the other popups would have announced: the achievements this tap
+    // unlocked (already waiting in achQueue, since checkAchievements runs
+    // before the queue drains) and the division the XP crossed into.
+    const extraEl = document.getElementById('first-win-extra');
+    if (extraEl) {
+      extraEl.hidden = true;
+      extraEl.textContent = '';
+      if (_newHunterQuiet()) {
+        const parts = [];
+        try {
+          for (let i = achQueue.length - 1; i >= 0; i--) {
+            const q = achQueue[i];
+            if (q && q.name) { parts.unshift(String(q.name)); achQueue.splice(i, 1); }
+          }
+        } catch (_) {}
+        try {
+          let crossed = false;
+          for (let i = levelUpQueue.length - 1; i >= 0; i--) {
+            if (levelUpQueue[i] && levelUpQueue[i].type === 'subrank') { levelUpQueue.splice(i, 1); crossed = true; }
+          }
+          const div = (typeof getRankDivisionInfo === 'function') ? getRankDivisionInfo(totalPoints) : null;
+          if (crossed && div && div.fullLabel) parts.push('Division ' + div.fullLabel);
+        } catch (_) {}
+        if (parts.length) { extraEl.textContent = parts.join(' · '); extraEl.hidden = false; }
+      }
+    }
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     try { playSfx('rank_fanfare'); } catch (_) {}
@@ -31155,7 +31195,11 @@
       if (btn) btn.removeEventListener('click', dismiss);
       // W486 — chain the one-time Field Manual pointer at the peak teaching moment (the user just
       // earned their first XP). If it shows, IT hands off the levelUpQueue drain on its own dismiss.
-      if (!localStorage.getItem('hb_fm_pointer_seen') && typeof showFieldManualPointer === 'function'
+      // W940 — never on a hunter's first day, and marked seen so it never
+      // auto-shows afterwards. The manual stays in Settings > Help & About.
+      if (_newHunterQuiet()) {
+        try { localStorage.setItem('hb_fm_pointer_seen', '1'); } catch (_) {}
+      } else if (!localStorage.getItem('hb_fm_pointer_seen') && typeof showFieldManualPointer === 'function'
           && showFieldManualPointer({ chain: true })) return;
       levelUpActive = false;
       drainLevelUpQueue();
@@ -31244,6 +31288,35 @@
     } catch (_) { return false; }
   }
   try { window.__showWelcomeBack = function () { showWelcomeBackScreen(2); }; } catch (_) {}
+
+  // ── W940 — ONE MOMENT, ONE MESSAGE ───────────────────────────────────
+  // The owner's first test run (2026-09-12): finishing onboarding and checking
+  // ONE habit produced ten popups in about three minutes — an ARISE toast, the
+  // notification ask, a hidden-quest notice, a First Awakened coach mark, a
+  // login-bonus toast, a partial-routine card, First Mark, a Field Manual
+  // prompt, an achievement toast and a division toast. Every reward still
+  // mattered; the announcements did not.
+  // Silencing the loud ones unmasked three quieter toasts they had been
+  // pre-empting (the pact's "Now hunting" confirmation, "Milestone unlocked",
+  // the stat level-up toast); those are quiet on day one too, as is the stat
+  // level-up modal. User-initiated feedback (errors, confirmations of a tap)
+  // is never silenced.
+  // For a hunter's FIRST DAY (onboarding itself, then until the device-local
+  // date moves past the day onboarding finished) only two things interrupt:
+  // the notification ask, the one iOS permission left, and Your First Mark,
+  // which carries First Step and the new division as a line instead of their
+  // own popups. Everything else is still granted, just not announced, and the
+  // one-time prompts (Field Manual, First Awakened coach) are marked seen so
+  // they never auto-show later. A hunter who installed before W940 has an
+  // older date or none, and is never quiet.
+  function _newHunterQuiet() {
+    try {
+      if (typeof needsOnboarding !== 'undefined' && needsOnboarding === true) return true;
+      const d = localStorage.getItem('hb_onboarding_first_xp_date');
+      return !!d && d === getDeviceLocalDate();
+    } catch (_) { return false; }
+  }
+  try { window.__newHunterQuiet = _newHunterQuiet; } catch (_) {}   // QA hook
 
   function drainLevelUpQueue() {
     if (levelUpActive) return;
@@ -31347,6 +31420,9 @@
   }
 
   function showAchievementPopup(ach) {
+    // W940 — unlocked either way. On a hunter's first day the toast is skipped
+    // and the queue keeps draining (First Mark names the ones it folded in).
+    if (_newHunterQuiet()) { achPopupTimer = setTimeout(drainAchQueue, 0); return; }
     // v3 Phase 1z.278B — Achievement chime. Priority 4 — suppressed
     // by a fresh rank_fanfare or boss_victory in the same 800ms
     // window, plays cleanly when it owns the moment. Throttled
@@ -34782,6 +34858,7 @@
   function showSubRankToast(label) {
     const text = String(label || '').trim();
     if (!text) return;
+    if (_newHunterQuiet()) return;   // W940 — First Mark carries the division on day one
     // Pre-empt any in-flight habit-toast so the celebration owns the
     // screen, same convention used by showHabitToast / reminder toast.
     try { document.querySelectorAll('.habit-toast').forEach(t => t.remove()); } catch (_) {}
@@ -34809,6 +34886,7 @@
     const stat = item && item.stat;
     const level = item && item.level;
     if (!stat || !level) return;
+    if (_newHunterQuiet()) return;   // W940 — the level is still gained
     try { document.querySelectorAll('.habit-toast').forEach(t => t.remove()); } catch (_) {}
     const toast = document.createElement('div');
     toast.className = 'habit-toast habit-toast--statlvl';
@@ -37971,7 +38049,8 @@
       } catch (_) {}
       // Nudge only when it unlocks DURING play (opts.live), never on the silent
       // boot-time stamp an existing hunter gets.
-      if (firstTime && opts && opts.live) {
+      // W940 — the ledger still unlocks; on a hunter's first day it isn't announced.
+      if (firstTime && opts && opts.live && !_newHunterQuiet()) {
         // W826 (L10) — an unlock via a first achievement lands the first visit on
         // the Milestones view (the thing they just earned), not the sparse grid.
         const viaAchievement = _historyActiveDays() < HISTORY_UNLOCK_DAYS;
@@ -39063,6 +39142,18 @@
   // toast path). Single beat, single tap — "BEGIN" CTA dismisses.
   function showFirstVowCoachmark(opts) {
     if (localStorage.getItem('hb_tour_first_vow_v1') === '1') return false;
+    // W940 — a first-day hunter already heard this from the onboarding pact.
+    // Marked seen so it never auto-shows later either. Jump-program hunters are
+    // the exception: theirs is the walkthrough of a calendar-locked program,
+    // not an acknowledgment.
+    try {
+      const _jumpWalk = (typeof _jumpProgramUnlocked === 'function') && _jumpProgramUnlocked();
+      if (!_jumpWalk && _newHunterQuiet()) {
+        localStorage.setItem('hb_tour_first_vow_v1', '1');
+        try { localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {}
+        return false;
+      }
+    } catch (_) {}
     // v3 Phase 1z.282C — Cross-flow guard. Eagerly set the welcome-
     // back key when a new user goes through the First Vow modal so
     // they never see a redundant existing-user welcome on next
@@ -39140,6 +39231,9 @@
     // (First Vow picker is what they should see).
     if (!Array.isArray(habits) || getActiveHabitCount() === 0) return false;
     if (localStorage.getItem('hb_tour_welcome_back_v1') === '1') return false;
+    // W940 — a hunter on their first day is not "back". Marked seen so it
+    // never greets them as a returning hunter later either.
+    if (_newHunterQuiet()) { try { localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {} return false; }
     _faRunCoachmark({
       context: 'welcome_back',
       beats: FA_WELCOME_BACK_BEATS,
@@ -44786,6 +44880,7 @@
   }
 
   function _showPartialCompoundToast(packId, xp) {
+    if (_newHunterQuiet()) return;   // W940 — the XP is already credited
     try {
       const pack = getPackById(packId);
       // W479 — the custom pack's display name ('Make Your Own') reads oddly inline;

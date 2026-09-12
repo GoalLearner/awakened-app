@@ -3011,3 +3011,106 @@ test.describe('AF · Sign in v2 (W939)', () => {
     expect(r.after.error).toBe('');   // a cancel is not an error
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AG. W940 — One moment, one message: a hunter's first day is quiet
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AG · One moment, one message (W940)', () => {
+  /** A hunter with one hand-tapped vow, 25 points (onboarding's grant) and no first completion yet. */
+  async function hunter(page: Page, onboardedDaysAgo: number) {
+    await freshApp(page);
+    await page.addInitScript((daysAgo) => {
+      // A long-time hunter has already had the one-per-install welcome-back
+      // coach; a first-day hunter must not get it at all (W940 gates it).
+      try { if (daysAgo > 0) localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {}
+      try {
+        if (sessionStorage.getItem('__w940_seeded')) return;
+        sessionStorage.setItem('__w940_seeded', '1');
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_onboarding_first_xp_date', ymd);
+        // Journal completes on a plain tap (Read is measurable and needs a goal first).
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w940-journal', name: 'Journal', emoji: '✍️', difficulty: 'easy', type: 'build' }]));
+        localStorage.setItem('hb_points', '25');
+        localStorage.removeItem('hb_first_completion_bonus_v1');
+        localStorage.removeItem('hb_fm_pointer_seen');
+      } catch (_) {}
+    }, onboardedDaysAgo);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+
+  const readScreen = () => {
+    const shown = (id: string) => {
+      const el = document.getElementById(id);
+      return !!el && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none';
+    };
+    const extra = document.getElementById('first-win-extra') as HTMLElement | null;
+    return {
+      firstMark: shown('first-win-overlay'),
+      extra: extra && !extra.hidden ? extra.textContent : null,
+      achievementToast: shown('ach-popup'),
+      fieldManual: shown('fm-pointer-overlay'),
+      noticeCards: document.querySelectorAll('.notice-card-wrap').length,
+      toasts: Array.from(document.querySelectorAll('.habit-toast')).map((t) => (t as HTMLElement).innerText.replace(/\s+/g, ' ').trim()),
+    };
+  };
+
+  test('first day: one habit tap shows First Mark only, carrying First Step and the division', async ({ page }) => {
+    await hunter(page, 0);
+    const quiet = await page.evaluate(() => (window as any).__newHunterQuiet());
+    expect(quiet).toBe(true);
+    // No "Welcome back, hunter." for someone who just arrived.
+    const coach = await page.evaluate(() => {
+      const el = document.getElementById('fa-coachmark-overlay');
+      return !!el && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none';
+    });
+    expect(coach).toBe(false);
+
+    await page.evaluate(() => (document.querySelector('#habit-list .habit-item') as HTMLElement).click());
+    await page.waitForTimeout(1500);
+    const atTap = await page.evaluate(readScreen);
+    expect(atTap.firstMark).toBe(true);
+    expect(atTap.extra).toContain('First Step');
+    expect(atTap.extra).toContain('Division E I');
+    expect(atTap.achievementToast).toBe(false);
+    expect(atTap.noticeCards).toBe(0);
+    expect(atTap.toasts.filter((t) => /DIVISION|STAT LEVEL|Milestone unlocked/i.test(t))).toEqual([]);
+
+    // ONWARD — and nothing follows it.
+    await page.evaluate(() => (document.getElementById('first-win-cta') as HTMLElement).click());
+    await page.waitForTimeout(2500);
+    const after = await page.evaluate(readScreen);
+    expect(after.firstMark).toBe(false);
+    expect(after.fieldManual).toBe(false);
+    expect(after.achievementToast).toBe(false);
+
+    // Every reward still landed; the one-time prompt is spent, not deferred.
+    const state = await page.evaluate(() => ({
+      points: Number(localStorage.getItem('hb_points')),
+      achievements: localStorage.getItem('hb_achievements') || '',
+      fmSeen: localStorage.getItem('hb_fm_pointer_seen'),
+    }));
+    expect(state.points).toBeGreaterThanOrEqual(75);   // 25 + the +50 First Mark + the habit
+    expect(state.achievements).toContain('first_step');
+    expect(state.fmSeen).toBe('1');
+  });
+
+  test('a hunter past their first day still gets the full celebration chain', async ({ page }) => {
+    await hunter(page, 10);
+    const quiet = await page.evaluate(() => (window as any).__newHunterQuiet());
+    expect(quiet).toBe(false);
+
+    await page.evaluate(() => (document.querySelector('#habit-list .habit-item') as HTMLElement).click());
+    await page.waitForTimeout(1500);
+    const atTap = await page.evaluate(readScreen);
+    expect(atTap.firstMark).toBe(true);
+    expect(atTap.extra).toBeNull();                     // nothing folded in: the others speak for themselves
+
+    await page.evaluate(() => (document.getElementById('first-win-cta') as HTMLElement).click());
+    await page.waitForTimeout(800);
+    const next = await page.evaluate(readScreen);
+    expect(next.fieldManual).toBe(true);                // W486 chain intact
+  });
+});

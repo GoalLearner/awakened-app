@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=695">
+  <link rel="stylesheet" href="styles.css?v=696">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1216,6 +1216,8 @@
       <h2 id="first-win-title" class="first-win-title">Your First Mark</h2>
       <p class="first-win-verse">The system counts only what you do.<br>You have begun.</p>
       <div class="first-win-reward"><span id="first-win-xp">+0 XP</span><span class="first-win-dot">·</span><span>Day 1</span></div>
+      <!-- W940 — on a hunter's first day: what this tap also unlocked, in place of their own popups. -->
+      <div id="first-win-extra" class="first-win-extra" hidden></div>
       <button id="first-win-cta" class="first-win-cta" type="button">ONWARD</button>
     </div>
   </div>
@@ -3392,7 +3394,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1345"></script>
+  <script src="app.js?v=1346"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

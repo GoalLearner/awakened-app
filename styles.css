@@ -36183,3 +36183,14 @@ body.combat-active #app * { animation-play-state: paused !important; }
   #signin-gate.sg-v2 .sg-art img,
   #signin-gate.sg-v2 .sg-step { animation: none !important; }
 }
+
+/* W940 — First Mark names what the first tap also unlocked (First Step, the division). */
+.first-win-extra {
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.6px;
+  color: #a78bfa;
+  text-transform: uppercase;
+  text-align: center;
+}
+.first-win-extra[hidden] { display: none; }
