@@ -263,7 +263,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w936'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w937'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -60927,16 +60927,47 @@
   }
   // Daily walk + Sleep. See the commit note on the ENTER handler.
   const _CN_CUSTOM_SEED_INDICES = [6, 1];
+  // W937 — the Steel Wolf's signature drop, shown (never granted) on a replay.
+  const _CN_WOLF_PREVIEW_RELIC = 'pack_leaders_greaves';
 
-  function showCinematicOnboarding() {
+  // W937 — Settings > Help & About > Replay the awakening.
+  function replayOnboardingPreview() {
+    try { closeSettings(); } catch (_) {}
+    setTimeout(() => {
+      try { showCinematicOnboarding({ preview: true }); }
+      catch (e) { console.warn('[cin] replay failed', e); }
+    }, 220);   // let the settings sheet finish sliding out first
+  }
+  try { window.__replayOnboarding = replayOnboardingPreview; } catch (_) {}
+
+  // W937 — REPLAY (read-only). Seeing onboarding again used to mean wiping the
+  // device, which for the owner means deleting the account he is signed into.
+  // In preview the flow reads but never writes: no alias claim, no permission
+  // flags, no funnel events, no leaderboard submit, no engage, no kill, no
+  // habits, no XP. ENTER just closes it. A ribbon says so the whole time, so
+  // the one screen that would otherwise be a claim — the Steel Wolf's fall —
+  // is honest as a preview of what a first run looks like.
+  function showCinematicOnboarding(opts) {
+    const preview = !!(opts && opts.preview);
     const root = document.getElementById('cin-onboarding');
     if (!root || !root.querySelector('#cn-s0')) {
+      if (preview) {
+        try { showHabitToast('The opening is unavailable in this build.'); } catch (_) {}
+        return;
+      }
       console.warn('[cin] v2 markup missing — falling back to legacy welcome');
       _legacyShowWelcomeScreen();
       return;
     }
     root.classList.remove('hidden');
+    root.classList.toggle('cn-preview', preview);
     root.setAttribute('aria-hidden', 'false');
+    {
+      const note = root.querySelector('#cn-preview-note');
+      if (note) note.hidden = !preview;
+      const fb = root.querySelector('#cin-fb');
+      if (fb) fb.classList.remove('on');
+    }
 
     const q  = (sel) => root.querySelector(sel);
     const qq = (sel) => Array.from(root.querySelectorAll(sel));
@@ -60955,6 +60986,13 @@
       health:   null,
       summoned: false,
     };
+    // A replay opens on the path this hunter actually walks.
+    if (preview) {
+      try {
+        const p = localStorage.getItem('hb_path');
+        if (p && typeof getPackById === 'function' && getPackById(p)) state.pack = p;
+      } catch (_) {}
+    }
 
     const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cin-scr-training', 'cn-s8'];
     const VOW_INDEX = 7;          // where SKIP lands — the one choice nobody skips past
@@ -61083,7 +61121,8 @@
       if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
 
       const Auth = window.Auth;
-      const pending = !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
+      // A replay never touches the alias — the name is already claimed.
+      const pending = !preview && !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
       // W329 — validate for BOTH pending and already-claimed (a claimed
       // name is reused verbatim as the alias at the deferred claim).
       if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
@@ -61153,6 +61192,17 @@
         asking = true;
         const available = !!(typeof Health !== 'undefined' && Health.isAvailable && Health.isAvailable());
         if (!available) { state.health = null; asking = false; next(); return; }
+
+        // Replay: read what Health already allows, ask for nothing, record
+        // nothing. A hunter who has never granted it sees the closed branch,
+        // which is exactly what a first run would show them.
+        if (preview) {
+          await _readHealth();
+          _fetchBoard();
+          asking = false;
+          next();
+          return;
+        }
 
         try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
         try {
@@ -61372,7 +61422,7 @@
         const suffix = (typeof _inviteCodeSuffix === 'function') ? _inviteCodeSuffix() : '';
         const text = 'Hunt The Twin Maw with me on Awakened — ' + _cnFmt(goal) +
                      ' combined steps and the relic drops for both of us.' + suffix;
-        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('share_opened', 'onboarding_summon'); } catch (_) {}
+        try { if (!preview && typeof window.__funnelEmit === 'function') window.__funnelEmit('share_opened', 'onboarding_summon'); } catch (_) {}
         let sent = false;
         if (navigator.share) {
           try { await navigator.share({ title: 'Awakened', text: text, url: url || undefined }); sent = true; }
@@ -61383,7 +61433,7 @@
         }
         if (!sent) return;
         state.summoned = true;
-        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('onboarding_summon_sent'); } catch (_) {}
+        try { if (!preview && typeof window.__funnelEmit === 'function') window.__funnelEmit('onboarding_summon_sent'); } catch (_) {}
         try { _hapticTick('SUCCESS'); } catch (_) {}
         q('#cn-mawimg').src = 'assets/bosses/the-twin-maw-summons.png';
         q('#cn-partyText').textContent = 'WAITING ON YOUR ALLY · INVITE SENT';
@@ -61722,6 +61772,40 @@
         return;
       }
 
+      // Replay: show the shape of the gate without touching the hunt. No
+      // engage, no kill, no roll — the relic named here is the Wolf's signature
+      // drop, labelled as the preview it is.
+      if (preview) {
+        if (today >= need) {
+          wolf.classList.add('cn-fell');
+          title.textContent = 'It falls.';
+          sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
+          let card = null;
+          try { card = CARDS[_CN_WOLF_PREVIEW_RELIC] || null; } catch (_) {}
+          let html = '';
+          if (card) {
+            const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
+            html += '<div class="cn-relic">' +
+              '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
+              '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
+              '<div class="cn-rr">' + esc(rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + ' · PREVIEW ONLY') + '</div></div></div>';
+          }
+          html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
+            esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
+            '<b class="cn-far">+' + _cnFmt(killRewardSouls((cfg && cfg.rank) || 'E')) + ' SOULS · +' +
+            ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
+          body.innerHTML = html;
+          return;
+        }
+        title.textContent = 'The Wolf is waiting.';
+        sub.textContent   = _cnFmt(Math.max(0, need - today)) + ' STEPS LEFT TODAY';
+        hpi.style.setProperty('--cn-w', Math.max(4, 100 - Math.min(100, (today / need) * 100)).toFixed(1) + '%');
+        body.innerHTML =
+          '<p class="cn-b">It is waiting for you when you walk. <b>Tonight, the first win is a vow kept.</b></p>' +
+          _cnVowsHtml(true);
+        return;
+      }
+
       // From here the hunt is real. A hunter's first engage is free (W771).
       let engaged = false;
       try { engaged = (typeof engageBoss === 'function') && !!engageBoss('the_steel_wolf'); } catch (_) {}
@@ -61782,6 +61866,14 @@
     // ── ENTER — commit and hand off ────────────────────────────
     q('#cn-enter').addEventListener('click', () => {
       _cinPlaySfx('gate');
+      if (preview) {
+        root.classList.add('hidden');
+        root.classList.remove('cn-preview');
+        root.setAttribute('aria-hidden', 'true');
+        const note = root.querySelector('#cn-preview-note');
+        if (note) note.hidden = true;
+        return;
+      }
       try {
         const n = state.name || (localStorage.getItem('hb_name') || '').trim() || 'Hunter';
         playerName = n;
@@ -68292,6 +68384,11 @@
       const fmRow = document.getElementById('settings-field-manual-row');
       if (fmRow) fmRow.addEventListener('click', function () {
         try { openFieldManual(); } catch (_) {}
+      });
+      // W937 — replay the opening without wiping the device to see it.
+      const replayRow = document.getElementById('settings-replay-onboarding');
+      if (replayRow) replayRow.addEventListener('click', function () {
+        try { replayOnboardingPreview(); } catch (_) {}
       });
       // W541 — manual, always-available "Rate Awakened" → user-initiated App Store
       // write-review composer (deep link; bypasses the native-sheet frequency cap).

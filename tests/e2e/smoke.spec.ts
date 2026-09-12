@@ -2107,11 +2107,17 @@ test.describe('X · Friend Activity folded by default (W931)', () => {
       try {
         const now = Date.now();
         localStorage.setItem('hb_fa_seen_ts', String(now));
-        const ev = (id: string, alias: string, rank: string, agoMs: number) => ({ id, alias, rankLabel: rank, eventType: 'boss_kill', eventKey: 'glass_strider', eventLabel: 'defeated The Glass Strider', eventValue: 1, rarity: null, createdAt: new Date(now - agoMs).toISOString(), likes: 0, liked: false, likers: [], likedAt: null });
+        // Anchor to LOCAL MIDNIGHT, not to `now`. Offsets measured back from
+        // `now` put "3 hours ago" on yesterday and "30 hours ago" on the day
+        // before whenever the suite runs between midnight and 03:00, which
+        // makes three day groups and fails an assertion about two.
+        const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+        const startOfToday = midnight.getTime();
+        const ev = (id: string, alias: string, rank: string, at: number) => ({ id, alias, rankLabel: rank, eventType: 'boss_kill', eventKey: 'glass_strider', eventLabel: 'defeated The Glass Strider', eventValue: 1, rarity: null, createdAt: new Date(at).toISOString(), likes: 0, liked: false, likers: [], likedAt: null });
         localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ ts: now, events: [
-          ev('x-e1', 'Grubbadub', 'D I', 30 * 60e3),
-          ev('x-e2', 'Anthony', 'C I', 3 * 3600e3),
-          ev('x-e3', 'RenDIESEL', 'S I', 30 * 3600e3),
+          ev('x-e1', 'Grubbadub', 'D I', now),                                          // today
+          ev('x-e2', 'Anthony',   'C I', Math.max(startOfToday + 1, now - 3 * 3600e3)), // today, clamped
+          ev('x-e3', 'RenDIESEL', 'S I', startOfToday - 5 * 3600e3),                    // yesterday
         ] }));
       } catch (_) {}
     });
@@ -2561,5 +2567,133 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     expect(r.title).toBe('The Wolf waits behind Health.');
     expect(r.engaged).toBe(false);
     expect(r.funnel).toContain('health_prompt_answered');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AD. W937 — replaying the awakening changes nothing
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AD · Replay the awakening (W937)', () => {
+  // The keys a real first run WOULD write. Asserted by name rather than by a
+  // blanket snapshot: the app keeps running behind the overlay and writes its
+  // own leaderboard, breadcrumb and beacon keys on its own schedule.
+  const WATCHED = [
+    'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1',
+    'hb_habits', 'hb_path', 'hb_name', 'hb_bosses', 'hb_inventory', 'hb_souls',
+    'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed',
+    'hb_onboarding_first_xp_awarded_v1', 'hb_onboarding_goal',
+    'hb_first_hunt_free_used', 'hb_funnel_queue',
+  ];
+
+  async function establishedAccount(page: Page) {
+    await freshApp(page);
+    await page.evaluate(() => {
+      localStorage.setItem('hb_name', 'Richie');
+      localStorage.setItem('hb_path', 'custom');
+      localStorage.setItem('hb_bosses', JSON.stringify({
+        the_steel_wolf: { streak: 0, kill_count: 3, last_eval_date: '2020-01-01', engaged: false },
+      }));
+    });
+  }
+
+  /** Drive the whole replay and hand back what it showed and what it moved. */
+  async function replay(page: Page, watched: string[]) {
+    return page.evaluate(async (WATCH) => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      const before: Record<string, string | null> = {};
+      WATCH.forEach((k: string) => { before[k] = localStorage.getItem(k); });
+
+      w.__replayOnboarding();
+      await wait(500);
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      const q = (s: string) => root.querySelector(s) as HTMLElement;
+      const opened = {
+        preview: root.classList.contains('cn-preview'),
+        ribbon:  !(document.getElementById('cn-preview-note') as HTMLElement).hidden,
+        name:    (q('#cin-nameField') as HTMLInputElement).value,
+      };
+
+      q('#cn-touch').click();             await wait(1100);
+      q('#cin-nameConfirm').click();      await wait(400);
+      q('#cn-healthBtn').click();         await wait(1200);
+      const reveal = (q('#cn-revealLine') as HTMLElement).textContent || '';
+      q('#cn-s3 [data-cn-next]').click(); await wait(900);
+      // The board is skipped when nobody else is on it, so advance from
+      // whichever screen is actually showing.
+      const afterReveal = (document.querySelector('.cn-scr.cn-shown') as HTMLElement).id;
+      if (afterReveal === 'cn-s4') { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
+      q('#cn-s5 #cn-huntAlone').click();  await wait(250);
+      q('#cn-s6 [data-cn-next]').click(); await wait(250);
+      q('#cn-s7 [data-cn-next]').click(); await wait(700);
+      const pact = {
+        shown:  !!document.querySelector('#cn-s8.cn-shown'),
+        fell:   q('#cn-wolf').classList.contains('cn-fell'),
+        locked: q('#cn-wolf').classList.contains('cn-lock'),
+        title:  (q('#cn-pactTitle') as HTMLElement).textContent,
+        relic:  (root.querySelector('#cn-pactBody .cn-rr') as HTMLElement | null)?.textContent || '',
+      };
+      q('#cn-enter').click();             await wait(1200);
+
+      return {
+        opened, reveal, pact,
+        askedPermission: !!w.__askedPermission,
+        touched:   WATCH.filter((k: string) => localStorage.getItem(k) !== before[k]),
+        killFlags: Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0),
+        closed:    root.classList.contains('hidden') && !root.classList.contains('cn-preview'),
+        wolf:      JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf,
+      };
+    }, watched);
+  }
+
+  test('the replay writes none of the keys a first run would', async ({ page }) => {
+    await establishedAccount(page);
+    const r = await replay(page, WATCHED);
+
+    expect(r.opened.preview).toBe(true);
+    expect(r.opened.ribbon).toBe(true);
+    expect(r.opened.name).toBe('Richie');   // the claimed name, prefilled, never re-claimed
+    expect(r.pact.shown).toBe(true);
+    // No HealthKit in a browser, so the flow shows exactly what a first run
+    // would show a hunter who has not connected it.
+    expect(r.pact.locked).toBe(true);
+    expect(r.pact.title).toBe('The Wolf waits behind Health.');
+
+    expect(r.touched).toEqual([]);
+    expect(r.killFlags).toEqual([]);
+    expect(r.closed).toBe(true);
+    expect(r.wolf.kill_count).toBe(3);
+    expect(r.wolf.engaged).toBe(false);
+    expect(r.wolf.last_eval_date).toBe('2020-01-01');
+  });
+
+  test('a day past 6,000 shows the fall as a preview and still leaves the hunt alone', async ({ page }) => {
+    await establishedAccount(page);
+    await page.evaluate(() => {
+      const w = window as any;
+      w.Health.isAvailable        = () => true;
+      w.Health.permissionStatus   = () => 'granted';
+      w.Health.requestPermissions = async () => { w.__askedPermission = true; return 'granted'; };
+      w.Health.getStepsBetween    = async () => 34112;
+      w.Health.getStepsToday      = async () => 9040;   // well past the Wolf's 6,000
+      w.Auth.fetchLeaderboardTop  = async () => ({
+        ok: true, me: { rank: 2, current_value: 34112 },
+        top: [{ rank: 1, alias: 'Galilea', current_value: 51144, avatar_id: 'avatar-ranger.png', card_bg: null }],
+      });
+    });
+    // Only the hunt-side keys here: with Health stubbed granted the app's own
+    // auto-verify runs behind the overlay and legitimately moves souls and the
+    // funnel queue, which has nothing to do with the replay.
+    const r = await replay(page, ['hb_bosses', 'hb_inventory', 'hb_habits', 'hb_path',
+                                  'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_first_hunt_free_used']);
+
+    expect(r.reveal).toContain('34,112');
+    expect(r.pact.fell).toBe(true);
+    expect(r.pact.relic).toContain('PREVIEW ONLY');   // shown, never rolled, never granted
+    expect(r.askedPermission).toBe(false);            // the permission is already answered
+    expect(r.touched).toEqual([]);
+    expect(r.killFlags).toEqual([]);
+    expect(r.wolf.kill_count).toBe(3);
+    expect(r.wolf.engaged).toBe(false);
   });
 });

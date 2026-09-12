@@ -35966,3 +35966,26 @@ body.combat-active #app * { animation-play-state: paused !important; }
   #cin-onboarding .cn-hp i { transition: none !important; }
   #cin-onboarding .cn-wait i { animation: none !important; }
 }
+
+/* ── W937 — replay the awakening (read-only preview) ──────────────────── */
+/* Opened from Settings mid-session, so it has to clear every other overlay
+   the app can have up (the arena's is 12300). First run keeps z-index 2000. */
+#cin-onboarding.cn-preview { z-index: 99000; }
+#cin-onboarding .cn-preview-note {
+  position: absolute;
+  top: max(env(safe-area-inset-top, 0px), 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  background: rgba(12, 10, 30, 0.82);
+  font-family: var(--cin-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--cin-violetB);
+  white-space: nowrap;
+  pointer-events: none;
+}
