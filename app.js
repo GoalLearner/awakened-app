@@ -263,7 +263,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w935'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w936'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20003,7 +20003,19 @@
   //   4. Duplicate (stacked or capped) — toast tells the user the
   //      drop happened and surfaces the new count or cap status.
   //      No cinematic, regardless of rarity.
+  // W936 — onboarding's PACT screen kills the Steel Wolf for real, and is
+  // itself the announcement. While this array is non-null announceKillAndDrop
+  // records the kill into it and skips the toast + boss-result queue; every
+  // bit of state (souls, the drop roll, the once-per-day claim) has already
+  // been applied by the caller, so nothing is lost — only shown once.
+  let _cinKillCapture = null;
+
   function announceKillAndDrop(cfg, soulsReward, dropInfo, opts) {
+    if (_cinKillCapture) {
+      _cinKillCapture.push({ cfg: cfg, soulsReward: soulsReward, dropInfo: dropInfo });
+      try { updateHeaderMetrics(); } catch (_) {}
+      return;
+    }
     // v3 Phase 1z.278B — Boss victory fanfare. Fires at the top of
     // the kill announcement, BEFORE the drop-reveal queue, so the
     // emotional beat is "kill = victory chime" and (if applicable)
@@ -60859,127 +60871,176 @@
     } catch (_) {}
   }
 
-  function _cinPaintSigils(root) {
-    const SIG = '<svg width="100%" height="100%" viewBox="0 0 40 40" aria-hidden="true">' +
-      '<path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/>' +
-      '</svg>';
-    const ICONS = {
-      sleep: '<svg viewBox="0 0 42 42" fill="none"><path d="M28 23a10 10 0 11-9-13 8 8 0 009 13z" stroke="#34d399" stroke-width="1.6" stroke-linejoin="round"/></svg>',
-      focus: '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="12" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="5.5" stroke="#eab308" stroke-width="1.6"/><circle cx="21" cy="21" r="1.6" fill="#eab308"/></svg>',
-      body:  '<svg viewBox="0 0 42 42" fill="none"><path d="M8 21h26" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"/><rect x="5" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="33.4" y="16.5" width="3.6" height="9" rx="1.4" fill="#ef4444"/><rect x="10" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/><rect x="29" y="18.5" width="3" height="5" rx="1.2" fill="#ef4444"/></svg>',
-      mind:  '<svg viewBox="0 0 42 42" fill="none"><circle cx="21" cy="21" r="11" stroke="#3b82f6" stroke-width="1.6"/><path d="M21 10v22M10 21a11 11 0 0122 0" stroke="#3b82f6" stroke-width="1.2" opacity=".7"/></svg>',
-      jump:  '<svg viewBox="0 0 42 42" fill="none"><path d="M21 8l-9 11h6v8h6v-8h6z" stroke="#22d3ee" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 34h18" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round"/></svg>'   /* W574 — Vertical Jump Program WHY icon */
-    };
-    root.querySelectorAll('.sigil').forEach((s) => {
-      if (s.hasAttribute('data-mini')) {
-        s.style.width = '13px';
-        s.style.height = '13px';
-        s.style.display = 'inline-flex';
-        s.innerHTML = SIG;
-      } else {
-        s.innerHTML = SIG;
-      }
-    });
-    root.querySelectorAll('[data-ic]').forEach((e) => {
-      const k = e.getAttribute('data-ic');
-      if (ICONS[k]) e.innerHTML = ICONS[k];
-    });
-    // Size the four primary sigils to match the design (84px, 58px on Why).
-    ['cin-sig1', 'cin-sig2', 'cin-sig6'].forEach((id) => {
-      const e = root.querySelector('#' + id);
-      if (e) { e.style.width = '84px'; e.style.height = '84px'; }
-    });
-    const s3 = root.querySelector('#cin-sig3');
-    if (s3) { s3.style.width = '58px'; s3.style.height = '58px'; }
+  // ═══════════════════════════════════════════════════════════
+  // W936 — ONBOARDING v2 ("Direction A", Claude Design handoff 31)
+  //
+  // Replaces the 1z.233 cinematic outright. The old flow asked the
+  // hunter three questions (name, why, path) and then showed them a
+  // symbolic "+25 XP"; it never showed them the game. W935's dig into
+  // the two-minute bounce found the cost: onboarding had exactly one
+  // funnel event, 62% of new hunters took "Make Your Own" and were
+  // seeded nothing, and the Apple Health ask fired AFTER the flow —
+  // so a new hunter could finish onboarding having seen no board, no
+  // boss, no relic, and no reason the app is worth a second open.
+  //
+  // The new flow shows the game with the game's own data:
+  //   0 MARK    the sigil, no chrome
+  //   1 NAME    claims the alias (unchanged backend path)
+  //   2 WITNESS onboarding now OWNS the Apple Health ask (was W935's
+  //             post-onboarding pre-prompt; single neutral button
+  //             straight to the system sheet, 5.1.1(iv)) and its
+  //             funnel events ride along unchanged
+  //   3 REVEAL  the hunter's real rolling seven-day step total, the
+  //             100K-Club road brightening with the count
+  //   4 BOARD   the real weekly Steps board with the hunter's REAL
+  //             rank — a dash, never a guess, until the server agrees
+  //   5 HUNT    The Twin Maw at its real 14,000-step goal with its
+  //             real three-relic drop pool; SUMMON opens the real
+  //             share sheet and nothing is claimed until it sends
+  //   6 ASCENT  Floor 1 of 100, the app's own Floor 100 art
+  //   7 VOW     the real packs with their real vow counts
+  //   – TRAIN   the 1z.273G training-week screen, unchanged, still
+  //             conditional on the pack carrying a training habit
+  //   8 PACT    the Steel Wolf, ENGAGED for real (a hunter's first
+  //             engage is free, W771) and — when Apple Health already
+  //             shows the day's 6,000 — KILLED for real through
+  //             evaluateSteelWolfForDay. Real souls, real drop roll,
+  //             real once-per-day claim. The relic on the screen is
+  //             the relic in the armory.
+  //
+  // Nothing here simulates. Every branch that cannot show a true
+  // number says so instead.
+  // ═══════════════════════════════════════════════════════════
+
+  // The four-point star, drawn once. Same path the rest of the app uses.
+  function _cnPaintSigil(el) {
+    if (!el) return;
+    el.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+      '<path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/></svg>';
   }
+  function _cnFmt(n) {
+    try { return Number(n).toLocaleString('en-US'); } catch (_) { return String(n); }
+  }
+  function _cnReduced() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch (_) { return false; }
+  }
+  // Daily walk + Sleep. See the commit note on the ENTER handler.
+  const _CN_CUSTOM_SEED_INDICES = [6, 1];
 
   function showCinematicOnboarding() {
     const root = document.getElementById('cin-onboarding');
-    if (!root) { console.warn('[cin] container missing — falling back to legacy welcome'); _legacyShowWelcomeScreen(); return; }
+    if (!root || !root.querySelector('#cn-s0')) {
+      console.warn('[cin] v2 markup missing — falling back to legacy welcome');
+      _legacyShowWelcomeScreen();
+      return;
+    }
     root.classList.remove('hidden');
     root.setAttribute('aria-hidden', 'false');
 
-    _cinPaintSigils(root);
+    const q  = (sel) => root.querySelector(sel);
+    const qq = (sel) => Array.from(root.querySelectorAll(sel));
 
-    const state = { name: '', why: null, pack: null };
-    // v3 Phase 1z.273G — Training Week inserted between Path and Pact.
-    // Conditional: show() auto-advances past it when the chosen pack
-    // includes no training habits. data-step matches Path so the dot
-    // strip stays anchored.
-    const order = ['cin-scr1', 'cin-scr2', 'cin-scr3', 'cin-scr4', 'cin-scr-training', 'cin-scr5', 'cin-scr6', 'cin-scr7'];
+    _cnPaintSigil(q('#cn-sigil'));
+    _cnPaintSigil(q('#cn-sigil-sm'));
+
+    // Everything the flow learns. `health` is true once a read came back
+    // under a granted permission, false when the ask was refused, and
+    // null where HealthKit does not exist at all (web preview, Android).
+    const state = {
+      name:     '',
+      pack:     'custom',   // Make Your Own is preselected (handoff 31)
+      steps7:   null,
+      today:    null,
+      health:   null,
+      summoned: false,
+    };
+
+    const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cin-scr-training', 'cn-s8'];
+    const VOW_INDEX = 7;          // where SKIP lands — the one choice nobody skips past
+    const TRAINING_INDEX = 8;
     let idx = 0;
 
-    const dots = root.querySelector('#cin-dots');
-    const skip = root.querySelector('#cin-skip');
+    const chrome = q('#cn-chrome');
+    const dots   = q('#cn-dots');
+    const skip   = q('#cn-skip');
 
     function show(i) {
       idx = i;
-      order.forEach((id, k) => {
-        const el = root.querySelector('#' + id);
-        if (el) el.classList.toggle('show', k === i);
+      const id = order[i];
+      order.forEach((sid, k) => {
+        const el = root.querySelector('#' + sid);
+        if (!el) return;
+        el.classList.toggle('cn-shown', k === i);
+        el.classList.toggle('show', k === i);   // the training screen still uses the 1z.233 .show
       });
-      const stepAttr = parseInt((root.querySelector('#' + order[i]) || {}).dataset?.step || '0', 10);
-      // Goal-gradient dots active on steps 1..4 (screens 2..5)
-      dots.classList.toggle('on', stepAttr >= 1 && stepAttr <= 4);
-      Array.from(dots.children).forEach((d, k) => d.classList.toggle('fill', k <= stepAttr - 1));
-      // Subtle Skip on Path + Training Week + Commitment (1z.273G — Training
-      // Week sits at index 4, Commitment slides from 4 to 5).
-      skip.classList.toggle('on', i >= 3 && i < 6);
-      // v3 Phase 1z.273G — Training Week mount + conditional skip.
-      if (order[i] === 'cin-scr-training') {
-        const trainingHabits = _cinCollectTrainingHabits();
-        if (trainingHabits.length === 0) {
-          // No training in this pack → auto-advance to Pact on the
-          // same tick. 1z.273H — the prior setTimeout(0) was a macro-
-          // task, which let the browser paint the training screen
-          // (the `.show` class was already applied above) for one
-          // frame before the skip fired. Synchronous recursion
-          // replaces the `.show` class in the same task before the
-          // next paint, so the flash is gone.
-          show(i + 1);
-          return;
-        }
-        _cinRenderTrainingScreen(trainingHabits);
+      const cur = root.querySelector('#' + id);
+      const isTraining = (i === TRAINING_INDEX);
+      const dot = isTraining ? 5 : parseInt((cur && cur.dataset.dot) || '-1', 10);
+      chrome.hidden = !!(cur && 'nochrome' in cur.dataset);
+      chrome.classList.toggle('cn-onart', !!(cur && cur.classList.contains('cn-art')));
+      Array.from(dots.children).forEach((d, k) => d.classList.toggle('cn-on', dot >= 0 && k <= dot));
+      // No SKIP on the witness screen. Apple rejected a Health pre-permission
+      // sheet once already (2.2.1 build 61) for offering anything beside the
+      // single neutral button; a skip in the chrome would read the same way.
+      // The reveal onward is pure show-and-tell, so it can be walked past.
+      skip.style.visibility = (i >= 3 && i < VOW_INDEX) ? 'visible' : 'hidden';
+
+      if (id === 'cn-s3') _runReveal();
+      if (id === 'cn-s4') _runBoard();
+      if (id === 'cn-s5') _runHunt();
+      if (id === 'cn-s7') _runVow();
+      if (isTraining) {
+        // Conditional, exactly as in 1z.273G: no training habits in the
+        // chosen pack → advance on the SAME tick so the screen can never
+        // paint for a frame.
+        const t = _cinCollectTrainingHabits();
+        if (t.length === 0) { show(i + 1); return; }
+        _cinRenderTrainingScreen(t);
       }
-      if (order[i] === 'cin-scr5') _fillPact();
-      if (order[i] === 'cin-scr6') _runReward();
-      if (order[i] === 'cin-scr7') {
-        const hl = root.querySelector('#cin-hookLine');
-        if (hl) hl.textContent = _whyLine();
-      }
+      if (id === 'cn-s8') _runPact();
     }
     function next() { if (idx < order.length - 1) show(idx + 1); }
 
-    // Generic next buttons
-    root.querySelectorAll('[data-cin-next]').forEach((b) => b.addEventListener('click', next));
+    qq('[data-cn-next]').forEach((b) => b.addEventListener('click', next));
+    skip.addEventListener('click', () => show(VOW_INDEX));
+    try { window.__cinShow = show; } catch (_) {}   // QA hook
 
-    // v3 Phase 1z.244 — SFX overlay on the commitment screen's awaken
-    // CTA. Generic next() above advances; this only adds the seal sound.
+    // ── 0 · THE MARK ───────────────────────────────────────────
     {
-      const awakenBtn = root.querySelector('#cin-awakenBtn');
-      if (awakenBtn) awakenBtn.addEventListener('click', () => _cinPlaySfx('seal'));
+      let lit = false;
+      const sig = q('#cn-sigil');
+      const light = () => {
+        if (lit) return;
+        lit = true;
+        sig.classList.add('cn-lit');
+        _cinPlaySfx('ignite');
+        setTimeout(() => show(1), _cnReduced() ? 120 : 900);
+      };
+      sig.addEventListener('click', light);
+      const touch = q('#cn-touch');
+      touch.addEventListener('click', light);
+      touch.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); light(); }
+      });
     }
 
-    // Screen 1 — opening: both the sigil and the ghost-tap CTA advance.
-    // First user gesture also unlocks the shared AudioContext (1z.244).
-    root.querySelector('#cin-igniteTap').addEventListener('click', () => {
-      _cinPlaySfx('ignite');
-      next();
-    });
-    root.querySelector('#cin-opTap').addEventListener('click', (e) => {
-      e.stopPropagation();
-      _cinPlaySfx('ignite');
-      next();
-    });
+    // ── 1 · THE NAME ───────────────────────────────────────────
+    // The single place the hunter name is captured, and (on iOS first
+    // run) the place the Apple Sign-In alias is claimed. Unchanged from
+    // 1z.245 apart from losing the typewriter acknowledgement — CONFIRM
+    // now goes straight to the witness.
+    const field   = q('#cin-nameField');
+    const confirm = q('#cin-nameConfirm');
+    const errEl   = q('#cin-nameError');
+    const suggBox = q('#cin-nameSuggestions');
 
-    // Screen 2 — naming.
-    const field        = root.querySelector('#cin-nameField');
-    const confirm      = root.querySelector('#cin-nameConfirm');
-    const errEl        = root.querySelector('#cin-nameError');
-    const suggBox      = root.querySelector('#cin-nameSuggestions');
+    function _setConfirmEnabled(on) {
+      confirm.disabled = !on;
+      confirm.classList.toggle('cn-off', !on);
+    }
     field.addEventListener('input', () => {
-      confirm.disabled = field.value.trim().length < 2;
-      // Clear any prior backend error when the user re-edits.
+      _setConfirmEnabled(field.value.trim().length >= 2);
       if (errEl) errEl.style.display = 'none';
       if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
     });
@@ -60987,25 +61048,6 @@
       if (e.key === 'Enter' && !confirm.disabled) _confirmName();
     });
     confirm.addEventListener('click', _confirmName);
-
-    // W472 — optional lore primer. A quiet info dot on the naming screen opens a
-    // glossary of the in-world terms (Hunter / Mark / Vow / the System) so a cold
-    // new user gets a foothold without interrupting the cinematic. Opt-in only.
-    const glossOpen  = root.querySelector('#cin-glossary-open');
-    const glossModal = root.querySelector('#cin-glossary');
-    const glossClose = root.querySelector('#cin-glossary-close');
-    if (glossOpen && glossModal) {
-      glossOpen.addEventListener('click', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        glossModal.classList.remove('hidden');
-        glossModal.setAttribute('aria-hidden', 'false');
-      });
-      const closeGloss = () => { glossModal.classList.add('hidden'); glossModal.setAttribute('aria-hidden', 'true'); };
-      if (glossClose) glossClose.addEventListener('click', closeGloss);
-      glossModal.addEventListener('click', (e) => { if (e.target === glossModal) closeGloss(); });
-      // Escape-to-close, matching the app's modal convention (souls-info, market sheet, etc.).
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !glossModal.classList.contains('hidden')) closeGloss(); });
-    }
 
     function _showNameError(msg, suggested) {
       if (errEl) {
@@ -61040,27 +61082,19 @@
       if (errEl) errEl.style.display = 'none';
       if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
 
-      // v3 Phase 1z.245 — if Apple Sign-In is pending (iOS native first-
-      // run, alias not yet claimed on the backend), commit the alias
-      // here. The cinematic name screen is now the SINGLE place the
-      // hunter name is captured. On error, surface inline and let the
-      // user retry without leaving the cinematic.
       const Auth = window.Auth;
       const pending = !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
-      // W329 — validate the chosen name client-side for BOTH guest and pending
-      // (a guest's name is reused verbatim as the alias at the deferred claim).
+      // W329 — validate for BOTH pending and already-claimed (a claimed
+      // name is reused verbatim as the alias at the deferred claim).
       if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
         _showNameError('3–20 chars · letters, numbers, spaces, _ and - only.');
         return;
       }
       if (pending) {
-        confirm.disabled = true;
+        _setConfirmEnabled(false);
         let result;
-        try {
-          result = await Auth.completeSignIn(name);
-        } catch (e) {
-          result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' };
-        }
+        try { result = await Auth.completeSignIn(name); }
+        catch (e) { result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' }; }
         if (!result || !result.ok) {
           const code = result && result.code;
           if (code === 'ALIAS_TAKEN') {
@@ -61074,68 +61108,315 @@
           } else {
             _showNameError((result && result.reason) || 'Could not claim that name.');
           }
-          confirm.disabled = false;
+          _setConfirmEnabled(true);
           return;
         }
       }
-
       state.name = name;
-      _cinPlaySfx('chime'); // v3 Phase 1z.244 — system recognition
-      root.querySelector('#cin-name-kicker').style.display = 'none';
-      root.querySelector('#cin-name-title').style.display = 'none';
-      root.querySelector('#cin-nameInputWrap').style.display = 'none';
-      const ack = root.querySelector('#cin-nameAck');
-      ack.style.display = 'block';
-      root.querySelector('#cin-nameEcho').textContent = state.name;
-      _typewrite(
-        root.querySelector('#cin-nameSys'),
-        state.name.toUpperCase() + '. The system recognizes you.',
-        () => {
-          const w = root.querySelector('#cin-nameNextWrap');
-          w.style.transition = 'opacity .6s';
-          w.style.opacity = '1';
-        }
-      );
+      _cinPlaySfx('chime');
+      show(2);
     }
 
-    // Screen 3 — why.
-    root.querySelectorAll('#cin-whyGrid .pick').forEach((p) => {
-      p.addEventListener('click', () => {
-        _cinPlaySfx('tap'); // v3 Phase 1z.244 — rune tap
-        root.querySelectorAll('#cin-whyGrid .pick').forEach((x) => x.setAttribute('aria-checked', 'false'));
-        p.setAttribute('aria-checked', 'true');
-        state.why  = p.dataset.why;
-        state.pack = p.dataset.pack;  // design's bias: VIT/STR → morning, FOCUS/INT → locked-in
-        root.querySelector('#cin-whyNext').disabled = false;
-      });
-    });
-    // When Why → Continue is tapped, pre-select the biased pack on screen 4.
-    root.querySelector('#cin-whyNext').addEventListener('click', () => {
-      setTimeout(() => {
-        if (!state.pack) return;
-        // v3 Phase 1z.251 — remap retired path values to a valid pick.
-        const targetPack = state.pack === 'locked-in' ? 'custom' : state.pack;
-        const el = root.querySelector('#cin-packs .pack[data-pack="' + targetPack + '"]');
-        if (el && el.getAttribute('aria-checked') !== 'true') el.click();
-      }, 30);
-    });
+    // W472 — the lore primer survives as a quiet line under the field.
+    {
+      const glossOpen  = q('#cin-glossary-open');
+      const glossModal = q('#cin-glossary');
+      const glossClose = q('#cin-glossary-close');
+      if (glossOpen && glossModal) {
+        glossOpen.addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          glossModal.classList.remove('hidden');
+          glossModal.setAttribute('aria-hidden', 'false');
+        });
+        const closeGloss = () => {
+          glossModal.classList.add('hidden');
+          glossModal.setAttribute('aria-hidden', 'true');
+        };
+        if (glossClose) glossClose.addEventListener('click', closeGloss);
+        glossModal.addEventListener('click', (e) => { if (e.target === glossModal) closeGloss(); });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !glossModal.classList.contains('hidden')) closeGloss();
+        });
+      }
+    }
 
-    // Screen 4 — path.
-    root.querySelectorAll('#cin-packs .pack').forEach((p) => {
-      p.addEventListener('click', () => {
-        _cinPlaySfx('vow'); // v3 Phase 1z.244 — deeper selection pulse
-        root.querySelectorAll('#cin-packs .pack').forEach((x) => x.setAttribute('aria-checked', 'false'));
-        p.setAttribute('aria-checked', 'true');
-        // v3 Phase 1z.251 — Locked-In was removed from the cinematic
-        // path choice. Defensive: if cached HTML or any stale path
-        // somehow surfaces a locked-in pack value here, remap to
-        // 'custom' so downstream pack-creation never tries to build
-        // a pack the user didn't actually choose.
-        const pickedPack = p.dataset.pack === 'locked-in' ? 'custom' : p.dataset.pack;
-        state.pack = pickedPack;
-        root.querySelector('#cin-pathNext').disabled = false;
+    // ── 2 · THE WITNESS — onboarding owns the Apple Health ask ──
+    // This screen IS the pre-permission sheet W935 shipped: one neutral
+    // button, no exit offered before the system prompt (App Review
+    // 5.1.1(iv)). The three W935 funnel events fire from here now, so
+    // grant-vs-deny stays as measurable as it was.
+    {
+      const btn = q('#cn-healthBtn');
+      let asking = false;
+      btn.addEventListener('click', async () => {
+        if (asking) return;
+        asking = true;
+        const available = !!(typeof Health !== 'undefined' && Health.isAvailable && Health.isAvailable());
+        if (!available) { state.health = null; asking = false; next(); return; }
+
+        try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
+        try {
+          if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_shown', 'onboarding');
+        } catch (_) {}
+
+        let result = 'unknown';
+        try { result = await Health.requestPermissions(); } catch (_) { result = 'unknown'; }
+        try {
+          localStorage.setItem('hb_hk_answered_v1', '1');
+          if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_answered', String(result || 'unknown'));
+        } catch (_) {}
+
+        // iOS resolves requestAuthorization even on Don't Allow, so the
+        // first read is the only honest tell — and it is the same read
+        // the reveal screen needs, so it happens exactly once.
+        await _readHealth();
+        try {
+          if (localStorage.getItem('hb_hk_first_read_v1') !== '1') {
+            localStorage.setItem('hb_hk_first_read_v1', '1');
+            if (typeof window.__funnelEmit === 'function') {
+              window.__funnelEmit('health_first_read',
+                state.steps7 == null ? 'null' : (state.steps7 > 0 ? 'steps' : 'zero'));
+            }
+          }
+        } catch (_) {}
+        try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ force: true }); } catch (_) {}
+
+        if (state.health === true) {
+          // Get the week onto the board now so screen 4 has a real rank
+          // to show, and let the ordinary verifiers catch up behind it.
+          try { if (typeof state.today === 'number') lbRecordStepsToday(state.today); } catch (_) {}
+          try { lbBackfillMissedStepDays(); } catch (_) {}
+          try { autoVerifySleep(); } catch (_) {}
+          try { autoVerifyStrengthTraining(); } catch (_) {}
+        }
+        _fetchBoard();   // two screens of runway before the board mounts
+        asking = false;
+        next();
       });
-    });
+    }
+
+    // One Apple Health read for the whole flow: the rolling seven-day
+    // total (the reveal) and today (the Steel Wolf's kill condition).
+    async function _readHealth() {
+      try {
+        if (typeof Health === 'undefined' || !Health.isAvailable()) { state.health = null; return; }
+        const end   = new Date();
+        const start = new Date(end.getTime());
+        start.setDate(start.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+        let week = null, today = null;
+        try { week  = await Health.getStepsBetween(start.toISOString(), end.toISOString()); } catch (_) {}
+        try { today = await Health.getStepsToday(); } catch (_) {}
+        if (typeof week  === 'number' && Number.isFinite(week))  state.steps7 = Math.round(week);
+        if (typeof today === 'number' && Number.isFinite(today)) state.today  = Math.round(today);
+        const granted = (typeof Health.permissionStatus === 'function') && Health.permissionStatus() === 'granted';
+        state.health = !!(granted && (state.steps7 !== null || state.today !== null));
+      } catch (_) { state.health = false; }
+    }
+
+    // ── 3 · THE REVEAL ─────────────────────────────────────────
+    function _runReveal() {
+      const el   = q('#cn-steps7');
+      const line = q('#cn-revealLine');
+      const scr  = q('#cn-s3');
+      scr.style.setProperty('--cn-p', '0');
+      const total = (state.health === true) ? (state.steps7 || 0) : 0;
+      scr.classList.toggle('cn-unlit', !(state.health === true && total > 0));
+
+      if (state.health === null) {
+        el.textContent = '—';
+        line.innerHTML = 'Apple Health lives on your iPhone. <b>The System reads your steps there.</b>';
+        return;
+      }
+      if (state.health === false) {
+        el.textContent = '—';
+        line.innerHTML = 'Health is closed. The System reads nothing yet. <b>The door stays open.</b>';
+        return;
+      }
+      if (total <= 0) {
+        el.textContent = '0';
+        line.innerHTML = 'Health holds no steps yet. <b>Carry your phone. The System counts from here.</b>';
+        return;
+      }
+      line.innerHTML = 'You walked ' + _cnFmt(total) + ' steps this week. <b>The System was not watching. It is now.</b>';
+      if (_cnReduced()) {
+        el.textContent = _cnFmt(total);
+        scr.style.setProperty('--cn-p', '1');
+        return;
+      }
+      const t0 = performance.now();
+      (function frame(t) {
+        const p = Math.min(1, (t - t0) / 900);
+        const e = 1 - Math.pow(1 - p, 3);
+        el.textContent = _cnFmt(Math.round(total * e));
+        scr.style.setProperty('--cn-p', String(e));
+        if (p < 1) requestAnimationFrame(frame);
+      })(t0);
+    }
+
+    // ── 4 · THE BOARD ──────────────────────────────────────────
+    // The real weekly Steps board. The hunter's row carries their REAL
+    // rank when the server has one; until the first upload lands it
+    // carries a dash, never a position inferred from a slice of a
+    // top-20 (the top-10-plus-pinned-YOU shape is deliberate, W386).
+    let _boardP = null;
+    function _fetchBoard() {
+      if (!_boardP) {
+        _boardP = (async () => {
+          try {
+            const r = await window.Auth.fetchLeaderboardTop('step_total', 20);
+            if (r && r.ok) return { top: Array.isArray(r.top) ? r.top : [], me: r.me || null };
+          } catch (_) {}
+          return { top: [], me: null };
+        })();
+      }
+      return _boardP;
+    }
+
+    let _boardRan = false;
+    async function _runBoard() {
+      if (_boardRan) return;
+      _boardRan = true;
+      const host = q('#cn-rows');
+      const fetched = await _fetchBoard();
+      if (idx !== 4) return;   // the hunter walked on while the fetch was in flight
+      const top = fetched.top, me = fetched.me;
+
+      const myAlias = (typeof lbGetMyAlias === 'function') ? (lbGetMyAlias() || '') : '';
+      const mine    = myAlias ? top.find((r) => r && r.alias === myAlias) : null;
+      const myRank  = (mine && typeof mine.rank === 'number') ? mine.rank
+                    : (me && typeof me.rank === 'number') ? me.rank : null;
+      const myValue = (mine && typeof mine.current_value === 'number') ? mine.current_value
+                    : (me && typeof me.current_value === 'number') ? me.current_value
+                    : (state.health === true ? (state.steps7 || 0) : null);
+
+      let myRankLabel = 'RANK E';
+      try {
+        myRankLabel = 'RANK ' + String(getRank(totalPoints).label || 'E').replace(/\s*rank\s*$/i, '').toUpperCase();
+      } catch (_) {}
+      let myAvatar = '';
+      try { myAvatar = (typeof getAvatarSrc === 'function') ? getAvatarSrc() : ''; } catch (_) {}
+
+      const others = top
+        .filter((r) => r && !(myAlias && r.alias === myAlias))
+        .slice(0, 4)
+        .map((r) => ({ rank: r.rank, alias: r.alias, value: r.current_value, avatar: r.avatar_id || '', bg: r.card_bg || '' }));
+      // A board of one is not a board. If nobody else came back — offline,
+      // a dev stub, a cold server — walk past the screen instead of showing
+      // an empty promise. Same-tick, so it never paints.
+      if (!others.length) { show(idx + 1); return; }
+
+      const rows = others.concat([{
+        rank: myRank, alias: state.name || myAlias || 'You', value: myValue,
+        avatar: myAvatar, bg: '', me: true, sub: myRankLabel,
+      }]);
+      // Ordered by the number each hunter walked (nulls last). The RANK
+      // column still shows only what the server has agreed to — a dash
+      // until the hunter's first upload lands, never a position inferred
+      // from a slice of the top twenty.
+      rows.sort((x, y) => (x.value == null ? 1 : (y.value == null ? -1 : y.value - x.value)));
+
+      host.innerHTML = rows.map((r) => {
+        let bg = '';
+        try { bg = r.bg ? (_cardBgArt(r.bg) || '') : ''; } catch (_) { bg = ''; }
+        if (!bg) bg = 'assets/backgrounds/bg_e.webp';
+        let bust = '';
+        try { bust = _bustSrc(r.avatar) || _bustSrc('avatar-base.png'); } catch (_) {}
+        return '<div class="cn-row' + (r.me ? ' cn-me' : '') + '">' +
+          '<img class="cn-bgi" src="' + esc(bg) + '" alt="" aria-hidden="true">' +
+          '<span class="cn-r">' + (r.rank == null ? '—' : r.rank) + '</span>' +
+          '<span class="cn-bust">' + (bust ? '<img src="' + esc(bust) + '" alt="" aria-hidden="true">' : '') + '</span>' +
+          '<div class="cn-nm">' + esc(r.alias || 'Hunter') +
+            (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</div>' +
+          '<span class="cn-v">' + (r.value == null ? '—' : _cnFmt(r.value)) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ── 5 · THE HUNT ───────────────────────────────────────────
+    function _runHunt() {
+      const cfg  = (typeof COOP_BOSSES !== 'undefined') ? COOP_BOSSES.the_twin_maw : null;
+      const goal = (cfg && cfg.coopGoalSteps) || 14000;
+      q('#cn-mawRank').textContent = ((cfg && cfg.rank) || 'E') + '-RANK · DUO';
+      q('#cn-mawLine').innerHTML =
+        'Falls at <b>' + _cnFmt(goal) + '</b> combined steps. Summon a friend — the relic drops for both.';
+
+      const host = q('#cn-drops');
+      if (host.childElementCount) return;
+      let pool = [];
+      try {
+        pool = Object.keys(CARDS).map((k) => CARDS[k]).filter((c) => c && c.source_boss === 'the_twin_maw');
+      } catch (_) {}
+      const weight = { common: 0, rare: 1, ultra_rare: 2, mythic: 3 };
+      pool.sort((a, b) => (weight[a.rarity] || 0) - (weight[b.rarity] || 0));
+      host.innerHTML = pool.slice(0, 3).map((c) => {
+        const ultra = (c.rarity === 'ultra_rare' || c.rarity === 'mythic');
+        const label = ((RARITY_LABELS[c.rarity] || c.rarity || '') +
+                       ((c.slot && !ultra) ? ' · ' + c.slot : '')).toUpperCase();
+        return '<div class="cn-drop' + (ultra ? ' cn-ur' : '') + '">' +
+          '<img src="' + esc(c.art_path || '') + '" alt="" aria-hidden="true">' +
+          '<div class="cn-dn">' + esc(c.name) + '<div class="cn-dr">' + esc(label) + '</div></div></div>';
+      }).join('');
+    }
+
+    // SUMMON opens the real iOS share sheet with the hunter's own
+    // invite link. Nothing on this screen changes until an invite
+    // actually goes out — a cancelled sheet leaves it as it was.
+    {
+      const btn = q('#cn-summon');
+      btn.addEventListener('click', async () => {
+        if (state.summoned) { next(); return; }
+        const cfg  = (typeof COOP_BOSSES !== 'undefined') ? COOP_BOSSES.the_twin_maw : null;
+        const goal = (cfg && cfg.coopGoalSteps) || 14000;
+        const url    = (typeof _inviteShareUrl === 'function') ? _inviteShareUrl() : '';
+        const suffix = (typeof _inviteCodeSuffix === 'function') ? _inviteCodeSuffix() : '';
+        const text = 'Hunt The Twin Maw with me on Awakened — ' + _cnFmt(goal) +
+                     ' combined steps and the relic drops for both of us.' + suffix;
+        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('share_opened', 'onboarding_summon'); } catch (_) {}
+        let sent = false;
+        if (navigator.share) {
+          try { await navigator.share({ title: 'Awakened', text: text, url: url || undefined }); sent = true; }
+          catch (_) { sent = false; }
+        } else {
+          try { await navigator.clipboard.writeText(text + (url ? '\n' + url : '')); sent = true; }
+          catch (_) { sent = false; }
+        }
+        if (!sent) return;
+        state.summoned = true;
+        try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('onboarding_summon_sent'); } catch (_) {}
+        try { _hapticTick('SUCCESS'); } catch (_) {}
+        q('#cn-mawimg').src = 'assets/bosses/the-twin-maw-summons.png';
+        q('#cn-partyText').textContent = 'WAITING ON YOUR ALLY · INVITE SENT';
+        q('#cn-party').classList.add('cn-sent');
+        btn.textContent = 'CONTINUE';
+        btn.classList.add('cn-nt');
+        const alone = q('#cn-huntAlone');
+        if (alone) alone.style.display = 'none';
+      });
+    }
+
+    // ── 7 · THE VOW ────────────────────────────────────────────
+    // The real packs, with the real number of vows each one seeds.
+    function _runVow() {
+      const host = q('#cn-paths');
+      if (host.childElementCount) return;
+      host.innerHTML = ['morning', 'custom', 'jump_program'].map((id) => {
+        const pack = (typeof getPackById === 'function') ? getPackById(id) : null;
+        if (!pack) return '';
+        let n = 0;
+        try { n = (getPackHabitDefs(id) || []).length; } catch (_) {}
+        const sub = (id === 'custom') ? 'Yours' : (n + (n === 1 ? ' vow' : ' vows'));
+        return '<button type="button" class="cn-path' + (id === state.pack ? ' cn-on' : '') + '" data-cn-pack="' + esc(id) + '">' +
+          '<span><span class="cn-pn">' + esc(pack.name) + '</span>' +
+          '<span class="cn-ps">' + esc(sub) + '</span></span>' +
+          '<span class="cn-pr">E</span></button>';
+      }).join('');
+      qq('[data-cn-pack]').forEach((b) => b.addEventListener('click', () => {
+        _cinPlaySfx('vow');
+        qq('[data-cn-pack]').forEach((x) => x.classList.toggle('cn-on', x === b));
+        state.pack = b.dataset.cnPack;
+      }));
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // v3 Phase 1z.273G — Training Week (inserted between Path and Pact)
@@ -61392,172 +61673,160 @@
       if (ghostBtn) ghostBtn.addEventListener('click', () => next());
     }
 
-    // Screen 5 — commitment "pact" tome.
-    function _fillPact() {
-      root.querySelector('#cin-pName').textContent = state.name || 'Unnamed';
-      const packId = state.pack || 'morning';
-      const pack   = (typeof getPackById === 'function') ? getPackById(packId) : null;
-      const packName = (pack && pack.name) || (
-        packId === 'morning'   ? 'Morning Routine' :
-        packId === 'locked-in' ? 'Locked-In'       :
-        'Your Own Path'
-      );
-      root.querySelector('#cin-pPath').textContent = packName;
-
-      // First rites = first 3 habit names from the chosen pack (or
-      // friendly placeholders for the empty custom pack).
-      let names = [];
-      if (typeof getPackHabitDefs === 'function') {
-        try {
-          const defs = getPackHabitDefs(packId) || [];
-          names = defs.slice(0, 3).map((h) => h && h.name).filter(Boolean);
-        } catch (_) {}
+    // ── 8 · THE PACT ───────────────────────────────────────────
+    // The first gate, told three ways, and only ever the true one.
+    function _cnVowsHtml(healthOn) {
+      let defs = [];
+      try { defs = (getPackHabitDefs(state.pack) || []).slice(0, 2); } catch (_) {}
+      if (!defs.length) {
+        defs = _CN_CUSTOM_SEED_INDICES.map((i) => DEFAULT_HABITS[i]).filter(Boolean);
       }
-      if (!names.length) {
-        names = (packId === 'custom')
-          ? ['Choose your first rite', 'Set your own hours', 'Hold the line']
-          : ['Sleep · 7 hours', 'Wake up at consistent time', 'No phone or social media after waking'];
-      }
-      root.querySelector('#cin-pHabits').innerHTML = names
-        .map((h) => '<div class="hbt"><span class="b"></span>' + esc(h) + '</div>')
-        .join('');
+      if (!defs.length) return '';
+      return '<div class="cn-vows">' + defs.map((h) => {
+        let auto = false;
+        try { auto = (typeof isHealthAutoVerifiableHabit === 'function') && !!isHealthAutoVerifiableHabit(h); } catch (_) {}
+        const note = auto
+          ? (healthOn ? 'READ FROM APPLE HEALTH' : 'NEEDS APPLE HEALTH')
+          : 'SEAL BY HAND';
+        return '<div class="cn-vow"><span class="cn-o"></span>' +
+          '<div class="cn-vn">' + esc(h.name) + '<small>' + note + '</small></div></div>';
+      }).join('') + '</div>';
     }
 
-    // Screen 6 — reward (peak). Sparks are generated each visit so the
-    // angles are fresh; no idle DOM cost when not on screen 6.
-    function _runReward() {
-      _cinPlaySfx('reward'); // v3 Phase 1z.244 — emotional peak shimmer
-      const host = root.querySelector('#cin-sparks');
-      host.innerHTML = '';
-      const reduced = (() => {
-        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-        catch (_) { return false; }
-      })();
-      if (!reduced) {
-        for (let i = 0; i < 18; i++) {
-          const a    = Math.random() * Math.PI * 2;
-          const dist = 70 + Math.random() * 120;
-          const dur  = 1.1 + Math.random() * 1.1;
-          const dly  = 0.15 + Math.random() * 0.3;
-          const s = document.createElement('span');
-          s.className = 'spark';
-          s.style.animation = 'cin-sparkfly ' + dur.toFixed(2) + 's ease-out ' + dly.toFixed(2) + 's both';
-          s.style.setProperty('--dx', (Math.cos(a) * dist).toFixed(0) + 'px');
-          s.style.setProperty('--dy', (Math.sin(a) * dist).toFixed(0) + 'px');
-          host.appendChild(s);
-        }
-      }
-      setTimeout(() => {
-        const w = root.querySelector('#cin-rewardNext');
-        w.style.transition = 'opacity .6s';
-        w.style.opacity = '1';
-      }, reduced ? 600 : 2600);
-    }
+    let _pactRan = false;
+    function _runPact() {
+      if (_pactRan) return;
+      _pactRan = true;
+      _cinPlaySfx('reward');
+      const wolf  = q('#cn-wolf');
+      const body  = q('#cn-pactBody');
+      const title = q('#cn-pactTitle');
+      const sub   = q('#cn-wolfSub');
+      const hpi   = q('#cn-hpi');
+      const cfg   = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
+      const need  = (cfg && cfg.stepThreshold) || 6000;
+      const today = (typeof state.today === 'number') ? state.today : 0;
+      wolf.className = 'cn-wolf';
+      hpi.style.removeProperty('--cn-w');
 
-    // Screen 7 — tomorrow hook copy biased by the WHY answer.
-    function _whyLine() {
-      const map = {
-        VIT:   'Your first night, reclaimed.',
-        FOCUS: 'Your first hour, undivided.',
-        STR:   'Your first rep, logged.',
-        INT:   'Your first page, turned.'
-      };
-      return map[state.why] || 'Your first verified streak awaits.';
-    }
-
-    // Typewriter for the system text on screen 2.
-    function _typewrite(el, text, done) {
-      const rm = (() => {
-        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-        catch (_) { return false; }
-      })();
-      if (rm) {
-        el.innerHTML = esc(text).replace(/^(\S+)/, '<b>$1</b>');
-        if (done) done();
+      // Health closed, or no HealthKit at all. The Wolf is NOT engaged:
+      // nothing could resolve the hunt, and a wager the hunter cannot
+      // win is not a first gate.
+      if (state.health !== true) {
+        wolf.classList.add('cn-lock');
+        title.textContent = 'The Wolf waits behind Health.';
+        sub.textContent   = 'FALLS AT ' + _cnFmt(need) + ' IN A DAY';
+        body.innerHTML =
+          '<p class="cn-b">Open Health and it will see you coming. <b>Tonight, the first win is a vow kept.</b></p>' +
+          _cnVowsHtml(false);
         return;
       }
-      el.innerHTML = '';
-      let i = 0;
-      (function step() {
-        if (i <= text.length) {
-          const t = text.slice(0, i);
-          el.innerHTML = esc(t).replace(/^(\S+\.)/, '<b>$1</b>');
-          i++;
-          setTimeout(step, 34);
-        } else if (done) done();
-      })();
+
+      // From here the hunt is real. A hunter's first engage is free (W771).
+      let engaged = false;
+      try { engaged = (typeof engageBoss === 'function') && !!engageBoss('the_steel_wolf'); } catch (_) {}
+
+      if (engaged && today >= need) {
+        // The day is already won, so run the REAL kill: real souls, real
+        // drop roll, real once-per-(boss, day) claim. The usual toast and
+        // boss-result modal are captured instead of shown — this screen
+        // IS the announcement, and two of them would be one too many.
+        let captured = null;
+        try {
+          _cinKillCapture = [];
+          evaluateSteelWolfForDay(today, getDeviceLocalDate());
+          captured = _cinKillCapture[0] || null;
+        } catch (e) {
+          console.warn('[cin] steel wolf kill failed', e);
+        } finally {
+          _cinKillCapture = null;
+        }
+        if (captured) {
+          wolf.classList.add('cn-fell');
+          title.textContent = 'It falls.';
+          sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
+          const card  = captured.dropInfo && captured.dropInfo.card;
+          const souls = captured.soulsReward | 0;
+          let html = '';
+          if (card) {
+            const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
+            const meta = rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + ' · IN YOUR ARMORY';
+            html += '<div class="cn-relic">' +
+              '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
+              '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
+              '<div class="cn-rr">' + esc(meta) + '</div></div></div>';
+          }
+          html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
+            esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
+            '<b class="cn-far">' + (souls > 0 ? '+' + _cnFmt(souls) + ' SOULS · ' : '') +
+            '+' + ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
+          body.innerHTML = html;
+          return;
+        }
+        // The kill did not actually fire (already claimed today, or the
+        // engage was refused). Fall through and say what IS true.
+      }
+
+      const left = Math.max(0, need - today);
+      title.textContent = engaged ? 'The Wolf is engaged.' : 'The Wolf is waiting.';
+      sub.textContent   = left > 0
+        ? _cnFmt(left) + ' STEPS LEFT TODAY'
+        : _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
+      const pct = Math.max(4, 100 - Math.min(100, (today / need) * 100));
+      hpi.style.setProperty('--cn-w', pct.toFixed(1) + '%');
+      body.innerHTML =
+        '<p class="cn-b">It is waiting for you when you walk. <b>Tonight, the first win is a vow kept.</b></p>' +
+        _cnVowsHtml(true);
     }
 
-    // W825 (Train 2, L7) — Skip used to jump straight to the Pact (show(5)),
-    // BYPASSING the Path screen: state.pack stayed null and the apply step
-    // silently defaulted to a 10-habit Morning Routine the user never chose
-    // or saw. Skip now lands on the Path screen (order[3]) — the one choice
-    // that decides what the app contains cannot be skipped past, only made.
-    skip.addEventListener('click', () => show(3));
-
-    // Final "Enter Awakened" — commit everything, fade to black, then
-    // hand off to the existing _completeOnboardingFinish so the
-    // notification prompt + habit creation + reveal of #app all run
-    // through their canonical path.
-    root.querySelector('#cin-enterApp').addEventListener('click', () => {
-      _cinPlaySfx('gate'); // v3 Phase 1z.244 — system gate opens
+    // ── ENTER — commit and hand off ────────────────────────────
+    q('#cn-enter').addEventListener('click', () => {
+      _cinPlaySfx('gate');
       try {
-        // Name → existing storage keys (matches launchQuest + _completeOnboardingFinish).
-        const n = state.name || 'Hunter';
+        const n = state.name || (localStorage.getItem('hb_name') || '').trim() || 'Hunter';
         playerName = n;
         localStorage.setItem('hb_name', playerName);
         localStorage.setItem('hb_welcomed', '1');
         localStorage.setItem('hb_hunter_name_claimed', '1');
 
-        // Pack → match the legacy IDs the rest of the app uses.
-        selectedPackId = state.pack || 'morning';
+        selectedPackId = state.pack || 'custom';
         localStorage.setItem('hb_path', selectedPackId);
-        // W574 — Vertical Jump Program (FITxVERT). Mirror the goal flag: it's
-        // server-authoritative (user-state UPSERT -> users.onboarding_goal, the
-        // queryable install metric) and drives the jump-library partition. The
-        // pack's own habits (49-66) seed through the existing getPackById path
-        // just below — no separate seeding needed; cycleDays carries through
-        // _completeOnboardingFinish onto each created habit (W575).
+        // W574 — the goal flag is server-authoritative (user-state UPSERT ->
+        // users.onboarding_goal) and partitions the jump library.
         try { localStorage.setItem('hb_onboarding_goal', selectedPackId === 'jump_program' ? 'jump_program' : 'default'); } catch (_) {}
-        // W575 — anchor the 14-day jump cycle to the program start (today) so
-        // cycleDays habits schedule off day-1. Set once; synced via SNAPSHOT_KEYS.
-        try { if (selectedPackId === 'jump_program' && !localStorage.getItem('hb_jump_program_started')) localStorage.setItem('hb_jump_program_started', getDeviceLocalDate()); } catch (_) {}
+        // W575 — anchor the 14-day jump cycle to today so cycleDays habits
+        // schedule off day one.
+        try {
+          if (selectedPackId === 'jump_program' && !localStorage.getItem('hb_jump_program_started')) {
+            localStorage.setItem('hb_jump_program_started', getDeviceLocalDate());
+          }
+        } catch (_) {}
 
-        // Pre-populate obSelected with the pack's habit indices so
-        // _completeOnboardingFinish builds the habit list correctly.
         if (typeof obSelected !== 'undefined' && typeof getPackById === 'function') {
           obSelected.clear();
           const pack = getPackById(selectedPackId);
-          if (pack && Array.isArray(pack.habits)) {
-            pack.habits.forEach((i) => obSelected.add(i));
-          }
-          // W825 (Train 2, L7) — the FOCUS and INT WHY answers bias the Path
-          // to 'custom' (1z.251), and getPackById('custom') carries no habits,
-          // so those users entered the app with ZERO vows. Seed 3 starter
-          // vows matched to their stated why (library indices). A user whose
-          // why didn't bias to custom but who deliberately picked Forge Your
-          // Own keeps the empty First Vow quick-pick — that emptiness is
-          // chosen, not accidental.
+          if (pack && Array.isArray(pack.habits)) pack.habits.forEach((i) => obSelected.add(i));
+          // W936 — Make Your Own carries no habits, and W935 measured what
+          // that costs: 62% of new hunters take this path, seeded nothing,
+          // and could reach neither the Steps board nor the Worldgate nor a
+          // step boss. Seed the two Apple Health anchors — Daily walk and
+          // Sleep — so the path starts inside the game; every other vow is
+          // still theirs to choose. This replaces W825's WHY-biased seeds,
+          // which died with the WHY screen.
           if (obSelected.size === 0 && selectedPackId === 'custom') {
-            const whySeeds = {
-              FOCUS: [12, 14, 25],  // Meditate & Breathwork · No phone after waking · Plan tomorrow
-              INT:   [11, 13, 39],  // Read · Journal · Learn something new
-            };
-            (whySeeds[state.why] || []).forEach((i) => obSelected.add(i));
+            _CN_CUSTOM_SEED_INDICES.forEach((i) => obSelected.add(i));
           }
         }
       } catch (e) { console.warn('[cin] commit failed', e); }
 
-      // Fade to black, then hand off.
       const fb = root.querySelector('#cin-fb');
       if (fb) fb.classList.add('on');
       setTimeout(() => {
         root.classList.add('hidden');
         root.setAttribute('aria-hidden', 'true');
         try {
-          // Re-uses the canonical end-of-onboarding pipeline (notif
-          // prompt → finish → main app reveal). Same guarantees as
-          // legacy onboarding completion.
+          // The canonical end-of-onboarding pipeline: notification prompt →
+          // habit creation → first-awakening XP → reveal of #app.
           if (typeof runOnboardingNotifPrompt === 'function') {
             runOnboardingNotifPrompt(() => _completeOnboardingFinish());
           } else if (typeof _completeOnboardingFinish === 'function') {
@@ -61567,11 +61836,8 @@
       }, 850);
     });
 
-    // Pre-fill the name field. Priority order:
-    //   1. Apple Sign-In givenName (if pending claim — 1z.245)
-    //   2. Existing hb_name on disk (dev stub or post-claim)
-    // The user can keep or edit either. We no longer auto-skip the
-    // opening / naming screens.
+    // Pre-fill the name field: Apple Sign-In's given name if a claim is
+    // pending (1z.245), else whatever is already on disk.
     try {
       let prefill = '';
       try {
@@ -61591,6 +61857,7 @@
         try { field.dispatchEvent(new Event('input')); } catch (_) {}
       }
     } catch (_) {}
+
     show(0);
   }
 
@@ -65722,6 +65989,11 @@
     // Steps board, the Worldgate or a step boss. The copy adapts when there is
     // no walk habit. Don't query HealthKit yet.
     if (status === 'unknown') {
+      // W936 — onboarding's WITNESS screen owns the first ask now, and it
+      // stamps hb_healthkit_prompted before it opens the system sheet. This
+      // stays as the safety net for hunters who installed before W936 (their
+      // flag is unset and they never saw the screen) and for anyone whose
+      // permission somehow returns to unknown afterwards.
       if (localStorage.getItem('hb_healthkit_prompted') !== '1') {
         showHealthKitPreprompt();
       }

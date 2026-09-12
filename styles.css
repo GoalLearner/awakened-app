@@ -25679,7 +25679,7 @@ button.guildhall-summary-tile:active {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;   /* W936 — the name screen is left-aligned now */
   gap: 8px;
 }
 #cin-onboarding .cin-name-suggestions-label {
@@ -35386,3 +35386,583 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg-pulse-pct { flex: none; font-family: var(--wg-mono); font-size: 11px; font-weight: 800; color: var(--wg-red); font-variant-numeric: tabular-nums; }
 .wg-pulse--down .wg-pulse-pct { color: var(--wg-gold); }
 .wg-pulse-chev { flex: none; color: var(--wg-ink3); font-size: 16px; line-height: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   W936 — ONBOARDING v2, "Direction A" (Claude Design handoff 31)
+   Nine screens: mark → name → witness → reveal → board → hunt →
+   ascent → vow → (training week) → pact.
+
+   Every class here is `cn-` prefixed and used NOWHERE else in the app,
+   so the two stylesheets cannot reach into each other. The design's
+   generic names (.c .t .b .k .row .cta .field .drop .stat .rank .path
+   .vow .tag .hp .pop .relic .hero .seg) would all have collided; the
+   prefix is the whole reason this block is safe to append.
+
+   Tokens are the existing --cin-* set declared on #cin-onboarding, so
+   the new screens and the surviving training-week screen share one
+   palette. Screens are absolutely positioned siblings inside the same
+   fixed container the old cinematic used.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── chrome: dots + skip ─────────────────────────────────── */
+#cin-onboarding .cn-chrome {
+  position: absolute;
+  top: max(env(safe-area-inset-top, 0px), 56px);
+  left: 24px; right: 24px;
+  height: 28px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#cin-onboarding .cn-chrome[hidden] { display: none; }
+#cin-onboarding .cn-dots { display: flex; gap: 7px; }
+#cin-onboarding .cn-dots i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  transition: background .45s, transform .45s;
+}
+#cin-onboarding .cn-dots i.cn-on {
+  background: var(--cin-gold);
+  transform: scale(1.12);
+}
+#cin-onboarding .cn-skip {
+  font-family: var(--cin-mono);
+  font-size: 11px; letter-spacing: 1.5px; font-weight: 700;
+  color: var(--cin-t3);
+  background: none; border: 0; padding: 6px 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Over full-bleed art the chrome needs to survive a bright frame. */
+#cin-onboarding .cn-chrome.cn-onart .cn-dots i { background: rgba(255,255,255,0.45); }
+#cin-onboarding .cn-chrome.cn-onart .cn-dots i.cn-on { background: var(--cin-gold); }
+#cin-onboarding .cn-chrome.cn-onart .cn-skip { color: var(--cin-t1); text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+
+/* ── screen shell ────────────────────────────────────────── */
+#cin-onboarding .cn-scr {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: calc(max(env(safe-area-inset-top, 0px), 56px) + 52px) 24px
+           calc(max(env(safe-area-inset-bottom, 0px), 20px) + 24px);
+}
+#cin-onboarding .cn-scr.cn-shown { display: flex; animation: cn-in .45s ease both; }
+@keyframes cn-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#cin-onboarding .cn-scr.cn-art { padding-top: 0; }
+
+#cin-onboarding .cn-c {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+#cin-onboarding .cn-c.cn-mid { justify-content: center; padding-bottom: 64px; }
+/* A tall screen on a short phone scrolls rather than clipping its own CTA. */
+#cin-onboarding .cn-c { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+#cin-onboarding .cn-c::-webkit-scrollbar { display: none; }
+#cin-onboarding .cn-c.cn-lift { margin-top: -56px; position: relative; }
+
+#cin-onboarding .cn-foot {
+  flex: none;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ── type ────────────────────────────────────────────────── */
+#cin-onboarding .cn-k {
+  font-family: var(--cin-mono);
+  font-size: 11px; letter-spacing: 3px; font-weight: 700;
+  color: var(--cin-t3); text-transform: uppercase;
+}
+#cin-onboarding .cn-k.cn-g { color: var(--cin-gold); }
+#cin-onboarding .cn-k.cn-vio {
+  color: var(--cin-violetB);
+  letter-spacing: 2px; font-size: 10.5px; white-space: nowrap;
+}
+#cin-onboarding .cn-t {
+  font-family: var(--cin-serif);
+  font-size: 27px; line-height: 1.15; letter-spacing: .5px; font-weight: 700;
+  color: var(--cin-t1); margin: 0;
+}
+#cin-onboarding .cn-b {
+  font-size: 16.5px; line-height: 1.5; color: var(--cin-t2); margin: 0;
+}
+#cin-onboarding .cn-b b { color: var(--cin-t1); font-weight: 600; }
+#cin-onboarding .cn-s { font-size: 12.5px; line-height: 1.5; color: var(--cin-t3); margin: 0; }
+#cin-onboarding .cn-fl {
+  font-family: var(--cin-flavor);
+  font-style: italic; font-size: 17px; line-height: 1.4;
+  color: var(--cin-t2); margin: 8px 0 0;
+}
+#cin-onboarding .cn-say { max-width: 232px; }
+#cin-onboarding .cn-err {
+  font-size: 12.5px; line-height: 1.4; color: #ef8a8a; margin: 0;
+}
+
+/* ── buttons ─────────────────────────────────────────────── */
+#cin-onboarding .cn-cta {
+  width: 100%; height: 56px;
+  border: 0; border-radius: 12px;
+  background: var(--cin-gold); color: #1a1200;
+  font-family: var(--cin-serif);
+  font-size: 16px; letter-spacing: 2px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none;
+  transition: filter .15s, transform .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-cta:active { transform: scale(.98); filter: brightness(1.1); }
+#cin-onboarding .cn-cta.cn-nt {
+  background: rgba(255,255,255,0.08); color: var(--cin-t1);
+  border: 1px solid var(--cin-line);
+}
+#cin-onboarding .cn-cta.cn-nt:active { background: rgba(255,255,255,0.14); }
+#cin-onboarding .cn-cta.cn-off {
+  background: rgba(245,184,66,0.22); color: rgba(26,18,0,0.55);
+  pointer-events: none;
+}
+#cin-onboarding .cn-quiet {
+  font-family: var(--cin-mono);
+  font-size: 11px; letter-spacing: 2px; font-weight: 700;
+  color: var(--cin-t3);
+  background: none; border: 0; padding: 4px 8px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-tapline {
+  cursor: pointer; align-self: flex-start;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-lore {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: none; border: 0; padding: 4px 0;
+  font-size: 12px; color: var(--cin-t3);
+  text-decoration: underline; text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── the mark ────────────────────────────────────────────── */
+#cin-onboarding .cn-sigil {
+  width: 84px; height: 84px;
+  background: none; border: 0; padding: 0;
+  cursor: pointer;
+  transition: transform .5s cubic-bezier(.2,.9,.2,1);
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-sigil svg { width: 100%; height: 100%; display: block; }
+#cin-onboarding .cn-sigil.cn-lit svg {
+  filter: drop-shadow(0 0 22px rgba(245,184,66,0.75));
+  animation: cn-breathe 2.6s ease-in-out infinite;
+}
+@keyframes cn-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+#cin-onboarding .cn-sigil-sm { width: 52px; height: 52px; cursor: default; }
+
+/* ── the name field ──────────────────────────────────────── */
+#cin-onboarding .cn-field {
+  width: 100%;
+  border: 0; border-bottom: 1.5px solid rgba(245,184,66,0.5);
+  background: none; outline: none;
+  font-family: var(--cin-serif);
+  font-size: 27px; letter-spacing: 1px;
+  padding: 8px 0; color: var(--cin-t1);
+  border-radius: 0;
+  -webkit-appearance: none;
+}
+#cin-onboarding .cn-field::placeholder {
+  color: var(--cin-t3);
+  font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+  font-size: 17px; letter-spacing: 0;
+}
+
+/* ── the guide (First Awakened) ──────────────────────────── */
+#cin-onboarding .cn-guide {
+  position: absolute;
+  right: -6px;
+  bottom: calc(max(env(safe-area-inset-bottom, 0px), 20px) + 108px);
+  width: 190px; height: 190px;
+  pointer-events: none;
+  z-index: 1;
+}
+#cin-onboarding .cn-guide img {
+  width: 100%; height: 100%;
+  object-fit: contain; object-position: bottom;
+  display: block;
+  filter: drop-shadow(0 18px 24px rgba(0,0,0,0.6));
+}
+#cin-onboarding .cn-guide-lg { width: 230px; height: 230px; }
+#cin-onboarding .cn-guide-md { width: 160px; height: 160px; }
+#cin-onboarding .cn-guide-sm { width: 150px; height: 150px; }
+/* Keep the board's footnote clear of the guide standing beside it. */
+#cin-onboarding #cn-s4 .cn-s { max-width: 226px; }
+
+/* ── 3 · the reveal: the road lights with the count ──────── */
+#cin-onboarding .cn-rd { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+#cin-onboarding .cn-rd img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 56% 50%;
+  display: block;
+  transform-origin: 56% 62%;
+  filter: brightness(calc(.45 + .55 * var(--cn-p, 0))) saturate(calc(.6 + .4 * var(--cn-p, 0)));
+  animation: cn-drift 8s ease-in-out infinite alternate;
+}
+@keyframes cn-drift {
+  from { transform: scale(1.04) translate(0, 0); }
+  to   { transform: scale(1.04) translate(-6px, -4px); }
+}
+#cin-onboarding .cn-road.cn-unlit .cn-rd img { filter: brightness(.4) saturate(.5); }
+#cin-onboarding .cn-rd::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.40) 52%,
+    rgba(6,6,16,0.80) 74%, rgba(10,10,24,0.97) 100%);
+}
+#cin-onboarding .cn-road .cn-c,
+#cin-onboarding .cn-road .cn-foot { position: relative; z-index: 1; }
+#cin-onboarding .cn-road .cn-c.cn-mid { justify-content: flex-end; padding-bottom: 8px; }
+/* the number is the only gold on this screen */
+#cin-onboarding .cn-road .cn-cta {
+  background: rgba(255,255,255,0.10);
+  color: var(--cin-t1);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+#cin-onboarding .cn-n {
+  font-family: var(--cin-mono);
+  font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -1px;
+  color: var(--cin-gold);
+  font-variant-numeric: tabular-nums;
+}
+#cin-onboarding .cn-n small {
+  font-size: 11px; letter-spacing: 2px; font-weight: 700;
+  color: var(--cin-t3); margin-left: 10px; vertical-align: middle;
+}
+
+/* ── 4 · the board ───────────────────────────────────────── */
+#cin-onboarding .cn-rows { display: flex; flex-direction: column; gap: 6px; }
+#cin-onboarding .cn-row {
+  position: relative;
+  height: 60px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 28px 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+#cin-onboarding .cn-row img.cn-bgi {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+#cin-onboarding .cn-row::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(90deg, rgba(10,10,24,0.86), rgba(10,10,24,0.55));
+}
+#cin-onboarding .cn-row > * { position: relative; z-index: 1; }
+#cin-onboarding .cn-row .cn-r {
+  font-family: var(--cin-serif);
+  font-size: 16px; font-weight: 700; color: var(--cin-t2);
+}
+#cin-onboarding .cn-row .cn-bust {
+  width: 44px; height: 44px;
+  border-radius: 50%; overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.18);
+}
+#cin-onboarding .cn-row .cn-bust img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#cin-onboarding .cn-row .cn-nm {
+  font-size: 16px; font-weight: 600; line-height: 1.15;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#cin-onboarding .cn-row .cn-nm small {
+  display: block;
+  font-family: var(--cin-mono);
+  font-size: 10px; letter-spacing: 1px; color: var(--cin-t2); margin-top: 2px;
+}
+#cin-onboarding .cn-row .cn-v {
+  font-family: var(--cin-mono);
+  font-size: 16px; font-weight: 700; color: var(--cin-t1);
+  font-variant-numeric: tabular-nums;
+}
+#cin-onboarding .cn-row.cn-me {
+  border-color: var(--cin-gold);
+  box-shadow: 0 0 18px rgba(245,184,66,0.18);
+  animation: cn-slidein .6s cubic-bezier(.2,.9,.2,1) .3s both;
+}
+#cin-onboarding .cn-row.cn-me .cn-r,
+#cin-onboarding .cn-row.cn-me .cn-v { color: var(--cin-gold); }
+#cin-onboarding .cn-row.cn-me .cn-bust { border-color: var(--cin-gold); }
+@keyframes cn-slidein { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+/* ── 5 · the hunt ────────────────────────────────────────── */
+#cin-onboarding .cn-hero {
+  position: relative;
+  margin: 0 -24px;
+  height: 360px;
+  flex: none;
+  overflow: hidden;
+}
+#cin-onboarding .cn-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#cin-onboarding .cn-hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(7,7,26,0.35) 0%, rgba(7,7,26,0) 30%,
+    rgba(7,7,26,0) 55%, var(--cin-bg) 100%);
+}
+#cin-onboarding .cn-boss {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+}
+/* The boss name and its rank share one line; the name is short by design. */
+#cin-onboarding .cn-boss > div { min-width: 0; }
+#cin-onboarding .cn-boss .cn-t { white-space: nowrap; }
+#cin-onboarding .cn-rank {
+  font-family: var(--cin-serif);
+  font-size: 13px; letter-spacing: 2px; font-weight: 700;
+  color: var(--cin-t2); white-space: nowrap; flex: none;
+}
+#cin-onboarding .cn-drops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+#cin-onboarding .cn-drop {
+  border: 1px solid var(--cin-line);
+  border-radius: 12px; overflow: hidden;
+  background: #0e0d20;
+}
+#cin-onboarding .cn-drop img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+#cin-onboarding .cn-drop .cn-dn { padding: 8px 8px 9px; font-size: 11.5px; font-weight: 600; line-height: 1.25; }
+#cin-onboarding .cn-drop .cn-dr {
+  font-family: var(--cin-mono);
+  font-size: 8.5px; letter-spacing: 1.2px; font-weight: 700;
+  color: var(--cin-t3); margin-top: 3px;
+}
+#cin-onboarding .cn-drop.cn-ur { border-color: rgba(245,184,66,0.55); }
+#cin-onboarding .cn-drop.cn-ur .cn-dr { color: var(--cin-gold); }
+#cin-onboarding .cn-party { min-height: 22px; }
+#cin-onboarding .cn-wait {
+  display: none;
+  align-items: center; gap: 8px;
+  font-family: var(--cin-mono);
+  font-size: 11px; letter-spacing: 1.5px; font-weight: 700;
+  color: var(--cin-violetB);
+}
+#cin-onboarding .cn-party.cn-sent .cn-wait { display: flex; }
+#cin-onboarding .cn-wait i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cin-violetB);
+  animation: cn-blink 1.4s infinite;
+}
+@keyframes cn-blink { 50% { opacity: .25; } }
+
+/* ── 6 · the ascent ──────────────────────────────────────── */
+#cin-onboarding .cn-hero.cn-tall { height: 440px; }
+#cin-onboarding .cn-hero.cn-tall img { object-position: 59% 40%; }
+#cin-onboarding .cn-floor1 {
+  position: absolute;
+  left: 50%; bottom: 118px;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-family: var(--cin-mono);
+  font-size: 9px; letter-spacing: 2px; font-weight: 700;
+  color: var(--cin-gold);
+  padding: 4px 8px;
+  border: 1px solid rgba(245,184,66,0.6);
+  border-radius: 5px;
+  background: rgba(10,10,24,0.55);
+  text-shadow: 0 0 8px rgba(245,184,66,0.5);
+}
+#cin-onboarding .cn-floor1::after {
+  content: '';
+  position: absolute; left: 50%; top: 100%;
+  width: 1px; height: 14px;
+  background: var(--cin-gold);
+  opacity: .7;
+}
+
+/* ── 7 · the vow ─────────────────────────────────────────── */
+#cin-onboarding .cn-paths { display: flex; flex-direction: column; gap: 8px; }
+#cin-onboarding .cn-path {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--cin-line);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-path.cn-on { border-color: var(--cin-gold); background: rgba(245,184,66,0.06); }
+#cin-onboarding .cn-path .cn-pn {
+  display: block;
+  font-family: var(--cin-serif);
+  font-size: 16px; font-weight: 700; color: var(--cin-t1);
+}
+#cin-onboarding .cn-path .cn-ps {
+  display: block;
+  font-size: 12.5px; color: var(--cin-t3); margin-top: 2px;
+}
+#cin-onboarding .cn-path .cn-pr {
+  font-family: var(--cin-serif);
+  font-size: 13px; letter-spacing: 2px; color: var(--cin-t3);
+}
+#cin-onboarding .cn-path.cn-on .cn-pr { color: var(--cin-gold); }
+
+/* ── 8 · the pact ────────────────────────────────────────── */
+#cin-onboarding .cn-wolf {
+  position: relative;
+  height: 176px; flex: none;
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--cin-line);
+}
+#cin-onboarding .cn-wolf img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 30%;
+  display: block;
+}
+#cin-onboarding .cn-wolf::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,24,0) 30%, rgba(10,10,24,0.92) 100%);
+}
+#cin-onboarding .cn-wolf .cn-wt {
+  position: absolute;
+  left: 14px; right: 14px; bottom: 12px;
+  z-index: 1;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+}
+#cin-onboarding .cn-wolf .cn-wn {
+  font-family: var(--cin-serif);
+  font-size: 18px; font-weight: 700; line-height: 1.1; color: var(--cin-t1);
+}
+#cin-onboarding .cn-wolf .cn-ws {
+  font-family: var(--cin-mono);
+  font-size: 10px; letter-spacing: .8px; font-weight: 700;
+  color: var(--cin-t2); margin-top: 5px; white-space: nowrap;
+}
+#cin-onboarding .cn-wolf.cn-fell {
+  border-color: rgba(245,184,66,0.6);
+  box-shadow: 0 0 28px rgba(245,184,66,0.18);
+}
+#cin-onboarding .cn-wolf.cn-fell img { animation: cn-drain 1.2s ease .4s both; }
+@keyframes cn-drain { from { filter: none; } to { filter: grayscale(.85) brightness(.55); } }
+#cin-onboarding .cn-wolf.cn-lock img { filter: grayscale(1) brightness(.4); }
+#cin-onboarding .cn-wolf.cn-lock .cn-hp { display: none; }
+#cin-onboarding .cn-hp {
+  position: absolute;
+  left: 14px; right: 14px; top: 14px;
+  z-index: 1;
+  height: 6px; border-radius: 3px;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+}
+#cin-onboarding .cn-hp i {
+  display: block; height: 100%;
+  width: var(--cn-w, 100%);
+  background: #ef4444;
+  transition: width 1.2s ease .4s;
+}
+#cin-onboarding .cn-wolf.cn-fell .cn-hp i { width: 0; }
+#cin-onboarding .cn-pop {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  font-family: var(--cin-serif);
+  font-size: 30px; letter-spacing: 6px; font-weight: 700;
+  color: var(--cin-gold);
+  text-shadow: 0 0 30px rgba(245,184,66,0.7);
+  opacity: 0;
+}
+#cin-onboarding .cn-wolf.cn-fell .cn-pop { animation: cn-stamp .5s cubic-bezier(.2,1.4,.4,1) 1.6s both; }
+@keyframes cn-stamp {
+  from { opacity: 0; transform: translate(-50%,-50%) scale(1.6); }
+  to   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+}
+#cin-onboarding .cn-relic {
+  display: flex; align-items: center; gap: 12px;
+  animation: cn-in .5s ease 1.9s both;
+}
+#cin-onboarding .cn-relic img {
+  width: 56px; height: 56px;
+  border-radius: 10px; object-fit: cover;
+  border: 1px solid rgba(245,184,66,0.5);
+}
+#cin-onboarding .cn-relic .cn-rn { font-size: 15px; font-weight: 600; color: var(--cin-t1); }
+#cin-onboarding .cn-relic .cn-rr {
+  font-family: var(--cin-mono);
+  font-size: 10px; letter-spacing: 1.5px; font-weight: 700;
+  color: var(--cin-gold); margin-top: 3px;
+}
+#cin-onboarding .cn-stat {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px; padding: 10px 0;
+  border-top: 1px solid var(--cin-line);
+  font-family: var(--cin-mono);
+  font-size: 12px; font-weight: 700; color: var(--cin-t2);
+}
+#cin-onboarding .cn-stat img { width: 22px; height: 22px; object-fit: contain; }
+#cin-onboarding .cn-stat b { color: var(--cin-gold); }
+#cin-onboarding .cn-stat .cn-far { margin-left: auto; }
+#cin-onboarding .cn-vows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+#cin-onboarding .cn-vow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--cin-line);
+  background: rgba(255,255,255,0.03);
+}
+#cin-onboarding .cn-vow .cn-o {
+  width: 24px; height: 24px; flex: none;
+  border-radius: 50%;
+  border: 1.5px dashed var(--cin-t3);
+  display: flex; align-items: center; justify-content: center;
+}
+#cin-onboarding .cn-vow .cn-o.cn-on { border: 0; background: var(--cin-gold); }
+#cin-onboarding .cn-vow .cn-vn { flex: 1; font-size: 16px; font-weight: 600; line-height: 1.2; color: var(--cin-t1); }
+#cin-onboarding .cn-vow .cn-vn small {
+  display: block;
+  font-family: var(--cin-mono);
+  font-size: 10px; letter-spacing: 1px; font-weight: 700;
+  color: var(--cin-t3); margin-top: 3px;
+}
+#cin-onboarding .cn-tag {
+  font-family: var(--cin-mono);
+  font-size: 10px; letter-spacing: 2px; font-weight: 700;
+  padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--cin-line);
+  color: var(--cin-t3);
+}
+#cin-onboarding .cn-tag.cn-ok { color: var(--cin-gold); border-color: rgba(245,184,66,0.5); }
+
+/* ── short screens (SE-class) ────────────────────────────── */
+@media (max-height: 700px) {
+  #cin-onboarding .cn-hero { height: 280px; }
+  #cin-onboarding .cn-hero.cn-tall { height: 330px; }
+  #cin-onboarding .cn-t { font-size: 23px; }
+  #cin-onboarding .cn-n { font-size: 46px; }
+  #cin-onboarding .cn-wolf { height: 150px; }
+  #cin-onboarding .cn-guide,
+  #cin-onboarding .cn-guide-lg,
+  #cin-onboarding .cn-guide-md,
+  #cin-onboarding .cn-guide-sm { width: 132px; height: 132px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cin-onboarding .cn-scr.cn-shown,
+  #cin-onboarding .cn-row.cn-me,
+  #cin-onboarding .cn-relic { animation: none !important; }
+  #cin-onboarding .cn-rd img { animation: none !important; }
+  #cin-onboarding .cn-sigil.cn-lit svg { animation: none !important; }
+  #cin-onboarding .cn-wolf.cn-fell img { animation: none !important; filter: grayscale(.85) brightness(.55); }
+  #cin-onboarding .cn-wolf.cn-fell .cn-pop { animation: none !important; opacity: 1; }
+  #cin-onboarding .cn-hp i { transition: none !important; }
+  #cin-onboarding .cn-wait i { animation: none !important; }
+}

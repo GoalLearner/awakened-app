@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=691">
+  <link rel="stylesheet" href="styles.css?v=692">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -206,124 +206,131 @@
     </div>
   </div>
 
-  <!-- v3 Phase 1z.233 — Cinematic Onboarding (7-screen reveal).
-       Replaces the visible first-run flow for brand-new users. Legacy
-       #welcome-screen / #path-screen / #onboarding markup is kept in
-       the DOM as a safety fallback and is not reachable from the
-       redirected showWelcomeScreen() path. All class names from the
-       ClaudeDesign source are kept verbatim and scoped under
-       #cin-onboarding so they cannot collide globally. IDs are
-       prefixed `cin-` for the same reason. Sigils (sparkle/star) are
-       injected by JS via cin._paintSigils() so the recurring motif is
-       a single source of truth. -->
+  <!-- Cinematic onboarding — the whole visible first run. Legacy
+       #welcome-screen / #path-screen / #onboarding markup above stays in
+       the DOM as a safety fallback (showCinematicOnboarding falls back to
+       _legacyShowWelcomeScreen if this container is missing) and is not
+       reachable from the redirected showWelcomeScreen() path. The screens
+       inside are W936's; the one survivor of 1z.233 is the training-week
+       screen, which still carries its original .scr / .cin-tw-* names. -->
   <div id="cin-onboarding" class="cin-onboarding hidden" aria-hidden="true">
 
-    <div class="dots" id="cin-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-    <button class="skip" id="cin-skip" type="button">Skip</button>
+    <!-- W936 — ONBOARDING v2, "Direction A" (Claude Design handoff 31). Nine
+         screens: mark → name → witness → reveal → board → hunt → ascent →
+         vow → (training week) → pact. Every number on these screens is read
+         from the live game — the seven-day step total comes from Apple Health,
+         the board rows and the hunter's rank come from the real weekly board,
+         the Twin Maw's goal and drops come from COOP_BOSSES + CARDS, and the
+         Steel Wolf's fall is the real kill through evaluateSteelWolfForDay.
+         Art is the art the hunter will meet again inside the app.
+         Class names are `cn-` prefixed and used NOWHERE else, so nothing
+         leaks in either direction with the app's 35k-line stylesheet. -->
+    <div class="cn-chrome" id="cn-chrome">
+      <div class="cn-dots" id="cn-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <button class="cn-skip" id="cn-skip" type="button">SKIP</button>
+    </div>
 
-    <!-- 1 · OPENING -->
-    <section class="scr" data-step="0" id="cin-scr1">
-      <div class="halo"></div>
-      <button class="tap-sigil" id="cin-igniteTap" type="button" aria-label="Continue">
-        <span class="sigil ignite" id="cin-sig1"></span>
-      </button>
-      <div style="height:30px"></div>
-      <div class="op-line l1">A new hunter stirs in the dark.</div>
-      <div class="op-line l2">The system has been waiting.</div>
-      <div class="op-line l3" style="margin-top:30px"><button type="button" class="ghosttap" id="cin-opTap">Touch the mark</button></div>
+    <!-- 0 · THE MARK -->
+    <section class="cn-scr" id="cn-s0" data-i="0" data-nochrome>
+      <div class="cn-c cn-mid">
+        <button class="cn-sigil" id="cn-sigil" type="button" aria-label="Touch the mark"></button>
+        <p class="cn-fl">A new hunter stirs in the dark.<br>The System has been waiting.</p>
+        <span class="cn-k cn-tapline" id="cn-touch" role="button" tabindex="0">Touch the mark</span>
+      </div>
     </section>
 
-    <!-- 2 · NAMING -->
-    <section class="scr" data-step="1" id="cin-scr2">
-      <div class="halo"></div>
-      <span class="sigil breathe rise" id="cin-sig2"></span>
-      <div class="kicker rise d1" id="cin-name-kicker" style="margin-top:24px">The system asks</div>
-      <h1 class="title rise d1" id="cin-name-title" style="margin:12px 0 18px">What do they call you?<button type="button" id="cin-glossary-open" class="cin-glossary-dot" aria-label="What do these words mean?">i</button></h1>
-      <div id="cin-nameInputWrap" class="rise d2">
-        <input class="field" id="cin-nameField" maxlength="20" placeholder="hunter name"
-               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" />
-        <!-- v3 Phase 1z.245 — inline backend error for the deferred
-             alias claim (ALIAS_TAKEN, ALIAS_INVALID, NETWORK, etc).
-             Hidden until completeSignIn returns a non-ok result. -->
-        <div id="cin-nameError" class="cin-name-error" style="display:none"></div>
-        <div id="cin-nameSuggestions" class="cin-name-suggestions" style="display:none"></div>
-        <div style="margin-top:26px"><button type="button" class="cta" id="cin-nameConfirm" disabled>Confirm</button></div>
+    <!-- 1 · THE NAME -->
+    <section class="cn-scr" id="cn-s1" data-i="1" data-dot="0">
+      <div class="cn-c cn-mid">
+        <span class="cn-sigil cn-sigil-sm cn-lit" id="cn-sigil-sm" aria-hidden="true"></span>
+        <span class="cn-k">The System asks</span>
+        <h2 class="cn-t">What do they call you?</h2>
+        <input class="cn-field" id="cin-nameField" placeholder="hunter name" maxlength="20" autocomplete="off"
+               autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <p class="cn-err" id="cin-nameError" style="display:none"></p>
+        <div class="cin-name-suggestions" id="cin-nameSuggestions" style="display:none"></div>
+        <button type="button" class="cn-lore" id="cin-glossary-open">Hunter, mark, vow — what the System means</button>
       </div>
-      <div id="cin-nameAck" style="display:none">
-        <div class="kicker" style="margin-bottom:12px">Designation accepted</div>
-        <div class="title" id="cin-nameEcho" style="font-size:34px"></div>
-        <div class="sys" id="cin-nameSys" style="margin-top:18px"></div>
-        <div style="margin-top:26px;opacity:0" id="cin-nameNextWrap">
-          <button type="button" class="cta" data-cin-next>Continue</button>
+      <div class="cn-foot"><button type="button" class="cn-cta cn-off" id="cin-nameConfirm" disabled>CONFIRM</button></div>
+    </section>
+
+    <!-- 2 · THE WITNESS (onboarding owns the Apple Health ask — W936) -->
+    <section class="cn-scr" id="cn-s2" data-i="2" data-dot="1">
+      <div class="cn-c">
+        <span class="cn-k">The witness</span>
+        <h2 class="cn-t">The System reads your steps.</h2>
+        <p class="cn-b cn-say">Apple Health. Steps, sleep, workouts. Nothing can be faked.</p>
+        <p class="cn-s cn-say">They stay on your phone. Awakened never sees them leave it.</p>
+      </div>
+      <div class="cn-guide cn-guide-lg"><img src="assets/coach/first-awakened-speaking.png" alt="" aria-hidden="true"></div>
+      <div class="cn-foot"><button type="button" class="cn-cta cn-nt" id="cn-healthBtn">CONTINUE</button></div>
+    </section>
+
+    <!-- 3 · THE REVEAL — the road lights with the count -->
+    <section class="cn-scr cn-road" id="cn-s3" data-i="3" data-dot="1">
+      <div class="cn-rd"><img src="assets/backgrounds/lb-bg-100k.webp" alt="" aria-hidden="true"></div>
+      <div class="cn-c cn-mid">
+        <span class="cn-k">Last 7 days</span>
+        <div class="cn-n"><span id="cn-steps7">0</span><small>STEPS</small></div>
+        <p class="cn-b" id="cn-revealLine"></p>
+      </div>
+      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
+    </section>
+
+    <!-- 4 · THE BOARD — the real weekly Steps board -->
+    <section class="cn-scr" id="cn-s4" data-i="4" data-dot="2">
+      <div class="cn-c">
+        <span class="cn-k">Weekly steps</span>
+        <h2 class="cn-t">Every rank on this board was walked.</h2>
+        <div class="cn-rows" id="cn-rows"></div>
+        <p class="cn-s">Resets Sunday 12:00 AM Pacific · Apple Health is the only source</p>
+      </div>
+      <div class="cn-guide cn-guide-sm"><img src="assets/coach/first-awakened-pointing.png" alt="" aria-hidden="true"></div>
+      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
+    </section>
+
+    <!-- 5 · THE HUNT — The Twin Maw, its real goal and its real drop pool -->
+    <section class="cn-scr cn-art" id="cn-s5" data-i="5" data-dot="3">
+      <div class="cn-hero"><img id="cn-mawimg" src="assets/bosses/the-twin-maw.png" alt="The Twin Maw"></div>
+      <div class="cn-c cn-lift">
+        <div class="cn-boss">
+          <div><span class="cn-k">The hunt</span><h2 class="cn-t">The Twin Maw</h2></div>
+          <span class="cn-rank" id="cn-mawRank">E-RANK · DUO</span>
         </div>
+        <p class="cn-b" id="cn-mawLine"></p>
+        <div class="cn-drops" id="cn-drops"></div>
+        <div class="cn-party" id="cn-party"><span class="cn-wait"><i></i><span id="cn-partyText"></span></span></div>
+      </div>
+      <div class="cn-foot">
+        <button type="button" class="cn-cta" id="cn-summon">SUMMON A FRIEND</button>
+        <button type="button" class="cn-quiet" id="cn-huntAlone" data-cn-next>HUNT ALONE</button>
       </div>
     </section>
 
-    <!-- 3 · WHY -->
-    <section class="scr" data-step="2" id="cin-scr3">
-      <span class="sigil breathe rise" id="cin-sig3" style="transform:scale(.7)"></span>
-      <div class="kicker rise d1" style="margin-top:6px">Speak it once</div>
-      <h1 class="title rise d1" style="margin:10px 0 20px;font-size:25px">What are you here<br/>to overcome?</h1>
-      <div class="grid2 rise d2" id="cin-whyGrid">
-        <!-- W574 — Vertical Jump Program (FITxVERT). Was Sleep/Recovery; now the
-             jump theme leads the WHY screen and biases the Path to the jump pack
-             (data-pack="jump_program"). data-why="STR" -> "Your first rep, logged." -->
-        <button class="pick" role="checkbox" aria-checked="false" data-why="STR"   data-pack="jump_program" type="button">
-          <span class="ic" data-ic="jump"></span><span class="pl">Jump</span><span class="ps">Vertical</span>
-        </button>
-        <!-- v3 Phase 1z.251 — FOCUS / INT used to bias the cinematic
-             Path screen toward Locked-In. With Locked-In removed from
-             the path choice, both now bias toward Forge Your Own
-             (Custom) so the user lands on a path that exists and the
-             First Vow quick-pick can deliver their intent. -->
-        <button class="pick" role="checkbox" aria-checked="false" data-why="FOCUS" data-pack="custom"    type="button">
-          <span class="ic" data-ic="focus"></span><span class="pl">Focus</span><span class="ps">Presence</span>
-        </button>
-        <button class="pick" role="checkbox" aria-checked="false" data-why="STR"   data-pack="morning"   type="button">
-          <span class="ic" data-ic="body"></span><span class="pl">Body</span><span class="ps">Strength</span>
-        </button>
-        <button class="pick" role="checkbox" aria-checked="false" data-why="INT"   data-pack="custom"    type="button">
-          <span class="ic" data-ic="mind"></span><span class="pl">Mind</span><span class="ps">Clarity</span>
-        </button>
+    <!-- 6 · THE ASCENT -->
+    <section class="cn-scr cn-art" id="cn-s6" data-i="6" data-dot="4">
+      <div class="cn-hero cn-tall">
+        <img src="assets/backgrounds/lb-bg-floor100.webp" alt="The Ascent">
+        <span class="cn-floor1">FLOOR 1</span>
       </div>
-      <div class="rise d3" style="margin-top:24px">
-        <button type="button" class="cta" id="cin-whyNext" data-cin-next disabled>Continue</button>
+      <div class="cn-c cn-lift">
+        <span class="cn-k">The ascent</span>
+        <h2 class="cn-t">Floor 1 of 100.<br>The summit has a name.</h2>
+        <p class="cn-b">Every floor is a day kept. The beacon at the top is lit for whoever arrives.</p>
+        <span class="cn-k cn-vio">Floor 100 · The Hall of the Awakened</span>
       </div>
+      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
     </section>
 
-    <!-- 4 · PATH -->
-    <section class="scr" data-step="3" id="cin-scr4">
-      <div class="kicker rise" style="margin-bottom:4px">Choose your way</div>
-      <h1 class="title rise" style="margin:0 0 16px;font-size:24px">The path that calls you</h1>
-      <div class="packs rise d1" id="cin-packs">
-        <!-- v3 Phase 1z.251 — Locked-In removed from the onboarding
-             path choice. The pack still exists in PACKS / Add Habits /
-             library / achievements / compound bonus tracking — users
-             can add it post-onboarding from the library. First-run
-             choice is now Morning Routine vs Forge Your Own only,
-             reducing decision friction at the most fragile moment. -->
-        <button class="pack" role="checkbox" aria-checked="false" data-pack="morning" type="button">
-          <div class="pn"><span class="sigil" data-mini></span>Morning Routine</div>
-          <div class="pb">Rise before the world. Anchor the day in light.</div>
-          <div class="bonus"><span class="sigil" data-mini></span>Compound Effect bonus active</div>
-        </button>
-        <button class="pack" role="checkbox" aria-checked="false" data-pack="custom" type="button">
-          <div class="pn"><span class="sigil" data-mini></span>Forge Your Own</div>
-          <div class="pb">Walk a road no one cut for you.</div>
-          <div class="warn">Going solo? The system favors the consistent — the lone road is harder to hold.</div>
-        </button>
-        <!-- W574 — Vertical Jump Program (FITxVERT acquisition path). Picking it
-             seeds the partitioned jump-training habits (49-54) via the existing
-             pack path + sets the onboarding_goal flag. Copy is a PLACEHOLDER. -->
-        <button class="pack" role="checkbox" aria-checked="false" data-pack="jump_program" type="button">
-          <div class="pn"><span class="sigil" data-mini></span>Vertical Jump Program</div>
-          <div class="pb">Train for hops — gain 10–15&Prime; in your first year.</div>
-          <div class="bonus"><span class="sigil" data-mini></span>Jump Program bonus active</div>
-        </button>
+    <!-- 7 · THE VOW — the real packs, with their real vow counts -->
+    <section class="cn-scr" id="cn-s7" data-i="7" data-dot="5">
+      <div class="cn-c">
+        <span class="cn-k">The vow</span>
+        <h2 class="cn-t">Choose a path.</h2>
+        <div class="cn-paths" id="cn-paths"></div>
       </div>
-      <div class="rise d2" style="margin-top:18px">
-        <button type="button" class="cta" id="cin-pathNext" data-cin-next disabled>Continue</button>
-      </div>
+      <div class="cn-guide cn-guide-md"><img src="assets/coach/first-awakened-idle.png" alt="" aria-hidden="true"></div>
+      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
     </section>
 
     <!-- 4½ · TRAINING WEEK (v3 Phase 1z.273G)
@@ -354,56 +361,28 @@
       <button type="button" class="cin-tw-ghost rise d3" id="cin-twSkip">You can change this any time</button>
     </section>
 
-    <!-- 5 · COMMITMENT -->
-    <section class="scr" data-step="4" id="cin-scr5">
-      <div class="kicker rise" style="margin-bottom:14px">The pact</div>
-      <div class="tome rise d1" id="cin-pact">
-        <div class="sec"><div class="lbl">Hunter</div><div class="val" id="cin-pName">—</div></div>
-        <div class="sec"><div class="lbl">Path</div><div class="val" id="cin-pPath">—</div></div>
-        <div class="sec"><div class="lbl">First rites</div><div id="cin-pHabits"></div></div>
-      </div>
-      <div class="stanza rise d2" style="font-size:14px;margin-top:18px">When you tap, the mark is struck. There is no undoing a beginning.</div>
-      <div class="rise d3" style="margin-top:20px">
-        <button type="button" class="cta" id="cin-awakenBtn" data-cin-next style="padding:15px 34px">Step into the circle</button>
-      </div>
-    </section>
-
-    <!-- 6 · FIRST REWARD (PEAK) -->
-    <section class="scr" data-step="-1" id="cin-scr6">
-      <div class="bloom" aria-hidden="true"></div>
-      <div class="ring" aria-hidden="true"></div>
-      <div class="ring r2" aria-hidden="true"></div>
-      <div id="cin-sparks" aria-hidden="true"></div>
-      <span class="sigil" id="cin-sig6" style="margin-bottom:8px"></span>
-      <div class="syswin">
-        <div class="wh">System · First Awakening</div>
-        <div class="wx">+25 <span style="font-size:15px;color:var(--cin-goldSoft)">XP</span></div>
-        <div class="ws">The spark is lit. It will not go out on its own.</div>
-      </div>
-      <div style="margin-top:30px;opacity:0" id="cin-rewardNext">
-        <button type="button" class="ghosttap" data-cin-next>Continue</button>
-      </div>
-    </section>
-
-    <!-- 7 · TOMORROW HOOK -->
-    <section class="scr" data-step="-1" id="cin-scr7">
-      <div class="kicker rise" style="margin-bottom:16px">The road ahead</div>
-      <div class="locked rise d1">
-        <div class="blur" aria-hidden="true"><span class="sigil" style="transform:scale(1.6)"></span></div>
-        <div class="day">Day 2</div>
-        <div class="lt" id="cin-hookLine">Your first verified streak awaits.</div>
-        <div class="lock-ic" aria-hidden="true">
-          <svg width="22" height="24" viewBox="0 0 22 24" fill="none">
-            <rect x="4" y="10" width="14" height="11" rx="2.5" stroke="#a78bfa" stroke-width="1.4"/>
-            <path d="M7 10V7a4 4 0 018 0v3" stroke="#a78bfa" stroke-width="1.4"/>
-            <circle cx="11" cy="15.5" r="1.6" fill="#f5b842"/>
-          </svg>
+    <!-- 8 · THE PACT — the first gate. The Steel Wolf is ENGAGED for real here
+         (a hunter's first engage is free, W771) and, when Apple Health already
+         shows the day's 6,000 steps, killed for real through
+         evaluateSteelWolfForDay: real souls, real drop roll, real once-per-day
+         claim. The relic on this screen is the relic now in the armory. When
+         the day is short, or Health is closed, the screen says so instead. -->
+    <section class="cn-scr" id="cn-s8" data-i="8" data-dot="5">
+      <div class="cn-c">
+        <span class="cn-k cn-g">The first gate</span>
+        <h2 class="cn-t" id="cn-pactTitle">It falls.</h2>
+        <div class="cn-wolf" id="cn-wolf">
+          <img src="assets/bosses/the-steel-wolf.png" alt="The Steel Wolf">
+          <div class="cn-hp"><i id="cn-hpi"></i></div>
+          <span class="cn-pop">FALLEN</span>
+          <div class="cn-wt">
+            <div><div class="cn-wn">The Steel Wolf</div><div class="cn-ws" id="cn-wolfSub"></div></div>
+            <span class="cn-rank">E-RANK</span>
+          </div>
         </div>
+        <div id="cn-pactBody"></div>
       </div>
-      <div class="stanza rise d2" style="font-size:14px;margin-top:20px">Return when the sun does. The system remembers those who keep their word.</div>
-      <div class="rise d3" style="margin-top:22px">
-        <button type="button" class="cta" id="cin-enterApp" style="padding:14px 30px">Enter Awakened</button>
-      </div>
+      <div class="cn-foot"><button type="button" class="cn-cta" id="cn-enter">ENTER</button></div>
     </section>
 
     <!-- W472 — optional lore primer. The cinematic introduces several in-world
@@ -3400,7 +3379,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1340"></script>
+  <script src="app.js?v=1341"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

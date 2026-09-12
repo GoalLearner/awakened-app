@@ -2294,3 +2294,272 @@ test.describe('AB · Honest step uploads (W935)', () => {
     expect(r.afterLand.sent).toBe('4321');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AC. W936 — onboarding v2: the flow shows the real game, with real numbers
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AC · Onboarding v2 (W936)', () => {
+  /**
+   * Boot straight into the cinematic. Deliberately does NOT use freshApp():
+   * that helper seeds hb_habits='[]' precisely to keep this overlay away, and
+   * waits on a tab bar the overlay is covering.
+   */
+  async function freshOnboarding(page: Page) {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + ymd, '1');
+        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed',
+         'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    await page.evaluate(() => {
+      const s = document.getElementById('awakened-splash');
+      if (s) s.remove();
+    });
+  }
+
+  /**
+   * Stub the two things the flow reads from outside itself: the native Health
+   * bridge (web has none) and the weekly board. Everything else — the Twin
+   * Maw's goal, its drop pool, the Steel Wolf's threshold, the packs, the
+   * reward numbers — comes from the app's own tables and is asserted as such.
+   */
+  async function walkToPact(page: Page, todaySteps: number, weekSteps: number) {
+    return page.evaluate(async ({ today, week }) => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      const q = (s: string) => root.querySelector(s) as HTMLElement;
+
+      w.Health.isAvailable       = () => true;
+      w.Health.permissionStatus  = () => 'granted';
+      w.Health.requestPermissions = async () => 'granted';
+      w.Health.getStepsBetween   = async () => week;
+      w.Health.getStepsToday     = async () => today;
+      w.Auth.fetchLeaderboardTop = async () => ({
+        ok: true, metric: 'step_total',
+        me: { rank: 4, current_value: week },
+        top: [
+          { rank: 1, alias: 'Galilea',   current_value: 51144, avatar_id: 'avatar-ranger.png',  card_bg: null },
+          { rank: 2, alias: 'RenDIESEL', current_value: 44910, avatar_id: 'avatar-warrior.png', card_bg: null },
+          { rank: 3, alias: 'Grubbadub', current_value: 38207, avatar_id: 'avatar-mage.png',    card_bg: null },
+          { rank: 5, alias: 'Anthony',   current_value: 29560, avatar_id: 'avatar-paladin.png', card_bg: null },
+        ],
+      });
+
+      q('#cn-touch').click();
+      await wait(1100);
+      const nameField = q('#cin-nameField') as HTMLInputElement;
+      nameField.value = 'Richie';
+      nameField.dispatchEvent(new Event('input'));
+      q('#cin-nameConfirm').click();
+      await wait(300);
+      const onWitness = !!document.querySelector('#cn-s2.cn-shown');
+
+      q('#cn-healthBtn').click();
+      await wait(900);
+      const reveal = {
+        line:  (q('#cn-revealLine') || {} as any).textContent || '',
+        unlit: q('#cn-s3').classList.contains('cn-unlit'),
+      };
+      const prompted = localStorage.getItem('hb_healthkit_prompted');
+      const funnel   = localStorage.getItem('hb_funnel_queue') || '';
+
+      q('#cn-s3 [data-cn-next]').click();
+      await wait(900);
+      const board = Array.from(root.querySelectorAll('#cn-rows .cn-row')).map((el) => ({
+        me:   el.classList.contains('cn-me'),
+        rank: (el.querySelector('.cn-r') as HTMLElement).textContent,
+        val:  (el.querySelector('.cn-v') as HTMLElement).textContent,
+      }));
+
+      q('#cn-s4 [data-cn-next]').click();
+      await wait(200);
+      const hunt = {
+        line:  (q('#cn-mawLine') as HTMLElement).textContent || '',
+        drops: Array.from(root.querySelectorAll('#cn-drops .cn-drop .cn-dn')).map((el) => el.childNodes[0].textContent),
+      };
+
+      q('#cn-s5 #cn-huntAlone').click();   // HUNT ALONE — no share sheet in a test
+      await wait(200);
+      q('#cn-s6 [data-cn-next]').click();  // the ascent
+      await wait(200);
+      const paths = Array.from(root.querySelectorAll('#cn-paths .cn-path')).map((el) => ({
+        name: (el.querySelector('.cn-pn') as HTMLElement).textContent,
+        sub:  (el.querySelector('.cn-ps') as HTMLElement).textContent,
+        on:   el.classList.contains('cn-on'),
+      }));
+      q('#cn-s7 [data-cn-next]').click();  // custom carries no training habit → straight to the pact
+      await wait(400);
+
+      const inv = JSON.parse(localStorage.getItem('hb_inventory') || '{}');
+      return {
+        onWitness, prompted, funnel, reveal, board, hunt, paths,
+        pact: {
+          shown:  !!document.querySelector('#cn-s8.cn-shown'),
+          fell:   q('#cn-wolf').classList.contains('cn-fell'),
+          locked: q('#cn-wolf').classList.contains('cn-lock'),
+          title:  (q('#cn-pactTitle') as HTMLElement).textContent,
+          sub:    (q('#cn-wolfSub') as HTMLElement).textContent,
+          relic:  root.querySelector('#cn-pactBody .cn-rn') ? (root.querySelector('#cn-pactBody .cn-rn') as HTMLElement).textContent : null,
+          stat:   root.querySelector('#cn-pactBody .cn-stat') ? (root.querySelector('#cn-pactBody .cn-stat') as HTMLElement).textContent : null,
+          vows:   Array.from(root.querySelectorAll('#cn-pactBody .cn-vow .cn-vn')).map((el) => el.childNodes[0].textContent),
+        },
+        wolfState:  JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || null,
+        killClaim:  Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_the_steel_wolf') === 0),
+        ownedCards: Object.keys(inv.cards || {}).filter((id) => ((inv.cards[id] || {}).count | 0) > 0),
+        queuedBossResult: localStorage.getItem('hb_boss_result_queue'),
+      };
+    }, { today: todaySteps, week: weekSteps });
+  }
+
+  test('the flow asks for Apple Health itself and then shows the hunter their own week, rank, and hunt', async ({ page }) => {
+    await freshOnboarding(page);
+    const r = await walkToPact(page, 7318, 31204);
+
+    // The ask lives inside the flow now (it used to fire after it, W935).
+    expect(r.onWitness).toBe(true);
+    expect(r.prompted).toBe('1');
+    expect(r.funnel).toContain('health_prompt_shown');
+    expect(r.funnel).toContain('onboarding');
+    expect(r.funnel).toContain('health_prompt_answered');
+    expect(r.funnel).toContain('health_first_read');
+
+    // The reveal is the hunter's own seven days, and the road is lit.
+    expect(r.reveal.line).toContain('31,204');
+    expect(r.reveal.unlit).toBe(false);
+
+    // The board carries the rank the SERVER gave, positioned by the number walked.
+    const me = r.board.find((x) => x.me);
+    expect(me).toBeTruthy();
+    expect(me!.rank).toBe('4');
+    expect(me!.val).toBe('31,204');
+    expect(r.board.map((x) => x.rank)).toEqual(['1', '2', '3', '4', '5']);
+
+    // The hunt reads its goal and its drop pool out of the game's own tables.
+    expect(r.hunt.line).toContain('14,000');
+    expect(r.hunt.drops).toEqual(['Twin-Fang Cleaver', 'The Twofold Gaze', 'Bothsight, the Long Hunt']);
+
+    // The paths are the real packs with their real vow counts.
+    expect(r.paths.map((p) => p.name)).toEqual(['Morning Routine', 'Make Your Own', 'Vertical Jump Program']);
+    expect(r.paths[0].sub).toBe('10 vows');
+    expect(r.paths[1].on).toBe(true);
+  });
+
+  test('a day already past 6,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
+    await freshOnboarding(page);
+    const r = await walkToPact(page, 7318, 31204);
+
+    expect(r.pact.shown).toBe(true);
+    expect(r.pact.fell).toBe(true);
+    expect(r.pact.title).toBe('It falls.');
+    expect(r.pact.sub).toBe('7,318 / 6,000 STEPS TODAY');
+
+    // Real kill: the boss ledger moved, the once-per-(boss, day) reward was
+    // claimed, and the relic on the screen is the relic in the armory.
+    expect(r.wolfState).toBeTruthy();
+    expect(r.wolfState.kill_count).toBe(1);
+    expect(r.wolfState.last_hunt_outcome).toBe('defeated');
+    expect(r.killClaim.length).toBe(1);
+    expect(r.pact.relic).toBeTruthy();
+    expect(r.ownedCards.length).toBe(1);
+    // The screen's reward line is sourced, not written: E-rank kill souls plus
+    // the first-awakening XP constant.
+    expect(r.pact.stat).toContain('+50 SOULS');
+    expect(r.pact.stat).toContain('+25 XP');
+    // And it announced itself exactly once — nothing queued to pop behind it.
+    expect(r.queuedBossResult).toBeNull();
+  });
+
+  test('a day still short of 6,000 engages the Wolf and says how far it is; Make Your Own seeds the two Health anchors', async ({ page }) => {
+    await freshOnboarding(page);
+    const r = await walkToPact(page, 3860, 18860);
+
+    expect(r.pact.fell).toBe(false);
+    expect(r.pact.locked).toBe(false);
+    expect(r.pact.title).toBe('The Wolf is engaged.');
+    expect(r.pact.sub).toBe('2,140 STEPS LEFT TODAY');
+    expect(r.wolfState.kill_count).toBe(0);
+    expect(r.killClaim.length).toBe(0);
+    expect(r.pact.vows).toEqual(['Daily walk', 'Sleep']);
+
+    const seeded = await page.evaluate(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      (document.querySelector('#cn-enter') as HTMLElement).click();
+      await wait(1200);
+      const cont = Array.from(document.querySelectorAll('button'))
+        .find((b) => /Continue/i.test(b.textContent || '') && (b as HTMLElement).offsetParent);
+      if (cont) (cont as HTMLElement).click();
+      await wait(1500);
+      return {
+        habits: JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name),
+        path:   localStorage.getItem('hb_path'),
+        name:   localStorage.getItem('hb_name'),
+        xp:     localStorage.getItem('hb_onboarding_first_xp_awarded_v1'),
+      };
+    });
+    // W936 — the path that seeded nothing now starts inside the game.
+    expect(seeded.habits.sort()).toEqual(['Daily walk', 'Sleep']);
+    expect(seeded.path).toBe('custom');
+    expect(seeded.name).toBe('Richie');
+    expect(seeded.xp).toBe('1');
+  });
+
+  test('Health refused leaves the Wolf behind the gate rather than engaged', async ({ page }) => {
+    await freshOnboarding(page);
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      const q = (s: string) => root.querySelector(s) as HTMLElement;
+      w.Health.isAvailable        = () => true;
+      w.Health.permissionStatus   = () => 'denied';
+      w.Health.requestPermissions = async () => 'denied';
+      w.Health.getStepsBetween    = async () => null;
+      w.Health.getStepsToday      = async () => null;
+      w.Auth.fetchLeaderboardTop  = async () => ({ ok: true, metric: 'step_total', me: null, top: [] });
+
+      q('#cn-touch').click();
+      await wait(1100);
+      const f = q('#cin-nameField') as HTMLInputElement;
+      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
+      q('#cin-nameConfirm').click();
+      await wait(300);
+      q('#cn-healthBtn').click();
+      await wait(900);
+      const reveal = { text: (q('#cn-revealLine') as HTMLElement).textContent, unlit: q('#cn-s3').classList.contains('cn-unlit') };
+      q('#cn-s3 [data-cn-next]').click();
+      await wait(700);
+      // An empty board is walked past, not shown: the hunter should now be on
+      // the hunt, one screen further than the CONTINUE they tapped.
+      const skippedBoard = !!document.querySelector('#cn-s5.cn-shown');
+      q('#cn-s5 #cn-huntAlone').click();
+      await wait(150);
+      q('#cn-s6 [data-cn-next]').click();
+      await wait(150);
+      q('#cn-s7 [data-cn-next]').click();
+      await wait(400);
+      return {
+        reveal, skippedBoard,
+        locked: q('#cn-wolf').classList.contains('cn-lock'),
+        title:  (q('#cn-pactTitle') as HTMLElement).textContent,
+        engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+        funnel: localStorage.getItem('hb_funnel_queue') || '',
+      };
+    });
+    expect(r.reveal.unlit).toBe(true);
+    expect(r.reveal.text).toContain('Health is closed');
+    expect(r.skippedBoard).toBe(true);
+    expect(r.locked).toBe(true);
+    expect(r.title).toBe('The Wolf waits behind Health.');
+    expect(r.engaged).toBe(false);
+    expect(r.funnel).toContain('health_prompt_answered');
+  });
+});
