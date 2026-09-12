@@ -81,6 +81,10 @@ async function freshApp(page: Page) {
   // service workers entirely (`serviceWorkers: 'block'`).
   await page.addInitScript(() => {
     try {
+      // W938 — addInitScript re-runs on every navigation. Inside a TEST HUNTER
+      // run the app must boot as a fresh install, so the returning-user seeds
+      // below stand down (a real phone has no init script at all).
+      if (localStorage.getItem('awk_sandbox_v1')) return;
       localStorage.setItem('hb_onboarding_seen_v2', '1');
       localStorage.setItem('hb_welcomed', '1');
       localStorage.setItem('hb_hunter_name_claimed', '1');
@@ -2695,5 +2699,181 @@ test.describe('AD · Replay the awakening (W937)', () => {
     expect(r.killFlags).toEqual([]);
     expect(r.wolf.kill_count).toBe(3);
     expect(r.wolf.engaged).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AE. W938 — TEST HUNTER: the account is set aside, nothing is sent, and
+//     every byte comes back — including after a crash at any stage.
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AE · Test as a new hunter (W938)', () => {
+  // Values the app never rewrites on its own, so "came back" means exactly that.
+  // hb_user is added per test from the booted dev session: a made-up JWT would
+  // be sent to the live worker on reboot, 401, and sign the app out — correctly.
+  const SENTINELS: Record<string, string> = {
+    hb_w938_sentinel: 'the-real-account',
+    hb_w938_relics: JSON.stringify({ nightfall_blade: { count: 1, upgrade_level: 4 } }),
+    hb_board_cache_v1: JSON.stringify({ topics: [], me: { role: 'owner' } }),
+    hb_healthkit_status: 'granted',   // device-level: must stay in place THROUGH the test
+  };
+
+  async function ownerAccount(page: Page) {
+    await freshApp(page);
+    const session = await page.evaluate((s) => {
+      Object.entries(s).forEach(([k, v]) => localStorage.setItem(k, v as string));
+      return localStorage.getItem('hb_user');
+    }, SENTINELS);
+    expect(session).toBeTruthy();
+    SENTINELS.hb_user = session as string;
+  }
+
+  /** Read every sentinel plus the sandbox's own bookkeeping. */
+  async function snapshot(page: Page) {
+    return page.evaluate((keys) => {
+      const vals: Record<string, string | null> = {};
+      keys.forEach((k: string) => { vals[k] = localStorage.getItem(k); });
+      const all = Object.keys(localStorage);
+      return {
+        vals,
+        setAside: all.filter((k) => k.indexOf('hbsb_') === 0).length,
+        flag: localStorage.getItem('awk_sandbox_v1'),
+        testJunk: localStorage.getItem('hb_w938_test_junk'),
+        bar: !!document.getElementById('awk-sandbox-bar'),
+        active: (window as any).__awkSandbox.active(),
+      };
+    }, Object.keys(SENTINELS));
+  }
+
+  function expectRestored(r: Awaited<ReturnType<typeof snapshot>>) {
+    for (const [k, v] of Object.entries(SENTINELS)) expect(r.vals[k], k).toBe(v);
+    expect(r.setAside).toBe(0);
+    expect(r.flag).toBeNull();
+    expect(r.testJunk).toBeNull();
+    expect(r.active).toBe(false);
+    expect(r.bar).toBe(false);
+  }
+
+  test('the Settings row shows for the owner only', async ({ page }) => {
+    await ownerAccount(page);
+    const owner = await page.evaluate(() => {
+      (document.getElementById('settings-btn') as HTMLElement).click();
+      return !document.getElementById('settings-test-hunter')!.classList.contains('hidden');
+    });
+    expect(owner).toBe(true);
+    const player = await page.evaluate(() => {
+      localStorage.setItem('hb_board_cache_v1', JSON.stringify({ topics: [], me: { role: null } }));
+      (document.getElementById('settings-close') as HTMLElement).click();
+      (document.getElementById('settings-btn') as HTMLElement).click();
+      return !document.getElementById('settings-test-hunter')!.classList.contains('hidden');
+    });
+    expect(player).toBe(false);
+  });
+
+  test('a test boots as a fresh install, sends nothing, and END puts every byte back', async ({ page }) => {
+    await ownerAccount(page);
+    // Allowed auth calls are answered here so the assertion is about the guard, not the network.
+    await page.route('**/v1/auth/refresh', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"jwt":"x"}' }));
+
+    // Start through the real sheet.
+    await page.evaluate(() => {
+      (document.getElementById('settings-btn') as HTMLElement).click();
+      (document.getElementById('settings-test-hunter') as HTMLElement).click();
+    });
+    await page.waitForTimeout(400);
+    await expect(page.locator('#th-overlay .th-title')).toHaveText('Test as a new hunter');
+    await Promise.all([page.waitForEvent('load'), page.evaluate(() => (document.getElementById('th-start') as HTMLElement).click())]);
+
+    // A fresh install: the cinematic, the TEST HUNTER bar, the account set aside.
+    await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    const during = await page.evaluate(async () => {
+      const w = window as any;
+      const backend = 'https://awakened-backend.richmondcampano93.workers.dev';
+      const post = await fetch(backend + '/v1/leaderboard/submit', { method: 'POST', body: '{}' });
+      const postBody = await post.json();
+      const refresh = await fetch(backend + '/v1/auth/refresh', { method: 'POST' });
+      let wsRefused = false;
+      try { new WebSocket('wss://awakened-backend.richmondcampano93.workers.dev/v1/pvp/ws'); } catch (_) { wsRefused = true; }
+      // The test hunter leaves marks that must not survive END.
+      localStorage.setItem('hb_w938_test_junk', 'discard me');
+      localStorage.setItem('hb_w938_sentinel', 'overwritten by the test');
+      return {
+        status: w.__awkSandbox.status(),
+        sentinelWasSetAside: localStorage.getItem('hbsb_hb_w938_sentinel'),
+        relicsVisible: localStorage.getItem('hb_w938_relics'),
+        deviceHealth: localStorage.getItem('hb_healthkit_status'),
+        postStatus: post.status, postCode: postBody.code,
+        refreshStatus: refresh.status,
+        wsRefused,
+      };
+    });
+    expect(during.status.active).toBe(true);
+    expect(during.status.phase).toBe('active');
+    expect(during.status.setAside).toBeGreaterThanOrEqual(5);
+    expect(during.sentinelWasSetAside).toBe('the-real-account');
+    expect(during.relicsVisible).toBeNull();            // the test hunter cannot see the real relics
+    expect(during.deviceHealth).toBe('granted');        // but the device's Health grant is still live
+    expect(during.postStatus).toBe(503);
+    expect(during.postCode).toBe('SANDBOX');
+    expect(during.refreshStatus).toBe(200);             // minting a session is allowed through
+    expect(during.wsRefused).toBe(true);
+    expect(during.status.blocked).toBeGreaterThanOrEqual(1);
+
+    // A reload inside the test keeps the test (sessionStorage survives it).
+    await page.reload();
+    await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
+
+    // END TEST from the bar.
+    page.once('dialog', (d) => d.accept());
+    await Promise.all([page.waitForEvent('load'), page.locator('#awk-sandbox-bar').click()]);
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    expectRestored(await snapshot(page));
+  });
+
+  test('closing the app mid-test restores the account on the next launch', async ({ page }) => {
+    await ownerAccount(page);
+    await page.evaluate(() => {
+      const r = (window as any).__awkSandbox.start();
+      if (!r.ok) throw new Error(r.code);
+      localStorage.setItem('hb_w938_test_junk', 'x');
+    });
+    // A relaunch is a page load WITHOUT the session token.
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    expectRestored(await snapshot(page));
+  });
+
+  test('a crash at any stage finishes cleanly on the next launch and loses nothing', async ({ page }) => {
+    await ownerAccount(page);
+    for (const stage of ['moving', 'wipe', 'restore'] as const) {
+      await page.evaluate(({ stage, sentinels }) => {
+        // Rebuild the exact on-disk shape a crash in `stage` leaves behind.
+        Object.entries(sentinels).forEach(([k, v]) => localStorage.setItem(k, v as string));
+        sessionStorage.clear();
+        const hunter = Object.keys(sentinels).filter((k) => k !== 'hb_healthkit_status');
+        if (stage === 'moving') {
+          // Half moved: the first two keys set aside, the rest still in place.
+          hunter.slice(0, 2).forEach((k) => { localStorage.setItem('hbsb_' + k, localStorage.getItem(k)!); localStorage.removeItem(k); });
+        } else if (stage === 'wipe') {
+          // Everything set aside, the test hunter half-wiped.
+          hunter.forEach((k) => { localStorage.setItem('hbsb_' + k, localStorage.getItem(k)!); localStorage.removeItem(k); });
+          localStorage.setItem('hb_w938_test_junk', 'x');
+          localStorage.setItem('hb_w938_sentinel', 'test hunter value');
+        } else {
+          // Test hunter already wiped; half of the real keys already back.
+          hunter.forEach((k) => { localStorage.setItem('hbsb_' + k, localStorage.getItem(k)!); localStorage.removeItem(k); });
+          hunter.slice(0, 3).forEach((k) => { localStorage.setItem(k, localStorage.getItem('hbsb_' + k)!); localStorage.removeItem('hbsb_' + k); });
+        }
+        localStorage.setItem('awk_sandbox_v1', JSON.stringify({ phase: stage, token: 'crashed', startedAt: 1 }));
+      }, { stage, sentinels: SENTINELS });
+      await page.reload();
+      await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+      const r = await snapshot(page);
+      for (const [k, v] of Object.entries(SENTINELS)) expect(r.vals[k], stage + ' ' + k).toBe(v);
+      expect(r.setAside, stage).toBe(0);
+      expect(r.flag, stage).toBeNull();
+      expect(r.testJunk, stage).toBeNull();
+    }
   });
 });
