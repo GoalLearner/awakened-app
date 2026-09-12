@@ -2876,4 +2876,61 @@ test.describe('AE · Test as a new hunter (W938)', () => {
       expect(r.testJunk, stage).toBeNull();
     }
   });
+  // The bug found on 2026-09-12: app.js flushes its IN-MEMORY state on teardown
+  // (pagehide / beforeunload) and on timers. Between END putting the real keys
+  // back and the reload, that flush would write the test hunter over them.
+  test('a save that lands after END is dropped: the test hunter cannot overwrite the real account', async ({ page }) => {
+    await ownerAccount(page);
+    // hb_points is app-owned (_saveNow writes it) and, unlike hb_habits, is not
+    // re-seeded by freshApp's init script on every navigation.
+    await page.evaluate(() => localStorage.setItem('hb_points', '4321'));
+    await page.evaluate(() => { const r = (window as any).__awkSandbox.start(); if (!r.ok) throw new Error(r.code); });
+    await page.reload();
+    await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
+
+    await Promise.all([
+      page.waitForEvent('load'),
+      page.evaluate(() => {
+        (window as any).__awkSandbox.finishTest();
+        // Exactly what a teardown flush does, in the gap before the reload.
+        localStorage.setItem('hb_points', '25');
+        localStorage.setItem('hb_w938_sentinel', 'flushed by the test hunter');
+        localStorage.removeItem('hb_w938_relics');
+      }),
+    ]);
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    const r = await page.evaluate(() => ({
+      points: localStorage.getItem('hb_points'),
+      sentinel: localStorage.getItem('hb_w938_sentinel'),
+      relics: localStorage.getItem('hb_w938_relics'),
+      active: (window as any).__awkSandbox.active(),
+    }));
+    expect(r.points).toBe('4321');
+    expect(r.sentinel).toBe('the-real-account');
+    expect(r.relics).toBe(SENTINELS.hb_w938_relics);
+    expect(r.active).toBe(false);
+  });
+
+  test('a save that lands after START is dropped: the test hunter starts clean', async ({ page }) => {
+    await ownerAccount(page);
+    await Promise.all([
+      page.waitForEvent('load'),
+      page.evaluate(() => {
+        (window as any).__awkSandbox.beginTest();
+        // The real account's memory flushing into the fresh install.
+        localStorage.setItem('hb_w938_leak', 'real account memory');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'r', name: 'LEAKED VOW' }]));
+      }),
+    ]);
+    await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    const r = await page.evaluate(() => ({
+      leak: localStorage.getItem('hb_w938_leak'),
+      leakSetAside: localStorage.getItem('hbsb_hb_w938_leak'),
+      habits: localStorage.getItem('hb_habits'),
+    }));
+    expect(r.leak).toBeNull();
+    expect(r.leakSetAside).toBeNull();
+    expect(r.habits === null || r.habits === '[]').toBe(true);
+  });
 });

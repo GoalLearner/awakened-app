@@ -27,7 +27,11 @@
  *      every `hbsb_` key back under its real name. Closing the app does the
  *      same thing on the next launch: the test lives in sessionStorage, which
  *      a relaunch clears, so a relaunch can never quietly continue a test.
- *   4. Every step is resumable. A phase flag is written before each stage, and
+ *   4. The old hunter cannot write after a transition. Once a start or an
+ *      end commits, the page drops every write to hb_ keys until the reload
+ *      finishes (see freezeHunterWrites), so the in-memory flush on teardown
+ *      can never land on the other hunter's data.
+ *   5. Every step is resumable. A phase flag is written before each stage, and
  *      boot finishes whichever stage a crash interrupted. The scratch wipe only
  *      ever runs while every real key is still set aside, and nothing under
  *      `hbsb_` is removed until its value has been written back.
@@ -60,6 +64,12 @@
   var ALLOWED_POSTS = /\/v1\/auth\/(verify|refresh)(\?|$)/;
 
   var blocked = 0;
+
+  // Captured before any other script runs, so the teardown freeze below always
+  // has the real methods to fall back on.
+  var realSetItem    = Storage.prototype.setItem;
+  var realRemoveItem = Storage.prototype.removeItem;
+  var realClear      = Storage.prototype.clear;
 
   function readFlag() {
     try { var raw = localStorage.getItem(FLAG); return raw ? JSON.parse(raw) : null; }
@@ -154,6 +164,50 @@
     return { ok: true };
   }
 
+  // ── the teardown freeze ─────────────────────────────────────────────────
+  // app.js saves its IN-MEMORY state on every teardown (W659 saveFlush on
+  // pagehide / beforeunload) and on any timer that calls save(). A start or an
+  // end is always followed by a reload, and in the gap before that page is
+  // gone, the OLD hunter's memory is still running. Left alone, a flush at END
+  // writes the test hunter's habits, completions, points and streaks straight
+  // over the real keys that were just put back, and the next boot then backs
+  // that up to the cloud. At START the same flush leaks the real account into
+  // the test hunter, which is then not a fresh install.
+  // So once a transition has committed, this page accepts no more writes to
+  // hunter state. Anything written now is stale by definition, and the reload
+  // is already under way.
+  function freezeHunterWrites() {
+    var isHunterKey = function (store, k) {
+      return store === window.localStorage && typeof k === 'string' && k.indexOf('hb_') === 0;
+    };
+    try {
+      Storage.prototype.setItem = function (k) {
+        if (isHunterKey(this, k)) return undefined;
+        return realSetItem.apply(this, arguments);
+      };
+      Storage.prototype.removeItem = function (k) {
+        if (isHunterKey(this, k)) return undefined;
+        return realRemoveItem.apply(this, arguments);
+      };
+      Storage.prototype.clear = function () {
+        if (this === window.localStorage) return undefined;
+        return realClear.apply(this, arguments);
+      };
+    } catch (_) {}
+  }
+
+  // What the Settings sheet and the bar actually call: commit, freeze, reload.
+  function beginTest() {
+    var r = start();
+    if (r.ok) { freezeHunterWrites(); try { window.location.reload(); } catch (_) {} }
+    return r;
+  }
+  function finishTest() {
+    var r = end();
+    if (r.ok) { freezeHunterWrites(); try { window.location.reload(); } catch (_) {} }
+    return r;
+  }
+
   // ── guards ──────────────────────────────────────────────────────────────
   function installNetworkGuard() {
     var realFetch = window.fetch;
@@ -238,12 +292,10 @@
                               'and your own progress comes back exactly as it was.');
         } catch (_) {}
         if (!ok) return;
-        var r = end();
+        var r = finishTest();
         if (!r.ok) {
           try { window.alert('The test could not finish restoring right now. Close the app and open it again; it finishes on launch.'); } catch (_) {}
-          return;
         }
-        try { window.location.reload(); } catch (_) {}
       });
       document.body.appendChild(bar);
     };
@@ -279,8 +331,10 @@
 
   window.__awkSandbox = {
     active: function () { return active; },
-    start: start,
+    start: start,          // the transition only (tests)
     end: end,
+    beginTest: beginTest,  // start + freeze + reload (what the app calls)
+    finishTest: finishTest,
     status: function () {
       var f2 = readFlag();
       return {
