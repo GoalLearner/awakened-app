@@ -36037,3 +36037,149 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .th-btn--primary { background: #f5b842; color: #1a1200; border: 0; }
 .th-btn--ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
 .th-err { margin: -6px 0 12px; font-size: 12.5px; color: #ef8a8a; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   W939 — SIGN IN v2 (Claude Design handoff 32)
+   The first screen after download. Scoped to #signin-gate.sg-v2 so the
+   hidden alias-step fallback keeps its old look, and nothing else in the
+   app can match. Every value below is the design's.
+   ═══════════════════════════════════════════════════════════════════ */
+#signin-gate.sg-v2 {
+  --sg-bg: #0a0a18;
+  --sg-gold: #f5b842;
+  --sg-ink: #f4f4fb;
+  --sg-ink2: #9596b2;
+  --sg-ink3: #585a76;
+  background: var(--sg-bg);
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+}
+#signin-gate.sg-v2 .sg-art {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+#signin-gate.sg-v2 .sg-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 62%;
+  display: block;
+  transform: scale(1.06);
+  animation: sg-drift 14s ease-in-out infinite alternate;
+}
+@keyframes sg-drift {
+  from { transform: scale(1.06) translate(0, 0); }
+  to   { transform: scale(1.06) translate(-8px, 6px); }
+}
+#signin-gate.sg-v2 .sg-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10,10,24,0.55) 0%, rgba(10,10,24,0.10) 14%, rgba(10,10,24,0) 30%,
+    rgba(10,10,24,0.72) 60%, var(--sg-bg) 76%, var(--sg-bg) 100%);
+}
+#signin-gate.sg-v2 .signin-gate-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 430px;
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 28px);
+}
+#signin-gate.sg-v2 .sg-step {
+  gap: 14px;
+  animation: sg-rise .7s cubic-bezier(.2,.9,.2,1) .15s both;
+}
+@keyframes sg-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+#signin-gate.sg-v2 .sg-lock { display: flex; align-items: center; gap: 10px; }
+#signin-gate.sg-v2 .sg-lock img {
+  width: 44px; height: 44px;
+  object-fit: contain; object-position: 50% 40%;
+  filter: drop-shadow(0 0 10px rgba(245,184,66,0.4));
+}
+#signin-gate.sg-v2 .sg-k {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px; letter-spacing: 4px; font-weight: 700;
+  color: var(--sg-gold); text-transform: uppercase;
+}
+#signin-gate.sg-v2 .sg-rule {
+  height: 1px;
+  margin: 2px 0;
+  background: linear-gradient(90deg, transparent, rgba(245,184,66,0.45), transparent);
+}
+#signin-gate.sg-v2 .sg-t {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 30px; line-height: 1.12; letter-spacing: .5px; font-weight: 700;
+  color: var(--sg-ink);
+  margin: 0;
+  text-align: left;
+  text-transform: none;
+}
+#signin-gate.sg-v2 .sg-fl {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic; font-size: 19px; line-height: 1.35;
+  color: #c9c9de;
+  margin: 0;
+  text-align: left;
+}
+#signin-gate.sg-v2 .sg-fl b { color: var(--sg-gold); font-weight: 500; }
+
+/* Apple HIG: the white style on a dark ground, system font, the exact title. */
+#signin-gate.sg-v2 .sg-apple {
+  position: relative;
+  width: 100%; height: 56px;
+  margin-top: 6px;
+  border: 0; border-radius: 14px;
+  background: #fff; color: #000;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  font-size: 18px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, filter .12s ease;
+  user-select: none;
+}
+#signin-gate.sg-v2 .sg-apple:active { transform: scale(.98); filter: brightness(.92); }
+#signin-gate.sg-v2 .sg-apple-mark { width: 20px; height: 20px; fill: #000; flex: none; }
+#signin-gate.sg-v2 .sg-apple.is-busy { color: transparent; pointer-events: none; }
+#signin-gate.sg-v2 .sg-apple.is-busy .sg-apple-mark { visibility: hidden; }
+#signin-gate.sg-v2 .sg-apple.is-busy::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 20px; height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(0,0,0,0.18);
+  border-top-color: #000;
+  animation: sg-spin .8s linear infinite;
+}
+@keyframes sg-spin { to { transform: rotate(360deg); } }
+#signin-gate.sg-v2 .sg-apple:disabled:not(.is-busy) { opacity: .6; }
+
+#signin-gate.sg-v2 .sg-err { text-align: center; margin: 0; }
+#signin-gate.sg-v2 .sg-s {
+  font-size: 12px; line-height: 1.5;
+  color: var(--sg-ink3);
+  margin: 0; padding: 0 8px;
+  text-align: center;
+}
+#signin-gate.sg-v2 .sg-s b { color: var(--sg-ink2); font-weight: 500; }
+
+@media (max-height: 700px) {
+  #signin-gate.sg-v2 .sg-t  { font-size: 26px; }
+  #signin-gate.sg-v2 .sg-fl { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #signin-gate.sg-v2 .sg-art img,
+  #signin-gate.sg-v2 .sg-step { animation: none !important; }
+}

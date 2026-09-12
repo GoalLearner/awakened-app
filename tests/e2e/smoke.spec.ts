@@ -2934,3 +2934,80 @@ test.describe('AE · Test as a new hunter (W938)', () => {
     expect(r.habits === null || r.habits === '[]').toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AF. W939 — Sign in v2: the first screen after download
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AF · Sign in v2 (W939)', () => {
+  test('the Gate art, the new copy and a truthful footnote', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const gate = document.getElementById('signin-gate') as HTMLElement;
+      const btn = document.getElementById('signin-apple-btn') as HTMLButtonElement;
+      document.getElementById('app')!.classList.add('hidden');
+      gate.classList.remove('hidden');
+      return {
+        v2: gate.classList.contains('sg-v2'),
+        art: (gate.querySelector('.sg-art img') as HTMLImageElement | null)?.getAttribute('src') || null,
+        logo: (gate.querySelector('.sg-lock img') as HTMLImageElement | null)?.getAttribute('src') || null,
+        title: (gate.querySelector('.signin-title') as HTMLElement).textContent,
+        blurb: (gate.querySelector('.signin-blurb') as HTMLElement).textContent,
+        foot: (gate.querySelector('.signin-footnote') as HTMLElement).textContent,
+        buttonText: (btn.textContent || '').replace(/\s+/g, ' ').trim(),
+        buttonBg: getComputedStyle(btn).backgroundColor,
+      };
+    });
+    expect(r.v2).toBe(true);
+    expect(r.art).toBe('assets/gates/gate-e-rank.png');
+    expect(r.logo).toBe('assets/awknd-logo.png');
+    expect(r.title).toBe('The Gate is open.');
+    expect(r.blurb).toContain('carry your progress between devices');
+    // The old line was untrue: CloudSync backs up every hb_ key.
+    expect(r.foot).not.toContain('Everything else stays on your device');
+    expect(r.foot).toContain('private backup');
+    expect(r.buttonText).toBe('Sign in with Apple');
+    expect(r.buttonBg).toBe('rgb(255, 255, 255)');
+  });
+
+  test('the button spins while Apple\'s sheet is up and comes back when it is cancelled', async ({ page }) => {
+    // Boot a genuinely signed-out, "native" app so the real gate controller
+    // wires the real button. Auth is patched the instant auth.js assigns it.
+    await page.addInitScript(() => {
+      let auth: any;
+      Object.defineProperty(window, 'Auth', {
+        configurable: true,
+        get() { return auth; },
+        set(v) {
+          v.devSignInIfLocalhost = () => false;
+          v.isNative = () => true;
+          (window as any).__sheetOpen = false;
+          v.signInWithApple = () => new Promise((res) => {
+            (window as any).__sheetOpen = true;
+            setTimeout(() => { (window as any).__sheetOpen = false; res(null); }, 700);   // the user cancels
+          });
+          auth = v;
+        },
+      });
+      const css = '#awakened-splash{display:none!important}';
+      document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); });
+    });
+    await page.goto('/');
+    await expect(page.locator('#signin-gate')).toBeVisible({ timeout: 15_000 });
+    const r = await page.evaluate(async () => {
+      const btn = document.getElementById('signin-apple-btn') as HTMLButtonElement;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      btn.click();
+      await wait(150);
+      const during = { sheet: (window as any).__sheetOpen, busy: btn.classList.contains('is-busy'), disabled: btn.disabled };
+      await wait(900);
+      const after = { sheet: (window as any).__sheetOpen, busy: btn.classList.contains('is-busy'), disabled: btn.disabled,
+                      error: (document.getElementById('signin-apple-error') as HTMLElement).textContent };
+      return { during, after };
+    });
+    expect(r.during).toEqual({ sheet: true, busy: true, disabled: true });
+    expect(r.after.sheet).toBe(false);
+    expect(r.after.busy).toBe(false);
+    expect(r.after.disabled).toBe(false);
+    expect(r.after.error).toBe('');   // a cancel is not an error
+  });
+});
