@@ -1662,7 +1662,6 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
         localStorage.setItem('hb_hunter_name_claimed', '1');
         localStorage.setItem('hb_cloud_restore_dismissed', '1');
         localStorage.setItem('hb_whats_new_seen', '99.99.99');
-        localStorage.setItem('hb_habits_listview_hint_v1', '1');   // suppress the list-view tip
         const _d = new Date();
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
@@ -3659,5 +3658,36 @@ test.describe('AK · Add Habits v3 (W945)', () => {
     await expect(page.locator('#lib-chips')).toBeVisible();
     await expect(page.locator('#lib-starter')).toBeVisible();
     await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AL. W946 — the "Vows now show live progress" tip is gone
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AL · No list-view tip (W946)', () => {
+  test('a hunter whose device never saw the tip gets a Habits tab without it', async ({ page }) => {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w946_seeded')) return;
+        sessionStorage.setItem('__w946_seeded', '1');
+        localStorage.removeItem('hb_habits_listview_hint_v1');
+        // Seeded list = returning hunter: keep the retention-ladder coaches out of the way.
+        ['hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_tour_first_vow_v1']
+          .forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'w946-j', name: 'Journal', emoji: '✍️', difficulty: 'easy', type: 'build' },
+        ]));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#habit-list .habit-item').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#habit-list')).toHaveClass(/habit-list--list/);   // the tip only ever showed in List view
+    await page.waitForTimeout(600);
+    await expect(page.locator('#listview-hint')).toHaveCount(0);
+    await expect(page.getByText('Vows now show live progress')).toHaveCount(0);
   });
 });
