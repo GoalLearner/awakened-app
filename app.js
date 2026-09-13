@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w941'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w942'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -38563,10 +38563,13 @@
   // v3 Phase 1z.282 — The First Awakened (Coachmarks + Field Manual)
   // ════════════════════════════════════════════════════════════════════
   // Three guidance surfaces hosted by a recurring character — The First
-  // Awakened. Dialogue copy + visual treatment delivered by ClaudeDesign
-  // (see chats/chat7 / fa-coachmarks.jsx / fa-manual.jsx in the design
-  // bundle for canonical source). DO NOT reword the dialogue — voice
-  // calibration was specifically constrained in the ClaudeDesign brief.
+  // Awakened. Visual treatment delivered by ClaudeDesign (see chats/chat7 /
+  // fa-coachmarks.jsx / fa-manual.jsx in the design bundle).
+  // W942 — THE OWNER'S RULE FOR THE GUIDE: he speaks plainly, in direct
+  // instructions, and his lines appear at once — a whole beat per card, one
+  // tap per beat, no typewriter. Keep beats to three short lines. The mythic
+  // register stays in the world (boss flavor, lore); the guide talks like a
+  // person who wants you to get on with it.
   //
   // Storage keys (local only, wiped on Reset All Progress):
   //   hb_tour_quests_v1  → set '1' after Quests coachmark dismissed
@@ -38586,19 +38589,16 @@
   // W768 (Co-op / Friends).
   const FA_QUESTS_BEATS = [
     { pose: 'idle', lines: [
-      'This is the Co-op tab — boss hunts live here.',
-      'The gates are solo challenges, ranked E to S. The Pacts at the bottom are hunts you take on with friends.',
+      'This is the Co-op tab. Boss hunts live here.',
+      'Gates are solo bosses, ranked E to S. Pacts at the bottom are hunts with friends.',
     ]},
     { pose: 'scroll', lines: [
-      'A boss is a real-life goal: hit the target it asks for — steps, workouts, sleep — inside its time window, and the boss goes down.',
-      'Tap any gate to read exactly what it takes before you commit.',
+      'A boss is a real goal \u2014 steps, workouts, sleep \u2014 inside a time window. Hit it and the boss goes down.',
+      'Tap any gate to read exactly what it takes.',
     ]},
     { pose: 'pointing', lines: [
-      'Starting a hunt costs Souls — the currency you earn by playing.',
-      'Win and your Souls come back, plus a relic. Run out of time and you only lose the entry fee — never your progress.',
-    ]},
-    { pose: 'nodding', lines: [
-      'Pick a gate that matches your rank. Read it. Start when you are ready.',
+      'Starting a hunt costs Souls. Win and they come back, plus a relic. Run out of time and you only lose the fee.',
+      'Pick a gate at your rank and start.',
     ]},
   ];
 
@@ -38610,23 +38610,18 @@
   // tabs (Stats, Quests, Items).
   const FA_ITEMS_BEATS = [
     { pose: 'idle', lines: [
-      'This is the Items tab.',
-      'Every relic you win from a boss lands here.',
-    ]},
-    { pose: 'scroll', lines: [
-      'Your Archive is the collection. Equip a relic and its stat bonuses power you up in battles.',
+      'This is the Items tab. Relics you win from bosses land here.',
+      'Open the Archive to see them. Equip a relic and its stats power you up in battles.',
     ]},
     { pose: 'pointing', lines: [
-      'It is also a Marketplace — spend Souls on relics you have not won yet, or sell back ones you no longer need.',
-    ]},
-    { pose: 'nodding', lines: [
-      'Equip what you earn. A relic sitting in storage does nothing.',
+      'The Marketplace sells relics you have not won yet, for Souls.',
+      'Equip what you earn. A relic in storage does nothing.',
     ]},
   ];
 
   // v3 Phase 1z.282B — First-vow commit acknowledgment.
-  // Single beat (~6 seconds at 30ms/char) fired after the user
-  // commits their initial vow selection in the onboarding picker.
+  // Single beat, shown whole (W942), fired after the user commits
+  // their initial vow selection in the onboarding picker.
   // Closes the narrative loop between "pick your vows" and "begin"
   // by having The First Awakened acknowledge the action. Replaces
   // the existing "Vow added" toast on first-commit only — subsequent
@@ -38634,9 +38629,9 @@
   // and use the toast normally.
   const FA_FIRST_VOW_BEATS = [
     { pose: 'nodding', lines: [
-      'Your first habits are locked in.',
-      'Check them off on the Habits tab every day — that is how you earn XP and level up.',
-      'Show up daily. Everything else in this app grows from that.',
+      'Your habits are set.',
+      'Check them off on the Habits tab every day. That is how you earn XP and rank up.',
+      'Show up daily. Everything else grows from that.',
     ]},
   ];
 
@@ -38648,22 +38643,16 @@
   // rotation, daily anchors every day, sets×reps in each habit name.
   const FA_JUMP_WELCOME_BEATS = [
     { pose: 'speaking', lines: [
-      'Welcome. You chose the Vertical Jump Program — I\'ll walk you through it plainly.',
-      'You train three days a week. The rest is recovery, and recovery is part of the program.',
-    ]},
-    { pose: 'scroll', lines: [
-      'Mondays are plyometrics — sprints and max-effort jumps.',
-      'Wednesdays are strength & mechanics. Fridays are heavy strength.',
-      'Tuesday and Thursday are recovery days. Weekends are off.',
+      'You chose the Vertical Jump Program. Here is how it works.',
+      'You train Monday, Wednesday and Friday. Tuesday and Thursday are recovery. Weekends are off.',
+      'Monday is plyometrics. Wednesday is strength and mechanics. Friday is heavy strength.',
     ]},
     { pose: 'pointing', lines: [
-      'On a training day, that day\'s exercises appear on your list — sets and reps are in the name.',
-      'Do the session, then check each one off. On rest days, no lifting appears. That is by design.',
-      'Every second Monday the jump work changes — two weeks make one full cycle, and it repeats.',
+      'On a training day, that day\'s exercises appear on your list with sets and reps in the name. Do them, then check each one off.',
+      'Rest days show no lifting. That is by design. Every second Monday the jump work changes \u2014 two weeks make one cycle.',
     ]},
     { pose: 'nodding', lines: [
-      'Creatine, sunlight, and your protein goal run every single day — rest days included.',
-      'They drive the recovery that makes you jump higher, and they keep your streak alive.',
+      'Creatine, sunlight and your protein goal run every day, rest days included. They drive recovery and keep your streak.',
       'Your first full cycle begins on Monday. Until then, keep the dailies. Now go.',
     ]},
   ];
@@ -38679,8 +38668,7 @@
   // same key so they never see a redundant welcome on next launch.
   const FA_WELCOME_BACK_BEATS = [
     { pose: 'idle', lines: [
-      'Welcome back, hunter.',
-      'All your progress is here — nothing was lost.',
+      'Welcome back, hunter. Nothing was lost.',
       'I will point out what is new as you go.',
     ]},
   ];
@@ -38847,32 +38835,36 @@
     return head + body + '</svg>';
   }
 
-  // ── Coachmark engine ────────────────────────────────────────────────
-  // Stateful: tracks current beat + line + typewriter progress.
+  // ── Coachmark engine ─────────────────────────────────────────
+  // W942 — the First Awakened speaks plainly. A beat's lines all appear at
+  // once on one card; there is no typewriter, no caret, no per-line tap.
   // Tap behavior:
-  //   - mid-typewriter → skip to end of current line
-  //   - line typed, more lines in beat → advance to next line
-  //   - last line of beat, more beats → advance to next beat
-  //   - last line of last beat → show CTA; tap outside CTA does nothing
+  //   - tap on the sheet, more beats → the next beat (pose, dots, lines)
+  //   - last beat → the CTA only; a tap outside the CTA does nothing
+  // Returns true when the card mounted, false when it could not (bad spec,
+  // missing DOM, or a coach already up — the re-entrancy guard). A refused
+  // mount marks nothing seen: every caller re-triggers on its own (the tab
+  // coaches on the next tab open, the retention ladder next launch).
   // Storage key set on dismissal (regardless of where the user dismissed).
   function _faRunCoachmark(spec) {
     const overlay = document.getElementById('fa-coachmark-overlay');
-    if (!overlay || !spec || !Array.isArray(spec.beats)) return;
+    if (!overlay || !spec || !Array.isArray(spec.beats) || !spec.beats.length) return false;
+    // W942 — never re-render or re-wire over a live coach. A second mount used
+    // to swap the spec while the first closure's listeners stayed attached: one
+    // tap ran two advance()s, and the first spec's onDismiss was lost.
+    if (!overlay.classList.contains('hidden')) return false;
     const sheet   = overlay.querySelector('.fa-coach-sheet');
     const figEl   = document.getElementById('fa-coach-figure');
     const speech  = document.getElementById('fa-coach-speech');
     const dots    = document.getElementById('fa-coach-dots');
     const footer  = document.getElementById('fa-coach-footer');
     const titleEl = document.getElementById('fa-coach-title');
-    if (!sheet || !figEl || !speech || !dots || !footer || !titleEl) return;
+    if (!sheet || !figEl || !speech || !dots || !footer || !titleEl) return false;
 
     titleEl.textContent = 'THE FIRST AWAKENED';
     overlay.dataset.context = spec.context || '';
 
-    const reducedMotion = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    const tw = { timer: null };
     let bi = 0;
-    let li = 0;
 
     function setFigure(pose) {
       const safe = (typeof pose === 'string') ? pose.replace(/[^a-z]/gi, '') : 'idle';
@@ -38900,10 +38892,6 @@
           e.stopPropagation();
           dismiss();
         });
-      } else if (mode === 'skip') {
-        footer.innerHTML = '<span class="fa-coach-hint">TAP TO SKIP ' +
-          '<svg width="16" height="9" viewBox="0 0 16 9" aria-hidden="true">' +
-          '<path d="M1 4.5h13M10 1l4 3.5L10 8" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
       } else { // 'next'
         footer.innerHTML = '<span class="fa-coach-hint">TAP TO CONTINUE ' +
           '<svg width="16" height="9" viewBox="0 0 16 9" aria-hidden="true">' +
@@ -38911,93 +38899,41 @@
       }
     }
 
-    function priorLinesHtml(beat, upToIdx) {
-      let html = '';
-      for (let i = 0; i < upToIdx; i++) {
-        html += '<p class="fa-coach-line fa-coach-line--prior">' +
-          esc(beat.lines[i]) + '</p>';
-      }
-      return html;
+    function linesHtml(beat) {
+      const lines = (beat && Array.isArray(beat.lines)) ? beat.lines : [];
+      return lines.map(function (l) { return '<p class="fa-coach-line">' + esc(l) + '</p>'; }).join('');
     }
 
-    function startLine() {
+    function renderBeat() {
       const beat = spec.beats[bi];
-      const line = beat.lines[li];
-      // build static prior lines + current line container
-      speech.innerHTML = priorLinesHtml(beat, li) +
-        '<p class="fa-coach-line fa-coach-line--current"><span id="fa-coach-typed"></span>' +
-        '<span class="fa-coach-caret">▍</span></p>';
-      const typed = document.getElementById('fa-coach-typed');
-      if (!typed) return;
-      if (reducedMotion) {
-        typed.textContent = line;
-        onTypewriterDone();
-        return;
-      }
-      let i = 0;
-      clearInterval(tw.timer);
-      tw.timer = setInterval(function () {
-        i += 1;
-        typed.textContent = line.slice(0, i);
-        if (i >= line.length) {
-          clearInterval(tw.timer);
-          tw.timer = null;
-          onTypewriterDone();
-        }
-      }, 30);
-      renderFooter('skip');
+      speech.innerHTML = linesHtml(beat);      // the whole beat, at once
+      setFigure(beat.pose);
+      renderDots();
+      renderFooter(bi === spec.beats.length - 1 ? 'cta' : 'next', spec.cta);
     }
 
-    function onTypewriterDone() {
-      // remove caret
-      const caret = speech.querySelector('.fa-coach-caret');
-      if (caret) caret.remove();
-      const beat = spec.beats[bi];
-      const isLastLine = li === beat.lines.length - 1;
-      const isLastBeat = bi === spec.beats.length - 1;
-      if (isLastBeat && isLastLine) {
-        renderFooter('cta', spec.cta);
-      } else {
-        renderFooter('next');
+    // Size the speech box to the tallest beat so the card never reflows
+    // between beats (the overlay is flex-centred; a height change would shift
+    // the whole card). Runs after `hidden` is removed, before the first paint.
+    function lockSpeechHeight() {
+      let max = 0;
+      for (let i = 0; i < spec.beats.length; i++) {
+        speech.innerHTML = linesHtml(spec.beats[i]);
+        max = Math.max(max, speech.offsetHeight);
       }
+      speech.style.minHeight = max ? (max + 'px') : '';
     }
 
     function advance() {
-      const beat = spec.beats[bi];
-      // mid-type → complete line
-      if (tw.timer) {
-        clearInterval(tw.timer);
-        tw.timer = null;
-        const typed = document.getElementById('fa-coach-typed');
-        if (typed) typed.textContent = beat.lines[li];
-        onTypewriterDone();
-        return;
-      }
-      const isLastLine = li === beat.lines.length - 1;
-      const isLastBeat = bi === spec.beats.length - 1;
-      if (!isLastLine) {
-        li += 1;
-        startLine();
-        return;
-      }
-      if (!isLastBeat) {
-        bi += 1;
-        li = 0;
-        setFigure(spec.beats[bi].pose);
-        renderDots();
-        startLine();
-        return;
-      }
-      // last line of last beat — wait for CTA
+      if (bi >= spec.beats.length - 1) return;   // last beat — the CTA is the only way out
+      bi += 1;
+      renderBeat();
     }
 
     function dismiss() {
-      try {
-        clearInterval(tw.timer);
-        tw.timer = null;
-      } catch (_) {}
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
+      speech.style.minHeight = '';
       // Persist seen flag
       if (spec.storageKey) {
         try { localStorage.setItem(spec.storageKey, '1'); } catch (_) {}
@@ -39006,8 +38942,7 @@
       sheet.removeEventListener('click', onSheetClick);
       overlay.removeEventListener('click', onOverlayClick);
       // v3 Phase 1z.282D — Post-dismiss callback for queue-driven
-      // coachmarks (rank-up gifts call this to release levelUpActive
-      // and drain the next queue item). Fire-and-forget; swallowed
+      // coachmarks (the queue release). Fire-and-forget; swallowed
       // exceptions cannot stall the dismiss flow.
       if (typeof spec.onDismiss === 'function') {
         try { spec.onDismiss(); } catch (_) {}
@@ -39027,14 +38962,13 @@
     // v3 Phase 1z.283 W179 — Backdrop tap NO LONGER dismisses the
     // coachmark. Smoke test caught the accidental-exit failure mode:
     // a user tapping a hair outside the sheet on the welcome beat
-    // ("HUNTER.") would lose the moment entirely, the storage key
-    // got marked seen on dismiss, and the coach never re-fired —
-    // i.e., they permanently missed the First Awakened greeting on
-    // a stray tap. Dismissal is now gated on the explicit "TAP TO
-    // CONTINUE" CTA on the final beat (or ESC for keyboard users
-    // in dev / web preview). Sheet-tap-to-advance is preserved —
-    // tapping anywhere on the SHEET still skips the typewriter and
-    // advances through beats; only the dark backdrop is inert.
+    // would lose the moment entirely, the storage key got marked seen
+    // on dismiss, and the coach never re-fired — i.e., they permanently
+    // missed the First Awakened greeting on a stray tap. Dismissal is
+    // gated on the explicit CTA on the final beat (or ESC for keyboard
+    // users in dev / web preview). Sheet-tap-to-advance is preserved —
+    // tapping anywhere on the SHEET advances to the next beat; only the
+    // dark backdrop is inert.
     function onOverlayClick(e) {
       // Intentional no-op. Kept wired only so e.stopPropagation in
       // onSheetClick has a matching listener boundary; removing
@@ -39051,17 +38985,16 @@
     sheet.addEventListener('click', onSheetClick);
     overlay.addEventListener('click', onOverlayClick);
 
-    // Initial render
-    setFigure(spec.beats[0].pose);
-    renderDots();
-    startLine();
-
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
+    lockSpeechHeight();      // measured un-hidden, before the first paint
+    renderBeat();
+    return true;
   }
 
   function showQuestsCoachmark() {
     if (localStorage.getItem('hb_tour_quests_v1') === '1') return;
+    if (_isAnyHigherPriorityModalActive()) return;   // W942 — waits; the next Co-op open re-fires
     _faRunCoachmark({
       context: 'quests',
       beats: FA_QUESTS_BEATS,
@@ -39071,6 +39004,7 @@
   }
   function showItemsCoachmark() {
     if (localStorage.getItem('hb_tour_items_v1') === '1') return;
+    if (_isAnyHigherPriorityModalActive()) return;   // W942 — waits; the next Items open re-fires
     _faRunCoachmark({
       context: 'items',
       beats: FA_ITEMS_BEATS,
@@ -39121,14 +39055,13 @@
     // dismissal chain: it IS their first-vow welcome, just with the right
     // content. Non-jump users are byte-identical to before.
     const _isJumpUser = (typeof _jumpProgramUnlocked === 'function') && _jumpProgramUnlocked();
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: _isJumpUser ? 'jump_welcome' : 'first_vow',
       beats: _isJumpUser ? FA_JUMP_WELCOME_BEATS : FA_FIRST_VOW_BEATS,
       cta: _isJumpUser ? 'START TRAINING' : 'BEGIN',
       storageKey: 'hb_tour_first_vow_v1',
       onDismiss: _onDismiss,
     });
-    return true;
   }
   // W584 — replayable jump-program walkthrough. The First Awakened lives as a
   // tappable guide row under the vows (jump users only; #fa-program-guide,
@@ -39176,13 +39109,12 @@
     // W940 — a hunter on their first day is not "back". Marked seen so it
     // never greets them as a returning hunter later either.
     if (_newHunterQuiet()) { try { localStorage.setItem('hb_tour_welcome_back_v1', '1'); } catch (_) {} return false; }
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: 'welcome_back',
       beats: FA_WELCOME_BACK_BEATS,
       cta: 'CONTINUE',
       storageKey: 'hb_tour_welcome_back_v1',
-    });
-    return true; // W363 — joins the one-per-launch dispatcher ladder
+    }); // W363 — joins the one-per-launch dispatcher ladder
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -39210,26 +39142,21 @@
 
   const FA_DAY3_BEATS = [
     { pose: 'idle', lines: [
-      'Hunter.',
-      'Three days is not a legacy.',
-      'It is the first proof that the vow survived contact with your life.',
-      'Continue.',
+      'Three days. The vow survived contact with your life.',
+      'Keep going.',
     ]},
   ];
 
   const FA_DAY7_BEATS = [
     { pose: 'speaking', lines: [
-      'Seven days.',
-      'The system has seen enough to begin counting you differently.',
-      'Do not mistake this for arrival.',
-      'It is only the gate.',
+      'Seven days. The system now counts you differently.',
+      'This is not arrival. It is the gate.',
     ]},
   ];
 
   const FA_STREAKLOSS_BEATS = [
     { pose: 'nodding', lines: [
-      'The streak broke.',
-      'The discipline did not.',
+      'The streak broke. The discipline did not.',
       'Return to the vow.',
     ]},
   ];
@@ -39245,12 +39172,9 @@
   // sleep habit → The Insomniac (7h sleep auto-verifies it), otherwise The
   // Steel Wolf (6,000 verified steps — their phone is already counting).
   const FA_FIRST_GATE_BEATS = [
-    { pose: 'speaking', lines: [
-      'You sealed your first vow.',
-      'One more thing to see — your first boss hunt. It is free.',
-    ] },
     { pose: 'pointing', lines: [
-      'Your steps and sleep already count toward it. I will take you to the gate.',
+      'First vow sealed. Now your first boss hunt \u2014 it is free.',
+      'Your steps and sleep already count. I will take you to the gate.',
     ] },
   ];
   function _firstGateRecommendedBoss() {
@@ -39304,7 +39228,7 @@
     if (_reviewDaysActive() < 1) return false;               // first vow not sealed yet — the copy leans on it
     if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
     try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('fg_guide_shown'); } catch (_) {}   // W883 (A2) — the DD-less activation path
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: 'firstgate',
       beats: FA_FIRST_GATE_BEATS,
       cta: 'TAKE ME TO THE GATE',
@@ -39317,7 +39241,6 @@
         } catch (_) {}
       },
     });
-    return true;
   }
 
   function showDay3Coachmark() {
@@ -39326,13 +39249,12 @@
     const days = getDaysSinceOrigin();
     if (typeof days !== 'number' || days < 3) return false;
     if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: 'day3',
       beats: FA_DAY3_BEATS,
       cta: 'CONTINUE',
       storageKey: 'hb_tour_day3_v1',
     });
-    return true;
   }
 
   // Day 7 — fires once when the user opens the app on calendar
@@ -39350,13 +39272,12 @@
     // eager-mark pattern as showFirstVowCoachmark's welcome-back
     // cross-flow guard at line 21908.
     try { localStorage.setItem('hb_tour_day3_v1', '1'); } catch (_) {}
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: 'day7',
       beats: FA_DAY7_BEATS,
       cta: 'CONTINUE',
       storageKey: 'hb_tour_day7_v1',
     });
-    return true;
   }
 
   // Streak-loss recovery — fires once per break date when a
@@ -39381,13 +39302,12 @@
     // User has actively archived everything → effectively
     // restarting; the recovery moment is the wrong narrative beat.
     if (!Array.isArray(habits) || (typeof getActiveHabitCount === 'function' && getActiveHabitCount() === 0)) return false;
-    _faRunCoachmark({
+    return _faRunCoachmark({
       context: 'streakloss',
       beats: FA_STREAKLOSS_BEATS,
       cta: 'RETURN',
       storageKey: seenKey,
     });
-    return true;
   }
 
   // Higher-priority modal active? If so, defer all retention
@@ -39409,6 +39329,7 @@
       'welcome-back-overlay', // W377 - day-2 welcome-back screen
       'wr-overlay',           // W657 - Week Recap ceremony (day-beats defer under it)
       'arena-overlay',        // W657 - never mount a beat over a live fight (Ascent/PvP)
+      'boss-fs-overlay',      // W942 - the boss sheet (the first-gate guide lands the hunter inside it)
     ];
     for (let i = 0; i < ids.length; i++) {
       const el = document.getElementById(ids[i]);
@@ -40982,6 +40903,8 @@
 
   try {
     window.__showQuestsCoachmark      = showQuestsCoachmark;
+    window.__showItemsCoachmark       = showItemsCoachmark;
+    window.__faRunCoachmark           = _faRunCoachmark;      // W942 QA — drive any spec
     window.__showFirstVowCoachmark    = showFirstVowCoachmark;
     window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
     // W941 — QA: run the one rank-up screen through the real queue.

@@ -3275,3 +3275,145 @@ test.describe('AH · One rank-up screen (W941)', () => {
     expect(next.classLine).toBeNull();       // oldRankId 'E' was carried through the queue
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AI. W942 — The First Awakened speaks plainly: whole beat, one tap per beat
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AI · The First Awakened speaks plainly (W942)', () => {
+  // Snapshot inside the same evaluate as the action — a retrying locator
+  // would hide a slow render, and "instant" is the thing under test.
+  const readCoach = () => {
+    const ov = document.getElementById('fa-coachmark-overlay') as HTMLElement;
+    const dots = Array.from(ov.querySelectorAll('.fa-coach-dot'));
+    return {
+      hidden: ov.classList.contains('hidden'),
+      context: ov.dataset.context,
+      lines: Array.from(ov.querySelectorAll('#fa-coach-speech .fa-coach-line')).map((e) => e.textContent),
+      caret: ov.querySelectorAll('.fa-coach-caret').length,
+      typed: !!document.getElementById('fa-coach-typed'),
+      footer: (document.getElementById('fa-coach-footer') as HTMLElement).textContent || '',
+      cta: (document.getElementById('fa-coach-cta') as HTMLElement | null)?.textContent || null,
+      activeDot: dots.findIndex((d) => d.classList.contains('is-active')),
+      pastDots: dots.filter((d) => d.classList.contains('is-past')).length,
+      speechMinH: (document.getElementById('fa-coach-speech') as HTMLElement).style.minHeight,
+    };
+  };
+
+  test('a beat shows all its lines at once; one tap per beat; the CTA closes, persists and fires onDismiss', async ({ page }) => {
+    await freshApp(page);
+    const r1 = await page.evaluate((read) => {
+      const w = window as any;
+      w.__e2eCoach = { dismissed: 0 };
+      const ok = w.__faRunCoachmark({
+        context: 'e2e',
+        beats: [{ pose: 'idle', lines: ['Alpha.', 'Beta.'] }, { pose: 'nodding', lines: ['Gamma.'] }],
+        cta: 'DONE',
+        storageKey: 'hb_e2e_coach_v1',
+        onDismiss: () => { w.__e2eCoach.dismissed++; },
+      });
+      return { ok, ...(new Function('return ' + read)())() };
+    }, readCoach.toString());
+    expect(r1.ok).toBe(true);
+    expect(r1.hidden).toBe(false);
+    expect(r1.context).toBe('e2e');
+    expect(r1.lines).toEqual(['Alpha.', 'Beta.']);     // the whole beat, no typing
+    expect(r1.caret).toBe(0);
+    expect(r1.typed).toBe(false);
+    expect(r1.footer).toContain('TAP TO CONTINUE');
+    expect(r1.cta).toBeNull();
+    expect(r1.activeDot).toBe(0);
+    expect(r1.speechMinH).toMatch(/px$/);              // sized to the tallest beat
+
+    const r2 = await page.evaluate((read) => {
+      (document.querySelector('.fa-coach-sheet') as HTMLElement).click();
+      return (new Function('return ' + read)())();
+    }, readCoach.toString());
+    expect(r2.lines).toEqual(['Gamma.']);               // one tap = one beat
+    expect(r2.cta).toBe('DONE');
+    expect(r2.activeDot).toBe(1);
+    expect(r2.pastDots).toBe(1);
+
+    const r3 = await page.evaluate(() => {
+      (document.getElementById('fa-coach-cta') as HTMLElement).click();
+      const ov = document.getElementById('fa-coachmark-overlay') as HTMLElement;
+      return {
+        hidden: ov.classList.contains('hidden'),
+        key: localStorage.getItem('hb_e2e_coach_v1'),
+        dismissed: (window as any).__e2eCoach.dismissed,
+        minH: (document.getElementById('fa-coach-speech') as HTMLElement).style.minHeight,
+      };
+    });
+    expect(r3.hidden).toBe(true);
+    expect(r3.key).toBe('1');
+    expect(r3.dismissed).toBe(1);
+    expect(r3.minH).toBe('');
+  });
+
+  test('a second coach while one is open is refused, marks nothing seen, and mounts on the next try', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const w = window as any;
+      const calls = { a: 0, b: 0 };
+      const ov = document.getElementById('fa-coachmark-overlay') as HTMLElement;
+      const okA = w.__faRunCoachmark({ context: 'e2e-a', beats: [{ pose: 'idle', lines: ['A one.'] }], cta: 'OK', storageKey: 'hb_e2e_a', onDismiss: () => { calls.a++; } });
+      const okB = w.__faRunCoachmark({ context: 'e2e-b', beats: [{ pose: 'idle', lines: ['ZZZ'] }], cta: 'OK', storageKey: 'hb_e2e_b', onDismiss: () => { calls.b++; } });
+      const during = { context: ov.dataset.context, text: (document.getElementById('fa-coach-speech') as HTMLElement).textContent };
+      (document.getElementById('fa-coach-cta') as HTMLElement).click();
+      const afterA = { hidden: ov.classList.contains('hidden'), keyA: localStorage.getItem('hb_e2e_a'), keyB: localStorage.getItem('hb_e2e_b'), calls: { ...calls } };
+      const okB2 = w.__faRunCoachmark({ context: 'e2e-b', beats: [{ pose: 'idle', lines: ['ZZZ'] }], cta: 'OK', storageKey: 'hb_e2e_b', onDismiss: () => { calls.b++; } });
+      return { okA, okB, during, afterA, okB2, contextB: ov.dataset.context };
+    });
+    expect(r.okA).toBe(true);
+    expect(r.okB).toBe(false);                          // refused while A is up
+    expect(r.during.context).toBe('e2e-a');
+    expect(r.during.text).not.toContain('ZZZ');
+    expect(r.afterA.hidden).toBe(true);
+    expect(r.afterA.keyA).toBe('1');
+    expect(r.afterA.keyB).toBeNull();                   // B was never marked seen
+    expect(r.afterA.calls).toEqual({ a: 1, b: 0 });
+    expect(r.okB2).toBe(true);                          // and it mounts once A is gone
+    expect(r.contextB).toBe('e2e-b');
+    // ESC dismisses too, and persists.
+    await page.keyboard.press('Escape');
+    const esc = await page.evaluate(() => ({ hidden: document.getElementById('fa-coachmark-overlay')!.classList.contains('hidden'), keyB: localStorage.getItem('hb_e2e_b') }));
+    expect(esc.hidden).toBe(true);
+    expect(esc.keyB).toBe('1');
+  });
+
+  test('the Items tour waits behind an open coach and mounts on the next Items open, a whole beat at a time', async ({ page }) => {
+    await freshApp(page);
+    const blocked = await page.evaluate(async () => {
+      const w = window as any;
+      w.__faRunCoachmark({ context: 'e2e', beats: [{ pose: 'idle', lines: ['Hold.'] }], cta: 'OK', storageKey: null });
+      (document.getElementById('tab-items') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 600));     // the tour fires +320ms after a tab switch
+      const ov = document.getElementById('fa-coachmark-overlay') as HTMLElement;
+      return { context: ov.dataset.context, key: localStorage.getItem('hb_tour_items_v1') };
+    });
+    expect(blocked.context).toBe('e2e');                // the tour did not paint over the open coach
+    expect(blocked.key).toBeNull();                     // and was not marked seen
+
+    const tour = await page.evaluate(async (read) => {
+      (document.getElementById('fa-coach-cta') as HTMLElement).click();
+      (document.getElementById('tab-habits') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 200));
+      (document.getElementById('tab-items') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 600));
+      const first = (new Function('return ' + read)())();
+      let taps = 0;
+      while (!document.getElementById('fa-coach-cta') && taps < 6) {
+        (document.querySelector('.fa-coach-sheet') as HTMLElement).click();
+        taps++;
+      }
+      const last = (new Function('return ' + read)())();
+      (document.getElementById('fa-coach-cta') as HTMLElement).click();
+      return { first, taps, last, key: localStorage.getItem('hb_tour_items_v1') };
+    }, readCoach.toString());
+    expect(tour.first.context).toBe('items');
+    expect(tour.first.lines.length).toBe(2);            // the whole first beat
+    expect(tour.first.caret).toBe(0);
+    expect(tour.taps).toBe(1);                          // two beats → one tap to the CTA
+    expect(tour.last.cta).toBe('UNDERSTOOD');
+    expect(tour.key).toBe('1');
+  });
+});

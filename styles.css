@@ -27356,7 +27356,7 @@ button.guildhall-summary-tile:active {
    gold corner brackets, violet sigil hairline kicker, Cinzel italic
    verse body, JetBrains Mono progress + counts. Differences from
    System Full: character figure overlaps the top edge of the card,
-   typewriter text reveal, progress dots, multi-beat dialogue.
+   whole-beat text (W942, no typewriter), progress dots, multi-beat dialogue.
 
    Palette inlined (matches FA_* tokens from design):
      panel       linear-gradient(180deg, rgba(28,22,54,0.97), rgba(11,9,28,0.98))
@@ -27542,7 +27542,9 @@ button.guildhall-summary-tile:active {
   background: linear-gradient(90deg, transparent, #f5b842, transparent);
 }
 
-/* Speech area — prior lines + current typewriter line. */
+/* Speech area — the whole beat at once (W942). 118px is the floor; the
+   engine raises min-height inline to the tallest beat at mount so the card
+   never reflows between beats. */
 .fa-coach-speech {
   position: relative;
   min-height: 118px;
@@ -27557,26 +27559,10 @@ button.guildhall-summary-tile:active {
   font-family: "Cinzel", "Cormorant Garamond", "Trajan Pro", Georgia, serif;
   font-style: italic;
   font-weight: 500;
+  font-size: 16.5px;
   line-height: 1.5;
   letter-spacing: 0.01em;
-}
-.fa-coach-line--prior {
-  font-size: 15.5px;
-  color: #9aa0bd;
-}
-.fa-coach-line--current {
-  font-size: 16.5px;
   color: #f4f3fb;
-}
-.fa-coach-caret {
-  display: inline-block;
-  margin-left: 1px;
-  color: #f5b842;
-  animation: fa-caret-blink 0.9s steps(1) infinite;
-}
-@keyframes fa-caret-blink {
-  0%, 49%   { opacity: 1; }
-  50%, 100% { opacity: 0; }
 }
 
 /* Progress dots — JetBrains-Mono-style. */
@@ -27647,10 +27633,9 @@ button.guildhall-summary-tile:active {
   transform: scale(0.97);
 }
 
-/* Reduced motion — drop rise + caret blink. */
+/* Reduced motion — drop the rise. */
 @media (prefers-reduced-motion: reduce) {
   .fa-coach-sheet { animation: none; }
-  .fa-coach-caret { animation: none; }
   .fa-coach-dot   { transition: none; }
   .fa-coach-cta   { transition: none; }
 }
