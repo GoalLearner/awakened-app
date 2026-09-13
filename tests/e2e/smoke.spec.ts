@@ -3911,3 +3911,74 @@ test.describe('AM · Onboarding v3 (W947)', () => {
     expect(r.touched).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AN. W948 — the last vow of the day opens the Perfect Day seal and nothing else
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AN · Perfect Day only (W948)', () => {
+  async function routineOfThree(page: Page, perfectAlreadyLogged: boolean) {
+    await freshApp(page);
+    await page.addInitScript((logged: boolean) => {
+      try {
+        if (sessionStorage.getItem('__w948_seeded')) return;
+        sessionStorage.setItem('__w948_seeded', '1');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify(['First vow', 'Second vow', 'Third vow'].map((n, i) => (
+          { id: 'w948-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }))));
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1',
+         'hb_tour_day7_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        if (logged) {
+          // Two vows already kept and today's Perfect Day already on the books:
+          // the last tap completes the routine but cannot open a second seal.
+          localStorage.setItem('hb_completions', JSON.stringify({ [ymd]: ['w948-0', 'w948-1'] }));
+          localStorage.setItem('hb_perfect_streak', JSON.stringify({ count: 1, lastDate: ymd, prevCount: 0, prevLastDate: ymd }));
+        }
+      } catch (_) {}
+    }, perfectAlreadyLogged);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#habit-list .habit-item')).toHaveCount(3, { timeout: 10_000 });
+  }
+
+  /** Tap all three vows and watch both popups for a few seconds. */
+  async function sealTheDay(page: Page) {
+    return page.evaluate(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const seen = { compound: false, pday: false };
+      const watch = setInterval(() => {
+        const cp = document.getElementById('compound-popup');
+        if (cp && cp.classList.contains('cp-show')) seen.compound = true;
+        const pd = document.getElementById('pday-overlay');
+        if (pd && pd.classList.contains('on')) seen.pday = true;
+      }, 25);
+      const pointsBefore = Number(localStorage.getItem('hb_points') || '0');
+      for (const li of Array.from(document.querySelectorAll('#habit-list .habit-item:not(.completed)')) as HTMLElement[]) {
+        li.click();
+        await wait(350);
+      }
+      await wait(2500);
+      clearInterval(watch);
+      return { seen, pointsBefore, pointsAfter: Number(localStorage.getItem('hb_points') || '0'),
+               awarded: JSON.parse(localStorage.getItem('hb_compound_awarded') || '{}') };
+    });
+  }
+
+  test('finishing the routine and the day on one tap shows the Perfect Day seal only, and the bonus is still paid', async ({ page }) => {
+    await routineOfThree(page, false);
+    const r = await sealTheDay(page);
+    expect(r.seen.pday).toBe(true);
+    expect(r.seen.compound).toBe(false);
+    // Three easy vows pay 3 base XP (more on a weekend); the routine bonus lands on top.
+    expect(r.pointsAfter - r.pointsBefore).toBeGreaterThan(6);
+  });
+
+  test('a routine completed on a day whose Perfect Day is already logged still gets its own popup', async ({ page }) => {
+    await routineOfThree(page, true);
+    const r = await sealTheDay(page);
+    expect(r.seen.pday).toBe(false);
+    expect(r.seen.compound).toBe(true);
+  });
+});
