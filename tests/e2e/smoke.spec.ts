@@ -2406,6 +2406,10 @@ test.describe('AC · Onboarding v2 (W936)', () => {
         sub:  (el.querySelector('.cn-ps') as HTMLElement).textContent,
         on:   el.classList.contains('cn-on'),
       }));
+      // Pin the drop roll before the pact mounts. The Steel Wolf's kill rolls the
+      // real E-rank table, which can honestly roll NO relic; the assertions below
+      // need one to have landed. 0 takes the guaranteed branch (0 < any rate).
+      Math.random = () => 0;
       q('#cn-s7 [data-cn-next]').click();  // custom carries no training habit → straight to the pact
       await wait(400);
 
