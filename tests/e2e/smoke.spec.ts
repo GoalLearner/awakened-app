@@ -2414,10 +2414,21 @@ test.describe('AC · Onboarding v2 (W936)', () => {
       Math.random = () => 0;
       q('#cn-s7 [data-cn-next]').click();  // custom carries no training habit → straight to the pact
       await wait(400);
+      // W947 — nothing is real until the strike: the Wolf waits armed, ENTER closed.
+      const beforeStrike = {
+        armed:   q('#cn-wolf').classList.contains('cn-armed'),
+        title:   (q('#cn-pactTitle') as HTMLElement).textContent,
+        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
+        engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+      };
+      // Strike in one press (the keyboard path of hold-to-strike).
+      q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await wait(1000);
 
       const inv = JSON.parse(localStorage.getItem('hb_inventory') || '{}');
       return {
-        onWitness, prompted, funnel, reveal, board, hunt, paths,
+        onWitness, prompted, funnel, reveal, board, hunt, paths, beforeStrike,
+        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
         pact: {
           shown:  !!document.querySelector('#cn-s8.cn-shown'),
           fell:   q('#cn-wolf').classList.contains('cn-fell'),
@@ -2474,8 +2485,10 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     await freshOnboarding(page);
     const r = await walkToPact(page, 7318, 31204);
 
+    expect(r.beforeStrike).toEqual({ armed: true, title: 'Strike the Wolf.', enterOn: false, engaged: false });
     expect(r.pact.shown).toBe(true);
     expect(r.pact.fell).toBe(true);
+    expect(r.enterOn).toBe(true);
     expect(r.pact.title).toBe('It falls.');
     expect(r.pact.sub).toBe('7,318 / 6,000 STEPS TODAY');
 
@@ -2505,8 +2518,9 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     expect(r.pact.sub).toBe('2,140 STEPS LEFT TODAY');
     expect(r.wolfState.kill_count).toBe(0);
     expect(r.killClaim.length).toBe(0);
-    expect(r.pact.vows).toEqual([]);
-    expect(r.pact.firstWin).toBe('Tonight, choose your first vow and keep it.');
+    // W947 — v3: the night's win is the walk the Wolf is waiting on.
+    expect(r.pact.vows).toEqual(['Walk 6,000']);
+    expect(r.pact.firstWin).toBe('Tonight, the first win is the walk.');
 
     const seeded = await page.evaluate(async () => {
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -2574,6 +2588,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
         reveal, skippedBoard,
         locked: q('#cn-wolf').classList.contains('cn-lock'),
         title:  (q('#cn-pactTitle') as HTMLElement).textContent,
+        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
         engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
         funnel: localStorage.getItem('hb_funnel_queue') || '',
       };
@@ -2584,6 +2599,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     expect(r.locked).toBe(true);
     expect(r.title).toBe('The Wolf waits behind Health.');
     expect(r.engaged).toBe(false);
+    expect(r.enterOn).toBe(true);   // nothing to strike, so nothing to wait for
     expect(r.funnel).toContain('health_prompt_answered');
   });
 });
@@ -2644,6 +2660,10 @@ test.describe('AD · Replay the awakening (W937)', () => {
       q('#cn-s5 #cn-huntAlone').click();  await wait(250);
       q('#cn-s6 [data-cn-next]').click(); await wait(250);
       q('#cn-s7 [data-cn-next]').click(); await wait(700);
+      if (q('#cn-wolf').classList.contains('cn-armed')) {
+        q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        await wait(1000);
+      }
       const pact = {
         shown:  !!document.querySelector('#cn-s8.cn-shown'),
         fell:   q('#cn-wolf').classList.contains('cn-fell'),
@@ -3689,5 +3709,205 @@ test.describe('AL · No list-view tip (W946)', () => {
     await page.waitForTimeout(600);
     await expect(page.locator('#listview-hint')).toHaveCount(0);
     await expect(page.getByText('Vows now show live progress')).toHaveCount(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AM. W947 — Onboarding v3 (Claude Design handoff 27, "Interactive")
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AM · Onboarding v3 (W947)', () => {
+  async function boot(page: Page) {
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w947_boot')) return;
+        sessionStorage.setItem('__w947_boot', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_fri_banner_' + ymd, '1');
+        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_avatar_skin',
+         'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    await page.evaluate((steps) => {
+      const s = document.getElementById('awakened-splash'); if (s) s.remove();
+      const w = window as any;
+      w.Health.isAvailable        = () => true;
+      w.Health.permissionStatus   = () => 'granted';
+      w.Health.requestPermissions = async () => 'granted';
+      w.Health.getStepsBetween    = async () => 18860;
+      w.Health.getStepsToday      = async () => 3860;
+      w.Auth.fetchLeaderboardTop  = async () => ({
+        ok: true, metric: 'step_total', me: { rank: 4, current_value: 18860 },
+        top: [{ rank: 1, alias: 'Galilea', current_value: 51144, avatar_id: 'avatar-ranger.png', card_bg: null }],
+      });
+    }, 0);
+  }
+
+  test('the bust appears with the second letter, is worn on the board, and equips the look', async ({ page }) => {
+    await boot(page);
+    await page.locator('#cn-touch').click();
+    await expect(page.locator('#cn-s1')).toHaveClass(/cn-shown/, { timeout: 5_000 });
+    const busts = page.locator('#cn-busts');
+    await page.locator('#cin-nameField').fill('R');
+    await expect(busts).not.toHaveClass(/cn-show/);
+    await page.locator('#cin-nameField').fill('Richie');
+    await expect(busts).toHaveClass(/cn-show/);
+    await expect(page.locator('[data-cn-bust="base"]')).toHaveClass(/cn-on/);
+
+    await page.locator('[data-cn-bust="warrior"]').click();
+    await expect(page.locator('[data-cn-bust="warrior"]')).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('[data-cn-bust="base"]')).not.toHaveClass(/cn-on/);
+    await page.locator('#cin-nameConfirm').click();
+    await expect(page.locator('#cn-s2')).toHaveClass(/cn-shown/);
+    expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBe('avatar-warrior.png');
+
+    await page.locator('#cn-healthBtn').click();
+    await expect(page.locator('#cn-s3')).toHaveClass(/cn-shown/, { timeout: 5_000 });
+    await page.locator('#cn-s3 [data-cn-next]').click();
+    const meBust = page.locator('#cn-rows .cn-row.cn-me .cn-bust img');
+    await expect(meBust).toHaveAttribute('src', /avatar-warrior-bust/, { timeout: 5_000 });
+  });
+
+  test('the road can be dragged once the count lands, and the number follows the light', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      (document.querySelector('#cn-touch') as HTMLElement).click(); await wait(1100);
+      const f = document.querySelector('#cin-nameField') as HTMLInputElement;
+      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
+      (document.querySelector('#cin-nameConfirm') as HTMLElement).click(); await wait(300);
+      (document.querySelector('#cn-healthBtn') as HTMLElement).click();
+    });
+    await expect(page.locator('#cn-s3')).toHaveClass(/cn-shown/, { timeout: 5_000 });
+    await expect(page.locator('#cn-rhint')).toHaveClass(/cn-show/, { timeout: 3_000 });
+    await expect(page.locator('#cn-steps7')).toHaveText('18,860');
+    await expect(page.locator('#cn-skip')).toBeHidden();
+
+    const pad = await page.locator('#cn-scrub').boundingBox();
+    const x = pad!.x + pad!.width * 0.8, y = pad!.y + pad!.height * 0.5;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 130, y, { steps: 6 });   // half the 260px throw
+    const mid = await page.evaluate(() => ({
+      n: (document.querySelector('#cn-steps7') as HTMLElement).textContent,
+      p: parseFloat(getComputedStyle(document.querySelector('#cn-s3') as HTMLElement).getPropertyValue('--cn-p')),
+    }));
+    await page.mouse.up();
+    expect(mid.p).toBeGreaterThan(0.45);
+    expect(mid.p).toBeLessThan(0.55);
+    expect(mid.n).toBe((Math.round(18860 * mid.p)).toLocaleString('en-US'));
+  });
+
+  test('holding the Wolf strikes it: a short hold keeps the damage, the full hold engages it and opens ENTER', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(async () => {
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const q = (s: string) => document.querySelector(s) as HTMLElement;
+      q('#cn-touch').click(); await wait(1100);
+      const f = q('#cin-nameField') as HTMLInputElement;
+      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
+      q('#cin-nameConfirm').click(); await wait(300);
+      q('#cn-healthBtn').click(); await wait(900);
+      q('#cn-s3 [data-cn-next]').click(); await wait(900);
+      if (document.querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
+      q('#cn-huntAlone').click(); await wait(200);
+      q('#cn-s6 [data-cn-next]').click(); await wait(200);
+      q('#cn-s7 [data-cn-next]').click(); await wait(400);
+    });
+    const wolf = page.locator('#cn-wolf');
+    await expect(wolf).toHaveClass(/cn-armed/);
+    await expect(page.locator('#cn-enter')).toBeDisabled();
+    await expect(page.locator('#cn-wolfSub')).toHaveText('3,860 STEPS TODAY · HOLD');
+
+    const box = await wolf.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+    await page.mouse.up();
+    await expect(page.locator('#cn-wolfSub')).toHaveText(/^\d+% STRUCK · HOLD AGAIN$/);
+    const partial = await page.evaluate(() => ({
+      width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
+      engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+    }));
+    expect(partial.width).toBeLessThan(100);
+    expect(partial.width).toBeGreaterThan(35.66);   // never past the share walked today
+    expect(partial.engaged).toBe(false);
+    await expect(page.locator('#cn-enter')).toBeDisabled();
+
+    await page.mouse.down();
+    await page.waitForTimeout(1400);
+    await page.mouse.up();
+    await expect(page.locator('#cn-pactTitle')).toHaveText('The Wolf is engaged.');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('2,140 STEPS LEFT TODAY');
+    const done = await page.evaluate(() => ({
+      width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
+      engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+    }));
+    expect(done.width).toBeCloseTo(35.67, 1);   // 3,860 of 6,000 struck, the rest stands
+    expect(done.engaged).toBe(true);
+    await expect(page.locator('#cn-enter')).toBeEnabled({ timeout: 2_000 });
+  });
+
+  test('a replay in the same session as a first run leaves the first run\'s handlers behind', async ({ page }) => {
+    await boot(page);
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      const root = () => document.getElementById('cin-onboarding') as HTMLElement;
+      const q = (s: string) => root().querySelector(s) as HTMLElement;
+      const walk = async () => {
+        q('#cn-touch').click(); await wait(1100);
+        const f = q('#cin-nameField') as HTMLInputElement;
+        if (!f.value) { f.value = 'Richie'; f.dispatchEvent(new Event('input')); }
+        q('#cin-nameConfirm').click(); await wait(300);
+        q('#cn-healthBtn').click(); await wait(900);
+        q('#cn-s3 [data-cn-next]').click(); await wait(900);
+        if (root().querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
+        q('#cn-huntAlone').click(); await wait(200);
+        q('#cn-s6 [data-cn-next]').click(); await wait(200);
+        q('#cn-s7 [data-cn-next]').click(); await wait(400);
+        q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        await wait(1000);
+        q('#cn-enter').click(); await wait(2200);
+      };
+      // The real first run with Health refused: its Wolf is never struck, so
+      // before W947 its strike handler stayed live on the shared element.
+      w.Health.permissionStatus   = () => 'denied';
+      w.Health.requestPermissions = async () => 'denied';
+      w.Health.getStepsBetween    = async () => null;
+      w.Health.getStepsToday      = async () => null;
+      await walk();
+      document.querySelectorAll('button').forEach((b) => {
+        if (/^(continue|not now|maybe later)$/i.test((b.textContent || '').trim()) && (b as HTMLElement).offsetParent) (b as HTMLElement).click();
+      });
+      await wait(600);
+      const KEYS = ['hb_habits', 'hb_path', 'hb_name', 'hb_bosses', 'hb_inventory', 'hb_onboarding_first_xp_awarded_v1', 'hb_avatar_skin'];
+      const before: Record<string, string | null> = {};
+      KEYS.forEach((k) => { before[k] = localStorage.getItem(k); });
+
+      // Health opened later; the replay arms the Wolf.
+      w.Health.permissionStatus   = () => 'granted';
+      w.Health.getStepsBetween    = async () => 18860;
+      w.Health.getStepsToday      = async () => 3860;
+      w.__replayOnboarding(); await wait(600);
+      const preview = root().classList.contains('cn-preview');
+      await walk();   // the replay, same session, same page
+      return {
+        preview,
+        closed: root().classList.contains('hidden'),
+        replayArmedThenPreviewed: !!root().querySelector('#cn-wolf.cn-spent'),
+        onlyOneRoot: document.querySelectorAll('#cin-onboarding').length,
+        touched: KEYS.filter((k) => localStorage.getItem(k) !== before[k]),
+      };
+    });
+    expect(r.preview).toBe(true);
+    expect(r.replayArmedThenPreviewed).toBe(true);
+    expect(r.onlyOneRoot).toBe(1);
+    expect(r.closed).toBe(true);
+    expect(r.touched).toEqual([]);
   });
 });

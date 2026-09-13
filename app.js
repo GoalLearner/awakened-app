@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w946'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w947'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -60910,6 +60910,11 @@
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
     catch (_) { return false; }
   }
+  // W947 — the name screen's busts → the avatar file each one wears. HUNTER is
+  // the class default, so it names no file.
+  function _cnBustFile(bust) {
+    return bust === 'ranger' ? 'avatar-ranger.png' : (bust === 'warrior' ? 'avatar-warrior.png' : '');
+  }
   // W937 — the Steel Wolf's signature drop, shown (never granted) on a replay.
   const _CN_WOLF_PREVIEW_RELIC = 'pack_leaders_greaves';
 
@@ -60989,9 +60994,24 @@
   // habits, no XP. ENTER just closes it. A ribbon says so the whole time, so
   // the one screen that would otherwise be a claim — the Steel Wolf's fall —
   // is honest as a preview of what a first run looks like.
+  // W947 — every run after the first starts from the markup index.html
+  // shipped. A replay in the same session used to reuse the first run's
+  // elements with the first run's listeners still attached, so its ENTER
+  // (and now its hold-to-strike) ran the real, non-preview handlers too.
+  let _cnPristineHtml = null;
   function showCinematicOnboarding(opts) {
     const preview = !!(opts && opts.preview);
-    const root = document.getElementById('cin-onboarding');
+    let root = document.getElementById('cin-onboarding');
+    if (root && root.querySelector('#cn-s0')) {
+      if (_cnPristineHtml === null) {
+        _cnPristineHtml = root.innerHTML;
+      } else {
+        const fresh = root.cloneNode(false);
+        fresh.innerHTML = _cnPristineHtml;
+        root.replaceWith(fresh);
+        root = fresh;
+      }
+    }
     if (!root || !root.querySelector('#cn-s0')) {
       if (preview) {
         try { showHabitToast('The opening is unavailable in this build.'); } catch (_) {}
@@ -61027,14 +61047,25 @@
       today:    null,
       health:   null,
       summoned: false,
+      bust:     'base',     // W947 — HUNTER / RANGER / WARRIOR on the name screen
     };
-    // A replay opens on the path this hunter actually walks.
+    // A replay opens on the path this hunter actually walks, wearing the
+    // look they wear.
     if (preview) {
       try {
         const p = localStorage.getItem('hb_path');
         if (p && typeof getPackById === 'function' && getPackById(p)) state.pack = p;
       } catch (_) {}
+      try {
+        const skin = getEquippedSkin();
+        state.bust = skin === 'avatar-ranger.png' ? 'ranger' : (skin === 'avatar-warrior.png' ? 'warrior' : 'base');
+      } catch (_) {}
     }
+    qq('[data-cn-bust]').forEach((x) => {
+      const on = x.dataset.cnBust === state.bust;
+      x.classList.toggle('cn-on', on);
+      x.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
 
     const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cin-scr-training', 'cn-s8'];
     const VOW_INDEX = 7;          // where SKIP lands — the one choice nobody skips past
@@ -61063,8 +61094,10 @@
       // No SKIP on the witness screen. Apple rejected a Health pre-permission
       // sheet once already (2.2.1 build 61) for offering anything beside the
       // single neutral button; a skip in the chrome would read the same way.
-      // The reveal onward is pure show-and-tell, so it can be walked past.
-      skip.style.visibility = (i >= 3 && i < VOW_INDEX) ? 'visible' : 'hidden';
+      // The board, hunt and ascent are pure show-and-tell, so they can be
+      // walked past. W947 — not the reveal: its road is dragged, and the drag
+      // surface sits under the chrome.
+      skip.style.visibility = (i >= 4 && i < VOW_INDEX) ? 'visible' : 'hidden';
 
       if (id === 'cn-s3') _runReveal();
       if (id === 'cn-s4') _runBoard();
@@ -61095,6 +61128,7 @@
         lit = true;
         sig.classList.add('cn-lit');
         _cinPlaySfx('ignite');
+        try { _hapticTick('MEDIUM'); } catch (_) {}
         setTimeout(() => show(1), _cnReduced() ? 120 : 900);
       };
       sig.addEventListener('click', light);
@@ -61119,7 +61153,20 @@
       confirm.disabled = !on;
       confirm.classList.toggle('cn-off', !on);
     }
+    // W947 — v3: the bust choice appears with the second letter.
+    function _syncBusts() {
+      q('#cn-busts').classList.toggle('cn-show', field.value.trim().length >= 2);
+    }
+    qq('[data-cn-bust]').forEach((b) => b.addEventListener('click', () => {
+      state.bust = b.dataset.cnBust;
+      qq('[data-cn-bust]').forEach((x) => {
+        x.classList.toggle('cn-on', x === b);
+        x.setAttribute('aria-checked', x === b ? 'true' : 'false');
+      });
+      try { _hapticTick('LIGHT'); } catch (_) {}
+    }));
     field.addEventListener('input', () => {
+      _syncBusts();
       _setConfirmEnabled(field.value.trim().length >= 2);
       if (errEl) errEl.style.display = 'none';
       if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
@@ -61194,7 +61241,18 @@
         }
       }
       state.name = name;
+      // W947 — a Ranger or Warrior pick is equipped as the hunter's look (the
+      // Wardrobe's free skins); HUNTER keeps the class default. A replay
+      // shows the choice and equips nothing.
+      if (!preview) {
+        const file = _cnBustFile(state.bust);
+        if (file) {
+          try { setEquippedSkin(file); } catch (_) {}
+          try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}
+        }
+      }
       _cinPlaySfx('chime');
+      try { _hapticTick('MEDIUM'); } catch (_) {}
       show(2);
     }
 
@@ -61307,6 +61365,42 @@
     }
 
     // ── 3 · THE REVEAL ─────────────────────────────────────────
+    // W947 — v3: once the count lands, the hunter can drag the road and the
+    // light (and the number) follow the finger, from dark to their own week.
+    const _reveal = { total: 0, on: false, p: 1 };
+    function _setRevealP(p) {
+      _reveal.p = p;
+      q('#cn-steps7').textContent = _cnFmt(Math.round(_reveal.total * p));
+      q('#cn-s3').style.setProperty('--cn-p', String(p));
+    }
+    function _armScrub() {
+      _reveal.on = true;
+      _reveal.p = 1;
+      q('#cn-rhint').classList.add('cn-show');
+    }
+    {
+      const pad = q('#cn-scrub');
+      let down = false, x0 = 0, p0 = 1;
+      pad.addEventListener('pointerdown', (e) => {
+        if (!_reveal.on) return;
+        down = true; x0 = e.clientX; p0 = _reveal.p;
+        try { pad.setPointerCapture(e.pointerId); } catch (_) {}
+        q('#cn-roadimg').style.animationPlayState = 'paused';
+        try { _hapticTick('LIGHT'); } catch (_) {}
+      });
+      pad.addEventListener('pointermove', (e) => {
+        if (!down) return;
+        _setRevealP(Math.max(0, Math.min(1, p0 + (e.clientX - x0) / 260)));
+      });
+      const up = () => {
+        if (!down) return;
+        down = false;
+        q('#cn-roadimg').style.animationPlayState = '';
+      };
+      pad.addEventListener('pointerup', up);
+      pad.addEventListener('pointercancel', up);
+    }
+
     function _runReveal() {
       const el   = q('#cn-steps7');
       const line = q('#cn-revealLine');
@@ -61314,6 +61408,9 @@
       scr.style.setProperty('--cn-p', '0');
       const total = (state.health === true) ? (state.steps7 || 0) : 0;
       scr.classList.toggle('cn-unlit', !(state.health === true && total > 0));
+      _reveal.total = total;
+      _reveal.on = false;
+      q('#cn-rhint').classList.remove('cn-show');
 
       if (state.health === null) {
         el.textContent = '—';
@@ -61332,17 +61429,16 @@
       }
       line.innerHTML = 'You walked ' + _cnFmt(total) + ' steps this week. <b>The System was not watching. It is now.</b>';
       if (_cnReduced()) {
-        el.textContent = _cnFmt(total);
-        scr.style.setProperty('--cn-p', '1');
+        _setRevealP(1);
+        _armScrub();
         return;
       }
       const t0 = performance.now();
       (function frame(t) {
         const p = Math.min(1, (t - t0) / 900);
-        const e = 1 - Math.pow(1 - p, 3);
-        el.textContent = _cnFmt(Math.round(total * e));
-        scr.style.setProperty('--cn-p', String(e));
+        _setRevealP(1 - Math.pow(1 - p, 3));
         if (p < 1) requestAnimationFrame(frame);
+        else _armScrub();
       })(t0);
     }
 
@@ -61386,8 +61482,8 @@
       try {
         myRankLabel = 'RANK ' + String(getRank(totalPoints).label || 'E').replace(/\s*rank\s*$/i, '').toUpperCase();
       } catch (_) {}
-      let myAvatar = '';
-      try { myAvatar = (typeof getAvatarSrc === 'function') ? getAvatarSrc() : ''; } catch (_) {}
+      let myAvatar = _cnBustFile(state.bust);   // W947 — the bust picked on the name screen
+      if (!myAvatar) { try { myAvatar = (typeof getAvatarSrc === 'function') ? getAvatarSrc() : ''; } catch (_) {} }
 
       const others = top
         .filter((r) => r && !(myAlias && r.alias === myAlias))
@@ -61505,6 +61601,7 @@
       }).join('');
       qq('[data-cn-pack]').forEach((b) => b.addEventListener('click', () => {
         _cinPlaySfx('vow');
+        try { _hapticTick('LIGHT'); } catch (_) {}
         qq('[data-cn-pack]').forEach((x) => x.classList.toggle('cn-on', x === b));
         state.pack = b.dataset.cnPack;
       }));
@@ -61767,87 +61864,169 @@
 
     // ── 8 · THE PACT ───────────────────────────────────────────
     // The first gate, told three ways, and only ever the true one.
-    // W944 — Make Your Own carries no vows, so there are none to name.
-    function _cnFirstWinLine() {
-      let n = 0;
-      try { n = (getPackHabitDefs(state.pack) || []).length; } catch (_) {}
-      return n ? 'Tonight, the first win is a vow kept.' : 'Tonight, choose your first vow and keep it.';
+    // W947 — v3 hold to strike. With Health open the hunter holds the Wolf
+    // down and its HP drains to exactly the share of the threshold walked
+    // today; releasing early keeps the damage. The strike landing is where
+    // the hunt becomes real (engage, and the kill when today is past the
+    // threshold). ENTER waits for the strike. Health closed, or no HealthKit:
+    // nothing to strike, nothing engaged, ENTER is open.
+    function _cnWalkRowHtml(healthOn, left, need) {
+      const note = healthOn ? _cnFmt(left) + ' LEFT TODAY · READ FROM HEALTH' : 'NEEDS APPLE HEALTH';
+      return '<div class="cn-vows"><div class="cn-vow"><span class="cn-o"></span>' +
+        '<div class="cn-vn">Walk ' + _cnFmt(need) + '<small>' + note + '</small></div>' +
+        (healthOn ? '<span class="cn-tag">OPEN</span>' : '') + '</div></div>';
     }
-    function _cnVowsHtml(healthOn) {
-      let defs = [];
-      try { defs = (getPackHabitDefs(state.pack) || []).slice(0, 2); } catch (_) {}
-      if (!defs.length) return '';
-      return '<div class="cn-vows">' + defs.map((h) => {
-        let auto = false;
-        try { auto = (typeof isHealthAutoVerifiableHabit === 'function') && !!isHealthAutoVerifiableHabit(h); } catch (_) {}
-        const note = auto
-          ? (healthOn ? 'READ FROM APPLE HEALTH' : 'NEEDS APPLE HEALTH')
-          : 'SEAL BY HAND';
-        return '<div class="cn-vow"><span class="cn-o"></span>' +
-          '<div class="cn-vn">' + esc(h.name) + '<small>' + note + '</small></div></div>';
-      }).join('') + '</div>';
+    function _cnEnterOpen(on) {
+      const enter = q('#cn-enter');
+      enter.disabled = !on;
+      enter.classList.toggle('cn-off', !on);
     }
 
-    let _pactRan = false;
+    const _pact = { ran: false, need: 6000, today: 0, hp: 100, target: 100, holding: false, struck: false, last: 0 };
+
     function _runPact() {
-      if (_pactRan) return;
-      _pactRan = true;
-      _cinPlaySfx('reward');
+      if (_pact.ran) return;
+      _pact.ran = true;
       const wolf  = q('#cn-wolf');
       const body  = q('#cn-pactBody');
       const title = q('#cn-pactTitle');
       const sub   = q('#cn-wolfSub');
       const hpi   = q('#cn-hpi');
       const cfg   = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
-      const need  = (cfg && cfg.stepThreshold) || 6000;
-      const today = (typeof state.today === 'number') ? state.today : 0;
+      _pact.need  = (cfg && cfg.stepThreshold) || 6000;
+      _pact.today = (typeof state.today === 'number') ? state.today : 0;
       wolf.className = 'cn-wolf';
-      hpi.style.removeProperty('--cn-w');
+      hpi.style.width = '100%';
+      _pact.hp = 100;
 
-      // Health closed, or no HealthKit at all. The Wolf is NOT engaged:
-      // nothing could resolve the hunt, and a wager the hunter cannot
-      // win is not a first gate.
       if (state.health !== true) {
         wolf.classList.add('cn-lock');
         title.textContent = 'The Wolf waits behind Health.';
-        sub.textContent   = 'FALLS AT ' + _cnFmt(need) + ' IN A DAY';
+        sub.textContent   = 'FALLS AT ' + _cnFmt(_pact.need) + ' IN A DAY';
         body.innerHTML =
-          '<p class="cn-b">Open Health and it will see you coming. <b>' + _cnFirstWinLine() + '</b></p>' +
-          _cnVowsHtml(false);
+          '<p class="cn-b">Open Health and it will see you coming. <b>Then the first win is the walk.</b></p>' +
+          _cnWalkRowHtml(false, _pact.need, _pact.need);
+        _cnEnterOpen(true);
         return;
       }
 
-      // Replay: show the shape of the gate without touching the hunt. No
-      // engage, no kill, no roll — the relic named here is the Wolf's signature
-      // drop, labelled as the preview it is.
+      _pact.target = Math.max(0, 100 - Math.min(100, (_pact.today / _pact.need) * 100));
+      wolf.classList.add('cn-armed');
+      wolf.setAttribute('role', 'button');
+      wolf.setAttribute('tabindex', '0');
+      wolf.setAttribute('aria-label', 'Hold to strike the Steel Wolf');
+      title.textContent = 'Strike the Wolf.';
+      sub.textContent   = _cnFmt(_pact.today) + ' STEPS TODAY · HOLD';
+      body.innerHTML = '<p class="cn-b">Hold it down. <b>Every step you walked today lands.</b></p>';
+      _cnEnterOpen(false);
+    }
+
+    function _pactLoop(t) {
+      if (!_pact.holding) return;
+      const dt = Math.min(50, t - _pact.last);
+      _pact.last = t;
+      _pact.hp = Math.max(_pact.target, _pact.hp - dt * 0.075);
+      q('#cn-hpi').style.width = _pact.hp + '%';
+      if (_pact.hp <= _pact.target) { _pact.holding = false; _strikeLands(); return; }
+      requestAnimationFrame(_pactLoop);
+    }
+    {
+      const wolf = q('#cn-wolf');
+      const armed = () => wolf.classList.contains('cn-armed') && !_pact.struck;
+      wolf.addEventListener('pointerdown', (e) => {
+        if (!armed() || _pact.holding) return;
+        _pact.holding = true;
+        _pact.last = performance.now();
+        wolf.classList.add('cn-holding');
+        try { wolf.setPointerCapture(e.pointerId); } catch (_) {}
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        requestAnimationFrame(_pactLoop);
+      });
+      const release = () => {
+        if (!_pact.holding) return;
+        _pact.holding = false;
+        wolf.classList.remove('cn-holding');
+        q('#cn-wolfSub').textContent = Math.round(100 - _pact.hp) + '% STRUCK · HOLD AGAIN';
+      };
+      wolf.addEventListener('pointerup', release);
+      wolf.addEventListener('pointercancel', release);
+      wolf.addEventListener('contextmenu', (e) => { if (armed()) e.preventDefault(); });
+      // Keyboard and switch users strike in one press.
+      wolf.addEventListener('keydown', (e) => {
+        if (!armed() || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        _pact.holding = false;
+        _pact.hp = _pact.target;
+        q('#cn-hpi').style.width = _pact.hp + '%';
+        _strikeLands();
+      });
+    }
+
+    function _strikeLands() {
+      if (_pact.struck) return;
+      _pact.struck = true;
+      const wolf  = q('#cn-wolf');
+      const body  = q('#cn-pactBody');
+      const title = q('#cn-pactTitle');
+      const sub   = q('#cn-wolfSub');
+      const cfg   = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
+      const need  = _pact.need, today = _pact.today;
+      wolf.classList.remove('cn-holding', 'cn-armed');
+      wolf.removeAttribute('role');
+      wolf.removeAttribute('tabindex');
+      _cinPlaySfx('reward');
+
+      const fellScreen = (card, souls, preview) => {
+        wolf.classList.add('cn-fell');
+        q('#cn-hpi').style.width = '0%';
+        title.textContent = 'It falls.';
+        sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
+        let html = '';
+        if (card) {
+          const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
+          const meta = rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + (preview ? ' · PREVIEW ONLY' : ' · IN YOUR ARMORY');
+          html += '<div class="cn-relic">' +
+            '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
+            '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
+            '<div class="cn-rr">' + esc(meta) + '</div></div></div>';
+        }
+        html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
+          esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
+          '<b class="cn-far">' + (souls > 0 ? '+' + _cnFmt(souls) + ' SOULS · ' : '') +
+          '+' + ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
+        body.innerHTML = html;
+        try { _hapticTick('HEAVY'); } catch (_) {}
+      };
+      const spentScreen = (engaged) => {
+        const left = Math.max(0, need - today);
+        wolf.classList.add('cn-spent');
+        title.textContent = engaged ? 'The Wolf is engaged.' : 'The Wolf is waiting.';
+        if (left > 0) {
+          sub.textContent = _cnFmt(left) + ' STEPS LEFT TODAY';
+          body.innerHTML =
+            '<p class="cn-b">It bleeds. <b>Tonight, the first win is the walk.</b> ' + _cnFmt(left) + ' steps and it falls.</p>' +
+            _cnWalkRowHtml(true, left, need);
+        } else {
+          // Past the threshold but no kill fired: today's claim is already spent.
+          sub.textContent = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
+          body.innerHTML = '<p class="cn-b">Today’s kill is already claimed. <b>It returns tomorrow.</b></p>';
+        }
+        try { _hapticTick('MEDIUM'); } catch (_) {}
+      };
+
+      // Replay: the shape of the gate, never the hunt. No engage, no kill, no
+      // roll — the relic named is the Wolf's signature drop, labelled as such.
       if (preview) {
         if (today >= need) {
-          wolf.classList.add('cn-fell');
-          title.textContent = 'It falls.';
-          sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
           let card = null;
           try { card = CARDS[_CN_WOLF_PREVIEW_RELIC] || null; } catch (_) {}
-          let html = '';
-          if (card) {
-            const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
-            html += '<div class="cn-relic">' +
-              '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
-              '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
-              '<div class="cn-rr">' + esc(rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + ' · PREVIEW ONLY') + '</div></div></div>';
-          }
-          html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
-            esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
-            '<b class="cn-far">+' + _cnFmt(killRewardSouls((cfg && cfg.rank) || 'E')) + ' SOULS · +' +
-            ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
-          body.innerHTML = html;
-          return;
+          let souls = 0;
+          try { souls = killRewardSouls((cfg && cfg.rank) || 'E'); } catch (_) {}
+          fellScreen(card, souls, true);
+        } else {
+          spentScreen(false);
         }
-        title.textContent = 'The Wolf is waiting.';
-        sub.textContent   = _cnFmt(Math.max(0, need - today)) + ' STEPS LEFT TODAY';
-        hpi.style.setProperty('--cn-w', Math.max(4, 100 - Math.min(100, (today / need) * 100)).toFixed(1) + '%');
-        body.innerHTML =
-          '<p class="cn-b">It is waiting for you when you walk. <b>' + _cnFirstWinLine() + '</b></p>' +
-          _cnVowsHtml(true);
+        setTimeout(() => _cnEnterOpen(true), 900);
         return;
       }
 
@@ -61871,45 +62050,20 @@
           _cinKillCapture = null;
         }
         if (captured) {
-          wolf.classList.add('cn-fell');
-          title.textContent = 'It falls.';
-          sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
-          const card  = captured.dropInfo && captured.dropInfo.card;
-          const souls = captured.soulsReward | 0;
-          let html = '';
-          if (card) {
-            const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
-            const meta = rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + ' · IN YOUR ARMORY';
-            html += '<div class="cn-relic">' +
-              '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
-              '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
-              '<div class="cn-rr">' + esc(meta) + '</div></div></div>';
-          }
-          html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
-            esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
-            '<b class="cn-far">' + (souls > 0 ? '+' + _cnFmt(souls) + ' SOULS · ' : '') +
-            '+' + ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
-          body.innerHTML = html;
+          fellScreen(captured.dropInfo && captured.dropInfo.card, captured.soulsReward | 0, false);
+          setTimeout(() => _cnEnterOpen(true), 900);
           return;
         }
         // The kill did not actually fire (already claimed today, or the
-        // engage was refused). Fall through and say what IS true.
+        // engage was refused). Say what IS true.
       }
-
-      const left = Math.max(0, need - today);
-      title.textContent = engaged ? 'The Wolf is engaged.' : 'The Wolf is waiting.';
-      sub.textContent   = left > 0
-        ? _cnFmt(left) + ' STEPS LEFT TODAY'
-        : _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
-      const pct = Math.max(4, 100 - Math.min(100, (today / need) * 100));
-      hpi.style.setProperty('--cn-w', pct.toFixed(1) + '%');
-      body.innerHTML =
-        '<p class="cn-b">It is waiting for you when you walk. <b>' + _cnFirstWinLine() + '</b></p>' +
-        _cnVowsHtml(true);
+      spentScreen(engaged);
+      setTimeout(() => _cnEnterOpen(true), 900);
     }
 
     // ── ENTER — commit and hand off ────────────────────────────
     q('#cn-enter').addEventListener('click', () => {
+      if (q('#cn-enter').disabled) return;   // W947 — the strike opens it
       _cinPlaySfx('gate');
       if (preview) {
         root.classList.add('hidden');

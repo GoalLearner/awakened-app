@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=700">
+  <link rel="stylesheet" href="styles.css?v=701">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -258,6 +258,12 @@
                autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done">
         <p class="cn-err" id="cin-nameError" style="display:none"></p>
         <div class="cin-name-suggestions" id="cin-nameSuggestions" style="display:none"></div>
+        <!-- W947 — v3: the hunter picks the bust they walk in wearing -->
+        <div class="cn-busts" id="cn-busts" role="radiogroup" aria-label="Choose your look">
+          <button type="button" class="cn-bust-o cn-on" data-cn-bust="base" role="radio" aria-checked="true"><img src="assets/busts/avatar-base-bust.webp" alt=""><span>HUNTER</span></button>
+          <button type="button" class="cn-bust-o" data-cn-bust="ranger" role="radio" aria-checked="false"><img src="assets/busts/avatar-ranger-bust.webp" alt=""><span>RANGER</span></button>
+          <button type="button" class="cn-bust-o" data-cn-bust="warrior" role="radio" aria-checked="false"><img src="assets/busts/avatar-warrior-bust.webp" alt=""><span>WARRIOR</span></button>
+        </div>
         <button type="button" class="cn-lore" id="cin-glossary-open">Hunter, mark, vow — what the System means</button>
       </div>
       <div class="cn-foot"><button type="button" class="cn-cta cn-off" id="cin-nameConfirm" disabled>CONFIRM</button></div>
@@ -277,11 +283,13 @@
 
     <!-- 3 · THE REVEAL — the road lights with the count -->
     <section class="cn-scr cn-road" id="cn-s3" data-i="3" data-dot="1">
-      <div class="cn-rd"><img src="assets/backgrounds/lb-bg-100k.webp" alt="" aria-hidden="true"></div>
+      <div class="cn-rd"><img id="cn-roadimg" src="assets/backgrounds/lb-bg-100k.webp" alt="" aria-hidden="true"></div>
+      <div class="cn-scrub" id="cn-scrub" aria-hidden="true"></div>
       <div class="cn-c cn-mid">
         <span class="cn-k">Last 7 days</span>
         <div class="cn-n"><span id="cn-steps7">0</span><small>STEPS</small></div>
         <p class="cn-b" id="cn-revealLine"></p>
+        <span class="cn-hint" id="cn-rhint"><i></i>DRAG THE ROAD · YOUR STEPS ARE THE LIGHT</span>
       </div>
       <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
     </section>
@@ -371,6 +379,8 @@
     </section>
 
     <!-- 8 · THE PACT — the first gate. The Steel Wolf is ENGAGED for real here
+         once the hunter holds it down (W947 — v3 hold to strike; the strike
+         drains exactly the share of 6,000 walked today, never more)
          (a hunter's first engage is free, W771) and, when Apple Health already
          shows the day's 6,000 steps, killed for real through
          evaluateSteelWolfForDay: real souls, real drop roll, real once-per-day
@@ -379,10 +389,11 @@
     <section class="cn-scr" id="cn-s8" data-i="8" data-dot="5">
       <div class="cn-c">
         <span class="cn-k cn-g">The first gate</span>
-        <h2 class="cn-t" id="cn-pactTitle">It falls.</h2>
+        <h2 class="cn-t" id="cn-pactTitle">Strike the Wolf.</h2>
         <div class="cn-wolf" id="cn-wolf">
           <img src="assets/bosses/the-steel-wolf.png" alt="The Steel Wolf">
           <div class="cn-hp"><i id="cn-hpi"></i></div>
+          <span class="cn-strike" aria-hidden="true">HOLD TO STRIKE</span>
           <span class="cn-pop">FALLEN</span>
           <div class="cn-wt">
             <div><div class="cn-wn">The Steel Wolf</div><div class="cn-ws" id="cn-wolfSub"></div></div>
@@ -391,7 +402,7 @@
         </div>
         <div id="cn-pactBody"></div>
       </div>
-      <div class="cn-foot"><button type="button" class="cn-cta" id="cn-enter">ENTER</button></div>
+      <div class="cn-foot"><button type="button" class="cn-cta cn-off" id="cn-enter" disabled>ENTER</button></div>
     </section>
 
     <!-- W472 — optional lore primer. The cinematic introduces several in-world
@@ -3402,7 +3413,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1352"></script>
+  <script src="app.js?v=1353"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

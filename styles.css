@@ -35786,7 +35786,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
   border-color: rgba(245,184,66,0.6);
   box-shadow: 0 0 28px rgba(245,184,66,0.18);
 }
-#cin-onboarding .cn-wolf.cn-fell img { animation: cn-drain 1.2s ease .4s both; }
+#cin-onboarding .cn-wolf.cn-fell img { animation: cn-drain 1s ease 0s both; }
 @keyframes cn-drain { from { filter: none; } to { filter: grayscale(.85) brightness(.55); } }
 #cin-onboarding .cn-wolf.cn-lock img { filter: grayscale(1) brightness(.4); }
 #cin-onboarding .cn-wolf.cn-lock .cn-hp { display: none; }
@@ -35800,9 +35800,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 }
 #cin-onboarding .cn-hp i {
   display: block; height: 100%;
-  width: var(--cn-w, 100%);
+  width: 100%;
   background: #ef4444;
-  transition: width 1.2s ease .4s;
 }
 #cin-onboarding .cn-wolf.cn-fell .cn-hp i { width: 0; }
 #cin-onboarding .cn-pop {
@@ -35816,14 +35815,14 @@ body.combat-active #app * { animation-play-state: paused !important; }
   text-shadow: 0 0 30px rgba(245,184,66,0.7);
   opacity: 0;
 }
-#cin-onboarding .cn-wolf.cn-fell .cn-pop { animation: cn-stamp .5s cubic-bezier(.2,1.4,.4,1) 1.6s both; }
+#cin-onboarding .cn-wolf.cn-fell .cn-pop { animation: cn-stamp .5s cubic-bezier(.2,1.4,.4,1) .5s both; }
 @keyframes cn-stamp {
   from { opacity: 0; transform: translate(-50%,-50%) scale(1.6); }
   to   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 }
 #cin-onboarding .cn-relic {
   display: flex; align-items: center; gap: 12px;
-  animation: cn-in .5s ease 1.9s both;
+  animation: cn-in .5s ease .8s both;
 }
 #cin-onboarding .cn-relic img {
   width: 56px; height: 56px;
@@ -35876,6 +35875,92 @@ body.combat-active #app * { animation-play-state: paused !important; }
   color: var(--cin-t3);
 }
 #cin-onboarding .cn-tag.cn-ok { color: var(--cin-gold); border-color: rgba(245,184,66,0.5); }
+
+/* ── W947 — Onboarding v3 (Claude Design handoff 27, "Interactive") ───── */
+/* Name: the bust the hunter walks in wearing. */
+#cin-onboarding .cn-busts {
+  display: flex; gap: 10px; width: 100%;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .4s, transform .4s;
+  pointer-events: none;
+}
+#cin-onboarding .cn-busts.cn-show { opacity: 1; transform: none; pointer-events: auto; }
+#cin-onboarding .cn-bust-o {
+  flex: 1; position: relative; aspect-ratio: 1;
+  padding: 0; overflow: hidden; cursor: pointer;
+  border-radius: 12px; border: 1.5px solid var(--cin-line);
+  background: #0e0d20;
+  -webkit-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-bust-o img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#cin-onboarding .cn-bust-o span {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 6px 4px;
+  font-family: var(--cin-mono); font-size: 9px; letter-spacing: 1.5px; font-weight: 700;
+  text-align: center; color: var(--cin-t2);
+  background: linear-gradient(180deg, transparent, rgba(10,10,24,0.92));
+}
+#cin-onboarding .cn-bust-o.cn-on { border-color: var(--cin-gold); box-shadow: 0 0 16px rgba(245,184,66,0.25); }
+#cin-onboarding .cn-bust-o.cn-on span { color: var(--cin-gold); }
+
+/* Reveal: drag the road, the steps are the light. */
+#cin-onboarding .cn-scrub {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 130px;
+  z-index: 2; touch-action: none; cursor: ew-resize;
+}
+#cin-onboarding .cn-hint {
+  display: flex; align-items: center; gap: 8px;
+  white-space: nowrap;
+  font-family: var(--cin-mono); font-size: 9.5px; letter-spacing: 1.6px; font-weight: 700;
+  color: var(--cin-t2);
+  opacity: 0; transition: opacity .4s;
+}
+#cin-onboarding .cn-hint.cn-show { opacity: 1; }
+#cin-onboarding .cn-hint i { width: 18px; height: 1px; background: var(--cin-t2); position: relative; flex: none; }
+#cin-onboarding .cn-hint i::after {
+  content: ''; position: absolute; right: 0; top: -3px;
+  width: 6px; height: 6px;
+  border-top: 1px solid var(--cin-t2); border-right: 1px solid var(--cin-t2);
+  transform: rotate(45deg);
+}
+
+/* Pact: hold the Wolf down; the strike lands what today walked. */
+#cin-onboarding .cn-wolf.cn-armed {
+  cursor: pointer; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#cin-onboarding .cn-strike {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2; pointer-events: none;
+  padding: 9px 16px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(10,10,24,0.6);
+  font-family: var(--cin-mono); font-size: 10px; letter-spacing: 3px; font-weight: 700;
+  color: var(--cin-t1); white-space: nowrap;
+  opacity: 0; transition: opacity .3s;
+}
+#cin-onboarding .cn-wolf.cn-armed .cn-strike { opacity: 1; animation: cn-pulsec 2s ease-in-out infinite; }
+#cin-onboarding .cn-wolf.cn-holding .cn-strike { opacity: 0; animation: none; }
+@keyframes cn-pulsec {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.05); }
+}
+#cin-onboarding .cn-wolf.cn-holding img { animation: cn-shake .12s linear infinite; }
+@keyframes cn-shake {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(1.5px, -1px); }
+  50%  { transform: translate(-1px, 1px); }
+  75%  { transform: translate(1px, 1.5px); }
+  100% { transform: translate(0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #cin-onboarding .cn-busts { transition: none; }
+  #cin-onboarding .cn-wolf.cn-armed .cn-strike { animation: none; }
+  #cin-onboarding .cn-wolf.cn-holding img { animation: none; }
+}
 
 /* ── short screens (SE-class) ────────────────────────────── */
 @media (max-height: 700px) {
