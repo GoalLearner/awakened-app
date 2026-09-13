@@ -3421,3 +3421,49 @@ test.describe('AI · The First Awakened speaks plainly (W942)', () => {
     expect(tour.key).toBe('1');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AJ. W943 — Health-verified vows lead the list on the very paint they land
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AJ · Health vows lead the list at once (W943)', () => {
+  test('adding Sleep before midnight from the library paints it above the hand-tapped vows without a reload', async ({ page }) => {
+    await freshApp(page);
+    // Two hand-tapped vows already on the list; no Health vow yet.
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w943_seeded')) return;
+        sessionStorage.setItem('__w943_seeded', '1');
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'w943-journal', name: 'Journal', emoji: '✍️', difficulty: 'easy', type: 'build' },
+          { id: 'w943-read',    name: 'Read',    emoji: '📖', difficulty: 'easy', type: 'build' },
+        ]));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    const before = await page.evaluate(() => Array.from(document.querySelectorAll('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name')).map((e) => (e.textContent || '').trim()));
+    expect(before[0]).toBe('Journal');
+
+    // The real Add Habits path: open, pick the Health vow, commit.
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+    const row = page.locator('#lib-sheet .lib-row', { has: page.locator('.lib-row-name', { hasText: /^Sleep before midnight$/ }) }).first();
+    await expect(row).toBeVisible({ timeout: 5_000 });
+    await row.click();
+    await expect(row).toHaveClass(/is-selected/);
+    await page.locator('#lib-cta').click();
+    await expect(page.locator('#lib-sheet')).toBeHidden({ timeout: 5_000 });
+
+    // The paint that follows the commit — no reload, no second render — leads
+    // with the Health vow. Before W943 it landed last until the next launch.
+    const after = await page.evaluate(() => Array.from(document.querySelectorAll('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name')).map((e) => (e.textContent || '').trim()));
+    expect(after[0]).toBe('Sleep before midnight');
+    expect(after.slice(1)).toEqual(['Journal', 'Read']);   // the hand-tapped order is untouched
+
+    // And storage agrees once the coalesced save lands.
+    await page.waitForTimeout(300);
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name));
+    expect(stored[0]).toBe('Sleep before midnight');
+  });
+});
