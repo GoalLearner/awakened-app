@@ -2425,6 +2425,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
           relic:  root.querySelector('#cn-pactBody .cn-rn') ? (root.querySelector('#cn-pactBody .cn-rn') as HTMLElement).textContent : null,
           stat:   root.querySelector('#cn-pactBody .cn-stat') ? (root.querySelector('#cn-pactBody .cn-stat') as HTMLElement).textContent : null,
           vows:   Array.from(root.querySelectorAll('#cn-pactBody .cn-vow .cn-vn')).map((el) => el.childNodes[0].textContent),
+          firstWin: ((root.querySelector('#cn-pactBody .cn-b b') || {}).textContent || ''),
         },
         wolfState:  JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || null,
         killClaim:  Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_the_steel_wolf') === 0),
@@ -2492,7 +2493,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     expect(r.queuedBossResult).toBeNull();
   });
 
-  test('a day still short of 6,000 engages the Wolf and says how far it is; Make Your Own seeds the two Health anchors', async ({ page }) => {
+  test('a day still short of 6,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
     await freshOnboarding(page);
     const r = await walkToPact(page, 3860, 18860);
 
@@ -2502,7 +2503,8 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     expect(r.pact.sub).toBe('2,140 STEPS LEFT TODAY');
     expect(r.wolfState.kill_count).toBe(0);
     expect(r.killClaim.length).toBe(0);
-    expect(r.pact.vows).toEqual(['Daily walk', 'Sleep']);
+    expect(r.pact.vows).toEqual([]);
+    expect(r.pact.firstWin).toBe('Tonight, choose your first vow and keep it.');
 
     const seeded = await page.evaluate(async () => {
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -2517,10 +2519,16 @@ test.describe('AC · Onboarding v2 (W936)', () => {
         path:   localStorage.getItem('hb_path'),
         name:   localStorage.getItem('hb_name'),
         xp:     localStorage.getItem('hb_onboarding_first_xp_awarded_v1'),
+        firstVowPicker: (() => {
+          const e = document.getElementById('empty-state');
+          return !!e && !e.classList.contains('hidden') && !e.classList.contains('empty-state--rest-day')
+            && document.querySelectorAll('#empty-state-quickgrid [data-quickpick-idx]').length > 0;
+        })(),
       };
     });
-    // W936 — the path that seeded nothing now starts inside the game.
-    expect(seeded.habits.sort()).toEqual(['Daily walk', 'Sleep']);
+    // W944 — Make Your Own seeds nothing; the First Vow picker takes over.
+    expect(seeded.habits).toEqual([]);
+    expect(seeded.firstVowPicker).toBe(true);
     expect(seeded.path).toBe('custom');
     expect(seeded.name).toBe('Richie');
     expect(seeded.xp).toBe('1');
