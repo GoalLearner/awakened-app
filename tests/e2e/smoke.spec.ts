@@ -508,10 +508,13 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     }
     expect(opened).toBe(true);
     await expect(page.locator('#lib-sheet')).toBeVisible();
-    // The just-added habit is filtered out of the available rows.
-    await expect(
-      page.locator('#lib-sheet .lib-row-name', { hasText: habitName })
-    ).toHaveCount(0);
+    // W945 — the just-added habit stays listed, dimmed as ACTIVE and unpickable.
+    const addedRow = page.locator('#lib-sheet .lib-row', {
+      has: page.locator('.lib-row-name', { hasText: new RegExp('^' + habitName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') }),
+    }).first();
+    await expect(addedRow).toHaveClass(/is-have/);
+    await expect(addedRow).toBeDisabled();
+    await expect(addedRow.locator('.lib-row-xp')).toHaveText('ACTIVE');
     // No stale inline residue on the re-opened sheet (the freeze symptom).
     const inlineStyle = await page.locator('#lib-sheet').evaluate((el) => ({
       transform: (el as HTMLElement).style.transform,
@@ -3473,5 +3476,179 @@ test.describe('AJ · Health vows lead the list at once (W943)', () => {
     await page.waitForTimeout(300);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name));
     expect(stored[0]).toBe('Sleep before midnight');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AK. W945 — Add Habits v3 (Claude Design handoff 26)
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AK · Add Habits v3 (W945)', () => {
+  const MR_HAND = ['Wake up at consistent time', 'No phone or social media after waking', 'Get morning sunlight', 'Morning gratitude practice'];
+
+  async function openLibWith(page: any, names: string[]) {
+    await freshApp(page);
+    await page.addInitScript((names: string[]) => {
+      try {
+        if (sessionStorage.getItem('__w945_seeded')) return;
+        sessionStorage.setItem('__w945_seeded', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(names.map((n, i) => ({ id: 'w945-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build' }))));
+        localStorage.setItem('hb_tour_first_vow_v1', '1');
+        localStorage.setItem('hb_notif_perm_requested', '1');
+      } catch (_) {}
+    }, names);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+  }
+  const rowByName = (page: any, name: string) =>
+    page.locator('#lib-list .lib-row', { has: page.locator('.lib-row-name', { hasText: new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') }) }).first();
+
+  test('every habit in the view shows, active ones dimmed and unpickable; a pick moves the header, CLEAR and the gold bar', async ({ page }) => {
+    await openLibWith(page, ['Cold shower', 'Journal']);
+
+    await expect(page.locator('#lib-sub')).toHaveText('2 active · 23 slots open');
+    await expect(page.locator('#lib-chips .lib-chip[data-chip="pop"] small')).toHaveText('11');
+
+    const view = await page.evaluate(() => Array.from(document.querySelectorAll('#lib-list .lib-row')).map((r) => ({
+      name: (r.querySelector('.lib-row-name') as HTMLElement).textContent,
+      have: r.classList.contains('is-have'),
+      disabled: (r as HTMLButtonElement).disabled,
+      xp: (r.querySelector('.lib-row-xp') as HTMLElement).textContent,
+      health: !!r.querySelector('.lib-row-health'),
+      art: !!r.querySelector('.lib-row-ic img'),
+    })));
+    expect(view.length).toBe(11);
+    expect(view.every((r) => r.art)).toBe(true);
+    const cold = view.find((r) => r.name === 'Cold shower')!;
+    expect(cold).toMatchObject({ have: true, disabled: true, xp: 'ACTIVE' });
+    expect(view.filter((r) => r.health).map((r) => r.name)).toEqual(['Sleep before midnight', 'Workout', 'Daily walk']);
+    expect(view.filter((r) => !r.have).every((r) => /^\+\d+ XP$/.test(r.xp || ''))).toBe(true);
+
+    // An active row can't be picked, even by a scripted click.
+    await page.evaluate(() => {
+      const r = Array.from(document.querySelectorAll('#lib-list .lib-row')).find((x) => x.textContent!.indexOf('Cold shower') >= 0) as HTMLElement;
+      r.click();
+    });
+    await expect(page.locator('#lib-cta')).toBeDisabled();
+    await expect(page.locator('#lib-cta')).toHaveText('Pick habits to add');
+
+    const walk = rowByName(page, 'Daily walk');
+    await walk.click();
+    await expect(walk).toHaveClass(/is-selected/);
+    await expect(walk).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#lib-sub')).toHaveText('2 active · 22 slots open');
+    await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
+    await expect(page.locator('#lib-clear')).toBeVisible();
+
+    await page.locator('#lib-clear').click();
+    await expect(walk).not.toHaveClass(/is-selected/);
+    await expect(page.locator('#lib-cta')).toBeDisabled();
+    await expect(page.locator('#lib-clear')).toBeHidden();
+    await expect(page.locator('#lib-sub')).toHaveText('2 active · 23 slots open');
+
+    // A category hides the starter strip and still lists what you have.
+    await page.locator('#lib-chips .lib-chip[data-chip="mental"]').click();
+    await expect(page.locator('#lib-starter')).toBeHidden();
+    await expect(page.locator('#lib-listcount')).toHaveText('Mental & Focus');
+    await expect(page.locator('#lib-listmeta')).toHaveText('8 habits');
+    await expect(rowByName(page, 'Journal')).toHaveClass(/is-have/);
+  });
+
+  test('a pack card selects only what is missing, saves nothing, and the gold bar lands it with the pack path', async ({ page }) => {
+    await openLibWith(page, MR_HAND);
+    const morning = page.locator('#lib-pack-morning');
+    const locked  = page.locator('#lib-pack-lockedin');
+    await expect(morning.locator('.lib-pack-count')).toHaveText('10 HABITS');
+    await expect(morning.locator('.lib-pack-add')).toHaveText('Add 6');
+    await expect(locked.locator('.lib-pack-count')).toHaveText('16 HABITS');
+    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 12');
+
+    await morning.click();
+    await expect(morning).toHaveClass(/is-sel/);
+    await expect(page.locator('#lib-cta')).toHaveText('Add 6 habits to my list');
+    await expect(page.locator('#lib-sub')).toHaveText('4 active · 15 slots open');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').length)).toBe(4);
+
+    await morning.click();   // a fully selected card lets its habits go
+    await expect(morning).not.toHaveClass(/is-sel/);
+    await expect(page.locator('#lib-cta')).toBeDisabled();
+
+    await morning.click();
+    await page.locator('#lib-cta').click();
+    await expect(page.locator('#lib-sheet')).toBeHidden({ timeout: 5_000 });
+    await page.waitForTimeout(300);
+    const saved = await page.evaluate(() => ({
+      habits: JSON.parse(localStorage.getItem('hb_habits') || '[]'),
+      path: localStorage.getItem('hb_path'),
+    }));
+    expect(saved.habits.length).toBe(10);
+    expect(saved.path).toBe('morning');
+    const walk = saved.habits.find((h: any) => h.name === 'Daily walk');
+    expect(walk && walk.stepGoal).toBeGreaterThan(0);   // the library builder, not the bare pack row
+
+    await page.evaluate(() => (document.getElementById('add-habit-btn') as HTMLElement).click());
+    await expect(page.locator('#lib-sheet')).toBeVisible();
+    await expect(morning.locator('.lib-pack-add')).toHaveText('All added');
+    await expect(morning).toBeDisabled();
+    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 6');
+  });
+
+  test('the 25-vow cap holds for a row and for a pack', async ({ page }) => {
+    await openLibWith(page, Array.from({ length: 24 }, (_, i) => 'Filler vow ' + (i + 1)));
+    await expect(page.locator('#lib-sub')).toHaveText('24 active · 1 slot open');
+
+    await rowByName(page, 'Hydrate').click();
+    await expect(page.locator('#lib-sub')).toHaveText('24 active · 0 slots open');
+    await rowByName(page, 'Read').click();
+    await expect(rowByName(page, 'Read')).not.toHaveClass(/is-selected/);
+    await expect(page.locator('.habit-toast').last()).toContainText('25 vow max');
+
+    await page.locator('#lib-pack-morning').click();
+    await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
+    await expect(page.locator('#lib-pack-morning')).not.toHaveClass(/is-sel/);
+
+    await rowByName(page, 'Hydrate').click();   // let it go, then the pack takes the one slot
+    await page.locator('#lib-pack-morning').click();
+    await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
+    await expect(page.locator('.habit-toast').last()).toContainText('Only 1 more fit');
+  });
+
+  test('search hides the chips and packs, highlights the match, names an empty result, and Cancel keeps the picks', async ({ page }) => {
+    await openLibWith(page, ['Journal']);
+    const sheet = page.locator('#lib-sheet');
+    const input = page.locator('#lib-search-input');
+
+    await input.focus();
+    await expect(sheet).toHaveClass(/is-searching/);
+    await expect(page.locator('#lib-chips')).toBeHidden();
+    await expect(page.locator('#lib-search-cancel')).toBeVisible();
+
+    await input.fill('sle');
+    await expect(page.locator('#lib-starter')).toBeHidden();
+    await expect(page.locator('#lib-listcount')).toHaveText(/^\d+ results?$/);
+    const hits = await page.evaluate(() => Array.from(document.querySelectorAll('#lib-list .lib-row')).map((r) => ({
+      name: (r.querySelector('.lib-row-name') as HTMLElement).textContent || '',
+      mark: (r.querySelector('.lib-row-name mark') as HTMLElement | null)?.textContent || '',
+      health: !!r.querySelector('.lib-row-health'),
+    })));
+    expect(hits.length).toBeGreaterThan(1);
+    expect(hits.every((h) => h.name.toLowerCase().includes('sle') && h.mark.toLowerCase() === 'sle')).toBe(true);
+    expect(hits.find((h) => h.name === 'Sleep before midnight')!.health).toBe(true);
+
+    await rowByName(page, 'Sleep before midnight').click();
+    await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
+
+    await input.fill('zzz');
+    await expect(page.locator('#lib-list .lib-empty')).toHaveText('Nothing called “zzz”');
+    await expect(page.locator('#lib-listcount')).toHaveText('No results');
+
+    await page.locator('#lib-search-cancel').click();
+    await expect(sheet).not.toHaveClass(/is-searching/);
+    await expect(input).toHaveValue('');
+    await expect(page.locator('#lib-chips')).toBeVisible();
+    await expect(page.locator('#lib-starter')).toBeVisible();
+    await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
   });
 });

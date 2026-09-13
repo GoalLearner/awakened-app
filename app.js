@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w944'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w945'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -42098,7 +42098,6 @@
       try { localStorage.setItem('hb_path', selectedPackId); } catch (_) {}
     }
 
-    const pack = getPackById(packId);
     // v3 Phase 1z.34 -- iOS post-save freeze hardening. The Lock-In /
     // Morning Routine pack-add modal was reported stuck after Save on
     // TestFlight. The close calls run first (good), but any throw in
@@ -42111,6 +42110,14 @@
     try { updateMorningButtonVisibility();  } catch (_) {}
     try { updateLockedInButtonVisibility(); } catch (_) {}
 
+    _packAddedFollowUp(packId, missing.length);
+  }
+
+  // The tail of a pack landing on the list: the pack modal's save and, since
+  // W945, an Add Habits save that completes a pack card's selection.
+  function _packAddedFollowUp(packId, addedCount, opts) {
+    opts = opts || {};
+    const pack = getPackById(packId);
     // v3 Phase 1z.283 W178 — Greeting parity with the custom path.
     // Before W178: onboarding users who picked the Morning Routine /
     // Locked-In pack added 10/16 vows in one tap and were greeted
@@ -42142,11 +42149,13 @@
 
     if (!_faCoachShown) {
       // Existing-user path: toast as before, then notif prompt.
-      try {
-        if (pack && pack.name) {
-          showHabitToast(pack.name + ' added — ' + missing.length + ' habit' + (missing.length === 1 ? '' : 's'));
-        }
-      } catch (_) {}
+      if (opts.toast !== false) {
+        try {
+          if (pack && pack.name) {
+            showHabitToast(pack.name + ' added — ' + addedCount + ' habit' + (addedCount === 1 ? '' : 's'));
+          }
+        } catch (_) {}
+      }
       scheduleNotifPrompt();
     }
   }
@@ -42457,14 +42466,27 @@
     // chip selection would be confusing.
     _libActiveChip = 'pop';
     _libQuery      = '';
+    _libQueryRaw   = '';
+    _libSearching  = false;
     _libSelected.clear();
     _libCommitting = false;
+    const si = document.getElementById('lib-search-input');
+    if (si) si.value = '';
+    const sheetEl = document.getElementById('lib-sheet');
+    if (sheetEl) sheetEl.classList.remove('is-searching', 'is-typing', 'has-query');
     renderLibrary();
     document.getElementById('lib-overlay').classList.remove('hidden');
     document.getElementById('lib-sheet').classList.remove('hidden');
+    const sc = document.getElementById('lib-scroll');
+    if (sc) sc.scrollTop = 0;
   }
 
   function closeLibrary() {
+    try {
+      const si = document.getElementById('lib-search-input');
+      if (si && document.activeElement === si) si.blur();
+    } catch (_) {}
+    _libSearching = false;
     document.getElementById('lib-overlay').classList.add('hidden');
     document.getElementById('lib-sheet').classList.add('hidden');
     // Drop selection state so a future open doesn't show stale picks.
@@ -42477,8 +42499,12 @@
   // _libQuery:      current search text (lowercased, trimmed).
   // _libSelected:   Set<defaultHabitIdx> awaiting commit.
   // _libCommitting: guard against rapid double-tap on the CTA.
+  // _libQueryRaw:   the search text as typed (the empty-state line).
+  // _libSearching:  W945 search mode — chips hidden, Cancel shown.
   let _libActiveChip = 'pop';
   let _libQuery      = '';
+  let _libQueryRaw   = '';
+  let _libSearching  = false;
   const _libSelected = new Set();
   let _libCommitting = false;
 
@@ -42523,58 +42549,75 @@
     return !!(h && h.library === 'jump_program' && !_jumpProgramUnlocked());
   }
 
-  function _libGetVisibleIndices(activeNames) {
-    // Search overrides chip filter.
-    if (_libQuery) {
-      const q = _libQuery;
-      const out = [];
-      for (let i = 0; i < DEFAULT_HABITS.length; i++) {
-        const h = DEFAULT_HABITS[i];
-        if (!h || !h.name) continue;
-        if (_habitHiddenForGoal(h)) continue;   // W574 — jump-library partition
-        if (activeNames.has(h.name)) continue;
-        if (h.name.toLowerCase().includes(q)) out.push(i);
-      }
-      return out;
-    }
-    // Popular: index lookup by exact name.
-    if (_libActiveChip === 'pop') {
+  // W945 — Add Habits v3 lists EVERY habit in the view, the ones already
+  // active included (dimmed, ACTIVE, not pickable), so a category reads the
+  // same whatever the hunter already has. Search overrides the chip.
+  function _libListable(i) {
+    const h = DEFAULT_HABITS[i];
+    return !!(h && h.name) && !_habitHiddenForGoal(h);   // W574 — jump-library partition
+  }
+  function _libChipIndices(key) {
+    if (key === 'pop') {
       const idxByName = {};
       for (let i = 0; i < DEFAULT_HABITS.length; i++) {
-        if (DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name) {
-          idxByName[DEFAULT_HABITS[i].name] = i;
-        }
+        if (DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name) idxByName[DEFAULT_HABITS[i].name] = i;
       }
+      return LIB_POPULAR_NAMES
+        .map((n) => idxByName[n])
+        .filter((i) => typeof i === 'number' && _libListable(i));
+    }
+    const chip = LIB_CHIPS.find(c => c.key === key);
+    const cat  = chip && chip.catLabel && OB_CATEGORIES.find(c => c.label === chip.catLabel);
+    if (!cat) return [];
+    const out = [];
+    for (let i = cat.start; i < cat.end; i++) if (_libListable(i)) out.push(i);
+    return out;
+  }
+  function _libGetVisibleIndices() {
+    if (_libQuery) {
       const out = [];
-      for (let i = 0; i < LIB_POPULAR_NAMES.length; i++) {
-        const idx = idxByName[LIB_POPULAR_NAMES[i]];
-        if (typeof idx !== 'number') continue;
-        if (_habitHiddenForGoal(DEFAULT_HABITS[idx])) continue;   // W576 — jump-library partition (defense-in-depth; matches search + category branches)
-        if (activeNames.has(DEFAULT_HABITS[idx].name)) continue;
-        out.push(idx);
+      for (let i = 0; i < DEFAULT_HABITS.length; i++) {
+        if (_libListable(i) && DEFAULT_HABITS[i].name.toLowerCase().includes(_libQuery)) out.push(i);
       }
       return out;
     }
-    // Category chip: walk OB_CATEGORIES slice.
-    const chip = LIB_CHIPS.find(c => c.key === _libActiveChip);
-    if (!chip || !chip.catLabel) return [];
-    const cat = OB_CATEGORIES.find(c => c.label === chip.catLabel);
-    if (!cat) return [];
-    const out = [];
-    for (let i = cat.start; i < cat.end; i++) {
-      if (_habitHiddenForGoal(DEFAULT_HABITS[i])) continue;   // W574 — jump-library partition
-      if (!activeNames.has(DEFAULT_HABITS[i].name)) out.push(i);
-    }
-    return out;
+    return _libChipIndices(_libActiveChip);
+  }
+
+  // W945 — the two pack cards. They SELECT; only the gold bar saves.
+  const LIB_PACK_CARDS = [
+    { id: 'morning',   domId: 'lib-pack-morning',  tone: 'gold',   art: 'assets/backgrounds/pack-morning-road.webp'   },
+    { id: 'locked-in', domId: 'lib-pack-lockedin', tone: 'violet', art: 'assets/backgrounds/pack-lockedin-tower.webp' },
+  ];
+  function _libActiveNames() {
+    return new Set(habits.filter(_isActiveHabit).map(h => h && h.name));
+  }
+  function _libPackIndices(packId) {
+    const p = getPackById(packId);
+    return (p && Array.isArray(p.habits)) ? p.habits.filter((i) => _libListable(i)) : [];
+  }
+  function _libPackMissing(packId, activeNames) {
+    return _libPackIndices(packId).filter((i) => !activeNames.has(DEFAULT_HABITS[i].name));
+  }
+  // Slots left once the current picks land (picks are never active names).
+  function _libRoom() {
+    return Math.max(0, MAX_ACTIVE_HABITS - getActiveHabitCount() - _libSelected.size);
+  }
+  function _libCapToast(room) {
+    try {
+      showHabitToast(room > 0
+        ? 'Only ' + room + ' more fit — ' + MAX_ACTIVE_HABITS + ' vow max.'
+        : MAX_ACTIVE_HABITS + ' vow max — remove a vow to make room.');
+    } catch (_) {}
   }
 
   // Stat → text color for the row meta line.
   const LIB_STAT_COLOR = {
-    STR:   '#ef4444',
-    VIT:   '#34d399',
-    INT:   '#3b82f6',
-    FOCUS: '#eab308',
-    WILL:  '#f97316',
+    STR:   '#f05252',
+    VIT:   '#3ddc9a',
+    INT:   '#6fb0ff',
+    FOCUS: '#f0c419',
+    WILL:  '#ff9a4d',
     WLT:   '#f5b842',
   };
 
@@ -42589,20 +42632,6 @@
     return null;
   }
 
-  function _libUpdateCta() {
-    const cta = document.getElementById('lib-cta');
-    if (!cta) return;
-    const n = _libSelected.size;
-    if (n === 0) {
-      cta.disabled = true;
-      cta.textContent = 'Select habits to add';
-    } else {
-      cta.disabled = false;
-      cta.innerHTML = 'Add <span class="lib-cta-n">' + n + '</span> habit' +
-        (n !== 1 ? 's' : '') + ' to my list';
-    }
-  }
-
   function _libCommitSelection() {
     if (_libCommitting) return;
     if (!_libSelected.size) return;
@@ -42613,6 +42642,12 @@
       // vows no longer block re-binding; the restore path below
       // un-archives the existing object (preserving streak history).
       const existingNames = new Set(habits.filter(_isActiveHabit).map(h => h && h.name));
+      // W945 — packs this save completes (every habit the card selected is
+      // still picked). They get what the pack modal's save gives them.
+      const packsDone = LIB_PACK_CARDS.map((pc) => pc.id).filter((pid) => {
+        const mis = _libPackMissing(pid, existingNames);
+        return mis.length > 0 && mis.every((i) => _libSelected.has(i));
+      });
       // v3 Phase 1z.280 — Active habit cap. Bulk add gate. Count the
       // effective add count AFTER dedup against ACTIVE names — picks
       // that match an already-active habit don't count. Picks that
@@ -42652,6 +42687,12 @@
         created.push(def.name);
       }
       _libSelected.clear();
+      // Mark the player's path on a first Morning Routine, as confirmPackAdd
+      // does (Locked-In, which carries the Morning Routine, doesn't override).
+      if (packsDone.indexOf('morning') >= 0 && packsDone.indexOf('locked-in') < 0 && !selectedPackId) {
+        selectedPackId = 'morning';
+        try { localStorage.setItem('hb_path', selectedPackId); } catch (_) {}
+      }
       try { save(); } catch (_) {}
       try {
         _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-commit', {
@@ -42687,229 +42728,140 @@
         showHabitToast(msg);
       } catch (_) {}
       closeLibrary();
+      try { updateMorningButtonVisibility();  } catch (_) {}
+      try { updateLockedInButtonVisibility(); } catch (_) {}
+      if (packsDone.length) {
+        try {
+          _packAddedFollowUp(packsDone.indexOf('locked-in') >= 0 ? 'locked-in' : 'morning',
+            created.length + restored.length, { toast: false });
+        } catch (_) {}
+      }
     } finally {
       _libCommitting = false;
     }
+  }
+
+  // W945 — Add Habits v3 (Claude Design handoff 26). The list is built on
+  // open, on a chip, and on each search keystroke; a tap only runs _libSync,
+  // which updates the rows, pack cards, header and gold bar in place, so a
+  // pick never rebuilds the list or reloads its icons.
+  const _LIB_PLUS_SVG = '<svg class="lib-ic-plus" viewBox="0 0 14 14" fill="none"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  const _LIB_TICK_SVG = '<svg class="lib-ic-tick" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const _LIB_HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.4C1.1 8.2 3.3 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.7 0 5.9 3.7 4.5 7.1C19.5 16.4 12 21 12 21z"/></svg>';
+
+  function _libHighlight(name) {
+    if (!_libQuery) return esc(name);
+    const i = name.toLowerCase().indexOf(_libQuery);
+    if (i < 0) return esc(name);
+    return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + _libQuery.length)) + '</mark>' +
+      esc(name.slice(i + _libQuery.length));
+  }
+
+  function _libRowHtml(idx, activeNames) {
+    const h = DEFAULT_HABITS[idx];
+    const have  = activeNames.has(h.name);
+    const diff  = h.difficulty || 'medium';
+    const xp    = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 0;
+    const stat  = _libHabitStat(h);
+    let health = false;
+    try { health = !!isHealthAutoVerifiableHabit(h); } catch (_) {}
+    return '<button type="button" class="lib-row' + (have ? ' is-have' : '') + '" data-idx="' + idx + '"' +
+        (have ? ' disabled aria-disabled="true"' : ' aria-pressed="false"') + '>' +
+      '<span class="lib-row-ic">' + habitIconHtml(h, { size: 42, eager: false }) + '</span>' +
+      '<span class="lib-row-mid">' +
+        '<span class="lib-row-name">' + _libHighlight(h.name) + '</span>' +
+        '<span class="lib-row-meta">' +
+          (stat ? '<span class="lib-row-stat" style="color:' + (LIB_STAT_COLOR[stat] || '#a78bfa') + '">' + esc(stat) + '</span>' : '') +
+          (health ? '<span class="lib-row-health">' + _LIB_HEART_SVG + 'Apple Health</span>' : '') +
+        '</span>' +
+      '</span>' +
+      '<span class="lib-row-xp">' + (have ? 'ACTIVE' : '+' + xp + ' XP') + '</span>' +
+      '<span class="lib-row-add" aria-hidden="true">' + (have ? '' : _LIB_PLUS_SVG) + _LIB_TICK_SVG + '</span>' +
+    '</button>';
   }
 
   function renderLibrary() {
     const sheet = document.getElementById('lib-sheet');
     const list  = document.getElementById('lib-list');
     if (!sheet || !list) return;
+    _wireLibrary(sheet);
     // v3 Phase 1z.283 W176 — Active-only. Archived vows display as
     // available; tapping triggers un-archive in _libCommitSelection.
-    const activeNames = new Set(habits.filter(_isActiveHabit).map(h => h.name));
+    const activeNames = _libActiveNames();
+    sheet.classList.toggle('is-searching', _libSearching);
+    sheet.classList.toggle('has-query', !!_libQueryRaw);
 
-    // ── Chips ────────────────────────────────────────────────
+    // ── Chips: built once (keeps their scroll), counts refreshed ──
     const chipsEl = document.getElementById('lib-chips');
-    if (chipsEl && !chipsEl.dataset.wired) {
-      chipsEl.dataset.wired = '1';
-      chipsEl.innerHTML = LIB_CHIPS.map(c =>
-        '<button type="button" class="lib-chip" data-chip="' + c.key + '">' +
-          esc(c.label) +
-        '</button>'
-      ).join('');
-      chipsEl.addEventListener('click', (e) => {
-        const btn = e.target && e.target.closest && e.target.closest('.lib-chip');
-        if (!btn) return;
-        _libActiveChip = btn.dataset.chip;
-        _libQuery      = '';
-        const si = document.getElementById('lib-search-input');
-        if (si) si.value = '';
-        try {
-          _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-filter-change', {
-            filterKey: _libActiveChip,
-          });
-        } catch (_) {}
-        renderLibrary();
-      });
-    }
     if (chipsEl) {
+      if (!chipsEl.dataset.built) {
+        chipsEl.dataset.built = '1';
+        chipsEl.innerHTML = LIB_CHIPS.map(c =>
+          '<button type="button" class="lib-chip" role="tab" data-chip="' + c.key + '">' +
+            esc(c.label) + '<small></small>' +
+          '</button>'
+        ).join('');
+      }
       chipsEl.querySelectorAll('.lib-chip').forEach(btn => {
-        btn.classList.toggle('is-on',
-          btn.dataset.chip === _libActiveChip && !_libQuery);
+        const on = btn.dataset.chip === _libActiveChip;
+        btn.classList.toggle('is-on', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        const sm = btn.querySelector('small');
+        if (sm) sm.textContent = String(_libChipIndices(btn.dataset.chip).length);
       });
     }
 
-    // ── Search ───────────────────────────────────────────────
-    const searchEl = document.getElementById('lib-search-input');
-    if (searchEl && !searchEl.dataset.wired) {
-      searchEl.dataset.wired = '1';
-      searchEl.addEventListener('input', () => {
-        _libQuery = (searchEl.value || '').trim().toLowerCase();
-        try {
-          _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-search', {
-            queryLength: _libQuery.length,
-          });
-        } catch (_) {}
-        renderLibrary();
-      });
-    }
-
-    // ── Start-fast strip (packs + Create Your Own) ──────────
-    // Hidden on search or non-Popular chip — focus on the filtered list.
+    // ── Start fast: packs + Create your own (Popular, no search) ──
     const starter = document.getElementById('lib-starter');
-    if (starter) {
-      const showStarter = !_libQuery && _libActiveChip === 'pop';
-      starter.style.display = showStarter ? 'block' : 'none';
-    }
+    if (starter) starter.classList.toggle('is-hidden', !!_libQuery || _libActiveChip !== 'pop');
     const packsEl = document.getElementById('lib-packs');
-    if (packsEl) {
-      const mrMissing = getMissingMorningHabits().length;
-      const liMissing = getMissingPackHabits('locked-in').length;
-      packsEl.innerHTML =
-        '<button type="button" class="lib-packcard lib-packcard--gold" id="lib-pack-morning">' +
-          '<span class="lib-packcard-head">' +
-            '<span class="lib-packcard-ic">' + packIconHtml('morning', { size: 22 }) + '</span>' +
-            '<span class="lib-packcard-name">Morning Routine</span>' +
+    if (packsEl && !packsEl.dataset.built) {
+      packsEl.dataset.built = '1';
+      packsEl.innerHTML = LIB_PACK_CARDS.map((pc) => {
+        const pack = getPackById(pc.id);
+        return '<button type="button" class="lib-pack lib-pack--' + pc.tone + '" id="' + pc.domId + '" data-pack="' + pc.id + '" aria-pressed="false">' +
+          '<img class="lib-pack-art" src="' + pc.art + '" alt="" aria-hidden="true" draggable="false" decoding="async">' +
+          '<span class="lib-pack-top">' +
+            '<span class="lib-pack-name">' + esc((pack && pack.name) || '') + '</span>' +
+            '<span class="lib-pack-count"></span>' +
           '</span>' +
-          '<span class="lib-packcard-count">' +
-            (mrMissing === 0 ? 'All added' : mrMissing + ' habits') +
-          '</span>' +
-          '<span class="lib-packcard-desc">The 10-habit starter pack.</span>' +
-        '</button>' +
-        '<button type="button" class="lib-packcard lib-packcard--violet" id="lib-pack-lockedin">' +
-          '<span class="lib-packcard-head">' +
-            '<span class="lib-packcard-ic">' + packIconHtml('lockedin', { size: 22 }) + '</span>' +
-            '<span class="lib-packcard-name">Locked-In</span>' +
-          '</span>' +
-          '<span class="lib-packcard-count">' +
-            (liMissing === 0 ? 'All added' : liMissing + ' habits') +
-          '</span>' +
-          '<span class="lib-packcard-desc">The full discipline cycle.</span>' +
+          '<span class="lib-pack-add"></span>' +
         '</button>';
-      const mrBtn = document.getElementById('lib-pack-morning');
-      const liBtn = document.getElementById('lib-pack-lockedin');
-      if (mrBtn) mrBtn.addEventListener('click', () => {
-        try { _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-pack-tap', { packId: 'morning' }); } catch (_) {}
-        openMorningPackModal();
-      });
-      if (liBtn) liBtn.addEventListener('click', () => {
-        try { _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-pack-tap', { packId: 'locked-in' }); } catch (_) {}
-        openLockedInPackModal();
-      });
+      }).join('');
     }
     const createRow = document.getElementById('lib-create-row');
     if (createRow) {
       const customCount = habits.filter(h => h.custom).length;
       const customsLeft = Math.max(0, MAX_CUSTOM_HABITS - customCount);
-      createRow.classList.toggle('is-disabled', customsLeft === 0);
+      createRow.classList.toggle('is-full', customsLeft === 0);
+      createRow.setAttribute('aria-disabled', customsLeft === 0 ? 'true' : 'false');
       createRow.innerHTML =
-        '<span class="lib-create-ic">' + packIconHtml('custom', { size: 24 }) + '</span>' +
-        '<span class="lib-create-body">' +
-          '<span class="lib-create-name">Create your own</span>' +
-          '<span class="lib-create-sub">' +
-            (customsLeft === 0
-              ? 'Cap reached (' + MAX_CUSTOM_HABITS + ' custom habits)'
-              : 'Your habit, your stat · +3 XP') +
-          '</span>' +
-        '</span>' +
-        '<span class="lib-create-left">' +
-          (customsLeft === 0 ? 'Full' : customsLeft + ' left') +
-        '</span>';
+        '<span class="lib-create-ic" aria-hidden="true">' + _LIB_PLUS_SVG + '</span>' +
+        '<span class="lib-create-name">Create your own</span>' +
+        '<span class="lib-create-sub">Name it, pick a stat</span>' +
+        '<span class="lib-create-left">' + (customsLeft === 0 ? 'FULL' : customsLeft + ' LEFT') + '</span>';
       createRow.onclick = customsLeft > 0 ? openCustomHabitModal : null;
     }
 
-    // ── List of available habits ─────────────────────────────
-    const items = _libGetVisibleIndices(activeNames);
+    // ── The list ─────────────────────────────────────────────
+    const items = _libGetVisibleIndices();
     const listCount = document.getElementById('lib-listcount');
-    if (listCount) {
-      if (_libQuery) {
-        listCount.textContent = items.length + ' result' +
-          (items.length !== 1 ? 's' : '');
-      } else {
-        const chip = LIB_CHIPS.find(c => c.key === _libActiveChip);
-        listCount.textContent = ((chip && chip.label) || 'Popular') +
-          ' · ' + items.length;
-      }
+    const listMeta  = document.getElementById('lib-listmeta');
+    if (_libQuery) {
+      if (listCount) listCount.textContent = items.length
+        ? items.length + ' result' + (items.length === 1 ? '' : 's')
+        : 'No results';
+      if (listMeta) listMeta.textContent = '';
+    } else {
+      const chip = LIB_CHIPS.find(c => c.key === _libActiveChip);
+      if (listCount) listCount.textContent = (chip && chip.label) || 'Popular';
+      if (listMeta) listMeta.textContent = items.length + ' habit' + (items.length === 1 ? '' : 's');
     }
+    list.innerHTML = items.length
+      ? items.map((idx) => _libRowHtml(idx, activeNames)).join('')
+      : '<div class="lib-empty">Nothing called “' + esc(_libQueryRaw.trim()) + '”</div>';
 
-    list.innerHTML = '';
-    if (!items.length) {
-      const empty = document.createElement('div');
-      empty.className = 'lib-empty';
-      empty.textContent = _libQuery
-        ? 'No habits match “' + _libQuery + '”.'
-        : 'All habits in this category are already in your list.';
-      list.appendChild(empty);
-      try {
-        _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-sheet-render', {
-          filterKey:    _libActiveChip,
-          visibleCount: 0,
-          queryLength:  _libQuery.length,
-        });
-      } catch (_) {}
-      _libUpdateCta();
-      _wireLibFooter();
-      return;
-    }
-
-    const frag = document.createDocumentFragment();
-    items.forEach(idx => {
-      const h = DEFAULT_HABITS[idx];
-      if (!h) return;
-      const diff   = h.difficulty || 'medium';
-      const xp     = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 0;
-      const stat   = _libHabitStat(h);
-      const statCl = (stat && LIB_STAT_COLOR[stat]) ? LIB_STAT_COLOR[stat] : '#a78bfa';
-      const isSel  = _libSelected.has(idx);
-      const row = document.createElement('button');
-      row.type      = 'button';
-      row.className = 'lib-row' + (isSel ? ' is-selected' : '');
-      row.dataset.idx = String(idx);
-      row.setAttribute('aria-pressed', isSel ? 'true' : 'false');
-      row.innerHTML =
-        '<span class="lib-row-ic">' + habitIconHtml(h, { size: 26, eager: false }) + '</span>' +
-        '<span class="lib-row-mid">' +
-          '<span class="lib-row-name">' + esc(h.name) + '</span>' +
-          '<span class="lib-row-meta">' +
-            '<span class="lib-row-dpill lib-row-dpill--' + diff + '">' +
-              ((DIFFICULTY[diff] && DIFFICULTY[diff].label) || diff) +
-            '</span>' +
-            (stat
-              ? '<span class="lib-row-xp"><span class="lib-row-stat" style="color:' + statCl + '">' +
-                  stat + '</span> · +' + xp + ' XP</span>'
-              : '<span class="lib-row-xp">+' + xp + ' XP</span>'
-            ) +
-          '</span>' +
-        '</span>' +
-        '<span class="lib-row-add" aria-hidden="true">' + (isSel ? '✓' : '+') + '</span>';
-      frag.appendChild(row);
-    });
-    list.appendChild(frag);
-
-    // Single delegated handler — tapping anywhere on the row toggles.
-    if (!list.dataset.wired) {
-      list.dataset.wired = '1';
-      list.addEventListener('click', (e) => {
-        const row = e.target && e.target.closest && e.target.closest('.lib-row');
-        if (!row) return;
-        const idx = parseInt(row.dataset.idx, 10);
-        if (isNaN(idx)) return;
-        if (_libSelected.has(idx)) {
-          _libSelected.delete(idx);
-          row.classList.remove('is-selected');
-          row.setAttribute('aria-pressed', 'false');
-          const add = row.querySelector('.lib-row-add');
-          if (add) add.textContent = '+';
-        } else {
-          _libSelected.add(idx);
-          row.classList.add('is-selected');
-          row.setAttribute('aria-pressed', 'true');
-          const add = row.querySelector('.lib-row-add');
-          if (add) add.textContent = '✓';
-        }
-        try {
-          _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-add-tap', {
-            idx, selectedCount: _libSelected.size,
-          });
-        } catch (_) {}
-        _libUpdateCta();
-      });
-    }
-
-    _libUpdateCta();
-    _wireLibFooter();
+    _libSync();
 
     try {
       _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-sheet-render', {
@@ -42920,15 +42872,172 @@
     } catch (_) {}
   }
 
-  function _wireLibFooter() {
+  // Everything that follows the selection, updated in place.
+  function _libSync() {
+    const sheet = document.getElementById('lib-sheet');
+    if (!sheet) return;
+    const activeNames = _libActiveNames();
+    const room = _libRoom();
+    const sub = document.getElementById('lib-sub');
+    if (sub) sub.textContent = getActiveHabitCount() + ' active · ' + room + (room === 1 ? ' slot open' : ' slots open');
+    sheet.querySelectorAll('#lib-list .lib-row').forEach((row) => {
+      if (row.classList.contains('is-have')) return;
+      const on = _libSelected.has(parseInt(row.dataset.idx, 10));
+      row.classList.toggle('is-selected', on);
+      row.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    LIB_PACK_CARDS.forEach((pc) => {
+      const card = document.getElementById(pc.domId);
+      if (!card) return;
+      const all = _libPackIndices(pc.id);
+      const mis = all.filter((i) => !activeNames.has(DEFAULT_HABITS[i].name));
+      const sel = mis.length > 0 && mis.every((i) => _libSelected.has(i));
+      card.classList.toggle('is-sel', sel);
+      card.classList.toggle('is-done', mis.length === 0);
+      card.disabled = mis.length === 0;
+      card.setAttribute('aria-pressed', sel ? 'true' : 'false');
+      const cnt = card.querySelector('.lib-pack-count');
+      if (cnt) cnt.textContent = all.length + ' HABITS';
+      const add = card.querySelector('.lib-pack-add');
+      if (add) add.textContent = mis.length === 0 ? 'All added'
+        : (mis.length === all.length ? 'Add all ' + all.length : 'Add ' + mis.length);
+    });
+    const n = _libSelected.size;
     const cta = document.getElementById('lib-cta');
-    if (cta && !cta.dataset.wired) {
-      cta.dataset.wired = '1';
-      cta.addEventListener('click', () => {
-        if (cta.disabled) return;
-        _libCommitSelection();
+    if (cta) {
+      cta.disabled = n === 0;
+      cta.textContent = n ? 'Add ' + n + ' habit' + (n === 1 ? '' : 's') + ' to my list' : 'Pick habits to add';
+    }
+    const foot = document.getElementById('lib-footer');
+    if (foot) foot.classList.toggle('has-selection', n > 0);
+  }
+
+  function _libToggleRow(idx) {
+    if (_libSelected.has(idx)) {
+      _libSelected.delete(idx);
+    } else {
+      const h = DEFAULT_HABITS[idx];
+      if (!h || _libActiveNames().has(h.name)) return;
+      if (_libRoom() <= 0) { _libCapToast(0); return; }
+      _libSelected.add(idx);
+    }
+    try {
+      _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-add-tap', {
+        idx, selectedCount: _libSelected.size,
+      });
+    } catch (_) {}
+    _libSync();
+  }
+
+  // A pack card selects the pack's habits that are not yet active, up to the
+  // room left; tapping a fully selected card lets them go. Nothing saves here.
+  function _libTogglePack(packId) {
+    const mis = _libPackMissing(packId, _libActiveNames());
+    if (!mis.length) return;
+    let action = 'select';
+    if (mis.every((i) => _libSelected.has(i))) {
+      mis.forEach((i) => _libSelected.delete(i));
+      action = 'deselect';
+    } else {
+      const room = _libRoom();
+      const want = mis.filter((i) => !_libSelected.has(i));
+      want.slice(0, room).forEach((i) => _libSelected.add(i));
+      if (want.length > room) _libCapToast(room);
+    }
+    try {
+      _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-pack-tap', {
+        packId, action, selectedCount: _libSelected.size,
+      });
+    } catch (_) {}
+    _libSync();
+  }
+
+  function _wireLibrary(sheet) {
+    if (sheet.dataset.wiredV3) return;
+    sheet.dataset.wiredV3 = '1';
+    const byId    = (id) => document.getElementById(id);
+    const chipsEl = byId('lib-chips');
+    const list    = byId('lib-list');
+    const packsEl = byId('lib-packs');
+    const search  = byId('lib-search-input');
+    const scroll  = byId('lib-scroll');
+
+    if (chipsEl) chipsEl.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest && e.target.closest('.lib-chip');
+      if (!btn) return;
+      _libActiveChip = btn.dataset.chip;
+      try {
+        _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-filter-change', {
+          filterKey: _libActiveChip,
+        });
+      } catch (_) {}
+      renderLibrary();
+      if (scroll) scroll.scrollTop = 0;
+    });
+    if (list) list.addEventListener('click', (e) => {
+      const row = e.target && e.target.closest && e.target.closest('.lib-row');
+      if (!row || row.classList.contains('is-have')) return;
+      const idx = parseInt(row.dataset.idx, 10);
+      if (!isNaN(idx)) _libToggleRow(idx);
+    });
+    if (packsEl) packsEl.addEventListener('click', (e) => {
+      const card = e.target && e.target.closest && e.target.closest('.lib-pack');
+      if (card && !card.disabled) _libTogglePack(card.dataset.pack);
+    });
+
+    // Search mode: focus hides the chips and the gold bar (the keyboard sits
+    // there); the packs step aside once there is a query. Cancel leaves it.
+    if (search) {
+      search.addEventListener('focus', () => {
+        _libSearching = true;
+        sheet.classList.add('is-searching', 'is-typing');
+      });
+      search.addEventListener('blur', () => { sheet.classList.remove('is-typing'); });
+      search.addEventListener('input', () => {
+        _libQueryRaw = search.value || '';
+        _libQuery    = _libQueryRaw.trim().toLowerCase();
+        try {
+          _addHabitBreadcrumb && _addHabitBreadcrumb('add-habits-search', {
+            queryLength: _libQuery.length,
+          });
+        } catch (_) {}
+        renderLibrary();
       });
     }
+    const clearQ = byId('lib-search-clear');
+    if (clearQ) {
+      clearQ.addEventListener('pointerdown', (e) => e.preventDefault());   // keep the keyboard up
+      clearQ.addEventListener('click', () => {
+        _libQueryRaw = '';
+        _libQuery    = '';
+        if (search) { search.value = ''; search.focus(); }
+        renderLibrary();
+      });
+    }
+    const cancel = byId('lib-search-cancel');
+    if (cancel) cancel.addEventListener('click', () => {
+      _libSearching = false;
+      _libQueryRaw  = '';
+      _libQuery     = '';
+      if (search) { search.value = ''; search.blur(); }
+      sheet.classList.remove('is-searching', 'is-typing');
+      renderLibrary();
+    });
+    // Scrolling the results puts the keyboard away; search mode stays.
+    if (scroll) scroll.addEventListener('touchmove', () => {
+      if (search && document.activeElement === search) search.blur();
+    }, { passive: true });
+
+    const clearSel = byId('lib-clear');
+    if (clearSel) clearSel.addEventListener('click', () => {
+      _libSelected.clear();
+      _libSync();
+    });
+    const cta = byId('lib-cta');
+    if (cta) cta.addEventListener('click', () => {
+      if (cta.disabled) return;
+      _libCommitSelection();
+    });
   }
   // v3 Phase 1z.252B — Legacy renderLibrary() body (pack-entry cards,
   // 7-accordion category list, per-row openHabitDetail confirm flow)

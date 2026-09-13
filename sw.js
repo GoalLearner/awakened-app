@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.241';
+const CACHE_VERSION = 'v6.242';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -145,6 +145,9 @@ const PRECACHE_ASSETS = [
   '/assets/backgrounds/bg_b.webp',
   '/assets/backgrounds/bg_a.webp',
   '/assets/backgrounds/bg_s.webp',
+  // W945 — Add Habits pack cards
+  '/assets/backgrounds/pack-morning-road.webp',
+  '/assets/backgrounds/pack-lockedin-tower.webp',
   // W705 — leaderboard painted strips (21KB total; offline boards keep their art)
   '/assets/backgrounds/lb-row-basic.webp',
   '/assets/backgrounds/lb-hero.webp',

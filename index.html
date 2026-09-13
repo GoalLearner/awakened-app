@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=698">
+  <link rel="stylesheet" href="styles.css?v=699">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2559,36 +2559,44 @@
        container-only; renderLibrary() in app.js populates chips,
        packs, and the visible list. -->
   <div id="lib-overlay" class="lib-overlay hidden"></div>
-  <div id="lib-sheet" class="lib-sheet lib-sheet--v2 hidden">
+  <!-- W945 — Add Habits v3 (Claude Design handoff 26) -->
+  <div id="lib-sheet" class="lib-sheet lib-sheet--v3 hidden" role="dialog" aria-modal="true" aria-labelledby="lib-title">
     <div class="lib-drag-handle"></div>
     <div class="lib-header">
-      <h2 class="lib-title">Add Habits</h2>
-      <button id="lib-close-btn" class="lib-close-btn" aria-label="Close">✕</button>
+      <div class="lib-head-text">
+        <h2 id="lib-title" class="lib-title">Add Habits</h2>
+        <div id="lib-sub" class="lib-sub"></div>
+      </div>
+      <button id="lib-close-btn" class="lib-close-btn" type="button" aria-label="Close">✕</button>
     </div>
-    <div class="lib-search-wrap">
-      <span class="lib-search-icon" aria-hidden="true">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <input id="lib-search-input" type="text" class="lib-search-input"
-             placeholder="Search habits…" autocomplete="off" autocorrect="off"
-             autocapitalize="none" spellcheck="false">
+    <div class="lib-srow">
+      <div class="lib-search-wrap">
+        <span class="lib-search-icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <input id="lib-search-input" type="text" class="lib-search-input"
+               placeholder="Search habits" autocomplete="off" autocorrect="off"
+               autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="Search habits">
+        <button id="lib-search-clear" class="lib-search-clear" type="button" aria-label="Clear search">✕</button>
+      </div>
+      <button id="lib-search-cancel" class="lib-search-cancel" type="button">Cancel</button>
     </div>
     <div id="lib-chips" class="lib-chips" role="tablist" aria-label="Habit categories"></div>
     <div id="lib-scroll" class="lib-scroll">
       <div id="lib-starter" class="lib-starter">
-        <div class="lib-seclbl">Start fast — add a full path in one tap</div>
+        <div class="lib-k">Start fast <span>tap a path to select it all</span></div>
         <div id="lib-packs" class="lib-packs"></div>
-        <div id="lib-create-row" class="lib-create-row"></div>
-        <div class="lib-divider" aria-hidden="true"></div>
+        <div id="lib-create-row" class="lib-create-row" role="button" tabindex="0"></div>
       </div>
-      <div id="lib-listcount" class="lib-listcount">Popular</div>
+      <div class="lib-k lib-k--list"><span id="lib-listcount" class="lib-listcount">Popular</span><span id="lib-listmeta" class="lib-listmeta"></span></div>
       <div id="lib-list" class="lib-list"></div>
     </div>
-    <div class="lib-footer">
-      <button id="lib-cta" class="lib-cta" type="button" disabled>Select habits to add</button>
+    <div id="lib-footer" class="lib-footer">
+      <button id="lib-clear" class="lib-clear" type="button">CLEAR</button>
+      <button id="lib-cta" class="lib-cta" type="button" disabled>Pick habits to add</button>
     </div>
   </div>
 
@@ -3394,7 +3402,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1350"></script>
+  <script src="app.js?v=1351"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
