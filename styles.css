@@ -3293,7 +3293,8 @@ footer {
 /* ─── W855 (Wave 2) — ACKNOWLEDGED: the System seizes the device ────────
    A hard CUT to pure black (no fade-in — the interruption IS the effect),
    held above every surface including cinematics (99000 layer rule), then
-   the System's line types itself in terminal blue. .ack-out releases. */
+   the System's line lands whole in terminal blue (W941: no typewriter).
+   .ack-out releases. */
 .ack-overlay {
   position: fixed; inset: 0; z-index: 99500;
   background: #000;
@@ -3313,12 +3314,6 @@ footer {
   line-height: 1.8;
   min-height: 1.8em;
 }
-.ack-line::after {
-  content: '▍';
-  color: rgba(143, 184, 232, 0.7);
-  animation: ack-caret 0.9s steps(1) infinite;
-}
-@keyframes ack-caret { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
 
 /* W848 (V1e) — category tint: the toast's ring + eyebrow take the achievement
    family's color (set via data-ach-cat on #ach-popup). Neutral 'general'
@@ -6346,6 +6341,9 @@ footer {
 .rankup-screen.rank-splus .rankup-class-unlock {
   animation: ru-fade-up 0.4s ease 1.35s both;
 }
+/* W941 — the class line is hidden when the class did not change (E→D); keep
+   the gap it used to hold so the trophy card doesn't crowd the rank name. */
+.rankup-class-unlock.hidden + .rankup-trophy-card { margin-top: 18px; }
 
 /* Trophy card */
 .rankup-trophy-card {
@@ -6374,6 +6372,39 @@ footer {
   color: rgba(255,255,255,0.35);
   font-variant-numeric: tabular-nums;
 }
+/* W941 — the First Awakened's souls gift, inside the trophy card */
+.rankup-souls-line {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f5b842;
+  font-variant-numeric: tabular-nums;
+}
+/* W941 — his one line, under the card */
+.rankup-fa {
+  margin: -8px 0 22px;
+  max-width: 300px;
+  animation: ru-fade-up 0.4s ease 1.2s both;
+}
+.rankup-fa-eyebrow {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 6px;
+}
+.rankup-fa-line {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  font-style: italic;
+  color: rgba(255,255,255,0.8);
+}
+.rankup-screen.rank-splus .rankup-fa { animation-delay: 2s; }
 
 /* Continue button */
 .rankup-continue-btn {
@@ -6397,6 +6428,25 @@ footer {
   animation: ru-fade-up 0.4s ease 2.2s both;
 }
 .rankup-continue-btn:active { transform: scale(0.96); opacity: 0.88; }
+/* W941 — Hunter Report as a secondary action under CONTINUE (C rank and up) */
+.rankup-share-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.72);
+  border-radius: 14px;
+  padding: 13px 26px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  margin-bottom: 14px;
+  animation: ru-fade-up 0.4s ease 1.35s both;
+}
+.rankup-share-btn:active { transform: scale(0.96); opacity: 0.88; }
+.rankup-screen.rank-splus .rankup-share-btn { animation-delay: 2.25s; }
 
 /* Branding */
 .rankup-brand {

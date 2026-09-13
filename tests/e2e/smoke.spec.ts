@@ -2483,7 +2483,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
     // The screen's reward line is sourced, not written: E-rank kill souls plus
     // the first-awakening XP constant.
     expect(r.pact.stat).toContain('+50 SOULS');
-    expect(r.pact.stat).toContain('+25 XP');
+    expect(r.pact.stat).toContain('+5 XP');   // W941 — the onboarding grant
     // And it announced itself exactly once — nothing queued to pop behind it.
     expect(r.queuedBossResult).toBeNull();
   });
@@ -3049,6 +3049,7 @@ test.describe('AG · One moment, one message (W940)', () => {
     const extra = document.getElementById('first-win-extra') as HTMLElement | null;
     return {
       firstMark: shown('first-win-overlay'),
+      firstMarkXp: (document.getElementById('first-win-xp') as HTMLElement | null)?.textContent || null,
       extra: extra && !extra.hidden ? extra.textContent : null,
       achievementToast: shown('ach-popup'),
       fieldManual: shown('fm-pointer-overlay'),
@@ -3072,6 +3073,7 @@ test.describe('AG · One moment, one message (W940)', () => {
     await page.waitForTimeout(1500);
     const atTap = await page.evaluate(readScreen);
     expect(atTap.firstMark).toBe(true);
+    expect(atTap.firstMarkXp).toBe('+10 XP');   // W941 — the First Mark grant
     expect(atTap.extra).toContain('First Step');
     expect(atTap.extra).toContain('Division E I');
     expect(atTap.achievementToast).toBe(false);
@@ -3092,7 +3094,7 @@ test.describe('AG · One moment, one message (W940)', () => {
       achievements: localStorage.getItem('hb_achievements') || '',
       fmSeen: localStorage.getItem('hb_fm_pointer_seen'),
     }));
-    expect(state.points).toBeGreaterThanOrEqual(75);   // 25 + the +50 First Mark + the habit
+    expect(state.points).toBeGreaterThanOrEqual(36);   // 25 seeded + the +10 First Mark + the habit (W941)
     expect(state.achievements).toContain('first_step');
     expect(state.fmSeen).toBe('1');
   });
@@ -3112,5 +3114,164 @@ test.describe('AG · One moment, one message (W940)', () => {
     await page.waitForTimeout(800);
     const next = await page.evaluate(readScreen);
     expect(next.fieldManual).toBe(true);                // W486 chain intact
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AH. W941 — One rank-up screen; the day-one grants are small
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AH · One rank-up screen (W941)', () => {
+  /**
+   * An established hunter (10 days in, past First Mark unless asked) sitting
+   * just under a rank line, with one plain-tap vow. IAP is stubbed LIVE so the
+   * premium gate under test is the rank, not the store.
+   */
+  async function rankHunter(page: Page, points: number, opts: { firstWin?: boolean } = {}) {
+    await freshApp(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });   // skips the ACKNOWLEDGED prelude
+    await page.addInitScript(({ points, firstWin }) => {
+      try {
+        if (sessionStorage.getItem('__w941_seeded')) return;
+        sessionStorage.setItem('__w941_seeded', '1');
+        const d = new Date(); d.setDate(d.getDate() - 10);
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_onboarding_first_xp_date', ymd);
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w941-journal', name: 'Journal', emoji: '✍️', difficulty: 'easy', type: 'build' }]));
+        localStorage.setItem('hb_points', String(points));
+        localStorage.setItem('hb_tour_welcome_back_v1', '1');
+        localStorage.setItem('hb_fm_pointer_seen', '1');
+        // The launch-time retention ladder (day 3 / day 7 / first gate) is a
+        // separate beat that waits behind levelUpActive; it is not the subject.
+        ['hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        if (firstWin) localStorage.removeItem('hb_first_completion_bonus_v1');
+        else localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.removeItem('hb_fa_rankup_seen_v1');
+        localStorage.removeItem('hb_hr_offered_D');
+        localStorage.removeItem('hb_hr_offered_C');
+        localStorage.removeItem('hb_founder_last_prompt_ms');
+      } catch (_) {}
+    }, { points, firstWin: !!opts.firstWin });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => {
+      const w = window as any;
+      w.Auth.iapAvailable = () => true;
+      w.Auth.purchasePremium = async () => ({});
+      w.Auth.isMember = () => false;
+    });
+  }
+
+  const readRank = () => {
+    const shown = (id: string) => {
+      const el = document.getElementById(id);
+      return !!el && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none';
+    };
+    const text = (id: string) => (document.getElementById(id) as HTMLElement | null)?.textContent || '';
+    const souls = JSON.parse(localStorage.getItem('hb_souls') || '{}');
+    const ledger = JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]');
+    return {
+      screen: shown('rankup-screen'),
+      badge: text('rankup-badge'),
+      classLine: shown('rankup-class-unlock') ? text('rankup-class-unlock') : null,
+      soulsLine: shown('rankup-souls-line') ? text('rankup-souls-line') : null,
+      faLine: shown('rankup-fa') ? text('rankup-fa-line') : null,
+      share: shown('rankup-share'),
+      premium: shown('rankup-founder') && !!document.getElementById('rankup-founder-cta'),
+      coach: shown('fa-coachmark-overlay'),
+      coachContext: shown('fa-coachmark-overlay') ? (document.getElementById('fa-coachmark-overlay') as HTMLElement).dataset.context : null,
+      report: shown('hr-overlay'),
+      firstMark: shown('first-win-overlay'),
+      prelude: !!document.querySelector('.ack-overlay'),
+      balance: souls.balance,
+      lastLedger: ledger[0] ? { delta: ledger[0].delta, type: ledger[0].type, detail: ledger[0].detail } : null,
+      seen: localStorage.getItem('hb_fa_rankup_seen_v1'),
+      offeredD: localStorage.getItem('hb_hr_offered_D'),
+      offeredC: localStorage.getItem('hb_hr_offered_C'),
+    };
+  };
+  const tapVow = () => (document.querySelector('#habit-list .habit-item') as HTMLElement).click();
+
+  test('E→D is one screen: the souls gift and one line, no coach card, no share sheet, no premium, no class line', async ({ page }) => {
+    await rankHunter(page, 99);
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls') || '{}').balance as number);
+    await page.evaluate(tapVow);
+    await page.waitForTimeout(1200);
+    const r = await page.evaluate(readRank);
+    expect(r.screen).toBe(true);
+    expect(r.badge).toBe('D');
+    expect(r.soulsLine).toContain('+50 SOULS');
+    expect(r.faLine).toBeTruthy();
+    expect(r.classLine).toBeNull();          // E and D are both Civilian: nothing unlocked
+    expect(r.share).toBe(false);             // C rank and up
+    expect(r.premium).toBe(false);           // C rank and up, even with IAP live
+    expect(r.coach).toBe(false);
+    expect(r.report).toBe(false);
+    expect(r.prelude).toBe(false);
+    // The gift is real, once, and reads as the First Awakened's in the ledger.
+    expect(r.balance).toBe(before + 50);
+    expect(r.lastLedger).toEqual({ delta: 50, type: 'fa_rankup', detail: 'D-rank advancement' });
+    expect(JSON.parse(r.seen || '[]')).toContain('D');
+
+    await page.evaluate(() => (document.getElementById('rankup-continue') as HTMLElement).click());
+    await page.waitForTimeout(1500);
+    const after = await page.evaluate(readRank);
+    expect(after.screen).toBe(false);
+    expect(after.coachContext).toBeNull();    // nothing follows
+    expect(after.report).toBe(false);
+
+    // Re-showing the same rank never re-gifts.
+    await page.evaluate(() => (window as any).__showRankUp('D', 'E'));
+    await page.waitForTimeout(600);
+    const again = await page.evaluate(readRank);
+    expect(again.screen).toBe(true);
+    expect(again.soulsLine).toBeNull();
+    expect(again.balance).toBe(before + 50);
+  });
+
+  test('D→C adds the class line, the share button and premium; the report opens on tap only', async ({ page }) => {
+    await rankHunter(page, 599);
+    await page.evaluate(tapVow);
+    await page.waitForTimeout(1200);
+    const r = await page.evaluate(readRank);
+    expect(r.screen).toBe(true);
+    expect(r.badge).toBe('C');
+    expect(r.soulsLine).toContain('+100 SOULS');
+    expect(r.classLine).toBe('CLASS UNLOCKED: Apprentice Hunter');
+    expect(r.share).toBe(true);
+    expect(r.premium).toBe(true);
+    expect(r.report).toBe(false);            // offered = the button was shown; nothing opened itself
+    expect(r.offeredC).toBe('1');
+
+    await page.evaluate(() => (document.getElementById('rankup-share') as HTMLElement).click());
+    await page.waitForTimeout(600);
+    const opened = await page.evaluate(readRank);
+    expect(opened.report).toBe(true);
+    expect(opened.screen).toBe(true);        // the report sits above the rank screen
+    await page.evaluate(() => (document.getElementById('hr-dismiss-btn') as HTMLElement).click());
+    await page.waitForTimeout(400);
+    const back = await page.evaluate(readRank);
+    expect(back.report).toBe(false);
+    expect(back.screen).toBe(true);
+    await page.evaluate(() => (document.getElementById('rankup-continue') as HTMLElement).click());
+    await page.waitForTimeout(400);
+    expect((await page.evaluate(readRank)).screen).toBe(false);
+  });
+
+  test('a same-tap First Mark comes before the rank screen, and E→D still shows no class line', async ({ page }) => {
+    await rankHunter(page, 95, { firstWin: true });
+    await page.evaluate(tapVow);
+    await page.waitForTimeout(1200);
+    const r = await page.evaluate(readRank);
+    expect(r.firstMark).toBe(true);
+    expect(r.screen).toBe(false);
+    expect(await page.evaluate(() => (document.getElementById('first-win-xp') as HTMLElement).textContent)).toBe('+10 XP');
+    await page.evaluate(() => (document.getElementById('first-win-cta') as HTMLElement).click());
+    await page.waitForTimeout(1200);
+    const next = await page.evaluate(readRank);
+    expect(next.firstMark).toBe(false);
+    expect(next.screen).toBe(true);
+    expect(next.badge).toBe('D');
+    expect(next.classLine).toBeNull();       // oldRankId 'E' was carried through the queue
   });
 });

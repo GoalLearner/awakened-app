@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.4';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.4-w940'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.4-w941'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -30800,16 +30800,17 @@
   // ── LEVEL UP SCREENS ─────────────────────────────────────
 
   // ── W855 (Wave 2, ACKNOWLEDGED) — the System seizes the device ──────────
-  // The rank-up now opens with a PRELUDE: the screen cuts to pure black
-  // mid-interaction, holds 1.5s of silence, then the System types
-  // "YOU HAVE BEEN ACKNOWLEDGED." character by character — each glyph
-  // landing with a real haptic tick and a low sine blip on a PRIVATE
-  // AudioContext (the playSfx priority gate must not swallow the
-  // rank_fanfare that follows). Then the black lifts straight into the
-  // existing fireworks (showRankUpScreen's body is untouched — the prelude
-  // is a prologue, not a replacement). Skipped under reduced-motion; a tap
-  // fast-forwards; z-index rides above everything (cinematic layer, 99000+
-  // per the body-level-cinematic rule).
+  // The rank-up opens with a PRELUDE: the screen cuts to pure black mid-
+  // interaction and the System's line lands — then the black lifts straight
+  // into the existing fireworks (showRankUpScreen's body is untouched; the
+  // prelude is a prologue, not a replacement). W941 — the line no longer
+  // types itself: it appears whole, holds ~0.7s, and lifts. The owner's rule
+  // for every System / First Awakened line is "direct, instant, nothing
+  // slow"; the 1.5s silent hold, the 55ms-per-glyph typewriter and its
+  // private blip AudioContext went with it. The black cut stays because it
+  // hides the DOM swap from the habit list into the white-flash screen.
+  // Skipped under reduced-motion; a tap finishes early; z-index rides above
+  // everything (cinematic layer, 99000+ per the body-level-cinematic rule).
   function _ackPrelude(label, onDone) {
     let done = false;
     const finish = function () {
@@ -30823,67 +30824,46 @@
     const ov = document.createElement('div');
     ov.className = 'ack-overlay';
     ov.innerHTML = '<div class="ack-line" aria-live="polite"></div>';
+    ov.querySelector('.ack-line').textContent = label || 'YOU HAVE BEEN ACKNOWLEDGED.';   // whole line, at once
     document.body.appendChild(ov);
-    const lineEl = ov.querySelector('.ack-line');
-    const text = label || 'YOU HAVE BEEN ACKNOWLEDGED.';
-    // Private audio — never touches the playSfx gate.
-    let ctx = null;
-    try { const C = window.AudioContext || window.webkitAudioContext; if (C && typeof soundEnabled !== 'undefined' && soundEnabled) { if (!window.__ackCtx) window.__ackCtx = new C(); ctx = window.__ackCtx; } } catch (_) {}
-    const blip = function (i) {
-      if (!ctx) return;
-      try {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type = 'square'; o.frequency.value = 210 + (i % 3) * 8;
-        const t = ctx.currentTime;
-        g.gain.setValueAtTime(0.028, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-        o.start(t); o.stop(t + 0.06);
-      } catch (_) {}
-    };
-    let i = 0, typing = null;
-    const type = function () {
-      typing = setInterval(function () {
-        if (done) { clearInterval(typing); return; }
-        if (i >= text.length) {
-          clearInterval(typing);
-          setTimeout(finish, 900);   // let the full line sit for a beat
-          return;
-        }
-        lineEl.textContent += text[i];
-        if (text[i] !== ' ') {
-          blip(i);
-          if (i % 2 === 0) { try { _hapticTick('LIGHT'); } catch (_) {} }
-        }
-        i++;
-      }, 55);
-    };
-    // Tap = fast-forward: complete the line instantly, then finish.
-    ov.addEventListener('click', function () {
-      if (i >= text.length) { finish(); return; }
-      try { clearInterval(typing); } catch (_) {}
-      lineEl.textContent = text; i = text.length;
-      setTimeout(finish, 450);
-    });
-    setTimeout(type, 1500);          // 1.5s of held black silence first
-    setTimeout(finish, 12000);       // hard failsafe — the queue must never stall
+    try { _hapticTick('MEDIUM'); } catch (_) {}
+    ov.addEventListener('click', finish);   // tap = finish early
+    setTimeout(finish, 700);                // the hold
+    setTimeout(finish, 3000);               // hard failsafe — the queue must never stall
   }
   // W855 QA — preview the seizure without a real rank-up.
   try { window.__ackPreview = function (label) { _ackPrelude(label || 'YOU HAVE BEEN ACKNOWLEDGED.', function () {}); }; } catch (_) {}
 
-  function showRankUpScreen(rank, prestigeLevel) {
+  // W941 — THE ONE RANK-UP SCREEN. A crossing used to fire four things in a
+  // row: this screen, a First Awakened coach card (three typed lines, three
+  // taps, the souls gift), the Hunter Report share sheet, and only then the
+  // First Mark. The owner saw all of it inside his first minute. Now the souls
+  // gift and the First Awakened's line render here, the share offer is a
+  // secondary button (C rank and up), the premium CTA waits for C too, and
+  // "CLASS UNLOCKED" appears only when the class actually changed (E and D
+  // are both Civilian — the first rank-up used to announce nothing).
+  //   ctx.oldRankId — the rank before this tap (from toggleHabit)
+  //   ctx.gifted    — souls already granted on the first entry (carried
+  //                   through the prelude re-entry so the grant runs once)
+  function showRankUpScreen(rank, prestigeLevel, ctx) {
+    ctx = ctx || {};
     // W453 — when prestigeLevel is given (>0) this same fanfare doubles as
     // the PRESTIGE celebration: force the gold S+ effects + prestige labels,
     // reusing all of the particle/shockwave/rain/dismiss/founder machinery.
     const isPrestige = (prestigeLevel != null) && (prestigeLevel > 0);
+    // W941 — the souls gift is granted on the FIRST entry, before the prelude,
+    // so a kill mid-prelude cannot lose it (the seen-set is written eagerly).
+    if (!isPrestige && ctx.gifted == null) ctx.gifted = _grantRankUpSouls(rank.id);
     // W855 — ACKNOWLEDGED prelude runs once per rank-up, then hands off to
     // the fireworks below. Guarded so the recursive re-entry skips it.
     if (!showRankUpScreen._ackDone) {
       showRankUpScreen._ackDone = true;
       _ackPrelude(isPrestige ? 'THE SYSTEM BOWS. PRESTIGE ' + prestigeLevel + '.' : 'YOU HAVE BEEN ACKNOWLEDGED.', function () {
-        try { showRankUpScreen(rank, prestigeLevel); } finally { showRankUpScreen._ackDone = false; }
+        try { showRankUpScreen(rank, prestigeLevel, ctx); } finally { showRankUpScreen._ackDone = false; }
       });
       return;
     }
+    const isCPlus = isPrestige || ['C', 'B', 'A', 'S', 'S+'].indexOf(rank.id) >= 0;
     // v3 Phase 1z.278B — Rank-up fanfare. Highest-priority SFX (5),
     // so even if a stat-up or achievement chime is queued from the
     // same tap, the priority gate suppresses them within the 800ms
@@ -30918,9 +30898,33 @@
     // Rank name + class (prestige reuses these slots: name = "Prestige N",
     // the class-unlock line = the ascending star glyphs)
     document.getElementById('rankup-rank-name').textContent   = isPrestige ? ('Prestige ' + prestigeLevel) : rank.label;
-    document.getElementById('rankup-class-unlock').textContent = isPrestige ? prestigeStars(prestigeLevel) : ('CLASS UNLOCKED: ' + getClass(rank.id));
+    // W941 — the class line only when the class actually changed. E and D are
+    // both Civilian (getClass), so the first rank-up used to read "CLASS
+    // UNLOCKED: CIVILIAN" — the unawakened default, nothing unlocked.
+    {
+      const classEl = document.getElementById('rankup-class-unlock');
+      const prevId  = ctx.oldRankId || _prevRankId(rank.id);
+      const classChanged = getClass(rank.id) !== getClass(prevId);
+      if (isPrestige)        { classEl.textContent = prestigeStars(prestigeLevel); classEl.classList.remove('hidden'); }
+      else if (classChanged) { classEl.textContent = 'CLASS UNLOCKED: ' + getClass(rank.id); classEl.classList.remove('hidden'); }
+      else                   { classEl.textContent = ''; classEl.classList.add('hidden'); }
+    }
     document.getElementById('rankup-xp-line').textContent     = totalPoints.toLocaleString() + ' Total XP';
     document.getElementById('rankup-days-line').textContent   = daysActive + ' Days Active';
+    // W941 — the First Awakened's gift and his line, on this screen.
+    {
+      const soulsEl = document.getElementById('rankup-souls-line');
+      const gifted  = (!isPrestige && ctx.gifted > 0) ? ctx.gifted : 0;
+      if (soulsEl) {
+        soulsEl.textContent = gifted ? ('+' + gifted.toLocaleString() + ' SOULS \u00b7 THE FIRST AWAKENED\u2019S GIFT') : '';
+        soulsEl.classList.toggle('hidden', !gifted);
+      }
+      const faWrap = document.getElementById('rankup-fa');
+      const faLine = document.getElementById('rankup-fa-line');
+      const line   = (!isPrestige && FA_RANKUP_LINE[rank.id]) || '';
+      if (faLine) faLine.textContent = line;
+      if (faWrap) faWrap.classList.toggle('hidden', !line);
+    }
 
     screen.classList.remove('hidden');
 
@@ -30956,10 +30960,10 @@
     try { _hapticTick(isPrestige || rank.id === 'S+' ? 'SUCCESS' : rank.id === 'S' ? 'HEAVY' : 'MEDIUM'); } catch (_) {}
 
     // W847 (V1c) — rank-up is the ladder's tier-2 peak. Arm here; the flush
-    // fires when the WHOLE celebration chain (rank screen → First Awakened
-    // beat → Hunter Report → achievement toasts) has fully drained, via the
-    // queue-empty branches. E/D rank-ups stay ask-free — too early.
-    if (isPrestige || ['C', 'B', 'A', 'S', 'S+'].indexOf(rank.id) >= 0) {
+    // fires when the WHOLE celebration chain (rank screen → achievement
+    // toasts) has fully drained, via the queue-empty branches. E/D rank-ups
+    // stay ask-free — too early.
+    if (isCPlus) {
       try { _reviewArm('rankup', { rank: isPrestige ? 'S+' : rank.id, rankLabel: isPrestige ? ('PRESTIGE ' + prestigeLevel) : (rank.label || '') }); } catch (_) {}
     }
 
@@ -30971,13 +30975,28 @@
       drainLevelUpQueue();
     };
     document.getElementById('rankup-continue').onclick = dismiss;
+    // W941 — Hunter Report: a secondary button from C rank up, opened on tap
+    // only (it used to be its own sheet, queued after the coach card).
+    // "Offered" now means the button was shown; the HR overlay sits above
+    // this screen and Dismiss returns here — CONTINUE stays the one release.
+    const _ruShare = document.getElementById('rankup-share');
+    if (_ruShare) {
+      const _offer = !isPrestige && isCPlus;
+      _ruShare.classList.toggle('hidden', !_offer);
+      if (_offer) { try { localStorage.setItem('hb_hr_offered_' + rank.id, '1'); } catch (_) {} }
+      _ruShare.onclick = _offer ? function (e) {
+        try { e.stopPropagation(); } catch (_) {}
+        try { openHunterReportPreview(_hrCollectData({ rank: rank.id }), null); } catch (_) {}
+      } : null;
+    }
     // W340 — tasteful Founder upsell at the rank-up peak (a rare, high-intent
     // moment). Gated on a LIVE IAP + non-owner, so it stays dormant until the
     // owner flips IAP_ENABLED, then surfaces automatically. Reuses .fv-founder-cta.
+    // W941 — and from C rank up only: D is the tutorial rank (owner call).
     const _ruFounder = document.getElementById('rankup-founder');
     if (_ruFounder) {
       let _ruLive = false;
-      try { _ruLive = _canShowFounderPrompt(); } catch (_) {}
+      if (isCPlus) { try { _ruLive = _canShowFounderPrompt(); } catch (_) {} }
       if (_ruLive) {
         _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Go Premium \u2014 back the climb' +
           '<span class="fv-founder-sub">UNLIMITED ASCENT \u00b7 UNLIMITED HUNTS</span></button>';   // W621 \u2014 headline benefit at the peak
@@ -31338,7 +31357,7 @@
       try { showFirstWinScreen(item); }
       catch (_) { levelUpActive = false; drainLevelUpQueue(); }
     }
-    else if (item.type === 'rank')        showRankUpScreen(item.rank);
+    else if (item.type === 'rank')        showRankUpScreen(item.rank, null, { oldRankId: item.oldRankId || null });
     else if (item.type === 'prestige')    showRankUpScreen(getRank(totalPoints), item.level);
     else if (item.type === 'class')       showClassChangePopup(item.classData);
     else if (item.type === 'awakening')   showAwakeningScreen(item.classData);
@@ -31362,48 +31381,10 @@
       levelUpActive = false;
       drainLevelUpQueue();
     }
-    else if (item.type === 'fa_rankup') {
-      // v3 Phase 1z.282D — The First Awakened acknowledges the rank
-      // advancement and gifts engage souls for the boss tier just
-      // unlocked. Queued by toggleHabit at position 1 (after the
-      // existing 'rank' celebration) so it fires AFTER the fireworks
-      // and BEFORE any stat-up modals. Blocking — releases the queue
-      // via the showFirstAwakenedRankUp onDismiss path. try/catch
-      // guards against an exception stalling the queue.
-      try { showFirstAwakenedRankUp(item.rankId); }
-      catch (_) {
-        levelUpActive = false;
-        drainLevelUpQueue();
-      }
-    }
-    else if (item.type === 'hunter_report') {
-      // v3 Phase 1z.283 W187 — Hunter Report share card.
-      // Queued by toggleHabit at position 2 (after 'rank' celebration
-      // and 'fa_rankup' character beat) so it fires AFTER both
-      // narrative moments and BEFORE stat-up modals. Per-rank
-      // idempotency via hb_hr_offered_<rankId>: eager-set on show
-      // so a user who backgrounds mid-preview doesn't get re-offered
-      // on next launch. Reset All Progress wipes via hb_* sweep.
-      const offeredKey = 'hb_hr_offered_' + String(item.rankId || 'unknown');
-      let alreadyOffered = false;
-      try { alreadyOffered = localStorage.getItem(offeredKey) === '1'; } catch (_) {}
-      if (alreadyOffered) {
-        levelUpActive = false;
-        drainLevelUpQueue();
-        return;
-      }
-      try { localStorage.setItem(offeredKey, '1'); } catch (_) {}
-      try {
-        const data = _hrCollectData({ rank: item.rankId });
-        openHunterReportPreview(data, function () {
-          levelUpActive = false;
-          drainLevelUpQueue();
-        });
-      } catch (_) {
-        levelUpActive = false;
-        drainLevelUpQueue();
-      }
-    }
+    // W941 — the fa_rankup and hunter_report queue items are gone: the
+    // souls gift, the First Awakened's line and the share offer live on the
+    // rank screen itself (showRankUpScreen). The queue is in-memory only, so
+    // no stale item of either type can arrive here.
     else                                  showStatLevelUp(item);
   }
 
@@ -32975,7 +32956,7 @@
     ptr.className = 'first-vow-pointer';
     ptr.innerHTML =
       '<span class="fvp-spark" aria-hidden="true">✦</span>' +
-      '<span class="fvp-text">Seal your first vow — tap a habit below to complete it. Your first <b>Mark</b> (+50 XP) awaits.</span>' +
+      '<span class="fvp-text">Seal your first vow — tap a habit below to complete it. Your first <b>Mark</b> (+' + FIRST_COMPLETION_BONUS_XP + ' XP) awaits.</span>' +
       '<button class="fvp-x" type="button" aria-label="Dismiss">&times;</button>';
     const panel = list.parentNode;
     try { panel.insertBefore(ptr, panel.firstChild); } catch (_) { return; }
@@ -36658,37 +36639,24 @@
         }
       }
 
-      // Detect rank up
+      // Detect rank up. W941 — ONE screen: the First Awakened's souls gift,
+      // his line and the Hunter Report offer all render inside
+      // showRankUpScreen now (the 1z.282D coach card and the W187 share sheet
+      // no longer follow it). A same-tap First Mark (unshifted above) stays
+      // AHEAD of the rank screen. oldRank was captured before any grant, so
+      // the screen can tell whether the CLASS actually changed.
       const newRank = getRank(totalPoints);
       const majorRankChanged = newRank.id !== oldRank.id;
       if (majorRankChanged) {
-        levelUpQueue.unshift({ type: 'rank', rank: newRank });
-        // v3 Phase 1z.282D — The First Awakened acknowledges the
-        // advancement and gifts engage souls for the new boss tier.
-        // Insert at queue position 1 so order is:
-        //   [0] rank-up celebration (fireworks + fanfare)
-        //   [1] fa_rankup (The First Awakened modal + souls)
-        //   [2] hunter_report (W187 share card preview)
-        //   [3+] stat-ups, sub-rank, achievements
-        // Idempotency lives inside showFirstAwakenedRankUp via the
-        // hb_fa_rankup_seen_v1 seen-set; queuing here is unconditional
-        // because the orchestrator releases the queue cleanly even on
-        // already-seen ranks.
-        levelUpQueue.splice(1, 0, { type: 'fa_rankup', rankId: newRank.id });
-        // v3 Phase 1z.283 W187 — Hunter Report share card. Queued
-        // immediately after fa_rankup so it follows the character
-        // beat. Per-rank idempotency via hb_hr_offered_<rankId>
-        // checked inside drainLevelUpQueue, so queuing here is also
-        // unconditional. Drain releases the queue on dismiss whether
-        // the user shared or skipped.
-        levelUpQueue.splice(2, 0, { type: 'hunter_report', rankId: newRank.id });
+        const _ruAt = (levelUpQueue[0] && levelUpQueue[0].type === 'first_win') ? 1 : 0;
+        levelUpQueue.splice(_ruAt, 0, { type: 'rank', rank: newRank, oldRankId: oldRank.id });
       }
 
       // W453 — Prestige star. Past S+, each PRESTIGE_STEP of XP beyond the
       // threshold earns another ascending star. Fires when THIS gain crosses
       // into a new star. Independent of major rank-up (you're already S+), so
-      // it queues AFTER the rank/fa/hunter beats on the (impossible-in-practice
-      // but defensive) tick where both happen.
+      // it queues AFTER the rank screen on the (impossible-in-practice but
+      // defensive) tick where both happen.
       // NOTE: reaching S+ itself (36000–47999 XP = prestige level 0) is NOT a
       // ✦ star — that moment is the normal S→S+ rank-up fanfare. The first ✦
       // intentionally celebrates at 48000 (level 1). This is by design; don't
@@ -38717,51 +38685,25 @@
     ]},
   ];
 
-  // v3 Phase 1z.282D — Rank-up congratulations + souls gift.
-  // Fires once per rank advancement (D, C, B, A, S, S+). Skips E —
-  // users start at E and never "advance" to it; cinematic onboarding
-  // already covers the welcome moment. S+ is treated specially: the
-  // peer-status narrative beat without a souls gift (no S+ boss
-  // currently exists, and the moment is bigger than the economy).
+  // v3 Phase 1z.282D → W941 — Rank-up: the First Awakened's line + souls gift.
+  // Once per rank advancement (D, C, B, A, S, S+). Skips E — users start at E
+  // and never "advance" to it. S+ is narrative-only (no S+ boss exists, and
+  // the moment is bigger than the economy).
+  // W941 — this used to be a three-line coach card (three taps) queued after
+  // the rank screen. It is now ONE direct line rendered on the rank screen
+  // itself (#rankup-fa-line), and the souls are granted by _grantRankUpSouls
+  // from showRankUpScreen. Souls = engageCostSouls(rankId): exactly one
+  // engagement at the new tier, pulled live.
   //
-  // Souls reward = engageCostSouls(rankId) so the rank-up gift
-  // covers exactly one engagement at the new tier. Pulled live (not
-  // hardcoded) so future economy changes propagate cleanly.
-  //
-  // Storage: hb_fa_rankup_seen_v1 (JSON array of seen ranks).
-  // Idempotent: shown at most once per rank per device. Reset All
-  // Progress wipes the seen-set and re-arms the moments.
-  const FA_RANKUP_BEATS = {
-    D: [{ pose: 'nodding', lines: [
-      'Hunter.',
-      'You have crossed the first threshold. The system has marked it.',
-      'Take these souls. The boss at your new rank will not enter for free.',
-    ]}],
-    C: [{ pose: 'nodding', lines: [
-      'The casual hunter is behind you now.',
-      'What you have done, most do not do.',
-      'Engage the boss at your rank. Read its condition first.',
-    ]}],
-    B: [{ pose: 'pointing', lines: [
-      'You have crossed into the disciplined ranks, hunter.',
-      'Few who began with you still stand.',
-      'The hunt deepens. So does the reward.',
-    ]}],
-    A: [{ pose: 'pointing', lines: [
-      'Hunter.',
-      'Few reach what you have reached. Fewer still continue past it.',
-      'Take these souls. The next hunt waits.',
-    ]}],
-    S: [{ pose: 'scroll', lines: [
-      'You stand where most never will, hunter.',
-      'I have read the record. The system has read it longer.',
-      'Engage the boss. The system will recognize the victory.',
-    ]}],
-    'S+': [{ pose: 'idle', lines: [
-      'Hunter.',
-      'You stand where I once stood alone.',
-      'The system has finished counting. Now we hunt as equals.',
-    ]}],
+  // Storage: hb_fa_rankup_seen_v1 (JSON array of seen ranks). Idempotent:
+  // gifted at most once per rank per device. Reset All Progress wipes it.
+  const FA_RANKUP_LINE = {
+    D:    'First threshold crossed. These souls open the D gate \u2014 go hunt.',
+    C:    'The casual hunter is behind you. Engage the boss at your rank.',
+    B:    'Few who started with you still stand. The hunt deepens.',
+    A:    'Few reach this. Fewer keep going. The next hunt waits.',
+    S:    'You stand where most never will. Engage the boss.',
+    'S+': 'You stand where I once stood alone. Now we hunt as equals.',
   };
 
   function _faRankupSeen(rankId) {
@@ -39531,9 +39473,10 @@
   // v3 Phase 1z.283 W187 — Hunter Report share card.
   //
   // A 1200×1500 PNG generated locally via Canvas API after a major
-  // rank-up. Triggered from drainLevelUpQueue() as a 'hunter_report'
-  // queue item inserted at position 2 (after 'rank' and 'fa_rankup').
-  // Per-rank idempotency via hb_hr_offered_<rankId>. Privacy: aggregate
+  // rank-up. W941 — offered as the SHARE YOUR HUNTER REPORT button on the
+  // rank screen itself (C rank and up), opened on tap; it is no longer a
+  // queue item. Per-rank idempotency via hb_hr_offered_<rankId>
+  // (offered = the button was shown). Privacy: aggregate
   // fields only (alias, class, rank, XP, streak, bosses, souls). Never
   // habit names. Never HealthKit values. Never other users' aliases.
   //
@@ -41011,79 +40954,42 @@
   } catch (_) {}
 
 
-  // v3 Phase 1z.282D — Rank-up congratulations orchestrator.
-  // Called from drainLevelUpQueue() when a 'fa_rankup' item is
-  // dispatched (queued by toggleHabit immediately after the
-  // existing 'rank' celebration item). Idempotent via the
-  // hb_fa_rankup_seen_v1 set — already-seen ranks fall through
-  // and release the queue without gifting souls or showing the
-  // modal. The seen-set is marked EAGERLY (before the modal opens)
-  // so a user who backgrounds mid-modal doesn't get re-gifted on
-  // next launch.
-  //
-  // Souls reward: engageCostSouls(rankId) — gives exactly one
-  // engagement at the new tier. S+ is treated as narrative-only
-  // (no boss exists at that tier; the peer-status moment is the
-  // reward).
+  // v3 Phase 1z.282D → W941 — the rank-up souls gift. Called by
+  // showRankUpScreen on its first entry. Idempotent via the
+  // hb_fa_rankup_seen_v1 set, marked EAGERLY (before the grant) so a kill or
+  // exception mid-way can never re-gift on the next launch. Returns the
+  // amount granted (0 when already seen, S+, or unknown).
   //
   // Ledger source label: fa_rankup_<rank>  (S+ → fa_rankup_splus).
-  // Classified by _classifySoulsEvent to render as
-  // "First Awakened's gift" with the rank in the detail row.
-  function showFirstAwakenedRankUp(rankId) {
-    const releaseQueue = function () {
-      try {
-        levelUpActive = false;
-        drainLevelUpQueue();
-      } catch (_) {}
-    };
-    if (!rankId || !FA_RANKUP_BEATS[rankId]) {
-      releaseQueue();
-      return;
-    }
-    if (_faRankupSeen(rankId)) {
-      releaseQueue();
-      return;
-    }
-    // Mark seen BEFORE any side effects so backgrounding mid-modal
-    // (or a JS exception during earnSouls / modal mount) cannot
-    // result in a re-gift on next launch. The user has "earned" the
-    // moment by crossing the rank threshold.
+  // Classified by _classifySoulsEvent to render as "First Awakened's gift"
+  // with the rank in the detail row — unchanged, so history still reads.
+  function _grantRankUpSouls(rankId) {
+    if (!rankId || rankId === 'S+' || !FA_RANKUP_LINE[rankId]) return 0;
+    if (_faRankupSeen(rankId)) return 0;
     _faMarkRankupSeen(rankId);
-
-    // Credit souls. Skip S+ entirely (no engage cost; narrative
-    // moment is the reward).
-    const isSPlus = (rankId === 'S+');
-    if (!isSPlus) {
-      try {
-        const cost = (typeof engageCostSouls === 'function')
-          ? engageCostSouls(rankId)
-          : 0;
-        if (cost > 0 && typeof earnSouls === 'function') {
-          earnSouls(cost, _faRankupSource(rankId));
-        }
-      } catch (_) { /* ledger failure must not block the modal */ }
+    let cost = 0;
+    try { cost = (typeof engageCostSouls === 'function') ? engageCostSouls(rankId) : 0; } catch (_) { cost = 0; }
+    if (cost > 0) {
+      try { earnSouls(cost, _faRankupSource(rankId)); } catch (_) { return 0; }
     }
-
-    // CTA: declarative for D-S, single-glyph dismiss for S+.
-    // The S+ moment is not an "I accept" — there is nothing to
-    // accept. The user simply stands where The First Awakened
-    // once stood.
-    const cta = isSPlus ? 'CONTINUE' : 'I ACCEPT';
-
-    _faRunCoachmark({
-      context: 'rankup_' + String(rankId).toLowerCase(),
-      beats: FA_RANKUP_BEATS[rankId],
-      cta: cta,
-      // No storageKey — we handle persistence via the seen-set above.
-      onDismiss: releaseQueue,
-    });
+    return cost;
+  }
+  // The rank one step below `id` — only the QA hook lacks a real oldRankId.
+  function _prevRankId(id) {
+    const i = RANKS.findIndex(function (r) { return r.id === id; });
+    return (i > 0) ? RANKS[i - 1].id : id;
   }
 
   try {
     window.__showQuestsCoachmark      = showQuestsCoachmark;
     window.__showFirstVowCoachmark    = showFirstVowCoachmark;
     window.__showWelcomeBackCoachmark = showWelcomeBackCoachmark;
-    window.__showFirstAwakenedRankUp  = showFirstAwakenedRankUp;
+    // W941 — QA: run the one rank-up screen through the real queue.
+    window.__showRankUp = function (rankId, oldRankId) {
+      const r = RANKS.find(function (x) { return x.id === rankId; }) || getRank(totalPoints);
+      levelUpQueue.unshift({ type: 'rank', rank: r, oldRankId: oldRankId || null });
+      drainLevelUpQueue();
+    };
   } catch (_) {}
 
   // ════════════════════════════════════════════════════════════════════
@@ -62533,7 +62439,12 @@
   // Reset all progress clears all hb_* keys (incl. the guard) so a
   // fresh QA pass can earn it again. Returning users never see
   // _completeOnboardingFinish so they don't get an extra grant either.
-  const ONBOARDING_FIRST_AWAKENING_XP = 25;
+  // W941 — 25 → 5. With the +50 First Mark this handed a new hunter 75 of
+  // the 100 XP to D before a single habit; four weekend taps made D on day
+  // one (owner: "you go from E to D in literally like 4 habits?"). The rank
+  // curve stays as it is (W452, non-demoting); the grants shrink. Hunters who
+  // already received the 25 keep it — the guard below is already set.
+  const ONBOARDING_FIRST_AWAKENING_XP = 5;
   const ONBOARDING_FIRST_XP_GUARD_KEY = 'hb_onboarding_first_xp_awarded_v1';
   // v3 Phase 1z.249 — Date the onboarding grant fired (device-local
   // YYYY-MM-DD). The XP · 30D sparkline tile derives its value from
@@ -62559,10 +62470,12 @@
   // guard is pre-claimed if they already have completion history) so veterans /
   // upgraders never get a surprise grant; an uncheck→recheck can't re-trip it and
   // reload / cloud restore can't re-grant. The hb_ key is swept by Reset All
-  // Progress, so a fresh QA pass re-earns it. Tunable: +50 puts a brand-new
-  // hunter most of the way to D-rank on their first tap (onboarding +25 + habit
-  // +5 + 50 = 80), a real first-session progression hit. E→D is 100 pts.
-  const FIRST_COMPLETION_BONUS_XP  = 50;
+  // Progress, so a fresh QA pass re-earns it. W941 — 50 → 10: at +50 the
+  // first tap alone put a hunter at 80 of the 100 XP to D, and the fourth tap
+  // ranked them up on day one. Now 5 (onboarding) + 10 + the habit ≈ 16, and a
+  // full day tops out near 73 even with ten vows on a weekend — E→D is a
+  // matter of days, as the 1z.275B curve intended. E→D is 100 pts.
+  const FIRST_COMPLETION_BONUS_XP  = 10;
   const FIRST_COMPLETION_GUARD_KEY = 'hb_first_completion_bonus_v1';
 
   function _completeOnboardingFinish() {

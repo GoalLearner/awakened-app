@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=696">
+  <link rel="stylesheet" href="styles.css?v=697">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3394,7 +3394,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1346"></script>
+  <script src="app.js?v=1347"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3504,7 +3504,9 @@
     <div id="stat-detail-habits" class="stat-detail-habits-list"></div>
   </div>
 
-  <!-- Rank Up Screen -->
+  <!-- Rank Up Screen — W941: THE ONE rank-up screen. The First Awakened's
+       souls gift and his line, the Hunter Report share (C rank up) and the
+       premium CTA (C rank up) all live here; nothing follows it. -->
   <div id="rankup-screen" class="rankup-screen hidden">
     <div id="rankup-particles-container"></div>
     <div class="rankup-content">
@@ -3514,14 +3516,20 @@
         <div id="rankup-shockwave" class="rankup-shockwave"></div>
       </div>
       <div id="rankup-rank-name" class="rankup-rank-name"></div>
-      <div id="rankup-class-unlock" class="rankup-class-unlock"></div>
+      <div id="rankup-class-unlock" class="rankup-class-unlock hidden"></div>
       <div class="rankup-trophy-card">
         <div id="rankup-xp-line" class="rankup-xp-line"></div>
         <div id="rankup-days-line" class="rankup-days-line"></div>
+        <div id="rankup-souls-line" class="rankup-souls-line hidden"></div>
       </div>
-      <!-- W340 — gated Founder upsell (JS shows it only when IAP is live). -->
+      <div id="rankup-fa" class="rankup-fa hidden">
+        <div class="rankup-fa-eyebrow">THE FIRST AWAKENED</div>
+        <p id="rankup-fa-line" class="rankup-fa-line"></p>
+      </div>
+      <!-- W340 — gated Founder upsell (JS shows it only when IAP is live; W941: C rank up). -->
       <div id="rankup-founder" class="hidden" style="margin: 2px 0 12px;"></div>
       <button id="rankup-continue" class="rankup-continue-btn">CONTINUE</button>
+      <button id="rankup-share" class="rankup-share-btn hidden" type="button">SHARE YOUR HUNTER REPORT</button>
       <div class="rankup-brand">⚔ Habit RPG</div>
     </div>
   </div>
