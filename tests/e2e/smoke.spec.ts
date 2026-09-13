@@ -3494,6 +3494,15 @@ test.describe('AK · Add Habits v3 (W945)', () => {
         localStorage.setItem('hb_habits', JSON.stringify(names.map((n, i) => ({ id: 'w945-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build' }))));
         localStorage.setItem('hb_tour_first_vow_v1', '1');
         localStorage.setItem('hb_notif_perm_requested', '1');
+        // A seeded list reads as a returning hunter: the retention ladder's
+        // coaches (welcome back, day 3/7, first gate, Double Dungeon) mount a
+        // beat after launch and, on a slow runner, over the open sheet.
+        localStorage.setItem('hb_tour_welcome_back_v1', '1');
+        localStorage.setItem('hb_tour_day3_v1', '1');
+        localStorage.setItem('hb_tour_day7_v1', '1');
+        localStorage.setItem('hb_fg_guide_v1', '1');
+        localStorage.setItem('hb_fm_pointer_seen', '1');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
       } catch (_) {}
     }, names);
     await page.reload();
