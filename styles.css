@@ -3162,6 +3162,12 @@ footer {
   font-size: 10px; letter-spacing: 1px; color: #b79cff;
 }
 .bfs-shadow-line.hidden { display: none; }
+/* W952 — the Wolf's trail, on his sheet only. Gold: this is a gift, not a warning. */
+.bfs-trail-line {
+  margin: 7px 0 0; font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 1px; line-height: 1.5; color: var(--gold, #f5b842);
+}
+.bfs-trail-line.hidden { display: none; }
 .shr-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.15); }
 .shr-art { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; filter: brightness(0.3) saturate(0.35) sepia(1) hue-rotate(215deg); }
 .shr-main { flex: 1; min-width: 0; }

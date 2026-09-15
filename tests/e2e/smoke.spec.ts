@@ -4206,3 +4206,140 @@ test.describe('AP · The hunt row (W951)', () => {
     await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 6,000 steps');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AQ. W952 — the Wolf's trail: a free daily hunt for every new hunter
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AQ · The Wolf\u2019s trail (W952)', () => {
+  const HOUR = 3600_000;
+  async function trailHunter(page: Page, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript((extra: Record<string, string>) => {
+      try {
+        if (sessionStorage.getItem('__w952_seeded')) return;
+        sessionStorage.setItem('__w952_seeded', '1');
+        const old = new Date(); old.setDate(old.getDate() - 5);
+        const oymd = old.getFullYear() + '-' + String(old.getMonth() + 1).padStart(2, '0') + '-' + String(old.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w952-a', name: 'First vow', emoji: '\u2022', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');   // the one-time migration clears engaged hunts
+        localStorage.setItem('hb_souls', JSON.stringify({ balance: 500, lastDailyBonusDate: '2099-01-01', totalEarned: 0, totalSpent: 0 }));
+        localStorage.setItem('hb_onboarding_first_xp_date', oymd);    // not day one: the W940 quiet rule is satisfied
+        localStorage.setItem('hb_wolf_trail_v1', '1');                // this hunter came through the new onboarding
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
+         'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        Object.entries(extra || {}).forEach(([k, v]) => { if (v === '') localStorage.removeItem(k); else localStorage.setItem(k, v); });
+      } catch (_) {}
+    }, extra || {});
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+  }
+  const engagedWolf = (page: Page) => page.evaluate(() => {
+    const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+    return (b.the_steel_wolf || {}).engaged === true;
+  });
+
+  test('today\u2019s hunt opens itself, costs nothing, and spends no banked credit', async ({ page }) => {
+    await trailHunter(page);
+    await expect.poll(() => engagedWolf(page), { timeout: 10_000 }).toBe(true);
+    const after = await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      const w = b.the_steel_wolf || {};
+      return {
+        souls: (JSON.parse(localStorage.getItem('hb_souls') || '{}')).balance,
+        spent: (JSON.parse(localStorage.getItem('hb_souls') || '{}')).totalSpent,
+        freebie: localStorage.getItem('hb_first_hunt_free_used'),
+        stone: localStorage.getItem('hb_stone_free_engage'),
+        told: localStorage.getItem('hb_wolf_trail_told'),
+        hours: Math.round(((w.hunt_expires_at || 0) - Date.now()) / 3600_000),
+        trail: (window as any).__wolfTrail(),
+      };
+    });
+    expect(after.souls).toBeGreaterThanOrEqual(500);   // the fee was never taken
+    expect(after.spent).toBe(0);                       // nothing was spent at all
+    expect(after.freebie).toBeNull();                  // the first-hunt freebie is still the hunter's to spend
+    expect(after.stone).toBeNull();
+    expect(after.hours).toBe(24);
+    expect(after.trail.active).toBe(true);
+    // Explained once, in the lightest surface there is.
+    expect(after.told).toBe('1');
+    await expect(page.locator('.habit-toast', { hasText: 'free every day' })).toBeVisible({ timeout: 5_000 });
+    // And it leads the Habits tab like any other hunt.
+    await expect(page.locator('#hunt-row .hunt-row-name')).toHaveText('The Steel Wolf');
+  });
+
+  test('a day that closes unclear is not a failure: no HUNT FAILED, tomorrow\u2019s hunt opens on its own', async ({ page }) => {
+    await trailHunter(page, {
+      hb_wolf_trail_told: '1',
+      hb_bosses: JSON.stringify({
+        the_steel_wolf: { engaged: true, kill_count: 0, streak: 0, step_progress: 10,
+          hunt_started_at: Date.now() - 30 * HOUR, hunt_expires_at: Date.now() - 6 * HOUR },
+      }),
+    });
+    await expect.poll(() => page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      return Math.round((((b.the_steel_wolf || {}).hunt_expires_at || 0) - Date.now()) / 3600_000);
+    }), { timeout: 10_000 }).toBe(24);
+    const after = await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      const w = b.the_steel_wolf || {};
+      const ov = document.getElementById('boss-result-overlay');
+      return {
+        engaged: w.engaged === true,
+        outcome: w.last_hunt_outcome,
+        failedScreen: !!(ov && !ov.classList.contains('hidden')),
+        pending: localStorage.getItem('hb_boss_result_pending'),
+      };
+    });
+    expect(after.failedScreen).toBe(false);   // nothing was lost, so nothing is announced
+    expect(after.pending).toBeNull();
+    expect(after.engaged).toBe(true);
+    expect(after.outcome).toBeNull();
+  });
+
+  test('the trail runs beside the three hunt slots, and stopping it by hand holds for the day', async ({ page }) => {
+    await trailHunter(page, {
+      hb_wolf_trail_told: '1',
+      hb_bosses: JSON.stringify({
+        the_insomniac:       { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - HOUR, hunt_expires_at: Date.now() + 20 * HOUR },
+        the_gray_pilgrim:    { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - HOUR, hunt_expires_at: Date.now() + 6 * 24 * HOUR },
+        the_marathon_wraith: { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - HOUR, hunt_expires_at: Date.now() + 6 * 24 * HOUR },
+      }),
+    });
+    // Three chosen hunts is the cap — the free one still opens, as a fourth.
+    await expect.poll(() => engagedWolf(page), { timeout: 10_000 }).toBe(true);
+    expect(await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      return Object.keys(b).filter((k) => b[k] && b[k].engaged === true).length;
+    })).toBe(4);
+
+    // Stop it by hand: gone for the rest of today, and the tick respects that.
+    await page.evaluate(() => (window as any).Bosses.disengageBoss('the_steel_wolf'));
+    await expect(page.locator('.habit-toast', { hasText: 'picks up again tomorrow' })).toBeVisible({ timeout: 5_000 });
+    await page.evaluate(() => (window as any).__wolfTrailTick());
+    expect(await engagedWolf(page)).toBe(false);
+    expect(await page.evaluate(() => (window as any).__wolfTrail().skippedToday)).toBe(true);
+
+    // Changing your mind re-opens it, and clears the skip.
+    expect(await page.evaluate(() => (window as any).Bosses.engageBoss('the_steel_wolf'))).toBe(true);
+    expect(await page.evaluate(() => (window as any).__wolfTrail().skippedToday)).toBe(false);
+  });
+
+  test('the boots end the trail — the Wolf goes back to being an ordinary gate', async ({ page }) => {
+    await trailHunter(page, {
+      hb_inventory: JSON.stringify({ cards: { trail_worn_boots: { count: 1, discovered: true } } }),
+    });
+    await page.waitForTimeout(4500);
+    expect(await engagedWolf(page)).toBe(false);
+    expect(await page.evaluate(() => (window as any).__wolfTrail())).toEqual({ active: false, owns: true, skippedToday: false });
+  });
+
+  test('a hunter who was already playing is left alone', async ({ page }) => {
+    await trailHunter(page, { hb_wolf_trail_v1: '' });
+    await page.waitForTimeout(4500);
+    expect(await engagedWolf(page)).toBe(false);
+    expect(await page.evaluate(() => (window as any).__wolfTrail().active)).toBe(false);
+    await expect(page.locator('#hunt-row')).toHaveClass(/hunt-row--idle/);
+  });
+});

@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.5-w951'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.5-w952'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1836,6 +1836,87 @@
     state.qualifying_progress = 0;
   }
 
+  // ── W952 — THE WOLF'S TRAIL ────────────────────────────────────────────
+  // Owner call 2026-09-15: every hunter who starts from here hunts The Steel
+  // Wolf FREE, once a day, automatically, until the Trail-Worn Boots are
+  // theirs. It is the whole loop on rails — a real boss, real steps, a real
+  // relic at the end — for someone who does not yet know that a hunt is
+  // something you choose. The trail ends the moment the boots drop (5% a
+  // kill, soft pity from 20, guaranteed at 40) and the Wolf becomes an
+  // ordinary rank-priced gate like every other.
+  //
+  // Three things make it free in the way that matters:
+  //   * no fee, and it consumes NO banked credit — the first-hunt freebie,
+  //     the stone's debt and the altar's gift stay banked for a boss the
+  //     hunter actually chooses. That is why 'trail' is FIRST in
+  //     _engageFreeReason's precedence, not last.
+  //   * it does not spend one of the three hunt slots (countEngagedBosses
+  //     leaves it out while the trail runs), so it never crowds out a hunt.
+  //   * a day it is not cleared is not a failure: the window closes, the
+  //     HUNT FAILED screen is suppressed, and the next day's hunt opens on
+  //     its own. Nothing is taken — that is the whole point of the trail.
+  // Stop hunting it by hand and it stays gone for the rest of that day.
+  //
+  // NEW HUNTERS ONLY, by design: the flag is stamped at onboarding finish, so
+  // nobody already playing wakes up to an engagement they did not ask for.
+  const WOLF_TRAIL_KEY      = 'hb_wolf_trail_v1';     // stamped in _completeOnboardingFinish
+  const WOLF_TRAIL_SKIP_KEY = 'hb_wolf_trail_skip';   // YYYY-MM-DD a manual stop is honoured for
+  const WOLF_TRAIL_TOLD_KEY = 'hb_wolf_trail_told';   // the one-time "this is free, daily" toast
+  const WOLF_TRAIL_BOSS_ID  = 'the_steel_wolf';
+  const WOLF_TRAIL_RELIC_ID = 'trail_worn_boots';
+
+  function _wolfTrailOwnsRelic() {
+    try {
+      const inv = (typeof getInventory === 'function' && getInventory()) || { cards: {} };
+      const c = (inv.cards || {})[WOLF_TRAIL_RELIC_ID];
+      return !!(c && (c.count || 0) > 0);
+    } catch (_) { return false; }
+  }
+  function _wolfTrailActive() {
+    try {
+      if (localStorage.getItem(WOLF_TRAIL_KEY) !== '1') return false;
+      return !_wolfTrailOwnsRelic();
+    } catch (_) { return false; }
+  }
+  function _wolfTrailIs(bossId) { return bossId === WOLF_TRAIL_BOSS_ID && _wolfTrailActive(); }
+  function _wolfTrailSkippedToday() {
+    try { return localStorage.getItem(WOLF_TRAIL_SKIP_KEY) === getDeviceLocalDate(); } catch (_) { return false; }
+  }
+
+  // Open today's hunt when the trail is running and nothing says otherwise.
+  // Idempotent and cheap — every guard short-circuits before engageBoss, and
+  // the daily kill-lock inside canEngageBossNow is what makes it once a day.
+  function _wolfTrailTick() {
+    try {
+      if (!_wolfTrailActive()) return false;
+      if (_wolfTrailSkippedToday()) return false;
+      const cfg = BOSSES[WOLF_TRAIL_BOSS_ID];
+      if (!cfg) return false;
+      const state = getBossState(WOLF_TRAIL_BOSS_ID);
+      if (state && state.engaged === true) return false;
+      if (!canEngageBossNow(WOLF_TRAIL_BOSS_ID, cfg, new Date()).ok) return false;   // cleared today
+      if (!engageBoss(WOLF_TRAIL_BOSS_ID, { auto: true })) return false;
+      // Said once, ever. An automatic hunt nobody explained is a mystery, not
+      // a gift — and a toast is the lightest surface that can say it (the
+      // W950 stage holds it behind anything that matters more).
+      try {
+        if (localStorage.getItem(WOLF_TRAIL_TOLD_KEY) !== '1' && !_newHunterQuiet() &&
+            typeof showHabitToast === 'function') {
+          localStorage.setItem(WOLF_TRAIL_TOLD_KEY, '1');
+          showHabitToast('The Wolf’s trail: you hunt it free every day until the Trail-Worn Boots are yours.');
+        }
+      } catch (_) {}
+      try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('wolf_trail_engaged', WOLF_TRAIL_BOSS_ID); } catch (_) {}
+      return true;
+    } catch (_) { return false; }
+  }
+  try {
+    window.__wolfTrail = function () {
+      return { active: _wolfTrailActive(), owns: _wolfTrailOwnsRelic(), skippedToday: _wolfTrailSkippedToday() };
+    };
+    window.__wolfTrailTick = _wolfTrailTick;
+  } catch (_) {}
+
   // Mark an active hunt as expired. Leaves kill_count alone (this
   // is a failed hunt, not a defeat). Sets last_hunt_outcome so the
   // detail screen can show a friendlier "Re-engage to try again"
@@ -1854,6 +1935,18 @@
     _clearBossHuntFields(state);
     state.last_hunt_outcome = 'expired';
     setBossState(id, state);
+    // W952 — the Wolf's trail: a day not cleared is not a failure. No HUNT
+    // FAILED screen, no wager lost (there was none), and today's hunt opens
+    // straight away if the day has turned. The hunter is walking a trail, not
+    // failing a test; being told otherwise every morning would teach the
+    // opposite of what the trail exists to teach.
+    if (_wolfTrailIs(id)) {
+      try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+      try { refreshBossFullScreenIfOpen && refreshBossFullScreenIfOpen(id); } catch (_) {}
+      try { _wolfTrailTick(); } catch (_) {}
+      try { _renderHuntRow(); } catch (_) {}
+      return;
+    }
     // v3 Phase 1z.56 — queue a failure result event so the user
     // sees a clear "Hunt Failed" screen once per expired hunt.
     // The event flows through the same _queueBossResult →
@@ -2379,6 +2472,10 @@
   function _bossResolveTick() {
     if ((++_bossResolveTickN % 2) !== 0) return;   // every 2 minutes
     try { if (document.visibilityState !== 'visible') return; } catch (_) {}
+    // W952 — above the engaged check on purpose: the moment the trail has
+    // nothing engaged is exactly the moment it needs to open today's hunt
+    // (an app left open across midnight would otherwise wait for a tab tap).
+    try { _wolfTrailTick(); } catch (_) {}
     let engaged = false;
     try {
       const m = loadBosses();
@@ -2433,7 +2530,13 @@
     const all = loadBosses();
     let n = 0;
     for (const id in all) {
-      if (all[id] && all[id].engaged === true) n += 1;
+      if (all[id] && all[id].engaged === true) {
+        // W952 — the Wolf's trail runs alongside the three slots, never inside
+        // one. A free daily hunt the hunter never chose must not be the reason
+        // a hunt they did choose is refused.
+        if (_wolfTrailIs(id)) continue;
+        n += 1;
+      }
     }
     return n;
   }
@@ -2455,6 +2558,7 @@
   // (a surface asserting state that stopped being true) does not get a second
   // outing. PRECEDENCE MIRRORS CONSUMPTION: first → stone → altar → rematch.
   const _ENGAGE_FREE_LABEL = {
+    trail:   'FREE — THE WOLF’S TRAIL',
     first:   'FIRST HUNT FREE',
     stone:   'FREE — THE STONE’S DEBT',
     altar:   'FREE — THE ALTAR’S GIFT',
@@ -2462,6 +2566,10 @@
   function _engageFreeReason(bossId, cfg) {
     try {
       if (!cfg || engageCostSouls(cfg.rank) <= 0) return null;   // already free by rank
+      // W952 — FIRST on purpose: the trail costs nothing AND consumes nothing,
+      // so a hunter walking it keeps the freebie / stone / altar credits for a
+      // boss they picked themselves.
+      if (_wolfTrailIs(bossId)) return 'trail';
       if (_firstHuntFreeAvailable()) return 'first';
       if (localStorage.getItem('hb_stone_free_engage') === '1') return 'stone';
       if (localStorage.getItem('hb_dd_free_engage') === '1') return 'altar';
@@ -2480,9 +2588,13 @@
     return getBossState(id).engaged === true;
   }
 
-  function engageBoss(bossId) {
+  // W952 — opts.auto marks an engage the hunter did not tap (the Wolf's
+  // trail opening today's hunt). It only silences the confirmation toast; the
+  // gates, the cost resolution and the state writes are identical.
+  function engageBoss(bossId, opts) {
     const cfg = BOSSES[bossId];
     if (!cfg) return false;
+    const _auto = !!(opts && opts.auto);
     const state = getBossState(bossId);
     if (state.engaged === true) return true; // already engaged, no-op
     // Engage gate (1z.72 daily kill-lock; the 1z.58 Friday-only gate
@@ -2509,7 +2621,7 @@
       } catch (_) {}
       return false;
     }
-    if (countEngagedBosses() >= MAX_ENGAGED_BOSSES) {
+    if (!_wolfTrailIs(bossId) && countEngagedBosses() >= MAX_ENGAGED_BOSSES) {   // W952 — the trail is outside the three
       try {
         if (typeof showHabitToast === 'function') {
           showHabitToast('You can only hunt 3 bosses at once. Disengage one first.');
@@ -2545,6 +2657,12 @@
         cost = 0;
         localStorage.removeItem('hb_stone_free_engage');
         if (typeof showHabitToast === 'function') showHabitToast('The stone’s debt is paid — this hunt is free.');
+      } else if (_freeReason === 'trail') {
+        // W952 — the trail. No fee, and nothing banked is spent.
+        cost = 0;
+        // A hunter who stopped it by hand and then engages it again has
+        // changed their mind; today's skip goes with it.
+        if (!_auto) { try { localStorage.removeItem(WOLF_TRAIL_SKIP_KEY); } catch (_) {} }
       } else if (_freeReason === 'altar') {
         // W866 — the altar's gift (Double Dungeon completion): the backup for
         // zero-kill hunters who spent the W771 freebie on a loss.
@@ -2608,7 +2726,10 @@
       // screen; the confirmation toast would only surface behind it. A hunter
       // who taps ENGAGE themselves, first day or not, still gets it.
       const _inOnboarding = (typeof needsOnboarding !== 'undefined' && needsOnboarding === true);
-      if (typeof showHabitToast === 'function' && !_inOnboarding) {
+      // W952 — an automatic trail engage says nothing here. Once-ever the tick
+      // explains the trail itself; after that a daily "Now hunting" would be
+      // the app talking to itself every morning.
+      if (typeof showHabitToast === 'function' && !_inOnboarding && !_auto) {
         showHabitToast('Now hunting ' + cfg.name + '.' + (cost > 0 ? ' -' + cost + ' souls.' : ''));
       }
     } catch (_) {}
@@ -2634,6 +2755,13 @@
       try { showHabitToast('The gate is sealed from the outside. Clear it — or let the window run out.'); } catch (_) {}
       return false;
     }
+    // W952 — stopping the trail by hand is respected for the rest of the day
+    // (otherwise the tick would re-open it seconds later and the button would
+    // read as broken). Tomorrow the trail resumes on its own.
+    let _trailStopped = false;
+    if (_wolfTrailIs(bossId)) {
+      try { localStorage.setItem(WOLF_TRAIL_SKIP_KEY, getDeviceLocalDate()); _trailStopped = true; } catch (_) {}
+    }
     // v3 Phase 1z.43 — also clear hunt-window fields on manual stop.
     _clearBossHuntFields(state);
     // Streak doesn't survive disengagement — re-engaging starts fresh.
@@ -2642,11 +2770,14 @@
     setBossState(bossId, state);
     try {
       if (typeof showHabitToast === 'function') {
-        showHabitToast('Stopped hunting ' + cfg.name + '.');
+        showHabitToast(_trailStopped
+          ? 'Stopped hunting ' + cfg.name + '. The trail picks up again tomorrow.'
+          : 'Stopped hunting ' + cfg.name + '.');
       }
     } catch (_) {}
     try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen(bossId); } catch (_) {}
+    try { _renderHuntRow(); } catch (_) {}   // W951
     return true;
   }
 
@@ -23556,7 +23687,11 @@
       _pushHuntHistory({
         mode: 'solo', boss_id: id, bossName: (cfg && cfg.name) || 'a boss',
         rank: (cfg && cfg.rank) || '', result: 'win',
-        souls: (reward || 0) + (_wltBonus_4 || 0) + (_hungerBonus_4 || 0) + (_writBonus_4 || 0),   // W845/W859 — history shows what was actually earned
+        // W952 — _writBonus_4 went out with the Watcher's Writ and was never
+        // removed from this sum, so EVERY solo kill threw a ReferenceError into
+        // the swallow below and the solo Kill Log History has been empty since.
+        // The trail makes solo kills the common case, so it matters now.
+        souls: (reward || 0) + (_wltBonus_4 || 0) + (_hungerBonus_4 || 0) + (_rgBonus_4 || 0),   // W845/W869 — history shows what was actually earned
         drop: dropped ? { id: dropped.id, name: dropped.name, rarity: dropped.rarity } : null,
         ts: Date.now(),
       });
@@ -33395,6 +33530,7 @@
       try { autoVerifyStrengthTraining(); } catch (_) {}
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
+      try { _wolfTrailTick(); } catch (_) {}   // W952
     }, 1500);
   }
 
@@ -52518,6 +52654,7 @@
     // refreshBossFullScreenIfOpen if it transitions the boss.
     try { resolveBossHuntsAcrossWindow(); } catch (_) {}
     try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
+    try { _wolfTrailTick(); } catch (_) {}   // W952
 
     const cadenceLabel = (cfg.cadence || 'daily').charAt(0).toUpperCase() +
                          (cfg.cadence || 'daily').slice(1);
@@ -52564,6 +52701,31 @@
         } else {
           rgl.classList.add('hidden');
         }
+      }
+    } catch (_) {}
+    // W952 — the trail's own line, on the Wolf's sheet only. The hunt is
+    // engaged automatically, so the free-engage button label is a surface the
+    // hunter may never see; this is where the trail explains itself.
+    try {
+      let tl = document.getElementById('bfs-trail-line');
+      if (_wolfTrailIs(id)) {
+        if (!tl && rankLabel && rankLabel.parentNode) {
+          tl = document.createElement('div');
+          tl.id = 'bfs-trail-line'; tl.className = 'bfs-trail-line';
+          rankLabel.parentNode.insertBefore(tl, rankLabel.nextSibling);
+        }
+        if (tl) {
+          let tail = '';
+          try {
+            const pd = (typeof getDropPityDisplay === 'function') ? getDropPityDisplay(id) : null;
+            const hard = pd && pd.ultraHardTarget;
+            if (hard) tail = ' ' + (pd.ultraCurrent || 0) + ' / ' + hard + ' hunts to a guaranteed pair.';
+          } catch (_) {}
+          tl.textContent = '\ud83d\udc3e THE WOLF’S TRAIL — free every day until the Trail-Worn Boots are yours.' + tail;
+          tl.classList.remove('hidden');
+        }
+      } else if (tl) {
+        tl.classList.add('hidden');
       }
     } catch (_) {}
     // W862 — ARISE extraction status (element created on demand — the sheet
@@ -63143,6 +63305,11 @@
       }
     } catch (_) {}
 
+    // W952 — THE WOLF'S TRAIL, new hunters only. Stamped here rather than on
+    // first boot so nobody already playing inherits a daily engagement they
+    // never asked for. Cleared by nothing — owning the boots ends the trail.
+    try { localStorage.setItem(WOLF_TRAIL_KEY, '1'); } catch (_) {}
+
     save();
     needsOnboarding = false;
     // Brand-new users just saw all the v1.1.0 features for the first time
@@ -67931,6 +68098,11 @@
       'hb_accolade_worldbreaker',
       'hb_tower_avenge_life',     // today's avenged bonus life (stale date = no-op)
       'hb_first_hunt_free_used',  // once-ever freebie consumed (W771/W850)
+      'hb_wolf_trail_v1',         // W952 — this hunter walks the Wolf's trail (new-hunter cohort)
+      'hb_wolf_trail_told',       // W952 — the trail was explained once, on this account
+      // NOT synced on purpose: hb_wolf_trail_skip. It means "not today", and a
+      // restore onto another device mid-day would carry a decision that has
+      // already expired everywhere it mattered.
       'hb_stone_free_engage',     // banked free engages — real, spendable credit
       'hb_dd_free_engage',
       // Misc UI / app-state
@@ -69096,6 +69268,7 @@
       // qualifying data. Fire-and-forget; idempotent.
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
+      try { _wolfTrailTick(); } catch (_) {}   // W952 — a new day usually arrives with a foreground
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.
