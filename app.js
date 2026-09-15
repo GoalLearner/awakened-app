@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.5-w950'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.5-w951'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2617,6 +2617,7 @@
     // happen instantly.
     try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
     try { refreshBossFullScreenIfOpen(bossId); } catch (_) {}
+    try { _renderHuntRow(); } catch (_) {}   // W951
     return true;
   }
 
@@ -21111,6 +21112,7 @@
     }
     _bossResultQueue.push(evt);
     _drainBossResultQueue();
+    try { _renderHuntRow(); } catch (_) {}   // W951 — the row goes gold
     return true;
   }
 
@@ -21419,6 +21421,13 @@
 
   function closeBossResult(opts) {
     const overlay = document.getElementById('boss-result-overlay');
+    // W951 — was the result actually ON SCREEN? switchTab() calls this on every
+    // tab change to make sure the modal never hangs over another tab; before
+    // W951 that unconditionally cleared the pending-result envelope, so a kill
+    // the hunter had never seen (evaluated on launch while he was on Status)
+    // was silently thrown away by his first tab tap. Only a close of an OPEN
+    // result retracts the envelope.
+    const _wasOpen = !!_bossResultCurrent || !!(overlay && !overlay.classList.contains('hidden'));
     if (overlay) {
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
@@ -21432,8 +21441,9 @@
     _bossResultBusy = false;
     // v3 Phase 1z.7 — clear pending-result envelope. The user opened
     // (and is now closing) the overlay; the gold HUNTING strip pill
-    // has done its job and should retract.
-    try { _clearBossResultPending(); } catch (_) {}
+    // has done its job and should retract. W951 — only if it was open.
+    if (_wasOpen) { try { _clearBossResultPending(); } catch (_) {} }
+    try { _renderHuntRow(); } catch (_) {}   // W951 — the gold row stands down
     // Drain the next queued result, if any.
     if (!(opts && opts.suppressDrain)) {
       _drainBossResultQueue();
@@ -24006,6 +24016,7 @@
     // already protects against).
     if (next !== prev) {
       try { lbSubmitAllMetricsDebounced(); } catch (_) {}
+      try { _renderHuntRow(); } catch (_) {}   // W951 — the bar follows the steps
       // W886 (3.0.1 B2) — seal on the DATA, not on a timer. The Double Dungeon
       // ticks at boot+8s and then every 60s, so in a session shorter than a
       // minute a commandment met mid-session went unsealed until the next
@@ -32998,45 +33009,240 @@
     try { const p = document.getElementById('first-vow-pointer'); if (p) p.remove(); } catch (_) {}
   }
 
-  // W598 — Dungeon tease (onboarding beat 3). Once a new user has SEALED their
-  // first vow (hb_first_completion_bonus_v1 — NOT just points>0, since onboarding
-  // grants +25 XP up front) but hasn't yet opened the Dungeon (no first-Quests-
-  // coachmark flag), a one-time dismissible banner on the Habits tab points them
-  // there, where the existing showQuestsCoachmark then teaches it. Reuses the
-  // first-vow-pointer styling. Tap → go to the Dungeon; ✕ → dismiss for good.
-  let _dungeonTeaseDismissed = false;
-  function _maybeShowDungeonTease() {
-    const existing = document.getElementById('dungeon-tease-pointer');
-    let done = false, visitedDungeon = false, completedFirst = false, onboardingDone = true;
-    try { done = localStorage.getItem('hb_dungeon_tease_seen') === '1'; } catch (_) {}
-    try { visitedDungeon = localStorage.getItem('hb_tour_quests_v1') === '1'; } catch (_) {}
+  // ── W951 — THE HUNT ROW ─────────────────────────────────────────────────
+  // Onboarding ends on a hunt ("The Wolf is engaged. 2,140 steps left today.")
+  // and the next morning the Habits tab said nothing about it: the only boss
+  // bar under the header is the Worldgate (everyone's boss), and the W598
+  // dungeon tease — which this replaces — still read "tap to face your first"
+  // to a hunter who was already hunting.
+  //
+  // The hunter's own hunt now leads the tab: ONE row for the hunt that needs
+  // them most, a +N chip for the rest, and a true "start a hunt" prompt when
+  // there is none. Solo gates and co-op hunts share it (owner call); a pending
+  // invite nobody has answered is not a hunt and stays on the Co-op tab. The
+  // Worldgate keeps the header. Nothing here is a popup: it is part of the
+  // page, so it never queues behind the W950 stage.
+  const HUNT_ROW_IDLE_KEY = 'hb_hunt_row_idle_hidden_v1';
+  let _huntRowIdleHidden = false;
+  let _huntCoop = { at: 0, list: [] };
+  function _huntFmt(n) { try { return Number(n || 0).toLocaleString('en-US'); } catch (_) { return String(n || 0); } }
+
+  // One line of truth per kill condition, from the same state the boss sheet reads.
+  function _huntSoloProgress(cfg, st) {
+    const today = function (m) { try { return _ddTodayVal(m) | 0; } catch (_) { return 0; } };
+    if (cfg.stepThreshold) {
+      const cur = Math.max(st.step_progress | 0, today('steps_daily'));
+      return { pct: cur / cfg.stepThreshold, line: _huntFmt(Math.min(cur, cfg.stepThreshold)) + ' / ' + _huntFmt(cfg.stepThreshold) + ' steps' };
+    }
+    if (cfg.flightThreshold) {
+      const cur = Math.max(st.flight_progress | 0, today('flights_daily'));
+      return { pct: cur / cfg.flightThreshold, line: _huntFmt(Math.min(cur, cfg.flightThreshold)) + ' / ' + _huntFmt(cfg.flightThreshold) + ' flights' };
+    }
+    if (cfg.activeEnergyKcal) {
+      const kcal = st.energy_progress | 0;
+      const done = !!st.strength_done;
+      return { pct: ((done ? 1 : 0) + Math.min(1, kcal / cfg.activeEnergyKcal)) / 2,
+               line: (done ? '✓' : '○') + ' workout · ' + _huntFmt(Math.min(kcal, cfg.activeEnergyKcal)) + ' / ' + _huntFmt(cfg.activeEnergyKcal) + ' kcal' };
+    }
+    const days = cfg.consecutiveDays || cfg.consecutiveNights;
+    if (days) {
+      const cur = st.qualifying_progress | 0;
+      return { pct: cur / days, line: cur + ' / ' + days + (cfg.consecutiveNights ? ' nights' : ' days') + ' in a row' };
+    }
+    const target = cfg.streakTarget || 1;
+    const cur = st.streak | 0;
+    if (target <= 1 && cur <= 0) return { pct: 0, line: String(cfg.killCondShort || '') };
+    let noun = 'days';
+    try { noun = _bossProgressNoun(cfg); } catch (_) {}
+    return { pct: cur / target, line: cur + ' / ' + target + ' ' + noun };
+  }
+
+  function _huntCoopItem(inst) {
+    const cfg = ((typeof COOP_BOSSES !== 'undefined') && COOP_BOSSES[inst.boss_id]) || {};
+    const flights = (inst.metric || cfg.coopMetric) === 'flights';
+    const goal = (flights ? (inst.goal_flights || inst.goal_steps) : inst.goal_steps) || cfg.coopGoalSteps || 0;
+    const cur  = (flights ? (inst.combined_flights != null ? inst.combined_flights : inst.combined_steps) : inst.combined_steps) || 0;
+    let them = '';
+    try { const v = _coopView(inst); them = (v.them && v.them.alias) || ''; } catch (_) {}
+    const remain = (typeof inst.time_remaining_ms === 'number') ? inst.time_remaining_ms
+      : (inst.ends_at ? Math.max(0, Date.parse(inst.ends_at) - Date.now()) : null);
+    return {
+      key: 'coop:' + (inst.id || inst.boss_id),
+      name: (cfg.name || inst.boss_name || 'Co-op hunt') + (them ? ' · with ' + them : ''),
+      rank: String(inst.boss_rank || cfg.rank || ''),
+      art: getBossArtPath(inst.boss_id),
+      pct: goal ? (cur / goal) : 0,
+      line: _huntFmt(cur) + ' / ' + _huntFmt(goal) + ' ' + (flights ? 'flights' : 'steps') + ' together',
+      remainMs: (typeof remain === 'number' && isFinite(remain)) ? remain : null,
+      startedAt: inst.starts_at ? Date.parse(inst.starts_at) : 0,
+      open: function () {
+        try { _coopOpenHuntDetail(inst); return; } catch (_) {}
+        try { openCoopSheet(inst.boss_id); } catch (_) {}
+      },
+    };
+  }
+
+  // The co-op list is server data; reuse the badge poller's cache and refresh
+  // it at most once a minute, then repaint when it lands.
+  function _huntRowSyncCoop() {
+    try {
+      if (!window.Auth || typeof Auth.coopBossList !== 'function') return;
+      if (localStorage.getItem('hb_coop_ever') !== '1') return;
+      if (typeof _coopListRes === 'object' && _coopListRes && Array.isArray(_coopListRes.instances)) {
+        _huntCoop.list = _coopListRes.instances.filter(function (x) { return x && x.status === 'active'; });
+      }
+      const now = Date.now();
+      if (now - _huntCoop.at < 60000) return;
+      _huntCoop.at = now;
+      Promise.resolve(_coopBossListCached()).then(function (res) {
+        if (!res || !res.ok || !Array.isArray(res.instances)) return;
+        _huntCoop.list = res.instances.filter(function (x) { return x && x.status === 'active'; });
+        try { _renderHuntRow(); } catch (_) {}
+      }, function () {});
+    } catch (_) {}
+  }
+
+  function _huntRowItems() {
+    const out = [];
+    // A kill the hunter has not seen yet leads, and opens its result.
+    try {
+      const pend = _readBossResultPending();
+      if (pend && pend.bossId) {
+        const cfg = (BOSSES[pend.bossId] || ((typeof COOP_BOSSES !== 'undefined' && COOP_BOSSES[pend.bossId]) || {}));
+        out.push({
+          key: 'pending', defeated: true, name: pend.bossName || cfg.name || 'Your hunt',
+          rank: String(cfg.rank || ''), art: getBossArtPath(pend.bossId), pct: 1,
+          line: 'Defeated — tap to claim', remainMs: null, startedAt: Date.now(),
+          open: function () { try { openBossResultFromPending(); } catch (_) {} },
+        });
+      }
+    } catch (_) {}
+    try {
+      const all = loadBosses() || {};
+      Object.keys(all).forEach(function (id) {
+        const st = all[id], cfg = BOSSES[id];
+        if (!st || st.engaged !== true || !cfg || cfg.coopOnly) return;
+        const p = _huntSoloProgress(cfg, st);
+        out.push({
+          key: 'solo:' + id, name: cfg.name, rank: String(cfg.rank || ''), art: getBossArtPath(id),
+          pct: Math.max(0, Math.min(1, p.pct || 0)), line: p.line,
+          remainMs: _bossHuntRemainingMs(st, cfg),
+          startedAt: _bossHuntStartMs(st) || 0,
+          open: function () { try { openBossFullScreen(id); } catch (_) {} },
+        });
+      });
+    } catch (_) {}
+    (_huntCoop.list || []).forEach(function (inst) {
+      try { out.push(_huntCoopItem(inst)); } catch (_) {}
+    });
+    // Urgency: a kill to claim, then a hunt that ends within the day, then the
+    // one closest to falling, then the newest.
+    out.sort(function (x, y) {
+      const dx = x.defeated ? 0 : 1, dy = y.defeated ? 0 : 1;
+      if (dx !== dy) return dx - dy;
+      const ex = (x.remainMs != null && x.remainMs <= 86400000) ? 0 : 1;
+      const ey = (y.remainMs != null && y.remainMs <= 86400000) ? 0 : 1;
+      if (ex !== ey) return ex - ey;
+      if ((y.pct || 0) !== (x.pct || 0)) return (y.pct || 0) - (x.pct || 0);
+      return (y.startedAt || 0) - (x.startedAt || 0);
+    });
+    return out;
+  }
+
+  function _huntRowHtml(it, extraCount) {
+    const remain = (it.remainMs != null) ? _formatHuntRemaining(it.remainMs) : '';
+    return '' +
+      '<img class="hunt-row-art" src="' + esc(it.art || '') + '" alt="" aria-hidden="true" decoding="async">' +
+      '<span class="hunt-row-main">' +
+        '<span class="hunt-row-top">' +
+          '<span class="hunt-row-name">' + esc(it.name || '') + '</span>' +
+          (extraCount ? '<button type="button" class="hunt-row-more" data-hunt-more aria-label="All your hunts">+' + extraCount + '</button>' : '') +
+          '<span class="hunt-row-meta">' + esc((it.rank ? it.rank + '-RANK' : '') + (remain ? ' · ' + remain : '')) + ' ›</span>' +
+        '</span>' +
+        '<span class="hunt-row-bar"><i style="width:' + Math.round(Math.max(2, Math.min(100, (it.pct || 0) * 100))) + '%"></i></span>' +
+        '<span class="hunt-row-line">' + esc(it.line || '') + '</span>' +
+      '</span>';
+  }
+
+  function _renderHuntRow() {
+    const list = document.getElementById('habit-list');
+    if (!list || !list.parentNode) return;
+    const existing = document.getElementById('hunt-row');
+    const kill = function () { if (existing) existing.remove(); };
+    let completedFirst = false, onboardingDone = true;
     try { completedFirst = localStorage.getItem('hb_first_completion_bonus_v1') === '1'; } catch (_) {}
     onboardingDone = !(typeof needsOnboarding !== 'undefined' && needsOnboarding);
-    if (_dungeonTeaseDismissed || done || visitedDungeon) { if (existing) existing.remove(); return; }
-    const list = document.getElementById('habit-list');
-    const hasRows = !!(list && list.children && list.children.length > 0);
-    if (!(completedFirst && onboardingDone && hasRows)) { if (existing) existing.remove(); return; }
-    if (existing) return; // already present + still valid
-    const ptr = document.createElement('div');
-    ptr.id = 'dungeon-tease-pointer';
-    ptr.className = 'first-vow-pointer dungeon-tease-pointer';
-    ptr.setAttribute('role', 'button');
-    ptr.setAttribute('tabindex', '0');
-    ptr.innerHTML =
-      '<span class="fvp-spark" aria-hidden="true">⚔</span>' +
-      '<span class="fvp-text">The <b>Dungeon</b> has opened. Bosses fall to real workouts and steps — tap to face your first.</span>' +
-      '<button class="fvp-x" type="button" aria-label="Dismiss">&times;</button>';
-    const panel = list.parentNode;
-    try { panel.insertBefore(ptr, panel.firstChild); } catch (_) { return; }
-    const retire = function () {
-      _dungeonTeaseDismissed = true;
-      try { localStorage.setItem('hb_dungeon_tease_seen', '1'); } catch (_) {}
-      try { const p = document.getElementById('dungeon-tease-pointer'); if (p) p.remove(); } catch (_) {}
+    // Day one stays quiet until the First Mark, exactly as the tease did.
+    if (!completedFirst || !onboardingDone) { kill(); return; }
+    if (document.getElementById('first-vow-pointer')) { kill(); return; }
+
+    _huntRowSyncCoop();
+    const items = _huntRowItems();
+    try { if (items.length) { _huntRowIdleHidden = false; localStorage.removeItem(HUNT_ROW_IDLE_KEY); } } catch (_) {}
+    if (!items.length) {
+      try { if (!_huntRowIdleHidden) _huntRowIdleHidden = localStorage.getItem(HUNT_ROW_IDLE_KEY) === '1'; } catch (_) {}
+      if (_huntRowIdleHidden) { kill(); return; }
+    }
+
+    const row = existing || document.createElement('div');
+    row.id = 'hunt-row';
+    row.className = 'hunt-row' + (items.length ? (items[0].defeated ? ' hunt-row--won' : '') : ' hunt-row--idle');
+    row.setAttribute('role', 'button');
+    row.setAttribute('tabindex', '0');
+    row.innerHTML = items.length
+      ? _huntRowHtml(items[0], items.length - 1)
+      : ('<span class="hunt-row-spark" aria-hidden="true">⚔</span>' +
+         '<span class="hunt-row-idle-text">No hunt running. <b>Bosses fall to real steps, sleep and workouts</b> — start one.</span>' +
+         '<button class="hunt-row-x" type="button" aria-label="Dismiss">&times;</button>');
+    if (!existing) {
+      const panel = list.parentNode;
+      try { panel.insertBefore(row, panel.firstChild); } catch (_) { return; }
+    }
+    row.onclick = function (e) {
+      if (e && e.target && e.target.closest) {
+        if (e.target.closest('[data-hunt-more]')) { e.stopPropagation(); _openHuntList(); return; }
+        if (e.target.closest('.hunt-row-x')) {
+          e.stopPropagation();
+          _huntRowIdleHidden = true;
+          try { localStorage.setItem(HUNT_ROW_IDLE_KEY, '1'); } catch (_) {}
+          row.remove();
+          return;
+        }
+      }
+      if (items.length) { try { items[0].open(); } catch (_) {} }
+      else { try { switchTab('quests'); } catch (_) {} }
     };
-    try {
-      ptr.querySelector('.fvp-x').addEventListener('click', function (e) { e.stopPropagation(); retire(); });
-      ptr.addEventListener('click', function () { retire(); try { switchTab('quests'); } catch (_) {} });
-    } catch (_) {}
+  }
+  try { window.__renderHuntRow = _renderHuntRow; } catch (_) {}   // QA hook
+
+  // Every hunt, newest urgency first. Opened by the +N chip; a tapped sheet,
+  // so it never waits on the stage.
+  function _openHuntList() {
+    try { document.getElementById('hunt-list-overlay')?.remove(); } catch (_) {}
+    const items = _huntRowItems();
+    const ov = document.createElement('div');
+    ov.id = 'hunt-list-overlay';
+    ov.className = 'hunt-list-overlay';
+    ov.innerHTML =
+      '<div class="hunt-list-sheet" role="dialog" aria-modal="true" aria-label="Your hunts">' +
+        '<div class="hunt-list-head"><span>YOUR HUNTS</span><button type="button" class="hunt-list-close" aria-label="Close">✕</button></div>' +
+        items.map(function (it, i) {
+          return '<div class="hunt-row hunt-row--in-list' + (it.defeated ? ' hunt-row--won' : '') + '" role="button" tabindex="0" data-hunt-i="' + i + '">' +
+            _huntRowHtml(it, 0) + '</div>';
+        }).join('') +
+      '</div>';
+    document.body.appendChild(ov);
+    const close = function () { try { ov.remove(); } catch (_) {} };
+    ov.addEventListener('click', function (e) {
+      const t = e.target;
+      if (t === ov || (t.closest && t.closest('.hunt-list-close'))) { close(); return; }
+      const rowEl = t.closest && t.closest('[data-hunt-i]');
+      if (rowEl) {
+        const it = items[parseInt(rowEl.dataset.huntI, 10)];
+        close();
+        if (it) { try { it.open(); } catch (_) {} }
+      }
+    });
   }
 
   function renderHabits(opts) {
@@ -33094,7 +33300,7 @@
       // !== 'habits'), so the pointer only becomes eligible on the later
       // tab-switch render, which usually BAILS (same fingerprint).
       try { _maybeShowFirstVowPointer(); } catch (_) {}
-      try { _maybeShowDungeonTease(); } catch (_) {}
+      try { _renderHuntRow(); } catch (_) {}
       if (opts.skipSideEffects) return;
       _armHabitsSideEffectsCoalesce();
       return;
@@ -33137,7 +33343,7 @@
     updateProgress();
     try { _renderVowsCompoundReward(); } catch (_) {}   // W514/W515 — compound reward caption in the vows header
     try { _maybeShowFirstVowPointer(); } catch (_) {}   // W504 — guide the brand-new user to their first completion
-    try { _maybeShowDungeonTease(); } catch (_) {}       // W598 — then tease the Dungeon after that first vow is sealed
+    try { _renderHuntRow(); } catch (_) {}                // W951 — the hunt the hunter is on leads the tab
 
     // v3 Phase 1z.94 — HealthKit auto-verify + boss-resolver side
     // effects are SKIPPABLE per-call. The post-add render path passes
@@ -39390,7 +39596,8 @@
     ['onboarding', 'dom', function () { return _stageVis('cin-onboarding'); }],
     // Surfaces the hunter opened. Nothing automatic lands on top of them either.
     ['sheet',    'dom',  function () {
-      return ['fa-manual-overlay', 'mv-overlay', 'system-full-overlay', 'arena-overlay', 'boss-fs-overlay'].some(_stageVis);
+      return ['fa-manual-overlay', 'mv-overlay', 'system-full-overlay', 'arena-overlay', 'boss-fs-overlay'].some(_stageVis)
+        || _stageOn('#hunt-list-overlay');
     }],
   ];
   function _stageBusyKeys(except, pri) {

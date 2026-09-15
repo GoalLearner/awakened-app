@@ -4089,3 +4089,120 @@ test.describe('AO · One surface at a time (W950)', () => {
     expect(await page.evaluate(stopStacks)).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AP. W951 — the hunt row leads the Habits tab
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AP · The hunt row (W951)', () => {
+  const HOUR = 3600_000;
+  async function hunter(page: Page, bosses: Record<string, unknown>, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(({ bosses, extra }: { bosses: Record<string, unknown>; extra: Record<string, string> }) => {
+      try {
+        if (sessionStorage.getItem('__w951_seeded')) return;
+        sessionStorage.setItem('__w951_seeded', '1');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const old = new Date(); old.setDate(old.getDate() - 3);
+        const oymd = old.getFullYear() + '-' + String(old.getMonth() + 1).padStart(2, '0') + '-' + String(old.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w951-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_bosses', JSON.stringify(bosses));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');   // the one-time W-era migration clears engaged hunts
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: { [ymd]: 1100 }, flights_daily: { [ymd]: 4 } }));
+        localStorage.setItem('hb_onboarding_first_xp_date', oymd);
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
+         'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v));
+      } catch (_) {}
+    }, { bosses, extra: extra || {} });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(2500);
+  }
+  const wolf = (over?: Record<string, unknown>) => ({
+    engaged: true, kill_count: 0, streak: 0, step_progress: 1100,
+    hunt_started_at: Date.now() - 3 * HOUR, hunt_expires_at: Date.now() + 21 * HOUR, ...(over || {}),
+  });
+
+  test('the hunt the hunter is on leads the tab, with live steps, and opens on tap', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: wolf() });
+    const row = page.locator('#hunt-row');
+    await expect(row).toBeVisible();
+    await expect(page.locator('#dungeon-tease-pointer')).toHaveCount(0);   // the old banner is gone for good
+    await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
+    await expect(row.locator('.hunt-row-line')).toHaveText('1,100 / 6,000 steps');
+    await expect(row.locator('.hunt-row-meta')).toContainText('E-RANK');
+    await expect(row.locator('.hunt-row-more')).toHaveCount(0);            // only one hunt: no count chip
+    // The bar is the share walked, not a guess.
+    const pct = await row.locator('.hunt-row-bar i').evaluate((el) => parseFloat((el as HTMLElement).style.width));
+    expect(pct).toBeGreaterThan(15);
+    expect(pct).toBeLessThan(21);
+    // It sits above the vows, where the old banner was.
+    expect(await page.evaluate(() => {
+      const r = document.getElementById('hunt-row'), h = document.getElementById('vows-header');
+      return !!(r && h && (r.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING));
+    })).toBe(true);
+
+    await row.click();
+    await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('three hunts: the one that needs today leads, the chip opens the rest, a list row opens its hunt', async ({ page }) => {
+    await hunter(page, {
+      the_steel_wolf:   wolf(),
+      the_insomniac:    { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 2 * HOUR, hunt_expires_at: Date.now() + 22 * HOUR },
+      the_gray_pilgrim: { engaged: true, kill_count: 0, streak: 0, flight_progress: 31, hunt_started_at: Date.now() - 4 * 24 * HOUR, hunt_expires_at: Date.now() + 3 * 24 * HOUR },
+    });
+    const row = page.locator('#hunt-row');
+    await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');   // ends today, furthest along
+    await expect(row.locator('.hunt-row-more')).toHaveText('+2');
+
+    await row.locator('.hunt-row-more').click();
+    const sheet = page.locator('#hunt-list-overlay');
+    await expect(sheet).toBeVisible();
+    expect(await sheet.locator('.hunt-row-name').allTextContents()).toEqual(['The Steel Wolf', 'The Insomniac', 'The Gray Pilgrim']);
+    expect(await sheet.locator('.hunt-row-line').allTextContents()).toEqual([
+      '1,100 / 6,000 steps', 'Sleep 7+ hours in a single night', '31 / 56 flights',
+    ]);
+    await sheet.locator('.hunt-row', { hasText: 'The Gray Pilgrim' }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#bfs-name')).toHaveText(/Gray Pilgrim/i);
+  });
+
+  test('a kill waiting to be seen turns the row gold and opens the result', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: { engaged: false, kill_count: 1, streak: 1 } }, {
+      hb_boss_result_pending: JSON.stringify({
+        bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 1,
+        defeatedAt: new Date().toISOString(), conditionLabel: '6,000 verified steps', drop: null,
+      }),
+    });
+    const row = page.locator('#hunt-row');
+    await expect(row).toHaveClass(/hunt-row--won/);
+    await expect(row.locator('.hunt-row-line')).toHaveText('Defeated — tap to claim');
+    await row.click();
+    await expect(page.locator('#boss-result-overlay')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('with no hunt running it says so and points at the Co-op tab; the ✕ puts it away until the next hunt', async ({ page }) => {
+    await hunter(page, {});
+    const row = page.locator('#hunt-row');
+    await expect(row).toHaveClass(/hunt-row--idle/);
+    await expect(row).toContainText('No hunt running');
+
+    await row.locator('.hunt-row-x').click();
+    await expect(page.locator('#hunt-row')).toHaveCount(0);
+    await page.evaluate(() => (window as any).__renderHuntRow());
+    await expect(page.locator('#hunt-row')).toHaveCount(0);                 // stays away
+
+    // A hunt starts: the row is back, whatever the hunter dismissed.
+    await page.evaluate((w) => {
+      localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: w }));
+      (window as any).__renderHuntRow();
+    }, wolf());
+    await expect(page.locator('#hunt-row')).toBeVisible();
+    await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 6,000 steps');
+  });
+});

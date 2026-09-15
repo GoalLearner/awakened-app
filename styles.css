@@ -455,18 +455,104 @@ h1 {
 .fvp-spark { flex: none; color: var(--gold, #f5b842); font-size: 1.05rem; }
 .fvp-text { flex: 1; font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--text-secondary, #cbd0e0); }
 .fvp-text b { color: var(--gold, #f5b842); font-weight: 800; }
-/* W598 — dungeon tease reuses the first-vow shell but is TAPPABLE and crimson-
-   keyed (the Dungeon reads as danger), distinct from the gold vow pointer. */
-.dungeon-tease-pointer {
+/* ── W951 — THE HUNT ROW (replaces the W598 dungeon tease) ──────────────
+   The hunt the hunter is actually on, at the top of the Habits tab: art,
+   a draining health bar, and one line of live progress. Crimson while the
+   hunt runs, gold once the boss is down and the result is waiting. */
+.hunt-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 4px 10px 10px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  background: linear-gradient(180deg, #171632, #111027);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.10);
   cursor: pointer;
-  border-color: rgba(220, 38, 38, 0.38);
-  background: linear-gradient(180deg, rgba(220, 38, 38, 0.13), rgba(220, 38, 38, 0.03));
-  animation: none;
-  box-shadow: 0 0 18px rgba(220, 38, 38, 0.12);
+  -webkit-tap-highlight-color: transparent;
 }
-.dungeon-tease-pointer .fvp-spark,
-.dungeon-tease-pointer .fvp-text b { color: #f0776b; }
-.dungeon-tease-pointer:active { transform: scale(0.995); }
+.hunt-row:active { transform: scale(0.995); }
+.hunt-row--won {
+  border-color: rgba(245, 184, 66, 0.55);
+  box-shadow: 0 0 20px rgba(245, 184, 66, 0.16);
+}
+.hunt-row--idle {
+  border-color: rgba(245, 184, 66, 0.30);
+  background: linear-gradient(180deg, rgba(245, 184, 66, 0.12), rgba(245, 184, 66, 0.03));
+  box-shadow: none;
+}
+.hunt-row-art {
+  width: 52px; height: 52px; flex: none;
+  border-radius: 12px; object-fit: cover; object-position: 50% 30%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0c0c1e;
+}
+.hunt-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.hunt-row-top { display: flex; align-items: center; gap: 8px; }
+.hunt-row-name {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+  color: var(--text-primary, #f4f4fb);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hunt-row-more {
+  flex: none; padding: 2px 7px;
+  border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; color: #c3c4da;
+  cursor: pointer;
+}
+.hunt-row-meta {
+  margin-left: auto; flex: none; white-space: nowrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 1.2px; font-weight: 700; color: #9d9fbd;
+}
+.hunt-row-bar {
+  display: block; height: 6px; border-radius: 3px;
+  background: rgba(255, 255, 255, 0.10); overflow: hidden;
+}
+.hunt-row-bar i { display: block; height: 100%; border-radius: 3px; background: #ef4444; transition: width 0.4s ease; }
+.hunt-row--won .hunt-row-bar i { background: var(--gold, #f5b842); }
+.hunt-row-line {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 0.5px; font-weight: 700;
+  color: var(--gold, #f5b842);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hunt-row-spark { flex: none; color: var(--gold, #f5b842); font-size: 1.05rem; }
+.hunt-row-idle-text { flex: 1; font-size: 0.8rem; font-weight: 600; line-height: 1.4; color: var(--text-secondary, #cbd0e0); }
+.hunt-row-idle-text b { color: var(--gold, #f5b842); font-weight: 800; }
+.hunt-row-x {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary, #8a8aa2); font-size: 0.85rem; line-height: 1; padding: 0; cursor: pointer;
+}
+
+/* The +N sheet: every hunt, same rows. */
+.hunt-list-overlay {
+  position: fixed; inset: 0; z-index: 12400;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: flex-end;
+}
+.hunt-list-sheet {
+  width: 100%; max-width: 430px; margin: 0 auto;
+  background: #0f0f22;
+  border: 1px solid rgba(255, 255, 255, 0.08); border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  padding: 10px 10px calc(18px + var(--safe-bottom));
+  max-height: 78vh; overflow-y: auto;
+}
+.hunt-list-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px 10px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: 2px; font-weight: 700; color: #9d9fbd;
+}
+.hunt-list-close { background: none; border: 0; color: #c3c4da; font-size: 14px; padding: 4px 6px; cursor: pointer; }
+.hunt-row--in-list { margin: 0 0 8px; }
+
+@media (prefers-reduced-motion: reduce) { .hunt-row-bar i { transition: none; } }
+
 .fvp-x {
   flex: none; width: 24px; height: 24px; border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04);
