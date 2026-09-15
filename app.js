@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.5-w949'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.5-w950'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5976,6 +5976,7 @@
     } catch (_) {}
   }
   function _stoneCeremony(latent, gate, cracked) {
+    if (_stageDefer('stone', 65, function () { _stoneCeremony(latent, gate, cracked); }, ['stone'])) return;   // W950
     try {
       const old = document.getElementById('stone-overlay'); if (old) old.remove();
       const ov = document.createElement('div');
@@ -7139,7 +7140,9 @@
       s.windows[bossId] = { killAt: Date.now(), until: Date.now() + SHADOW_WINDOW_MS, lastCheck: 0 };
       _shSave(s);
       // W940 — the window still opens; a first-day hunter just isn't told yet.
-      if (!_newHunterQuiet()) { try { showHabitToast('The System stirs: an extraction window opens. 48 hours.'); } catch (_) {} }
+      // W950 — told on the next task, after the kill's result screen has claimed
+      // the stage, so the toast waits for it instead of landing on top.
+      if (!_newHunterQuiet()) { setTimeout(function () { try { showHabitToast('The System stirs: an extraction window opens. 48 hours.'); } catch (_) {} }, 0); }
       try { renderShadowStrip(); } catch (_) {}
     } catch (_) {}
   }
@@ -7296,6 +7299,9 @@
     const cfg = BOSSES[bossId]; if (!cfg) return;
     const s = _shLoad();
     if (s.extracted[bossId]) return;
+    // W950 — waits its turn; nothing is saved until it plays, so a closed app
+    // leaves the window open for the next tick instead of losing the shadow.
+    if (_stageDefer('arise:' + bossId, 65, function () { _ariseCeremony(bossId); }, ['arise'])) return;
     s.extracted[bossId] = { at: Date.now(), name: 'Shadow of ' + (cfg.name || 'the Slain') };
     delete s.windows[bossId];
     if (s.active.indexOf(bossId) === -1 && s.active.length < _shSlots()) s.active.push(bossId);
@@ -20080,17 +20086,24 @@
       }
     }
 
-    try {
-      if (typeof showHabitToast === 'function') {
-        // W611 — when a relic dropped, make the toast tappable → Drop History, so
-        // the reward is reachable even if the reveal ceremony didn't pop (Rendell).
-        if (dropInfo && dropInfo.card) {
-          showHabitToast(toastMsg, { cta: 'View', onTap: function () { try { openDropLedger(); } catch (_) {} } });
-        } else {
-          showHabitToast(toastMsg);
+    // W950 — the toast is the fallback, not the opener: when the result screen
+    // will show, it carries the kill and the (sealed) relic itself, and a toast
+    // naming the relic first spoiled the reveal. It still plays when no result
+    // screen follows (a result already acknowledged).
+    const _showKillToast = function () {
+      try {
+        if (typeof showHabitToast === 'function') {
+          // W611 — when a relic dropped, make the toast tappable → Drop History, so
+          // the reward is reachable even if the reveal ceremony didn't pop (Rendell).
+          if (dropInfo && dropInfo.card) {
+            showHabitToast(toastMsg, { cta: 'View', onTap: function () { try { openDropLedger(); } catch (_) {} } });
+          } else {
+            showHabitToast(toastMsg);
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    };
+    let _resultQueued = false;
 
     // v3 Phase 1z.73 — every defeat queues a boss-result modal,
     // even when a rare/ultra first-acquisition is also queued for
@@ -20124,7 +20137,7 @@
         } catch (_) {}
         const mercy = (typeof getDropPityDisplay === 'function')
           ? getDropPityDisplay(cfg.id) : null;
-        _queueBossResult({
+        _resultQueued = !!_queueBossResult({
           bossId:         cfg.id,
           bossName:       cfg.name,
           rank:           cfg.rank,
@@ -20160,6 +20173,7 @@
         });
       }
     } catch (_) {}
+    if (!_resultQueued) _showKillToast();
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -21075,7 +21089,7 @@
   } catch (_) {}
 
   function _queueBossResult(evt) {
-    if (!evt || !evt.bossId) return;
+    if (!evt || !evt.bossId) return false;
     // v3 Phase 1z.56 — branch on outcome so failure events get
     // their own per-hunt seen-key and do NOT write the gold
     // HUNTING-strip pending-result pill (the pill is meant to
@@ -21086,7 +21100,7 @@
       const key = isFailed
         ? _bossFailedSeenKey(evt.bossId, evt.hunt_started_at)
         : _bossResultSeenKey(evt.bossId, evt.kill_count);
-      if (localStorage.getItem(key) === '1') return;
+      if (localStorage.getItem(key) === '1') return false;
     } catch (_) {}
     if (!isFailed) {
       // v3 Phase 1z.7 — write the pending-result envelope so the
@@ -21097,6 +21111,7 @@
     }
     _bossResultQueue.push(evt);
     _drainBossResultQueue();
+    return true;
   }
 
   function _drainBossResultQueue() {
@@ -21114,8 +21129,10 @@
       setTimeout(() => { try { processRevealQueue(); } catch (_) {} }, 200);
       return;
     }
+    // W950 — wait for the screen to clear; the result goes back to the front.
+    if (_stageDefer('boss', 10, _drainBossResultQueue, ['boss'])) { _bossResultQueue.unshift(next); return; }
     _bossResultBusy = true;
-    // setTimeout 600ms — give the kill toast its moment first.
+    _stageBigMoment = true;
     setTimeout(() => { try { _showBossResult(next); } catch (_) { _bossResultBusy = false; } }, 600);
   }
 
@@ -21600,6 +21617,9 @@
       var ready = _reviewDaysActive() >= 3 || _reviewPerfectDayCount() >= 2 || _rvGet(_RV.firstBoss) || _rvGet(_RV.firstCoop);
       if (!ready) return;
     }
+    // W950 — never on top of anything: the ask waits until the celebration
+    // (and whatever followed it) has closed.
+    if (_stageDefer('review', 90, function () { _maybeReviewPrompt(trigger, ctx); })) return;
     _rvSet(_RV2.lastShown, String(Date.now()));     // soft spacing — an ignored card can't re-pester this week
     _showReviewPrePrompt(trigger, ctx);
   }
@@ -21826,6 +21846,7 @@
     if (_revealActive) return;
     const inv = getInventory();
     if (!inv.reveal_queue || inv.reveal_queue.length === 0) return;
+    if (_stageDefer('reveal', 15, processRevealQueue, ['reveal'])) return;   // W950
     const nextId = inv.reveal_queue[0];
     const card = CARDS[nextId];
     if (!card) {
@@ -21844,6 +21865,7 @@
     const overlay = document.getElementById('reveal-overlay');
     if (!overlay) return;
     _revealActive = true;
+    _stageBigMoment = true;   // W950
     document.body.classList.add('reveal-locked');
     // v3 Phase 1z.165 — Guild Hall feat row for ultra-rare drops.
     // Per-card-id idempotent so re-opening the modal (debug, queue
@@ -26906,6 +26928,7 @@
     if (getTodayDayName() !== 'Fri') return;
     const bannerKey = 'hb_fri_banner_' + today;
     if (localStorage.getItem(bannerKey)) return;
+    if (_stageDefer('friday', 55, setupFridayBanner, ['friday'])) return;   // W950
 
     const nah      = habits.find(h => h.name === 'No alcohol');
     const day1Done = nah && (completions[today] || []).includes(nah.id);
@@ -30847,6 +30870,7 @@
   //                   through the prelude re-entry so the grant runs once)
   function showRankUpScreen(rank, prestigeLevel, ctx) {
     ctx = ctx || {};
+    _stageBigMoment = true;   // W950
     // W453 — when prestigeLevel is given (>0) this same fanfare doubles as
     // the PRESTIGE celebration: force the gold S+ effects + prestige labels,
     // reusing all of the particle/shockwave/rain/dismiss/founder machinery.
@@ -31346,6 +31370,7 @@
       else if (!achQueue.length) { try { _reviewFlush(['rankup']); } catch (_) {} }
       return;
     }
+    if (_stageDefer('levelup', 20, drainLevelUpQueue, ['levelup'])) return;   // W950
     const item = levelUpQueue.shift();
     levelUpActive = true;
     if      (item.type === 'comeback')    showComebackScreen(item);
@@ -31396,6 +31421,7 @@
       try { _reviewFlush(['rankup']); } catch (_) {}
       return;
     }
+    if (_stageDefer('ach', 85, drainAchQueue, ['ach'])) { achPopupTimer = null; return; }   // W950
     const ach = achQueue.shift();
     showAchievementPopup(ach);
   }
@@ -34864,6 +34890,8 @@
   const _noticeCardQueue = [];
   function showSystemNotice(title, body) {
     try {
+      if (!document.getElementById('aw-notice') && (performance.now() - _stageLastGesture) > 1500 &&
+          _stageDefer('notice:' + title, 70, function () { showSystemNotice(title, body); }, ['notice'])) return;   // W950
       const mounted = document.getElementById('aw-notice');
       if (mounted) {
         if (_sysNoticeQueue.length >= _NOTICE_QUEUE_CAP) return;
@@ -34897,6 +34925,11 @@
   }
   function showHabitToast(msg, opts) {
     opts = opts || {};
+    // W950 — an automatic toast waits for the screen to clear; one raised by
+    // the hunter's own tap (feedback inside an open surface) shows at once.
+    if ((performance.now() - _stageLastGesture) > 1500 &&
+        _stageDefer('toast:' + msg, 80, function () { showHabitToast(msg, opts); }, ['ach'])) return;
+    if (typeof opts.onlyIf === 'function') { try { if (!opts.onlyIf()) return; } catch (_) {} }   // W950 — still true when it shows?
     document.querySelectorAll('.habit-toast').forEach(t => t.remove());
     const toast = document.createElement('div');
     const isTap   = typeof opts.onTap === 'function';
@@ -36271,6 +36304,7 @@
     try { if (navigator.vibrate) { var map = { LIGHT: 12, MEDIUM: 22, HEAVY: 42, SUCCESS: [18, 40, 28] }; navigator.vibrate(map[k] || 12); } } catch (e) {}
   }
   try { window._hapticTick = _hapticTick; } catch (_) {}
+  try { window.__pday = function (n, xp) { _pdayPending = true; triggerPerfectDayCelebration(n, xp); }; } catch (_) {}   // W950 — QA hook
 
   function _pdaySizeCanvas() {
     var fx = document.getElementById('pday-fx'); if (!fx) return;
@@ -36334,6 +36368,9 @@
   // Public entry — streak + XP default to the live perfect-streak + today's XP.
   function triggerPerfectDayCelebration(streakCount, todayXp) {
     var ov = document.getElementById('pday-overlay'); if (!ov) return;
+    // W950 — the seal waits for a First Mark, a boss result or a card to close.
+    // _pdayPending stays up meanwhile, so routine popups keep standing down.
+    if (_stageDefer('pday', 30, function () { triggerPerfectDayCelebration(streakCount, todayXp); }, ['pday', 'bonus'])) return;
     _pdayPending = false;
     // W948 — one moment: a routine popup still up from an earlier tap steps aside.
     try {
@@ -38809,6 +38846,9 @@
     // to swap the spec while the first closure's listeners stayed attached: one
     // tap ran two advance()s, and the first spec's onDismiss was lost.
     if (!overlay.classList.contains('hidden')) return false;
+    // W950 — something else is up: the card waits its turn (and still marks its
+    // key only when the hunter dismisses it).
+    if (_stageDefer('coach:' + (spec.context || spec.storageKey || ''), 60, function () { _faRunCoachmark(spec); })) return true;
     const sheet   = overlay.querySelector('.fa-coach-sheet');
     const figEl   = document.getElementById('fa-coach-figure');
     const speech  = document.getElementById('fa-coach-speech');
@@ -39266,32 +39306,165 @@
     });
   }
 
-  // Higher-priority modal active? If so, defer all retention
-  // moments to the next launch — never stack on top of another
-  // narrative beat or a critical system surface.
-  function _isAnyHigherPriorityModalActive() {
+  // ── W950 — THE STAGE: one blocking surface at a time ─────────────────────
+  // The owner, after the retention simulation (2026-09-15): "a popup queue is
+  // very important .. I also don't want to have too many popups at one moment
+  // simultaneously." Every system used to show its surface the moment its own
+  // condition came true — boss results, the relic reveal, the level-up chain,
+  // the Perfect Day seal, routine bonuses, First Awakened cards, System
+  // notices, notice cards, achievements, the rating ask, What's New, the
+  // Friday challenge, ARISE, the Measuring Stone and every automatic toast —
+  // and six private queues never spoke to each other. A new hunter's first
+  // boss kill drew four blocking surfaces at once; the morning after a missed
+  // day drew five.
+  //
+  // Now every automatic show point asks the stage first. If anything blocking
+  // is up (or on its way: the flags below), the show becomes an item in ONE
+  // line, ordered by what matters most, and runs once the screen has been
+  // clear for 450 ms. Nothing is dropped and no reward moves: every grant
+  // still happens where it always did; only the announcement waits its turn.
+  //
+  //   10 boss result · 15 relic reveal · 20 level-up chain (First Mark,
+  //   rank-up, comeback…) · 30 Perfect Day · 40 routine bonus · 45 What's New
+  //   · 50 First Awakened retention beat · 55 Friday challenge · 60 other First
+  //   Awakened cards · 65 ARISE / Measuring Stone · 70 System notices and
+  //   notice cards · 80 automatic toasts · 85 achievements · 90 rating ask
+  //
+  // Rules on top of the line:
+  //   - A toast, System notice or notice card raised by the hunter's own tap
+  //     shows at once (they asked for it); automatic ones wait. At most 3 toasts wait, and a
+  //     toast that waited more than 12 s is dropped as stale.
+  //   - Once a big moment has played this launch (boss result, relic reveal,
+  //     rank-up), the retention beat waits for the next launch instead.
+  //   - Flags alone (a surface on its way with nothing on screen) can hold the
+  //     line for at most 6 s, so a stuck flag can never freeze it.
+  var _stageQueue = [], _stageSeq = 0, _stageTimer = 0, _stageClearAt = 0, _stageClearKey = '';
+  var _stageFlagOnlySince = 0, _stageBigMoment = false, _stageLastGesture = -1e9;
+  try {
+    document.addEventListener('pointerdown', function () { _stageLastGesture = performance.now(); }, true);
+    document.addEventListener('keydown', function () { _stageLastGesture = performance.now(); }, true);
+  } catch (_) {}
+  function _stageVis(id) {
+    var el = document.getElementById(id);
+    if (!el || el.classList.contains('hidden')) return false;
     try {
-      if (typeof levelUpActive !== 'undefined' && levelUpActive) return true;
-    } catch (_) {}
-    const ids = [
-      'fa-coachmark-overlay', // another FA coachmark already open
-      'cin-onboarding',       // cinematic onboarding
-      'daily-insight-overlay',// morning briefing
-      'fa-manual-overlay',    // field manual
-      'mv-overlay',           // manage vows
-      'system-full-overlay',  // 25-cap modal
-      'reveal-overlay',       // boss / card reveal
-      'wn-overlay',      // W362 - post-update What’s New sheet must defer day-beats
-      'welcome-back-overlay', // W377 - day-2 welcome-back screen
-      'wr-overlay',           // W657 - Week Recap ceremony (day-beats defer under it)
-      'arena-overlay',        // W657 - never mount a beat over a live fight (Ascent/PvP)
-      'boss-fs-overlay',      // W942 - the boss sheet (the first-gate guide lands the hunter inside it)
-    ];
-    for (let i = 0; i < ids.length; i++) {
-      const el = document.getElementById(ids[i]);
-      if (el && !el.classList.contains('hidden')) return true;
+      var cs = getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.02;
+    } catch (_) { return true; }
+  }
+  function _stageOn(sel) { return !!document.querySelector(sel); }
+  // [key, 'flag' | 'dom' | 'soft', test]. A flag means "on its way"; dom means
+  // "on screen". A soft surface (the 4 s achievement banner) holds back only
+  // the small news behind it (pri 80+), never a real moment.
+  // A flag holds back only what matters less than it: a rank-up (20) never
+  // waits on a Perfect Day (30) that is itself queued behind the rank-up.
+  var _STAGE_FLAG_PRI = { boss: 10, reveal: 15, levelup: 20, pday: 30, bonus: 40 };
+  var _STAGE_SURFACES = [
+    ['levelup',  'flag', function () { return typeof levelUpActive !== 'undefined' && !!levelUpActive; }],
+    ['levelup',  'dom',  function () {
+      return ['first-win-overlay', 'rankup-screen', 'comeback-screen', 'firstverify-screen', 'class-popup', 'awakening-screen',
+              'class-choice-screen', 'perfect-day-screen', 'statlvl-popup', 'fm-pointer-overlay'].some(_stageVis) || _stageOn('.ack-overlay');
+    }],
+    ['boss',     'flag', function () { return typeof _bossResultBusy !== 'undefined' && !!_bossResultBusy; }],
+    ['boss',     'dom',  function () { return _stageVis('boss-result-overlay'); }],
+    ['reveal',   'flag', function () { return typeof _revealActive !== 'undefined' && !!_revealActive; }],
+    ['reveal',   'dom',  function () { return _stageVis('reveal-overlay'); }],
+    ['pday',     'flag', function () { return typeof _pdayPending !== 'undefined' && !!_pdayPending; }],
+    ['pday',     'dom',  function () { return typeof _pdayIsOn === 'function' && _pdayIsOn(); }],
+    ['bonus',    'flag', function () { return typeof _bonusPopupActive !== 'undefined' && !!_bonusPopupActive; }],
+    ['bonus',    'dom',  function () { var el = document.getElementById('compound-popup'); return !!(el && el.classList.contains('cp-show')); }],
+    ['coach',    'dom',  function () { return _stageVis('fa-coachmark-overlay'); }],
+    ['review',   'dom',  function () { return _stageOn('#review-pp-overlay'); }],
+    ['notice',   'dom',  function () { return _stageOn('#aw-notice'); }],
+    ['card',     'dom',  function () { return _stageOn('.notice-card-wrap'); }],
+    ['ach',      'soft', function () { return _stageVis('ach-popup'); }],
+    ['welcome',  'dom',  function () { return _stageVis('welcome-back-overlay'); }],
+    ['briefing', 'dom',  function () { return _stageVis('daily-insight-overlay'); }],
+    ['whatsnew', 'dom',  function () { return _stageVis('wn-overlay'); }],
+    ['recap',    'dom',  function () { return _stageOn('#wr-overlay'); }],
+    ['friday',   'dom',  function () { return _stageVis('fri-challenge-overlay'); }],
+    ['notif',    'dom',  function () { return _stageVis('notif-explain-overlay'); }],
+    ['health',   'dom',  function () { return _stageOn('#hk-preprompt-overlay'); }],
+    ['stone',    'dom',  function () { return _stageOn('#stone-overlay'); }],
+    ['arise',    'dom',  function () { return _stageOn('.arise-overlay'); }],
+    ['onboarding', 'dom', function () { return _stageVis('cin-onboarding'); }],
+    // Surfaces the hunter opened. Nothing automatic lands on top of them either.
+    ['sheet',    'dom',  function () {
+      return ['fa-manual-overlay', 'mv-overlay', 'system-full-overlay', 'arena-overlay', 'boss-fs-overlay'].some(_stageVis);
+    }],
+  ];
+  function _stageBusyKeys(except, pri) {
+    var ex = except ? [].concat(except) : [];
+    var out = { dom: [], flag: [] };
+    if (!_STAGE_SURFACES) return out;   // asked before this block ran at load
+    for (var i = 0; i < _STAGE_SURFACES.length; i++) {
+      var sf = _STAGE_SURFACES[i];
+      if (ex.indexOf(sf[0]) >= 0) continue;
+      if (pri != null && sf[1] === 'flag' && (_STAGE_FLAG_PRI[sf[0]] || 0) > pri) continue;
+      if (sf[1] === 'soft' && (pri == null || pri < 80)) continue;
+      var on = false;
+      try { on = !!sf[2](); } catch (_) { on = false; }
+      if (on) out[sf[1] === 'flag' ? 'flag' : 'dom'].push(sf[0]);
     }
+    return out;
+  }
+  function _stageBusy(except, pri) {
+    var b = _stageBusyKeys(except, pri);
+    if (b.dom.length) { _stageFlagOnlySince = 0; return true; }
+    if (b.flag.length) {
+      var now = performance.now();
+      if (!_stageFlagOnlySince) _stageFlagOnlySince = now;
+      return (now - _stageFlagOnlySince) < 6000;
+    }
+    _stageFlagOnlySince = 0;
     return false;
+  }
+  // Ask the stage. false → nothing blocking, show now. true → queued; the
+  // caller returns and `run` shows it later (it asks again then, and passes).
+  function _stageDefer(key, pri, run, except) {
+    if (!_stageQueue || !_stageBusy(except, pri)) return false;
+    for (var i = 0; i < _stageQueue.length; i++) {
+      if (_stageQueue[i].key === key) { _stageQueue[i].run = run; _stagePump(); return true; }
+    }
+    if (key.indexOf('toast:') === 0) {
+      var toasts = _stageQueue.filter(function (x) { return x.key.indexOf('toast:') === 0; });
+      if (toasts.length >= 3) _stageQueue.splice(_stageQueue.indexOf(toasts[0]), 1);
+    }
+    _stageQueue.push({ key: key, pri: pri, run: run, except: except, seq: ++_stageSeq, at: performance.now() });
+    _stagePump();
+    return true;
+  }
+  function _stagePump() {
+    if (_stageTimer) return;
+    _stageTimer = setInterval(function () {
+      if (!_stageQueue.length) { clearInterval(_stageTimer); _stageTimer = 0; _stageClearAt = 0; return; }
+      _stageQueue.sort(function (a, b) { return (a.pri - b.pri) || (a.seq - b.seq); });
+      var item = _stageQueue[0];
+      if (_stageBusy(item.except, item.pri)) { _stageClearAt = 0; return; }
+      var now = performance.now();
+      if (!_stageClearAt || _stageClearKey !== item.key) { _stageClearAt = now; _stageClearKey = item.key; return; }
+      if (now - _stageClearAt < 450) return;
+      _stageClearAt = 0;
+      _stageQueue.shift();
+      // A toast that waited past 12 s is stale news ("finish every vow" after
+      // the hunter already has); it goes quietly.
+      if (item.key.indexOf('toast:') === 0 && (now - item.at) > 12000) return;
+      try { item.run(); } catch (e) { try { _logSwallow('stage:' + item.key, e); } catch (_) {} }
+    }, 150);
+  }
+  try {
+    window.__stage = {
+      busy:  function (except) { return _stageBusy(except); },
+      keys:  function () { return _stageQueue.map(function (x) { return x.key; }); },
+      big:   function () { return _stageBigMoment; },
+      toast: function (msg) { showHabitToast(msg); },   // QA: an automatic toast
+    };
+  } catch (_) {}
+
+  // Higher-priority surface up? Retention beats, the Week Recap and the
+  // resume briefing ask this before they show. W950: it IS the stage now.
+  function _isAnyHigherPriorityModalActive() {
+    return _stageBusy();
   }
 
   // Single decision point — ONE beat per launch. Priority order:
@@ -39302,7 +39475,10 @@
   // Returns silently if a higher-priority modal is mounted —
   // does not retry, does not queue. Next launch reconsiders.
   function maybeShowFirstAwakenedRetentionMoment() {
-    if (_isAnyHigherPriorityModalActive()) return;
+    // W950 — a big moment already played this launch: the beat waits for the
+    // next one. Otherwise it waits its turn behind whatever is up.
+    if (_stageBigMoment) return;
+    if (_isAnyHigherPriorityModalActive()) { _stageDefer('retention', 50, maybeShowFirstAwakenedRetentionMoment); return; }
     if (_maybeShowWelcomeBack()) return; // W367 — day-2 welcome-back screen is day-2-ONLY (cannot defer); must outrank the deferrable intro/milestones
     if (showWelcomeBackCoachmark()) return; // W363 — existing-user intro; was a separate +1500ms timer that raced this dispatcher
     if (showStreakLossCoachmark()) return;
@@ -44730,6 +44906,8 @@
   function showNoticeCard(opts) {
     try {
       opts = opts || {};
+      if (!document.querySelector('.notice-card-wrap') && (performance.now() - _stageLastGesture) > 1500 &&
+          _stageDefer('card:' + (opts.title || ''), 70, function () { showNoticeCard(opts); }, ['card'])) return;   // W950
       // W895 — queue instead of destroying whatever is already on screen.
       const _mountedCard = document.querySelector('.notice-card-wrap');
       if (_mountedCard) {
@@ -44780,12 +44958,14 @@
       // W479 — the custom pack's display name ('Make Your Own') reads oddly inline;
       // call a self-built routine just "routine" in the partial nudge.
       const name = (packId === 'custom') ? 'routine' : (pack ? pack.name : 'routine');
-      // W477/W478 centered nudge; W481 routes it through the shared showNoticeCard.
-      showNoticeCard({
-        icon:     (typeof xpIconHtml === 'function') ? xpIconHtml({ size: 26 }) : '⚡',
-        amount:   '+' + xp + ' XP',
-        title:    'Partial ' + name + ' bonus',
-        bodyHtml: 'Finish all of them to claim the full <b>Compound Effect</b>.',
+      // W950 — small news is a toast. This was a centered card that needed a
+      // tap (W477/W481) for +1 XP; the simulated first days met it in three of
+      // five sessions, twice on top of something bigger.
+      showHabitToast('+' + xp + ' XP · partial ' + name + ' bonus. Finish every vow for the full bonus.', {
+        // If it waited its turn, it goes quietly once every vow is kept.
+        onlyIf: function () {
+          try { const t = habits.filter(isScheduledToday); return !t.every(function (h) { return isChecked(h.id); }); } catch (_) { return true; }
+        },
       });
     } catch (_) {}
   }
@@ -45086,6 +45266,7 @@
     // the seal is up or about to be, the routine popup is not shown. Its XP,
     // streak and milestone souls were already paid before it was queued.
     if (_pdayPending || _pdayIsOn()) { _bonusPopupQueue.length = 0; return; }
+    if (_stageDefer('bonus', 40, drainBonusPopupQueue, ['bonus'])) return;   // W950
     const item = _bonusPopupQueue.shift();
     _bonusPopupActive = true;
     showCompoundPopup(item.packId, item.newStreak, item.finalXP, item.doubled, item.milestoneSouls);
@@ -57531,6 +57712,7 @@
 
   function openWhatsNewSheet(opts) {
     opts = opts || {};
+    if (!opts.manual && _stageDefer('whatsnew', 45, function () { openWhatsNewSheet(opts); }, ['whatsnew'])) return;   // W950
     const overlay = document.getElementById('wn-overlay');
     const sheet   = document.getElementById('wn-sheet');
     if (!overlay || !sheet) return;

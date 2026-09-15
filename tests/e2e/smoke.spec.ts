@@ -3253,6 +3253,10 @@ test.describe('AH · One rank-up screen (W941)', () => {
     expect(after.screen).toBe(false);
     expect(after.coachContext).toBeNull();    // nothing follows
     expect(after.report).toBe(false);
+    // W950 — the same tap sealed the day; its Perfect Day takes its turn after
+    // the rank screen instead of landing on it. Close it the way a hunter would.
+    await page.evaluate(() => { const pd = document.getElementById('pday-overlay'); if (pd && pd.classList.contains('on')) pd.click(); });
+    await page.waitForTimeout(700);
 
     // Re-showing the same rank never re-gifts.
     await page.evaluate(() => (window as any).__showRankUp('D', 'E'));
@@ -3971,8 +3975,10 @@ test.describe('AN · Perfect Day only (W948)', () => {
     const r = await sealTheDay(page);
     expect(r.seen.pday).toBe(true);
     expect(r.seen.compound).toBe(false);
-    // Three easy vows pay 3 base XP (more on a weekend); the routine bonus lands on top.
-    expect(r.pointsAfter - r.pointsBefore).toBeGreaterThan(6);
+    // The routine bonus was paid (today's award is on the books), just not announced.
+    const today = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+    expect(r.awarded.custom).toBe(today);
+    expect(r.pointsAfter - r.pointsBefore).toBeGreaterThan(3);   // more than the three vows alone
   });
 
   test('a routine completed on a day whose Perfect Day is already logged still gets its own popup', async ({ page }) => {
@@ -3980,5 +3986,106 @@ test.describe('AN · Perfect Day only (W948)', () => {
     const r = await sealTheDay(page);
     expect(r.seen.pday).toBe(false);
     expect(r.seen.compound).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AO. W950 — the stage: one blocking surface at a time
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AO · One surface at a time (W950)', () => {
+  async function quietHunter(page: Page, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript((extra: Record<string, string>) => {
+      try {
+        if (sessionStorage.getItem('__w950_seeded')) return;
+        sessionStorage.setItem('__w950_seeded', '1');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w950-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1',
+         'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        Object.entries(extra || {}).forEach(([k, v]) => { if (v === '') localStorage.removeItem(k); else localStorage.setItem(k, v); });
+      } catch (_) {}
+    }, extra || {});
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(3200);   // let the launch beats run their course
+  }
+  // Sample what is on screen; stopStacks() reports any moment two blocking surfaces overlapped.
+  const watchStacks = () => {
+    const w = window as any;
+    const on = (id: string) => { const el = document.getElementById(id); return !!el && !el.classList.contains('hidden') && getComputedStyle(el).display !== 'none'; };
+    w.__w950stacks = [];
+    w.__w950t = setInterval(() => {
+      const up = [
+        on('boss-result-overlay') && 'boss', on('fa-coachmark-overlay') && 'coach', on('first-win-overlay') && 'firstmark',
+        (document.getElementById('pday-overlay') as HTMLElement).classList.contains('on') && 'pday',
+        !!document.getElementById('review-pp-overlay') && 'review', !!document.querySelector('.notice-card-wrap') && 'card',
+      ].filter(Boolean);
+      if (up.length > 1) w.__w950stacks.push(up.join('+'));
+    }, 40);
+  };
+  const stopStacks = () => { const w = window as any; clearInterval(w.__w950t); return Array.from(new Set(w.__w950stacks)); };
+
+  test('a First Awakened card never lands on a boss result; it takes its turn when the result closes', async ({ page }) => {
+    await quietHunter(page);
+    await page.evaluate(watchStacks);
+    await page.evaluate(() => (window as any).__queueBossResult({
+      bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 951, conditionLabel: '6,000 verified steps', drop: null, mercy: null,
+    }));
+    await expect(page.locator('#boss-result-overlay')).toBeVisible({ timeout: 3_000 });
+
+    const accepted = await page.evaluate(() => (window as any).__faRunCoachmark({
+      context: 'w950', storageKey: 'hb_w950_coach', cta: 'OK', beats: [{ pose: 'idle', lines: ['After the kill.'] }],
+    }));
+    expect(accepted).toBe(true);                                   // accepted into the line, not refused
+    await page.waitForTimeout(900);
+    await expect(page.locator('#fa-coachmark-overlay')).toBeHidden();
+    expect(await page.evaluate(() => (window as any).__stage.keys())).toContain('coach:w950');
+
+    await page.locator('#bro-close-x').click();
+    await expect(page.locator('#boss-result-overlay')).toBeHidden({ timeout: 3_000 });
+    await expect(page.locator('#fa-coachmark-overlay')).toBeVisible({ timeout: 3_000 });
+    await expect(page.locator('#fa-coach-speech')).toContainText('After the kill.');
+    expect(await page.evaluate(stopStacks)).toEqual([]);
+  });
+
+  test('an automatic toast waits behind an open card and shows once it closes; a toast from the hunter tapping shows at once', async ({ page }) => {
+    await quietHunter(page);
+    await page.evaluate(() => (window as any).__faRunCoachmark({
+      context: 'w950t', storageKey: 'hb_w950_toast_coach', cta: 'OK', beats: [{ pose: 'idle', lines: ['Hold on.'] }],
+    }));
+    await expect(page.locator('#fa-coachmark-overlay')).toBeVisible();
+    await page.waitForTimeout(1700);                               // well past any tap on the page
+    await page.evaluate(() => (window as any).__stage.toast('Automatic news'));
+    await page.waitForTimeout(600);
+    await expect(page.locator('.habit-toast', { hasText: 'Automatic news' })).toHaveCount(0);
+
+    await page.locator('#fa-coach-cta').click();
+    await expect(page.locator('#fa-coachmark-overlay')).toBeHidden();
+    await expect(page.locator('.habit-toast', { hasText: 'Automatic news' })).toBeVisible({ timeout: 3_000 });
+
+    // A tap, then feedback: shown even with a card up.
+    await page.evaluate(() => (window as any).__faRunCoachmark({
+      context: 'w950u', storageKey: 'hb_w950_toast_coach2', cta: 'OK', beats: [{ pose: 'idle', lines: ['Still here.'] }],
+    }));
+    await expect(page.locator('#fa-coachmark-overlay')).toBeVisible();
+    await page.mouse.click(10, 10);
+    await page.evaluate(() => (window as any).__stage.toast('You tapped'));
+    await expect(page.locator('.habit-toast', { hasText: 'You tapped' })).toBeVisible({ timeout: 1_000 });
+  });
+
+  test('on a first day, the Perfect Day seal waits for the First Mark to close', async ({ page }) => {
+    await quietHunter(page, { hb_first_completion_bonus_v1: '' });
+    await page.evaluate(watchStacks);
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect(page.locator('#first-win-overlay')).toBeVisible({ timeout: 3_000 });
+    await page.waitForTimeout(1500);
+    expect(await page.evaluate(() => (document.getElementById('pday-overlay') as HTMLElement).classList.contains('on'))).toBe(false);
+
+    await page.locator('#first-win-cta').click();
+    await expect(page.locator('#first-win-overlay')).toBeHidden({ timeout: 3_000 });
+    await expect.poll(() => page.evaluate(() => (document.getElementById('pday-overlay') as HTMLElement).classList.contains('on')), { timeout: 3_000 }).toBe(true);
+    expect(await page.evaluate(stopStacks)).toEqual([]);
   });
 });
