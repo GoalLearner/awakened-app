@@ -3936,8 +3936,11 @@ test.describe('AN · Perfect Day only (W948)', () => {
       try {
         if (sessionStorage.getItem('__w948_seeded')) return;
         sessionStorage.setItem('__w948_seeded', '1');
-        const d = new Date();
-        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        // The habit day is PACIFIC, not device-local (app.js `let today =
+        // getPTDate()`), so every completion / streak key must be stamped the
+        // same way. Seeding the runner's own midnight put these keys a day
+        // ahead for the whole UTC evening, which is a third of every CI day.
+        const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
         localStorage.setItem('hb_habits', JSON.stringify(['First vow', 'Second vow', 'Third vow'].map((n, i) => (
           { id: 'w948-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }))));
         ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1',
@@ -3957,17 +3960,15 @@ test.describe('AN · Perfect Day only (W948)', () => {
     await expect(page.locator('#habit-list .habit-item')).toHaveCount(3, { timeout: 10_000 });
   }
 
-  /** The device-local date, computed the way the app computes it. */
-  const localDay = (page: Page) => page.evaluate(() => {
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  });
+  /** The app's habit day: Pacific, the same clock `today` is read from. */
+  const ptDay = (page: Page) => page.evaluate(() =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()));
 
   /** Tap all three vows and watch both popups for a few seconds. */
   async function sealTheDay(page: Page) {
     return page.evaluate(async () => {
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const day = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+      const day = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
       const dayBefore = day();
       const seen = { compound: false, pday: false };
       const watch = setInterval(() => {
@@ -3995,22 +3996,23 @@ test.describe('AN · Perfect Day only (W948)', () => {
     expect(r.seen.pday).toBe(true);
     expect(r.seen.compound).toBe(false);
     // The routine bonus was paid (today's award is on the books), just not
-    // announced. "Today" is whichever day the taps actually happened on: a run
-    // that straddles local midnight stamps the day it began, and asserting
-    // against the clock AFTER the fact fails by exactly one day (CI, 00:00 UTC,
-    // 2026-09-16 — expected 09-16, the app had honestly written 09-15).
+    // announced. "Today" is the app's PACIFIC day — asserting against the
+    // runner's own clock failed by exactly one day for the whole UTC evening
+    // (CI: array ["2026-09-16","2026-09-16"], the app had correctly written
+    // "2026-09-15"). Both ends are captured so a run that straddles the PT
+    // rollover still accepts the day the taps actually landed on.
     expect([r.dayBefore, r.dayAfter]).toContain(r.awarded.custom);
     expect(r.pointsAfter - r.pointsBefore).toBeGreaterThan(3);   // more than the three vows alone
   });
 
   test('a routine completed on a day whose Perfect Day is already logged still gets its own popup', async ({ page }) => {
     await routineOfThree(page, true);
-    const seedDay = await localDay(page);           // the day the seed called "today"
+    const seedDay = await ptDay(page);              // the day the seed called "today"
     const r = await sealTheDay(page);
     // The whole premise is "today's Perfect Day is already on the books". If the
-    // local day rolls between the seed and the taps, that seed describes
-    // YESTERDAY and a second seal is the correct behaviour, not a regression —
-    // there is nothing left to assert.
+    // PT day rolls between the seed and the taps, that seed describes YESTERDAY
+    // and a second seal is the correct behaviour, not a regression — there is
+    // nothing left to assert.
     test.skip(seedDay !== r.dayAfter, 'the local day rolled over mid-test');
     expect(r.seen.pday).toBe(false);
     expect(r.seen.compound).toBe(true);
