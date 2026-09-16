@@ -25841,14 +25841,14 @@ button.guildhall-summary-tile:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  margin-bottom: 4px;   /* W956 — the picker fits a 375px phone without scrolling */
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;   /* W956/W957 — the picker fits a 375px phone without scrolling */
 }
 .empty-state .ev-sigil-ring {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 1px solid rgba(167, 139, 250, 0.45);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.32);
@@ -25860,8 +25860,8 @@ button.guildhall-summary-tile:active {
   100% { transform: scale(1.32); opacity: 0; }
 }
 .empty-state .ev-sigil-disc {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -25881,8 +25881,8 @@ button.guildhall-summary-tile:active {
   50%      { transform: scale(1.06); }
 }
 .empty-state .ev-sigil-disc svg {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   filter: drop-shadow(0 0 6px rgba(245, 184, 66, 0.55));
 }
 
@@ -25924,7 +25924,7 @@ button.guildhall-summary-tile:active {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 10px 11px;
+  padding: 8px 11px;
   border-radius: 13px;
   cursor: pointer;
   text-align: left;
