@@ -73,6 +73,17 @@ test.beforeEach(async ({ page }) => {
  * rely on the dev sign-in path to populate that, exercising the real
  * mount sequence.
  */
+/** Open the Add Habits library by whichever door the current state shows.
+ *  W956 — the footer "+ Add Habits" stands down while the First Vow picker is
+ *  up (it and the picker's "Browse the full library →" both call openLibrary,
+ *  and the picker screen must fit one phone screen). A hunter with no vows yet
+ *  therefore reaches the library through the picker's link. */
+async function openAddHabits(page: Page) {
+  const footer = page.locator('#add-habit-btn');
+  if (await footer.isVisible()) { await footer.click(); return; }
+  await page.locator('#empty-state-browse').click();
+}
+
 async function freshApp(page: Page) {
   // Seed all the gate-skipping localStorage keys BEFORE any page
   // script runs. addInitScript fires on every navigation in this
@@ -232,8 +243,12 @@ test.describe('C · Habits tab', () => {
     const emptyStateVisible = await page.locator('#empty-state').isVisible();
     expect(habitListVisible || emptyStateVisible).toBe(true);
     // Add-Habits affordance — match the visible button by role.
-    // Copy may shift between "Add Habit", "+ ADD", etc.
-    const addAffordance = page.getByRole('button', { name: /add\s*habit/i }).first();
+    // Copy may shift between "Add Habit", "+ ADD", etc. W956 — a hunter with no
+    // vows yet sees the First Vow picker instead, whose own library link is the
+    // door; the claim under test is that SOME way in is on screen, not its name.
+    const addAffordance = page
+      .getByRole('button', { name: /add\s*habit|browse the full library/i })
+      .first();
     await expect(addAffordance).toBeVisible({ timeout: 10_000 });
   });
 });
@@ -445,7 +460,7 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     // Habits tab → + Add Habit.
     await page.locator('#tab-habits').click();
     await expect(page.locator('#tab-habits.active')).toBeVisible();
-    await page.locator('#add-habit-btn').click();
+    await openAddHabits(page);
     await expect(page.locator('#lib-sheet')).toBeVisible();
 
     // v3 — the Add Habits library is now a chip-filtered MULTI-SELECT
@@ -506,8 +521,12 @@ test.describe('H · Add Habits preset add path (1z.91)', () => {
     let opened = false;
     for (let attempt = 0; attempt < 8 && !opened; attempt++) {
       await page.evaluate(() => {
+        // W956 — whichever door is up: the footer button, or the First Vow
+        // picker's library link when this hunter has no vows yet.
         const btn = document.getElementById('add-habit-btn');
-        if (btn) btn.click();
+        const link = document.getElementById('empty-state-browse');
+        const el = (btn && !btn.classList.contains('hidden')) ? btn : link;
+        if (el) (el as HTMLElement).click();
       });
       try {
         await page.locator('#lib-sheet').waitFor({ state: 'visible', timeout: 1_500 });
@@ -550,7 +569,7 @@ test.describe('I · Create Your Own Habit (1z.106)', () => {
 
     await page.locator('#tab-habits').click();
     await expect(page.locator('#tab-habits.active')).toBeVisible();
-    await page.locator('#add-habit-btn').click();
+    await openAddHabits(page);
     await expect(page.locator('#lib-sheet')).toBeVisible();
 
     // Open Create Your Own modal. v3 — the custom entry is the
@@ -4540,5 +4559,73 @@ test.describe('AS · Day one shows the hunt (W954)', () => {
     await expect(page.locator('#first-vow-pointer')).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(3500);
     await expect(page.locator('#hunt-row')).toHaveCount(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────
+// AT. W956 — the First Vow picker fits one screen
+// ────────────────────────────────────────────────────────────────────────
+test.describe('AT · The First Vow picker fits one screen (W956)', () => {
+  test.use({ viewport: { width: 375, height: 812 } });   // the smallest modern iPhone
+
+  async function firstVow(page: Page, withHunt = true) {
+    await freshApp(page);
+    await page.addInitScript((withHunt: boolean) => {
+      try {
+        if (sessionStorage.getItem('__w956_seeded')) return;
+        sessionStorage.setItem('__w956_seeded', '1');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', '[]');                     // no vows yet: the picker
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        localStorage.setItem('hb_onboarding_first_xp_date', ymd);    // day one
+        if (withHunt) {
+          localStorage.setItem('hb_wolf_trail_v1', '1');
+          localStorage.setItem('hb_bosses', JSON.stringify({ the_carouser: {
+            engaged: true, kill_count: 0, streak: 0, flight_progress: 2,
+            hunt_started_at: Date.now() - 3600_000, hunt_expires_at: Date.now() + 23 * 3600_000 } }));
+        }
+      } catch (_) {}
+    }, withHunt);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#empty-state-quickgrid .ev-chip').first()).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(1500);
+  }
+  const overflow = (page: Page) => page.evaluate(() => {
+    const ms = document.getElementById('main-scroll');
+    return ms ? ms.scrollHeight - ms.clientHeight : -1;
+  });
+
+  test('a new hunter can see and reach every vow without scrolling — hunt row included', async ({ page }) => {
+    await firstVow(page);
+    await expect(page.locator('#hunt-row')).toBeVisible();
+    await expect(page.locator('#empty-state-quickgrid .ev-chip')).toHaveCount(6);
+    // The commit CTA and the library link are the point of the screen; both
+    // must be ON it, not below the fold.
+    for (const sel of ['#empty-state-commit', '#empty-state-browse']) {
+      expect(await page.locator(sel).evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom <= window.innerHeight && r.top >= 0;
+      })).toBe(true);
+    }
+    expect(await overflow(page)).toBe(0);
+  });
+
+  test('the First Awakened banner is gone from the picker for good', async ({ page }) => {
+    await firstVow(page);
+    await expect(page.locator('.ev-coach-banner')).toHaveCount(0);
+  });
+
+  test('one door, not two: the footer Add Habits stands down for the picker and comes back with the first vow', async ({ page }) => {
+    await firstVow(page, false);
+    await expect(page.locator('#add-habit-btn')).toBeHidden();
+    await expect(page.locator('#empty-state-browse')).toBeVisible();   // the library is still one tap away
+
+    await page.locator('#empty-state-quickgrid .ev-chip').first().click();
+    await page.locator('#empty-state-commit').click();
+    await expect(page.locator('#habit-list .habit-item')).toHaveCount(1, { timeout: 10_000 });
+    await expect(page.locator('#add-habit-btn')).toBeVisible();
   });
 });
