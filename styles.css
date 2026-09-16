@@ -551,6 +551,42 @@ h1 {
 .hunt-list-close { background: none; border: 0; color: #c3c4da; font-size: 14px; padding: 4px 6px; cursor: pointer; }
 .hunt-row--in-list { margin: 0 0 8px; }
 
+/* W953 — the second hunt, offered where the empty space shows. Dashed gold,
+   the same "there is room for more" idiom as + Add Habits. */
+.hunt-add {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  margin: 2px 0 6px; padding: 10px 12px;
+  border-radius: 16px; border: 1px dashed rgba(245, 184, 66, 0.45);
+  background: rgba(245, 184, 66, 0.05);
+  text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.hunt-add:active { transform: scale(0.995); }
+.hunt-add-art {
+  width: 44px; height: 44px; flex: none;
+  border-radius: 11px; object-fit: cover; object-position: 50% 30%;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: #0c0c1e;
+  opacity: 0.85;
+}
+.hunt-add-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.hunt-add-top { display: flex; align-items: center; gap: 8px; }
+.hunt-add-name {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--gold, #f5b842);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hunt-add-meta {
+  margin-left: auto; flex: none; white-space: nowrap;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: 1.2px; font-weight: 700; color: #9d9fbd;
+}
+.hunt-add-line {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.4px; font-weight: 700; color: #c3c4da;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hunt-add-plus { flex: none; color: var(--gold, #f5b842); font-size: 1.15rem; line-height: 1; padding: 0 2px; }
+
 @media (prefers-reduced-motion: reduce) { .hunt-row-bar i { transition: none; } }
 
 .fvp-x {

@@ -4145,7 +4145,11 @@ test.describe('AP · The hunt row (W951)', () => {
       return !!(r && h && (r.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING));
     })).toBe(true);
 
+    // W953 — the card opens YOUR HUNTS; the boss is one tap further in.
     await row.click();
+    const sheet = page.locator('#hunt-list-overlay');
+    await expect(sheet).toBeVisible({ timeout: 5_000 });
+    await sheet.locator('.hunt-row', { hasText: 'The Steel Wolf' }).click();
     await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 5_000 });
   });
 
@@ -4341,5 +4345,111 @@ test.describe('AQ · The Wolf\u2019s trail (W952)', () => {
     expect(await engagedWolf(page)).toBe(false);
     expect(await page.evaluate(() => (window as any).__wolfTrail().active)).toBe(false);
     await expect(page.locator('#hunt-row')).toHaveClass(/hunt-row--idle/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// AR. W953 — the card opens the list, and a lone hunt is offered a second
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AR \u00b7 A second hunt, one tap away (W953)', () => {
+  const HOUR = 3600_000;
+  async function hunter(page: Page, bosses: Record<string, unknown>, souls = 500) {
+    await freshApp(page);
+    await page.addInitScript(({ bosses, souls }: { bosses: Record<string, unknown>; souls: number }) => {
+      try {
+        if (sessionStorage.getItem('__w953_seeded')) return;
+        sessionStorage.setItem('__w953_seeded', '1');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const old = new Date(); old.setDate(old.getDate() - 5);
+        const oymd = old.getFullYear() + '-' + String(old.getMonth() + 1).padStart(2, '0') + '-' + String(old.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w953-a', name: 'First vow', emoji: '\u2022', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_bosses', JSON.stringify(bosses));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: { [ymd]: 1100 }, flights_daily: { [ymd]: 2 } }));
+        localStorage.setItem('hb_souls', JSON.stringify({ balance: souls, lastDailyBonusDate: ymd, totalEarned: 0, totalSpent: 0 }));
+        localStorage.setItem('hb_onboarding_first_xp_date', oymd);
+        localStorage.setItem('hb_first_hunt_free_used', '1');   // no banked credit: the offer must name the real price
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
+         'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+      } catch (_) {}
+    }, { bosses, souls });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(2500);
+  }
+  const wolf = () => ({
+    engaged: true, kill_count: 0, streak: 0, step_progress: 1100,
+    hunt_started_at: Date.now() - 3 * HOUR, hunt_expires_at: Date.now() + 21 * HOUR,
+  });
+
+  test('one hunt: the list offers the Carouser at its real price, and one tap starts it', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: wolf() });
+    await page.locator('#hunt-row').click();
+    const sheet = page.locator('#hunt-list-overlay');
+    await expect(sheet).toBeVisible();
+    const add = sheet.locator('.hunt-add');
+    await expect(add.locator('.hunt-add-name')).toHaveText('HUNT THE CAROUSER');
+    await expect(add.locator('.hunt-add-meta')).toHaveText('E-RANK');
+    await expect(add.locator('.hunt-add-line')).toHaveText('Climb 5+ verified flights today \u00b7 25 SOULS');
+
+    await add.click();
+    // The hunt starts and the list rebuilds around it (same id, a new element):
+    // two rows now, and the offer is gone.
+    const sheet2 = page.locator('#hunt-list-overlay');
+    await expect(sheet2).toBeVisible({ timeout: 5_000 });
+    // Both hunts are listed; the ordering rule (furthest along first) decides
+    // which leads, and today's 2 of 5 flights beats 1,100 of 6,000 steps.
+    expect((await sheet2.locator('.hunt-row-name').allTextContents()).slice().sort())
+      .toEqual(['The Carouser', 'The Steel Wolf']);
+    await expect(sheet2.locator('.hunt-add')).toHaveCount(0);
+    const after = await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      return { engaged: (b.the_carouser || {}).engaged === true, souls: (JSON.parse(localStorage.getItem('hb_souls') || '{}')).balance };
+    });
+    expect(after.engaged).toBe(true);
+    expect(after.souls).toBe(475);            // the 25-soul fee, exactly as the button said
+    // And the card now leads with a count.
+    await expect(page.locator('#hunt-row .hunt-row-more')).toHaveText('+1');
+  });
+
+  test('two hunts running: no offer \u2014 the app does not push a third', async ({ page }) => {
+    await hunter(page, {
+      the_steel_wolf: wolf(),
+      the_insomniac:  { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 2 * HOUR, hunt_expires_at: Date.now() + 22 * HOUR },
+    });
+    await page.locator('#hunt-row').click();
+    const sheet = page.locator('#hunt-list-overlay');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('.hunt-add')).toHaveCount(0);
+  });
+
+  test('a lone hunt that IS the Carouser gets no offer to hunt it again', async ({ page }) => {
+    await hunter(page, {
+      the_carouser: { engaged: true, kill_count: 0, streak: 0, flight_progress: 2, hunt_started_at: Date.now() - HOUR, hunt_expires_at: Date.now() + 23 * HOUR },
+    });
+    await page.locator('#hunt-row').click();
+    const sheet = page.locator('#hunt-list-overlay');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('.hunt-row-name')).toHaveText('The Carouser');
+    await expect(sheet.locator('.hunt-add')).toHaveCount(0);
+  });
+
+  test('a kill waiting to be claimed still claims on the first tap', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: { engaged: false, kill_count: 1, streak: 1 } });
+    await page.evaluate(() => {
+      localStorage.setItem('hb_boss_result_pending', JSON.stringify({
+        bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', kill_count: 1,
+        defeatedAt: new Date().toISOString(), acknowledged: false,
+      }));
+      (window as any).__renderHuntRow();
+    });
+    const row = page.locator('#hunt-row');
+    await expect(row).toHaveClass(/hunt-row--won/);
+    await row.click();
+    await expect(page.locator('#boss-result-overlay')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#hunt-list-overlay')).toHaveCount(0);
   });
 });

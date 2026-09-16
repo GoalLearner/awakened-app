@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.5';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.5-w952'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.5-w953'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -33291,7 +33291,7 @@
       '<span class="hunt-row-main">' +
         '<span class="hunt-row-top">' +
           '<span class="hunt-row-name">' + esc(it.name || '') + '</span>' +
-          (extraCount ? '<button type="button" class="hunt-row-more" data-hunt-more aria-label="All your hunts">+' + extraCount + '</button>' : '') +
+          (extraCount ? '<span class="hunt-row-more">+' + extraCount + '</span>' : '') +
           '<span class="hunt-row-meta">' + esc((it.rank ? it.rank + '-RANK' : '') + (remain ? ' · ' + remain : '')) + ' ›</span>' +
         '</span>' +
         '<span class="hunt-row-bar"><i style="width:' + Math.round(Math.max(2, Math.min(100, (it.pct || 0) * 100))) + '%"></i></span>' +
@@ -33335,7 +33335,6 @@
     }
     row.onclick = function (e) {
       if (e && e.target && e.target.closest) {
-        if (e.target.closest('[data-hunt-more]')) { e.stopPropagation(); _openHuntList(); return; }
         if (e.target.closest('.hunt-row-x')) {
           e.stopPropagation();
           _huntRowIdleHidden = true;
@@ -33344,17 +33343,66 @@
           return;
         }
       }
-      if (items.length) { try { items[0].open(); } catch (_) {} }
-      else { try { switchTab('quests'); } catch (_) {} }
+      // W953 (owner call) — the card opens the LIST, not the boss. "What am I
+      // hunting?" is the question the card raises, and the list is the whole
+      // answer; the boss is one more tap from there. The single exception is a
+      // kill waiting to be claimed — its own line reads "tap to claim", so it
+      // must claim, or the card is lying about what the tap does.
+      if (items.length) {
+        if (items[0].defeated) { try { items[0].open(); } catch (_) {} }
+        else { _openHuntList(); }
+      } else { try { switchTab('quests'); } catch (_) {} }
     };
   }
   try { window.__renderHuntRow = _renderHuntRow; } catch (_) {}   // QA hook
+
+  // W953 — one hunt running is a hunter with room for another and no reason
+  // to go looking. The Carouser is the second E-rank gate: no rank to reach,
+  // five flights of stairs, the same 24 hours. Offered here, at the moment the
+  // list makes the empty space obvious, and started in one tap.
+  const HUNT_ADD_BOSS_ID = 'the_carouser';
+  function _huntAddOffer() {
+    try {
+      const cfg = BOSSES[HUNT_ADD_BOSS_ID];
+      if (!cfg) return null;
+      const st = getBossState(HUNT_ADD_BOSS_ID);
+      if (st && st.engaged === true) return null;
+      if (!canEngageBossNow(HUNT_ADD_BOSS_ID, cfg, new Date()).ok) return null;   // cleared today
+      if (typeof isGateUnlocked === 'function' && !isGateUnlocked(cfg.rank)) return null;
+      const free = _ENGAGE_FREE_LABEL[_engageFreeReason(HUNT_ADD_BOSS_ID, cfg)] || null;
+      const cost = engageCostSouls(cfg.rank);
+      return {
+        name: cfg.name,
+        rank: String(cfg.rank || ''),
+        art:  getBossArtPath(HUNT_ADD_BOSS_ID),
+        cond: cfg.killCondShort || cfg.killCondLong || '',
+        // Same resolver the boss sheet uses, so the price here can never
+        // disagree with what the tap actually charges (the W889 rule).
+        price: free || (cost > 0 ? cost.toLocaleString('en-US') + ' SOULS' : 'FREE'),
+      };
+    } catch (_) { return null; }
+  }
+  function _huntAddHtml(offer) {
+    return '' +
+      '<button type="button" class="hunt-add" data-hunt-add>' +
+        '<img class="hunt-add-art" src="' + esc(offer.art || '') + '" alt="" aria-hidden="true" decoding="async">' +
+        '<span class="hunt-add-main">' +
+          '<span class="hunt-add-top">' +
+            '<span class="hunt-add-name">HUNT ' + esc(String(offer.name || '').toUpperCase()) + '</span>' +
+            '<span class="hunt-add-meta">' + esc(offer.rank ? offer.rank + '-RANK' : '') + '</span>' +
+          '</span>' +
+          '<span class="hunt-add-line">' + esc(offer.cond) + ' · ' + esc(offer.price) + '</span>' +
+        '</span>' +
+        '<span class="hunt-add-plus" aria-hidden="true">+</span>' +
+      '</button>';
+  }
 
   // Every hunt, newest urgency first. Opened by the +N chip; a tapped sheet,
   // so it never waits on the stage.
   function _openHuntList() {
     try { document.getElementById('hunt-list-overlay')?.remove(); } catch (_) {}
     const items = _huntRowItems();
+    const offer = (items.length === 1) ? _huntAddOffer() : null;
     const ov = document.createElement('div');
     ov.id = 'hunt-list-overlay';
     ov.className = 'hunt-list-overlay';
@@ -33365,12 +33413,25 @@
           return '<div class="hunt-row hunt-row--in-list' + (it.defeated ? ' hunt-row--won' : '') + '" role="button" tabindex="0" data-hunt-i="' + i + '">' +
             _huntRowHtml(it, 0) + '</div>';
         }).join('') +
+        // W953 — only on a lone hunt. Two or more and the hunter is already
+        // spending their attention; this would be the app pushing.
+        ((items.length === 1 && offer) ? _huntAddHtml(offer) : '') +
       '</div>';
     document.body.appendChild(ov);
     const close = function () { try { ov.remove(); } catch (_) {} };
     ov.addEventListener('click', function (e) {
       const t = e.target;
       if (t === ov || (t.closest && t.closest('.hunt-list-close'))) { close(); return; }
+      if (t.closest && t.closest('[data-hunt-add]')) {
+        // The hunt starts here — the list rebuilds around it so the hunter
+        // sees the second row appear rather than being thrown somewhere new.
+        let started = false;
+        try { started = !!engageBoss(HUNT_ADD_BOSS_ID); } catch (_) {}
+        close();
+        try { _renderHuntRow(); } catch (_) {}
+        if (started) { try { _openHuntList(); } catch (_) {} }
+        return;
+      }
       const rowEl = t.closest && t.closest('[data-hunt-i]');
       if (rowEl) {
         const it = items[parseInt(rowEl.dataset.huntI, 10)];
