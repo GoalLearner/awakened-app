@@ -4483,3 +4483,62 @@ test.describe('AR \u00b7 A second hunt, one tap away (W953)', () => {
     await expect(page.locator('#hunt-list-overlay')).toHaveCount(0);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────
+// AS. W954 — a new hunter sees the hunt on day one
+// ────────────────────────────────────────────────────────────────────────
+test.describe('AS · Day one shows the hunt (W954)', () => {
+  /** A hunter on their very first day: onboarded, nothing sealed yet. */
+  async function dayOne(page: Page, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript((extra: Record<string, string>) => {
+      try {
+        if (sessionStorage.getItem('__w954_seeded')) return;
+        sessionStorage.setItem('__w954_seeded', '1');
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'w954-a', name: 'Sleep',      emoji: '•', difficulty: 'medium', type: 'build', primaryStat: 'VIT' },
+          { id: 'w954-b', name: 'Daily walk', emoji: '•', difficulty: 'easy',   type: 'build', primaryStat: 'VIT' }]));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        localStorage.setItem('hb_onboarding_first_xp_date', ymd);   // TODAY — this is day one
+        localStorage.setItem('hb_wolf_trail_v1', '1');              // came through the new onboarding
+        localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: {
+          engaged: true, kill_count: 0, streak: 0, step_progress: 0,
+          hunt_started_at: Date.now() - 3600_000, hunt_expires_at: Date.now() + 23 * 3600_000 } }));
+        Object.entries(extra || {}).forEach(([k, v]) => { if (v === '') localStorage.removeItem(k); else localStorage.setItem(k, v); });
+      } catch (_) {}
+    }, extra || {});
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+  }
+
+  test('the Wolf is on the first screen a new hunter ever sees, under the vow prompt and never above it', async ({ page }) => {
+    await dayOne(page);
+    const row = page.locator('#hunt-row');
+    await expect(row).toBeVisible({ timeout: 10_000 });
+    await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
+    await expect(row.locator('.hunt-row-line')).toHaveText('0 / 6,000 steps');
+    // The first vow is still the day's job, so it keeps the top slot.
+    await expect(page.locator('#first-vow-pointer')).toBeVisible();
+    expect(await page.evaluate(() => {
+      const r = document.getElementById('hunt-row'), pt = document.getElementById('first-vow-pointer');
+      return !!(r && pt) && !!(pt.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING);
+    })).toBe(true);
+  });
+
+  test('a hunter who never walked the trail keeps the old day-one quiet', async ({ page }) => {
+    await dayOne(page, { hb_wolf_trail_v1: '' });
+    await expect(page.locator('#first-vow-pointer')).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(3500);
+    await expect(page.locator('#hunt-row')).toHaveCount(0);
+  });
+
+  test('with the trail on but no hunt running, day one stays quiet — no idle row to explain', async ({ page }) => {
+    await dayOne(page, { hb_bosses: '{}', hb_wolf_trail_v1: '' });   // no trail tick, no hunt
+    await expect(page.locator('#first-vow-pointer')).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(3500);
+    await expect(page.locator('#hunt-row')).toHaveCount(0);
+  });
+});
