@@ -110,6 +110,16 @@ async function freshApp(page: Page) {
         String(d.getMonth() + 1).padStart(2, '0') + '-' +
         String(d.getDate()).padStart(2, '0');
       localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      // Daily Insight (the morning briefing) — a full-screen bottom sheet that
+      // fires once per device-local day for any welcomed user WITH ACTIVE VOWS.
+      // freshApp itself seeds hb_habits='[]', so the gate has always refused it
+      // here; the moment a spec seeds real vows (AN/AO/AP/AQ/AR) it becomes
+      // eligible, and since W950 it is a STAGE surface — it waits behind the
+      // launch beats and then pumps, so when it arrives is a race. On CI it
+      // landed mid-spec and its .vn-overlay swallowed every click (13 failures,
+      // 2026-09-16 UTC, all green locally). Same treatment as the Friday
+      // banner: stamp the per-day flag so shouldShowDailyInsight() refuses.
+      localStorage.setItem('hb_daily_insight_last_shown', ymd);
     } catch (_) {}
   });
   await page.goto('/');
