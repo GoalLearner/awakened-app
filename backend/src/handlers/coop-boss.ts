@@ -32,70 +32,17 @@ import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 import { readEntitlements } from './iap-entitlements';
 
-// ── W648 — concurrent-hunt cap (the co-op membership paywall) ───────
-// Free hunters may run at most this many simultaneous hunts; Premium members
-// (readEntitlements().member) are unlimited. Enforced server-side in BOTH
-// create and join — the client mirror
-// is UX only. The entrance fee itself is client-side souls (same trust model
-// as solo engage costs; see the header note above).
-const FREE_CONCURRENT_HUNT_CAP = 3;
-
-/** Hunts that count against a user's cap: ones they INITIATED (pending or
- *  active) plus ones they ACCEPTED (active). A received-but-unanswered invite
- *  deliberately does NOT count — otherwise any friend could fill a free
- *  player's cap just by spamming summons at them.
- *  W649 — an 'active' hunt whose 24h window already LAPSED doesn't count
- *  either: rows only flip to expired when a participant's client resolves
- *  them, so without the ends_at guard three abandoned hunts would wall a free
- *  player behind CAP_REACHED (and a Founder upsell) indefinitely. ends_at is
- *  an ISO-8601 string, which SQLite's strftime parses natively.
- *  Known, accepted: the cap is check-then-insert without a transaction — two
- *  perfectly-raced creates can briefly land 4 hunts. Impact is one extra
- *  hunt, self-corrects as hunts finish; not worth a compensating delete. */
-// W692 — the single "does this user have a running hunt?" predicate, shared as a
-// SQL fragment by countRunningHunts (the fast-path) and the create atomic-insert
-// cap guard so the two can NEVER drift (the W677 review flagged the duplication as
-// the failure mode). ?U is the user placeholder; the caller binds it.
-//
-// A hunt counts when the user is: the challenger; OR a participant on an ACTIVE
-// hunt; OR a participant who has ANSWERED (joined_at set) on a still-pending hunt.
-// The answered-pending arm is the W677 paywall-integrity guard: without it a free
-// user could answer unlimited N-hunter summons cap-free and have them all flip
-// active later (deterministic bypass). A hunter stuck waiting on the last ally can
-// free the slot via /decline. Lapsed active hunts (past ends_at) don't count (W649).
-const RUNNING_HUNT_SQL = `status IN ('pending','active')
-        AND (challenger_user_id = ?U
-          OR EXISTS (SELECT 1 FROM coop_boss_participants p
-                      WHERE p.instance_id = coop_boss_instances.id AND p.user_id = ?U
-                        AND (coop_boss_instances.status = 'active'
-                             OR (coop_boss_instances.status = 'pending' AND p.joined_at IS NOT NULL))))
-        AND (status = 'pending' OR ends_at IS NULL OR strftime('%s', ends_at) > strftime('%s', 'now'))`;
-
-async function countRunningHunts(env: Env, userId: string): Promise<number> {
-  const row = await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM coop_boss_instances WHERE ${RUNNING_HUNT_SQL.replace(/\?U/g, '?1')}`,
-  )
-    .bind(userId)
-    .first<{ n: number }>();
-  return row ? Number(row.n) : 0;
-}
-
-/** 409 CAP_REACHED gate shared by create + join. Returns null when allowed. */
-async function checkHuntCap(env: Env, userId: string): Promise<Response | null> {
-  // W650 — `member` = Founder (lifetime) OR active premium subscription; both
-  // tiers of the same membership get unlimited concurrent hunts.
-  const { member } = await readEntitlements(env, userId);
-  if (member) return null;
-  const running = await countRunningHunts(env, userId);
-  if (running < FREE_CONCURRENT_HUNT_CAP) return null;
-  return jsonError(
-    409,
-    'CAP_REACHED',
-    `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
-    { cap: FREE_CONCURRENT_HUNT_CAP },
-  );
-}
-
+// ── W955 — THE CO-OP HUNT CAP IS GONE (owner call 2026-09-16) ───────
+// W648 capped free hunters at 3 simultaneous co-op hunts and sold the 4th as
+// Premium. Rendell reported it as "the group hunts keep counting toward the
+// limit" — he had the mechanism wrong (the solo MAX_ENGAGED_BOSSES and this
+// were always separate counters) but the pain was real, and worse than he
+// described: a hunt counted against you whether you STARTED it or merely
+// ACCEPTED a friend's summons. In a community where everyone summons everyone,
+// that put the most cooperative hunter permanently at the wall — and then
+// showed them a paywall for being the one who always says yes. A co-op game
+// must never charge for cooperating. Removed at the root: no counter, no gate,
+// no CAP_REACHED. Membership keeps its other benefits; this is not one.
 // ── Server-authoritative co-op boss roster ──────────────────────────
 // goalSteps is the COMBINED target across both hunters (for flights bosses it
 // is a flight count, not a step count — the column is metric-generic);
@@ -838,36 +785,18 @@ async function createCoopHunt(
     }
   }
 
-  // W648 — free hunters: at most 3 running hunts; Founders unlimited. Checked
-  // AFTER the cheap validation gates so the entitlement lookup only runs on
-  // otherwise-valid summons. The invitee is deliberately NOT capped here —
-  // their cap is enforced when they JOIN (a pending invite costs them nothing).
-  // W674 — the dup check above + this cap are FAST-PATH specific errors for the
-  // common (unraced) case; `member` is read here and reused by the atomic insert's
-  // cap guard below so entitlements are read once.
-  const { member } = await readEntitlements(env, session.userId);
-  if (!member) {
-    const running = await countRunningHunts(env, session.userId);
-    if (running >= FREE_CONCURRENT_HUNT_CAP) {
-      return { deny: jsonError(
-        409,
-        'CAP_REACHED',
-        `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
-        { cap: FREE_CONCURRENT_HUNT_CAP },
-      ) };
-    }
-  }
+  // W955 — no concurrent-hunt cap. The duplicate-hunt guard below is the only
+  // thing a summons can still trip.
 
   const id = crypto.randomUUID();
   const partner1 = allies[0];
   const partner2 = allies[1] ?? null; // dual-write legacy columns for old clients
 
-  // W674/W692 — atomic guarded insert (the race backstop). Re-checks BOTH guards —
-  // no live instance for this boss containing the summoner + any invited ally, AND,
-  // for non-members, the concurrent-hunt cap — inside ONE INSERT … SELECT … WHERE, so
-  // two creates that both passed the fast-path checks cannot both land a row. SQLite
-  // serializes writers, so the cap COUNT re-reads after any raced create commits →
-  // the paywall can't be bypassed by a double-summon. The participant rows are written
+  // W674/W692 — atomic guarded insert (the race backstop). Re-checks the dup guard —
+  // no live instance for this boss containing the summoner + any invited ally —
+  // inside ONE INSERT … SELECT … WHERE, so two creates that both passed the
+  // fast-path check cannot both land a row. W955 — the cap arm of this guard is
+  // gone with the cap itself. The participant rows are written
   // in the SAME env.DB.batch (below), each guarded on the instance existing, so a lost
   // race writes neither the instance nor its participants. Anonymous `?` placeholders
   // are bound in build order via the `bind`/push helper.
@@ -879,11 +808,7 @@ async function createCoopHunt(
         goal_steps, goal_flights, reward_souls, fill_target, status)
      SELECT ${IP(id)}, ${IP(bossId)}, ${IP(cfg.rank)}, ${IP(session.userId)}, ${IP(partner1)}, ${IP(partner2)},
             ${IP(cfg.goalSteps)}, ${IP(cfg.goalFlights ?? null)}, ${IP(cfg.rewardSouls)}, ${IP(fillTarget)}, 'pending'
-      WHERE NOT EXISTS ( ${dupSelect(IP)} )
-        AND ( ${IP(member ? 1 : 0)} = 1 OR (
-              SELECT COUNT(*) FROM coop_boss_instances
-               WHERE ${RUNNING_HUNT_SQL.replace(/\?U/g, () => IP(session.userId))}
-            ) < ${IP(FREE_CONCURRENT_HUNT_CAP)} )`;
+      WHERE NOT EXISTS ( ${dupSelect(IP)} )`;
 
   // Batch: instance insert (statement 0) + one participant row per ally, each guarded
   // on the instance existing so a lost cap/dup race writes no orphan participant rows.
@@ -908,13 +833,11 @@ async function createCoopHunt(
     const dup = await env.DB.prepare(`${dupSelect((v) => (dp.push(v), '?'))} LIMIT 1`)
       .bind(...dp)
       .first();
+    // W955 — with the cap gone the dup guard is the ONLY arm of the insert's
+    // WHERE, so a lost race is a duplicate by construction. The re-read stays
+    // so the refusal names the real reason rather than guessing.
     if (dup) return { deny: jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.') };
-    return { deny: jsonError(
-      409,
-      'CAP_REACHED',
-      `You already have ${FREE_CONCURRENT_HUNT_CAP} hunts running. Finish one first — or go Premium for unlimited hunts.`,
-      { cap: FREE_CONCURRENT_HUNT_CAP },
-    ) };
+    return { deny: jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.') };
   }
 
   const row = await loadInstance(env, id);
@@ -1079,11 +1002,8 @@ export async function handleCoopBossJoin(
     }
   }
 
-  // W648 — the joiner's cap. THIS instance is their received-pending row, which
-  // countRunningHunts already excludes, so at the cap the join is refused
-  // without off-by-one gymnastics. Founders bypass inside checkHuntCap.
-  const capHit = await checkHuntCap(env, session.userId);
-  if (capHit) return capHit;
+  // W955 — answering a summons is never refused for volume. Saying yes to a
+  // friend was the single most punished action in the old cap.
 
   const cfg = COOP_BOSS_CFG[row.boss_id];
   const windowHours = cfg ? cfg.windowHours : 24;

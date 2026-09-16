@@ -148,82 +148,41 @@ function createReq(): Request {
   });
 }
 
-describe('W648 — concurrent-hunt cap on CREATE', () => {
-  it('allows a free hunter under the cap (2 running)', async () => {
-    const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 2 })), session('u1'));
+// ── W955 — the concurrent-hunt cap is GONE (owner call 2026-09-16) ──────────
+// W648 let a free hunter run 3 co-op hunts and sold the 4th as Premium. It
+// counted hunts you ACCEPTED as well as hunts you started, so the hunter who
+// always says yes to a friend lived at the wall. These tests are the old cap
+// suite inverted: the numbers that used to refuse must now go through.
+describe('W955 — no concurrent-hunt cap', () => {
+  it('a free hunter with 50 hunts running can still summon', async () => {
+    const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 50 })), session('u1'));
     const body = (await res.json()) as { ok?: boolean };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
   });
 
-  it('rejects a free hunter AT the cap with 409 CAP_REACHED (+cap in payload)', async () => {
-    const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 3 })), session('u1'));
-    const body = (await res.json()) as { error?: string; cap?: number };
-    expect(res.status).toBe(409);
-    expect(body.error).toBe('CAP_REACHED');
-    expect(body.cap).toBe(3);
-  });
-
-  it('W650 — lets an active premium SUBSCRIBER create past the cap', async () => {
-    const res = await handleCoopBossCreate(
-      createReq(),
-      makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() + 86_400_000 })),
-      session('u1'),
-    );
+  it('a free hunter with 50 hunts running can still ANSWER one — saying yes is never refused', async () => {
+    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 50 })), session('u2'), 'inst-1');
     const body = (await res.json()) as { ok?: boolean };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
   });
 
-  it('W650 — a LAPSED subscriber is capped like a free hunter', async () => {
+  it('a LAPSED subscriber is not capped either — membership is no longer the difference', async () => {
     const res = await handleCoopBossCreate(
       createReq(),
-      makeEnv(makeDb({ running: 3, premiumExpiresAt: Date.now() - 1000 })),
+      makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() - 1000 })),
       session('u1'),
     );
-    const body = (await res.json()) as { error?: string };
-    expect(res.status).toBe(409);
-    expect(body.error).toBe('CAP_REACHED');
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { ok?: boolean }).ok).toBe(true);
   });
 
-  it('counts hunts via the received-invites-excluded formula (griefing guard)', async () => {
+  it('the cap COUNT is never even asked for — removed at the root, not raised', async () => {
     const log: string[] = [];
     await handleCoopBossCreate(createReq(), makeEnv(makeDb({ running: 0 }, log)), session('u1'));
-    const capSql = log.find((s) => s.includes('COUNT(*) AS n FROM coop_boss_instances'));
-    expect(capSql).toBeTruthy();
-    // W692 — a received-but-unanswered invite must NOT count against the invitee.
-    // Ally seats now live in coop_boss_participants; the cap counts a participant only
-    // once the hunt is ACTIVE, or (the W677 answered-pending guard) once THAT seat has
-    // been stamped joined_at while still pending — else a free user answers unlimited
-    // summons cap-free and they all flip active later (deterministic paywall bypass).
-    expect(capSql).toMatch(/EXISTS \(SELECT 1 FROM coop_boss_participants p\s+WHERE p\.instance_id = coop_boss_instances\.id AND p\.user_id = \?1/);
-    expect(capSql).toMatch(/p\.joined_at IS NOT NULL/);
-    // W649 — an active hunt whose window already lapsed must not count either
-    // (unresolved-expired rows would otherwise wall the user forever).
-    expect(capSql).toMatch(/strftime\('%s', ends_at\) > strftime\('%s', 'now'\)/);
-  });
-});
-
-describe('W648 — concurrent-hunt cap on JOIN', () => {
-  it('rejects a free joiner AT the cap with 409 CAP_REACHED', async () => {
-    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 3 })), session('u2'), 'inst-1');
-    const body = (await res.json()) as { error?: string };
-    expect(res.status).toBe(409);
-    expect(body.error).toBe('CAP_REACHED');
-  });
-
-  it('allows a free joiner under the cap', async () => {
-    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 2 })), session('u2'), 'inst-1');
-    const body = (await res.json()) as { ok?: boolean };
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-  });
-
-  it('W650 — lets an active premium SUBSCRIBER join past the cap (unlimited)', async () => {
-    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ running: 50, premiumExpiresAt: Date.now() + 86_400_000 })), session('u2'), 'inst-1');
-    const body = (await res.json()) as { ok?: boolean };
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
+    expect(log.find((q) => q.includes('COUNT(*) AS n FROM coop_boss_instances'))).toBeUndefined();
+    expect(log.some((q) => q.includes('INSERT INTO coop_boss_instances'))).toBe(true);
   });
 });
 
@@ -241,10 +200,9 @@ describe('W674 — atomic guarded create insert', () => {
             if (sql.includes('FROM premium_subscriptions')) return null; // free hunter
             if (sql.includes('FROM friends')) return { id: 'friend-row' };
             if (sql.includes('FROM public_profile_summary')) return { rank_tier: 'S' };
-            if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return { n: 0 }; // fast-path cap passes
             // W692 — the dup check (fast-path AND post-insert re-derive share dupSelect:
-            // `SELECT 1 FROM coop_boss_instances i …`). dupExists=false → the fast-path
-            // passes and the CAP (lost batch) is what blocks → CAP_REACHED.
+            // `SELECT 1 FROM coop_boss_instances i …`). W955 — with the cap gone the dup
+            // guard is the insert's only arm, so a lost race is a duplicate either way.
             if (sql.includes('SELECT 1 FROM coop_boss_instances i')) return dupExists ? { x: 1 } : null;
             if (sql.includes('SELECT * FROM coop_boss_instances')) return { ...PENDING_ROW };
             return null;
@@ -266,11 +224,11 @@ describe('W674 — atomic guarded create insert', () => {
     expect(body.error).toBe('ALREADY_ACTIVE');
   });
 
-  it('409 CAP_REACHED when the guarded insert is blocked by the cap in the race', async () => {
+  it('W955 — a lost race with no visible duplicate still reads as ALREADY_ACTIVE, never a cap', async () => {
     const res = await handleCoopBossCreate(createReq(), makeEnv(racedDb(false)), session('u1'));
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(409);
-    expect(body.error).toBe('CAP_REACHED');
+    expect(body.error).toBe('ALREADY_ACTIVE');
   });
 });
 
@@ -893,10 +851,10 @@ describe('W925 — fan-out duo summons', () => {
     expect((await trio.json() as { error: string }).error).toBe('PARTY_SIZE');
   });
 
-  it('a free hunter at the cap is refused on every fanned hunt → the specific CAP_REACHED comes back', async () => {
-    const res = await handleCoopBossCreate(createWith(['u2', 'u3']), makeEnv(makeDb({ running: 3 })), session('u1'));
-    expect(res.status).toBe(409);
-    expect((await res.json() as { error: string }).error).toBe('CAP_REACHED');
+  it('W955 — a free hunter deep in hunts still fans out to every ally', async () => {
+    const res = await handleCoopBossCreate(createWith(['u2', 'u3']), makeEnv(makeDb({ running: 50 })), session('u1'));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { ok?: boolean }).ok).toBe(true);
   });
 
   it('a single ally is a plain summons: one insert, no fan-out payload', async () => {
