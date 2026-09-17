@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=706">
+  <link rel="stylesheet" href="styles.css?v=707">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1192,10 +1192,16 @@
     <footer id="main-footer">
       <!-- Pack progress strips — tappable; open Add Pack modal when missing habits -->
       <div id="compound-progress" class="compound-progress compound-progress--footer hidden"></div>
-      <!-- Single Add Habits button — pack add buttons removed; pack strips above own that flow -->
-      <button id="add-habit-btn" class="add-btn add-btn--full">
-        <span class="add-plus">+</span>
-        <span>Add Habits</span>
+      <!-- W958 — SEAL A NEW VOW. The dashed kit CTA is gone; the control is now
+           the bottom edge of the system window itself: a gold hairline, Cinzel
+           tracked caps, and a press that lights the rule. The id is unchanged —
+           every wiring, the W956 first-vow rule and the specs all key on it. -->
+      <div class="habits-fade" aria-hidden="true"></div>
+      <button id="add-habit-btn" class="newvow" type="button" aria-label="Seal a new vow">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <span>SEAL A NEW VOW</span>
       </button>
       <!-- W365 — Manage Vows moved into the "Seal your vows" header (see _renderVowsHeader). -->
     </footer>
@@ -2561,10 +2567,11 @@
     <div class="lib-drag-handle"></div>
     <div class="lib-header">
       <div class="lib-head-text">
-        <h2 id="lib-title" class="lib-title">Add Habits</h2>
+        <div class="lib-eyebrow">THE LIBRARY</div>
+        <h2 id="lib-title" class="lib-title">Seal a new vow</h2>
         <div id="lib-sub" class="lib-sub"></div>
       </div>
-      <button id="lib-close-btn" class="lib-close-btn" type="button" aria-label="Close">✕</button>
+      <button id="lib-close-btn" class="lib-close-btn" type="button" aria-label="Done">DONE</button>
     </div>
     <div class="lib-srow">
       <div class="lib-search-wrap">
@@ -3399,7 +3406,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1363"></script>
+  <script src="app.js?v=1364"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

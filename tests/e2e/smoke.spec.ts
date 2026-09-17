@@ -74,10 +74,10 @@ test.beforeEach(async ({ page }) => {
  * mount sequence.
  */
 /** Open the Add Habits library by whichever door the current state shows.
- *  W956 — the footer "+ Add Habits" stands down while the First Vow picker is
- *  up (it and the picker's "Browse the full library →" both call openLibrary,
- *  and the picker screen must fit one phone screen). A hunter with no vows yet
- *  therefore reaches the library through the picker's link. */
+ *  W956/W958 — the footer bar (SEAL A NEW VOW) stands down while the First Vow
+ *  picker is up; it and the picker's "Browse the full library →" both call
+ *  openLibrary, and the picker screen must fit one phone screen. A hunter with
+ *  no vows yet therefore reaches the library through the picker's link. */
 async function openAddHabits(page: Page) {
   const footer = page.locator('#add-habit-btn');
   if (await footer.isVisible()) { await footer.click(); return; }
@@ -247,7 +247,7 @@ test.describe('C · Habits tab', () => {
     // vows yet sees the First Vow picker instead, whose own library link is the
     // door; the claim under test is that SOME way in is on screen, not its name.
     const addAffordance = page
-      .getByRole('button', { name: /add\s*habit|browse the full library/i })
+      .getByRole('button', { name: /seal a new vow|add\s*habit|browse the full library/i })
       .first();
     await expect(addAffordance).toBeVisible({ timeout: 10_000 });
   });
@@ -4627,5 +4627,84 @@ test.describe('AT · The First Vow picker fits one screen (W956)', () => {
     await page.locator('#empty-state-commit').click();
     await expect(page.locator('#habit-list .habit-item')).toHaveCount(1, { timeout: 10_000 });
     await expect(page.locator('#add-habit-btn')).toBeVisible();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// AU. W958 — SEAL A NEW VOW: the control is the window's bottom edge
+// ─────────────────────────────────────────────────────────────────────
+test.describe('AU · Seal a new vow (W958)', () => {
+  async function habits(page: Page, vows = 3) {
+    await freshApp(page);
+    await page.addInitScript((vows: number) => {
+      try {
+        if (sessionStorage.getItem('__w958_seeded')) return;
+        sessionStorage.setItem('__w958_seeded', '1');
+        const names = ['Sleep', 'Daily walk', 'No phone after waking'];
+        localStorage.setItem('hb_habits', JSON.stringify(names.slice(0, vows).map((n, i) => (
+          { id: 'w958-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build', primaryStat: 'VIT' }))));
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1',
+         'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+      } catch (_) {}
+    }, vows);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(1200);
+  }
+
+  test('the bar is the bottom edge of the window, not a card on it', async ({ page }) => {
+    await habits(page);
+    const bar = page.locator('#add-habit-btn');
+    await expect(bar).toHaveText(/SEAL A NEW VOW/);
+    // Flush to the bottom, edge to edge of the app shell, 56px tall — a window
+    // edge, not a button. (The shell is narrower than the viewport, so the claim
+    // is "spans the shell", not a pixel count.)
+    expect(await page.evaluate(() => {
+      const b = document.getElementById('add-habit-btn')!.getBoundingClientRect();
+      const shell = document.getElementById('app')!.getBoundingClientRect();
+      return {
+        h: Math.round(b.height),
+        spansShell: Math.round(b.width) === Math.round(shell.width),
+        flushBottom: Math.round(shell.bottom - b.bottom),
+      };
+    })).toEqual({ h: 56, spansShell: true, flushBottom: 0 });
+    // The gold hairline is the footer's own top border.
+    expect(await page.evaluate(() =>
+      getComputedStyle(document.getElementById('main-footer')!).borderTopColor,
+    )).toBe('rgba(245, 158, 11, 0.42)');
+    // No dashed kit CTA survives anywhere.
+    await expect(page.locator('.add-btn')).toHaveCount(0);
+  });
+
+  test('the press lights the whole rule, and lets go of it', async ({ page }) => {
+    await habits(page);
+    const footer = page.locator('#main-footer');
+    await expect(footer).not.toHaveClass(/pressed/);
+    await page.locator('#add-habit-btn').hover();
+    await page.mouse.down();
+    await expect(footer).toHaveClass(/pressed/);
+    await page.mouse.up();
+    await expect(footer).not.toHaveClass(/pressed/);
+  });
+
+  test('it opens the library, which now names itself and says DONE', async ({ page }) => {
+    await habits(page);
+    await page.locator('#add-habit-btn').click();
+    await expect(page.locator('#lib-sheet')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#lib-sheet .lib-eyebrow')).toHaveText('THE LIBRARY');
+    await expect(page.locator('#lib-title')).toHaveText('Seal a new vow');
+    await expect(page.locator('#lib-close-btn')).toHaveText('DONE');
+    // The slots line is the one the sheet already kept honest.
+    await expect(page.locator('#lib-sub')).toHaveText('3 active · 22 slots open');
+  });
+
+  test('the bar stands down for the First Vow picker — hairline and all', async ({ page }) => {
+    await habits(page, 0);
+    await expect(page.locator('#empty-state-quickgrid .ev-chip').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#main-footer')).toBeHidden();
   });
 });

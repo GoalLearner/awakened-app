@@ -5108,13 +5108,25 @@ footer {
   color: var(--lib-ink3); text-transform: uppercase;
   margin-top: 3px;
 }
+/* W958 — the library names what it is above what you do there. */
+#lib-sheet.lib-sheet--v3 .lib-eyebrow {
+  font-family: var(--lib-mono);
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2.8px;
+  color: var(--lib-gold);
+  margin-bottom: 5px;
+}
+/* DONE, not an ✕: you leave the library when you are finished, not by escaping. */
 #lib-sheet.lib-sheet--v3 .lib-close-btn {
   position: relative;
-  width: 34px; height: 34px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 0;
-  color: var(--lib-ink2);
-  font-size: 14px;
+  width: auto; height: auto;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--lib-gold);
+  font-family: var(--lib-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 1.6px;
+  flex: none;
 }
 /* 34px to the eye, 44pt to the thumb (1z.253). */
 #lib-sheet.lib-sheet--v3 .lib-close-btn::after { content: ''; position: absolute; inset: -5px; }
@@ -10486,6 +10498,63 @@ footer {
 
 /* Footer is now flex-column — Add Habits button stretches full width */
 #main-footer .add-btn { width: 100%; }
+
+/* ── W958 — SEAL A NEW VOW ───────────────────────────────────────────────
+   The control is the bottom edge of the system window, not a card sitting on
+   it. At rest: a gold hairline and tracked Cinzel caps. Pressed: the rule
+   itself lights up across the full width. Replaces the dashed .add-btn kit
+   CTA, which read as a placeholder in every screenshot. */
+#main-footer {
+  position: relative;
+  flex: none;
+  background: var(--bg-header);
+  border-top: 1px solid rgba(245, 158, 11, 0.42);
+  /* Edge to edge. The bare `footer` rule above insets 16px, which would turn
+     the window's bottom edge back into a card floating on it. */
+  padding: 0 0 var(--safe-bottom);
+  gap: 0;
+  transition: border-color 0.12s ease;
+}
+/* The pack-progress strip still wants its gutter; it just no longer sets the
+   footer's. */
+#main-footer #compound-progress:not(.hidden) { margin: 12px 16px 0; }
+/* The lit rule. Fades in on press — the whole edge answers the thumb. */
+#main-footer::before {
+  content: '';
+  position: absolute; left: 0; right: 0; top: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.9), transparent);
+  opacity: 0; transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+/* Content fades out under the bar instead of being chopped by it. */
+#main-footer .habits-fade {
+  position: absolute; left: 0; right: 0; top: -60px; height: 60px;
+  background: linear-gradient(180deg, transparent, var(--bg));
+  pointer-events: none;
+}
+#main-footer .newvow {
+  display: flex; align-items: center; justify-content: center; gap: 11px;
+  height: 56px; width: 100%;
+  border: 0; background: transparent;
+  color: var(--text-primary);
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none;
+  transition: color 0.12s ease;
+}
+#main-footer .newvow svg { color: var(--gold); transition: filter 0.12s ease; flex: none; }
+/* Driven by a .pressed class, not :has() — the control predates :has on the
+   oldest iOS this ships to, and the bottom bar is not the place to find out. */
+#main-footer.pressed { border-top-color: var(--gold); }
+#main-footer.pressed::before { opacity: 1; }
+#main-footer.pressed .newvow { color: var(--gold); }
+#main-footer.pressed .newvow svg { filter: drop-shadow(0 0 6px var(--gold-glow)); }
+@media (prefers-reduced-motion: reduce) {
+  #main-footer, #main-footer::before, #main-footer .newvow, #main-footer .newvow svg { transition: none; }
+}
+
 
 /* "+ X missing" pill on pack progress rows when canonical habits aren't yet active */
 .cp-prog-add {
