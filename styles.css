@@ -201,13 +201,31 @@ header.header--compact .metric-card {
   gap: 3px !important;
   transition: padding 160ms ease, gap 160ms ease;
 }
-/* Rank card: keep the big D badge; drop PALADIN reset, the
-   progress bar, and the "1797 to C" sub line. */
+/* Rank card: keep the big D badge; drop PALADIN reset and the
+   "1797 to C" sub line. */
 header.header--compact .metric-card--rank .metric-card-reset,
-header.header--compact .metric-card--rank .metric-card-bar,
 header.header--compact .metric-card--rank .metric-card-sub {
   display: none !important;
 }
+/* W963 — the bar stays, as the card's bottom edge. The compact header
+   hid it since 1z.179, so a new hunter's first screen read "E · 5 PTS"
+   with nothing that moves. Absolutely positioned inside the card (which is
+   already position:relative + overflow:hidden), so it costs 0px of height
+   and the W956 one-screen picker fit is untouched. The fill keeps its
+   gradient and width transition; the only change is where it lives. */
+header.header--compact .metric-card--rank .metric-card-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 3px; border-radius: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+/* The seal you just made moves it — a brief brightening, nothing more. */
+@keyframes rank-fill-pulse {
+  0%   { filter: brightness(1); }
+  35%  { filter: brightness(1.9); }
+  100% { filter: brightness(1); }
+}
+.rank-fill.rank-fill--pulse { animation: rank-fill-pulse 0.55s ease-out; }
+@media (prefers-reduced-motion: reduce) { .rank-fill.rank-fill--pulse { animation: none; } }
 /* Steps card: keep the "#2" rank row + WORLD RANK label + chev;
    drop the "82.9K STEPS" total subline. The whole card remains
    a single button so the tap target stays comfortable. */

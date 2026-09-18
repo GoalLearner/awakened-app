@@ -4783,3 +4783,85 @@ test.describe('AV · The stylesheet parses (W960)', () => {
     await expect(page.locator('#mv-overlay .mv-sheet')).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AW. W963 — the rank bar moves on the tap you just made
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AW · The rank bar moves on the seal (W963)', () => {
+  // Seed shape matters: a vow must carry custom:true to seal by row tap in the
+  // list language — library-named vows without it route elsewhere.
+  async function hunterAt5(page: Page) {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w963_seeded')) return;
+        sessionStorage.setItem('__w963_seeded', '1');
+        localStorage.setItem('hb_points', '5');                       // E, 28 to E II
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1',
+         'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'w963-a', name: 'First vow',  emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' },
+          { id: 'w963-b', name: 'Second vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'INT'  }]));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#habit-list .habit-item')).toHaveCount(2, { timeout: 10_000 });
+    await page.waitForTimeout(800);
+  }
+  const bar = (page: Page) => page.evaluate(() => {
+    const hdr = document.querySelector('header')!;
+    const card = document.querySelector('.metric-card--rank')!;
+    const track = card.querySelector('.metric-card-bar') as HTMLElement;
+    const fill = document.getElementById('rank-bar')!;
+    const cr = card.getBoundingClientRect(), tr = track.getBoundingClientRect();
+    return {
+      compact: hdr.classList.contains('header--compact'),
+      headerH: hdr.offsetHeight,
+      trackVisible: getComputedStyle(track).display !== 'none',
+      trackH: Math.round(tr.height),
+      flush: Math.round(cr.bottom - tr.bottom),
+      widthPct: parseFloat(fill.style.width),
+      caption: document.getElementById('rank-next')!.textContent,
+    };
+  });
+
+  test('in the compact header the bar is visible, 3px, on the card’s bottom edge, and costs no height', async ({ page }) => {
+    await hunterAt5(page);
+    const b = await bar(page);
+    expect(b.compact).toBe(true);
+    expect(b.trackVisible).toBe(true);
+    expect(b.trackH).toBe(3);
+    expect(b.flush).toBeLessThanOrEqual(1);              // the card's 1px border
+    expect(b.widthPct).toBeGreaterThan(10);              // 5 of the 33-XP first division
+    // Zero layout cost: hide it and the header must not move.
+    const hiddenH = await page.evaluate(() => {
+      const t = document.querySelector('.metric-card--rank .metric-card-bar') as HTMLElement;
+      t.style.display = 'none'; const h = document.querySelector('header')!.offsetHeight; t.style.display = ''; return h;
+    });
+    expect(hiddenH).toBe(b.headerH);
+  });
+
+  test('the bar and the caption name the same climb, and a seal moves both', async ({ page }) => {
+    await hunterAt5(page);
+    const before = await bar(page);
+    expect(before.caption).toMatch(/to E II$/);
+    await page.evaluate(() => {
+      const w = window as any; w.__pulsed = false;
+      const rf = document.getElementById('rank-bar')!;
+      new MutationObserver(() => { if (rf.classList.contains('rank-fill--pulse')) w.__pulsed = true; })
+        .observe(rf, { attributes: true, attributeFilter: ['class'] });
+    });
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect.poll(() => bar(page).then((x) => x.widthPct), { timeout: 5_000 }).toBeGreaterThan(before.widthPct);
+    const after = await bar(page);
+    const num = (c: string | null) => parseInt(String(c).replace(/[^0-9]/g, ''), 10);
+    expect(num(after.caption)).toBeLessThan(num(before.caption));   // "28 to E II" -> "26 to E II"
+    expect(await page.evaluate(() => (window as any).__pulsed)).toBe(true);
+    expect(after.headerH).toBe(before.headerH);
+  });
+});
