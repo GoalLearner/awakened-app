@@ -4708,3 +4708,78 @@ test.describe('AU · Seal a new vow (W958)', () => {
     await expect(page.locator('#main-footer')).toBeHidden();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// AV. W960 — the stylesheet parses, and Manage Vows lands on screen
+// ─────────────────────────────────────────────────────────────────────
+test.describe('AV · The stylesheet parses (W960)', () => {
+  // A stray brace in styles.css is silent: node --check never sees CSS, the app
+  // still boots, and the ONLY symptom is one rule missing. W956 left an orphan
+  // `}` and it ate `.mv-overlay`, which shipped Manage Vows opening a full
+  // viewport below the fold in 3.0.5. This spec is the tripwire.
+  // EXACT: standalone rules. A substring test is useless here — when the stray
+  // brace ate `.mv-overlay`, `.mv-overlay.hidden` survived and any "contains"
+  // matcher happily reported it present. That is exactly how the first version
+  // of this guard passed against the real bug.
+  const MUST_EXIST_EXACT = [
+    '.mv-overlay',        // Manage Vows — the W956 casualty
+    '.wg2-mon',           // the worldgate emblem — the W934 casualty
+  ];
+  // TOKEN: these are only ever written as descendants (`#main-footer .newvow`).
+  const MUST_EXIST_TOKEN = ['.hunt-row', '.newvow', '.ev-grid', '.habit-item', '.tab-btn', '.bcard'];
+
+  test('every critical selector actually made it into the CSSOM', async ({ page }) => {
+    await freshApp(page);
+    const seen = await page.evaluate(() => {
+      const got: string[] = [];
+      for (const ss of Array.from(document.styleSheets)) {
+        let rules: CSSRuleList;
+        try { rules = (ss as CSSStyleSheet).cssRules; } catch (_) { continue; }
+        for (const r of Array.from(rules)) {
+          const sel = (r as CSSStyleRule).selectorText;
+          if (sel) sel.split(',').forEach((x) => got.push(x.trim()));
+        }
+      }
+      return got;
+    });
+    expect(seen.length).toBeGreaterThan(7000);           // the sheet loaded at all
+    const missingExact = MUST_EXIST_EXACT.filter((sel) => !seen.includes(sel));
+    expect(missingExact).toEqual([]);
+    const missingToken = MUST_EXIST_TOKEN.filter((cls) => !seen.some((sel) => {
+      const i = sel.indexOf(cls);
+      if (i < 0) return false;
+      const after = sel.charAt(i + cls.length);
+      return after === '' || '.: ,>+~['.indexOf(after) >= 0;
+    }));
+    expect(missingToken).toEqual([]);
+  });
+
+  test('Manage Vows opens ON the screen, bottom-anchored', async ({ page }) => {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w960_seeded')) return;
+        sessionStorage.setItem('__w960_seeded', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(['Sleep', 'Read', 'Hydrate'].map((n, i) => (
+          { id: 'w960-' + i, name: n, emoji: '•', difficulty: 'easy', type: 'build', primaryStat: 'VIT' }))));
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(1200);
+
+    await page.evaluate(() => (window as any).__openManageVows());
+    await page.waitForTimeout(700);   // past the 320ms slide-up
+    const box = await page.evaluate(() => {
+      const sh = document.querySelector('#mv-overlay .mv-sheet') as HTMLElement;
+      const r = sh.getBoundingClientRect();
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: window.innerHeight };
+    });
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeLessThan(box.vh);              // it is ON the screen
+    expect(Math.abs(box.bottom - box.vh)).toBeLessThanOrEqual(1);   // anchored to the bottom edge
+    await expect(page.locator('#mv-overlay .mv-sheet')).toBeVisible();
+  });
+});
