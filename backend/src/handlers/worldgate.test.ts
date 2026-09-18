@@ -58,11 +58,11 @@ describe('worldgate HP (W892)', () => {
     expect(rate).toBeLessThanOrEqual(0.8);
   });
 
-  it('escalates after consecutive wins so victory does not become routine', () => {
+  it('W962 — a win streak does NOT raise the next gate (escalator off for a small fleet)', () => {
     const pools = [398668, 305069, 306299, 371684];
     const base = computeGateHp(pools, 0, 0);
-    expect(computeGateHp(pools, 1, 0)).toBeGreaterThan(base);
-    expect(computeGateHp(pools, 2, 0)).toBeGreaterThan(computeGateHp(pools, 1, 0));
+    expect(computeGateHp(pools, 1, 0)).toBe(base);
+    expect(computeGateHp(pools, 5, 0)).toBe(base);
   });
 
   it('self-corrects downward after a slump', () => {

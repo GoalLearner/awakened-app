@@ -49,7 +49,12 @@ const CARRY_RATE = 0.05;
 // with one week missing by 2,009 steps.
 const HP_MIN = 120_000;
 const HP_MEDIAN_FACTOR = 0.80;      // the fleet's median week should usually win
-const HP_STREAK_ESCALATOR = 0.15;   // +15% per consecutive win: victory must not become routine
+// W962 (owner call 2026-09-18) — the escalator is OFF. It was +15% per
+// consecutive win so "victory must not become routine", but with ~7 weekly
+// actives a routine victory is the whole point: the fleet is not big enough
+// for the gate to get harder on them. The arm stays in the formula at zero so
+// it can be switched back on when the hunter count justifies it.
+const HP_STREAK_ESCALATOR = 0;
 const HP_MEDIAN_WEEKS = 4;
 
 /** Pure HP math — exported so it can be tested without a database. */
