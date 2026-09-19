@@ -35469,6 +35469,109 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg-pulse-name { flex: 0 1 auto; min-width: 0; font-family: var(--wg-serif); font-size: 12.5px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wg-pulse-bar { flex: 1 1 40px; min-width: 40px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; display: flex; }
 .wg-pulse-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6d3fd9, #a78bfa); }
+
+/* ── W964 · the Worldgate kill ceremony ────────────────────────────────────────
+   The gate falling is the only thing every hunter does together, and it used
+   to be announced in the same box as a routine notice. Full screen, gold (the
+   slain colour the sheet already speaks), no art: the emblem breaking, the
+   monster's name, and the three numbers that make a shared kill yours.
+   Inherits --wg-* from .wg-scope on the overlay itself. */
+.wgk-screen {
+  position: fixed; inset: 0; z-index: 600;
+  background: radial-gradient(ellipse at 50% 55%, #1c0c02 0%, #000 72%);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.wgk-screen.hidden { display: none !important; }
+/* Same white cut the rank-up opens on — it hides the paint. */
+.wgk-screen::before {
+  content: ''; position: absolute; inset: 0; background: #fff; z-index: 1;
+  animation: ru-flash 0.45s ease-out forwards; pointer-events: none;
+}
+.wgk-particles { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.wgk-content {
+  position: relative; z-index: 2; width: 100%; max-width: 430px;
+  padding: 32px 28px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.wgk-eyebrow {
+  font-size: 0.72rem; font-weight: 900; letter-spacing: 0.32em; color: var(--wg-gold);
+  text-transform: uppercase; margin-bottom: 20px;
+  animation: ru-fade-up 0.5s ease 0.45s both;
+}
+.wgk-emblem-wrap { position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+.wgk-emblem {
+  width: 116px; height: 116px; border-radius: 30px; color: var(--wg-gold);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(245, 184, 66, 0.55);
+  background: radial-gradient(circle at 50% 40%, rgba(245, 184, 66, 0.26), rgba(245, 184, 66, 0.04) 70%);
+  box-shadow: 0 0 34px rgba(245, 184, 66, 0.28);
+  animation: wgk-break 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+.wgk-emblem svg { width: 62px; height: 62px; filter: drop-shadow(0 0 10px rgba(245, 184, 66, 0.85)); }
+/* It arrives too big, then takes the two hits that put it down. */
+@keyframes wgk-break {
+  0%   { transform: scale(0.72) rotate(-6deg); opacity: 0; }
+  45%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  62%  { transform: scale(1.02) translateX(-4px); }
+  74%  { transform: scale(1.02) translateX(4px); }
+  100% { transform: scale(1) translateX(0); opacity: 1; }
+}
+.wgk-fracture {
+  position: absolute; left: 50%; top: 50%; width: 3px; height: 190px;
+  background: linear-gradient(180deg, transparent, #fff5d9, transparent);
+  transform: translate(-50%, -50%) rotate(24deg); opacity: 0; pointer-events: none;
+  animation: wgk-frac 0.5s ease-out 0.72s both;
+}
+@keyframes wgk-frac {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(24deg) scaleY(0.2); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(24deg) scaleY(1.25); }
+}
+.wgk-shockwave {
+  position: absolute; width: 110px; height: 110px; border-radius: 50%;
+  border: 2.5px solid var(--wg-gold); opacity: 0; pointer-events: none;
+}
+.wgk-shockwave.wgk-sw-on { animation: wgk-shockwave 0.7s ease-out 0.5s forwards; }
+@keyframes wgk-shockwave {
+  0%   { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 0; transform: scale(4.5); }
+}
+.wgk-name {
+  margin: 0; font-family: var(--wg-serif); font-size: 2rem; font-weight: 900;
+  letter-spacing: -0.01em; color: #fff; line-height: 1.12;
+  animation: ru-fade-up 0.45s ease 0.66s both;
+}
+.wgk-down {
+  margin-top: 6px; font-size: 0.74rem; font-weight: 900; letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.5);
+  animation: ru-fade-up 0.45s ease 0.78s both;
+}
+/* One fact per line, and a fact that is unknown is left out, never zeroed. */
+.wgk-facts { width: 100%; margin: 24px 0 2px; display: flex; flex-direction: column; gap: 11px; }
+.wgk-fact { display: flex; align-items: baseline; justify-content: center; gap: 9px; animation: ru-fade-up 0.42s ease both; }
+.wgk-fact b { font-size: 1.34rem; font-weight: 900; color: var(--wg-gold); font-variant-numeric: tabular-nums; }
+.wgk-fact span { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.16em; color: rgba(255, 255, 255, 0.58); }
+.wgk-souls { margin-top: 22px; display: flex; align-items: baseline; gap: 8px; animation: ru-fade-up 0.45s ease 1.5s both; }
+.wgk-souls-n { font-size: 2.3rem; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 22px rgba(245, 184, 66, 0.55); }
+.wgk-souls-k { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.26em; color: var(--wg-gold); }
+.wgk-whisper { margin: 16px 0 24px; font-size: 0.82rem; font-style: italic; color: rgba(255, 255, 255, 0.42); animation: ru-fade-up 0.45s ease 1.72s both; }
+.wgk-continue {
+  background: var(--wg-gold); color: #1a1003; border: none; border-radius: 14px;
+  padding: 17px 44px; font-size: 0.82rem; font-weight: 900; letter-spacing: 0.15em;
+  font-family: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  animation: ru-fade-up 0.4s ease 1.9s both;
+}
+.wgk-continue:active { transform: scale(0.96); opacity: 0.88; }
+@media (prefers-reduced-motion: reduce) {
+  /* The entry flash is a full-bleed white sheet that the animation fades out.
+     Stopping the animation freezes it at opacity 1 and the white copy under
+     it disappears — so remove the sheet outright rather than pause it. */
+  .wgk-screen::before { display: none; }
+  .wgk-emblem, .wgk-eyebrow, .wgk-name, .wgk-down, .wgk-fact, .wgk-souls,
+  .wgk-whisper, .wgk-continue { animation: none !important; }
+  .wgk-fracture, .wgk-shockwave.wgk-sw-on { animation: none !important; opacity: 0; }
+}
 .wg-pulse-bar i.wg-pulse-you { background: var(--wg-gold); box-shadow: 0 0 6px rgba(245, 184, 66, 0.6); }
 .wg-pulse-pct { flex: none; font-family: var(--wg-mono); font-size: 11px; font-weight: 800; color: var(--wg-red); font-variant-numeric: tabular-nums; }
 .wg-pulse--down .wg-pulse-pct { color: var(--wg-gold); }

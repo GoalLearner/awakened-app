@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.6-w963'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.6-w964'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6759,17 +6759,126 @@
             if (!(cl && cl.ok && cl.first && cl.souls > 0)) return;
             try { earnSouls(cl.souls, 'worldgate_' + r.week_start); } catch (_) {}
             try { localStorage.setItem('hb_accolade_worldbreaker', String((parseInt(localStorage.getItem('hb_accolade_worldbreaker'), 10) || 0) + 1)); } catch (_) {}
-            try { _hapticTick('SUCCESS'); } catch (_) {}
-            try { showNoticeCard({ eyebrow: 'THE GATE BREAKS', title: 'The Worldgate is down', body: 'Every hunter’s verified steps brought it low — yours among them. +' + cl.souls + ' souls. One server, one monster, one kill.' }); } catch (_) {}
+            try { showWorldgateKill(_wgCache() || {}, cl.souls); } catch (_) {}   // W964
           }).catch(function () {});
         }
       try { renderWorldgatePulse(); } catch (_) {}
       try { _wgSheetPaint(); } catch (_) {}
+      try { _wgKillReplay(); } catch (_) {}   // W964 — a kill kept from day one
       // The bar moved since you last looked — a strike lands on screen.
       try { if (prev && prev.week === r.week_start && Number(r.pool) > Number(prev.pool)) _wgFlash(Number(r.pool) - Number(prev.pool), (r.my_damage | 0) - (prev.my | 0)); } catch (_) {}
       return true;
     } catch (_) { return false; }
   }
+
+  // ── W964 · the gate falls ──────────────────────────────────────
+  // A whole server killing the week's world boss is the biggest shared thing
+  // in the app, and it used to be announced through showNoticeCard — the same
+  // box as a routine system notice, which never even said which monster died.
+  // Everything the ceremony needs is already in the cache written a moment
+  // earlier: the boss name, the hunter count, your own strikes, your place.
+  const WGK_PENDING_KEY = 'hb_wgk_pending';
+  /** Day one is the notification ask + the First Mark only (W940), so a kill
+   *  that lands on it is kept rather than lost — it plays on the next launch. */
+  function _wgKillStash(c, souls) {
+    try {
+      localStorage.setItem(WGK_PENDING_KEY, JSON.stringify({
+        week: c.week, souls: souls, my: c.my, hunters: c.hunters, my_rank: c.my_rank, floor: c.floor,
+      }));
+    } catch (_) {}
+  }
+  function _wgKillReplay() {
+    try {
+      if (_newHunterQuiet()) return;
+      const pend = JSON.parse(localStorage.getItem(WGK_PENDING_KEY) || 'null');
+      if (!pend) return;
+      localStorage.removeItem(WGK_PENDING_KEY);
+      showWorldgateKill(pend, pend.souls);
+    } catch (_) {}
+  }
+
+  function showWorldgateKill(c, souls) {
+    const screen = document.getElementById('wgkill-screen');
+    if (!screen) return false;
+    c = c || {}; souls = Math.max(0, Number(souls) || 0);
+    if (_newHunterQuiet()) { _wgKillStash(c, souls); return false; }   // W940
+    if (!screen.classList.contains('hidden')) return false;
+    // W950 — priority 18: a boss result (10) or a relic reveal (15) already in
+    // flight finishes first, but the gate goes ahead of the level-up chain —
+    // a rank-up comes back next launch, the gate falls once a week.
+    if (_stageDefer('wgkill', 18, function () { showWorldgateKill(c, souls); }, ['wgkill'])) return false;
+    _stageBigMoment = true;
+
+    const my = Math.max(0, Number(c.my) || 0);
+    const hunters = Math.max(0, Number(c.hunters) || 0);
+    const place = Math.max(0, Number(c.my_rank) || 0);
+    const onWall = my >= (Number(c.floor) || 15000);
+
+    document.getElementById('wgk-emblem').innerHTML = _WG_EMBLEM;
+    document.getElementById('wgk-name').textContent = _wgBossName(c.week);
+
+    // The three numbers that make a shared kill yours. A fact we do not have
+    // is left out rather than printed as a zero.
+    const facts = [];
+    if (hunters > 0) facts.push([_wgFmt(hunters), hunters === 1 ? 'HUNTER BROUGHT IT DOWN' : 'HUNTERS BROUGHT IT DOWN']);
+    if (my > 0) facts.push([_wgFmt(my), 'OF YOUR STEPS LANDED']);
+    if (onWall) facts.push([place > 0 ? '#' + _wgFmt(place) : '\u2726', 'ON THE KILL WALL']);
+    document.getElementById('wgk-facts').innerHTML = facts.map(function (f, i) {
+      return '<div class="wgk-fact" style="animation-delay:' + (0.96 + i * 0.14).toFixed(2) + 's">' +
+        '<b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
+    }).join('');
+
+    screen.classList.remove('hidden');
+    screen.setAttribute('aria-hidden', 'false');
+
+    // The bounty counts up instead of sitting inside a sentence.
+    const soulsEl = document.getElementById('wgk-souls-n');
+    soulsEl.textContent = '+0';
+    const startAt = 1460 + facts.length * 140;
+    const countTimer = setTimeout(function () {
+      const t0 = performance.now();
+      (function tick(now) {
+        const k = Math.min(1, (now - t0) / 720);
+        soulsEl.textContent = '+' + _wgFmt(Math.round(souls * (1 - Math.pow(1 - k, 3))));
+        if (k < 1 && !screen.classList.contains('hidden')) requestAnimationFrame(tick);
+      })(t0);
+    }, startAt);
+
+    const host = document.getElementById('wgk-particles');
+    try { spawnBurstParticles(26, '#f5b842', host); } catch (_) {}
+    const sw = document.getElementById('wgk-shockwave');
+    if (sw) {
+      sw.classList.remove('wgk-sw-on'); void sw.offsetWidth; sw.classList.add('wgk-sw-on');
+      sw.addEventListener('animationend', function () { sw.classList.remove('wgk-sw-on'); }, { once: true });
+    }
+    try { playSfx('boss_victory'); } catch (_) {}
+    try { _hapticTick('SUCCESS'); } catch (_) {}
+
+    const dismiss = function () {
+      clearTimeout(countTimer);
+      soulsEl.textContent = '+' + _wgFmt(souls);
+      screen.classList.add('hidden');
+      screen.setAttribute('aria-hidden', 'true');
+      if (host) host.innerHTML = '';
+      try { renderWorldgatePulse(); } catch (_) {}
+    };
+    document.getElementById('wgk-continue').onclick = dismiss;
+    return true;
+  }
+  // QA: __wgKillPreview() replays the ceremony off the live cache, or off a
+  // stand-in when this device has never seen a gate fall.
+  try {
+    window.__wgKillPreview = function (souls) {
+      const c = _wgCache() || {};
+      return showWorldgateKill({
+        // Only a hunter past the claim floor can claim at all, so the
+        // stand-in is past it too — the Kill Wall line is never a maybe.
+        week: c.week || '2026-09-14', my: Number(c.my) || 18240,
+        hunters: Number(c.hunters) || 7, my_rank: Number(c.my_rank) || 3, floor: Number(c.floor) || 15000,
+      }, souls == null ? (Number(c.souls) || 200) : souls);
+    };
+    window.__wgKillReplay = _wgKillReplay;
+  } catch (_) {}
 
   // ── the HP bar (card + sheet share it): all hunters · your guild · you, in gold ──
   function _wgBarHtml(c, tall) {
@@ -31196,8 +31305,11 @@
     }
   }
 
-  function spawnBurstParticles(count, color) {
-    const container = document.getElementById('rankup-particles-container');
+  function spawnBurstParticles(count, color, host) {
+    // W964 — `host` lets another ceremony borrow the burst; the default
+    // container lives inside #rankup-screen and is invisible unless that
+    // screen is the one on stage.
+    const container = host || document.getElementById('rankup-particles-container');
     const cx = window.innerWidth  / 2;
     const cy = window.innerHeight / 2;
     for (let i = 0; i < count; i++) {
@@ -39847,6 +39959,7 @@
     }],
     ['boss',     'flag', function () { return typeof _bossResultBusy !== 'undefined' && !!_bossResultBusy; }],
     ['boss',     'dom',  function () { return _stageVis('boss-result-overlay'); }],
+    ['wgkill',   'dom',  function () { return _stageVis('wgkill-screen'); }],   // W964
     ['reveal',   'flag', function () { return typeof _revealActive !== 'undefined' && !!_revealActive; }],
     ['reveal',   'dom',  function () { return _stageVis('reveal-overlay'); }],
     ['pday',     'flag', function () { return typeof _pdayPending !== 'undefined' && !!_pdayPending; }],

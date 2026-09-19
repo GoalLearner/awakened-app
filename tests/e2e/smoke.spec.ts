@@ -4865,3 +4865,123 @@ test.describe('AW · The rank bar moves on the seal (W963)', () => {
     expect(after.headerH).toBe(before.headerH);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AX. W964 — the Worldgate kill is a ceremony, not a notice card
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AX · The gate falls (W964)', () => {
+  // The claim only fires once a week on a real server, so every spec drives
+  // the same QA hook the ceremony ships with.
+  const read = (page: Page) => page.evaluate(() => {
+    const s = document.getElementById('wgkill-screen')!;
+    return {
+      shown: !s.classList.contains('hidden'),
+      name: (document.getElementById('wgk-name') || {} as any).textContent,
+      facts: [].map.call(document.querySelectorAll('.wgk-fact'), (f: any) => f.textContent.replace(/\s+/g, ' ')),
+      souls: (document.getElementById('wgk-souls-n') || {} as any).textContent,
+      pending: localStorage.getItem('hb_wgk_pending'),
+    };
+  });
+
+  test('it names the monster, your steps and your place — then counts the bounty up', async ({ page }) => {
+    await freshApp(page);
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    const mounted = await page.evaluate(() => (window as any).__wgKillPreview(200));
+    expect(mounted).toBe(true);
+    const b = await read(page);
+    expect(b.shown).toBe(true);
+    // The old notice card never said WHICH monster died.
+    expect(String(b.name).length).toBeGreaterThan(3);
+    expect(b.name).not.toBe('\u2014');
+    expect(b.facts.length).toBe(3);
+    expect(b.facts.join(' | ')).toContain('HUNTERS BROUGHT IT DOWN');
+    expect(b.facts.join(' | ')).toContain('OF YOUR STEPS LANDED');
+    expect(b.facts.join(' | ')).toContain('ON THE KILL WALL');
+    // The bounty counts rather than sitting in a sentence.
+    expect(b.souls).toBe('+0');
+    await expect.poll(() => read(page).then((x) => x.souls), { timeout: 6_000 }).toBe('+200');
+    // CONTINUE is the one release, and it fits above the fold on a phone.
+    const cta = page.locator('#wgk-continue');
+    await expect(cta).toBeInViewport();
+    await cta.click();
+    expect((await read(page)).shown).toBe(false);
+  });
+
+  test('it waits its turn behind a surface already on stage, then arrives (W950)', async ({ page }) => {
+    await freshApp(page);
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    // Put a real stage surface up and own its timing: #rankup-screen is the
+    // 'levelup' DOM surface, and nothing else in this spec touches it.
+    await page.evaluate(() => { document.getElementById('rankup-screen')!.classList.remove('hidden'); });
+    expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);
+    expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(false);
+    expect((await read(page)).shown).toBe(false);
+    // Deferred, not dropped: clear the stage and the queue delivers it.
+    await page.evaluate(() => { document.getElementById('rankup-screen')!.classList.add('hidden'); });
+    await expect.poll(() => read(page).then((x) => x.shown), { timeout: 10_000 }).toBe(true);
+  });
+
+  test('a kill on day one is kept, not spent on a hunter being kept quiet (W940)', async ({ page }) => {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_onboarding_first_xp_date', ymd);   // today = day one
+        localStorage.removeItem('hb_wgk_pending');
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(false);
+    const quiet = await read(page);
+    expect(quiet.shown).toBe(false);
+    expect(JSON.parse(String(quiet.pending)).souls).toBe(200);     // kept for later
+    // Not day one any more: the replay spends it and clears the key.
+    await page.evaluate(() => {
+      localStorage.removeItem('hb_onboarding_first_xp_date');
+      (window as any).__wgKillReplay();
+    });
+    const later = await read(page);
+    expect(later.shown).toBe(true);
+    expect(later.pending).toBeNull();
+  });
+
+  // The entry flash is a full-bleed white sheet above the background and below
+  // the copy. Pausing its fade instead of removing it leaves a white screen
+  // with white text on it — which is exactly what the first cut of this
+  // ceremony shipped to anyone running Reduce Motion.
+  test.describe('with Reduce Motion on', () => {
+    test('nothing covers the copy', async ({ page }) => {
+      await freshApp(page);
+      // test.use({reducedMotion}) does not reach this page fixture — emulate it
+      // on the page, the way the rest of this suite does.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+      expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(true);
+      const probe = await page.evaluate(() => {
+        const hit = (sel: string) => {
+          const el = document.querySelector(sel) as HTMLElement;
+          const r = el.getBoundingClientRect();
+          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return { covered: !(el === top || el.contains(top)), opacity: getComputedStyle(el).opacity };
+        };
+        return {
+          rm: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          flash: getComputedStyle(document.querySelector('.wgk-screen')!, '::before').display,
+          name: hit('#wgk-name'),
+          fact: hit('.wgk-fact'),
+          cta: hit('#wgk-continue'),
+        };
+      });
+      expect(probe.rm).toBe(true);
+      expect(probe.flash).toBe('none');
+      expect(probe.name.covered).toBe(false);
+      expect(probe.name.opacity).toBe('1');
+      expect(probe.fact.covered).toBe(false);
+      expect(probe.fact.opacity).toBe('1');
+      expect(probe.cta.covered).toBe(false);
+    });
+  });
+});

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=709">
+  <link rel="stylesheet" href="styles.css?v=710">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3406,7 +3406,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1367"></script>
+  <script src="app.js?v=1368"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3543,6 +3543,30 @@
       <button id="rankup-continue" class="rankup-continue-btn">CONTINUE</button>
       <button id="rankup-share" class="rankup-share-btn hidden" type="button">SHARE YOUR HUNTER REPORT</button>
       <div class="rankup-brand">⚔ Habit RPG</div>
+    </div>
+  </div>
+
+  <!-- W964 — the Worldgate kill ceremony. The week's world boss going down is
+       the one thing every hunter in the app does together, and it used to
+       arrive as a generic notice card: no monster name, no hunter count, none
+       of your own steps. Everything here is painted from the worldgate cache
+       written moments before the claim, so it costs no extra call and needs
+       no art. `wg-scope` carries the gate's own tokens (styles.css). -->
+  <div id="wgkill-screen" class="wgk-screen wg-scope hidden" role="dialog" aria-labelledby="wgk-name" aria-hidden="true">
+    <div id="wgk-particles" class="wgk-particles" aria-hidden="true"></div>
+    <div class="wgk-content">
+      <div class="wgk-eyebrow">THE GATE BREAKS</div>
+      <div class="wgk-emblem-wrap">
+        <div id="wgk-emblem" class="wgk-emblem" aria-hidden="true"></div>
+        <div id="wgk-shockwave" class="wgk-shockwave" aria-hidden="true"></div>
+        <span class="wgk-fracture" aria-hidden="true"></span>
+      </div>
+      <h2 id="wgk-name" class="wgk-name">&mdash;</h2>
+      <div class="wgk-down">IS DOWN</div>
+      <div id="wgk-facts" class="wgk-facts"></div>
+      <div class="wgk-souls"><span id="wgk-souls-n" class="wgk-souls-n">+0</span><span class="wgk-souls-k">SOULS</span></div>
+      <p class="wgk-whisper">One server. One monster. One kill.</p>
+      <button id="wgk-continue" class="wgk-continue" type="button">CONTINUE</button>
     </div>
   </div>
 
