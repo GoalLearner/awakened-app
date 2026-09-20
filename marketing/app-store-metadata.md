@@ -8,6 +8,87 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## ⚠ 3.0.6 — READY TO PASTE (W967, drafted 2026-09-20)
+
+Three parts: the release notes, and **three corrections to the live description**. The
+corrections matter more than the notes — two of them describe features the shipping build
+does not have, which is what Guideline 2.3.1 is about.
+
+### Release notes (What's New)
+
+```
+The ladder you climb, where you can see it.
+
+• Your rank moves when you do. The bar under your rank card fills toward
+  your next division and flashes every time you seal a vow. It was always
+  being counted — the header was hiding it.
+
+• A division is a moment now. A letter is three marks. Crossing D III to
+  D II lights one of them, and the screen tells you how many are left
+  before the next letter.
+
+• The gate falls like it matters. When the world boss goes down, the
+  screen names the monster, how many hunters brought it down, and how many
+  of your own steps landed on it.
+
+• The Worldgate stops escalating. It no longer grows after a win — next
+  week's gate is the same size as this week's.
+
+Also fixed: Manage Vows was opening below the fold and read as a dead
+button.
+```
+
+### Correction 1 — Ranked PvP (REQUIRED)
+
+The live description carries this as a headline bullet:
+
+> Ranked PvP — The Arena — Live turn-based duels, a seasonal rating ladder, and spar a
+> friend's Echo anytime.
+
+**None of it is reachable.** `PVP_RANKED_LOCKED = true` (app.js:16902) seals the ranked queue
+**and** the friend Echo — both route to `_pvpLockedNudge()`, a card reading *"The Arena Is
+Sealed — ranked duels open once enough rivals have awakened."* A reviewer following the
+description gets that card. Replace the bullet with something true and already shipped:
+
+```
+One world boss, all of us — Every hunter's verified steps strike the same weekly Worldgate.
+Bring it down together, and the hunters who landed enough steps share the bounty.
+```
+
+Put the PvP bullet back when `PVP_RANKED_LOCKED` flips to false.
+
+### Correction 2 — Streak Shields (REQUIRED)
+
+> Streaks with stakes — Keep your daily vows, build streaks, and earn Streak Shields and soul
+> rewards.
+
+Streak Shields were **deleted in W918** (owner, 2026-09-06). Replace with:
+
+```
+Streaks with stakes — Keep your daily vows and hold your streak. The system remembers every
+one, and pays souls for the discipline.
+```
+
+### Correction 3 — the five-hunter raid (worth a word)
+
+> Hunt bosses solo or co-op — Take down dungeon bosses on your own, or summon up to four
+> allies for a five-hunter raid.
+
+The five-hunter raid (the Grinning God) is `membersOnly: true` and gated on `isMember`
+(app.js:57694). Softer than the other two — it exists, it is just paid — but the sentence
+reads as included. One word fixes it:
+
+```
+… or summon up to four allies for a five-hunter raid (Premium).
+```
+
+### Also outstanding, not metadata
+- ASC **review notes** reportedly still say membership has "no gameplay effect". Verify.
+- Download size is **344 MB**, nearly all relic/boss art at print weight.
+- The privacy-policy URL on the listing is a default Netlify subdomain.
+
+---
+
 ## Current — live as of 2.2.5 (W185 / `bcac999`)
 
 | Field | Value |
