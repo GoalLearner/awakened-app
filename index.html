@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=710">
+  <link rel="stylesheet" href="styles.css?v=711">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3406,7 +3406,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1368"></script>
+  <script src="app.js?v=1369"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3567,6 +3567,33 @@
       <div class="wgk-souls"><span id="wgk-souls-n" class="wgk-souls-n">+0</span><span class="wgk-souls-k">SOULS</span></div>
       <p class="wgk-whisper">One server. One monster. One kill.</p>
       <button id="wgk-continue" class="wgk-continue" type="button">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- W965 — DIVISION UP. Ported from the Claude Design handoff (27),
+       "Rank Celebrations - Division Up.html". Only the mock's `.ov` overlay
+       ports — its `.app` backdrop is the mock's own phone and the real app
+       supplies that. Kept as `.divup` because the child classes (.stage,
+       .title, .sub, .flash) are generic enough to collide if unscoped.
+
+       A letter is three marks. The numeral counts DOWN — III means three
+       crossings left — so lit marks + numeral strokes always equals three.
+       This screen fires at II and I only (12x in a whole climb); III is only
+       ever entered by the letter turn.
+
+       Owner call: TAP TO CONTINUE. The mock auto-dismissed at 3.0s with
+       tap-to-skip; this holds until the hunter taps. -->
+  <div id="divup-screen" class="divup hidden" role="dialog" aria-live="polite" aria-label="Division up">
+    <div class="scrim"></div>
+    <div class="flash"></div>
+    <div class="stage">
+      <div class="eyebrow">DIVISION UP</div>
+      <div class="title"><span class="L"></span><span class="N"></span></div>
+      <div class="ladder"><span class="mk"><svg viewBox="0 0 14 24" aria-hidden="true"><polygon points="7,1 13,12 7,23 1,12"></polygon></svg></span><span class="mk"><svg viewBox="0 0 14 24" aria-hidden="true"><polygon points="7,1 13,12 7,23 1,12"></polygon></svg></span><span class="mk"><svg viewBox="0 0 14 24" aria-hidden="true"><polygon points="7,1 13,12 7,23 1,12"></polygon></svg></span></div>
+      <div class="hair"><i></i></div>
+      <div class="sub"></div>
+      <div class="fact"></div>
+      <div class="tapc">TAP TO CONTINUE</div>
     </div>
   </div>
 

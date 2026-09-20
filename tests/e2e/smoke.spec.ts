@@ -4985,3 +4985,119 @@ test.describe('AX · The gate falls (W964)', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AY. W965 — DIVISION UP: the mark lights, and it waits for you
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AY · Division up (W965)', () => {
+  // D spans 100-599, so its three divisions are III 100-266, II 267-433,
+  // I 434-599. Seeding 265 puts a medium vow's +3 (or +6 at the weekend)
+  // across the II boundary either way.
+  async function hunterAt(page: Page, points: number, seen?: string[]) {
+    await freshApp(page);
+    await page.addInitScript(([pts, seenList]) => {
+      try {
+        if (sessionStorage.getItem('__w965_seeded')) return;
+        sessionStorage.setItem('__w965_seeded', '1');
+        localStorage.setItem('hb_points', String(pts));
+        // Without this the First Mark fires instead and folds the division
+        // into its own summary — the 1z.275C behaviour this spec is not about.
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        if (seenList && seenList.length) localStorage.setItem('hb_rank_div_seen_v1', JSON.stringify(seenList));
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen',
+         'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_habits', JSON.stringify([
+          { id: 'w965-a', name: 'First vow', emoji: '\u2022', difficulty: 'medium', type: 'build', custom: true, primaryStat: 'WILL' }]));
+      } catch (_) {}
+    }, [points, seen || []] as [number, string[]]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#habit-list .habit-item')).toHaveCount(1, { timeout: 10_000 });
+    await page.waitForTimeout(700);
+  }
+  const shown = (page: Page) => page.evaluate(() => !document.getElementById('divup-screen')!.classList.contains('hidden'));
+  const read = (page: Page) => page.evaluate(() => {
+    const s = document.getElementById('divup-screen')!;
+    return {
+      letter: s.querySelector('.L')!.textContent,
+      numeral: s.querySelector('.N')!.textContent,
+      lit: [].filter.call(s.querySelectorAll('.mk'), (m: any) => m.classList.contains('lit')).length,
+      sub: s.querySelector('.sub')!.textContent,
+      seen: localStorage.getItem('hb_rank_div_seen_v1'),
+    };
+  });
+
+  test('crossing into II lights one mark — and the screen WAITS to be tapped', async ({ page }) => {
+    await hunterAt(page, 265);
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect.poll(() => shown(page), { timeout: 8_000 }).toBe(true);
+    // The mark lights at t=1200 — until then the screen correctly still reads
+    // III with nothing lit, so wait for the settled state rather than sleeping.
+    await expect.poll(() => read(page).then((x) => x.numeral), { timeout: 20_000 }).toBe('II');
+    const b = await read(page);
+    expect(b.letter).toBe('D');
+    expect(b.numeral).toBe('II');          // the numeral counts DOWN
+    expect(b.lit).toBe(1);                 // lit marks + numeral strokes === 3
+    expect(b.sub).toBe('TWO MARKS TO C');
+    expect(String(b.seen)).toContain('D:II');
+    // The Claude Design mock left on its own at 3.0s. The owner asked for tap
+    // to continue, so it must still be here well past that.
+    await page.waitForTimeout(4_200);
+    expect(await shown(page)).toBe(true);
+    await page.locator('#divup-screen').click();
+    await expect.poll(() => shown(page), { timeout: 3_000 }).toBe(false);
+  });
+
+  test('the same boundary never fires twice', async ({ page }) => {
+    // A W479 compound clawback can drop points back under a boundary that is
+    // then re-crossed. The toast could repeat harmlessly; a held screen cannot.
+    await hunterAt(page, 265, ['D:II']);
+    await page.locator('#habit-list .habit-item').first().click();
+    await page.waitForTimeout(2_500);
+    expect(await shown(page)).toBe(false);
+  });
+
+  test('a whole letter shows the rank screen, never the division screen', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });   // skips the ACK prelude
+    await hunterAt(page, 597);                              // +3 or +6 clears 600 = C
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect.poll(
+      () => page.evaluate(() => !document.getElementById('rankup-screen')!.classList.contains('hidden')),
+      { timeout: 10_000 },
+    ).toBe(true);
+    expect(await shown(page)).toBe(false);
+  });
+
+  test('with Reduce Motion the screen still lands, and nothing covers it', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await hunterAt(page, 265);
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect.poll(() => shown(page), { timeout: 8_000 }).toBe(true);
+    // Settle: the fact line is the last thing to arrive (t=1650 + 280ms).
+    // Settle on the LAST beat, not the second-to-last: the tap hint arrives at
+    // t=1980 + 320ms, after the fact line at 1650. Polling .fact and then
+    // asserting .tapc reads it mid-fade. Generous timeout because the beats are
+    // setTimeout-driven — we are waiting on a real end state, not a deadline.
+    await expect.poll(
+      () => page.evaluate(() => getComputedStyle(document.querySelector('#divup-screen .tapc')!).opacity),
+      { timeout: 20_000 },
+    ).toBe('1');
+    const probe = await page.evaluate(() => {
+      const hit = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement;
+        const r = el.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { covered: !(el === top || el.contains(top) || el.parentElement === top), opacity: getComputedStyle(el).opacity };
+      };
+      return { title: hit('#divup-screen .title'), sub: hit('#divup-screen .sub'), tapc: hit('#divup-screen .tapc') };
+    });
+    // Removed, not paused — a frozen half-frame is the W964 bug.
+    expect(probe.title.opacity).toBe('1');
+    expect(probe.sub.opacity).toBe('1');
+    expect(probe.tapc.opacity).toBe('1');
+    expect(probe.title.covered).toBe(false);
+  });
+});

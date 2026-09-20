@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.6';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.6-w964'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.6-w965'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -31662,14 +31662,18 @@
     else if (item.type === 'classChoice') showClassChoiceScreen(item.options);
     else if (item.type === 'perfectday')  showPerfectDayScreen(item);
     else if (item.type === 'subrank') {
-      // v3 Phase 1z.275C — Sub-rank toast is non-blocking. No modal,
-      // no overlay, no backend. Fire-and-forget: free the queue lock
-      // immediately so any trailing items (achievements, etc.) drain
-      // without waiting on the 2.6s auto-dismiss timer. Wrapped in
-      // try/catch so a missing helper can never stall the queue.
-      try { showSubRankToast(item.label); } catch (_) {}
-      levelUpActive = false;
-      drainLevelUpQueue();
+      // W965 — was a 2.8s non-blocking toast on the habit-toast pipeline
+      // (1z.275C). It is a held screen now, so it OWNS the queue lock until the
+      // hunter taps: showDivisionScreen releases it and drains from there.
+      // Day one stays quiet (W940) — the First Mark carries the division, and
+      // the first_win fold above already folds this item into its summary.
+      // Any failure falls through to releasing the lock, so the queue can
+      // never stall on a missing element.
+      let _divShown = false;
+      if (!_newHunterQuiet()) {
+        try { _divShown = showDivisionScreen(item); } catch (_) { _divShown = false; }
+      }
+      if (!_divShown) { levelUpActive = false; drainLevelUpQueue(); }
     }
     else if (item.type === 'statToast') {
       // W476 — lightweight stat level-up toast (the in-between levels). Non-blocking
@@ -35366,35 +35370,202 @@
 
   // v3 Phase 1z.275C — Sub-rank advancement toast.
   // Two-line premium variant of the habit-toast surface. Fires when a
-  // habit completion crosses a sub-rank division boundary (e.g.
-  // D III → D II) WITHOUT crossing a major rank. Local-only: no
-  // backend, no Guild event, no public event, no storage key. The
-  // toast piggybacks on the .habit-toast DOM + animation pipeline
-  // and adds a .habit-toast--division modifier for the gold-accent
-  // two-line layout (kicker + value). 2.8s dwell — between plain
-  // (2.2s) and tappable (4.0s); long enough to read the new
-  // division label, short enough to feel like a tick, not a modal.
-  function showSubRankToast(label) {
-    const text = String(label || '').trim();
-    if (!text) return;
-    if (_newHunterQuiet()) return;   // W940 — First Mark carries the division on day one
-    // Pre-empt any in-flight habit-toast so the celebration owns the
-    // screen, same convention used by showHabitToast / reminder toast.
-    try { document.querySelectorAll('.habit-toast').forEach(t => t.remove()); } catch (_) {}
-    const toast = document.createElement('div');
-    toast.className = 'habit-toast habit-toast--division';
-    toast.setAttribute('role', 'status');
-    toast.setAttribute('aria-live', 'polite');
-    toast.innerHTML =
-      '<div class="habit-toast-kicker">DIVISION ADVANCED</div>' +
-      '<div class="habit-toast-value">' + esc(text) + '</div>';
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('habit-toast--visible')));
-    setTimeout(() => {
-      toast.classList.remove('habit-toast--visible');
-      setTimeout(() => { try { toast.remove(); } catch (_) {} }, 300);
-    }, 2800);
+  // ── W965 · DIVISION UP ──────────────────────────────────────
+  // Ported from the Claude Design handoff (27). A letter is three marks; the
+  // numeral counts DOWN, so lit marks + numeral strokes always equals three.
+  // Crossing takes the last stroke off the numeral and drops it into a mark.
+  //
+  // Fires at II and I only — 12 times in a whole climb. III is only ever
+  // entered by the letter turn, which is why the caller skips this whenever
+  // the major rank changed.
+  //
+  // OWNER CALL: tap to continue. The mock left on its own at 3.0s; this holds
+  // until tapped, so it owns the celebration queue until then.
+  const _DIV_TIER_HEX = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9', 'S+': '#facc15' };
+  const _DIV_NUM = ['III', 'II', 'I'];
+  const _DIV_SEEN_KEY = 'hb_rank_div_seen_v1';
+  const _DIV_LAST_KEY = 'hb_rank_div_last_v1';
+  const _DIV_WORD = ['', 'ONE', 'TWO', 'THREE'];
+
+  function _divSeen(key) {
+    try { const a = JSON.parse(localStorage.getItem(_DIV_SEEN_KEY) || '[]'); return Array.isArray(a) && a.indexOf(key) >= 0; } catch (_) { return false; }
   }
+  function _divMarkSeen(key) {
+    try {
+      const a = JSON.parse(localStorage.getItem(_DIV_SEEN_KEY) || '[]');
+      const set = Array.isArray(a) ? a : [];
+      if (set.indexOf(key) < 0) set.push(key);
+      localStorage.setItem(_DIV_SEEN_KEY, JSON.stringify(set.slice(-40)));
+    } catch (_) {}
+  }
+  function _divRgba(hex, a) {
+    try { const n = parseInt(String(hex).slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+    catch (_) { return 'rgba(255,255,255,' + a + ')'; }
+  }
+  /** Days since the previous division crossing — the fact line's second half.
+   *  Null on the very first one, and the line simply omits it. */
+  function _divDaysSinceLast() {
+    try {
+      const prev = localStorage.getItem(_DIV_LAST_KEY);
+      if (!prev) return null;
+      const d = Math.round((Date.parse(getDeviceLocalDate()) - Date.parse(prev)) / 86400000);
+      return (Number.isFinite(d) && d > 0) ? d : null;
+    } catch (_) { return null; }
+  }
+
+  function showDivisionScreen(opts) {
+    const scr = document.getElementById('divup-screen');
+    if (!scr) return false;
+    opts = opts || {};
+    const tier = String(opts.tier || 'E');
+    const n = Math.max(1, Math.min(2, Number(opts.n) || 1));        // 1 -> II, 2 -> I
+    const nextLetter = String(opts.nextLetter || '');
+    const hex = _DIV_TIER_HEX[tier] || _DIV_TIER_HEX.E;
+    const reduced = (function () {
+      try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; }
+    })();
+
+    const q = (sel) => scr.querySelector(sel);
+    const el = {
+      scrim: q('.scrim'), flash: q('.flash'), stage: q('.stage'), L: q('.L'), N: q('.N'),
+      marks: [].slice.call(scr.querySelectorAll('.mk')), hair: q('.hair'), hairFill: q('.hair i'),
+      sub: q('.sub'), fact: q('.fact'), tapc: q('.tapc'),
+    };
+
+    // Timers + animations, all cancellable by the tap.
+    const timers = []; const anims = [];
+    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const anim = (node, kf, o) => { const a = node.animate(kf, Object.assign({ fill: 'forwards' }, o)); anims.push(a); return a; };
+    const killFx = () => { scr.querySelectorAll('.fly,.shock,.pt').forEach((e) => e.remove()); };
+
+    scr.style.setProperty('--tier', hex);
+    scr.style.setProperty('--tierGlow', _divRgba(hex, 0.45));
+    scr.style.setProperty('--tierTint', _divRgba(hex, 0.16));
+
+    const strokes = (count) => { el.N.innerHTML = '<i>I</i>'.repeat(count); el.N.style.marginLeft = count ? '' : '0'; };
+    const centre = (node) => {
+      const r = scr.getBoundingClientRect(); const b = node.getBoundingClientRect();
+      return { x: b.left + b.width / 2 - r.left, y: b.top + b.height / 2 - r.top };
+    };
+
+    // Resting state: before the crossing. n-1 marks lit, the numeral still
+    // carrying the stroke this crossing is about to take off it.
+    el.L.textContent = tier;
+    strokes(3 - (n - 1));
+    el.marks.forEach((m, i) => { m.classList.toggle('lit', i < (n - 1)); m.style.transform = 'none'; m.style.opacity = 1; });
+    el.hairFill.style.transform = 'scaleX(.82)';
+    el.hair.style.opacity = 1;
+    el.sub.style.opacity = 0; el.fact.style.opacity = 0; el.tapc.style.opacity = 0;
+    el.flash.style.opacity = 0;
+    const rem = 3 - n;
+    el.sub.textContent = _DIV_WORD[rem] + ' MARK' + (rem === 1 ? '' : 'S') + ' TO ' + nextLetter;
+    const days = _divDaysSinceLast();
+    const xpSpan = Math.max(0, Math.round(Number(opts.divisionXp) || 0));
+    el.fact.textContent = (xpSpan ? xpSpan.toLocaleString() + ' XP' : '') +
+      (xpSpan && days ? ' \u00b7 ' : '') + (days ? days + (days === 1 ? ' DAY' : ' DAYS') : '');
+    killFx();
+
+    scr.classList.remove('hidden');
+    anim(el.scrim, [{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
+    anim(el.stage, reduced ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 380, easing: 'cubic-bezier(.2,.7,.2,1)' });
+
+    at(300, () => {
+      try { _hapticTick('LIGHT'); } catch (_) {}
+      if (reduced) { el.hair.style.opacity = 0; return; }
+      anim(el.hairFill, [{ transform: 'scaleX(.82)' }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'cubic-bezier(.55,0,.85,.35)' });
+      anim(el.marks[n - 1], [{ opacity: .45 }, { opacity: 1 }], { duration: 600 });
+    });
+    at(900, () => {
+      try { playSfx('division_' + n); } catch (_) {}
+      if (reduced) return;
+      const stroke = el.N.lastElementChild;
+      if (stroke) anim(stroke, [{ textShadow: '0 0 0 transparent', transform: 'none' }, { textShadow: '0 0 22px ' + hex, transform: 'translateY(-4px)' }], { duration: 100 });
+      anim(el.hairFill, [{ background: '#fff', boxShadow: '0 0 14px #fff' }, { background: hex, boxShadow: '0 0 8px ' + _divRgba(hex, .45) }], { duration: 240 });
+      anim(el.hair, [{ opacity: 1 }, { opacity: 1, offset: .45 }, { opacity: 0 }], { duration: 420 });
+    });
+    // The stroke leaves the numeral and drops into its mark.
+    at(1000, () => {
+      if (reduced) return;
+      const stroke = el.N.lastElementChild; if (!stroke) return;
+      const r = scr.getBoundingClientRect(); const sr = stroke.getBoundingClientRect();
+      const mc = centre(el.marks[n - 1]);
+      const sx = sr.left - r.left, sy = sr.top - r.top, sw = sr.width, sh = sr.height;
+      const fly = document.createElement('span');
+      fly.className = 'fly'; fly.textContent = 'I';
+      fly.style.cssText = 'left:' + sx + 'px;top:' + sy + 'px;width:' + sw + 'px;height:' + sh + 'px';
+      scr.appendChild(fly);
+      anim(fly, [
+        { transform: 'translateY(-4px) scale(1)', opacity: 1, textShadow: '0 0 22px ' + hex },
+        { transform: 'translate(' + (mc.x - (sx + sw / 2)) + 'px,' + (mc.y - (sy + sh / 2)) + 'px) scale(.2)', opacity: .9, color: hex, textShadow: '0 0 10px ' + hex },
+      ], { duration: 200, easing: 'cubic-bezier(.5,0,1,.55)' });
+      stroke.style.opacity = 0; stroke.style.width = sw + 'px';
+      anim(stroke, [{ width: sw + 'px' }, { width: '0px' }], { duration: 220, easing: 'ease-out' });
+      if (el.N.children.length === 1) anim(el.N, [{ marginLeft: '16px' }, { marginLeft: '0px' }], { duration: 220, easing: 'ease-out' });
+    });
+    at(1080, () => { if (reduced) anim(el.N, [{ opacity: 1 }, { opacity: 0 }], { duration: 120 }); });
+    at(1200, () => {
+      try { _hapticTick('MEDIUM'); } catch (_) {}
+      try { el.N.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
+      strokes(3 - n);
+      if (reduced) { anim(el.N, [{ opacity: 0 }, { opacity: 1 }], { duration: 200 }); }
+      const m = el.marks[n - 1];
+      try { m.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
+      scr.querySelectorAll('.fly').forEach((e) => e.remove());
+      m.classList.add('lit');
+      if (reduced) { anim(m, [{ opacity: 0 }, { opacity: 1 }], { duration: 220 }); return; }
+      anim(m, [{ transform: 'scale(.6)' }, { transform: 'scale(1.45)', offset: .4 }, { transform: 'scale(1)' }], { duration: 480, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+      // ring + motes out of the mark that just lit
+      const c = centre(m);
+      const ring = document.createElement('span');
+      ring.className = 'shock'; ring.style.left = c.x + 'px'; ring.style.top = c.y + 'px';
+      scr.appendChild(ring);
+      anim(ring, [{ transform: 'translate(-50%,-50%) scale(.08)', opacity: .95 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.1,.6,.3,1)' });
+      for (let i = 0; i < 10; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'pt'; dot.style.left = (c.x - 2) + 'px'; dot.style.top = (c.y - 2) + 'px';
+        scr.appendChild(dot);
+        const ang = (i / 10) * Math.PI * 2 + Math.random() * .5, dist = 44 + Math.random() * 44;
+        anim(dot, [{ transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: 'translate(' + (Math.cos(ang) * dist) + 'px,' + (Math.sin(ang) * dist) + 'px) scale(.3)', opacity: 0 }],
+          { duration: 520 + Math.random() * 200, easing: 'cubic-bezier(.1,.7,.3,1)' });
+      }
+      anim(el.flash, [{ opacity: 0 }, { opacity: .26, offset: .3 }, { opacity: 0 }], { duration: 260 });
+    });
+    at(1500, () => anim(el.sub, [{ opacity: 0 }, { opacity: 1 }], { duration: 280 }));
+    at(1650, () => anim(el.fact, [{ opacity: 0 }, { opacity: 1 }], { duration: 280 }));
+    // The mock faded out here. Ours waits, so it has to say it waits.
+    at(1980, () => anim(el.tapc, [{ opacity: 0 }, { opacity: 1 }], { duration: 320 }));
+
+    let closed = false;
+    const close = function () {
+      if (closed) return;
+      closed = true;
+      timers.forEach(clearTimeout);
+      anims.forEach((a) => { try { a.cancel(); } catch (_) {} });
+      scr.removeEventListener('click', close);
+      // Land on the settled state so the fade-out never shows a half-frame.
+      strokes(3 - n);
+      el.marks.forEach((m, i) => { m.classList.toggle('lit', i < n); m.style.transform = 'none'; m.style.opacity = 1; });
+      el.hair.style.opacity = 0;
+      el.sub.style.opacity = 1; el.fact.style.opacity = 1; el.tapc.style.opacity = 1;
+      killFx();
+      const out = scr.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200 });
+      out.onfinish = () => { scr.classList.add('hidden'); scr.style.opacity = ''; };
+      try { localStorage.setItem(_DIV_LAST_KEY, getDeviceLocalDate()); } catch (_) {}
+      levelUpActive = false;
+      drainLevelUpQueue();
+    };
+    scr.addEventListener('click', close);
+    return true;
+  }
+  try {
+    window.__showDivision = function (tier, n, nextLetter) {
+      levelUpActive = true;
+      return showDivisionScreen({ tier: tier || 'D', n: n || 1, nextLetter: nextLetter || 'C', divisionXp: 167 });
+    };
+  } catch (_) {}
 
   // W476 — lightweight, non-blocking stat level-up toast. Used for the in-between
   // levels (the milestone levels 5/10/15/20 keep the full modal). Makes a single
@@ -35693,7 +35864,7 @@
   //   5 = rank_fanfare, boss_victory, ultra_drop, class awakening,
   //       PR cinematic, comeback
   //   4 = achievement, rare drop, compound popup
-  //   3 = stat_chime, subrank_blip
+  //   3 = stat_chime
   //   2 = boss_engage, perfect day
   //   1 = habit_seal
   //
@@ -35710,7 +35881,9 @@
     habit_seal:   1,
     boss_engage:  2,
     perfect_day:  2,
-    subrank_blip: 3,
+    division_1:   4,
+    division_2:   4,
+    division_3:   4,
     stat_chime:   3,
     achievement:  4,
     rare_drop:    4,
@@ -35781,7 +35954,7 @@
   // (sine + small gain envelope, mild exponential decay).
   function _sfxRender(ac, name) {
     const t0 = ac.currentTime;
-    const playNote = function (freq, startOffset, dur, peakGain, type) {
+    const playNote = function (freq, startOffset, dur, peakGain, type, attack) {
       const osc = ac.createOscillator();
       const g   = ac.createGain();
       osc.connect(g); g.connect(ac.destination);
@@ -35789,7 +35962,9 @@
       osc.frequency.value = freq;
       const t = t0 + startOffset;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(peakGain, t + Math.min(0.04, dur * 0.25));
+      // W965 — optional `attack` (6th arg). Omitted everywhere else, so
+      // every existing chime keeps its exact envelope.
+      g.gain.linearRampToValueAtTime(peakGain, t + (attack != null ? attack : Math.min(0.04, dur * 0.25)));
       g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
       osc.start(t);
       osc.stop(t + dur + 0.02);
@@ -35808,6 +35983,18 @@
       osc.start(t);
       osc.stop(t + dur + 0.02);
     };
+    // W965 — division_cue(n) replaces subrank_blip. Two notes 300ms apart in
+    // the SAME voice as rank_fanfare (sine, 12ms attack, exponential decay over
+    // 600ms; triangle at 0.28x on the top note only). The three cues climb
+    // C4-E4 / E4-G4 / G4-C5 and rank_fanfare then picks up on C5 — so a whole
+    // tier is one arpeggio, an octave climbed across four celebrations.
+    if (name === 'division_1' || name === 'division_2' || name === 'division_3') {
+      const pair = { division_1: [261.63, 329.63], division_2: [329.63, 392.00], division_3: [392.00, 523.25] }[name];
+      playNote(pair[0], 0,    0.6, 0.15, 'sine', 0.012);
+      playNote(pair[1], 0.30, 0.6, 0.17, 'sine', 0.012);
+      playNote(pair[1], 0.30, 0.6, 0.17 * 0.28, 'triangle', 0.012);
+      return;
+    }
     if (name === 'rank_fanfare') {
       // Four-note arpeggio C5 → E5 → G5 → C6. Bright, premium, ~800ms.
       const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -37290,9 +37477,25 @@
             newDivInfo &&
             oldDivInfo.fullLabel &&
             newDivInfo.fullLabel &&
-            oldDivInfo.fullLabel !== newDivInfo.fullLabel
+            oldDivInfo.fullLabel !== newDivInfo.fullLabel &&
+            newDivInfo.divisionIndex > 0     // W965 — III is only ever entered by the letter turn
           ) {
-            levelUpQueue.push({ type: 'subrank', label: newDivInfo.fullLabel });
+            // W965 — once and for all. The transition test on its own re-fires
+            // whenever a W479 compound clawback drops totalPoints back under a
+            // boundary that is then re-crossed. Harmless for the old 2.8s toast;
+            // wrong for a screen that holds until tapped.
+            const seenKey = newDivInfo.majorRank + ':' + newDivInfo.division;
+            if (!_divSeen(seenKey)) {
+              _divMarkSeen(seenKey);
+              levelUpQueue.push({
+                type: 'subrank',
+                label: newDivInfo.fullLabel,
+                tier: newDivInfo.majorRank,
+                n: newDivInfo.divisionIndex,                  // 1 -> II, 2 -> I
+                nextLetter: newDivInfo.nextMajorRank || '',
+                divisionXp: Math.max(0, Math.round((newDivInfo.nextDivisionStartXp || 0) - (newDivInfo.currentDivisionStartXp || 0))),
+              });
+            }
           }
         } catch (_) {}
       }
@@ -68332,6 +68535,8 @@
       'hb_avenger_count',         // lifetime tallies
       'hb_accolade_altar',        // Awakened at the Altar
       'hb_accolade_worldbreaker',
+      'hb_rank_div_seen_v1',      // W965 — division boundaries already celebrated
+      'hb_rank_div_last_v1',      // W965 — date of the last crossing (the "N DAYS" fact)
       'hb_tower_avenge_life',     // today's avenged bonus life (stale date = no-op)
       'hb_first_hunt_free_used',  // once-ever freebie consumed (W771/W850)
       'hb_wolf_trail_v1',         // W952 — this hunter walks the Wolf's trail (new-hunter cohort)
