@@ -3406,7 +3406,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1369"></script>
+  <script src="app.js?v=1370"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3981,6 +3981,18 @@
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Test as a new hunter</div>
               <div class="settings-v2-fsub">The real first run, from sign-in · your account is set aside</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <!-- W966 — owner only. A division crossing arrives on its own
+               schedule, so there was no way to look at the celebration on a
+               real phone without waiting for one. Plays it in YOUR rank's
+               colour and writes nothing — the same contract as "Replay the
+               awakening" above. -->
+          <button id="settings-preview-celebrations" class="settings-v2-frow settings-v2-rowbtn hidden" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Preview rank celebrations</div>
+              <div class="settings-v2-fsub">Both division screens, in your colour · nothing is saved</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>

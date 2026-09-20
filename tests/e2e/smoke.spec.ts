@@ -5101,3 +5101,78 @@ test.describe('AY · Division up (W965)', () => {
     expect(probe.title.covered).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// AZ. W966 — previewing the celebrations on a real phone
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AZ · Preview rank celebrations (W966)', () => {
+  async function asRole(page: Page, role: string) {
+    await freshApp(page);
+    await page.addInitScript(([r]) => {
+      try {
+        if (sessionStorage.getItem('__w966_seeded')) return;
+        sessionStorage.setItem('__w966_seeded', '1');
+        localStorage.setItem('hb_points', '3400');                       // B rank
+        localStorage.setItem('hb_board_cache_v1', JSON.stringify({ me: { role: r } }));
+      } catch (_) {}
+    }, [role]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const div = (page: Page) => page.evaluate(() => {
+    const s = document.getElementById('divup-screen')!;
+    return {
+      shown: !s.classList.contains('hidden'),
+      L: s.querySelector('.L')!.textContent,
+      N: s.querySelector('.N')!.textContent,
+      lit: [].filter.call(s.querySelectorAll('.mk'), (m: any) => m.classList.contains('lit')).length,
+    };
+  });
+
+  // The gate controls the `hidden` class (syncTestHunterRow, run by openSettings).
+  // Assert that, not paint: the row sits in a settings group that may be
+  // collapsed, so toBeVisible() could fail for a reason this feature does not own.
+  const rowRevealed = (page: Page) => page.evaluate(
+    () => !document.getElementById('settings-preview-celebrations')!.classList.contains('hidden'));
+
+  test('the row is the owner\u2019s alone', async ({ page }) => {
+    await asRole(page, 'owner');
+    await page.locator('#settings-btn').click();
+    await expect.poll(() => rowRevealed(page), { timeout: 6_000 }).toBe(true);
+  });
+
+  test('a non-owner never sees it', async ({ page }) => {
+    await asRole(page, 'member');
+    await page.locator('#settings-btn').click();
+    await page.waitForTimeout(800);
+    expect(await rowRevealed(page)).toBe(false);
+  });
+
+  test('it plays both marks in your own colour, and saves nothing', async ({ page }) => {
+    await asRole(page, 'owner');
+    await page.evaluate(() => (window as any).__previewRankCelebrations());
+    await expect.poll(() => div(page).then((x) => x.N), { timeout: 20_000 }).toBe('II');
+    expect((await div(page)).L).toBe('B');          // 3,400 XP is B rank
+    expect((await div(page)).lit).toBe(1);
+    await page.locator('#divup-screen').click();    // chains straight into the next
+    await expect.poll(() => div(page).then((x) => x.N), { timeout: 20_000 }).toBe('I');
+    expect((await div(page)).lit).toBe(2);
+    await page.locator('#divup-screen').click();
+    await expect.poll(() => div(page).then((x) => x.shown), { timeout: 5_000 }).toBe(false);
+    // "nothing is saved" is the contract this row inherits from Replay the awakening.
+    expect(await page.evaluate(() => localStorage.getItem('hb_rank_div_last_v1'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('hb_rank_div_seen_v1'))).toBeNull();
+  });
+
+  test('the stage still sees it after the flag window has expired', async ({ page }) => {
+    // W965 registered no DOM surface, so the screen was covered only by the
+    // levelUpActive FLAG — and flag-only busy expires after 6s. Tap-to-continue
+    // makes the hold indefinite, so past 6s anything could have landed on top.
+    await asRole(page, 'owner');
+    await page.evaluate(() => (window as any).__showDivision('B', 1, 'A'));
+    await expect.poll(() => div(page).then((x) => x.shown), { timeout: 10_000 }).toBe(true);
+    await page.waitForTimeout(7_000);
+    expect((await div(page)).shown).toBe(true);
+    expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);
+  });
+});
