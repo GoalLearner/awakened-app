@@ -34944,6 +34944,16 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .hunter-crown { display: inline-flex; align-items: center; line-height: 0; vertical-align: middle; }
 .hunter-crown svg { width: 16px; height: 12px; filter: drop-shadow(0 0 4px rgba(246,223,28,0.45)); }
 .board-crown { margin-left: 1px; }
+/* W969 — the crown rides the name on every list (boards, friends, co-op,
+   Worldgate, Arena). Sized to sit on the text baseline, never wrap alone. */
+/* W969b — aligned to the LETTERS, not the line box. The crown sits on the text
+   baseline at cap height (0.72em), so it scales with every name's font size.
+   Measured: within ±0.5px of the capitals' centre at 12.5 / 17 / 22px, bottom
+   exactly on the baseline. Inside the four flex name rows (arena list, co-op
+   damage board, defeat screen, hunt history) plain baseline stays within 1px;
+   align-self:baseline made it worse (up to 3px) — so it is deliberately absent. */
+.name-crown { display: inline-block; vertical-align: baseline; line-height: 0; margin-left: .32em; white-space: nowrap; flex: none; }
+.name-crown svg { display: block; height: .72em; width: auto; filter: drop-shadow(0 0 3px rgba(246,223,28,0.45)); }
 .pc-crown { margin-top: 9px; }
 .pc-crown svg { width: 26px; height: 20px; filter: drop-shadow(0 0 8px rgba(246,223,28,0.5)); }
 

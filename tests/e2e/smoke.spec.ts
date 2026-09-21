@@ -5176,3 +5176,90 @@ test.describe('AZ · Preview rank celebrations (W966)', () => {
     expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// BA. W969 — the developer / moderator crown rides the name everywhere
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BA · The crown is part of the name (W969)', () => {
+  async function withRoster(page: Page) {
+    await freshApp(page);
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_crown_roster_v1', JSON.stringify({ at: Date.now(),
+          list: [{ alias: 'Richie', role: 'owner' }, { alias: 'RenDIESEL', role: 'mod' }] }));
+        localStorage.setItem('hb_worldgate_v1', JSON.stringify({ at: Date.now(), week: '2026-09-20', hp: 200000, pool: 91000,
+          status: 'active', my: 12000, floor: 15000, souls: 200, claimable: false, claimed: false, hunters: 9,
+          guild: { steps: 0, hunters: 0 }, my_rank: 3,
+          top: [{ alias: 'RenDIESEL', steps: 30112, rank_tier: 'A' }, { alias: 'Zynfandel', steps: 18220, rank_tier: 'D' }],
+          wall: [{ alias: 'RenDIESEL' }, { alias: 'Zynfandel' }], wall_count: 2, recent: [], rallied: false }));
+      } catch (_) {}
+    });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+
+  test('the roster decides who wears it — case-insensitive, and nobody else', async ({ page }) => {
+    await withRoster(page);
+    const r = await page.evaluate(() => {
+      const f = (window as any).__crownFor;
+      return { owner: f('Richie'), mod: f('rendiesel'), other: f('Zynfandel'), blank: f('') };
+    });
+    expect(r.owner).toContain('title="Developer"');
+    expect(r.mod).toContain('title="Moderator"');
+    expect(r.other).toBe('');
+    expect(r.blank).toBe('');
+  });
+
+  test('it sits inside the name on a list that never carried a role', async ({ page }) => {
+    await withRoster(page);
+    await page.evaluate(() => document.getElementById('wg-pulse')!.click());
+    await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
+    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-pane .wg2-nmbtn'),
+      (n: any) => ({ name: n.textContent.trim(), crown: !!n.querySelector('.name-crown') })));
+    expect(rows).toContainEqual({ name: 'RenDIESEL', crown: true });
+    expect(rows).toContainEqual({ name: 'Zynfandel', crown: false });
+  });
+
+  test('it sits on the letters: bottom on the baseline, top at cap height', async ({ page }) => {
+    // W969b — the owner saw it riding low. Pin it to the glyphs, not the line box.
+    await withRoster(page);
+    await page.evaluate(() => document.getElementById('wg-pulse')!.click());
+    await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
+    await expect(page.locator('.wg2-pane .name-crown').first()).toBeVisible({ timeout: 8_000 });
+    const m = await page.evaluate(() => {
+      const btn = document.querySelector('.wg2-pane .wg2-nmbtn .name-crown')!.parentElement as HTMLElement;
+      const probe = document.createElement('span');
+      probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+      btn.insertBefore(probe, btn.querySelector('.name-crown'));
+      const base = probe.getBoundingClientRect().top; probe.remove();
+      const svg = btn.querySelector('.name-crown svg')!.getBoundingClientRect();
+      const fs = parseFloat(getComputedStyle(btn).fontSize);
+      return { bottomVsBase: svg.bottom - base, heightEm: svg.height / fs };
+    });
+    expect(Math.abs(m.bottomVsBase)).toBeLessThanOrEqual(1);
+    expect(m.heightEm).toBeGreaterThan(0.6);
+    expect(m.heightEm).toBeLessThan(0.85);
+  });
+
+  test('the player card no longer carries a crown of its own', async ({ page }) => {
+    // Owner: "no M crown on our player card … anywhere else would be redundant."
+    await withRoster(page);
+    const n = await page.evaluate(() => document.querySelectorAll('.pc-crown, .board-av-crown').length);
+    expect(n).toBe(0);
+  });
+
+  test('the cache holds names and roles only — never an account id', async ({ page }) => {
+    await freshApp(page);
+    await page.route('**/v1/board/moderators', (route) => route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ moderators: [{ user_id: 'u-secret-1', alias: 'Richie', role: 'owner', granted_at: 1 }] }) }));
+    const stored = await page.evaluate(async () => {
+      const A = (window as any).Auth;
+      A.boardModerators = async () => ({ ok: true, moderators: [{ user_id: 'u-secret-1', alias: 'Richie', role: 'owner', granted_at: 1 }] });
+      await (window as any).__crownRosterSync(true);
+      return localStorage.getItem('hb_crown_roster_v1');
+    });
+    expect(stored).toContain('Richie');
+    expect(stored).not.toContain('u-secret-1');
+  });
+});
