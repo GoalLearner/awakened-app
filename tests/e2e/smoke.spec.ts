@@ -611,7 +611,7 @@ test.describe('I · Create Your Own Habit (1z.106)', () => {
     expect(found).toBeTruthy();
     expect(found.custom).toBe(true);
     expect(found.primaryStat).toBe('STR');
-    expect(found.difficulty).toBe('medium');
+    expect(found.difficulty).toBe('easy');   // W970: every custom vow is Easy
 
     // Toast confirms the add.
     await expect(page.locator('.habit-toast').first()).toContainText(/run/i);
@@ -1131,6 +1131,7 @@ test.describe('L · Sleep streak derived from completion ledger (1z.115)', () =>
     await freshAppForLedgerTest(page);
 
     const result = await page.evaluate(() => {
+      localStorage.setItem('hb_health_seal_cutover_v1', '2999-01-01');   // W970: seeded days predate the change
       const w = window as unknown as { Leaderboard: LbTest };
       const habits = w.Leaderboard.__test_getHabits();
       const completions = w.Leaderboard.__test_getCompletions();
@@ -1183,6 +1184,7 @@ test.describe('L · Sleep streak derived from completion ledger (1z.115)', () =>
     await freshAppForLedgerTest(page);
 
     const result = await page.evaluate(() => {
+      localStorage.setItem('hb_health_seal_cutover_v1', '2999-01-01');   // W970: seeded days predate the change
       const w = window as unknown as { Leaderboard: LbTest };
       const habits = w.Leaderboard.__test_getHabits();
       const completions = w.Leaderboard.__test_getCompletions();
@@ -1225,6 +1227,7 @@ test.describe('L · Sleep streak derived from completion ledger (1z.115)', () =>
     await freshAppForLedgerTest(page);
 
     const result = await page.evaluate(() => {
+      localStorage.setItem('hb_health_seal_cutover_v1', '2999-01-01');   // W970: seeded days predate the change
       const w = window as unknown as { Leaderboard: LbTest };
       const habits = w.Leaderboard.__test_getHabits();
       const completions = w.Leaderboard.__test_getCompletions();
@@ -1415,6 +1418,7 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     await freshAppForLedgerTest(page);
 
     const result = await page.evaluate(() => {
+      localStorage.setItem('hb_health_seal_cutover_v1', '2999-01-01');   // W970: seeded days predate the change
       const w = window as unknown as { Leaderboard: LbTest & {
         __test_computeWorkoutStreakFromCompletions: () => { current: number; best: number; completionDateCount: number } | null;
       } };
@@ -1464,6 +1468,7 @@ test.describe('O · Workout streak leaderboard card (1z.118)', () => {
     await freshAppForLedgerTest(page);
 
     const result = await page.evaluate(() => {
+      localStorage.setItem('hb_health_seal_cutover_v1', '2999-01-01');   // W970: seeded days predate the change
       const w = window as unknown as { Leaderboard: LbTest & {
         __test_computeWorkoutStreakFromCompletions: () => { current: number; best: number } | null;
       } };
@@ -2285,12 +2290,12 @@ test.describe('AA · Apple Health prompt on every path (W935)', () => {
     expect(r.queue).toContain('no_walk');
   });
 
-  test('a hunter with the Daily walk habit still sees the walk copy and the step-goal picker', async ({ page }) => {
+  test('W970: a hunter with the Daily walk vow sees the neutral Connect Apple Health sheet, no step picker', async ({ page }) => {
     const r = await seedAndPrompt(page, [
       { id: 'h-walk', name: 'Daily walk', emoji: '🚶', difficulty: 'easy', type: 'build', primaryStat: 'VIT', stepGoal: 8000 },
     ]);
-    expect(r.title).toMatch(/Auto-verify your/);
-    expect(r.picker).toBe(true);
+    expect(r.title).toBe('Connect Apple Health');   // Health no longer seals vows
+    expect(r.picker).toBe(false);
     expect(r.queue).toContain('health_prompt_shown');
   });
 });
@@ -3489,7 +3494,7 @@ test.describe('AI · The First Awakened speaks plainly (W942)', () => {
 // AJ. W943 — Health-verified vows lead the list on the very paint they land
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AJ · Health vows lead the list at once (W943)', () => {
-  test('adding Sleep before midnight from the library paints it above the hand-tapped vows without a reload', async ({ page }) => {
+  test('W970: adding Sleep before midnight from the library lands it after the hand-tapped vows like any vow', async ({ page }) => {
     await freshApp(page);
     // Two hand-tapped vows already on the list; no Health vow yet.
     await page.addInitScript(() => {
@@ -3521,13 +3526,12 @@ test.describe('AJ · Health vows lead the list at once (W943)', () => {
     // The paint that follows the commit — no reload, no second render — leads
     // with the Health vow. Before W943 it landed last until the next launch.
     const after = await page.evaluate(() => Array.from(document.querySelectorAll('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name')).map((e) => (e.textContent || '').trim()));
-    expect(after[0]).toBe('Sleep before midnight');
-    expect(after.slice(1)).toEqual(['Journal', 'Read']);   // the hand-tapped order is untouched
+    expect(after).toEqual(['Journal', 'Read', 'Sleep before midnight']);   // no forced sort to the top
 
     // And storage agrees once the coalesced save lands.
     await page.waitForTimeout(300);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name));
-    expect(stored[0]).toBe('Sleep before midnight');
+    expect(stored).toEqual(['Journal', 'Read', 'Sleep before midnight']);
   });
 });
 
@@ -3584,7 +3588,7 @@ test.describe('AK · Add Habits v3 (W945)', () => {
     expect(view.every((r) => r.art)).toBe(true);
     const cold = view.find((r) => r.name === 'Cold shower')!;
     expect(cold).toMatchObject({ have: true, disabled: true, xp: 'ACTIVE' });
-    expect(view.filter((r) => r.health).map((r) => r.name)).toEqual(['Sleep before midnight', 'Workout', 'Daily walk']);
+    expect(view.filter((r) => r.health).map((r) => r.name)).toEqual([]);   // W970: no Apple Health tags
     expect(view.filter((r) => !r.have).every((r) => /^\+\d+ XP$/.test(r.xp || ''))).toBe(true);
 
     // An active row can't be picked, even by a scripted click.
@@ -3696,7 +3700,7 @@ test.describe('AK · Add Habits v3 (W945)', () => {
     })));
     expect(hits.length).toBeGreaterThan(1);
     expect(hits.every((h) => h.name.toLowerCase().includes('sle') && h.mark.toLowerCase() === 'sle')).toBe(true);
-    expect(hits.find((h) => h.name === 'Sleep before midnight')!.health).toBe(true);
+    expect(hits.find((h) => h.name === 'Sleep before midnight')!.health).toBe(false);   // W970
 
     await rowByName(page, 'Sleep before midnight').click();
     await expect(page.locator('#lib-cta')).toHaveText('Add 1 habit to my list');
@@ -4991,7 +4995,7 @@ test.describe('AX · The gate falls (W964)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AY · Division up (W965)', () => {
   // D spans 100-599, so its three divisions are III 100-266, II 267-433,
-  // I 434-599. Seeding 265 puts a medium vow's +3 (or +6 at the weekend)
+  // I 434-599. Seeding 266 puts a custom vow's +1 (or +2 at the weekend)
   // across the II boundary either way.
   async function hunterAt(page: Page, points: number, seen?: string[]) {
     await freshApp(page);
@@ -5031,7 +5035,7 @@ test.describe('AY · Division up (W965)', () => {
   });
 
   test('crossing into II lights one mark — and the screen WAITS to be tapped', async ({ page }) => {
-    await hunterAt(page, 265);
+    await hunterAt(page, 266);
     await page.locator('#habit-list .habit-item').first().click();
     await expect.poll(() => shown(page), { timeout: 8_000 }).toBe(true);
     // The mark lights at t=1200 — until then the screen correctly still reads
@@ -5054,7 +5058,7 @@ test.describe('AY · Division up (W965)', () => {
   test('the same boundary never fires twice', async ({ page }) => {
     // A W479 compound clawback can drop points back under a boundary that is
     // then re-crossed. The toast could repeat harmlessly; a held screen cannot.
-    await hunterAt(page, 265, ['D:II']);
+    await hunterAt(page, 266, ['D:II']);
     await page.locator('#habit-list .habit-item').first().click();
     await page.waitForTimeout(2_500);
     expect(await shown(page)).toBe(false);
@@ -5062,7 +5066,7 @@ test.describe('AY · Division up (W965)', () => {
 
   test('a whole letter shows the rank screen, never the division screen', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });   // skips the ACK prelude
-    await hunterAt(page, 597);                              // +3 or +6 clears 600 = C
+    await hunterAt(page, 599);                              // W970: custom +1 clears 600 = C
     await page.locator('#habit-list .habit-item').first().click();
     await expect.poll(
       () => page.evaluate(() => !document.getElementById('rankup-screen')!.classList.contains('hidden')),
@@ -5073,7 +5077,7 @@ test.describe('AY · Division up (W965)', () => {
 
   test('with Reduce Motion the screen still lands, and nothing covers it', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await hunterAt(page, 265);
+    await hunterAt(page, 266);
     await page.locator('#habit-list .habit-item').first().click();
     await expect.poll(() => shown(page), { timeout: 8_000 }).toBe(true);
     // Settle: the fact line is the last thing to arrive (t=1650 + 280ms).
@@ -5261,5 +5265,136 @@ test.describe('BA · The crown is part of the name (W969)', () => {
     });
     expect(stored).toContain('Richie');
     expect(stored).not.toContain('u-secret-1');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// BB. W970 — vows are yours to tick; recognition is verified by Apple Health
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BB · Vows are yours, recognition is verified (W970)', () => {
+  const ymd = (off: number) => {
+    const d = new Date(); d.setDate(d.getDate() - off);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  async function seed(page: Page, habitsJson: any[], extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([hs, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w970')) return;
+        sessionStorage.setItem('__w970', '1');
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen',
+         'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1', 'hb_healthkit_prompted'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [habitsJson, extra || {}] as [any[], Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  // Apple Health granted, with whatever numbers the test wants.
+  async function health(page: Page, o: { steps?: number; workoutMin?: number; sleepH?: number }) {
+    await page.evaluate((o) => {
+      const H = (window as any).Health;
+      H.isAvailable = () => true;
+      H.permissionStatus = () => 'granted';
+      H.getStepsToday = async () => o.steps || 0;
+      const w = o.workoutMin ? { count: 1, totalMinutes: o.workoutMin, workouts: [] } : null;
+      H.getAnyWorkoutsToday = async () => w;
+      H.getStrengthWorkoutsToday = async () => w;
+      H.getSleepLastNight = async () => (o.sleepH ? { totalAsleepHours: o.sleepH, bedtimeBeforeMidnight: true, sessionEndsToday: true } : null);
+    }, o);
+  }
+  const WALK = { id: 'w970-walk', name: 'Daily walk', emoji: '\u2022', difficulty: 'easy', type: 'build', stepGoal: 8000, primaryStat: 'VIT' };
+  const WORKOUT = { id: 'w970-wo', name: 'Workout', emoji: '\u2022', difficulty: 'hard', type: 'build', primaryStat: 'STR' };
+  const doneToday = (page: Page, id: string) => page.evaluate((id) => {
+    const c = JSON.parse(localStorage.getItem('hb_completions') || '{}');
+    return Object.keys(c).some((d) => Array.isArray(c[d]) && c[d].includes(id));
+  }, id);
+
+  test('Daily walk is a tap vow: it seals on a tap, with no Apple Health chrome', async ({ page }) => {
+    await seed(page, [WALK]);
+    await page.locator('#tab-habits').click();
+    const row = page.locator('#habit-list .habit-item').first();
+    await expect(row).toBeVisible({ timeout: 10_000 });
+    const txt = await row.innerText();
+    expect(txt).not.toContain('Apple Health');
+    expect(txt).not.toMatch(/\/\s*8,000 steps/);
+    await row.click();
+    await expect.poll(() => doneToday(page, 'w970-walk'), { timeout: 6_000 }).toBe(true);
+    expect(await page.evaluate(() => {
+      const m = document.getElementById('note-modal'); return !!m && !m.classList.contains('hidden');
+    })).toBe(false);
+  });
+
+  test('Apple Health never seals a vow \u2014 12,000 real steps leave Daily walk for the hunter', async ({ page }) => {
+    await seed(page, [WALK]);
+    await health(page, { steps: 12000 });
+    await page.evaluate(async () => { await (window as any).autoVerifyWalk(); });
+    await page.waitForTimeout(800);
+    expect(await doneToday(page, 'w970-walk')).toBe(false);
+  });
+
+  test('a real Apple Health workout posts to friends; a ticked Workout vow never does', async ({ page }) => {
+    // Tick the vow with NO Health workout: nothing may queue.
+    await seed(page, [WORKOUT]);
+    await health(page, {});
+    await page.locator('#tab-habits').click();
+    await page.locator('#habit-list .habit-item').first().click();
+    await expect.poll(() => doneToday(page, 'w970-wo'), { timeout: 6_000 }).toBe(true);
+    await page.evaluate(async () => { await (window as any).autoVerifyStrengthTraining(); });
+    expect((await page.evaluate(() => (window as any).__paeQueuePeek())).join(' ')).not.toContain('verified_workout');
+    // Now a genuine 45-minute Apple Health workout: it posts, once.
+    await health(page, { workoutMin: 45 });
+    await page.evaluate(async () => { await (window as any).autoVerifyStrengthTraining(); await (window as any).autoVerifyStrengthTraining(); });
+    const q = await page.evaluate(() => (window as any).__paeQueuePeek());
+    expect(q.filter((x: string) => x.indexOf('verified_workout') === 0).length).toBe(1);
+  });
+
+  test('the workout streak board counts Apple Health days, never taps', async ({ page }) => {
+    // Three consecutive verified days in workout_daily, and NO Workout vow at all.
+    await seed(page, [], { hb_leaderboard: JSON.stringify({ workout_daily: { [ymd(1)]: 40, [ymd(2)]: 35, [ymd(3)]: 31 } }) });
+    const a = await page.evaluate(() => (window as any).__verifiedStreaks().workout);
+    expect(a.current).toBe(3);
+    expect(a.workoutHabitId).toBeNull();
+  });
+
+  test('Workout vow days ticked after the change never feed the board', async ({ page }) => {
+    const comp = { [ymd(1)]: ['w970-wo'], [ymd(2)]: ['w970-wo'], [ymd(3)]: ['w970-wo'] };
+    await seed(page, [WORKOUT], { hb_completions: JSON.stringify(comp), hb_health_seal_cutover_v1: '2000-01-01' });
+    expect((await page.evaluate(() => (window as any).__verifiedStreaks().workout)).current).toBe(0);
+  });
+
+  test('Workout days from before the change stay — they were Health-sealed', async ({ page }) => {
+    const comp = { [ymd(1)]: ['w970-wo'], [ymd(2)]: ['w970-wo'], [ymd(3)]: ['w970-wo'] };
+    await seed(page, [WORKOUT], { hb_completions: JSON.stringify(comp), hb_health_seal_cutover_v1: '2999-01-01' });
+    expect((await page.evaluate(() => (window as any).__verifiedStreaks().workout)).current).toBe(3);
+  });
+
+  test('custom vows: no 5-vow limit, no difficulty picker, always +1 XP', async ({ page }) => {
+    const customs = Array.from({ length: 6 }, (_, i) => ({ id: 'c' + i, name: 'Mine ' + i, emoji: '\u2022',
+      difficulty: i === 0 ? 'hard' : 'medium', type: 'build', custom: true, primaryStat: 'WILL' }));
+    await seed(page, customs, { hb_points: '400' });
+    const r = await page.evaluate(() => {
+      const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]');
+      return { diffs: hs.map((h: any) => h.difficulty), xp: localStorage.getItem('hb_points'),
+               picker: !!document.getElementById('custom-diff-row') };
+    });
+    expect(r.diffs.every((d: string) => d === 'easy')).toBe(true);   // migrated
+    expect(r.xp).toBe('400');                                        // nothing taken back
+    expect(r.picker).toBe(false);
+    await page.evaluate(() => { try { (window as any).renderLibrary && (window as any).renderLibrary(); } catch (_) {} });
+    const createTxt = await page.evaluate(() => { const el = document.getElementById('lib-create-row'); return el ? el.textContent : ''; });
+    if (createTxt) { expect(createTxt).not.toMatch(/LEFT|FULL/); }
+  });
+
+  test('a Perfect Day celebrates but never posts to the friends feed', async ({ page }) => {
+    await seed(page, [WALK]);
+    await page.evaluate(() => { try { (window as any).__pday(7, 30); } catch (_) {} });
+    await page.waitForTimeout(600);
+    const q = await page.evaluate(() => (window as any).__paeQueuePeek());
+    expect(q.join(' ')).not.toContain('perfect_day');
   });
 });

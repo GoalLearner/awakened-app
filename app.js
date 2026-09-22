@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w969b'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w970'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -686,6 +686,7 @@
   // truth" patterns. The Edit Habit modal hosts the configuration UI.
   // Always read via getHabitStepGoal(habit) — never reference the
   // default directly outside the helper.
+  const HEALTH_SEALS_HABITS = false;   // W970 — see isAutoVerifyDisabled
   const HEALTHKIT_WALK_DEFAULT_THRESHOLD = 8000;
   // Data-layer floor — kept loose so EXISTING users who already saved
   // sub-8,000 step goals don't have their stored value silently re-
@@ -24607,76 +24608,75 @@
   // device that hasn't run the rename migration yet still counts
   // those days. Returns { current, best, completionDateCount,
   // workoutHabitId, startedFromYesterday } or null on bad inputs.
-  function _lbComputeWorkoutStreakFromCompletions() {
+  // ── W970 — verified days, not ticked days ────────────────────────────
+  // The sleep and workout streaks feed a leaderboard and the public verified_streak
+  // posts, so they must be Apple-Health-verified. Until W970 every Sleep/Workout
+  // habit day WAS Health-sealed (the habit couldn't be tapped), so those ledger days
+  // stay as honest history — but only BEFORE the cutover. From the cutover on, a day
+  // counts only if Apple Health recorded it (the sleep_hours_daily / workout_daily
+  // maps, both written straight from Health for every hunter, vow or no vow).
+  const HEALTH_SEAL_CUTOVER_KEY = 'hb_health_seal_cutover_v1';
+  function _healthSealCutover() {
     try {
-      if (typeof habits === 'undefined' || !Array.isArray(habits)) return null;
-      if (typeof completions === 'undefined' || !completions) return null;
-      if (typeof today !== 'string' || !today) return null;
-      // Defensive: recognize both 'Workout' (canonical post-1z.105)
-      // and 'Strength training' (legacy pre-1z.105) on non-custom
-      // habits. 1z.107 ships the same dual-name guard in
-      // findStrengthHabit / isStrengthWorkoutHabit.
-      const workoutHabit = habits.find(h =>
-        h && !h.custom && (h.name === 'Workout' || h.name === 'Strength training')
-      );
-      if (!workoutHabit) return null;
-      const workoutId = workoutHabit.id;
-
-      // Current streak: walk backwards from today. If today's Workout
-      // hasn't been recorded yet (user pulls leaderboard at noon
-      // before a workout), start from yesterday so the streak isn't
-      // artificially zeroed by a not-yet-evaluated day.
-      const start = new Date(today + 'T00:00:00');
-      const todayList = completions[today];
-      const todayDone = Array.isArray(todayList) && todayList.includes(workoutId);
-      const startOffset = todayDone ? 0 : 1;
-
-      let current = 0;
-      for (let j = 0; j < 365; j++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() - startOffset - j);
-        const ds = d.getFullYear() + '-' +
-                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                   String(d.getDate()).padStart(2, '0');
-        const dayList = completions[ds];
-        const done = Array.isArray(dayList) && dayList.includes(workoutId);
-        if (done) current++;
-        else break;
+      let d = localStorage.getItem(HEALTH_SEAL_CUTOVER_KEY);
+      if (!d) {
+        d = (typeof today === 'string' && today) ? today : new Date().toISOString().slice(0, 10);
+        localStorage.setItem(HEALTH_SEAL_CUTOVER_KEY, d);
       }
-
-      // Best streak: longest consecutive run across all completion
-      // dates for this id.
-      const allDates = Object.keys(completions || {})
-        .filter(d => Array.isArray(completions[d]) && completions[d].includes(workoutId))
-        .sort();
-      let best = current;
-      if (allDates.length > 0) {
-        let run = 1;
-        let longest = 1;
-        for (let i = 1; i < allDates.length; i++) {
-          const prev = new Date(allDates[i - 1] + 'T00:00:00');
-          const cur  = new Date(allDates[i]     + 'T00:00:00');
-          const diffDays = Math.round((cur - prev) / 86400000);
-          if (diffDays === 1) {
-            run++;
-            if (run > longest) longest = run;
-          } else {
-            run = 1;
-          }
-        }
-        if (longest > best) best = longest;
+      return d;
+    } catch (_) { return '0000-00-00'; }   // no storage: trust Health only
+  }
+  function _verifiedDaySet(habitNames, mapName, minValue) {
+    const set = new Set();
+    const cut = _healthSealCutover();
+    try {
+      const ids = (Array.isArray(habits) ? habits : [])
+        .filter(h => h && !h.custom && habitNames.indexOf(h.name) >= 0).map(h => h.id);
+      if (ids.length && completions) {
+        Object.keys(completions).forEach(function (d) {
+          if (d < cut && Array.isArray(completions[d]) && completions[d].some(x => ids.indexOf(x) >= 0)) set.add(d);
+        });
       }
-
-      return {
-        current: current,
-        best:    best,
-        completionDateCount: allDates.length,
-        workoutHabitId: workoutId,
-        startedFromYesterday: !todayDone,
-      };
-    } catch (_) {
-      return null;
+    } catch (_) {}
+    try {
+      const st = loadLeaderboardState();
+      const m = (st && st[mapName]) || {};
+      Object.keys(m).forEach(function (d) { if (Number(m[d]) >= minValue) set.add(d); });
+    } catch (_) {}
+    return set;
+  }
+  function _streakFromDaySet(set) {
+    const ymd = function (d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    };
+    const base = (typeof today === 'string' && today) ? today : ymd(new Date());
+    const start = new Date(base + 'T00:00:00');
+    const todayDone = set.has(base);
+    const offset = todayDone ? 0 : 1;   // today not in yet? count back from yesterday
+    let current = 0;
+    for (let j = 0; j < 400; j++) {
+      const d = new Date(start); d.setDate(start.getDate() - offset - j);
+      if (set.has(ymd(d))) current++; else break;
     }
+    const all = Array.from(set).sort();
+    let best = current, run = 0, prev = null;
+    all.forEach(function (ds) {
+      const cur = new Date(ds + 'T00:00:00');
+      run = (prev && Math.round((cur - prev) / 86400000) === 1) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = cur;
+    });
+    return { current: current, best: best, count: all.length, startedFromYesterday: !todayDone };
+  }
+
+  function _lbComputeWorkoutStreakFromCompletions() {
+    // W970 — Apple-Health workout days (≥ the 30-min daily target), plus pre-cutover
+    // Workout/Strength-training habit days, which were Health-sealed by construction.
+    try {
+      const r = _streakFromDaySet(_verifiedDaySet(['Workout', 'Strength training'], 'workout_daily', HEALTHKIT_WORKOUT_DAILY_TARGET_MIN));
+      const h = (Array.isArray(habits) ? habits : []).find(x => x && !x.custom && (x.name === 'Workout' || x.name === 'Strength training'));
+      return { current: r.current, best: r.best, completionDateCount: r.count, workoutHabitId: h ? h.id : null, startedFromYesterday: r.startedFromYesterday };
+    } catch (_) { return null; }
   }
 
   // v3 Phase 1z.115 — derive sleep streak from the habit completion
@@ -24696,70 +24696,15 @@
   // got there via autoVerifySleep → toggleHabit, which means each
   // entry is HK-verified by construction. The "Verified by Apple
   // Health" leaderboard copy is preserved.
+  try { window.__verifiedStreaks = function () { return { sleep: _lbComputeSleepStreakFromCompletions(), workout: _lbComputeWorkoutStreakFromCompletions() }; }; } catch (_) {}   // W970 — QA, read-only
   function _lbComputeSleepStreakFromCompletions() {
+    // W970 — Apple-Health nights of 7h+ (the same bar as the verified 7h post), plus
+    // pre-cutover Sleep habit days, which were Health-sealed by construction.
     try {
-      if (typeof habits === 'undefined' || !Array.isArray(habits)) return null;
-      if (typeof completions === 'undefined' || !completions) return null;
-      if (typeof today !== 'string' || !today) return null;
-      const sleepHabit = habits.find(h => h && !h.custom && h.name === 'Sleep');
-      if (!sleepHabit) return null;
-      const sleepId = sleepHabit.id;
-
-      // Current streak: walk backwards from today. If today's Sleep
-      // hasn't been recorded yet (user pulls leaderboard at noon
-      // before tonight's auto-verify), start from yesterday so the
-      // streak isn't artificially zeroed by a not-yet-evaluated day.
-      const start = new Date(today + 'T00:00:00');
-      const todayList = completions[today];
-      const todayDone = Array.isArray(todayList) && todayList.includes(sleepId);
-      const startOffset = todayDone ? 0 : 1;
-
-      let current = 0;
-      for (let j = 0; j < 365; j++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() - startOffset - j);
-        const ds = d.getFullYear() + '-' +
-                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                   String(d.getDate()).padStart(2, '0');
-        const dayList = completions[ds];
-        const done = Array.isArray(dayList) && dayList.includes(sleepId);
-        if (done) current++;
-        else break;
-      }
-
-      // Best streak: iterate over all dates where Sleep was completed,
-      // sort, find the longest consecutive run.
-      const allDates = Object.keys(completions || {})
-        .filter(d => Array.isArray(completions[d]) && completions[d].includes(sleepId))
-        .sort();
-      let best = current;
-      if (allDates.length > 0) {
-        let run = 1;
-        let longest = 1;
-        for (let i = 1; i < allDates.length; i++) {
-          const prev = new Date(allDates[i - 1] + 'T00:00:00');
-          const cur  = new Date(allDates[i]     + 'T00:00:00');
-          const diffDays = Math.round((cur - prev) / 86400000);
-          if (diffDays === 1) {
-            run++;
-            if (run > longest) longest = run;
-          } else {
-            run = 1;
-          }
-        }
-        if (longest > best) best = longest;
-      }
-
-      return {
-        current: current,
-        best:    best,
-        completionDateCount: allDates.length,
-        sleepHabitId: sleepId,
-        startedFromYesterday: !todayDone,
-      };
-    } catch (_) {
-      return null;
-    }
+      const r = _streakFromDaySet(_verifiedDaySet(['Sleep'], 'sleep_hours_daily', 7));
+      const h = (Array.isArray(habits) ? habits : []).find(x => x && !x.custom && x.name === 'Sleep');
+      return { current: r.current, best: r.best, completionDateCount: r.count, sleepHabitId: h ? h.id : null, startedFromYesterday: r.startedFromYesterday };
+    } catch (_) { return null; }
   }
 
   // Read-only snapshot for UI + leaderboard submit. Computes the
@@ -25363,6 +25308,7 @@
   // Drags within the same partition (auto-verify reorder amongst
   // themselves, custom reorder amongst themselves) work normally.
   function sortHabitsAutoVerifyFirst(arr) {
+    if (!HEALTH_SEALS_HABITS) return;   // W970 — no system layer to pin to the top
     if (!Array.isArray(arr) || arr.length < 2) return;
     const auto = [];
     const rest = [];
@@ -25429,6 +25375,7 @@
   // future programmatic toggle path that might be added.
   function isReadOnlyAutoVerifyHabit(habit) {
     if (!habit) return false;
+    if (!HEALTH_SEALS_HABITS) return false;   // W970 — every vow can be tapped
     if (habit.custom) return false;
     // v3 Phase 1z.107 — workout match uses the legacy-aware helper so
     // a pre-1z.105 'Strength training' row that never got renamed is
@@ -25541,7 +25488,19 @@
     if (habit.name !== 'Daily walk') return false;
     return true;
   }
+  // ── W970 — VOWS ARE YOURS, RECOGNITION IS VERIFIED ────────────────────
+  // Owner, 2026-09-21: "The ticking of the habits is for the user, but if they want
+  // recognition — must be verified through Apple Health." Daily walk, Sleep, Sleep
+  // before midnight and Workout stop being sealed by Health; they are tap vows like
+  // every other. Apple Health keeps doing everything that OTHER hunters see: the
+  // dungeons and co-op bosses, the Worldgate, every leaderboard, and the verified
+  // posts on the friends feed — all of which already read Health directly.
+  // This one flag turns off only the HABIT half of auto-verify. Every habit-seal
+  // path (today's seal, the un-seal-on-data-drop, the three yesterday backfills)
+  // was already gated on this function, so flipping it here reaches all of them.
+  // Flip HEALTH_SEALS_HABITS back to true to restore the old behaviour.
   function isAutoVerifyDisabled() {
+    if (!HEALTH_SEALS_HABITS) return true;
     return localStorage.getItem('hb_healthkit_disabled') === '1';
   }
   function setAutoVerifyDisabled(disabled) {
@@ -25574,6 +25533,15 @@
     // it: the rank bar is every single seal, a division is every few days to
     // every few weeks, the Worldgate is weekly. The owner-only preview row
     // (W966) is deliberately absent — nobody else can see it.
+    // W970 — 3.0.7. The vow change leads: it is the one every hunter meets on day one.
+    '3.0.7': {
+      subtitle: 'Your vows are yours. Your glory is verified.',
+      items: [
+        { emoji: '', title: 'Tick every vow yourself', description: "Walk, Sleep and Workout are vows like the rest now — tap them when you've kept them. No step bar, nothing waiting on Apple Health." },
+        { emoji: '', title: 'Apple Health powers the hunt', description: "Your real steps, sleep and workouts still bring bosses down, strike the Worldgate and set every leaderboard. What other hunters see is always verified." },
+        { emoji: '', title: 'Make as many vows as you like', description: "The five-vow limit is gone. Every vow you create is worth +1 XP — up to 25 vows in all." },
+      ],
+    },
     '3.0.6': {
       subtitle: 'The ladder you climb, where you can see it.',
       items: [
@@ -26598,11 +26566,11 @@
   const CLASS_SHIFT_DOMINANCE = 1.20;  // 20%+ over current class to shift
   const CLASS_BALANCE_RATIO   = 0.85;  // within 15% across all 6 stats → Sage
 
-  // Custom habits are user-authored. They're locked at Medium (3 XP) so they
-  // can't game the rank economy. The cap keeps the curated 49 as the
-  // canonical path — customs are bonus tracking, not a parallel system.
-  const MAX_CUSTOM_HABITS    = 5;
-  const CUSTOM_HABIT_DIFFICULTY = 'medium';
+  // W970 — custom vows: as many as the hunter likes up to the 25-active cap every
+  // habit shares (MAX_ACTIVE_HABITS), each worth Easy (+1 XP), locked. Owner: "if
+  // they make up a habit then it'll be for only 1 xp max." The old 5-custom cap and
+  // the Easy/Medium/Hard picker are gone.
+  const CUSTOM_HABIT_DIFFICULTY = 'easy';
 
   // v3 Phase 1z.280 — Active habit cap. A focused hunter keeps only the
   // vows that matter; more than 25 active habits inflates the XP / stat /
@@ -29038,6 +29006,11 @@
     try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.WidgetBridge) || null; } catch (_) { return null; }
   }
   function _widgetStepGoalToday() {
+    // W970 — the step ring is Apple Health data, not a vow: never 0 just because the
+    // hunter has no Daily walk vow. Floor at the standing 8,000 default.
+    return Math.max(HEALTHKIT_WALK_DEFAULT_THRESHOLD, _widgetStepGoalFromVows());
+  }
+  function _widgetStepGoalFromVows() {
     try {
       var g = 0;
       (Array.isArray(habits) ? habits : []).forEach(function (h) {
@@ -29754,6 +29727,9 @@
   // the band list caps the public feed at the 100-day Century milestone.
   const _PAE_PERFECT_DAY_BANDS = [7, 14, 21, 30, 60, 100];
   function _emitPerfectDayEvent(day) {
+    // W970 — a Perfect Day is every vow TICKED, and ticks are for the hunter alone.
+    // The celebration and the streak stay; nothing posts to the friends feed.
+    return;
     if (typeof _queuePublicAchievementEvent !== 'function') return;
     if (!Number.isInteger(day) || _PAE_PERFECT_DAY_BANDS.indexOf(day) < 0) return;
     const key = 'perfect_day:' + day;
@@ -29863,6 +29839,7 @@
     }
   }
   try { window.__queuePublicAchievementEvent = _queuePublicAchievementEvent; } catch (_) {}
+  try { window.__paeQueuePeek = function () { return _paeQueue.map(function (q) { return q.eventType + ':' + q.clientEventId; }); }; } catch (_) {}   // W970 — QA, read-only
 
   // v3 Phase 1z.223C — privacy-safe per-card-id nonce for the
   // public ultra-rare drop event. The nonce is generated once per
@@ -31962,8 +31939,8 @@
 
       // Is this an Apple-Health auto-verifiable habit? Drives the small
       // AUTO badge in the label column and the auto-source dot on done cells.
-      const isAutoHabit = typeof isHealthAutoVerifiableHabit === 'function' &&
-                          isHealthAutoVerifiableHabit(habit);
+      const isAutoHabit = HEALTH_SEALS_HABITS && typeof isHealthAutoVerifiableHabit === 'function' &&
+                          isHealthAutoVerifiableHabit(habit);   // W970
 
       const row = document.createElement('div');
       row.className = 'hg-row hg-row--ledger';
@@ -33145,7 +33122,9 @@
       const isWalk = (habit.name === 'Daily walk' && !habit.custom);
       const stepGoalRaw = parseInt(habit.stepGoal, 10);
       const hasStepGoal = Number.isFinite(stepGoalRaw);
-      if (isWalk || hasStepGoal) {
+      // W970 — no step bar on a vow: the walk is ticked by the hunter, and a live
+      // "2,834 / 8,000" was exactly the pressure the owner wanted gone.
+      if (HEALTH_SEALS_HABITS && (isWalk || hasStepGoal)) {
         const goal = (typeof getHabitStepGoal === 'function')
           ? getHabitStepGoal(habit)
           : (hasStepGoal ? stepGoalRaw : 8000);
@@ -34929,7 +34908,7 @@
     // pill is replaced by the dashed-blue-ring status indicator + the
     // tiny blue lock dot on the gold disc when auto-complete; but we
     // keep the boolean for any downstream consumer.
-    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
+    const isAutoVerified = HEALTH_SEALS_HABITS && (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);   // W970
 
     // Read-only HealthKit-managed habits — Sleep, Daily walk, Sleep
     // before midnight. Cannot be manually toggled; click routes to
@@ -34939,7 +34918,7 @@
     // habit OR an already-auto-verified one. The dashed-blue-ring
     // signals "system monitors this; you can't manually toggle".
     const isAutoCard = isReadOnly || isAutoVerified ||
-      (typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));
+      (HEALTH_SEALS_HABITS && typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));   // W970
 
     const li = document.createElement('li');
     li.className = 'habit-item codex' + (done ? ' completed' : '') +
@@ -35098,10 +35077,10 @@
     const xpVal  = diffPts(diff);
     const wknd   = isWeekend();
 
-    const isAutoVerified = (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);
+    const isAutoVerified = HEALTH_SEALS_HABITS && (typeof AUTO_VERIFY !== 'undefined') && AUTO_VERIFY.isAutoVerifiedToday(habit.id);   // W970
     const isReadOnly = isReadOnlyAutoVerifyHabit(habit);
     const isHealthHabit = isReadOnly || isAutoVerified ||
-      (typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));
+      (HEALTH_SEALS_HABITS && typeof isHealthAutoVerifiableHabit === 'function' && isHealthAutoVerifiableHabit(habit));   // W970
 
     // Stat color (same source as the grid card).
     const statId  = (typeof getHabitPrimaryStat === 'function') ? getHabitPrimaryStat(habit) : null;
@@ -42012,7 +41991,7 @@
   }
 
   // ── W926 — MY ORDER: move a vow one place within its group ─────────────────
-  function _mvHealthGroup(h) { try { return typeof isHealthAutoVerifiableHabit === 'function' && !!isHealthAutoVerifiableHabit(h); } catch (_) { return false; } }
+  function _mvHealthGroup(h) { if (!HEALTH_SEALS_HABITS) return false; try { return typeof isHealthAutoVerifiableHabit === 'function' && !!isHealthAutoVerifiableHabit(h); } catch (_) { return false; } }
   function _mvOrderMeta() {
     const active = (Array.isArray(habits) ? habits : []).filter(_isActiveHabit);
     const health = active.filter(_mvHealthGroup);
@@ -42586,7 +42565,6 @@
   // click-handler pattern as the schedule sheet's day pills.
   let _customDays = [...ALL_DAYS];
   function openCustomHabitModal() {
-    if (habits.filter(h => h.custom).length >= MAX_CUSTOM_HABITS) return;
     _customEmoji  = '⚡';
     _customStatId = null;
     _customIconKey = null;
@@ -42735,8 +42713,8 @@
   // 3 layers: legendary is omitted from the markup, ignored in this handler, AND clamped on persist,
   // so a user-authored habit can never exceed hard (5 XP / 1.3x compound). Mirrors the days-row
   // wiring (idempotent via data-wired so reopening the modal can't stack listeners).
-  const CUSTOM_DIFF_ALLOWED = ['easy', 'medium', 'hard'];
-  function _clampCustomDiff(d) { return CUSTOM_DIFF_ALLOWED.indexOf(d) >= 0 ? d : 'medium'; }
+  const CUSTOM_DIFF_ALLOWED = ['easy'];
+  function _clampCustomDiff(d) { return 'easy'; }   // W970 — every custom vow is Easy
   // W508 — surface the W485 difficulty tilt (Economy transparency). The custom
   // compound is ~90% of rank XP and scales by the routine's AVERAGE habit
   // difficulty, but that lever was invisible at create-time. Paints a muted
@@ -42876,11 +42854,7 @@
       try { showSystemFullModal({ context: 'custom', attemptedCount: 1 }); } catch (_) {}
       return;
     }
-    // v3 Phase 1z.283 W177 — Custom-habit cap counts ACTIVE customs
-    // only. Archived customs no longer consume slots indefinitely.
-    if (habits.filter(h => _isActiveHabit(h) && h.custom).length >= MAX_CUSTOM_HABITS) {
-      return showErr('You\'ve reached the ' + MAX_CUSTOM_HABITS + '-custom-habit cap.');
-    }
+    // W970 — no custom-only cap: the 25-active check above is the limit.
 
     // v3 Phase 1z.273D — defensive zero-day guard (UI prevents this
     // via min-1 click handler, but belt-and-braces against any future
@@ -43734,7 +43708,7 @@
     const xp    = (DIFFICULTY[diff] && DIFFICULTY[diff].pts) || 0;
     const stat  = _libHabitStat(h);
     let health = false;
-    try { health = !!isHealthAutoVerifiableHabit(h); } catch (_) {}
+    try { health = HEALTH_SEALS_HABITS && !!isHealthAutoVerifiableHabit(h); } catch (_) {}   // W970
     return '<button type="button" class="lib-row' + (have ? ' is-have' : '') + '" data-idx="' + idx + '"' +
         (have ? ' disabled aria-disabled="true"' : ' aria-pressed="false"') + '>' +
       '<span class="lib-row-ic">' + habitIconHtml(h, { size: 42, eager: false }) + '</span>' +
@@ -43801,16 +43775,16 @@
     }
     const createRow = document.getElementById('lib-create-row');
     if (createRow) {
-      const customCount = habits.filter(h => h.custom).length;
-      const customsLeft = Math.max(0, MAX_CUSTOM_HABITS - customCount);
-      createRow.classList.toggle('is-full', customsLeft === 0);
-      createRow.setAttribute('aria-disabled', customsLeft === 0 ? 'true' : 'false');
+      // W970 — no custom-only cap, so no "N LEFT / FULL"; the 25-active limit
+      // speaks for itself (System Full) at save.
+      createRow.classList.remove('is-full');
+      createRow.setAttribute('aria-disabled', 'false');
       createRow.innerHTML =
         '<span class="lib-create-ic" aria-hidden="true">' + _LIB_PLUS_SVG + '</span>' +
         '<span class="lib-create-name">Create your own</span>' +
         '<span class="lib-create-sub">Name it, pick a stat</span>' +
-        '<span class="lib-create-left">' + (customsLeft === 0 ? 'FULL' : customsLeft + ' LEFT') + '</span>';
-      createRow.onclick = customsLeft > 0 ? openCustomHabitModal : null;
+        '<span class="lib-create-left">+1 XP</span>';
+      createRow.onclick = openCustomHabitModal;
     }
 
     // ── The list ─────────────────────────────────────────────
@@ -59199,7 +59173,7 @@
       // this surface). difficulty is already read-only-by-CSS in the
       // diff-row, but skip the assignment too for parity. (v1.1.6)
       if (!isCanonicalHabit(habit)) {
-        habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = editFormDiff;
+        habit.name = name; habit.emoji = editFormEmoji; habit.difficulty = habit.custom ? 'easy' : editFormDiff;   // W970 — customs are Easy, locked
       }
       // Persist HealthKit goal if the modal was in step-goal OR
       // sleep-goal mode. Each is staged inline as user taps chips
@@ -61728,7 +61702,11 @@
     }
 
     const status   = Health.permissionStatus(); // 'granted' | 'denied' | 'unknown' | 'unavailable'
-    const disabled = isAutoVerifyDisabled();
+    // W970 — isAutoVerifyDisabled() is always true now (habits aren't Health-sealed),
+    // which would read as "Paused". Settings shows the hunter's own flag instead,
+    // and the toggle row itself is hidden: there is nothing left for it to pause.
+    const disabled = HEALTH_SEALS_HABITS ? isAutoVerifyDisabled() : false;
+    try { const _avRow = document.getElementById('settings-health-autoverify-row'); if (_avRow) _avRow.classList.toggle('hidden', !HEALTH_SEALS_HABITS); } catch (_) {}
 
     if (status === 'granted') {
       stateB.classList.remove('hidden');
@@ -67011,7 +66989,8 @@
     // installs see the default 3,000; users who've already configured
     // a different value (via Edit Habit during onboarding or after) see
     // their own number.
-    const walk = (typeof findWalkHabit === 'function') ? findWalkHabit() : null;
+    // W970 — Health no longer seals vows, so always the neutral variant.
+    const walk = (HEALTH_SEALS_HABITS && typeof findWalkHabit === 'function') ? findWalkHabit() : null;
     const initialGoal = walk ? getHabitStepGoal(walk) : HEALTHKIT_WALK_DEFAULT_THRESHOLD;
 
     // v1.1.5 sleep extension: detect if the user also has either sleep
@@ -67019,8 +66998,8 @@
     // auto-verifies too. Single permission grant covers both data types
     // — no separate explainer or chip picker for sleep here (configured
     // via Edit Habit modal).
-    const hasSleepHabit   = !!(typeof findSleepHabit === 'function' && findSleepHabit());
-    const hasBedtimeHabit = !!(typeof findSleepBeforeMidnightHabit === 'function' && findSleepBeforeMidnightHabit());
+    const hasSleepHabit   = HEALTH_SEALS_HABITS && !!(typeof findSleepHabit === 'function' && findSleepHabit());
+    const hasBedtimeHabit = HEALTH_SEALS_HABITS && !!(typeof findSleepBeforeMidnightHabit === 'function' && findSleepBeforeMidnightHabit());
     const hasAnySleep     = hasSleepHabit || hasBedtimeHabit;
     let sleepLine = '';
     if (hasSleepHabit && hasBedtimeHabit) {
@@ -67049,9 +67028,9 @@
           // one-button sheet, saying what Apple Health does in the game.
           : '<h2 class="hk-preprompt-title">Connect Apple Health</h2>' +
             '<p class="hk-preprompt-body">' +
-              'Awakened reads your steps, sleep and workouts from Apple Health. They power the ' +
-              'weekly Steps board, the Worldgate and your boss hunts, and they complete your ' +
-              'habits for you &mdash; no tap needed.' +
+              'Awakened reads your steps, sleep and workouts from Apple Health. They power your ' +
+              'boss hunts, the Worldgate and every leaderboard &mdash; the things other hunters ' +
+              'see. Your vows stay yours to tick.' +
             '</p>') +
         // Inline chip picker — collapsed by default, opens when the
         // step-goal value above is tapped. Reuses .habit-edit-stepgoal-*
@@ -67806,6 +67785,22 @@
       lbRecordSleepNight(data.totalAsleepHours, bedtimeBeforeMidnight, getDeviceLocalDate());
     } catch (e) { console.warn('[Leaderboard] sleep record failed', e); }
 
+    // W970 — recognition is VERIFIED. 7h+ of Apple-Health sleep posts to the friends
+    // feed on its own; a ticked Sleep vow never does. Both calls are idempotent per
+    // night (guild key + public event key), so re-foregrounding can't double-post.
+    try {
+      if (data && (data.totalAsleepHours || 0) >= 7) {
+        const nightDate = (typeof getDeviceLocalYesterday === 'function')
+          ? getDeviceLocalYesterday()
+          : new Date().toISOString().slice(0, 10);
+        recordGuildActivity('sleep_quality_7h', {
+          hours: Number((data.totalAsleepHours || 0).toFixed(2)),
+          nightDate: nightDate,
+        }, 'sleep_7h_' + nightDate);
+        try { _emitVerifiedSleep7hEvent(nightDate); } catch (_) {}
+      }
+    } catch (_) {}
+
     // ── Habit auto-verify — gated on pause toggle + habit presence ──
     // Restructured (v3 Phase 1z.8) so today's bail conditions don't
     // kill the yesterday-backfill call at the bottom. Wrapped in a
@@ -67913,24 +67908,9 @@
           // already know totalAsleepHours >= goalHours here; the
           // user's goal is usually 7 but the milestone fires for
           // anything ≥7 even if their personal goal is higher.
-          try {
-            if (data.totalAsleepHours >= 7) {
-              const nightDate = (typeof getDeviceLocalYesterday === 'function')
-                ? getDeviceLocalYesterday()
-                : new Date().toISOString().slice(0, 10);
-              recordGuildActivity('sleep_quality_7h', {
-                hours: Number((data.totalAsleepHours || 0).toFixed(2)),
-                nightDate: nightDate,
-              }, 'sleep_7h_' + nightDate);
-              // v3 Phase 1z.273M — Public verified_sleep_7h event.
-              // Inherits all the gates above (sleep sealed AND
-              // totalAsleepHours >= 7 AND rest-day cleared AND no
-              // race-checked-during-eval). No hours / score / stages
-              // / bedtime / wake time in the payload — the private
-              // recordGuildActivity above keeps them local-only.
-              try { _emitVerifiedSleep7hEvent(nightDate); } catch (_) {}
-            }
-          } catch (_) {}
+          // W970 — the 7h friends-feed post moved to the Health-direct section
+          // above (right after the sleep board records the night): it fires from
+          // Apple Health, whether or not a Sleep vow exists or was ticked.
         } else {
           _addHealthVerifyBreadcrumb('sleep-skip', { reason: 'race-checked-during-eval' });
         }
@@ -68128,6 +68108,14 @@
       try {
         evaluateIronWardenForDay(workoutData, getDeviceLocalDate());
       } catch (e) { console.warn('[Bosses] iron warden eval failed', e); }
+      // W970 — recognition is VERIFIED: a 30-minute Apple Health workout day posts
+      // "verified workout" to the friends feed whether or not a Workout vow exists
+      // or was ticked. Idempotent per day (the event key carries the date).
+      try {
+        if ((workoutData.totalMinutes || 0) >= HEALTHKIT_WORKOUT_DAILY_TARGET_MIN) {
+          _emitVerifiedWorkoutEvent(getDeviceLocalDate());
+        }
+      } catch (_) {}
     } else {
       log('workout-data (iron warden): null');
     }
@@ -68209,12 +68197,7 @@
         //  - re-foreground / re-tick dedupes via the per-day marker
         // No HealthKit values in the payload — minutes, count, type
         // all stay private (kept only in the local breadcrumb above).
-        try {
-          const _vwDateKey = (typeof getDeviceLocalDate === 'function')
-            ? getDeviceLocalDate()
-            : new Date().toISOString().slice(0, 10);
-          _emitVerifiedWorkoutEvent(_vwDateKey);
-        } catch (_) {}
+        // W970 — the verified-workout post moved to the Health-direct section above.
         didTodaySeal = true;
       }
     }
@@ -69154,6 +69137,16 @@
     // regardless of whether anything was changed, so users without
     // the habit (or who already customized) don't get re-scanned
     // on every app open.
+    // W970 — every custom vow is Easy (+1 XP). Enforced on EVERY load, not once behind
+    // a flag: a reinstall that restores habits from the cloud after a one-time flag was
+    // set would otherwise bring back Medium/Hard customs. It's a cheap, idempotent pass.
+    // Rank XP, stat points and streaks are running totals and are never recomputed, so
+    // nothing already earned is taken back.
+    {
+      let _chg = false;
+      habits.forEach(h => { if (h && h.custom && h.difficulty !== 'easy') { h.difficulty = 'easy'; _chg = true; } });
+      if (_chg) save();
+    }
     if (!localStorage.getItem('hb_walk_target_migrated_v1')) {
       let didBump = false;
       habits.forEach(h => {

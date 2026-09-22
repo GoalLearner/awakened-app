@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=713">
+  <link rel="stylesheet" href="styles.css?v=714">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3008,17 +3008,11 @@
 
       <!-- W489 — difficulty picker (easy/medium/hard; legendary intentionally omitted, anti-gaming).
            Reuses the edit modal's .diff-row/.diff-btn/.edit-diff-help styling — no new CSS. -->
-      <div class="custom-stat-label">HOW DEMANDING IS IT?</div>
-      <div class="diff-row" id="custom-diff-row">
-        <button class="diff-btn" data-diff="easy"   type="button">Easy</button>
-        <button class="diff-btn" data-diff="medium" type="button">Medium</button>
-        <button class="diff-btn" data-diff="hard"   type="button">Hard</button>
-      </div>
-      <div class="edit-diff-help">XP per completion — Easy +1, Medium +3, Hard +5.</div>
+      <!-- W970 — no picker: every vow you make is Easy (+1 XP), locked. -->
+      <div class="edit-diff-help">Every vow you make is worth +1 XP.</div>
       <!-- W508 — surface the W485 difficulty tilt: the daily Compound (~90% of rank XP) scales by the
            routine's AVERAGE difficulty. Populated live from AwakenedEconomy.customCompoundDifficultyFactor
            so it can never disagree with the award path. Display-only. -->
-      <div class="edit-diff-help" id="custom-diff-mult"></div>
 
       <!-- v3 Phase 1z.273D — Days row. Reuses the same `.days-row` /
            `.day-btn[data-day]` markup as the existing schedule picker
@@ -3406,7 +3400,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1374"></script>
+  <script src="app.js?v=1375"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3855,7 +3849,7 @@
                 <span id="settings-health-status-value" class="settings-v2-pill settings-v2-pill--green"><span class="settings-v2-pilldot"></span>Connected</span>
               </span>
             </div>
-            <div class="settings-v2-frow">
+            <div class="settings-v2-frow" id="settings-health-autoverify-row">
               <div class="settings-v2-fcol">
                 <div class="settings-v2-fname">Auto-verify habits</div>
                 <div class="settings-v2-fsub">Confirm steps, sleep &amp; workouts from Health</div>
@@ -3884,7 +3878,7 @@
             </div>
             <!-- W824 (L5) — copy was stale-narrow (walk only); auto-verify
                  covers steps, sleep, bedtime, workouts, and flights. -->
-            <p class="settings-rem-note">Connect Apple Health to auto-verify your habits — steps, sleep, workouts, and flights — the moment your device records them. Your data stays on your device; only totals you choose to rank with are sent.</p>
+            <p class="settings-rem-note">Connect Apple Health to power your boss hunts, the Worldgate and every leaderboard with your real steps, sleep, workouts and flights. Your data stays on your device; only totals you choose to rank with are sent.</p>
             <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
             <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
           </div>
