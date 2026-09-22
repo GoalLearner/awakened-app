@@ -5552,3 +5552,161 @@ test.describe('BD · Updates on the board (W973)', () => {
     await expect(badge).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// BE. W974 — RATING MOMENTS (Claude Design handoff 28): five one-time cards
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BE · Rating moments (W974)', () => {
+  const ymd = (off: number) => {
+    const d = new Date(); d.setDate(d.getDate() - off);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  async function seed(page: Page, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([ex]) => {
+      try {
+        if (sessionStorage.getItem('__w974')) return;
+        sessionStorage.setItem('__w974', '1');
+        localStorage.setItem('hb_first_completion_bonus_v1', '1');
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen',
+         'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1', 'hb_healthkit_prompted'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');   // not a first-day hunter
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [extra || {}] as [Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const card = (page: Page) => page.evaluate(() => {
+    const o = document.getElementById('review-pp-overlay');
+    if (!o) return null;
+    const q = (s: string) => (o.querySelector(s)?.textContent || '').replace(/\s+/g, ' ').trim();
+    return { eyebrow: q('.rm-eyebrow'), title: q('.rm-title'), stat: q('.rm-stat'), cta: q('.rm-cta'), later: q('.rm-later'),
+             foot: q('.rm-foot'), buttons: o.querySelectorAll('button').length, text: (o.textContent || '').replace(/\s+/g, ' ') };
+  });
+  const WEEK = () => {
+    const c: Record<string, string[]> = {};
+    for (let i = 0; i < 7; i++) c[ymd(i)] = ['w974-a', 'w974-b'];
+    return { hb_habits: JSON.stringify([{ id: 'w974-a', name: 'Read', emoji: '•', difficulty: 'easy', type: 'build' },
+                                        { id: 'w974-b', name: 'Journal', emoji: '•', difficulty: 'easy', type: 'build' }]),
+             hb_completions: JSON.stringify(c) };
+  };
+
+  test('each of the five cards: its own words, exactly two buttons, and nothing offered for a rating', async ({ page }) => {
+    await seed(page);
+    const expectOf: Record<string, [string, RegExp]> = {
+      week: ['FIRST WEEK KEPT', /7 days kept\. ?Not one missed\./], perfect: ['THREE PERFECT DAYS', /3 perfect days\. ?Every vow sealed\./],
+      boss: ['FIRST BOSS DEFEATED', /The Steel Wolf ?has fallen\./], rank: ['RANK ASCENDED', /You climbed ?to C II\./],
+      coop: ['FIRST CO-OP WIN', /The Twin Maw ?is cleared\./],
+    };
+    for (const m of Object.keys(expectOf)) {
+      await page.evaluate((mm) => (window as any).__reviewPreview(mm), m);
+      const c = (await card(page))!;
+      expect(c.eyebrow.toUpperCase()).toBe(expectOf[m][0]);
+      expect(c.title).toMatch(expectOf[m][1]);
+      expect(c.buttons).toBe(2);
+      expect(c.cta).toBe('Write a review');
+      expect(c.later).toBe('Not now');
+      expect(c.foot).toBe('Opens the App Store');
+      expect(c.text).not.toMatch(/\bsouls?\b|\bXP\b|reward|gift|free|★|stars?\b/i);   // Apple 1.1.7
+    }
+  });
+
+  test('first week kept: seven sealed days bring the card once, with the real numbers', async ({ page }) => {
+    await seed(page, WEEK());
+    await page.evaluate(() => (window as any).__rm.checkWeek());
+    await expect.poll(() => card(page).then((c) => c && c.eyebrow.toUpperCase()), { timeout: 8_000 }).toBe('FIRST WEEK KEPT');
+    expect((await card(page))!.stat).toMatch(/^14 vows kept · 7-day streak$/i);
+    expect(await page.evaluate(() => (window as any).__rm.shown())).toEqual(['week']);
+    await page.locator('#review-pp-overlay .rm-later').click();
+    await expect.poll(() => card(page), { timeout: 3_000 }).toBeNull();
+    // Once, ever — even with the cooldowns cleared.
+    await page.evaluate(() => { localStorage.removeItem('hb_review_notnow_at'); localStorage.removeItem('hb_review_shown_at'); (window as any).__rm.checkWeek(); });
+    await page.waitForTimeout(2_000);
+    expect(await card(page)).toBeNull();
+  });
+
+  test('six days is not a week', async ({ page }) => {
+    const w = WEEK(); const c = JSON.parse(w.hb_completions); delete c[ymd(3)];
+    await seed(page, { ...w, hb_completions: JSON.stringify(c) });
+    await page.evaluate(() => (window as any).__rm.checkWeek());
+    await page.waitForTimeout(2_000);
+    expect(await card(page)).toBeNull();
+  });
+
+  test('Write a review opens the App Store composer and spends one ask', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => { (window as any).__opened = []; window.open = ((u: string) => { (window as any).__opened.push(u); return null; }) as any; });
+    await page.evaluate(() => (window as any).__rm.maybe('boss', { bossName: 'The Insomniac', bossRank: 'C' }));
+    await expect.poll(() => card(page).then((c) => c && c.title), { timeout: 5_000 }).toMatch(/The Insomniac/);
+    expect((await card(page))!.stat).toMatch(/^C-rank boss · first kill$/i);
+    await page.locator('#review-pp-overlay .rm-cta').click();
+    await expect.poll(() => page.evaluate(() => (window as any).__opened), { timeout: 4_000 }).toEqual(['https://apps.apple.com/app/id6764727990?action=write-review']);
+    await expect.poll(() => card(page), { timeout: 3_000 }).toBeNull();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_review_asks_v2') || '[]').length)).toBe(1);
+    // 30 days between asks: the next moment waits.
+    expect(await page.evaluate(() => (window as any).__rm.eligible('coop'))).toBe(false);
+  });
+
+  test('Not now leaves the ask budget alone and starts the 30-day cooldown', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => (window as any).__rm.maybe('coop', { dungeonName: 'The Twin Maw', partySize: 2 }));
+    await expect.poll(() => card(page).then((c) => c && c.eyebrow.toUpperCase()), { timeout: 5_000 }).toBe('FIRST CO-OP WIN');
+    await page.locator('#review-pp-overlay .rm-later').click();
+    await expect.poll(() => card(page), { timeout: 3_000 }).toBeNull();
+    const r = await page.evaluate(() => ({ asks: JSON.parse(localStorage.getItem('hb_review_asks_v2') || '[]').length,
+      notNow: Number(localStorage.getItem('hb_review_notnow_at') || 0), perfect: (window as any).__rm.eligible('perfect') }));
+    expect(r.asks).toBe(0);
+    expect(r.notNow).toBeGreaterThan(0);
+    expect(r.perfect).toBe(false);
+  });
+
+  test('never on a new hunter’s first day', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => {
+      const d = new Date(); const t = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      localStorage.setItem('hb_onboarding_first_xp_date', t);
+      (window as any).__rm.maybe('boss', { bossName: 'The Steel Wolf', bossRank: 'D' });
+    });
+    await page.waitForTimeout(1_500);
+    expect(await card(page)).toBeNull();
+    expect(await page.evaluate(() => (window as any).__rm.shown())).toEqual([]);   // not spent — it can come later
+  });
+
+  test('the old card and its summit / mythic moments are gone', async ({ page }) => {
+    await seed(page);
+    const r = await page.evaluate(() => ({ summit: (window as any).__rm.eligible('summit'), mythic: (window as any).__rm.eligible('mythic'),
+      oldCss: [].some.call(document.styleSheets, (ss: any) => { try { return [].some.call(ss.cssRules, (x: any) => /\.review-pp-card/.test(x.cssText || '')); } catch (_) { return false; } }) }));
+    expect(r).toEqual({ summit: false, mythic: false, oldCss: false });
+  });
+
+  test('the owner’s Settings row previews all five in order, opening and saving nothing', async ({ page }) => {
+    await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'owner' } }) });
+    await page.locator('#settings-btn').click();
+    await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-rating')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
+    await page.evaluate(() => { (window as any).__opened = []; window.open = ((u: string) => { (window as any).__opened.push(u); return null; }) as any; (window as any).__previewRatingMoments(); });
+    const seen: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      await expect.poll(() => card(page).then((c) => (c ? c.eyebrow.toUpperCase() : null)), { timeout: 6_000 }).not.toBe(i ? seen[i - 1] : null);
+      await expect.poll(() => card(page).then((c) => (c ? c.eyebrow.toUpperCase() : null)), { timeout: 6_000 }).not.toBeNull();
+      seen.push((await card(page))!.eyebrow.toUpperCase());
+      await page.locator('#review-pp-overlay ' + (i % 2 ? '.rm-later' : '.rm-cta')).click();
+      await expect.poll(() => card(page).then((c) => (c ? c.eyebrow.toUpperCase() : null)), { timeout: 4_000 }).not.toBe(seen[i]);
+    }
+    expect(seen).toEqual(['FIRST WEEK KEPT', 'THREE PERFECT DAYS', 'FIRST BOSS DEFEATED', 'RANK ASCENDED', 'FIRST CO-OP WIN']);
+    const r = await page.evaluate(() => ({ opened: (window as any).__opened, asks: localStorage.getItem('hb_review_asks_v2'), notNow: localStorage.getItem('hb_review_notnow_at'), shown: localStorage.getItem('hb_rm_shown_v1') }));
+    expect(r.opened).toEqual([]);
+    expect(r.notNow).toBeNull();
+    expect(r.shown).toBeNull();
+    expect(JSON.parse(r.asks || '[]')).toEqual([]);
+  });
+
+  test('a non-owner never sees the preview row', async ({ page }) => {
+    await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'member' } }) });
+    await page.locator('#settings-btn').click();
+    await page.waitForTimeout(800);
+    expect(await page.evaluate(() => document.getElementById('settings-preview-rating')!.classList.contains('hidden'))).toBe(true);
+  });
+});

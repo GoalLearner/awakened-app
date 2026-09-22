@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w973'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w974'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16366,24 +16366,6 @@
     try { if (_AUD.musicLoop) _audStopMusic(0.5); } catch (_) {}
     try { _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); } catch (_) {}   // W544 — the bespoke First Awakened finale (Suno) carries the summit; victory_sting fallback if absent
     try { _hallRecordFinish(); } catch (_) {}   // W270 — claim the eternal ordinal in the Hall of the Awakened
-    // W847 (V1c) — the summit is the ladder's tier-3 peak. Arm ONCE (a
-    // post-summit tower revisit re-renders this screen; that's not the
-    // moment) — flushed when the hunter enters the Hall, ordinal on screen.
-    try {
-      if (!localStorage.getItem('hb_review_summit_armed')) {
-        localStorage.setItem('hb_review_summit_armed', '1');
-        var _sumOrd = null;
-        try {
-          var _fin = JSON.parse(localStorage.getItem(_HALL_FINISH_KEY) || 'null');
-          var _n = _fin && parseInt(_fin.ordinal, 10);
-          if (_n > 0) {
-            var _sfx = (_n % 100 >= 11 && _n % 100 <= 13) ? 'TH' : ['TH', 'ST', 'ND', 'RD'][_n % 10] || 'TH';
-            _sumOrd = _n + _sfx;
-          }
-        } catch (_) {}
-        _reviewArm('summit', { ordinal: _sumOrd });
-      }
-    } catch (_) {}
     const portrait = 'assets/coach/first-awakened-idle.png';
     _arSet(
       '<div class="fn-summit">' +
@@ -16532,9 +16514,6 @@
     _arView = 'hall';
     _arBodyMode(false);
     const finished = (getAscentState().highestCleared || 0) >= ASCENT_FLOORS;
-    // W847 (V1c) — the freshly summited hunter just entered the Hall, ordinal
-    // on screen: flush the tier-3 summit ask (no-op unless armed this session).
-    if (finished) { try { _reviewFlush(['summit']); } catch (_) {} }
     // W382 — self-heal the Hall finish. The summit clear records the eternal
     // ordinal via a one-time _arRenderSummit -> _hallRecordFinish POST; if that
     // happened OFFLINE the POST failed and the ordinal would be lost forever (no
@@ -21203,9 +21182,6 @@
       if (_megaState === 'reveal' || _megaState === 'aftermath') { _megaFastForwardToSettled(); return; }
       if (_megaState === 'settled') {
         closeCardRevealModal();
-        // W847 (V1c) \u2014 the claim tap ends the 11s Eclipse Coronation: the
-        // single highest moment the app can stage. Tier-2 ladder ask.
-        try { _reviewFlush(['mythic']); } catch (_) {}
         return;
       }
       // cut / totality / forge \u2014 you cannot rush reverence
@@ -21228,8 +21204,6 @@
     const overlay = document.getElementById('reveal-overlay');
     const stage = document.getElementById('sigil-bloom-stage');
     if (!overlay || !stage) return;
-    // W847 (V1c) — arm the tier-2 mythic ask; flushed by the claim tap.
-    try { _reviewArm('mythic', { relicName: (card && card.name) || 'a Mythic' }); } catch (_) {}
     _teardownMegaReveal();
     _buildMegaRevealDOM(card);
     try { const ia = document.getElementById('megaBladeArt'); if (ia) { const im = new Image(); im.onerror = function(){ ia.style.display = 'none'; }; im.src = (card && card.art_path) || 'assets/items/nightfall-blade-of-the-sovereign.png'; } } catch (_) {}
@@ -21760,14 +21734,24 @@
   } catch (_) {}
 
   // ════════════════════════════════════════════════════════════════════════
-  // W541 — App Store review PRE-PROMPT (compliant, one-shot). A branded screen
-  // at a peak moment whose single CTA fires Apple's NATIVE review sheet via
-  // @capacitor-community/in-app-review. Exactly two HARMLESS actions: "Rate
-  // Awakened" (native sheet) + "Not now" (close only). NO sentiment fork, NO
-  // custom stars, NO reward tied to rating. The native API gives no outcome
-  // callback, so EVERY gate is on our own milestone flags — never on whether
-  // the user rated. Guideline 1.1.6 / 5.6. Flags are localStorage (the app's
-  // pattern) + added to CloudSync SNAPSHOT_KEYS so the one shot survives reinstall.
+  // W974 — RATING MOMENTS (Claude Design handoff 28, "Rating Moments v3").
+  // Replaces the W541/W847 pre-prompt card and all six of its variants.
+  // Five cards, each shown at most ONCE, right after its milestone's own
+  // celebration has closed:
+  //   week    — the first time the last seven days all hold a sealed vow
+  //   perfect — the third perfect day (the hb_review_pday_count ledger)
+  //   boss    — the first boss ever killed
+  //   rank    — a rank or division reached at C or above
+  //   coop    — the first co-op dungeon ever cleared
+  // Apple (Guideline 1.1.7 / 5.6): exactly two controls, no stars, no "are you
+  // enjoying it?" fork, and NOTHING paid for a rating — a milestone's reward is
+  // paid on its celebration, before this card; this card never mentions one.
+  // "Write a review" opens the App Store composer (?action=write-review).
+  // requestReview() is deliberately not used: Apple may show nothing for it.
+  // Limits (kept from W847): <=3 asks per rolling 365 days (an ask = the CTA
+  // tapped), >=30 days between asks, "Not now" -> 30-day cooldown, a card shown
+  // but unanswered -> 7-day spacing. The W847 tier ladder is gone (no tier-3
+  // moment remains). Never on a new hunter's first day (W940).
   // ════════════════════════════════════════════════════════════════════════
   var _RV = {
     seen:      'hb_review_prompt_v1_seen',   // LEGACY one-shot flag (pre-W847) — read once for migration, never written again
@@ -21776,22 +21760,13 @@
     pdayCount: 'hb_review_pday_count',
     pdayLast:  'hb_review_pday_last',
   };
-  // W847 (v3 Train V1) — ESCALATION LADDER replaces the once-ever shot.
-  // Owner-locked policy (2026-08-22): at most 3 asks per rolling 365 days
-  // (Apple's own SKStoreReviewController ceiling — the API is fire-and-forget,
-  // so WE keep the ledger), >=30d between asks, and each successive ask
-  // demands a BIGGER peak: ask 1 = tier 1+ (first boss / first co-op /
-  // perfect day), ask 2 = tier 2+ (rank-up C+, mythic claim), ask 3 = tier 3
-  // (the summit). "Not now" costs a 30-day cooldown but does NOT consume an
-  // ask — only tapping "Rate Awakened" (the native sheet actually firing)
-  // stamps the ledger. A shown-but-unanswered card stamps a 7-day soft
-  // spacing so an ignored prompt can't reappear at the next same-week peak.
   var _RV2 = {
     asks:      'hb_review_asks_v2',        // JSON array of unix-ms timestamps, pruned to 365d
     notNow:    'hb_review_notnow_at',      // unix ms of the last "Not now"
-    lastShown: 'hb_review_shown_at',       // unix ms of the last pre-prompt render (device-local)
+    lastShown: 'hb_review_shown_at',       // unix ms of the last card render (device-local)
   };
-  var _REVIEW_TIER = { boss: 1, coop: 1, perfectday: 1, rankup: 2, mythic: 2, summit: 3 };
+  var _RM_SHOWN_KEY = 'hb_rm_shown_v1';     // W974 — JSON array of moments already shown (each shows once, ever)
+  var _RM_MOMENTS = ['week', 'perfect', 'boss', 'rank', 'coop'];
   var _REVIEW_MAX_ASKS_PER_YEAR = 3;
   var _REVIEW_ASK_SPACING_MS   = 30 * 86400000;
   var _REVIEW_NOTNOW_COOLDOWN_MS = 30 * 86400000;
@@ -21808,33 +21783,32 @@
     _rvSet(_RV.pdayLast, d);
     _rvSet(_RV.pdayCount, String(_reviewPerfectDayCount() + 1));
   }
-  // W847 — the ask ledger. Timestamps of asks that actually FIRED the native
-  // sheet, pruned to the rolling 365-day window on every read.
+  // The ask ledger: timestamps of asks whose CTA was tapped, pruned to 365 days.
   function _reviewAsks() {
     try {
       var arr = JSON.parse(_rvGet(_RV2.asks) || '[]');
       if (!Array.isArray(arr)) arr = [];
       var floor = Date.now() - 365 * 86400000;
-      arr = arr.filter(function (t) { return typeof t === 'number' && t > floor; });
-      return arr;
+      return arr.filter(function (t) { return typeof t === 'number' && t > floor; });
     } catch (_) { return []; }
   }
   function _reviewConsumeAsk() {
     try { var a = _reviewAsks(); a.push(Date.now()); _rvSet(_RV2.asks, JSON.stringify(a)); } catch (_) {}
   }
-  // One-time migration: a pre-W847 user whose single shot was spent counts as
-  // ask 1 stamped NOW — conservative (they wait the full 30d before ask 2).
+  // One-time migration: a pre-W847 hunter whose single shot was spent counts as
+  // ask 1 stamped NOW — conservative (they wait the full 30 days).
   function _reviewMigrateLegacy() {
     try {
       if (_rvGet(_RV2.asks) !== null) return;
-      if (_rvGet(_RV.seen) === '1') _rvSet(_RV2.asks, JSON.stringify([Date.now()]));
-      else _rvSet(_RV2.asks, '[]');
+      _rvSet(_RV2.asks, _rvGet(_RV.seen) === '1' ? JSON.stringify([Date.now()]) : '[]');
     } catch (_) {}
   }
-  function _reviewEligible(trigger) {
+  function _rmShown() { try { var a = JSON.parse(_rvGet(_RM_SHOWN_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function _rmMarkShown(m) { var a = _rmShown(); if (a.indexOf(m) < 0) { a.push(m); _rvSet(_RM_SHOWN_KEY, JSON.stringify(a)); } }
+  function _reviewEligible(moment) {
     _reviewMigrateLegacy();
-    var tier = _REVIEW_TIER[trigger] || 0;
-    if (!tier) return false;
+    if (_RM_MOMENTS.indexOf(moment) < 0) return false;
+    if (_rmShown().indexOf(moment) >= 0) return false;
     var now = Date.now();
     var asks = _reviewAsks();
     if (asks.length >= _REVIEW_MAX_ASKS_PER_YEAR) return false;
@@ -21843,17 +21817,14 @@
     if (notNow && now - notNow < _REVIEW_NOTNOW_COOLDOWN_MS) return false;
     var shown = parseInt(_rvGet(_RV2.lastShown), 10) || 0;
     if (shown && now - shown < _REVIEW_SHOWN_SPACING_MS) return false;
-    // The ladder: each successive ask demands a bigger peak.
-    var requiredTier = asks.length === 0 ? 1 : asks.length === 1 ? 2 : 3;
-    return tier >= requiredTier;
+    return true;
   }
-  // A qualifying celebration just began — fire the pre-prompt when it CLOSES so
-  // the milestone's own animation plays first and fully.
-  function _reviewArm(trigger, ctx) {
-    // Priority: never let a lower-tier arm clobber a still-pending higher- or
-    // equal-tier one (that would silently drop the bigger moment).
-    if (_reviewPending && (_REVIEW_TIER[_reviewPending.trigger] || 0) >= (_REVIEW_TIER[trigger] || 0)) return;
-    _reviewPending = { trigger: trigger, ctx: ctx || {} };
+  // A qualifying moment just happened — hold it until its celebration CLOSES.
+  // The first eligible moment keeps the slot; a second one the same beat is dropped.
+  function _reviewArm(moment, ctx) {
+    if (_reviewPending && _reviewEligible(_reviewPending.trigger)) return;
+    if (!_reviewEligible(moment)) return;
+    _reviewPending = { trigger: moment, ctx: ctx || {} };
   }
   function _reviewFlush(allowed) {
     var p = _reviewPending;
@@ -21861,75 +21832,465 @@
     _reviewPending = null;
     setTimeout(function () { try { _maybeReviewPrompt(p.trigger, p.ctx); } catch (_) {} }, 480);   // short gap after the celebration clears
   }
-  function _maybeReviewPrompt(trigger, ctx) {
-    if (!_reviewEligible(trigger)) return;
-    if (trigger === 'perfectday') {
-      // READY gate — never spend an ask on a brand-new day-one perfect day.
-      var ready = _reviewDaysActive() >= 3 || _reviewPerfectDayCount() >= 2 || _rvGet(_RV.firstBoss) || _rvGet(_RV.firstCoop);
-      if (!ready) return;
-    }
-    // W950 — never on top of anything: the ask waits until the celebration
-    // (and whatever followed it) has closed.
-    if (_stageDefer('review', 90, function () { _maybeReviewPrompt(trigger, ctx); })) return;
-    _rvSet(_RV2.lastShown, String(Date.now()));     // soft spacing — an ignored card can't re-pester this week
-    _showReviewPrePrompt(trigger, ctx);
-  }
-  // Native review sheet. No success/failure callback exists; fire-and-forget.
-  function _reviewRequestNative() {
-    try {
-      var P = (window.Capacitor && window.Capacitor.Plugins) || {};
-      if (P.InAppReview && typeof P.InAppReview.requestReview === 'function') { P.InAppReview.requestReview(); return true; }
-    } catch (_) {}
-    return false;
+  function _maybeReviewPrompt(moment, ctx) {
+    if (!_reviewEligible(moment)) return;
+    try { if (_newHunterQuiet()) return; } catch (_) {}   // W940 — never on day one
+    // W950 — never on top of anything: waits until whatever is up has closed.
+    if (_stageDefer('review', 90, function () { _maybeReviewPrompt(moment, ctx); })) return;
+    _rvSet(_RV2.lastShown, String(Date.now()));
+    _rmMarkShown(moment);                          // once, ever — whichever button, or none
+    _rmShow(moment, ctx, {});
   }
   function _reviewWriteReviewUrl() { return 'https://apps.apple.com/app/id' + _REVIEW_APP_ID + '?action=write-review'; }
-  function _reviewCTA() {
-    // Native sheet on iOS; on web/PWA (plugin absent) fall back to the user-
-    // initiated write-review composer. Both are compliant; neither gates on sentiment.
-    // W847 — THIS is the only place an ask is consumed: the sheet actually fired.
-    _reviewConsumeAsk();
-    if (!_reviewRequestNative()) { try { window.open(_reviewWriteReviewUrl(), '_system'); } catch (_) {} }
+
+  // W974 — FIRST WEEK KEPT. Runs after every seal; cheap, and silent once shown.
+  function _rmCheckWeek() {
+    try {
+      if (_rmShown().indexOf('week') >= 0) return;
+      if (typeof completions === 'undefined' || !completions || typeof prevDay !== 'function') return;
+      var d = today, kept = 0;
+      for (var i = 0; i < 7; i++) { var n = (completions[d] || []).length; if (!n) return; kept += n; d = prevDay(d); }
+      var streak = 7;
+      while (streak < 3650 && (completions[d] || []).length) { streak++; d = prevDay(d); }
+      _reviewArm('week', { days: 7, vowsKept: kept, streak: streak });
+      setTimeout(function () { try { _reviewFlush(['week']); } catch (_) {} }, 900);   // after the seal's own feedback
+    } catch (_) {}
   }
-  function _reviewEmblem(kind) {
-    var o = '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">';
-    if (kind === 'party') return o + '<path d="M13 11 L29 29 M9 15 L13 11 L17 13 M29 29 L35 35 L37 31 L33 27"/><path d="M35 11 L19 29 M39 15 L35 11 L31 13 M19 29 L13 35 L11 31 L15 27"/></svg>';
-    if (kind === 'shieldcheck') return o + '<path d="M24 6 L38 11 V21 C38 30 32 36 24 39 C16 36 10 30 10 21 V11 L24 6Z"/><path d="M17.5 22 L22 26.5 L31 16.5"/></svg>';
-    return o + '<path d="M16 8 H32 V16 A8 8 0 0 1 16 16 Z"/><path d="M16 11 H10 A4 4 0 0 0 14.5 17.2"/><path d="M32 11 H38 A4 4 0 0 1 33.5 17.2"/><path d="M24 24 V31 M18 40 H30 M21 31 H27"/></svg>';
+  function _rmDateLabel() {
+    // By hand: en-GB now says "Sept"; the design reads "Sat 19 Sep".
+    var d = new Date();
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   }
-  var _REVIEW_VARIANTS = {
-    boss:       { eyebrow: 'BOSS DEFEATED',   emblem: 'trophy',     head: function (c) { return 'You bested<br>' + esc(c.bossName || 'the boss'); }, sub: function (c) { return 'FIRST BOSS · RANK ' + esc(c.rank || '—'); }, emo: 'Few hunters make it this far.', why: 'A rating helps other hunters find the climb.' },
-    coop:       { eyebrow: 'DUNGEON CLEARED', emblem: 'party',      head: function (c) { return 'Your guild cleared<br>' + esc(c.dungeonName || 'the dungeon'); }, sub: function (c) { return 'FIRST CO-OP WIN · ' + ((c.partySize || 2)) + ' HUNTERS'; }, emo: 'Stronger together.', why: 'A rating helps other hunters find their guild.' },
-    perfectday: { eyebrow: 'VOWS SEALED',     emblem: 'shieldcheck', head: function () { return 'A flawless<br>day'; }, sub: function () { return 'FIRST PERFECT DAY · ALL VOWS KEPT'; }, emo: 'You did what others won’t.', why: 'A rating helps other hunters start theirs.' },
-    // W847 — the ladder's tier-2/3 peaks.
-    rankup:     { eyebrow: 'RANK ASCENDED',   emblem: 'trophy',      head: function (c) { return 'You reached<br>RANK ' + esc(c.rank || '—'); }, sub: function (c) { return 'THE CLIMB CONTINUES · ' + esc(c.rankLabel || ('RANK ' + (c.rank || '—'))); }, emo: 'Most never make it past E.', why: 'A rating helps other hunters find the climb.' },
-    mythic:     { eyebrow: 'A LEGEND CLAIMED', emblem: 'trophy',     head: function (c) { return 'You hold<br>' + esc(c.relicName || 'a Mythic'); }, sub: function () { return 'MYTHIC RELIC · MEGA-RARE'; }, emo: 'Forever marked. Few will ever see one.', why: 'A rating helps other hunters chase theirs.' },
-    summit:     { eyebrow: 'THE SUMMIT',      emblem: 'shieldcheck', head: function () { return 'Floor 100<br>is yours'; }, sub: function (c) { return c.ordinal ? ('THE ' + esc(String(c.ordinal)) + ' TO AWAKEN') : 'THE ASCENT · COMPLETE'; }, emo: 'The Tower has a new name on it.', why: 'A rating helps other hunters begin the climb.' },
+
+  // ── the card ────────────────────────────────────────────────────────────
+  // Class names are rm- prefixed: the mock's generic ones (.card, .title, .tag,
+  // .mk, .stat…) would collide with app-wide CSS. SVG ids are prefixed too.
+  var _RM_NS = 'http://www.w3.org/2000/svg';
+  var _RM_N = { G4: 392, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, B5: 987.77, C6: 1046.5, E6: 1318.51, B6: 1975.53 };
+  var _rmLive = null;   // { close } while a card is up
+  // The rank_fanfare voice: sine, 12ms attack, exponential decay; triangle 0.28x on top.
+  function _rmTone(f, o) {
+    if (!soundEnabled) return;
+    o = o || {};
+    try {
+      var c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      var t = c.currentTime + (o.at || 0), dur = o.dur || 0.6, g = o.gain || 0.1;
+      var voice = function (type, gg) {
+        var gn = c.createGain();
+        gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(gg, t + 0.012); gn.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+        gn.connect(c.destination);
+        var os = c.createOscillator(); os.type = type; os.frequency.value = f; os.connect(gn); os.start(t); os.stop(t + dur + 0.05);
+      };
+      voice(o.type || 'sine', g);
+      if (o.tri) voice('triangle', g * 0.28);
+    } catch (_) {}
+  }
+  function _rmThud(g) {
+    if (!soundEnabled) return;
+    try {
+      var c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      var t = c.currentTime, gn = c.createGain(), os = c.createOscillator();
+      os.type = 'sine'; os.frequency.setValueAtTime(150, t); os.frequency.exponentialRampToValueAtTime(52, t + 0.18);
+      gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g || 0.28, t + 0.008); gn.gain.exponentialRampToValueAtTime(0.0008, t + 0.26);
+      os.connect(gn); gn.connect(c.destination); os.start(t); os.stop(t + 0.3);
+    } catch (_) {}
+  }
+  // tick = selection feedback; light/medium/heavy = impact.
+  function _rmHap(k) {
+    try {
+      var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (k === 'tick') {
+        if (H && typeof H.selectionChanged === 'function') { H.selectionChanged(); return; }
+        try { if (navigator.vibrate) navigator.vibrate(5); } catch (_) {}
+        return;
+      }
+    } catch (_) {}
+    try { _hapticTick(k); } catch (_) {}
+  }
+  function _rmEl(tag, attrs, parent) { var el = document.createElementNS(_RM_NS, tag); for (var k in attrs) el.setAttribute(k, attrs[k]); if (parent) parent.appendChild(el); return el; }
+  function _rmBack(s) { return function (t) { return 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }; }
+  var _rmEase = { out: function (t) { return 1 - Math.pow(1 - t, 3); }, inOut: function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }, back: _rmBack(1.7) };
+  function _rmTween(ms, fn, e) {
+    e = e || _rmEase.out;
+    return new Promise(function (res) { var t0 = performance.now(); var st = function (now) { var k = Math.min(1, (now - t0) / ms); fn(e(k)); if (k < 1) requestAnimationFrame(st); else res(); }; requestAnimationFrame(st); });
+  }
+  function _rmF1(v) { return v.toFixed(1); }
+  function _rmFmt(n) { try { return Math.round(Number(n) || 0).toLocaleString('en-US'); } catch (_) { return String(n); } }
+
+  // Each moment: copy + its seal SVG. Every value from the app goes through esc().
+  var _RM_CARDS = {
+    week: {
+      eyebrow: 'First week kept',
+      seal: function () {
+        var offs = [-2.5, -49.18, -95.85, -142.53, -189.2, -235.88, -282.55];
+        return '<g class="rm-ring7" transform="rotate(-90 60 60)">' + offs.map(function (o) { return '<circle cx="60" cy="60" r="52" stroke-dasharray="41.68 285.05" stroke-dashoffset="' + o + '"></circle>'; }).join('') + '</g>' +
+          '<g transform="translate(33 35)"><g class="rm-emb"><circle pathLength="1" cx="27" cy="7.5" r="3"></circle><path pathLength="1" d="M18 15.5h18l-4-5H22z"></path><path pathLength="1" d="M18 15.5v25h18v-25"></path><path class="rm-flame" pathLength="1" d="M27 22.5c2.6 3.4 4 5.6 4 7.6a4 4 0 0 1-8 0c0-2 1.4-4.2 4-7.6z"></path><path pathLength="1" d="M21 40.5V44M33 40.5V44M16 44h22"></path></g></g>';
+      },
+      title: function (c) { return '<span class="rm-d">' + esc(String(c.days || 7)) + '</span> days kept.<br>Not one missed.'; },
+      stat: function (c) { return '<span class="rm-d">' + esc(_rmFmt(c.vowsKept)) + '</span> vows kept · <span class="rm-d">' + esc(_rmFmt(c.streak || 7)) + '</span>-day streak'; },
+      feel: 'Most who begin are gone by day three.',
+      why: 'New hunters decide by what others write — a few lines on what this week took will tell them more than we can.',
+    },
+    perfect: {
+      eyebrow: 'Three perfect days',
+      seal: function () {
+        return '<g transform="rotate(-90 60 60)"><g class="rm-spin"><circle class="rm-rc rm-r1" pathLength="1" cx="60" cy="60" r="40"></circle><circle class="rm-bead" cx="100" cy="60" r="2.6"></circle></g><g class="rm-spin"><circle class="rm-rc rm-r2" pathLength="1" cx="60" cy="60" r="46"></circle><circle class="rm-bead" cx="106" cy="60" r="2.6"></circle></g><g class="rm-spin"><circle class="rm-rc rm-r3" pathLength="1" cx="60" cy="60" r="52"></circle><circle class="rm-bead" cx="112" cy="60" r="2.6"></circle></g></g>' +
+          '<g transform="translate(33 33)"><g class="rm-emb"><circle pathLength="1" cx="27" cy="27" r="8.5"></circle><path pathLength="1" d="M27 8v6M27 40v6M8 27h6M40 27h6M36.2 17.8l2.8-2.8M36.2 36.2l2.8 2.8M17.8 36.2 15 39M17.8 17.8 15 15"></path></g></g>';
+      },
+      title: function (c) { return '<span class="rm-d">' + esc(String(c.count || 3)) + '</span> perfect days.<br>Every vow sealed.'; },
+      stat: function (c) { return 'Perfect day <span class="rm-d">' + esc(String(c.count || 3)) + '</span>' + (c.thirdDate ? ' · <span class="rm-d">' + esc(c.thirdDate) + '</span>' : ''); },
+      feel: 'Once is luck. Three times is you.',
+      why: 'Write down what your perfect day holds — someone reading is trying to build their first.',
+    },
+    boss: {
+      eyebrow: 'First boss defeated',
+      seal: function (c) {
+        var r = esc(String(c.bossRank || ''));
+        return '<defs><mask id="rm-cut-boss" maskUnits="userSpaceOnUse" x="-10" y="-10" width="140" height="140"><rect x="-10" y="-10" width="140" height="140" fill="#fff" stroke="none"></rect><g class="rm-cutr" transform="translate(102.6 30.2) rotate(30)" stroke="#000" stroke-width="7"><path pathLength="1" d="M-7-15q2.2 15 0 30"></path><path pathLength="1" d="M0-15q2.2 15 0 30"></path><path pathLength="1" d="M7-15q2.2 15 0 30"></path></g>' + (r ? '<rect x="48" y="102" width="24" height="20" rx="5" fill="#000" stroke="none"></rect>' : '') + '</mask></defs>' +
+          '<g class="rm-shake"><circle class="rm-ring" cx="60" cy="60" r="52" mask="url(#rm-cut-boss)"></circle>' +
+          '<g class="rm-rakes" transform="translate(102.6 30.2) rotate(30)"><path pathLength="1" d="M-7-15q2.2 15 0 30"></path><path pathLength="1" d="M0-15q2.2 15 0 30"></path><path pathLength="1" d="M7-15q2.2 15 0 30"></path></g>' +
+          (r ? '<g class="rm-tagg"><rect class="rm-tag" x="50.5" y="104" width="19" height="16" rx="4"></rect><text class="rm-tagl" x="60" y="115.8" text-anchor="middle">' + r + '</text></g>' : '') +
+          '<g transform="translate(33 35)"><g class="rm-plant"><g class="rm-emb"><circle pathLength="1" cx="27" cy="6.5" r="2.8"></circle><path pathLength="1" d="M27 9.3v6.2M18.5 15.5h17"></path><path pathLength="1" d="M23.8 15.5v31M30.2 15.5v31"></path><path pathLength="1" d="M27 19.5v17"></path><path pathLength="1" d="M12 46.5h30"></path></g></g></g>' +
+          '<g class="rm-fx"></g></g>';
+      },
+      title: function (c) { return '<span class="rm-d">' + esc(c.bossName || 'The boss') + '</span><br>has fallen.'; },
+      stat: function (c) { return c.bossRank ? '<span class="rm-d">' + esc(String(c.bossRank)) + '</span>-rank boss · first kill' : 'First kill'; },
+      long: function (c) { return String(c.bossName || '').length > 16; },
+      feel: 'Every blow was a step you took.',
+      why: 'Tell the next hunter how it fell; nobody believes a walk can kill a boss until they read it from someone who did.',
+    },
+    rank: {
+      eyebrow: 'Rank ascended',
+      seal: function (c) {
+        var lit = _rmLitMarks(c.rankLabel);
+        var pts = ['46.54,4.17 50.14,9.77 46.54,15.37 42.94,9.77', '60,2.4 63.6,8 60,13.6 56.4,8', '73.46,4.17 77.06,9.77 73.46,15.37 69.86,9.77'];
+        return '<path class="rm-arc" pathLength="1" d="M81.98 12.87A52 52 0 1 1 38.02 12.87"></path>' +
+          '<path class="rm-charge" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" d="M81.98 12.87A52 52 0 1 1 38.02 12.87"></path>' +
+          pts.map(function (p, i) { return '<polygon class="rm-mk' + (i < lit ? ' rm-lit' + (i === lit - 1 ? ' rm-new' : '') : '') + '" points="' + p + '"></polygon>'; }).join('') +
+          '<g transform="translate(33 34)"><g class="rm-emb rm-chev"><path class="rm-c3" d="M15 21 27 11l12 10"></path><path class="rm-c2" d="M15 31 27 21l12 10"></path><path class="rm-c1" d="M15 41 27 31l12 10"></path></g></g>' +
+          '<g class="rm-fx"></g>';
+      },
+      title: function (c) { return 'You climbed<br>to <span class="rm-d">' + esc(String(c.rankLabel || '')) + '</span>.'; },
+      stat: function (c) { return '<span class="rm-d">' + esc(_rmFmt(c.points)) + '</span> rank points'; },
+      feel: 'Nobody climbs by accident.',
+      why: 'Write where you started and where you stand — it’s the one thing a new hunter can’t picture.',
+    },
+    coop: {
+      eyebrow: 'First co-op win',
+      seal: function () {
+        return '<defs><mask id="rm-lk-a" maskUnits="userSpaceOnUse" x="-24" y="-10" width="168" height="140"><rect x="-24" y="-10" width="168" height="140" fill="#fff" stroke="none"></rect><circle class="rm-lkA" cx="60" cy="97.47" r="4" fill="#000" stroke="none"></circle></mask><mask id="rm-lk-b" maskUnits="userSpaceOnUse" x="-24" y="-10" width="168" height="140"><rect x="-24" y="-10" width="168" height="140" fill="#fff" stroke="none"></rect><circle class="rm-lkB" cx="60" cy="22.53" r="4" fill="#000" stroke="none"></circle></mask></defs>' +
+          '<circle class="rm-you" cx="46" cy="60" r="40" mask="url(#rm-lk-a)"></circle><circle class="rm-ally" cx="74" cy="60" r="40" mask="url(#rm-lk-b)"></circle>' +
+          '<g transform="translate(33 33)"><g class="rm-emb"><path pathLength="1" d="M14 46V24a13 13 0 0 1 26 0v22"></path><path pathLength="1" d="M21 46V28a6 6 0 0 1 12 0v18"></path><path pathLength="1" d="M24.5 7.5h5l-1 4.5h-3z"></path><path pathLength="1" d="M10 46h34"></path></g></g>' +
+          '<g class="rm-fx"></g>';
+      },
+      title: function (c) { return '<span class="rm-d">' + esc(c.dungeonName || 'The dungeon') + '</span><br>is cleared.'; },
+      stat: function (c) { return 'Party of <span class="rm-d">' + esc(String(c.partySize || 2)) + '</span> · first co-op clear'; },
+      long: function (c) { return String(c.dungeonName || '').length > 16; },
+      feel: 'Some doors don’t open for one.',
+      why: 'Say what it’s like to hunt with someone at your side — it’s the part no screenshot shows.',
+    },
   };
-  function _reviewClose() { var ov = document.getElementById('review-pp-overlay'); if (ov) { ov.classList.add('closing'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 240); } }
-  function _showReviewPrePrompt(trigger, ctx) {
-    var v = _REVIEW_VARIANTS[trigger]; if (!v) return;
-    ctx = ctx || {};
+  // Lit division marks = 3 - numeral strokes: III 0, II 1, I 2; no numeral 0.
+  function _rmLitMarks(label) {
+    var m = /\s(I{1,3})$/.exec(String(label || '').trim());
+    return m ? 3 - m[1].length : 0;
+  }
+
+  // The seal performances — ported 1:1 from the mock's TOYS (timings in its header).
+  var _RM_TOYS = {
+    week: function (c) {
+      var segs = [].slice.call(c.svg.querySelectorAll('.rm-ring7 circle')), flame = c.svg.querySelector('.rm-flame');
+      var FQ = [_RM_N.C5, _RM_N.D5, _RM_N.E5, _RM_N.F5, _RM_N.G5, _RM_N.A5, _RM_N.B5];
+      var last = -1, seen = {}, seenN = 0, s0 = { x: 60, y: 60 }, moved = false;
+      var idx = function (p) { return Math.floor(((Math.atan2(p.y - 60, p.x - 60) * 180 / Math.PI + 450) % 360) / (360 / 7)) % 7; };
+      var rad = function (p) { return Math.hypot(p.x - 60, p.y - 60); };
+      var flash = function (i, big) { if (c.RM) return; segs[i].animate([{ stroke: '#fff6dc', strokeWidth: big ? 4.6 : 5.4 }, { stroke: '#f5b842', strokeWidth: 2.2 }], { duration: big ? 640 : 460, easing: 'cubic-bezier(.2,.7,.2,1)' }); };
+      var light = function (i) { segs[i].style.opacity = 1; flash(i); _rmTone(FQ[i], { gain: 0.09, dur: 0.5 }); c.hap('tick'); };
+      var flare = function () {
+        segs.forEach(function (s, i) { s.style.opacity = 1; c.at(i * 35, function () { flash(i, true); }); });
+        if (!c.RM) flame.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.35,1.6)' }, { transform: 'scale(1)' }], { duration: 720, easing: 'cubic-bezier(.2,.8,.3,1)' });
+        _rmTone(_RM_N.C6, { gain: 0.13, dur: 0.9, tri: true }); c.hap('MEDIUM');
+      };
+      var gust = function () {
+        if (!c.RM) flame.animate([{ transform: 'none' }, { transform: 'scale(.8,1.3) skewX(-9deg)' }, { transform: 'scale(1.12,.9) skewX(5deg)' }, { transform: 'none' }], { duration: 640, easing: 'ease-out' });
+        _rmTone(_RM_N.G4, { gain: 0.07, dur: 0.4 }); c.hap('LIGHT');
+      };
+      return {
+        perform: function () { segs.forEach(function (s) { s.style.opacity = 0.12; }); for (var i = 0; i < 7; i++) (function (j) { c.at(420 + j * 110, function () { light(j); }); })(i); c.at(1200, flare); },
+        finale: flare,
+        down: function (p) { s0 = p; moved = false; seen = {}; seenN = 0; last = -1; if (rad(p) > 30) { last = idx(p); seen[last] = 1; seenN = 1; light(last); } },
+        move: function (p) { if (Math.hypot(p.x - s0.x, p.y - s0.y) > 5) moved = true; if (rad(p) < 24) return; var i = idx(p); if (i === last) return; last = i; light(i); if (!seen[i]) { seen[i] = 1; seenN++; } if (seenN === 7) { seen = {}; seen[i] = 1; seenN = 1; flare(); } },
+        up: function () { if (!moved && rad(s0) <= 30) gust(); },
+      };
+    },
+    perfect: function (c) {
+      var spins = [].slice.call(c.svg.querySelectorAll('.rm-spin')), beads = [].slice.call(c.svg.querySelectorAll('.rm-bead')), F = [1.6, 1.25, 1];
+      var ang = [0, 0, 0], vel = 0, la = 0, lt = 0, raf = 0, gen = 0, lastTick = 0;
+      var set = function () { spins.forEach(function (g, i) { g.setAttribute('transform', 'rotate(' + ang[i].toFixed(2) + ' 60 60)'); }); };
+      var aAt = function (p) { return Math.atan2(p.y - 60, p.x - 60) * 180 / Math.PI; };
+      var tick = function (i) { var t = performance.now(); if (t - lastTick > 60) { lastTick = t; _rmTone(_RM_N.G5 * [1.5, 1.26, 1][i], { gain: 0.035, dur: 0.12 }); c.hap('tick'); } };
+      var cross = function (prev, next) { next.forEach(function (n, i) { if (Math.floor(n / 360) !== Math.floor(prev[i] / 360)) tick(i); }); };
+      var step = function (d) { var prev = ang; ang = ang.map(function (a, i) { return a + d * F[i]; }); cross(prev, ang); set(); };
+      var aligned = function () {
+        if (!c.RM) beads.forEach(function (b) { b.animate([{ transform: 'scale(1)' }, { transform: 'scale(2.3)' }, { transform: 'scale(1)' }], { duration: 500, easing: 'cubic-bezier(.2,.9,.3,1.2)' }); });
+        spins.forEach(function (g) { g.firstElementChild.animate([{ stroke: '#fff6dc' }, { stroke: '#f5b842' }], { duration: 480 }); });
+        _rmTone(_RM_N.C5, { gain: 0.08 }); _rmTone(_RM_N.E5, { at: 0.05, gain: 0.08 }); _rmTone(_RM_N.G5, { at: 0.1, gain: 0.1, tri: true }); c.hap('MEDIUM');
+      };
+      var spinTo = function (from, ms, e, ticks) {
+        var g = ++gen;
+        return _rmTween(ms, function (k) { if (g !== gen || c.dead()) return; var prev = ang; ang = from.map(function (f) { return f * (1 - k); }); if (ticks) cross(prev, ang); set(); }, e)
+          .then(function () { if (g !== gen || c.dead()) return; ang = [0, 0, 0]; set(); aligned(); });
+      };
+      var snap = function (g) {
+        var from = ang.slice(), to = from.map(function (a) { return Math.round(a / 360) * 360; });
+        _rmTween(c.RM ? 1 : 560, function (k) { if (g !== gen || c.dead()) return; ang = from.map(function (f, i) { return f + (to[i] - f) * k; }); set(); }, _rmEase.back)
+          .then(function () { if (g !== gen || c.dead()) return; ang = [0, 0, 0]; set(); aligned(); });
+      };
+      var coast = function (g) {
+        var t0 = performance.now();
+        var loop = function (now) { if (g !== gen || c.dead()) return; var dt = Math.min(32, now - t0); t0 = now; step(vel * dt); vel *= Math.pow(0.9955, dt); if (Math.abs(vel) > 0.03) raf = requestAnimationFrame(loop); else snap(g); };
+        raf = requestAnimationFrame(loop);
+      };
+      return {
+        perform: function () { gen++; cancelAnimationFrame(raf); ang = [-560, -430, -300]; set(); c.at(640, function () { spinTo(ang.slice(), c.RM ? 1 : 820, _rmBack(1.1), true); }); },
+        finale: function () { spinTo([-720, -360, -360], c.RM ? 1 : 440, _rmEase.inOut, false); },
+        down: function (p) { gen++; cancelAnimationFrame(raf); la = aAt(p); lt = performance.now(); vel = 0; },
+        move: function (p) { var a = aAt(p); var d = a - la; if (d > 180) d -= 360; if (d < -180) d += 360; la = a; var t = performance.now(), dt = Math.max(1, t - lt); lt = t; vel = vel * 0.5 + (d / dt) * 0.5; step(d); },
+        up: function () { if (c.RM || performance.now() - lt > 90 || Math.abs(vel) < 0.03) { vel = 0; snap(gen); } else { vel = Math.max(-2.4, Math.min(2.4, vel)); coast(gen); } },
+        stop: function () { gen++; cancelAnimationFrame(raf); },
+      };
+    },
+    boss: function (c) {
+      var fx = c.svg.querySelector('.rm-fx'), shake = c.svg.querySelector('.rm-shake'), sword = c.svg.querySelector('.rm-plant'); var s0 = { x: 60, y: 60 };
+      var wobble = function (a) { if (c.RM) return; sword.animate([0, 1, -0.7, 0.45, -0.2, 0].map(function (k) { return { transform: 'rotate(' + (k * a).toFixed(2) + 'deg)' }; }), { duration: 900, easing: 'ease-out' }); };
+      var rake = function (a, b) {
+        var dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
+        var cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2; var o = Math.hypot(cx - 60, cy - 60); if (o > 26) { cx = 60 + (cx - 60) * 26 / o; cy = 60 + (cy - 60) * 26 / o; } var L = 78;
+        [-7, 0, 7].forEach(function (k, j) {
+          var x1 = cx + nx * k - ux * L / 2, y1 = cy + ny * k - uy * L / 2, x2 = cx + nx * k + ux * L / 2, y2 = cy + ny * k + uy * L / 2;
+          var el = _rmEl('path', { d: 'M' + _rmF1(x1) + ' ' + _rmF1(y1) + 'Q' + _rmF1(cx + nx * (k + 3)) + ' ' + _rmF1(cy + ny * (k + 3)) + ' ' + _rmF1(x2) + ' ' + _rmF1(y2), pathLength: 1, 'stroke-dasharray': 1, 'stroke-width': 2.3 }, fx);
+          el.animate([{ strokeDashoffset: 1, opacity: 0 }, { opacity: 1, offset: 0.15 }, { strokeDashoffset: 0, opacity: 1 }], { duration: c.RM ? 1 : 130, delay: j * 40, easing: 'cubic-bezier(.7,0,.9,.5)', fill: 'both' });
+          el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, delay: 900, fill: 'forwards' }).onfinish = function () { el.remove(); };
+        });
+        if (!c.RM) shake.animate([{ transform: 'none' }, { transform: 'translate(' + _rmF1(ux * 3) + 'px,' + _rmF1(uy * 3) + 'px)' }, { transform: 'translate(' + _rmF1(-ux * 1.5) + 'px,' + _rmF1(-uy * 1.5) + 'px)' }, { transform: 'none' }], { duration: 260, delay: 90, easing: 'ease-out' });
+        wobble(5); c.at(90, function () { _rmThud(); c.hap('MEDIUM'); });
+      };
+      return {
+        perform: function () { c.at(470, function () { _rmThud(0.12); c.hap('LIGHT'); }); c.at(620, function () { rake({ x: 100, y: 16 }, { x: 20, y: 104 }); }); c.at(900, function () { c.hap('tick'); }); },
+        finale: function () { rake({ x: 18, y: 22 }, { x: 102, y: 98 }); },
+        down: function (p) { s0 = p; }, move: function () {},
+        up: function (p) { if (Math.hypot(p.x - s0.x, p.y - s0.y) > 18) rake(s0, p); else { wobble(8); _rmTone(_RM_N.E6, { gain: 0.05, dur: 1.1, type: 'triangle' }); _rmTone(_RM_N.B6 * 1.003, { gain: 0.022, dur: 0.9 }); c.hap('LIGHT'); } },
+      };
+    },
+    rank: function (c) {
+      var charge = c.svg.querySelector('.rm-charge'), ch = [].slice.call(c.svg.querySelectorAll('.rm-chev path')).reverse(), fresh = c.svg.querySelector('.rm-mk.rm-new'), fx = c.svg.querySelector('.rm-fx');
+      var TH = [0.28, 0.58, 0.88], NT = [_RM_N.C5, _RM_N.E5, _RM_N.G5];
+      var p = 0, hold = false, raf = 0, lt = 0, stage = 0, fired = false, auto = false;
+      var setP = function () { charge.style.strokeDashoffset = (1 - p).toFixed(4); charge.style.opacity = p > 0.002 ? 1 : 0; };
+      var light = function (i, on) { var e = ch[i]; if (on) { e.style.strokeOpacity = 1; if (!c.RM) e.animate([{ stroke: '#fff6dc', strokeWidth: 3.4 }, { stroke: '#f5b842', strokeWidth: 2.3 }], { duration: 380, easing: 'ease-out' }); } else e.style.strokeOpacity = ''; };
+      var burstFx = function () {
+        c.hap('HEAVY'); [_RM_N.C5, _RM_N.E5, _RM_N.G5, _RM_N.C6].forEach(function (f, i) { _rmTone(f, { at: i * 0.07, gain: 0.1, dur: 0.8, tri: i === 3 }); });
+        if (fresh) fresh.style.opacity = 1;
+        if (!c.RM) {
+          var r = _rmEl('circle', { cx: 60, cy: 60, r: 52, 'stroke-width': 1.6 }, fx);
+          r.animate([{ transform: 'scale(1)', opacity: 0.9 }, { transform: 'scale(1.6)', opacity: 0 }], { duration: 640, easing: 'cubic-bezier(.1,.6,.3,1)' }).onfinish = function () { r.remove(); };
+          if (fresh) fresh.animate([{ transform: 'scale(.3)' }, { transform: 'scale(1.9)' }, { transform: 'scale(1)' }], { duration: 560, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+        }
+        ch.forEach(function (e) { e.animate([{ stroke: '#fff6dc' }, { stroke: '#f5b842' }], { duration: 520 }); });
+      };
+      var burst = function () { fired = true; if (auto) { hold = false; auto = false; } burstFx(); };
+      var loop = function (now) {
+        if (c.dead()) { raf = 0; return; }
+        var dt = Math.min(40, now - lt); lt = now;
+        if (hold && !fired) p = Math.min(1, p + dt / (c.RM ? 1 : 900)); else p = Math.max(0, p - dt / (fired ? 700 : 420));
+        setP();
+        var s = TH.filter(function (t) { return p >= t; }).length;
+        while (stage < s) { light(stage, true); _rmTone(NT[stage], { gain: 0.08, dur: 0.45 }); c.hap('tick'); stage++; }
+        while (stage > s) { stage--; light(stage, false); }
+        if (p >= 1 && !fired) burst();
+        if (hold || p > 0) raf = requestAnimationFrame(loop); else raf = 0;
+      };
+      var go = function () { if (!raf) { lt = performance.now(); raf = requestAnimationFrame(loop); } };
+      return {
+        perform: function () { ch.forEach(function (e) { e.style.strokeOpacity = 0.25; }); if (fresh) fresh.style.opacity = 0; c.at(440, function () { auto = true; hold = true; fired = false; c.hap('LIGHT'); go(); }); },
+        finale: burstFx,
+        down: function () { auto = false; hold = true; fired = false; c.hap('LIGHT'); go(); }, move: function () {},
+        up: function () { hold = false; go(); },
+        stop: function () { cancelAnimationFrame(raf); raf = 0; },
+      };
+    },
+    coop: function (c) {
+      var you = c.svg.querySelector('.rm-you'), ally = c.svg.querySelector('.rm-ally'), mA = c.svg.querySelector('.rm-lkA'), mB = c.svg.querySelector('.rm-lkB'), fx = c.svg.querySelector('.rm-fx'), emb = c.svg.querySelector('.rm-emb');
+      var s = 14, v = 0, x0 = 0, raf = 0, lt = 0, locked = true, pulled = false, gen = 0;
+      var place = function () { you.setAttribute('cx', (60 - s).toFixed(2)); ally.setAttribute('cx', (60 + s).toFixed(2)); var h = Math.sqrt(Math.max(0, 1600 - s * s)); mA.setAttribute('cy', (60 + h).toFixed(2)); mB.setAttribute('cy', (60 - h).toFixed(2)); };
+      var click = function () {
+        c.hap('MEDIUM'); _rmTone(_RM_N.C5, { gain: 0.09, dur: 0.7 }); _rmTone(_RM_N.G5, { gain: 0.08, dur: 0.7, tri: true });
+        if (!c.RM) [mA, mB].forEach(function (m) {
+          var y = +m.getAttribute('cy');
+          for (var i = 0; i < 6; i++) {
+            var a = i / 6 * Math.PI * 2 + Math.random() * 0.5, d = 7 + Math.random() * 6;
+            var dot = _rmEl('circle', { cx: 60, cy: y.toFixed(2), r: 1.3, fill: i % 2 ? '#a78bfa' : '#f5b842', stroke: 'none' }, fx);
+            (function (el) { el.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: 'translate(' + _rmF1(Math.cos(a) * d) + 'px,' + _rmF1(Math.sin(a) * d) + 'px)', opacity: 0 }], { duration: 540, easing: 'cubic-bezier(.1,.7,.3,1)' }).onfinish = function () { el.remove(); }; })(dot);
+          }
+        });
+        [].slice.call(emb.children).forEach(function (e) { e.animate([{ stroke: '#fff6dc' }, { stroke: '#f5b842' }], { duration: 540 }); });
+      };
+      var spring = function () {
+        var g = ++gen; lt = performance.now();
+        var loop = function (now) {
+          if (g !== gen || c.dead()) return;
+          var dt = Math.min(0.032, (now - lt) / 1000); lt = now;
+          v += (-(s - 14) * 380 - v * 12) * dt; s = Math.max(8, s + v * dt); place();
+          if (!locked && s <= 14.4 && v < 0) { locked = true; click(); }
+          if (Math.abs(s - 14) > 0.02 || Math.abs(v) > 0.2) raf = requestAnimationFrame(loop); else { s = 14; v = 0; place(); }
+        };
+        raf = requestAnimationFrame(loop);
+      };
+      return {
+        perform: function () { gen++; cancelAnimationFrame(raf); s = 38; v = 0; locked = false; place(); c.at(700, function () { if (c.RM) { s = 14; place(); locked = true; click(); } else spring(); }); },
+        finale: function () { if (c.RM) { click(); return; } var g = ++gen; _rmTween(150, function (k) { if (g !== gen) return; s = 14 + 12 * k; place(); }).then(function () { if (g === gen && !c.dead()) { locked = false; spring(); } }); },
+        down: function (p) { gen++; cancelAnimationFrame(raf); x0 = p.x; v = 0; pulled = false; c.hap('LIGHT'); },
+        move: function (p) { var pull = 24 * (1 - Math.exp(-Math.abs(p.x - x0) / 36)); s = 14 + pull; if (pull > 2) { locked = false; pulled = true; } place(); },
+        up: function () { if (!pulled) { s = 14; place(); click(); return; } if (c.RM) { s = 14; place(); if (!locked) { locked = true; click(); } return; } spring(); },
+        stop: function () { gen++; cancelAnimationFrame(raf); },
+      };
+    },
+  };
+
+  /** Render one card. opts.preview — the owner's Settings preview: opens nothing,
+   *  records nothing; opts.onClose runs after the card has gone. */
+  function _rmShow(moment, ctx, opts) {
+    var def = _RM_CARDS[moment]; if (!def) return false;
+    ctx = ctx || {}; opts = opts || {};
+    var preview = !!opts.preview;
+    try { if (_rmLive) _rmLive.close(true); } catch (_) {}
     var old = document.getElementById('review-pp-overlay'); if (old) old.remove();
-    var checks = trigger === 'perfectday' ? '<div class="review-pp-checks"><i></i><i></i><i></i><i></i></div>' : '';
-    var ov = document.createElement('div'); ov.id = 'review-pp-overlay'; ov.className = 'review-pp';
+    var RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    var ov = document.createElement('div');
+    ov.id = 'review-pp-overlay'; ov.className = 'rm-ov rm-run';
     ov.innerHTML =
-      '<div class="review-pp-card" role="dialog" aria-modal="true" aria-label="Rate Awakened">' +
-        '<div class="review-pp-eyebrow">' + esc(v.eyebrow) + '</div>' +
-        '<div class="review-pp-emblem">' + _reviewEmblem(v.emblem) + '</div>' +
-        '<div class="review-pp-head">' + v.head(ctx) + '</div>' +
-        '<div class="review-pp-sub">' + v.sub(ctx) + '</div>' + checks +
-        '<div class="review-pp-divider"></div>' +
-        '<div class="review-pp-emo">' + esc(v.emo) + '</div>' +
-        '<div class="review-pp-why">' + esc(v.why) + '</div>' +
-        '<button type="button" class="review-pp-cta" id="review-pp-rate">Rate Awakened</button>' +
-        '<button type="button" class="review-pp-not" id="review-pp-not">Not now</button>' +
-        '<div class="review-pp-foot">Opens Apple’s rating prompt</div>' +
+      '<div class="rm-scrim"></div><div class="rm-tilt">' +
+        '<article class="rm-card rm-m-' + moment + '" role="dialog" aria-modal="true" aria-labelledby="rm-title">' +
+          '<p class="rm-eyebrow">' + esc(def.eyebrow) + '</p>' +
+          '<div class="rm-seal"><svg viewBox="0 0 120 120" aria-hidden="true">' + def.seal(ctx) + '</svg></div>' +
+          '<h3 class="rm-title' + (def.long && def.long(ctx) ? ' rm-title--long' : '') + '" id="rm-title">' + def.title(ctx) + '</h3>' +
+          '<p class="rm-stat">' + def.stat(ctx) + '</p>' +
+          '<div class="rm-rule"><i></i></div>' +
+          '<p class="rm-feel">' + esc(def.feel) + '</p>' +
+          '<p class="rm-why">' + esc(def.why) + '</p>' +
+          '<button type="button" class="rm-cta">Write a review</button>' +
+          '<button type="button" class="rm-later">Not now</button>' +
+          '<p class="rm-foot">Opens the App Store</p>' +
+        '</article>' +
       '</div>';
     document.body.appendChild(ov);
-    requestAnimationFrame(function () { ov.classList.add('on'); });
-    var rate = ov.querySelector('#review-pp-rate'); if (rate) rate.addEventListener('click', function () { _reviewCTA(); _reviewClose(); });
-    var not = ov.querySelector('#review-pp-not'); if (not) not.addEventListener('click', function () { _rvSet(_RV2.notNow, String(Date.now())); _reviewClose(); });   // W847 — 30d cooldown; never consumes an ask
+    var tilt = ov.querySelector('.rm-tilt'), card = ov.querySelector('.rm-card'), seal = ov.querySelector('.rm-seal'), svg = seal.querySelector('svg');
+    var cta = ov.querySelector('.rm-cta'), later = ov.querySelector('.rm-later');
+    var timers = [], dead = false, leaving = false, dragging = false;
+    var at = function (ms, fn) { timers.push(setTimeout(function () { if (!dead) { try { fn(); } catch (_) {} } }, ms)); };
+    var H = null; try { H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; if (H && typeof H.selectionStart === 'function') H.selectionStart(); } catch (_) {}
+    var toy = _RM_TOYS[moment]({ svg: svg, RM: RM, at: at, hap: _rmHap, dead: function () { return dead; } });
+
+    // Light catch: device tilt where the OS hands it over without a permission
+    // prompt (iOS asks for one — never prompt for a decoration; the card sits still).
+    var orient = null, base = null;
+    try {
+      if (!RM && typeof window.DeviceOrientationEvent !== 'undefined' && typeof window.DeviceOrientationEvent.requestPermission !== 'function') {
+        orient = function (e) {
+          if (dragging || leaving || e.gamma == null || e.beta == null) return;
+          if (base == null) base = e.beta;
+          var gx = Math.max(-1, Math.min(1, e.gamma / 30)), by = Math.max(-1, Math.min(1, (e.beta - base) / 30));
+          tilt.style.transform = 'rotateX(' + (-by * 2.5).toFixed(2) + 'deg) rotateY(' + (gx * 3).toFixed(2) + 'deg)';
+          seal.style.setProperty('--sx', (50 + gx * 30).toFixed(1) + '%'); seal.style.setProperty('--sy', (37 + by * 25).toFixed(1) + '%');
+        };
+        window.addEventListener('deviceorientation', orient);
+      }
+    } catch (_) {}
+
+    var close = function (instant) {
+      if (dead) return;
+      dead = true; _rmLive = null;
+      timers.forEach(clearTimeout);
+      try { if (toy.stop) toy.stop(); } catch (_) {}
+      try { if (orient) window.removeEventListener('deviceorientation', orient); } catch (_) {}
+      try { if (H && typeof H.selectionEnd === 'function') H.selectionEnd(); } catch (_) {}
+      try { ov.remove(); } catch (_) {}
+      if (!instant && typeof opts.onClose === 'function') { try { opts.onClose(); } catch (_) {} }
+    };
+    _rmLive = { close: close };
+    var leave = function (kf, ms, then) {
+      leaving = true;
+      var a = tilt.animate(kf, { duration: ms, easing: 'ease-in', fill: 'forwards' });
+      ov.querySelector('.rm-scrim').animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms + 80, delay: 40, fill: 'forwards' });
+      a.onfinish = function () { if (then) { try { then(); } catch (_) {} } close(); };
+    };
+
+    // The optional touch on the seal — nothing depends on it.
+    var P = function (e) { var r = svg.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * 120, y: (e.clientY - r.top) / r.height * 120 }; };
+    seal.addEventListener('pointerdown', function (e) { if (leaving) return; e.preventDefault(); dragging = true; seal.classList.add('rm-grab'); try { seal.setPointerCapture(e.pointerId); } catch (_) {} tilt.style.transform = ''; try { toy.down(P(e)); } catch (_) {} });
+    seal.addEventListener('pointermove', function (e) { if (dragging) { try { toy.move(P(e)); } catch (_) {} } });
+    var end = function (e) { if (!dragging) return; dragging = false; seal.classList.remove('rm-grab'); try { toy.up(P(e)); } catch (_) {} };
+    seal.addEventListener('pointerup', end); seal.addEventListener('pointercancel', end);
+
+    cta.addEventListener('click', function () {
+      if (leaving) return;
+      if (!preview) _reviewConsumeAsk();         // the only place an ask is spent
+      try {
+        var br = cta.getBoundingClientRect(), b = document.createElement('span');
+        b.className = 'rm-burst';
+        b.style.cssText = 'left:' + (br.left + br.width / 2) + 'px;top:' + (br.top + br.height / 2) + 'px;width:' + br.width + 'px;height:' + br.height + 'px';
+        ov.appendChild(b);
+        b.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(1.12,1.9)', opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.1,.6,.3,1)' }).onfinish = function () { b.remove(); };
+      } catch (_) {}
+      try { toy.finale(); } catch (_) {}
+      if (!RM) seal.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1)' }, { transform: 'scale(1)' }], { duration: 320, delay: 80, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+      leaving = true;
+      at(560, function () {
+        leave([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: RM ? 'none' : 'translateY(-14px) scale(.98)' }], 300,
+          preview ? null : function () { try { window.open(_reviewWriteReviewUrl(), '_system'); } catch (_) {} });
+      });
+    });
+    later.addEventListener('click', function () {
+      if (leaving) return;
+      _rmHap('LIGHT');
+      if (!preview) _rvSet(_RV2.notNow, String(Date.now()));   // 30-day cooldown; never spends an ask
+      leave([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: RM ? 'none' : 'translateY(18px)' }], 260, null);
+    });
+    // Backdrop taps do nothing. No X, no swipe.
+    try { toy.perform(); } catch (_) {}
+    return true;
   }
+
+  // Sample data for the owner's preview — this hunter's own numbers where cheap.
+  function _rmSample(moment) {
+    var info = null; try { info = getRankDivisionInfo(totalPoints); } catch (_) {}
+    var week = { days: 7, vowsKept: 23, streak: 7 };
+    try {
+      var d = today, kept = 0, full = true;
+      for (var i = 0; i < 7; i++) { var n = (completions[d] || []).length; if (!n) full = false; kept += n; d = prevDay(d); }
+      if (full && kept) week.vowsKept = kept;
+    } catch (_) {}
+    var S = {
+      week: week,
+      perfect: { count: 3, thirdDate: _rmDateLabel() },
+      boss: { bossName: 'The Steel Wolf', bossRank: 'D' },
+      rank: (info && ['C', 'B', 'A', 'S'].indexOf(info.majorRank) >= 0) ? { rankLabel: info.fullLabel, points: totalPoints } : { rankLabel: 'C II', points: 4333 },
+      coop: { dungeonName: 'The Twin Maw', partySize: 2 },
+    };
+    return S[moment] || {};
+  }
+  /** W974 — the owner's Settings row: all five cards back to back, nothing opened, nothing saved. */
+  function previewRatingMoments() {
+    var step = function (i) {
+      if (i >= _RM_MOMENTS.length) return;
+      _rmShow(_RM_MOMENTS[i], _rmSample(_RM_MOMENTS[i]), { preview: true, onClose: function () { setTimeout(function () { step(i + 1); }, 320); } });
+    };
+    step(0);
+  }
+  try { window.__previewRatingMoments = previewRatingMoments; } catch (_) {}
+  try { window.__rm = { arm: _reviewArm, flush: _reviewFlush, eligible: _reviewEligible, checkWeek: _rmCheckWeek, maybe: _maybeReviewPrompt, shown: _rmShown }; } catch (_) {}   // QA
 
   // ════════════════════════════════════════════════════════════════════════
   // W542 — DEV TEST PANEL (hidden; long-press the Settings "Version" line ~0.85s).
@@ -21952,29 +22313,26 @@
     try {
       var cfg = (typeof getBoss === 'function') ? (getBoss('the_steel_wolf') || getBoss('the_insomniac')) : null;
       if (!cfg) { _devToast('no boss cfg'); return; }
-      _reviewArm('boss', { bossName: cfg.name || 'the boss', rank: cfg.rank || 'C' });
+      _reviewArm('boss', { bossName: cfg.name || 'the boss', bossRank: cfg.rank || 'C' });
       announceKillAndDrop(cfg, 50, null);   // the REAL celebration path — builds the full evt + queues the modal + fanfare
     } catch (e) { _devToast(e); }
   }
   function _devResetReview() {
-    try { ['hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last', 'hb_review_asks_v2', 'hb_review_notnow_at', 'hb_review_shown_at', 'hb_review_summit_armed'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
+    try { ['hb_rm_shown_v1', 'hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last', 'hb_review_asks_v2', 'hb_review_notnow_at', 'hb_review_shown_at', 'hb_review_summit_armed'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
     _reviewPending = null; _devToast('Review ladder reset');
   }
   // W847 — QA hooks (console-reachable even with the dev panel dead):
-  //   __reviewPreview('boss'|'coop'|'perfectday'|'rankup'|'mythic'|'summit')
+  //   __reviewPreview('week'|'perfect'|'boss'|'rank'|'coop')
   //     renders that pre-prompt variant with sample ctx, bypassing eligibility.
   //   __reviewLadder() → current ladder state; __reviewLadder(true) resets it.
   try {
-    window.__reviewPreview = function (trigger) {
-      _showReviewPrePrompt(trigger || 'boss', {
-        bossName: 'The Steel Wolf', rank: 'C', rankLabel: 'C II',
-        dungeonName: 'The Twin Maw', partySize: 2,
-        relicName: 'Nightfall, Blade of the Sovereign', ordinal: '3RD',
-      });
+    window.__reviewPreview = function (moment) {   // W974 — renders one card as a preview: opens nothing, saves nothing
+      var m = moment || 'week';
+      return _rmShow(m, _rmSample(m), { preview: true });
     };
     window.__reviewLadder = function (reset) {
       if (reset) { _devResetReview(); return 'reset'; }
-      return { asks: _reviewAsks(), notNowAt: parseInt(_rvGet(_RV2.notNow), 10) || 0, shownAt: parseInt(_rvGet(_RV2.lastShown), 10) || 0, pending: _reviewPending };
+      return { asks: _reviewAsks(), notNowAt: parseInt(_rvGet(_RV2.notNow), 10) || 0, shownAt: parseInt(_rvGet(_RV2.lastShown), 10) || 0, shown: _rmShown(), pending: _reviewPending };
     };
   } catch (_) {}
   function _devOpenPanel() {
@@ -21983,10 +22341,10 @@
       ['🎬  Unbind cinematic (F100)', function () { _devClose(); try { _faPlayUnbindCinematic(function () {}, function () {}); } catch (e) { _devToast(e); } }],
       ['👑  The Ascension (F100 victory finale)', function () { _devClose(); try { if (_AUD.musicLoop) _audStopMusic(0.4); _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); _arPlayAscension({ onHall: function () { try { showTab && showTab('status'); } catch (_) {} } }); } catch (e) { _devToast(e); } }],
       ['🐺  Boss-defeated celebration → review', function () { _devClose(); _devBossCeleb(); }],
-      ['🎉  Perfect-day celebration', function () { _devClose(); try { triggerPerfectDayCelebration(7); _reviewArm('perfectday', {}); } catch (e) { _devToast(e); } }],
-      ['🗡️  Review pre-prompt: Boss', function () { _devClose(); _showReviewPrePrompt('boss', { bossName: 'The Steel Wolf', rank: 'C' }); }],
-      ['🛡️  Co-op win (record kill + review)', function () { _devClose(); try { var _cid = Object.keys(COOP_BOSSES)[0]; _coopBumpKill(_cid); _devToast((COOP_BOSSES[_cid] || {}).name + ' logged'); } catch (_) {} _showReviewPrePrompt('coop', { dungeonName: 'The Twin Maw', partySize: 2 }); }],
-      ['✦  Review pre-prompt: Perfect Day', function () { _devClose(); _showReviewPrePrompt('perfectday', {}); }],
+      ['🎉  Perfect-day celebration', function () { _devClose(); try { triggerPerfectDayCelebration(7); } catch (e) { _devToast(e); } }],
+      ['🗡️  Review pre-prompt: Boss', function () { _devClose(); _rmShow('boss', _rmSample('boss'), { preview: true }); }],
+      ['🛡️  Co-op win (record kill + review)', function () { _devClose(); try { var _cid = Object.keys(COOP_BOSSES)[0]; _coopBumpKill(_cid); _devToast((COOP_BOSSES[_cid] || {}).name + ' logged'); } catch (_) {} _rmShow('coop', _rmSample('coop'), { preview: true }); }],
+      ['✦  Review pre-prompt: Perfect Day', function () { _devClose(); _rmShow('perfect', _rmSample('perfect'), { preview: true }); }],
       ['↺  Reset review one-shot (re-test)', function () { _devResetReview(); }],
     ];
     var ov = document.createElement('div'); ov.id = 'dev-panel';
@@ -23552,9 +23910,8 @@
         if (_firstKill) {
           try {
             try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-            _rvSet(_RV.firstBoss, '1');
-            var _rvRankN = ''; try { _rvRankN = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
-            _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankN || (cfg && cfg.rank) || '' });
+            var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
+            if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' });
           } catch (_) {}
         }
         // Re-render the Quests panel so the streak progress + kill
@@ -23677,9 +24034,8 @@
         if (_firstKill) {
           try {
             try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-            _rvSet(_RV.firstBoss, '1');
-            var _rvRankD = ''; try { _rvRankD = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {}
-            _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRankD || (cfg && cfg.rank) || '' });
+            var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
+            if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' });
           } catch (_) {}
         }
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -23809,8 +24165,8 @@
     announceKillAndDrop(cfg, reward, dropped);
     // W541 — solo boss win → mark first-boss + arm the review pre-prompt (fires on modal close).
     try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-    _rvSet(_RV.firstBoss, '1');
-    try { var _rvRank = ''; try { _rvRank = String(getRank(totalPoints).label || '').replace(/\s*rank\s*$/i, ''); } catch (_) {} if (!_rvRank) _rvRank = (cfg && cfg.rank) || ''; _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', rank: _rvRank }); } catch (_) {}
+    var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
+    try { if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' }); } catch (_) {}
     // v3 Phase 1z.165 — Guild Hall feat row. Boss kills are per-day
     // idempotent on (boss_id, kill_count) so the same kill can't
     // double-emit even if _awardSingleShotKill is called twice (e.g.
@@ -31279,7 +31635,7 @@
     // toasts) has fully drained, via the queue-empty branches. E/D rank-ups
     // stay ask-free — too early.
     if (isCPlus) {
-      try { _reviewArm('rankup', { rank: isPrestige ? 'S+' : rank.id, rankLabel: isPrestige ? ('PRESTIGE ' + prestigeLevel) : (rank.label || '') }); } catch (_) {}
+      try { var _rmDiv = getRankDivisionInfo(totalPoints); _reviewArm('rank', { rankLabel: isPrestige ? 'S+' : ((_rmDiv && _rmDiv.fullLabel) || rank.id), points: totalPoints }); } catch (_) {}
     }
 
     const dismiss = () => {
@@ -31661,7 +32017,7 @@
       if (achQueue.length && !achPopupTimer) drainAchQueue();
       // W847 — the whole celebration chain is spent; a pending tier-2 rank-up
       // ask may now surface (no-op when nothing is armed or ineligible).
-      else if (!achQueue.length) { try { _reviewFlush(['rankup']); } catch (_) {} }
+      else if (!achQueue.length) { try { _reviewFlush(['rank']); } catch (_) {} }
       return;
     }
     if (_stageDefer('levelup', 20, drainLevelUpQueue, ['levelup'])) return;   // W950
@@ -31716,7 +32072,7 @@
       achPopupTimer = null;
       // W847 — achievement toasts were the last of the chain; a pending
       // tier-2 rank-up ask may now surface (no-op when nothing is armed).
-      try { _reviewFlush(['rankup']); } catch (_) {}
+      try { _reviewFlush(['rank']); } catch (_) {}
       return;
     }
     if (_stageDefer('ach', 85, drainAchQueue, ['ach'])) { achPopupTimer = null; return; }   // W950
@@ -35615,6 +35971,8 @@
   function syncPreviewCelebrationsRow() {
     const row = document.getElementById('settings-preview-celebrations');
     if (row) row.classList.toggle('hidden', !_testHunterAllowed());
+    const rateRow = document.getElementById('settings-preview-rating');   // W974 — same owner gate
+    if (rateRow) rateRow.classList.toggle('hidden', !_testHunterAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -37185,7 +37543,7 @@
   function _pdayClose() {
     var ov = document.getElementById('pday-overlay'); if (!ov) return;
     _pdayClearTimers(); ov.classList.add('closing');
-    setTimeout(function () { ov.classList.remove('on'); _pdayReset(); try { _reviewFlush(['perfectday']); } catch (_) {} }, 300);
+    setTimeout(function () { ov.classList.remove('on'); _pdayReset(); try { _reviewFlush(['perfect']); } catch (_) {} }, 300);
   }
 
   // Public entry — streak + XP default to the live perfect-streak + today's XP.
@@ -37231,8 +37589,8 @@
 
     _pdayPlaySfx();
     _pdayState.running = true; _pdayState.startT = performance.now(); _pdayState.rafId = requestAnimationFrame(_pdayLoop);
-    // W541 — perfect day → count it + arm the review pre-prompt (fires on _pdayClose, gated by READY).
-    try { _reviewBumpPerfectDay(); _reviewArm('perfectday', {}); } catch (_) {}
+    // W974 — count every perfect day; the THIRD is a rating moment (fires on _pdayClose).
+    try { _reviewBumpPerfectDay(); if (_reviewPerfectDayCount() === 3) _reviewArm('perfect', { count: 3, thirdDate: _rmDateLabel() }); } catch (_) {}
 
     _pdayHaptic('LIGHT', _pdayState.reduced);
     if (!_pdayState.reduced) {
@@ -37553,6 +37911,8 @@
                 nextLetter: newDivInfo.nextMajorRank || '',
                 divisionXp: Math.max(0, Math.round((newDivInfo.nextDivisionStartXp || 0) - (newDivInfo.currentDivisionStartXp || 0))),
               });
+              // W974 — a division at C or above is a rating moment.
+              if (['C', 'B', 'A', 'S'].indexOf(newDivInfo.majorRank) >= 0) { try { _reviewArm('rank', { rankLabel: newDivInfo.fullLabel, points: totalPoints }); } catch (_) {} }
             }
           }
         } catch (_) {}
@@ -37600,6 +37960,7 @@
     renderRank();
     updateProgress();
     checkPerfectDay();
+    _rmCheckWeek();   // W974 — the first seven-day run is a rating moment
     if (currentTab === 'profile') renderProfile();
   }
 
@@ -55023,8 +55384,9 @@
     try { delete _coopBadgeByBoss[inst.boss_id]; } catch (_) {}
     try { _coopApplyBadge(); } catch (_) {}
     // W541 — co-op dungeon win → mark first-coop + arm the review pre-prompt (fires on modal close).
+    var _rmFirstCoop = !_rvGet(_RV.firstCoop);   // W974 — only the first clear is the moment
     _rvSet(_RV.firstCoop, '1');
-    try { _reviewArm('coop', { dungeonName: (cfg && cfg.name) || 'the dungeon', partySize: (inst && inst.party_size) || 2 }); } catch (_) {}   // W677 — trio-aware
+    try { if (_rmFirstCoop) _reviewArm('coop', { dungeonName: (cfg && cfg.name) || 'the dungeon', partySize: (inst && inst.party_size) || 2 }); } catch (_) {}   // W677 — trio-aware
     // W448 — also drop a notification-tray record (best-effort) so a win lands even if
     // the resolution was detected on app-resume rather than while watching the sheet.
     // W662 — suppress the generic win ping when an ULTRA/MEGA drop already fired
@@ -68564,6 +68926,7 @@
       'hb_review_first_coop_done',
       'hb_review_pday_count',
       'hb_review_pday_last',
+      'hb_rm_shown_v1',          // W974 — rating moments already shown (each once, ever)
       'hb_coop_kills',            // W545 — per-co-op-boss kill counts for the Kill Log
       'hb_coop_pacts',            // W663 — per-friend co-op Pact streak (Snapchat-style)
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
@@ -69795,6 +70158,13 @@
         if (!_testHunterAllowed()) return;
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewRankCelebrations(); } catch (_) {} }, 280);
+      });
+      // W974 — owner-only: all five rating moments back to back; opens nothing, saves nothing.
+      const ratePreviewRow = document.getElementById('settings-preview-rating');
+      if (ratePreviewRow) ratePreviewRow.addEventListener('click', function () {
+        if (!_testHunterAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        setTimeout(function () { try { previewRatingMoments(); } catch (_) {} }, 280);
       });
       // W541 — manual, always-available "Rate Awakened" → user-initiated App Store
       // write-review composer (deep link; bypasses the native-sheet frequency cap).
