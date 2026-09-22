@@ -8,6 +8,38 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.7 — READY TO PASTE (W968–W975, drafted 2026-09-22, build 534)
+
+### Release notes (What's New)
+
+```
+Your vows are yours. Your glory is verified.
+
+• Tick every vow yourself. Daily walk, Sleep and Workout are ordinary
+  vows now — tap them when you've kept them. Nothing waits on Apple
+  Health to check them off for you.
+
+• Apple Health still powers the hunt. Your real steps, sleep and
+  workouts bring bosses down, strike the Worldgate and set every
+  leaderboard. What other hunters see stays verified.
+
+• Make as many vows as you like. The five-vow limit is gone. Every vow
+  you create is worth +1 XP, up to 25 in all.
+
+• The Worldgate crowns its MVPs. When the gate falls, the three hunters
+  who carried it take the podium and earn bonus souls. The top three in
+  Top Hunters wear MVP, 2ND and 3RD.
+
+• Updates on the Community board. News from the developers gets its own
+  section, pinned to the top each week.
+
+• A Morning Routine you can finish. New hunters get six steps that fit
+  inside the first hour.
+```
+
+Deliberately left out: the review cards (never advertise a rating ask) and the
+developer crown (not a player feature).
+
 ## ⚠ 3.0.6 — READY TO PASTE (W967, drafted 2026-09-20)
 
 Three parts: the release notes, and **three corrections to the live description**. The
