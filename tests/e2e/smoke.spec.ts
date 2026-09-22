@@ -5253,6 +5253,33 @@ test.describe('BA · The crown is part of the name (W969)', () => {
     expect(n).toBe(0);
   });
 
+  test('W972: the Hunter Profile name on Status wears it — keyed on the signed-in account', async ({ page }) => {
+    // The local stub signs in as "DevUser"; on the owner's phone that account is Richie.
+    await withRoster(page);
+    const crownAfter = async (list: any[]) => {
+      await page.addInitScript((l) => { try { localStorage.setItem('hb_crown_roster_v1', JSON.stringify({ at: Date.now(), list: l })); } catch (_) {} }, list);   // runs after withRoster's seed
+      await page.reload();
+      await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+      await page.locator('#tab-profile').click();
+      await expect(page.locator('#sc-name-val')).toBeVisible({ timeout: 8_000 });
+      return page.evaluate(() => !!document.querySelector('#sc-name-val .name-crown'));
+    };
+    expect(await crownAfter([{ alias: 'devuser', role: 'owner' }])).toBe(true);
+    expect(await crownAfter([{ alias: 'RenDIESEL', role: 'mod' }])).toBe(false);
+  });
+
+  test('W972: a Community post and reply author wears it; others do not', async ({ page }) => {
+    await withRoster(page);
+    const r = await page.evaluate(() => {
+      const who = (window as any).__board.who;
+      const el = document.createElement('div');
+      el.innerHTML = who({ alias: 'RenDIESEL', rank_label: 'S' }, { created_at: Date.now() }, {}) +
+                     who({ alias: 'Grubbadub', rank_label: 'C' }, { created_at: Date.now() }, { sub: true });
+      return [].map.call(el.querySelectorAll('.board-name'), (b: any) => ({ name: b.textContent.trim(), crown: !!b.querySelector('.name-crown') }));
+    });
+    expect(r).toEqual([{ name: 'RenDIESEL', crown: true }, { name: 'Grubbadub', crown: false }]);
+  });
+
   test('the cache holds names and roles only — never an account id', async ({ page }) => {
     await freshApp(page);
     await page.route('**/v1/board/moderators', (route) => route.fulfill({ status: 200, contentType: 'application/json',

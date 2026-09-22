@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w971'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w972'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34578,7 +34578,7 @@
           })() +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
-              '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + '</span>' +
+              '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + _crownForMe() + '</span>' +   // W972
               // v3 Phase 1j — hunter name is claim-once. Render the
               // edit pencil only for users who haven't claimed yet.
               (localStorage.getItem('hb_hunter_name_claimed') === '1'
@@ -47309,7 +47309,7 @@
     const lr = t.last_reply;
     if (!lr || !lr.alias) return '<div class="board-last board-last--none"><span class="board-last-arrow">No replies yet — be the first</span></div>';
     const n = _boardNewCount(t);
-    return '<div class="board-last">' + _boardAvHtml(lr, 'board-av--xs') + '<b>' + esc(lr.alias) + '</b>' +
+    return '<div class="board-last">' + _boardAvHtml(lr, 'board-av--xs') + '<b>' + esc(lr.alias) + _crownFor(lr.alias) + '</b>' +
       '<span class="board-last-arrow">replied · ' + esc(_boardRel(lr.at)) + '</span>' +
       (n ? '<span class="board-last-new">' + (n > 0 ? n + ' NEW' : 'NEW') + '</span>' : '') +
     '</div>';
@@ -47348,7 +47348,7 @@
         '</div>' +
         '<div class="board-tl">' + esc(t.title || '') + '</div>' +
         (t.preview ? '<div class="board-ts">' + esc(t.preview) + '</div>' : '') +
-        '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(a.alias || 'hunter') + '</button>' +
+        '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(a.alias || 'hunter') + _crownFor(a.alias) + '</button>' +
           '<span class="board-rk">' + esc(tier) + '</span><span class="board-dt">' + esc(_boardRel(t.last_activity_at)) + '</span></div>' +
         _boardLastHtml(t) +   // W929
       '</div>' +
@@ -47855,7 +47855,7 @@
     const alias = String(a.alias || 'Hunter');
     const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
     return '<div class="board-pwho">' + _boardAvHtml(a, opts.sub ? 'board-av--sm' : 'board-av--md') +
-      '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + '</button>' +
+      '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + _crownFor(alias) + '</button>' +
       '<span class="board-prank">' + esc(tier) + '</span>' + founder + _boardPillsHtml(a, opts.opId) +
       '<span class="board-ptime">' + esc(_boardRel(p.created_at)) + (p.edited_at ? '<span class="board-edited">· EDITED</span>' : '') + '</span>' +
       '<button type="button" class="board-dots" data-board-menu aria-label="Post options">···</button>' +
@@ -48443,6 +48443,7 @@
       settings: renderBoardBlocksSettings, pane: _cmSetPane, sort: _boardSetSort, tag: _boardSetTag,
       preflight: _boardPreflight, posts: function () { return _boardPosts; },   // W914
       rsort: _boardSetRSort,   // W929
+      who: _boardWhoHtml,      // W972 — QA
     };
   } catch (_) {}
 
