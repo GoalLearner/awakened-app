@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w970'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w971'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -28376,10 +28376,40 @@
   // pack rewards 7+ hour sleep duration rather than just bedtime timing.
   // The bedtime-only habit still exists at index 2 — users who prefer
   // it can add it from the library; it's just not in the canonical pack.
-  const _MORNING_HABIT_INDICES = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
+  const _MORNING_V1_INDICES   = [1, 23, 14, 16, 41, 6, 46, 12, 4, 19];
   // Locked-In adds: priority task(24), no social before noon(17),
   // no doomscrolling 5PM(29), plan tomorrow(25), no screens before bed(18), read(11)
-  const _LOCKED_IN_EXTRA_INDICES = [24, 17, 29, 25, 18, 11];
+  const _LOCKED_IN_V1_EXTRAS  = [24, 17, 29, 25, 18, 11];
+  // W971 — v2, owner 2026-09-21: a morning you can actually finish. Six
+  // steps in the order you do them, all inside the first hour: wake up at a
+  // consistent time(23), hydrate(0), no phone after waking(14), sunlight(16),
+  // meditate & breathwork(12), gratitude(41). The four all-day habits that
+  // kept the "morning" open until night (Sleep, Daily walk, Workout, Whole
+  // foods) and Vitamins move to Locked-In — the full-day cycle — so Locked-In
+  // keeps every habit it had (and gains Hydrate).
+  // NEW HUNTERS ONLY (owner): a hunter already on the routine keeps v1.
+  const _MORNING_V2_INDICES   = [23, 0, 14, 16, 12, 41];
+  const _LOCKED_IN_V2_EXTRAS  = [1, 6, 46, 4, 19, 24, 17, 29, 25, 18, 11];
+  // 'v1' | 'v2', stamped once (hb_mr_version, cloud-synced). Unstamped: a
+  // hunter holding 7+ of the old ten is on v1; anyone else is v2. Nothing is
+  // stamped while the list is empty, so a reinstall waits for its restore.
+  function _morningVersion() {
+    try {
+      const v = localStorage.getItem('hb_mr_version');
+      if (v === 'v1' || v === 'v2') return v;
+      const list = (typeof habits !== 'undefined' && Array.isArray(habits)) ? habits : [];
+      const active = list.filter((h) => h && !h.archived);
+      if (!active.length) return 'v2';
+      const names = new Set(active.map((h) => h.name));
+      const held = _MORNING_V1_INDICES.filter((i) => DEFAULT_HABITS[i] && names.has(DEFAULT_HABITS[i].name)).length;
+      const out = held >= 7 ? 'v1' : 'v2';
+      localStorage.setItem('hb_mr_version', out);
+      return out;
+    } catch (_) { return 'v2'; }
+  }
+  try { window.__morningPack = () => ({ version: _morningVersion(), morning: getPackHabitDefs('morning').map((h) => h.name), lockedIn: getPackHabitDefs('locked-in').map((h) => h.name) }); } catch (_) {}
+  function _morningIndices()   { return _morningVersion() === 'v1' ? _MORNING_V1_INDICES : _MORNING_V2_INDICES; }
+  function _lockedInExtras()   { return _morningVersion() === 'v1' ? _LOCKED_IN_V1_EXTRAS : _LOCKED_IN_V2_EXTRAS; }
 
   const PACKS = [
     {
@@ -28391,7 +28421,7 @@
       color:   '#f59e0b',
       bonusLabel: '⚡ COMPOUND EFFECT BONUS',
       packLabel:  'Compound Effect Bonus',
-      habits: _MORNING_HABIT_INDICES.slice(),
+      get habits() { return _morningIndices().slice(); },   // W971 — v1 or v2
     },
     {
       id:      'locked-in',
@@ -28403,7 +28433,7 @@
       bonusLabel: '🔒 LOCKED-IN BONUS',
       packLabel:  'Locked-In Bonus',
       // Composed: 10 MR habits + 6 LI extras = 16 total. NEVER hardcode.
-      habits: [..._MORNING_HABIT_INDICES, ..._LOCKED_IN_EXTRA_INDICES],
+      get habits() { return [..._morningIndices(), ..._lockedInExtras()]; },   // W971
     },
     {
       id:      'custom',
@@ -39172,8 +39202,8 @@
     if (titleEl)    titleEl.textContent    = 'Add ' + pack.name + '?';
     if (subtitleEl) {
       subtitleEl.textContent = packId === 'locked-in'
-        ? '16 habits — the complete discipline cycle.'
-        : 'This pack contains 10 habits designed to compound daily.';
+        ? getPackHabitDefs('locked-in').length + ' habits — the complete discipline cycle.'
+        : getPackHabitDefs(packId).length + ' habits, all inside your first hour.';
     }
 
     // v3 Phase 1z.283 W176 — Active-only name set (archived vows
@@ -46104,7 +46134,7 @@
     if (labelEl) labelEl.innerHTML = iconify(pack.bonusLabel || '⚡ COMPOUND EFFECT BONUS', { size: 22 });
     document.getElementById('cp-pack-msg').textContent =
       isLockedIn
-        ? 'All 16 habits complete. You owned the day.'
+        ? 'All ' + getPackHabitDefs('locked-in').length + ' habits complete. You owned the day.'
         : isCustom
           ? 'Your whole routine, complete. The compound effect is yours.'
           : 'All ' + pack.name + ' habits complete!';
@@ -58132,9 +58162,9 @@
     // LI). We must check for at least one of the 6 LI-EXCLUSIVE extras
     // before suppressing the MR strip. Pure-MR users keep their MR row.
     const liExclusivelyActive = (function() {
-      const liExtraNames = (typeof _LOCKED_IN_EXTRA_INDICES !== 'undefined' &&
+      const liExtraNames = (typeof _lockedInExtras === 'function' &&
                             typeof DEFAULT_HABITS !== 'undefined')
-        ? new Set(_LOCKED_IN_EXTRA_INDICES.map(i => DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name).filter(Boolean))
+        ? new Set(_lockedInExtras().map(i => DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name).filter(Boolean))
         : new Set();
       if (liExtraNames.size === 0) return false;
       // v3 Phase 1z.283 W177 — Active-only. Pack-detection is
@@ -58240,8 +58270,8 @@
     // ≥1 of the 6 LI-only extras, else a pure-Morning user shows a phantom "LI x/16".
     let liActive = false;
     try {
-      if (typeof _LOCKED_IN_EXTRA_INDICES !== 'undefined' && typeof DEFAULT_HABITS !== 'undefined') {
-        const extras = new Set(_LOCKED_IN_EXTRA_INDICES
+      if (typeof _lockedInExtras === 'function' && typeof DEFAULT_HABITS !== 'undefined') {
+        const extras = new Set(_lockedInExtras()
           .map(i => DEFAULT_HABITS[i] && DEFAULT_HABITS[i].name).filter(Boolean));
         liActive = extras.size > 0 && habits.some(h => _isActiveHabit(h) && extras.has(h.name));
       }
@@ -63177,6 +63207,7 @@
 
         selectedPackId = state.pack || 'custom';
         localStorage.setItem('hb_path', selectedPackId);
+        try { localStorage.setItem('hb_mr_version', 'v2'); } catch (_) {}   // W971 — new hunters get the v2 morning
         // W574 — the goal flag is server-authoritative (user-state UPSERT ->
         // users.onboarding_goal) and partitions the jump library.
         try { localStorage.setItem('hb_onboarding_goal', selectedPackId === 'jump_program' ? 'jump_program' : 'default'); } catch (_) {}
@@ -63421,7 +63452,7 @@
       '<div class="path-card-name">Morning Routine</div>'                       +
       '<div class="path-card-tagline">Win the morning. Win the day.</div>'      +
       '<div class="path-card-sub">For the intentional starter</div>'            +
-      '<div class="path-card-count">10 habits pre-selected</div>';
+      '<div class="path-card-count">' + _MORNING_V2_INDICES.length + ' habits pre-selected</div>';
 
     // ── Card: Locked-In ────────────────────────────────────
     // v3 Phase 1z.251 — Locked-In legacy card removed from the
@@ -63782,6 +63813,7 @@
       const MORNING_NOTES = {
         'Sleep before midnight':              'It all starts the night before. Quality sleep before midnight sets the foundation for everything.',
         'Wake up at consistent time':         'Discipline starts before your feet hit the floor. Same time every day builds the warrior.',
+        'Hydrate':                            'Water before coffee. A full glass the moment you are up wakes the body before anything asks for it.',
         'No phone or social media after waking': 'Protect your mind in the first 30 minutes. What you consume first shapes your entire day.',
         'Get morning sunlight':               'Get outside. Natural light sets your circadian rhythm and signals your body it is time to conquer.',
         'Morning gratitude practice':         'Three things. Every morning. Rewires your brain toward abundance over time.',
@@ -68552,6 +68584,7 @@
       'hb_welcomed',
       'hb_onboarding_seen_v2',
       'hb_path',
+      'hb_mr_version',   // W971 — which Morning Routine this hunter is on
       'hb_class',
       // Auto-verify metadata
       'hb_completions_auto',

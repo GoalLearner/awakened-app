@@ -2511,7 +2511,7 @@ test.describe('AC · Onboarding v2 (W936)', () => {
 
     // The paths are the real packs with their real vow counts.
     expect(r.paths.map((p) => p.name)).toEqual(['Morning Routine', 'Make Your Own', 'Vertical Jump Program']);
-    expect(r.paths[0].sub).toBe('10 vows');
+    expect(r.paths[0].sub).toBe('6 vows');   // W971 — the six-step morning
     expect(r.paths[1].on).toBe(true);
   });
 
@@ -3625,15 +3625,16 @@ test.describe('AK · Add Habits v3 (W945)', () => {
     await openLibWith(page, MR_HAND);
     const morning = page.locator('#lib-pack-morning');
     const locked  = page.locator('#lib-pack-lockedin');
-    await expect(morning.locator('.lib-pack-count')).toHaveText('10 HABITS');
-    await expect(morning.locator('.lib-pack-add')).toHaveText('Add 6');
-    await expect(locked.locator('.lib-pack-count')).toHaveText('16 HABITS');
-    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 12');
+    // W971 — a hunter holding 4 of the old ten is on the v2 six-step morning.
+    await expect(morning.locator('.lib-pack-count')).toHaveText('6 HABITS');
+    await expect(morning.locator('.lib-pack-add')).toHaveText('Add 2');
+    await expect(locked.locator('.lib-pack-count')).toHaveText('17 HABITS');
+    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 13');
 
     await morning.click();
     await expect(morning).toHaveClass(/is-sel/);
-    await expect(page.locator('#lib-cta')).toHaveText('Add 6 habits to my list');
-    await expect(page.locator('#lib-sub')).toHaveText('4 active · 15 slots open');
+    await expect(page.locator('#lib-cta')).toHaveText('Add 2 habits to my list');
+    await expect(page.locator('#lib-sub')).toHaveText('4 active · 19 slots open');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').length)).toBe(4);
 
     await morning.click();   // a fully selected card lets its habits go
@@ -3648,16 +3649,15 @@ test.describe('AK · Add Habits v3 (W945)', () => {
       habits: JSON.parse(localStorage.getItem('hb_habits') || '[]'),
       path: localStorage.getItem('hb_path'),
     }));
-    expect(saved.habits.length).toBe(10);
+    expect(saved.habits.length).toBe(6);
     expect(saved.path).toBe('morning');
-    const walk = saved.habits.find((h: any) => h.name === 'Daily walk');
-    expect(walk && walk.stepGoal).toBeGreaterThan(0);   // the library builder, not the bare pack row
+    expect(saved.habits.map((h: any) => h.name)).toEqual(expect.arrayContaining(['Hydrate', 'Meditate & Breathwork']));
 
     await page.evaluate(() => (document.getElementById('add-habit-btn') as HTMLElement).click());
     await expect(page.locator('#lib-sheet')).toBeVisible();
     await expect(morning.locator('.lib-pack-add')).toHaveText('All added');
     await expect(morning).toBeDisabled();
-    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 6');
+    await expect(locked.locator('.lib-pack-add')).toHaveText('Add 11');
   });
 
   test('the 25-vow cap holds for a row and for a pack', async ({ page }) => {
@@ -5396,5 +5396,63 @@ test.describe('BB · Vows are yours, recognition is verified (W970)', () => {
     await page.waitForTimeout(600);
     const q = await page.evaluate(() => (window as any).__paeQueuePeek());
     expect(q.join(' ')).not.toContain('perfect_day');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// BC. W971 — a Morning Routine you can finish (new hunters only)
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BC · A morning you can finish (W971)', () => {
+  const V1 = ['Sleep', 'Wake up at consistent time', 'No phone or social media after waking', 'Get morning sunlight',
+    'Morning gratitude practice', 'Daily walk', 'Vitamins and minerals', 'Meditate & Breathwork', 'Workout', 'Whole foods diet'];
+  const V2 = ['Wake up at consistent time', 'Hydrate', 'No phone or social media after waking', 'Get morning sunlight',
+    'Meditate & Breathwork', 'Morning gratitude practice'];
+  async function seed(page: Page, names: string[], extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([ns, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w971')) return;
+        sessionStorage.setItem('__w971', '1');
+        localStorage.removeItem('hb_mr_version');
+        localStorage.setItem('hb_habits', JSON.stringify(ns.map((n: string, i: number) =>
+          ({ id: 'w971-' + i, name: n, emoji: '\u2022', difficulty: 'easy', type: 'build', primaryStat: 'VIT' }))));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [names, extra || {}] as [string[], Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+
+  test('a hunter already on the ten keeps the ten, and Locked-In stays at sixteen', async ({ page }) => {
+    await seed(page, V1, { hb_path: 'morning' });
+    const r = await page.evaluate(() => (window as any).__morningPack());
+    expect(r.version).toBe('v1');
+    expect(r.morning).toEqual(V1);
+    expect(r.lockedIn.length).toBe(16);
+    expect(await page.evaluate(() => localStorage.getItem('hb_mr_version'))).toBe('v1');
+  });
+
+  test('a new hunter gets the six-step morning; the all-day habits live in Locked-In', async ({ page }) => {
+    await seed(page, ['Journal']);
+    const r = await page.evaluate(() => (window as any).__morningPack());
+    expect(r.version).toBe('v2');
+    expect(r.morning).toEqual(V2);
+    expect(r.lockedIn.length).toBe(17);
+    for (const n of ['Sleep', 'Daily walk', 'Workout', 'Whole foods diet', 'Vitamins and minerals']) {
+      expect(r.morning).not.toContain(n);
+      expect(r.lockedIn).toContain(n);
+    }
+  });
+
+  test('an empty list never stamps a version, so a reinstall waits for its restore', async ({ page }) => {
+    await seed(page, []);
+    const r = await page.evaluate(() => ({ v: (window as any).__morningPack().version, stamp: localStorage.getItem('hb_mr_version') }));
+    expect(r.v).toBe('v2');
+    expect(r.stamp).toBeNull();
+  });
+
+  test('a stamped v1 survives trimming the list', async ({ page }) => {
+    await seed(page, ['Sleep', 'Hydrate'], { hb_mr_version: 'v1' });
+    expect((await page.evaluate(() => (window as any).__morningPack())).morning).toEqual(V1);
   });
 });
