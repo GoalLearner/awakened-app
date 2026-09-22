@@ -51,7 +51,7 @@ interface State {
   consents: Set<string>;
   mutes: Record<string, number>;
   mods: Record<string, 'owner' | 'mod'>;
-  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null }>;
+  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null; kind?: string | null }>;
   votes: Set<string>;     // W913 — `${topic}|${user}`
   replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string; parent_reply_id?: string | null; edited_at?: number | null }>;
   strikes: { user_id: string; created_at: number }[];   // W914
@@ -117,6 +117,11 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               return { up_count: [...st.replyVotes].filter((k) => k.startsWith(`${binds[0]}|`)).length };
             }
             if (/SELECT 1 AS f FROM board_follows/.test(sql)) return st.follows.has(`${binds[0]}|${binds[1]}`) ? { f: 1 } : null;
+            if (/SELECT id, created_at FROM board_topics WHERE kind = 'update'/.test(sql)) {   // W973
+              const hit = Object.entries(st.topics).filter(([, t]) => t.kind === 'update' && t.deleted_at == null && t.hidden_at == null)
+                .sort((a, b) => (b[1].created_at || 0) - (a[1].created_at || 0))[0];
+              return hit ? { id: hit[0], created_at: hit[1].created_at || 0 } : null;
+            }
             if (/SELECT title FROM board_topics/.test(sql)) { const t = st.topics[binds[0] as string]; return t ? { title: t.title || 'T' } : null; }
             // W921 — the three unseen COUNTs
             if (/FROM board_topics t\s+JOIN users u/.test(sql)) {
@@ -216,7 +221,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/UPDATE board_replies SET body = \?, edited_at/.test(sql)) { const r = st.replies[binds[2] as string]; if (r) { r.body = binds[0] as string; r.edited_at = binds[1] as number; } return ok(1); }
             if (/INSERT INTO board_consents/.test(sql)) { st.consents.add(binds[0] as string); return ok(1); }
             if (/INSERT INTO board_topics/.test(sql)) {
-              st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: null, created_at: binds[5] as number, title: binds[3] as string, body: binds[4] as string };
+              st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: (binds[8] as number | null) ?? null, created_at: binds[5] as number, title: binds[3] as string, body: binds[4] as string, kind: (binds[7] as string | null) ?? null };
               return ok(1);
             }
             if (/INSERT OR IGNORE INTO board_votes/.test(sql)) {
@@ -225,6 +230,9 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/DELETE FROM board_votes/.test(sql)) { st.votes.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/UPDATE board_topics SET up_count/.test(sql)) {
               const t = st.topics[binds[1] as string]; if (t) t.up_count = [...st.votes].filter((k) => k.startsWith(`${binds[1]}|`)).length; return ok(1);
+            }
+            if (/SET pinned_at = NULL, pinned_by = NULL WHERE kind = 'update'/.test(sql)) {   // W973
+              for (const t of Object.values(st.topics)) if (t.kind === 'update') t.pinned_at = null; return ok(1);
             }
             if (/UPDATE board_topics SET pinned_at/.test(sql)) {
               const t = st.topics[binds[2] as string]; if (t) t.pinned_at = binds[0] as number | null; return ok(1);
@@ -645,7 +653,7 @@ describe('W913 — the v3 board: votes, pins, sorts and counts', () => {
     const st = fresh();
     await postTopic(st, me); await postTopic(st, ren);
     const first = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
-    expect(first.counts).toEqual({ all: 2, improvement: 0, bug: 0, talk: 2 });
+    expect(first.counts).toEqual({ all: 2, improvement: 0, bug: 0, talk: 2, update: 0 });
     const later = await json(await handleBoardTopicsGet(get('/v1/board/topics?cursor=5%7Cdeadbeef-0000'), makeEnv(st), x));
     expect(later.counts).toBeUndefined();
   });
@@ -945,5 +953,55 @@ describe('W929 · thread v4', () => {
     expect(await on.json()).toMatchObject({ ok: true, following: true });
     const off = await handleBoardFollowPost(new Request('https://x', { method: 'POST' }), env, me, 'aaaaaaaa-0001');
     expect(await off.json()).toMatchObject({ ok: true, following: false });
+  });
+});
+
+describe('W973 · Updates — the developers\' weekly voice', () => {
+  it('only the owner or a moderator opens an update; anyone else is refused', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner'; st.mods['u-ren'] = 'mod';
+    const guake = await postTopic(st, x, { tag: 'update', title: 'Week of Sep 21', body: 'Not official.' });
+    expect(guake.status).toBe(403);
+    expect(guake.body.code ?? guake.body.error).toBeTruthy();
+    expect(Object.keys(st.topics)).toHaveLength(0);
+    expect((await postTopic(st, me, { tag: 'update', title: 'Week of Sep 21', body: 'Your vows are yours now.' })).status).toBe(200);
+    expect((await postTopic(st, ren, { tag: 'update', title: 'Week of Sep 28', body: 'More news.' })).status).toBe(200);
+  });
+
+  it('it is stored as talk + kind update, and a new update pins itself and unpins the last', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 21', body: 'First.' });
+    const first = st.topics[a.body.id as string];
+    expect(first.kind).toBe('update');
+    expect(first.pinned_at).not.toBeNull();
+    const insert = st.calls.find((c) => /INSERT INTO board_topics/.test(c.sql))!;
+    expect(insert.binds[2]).toBe('talk');   // the 0055 CHECK never sees 'update'
+    const b = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 28', body: 'Second.' });
+    expect(st.topics[a.body.id as string].pinned_at).toBeNull();
+    expect(st.topics[b.body.id as string].pinned_at).not.toBeNull();
+    // An ordinary topic never pins and has no kind.
+    const t = await postTopic(st, x);
+    expect(st.topics[t.body.id as string].pinned_at).toBeNull();
+    expect(st.topics[t.body.id as string].kind).toBeNull();
+  });
+
+  it('the list filter accepts update and the wire tag maps from kind', async () => {
+    const st = fresh();
+    const r = await handleBoardTopicsGet(get('/v1/board/topics?tag=update'), makeEnv(st), me);
+    expect(r.status).toBe(200);
+    const q = st.calls.find((c) => /FROM board_topics x/.test(c.sql))!;
+    expect(q.sql).toContain("CASE WHEN x.kind = 'update' THEN 'update' ELSE x.tag END");
+    expect((await json(r)).counts).toMatchObject({ update: 0 });
+  });
+
+  it('unseen names the newest visible update so the app can keep a dot until it is opened', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const none = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
+    expect(none.update).toBeNull();
+    const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 21', body: 'First.' });
+    const u = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
+    expect((u.update as { id: string }).id).toBe(a.body.id);
+    st.topics[a.body.id as string].hidden_at = Date.now();
+    const hidden = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
+    expect(hidden.update).toBeNull();
   });
 });

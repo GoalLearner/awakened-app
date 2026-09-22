@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w972'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w973'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -47083,7 +47083,7 @@
   const BOARD_BODY_MAX = 1000;
   const BOARD_TAB_ROWS = 6;      // W913 — the board has its own pane now; the page no longer stacks
   const BOARD_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'];
-  const BOARD_TAG_LABEL = { improvement: 'IDEA', bug: 'BUG', talk: 'TALK' };   // W913 — v3 names the improvement tag IDEA
+  const BOARD_TAG_LABEL = { improvement: 'IDEA', bug: 'BUG', talk: 'TALK', update: 'UPDATE' };   // W973 — UPDATE = the developers' weekly voice   // W913 — v3 names the improvement tag IDEA
   const BOARD_SORTS = [['latest', 'LATEST'], ['hot', 'HOT'], ['unanswered', 'UNANSWERED']];
   const BOARD_REASONS = [['harassment', 'Harassment'], ['spam', 'Spam'], ['offensive', 'Offensive'], ['other', 'Something else']];
   let _boardLists = {};          // W913 — `${tag}|${sort}` → { topics, next_cursor } (tab + full-board sheet share it)
@@ -47361,8 +47361,9 @@
   function _boardFiltersHtml() {
     const c = _boardCounts || {};
     const cnt = function (k) { return (c[k] != null) ? ' <span class="board-f-n">' + (Number(c[k]) || 0) + '</span>' : ''; };
-    return [['', 'ALL', 'all'], ['improvement', 'IDEAS', 'improvement'], ['bug', 'BUGS', 'bug'], ['talk', 'TALK', 'talk']].map(function (f) {
-      return '<button type="button" class="board-f' + (f[0] ? ' board-f--' + f[0] : '') + '" data-board-tag="' + f[0] + '" data-active="' + (f[0] === _boardTag ? 'true' : 'false') + '">' + (f[0] ? '<i></i>' : '') + f[1] + cnt(f[2]) + '</button>';
+    return [['', 'ALL', 'all'], ['update', 'UPDATES', 'update'], ['improvement', 'IDEAS', 'improvement'], ['bug', 'BUGS', 'bug'], ['talk', 'TALK', 'talk']].map(function (f) {
+      const dot = (f[0] === 'update' && _cmUpdateUnseen()) ? '<span class="board-f-new" aria-label="New update"></span>' : '';   // W973
+      return '<button type="button" class="board-f' + (f[0] ? ' board-f--' + f[0] : '') + '" data-board-tag="' + f[0] + '" data-active="' + (f[0] === _boardTag ? 'true' : 'false') + '">' + (f[0] ? '<i></i>' : '') + f[1] + cnt(f[2]) + dot + '</button>';
     }).join('');
   }
   function _boardTotal(shown) {
@@ -47460,7 +47461,7 @@
     _boardInflightKeys.delete(key);
     if (!res.ok) {
       if (res.code === 'NOT_SIGNED_IN' || res.code === 'GUEST_SKIP' || res.code === 'EXPIRED') { _boardSignInPaint(); return; }
-      if (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER') { _boardStore(tag, sort, { topics: [], counts: { all: 0, improvement: 0, bug: 0, talk: 0 } }, false); _boardPaint(); return; }
+      if (res.code === 'LOCAL_DEV_SKIP' || res.code === 'STUB_USER') { _boardStore(tag, sort, { topics: [], counts: { all: 0, improvement: 0, bug: 0, talk: 0, update: 0 } }, false); _boardPaint(); return; }
       if (_boardLists[key]) return;   // never wipe a good paint on a failed refresh
       _boardErrorPaint(res.detail || res.code); return;
     }
@@ -47629,8 +47630,9 @@
   function _boardComposerHtml(kind, topicTitle, opts) {
     const isTopic = kind === 'topic';
     const isEdit = kind === 'edit';   // W929 — editing your own reply
-    const cats = [['improvement', 'IDEA', 'Something Awakened should do'], ['bug', 'BUG', 'Something broke'], ['talk', 'TALK', 'Anything for the Hall']];
     const me = _boardMe || {};
+    const cats = [['improvement', 'IDEA', 'Something Awakened should do'], ['bug', 'BUG', 'Something broke'], ['talk', 'TALK', 'Anything for the Hall']];
+    if (me.role === 'owner' || me.role === 'mod') cats.push(['update', 'UPDATE', 'This week in Awakened']);   // W973 — server enforces it too
     const prefill = isEdit ? String((opts && opts.body) || '') : ((opts && opts.replyTo) ? '@' + String(opts.replyTo).replace(/\s+/g, '') + ' ' : '');
     const ctx = isEdit ? 'Editing your reply on <b>' + esc(topicTitle || 'this topic') + '</b>'
       : ((opts && opts.replyTo) ? 'Replying to <b class="board-at">@' + esc(opts.replyTo) + '</b>' : 'Replying to <b>' + esc(topicTitle || 'this topic') + '</b>');
@@ -47973,7 +47975,7 @@
     const who = {}; if (t.author && t.author.alias) who[t.author.alias] = 1;
     (d.replies || []).forEach(function (r) { if (r.author && r.author.alias) who[r.author.alias] = 1; });
     const hunters = Object.keys(who).length;
-    const label = t.tag === 'improvement' ? 'IDEAS' : (t.tag === 'bug' ? 'BUGS' : 'TALK');
+    const label = t.tag === 'improvement' ? 'IDEAS' : (t.tag === 'bug' ? 'BUGS' : (t.tag === 'update' ? 'UPDATES' : 'TALK'));
     const sub = el.querySelector('[data-board-sub]');
     if (sub) sub.textContent = label + ' · ' + total + (total === 1 ? ' REPLY' : ' REPLIES') + ' · ' + hunters + (hunters === 1 ? ' HUNTER' : ' HUNTERS');
     const rc = el.querySelector('[data-board-rcount]'); if (rc) rc.textContent = total ? total + (total === 1 ? ' REPLY' : ' REPLIES') : 'NO REPLIES YET';
@@ -48011,6 +48013,7 @@
     const el = _boardSheetOpen('Topic', '<div class="board-loading">' + (typeof _skelHtml === 'function' ? _skelHtml('rows', 3) : 'Loading…') + '</div>', 'board-sheet--topic',
       { sub: '', right: '<button type="button" class="board-bell hidden" data-board-follow aria-pressed="false" aria-label="Follow this topic">' + _BOARD_BELL_ICON + '</button>' });
     el.dataset.topicId = id;
+    try { _cmUpdateOpened(id); } catch (_) {}   // W973
     let res; try { res = await Auth.boardTopic(id, ''); } catch (_) { res = { ok: false, code: 'NETWORK' }; }
     if (_boardSheet !== el) return;
     const bodyEl = el.querySelector('.board-sheet-body'); if (!bodyEl) return;
@@ -48303,7 +48306,12 @@
         // W913 — the BUG card swaps in the report template as the placeholder.
         try {
           const f = el.closest('form'); const ta = f && f.querySelector('textarea[name="body"]');
-          if (ta && !ta.value) ta.placeholder = el.getAttribute('data-board-pick') === 'bug' ? 'Device · app version\nWhat happened\nSteps to reproduce' : 'Say more…';
+          const pk = el.getAttribute('data-board-pick');
+          if (ta && !ta.value) ta.placeholder = pk === 'bug' ? 'Device · app version\nWhat happened\nSteps to reproduce' : (pk === 'update' ? 'What changed this week, in plain words…' : 'Say more…');
+          // W973 — an update gets a "Week of …" title to start from (pins itself on post).
+          const ti = f && f.querySelector('input[name="title"]');
+          if (ti && pk === 'update' && !ti.value) ti.value = 'Week of ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (ti && pk !== 'update' && /^Week of /.test(ti.value)) ti.value = '';
         } catch (_) {}
         return;
       }
@@ -48402,19 +48410,46 @@
   let _cmUnseen = { topics: 0, replies: 0, likes: 0 };
   let _cmUnseenAt = 0; let _cmUnseenInflight = false;
   const _CM_UNSEEN_GATE_MS = 5 * 60 * 1000;
+  // W973 — UPDATES. The newest developer update (from /community/unseen) keeps a
+  // DOT on the tab and the BOARD pill until that topic is opened — unlike the
+  // count, it survives tapping the tab. Only the id is stored, never the text.
+  let _cmUpdate = null;   // { id, created_at } | null
+  let _cmUpdateSeen = '';
+  try { _cmUpdateSeen = localStorage.getItem('hb_board_update_seen') || ''; } catch (_) {}
+  function _cmUpdateUnseen() { try { return !!(_cmUpdate && _cmUpdate.id && _cmUpdate.id !== _cmUpdateSeen); } catch (_) { return false; } }   // try: the rail can paint before this block runs
+  function _cmUpdateOpened(id) {
+    if (!id || !_cmUpdate || id !== _cmUpdate.id || id === _cmUpdateSeen) return;
+    _cmUpdateSeen = id; try { localStorage.setItem('hb_board_update_seen', id); } catch (_) {}
+    _cmPaintBadges();
+    try { document.querySelectorAll('[data-board-filters]').forEach(function (el) { el.innerHTML = _boardFiltersHtml(); }); } catch (_) {}
+  }
   function _cmPaintBadges() {
     const onTab = (typeof currentTab !== 'undefined' && currentTab === 'social');
     const nb = (_cmUnseen.topics || 0) + (_cmUnseen.replies || 0);
     const total = nb + (_cmUnseen.likes || 0);
+    const upd = _cmUpdateUnseen();
     const tb = document.getElementById('tab-social-badge');
-    if (tb) { tb.textContent = total > 99 ? '99+' : String(total); tb.classList.toggle('hidden', !(total > 0) || onTab); }
+    if (tb) {
+      const dotOnly = !(total > 0) && upd;
+      tb.textContent = dotOnly ? '' : (total > 99 ? '99+' : String(total));
+      tb.classList.toggle('tab-badge--dot', dotOnly);
+      tb.classList.toggle('hidden', !((total > 0 && !onTab) || dotOnly));
+    }
     const bb = document.getElementById('cm-board-badge');
-    if (bb) { bb.textContent = nb > 99 ? '99+' : String(nb); bb.classList.toggle('hidden', !(nb > 0) || _cmPane === 'board'); }
+    if (bb) {
+      const dotOnly = !(nb > 0) && upd;
+      bb.textContent = dotOnly ? '' : (nb > 99 ? '99+' : String(nb));
+      bb.classList.toggle('cm-bdg--dot', dotOnly);
+      bb.classList.toggle('hidden', !((nb > 0 && _cmPane !== 'board') || (dotOnly && _cmPane !== 'board')));
+    }
   }
   function _cmApplyUnseen(u) {
     const b = (u && u.board) || u || {};
     _cmUnseen = { topics: Number(b.topics) || 0, replies: Number(b.replies) || 0, likes: Number(u && u.likes) || 0 };
+    const prevUnseen = _cmUpdateUnseen();
+    if (u && Object.prototype.hasOwnProperty.call(u, 'update')) _cmUpdate = (u.update && u.update.id) ? { id: String(u.update.id), created_at: Number(u.update.created_at) || 0 } : null;
     _cmPaintBadges();
+    if (prevUnseen !== _cmUpdateUnseen()) { try { document.querySelectorAll('[data-board-filters]').forEach(function (el) { el.innerHTML = _boardFiltersHtml(); }); } catch (_) {} }
   }
   async function _cmUnseenSync(force) {
     if (!(window.Auth && typeof Auth.communityUnseen === 'function')) return;
@@ -48433,7 +48468,7 @@
     _cmPaintBadges();
   }
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { try { _cmUnseenSync(false); } catch (_) {} } });
-  try { window.__cm = { unseen: _cmApplyUnseen, sync: _cmUnseenSync, seen: _cmMarkSeen, state: function () { return { seen: _cmSeenTs, unseen: _cmUnseen }; } }; } catch (_) {}
+  try { window.__cm = { unseen: _cmApplyUnseen, sync: _cmUnseenSync, seen: _cmMarkSeen, updateOpened: _cmUpdateOpened, state: function () { return { seen: _cmSeenTs, unseen: _cmUnseen, update: _cmUpdate, updateSeen: _cmUpdateSeen }; } }; } catch (_) {}
 
   // QA hooks
   try {

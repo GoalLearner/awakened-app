@@ -5483,3 +5483,72 @@ test.describe('BC · A morning you can finish (W971)', () => {
     expect((await page.evaluate(() => (window as any).__morningPack())).morning).toEqual(V1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// BD. W973 — UPDATES: the developers' weekly voice on the Community board
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BD · Updates on the board (W973)', () => {
+  async function boardWith(page: Page, role: string | null) {
+    await freshApp(page);
+    await page.click('#tab-social');
+    await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+    await page.evaluate((r) => {
+      const now = Date.now();
+      const au = { author_id: 'u-me', alias: 'Richie', rank_label: 'S', founder_seq: 0, is_mod: true, mod_role: 'owner' };
+      (window as any).Auth.boardTopics = async () => ({
+        ok: true, next_cursor: null, counts: { all: 2, improvement: 0, bug: 0, talk: 1, update: 1 },
+        me: { consented: true, muted_until: null, role: r, rules_version: 99, rank_tier: 'S', topic_min_tier: 'E', reply_min_tier: 'E' },
+        topics: [
+          { id: 'upd-1', tag: 'update', title: 'Week of Sep 21', preview: 'Your vows are yours now.', created_at: now - 3600000, last_activity_at: now - 3600000, reply_count: 0, up_count: 0, voted: false, pinned: true, locked: false, repliers: [], last_reply: null, author: au },
+          { id: 'tlk-1', tag: 'talk', title: 'First post', preview: 'Hope you all enjoy', created_at: now - 86400000, last_activity_at: now - 86400000, reply_count: 0, up_count: 0, voted: false, pinned: false, locked: false, repliers: [], last_reply: null, author: au },
+        ],
+      });
+      (window as any).__board.render();
+    }, role);
+    await expect(page.locator('#board-body .board-topic')).toHaveCount(2);
+  }
+
+  test('UPDATES sits right after ALL, and an update row wears the UPDATE tag', async ({ page }) => {
+    await boardWith(page, null);
+    const chips = await page.evaluate(() => [].map.call(document.querySelectorAll('[data-board-filters] .board-f'), (b: any) => b.getAttribute('data-board-tag')));
+    expect(chips.slice(0, 5)).toEqual(['', 'update', 'improvement', 'bug', 'talk']);
+    await expect(page.locator('#board-body .board-topic').first().locator('.board-tag--update')).toHaveText('UPDATE');
+  });
+
+  test('only the owner and moderators can pick UPDATE when opening a topic', async ({ page }) => {
+    await boardWith(page, null);
+    await page.evaluate(() => (window as any).__board.compose('topic'));
+    await expect(page.locator('.board-compose .board-catb')).toHaveCount(3);
+    await expect(page.locator('[data-board-pick="update"]')).toHaveCount(0);
+  });
+
+  test('a moderator picks UPDATE and gets a "Week of" title to start from', async ({ page }) => {
+    await boardWith(page, 'mod');
+    await page.evaluate(() => (window as any).__board.compose('topic'));
+    await expect(page.locator('[data-board-pick="update"]')).toHaveCount(1);
+    await page.locator('[data-board-pick="update"]').click();
+    await expect(page.locator('.board-compose input[name="title"]')).toHaveValue(/^Week of [A-Z][a-z]{2} \d{1,2}$/);
+    await page.locator('[data-board-pick="talk"]').click();
+    await expect(page.locator('.board-compose input[name="title"]')).toHaveValue('');
+  });
+
+  test('a new update keeps a dot on the Community tab until that update is opened', async ({ page }) => {
+    await boardWith(page, null);
+    await page.click('#tab-habits');
+    await page.evaluate(() => (window as any).__cm.unseen({ board: { topics: 0, replies: 0 }, likes: 0, update: { id: 'upd-1', created_at: Date.now() } }));
+    const badge = page.locator('#tab-social-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveClass(/tab-badge--dot/);
+    // Tapping the tab is not enough — the dot waits for the update itself.
+    await page.click('#tab-social');
+    await expect(badge).toBeVisible();
+    await expect(page.locator('[data-board-filters] .board-f--update .board-f-new')).toHaveCount(1);
+    await page.evaluate(() => (window as any).__board.open('upd-1'));
+    await expect(badge).toBeHidden();
+    await expect(page.locator('[data-board-filters] .board-f--update .board-f-new')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('hb_board_update_seen'))).toBe('upd-1');
+    // Next week's update brings the dot back.
+    await page.evaluate(() => (window as any).__cm.unseen({ board: { topics: 0, replies: 0 }, likes: 0, update: { id: 'upd-2', created_at: Date.now() } }));
+    await expect(badge).toBeVisible();
+  });
+});

@@ -32,7 +32,15 @@ import { notifyUser } from '../lib/apns';
 import { isProfaneWord } from '../profanity';
 
 export const BOARD_RULES_VERSION = 1;
-export const BOARD_TAGS = ['improvement', 'bug', 'talk'] as const;
+export const BOARD_TAGS = ['improvement', 'bug', 'talk', 'update'] as const;
+// W973 — UPDATES: the developers' weekly voice. Only the owner and moderators
+// open an update; everyone reads, replies and upvotes. Stored as tag 'talk' +
+// kind 'update' (0061 adds the column) because the 0055 CHECK on tag cannot be
+// altered without rebuilding a table other tables cascade from. On the wire it
+// is simply tag 'update'. A new update pins itself and unpins the last one.
+export const UPDATE_TAG = 'update';
+/** The wire tag for a stored row. */
+const WIRE_TAG_SQL = `CASE WHEN x.kind = 'update' THEN 'update' ELSE x.tag END`;
 export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
 export const AUTO_HIDE_REPORTS = 3;
@@ -111,6 +119,7 @@ interface AuthorRow {
 interface TopicRow extends AuthorRow {
   id: string;
   tag: string;
+  kind?: string | null;   // W973
   title: string;
   body: string;
   created_at: number;
@@ -273,7 +282,7 @@ function authorOut(r: AuthorRow) {
 function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false, repliers: [] }) {
   return {
     id: r.id,
-    tag: r.tag,
+    tag: r.kind === UPDATE_TAG ? UPDATE_TAG : r.tag,   // W973
     title: r.title,
     body: full ? r.body : undefined,
     preview: full ? undefined : String(r.body || '').slice(0, 160),
@@ -295,7 +304,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
   };
 }
 
-const TOPIC_COLS = `x.id, x.tag, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at`;
+const TOPIC_COLS = `x.id, x.tag, x.kind, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at`;
 
 /** Which of these topics the caller upvoted. */
 async function votedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
@@ -390,7 +399,7 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const url = new URL(request.url);
   const tag = url.searchParams.get('tag') || '';
-  if (tag && !isTag(tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug or talk.');
+  if (tag && !isTag(tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug, talk or update.');
   const sortRaw = url.searchParams.get('sort') || 'latest';
   if (!(SORTS as readonly string[]).includes(sortRaw)) return jsonError(400, 'INVALID_SORT', 'sort must be latest, hot or unanswered.');
   const sort = sortRaw as Sort;
@@ -412,7 +421,7 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const where = `x.deleted_at IS NULL
         AND ${SIM_FILTER}
         AND (? = 1 OR x.hidden_at IS NULL)
-        AND (? = '' OR x.tag = ?)
+        AND (? = '' OR ${WIRE_TAG_SQL} = ?)
         AND ${BLOCK_FILTER}`;
   const whereBinds = [modView, tag, tag, session.userId, session.userId];
   const firstPage = !cursorRaw;
@@ -454,15 +463,15 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const [voted, repliers] = await Promise.all([votedSet(env, session.userId, ids), repliersMap(env, session.userId, ids)]);
 
   // Tag counts for the filter rail (visible topics, every tag) — first page only.
-  let counts: { all: number; improvement: number; bug: number; talk: number } | undefined;
+  let counts: { all: number; improvement: number; bug: number; talk: number; update: number } | undefined;
   if (firstPage) {
     const c = await env.DB.prepare(
-      `SELECT x.tag AS tag, COUNT(*) AS n
+      `SELECT ${WIRE_TAG_SQL} AS tag, COUNT(*) AS n
          FROM board_topics x${AUTHOR_JOIN}
         WHERE ${where}
-        GROUP BY x.tag`,
+        GROUP BY 1`,
     ).bind(modView, '', '', session.userId, session.userId).all<{ tag: string; n: number }>();
-    counts = { all: 0, improvement: 0, bug: 0, talk: 0 };
+    counts = { all: 0, improvement: 0, bug: 0, talk: 0, update: 0 };
     for (const r of c.results ?? []) {
       const n = Number(r.n) || 0;
       if (isTag(r.tag)) counts[r.tag] = n;
@@ -643,20 +652,27 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
   if ('deny' in gate) return gate.deny;
   const body = await readJson<{ tag?: unknown; title?: unknown; body?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
-  if (!isTag(body.tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug or talk.');
+  if (!isTag(body.tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug, talk or update.');
   const title = clampText(body.title, TITLE_MAX);
   const text = clampText(body.body, BODY_MAX);
   if (!title) return jsonError(400, 'MISSING_TITLE', 'Give the topic a title.');
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
+  const isUpdate = body.tag === UPDATE_TAG;   // W973
+  if (isUpdate && !isModRole(gate.me.role)) return jsonError(403, 'UPDATES_MODS_ONLY', 'Only the developers post updates.');
   if (!textIsClean(title) || !textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
   const spam = await spamGate(env, session, gate.me, 'topic', '', title, text, ctx);   // W914
   if (spam) return spam.deny;
   const id = crypto.randomUUID();
   const now = Date.now();
+  // W973 — the newest update is the pinned one: unpin the last before pinning this.
+  if (isUpdate) {
+    await env.DB.prepare("UPDATE board_topics SET pinned_at = NULL, pinned_by = NULL WHERE kind = 'update' AND pinned_at IS NOT NULL").bind().run();
+  }
   await env.DB.prepare(
-    `INSERT INTO board_topics (id, author_id, tag, title, body, created_at, last_activity_at, reply_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
-  ).bind(id, session.userId, body.tag, title, text, now, now).run();
+    `INSERT INTO board_topics (id, author_id, tag, title, body, created_at, last_activity_at, reply_count, kind, pinned_at, pinned_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+  ).bind(id, session.userId, isUpdate ? 'talk' : body.tag, title, text, now, now,
+    isUpdate ? UPDATE_TAG : null, isUpdate ? now : null, isUpdate ? session.userId : null).run();
   // W929 — the author follows their own topic (pushed on every reply until they unfollow).
   await env.DB.prepare('INSERT OR IGNORE INTO board_follows (topic_id, user_id, created_at) VALUES (?, ?, ?)').bind(id, session.userId, now).run();
   return jsonOk({ ok: true, id, created_at: now });
@@ -1146,8 +1162,13 @@ export async function handleCommunityUnseenGet(request: Request, env: Env, sessi
        JOIN public_achievement_events e ON e.id = l.event_id
       WHERE l.created_at > ? AND e.user_id = ? AND l.user_id != ?`,
   ).bind(since, me, me).first<{ n: number }>();
+  // W973 — the newest update, so the client can keep a dot on Community until it is opened.
+  const upd = await env.DB.prepare(
+    `SELECT id, created_at FROM board_topics WHERE kind = 'update' AND deleted_at IS NULL AND hidden_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+  ).bind().first<{ id: string; created_at: number }>();
   const nt = Number(topics?.n) || 0, nr = Number(replies?.n) || 0, nl = Number(likes?.n) || 0;
-  return jsonOk({ ok: true, since, now, board: { topics: nt, replies: nr }, likes: nl, total: nt + nr + nl });
+  return jsonOk({ ok: true, since, now, board: { topics: nt, replies: nr }, likes: nl, total: nt + nr + nl,
+    update: upd ? { id: upd.id, created_at: Number(upd.created_at) || 0 } : null });
 }
 
 export async function handleAdminBoardOwner(request: Request, env: Env): Promise<Response> {

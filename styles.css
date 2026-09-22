@@ -34986,6 +34986,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-f { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025); font-family: var(--b-mono); font-size: 8.5px; font-weight: 800; letter-spacing: 1.4px; color: var(--b-ink2); white-space: nowrap; flex: none; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .board-f i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
 .board-f--improvement i { background: var(--b-gold); } .board-f--bug i { background: var(--b-red); } .board-f--talk i { background: var(--b-vio-lt); }
+/* W973 — UPDATES: the developers' voice, in the app's verified teal */
+.board-f--update i { background: #5eead4; }
+.board-f-new { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.7); margin-left: 2px; }
+.board-catb[data-active="true"][data-board-pick="update"] { border-color: rgba(94,234,212,0.6); background: rgba(94,234,212,0.10); }
+.tab-badge.tab-badge--dot { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 4px; left: calc(50% + 10px); }
+.cm-bdg.cm-bdg--dot { display: inline-block; min-width: 7px; width: 7px; height: 7px; padding: 0; border-radius: 50%; vertical-align: middle; }
 .board-f-n { color: var(--b-ink3); font-weight: 700; }
 .board-f[data-active="true"] { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.6); color: var(--b-ink); }
 .board-f[data-active="true"] .board-f-n { color: var(--b-vio-lt); }
@@ -35018,10 +35024,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-rune--improvement { background: var(--b-gold); box-shadow: 0 0 8px var(--b-gold-glow); }
 .board-rune--bug { background: var(--b-red); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
 .board-rune--talk { background: var(--b-vio-lt); box-shadow: 0 0 8px rgba(167,139,250,0.5); }
+.board-rune--update { background: #5eead4; box-shadow: 0 0 8px rgba(94,234,212,0.5); }   /* W973 */
 .board-topic--hot .board-rune { animation: board-ember 1.6s ease-in-out infinite; }
 @keyframes board-ember { 0%, 100% { box-shadow: 0 0 6px rgba(239,68,68,0.5); } 50% { box-shadow: 0 0 14px rgba(239,68,68,0.95), 0 0 26px rgba(239,68,68,0.4); } }
 .board-tag { display: inline-flex; align-items: center; gap: 4px; font-family: var(--b-mono); font-size: 7.5px; font-weight: 800; letter-spacing: 1.4px; padding: 2px 0; border-radius: 4px; color: var(--b-vio-lt); }
 .board-tag--improvement { color: var(--b-gold); } .board-tag--bug { color: #fca5a5; } .board-tag--talk { color: var(--b-vio-lt); }
+.board-tag--update { color: #5eead4; }   /* W973 */
 .board-tag--pin { color: var(--b-gold); background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.35); padding: 2px 6px; }
 .board-tag--hidden { color: var(--b-ink2); border: 1px dashed rgba(255,255,255,0.25); padding: 2px 6px; }
 .board-tl { margin-top: 5px; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--b-ink); }
@@ -35051,7 +35059,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* composer cards */
 .board-ssub { font-family: var(--b-mono); font-size: 8.5px; letter-spacing: 1.6px; color: var(--b-ink3); margin: 0 0 10px; }
 .board-ssub b { color: var(--b-vio-lt); font-weight: 800; }
-.board-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.board-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
 .board-catb { border-radius: 12px; padding: 11px 8px 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025); display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; transition: all .2s; color: var(--b-ink2); -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .board-catb .board-rune { width: 11px; height: 11px; margin-top: 2px; }
 .board-cl { font-family: var(--b-mono); font-size: 8.5px; font-weight: 800; letter-spacing: 1.4px; color: var(--b-ink2); }
