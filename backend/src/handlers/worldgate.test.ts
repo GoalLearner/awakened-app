@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
-import { computeGateHp, handleWorldgateGet, handleWorldgateRally, WORLDGATE_CLAIM_FLOOR } from './worldgate';
+import { computeGateHp, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -88,7 +88,8 @@ const mockNotify = vi.mocked(notifyUser);
 interface WgState {
   merged: Array<{ user_id: string; alias: string; steps: number; rank_tier?: string; updated_at?: number }>;
   friends: string[];        // accepted friends of 'u-me'
-  gate: { hp: number; status: string };
+  gate: { hp: number; status: string; kill_json?: string | null; slain_at?: number | null };
+  claims?: Set<string>;     // W975 — user ids that claimed this week
   rallies: Set<string>;     // `${user}|${day}`
   calls: { sql: string; binds: unknown[] }[];
 }
@@ -101,10 +102,13 @@ function wgEnv(st: WgState): Env {
         st.calls.push({ sql, binds });
         return {
           first: async () => {
-            if (/FROM world_gates WHERE week_start = \?/.test(sql)) return { week_start: binds[0], hp: st.gate.hp, status: st.gate.status, slain_at: null, slain_by: null };
+            // W975 — the frozen kill's two reads (before the generic pool route, which would match too).
+            if (/AS kill_hunters, COALESCE\(SUM\(steps\), 0\) AS kill_pool FROM merged/.test(sql)) return { kill_hunters: st.merged.length, kill_pool: st.merged.reduce((a, r) => a + r.steps, 0) };
+            if (/AS above_kill/.test(sql)) { const m = st.merged.find((r) => r.user_id === binds[1]); const mine = m ? m.steps : 0; return { mine: m ? m.steps : null, above_kill: st.merged.filter((r) => r.steps > mine).length }; }
+            if (/FROM world_gates WHERE week_start = \?/.test(sql)) return { week_start: binds[0], hp: st.gate.hp, status: st.gate.status, slain_at: st.gate.slain_at ?? null, slain_by: null, kill_json: st.gate.kill_json ?? null };
             if (/SUM\(steps\), 0\) AS pool FROM merged/.test(sql)) return { pool: st.merged.reduce((a, r) => a + r.steps, 0) };
             if (/FROM leaderboard_snapshots WHERE user_id = \?/.test(sql)) { const m = st.merged.find((r) => r.user_id === binds[0]); return m ? { current_value: m.steps } : null; }
-            if (/FROM world_gate_claims/.test(sql)) return null;
+            if (/FROM world_gate_claims/.test(sql)) return st.claims && st.claims.has(binds[1] as string) ? { one: 1 } : null;
             if (/AS hunters,/.test(sql)) {
               const me = binds[1] as string; const mine = binds[2] as number; const floor = binds[3] as number;
               const g = st.merged.filter((r) => isFriend(r.user_id) && r.user_id !== me);
@@ -114,6 +118,10 @@ function wgEnv(st: WgState): Env {
             return null;
           },
           all: async () => {
+            if (/SELECT m\.user_id AS user_id, u\.alias AS alias/.test(sql)) {   // W975 — the podium freeze
+              const results = st.merged.slice().sort((a, b) => b.steps - a.steps || a.alias.localeCompare(b.alias)).slice(0, 3).map((r) => ({ user_id: r.user_id, alias: r.alias, steps: r.steps, rank_tier: r.rank_tier ?? null }));
+              return { results, success: true, meta: {} };
+            }
             if (/ORDER BY m\.steps DESC, u\.alias ASC\s+LIMIT \?3/.test(sql) && /AS me/.test(sql)) {
               const me = binds[1] as string;
               const results = st.merged.slice().sort((a, b) => b.steps - a.steps).slice(0, binds[2] as number).map((r) => ({ alias: r.alias, steps: r.steps, rank_tier: r.rank_tier ?? null, me: r.user_id === me ? 1 : 0 }));
@@ -133,6 +141,16 @@ function wgEnv(st: WgState): Env {
             return { results: [], success: true, meta: {} };
           },
           run: async () => {
+            if (/UPDATE world_gates SET kill_json/.test(sql)) { st.gate.kill_json = binds[0] as string; return { success: true, meta: { changes: 1 } }; }
+            if (/UPDATE world_gates SET status = 'slain', slain_at = \?, slain_by/.test(sql)) {
+              if (st.gate.status !== 'open') return { success: true, meta: { changes: 0 } };
+              st.gate.status = 'slain'; st.gate.slain_at = binds[0] as number; return { success: true, meta: { changes: 1 } };
+            }
+            if (/INSERT INTO world_gate_claims/.test(sql)) {
+              st.claims = st.claims || new Set();
+              if (st.claims.has(binds[1] as string)) throw new Error('UNIQUE constraint failed');
+              st.claims.add(binds[1] as string); return { success: true, meta: { changes: 1 } };
+            }
             if (/INSERT OR IGNORE INTO world_gate_rallies/.test(sql)) {
               const k = `${binds[0]}|${binds[1]}`; if (st.rallies.has(k)) return { success: true, meta: { changes: 0 } };
               st.rallies.add(k); return { success: true, meta: { changes: 1 } };
@@ -203,5 +221,63 @@ describe('W916 — the Worldgate v2 read side', () => {
     const r = (await (await handleWorldgateRally(new Request('https://x/v1/worldgate/rally', { method: 'POST' }), wgEnv(st), meS, wgCtx)).json()) as Record<string, unknown>;
     expect(r).toMatchObject({ ok: true, sent: 0 });
     expect(mockNotify).not.toHaveBeenCalled();
+  });
+});
+
+// ── W975 — Worldgate MVPs: the podium frozen at the kill, and its bonus ───
+describe('W975 — Worldgate MVPs', () => {
+  const kill = async (st: WgState, who: SessionPayload = meS) =>
+    (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), who)).json()) as Record<string, any>;
+  const claim = async (st: WgState, who: SessionPayload) =>
+    (await (await handleWorldgateClaim(new Request('https://x/v1/worldgate/claim', { method: 'POST' }), wgEnv(st), who)).json()) as Record<string, any>;
+  const ren = { userId: 'u-ren', alias: 'RenDIESEL' } as SessionPayload;
+  const g = { userId: 'u-g', alias: 'grubbadub' } as SessionPayload;
+
+  it('an open gate announces nothing', async () => {
+    const r = await kill(wgFresh());
+    expect(r.kill).toBeNull();
+  });
+
+  it('the read that crosses the line freezes the top three, the pool and the headcount', async () => {
+    const st = wgFresh(); st.gate.hp = 40000;   // 50,000 walked: this read stamps the kill
+    const r = await kill(st);
+    expect(r.status).toBe('slain');
+    expect(r.kill.mvps.map((m: any) => m.alias)).toEqual(['RenDIESEL', 'james', 'grubbadub']);
+    expect(r.kill.mvps[0]).toEqual({ alias: 'RenDIESEL', rank_tier: 'S', steps: 21000 });
+    expect(JSON.stringify(r.kill)).not.toMatch(/u-ren|user_id/);   // ids never leave the server
+    expect(r.kill).toMatchObject({ pool: 50000, hunters: 4, my_place: 0, my_steps: 4000, my_pos: 4, mvp_bonus: WORLDGATE_MVP_BONUS });
+    // Richie then walks past everyone: the podium does not move.
+    st.merged[0]!.steps = 30000;
+    const later = await kill(st);
+    expect(later.kill.mvps.map((m: any) => m.alias)).toEqual(['RenDIESEL', 'james', 'grubbadub']);
+    expect(later.kill.my_place).toBe(0);
+  });
+
+  it('a gate slain before the freeze existed is frozen on first read', async () => {
+    const st = wgFresh(); st.gate.status = 'slain'; st.gate.slain_at = 123;
+    const r = await kill(st);
+    expect(r.kill.mvps.length).toBe(3);
+    expect(st.gate.kill_json).toContain('RenDIESEL');
+    expect(r.kill.slain_at).toBe(123);
+  });
+
+  it('1st gets bounty + 150; an MVP under the bounty floor still gets the bonus; a non-MVP under the floor is refused', async () => {
+    const st = wgFresh(); st.gate.hp = 40000;
+    await kill(st);   // stamp + freeze
+    const a = await claim(st, ren);
+    expect(a).toMatchObject({ ok: true, first: true, bounty: WORLDGATE_SOULS, mvp_bonus: 150, mvp_place: 1, souls: WORLDGATE_SOULS + 150 });
+    const third = await claim(st, g);   // 9,000 steps: below the floor, but 3rd on the podium
+    expect(third).toMatchObject({ ok: true, first: true, bounty: 0, mvp_bonus: 50, mvp_place: 3, souls: 50 });
+    const again = await claim(st, ren);
+    expect(again).toMatchObject({ first: false, souls: 0 });
+    const res = await handleWorldgateClaim(new Request('https://x/v1/worldgate/claim', { method: 'POST' }), wgEnv(st), meS);
+    expect(res.status).toBe(403);
+  });
+
+  it('an MVP below the floor reads as claimable', async () => {
+    const st = wgFresh(); st.gate.hp = 40000;
+    await kill(st);
+    expect((await kill(st, g)).claimable).toBe(true);
+    expect((await kill(st, meS)).claimable).toBe(false);
   });
 });

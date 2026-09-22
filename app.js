@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w974'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w975'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -6752,133 +6752,278 @@
           hunters: r.hunters | 0, guild: r.guild || { steps: 0, hunters: 0 }, my_rank: r.my_rank || null,
           top: Array.isArray(r.top) ? r.top : [], wall: Array.isArray(r.wall) ? r.wall : [], wall_count: r.wall_count | 0,
           recent: Array.isArray(r.recent) ? r.recent : [], rallied: !!r.rallied_today,
+          kill: (r.kill && typeof r.kill === 'object') ? r.kill : null,   // W975 — the podium frozen at the kill
         }));
       } catch (_) {}
         // Auto-claim the bounty the moment it's ours to take.
         if (r.claimable && typeof Auth.claimWorldgate === 'function') {
+          _wgmClaimInflight = true;   // W975 — the MVP card waits for this answer (it carries the bounty line)
           _w2Watch('worldgate_claim', Auth.claimWorldgate()).then(function (cl) {   // W884
-            if (!(cl && cl.ok && cl.first && cl.souls > 0)) return;
+            _wgmClaimInflight = false;
+            if (!(cl && cl.ok && cl.first && cl.souls > 0)) { try { _wgmMaybe(); } catch (_) {} return; }
             try { earnSouls(cl.souls, 'worldgate_' + r.week_start); } catch (_) {}
             try { localStorage.setItem('hb_accolade_worldbreaker', String((parseInt(localStorage.getItem('hb_accolade_worldbreaker'), 10) || 0) + 1)); } catch (_) {}
-            try { showWorldgateKill(_wgCache() || {}, cl.souls); } catch (_) {}   // W964
-          }).catch(function () {});
+            try { _wgmRecordClaim(r.week_start, cl); } catch (_) {}   // W975 — bounty + MVP bonus, for the card
+            try { _wgmMaybe(); } catch (_) {}
+          }).catch(function () { _wgmClaimInflight = false; try { _wgmMaybe(); } catch (_) {} });
         }
       try { renderWorldgatePulse(); } catch (_) {}
       try { _wgSheetPaint(); } catch (_) {}
-      try { _wgKillReplay(); } catch (_) {}   // W964 — a kill kept from day one
+      try { _wgmMaybe(); } catch (_) {}   // W975 — the MVP card, once per kill (day one waits)
       // The bar moved since you last looked — a strike lands on screen.
       try { if (prev && prev.week === r.week_start && Number(r.pool) > Number(prev.pool)) _wgFlash(Number(r.pool) - Number(prev.pool), (r.my_damage | 0) - (prev.my | 0)); } catch (_) {}
       return true;
     } catch (_) { return false; }
   }
 
-  // ── W964 · the gate falls ──────────────────────────────────────
-  // A whole server killing the week's world boss is the biggest shared thing
-  // in the app, and it used to be announced through showNoticeCard — the same
-  // box as a routine system notice, which never even said which monster died.
-  // Everything the ceremony needs is already in the cache written a moment
-  // earlier: the boss name, the hunter count, your own strikes, your place.
-  const WGK_PENDING_KEY = 'hb_wgk_pending';
-  /** Day one is the notification ask + the First Mark only (W940), so a kill
-   *  that lands on it is kept rather than lost — it plays on the next launch. */
-  function _wgKillStash(c, souls) {
+  // ── W975 · WORLDGATE MVPs (Claude Design handoff 29) ─────────────────────
+  // Replaces the W964 kill ceremony outright. The honours roll after a kill:
+  // every hunter sees it ONCE, the next time the app opens after the gate
+  // falls. The server's bar fills, then the podium, frozen at the kill by the
+  // backend (0062), lands 3 -> 2 -> 1. A hunter who earned the bounty sees it
+  // on the card; an MVP sees their plinth marked YOU and their bonus.
+  // Tap: the first tap skips to the final frame, the next leaves (owner rule:
+  // tap to continue). No buttons, no X. Day one waits for the next launch.
+  const WGM_SEEN_KEY = 'hb_wgmvp_seen_v1';     // the kill week this device has shown
+  const WGM_CLAIM_KEY = 'hb_wgmvp_claim_v1';   // { week, bounty, bonus, place } from this device's claim
+  const WGM_GLINT_KEY = 'hb_wgmvp_glint_v1';   // the week whose list badges already glinted
+  const _WGM_PC = ['#f5b842', '#cbd5e1', '#d19a66'];
+  const _WGM_ORD = ['1st', '2nd', '3rd'];
+  const _WGM_N = { E4: 329.63, G4: 392, C5: 523.25, E5: 659.25, G5: 783.99, B5: 987.77, E6: 1318.51 };
+  let _wgmClaimInflight = false;   // the bounty claim is in flight; its answer calls _wgmMaybe
+  let _wgmLive = null;
+
+  // The rank_fanfare voice: sine, 12ms attack, exponential decay; triangle 0.28x on top.
+  function _wgmTone(f, o) {
     try {
-      localStorage.setItem(WGK_PENDING_KEY, JSON.stringify({
-        week: c.week, souls: souls, my: c.my, hunters: c.hunters, my_rank: c.my_rank, floor: c.floor,
-      }));
+      if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+      const c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      o = o || {};
+      const t = c.currentTime + (o.at || 0), dur = o.dur || 0.6, g = o.gain || 0.1;
+      const voice = function (type, gg) {
+        const gn = c.createGain();
+        gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(gg, t + 0.012); gn.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+        gn.connect(c.destination);
+        const os = c.createOscillator(); os.type = type; os.frequency.value = f; os.connect(gn); os.start(t); os.stop(t + dur + 0.05);
+      };
+      voice('sine', g);
+      if (o.tri) voice('triangle', g * 0.28);
     } catch (_) {}
   }
-  function _wgKillReplay() {
-    try {
-      if (_newHunterQuiet()) return;
-      const pend = JSON.parse(localStorage.getItem(WGK_PENDING_KEY) || 'null');
-      if (!pend) return;
-      localStorage.removeItem(WGK_PENDING_KEY);
-      showWorldgateKill(pend, pend.souls);
-    } catch (_) {}
+  function _wgmDate(ms) {
+    if (!ms) return '';
+    const d = new Date(Number(ms));
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   }
+  /** The MVP tag: 1st "MVP" solid gold, 2nd "2ND" silver, 3rd "3RD" bronze. 24:13. */
+  function _wgmBadge(p, h, attrs) {
+    const c = _WGM_PC[p - 1]; const solid = p === 1; h = h || 13;
+    return '<svg class="wg-mvpb" data-p="' + p + '"' + (attrs || '') + ' viewBox="0 0 24 13" width="' + (h * 24 / 13).toFixed(1) + '" height="' + h + '" role="img" aria-label="Worldgate MVP, ' + _WGM_ORD[p - 1] + '">' +
+      '<rect x=".5" y=".5" width="23" height="12" rx="3" fill="' + c + '" fill-opacity="' + (solid ? 1 : 0.14) + '" stroke="' + c + '" stroke-width=".9"/>' +
+      '<text x="12.2" y="9.45" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="800" font-size="7.6" letter-spacing=".4" fill="' + (solid ? '#1c1405' : c) + '">' + (solid ? 'MVP' : _WGM_ORD[p - 1].toUpperCase()) + '</text></svg>';
+  }
+  const _WGM_GEM = '<svg width="8" height="10" viewBox="0 0 10 12" aria-hidden="true"><path d="M5 0l3 3-3 8-3-8z" fill="#34d399"/></svg>';
+  const _WGM_GATE = '<svg viewBox="0 0 28 28" aria-hidden="true"><path class="wgm-hex" d="M14 3 24 9v10L14 25 4 19V9z"/><path class="wgm-lid" d="M8.6 14.2c2.2 1.9 8.6 1.9 10.8 0M10.5 16l-.8 1.3M14 16.7v1.5M17.5 16l.8 1.3"/><path class="wgm-crack" pathLength="1" d="M16.2 3.9 13.4 9.2l2.3 2.1-2.9 4.9 2 2.3-1.8 5.9"/></svg>';
+  const _WGM_EMB = [[18, 6.2, -0.4, '#f5b842', -14], [46, 7.4, -2.1, '#ef4444', 10], [72, 5.6, -3.6, '#f5b842', -6], [96, 8.0, -1.2, '#f5b842', 18], [118, 6.6, -4.4, '#ef4444', -20], [140, 5.2, -2.8, '#f5b842', 8], [164, 7.8, -0.9, '#ef4444', -12], [188, 6.0, -3.1, '#f5b842', 14], [58, 8.4, -5.2, '#f5b842', -4], [130, 7.0, -6.0, '#ef4444', 6], [84, 6.8, -4.9, '#f5b842', -16], [204, 5.8, -1.7, '#f5b842', -8]]
+    .map(function (e) { return '<i style="left:' + e[0] + 'px;background:' + e[3] + ';box-shadow:0 0 6px ' + e[3] + ';animation-duration:' + e[1] + 's;animation-delay:' + e[2] + 's;--dx:' + e[4] + 'px"></i>'; }).join('');
 
-  function showWorldgateKill(c, souls) {
-    const screen = document.getElementById('wgkill-screen');
-    if (!screen) return false;
-    c = c || {}; souls = Math.max(0, Number(souls) || 0);
-    if (_newHunterQuiet()) { _wgKillStash(c, souls); return false; }   // W940
-    if (!screen.classList.contains('hidden')) return false;
-    // W950 — priority 18: a boss result (10) or a relic reveal (15) already in
-    // flight finishes first, but the gate goes ahead of the level-up chain —
-    // a rank-up comes back next launch, the gate falls once a week.
-    if (_stageDefer('wgkill', 18, function () { showWorldgateKill(c, souls); }, ['wgkill'])) return false;
-    _stageBigMoment = true;
-
-    const my = Math.max(0, Number(c.my) || 0);
-    const hunters = Math.max(0, Number(c.hunters) || 0);
-    const place = Math.max(0, Number(c.my_rank) || 0);
-    const onWall = my >= (Number(c.floor) || 15000);
-
-    document.getElementById('wgk-emblem').innerHTML = _WG_EMBLEM;
-    document.getElementById('wgk-name').textContent = _wgBossName(c.week);
-
-    // The three numbers that make a shared kill yours. A fact we do not have
-    // is left out rather than printed as a zero.
-    const facts = [];
-    if (hunters > 0) facts.push([_wgFmt(hunters), hunters === 1 ? 'HUNTER BROUGHT IT DOWN' : 'HUNTERS BROUGHT IT DOWN']);
-    if (my > 0) facts.push([_wgFmt(my), 'OF YOUR STEPS LANDED']);
-    if (onWall) facts.push([place > 0 ? '#' + _wgFmt(place) : '\u2726', 'ON THE KILL WALL']);
-    document.getElementById('wgk-facts').innerHTML = facts.map(function (f, i) {
-      return '<div class="wgk-fact" style="animation-delay:' + (0.96 + i * 0.14).toFixed(2) + 's">' +
-        '<b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
-    }).join('');
-
-    screen.classList.remove('hidden');
-    screen.setAttribute('aria-hidden', 'false');
-
-    // The bounty counts up instead of sitting inside a sentence.
-    const soulsEl = document.getElementById('wgk-souls-n');
-    soulsEl.textContent = '+0';
-    const startAt = 1460 + facts.length * 140;
-    const countTimer = setTimeout(function () {
-      const t0 = performance.now();
-      (function tick(now) {
-        const k = Math.min(1, (now - t0) / 720);
-        soulsEl.textContent = '+' + _wgFmt(Math.round(souls * (1 - Math.pow(1 - k, 3))));
-        if (k < 1 && !screen.classList.contains('hidden')) requestAnimationFrame(tick);
-      })(t0);
-    }, startAt);
-
-    const host = document.getElementById('wgk-particles');
-    try { spawnBurstParticles(26, '#f5b842', host); } catch (_) {}
-    const sw = document.getElementById('wgk-shockwave');
-    if (sw) {
-      sw.classList.remove('wgk-sw-on'); void sw.offsetWidth; sw.classList.add('wgk-sw-on');
-      sw.addEventListener('animationend', function () { sw.classList.remove('wgk-sw-on'); }, { once: true });
-    }
-    try { playSfx('boss_victory'); } catch (_) {}
-    try { _hapticTick('SUCCESS'); } catch (_) {}
-
-    const dismiss = function () {
-      clearTimeout(countTimer);
-      soulsEl.textContent = '+' + _wgFmt(souls);
-      screen.classList.add('hidden');
-      screen.setAttribute('aria-hidden', 'true');
-      if (host) host.innerHTML = '';
-      try { renderWorldgatePulse(); } catch (_) {}
+  /** Card data from the cache's frozen kill (+ this device's claim of that week). */
+  function _wgmData(k) {
+    let claim = null; try { claim = JSON.parse(localStorage.getItem(WGM_CLAIM_KEY) || 'null'); } catch (_) {}
+    const mine = claim && claim.week === k.week ? claim : null;
+    const bonus = Array.isArray(k.mvp_bonus) && k.mvp_bonus.length === 3 ? k.mvp_bonus : [150, 100, 50];
+    return {
+      boss: _wgBossName(k.week), hunters: Number(k.hunters) || 0, pool: Number(k.pool) || 0, fell: _wgmDate(k.slain_at),
+      mvps: (Array.isArray(k.mvps) ? k.mvps : []).slice(0, 3).map(function (m) { return { alias: String(m.alias || ''), rank: m.rank_tier || '', steps: Number(m.steps) || 0 }; }),
+      you: Math.max(0, Math.min(3, Number(k.my_place) || 0)),
+      meSteps: Number(k.my_steps) || 0, mePos: Number(k.my_pos) || 0,
+      bonus: bonus, bounty: mine ? Math.max(0, Number(mine.bounty) || 0) : 0,
+      // Only a bonus this device actually claimed is shown: last week's kill (announced from the
+      // new week) can no longer be claimed, so its MVPs see YOU but no souls line.
+      bonusPaid: mine ? Math.max(0, Number(mine.bonus) || 0) : 0,
     };
-    document.getElementById('wgk-continue').onclick = dismiss;
+  }
+  function _wgmCardHtml(d) {
+    const tot = Math.max(1, d.pool);
+    const pct = function (s) { return Math.max(0, Math.min(100, s / tot * 100)).toFixed(3); };
+    const segs = d.mvps.map(function (m, i) { return '<i class="wgm-sg wgm-s' + (i + 1) + (d.you === i + 1 ? ' wgm-me' : '') + '" style="width:' + pct(m.steps) + '%"></i>'; }).join('') +
+      (d.meSteps > 0 && !d.you ? '<i class="wgm-sg wgm-me" style="width:' + pct(d.meSteps) + '%"></i>' : '') + '<i class="wgm-sg wgm-rest"></i>';
+    const col = function (i) {
+      const m = d.mvps[i]; if (!m) return '<div class="wgm-col wgm-p' + (i + 1) + ' wgm-empty"></div>';
+      const p = i + 1, you = d.you === p;
+      return '<div class="wgm-col wgm-p' + p + (you ? ' wgm-you' : '') + '"><div class="wgm-lbl">' + (you ? '<span class="wgm-youtag">You</span>' : '') +
+        '<p class="wgm-nm">' + esc(m.alias) + _crownFor(m.alias) + '</p>' +
+        '<p class="wgm-metaln">' + (m.rank ? '<span class="wgm-rk">' + esc(String(m.rank)) + '</span>' : '') + '<b class="wgm-st" data-to="' + m.steps + '">0</b></p>' +
+        (you && d.bonusPaid > 0 ? '<p class="wgm-bonus">' + _WGM_GEM + '<span>+<b data-to="' + d.bonusPaid + '">0</b> souls</span></p>' : '') +
+        '</div><div class="wgm-plinth"><span class="wgm-pl">' + p + '</span><span class="wgm-ord">' + _WGM_ORD[i] + '</span></div></div>';
+    };
+    let mine = '';
+    if (d.you) { const m = d.mvps[d.you - 1]; mine = '<p class="wgm-mine wgm-rv"><i></i>Your strikes · <b data-to="' + (m ? m.steps : d.meSteps) + '">0</b> · #' + d.you + '</p>'; }
+    else if (d.meSteps > 0) mine = '<p class="wgm-mine wgm-rv"><i></i>Your strikes · <b data-to="' + d.meSteps + '">0</b>' + (d.mePos ? ' · #' + d.mePos : '') + '</p>';
+    const bounty = d.bounty > 0 ? '<p class="wgm-mine wgm-bounty wgm-rv">' + _WGM_GEM + 'Bounty · <b data-to="' + d.bounty + '">0</b> souls</p>' : '';
+    return '<div class="wgm-scrim"></div><div class="wgm-card"><div class="wgm-embers">' + _WGM_EMB + '</div><div class="wgm-gate">' + _WGM_GATE + '</div>' +
+      '<p class="wgm-eyebrow wgm-rv">The Worldgate has fallen</p><h2 class="wgm-boss wgm-rv">' + esc(d.boss) + '</h2>' +
+      '<p class="wgm-coll wgm-rv"><b data-k="h" data-to="' + d.hunters + '">0</b> hunters · <b class="wgm-g" data-k="s" data-to="' + d.pool + '">0</b> steps</p>' +
+      (d.fell ? '<p class="wgm-fell wgm-rv">Fell <b>' + esc(d.fell) + '</b></p>' : '') +
+      '<div class="wgm-bar"><div class="wgm-track"><div class="wgm-fill">' + segs + '</div></div><div class="wgm-bl"><span>One monster · all of us</span><span class="wgm-pct" data-to="100" data-suf="%">0%</span></div></div>' +
+      '<div class="wgm-podium">' + [1, 0, 2].map(col).join('') + '</div>' + mine + bounty + '<p class="wgm-tap">Tap to continue</p></div>';
+  }
+
+  /** Render the card. opts.preview: the owner's Settings row (records nothing);
+   *  opts.onClose runs after it has gone. */
+  function showWorldgateMvps(d, opts) {
+    opts = opts || {};
+    try { if (_wgmLive) _wgmLive.close(true); } catch (_) {}
+    const old = document.getElementById('wgmvp-screen'); if (old) old.remove();
+    let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    const screen = document.createElement('div');
+    screen.id = 'wgmvp-screen'; screen.className = 'wgm-screen wg-scope';
+    screen.setAttribute('role', 'dialog'); screen.setAttribute('aria-label', 'The Worldgate has fallen');
+    screen.innerHTML = _wgmCardHtml(d);
+    document.body.appendChild(screen);
+    if (!opts.preview) { try { _stageBigMoment = true; } catch (_) {} }
+    const q = function (s) { return screen.querySelector(s); };
+    const T = []; let gen = 0, done = false, dead = false;
+    const at = function (ms, fn) { T.push(setTimeout(function () { if (!dead) { try { fn(); } catch (_) {} } }, ms)); };
+    const fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+    const count = function (el, ms) {
+      if (!el) return; const g = gen, to = +el.dataset.to, suf = el.dataset.suf || '', t0 = performance.now();
+      const st = function (now) { if (g !== gen || dead) return; const k = Math.min(1, (now - t0) / ms); el.textContent = fmt(to * (1 - Math.pow(1 - k, 3))) + suf; if (k < 1) requestAnimationFrame(st); };
+      requestAnimationFrame(st);
+    };
+    // Names: Cinzel 14px (1st 16px), two lines, shrinking in 0.5px steps to 11px.
+    try {
+      const fit = function () { screen.querySelectorAll('.wgm-nm').forEach(function (p) { p.style.fontSize = ''; let fs = parseFloat(getComputedStyle(p).fontSize), g = 0; while ((p.scrollWidth > p.clientWidth + 0.5 || p.scrollHeight > p.clientHeight + 1) && fs > 11 && g++ < 24) { fs -= 0.5; p.style.fontSize = fs + 'px'; } }); };
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit();
+    } catch (_) {}
+
+    const land = { 3: 1800, 2: 2220, 1: 2740 };
+    at(20, function () { screen.classList.add('wgm-in'); });
+    at(200, function () { q('.wgm-gate').classList.add('wgm-on'); });
+    at(320, function () { q('.wgm-eyebrow').classList.add('wgm-on'); });
+    at(440, function () { q('.wgm-boss').classList.add('wgm-on'); });
+    at(580, function () { q('.wgm-coll').classList.add('wgm-on'); count(q('[data-k=h]'), 500); count(q('[data-k=s]'), 900); });
+    at(660, function () { const f = q('.wgm-fell'); if (f) f.classList.add('wgm-on'); });
+    at(720, function () { q('.wgm-bar').classList.add('wgm-on'); count(q('.wgm-pct'), 800); });
+    at(1540, function () { q('.wgm-bar').classList.add('wgm-done'); gen++; q('.wgm-pct').textContent = 'Felled'; _hapticTick('LIGHT'); _wgmTone(_WGM_N.E4, { gain: 0.07, dur: 0.7 }); });
+    [[3, 1640], [2, 2060], [1, 2500]].forEach(function (pt) {
+      const p = pt[0], col = q('.wgm-col.wgm-p' + p); if (!col || col.classList.contains('wgm-empty')) return;
+      at(pt[1], function () { col.classList.add('wgm-up'); });
+      at(land[p], function () {
+        col.classList.add('wgm-land'); count(col.querySelector('.wgm-st'), p === 1 ? 650 : 500);
+        if (p === 1) { _hapticTick('MEDIUM'); [_WGM_N.C5, _WGM_N.E5, _WGM_N.G5].forEach(function (f, i) { _wgmTone(f, { at: i * 0.06, gain: 0.09, dur: 0.9, tri: i === 2 }); }); }
+        else { _hapticTick('LIGHT'); _wgmTone(p === 3 ? _WGM_N.G4 : _WGM_N.C5, { gain: 0.09, dur: 0.6 }); }
+      });
+    });
+    let tMine = land[1] + 500;
+    if (d.you) {
+      const tY = land[d.you] + 260;
+      at(tY, function () { const col = q('.wgm-col.wgm-you'); if (!col) return; col.classList.add('wgm-you-on'); count(col.querySelector('.wgm-bonus b'), 450); _hapticTick('MEDIUM'); _wgmTone(_WGM_N.B5, { gain: 0.07, dur: 0.4 }); _wgmTone(_WGM_N.E6, { at: 0.09, gain: 0.08, dur: 0.7, tri: true }); });
+      tMine = Math.max(tMine, tY + 400);
+    }
+    const lines = [].slice.call(screen.querySelectorAll('.wgm-mine'));
+    lines.forEach(function (el, i) { at(tMine + i * 300, function () { el.classList.add('wgm-on'); count(el.querySelector('b'), 600); }); });
+    const tTap = tMine + Math.max(0, lines.length - 1) * 300 + 700;
+    at(tTap, function () { q('.wgm-tap').classList.add('wgm-on'); done = true; });
+
+    const close = function (instant) {
+      if (dead) return; dead = true; _wgmLive = null;
+      T.forEach(clearTimeout);
+      try { screen.remove(); } catch (_) {}
+      if (!opts.preview) { try { renderWorldgatePulse(); } catch (_) {} }
+      if (!instant && typeof opts.onClose === 'function') { try { opts.onClose(); } catch (_) {} }
+    };
+    _wgmLive = { close: close };
+    const skip = function () {
+      T.forEach(clearTimeout); T.length = 0; gen++;
+      screen.classList.add('wgm-skip', 'wgm-in');
+      screen.querySelectorAll('.wgm-gate,.wgm-rv,.wgm-bar,.wgm-tap').forEach(function (e) { e.classList.add('wgm-on'); });
+      screen.querySelectorAll('.wgm-col').forEach(function (c) { c.classList.add('wgm-up', 'wgm-land'); });
+      const y = q('.wgm-col.wgm-you'); if (y) y.classList.add('wgm-you-on');
+      screen.querySelectorAll('[data-to]').forEach(function (e) { e.textContent = fmt(+e.dataset.to) + (e.dataset.suf || ''); });
+      q('.wgm-pct').textContent = 'Felled';
+      void screen.offsetWidth; requestAnimationFrame(function () { screen.classList.remove('wgm-skip'); });
+      done = true; _hapticTick('LIGHT');
+    };
+    const exit = function () {
+      _hapticTick('LIGHT');
+      const card = q('.wgm-card');
+      const a = card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: RM ? 'none' : 'translateY(14px) scale(.985)' }], { duration: 280, easing: 'ease-in', fill: 'forwards' });
+      q('.wgm-scrim').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 280, fill: 'forwards' });
+      a.onfinish = function () { close(false); };
+    };
+    let leaving = false;
+    screen.addEventListener('click', function () { if (leaving || dead) return; if (done) { leaving = true; exit(); } else skip(); });
     return true;
   }
-  // QA: __wgKillPreview() replays the ceremony off the live cache, or off a
-  // stand-in when this device has never seen a gate fall.
-  try {
-    window.__wgKillPreview = function (souls) {
-      const c = _wgCache() || {};
-      return showWorldgateKill({
-        // Only a hunter past the claim floor can claim at all, so the
-        // stand-in is past it too — the Kill Wall line is never a maybe.
-        week: c.week || '2026-09-14', my: Number(c.my) || 18240,
-        hunters: Number(c.hunters) || 7, my_rank: Number(c.my_rank) || 3, floor: Number(c.floor) || 15000,
-      }, souls == null ? (Number(c.souls) || 200) : souls);
+
+  /** Show this week's (or last week's) kill once, if this device hasn't yet. */
+  function _wgmMaybe() {
+    try {
+      const c = _wgCache(); const k = c && c.kill;
+      if (!k || !k.week || !Array.isArray(k.mvps) || !k.mvps.length) return false;
+      if (localStorage.getItem(WGM_SEEN_KEY) === k.week) return false;
+      if (_wgmClaimInflight) return false;          // the claim's answer calls back
+      if (document.getElementById('wgmvp-screen')) return false;
+      if (_newHunterQuiet()) return false;          // W940 — waits for the next launch
+      // W950 — priority 18: a boss result (10) or relic reveal (15) finishes
+      // first; the gate goes ahead of the level-up chain.
+      if (_stageDefer('wgmvp', 18, function () { _wgmMaybe(); }, ['wgmvp'])) return false;
+      try { localStorage.setItem(WGM_SEEN_KEY, k.week); } catch (_) {}
+      return showWorldgateMvps(_wgmData(k), {});
+    } catch (_) { return false; }
+  }
+  function _wgmRecordClaim(week, cl) {
+    try { localStorage.setItem(WGM_CLAIM_KEY, JSON.stringify({ week: week, bounty: Number(cl.bounty != null ? cl.bounty : cl.souls) || 0, bonus: Number(cl.mvp_bonus) || 0, place: Number(cl.mvp_place) || 0 })); } catch (_) {}
+  }
+  /** The list's badges glint once, the first time it opens after a gate falls. */
+  function _wgmGlint() {
+    try {
+      const c = _wgCache(); if (!c || c.status !== 'slain' || !_wgSheet) return;
+      const els = [].slice.call(_wgSheet.querySelectorAll('.wg2-rank .wg-mvpb'));
+      if (!els.length) return;
+      if (localStorage.getItem(WGM_GLINT_KEY) === c.week) return;
+      localStorage.setItem(WGM_GLINT_KEY, c.week);
+      let RM = false; try { RM = !!window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+      if (RM) return;
+      els.forEach(function (el, k) {
+        const p = Number(el.getAttribute('data-p')) || 1;
+        el.animate([{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.4)', filter: 'brightness(2.2) drop-shadow(0 0 4px ' + _WGM_PC[p - 1] + ')' }, { transform: 'scale(1)', filter: 'brightness(1)' }], { duration: 520, delay: 500 + k * 150, easing: 'cubic-bezier(.2,.8,.3,1)' });
+      });
+    } catch (_) {}
+  }
+  /** Tap a badge: "WORLDGATE MVP · 1ST · The Drowned Abbot". */
+  function _wgmBadgeTip(el) {
+    try {
+      const old = document.getElementById('wgm-tip'); if (old) old.remove();
+      const c = _wgCache() || {}; const p = Number(el.getAttribute('data-p')) || 1;
+      const tip = document.createElement('div');
+      tip.id = 'wgm-tip'; tip.className = 'wgm-tip wg-scope';
+      tip.innerHTML = 'Worldgate MVP · <b>' + _WGM_ORD[p - 1] + '</b><br>' + esc(_wgBossName(c.week));
+      document.body.appendChild(tip);
+      const r = el.getBoundingClientRect();
+      tip.style.left = (r.left + r.width / 2) + 'px'; tip.style.top = (r.top - 6) + 'px';
+      requestAnimationFrame(function () { tip.classList.add('wgm-on'); });
+      setTimeout(function () { try { tip.remove(); } catch (_) {} }, 2200);
+    } catch (_) {}
+  }
+  /** W975 — the owner's Settings row: the everyone card, then the MVP card.
+   *  Real kill data when this device has one, else a stand-in. Records nothing. */
+  function previewWorldgateMvps() {
+    const c = _wgCache() || {};
+    const base = (c.kill && Array.isArray(c.kill.mvps) && c.kill.mvps.length === 3) ? _wgmData(c.kill) : {
+      boss: _wgBossName(c.week || '2026-09-20'), hunters: 41, pool: 1284000, fell: _wgmDate(Date.now()),
+      mvps: [{ alias: 'Anthony', rank: 'C', steps: 28018 }, { alias: 'Ryan', rank: 'E', steps: 24550 }, { alias: 'Zynfandel', rank: 'D', steps: 21907 }],
+      you: 0, meSteps: 4472, mePos: 7, bonus: [150, 100, 50], bounty: 0,
     };
-    window.__wgKillReplay = _wgKillReplay;
+    const everyone = Object.assign({}, base, { you: 0, bounty: 0 });
+    const asMvp = Object.assign({}, base, { you: 1, bounty: Number(c.souls) || 200, bonusPaid: (base.bonus || [150])[0] });
+    showWorldgateMvps(everyone, { preview: true, onClose: function () { setTimeout(function () { showWorldgateMvps(asMvp, { preview: true }); }, 320); } });
+  }
+  try {
+    window.__previewWorldgateMvps = previewWorldgateMvps;
+    window.__wgm = { maybe: _wgmMaybe, show: showWorldgateMvps, data: _wgmData, badge: _wgmBadge };   // QA
   } catch (_) {}
 
   // ── the HP bar (card + sheet share it): all hunters · your guild · you, in gold ──
@@ -6948,16 +7093,18 @@
         '<span class="wg2-amt">' + _wgFmt(r.steps) + '</span></div>';
     }).join('') + '</div>';
   }
-  function _wgRankRow(pos, h, max) {
+  function _wgRankRow(pos, h, max, mvp) {   // W975 — mvp: 1|2|3 wears the badge
     return '<div class="wg2-ri' + (h.me ? ' wg2-ri--me' : '') + '"><span class="wg2-pos">' + esc(String(pos)) + '</span><span class="wg2-av wg2-av--' + (h.me ? 'me' : String(Math.abs(String(h.alias || '').length) % 4)) + '">' + esc(_wgInitial(h.alias)) + '</span>' +
-      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(h.alias) + _crownFor(h.alias) + '</button><small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
+      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(h.alias) + _crownFor(h.alias) + '</button>' + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '<small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
       '<span class="wg2-amt">' + _wgFmt(h.steps) + '</span><div class="wg2-bar"><i style="width:' + Math.max(2, Math.min(100, (Number(h.steps) || 0) / max * 100)).toFixed(1) + '%"></i></div></div>';
   }
   function _wgRankHtml(c) {
     const top = Array.isArray(c.top) ? c.top : [];
     if (!top.length) return '<div class="wg2-empty">No strikes yet this week.</div>';
     const max = Math.max(1, Number(top[0].steps) || 1);
-    let rows = top.map(function (h, i) { return _wgRankRow(i + 1, h, max); }).join('');
+    // W975 — once the week's gate has fallen, whoever is 1st/2nd/3rd right now wears the MVP badge (owner call).
+    const slain = c.status === 'slain';
+    let rows = top.map(function (h, i) { return _wgRankRow(i + 1, h, max, slain && i < 3 ? i + 1 : 0); }).join('');
     if (!top.some(function (h) { return h.me; }) && (Number(c.my) || 0) > 0 && c.my_rank) rows += _wgRankRow('#' + c.my_rank, { alias: _wgMyAlias() || 'You', steps: c.my, me: true }, max);
     return '<div class="wg2-rank">' + rows + '</div>';
   }
@@ -7014,6 +7161,7 @@
     const st = body.scrollTop;
     body.innerHTML = _wgSheetHtml(c);
     body.scrollTop = st;
+    try { _wgmGlint(); } catch (_) {}   // W975 — badges glint once per fallen gate
   }
   function openWorldgateSheet(seg) {
     const c = _wgCache();
@@ -7111,6 +7259,7 @@
       const t = e.target; if (!t || !t.closest) return;
       let el;
       if ((el = t.closest('[data-wg-close]'))) { e.preventDefault(); closeWorldgateSheet(); return; }
+      if ((el = t.closest('[data-wg-mvp]'))) { e.preventDefault(); e.stopPropagation(); _wgmBadgeTip(el); return; }   // W975
       if ((el = t.closest('[data-wg-profile]'))) {
         e.preventDefault(); e.stopPropagation();
         const who = el.getAttribute('data-wg-profile'); const had = !!_wgSheet;
@@ -35973,6 +36122,8 @@
     if (row) row.classList.toggle('hidden', !_testHunterAllowed());
     const rateRow = document.getElementById('settings-preview-rating');   // W974 — same owner gate
     if (rateRow) rateRow.classList.toggle('hidden', !_testHunterAllowed());
+    const wgmRow = document.getElementById('settings-preview-wgmvp');   // W975 — same owner gate
+    if (wgmRow) wgmRow.classList.toggle('hidden', !_testHunterAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -40582,7 +40733,7 @@
     }],
     ['boss',     'flag', function () { return typeof _bossResultBusy !== 'undefined' && !!_bossResultBusy; }],
     ['boss',     'dom',  function () { return _stageVis('boss-result-overlay'); }],
-    ['wgkill',   'dom',  function () { return _stageVis('wgkill-screen'); }],   // W964
+    ['wgmvp',    'dom',  function () { return !!document.getElementById('wgmvp-screen'); }],   // W975 (replaced W964's wgkill)
     ['reveal',   'flag', function () { return typeof _revealActive !== 'undefined' && !!_revealActive; }],
     ['reveal',   'dom',  function () { return _stageVis('reveal-overlay'); }],
     ['pday',     'flag', function () { return typeof _pdayPending !== 'undefined' && !!_pdayPending; }],
@@ -68927,6 +69078,8 @@
       'hb_review_pday_count',
       'hb_review_pday_last',
       'hb_rm_shown_v1',          // W974 — rating moments already shown (each once, ever)
+      'hb_wgmvp_seen_v1',        // W975 — the Worldgate kill week whose MVP card was shown
+      'hb_wgmvp_claim_v1',       // W975 — this hunter's bounty/bonus for that kill
       'hb_coop_kills',            // W545 — per-co-op-boss kill counts for the Kill Log
       'hb_coop_pacts',            // W663 — per-friend co-op Pact streak (Snapchat-style)
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
@@ -70158,6 +70311,13 @@
         if (!_testHunterAllowed()) return;
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewRankCelebrations(); } catch (_) {} }, 280);
+      });
+      // W975 — owner-only: the Worldgate MVP card, as everyone and as the 1st MVP; saves nothing.
+      const wgmPreviewRow = document.getElementById('settings-preview-wgmvp');
+      if (wgmPreviewRow) wgmPreviewRow.addEventListener('click', function () {
+        if (!_testHunterAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        setTimeout(function () { try { previewWorldgateMvps(); } catch (_) {} }, 280);
       });
       // W974 — owner-only: all five rating moments back to back; opens nothing, saves nothing.
       const ratePreviewRow = document.getElementById('settings-preview-rating');

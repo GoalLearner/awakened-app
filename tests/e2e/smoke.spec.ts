@@ -4871,126 +4871,6 @@ test.describe('AW · The rank bar moves on the seal (W963)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// AX. W964 — the Worldgate kill is a ceremony, not a notice card
-// ─────────────────────────────────────────────────────────────────────────
-test.describe('AX · The gate falls (W964)', () => {
-  // The claim only fires once a week on a real server, so every spec drives
-  // the same QA hook the ceremony ships with.
-  const read = (page: Page) => page.evaluate(() => {
-    const s = document.getElementById('wgkill-screen')!;
-    return {
-      shown: !s.classList.contains('hidden'),
-      name: (document.getElementById('wgk-name') || {} as any).textContent,
-      facts: [].map.call(document.querySelectorAll('.wgk-fact'), (f: any) => f.textContent.replace(/\s+/g, ' ')),
-      souls: (document.getElementById('wgk-souls-n') || {} as any).textContent,
-      pending: localStorage.getItem('hb_wgk_pending'),
-    };
-  });
-
-  test('it names the monster, your steps and your place — then counts the bounty up', async ({ page }) => {
-    await freshApp(page);
-    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
-    const mounted = await page.evaluate(() => (window as any).__wgKillPreview(200));
-    expect(mounted).toBe(true);
-    const b = await read(page);
-    expect(b.shown).toBe(true);
-    // The old notice card never said WHICH monster died.
-    expect(String(b.name).length).toBeGreaterThan(3);
-    expect(b.name).not.toBe('\u2014');
-    expect(b.facts.length).toBe(3);
-    expect(b.facts.join(' | ')).toContain('HUNTERS BROUGHT IT DOWN');
-    expect(b.facts.join(' | ')).toContain('OF YOUR STEPS LANDED');
-    expect(b.facts.join(' | ')).toContain('ON THE KILL WALL');
-    // The bounty counts rather than sitting in a sentence.
-    expect(b.souls).toBe('+0');
-    await expect.poll(() => read(page).then((x) => x.souls), { timeout: 6_000 }).toBe('+200');
-    // CONTINUE is the one release, and it fits above the fold on a phone.
-    const cta = page.locator('#wgk-continue');
-    await expect(cta).toBeInViewport();
-    await cta.click();
-    expect((await read(page)).shown).toBe(false);
-  });
-
-  test('it waits its turn behind a surface already on stage, then arrives (W950)', async ({ page }) => {
-    await freshApp(page);
-    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
-    // Put a real stage surface up and own its timing: #rankup-screen is the
-    // 'levelup' DOM surface, and nothing else in this spec touches it.
-    await page.evaluate(() => { document.getElementById('rankup-screen')!.classList.remove('hidden'); });
-    expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);
-    expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(false);
-    expect((await read(page)).shown).toBe(false);
-    // Deferred, not dropped: clear the stage and the queue delivers it.
-    await page.evaluate(() => { document.getElementById('rankup-screen')!.classList.add('hidden'); });
-    await expect.poll(() => read(page).then((x) => x.shown), { timeout: 10_000 }).toBe(true);
-  });
-
-  test('a kill on day one is kept, not spent on a hunter being kept quiet (W940)', async ({ page }) => {
-    await freshApp(page);
-    await page.addInitScript(() => {
-      try {
-        const d = new Date();
-        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_onboarding_first_xp_date', ymd);   // today = day one
-        localStorage.removeItem('hb_wgk_pending');
-      } catch (_) {}
-    });
-    await page.reload();
-    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
-    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
-    expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(false);
-    const quiet = await read(page);
-    expect(quiet.shown).toBe(false);
-    expect(JSON.parse(String(quiet.pending)).souls).toBe(200);     // kept for later
-    // Not day one any more: the replay spends it and clears the key.
-    await page.evaluate(() => {
-      localStorage.removeItem('hb_onboarding_first_xp_date');
-      (window as any).__wgKillReplay();
-    });
-    const later = await read(page);
-    expect(later.shown).toBe(true);
-    expect(later.pending).toBeNull();
-  });
-
-  // The entry flash is a full-bleed white sheet above the background and below
-  // the copy. Pausing its fade instead of removing it leaves a white screen
-  // with white text on it — which is exactly what the first cut of this
-  // ceremony shipped to anyone running Reduce Motion.
-  test.describe('with Reduce Motion on', () => {
-    test('nothing covers the copy', async ({ page }) => {
-      await freshApp(page);
-      // test.use({reducedMotion}) does not reach this page fixture — emulate it
-      // on the page, the way the rest of this suite does.
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
-      expect(await page.evaluate(() => (window as any).__wgKillPreview(200))).toBe(true);
-      const probe = await page.evaluate(() => {
-        const hit = (sel: string) => {
-          const el = document.querySelector(sel) as HTMLElement;
-          const r = el.getBoundingClientRect();
-          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          return { covered: !(el === top || el.contains(top)), opacity: getComputedStyle(el).opacity };
-        };
-        return {
-          rm: matchMedia('(prefers-reduced-motion: reduce)').matches,
-          flash: getComputedStyle(document.querySelector('.wgk-screen')!, '::before').display,
-          name: hit('#wgk-name'),
-          fact: hit('.wgk-fact'),
-          cta: hit('#wgk-continue'),
-        };
-      });
-      expect(probe.rm).toBe(true);
-      expect(probe.flash).toBe('none');
-      expect(probe.name.covered).toBe(false);
-      expect(probe.name.opacity).toBe('1');
-      expect(probe.fact.covered).toBe(false);
-      expect(probe.fact.opacity).toBe('1');
-      expect(probe.cta.covered).toBe(false);
-    });
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────
 // AY. W965 — DIVISION UP: the mark lights, and it waits for you
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AY · Division up (W965)', () => {
@@ -5708,5 +5588,144 @@ test.describe('BE · Rating moments (W974)', () => {
     await page.locator('#settings-btn').click();
     await page.waitForTimeout(800);
     expect(await page.evaluate(() => document.getElementById('settings-preview-rating')!.classList.contains('hidden'))).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// BF. W975 — WORLDGATE MVPs (Claude Design handoff 29): replaces the W964 ceremony
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BF · Worldgate MVPs (W975)', () => {
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const KILL = (over?: Record<string, unknown>) => ({
+    week: '2026-09-20', slain_at: Date.UTC(2026, 8, 24, 18), pool: 1284000, hunters: 41,
+    mvps: [{ alias: 'Anthony', rank_tier: 'C', steps: 28018 }, { alias: 'Ryan', rank_tier: 'E', steps: 24550 }, { alias: 'Zynfandel', rank_tier: 'D', steps: 21907 }],
+    my_place: 0, my_steps: 4472, my_pos: 7, mvp_bonus: [150, 100, 50], ...(over || {}),
+  });
+  async function seed(page: Page, gate: Record<string, unknown>, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([g, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w975')) return;
+        sessionStorage.setItem('__w975', '1');
+        localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_worldgate_v1', JSON.stringify(Object.assign({ at: Date.now(), week: '2026-09-20', hp: 1200000, pool: 1290000, status: 'slain', my: 4472, floor: 15000, souls: 200,
+          claimable: false, claimed: false, hunters: 41, guild: { steps: 0, hunters: 0 }, my_rank: 7,
+          top: [{ alias: 'Zynfandel', steps: 30100, rank_tier: 'D' }, { alias: 'Mara', steps: 29000, rank_tier: 'C' }, { alias: 'Anthony', steps: 28018, rank_tier: 'C' }, { alias: 'Ryan', steps: 24550, rank_tier: 'E' }, { alias: 'Galilea', steps: 8848, rank_tier: 'B' }],
+          wall: [], wall_count: 4, recent: [], rallied: false, kill: null }, g)));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [gate, extra || {}] as [Record<string, unknown>, Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const card = (page: Page) => page.evaluate(() => {
+    const s = document.getElementById('wgmvp-screen'); if (!s) return null;
+    const t = (sel: string) => (s.querySelector(sel)?.textContent || '').replace(/\s+/g, ' ').trim();
+    const cols = [].map.call(s.querySelectorAll('.wgm-col'), (c: any) => ({ cls: c.className, nm: (c.querySelector('.wgm-nm')?.textContent || '').trim(),
+      you: !!c.querySelector('.wgm-youtag'), bonus: (c.querySelector('.wgm-bonus')?.textContent || '').replace(/\s+/g, ' ').trim(), landed: c.classList.contains('wgm-land') }));
+    return { eyebrow: t('.wgm-eyebrow'), boss: t('.wgm-boss'), coll: t('.wgm-coll'), fell: t('.wgm-fell'), cols,
+      mine: [].map.call(s.querySelectorAll('.wgm-mine'), (m: any) => m.textContent.replace(/\s+/g, ' ').trim()), buttons: s.querySelectorAll('button').length };
+  });
+
+  test('the everyone card: the fallen boss, the whole server, and the podium in 2 · 1 · 3 order', async ({ page }) => {
+    await seed(page, { kill: KILL() });
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await expect.poll(() => card(page).then((c) => c && c.eyebrow.toUpperCase()), { timeout: 6_000 }).toBe('THE WORLDGATE HAS FALLEN');
+    await page.locator('#wgmvp-screen').click();   // first tap: straight to the final frame
+    const c = (await card(page))!;
+    expect(c.buttons).toBe(0);                      // tap to continue — no buttons, no X
+    expect(c.coll.toUpperCase()).toBe('41 HUNTERS · 1,284,000 STEPS');
+    expect(c.fell.toUpperCase()).toMatch(/^FELL (SUN|MON|TUE|WED|THU|FRI|SAT) \d{1,2} SEP$/);
+    expect(c.cols.map((x) => x.nm)).toEqual(['Ryan', 'Anthony', 'Zynfandel']);   // 2nd · 1st · 3rd
+    expect(c.cols.every((x) => x.landed && !x.you)).toBe(true);
+    expect(c.mine).toEqual(['Your strikes · 4,472 · #7']);
+    expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBe('2026-09-20');
+    await page.locator('#wgmvp-screen').click();   // second tap: leave
+    await expect.poll(() => card(page), { timeout: 3_000 }).toBeNull();
+    // Once per kill.
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await page.waitForTimeout(800);
+    expect(await card(page)).toBeNull();
+  });
+
+  test('an MVP sees their plinth marked YOU, their bonus, and the bounty', async ({ page }) => {
+    await seed(page, { kill: KILL({ my_place: 2, my_steps: 24550, my_pos: 2 }) },
+      { hb_wgmvp_claim_v1: JSON.stringify({ week: '2026-09-20', bounty: 200, bonus: 100, place: 2 }) });
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
+    await page.locator('#wgmvp-screen').click();
+    const c = (await card(page))!;
+    const ryan = c.cols.find((x) => x.nm === 'Ryan')!;
+    expect(ryan.you).toBe(true);
+    expect(ryan.bonus).toBe('+100 souls');
+    expect(c.cols.filter((x) => x.you).length).toBe(1);
+    expect(c.mine).toEqual(['Your strikes · 24,550 · #2', 'Bounty · 200 souls']);
+  });
+
+  test('last week’s MVP (bonus no longer claimable) sees YOU but no souls line', async ({ page }) => {
+    await seed(page, { kill: KILL({ my_place: 1, my_steps: 28018, my_pos: 1 }) });
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
+    await page.locator('#wgmvp-screen').click();
+    const a = (await card(page))!.cols.find((x) => x.nm === 'Anthony')!;
+    expect(a.you).toBe(true);
+    expect(a.bonus).toBe('');
+  });
+
+  test('a hunter who never struck sees no line of their own', async ({ page }) => {
+    await seed(page, { kill: KILL({ my_steps: 0, my_pos: null }) });
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
+    expect((await card(page))!.mine).toEqual([]);
+  });
+
+  test('never on a new hunter’s first day, and the kill waits for them', async ({ page }) => {
+    await seed(page, { kill: KILL() }, { hb_onboarding_first_xp_date: today() });
+    await page.evaluate(() => (window as any).__wgm.maybe());
+    await page.waitForTimeout(800);
+    expect(await card(page)).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBeNull();
+  });
+
+  test('the badge: the list’s live top three wear MVP / 2ND / 3RD once the gate has fallen', async ({ page }) => {
+    await seed(page, { kill: KILL() });
+    await page.evaluate(() => document.getElementById('wg-pulse')!.click());
+    await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
+    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-rank .wg2-ri'), (r: any) => ({
+      name: (r.querySelector('.wg2-nmbtn')?.textContent || '').trim(), badge: r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null,
+      text: (r.querySelector('.wg-mvpb text')?.textContent || '') })));
+    // Live order, not the frozen podium: Zynfandel leads the list now.
+    expect(rows.slice(0, 5).map((r: any) => [r.name, r.badge, r.text])).toEqual([
+      ['Zynfandel', '1', 'MVP'], ['Mara', '2', '2ND'], ['Anthony', '3', '3RD'], ['Ryan', null, ''], ['Galilea', null, '']]);
+  });
+
+  test('no badges while the gate still stands', async ({ page }) => {
+    await seed(page, { status: 'open', kill: null });
+    await page.evaluate(() => document.getElementById('wg-pulse')!.click());
+    await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
+    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
+    expect(await page.locator('.wg2-rank .wg-mvpb').count()).toBe(0);
+  });
+
+  test('the old kill ceremony is gone', async ({ page }) => {
+    await seed(page, { kill: KILL() });
+    const r = await page.evaluate(() => ({ screen: !!document.getElementById('wgkill-screen'), preview: typeof (window as any).__wgKillPreview }));
+    expect(r).toEqual({ screen: false, preview: 'undefined' });
+  });
+
+  test('the owner’s Settings row previews both cards and saves nothing', async ({ page }) => {
+    await seed(page, { kill: null }, { hb_board_cache_v1: JSON.stringify({ me: { role: 'owner' } }) });
+    await page.locator('#settings-btn').click();
+    await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-wgmvp')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
+    await page.evaluate(() => (window as any).__previewWorldgateMvps());
+    await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
+    expect((await card(page))!.cols.some((x) => x.you)).toBe(false);
+    await page.locator('#wgmvp-screen').click(); await page.locator('#wgmvp-screen').click();
+    await expect.poll(() => card(page).then((c) => c && c.cols.some((x) => x.you)), { timeout: 6_000 }).toBe(true);
+    await page.locator('#wgmvp-screen').click(); await page.locator('#wgmvp-screen').click();
+    await expect.poll(() => card(page), { timeout: 3_000 }).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBeNull();
   });
 });

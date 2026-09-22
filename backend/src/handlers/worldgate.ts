@@ -28,6 +28,12 @@ export const WORLDGATE_SOULS = 200;
 export const WORLDGATE_TOP = 5;          // top strikers shown in the sheet
 export const WORLDGATE_WALL_MAX = 60;    // Kill Wall names returned (≥ claim floor)
 export const WORLDGATE_RECENT = 6;       // latest strikers (by last verified sync)
+// W975 — WORLDGATE MVPs (owner 2026-09-22, Claude Design handoff 29). The top
+// three by steps at the MOMENT the gate falls are its MVPs: frozen into
+// world_gates.kill_json (0062) when the kill is stamped, so the podium never
+// moves afterwards even though the week's list keeps climbing until Sunday.
+// They are paid this bonus on top of the bounty, through the same claim.
+export const WORLDGATE_MVP_BONUS = [150, 100, 50];
 const CARRY_RATE = 0.05;
 
 // W892 (3.0.1 C11) — HP FROM WHAT THE FLEET ACTUALLY WALKS.
@@ -83,7 +89,45 @@ function ptWeekStartNow(): string {
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 }
 
-interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; }
+interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; kill_json?: string | null; }
+/** W975 — the kill, frozen. user_id never leaves the server. */
+interface KillSnap { pool: number; hunters: number; mvps: Array<{ user_id: string; alias: string; rank_tier: string | null; steps: number }> }
+
+/** Freeze the top three, the pool and the headcount of `week` into its gate row. */
+async function snapshotKill(env: Env, week: string): Promise<KillSnap> {
+  const rows = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT m.user_id AS user_id, u.alias AS alias, m.steps AS steps, pps.rank_tier AS rank_tier
+       FROM merged m
+       JOIN users u ON u.id = m.user_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
+      ORDER BY m.steps DESC, u.alias ASC
+      LIMIT 3`,
+  ).bind(week).all<{ user_id: string; alias: string; steps: number; rank_tier: string | null }>();
+  const agg = await env.DB.prepare(
+    `${MERGED_FOR_WEEK} SELECT COUNT(*) AS kill_hunters, COALESCE(SUM(steps), 0) AS kill_pool FROM merged`,
+  ).bind(week).first<{ kill_hunters: number; kill_pool: number }>();
+  const snap: KillSnap = {
+    pool: Number(agg?.kill_pool) || 0,
+    hunters: Number(agg?.kill_hunters) || 0,
+    mvps: (rows.results ?? []).map((r) => ({ user_id: r.user_id, alias: r.alias, rank_tier: r.rank_tier ?? null, steps: Number(r.steps) || 0 })),
+  };
+  await env.DB.prepare('UPDATE world_gates SET kill_json = ? WHERE week_start = ?').bind(JSON.stringify(snap), week).run();
+  return snap;
+}
+/** The frozen kill of a slain gate. A gate slain before 0062 (or whose stamping
+ *  request raced) is frozen on first read — its week's final standings. */
+async function killSnap(env: Env, gate: GateRow): Promise<KillSnap | null> {
+  if (!gate || gate.status !== 'slain') return null;
+  if (gate.kill_json) {
+    try { const s = JSON.parse(gate.kill_json) as KillSnap; if (s && Array.isArray(s.mvps)) return s; } catch { /* re-freeze below */ }
+  }
+  return snapshotKill(env, gate.week_start);
+}
+function prevWeekOf(week: string): string {
+  const d = new Date(week + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 7);
+  return d.toISOString().slice(0, 10);
+}
 
 // W892 — was a raw SUM over leaderboard_snapshots. That table holds ONE row per
 // (user, metric) and is OVERWRITTEN IN PLACE as hunters submit in the new week,
@@ -140,6 +184,7 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
     if (priorPool >= prior.hp) {
       await env.DB.prepare("UPDATE world_gates SET status = 'slain', slain_at = ? WHERE week_start = ? AND status = 'open'")
         .bind(Date.now(), prior.week_start).run();
+      await snapshotKill(env, prior.week_start);   // W975 — its final standings are the podium
     } else {
       carry = Math.floor(priorPool * CARRY_RATE);
       await env.DB.prepare("UPDATE world_gates SET status = 'survived' WHERE week_start = ? AND status = 'open'")
@@ -178,9 +223,16 @@ export async function handleWorldgateGet(
   const pool = await weeklyPool(env, week);
   // First read past the line stamps the kill.
   if (gate.status === 'open' && pool >= gate.hp) {
-    await env.DB.prepare("UPDATE world_gates SET status = 'slain', slain_at = ?, slain_by = ? WHERE week_start = ? AND status = 'open'")
-      .bind(Date.now(), session.userId, week).run();
+    const now = Date.now();
+    const stamp = await env.DB.prepare("UPDATE world_gates SET status = 'slain', slain_at = ?, slain_by = ? WHERE week_start = ? AND status = 'open'")
+      .bind(now, session.userId, week).run();
     gate.status = 'slain';
+    if (!gate.slain_at) gate.slain_at = now;
+    // W975 — the request that stamps the kill freezes the podium. A raced
+    // stamp leaves it to killSnap's first-read freeze a moment later.
+    if (stamp && stamp.meta && Number(stamp.meta.changes) >= 1) {
+      try { gate.kill_json = JSON.stringify(await snapshotKill(env, week)); } catch { /* frozen on next read */ }
+    }
   }
   const mine = await env.DB.prepare(
     "SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = 'step_total' AND week_start = ?",
@@ -232,11 +284,47 @@ export async function handleWorldgateGet(
   const rallied = await env.DB.prepare('SELECT sent FROM world_gate_rallies WHERE user_id = ? AND day = ?')
     .bind(session.userId, ptDayNow()).first<{ sent: number }>();
 
+  // W975 — the kill to announce: this week's gate if it fell, else last week's
+  // (a gate stamped at the Sunday rollover is only ever seen from the new week).
+  let killGate: GateRow | null = gate.status === 'slain' ? gate : null;
+  if (!killGate) {
+    const prev = await env.DB.prepare("SELECT * FROM world_gates WHERE week_start = ? AND status = 'slain'")
+      .bind(prevWeekOf(week)).first<GateRow>();
+    killGate = prev || null;
+  }
+  let kill: Record<string, unknown> | null = null;
+  let myPlace = 0;
+  if (killGate) {
+    const snap = await killSnap(env, killGate);
+    if (snap) {
+      const place = snap.mvps.findIndex((m) => m.user_id === session.userId) + 1;
+      const kw = await env.DB.prepare(
+        `${MERGED_FOR_WEEK}
+         SELECT (SELECT steps FROM merged WHERE user_id = ?2) AS mine,
+                (SELECT COUNT(*) FROM merged WHERE steps > COALESCE((SELECT steps FROM merged WHERE user_id = ?2), 0)) AS above_kill`,
+      ).bind(killGate.week_start, session.userId).first<{ mine: number | null; above_kill: number }>();
+      const kMine = Number(kw?.mine) || 0;
+      if (killGate.week_start === week) myPlace = place;
+      kill = {
+        week: killGate.week_start,
+        slain_at: Number(killGate.slain_at) || 0,
+        pool: snap.pool,
+        hunters: snap.hunters,
+        mvps: snap.mvps.map((m) => ({ alias: m.alias, rank_tier: m.rank_tier, steps: m.steps })),
+        my_place: place,
+        my_steps: kMine,
+        my_pos: kMine > 0 ? (Number(kw?.above_kill) || 0) + 1 : null,
+        mvp_bonus: WORLDGATE_MVP_BONUS,
+      };
+    }
+  }
+
   return jsonOk({
     ok: true, week_start: week, hp: gate.hp, pool, status: gate.status,
     my_damage: myDamage,
     claim_floor: WORLDGATE_CLAIM_FLOOR, souls: WORLDGATE_SOULS,
-    claimable: gate.status === 'slain' && !claimed && myDamage >= WORLDGATE_CLAIM_FLOOR,
+    // W975 — an MVP may claim the bonus even below the bounty floor.
+    claimable: gate.status === 'slain' && !claimed && (myDamage >= WORLDGATE_CLAIM_FLOOR || myPlace > 0),
     claimed: !!claimed,
     hunters: Number(agg?.hunters) || 0,
     guild: { steps: Number(agg?.guild_steps) || 0, hunters: Number(agg?.guild_hunters) || 0 },
@@ -246,6 +334,7 @@ export async function handleWorldgateGet(
     wall_count: Number(agg?.wall_count) || 0,
     recent: (recentRows.results ?? []).map((r) => ({ alias: r.alias, steps: Number(r.steps) || 0, at: Number(r.at) || 0 })),
     rallied_today: !!rallied,
+    kill,   // W975 — null unless this or last week's gate fell
   });
 }
 
@@ -298,14 +387,19 @@ export async function handleWorldgateClaim(
   const mine = await env.DB.prepare(
     "SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = 'step_total' AND week_start = ?",
   ).bind(session.userId, week).first<{ current_value: number }>();
-  if ((mine?.current_value ?? 0) < WORLDGATE_CLAIM_FLOOR) {
+  // W975 — the bounty asks the floor; the MVP bonus asks a place on the frozen podium.
+  const snap = await killSnap(env, gate);
+  const place = snap ? snap.mvps.findIndex((m) => m.user_id === session.userId) + 1 : 0;
+  const bounty = (mine?.current_value ?? 0) >= WORLDGATE_CLAIM_FLOOR ? WORLDGATE_SOULS : 0;
+  const bonus = place > 0 ? (WORLDGATE_MVP_BONUS[place - 1] ?? 0) : 0;
+  if (!bounty && !bonus) {
     return jsonError(403, 'TOO_LITTLE_DAMAGE', 'The bounty asks ' + WORLDGATE_CLAIM_FLOOR.toLocaleString('en-US') + ' verified steps this week.');
   }
   try {
     await env.DB.prepare('INSERT INTO world_gate_claims (week_start, user_id, claimed_at) VALUES (?, ?, ?)')
       .bind(week, session.userId, Date.now()).run();
   } catch {
-    return jsonOk({ ok: true, first: false, souls: 0 });   // already claimed
+    return jsonOk({ ok: true, first: false, souls: 0, bounty: 0, mvp_bonus: 0, mvp_place: place });   // already claimed
   }
-  return jsonOk({ ok: true, first: true, souls: WORLDGATE_SOULS });
+  return jsonOk({ ok: true, first: true, souls: bounty + bonus, bounty, mvp_bonus: bonus, mvp_place: place });
 }
