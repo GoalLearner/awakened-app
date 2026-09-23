@@ -6006,4 +6006,78 @@ test.describe('BH · Hunt results (W980)', () => {
     await page.locator('#settings-btn').click();
     await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-hunts')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
   });
+
+  // W981 — the old card is gone, not hidden: no markup, no rules, no wiring.
+  test('the old Boss Defeated card no longer exists anywhere', async ({ page }) => {
+    await seed(page);
+    const r = await page.evaluate(() => {
+      const o = document.getElementById('boss-result-overlay')!;
+      let rules = 0;
+      for (const sh of Array.from(document.styleSheets)) {
+        let list: CSSRuleList | null = null; try { list = sh.cssRules; } catch (_) {}
+        if (list) for (const rule of Array.from(list)) { const t = (rule as any).selectorText || ''; if (/\.bro-overlay|\.bro-shell|\.coopdf|\.coop-victory/.test(t)) rules++; }
+      }
+      return { cls: o.className, kids: o.children.length, oldIds: document.querySelectorAll('[id^="bro-"]').length,
+        oldCls: document.querySelectorAll('.bro-overlay, .bro-shell, .coopdf, .coop-victory').length, rules,
+        panels: typeof (window as any)._coopVictoryHtml };
+    });
+    expect(r.cls).toContain('hr-screen');
+    expect(r.kids).toBe(0);
+    expect(r.oldIds).toBe(0);
+    expect(r.oldCls).toBe(0);
+    expect(r.rules).toBe(0);
+  });
+
+  const ended = (over: Record<string, any>) => Object.assign({ id: 'w981-hunt', boss_id: 'the_twin_maw', status: 'completed', result: 'success', role: 'challenger', goal_steps: 30000, combined_steps: 31200,
+    starts_at: new Date(Date.now() - 20 * 3600000).toISOString(), resolved_at: new Date(Date.now() - 3600000).toISOString(),
+    party: [{ user_id: 'u-a', alias: 'anthony', role: 'ally', steps: 17000, joined: true }, { user_id: 'me', alias: 'Richie', role: 'challenger', steps: 14200, joined: true }] }, over);
+  const sheetBody = (page: Page) => page.evaluate(() => (document.getElementById('coop-fs-body') || { innerHTML: '' }).innerHTML);
+
+  test('co-op sheet on a won hunt: the new screen over it, never the old panel — and only once', async ({ page }) => {
+    await seed(page, { hb_coop_awarded: JSON.stringify({ 'w981-hunt': true }) });
+    await page.evaluate((i) => (window as any).__hr.sheet(i), ended({}));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 6_000 }).toBe('victory');
+    const body = await sheetBody(page);
+    expect(body).not.toMatch(/coop-victory|coopdf|THE HUNT IS WON|THE QUARRY HOLDS/);
+    await tap(page);
+    const v = await view(page);
+    expect(v.eyebrow.toUpperCase()).toBe('CO-OP HUNT · RANK E');
+    expect(v.stamp.toUpperCase()).toBe('BEATEN TOGETHER');
+    expect(v.rows.length).toBe(2);
+    expect(v.relic).toBe('');   // not known on this device: no relic claim either way
+    expect(v.text).not.toMatch(/Souls only this time/);
+    await tap(page);
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+    // Opened again: the sheet stays the sheet.
+    await page.evaluate((i) => (window as any).__hr.sheet(i), ended({}));
+    await page.waitForTimeout(2_200);
+    expect((await view(page)).shown).toBe(false);
+    expect(await sheetBody(page)).not.toMatch(/coop-victory|coopdf/);
+  });
+
+  test('co-op sheet on a lost hunt: the defeat screen, no crimson panel, no old hero ward', async ({ page }) => {
+    await seed(page, { hb_coop_awarded: JSON.stringify({ 'w981-loss': true }) });
+    await page.evaluate((i) => (window as any).__hr.sheet(i), ended({ id: 'w981-loss', status: 'expired', result: 'defeat', combined_steps: 25800, party: [{ user_id: 'u-a', alias: 'anthony', role: 'ally', steps: 14000, joined: true }, { user_id: 'me', alias: 'Richie', role: 'challenger', steps: 11800, joined: true }] }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 6_000 }).toBe('defeat');
+    expect(await sheetBody(page)).not.toMatch(/coopdf|THE QUARRY HOLDS|Ran Out of Time/);
+    expect(await page.evaluate(() => document.getElementById('coop-fs-overlay')!.classList.contains('coop-overlay--defeat'))).toBe(false);
+    await tap(page);
+    const v = await view(page);
+    expect(v.stamp.toUpperCase()).toBe('SURVIVES');
+    expect(v.pct).toMatch(/^86 ?%/);
+    expect(v.call).toBe('Call again');
+  });
+
+  test('the sheet waits for the award path, and skips a hunt older than three days', async ({ page }) => {
+    await seed(page);
+    // Not awarded on this device yet → the award path owns the moment.
+    await page.evaluate((i) => (window as any).__hr.sheet(i), ended({ id: 'w981-fresh' }));
+    await page.waitForTimeout(2_200);
+    expect((await view(page)).shown).toBe(false);
+    // Awarded, but ended a week ago → the sheet just opens.
+    await page.evaluate(() => localStorage.setItem('hb_coop_awarded', JSON.stringify({ 'w981-old': true })));
+    await page.evaluate((i) => (window as any).__hr.sheet(i), ended({ id: 'w981-old', resolved_at: new Date(Date.now() - 7 * 86400000).toISOString() }));
+    await page.waitForTimeout(2_200);
+    expect((await view(page)).shown).toBe(false);
+  });
 });

@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w980'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w981'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -21621,7 +21621,17 @@
     } catch (_) {}
     const t0 = _hrTs(inst.starts_at), t1 = _hrTs(inst.resolved_at || inst.updated_at) || Date.now();
     const took = t0 ? Math.max(0, Math.min(24 * 60, Math.round((t1 - t0) / 60000))) : 0;
-    return { party: party, goal: goal, fgoal: fgoal, unit: (!both && unit === 'flights') ? 'flights' : 'steps', mvp: mvp, pact: pact, fed: !!extra.fed, time: took ? _hrHM(took) : '' };
+    return { id: inst.id || null, party: party, goal: goal, fgoal: fgoal, unit: (!both && unit === 'flights') ? 'flights' : 'steps', mvp: mvp, pact: pact, fed: !!extra.fed, time: took ? _hrHM(took) : '' };
+  }
+
+  // W981 — once per co-op hunt, whichever surface gets there first: the result
+  // queue (the award path) or the co-op sheet opened on a hunt that has ended.
+  const _HR_COOP_SEEN = 'hb_hr_coop_seen_v1';
+  function _hrCoopSeenList() { try { const a = JSON.parse(localStorage.getItem(_HR_COOP_SEEN) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function _hrCoopSeen(id) { return !!id && _hrCoopSeenList().indexOf(id) >= 0; }
+  function _hrCoopMark(id) {
+    if (!id) return;
+    try { const a = _hrCoopSeenList(); if (a.indexOf(id) < 0) { a.unshift(id); if (a.length > 50) a.length = 50; localStorage.setItem(_HR_COOP_SEEN, JSON.stringify(a)); } } catch (_) {}
   }
 
   /** Result event → the design's data. */
@@ -21673,9 +21683,10 @@
   function _hrCnt(n, fmt) { return '<b class="hr-cnt" data-to="' + (Number(n) || 0) + '"' + (fmt === 'hm' ? ' data-fmt="hm"' : '') + '>' + (fmt === 'hm' ? '0h 00m' : '0') + '</b>'; }
   function _hrRewardHtml(d) {
     const souls = (d.souls != null && d.souls > 0) ? '<div class="hr-rc hr-souls hr-rv"><span class="hr-lab">Souls</span><b class="hr-big">+<span class="hr-cnt" data-to="' + (d.souls | 0) + '">0</span></b></div>' : '';
-    const relic = d.relic ? '<div class="hr-rc hr-rv"><span class="hr-lab">Relic</span><span class="hr-rn">' + esc(d.relic.n) + '</span><span class="hr-rr">' + esc(d.relic.r) + '</span></div>'
+    const relic = d.relic === false ? ''   // W981 — not known on this device: say nothing rather than guess
+      : d.relic ? '<div class="hr-rc hr-rv"><span class="hr-lab">Relic</span><span class="hr-rn">' + esc(d.relic.n) + '</span><span class="hr-rr">' + esc(d.relic.r) + '</span></div>'
       : '<div class="hr-rc hr-none hr-rv"><span class="hr-lab">Relic</span><span class="hr-rn">Souls only this time</span></div>';
-    return '<div class="hr-reward' + (souls ? '' : ' hr-one') + '">' + souls + relic + '</div>';
+    return '<div class="hr-reward' + ((souls && relic) ? '' : ' hr-one') + '">' + souls + relic + '</div>';
   }
   function _hrRowsHtml(d, cols) {
     const fl = d.fgoal > 0, unit = d.unit === 'flights' ? ' fl' : ' steps';
@@ -21871,6 +21882,7 @@
     } catch (_) {}
 
     _bossResultCurrent = evt;
+    if (evt.coop && evt.coop.id) _hrCoopMark(evt.coop.id);   // W981 — the sheet never replays it
     // W980 — the hunt results screen (Claude Design handoffs 31 + 32) replaces
     // the .bro-* card for all four outcomes. closeBossResult still owns the
     // exit: pending clear, queue drain (which then plays any relic reveal) and
@@ -21905,9 +21917,6 @@
     if (overlay) {
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
-      // v3 Phase 1z.56 — strip the failure-theme class so a
-      // subsequent defeat opens with the standard gold palette.
-      overlay.classList.remove('bro-overlay--failed');
     }
     document.body.classList.remove('bro-locked');
     const _closingWin = !!(_bossResultCurrent && _bossResultCurrent.outcome !== 'failed');   // W541 — only a WIN dismissal may spend the review shot
@@ -22631,69 +22640,12 @@
     ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(function (ev) { ver.addEventListener(ev, cancel); });
   }
 
+  // W981 — the old card's buttons (bro-close, bro-hunt-again, bro-view-relic,
+  // bro-view-mercy) went with it; the hunt results screen (W980) owns its own
+  // taps. Escape still closes it on the web.
   function setupBossResultModal() {
     const overlay = document.getElementById('boss-result-overlay');
     if (!overlay) return;
-    const closeBtn = document.getElementById('bro-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => closeBossResult());
-    const closeX = document.getElementById('bro-close-x');
-    if (closeX) closeX.addEventListener('click', () => closeBossResult());
-    const huntAgainBtn = document.getElementById('bro-hunt-again');
-    if (huntAgainBtn) {
-      huntAgainBtn.addEventListener('click', () => {
-        const id = huntAgainBtn.getAttribute('data-boss-id');
-        // Close first so re-engage toasts aren't hidden behind the modal.
-        // Suppress drain so the re-engage doesn't race with the next queued result.
-        closeBossResult({ suppressDrain: true });
-        if (id) {
-          try { engageBoss(id); } catch (_) {}
-        }
-        // Now drain any remaining queued results.
-        _drainBossResultQueue();
-      });
-    }
-    const viewBtn = document.getElementById('bro-view-relic');
-    if (viewBtn) {
-      viewBtn.addEventListener('click', () => {
-        const cardId = viewBtn.getAttribute('data-card-id');
-        // v3 Phase 1z.82 — masked-drop branch. For rare/ultra first-
-        // acquisitions, the boss-defeated modal hid the relic identity.
-        // Tapping "Reveal Relic" should NOT open the static card-detail
-        // page (that would spoil the relic without the cinematic). Just
-        // close the modal — _drainBossResultQueue chains to
-        // processRevealQueue when the boss-defeated queue empties,
-        // and the Sigil Bloom fires from openCardRevealModal. The
-        // cinematic itself marks the card as seen + clears the NEW
-        // chip when the user taps to continue.
-        const isMasked = viewBtn.getAttribute('data-masked') === '1';
-        if (isMasked) {
-          closeBossResult({ suppressDrain: true });
-          _drainBossResultQueue();
-          return;
-        }
-        closeBossResult({ suppressDrain: true, flushReview: true });   // W547 — View Relic is a deliberate win-engagement; still let the review pre-prompt flush
-        try {
-          // v3 Phase 1z.7 — viewing the relic clears its NEW chip.
-          if (cardId) _markRelicSeen(cardId);
-          const card = CARDS && CARDS[cardId];
-          const inv = (typeof getInventory === 'function') ? getInventory() : null;
-          const entry = inv && inv.cards && inv.cards[cardId];
-          if (card && entry && typeof openCardDetailModal === 'function') {
-            openCardDetailModal(card, entry);
-          }
-        } catch (_) {}
-        _drainBossResultQueue();
-      });
-    }
-    const viewMercy = document.getElementById('bro-view-mercy');
-    if (viewMercy) {
-      viewMercy.addEventListener('click', () => {
-        const id = viewMercy.getAttribute('data-boss-id');
-        closeBossResult({ suppressDrain: true, flushReview: true });   // W547 — View Mercy is a deliberate win-engagement; still let the review pre-prompt flush
-        try { if (id && typeof openBossFullScreen === 'function') openBossFullScreen(id); } catch (_) {}
-        _drainBossResultQueue();
-      });
-    }
     // ESC closes.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
@@ -56171,7 +56123,7 @@
     // reads as UNBEATEN, then render the verdict / near-miss bars / fellowship in the body.
     const isDefeat = !_coopSheet.picking && !!inst && inst.status === 'expired' && inst.result === 'defeat';
     const overlay = document.getElementById('coop-fs-overlay');
-    if (overlay) overlay.classList.toggle('coop-overlay--defeat', isDefeat);
+    if (overlay) overlay.classList.remove('coop-overlay--defeat');   // W981 — the defeat lives on the hunt results screen now
     // W747 — battle-state hero layers only while a hunt is LIVE; every other
     // state strips the battle chrome (phase filters must never bleed into the
     // recruit/pending/victory/defeat renders).
@@ -56194,9 +56146,53 @@
       _coopBattleQueryBanked(inst);
       return;
     }
-    if (inst && inst.status === 'completed' && inst.result === 'success') { body.innerHTML = _coopVictoryHtml(inst); return; }
-    if (isDefeat) { body.innerHTML = _coopDefeatHtml(inst); return; }
+    // W981 — an ENDED hunt no longer paints the W449 victory / defeat panels
+    // here: the hunt results screen (W980) opens over the sheet instead, once
+    // per hunt, and the sheet underneath is ready to call again.
+    if (inst && ((inst.status === 'completed' && inst.result === 'success') || isDefeat)) _coopSheetResultSoon(inst);
     body.innerHTML = _coopRecruitHtml(inst);
+  }
+
+  // W981 — the award path shows a hunt's result first whenever it can (win:
+  // after the claim; loss: straight away). This catches the rest — a hunt
+  // claimed on another device, or one that ended while you were away — when
+  // you open its sheet. Waits a beat so an award in flight always wins, never
+  // runs twice for a hunt, and skips anything older than three days.
+  function _coopSheetResultSoon(inst) {
+    if (!inst || !inst.id || _coopSheet._hrFor === inst.id) return;
+    _coopSheet._hrFor = inst.id;
+    setTimeout(function () { try { _coopSheetResult(inst.id); } catch (_) {} }, 1500);
+  }
+  function _coopSheetResult(id) {
+    const inst = _coopSheet.instance;
+    const sheet = document.getElementById('coop-fs-overlay');
+    const ov = document.getElementById('boss-result-overlay');
+    if (!inst || inst.id !== id || !sheet || sheet.classList.contains('hidden') || !ov) return false;
+    const won = inst.status === 'completed' && inst.result === 'success';
+    if (!won && !(inst.status === 'expired' && inst.result === 'defeat')) return false;
+    if (_hrCoopSeen(id) || _coopClaimInFlight[id] || !_loadCoopAwarded()[id]) return false;
+    if (_bossResultBusy || _bossResultQueue.length || !ov.classList.contains('hidden')) return false;
+    try { if (localStorage.getItem('hb_boss_result_pending')) return false; } catch (_) {}
+    const at = _hrTs(inst.resolved_at || inst.updated_at || inst.ends_at);
+    if (at && Date.now() - at > 3 * 86400000) { _hrCoopMark(id); return false; }
+    const cfg = COOP_BOSSES[inst.boss_id] || _coopSheet.cfg || {};
+    const d = Object.assign({ kind: won ? 'victory' : 'defeat', solo: false, boss: cfg.name || 'The boss', rank: String(cfg.rank || 'E').toUpperCase(),
+      art: getBossArtPath(cfg.artId || inst.boss_id), short: _hrShort(cfg.name) }, _hrCoopData(inst, {}));
+    if (won) {
+      let h = null; try { h = _loadCoopHistory().filter(function (x) { return x && x.id === id; })[0] || null; } catch (_) {}
+      d.souls = (h && h.souls) || Number(inst.reward_souls) || cfg.coopRewardSouls || 0;
+      d.relic = (h && h.drop) ? _hrRelic({ name: h.drop.name, rarity: h.drop.rarity }) : false;
+    }
+    _hrCoopMark(id);
+    _bossResultBusy = true;   // the queue waits behind it; closeBossResult releases + drains
+    _hrShow(ov, d, {
+      onClose: function () { closeBossResult(); },
+      onAgain: function () { closeBossResult(); },   // the sheet's call-again is right underneath
+    });
+    ov.classList.remove('hidden');
+    ov.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('bro-locked');
+    return true;
   }
 
   // W925 — YOUR HUNTS ON THIS BOSS: one chip per live hunt (a fanned-out summons makes
@@ -56918,105 +56914,6 @@
     );
   }
 
-  function _coopVictoryHtml(inst) {
-    const cfg = _coopSheet.cfg;
-    const v = _coopView(inst);
-    // W677 — name EVERY ally in the victory line ("A and B" on a trio).
-    const themAlias = esc((v.others && v.others.length)
-      ? v.others.map(function (o) { return _coopAlias((o && o.alias) || 'your ally'); }).join(' and ')
-      : _coopAlias((v.them && v.them.alias) || 'your ally'));
-    const combined = (inst.combined_steps || 0).toLocaleString('en-US');
-    const unit = _coopUnit(inst);                                       // W397
-    const verb = _coopMetric(inst) === 'flights' ? 'climbed' : 'walked';
-    const title = cfg.coopVictoryTitle || 'THE HUNT IS WON';
-    // W447 — a dual hunt recounts BOTH feats. W686 — the sleep raid recounts both disciplines.
-    const deed = _coopIsBoth(inst)
-      ? 'walked ' + combined + ' steps and climbed ' + (inst.combined_flights || 0).toLocaleString('en-US') + ' flights'
-      : _coopIsSleep(inst)
-        ? 'walked ' + combined + ' steps and slept ' + _coopFmtSleep(inst.combined_sleep_minutes || 0)
-        : verb + ' ' + combined + ' ' + esc(unit);
-    return (
-      '<div class="coop-victory">' + esc(title) + '</div>' +
-      '<p class="coop-lead">You and ' + themAlias + ' ' + deed +
-        ' together, enough to bring down ' + esc(cfg.name) + '.</p>' +
-      '<div class="coop-reward">+' + cfg.coopRewardSouls + ' souls \u00B7 ' + (_coopDropGuaranteed(cfg) ? 'a relic claimed' : 'a chance at its hoard') + '</div>' +
-      '<button class="coop-cta" data-coop-action="invite">HUNT AGAIN</button>'
-    );
-  }
-
-  // W449 \u2014 DEFEAT screen (ClaudeDesign handoff #15): the somber twin of _coopVictoryHtml, shown
-  // when the hunt's 24h window closed with the goal unmet. Centerpiece is the SHARED near-miss \u2014
-  // both goals (for a dual boss) with the per-hunter split \u2014 so two allies see how close they came
-  // TOGETHER. No blame, no reward; crimson register; "call again". The hero is dimmed + crimson-warded
-  // by the coop-overlay--defeat class (toggled in renderCoopSheet) so the boss reads as unbeaten.
-  function _coopDefeatHtml(inst) {
-    const cfg = _coopSheet.cfg;
-    const v = _coopView(inst);
-    const both = _coopIsBoth(inst);
-    // W677 review #8 \u2014 the defeat story includes EVERY hunter (flavor, per-hunter
-    // split, fellowship strip), so a trio's third hunter isn't erased from the loss
-    // and the split values sum to the combined near-miss number.
-    const others = (v.others && v.others.length) ? v.others : [v.them];
-    const ally = others.map(function (o) { return _coopAlias((o && o.alias) || 'your ally'); }).join(' and ');
-    let youAlias = 'You'; try { const u = Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) youAlias = u.alias; } catch (_) {}
-    const youInit = esc((String(youAlias).trim().charAt(0) || 'Y').toUpperCase());
-    const kicker = cfg.coopDefeatTitle || 'THE QUARRY HOLDS';
-    const flavor = 'You and ' + esc(ally) + ' came up short before the window closed \u2014 ' + esc(cfg.name) + ' endures.';
-    // one near-miss bar: combined / goal, crimson fill with a "just short" notch, + the per-hunter split
-    // W686 — fmt formats the displayed numbers (sleep passes minutes→hours).
-    const goalBar = function (combined, goal, label, metric, fmt) {
-      const c = Math.max(0, combined || 0), g = goal || 0;
-      const f = fmt || function (n) { return (n || 0).toLocaleString('en-US'); };
-      // W686 review #14 — FLOOR: a 1-minute near-miss must read 99%, never 100%.
-      const pct = g > 0 ? Math.max(0, Math.min(100, Math.floor(c / g * 100))) : 0;
-      const val = function (p) { return f(Math.max(0, (p && p[metric]) || 0)); };
-      const allySplit = others.map(function (o) {
-        return '<span class="coopdf-who"><span class="coopdf-dot ally"></span>' + esc(_coopAlias((o && o.alias) || 'ally')) + _crownFor(o && o.alias) + ' <b>' + val(o) + '</b></span>';
-      }).join('');
-      return '<div class="coopdf-goal">' +
-        '<div class="coopdf-goal-top"><span class="coopdf-goal-name">' + esc(label) + '</span>' +
-          '<span class="coopdf-goal-val">' + f(c) + ' <span class="of">/ ' + f(g) + '</span><span class="pct">' + pct + '%</span></span></div>' +
-        '<div class="coopdf-track"><div class="coopdf-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="coopdf-split">' +
-          '<span class="coopdf-who"><span class="coopdf-dot you"></span>You <b>' + val(v.me) + '</b></span>' +
-          allySplit +
-        '</div></div>';
-    };
-    let bars;
-    if (both) {
-      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', 'steps') +
-             goalBar(inst.combined_flights, inst.goal_flights || cfg.coopGoalFlights, 'Combined Flights', 'flights');
-    } else if (_coopIsSleep(inst)) {
-      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined Steps', 'steps') +
-             goalBar(inst.combined_sleep_minutes, inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes, 'Combined Sleep', 'sleep_minutes', _coopFmtSleep);
-    } else {
-      const u = _coopUnit(inst);
-      bars = goalBar(inst.combined_steps, inst.goal_steps || cfg.coopGoalSteps, 'Combined ' + (u.charAt(0).toUpperCase() + u.slice(1)), 'steps');
-    }
-    return (
-      '<div class="coopdf">' +
-        '<div class="coopdf-verdict">' +
-          '<div class="coopdf-kicker">' + esc(kicker) + '</div>' +
-          '<div class="coopdf-headline">The Hunt Ran Out of Time</div>' +
-          '<div class="coopdf-flavor">' + flavor + '</div>' +
-        '</div>' +
-        '<div class="coopdf-progress">' + bars + '</div>' +
-        '<div class="coopdf-fellowship">' +
-          '<div class="coopdf-hunter"><div class="coopdf-av you">' + youInit + '</div><div class="coopdf-tag you">You</div></div>' +
-          others.map(function (o) {
-            const a = _coopAlias((o && o.alias) || 'ally');
-            return '<div class="coopdf-seam"></div>' +
-              '<div class="coopdf-hunter"><div class="coopdf-av ally">' + esc((String(a).trim().charAt(0) || 'A').toUpperCase()) + '</div><div class="coopdf-tag ally">' + esc(a) + '</div></div>';
-          }).join('') +
-        '</div>' +
-        '<div class="coopdf-reset">No relic claimed \u00B7 the hunt resets</div>' +
-        '<div class="coopdf-ctas">' +
-          '<button class="coopdf-callagain" data-coop-action="invite"><svg class="spark" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 0l1.5 5L13 6.5 8.5 8 7 14 5.5 8 1 6.5 5.5 5z" fill="#f5b842"/></svg>Call Again</button>' +
-          '<button class="coopdf-back" data-coop-action="close">Back to the Dungeon</button>' +
-        '</div>' +
-      '</div>'
-    );
-  }
 
   // W483 \u2014 does an ALLY's rank meet a co-op boss's prerequisite? Mirrors the backend
   // gate exactly (same RANK_ORDER incl S+; an unknown/unsynced rank defaults to E, which
@@ -59709,7 +59606,7 @@
     };
     step(0);
   }
-  try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow }; } catch (_) {}   // QA
+  try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow, sheet: function (inst) { _coopOpenHuntDetail(inst, false); }, sheetNow: function (id) { return _coopSheetResult(id); } }; } catch (_) {}   // QA
   try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────

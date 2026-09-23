@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=719">
+  <link rel="stylesheet" href="styles.css?v=720">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -1611,159 +1611,9 @@
     </section>
   </div>
 
-  <!-- Boss defeat result modal (v3 Phase 1z.6) — fires for common
-       drops + no-drop defeats. Rare/ultra continue to use the
-       existing cinematic reveal in #reveal-overlay. -->
-  <!-- Boss Defeated overlay (v3 Phase 1z.7 redesign on the 1z.6 controller).
-       Markup id and per-element ids preserved so the existing _showBossResult /
-       closeBossResult flow continues to populate without rewiring. The hero
-       header gains a rune divider + Cinzel BOSS DEFEATED title with glow, the
-       boss card gains a portrait+slash visual and a verified defeat-condition
-       row, and the actions stack reorders (purple primary → gold secondary →
-       ghost tertiary). -->
-  <div id="boss-result-overlay" class="bro-overlay hidden" aria-hidden="true" role="dialog" aria-labelledby="bro-overlay-title">
-    <div class="bro-gold-dust" aria-hidden="true"></div>
-    <button id="bro-close-x" type="button" class="bro-close-x" aria-label="Close">✕</button>
-    <div class="bro-shell">
-      <header class="bro-hero">
-        <div class="bro-rune-divider" aria-hidden="true">
-          <span class="bro-rune-line"></span>
-          <span class="bro-rune-sparkle">✦</span>
-          <span class="bro-rune-line"></span>
-        </div>
-        <div class="bro-kicker">SYSTEM RESULT</div>
-        <h2 id="bro-overlay-title" class="bro-overlay-title">BOSS DEFEATED</h2>
-        <div class="bro-subline">Your discipline broke the hunt.</div>
-      </header>
-
-      <!-- Boss card — portrait with diagonal slash, rank pill, fallen subline,
-           defeat-condition VERIFIED row -->
-      <section class="bro-boss-card">
-        <div class="bro-boss-card-body">
-          <div class="bro-boss-portrait">
-            <img id="bro-boss-portrait" class="bro-boss-portrait-img" src="" alt="" loading="lazy">
-            <span class="bro-boss-portrait-slash" aria-hidden="true"></span>
-          </div>
-          <div class="bro-boss-meta">
-            <span id="bro-rank-pill" class="bro-rank-pill" data-rank="E">E-RANK BOSS</span>
-            <h3 id="bro-boss-name" class="bro-boss-name">—</h3>
-            <span class="bro-fallen">Has Fallen</span>
-          </div>
-        </div>
-        <div class="bro-defeat-row">
-          <span class="bro-defeat-check" aria-hidden="true">✓</span>
-          <span id="bro-condition" class="bro-defeat-text">—</span>
-          <span class="bro-verified-chip">VERIFIED</span>
-        </div>
-      </section>
-
-      <!-- Reward — relic acquired variant -->
-      <section id="bro-relic-card" class="bro-reward bro-reward--relic hidden">
-        <div id="bro-relic-eyebrow" class="bro-reward-kicker">RELIC ACQUIRED</div>
-        <div class="bro-relic-row">
-          <div class="bro-relic-art-wrap">
-            <span id="bro-relic-slot-icon" class="bro-relic-slot-icon" aria-hidden="true">✦</span>
-            <!-- v3 Phase 1z.48 — dropped `loading="lazy"`. The image
-                 is inside a section that toggles `.hidden` and the JS
-                 sets `display:none` BEFORE assigning `src`. Browsers
-                 treat lazy-loaded hidden images as offscreen and
-                 defer the fetch; `onload` then never fires and the
-                 slot-emoji fallback remains visible. The detail-page
-                 img (`#carddetail-card-art-img`) has no lazy attribute,
-                 which is why the same path renders correctly there. -->
-            <img id="bro-relic-art" class="bro-relic-art" alt="">
-          </div>
-          <div class="bro-relic-info">
-            <div id="bro-relic-rarity-pill" class="bro-relic-rarity-pill" data-rarity="common">COMMON</div>
-            <div id="bro-relic-name" class="bro-relic-name"></div>
-            <div id="bro-relic-meta" class="bro-relic-meta"></div>
-            <div id="bro-relic-stats" class="bro-relic-stats"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- v3 Phase 1z.83 — Sealed Mystery Relic (ClaudeDesign).
-           Shown INSTEAD OF #bro-relic-card for rare / ultra first-
-           acquisitions. The actual relic identity (name, art, slot,
-           source, stats, rarity-pill) is NOT rendered in the DOM
-           until the user taps "Reveal Relic" — accessibility tools
-           cannot read what doesn't exist. Tap routes to the existing
-           Sigil Bloom cinematic via the 1z.73 result-queue chain. -->
-      <section id="bro-sealed-card" class="bro-reward bro-reward--sealed hidden" aria-label="A sealed relic. Tap reveal to identify.">
-        <div class="bro-sealed-kicker">· RELIC ACQUIRED ·</div>
-        <div class="bro-sealed-aura" aria-hidden="true"></div>
-        <div class="bro-sealed-motes" aria-hidden="true">
-          <span class="bro-sealed-mote bro-sealed-mote--v1"></span>
-          <span class="bro-sealed-mote bro-sealed-mote--g1"></span>
-          <span class="bro-sealed-mote bro-sealed-mote--v2"></span>
-          <span class="bro-sealed-mote bro-sealed-mote--g2"></span>
-          <span class="bro-sealed-mote bro-sealed-mote--v3"></span>
-          <span class="bro-sealed-mote bro-sealed-mote--g3"></span>
-        </div>
-        <div class="bro-sealed-row">
-          <div class="bro-sealed-sigil" aria-hidden="true">
-            <div class="bro-sealed-sigil-frame">
-              <div class="bro-sealed-sigil-well">
-                <div class="bro-sealed-sigil-aura"></div>
-                <svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                  <!-- corner cuts -->
-                  <path d="M5 15 L11 9"  stroke="#f5b842" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-                  <path d="M77 15 L83 9" stroke="#f5b842" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-                  <path d="M5 73 L11 79" stroke="#f5b842" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-                  <path d="M77 73 L83 79" stroke="#f5b842" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-                  <!-- rune circles -->
-                  <circle cx="44" cy="44" r="22" fill="none" stroke="#f5b842" stroke-width="0.8" opacity="0.45"/>
-                  <circle cx="44" cy="44" r="14" fill="none" stroke="#a78bfa" stroke-width="0.6" opacity="0.6" stroke-dasharray="2 3"/>
-                  <!-- spark sigil — gold flame + outlined triangle, centered -->
-                  <g transform="translate(38 36) scale(0.12)" style="filter: drop-shadow(0 0 4px rgba(245,184,66,0.45));">
-                    <path d="M50 12 L84 82 L16 82 Z" fill="none" stroke="#f5b842" stroke-width="3.5" stroke-linejoin="round"/>
-                    <path d="M50 34 C 42 48 42 60 50 66 C 58 60 58 48 50 34 Z" fill="#f5b842"/>
-                  </g>
-                  <!-- seal bar — the locked symbol -->
-                  <line x1="14" y1="44" x2="74" y2="44" stroke="#f5b842" stroke-width="1.8" stroke-linecap="round" style="filter: drop-shadow(0 0 4px rgba(245,184,66,0.45));"/>
-                  <line x1="14" y1="44" x2="74" y2="44" stroke="#fff8e1" stroke-width="0.6" opacity="0.7"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div class="bro-sealed-text">
-            <div class="bro-sealed-title bro-sealed-title--1">A sealed relic</div>
-            <div class="bro-sealed-title bro-sealed-title--2">has emerged.</div>
-            <div class="bro-sealed-whisper">Its power is hidden. Reveal to identify.</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Reward — no-drop variant (mercy progress) -->
-      <section id="bro-nodrop-card" class="bro-reward bro-reward--none hidden">
-        <div class="bro-reward-kicker bro-reward-kicker--muted">NO RELIC DROPPED</div>
-        <div class="bro-nodrop-body">Mercy increased. Closer to the next guaranteed drop.</div>
-        <div id="bro-mercy-block" class="bro-mercy-block"></div>
-      </section>
-
-      <!-- v3 Phase 1z.56 — failure variant (hunt expired without
-           defeat). Shown when _expireBossHunt queues an
-           `outcome: 'failed'` event. No drop / no souls / no mercy
-           progress. Sibling to bro-relic-card + bro-nodrop-card so
-           the existing one-section-visible logic toggles cleanly. -->
-      <section id="bro-failed-card" class="bro-reward bro-reward--failed hidden">
-        <div class="bro-reward-kicker bro-reward-kicker--failed">HUNT EXPIRED</div>
-        <div id="bro-failed-body" class="bro-nodrop-body">The hunt window closed before the objective was completed.</div>
-        <div class="bro-failed-rewards">
-          <div class="bro-failed-line">No relic found</div>
-          <div class="bro-failed-line">No souls gained</div>
-        </div>
-      </section>
-
-      <!-- Action stack: primary purple → gold secondary → ghost tertiary -->
-      <div class="bro-actions">
-        <button id="bro-view-relic" type="button" class="bro-btn bro-btn--primary hidden">View Relic</button>
-        <button id="bro-view-mercy" type="button" class="bro-btn bro-btn--primary hidden">View Mercy Progress</button>
-        <button id="bro-hunt-again" type="button" class="bro-btn bro-btn--gold">Hunt Again</button>
-        <button id="bro-close" type="button" class="bro-btn bro-btn--ghost">Close</button>
-      </div>
-    </div>
-  </div>
+  <!-- W980/W981 — the hunt results screen (solo + co-op, victory + defeat).
+       _hrShow() renders into this host; the old .bro-* card is gone. -->
+  <div id="boss-result-overlay" class="hr-screen hidden" aria-hidden="true" role="dialog" aria-label="Hunt result"></div>
 
   <!-- Leaderboard ranking sheet — opened from a Social-tab stat card.
        Rendered by openLeaderboardRanking(metric). v2.1 Phase C ships
@@ -3333,7 +3183,7 @@
        openLeaderboardRanking renders. Backend is never touched. -->
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
-  <script src="app.js?v=1385"></script>
+  <script src="app.js?v=1386"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
