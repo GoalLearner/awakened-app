@@ -5437,10 +5437,9 @@ test.describe('BD · Updates on the board (W973)', () => {
 // BE. W974 — RATING MOMENTS (Claude Design handoff 28): five one-time cards
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('BE · Rating moments (W974)', () => {
-  const ymd = (off: number) => {
-    const d = new Date(); d.setDate(d.getDate() - off);
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  };
+  // The app's `today` is PACIFIC (getPTDate). CI runs in UTC, so between 5 PM PST
+  // and midnight a local-date seed sits a day ahead and the week never closes.
+  const ymd = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   async function seed(page: Page, extra?: Record<string, string>) {
     await freshApp(page);
     await page.addInitScript(([ex]) => {
