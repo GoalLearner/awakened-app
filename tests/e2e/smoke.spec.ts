@@ -5490,6 +5490,7 @@ test.describe('BE · Rating moments (W974)', () => {
       expect(c.later).toBe('Not now');
       expect(c.foot).toBe('Opens the App Store');
       expect(c.text).not.toMatch(/\bsouls?\b|\bXP\b|reward|gift|free|★|stars?\b/i);   // Apple 1.1.7
+      expect(c.text).not.toMatch(/\bfell(ed)?\b/i);   // banned copy word (standing rule)
     }
   });
 
@@ -5635,7 +5636,8 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     const c = (await card(page))!;
     expect(c.buttons).toBe(0);                      // tap to continue — no buttons, no X
     expect(c.coll.toUpperCase()).toBe('41 HUNTERS · 1,284,000 STEPS');
-    expect(c.fell.toUpperCase()).toMatch(/^FELL (SUN|MON|TUE|WED|THU|FRI|SAT) \d{1,2} SEP$/);
+    expect(c.fell.toUpperCase()).toMatch(/^BROKEN (SUN|MON|TUE|WED|THU|FRI|SAT) \d{1,2} SEP$/);
+    expect([c.eyebrow, c.boss, c.coll, c.fell].concat(c.mine).join(' ')).not.toMatch(/\bfell(ed)?\b/i);   // banned copy word (standing rule)
     expect(c.cols.map((x) => x.nm)).toEqual(['Ryan', 'Anthony', 'Zynfandel']);   // 2nd · 1st · 3rd
     expect(c.cols.every((x) => x.landed && !x.you)).toBe(true);
     expect(c.mine).toEqual(['Your strikes · 4,472 · #7']);
