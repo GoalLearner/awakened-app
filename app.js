@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w979'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w980'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -20514,6 +20514,8 @@
           rank:           cfg.rank,
           kill_count:     _killCount,
           conditionLabel: cfg.killCondShort || cfg.killCondLong || '',
+          souls:          soulsReward,                                   // W980 — the results screen counts it in
+          coop:           (opts && opts.coopData) || null,               // W980 — party, goal, MVP, hunger, pact
           drop: card ? {
             cardId:   card.id,
             name:     card.name,
@@ -21503,6 +21505,354 @@
     setTimeout(() => { try { _showBossResult(next); } catch (_) { _bossResultBusy = false; } }, 600);
   }
 
+  // ── W980 · HUNT RESULTS (Claude Design handoffs 31 + 32) ────────────────
+  // Replaces the 1z.6/1z.7 boss result card (.bro-*) for EVERY hunt outcome:
+  // solo victory, solo escape, co-op victory, co-op defeat — one family.
+  // Renders INSIDE #boss-result-overlay, so the queue, the W950 stage
+  // ('boss', 10), the pending re-open, closeBossResult's review flush and the
+  // relic reveal that follows a close (processRevealQueue on drain) all keep
+  // working untouched. Victory: the first tap skips to the end, the next
+  // leaves (owner rule: tap to continue). Defeat: its buttons are the only
+  // exits — Hunt again / Call again, and Not now. A sealed first rare/ultra
+  // stays sealed here ("Sealed relic"): its own reveal plays after the close.
+  // Copy rule: never "fell" / "felled".
+  const _HR_N = { G3: 196, E2: 82.41, A1: 55, G4: 392, C5: 523.25, E5: 659.25, G5: 783.99, B5: 987.77, C6: 1046.5, E6: 1318.51 };
+  const _HR_CRACKS = ['M50 50L41 39 36 30 28 22 24 8', 'M50 50L62 44 74 40 84 30 96 24', 'M50 50L46 62 38 70 34 84 26 98', 'M50 50L58 60 66 63 72 76 82 82 88 100', 'M50 50L50 36 54 26 52 12 56 0', 'M41 39L34 40 26 36', 'M62 44L64 54 74 58', 'M46 62L56 66 60 74'];
+  let _hrLive = null;
+
+  function _hrTone(f, at, dur, g) {
+    try {
+      if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+      const c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      const t = c.currentTime + (at || 0), o = c.createOscillator(), v = c.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(g || 0.08, t + 0.012); v.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.6));
+      o.connect(v); v.connect(c.destination); o.start(t); o.stop(t + (dur || 0.6) + 0.05);
+    } catch (_) {}
+  }
+  function _hrFall(f0, f1, dur, g) {
+    try {
+      if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+      const c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      const t = c.currentTime, o = c.createOscillator(), v = c.createGain();
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(g, t + 0.012); v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(v); v.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+    } catch (_) {}
+  }
+  const _hrChord = function (fs, gap, dur, g) { fs.forEach(function (f, i) { _hrTone(f, i * (gap || 0.06), dur || 1.2, g || 0.075); }); };
+  function _hrHap(k) {
+    try {
+      const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (k === 'error') { if (H && typeof H.notification === 'function') { H.notification({ type: 'ERROR' }); return; } try { if (navigator.vibrate) navigator.vibrate([30, 60, 30]); } catch (_) {} return; }
+    } catch (_) {}
+    try { _hapticTick(k === 'success' ? 'SUCCESS' : k === 'heavy' ? 'HEAVY' : k === 'medium' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
+  }
+  const _hrN = function (n) { try { return Math.round(Number(n) || 0).toLocaleString('en-US'); } catch (_) { return String(n); } };
+  const _hrHM = function (n) { n = Math.max(0, Math.round(Number(n) || 0)); return Math.floor(n / 60) + 'h ' + String(n % 60).padStart(2, '0') + 'm'; };
+  function _hrFmtVal(fmt, n) { return fmt === 'hm' ? _hrHM(n) : _hrN(n); }
+  function _hrUnit(fmt) { return fmt === 'min' ? ' min' : fmt === 'fl' ? ' flights' : fmt === 'hm' ? '' : ' steps'; }
+  function _hrAsk(fmt, ask) { return fmt === 'hm' ? (Math.round(ask / 6) / 10 + 'h').replace('.0h', 'h') : _hrN(ask) + _hrUnit(fmt); }
+  function _hrOrd(n) { n = n | 0; if (n <= 1) return 'First'; const s = (n % 100 >= 11 && n % 100 <= 13) ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th'); return n + s; }
+  function _hrShort(name) { const m = /^The\s+(.+)$/i.exec(String(name || '').trim()); if (!m) return String(name || 'The boss'); const w = m[1].split(/\s+/); return 'The ' + w[w.length - 1]; }
+  function _hrMe() { try { const u = Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) return String(u.alias); } catch (_) {} try { return String(localStorage.getItem('hb_name') || 'You'); } catch (_) { return 'You'; } }
+
+  // Solo: which daily record answers this boss's kill condition.
+  function _hrSoloMetric(cfg) {
+    if (!cfg) return null;
+    if (cfg.stepThreshold) return { key: 'steps_daily', ask: Number(cfg.stepThreshold), fmt: 'steps', label: 'Best day' };
+    if (cfg.flightThreshold) return { key: 'flights_daily', ask: Number(cfg.flightThreshold), fmt: 'fl', label: 'Best day' };
+    if (cfg.sleepHours) return { key: 'sleep_hours_daily', ask: Math.round(Number(cfg.sleepHours) * 60), fmt: 'hm', label: 'Best night', scale: 60 };
+    if (cfg.workoutMinutes) return { key: 'workout_daily', ask: Number(cfg.workoutMinutes), fmt: 'min', label: 'Best session' };
+    return null;
+  }
+  function _hrBest(metric, fromMs, toMs) {
+    try {
+      const lb = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+      const map = lb && lb[metric.key]; if (!map || typeof map !== 'object') return null;
+      const day = function (ms) { return new Date(ms).toLocaleDateString('en-CA'); };
+      const from = day(fromMs), to = day(toMs);
+      let best = null;
+      Object.keys(map).forEach(function (k) { if (k >= from && k <= to) { const v = Number(map[k]) || 0; if (best == null || v > best) best = v; } });
+      return best == null ? null : Math.round(best * (metric.scale || 1));
+    } catch (_) { return null; }
+  }
+  function _hrTs(x) { if (!x) return 0; const n = Number(x); if (Number.isFinite(n) && n > 0) return n < 1e12 ? n * 1000 : n; const p = Date.parse(x); return Number.isFinite(p) ? p : 0; }
+  function _hrRelic(drop) {
+    if (!drop) return null;
+    const sealed = !!(drop.wasFirst && (drop.rarity === 'rare' || drop.rarity === 'ultra_rare'));
+    const r = (typeof RARITY_LABELS !== 'undefined' && RARITY_LABELS[drop.rarity]) || drop.rarity || '';
+    return sealed ? { n: 'A sealed relic', r: r + ' · revealed next' } : { n: drop.name || 'A relic', r: r + (drop.wasFirst === false ? ' · duplicate' : '') };
+  }
+
+  /** Co-op party + goal from a hunt instance (the viewer is marked). */
+  function _hrCoopData(inst, extra) {
+    extra = extra || {};
+    const cfg = (typeof COOP_BOSSES !== 'undefined' && COOP_BOSSES[inst.boss_id]) || {};
+    let myId = null; try { myId = _coopMyId(); } catch (_) {}
+    let rows;
+    if (Array.isArray(inst.party) && inst.party.length) rows = inst.party.slice();
+    else rows = [inst.challenger, inst.partner, inst.partner2].filter(Boolean);
+    const both = (function () { try { return _coopIsBoth(inst); } catch (_) { return false; } })();
+    const unit = (function () { try { return _coopUnit(inst); } catch (_) { return 'steps'; } })();
+    let v = null; try { v = _coopView(inst); } catch (_) {}
+    const party = rows.map(function (p, i) {
+      const you = myId ? (p && p.user_id === myId) : (v && p === v.me);
+      const alias = you ? _hrMe() : (function () { try { return _coopAlias((p && p.alias) || 'ally'); } catch (_) { return (p && p.alias) || 'ally'; } })();
+      const steps = Math.max(0, Number(p && p.steps) || 0), flights = Math.max(0, Number(p && p.flights) || 0);
+      return { n: alias, raw: p && p.alias, uid: p && p.user_id, you: !!you, s: (!both && unit === 'flights') ? flights : steps, f: flights };
+    });
+    if (!party.some(function (p) { return p.you; }) && party.length) party[0].you = true;
+    const goal = (!both && unit === 'flights') ? (Number(inst.goal_flights || inst.goal_steps || cfg.coopGoalFlights || cfg.coopGoalSteps) || 0) : (Number(inst.goal_steps || cfg.coopGoalSteps) || 0);
+    const fgoal = both ? (Number(inst.goal_flights || cfg.coopGoalFlights) || 0) : 0;
+    // The hunt's MVP: a strict top by the battle's damage scores (same rule as the award).
+    let mvp = null;
+    try {
+      const roster = _coopBattleRoster(inst), scores = _coopDamageScores(inst, roster);
+      let ti = -1, tv = 0;
+      scores.forEach(function (x, i) { if (x > tv) { tv = x; ti = i; } else if (x === tv) ti = -1; });
+      if (ti >= 0 && tv > 0 && roster.length > 1) mvp = roster[ti].me ? _hrMe() : roster[ti].alias;
+    } catch (_) {}
+    let pact = null;
+    try {
+      if (party.length === 2) { const ally = party.filter(function (p) { return !p.you; })[0]; const pf = ally && _coopPactFor(ally.uid); if (pf && pf.streak > 0) pact = { n: ally.n, d: pf.streak }; }
+    } catch (_) {}
+    const t0 = _hrTs(inst.starts_at), t1 = _hrTs(inst.resolved_at || inst.updated_at) || Date.now();
+    const took = t0 ? Math.max(0, Math.min(24 * 60, Math.round((t1 - t0) / 60000))) : 0;
+    return { party: party, goal: goal, fgoal: fgoal, unit: (!both && unit === 'flights') ? 'flights' : 'steps', mvp: mvp, pact: pact, fed: !!extra.fed, time: took ? _hrHM(took) : '' };
+  }
+
+  /** Result event → the design's data. */
+  function _hrData(evt) {
+    const failed = evt.outcome === 'failed';
+    const coop = evt.coop || null;
+    const cfg = (!coop && typeof BOSSES !== 'undefined') ? BOSSES[evt.bossId] : null;
+    const artId = coop ? ((typeof COOP_BOSSES !== 'undefined' && COOP_BOSSES[evt.bossId] && COOP_BOSSES[evt.bossId].artId) || evt.bossId) : evt.bossId;
+    const d = { kind: failed ? 'defeat' : 'victory', solo: !coop, boss: evt.bossName || 'The boss', rank: String(evt.rank || 'E').toUpperCase(), art: getBossArtPath(artId), short: _hrShort(evt.bossName) };
+    if (coop) { Object.assign(d, coop); d.souls = evt.souls; d.relic = _hrRelic(evt.drop); return d; }
+    d.cond = evt.conditionLabel || (cfg && (cfg.killCondShort || cfg.killCondLong)) || 'Kill condition';
+    const m = _hrSoloMetric(cfg);
+    if (failed) {
+      const from = _hrTs(evt.hunt_started_at) || (Date.now() - 3 * 86400000);
+      const best = m ? _hrBest(m, from, Date.now()) : null;
+      if (m && best != null && best > 0 && best < m.ask) { d.best = best; d.ask = m.ask; d.fmt = m.fmt; d.bestLabel = m.label; }
+      return d;
+    }
+    d.kill = Math.max(1, evt.kill_count | 0);
+    d.souls = evt.souls;
+    d.relic = _hrRelic(evt.drop);
+    if (m) { const did = _hrBest(m, Date.now() - 3 * 86400000, Date.now()); if (did != null && did >= m.ask) { d.did = did; d.ask = m.ask; d.fmt = m.fmt; } }
+    return d;
+  }
+
+  function _hrPalette(d) {
+    const v = d.kind === 'victory', al = v ? ['#8b5cf6', '#6d28d9'] : ['#991b1b', '#5f1212'];
+    let k = 0;
+    return (d.party || [{ you: true }]).map(function (p) { return p.you ? (v ? '#f5b842' : '#ef4444') : al[(k++) % 2]; });
+  }
+  function _hrPortHtml(d) {
+    return '<div class="hr-port"><img class="hr-art" src="' + esc(d.art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      (d.kind === 'victory' ? '<svg class="hr-cracks" viewBox="0 0 100 100" aria-hidden="true">' + _HR_CRACKS.map(function (p) { return '<path d="' + p + '" pathLength="1"></path>'; }).join('') + '</svg>' : '<div class="hr-veilr"></div>') +
+      '<div class="hr-flash"></div></div>';
+  }
+  function _hrMarksHtml(d, cols) {
+    const who = d.solo ? [{ n: _hrMe() }] : d.party;
+    const o = d.solo ? [[0, 124]] : (who.length === 2 ? [[-124, 92], [124, 92]] : [[-130, 66], [130, 66], [0, 128]]);
+    return who.map(function (p, i) {
+      const pos = o[i] || [0, 124];
+      return '<span class="hr-mark" style="--ox:' + pos[0] + 'px;--oy:' + pos[1] + 'px;--c:' + cols[i] + '"><svg viewBox="0 0 36 40"><path d="M18 2l15 8.5v19L18 38 3 29.5v-19z"></path></svg><b>' + esc((String(p.n || '?').trim().charAt(0) || '?').toUpperCase()) + '</b></span>';
+    }).join('');
+  }
+  function _hrBurstHtml() {
+    let s = '';
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + (i % 2) * 0.17, r = 80 + (i * 37) % 70; s += '<i style="--dx:' + Math.round(Math.cos(a) * r) + 'px;--dy:' + Math.round(Math.sin(a) * r) + 'px;--dl:' + ((i % 3) * 40) + 'ms"></i>'; }
+    return '<div class="hr-burst">' + s + '</div>';
+  }
+  function _hrCnt(n, fmt) { return '<b class="hr-cnt" data-to="' + (Number(n) || 0) + '"' + (fmt === 'hm' ? ' data-fmt="hm"' : '') + '>' + (fmt === 'hm' ? '0h 00m' : '0') + '</b>'; }
+  function _hrRewardHtml(d) {
+    const souls = (d.souls != null && d.souls > 0) ? '<div class="hr-rc hr-souls hr-rv"><span class="hr-lab">Souls</span><b class="hr-big">+<span class="hr-cnt" data-to="' + (d.souls | 0) + '">0</span></b></div>' : '';
+    const relic = d.relic ? '<div class="hr-rc hr-rv"><span class="hr-lab">Relic</span><span class="hr-rn">' + esc(d.relic.n) + '</span><span class="hr-rr">' + esc(d.relic.r) + '</span></div>'
+      : '<div class="hr-rc hr-none hr-rv"><span class="hr-lab">Relic</span><span class="hr-rn">Souls only this time</span></div>';
+    return '<div class="hr-reward' + (souls ? '' : ' hr-one') + '">' + souls + relic + '</div>';
+  }
+  function _hrRowsHtml(d, cols) {
+    const fl = d.fgoal > 0, unit = d.unit === 'flights' ? ' fl' : ' steps';
+    return '<div class="hr-party">' + d.party.map(function (p, i) {
+      return '<div class="hr-row hr-rv' + (fl ? ' hr-fl' : '') + '" style="--c:' + cols[i] + '"><i class="hr-dot"></i><span class="hr-nm">' + esc(p.n) + (p.you ? '<em class="hr-you">You</em>' : '') + '</span>' +
+        '<span class="hr-v">' + _hrCnt(p.s) + unit + '</span>' + (fl ? '<span class="hr-v hr-f">' + _hrCnt(p.f) + ' fl</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  function _hrCoopGoalHtml(d, cols, total) {
+    const v = d.kind === 'victory', goal = Math.max(1, d.goal), base = v ? Math.max(total, 1) : goal, pct = Math.round(total / goal * 100), near = pct >= 80;
+    const segs = d.party.map(function (p, i) { return '<i class="hr-sg" style="--w:' + (p.s / base * 100).toFixed(2) + '%;--c:' + cols[i] + '"></i>'; }).join('');
+    const unit = d.unit === 'flights' ? ' flights' : ' steps';
+    const right = v ? '<span class="hr-ok"><b class="hr-cnt" data-to="' + pct + '">0</b>%</span>' : (near ? '<span class="hr-short hr-rv">' + _hrN(goal - total) + ' short</span>' : '');
+    return '<div class="hr-goal hr-rv"><div class="hr-track"><div class="hr-fill">' + segs + '</div>' + (v ? '' : '<i class="hr-gap" style="--l:' + Math.min(100, total / goal * 100).toFixed(2) + '%"></i>') + '</div>' +
+      '<div class="hr-gl"><span><b class="hr-cnt" data-to="' + total + '">0</b> / ' + _hrN(goal) + unit + '</span>' + right + '</div></div>';
+  }
+  function _hrFlightsHtml(d, cols) {
+    const tot = d.party.reduce(function (a, p) { return a + p.f; }, 0);
+    return '<div class="hr-goal hr-gfl hr-rv"><div class="hr-track hr-thin"><div class="hr-fill">' + d.party.map(function (p, i) { return '<i class="hr-sg" style="--w:' + (tot ? (p.f / tot * 100).toFixed(2) : 0) + '%;--c:' + cols[i] + '"></i>'; }).join('') + '</div></div>' +
+      '<div class="hr-gl"><span class="hr-flt"><b class="hr-cnt" data-to="' + tot + '">0</b> / ' + _hrN(d.fgoal) + ' flights</span><span class="hr-ok"><b class="hr-cnt" data-to="' + Math.round(tot / Math.max(1, d.fgoal) * 100) + '">0</b>%</span></div></div>';
+  }
+  function _hrVictoryHtml(d) {
+    const cols = _hrPalette(d);
+    let body;
+    if (d.solo) {
+      const hasN = d.did != null && d.ask > 0;
+      body = '<div class="hr-stamp">Beaten</div>' + (d.kill === 1 ? '<div class="hr-kill">First kill</div>' : '<div class="hr-sub hr-rv">' + esc(_hrOrd(d.kill)) + ' kill</div>') +
+        '<div class="hr-rl hr-rv">Kill condition · <b>met</b></div><div class="hr-row hr-rv" style="--c:#f5b842"><i class="hr-dot"></i><span class="hr-nm hr-cond">' + esc(d.cond) + '</span>' + (hasN ? '<span class="hr-v">' + _hrCnt(d.did, d.fmt) + _hrUnit(d.fmt) + '</span>' : '') + '</div>' +
+        '<div class="hr-goal hr-rv"><div class="hr-track"><div class="hr-fill"><i class="hr-sg" style="--w:100%;--c:#f5b842"></i></div></div><div class="hr-gl">' +
+          (hasN ? '<span>' + _hrCnt(d.did, d.fmt) + ' / ' + esc(_hrAsk(d.fmt, d.ask)) + '</span><span class="hr-ok"><b class="hr-cnt" data-to="' + Math.round(d.did / d.ask * 100) + '">0</b>%</span>' : '<span>Condition met</span><span class="hr-ok">100%</span>') +
+        '</div></div>' + _hrRewardHtml(d);
+    } else {
+      const total = d.party.reduce(function (a, p) { return a + p.s; }, 0);
+      body = '<div class="hr-stamp">Beaten together</div>' + (d.time ? '<div class="hr-sub hr-rv">Done in <b>' + esc(d.time) + '</b></div>' : '') +
+        _hrRowsHtml(d, cols) + _hrCoopGoalHtml(d, cols, total) + (d.fgoal > 0 ? _hrFlightsHtml(d, cols) : '') +
+        (d.mvp ? '<div class="hr-mvp"><svg class="hr-sig" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 1l3.4 10.6L29 15l-10.6 3.4L15 29l-3.4-10.6L1 15l10.6-3.4z"></path></svg><div><div class="hr-me">Hunt MVP</div><div class="hr-mn">' + esc(d.mvp) + ' carried the hunt</div><div class="hr-mb">+' + Math.max(1, d.party.length - 1) + '% souls and relic luck</div></div></div>' : '') +
+        _hrRewardHtml(d) +
+        '<div class="hr-chips">' + (d.fed ? '<span class="hr-chip hr-g hr-rv">The hunger is fed · 2× souls</span>' : '') + (d.pact ? '<span class="hr-chip hr-vio hr-rv">Pact with ' + esc(d.pact.n) + ' · ' + d.pact.d + ' days</span>' : '') + '</div>';
+    }
+    return '<div class="hr-eyebrow hr-rv">' + (d.solo ? 'Solo' : 'Co-op') + ' hunt · Rank ' + esc(d.rank) + '</div>' +
+      '<div class="hr-hero">' + _hrPortHtml(d) + _hrBurstHtml() + _hrMarksHtml(d, cols) + '</div><h1 class="hr-boss hr-rv">' + esc(d.boss) + '</h1>' + body + '<div class="hr-hint">Tap to continue</div>';
+  }
+  function _hrDefeatHtml(d) {
+    const cols = _hrPalette(d);
+    let body, near;
+    if (d.solo) {
+      const has = d.best != null;
+      const pct = has ? Math.round(d.best / d.ask * 100) : 0; near = has && pct >= 80;
+      const shortTxt = has ? (d.fmt === 'hm' ? _hrHM(d.ask - d.best) + ' short' : _hrN(d.ask - d.best) + _hrUnit(d.fmt) + ' short') : '';
+      body = '<div class="hr-stamp">Escaped</div><div class="hr-sub hr-rv">The window closed</div>' +
+        (has ? '<div class="hr-pctbig hr-rv"><b><span class="hr-cnt" data-to="' + pct + '">0</span><i>%</i></b><span class="hr-lab">of the condition</span></div>' +
+          '<div class="hr-goal hr-rv"><div class="hr-track"><div class="hr-fill"><i class="hr-sg" style="--w:' + (d.best / d.ask * 100).toFixed(2) + '%;--c:#ef4444"></i></div><i class="hr-gap" style="--l:' + (d.best / d.ask * 100).toFixed(2) + '%"></i></div>' +
+          '<div class="hr-gl"><span>' + _hrCnt(d.best, d.fmt) + ' / ' + esc(_hrAsk(d.fmt, d.ask)) + '</span>' + (near ? '<span class="hr-short hr-rv">' + esc(shortTxt) + '</span>' : '') + '</div></div>' : '') +
+        '<div class="hr-rl hr-rv">Kill condition' + (has ? ' · <b>' + esc(d.bestLabel) + '</b>' : '') + '</div><div class="hr-row hr-rv" style="--c:#ef4444"><i class="hr-dot"></i><span class="hr-nm hr-cond">' + esc(d.cond) + '</span>' + (has ? '<span class="hr-v">' + _hrCnt(d.best, d.fmt) + _hrUnit(d.fmt) + '</span>' : '') + '</div>';
+    } else {
+      const total = d.party.reduce(function (a, p) { return a + p.s; }, 0), pct = Math.round(total / Math.max(1, d.goal) * 100); near = pct >= 80;
+      body = '<div class="hr-stamp">Survives</div><div class="hr-sub hr-rv">The 24h window closed</div>' +
+        '<div class="hr-pctbig hr-rv"><b><span class="hr-cnt" data-to="' + Math.min(99, pct) + '">0</span><i>%</i></b><span class="hr-lab">of the goal</span></div>' + _hrCoopGoalHtml(d, cols, total) + _hrRowsHtml(d, cols);
+    }
+    d._near = near;
+    return '<div class="hr-eyebrow hr-rv">' + (d.solo ? 'Solo' : 'Co-op') + ' hunt · Rank ' + esc(d.rank) + '</div>' +
+      '<div class="hr-hero">' + _hrPortHtml(d) + _hrMarksHtml(d, cols) + '</div><h1 class="hr-boss hr-rv">' + esc(d.boss) + '</h1>' + body +
+      '<p class="hr-mood hr-rv">' + (near ? 'So close it hurts.' : esc(d.short) + ' was strong this time.') + '</p>' +
+      '<div class="hr-acts hr-rv"><button type="button" class="hr-call" data-hr-again>' + (d.solo ? 'Hunt again' : 'Call again') + '</button><button type="button" class="hr-later" data-hr-later>Not now</button></div>';
+  }
+
+  /** Render + run. opts.onClose(kind) after the exit; opts.onAgain() for Hunt/Call again. */
+  function _hrShow(host, d, opts) {
+    opts = opts || {};
+    try { if (_hrLive) _hrLive.stop(); } catch (_) {}
+    let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    host.className = 'hr-screen';
+    host.innerHTML = '<div class="hr-frame hr-' + d.kind + (RM ? ' hr-rm' : '') + '">' + (d.kind === 'victory' ? _hrVictoryHtml(d) : _hrDefeatHtml(d)) + '</div>';
+    const el = host.querySelector('.hr-frame');
+    const q = function (s) { return el.querySelector(s); }, qa = function (s) { return [].slice.call(el.querySelectorAll(s)); };
+    const on = function (s) { qa(s).forEach(function (x) { x.classList.add('hr-on'); }); };
+    const S = { timers: [], raf: [], done: false, skipping: false, dead: false, i: 0, steps: [] };
+    const fx = function () { return !S.skipping && !RM; };
+    const count = function (c, dur) {
+      if (!c) return; const to = +c.getAttribute('data-to'), hm = c.getAttribute('data-fmt') === 'hm';
+      const f = function (n) { return hm ? _hrHM(n) : _hrN(n); };
+      if (S.skipping || RM) { c.textContent = f(to); return; }
+      const t0 = performance.now();
+      (function g(t) { if (S.dead || S.skipping) { c.textContent = f(to); return; } const k = Math.min(1, (t - t0) / dur); c.textContent = f(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) S.raf.push(requestAnimationFrame(g)); })(t0);
+    };
+    const hap = function (k) { if (!S.skipping) _hrHap(k); };
+    const snd = function (fn) { if (!S.skipping) fn(); };
+    const marks = qa('.hr-mark'), port = q('.hr-port'), T = [];
+    const n = d.solo ? 1 : d.party.length;
+    T.push([0, function () { el.classList.add('hr-in'); on('.hr-eyebrow'); }], [200, function () { port.classList.add('hr-on'); }]);
+    marks.forEach(function (m, i) { T.push([600 + i * 120, function () { m.classList.add('hr-show'); hap('light'); }]); });
+    T.push([1200, function () { marks.forEach(function (m) { m.classList.add('hr-fly'); }); }]);
+    if (d.kind === 'victory') {
+      T.push([1700, function () {
+        port.classList.add('hr-dead'); el.classList.add('hr-struck'); marks.forEach(function (m) { m.classList.add('hr-gone'); });
+        if (fx()) { port.classList.add('hr-hit'); const b = q('.hr-burst'); if (b) b.classList.add('hr-go'); }
+        hap('heavy'); snd(function () { _hrChord([_HR_N.G4, _HR_N.C5, _HR_N.E5, _HR_N.G5]); _hrTone(_HR_N.A1, 0, 0.5, 0.14); });
+      }]);
+      T.push([2100, function () { on('.hr-boss'); }], [2280, function () { on('.hr-stamp'); hap('medium'); snd(function () { _hrTone(_HR_N.C6, 0, 0.9, 0.06); }); }]);
+      let R;
+      if (d.solo) {
+        T.push([2450, function () {
+          const k = q('.hr-kill');
+          if (k) { k.classList.add('hr-on'); if (fx()) k.classList.add('hr-flare'); hap('heavy'); snd(function () { _hrChord([_HR_N.G5, _HR_N.C6, _HR_N.E6], 0.07, 1.5, 0.07); }); }
+          else { on('.hr-sub'); hap('light'); }
+        }]);
+        T.push([2700, function () { on('.hr-rl'); on('.hr-row'); qa('.hr-row .hr-cnt').forEach(function (c) { count(c, 800); }); }]);
+        T.push([2950, function () { on('.hr-goal'); const sg = q('.hr-sg'); if (sg) sg.classList.add('hr-on'); qa('.hr-gl .hr-cnt').forEach(function (c) { count(c, 420); }); hap('light'); snd(function () { _hrTone(_HR_N.C5, 0, 0.6, 0.05); }); }]);
+        T.push([3370, function () { if (fx()) { const t = q('.hr-track'); if (t) t.classList.add('hr-done'); } hap('medium'); snd(function () { _hrTone(_HR_N.C6, 0, 1, 0.07); }); }]);
+        R = 3770;
+      } else {
+        T.push([2400, function () { on('.hr-sub'); }]);
+        qa('.hr-row').forEach(function (r, i) { T.push([2650 + i * 100, function () { r.classList.add('hr-on'); r.querySelectorAll('.hr-cnt').forEach(function (c) { count(c, 800); }); }]); });
+        const B = 2950, END = B + n * 420;
+        T.push([B - 50, function () { on('.hr-goal'); qa('.hr-goal .hr-gl .hr-cnt').forEach(function (c) { count(c, n * 420); }); }]);
+        d.party.forEach(function (p, i) {
+          T.push([B + i * 420, function () { qa('.hr-fill .hr-sg:nth-child(' + (i + 1) + ')').forEach(function (s) { s.classList.add('hr-on'); }); hap('light'); snd(function () { _hrTone([_HR_N.C5, _HR_N.E5, _HR_N.G5][i % 3], 0, 0.6, 0.05); }); }]);
+        });
+        T.push([END, function () { if (fx()) qa('.hr-track').forEach(function (t) { t.classList.add('hr-done'); }); hap('medium'); snd(function () { _hrTone(_HR_N.C6, 0, 1, 0.07); }); }]);
+        if (d.mvp) T.push([END + 350, function () { const m = q('.hr-mvp'); if (m) { m.classList.add('hr-on'); if (fx()) m.classList.add('hr-shine'); } hap('medium'); snd(function () { _hrChord([_HR_N.B5, _HR_N.E6], 0.09, 1.4, 0.065); }); }]);
+        R = END + (d.mvp ? 950 : 400);
+      }
+      T.push([R, function () { on('.hr-rc'); count(q('.hr-rc .hr-cnt'), 600); hap('success'); snd(function () { _hrChord([_HR_N.E5, _HR_N.G5, _HR_N.C6], 0.07, 1.6, 0.065); }); }]);
+      qa('.hr-chip').forEach(function (c, i) { T.push([R + 350 + i * 120, function () { c.classList.add('hr-on'); }]); });
+      T.push([R + 1100, function () { const h = q('.hr-hint'); if (h) h.classList.add('hr-on'); S.done = true; }]);
+    } else {
+      const near = !!d._near, hasBar = !!q('.hr-pctbig');
+      T.push([1700, function () {
+        el.classList.add('hr-struck');
+        if (fx()) { port.classList.add('hr-hit'); marks.forEach(function (m) { m.classList.add('hr-back'); }); } else marks.forEach(function (m) { m.classList.add('hr-gone'); });
+        hap('error'); snd(function () { _hrFall(_HR_N.G3, _HR_N.E2, 0.8, 0.12); _hrTone(_HR_N.A1, 0, 0.5, 0.12); });
+      }]);
+      T.push([2150, function () { on('.hr-boss'); }], [2300, function () { on('.hr-stamp'); hap('medium'); }], [2420, function () { on('.hr-sub'); }]);
+      let t = 2700;
+      if (hasBar) {
+        T.push([2700, function () { on('.hr-pctbig'); on('.hr-goal'); count(q('.hr-pctbig .hr-cnt'), 750); qa('.hr-gl .hr-cnt').forEach(function (c) { count(c, 750); }); }]);
+        qa('.hr-fill .hr-sg').forEach(function (s, i, all) { T.push([2720 + Math.round(i * 700 / all.length), function () { s.classList.add('hr-on'); }]); });
+        T.push([3500, function () { const g = q('.hr-gap'); if (g) g.classList.add('hr-on'); on('.hr-short'); hap('medium'); snd(function () { _hrTone(_HR_N.E2, 0, 0.7, 0.12); }); }]);
+        t = 3700;
+      }
+      qa('.hr-rl').forEach(function (r) { T.push([t, function () { r.classList.add('hr-on'); }]); });
+      qa('.hr-row').forEach(function (r, i) { T.push([t + i * 90, function () { r.classList.add('hr-on'); r.querySelectorAll('.hr-cnt').forEach(function (c) { count(c, 600); }); }]); });
+      T.push([t + 400, function () { on('.hr-mood'); }], [t + 800, function () { on('.hr-acts'); if (near) el.classList.add('hr-near'); S.done = true; }]);
+    }
+    S.steps = T.sort(function (a, b) { return a[0] - b[0]; });
+    S.steps.forEach(function (st, i) { S.timers.push(setTimeout(function () { if (S.dead) return; S.i = i + 1; try { st[1](); } catch (_) {} }, st[0])); });
+
+    const stop = function () { S.dead = true; S.timers.forEach(clearTimeout); S.raf.forEach(cancelAnimationFrame); if (_hrLive && _hrLive.el === el) _hrLive = null; };
+    const skip = function () {
+      if (S.done) return;
+      S.timers.forEach(clearTimeout); S.timers = [];
+      S.skipping = true; el.classList.add('hr-skip');
+      for (; S.i < S.steps.length; S.i++) { try { S.steps[S.i][1](); } catch (_) {} }
+      qa('.hr-cnt').forEach(function (c) { const to = +c.getAttribute('data-to'); c.textContent = c.getAttribute('data-fmt') === 'hm' ? _hrHM(to) : _hrN(to); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('hr-skip'); S.skipping = false; }); });
+      _hrHap('light');
+    };
+    let leaving = false;
+    const leave = function (then) {
+      if (leaving) return; leaving = true;
+      _hrHap('light');
+      el.classList.add('hr-out');
+      setTimeout(function () { stop(); try { then && then(); } catch (_) {} }, RM ? 120 : 300);
+    };
+    el.addEventListener('click', function (e) {
+      if (leaving || S.dead) return;
+      const again = e.target.closest && e.target.closest('[data-hr-again]');
+      const later = e.target.closest && e.target.closest('[data-hr-later]');
+      if (again) { again.classList.add('hr-pressed'); _hrHap('heavy'); _hrChord([_HR_N.G4, _HR_N.C5, _HR_N.G5], 0.05, 1.2, 0.08); setTimeout(function () { leave(opts.onAgain); }, 380); return; }
+      if (later) { leave(opts.onClose); return; }
+      if (!S.done) { skip(); return; }
+      if (d.kind === 'victory') leave(opts.onClose);
+    });
+    _hrLive = { el: el, stop: stop, skip: skip, data: d };
+    return true;
+  }
+
   function _showBossResult(evt) {
     const overlay = document.getElementById('boss-result-overlay');
     if (!overlay) { _bossResultBusy = false; return; }
@@ -21520,271 +21870,30 @@
       localStorage.setItem(seenKey, '1');
     } catch (_) {}
 
-    // Theme the overlay via a class so CSS can mute the gold accents
-    // for failure (red ember palette). Removed on close.
-    overlay.classList.toggle('bro-overlay--failed', isFailed);
-
     _bossResultCurrent = evt;
-
-    // v3 Phase 1z.56 — title + subline + "Fallen/Escaped" copy
-    // diverge between defeat and failure paths.
-    const titleEl = document.getElementById('bro-overlay-title');
-    if (titleEl) titleEl.textContent = isFailed ? 'HUNT FAILED' : 'BOSS DEFEATED';
-    const sublineEl = overlay.querySelector('.bro-subline');
-    if (sublineEl) {
-      sublineEl.textContent = isFailed
-        ? ((evt.bossName ? 'The ' + evt.bossName.replace(/^The\s+/i, '') : 'The boss') + ' escaped.')
-        : 'Your discipline broke the hunt.';
-    }
-    const fallenEl = overlay.querySelector('.bro-fallen');
-    if (fallenEl) fallenEl.textContent = isFailed ? 'Escaped' : 'Has Fallen';
-
-    // Boss card — name, rank pill, condition row, portrait
-    const nameEl = document.getElementById('bro-boss-name');
-    if (nameEl) nameEl.textContent = evt.bossName || '—';
-
-    const rankPill = document.getElementById('bro-rank-pill');
-    if (rankPill) {
-      const rank = (evt.rank || 'E').toUpperCase();
-      rankPill.textContent = rank + '-RANK BOSS';
-      rankPill.setAttribute('data-rank', rank);
-    }
-
-    const portraitImg = document.getElementById('bro-boss-portrait');
-    if (portraitImg) {
-      portraitImg.removeAttribute('data-art');
-      portraitImg.onerror = () => { portraitImg.setAttribute('data-art', 'missing'); };
-      portraitImg.onload  = () => { portraitImg.removeAttribute('data-art'); };
-      const path = getBossArtPath(evt.bossId);
-      portraitImg.src = path;
-      portraitImg.alt = evt.bossName || '';
-    }
-
-    // v3 Phase 1z.56 — hide the "VERIFIED" defeat row on failure
-    // (no defeat happened). The row stays in the DOM so re-using
-    // the same modal for a subsequent defeat repaints cleanly.
-    const defeatRow = overlay.querySelector('.bro-defeat-row');
-    if (defeatRow) defeatRow.classList.toggle('hidden', isFailed);
-
-    const condEl = document.getElementById('bro-condition');
-    if (condEl) {
-      const short = (BOSS_DEFEAT_CONDITIONS && BOSS_DEFEAT_CONDITIONS[evt.bossId]) || null;
-      condEl.textContent = short || evt.conditionLabel || 'Kill condition cleared';
-    }
-
-    const relicCard  = document.getElementById('bro-relic-card');
-    const sealedCard = document.getElementById('bro-sealed-card');
-    const nodropCard = document.getElementById('bro-nodrop-card');
-    const failedCard = document.getElementById('bro-failed-card');
-    const viewBtn    = document.getElementById('bro-view-relic');
-    const viewMercy  = document.getElementById('bro-view-mercy');
-
-    // v3 Phase 1z.83 — Sealed Mystery Relic. Show the sealed card
-    // (NOT bro-relic-card) for rare / ultra FIRST acquisitions. The
-    // relic identity stays entirely absent from the DOM until reveal.
-    const _sealRelic = !!(evt.drop && evt.drop.wasFirst &&
-      (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare'));
-
-    if (isFailed) {
-      // v3 Phase 1z.56 — failure variant: hide relic + mercy cards,
-      // show the failed card with no-reward copy. HUNT AGAIN stays
-      // available (engageBoss handles the souls cost gate).
-      if (relicCard)  relicCard.classList.add('hidden');
-      if (sealedCard) sealedCard.classList.add('hidden');
-      if (nodropCard) nodropCard.classList.add('hidden');
-      if (failedCard) failedCard.classList.remove('hidden');
-      if (viewBtn)    viewBtn.classList.add('hidden');
-      if (viewMercy)  viewMercy.classList.add('hidden');
-      // Populate the failure body with the unmet condition so the
-      // user understands WHAT they needed to do. Falls back to a
-      // generic line if no condition copy is available.
-      const failedBody = document.getElementById('bro-failed-body');
-      if (failedBody) {
-        const cond = (evt.conditionLabel || '').trim();
-        failedBody.textContent = cond
-          ? ('Objective not completed in time: ' + cond)
-          : 'The hunt window closed before the objective was completed.';
-      }
-    } else if (evt.drop && _sealRelic) {
-      // v3 Phase 1z.83 — sealed-mystery branch. The relic identity is
-      // NOT rendered in the DOM. The sealed sigil + "A sealed relic
-      // has emerged." copy stands in. Tap Reveal Relic → close →
-      // queue drain → Sigil Bloom cinematic fires.
-      if (failedCard) failedCard.classList.add('hidden');
-      if (relicCard)  relicCard.classList.add('hidden');
-      if (nodropCard) nodropCard.classList.add('hidden');
-      if (sealedCard) sealedCard.classList.remove('hidden');
-      if (viewMercy)  viewMercy.classList.add('hidden');
-      if (viewBtn) {
-        viewBtn.classList.remove('hidden');
-        // cardId stays on the button so the queue chain can route
-        // the right card to processRevealQueue post-close. data-masked
-        // signals "tap → close + drain, don't open card detail."
-        viewBtn.setAttribute('data-card-id', evt.drop.cardId);
-        viewBtn.setAttribute('data-masked', '1');
-        // Wipe any prior text + restore as "Reveal Relic" with the
-        // seal-glyph icon. is-armed adds the violet pulse + glow.
-        viewBtn.classList.add('is-armed');
-        viewBtn.innerHTML =
-          '<span class="bro-btn-seal-glyph" aria-hidden="true">' +
-            '<svg viewBox="0 0 16 16">' +
-              '<circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
-              '<path d="M5 9 L11 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
-              '<path d="M8 4 L8 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
-            '</svg>' +
-          '</span>' +
-          'Reveal Relic';
-      }
-    } else if (evt.drop) {
-      if (failedCard) failedCard.classList.add('hidden');
-      if (sealedCard) sealedCard.classList.add('hidden');
-      // Relic acquired — commons + duplicate rare/ultra fall here.
-      if (relicCard)  relicCard.classList.remove('hidden');
-      if (nodropCard) nodropCard.classList.add('hidden');
-      if (viewBtn) {
-        viewBtn.classList.remove('hidden');
-        viewBtn.classList.remove('is-armed');
-        viewBtn.removeAttribute('data-masked');
-        viewBtn.setAttribute('data-card-id', evt.drop.cardId);
-        viewBtn.textContent = 'View Relic';
-      }
-      if (viewMercy) viewMercy.classList.add('hidden');
-
-      // Rarity pill + outer card border tint
-      const rarityPill = document.getElementById('bro-relic-rarity-pill');
-      if (rarityPill) {
-        const rarityLabel = (RARITY_LABELS && RARITY_LABELS[evt.drop.rarity]) || evt.drop.rarity || '';
-        rarityPill.textContent = String(rarityLabel).toUpperCase();
-        rarityPill.setAttribute('data-rarity', evt.drop.rarity || 'common');
-      }
-      if (relicCard) relicCard.setAttribute('data-rarity', evt.drop.rarity || 'common');
-
-      const eyebrowEl = document.getElementById('bro-relic-eyebrow');
-      if (eyebrowEl) {
-        // W611-fix — tell the truth about duplicates/capped (was always
-        // "RELIC ACQUIRED", which contradicts the toast's "Duplicate · cap
-        // reached"). The relic still shows; only the eyebrow is honest.
-        let _eb;
-        if (evt.drop.wasCapped)          _eb = 'DUPLICATE · CAP REACHED';
-        else if (evt.drop.wasFirst === false) _eb = 'DUPLICATE';
-        else if (evt.drop.fromPity)      _eb = (evt.drop.pityType === 'ultra_hard' ? 'FATE ANSWERED' : 'MERCY AWAKENED');
-        else                             _eb = 'RELIC ACQUIRED';
-        eyebrowEl.textContent = _eb;
-      }
-      // v3 Phase 1z.48 — route through the shared setModalCardArt
-      // helper used by openCardDetailModal so the Boss Defeated
-      // result modal and the relic-detail page render artwork
-      // identically. The previous inline block paired the same
-      // onload/onerror dance with a `loading="lazy"` <img>, which
-      // (combined with `display: none` set before src) caused
-      // browsers to defer the load and never fire `onload` — the
-      // emoji slot-icon fallback stayed visible even though the
-      // artwork exists. The img element now has no lazy attribute
-      // (see index.html) and uses the same code path as the
-      // working detail page.
-      setModalCardArt('bro-relic-art', evt.drop.artPath);
-      const slotIconEl = document.getElementById('bro-relic-slot-icon');
-      if (slotIconEl) slotIconEl.textContent = (SLOT_ICONS && SLOT_ICONS[evt.drop.slot]) || '✦';
-      const relicNameEl = document.getElementById('bro-relic-name');
-      if (relicNameEl) relicNameEl.textContent = evt.drop.name || '';
-      const metaEl = document.getElementById('bro-relic-meta');
-      if (metaEl) {
-        const slotLabel = (evt.drop.slot || '').toUpperCase();
-        const sourceLabel = evt.bossName ? ('From ' + evt.bossName.toUpperCase()) : '';
-        const newPill = evt.drop.wasFirst ? '<span class="bro-relic-new">NEW</span>' : '';
-        let cmpChip = '';   // W927 — "▲ +7 vs Equipped" on the result card (the reveal carries the full window)
-        try { const cc = CARDS && CARDS[evt.drop.cardId]; if (cc) cmpChip = relicCompareHtml(relicCompare(cc), 'line'); } catch (_) { cmpChip = ''; }
-        metaEl.innerHTML =
-          (slotLabel  ? '<span class="bro-relic-slot">' + slotLabel + '</span>' : '') +
-          (sourceLabel ? '<span class="bro-relic-source">· ' + sourceLabel + '</span>' : '') +
-          newPill + cmpChip;
-      }
-      const statsEl = document.getElementById('bro-relic-stats');
-      if (statsEl) {
-        const card = CARDS && CARDS[evt.drop.cardId];
-        statsEl.innerHTML = card ? cardStatBadgesHtml(card) : '';
-      }
-
-      // v3 Phase 1z.83 — rare/ultra FIRST-acquisitions are now
-      // handled by the `_sealRelic` branch above (Sealed Mystery
-      // Relic card). The legacy 1z.82 "???" masking inside
-      // bro-relic-card was retired with that move. Commons +
-      // duplicate rare/ultra reach this branch and see the full
-      // relic as before.
-    } else {
-      // No drop — mercy increased. Render 3-row mercy block with bar fills.
-      if (relicCard)  relicCard.classList.add('hidden');
-      if (sealedCard) sealedCard.classList.add('hidden');
-      if (nodropCard) nodropCard.classList.remove('hidden');
-      if (failedCard) failedCard.classList.add('hidden');
-      if (viewBtn)    viewBtn.classList.add('hidden');
-      if (viewMercy) {
-        viewMercy.classList.remove('hidden');
-        viewMercy.setAttribute('data-boss-id', evt.bossId);
-      }
-      const mercyBlock = document.getElementById('bro-mercy-block');
-      if (mercyBlock && evt.mercy) {
-        const m = evt.mercy;
-        const cur1 = Math.min(m.anyDropCurrent || 0, m.anyDropTarget    || 0);
-        const cur2 = Math.min(m.rareCurrent    || 0, m.rareTarget       || 0);
-        const cur3 = Math.min(m.ultraCurrent   || 0, m.ultraHardTarget  || 0);
-        const t1 = m.anyDropTarget    || 1;
-        const t2 = m.rareTarget       || 1;
-        const t3 = m.ultraHardTarget  || 1;
-        const p1 = Math.min(100, (cur1 / t1) * 100);
-        const p2 = Math.min(100, (cur2 / t2) * 100);
-        const p3 = Math.min(100, (cur3 / t3) * 100);
-        mercyBlock.innerHTML =
-          '<div class="bro-mercy-row" data-tier="any">' +
-            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Guaranteed Relic</span>' +
-              '<span class="bro-mercy-val">' + cur1 + ' / ' + (m.anyDropTarget || 0) + '</span></div>' +
-            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p1 + '%"></div></div>' +
-          '</div>' +
-          '<div class="bro-mercy-row" data-tier="rare">' +
-            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Rare Mercy</span>' +
-              '<span class="bro-mercy-val">' + cur2 + ' / ' + (m.rareTarget || 0) + '</span></div>' +
-            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p2 + '%"></div></div>' +
-          '</div>' +
-          '<div class="bro-mercy-row" data-tier="ultra">' +
-            '<div class="bro-mercy-row-head"><span class="bro-mercy-label">Ultra Mercy</span>' +
-              '<span class="bro-mercy-val">' + cur3 + ' / ' + (m.ultraHardTarget || 0) + '</span></div>' +
-            '<div class="bro-mercy-bar"><div class="bro-mercy-bar-fill" style="width:' + p3 + '%"></div></div>' +
-          '</div>';
-      } else if (mercyBlock) {
-        mercyBlock.innerHTML = '';
-      }
-    }
-
-    // Wire Hunt Again button data-boss-id.
-    const huntAgainBtn = document.getElementById('bro-hunt-again');
-    if (huntAgainBtn) huntAgainBtn.setAttribute('data-boss-id', evt.bossId);
-
+    // W980 — the hunt results screen (Claude Design handoffs 31 + 32) replaces
+    // the .bro-* card for all four outcomes. closeBossResult still owns the
+    // exit: pending clear, queue drain (which then plays any relic reveal) and
+    // the review flush.
+    let d = null;
+    try { d = _hrData(evt); } catch (_) {}
+    if (!d) d = { kind: isFailed ? 'defeat' : 'victory', solo: true, boss: evt.bossName || 'The boss', rank: String(evt.rank || 'E'), art: getBossArtPath(evt.bossId), short: _hrShort(evt.bossName), cond: evt.conditionLabel || 'Kill condition', kill: Math.max(1, evt.kill_count | 0), souls: evt.souls, relic: null };
+    _hrShow(overlay, d, {
+      onClose: function () { closeBossResult(); },
+      onAgain: function () {
+        const id = evt.bossId;
+        closeBossResult({ suppressDrain: true });
+        try { if (evt.coop) openCoopSheet(id); else engageBoss(id); } catch (_) {}
+        _drainBossResultQueue();
+      },
+    });
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('bro-locked');
-
-    // v3 Phase 1z.73 — confetti + chime when the boss-defeated modal
-    // opens with a rare or ultra_rare relic in evt.drop. Failed-outcome
-    // events have no drop, so the celebration only ever fires for
-    // genuine defeats. Cinematic reveals get their own celebration
-    // hook in openCardRevealModal; duplicates that route through the
-    // boss-defeated modal (not the cinematic) get their celebration
-    // here.
-    //
-    // v3 Phase 1z.84 — skip the confetti+chime for SEALED first
-    // acquisitions. The sealed sigil is intentionally quiet; the
-    // Sigil Bloom cinematic carries the celebration. Without this
-    // guard the legacy pdc-overlay reuse (confetti canvas + the
-    // "PERFECT DAY" banner inside the same DOM element) leaked
-    // through over the sealed card. Only duplicate rare/ultra
-    // drops (wasFirst=false) reach the confetti path now.
-    if (!isFailed && evt.drop && evt.drop.rarity && !_sealRelic &&
-        (evt.drop.rarity === 'rare' || evt.drop.rarity === 'ultra_rare')) {
-      try { celebrateRareDrop(evt.drop.rarity); } catch (_) {}
-    }
   }
 
   function closeBossResult(opts) {
+    try { if (_hrLive) _hrLive.stop(); } catch (_) {}   // W980
     const overlay = document.getElementById('boss-result-overlay');
     // W951 — was the result actually ON SCREEN? switchTab() calls this on every
     // tab change to make sure the modal never hangs over another tab; before
@@ -36130,6 +36239,8 @@
     if (wgmRow) wgmRow.classList.toggle('hidden', !_testHunterAllowed());
     const tbRow = document.getElementById('settings-preview-briefing');   // W978 — same owner gate
     if (tbRow) tbRow.classList.toggle('hidden', !_testHunterAllowed());
+    const hrRow = document.getElementById('settings-preview-hunts');   // W980 — same owner gate
+    if (hrRow) hrRow.classList.toggle('hidden', !_testHunterAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -55492,16 +55603,12 @@
     try { _annotateCoopHistorySouls(inst.id, reward); } catch (_) {}   // W809 — history shows what was ACTUALLY earned (MVP + hunger mults included)
     let dropInfo = null;
     try { dropInfo = rollBossDrop(cfg.dropSourceBoss || 'the_steel_wolf', { source: 'coop', sourceName: cfg.name, luck: _mvpMult * (_hungered ? HUNGER_LUCK_MULT : 1) }); } catch (_) {}
-    if (_hungered) {
-      try { showHabitToast('The hunger is fed — 2× souls from ' + cfg.name + '.'); } catch (_) {}
-    }
-    if (_mvpCarried > 0) {
-      try { showHabitToast('✦ Hunt MVP — +' + _mvpCarried + '% souls & relic luck for carrying ' + _mvpCarried + ' hunter' + (_mvpCarried === 1 ? '' : 's')); } catch (_) {}
-    }
+    // W980 — the results screen names the MVP and the fed hunger; no toasts on top of it.
     try {
       announceKillAndDrop(
         { id: cfg.id, name: cfg.name, rank: cfg.rank, killCondShort: cfg.killCondShort },
-        reward, dropInfo, { coop: true });   // W611 — flag co-op so the seen-key uses the co-op kill count
+        reward, dropInfo, { coop: true,   // W611 — flag co-op so the seen-key uses the co-op kill count
+          coopData: (function () { try { return _hrCoopData(inst, { fed: _hungered }); } catch (_) { return null; } })() });   // W980
     } catch (_) {}
     // W762 — attach the relic to this hunt's already-logged W716 history row.
     try { if (dropInfo) _annotateCoopHistoryDrop(inst.id, { id: dropInfo.id, name: dropInfo.name, rarity: dropInfo.rarity }); } catch (_) {}
@@ -55576,15 +55683,18 @@
     // W481 — centered tap-to-continue card (was a bottom toast that clipped the long
     // line + flashed by in 2.2s). The co-op WIN already gets a rich result modal; this
     // gives the DEFEAT a matching readable beat.
+    // W980 — the defeat screen (handoff 31) replaces the W481 notice card. It
+    // rides the boss-result queue (seen once per hunt id) and the W950 stage.
     try {
-      showNoticeCard({
-        icon:  '☠️',
-        title: cfg.name + ' bested you',
-        body:  'The co-op hunt came up short before the window closed. Rally your ally and call again.',
-        tone:  'loss',
+      _queueBossResult({
+        outcome:         'failed',
+        bossId:          cfg.id || inst.boss_id,
+        bossName:        cfg.name,
+        rank:            cfg.rank,
+        hunt_started_at: 'coop-' + inst.id,
+        coop:            _hrCoopData(inst, {}),
       });
     } catch (_) {}
-    try { playSfx('ar_lose'); } catch (_) {}
     try { _coopLocalNotify('Defeated by ' + cfg.name, 'Your co-op hunt came up short. Rally your ally and call again.'); } catch (_) {}
   }
 
@@ -59578,6 +59688,28 @@
   }
   /** W978 — the owner's Settings row: the real briefing, saving nothing. */
   function previewTodaysBriefing() { return _tbShow({ preview: true }); }
+  /** W980 — the owner's Settings row: solo win, solo escape, co-op win, co-op defeat. Nothing is saved. */
+  function previewHuntResults() {
+    const ov = document.getElementById('boss-result-overlay'); if (!ov) return;
+    const me = _hrMe();
+    const base = function (id, name, rank) { return { boss: name, rank: rank, art: getBossArtPath(id), short: _hrShort(name) }; };
+    const S = [
+      Object.assign(base('the_insomniac', 'The Insomniac', 'D'), { kind: 'victory', solo: true, kill: 1, cond: 'Sleep 7+ hours', did: 462, ask: 420, fmt: 'hm', souls: 120, relic: { n: 'A sealed relic', r: 'Rare · revealed next' } }),
+      Object.assign(base('the_steel_wolf', 'The Steel Wolf', 'E'), { kind: 'defeat', solo: true, cond: 'Walk 6,000+ steps in a single day', best: 5410, ask: 6000, fmt: 'steps', bestLabel: 'Best day' }),
+      Object.assign(base('the_twin_maw', 'The Twin Maw', 'E'), { kind: 'victory', solo: false, unit: 'steps', time: '19h 05m', goal: 30000, fgoal: 0,
+        party: [{ n: 'Anthony', s: 14210, f: 0 }, { n: me, s: 11840, f: 0, you: true }, { n: 'Kai', s: 7900, f: 0 }], mvp: 'Anthony', souls: 180, relic: { n: 'Bramble Wardplate', r: 'Rare' }, fed: true }),
+      Object.assign(base('the_twin_maw', 'The Twin Maw', 'E'), { kind: 'defeat', solo: false, unit: 'steps', goal: 24000, fgoal: 0,
+        party: [{ n: 'Anthony', s: 11300, f: 0 }, { n: me, s: 9610, f: 0, you: true }] }),
+    ];
+    const step = function (k) {
+      if (k >= S.length) { ov.classList.add('hidden'); ov.setAttribute('aria-hidden', 'true'); document.body.classList.remove('bro-locked'); ov.innerHTML = ''; return; }
+      const next = function () { setTimeout(function () { step(k + 1); }, 250); };
+      _hrShow(ov, S[k], { onClose: next, onAgain: next });
+      ov.classList.remove('hidden'); ov.setAttribute('aria-hidden', 'false'); document.body.classList.add('bro-locked');
+    };
+    step(0);
+  }
+  try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow }; } catch (_) {}   // QA
   try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────
@@ -70384,6 +70516,13 @@
         if (!_testHunterAllowed()) return;
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewRankCelebrations(); } catch (_) {} }, 280);
+      });
+      // W980 — owner-only: the four hunt results back to back; saves nothing.
+      const hrPreviewRow = document.getElementById('settings-preview-hunts');
+      if (hrPreviewRow) hrPreviewRow.addEventListener('click', function () {
+        if (!_testHunterAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        setTimeout(function () { try { previewHuntResults(); } catch (_) {} }, 280);
       });
       // W978 — owner-only: today's briefing, as it would open tomorrow; saves nothing.
       const tbPreviewRow = document.getElementById('settings-preview-briefing');

@@ -4096,7 +4096,9 @@ test.describe('AO · One surface at a time (W950)', () => {
     await expect(page.locator('#fa-coachmark-overlay')).toBeHidden();
     expect(await page.evaluate(() => (window as any).__stage.keys())).toContain('coach:w950');
 
-    await page.locator('#bro-close-x').click();
+    // W980 — the result is tap-to-continue: the first tap skips to the end, the second leaves.
+    await page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
+    await page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
     await expect(page.locator('#boss-result-overlay')).toBeHidden({ timeout: 3_000 });
     await expect(page.locator('#fa-coachmark-overlay')).toBeVisible({ timeout: 3_000 });
     await expect(page.locator('#fa-coach-speech')).toContainText('After the kill.');
@@ -5852,5 +5854,156 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
     expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(before);
     expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// BH. W980 — HUNT RESULTS (Claude Design handoffs 31 + 32): solo + co-op, win + loss
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BH · Hunt results (W980)', () => {
+  const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
+  async function seed(page: Page, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([ex]) => {
+      try {
+        if (sessionStorage.getItem('__w980')) return;
+        sessionStorage.setItem('__w980', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [extra || {}] as [Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const view = (page: Page) => page.evaluate(() => {
+    const o = document.getElementById('boss-result-overlay')!;
+    const f = o.querySelector('.hr-frame');
+    const t = (s: string) => ((f && f.querySelector(s)?.textContent) || '').replace(/\s+/g, ' ').trim();
+    return { shown: !o.classList.contains('hidden'), kind: f ? (f.classList.contains('hr-victory') ? 'victory' : 'defeat') : null,
+      eyebrow: t('.hr-eyebrow'), boss: t('.hr-boss'), stamp: t('.hr-stamp'), kill: t('.hr-kill'), sub: t('.hr-sub'), pct: t('.hr-pctbig'),
+      rows: f ? [].map.call(f.querySelectorAll('.hr-row'), (r: any) => r.textContent.replace(/\s+/g, ' ').trim()) : [],
+      rl: t('.hr-rl'), mvp: t('.hr-mvp'), souls: t('.hr-souls'), relic: t('.hr-rc:not(.hr-souls)'), chips: t('.hr-chips'), mood: t('.hr-mood'),
+      call: t('.hr-call'), buttons: f ? f.querySelectorAll('button').length : 0, text: (f && f.textContent) || '' };
+  });
+  const tap = (page: Page) => page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
+
+  test('solo victory: BEATEN, FIRST KILL, the condition met, souls — tap skips, tap leaves', async ({ page }) => {
+    await seed(page, { hb_leaderboard: JSON.stringify({ steps_daily: { [pt(0)]: 8214 } }) });
+    await page.evaluate(() => (window as any).__queueBossResult({ bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 1, conditionLabel: 'Walk 6,000+ steps in a single day', souls: 120, drop: null, mercy: null }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    await tap(page);   // skip to the end
+    const v = await view(page);
+    expect(v.eyebrow.toUpperCase()).toBe('SOLO HUNT · RANK E');
+    expect(v.boss).toBe('The Steel Wolf');
+    expect(v.stamp.toUpperCase()).toBe('BEATEN');
+    expect(v.kill.toUpperCase()).toBe('FIRST KILL');
+    expect(v.rows[0]).toMatch(/Walk 6,000\+ steps in a single day ?8,214 steps/);
+    expect(v.souls).toMatch(/\+120/);
+    expect(v.relic).toMatch(/Souls only this time/);
+    expect(v.buttons).toBe(0);
+    await tap(page);   // leave
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+    expect(await page.evaluate(() => localStorage.getItem('hb_boss_result_pending'))).toBeNull();
+  });
+
+  test('a first rare stays sealed on the card — its reveal comes after', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => (window as any).__queueBossResult({ bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 3, conditionLabel: 'x', souls: 90,
+      drop: { cardId: 'x', name: 'Fang of the Pack', rarity: 'rare', wasFirst: true }, mercy: null }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    await tap(page);
+    const v = await view(page);
+    expect(v.sub.toUpperCase()).toBe('3RD KILL');
+    expect(v.relic).toMatch(/A sealed relic/);
+    expect(v.text).not.toContain('Fang of the Pack');
+  });
+
+  test('solo escape: the best day and how short, never a tap-away — Not now leaves', async ({ page }) => {
+    await seed(page, { hb_leaderboard: JSON.stringify({ sleep_hours_daily: { [pt(1)]: 6.3, [pt(2)]: 5.1 } }) });
+    await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_insomniac', bossName: 'The Insomniac', rank: 'D', conditionLabel: 'Sleep 7+ hours', hunt_started_at: Date.now() - 3 * 86400000 }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('defeat');
+    await tap(page);   // skip; a defeat never closes on a tap
+    const v = await view(page);
+    expect(v.stamp.toUpperCase()).toBe('ESCAPED');
+    expect(v.pct).toMatch(/^90 ?%/);
+    expect(v.rl.toUpperCase()).toMatch(/BEST NIGHT/);
+    expect(v.rows[0]).toMatch(/6h 18m/);
+    expect(v.mood).toBe('So close it hurts.');
+    expect(v.call).toBe('Hunt again');
+    await tap(page);
+    expect((await view(page)).shown).toBe(true);
+    await page.locator('#boss-result-overlay [data-hr-later]').click();
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+  });
+
+  test('co-op victory: beaten together, each share, the MVP band, the hunger chip', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => (window as any).__queueBossResult({ bossId: 'the_twin_maw', bossName: 'The Twin Maw', rank: 'E', kill_count: 7, souls: 360, drop: null, mercy: null,
+      coop: { party: [{ n: 'Anthony', s: 14210, f: 0 }, { n: 'Richie', s: 11840, f: 0, you: true }, { n: 'Kai', s: 7900, f: 0 }], goal: 30000, fgoal: 0, unit: 'steps', mvp: 'Anthony', pact: null, fed: true, time: '19h 05m' } }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    await tap(page);
+    const v = await view(page);
+    expect(v.eyebrow.toUpperCase()).toBe('CO-OP HUNT · RANK E');
+    expect(v.stamp.toUpperCase()).toBe('BEATEN TOGETHER');
+    expect(v.sub.toUpperCase()).toBe('DONE IN 19H 05M');
+    expect(v.rows.length).toBe(3);
+    expect(v.rows[1]).toMatch(/Richie ?You ?11,840 steps/i);
+    expect(v.mvp).toMatch(/Anthony carried the hunt/);
+    expect(v.chips).toMatch(/The hunger is fed · 2× souls/);
+    expect(v.souls).toMatch(/\+360/);
+  });
+
+  test('co-op defeat: SURVIVES, the % of the goal, the shortfall, Call again', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_twin_maw', bossName: 'The Twin Maw', rank: 'E', hunt_started_at: 'coop-t1',
+      coop: { party: [{ n: 'Anthony', s: 11300, f: 0 }, { n: 'Richie', s: 9610, f: 0, you: true }], goal: 24000, fgoal: 0, unit: 'steps', mvp: null, pact: null, fed: false, time: '' } }));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('defeat');
+    await tap(page);
+    const v = await view(page);
+    expect(v.stamp.toUpperCase()).toBe('SURVIVES');
+    expect(v.pct).toMatch(/^87 ?%/);
+    expect(v.text).toMatch(/3,090 short/i);
+    expect(v.call).toBe('Call again');
+    expect(v.mood).toBe('So close it hurts.');
+    // Once per hunt: the same hunt never queues twice.
+    await page.locator('#boss-result-overlay [data-hr-later]').click();
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+    const again = await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_twin_maw', bossName: 'The Twin Maw', rank: 'E', hunt_started_at: 'coop-t1', coop: null }));
+    expect(again).toBe(false);
+  });
+
+  test('the co-op builder reads a real hunt: party order, goal, time, the far-off mood', async ({ page }) => {
+    await seed(page);
+    const d = await page.evaluate(() => (window as any).__hr.coop({ boss_id: 'the_twin_maw', goal_steps: 30000,
+      party: [{ user_id: 'u-a', alias: 'anthony', steps: 6120 }, { user_id: 'u-k', alias: 'kai', steps: 2180 }],
+      starts_at: new Date(Date.now() - (14 * 60 + 22) * 60000).toISOString(), resolved_at: new Date().toISOString() }, {}));
+    expect(d.party.map((p: any) => p.s)).toEqual([6120, 2180]);
+    expect(d.party.filter((p: any) => p.you).length).toBe(1);
+    expect(d.goal).toBe(30000);
+    expect(d.time).toBe('14h 22m');
+  });
+
+  test('none of the four screens ever says fell / felled', async ({ page }) => {
+    await seed(page);
+    const texts: string[] = [];
+    await page.evaluate(() => (window as any).__previewHuntResults());
+    for (let i = 0; i < 4; i++) {
+      await expect.poll(() => view(page).then((v) => v.shown && v.kind), { timeout: 5_000 }).toBeTruthy();
+      await tap(page);
+      const v = await view(page);
+      texts.push(v.text);
+      if (v.kind === 'defeat') await page.locator('#boss-result-overlay [data-hr-later]').click(); else await tap(page);
+      await page.waitForTimeout(700);
+    }
+    expect(texts.length).toBe(4);
+    texts.forEach((t) => expect(t).not.toMatch(/\bfell(ed)?\b/i));
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+  });
+
+  test('the owner sees the preview row; others do not', async ({ page }) => {
+    await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'owner' } }) });
+    await page.locator('#settings-btn').click();
+    await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-hunts')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
   });
 });
