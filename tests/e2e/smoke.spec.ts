@@ -5688,7 +5688,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBeNull();
   });
 
-  test('the badge: the list’s live top three wear MVP / 2ND / 3RD once the gate has fallen', async ({ page }) => {
+  test('the badge: the list’s live top three wear MVP / 2ND / 3RD', async ({ page }) => {
     await seed(page, { kill: KILL() });
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
@@ -5701,12 +5701,15 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
       ['Zynfandel', '1', 'MVP'], ['Mara', '2', '2ND'], ['Anthony', '3', '3RD'], ['Ryan', null, ''], ['Galilea', null, '']]);
   });
 
-  test('no badges while the gate still stands', async ({ page }) => {
+  test('W977: a running MVP — the badges show all week, even while the gate still stands', async ({ page }) => {
     await seed(page, { status: 'open', kill: null });
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
     await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
-    expect(await page.locator('.wg2-rank .wg-mvpb').count()).toBe(0);
+    const badges = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-rank .wg2-ri'), (r: any) => r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null));
+    expect(badges.slice(0, 5)).toEqual(['1', '2', '3', null, null]);
+    // Your own pinned row below the list never wears one.
+    expect(await page.locator('.wg2-ri--me .wg-mvpb').count()).toBe(0);
   });
 
   test('the old kill ceremony is gone', async ({ page }) => {
