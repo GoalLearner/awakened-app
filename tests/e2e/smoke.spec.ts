@@ -6007,6 +6007,24 @@ test.describe('BH · Hunt results (W980)', () => {
     await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-hunts')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
   });
 
+  // W982 — a board mod gets every preview row; the new-hunter sandbox stays the owner's.
+  test('a mod sees the preview rows, never Test as a new hunter', async ({ page }) => {
+    await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'mod' } }) });
+    await page.locator('#settings-btn').click();
+    const ids = ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts'];
+    await expect.poll(() => page.evaluate((xs) => xs.every((x) => !document.getElementById(x)!.classList.contains('hidden')), ids), { timeout: 6_000 }).toBe(true);
+    expect(await page.evaluate(() => document.getElementById('settings-test-hunter')!.classList.contains('hidden'))).toBe(true);
+  });
+
+  test('a regular hunter sees none of them', async ({ page }) => {
+    await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: null } }) });
+    await page.locator('#settings-btn').click();
+    await page.waitForTimeout(800);
+    const shown = await page.evaluate(() => ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-test-hunter']
+      .filter((x) => !document.getElementById(x)!.classList.contains('hidden')));
+    expect(shown).toEqual([]);
+  });
+
   // W981 — the old card is gone, not hidden: no markup, no rules, no wiring.
   test('the old Boss Defeated card no longer exists anywhere', async ({ page }) => {
     await seed(page);
