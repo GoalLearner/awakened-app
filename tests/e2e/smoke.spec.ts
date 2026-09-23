@@ -5731,3 +5731,124 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBeNull();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// BG. W978 — TODAY'S BRIEFING v2 (Claude Design handoff 30): one screen + a seal
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('BG · Today’s Briefing v2 (W978)', () => {
+  // The app's `today` is Pacific (getPTDate) — seed in Pacific time (the 5 PM PST trap).
+  const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const VOWS = [
+    { id: 'tb-phone', name: 'No phone or social media after waking', emoji: '•', difficulty: 'medium', type: 'quit' },
+    { id: 'tb-med', name: 'Meditate & Breathwork', emoji: '•', difficulty: 'medium', type: 'build' },
+    { id: 'tb-wake', name: 'Wake up at consistent time', emoji: '•', difficulty: 'medium', type: 'build' },
+    { id: 'tb-read', name: 'Read', emoji: '•', difficulty: 'easy', type: 'build' },
+  ];
+  async function seed(page: Page, comp: Record<string, string[]>, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([hs, c, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w978')) return;
+        sessionStorage.setItem('__w978', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        localStorage.setItem('hb_completions', JSON.stringify(c));
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [VOWS, comp, extra || {}] as [any[], Record<string, string[]>, Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const view = (page: Page) => page.evaluate(() => {
+    const r = document.getElementById('tb-root')!;
+    const t = (s: string) => (r.querySelector(s)?.textContent || '').replace(/\s+/g, ' ').trim();
+    return { shown: !document.getElementById('daily-insight-overlay')!.classList.contains('hidden'),
+      date: t('.tb-date'), day: t('.tb-dayn'), streak: t('.tb-streak'), yest: t('.tb-yest'), big: t('.tb-big'), xp: t('.tb-xp'),
+      climb: [].map.call(r.querySelectorAll('.tb-clt span'), (x: any) => x.textContent.trim()).join(' | '), chips: [].map.call(r.querySelectorAll('.tb-chip'), (c: any) => c.textContent.trim()), segs: r.querySelectorAll('.tb-seg').length,
+      world: t('.tb-world'), label: ((r.querySelector('.tb-rl') as HTMLElement)?.innerText || '').trim(), stamped: r.classList.contains('tb-stamped'), text: r.textContent || '' };
+  });
+  async function holdSeal(page: Page, ms: number) {
+    const box = (await page.locator('#tb-root .tb-seal').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(ms); await page.mouse.up();
+  }
+
+  test('one screen: the day, yesterday in a line, today as a ring, the climb, three chips — no vow list, no dead tile', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone', 'tb-med'], [pt(2)]: ['tb-read'] });
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await page.waitForTimeout(1600);
+    const v = await view(page);
+    expect(v.shown).toBe(true);
+    expect(v.date).toMatch(/^(SUN|MON|TUE|WED|THU|FRI|SAT) · [A-Z]{3} \d{1,2}$/);
+    expect(v.day).toMatch(/^Day \d+$/);
+    expect(v.streak).toBe('2-day streak');
+    expect(v.yest).toBe('Yesterday: 2 of 4 vows kept.');
+    expect(v.big).toBe('4');
+    expect(v.segs).toBe(4);
+    expect(v.xp).toBe('+10 XP on the table');   // 3 medium (+3) + 1 easy (+1)
+    expect(v.climb).toMatch(/^Rank [A-Z+]+ \| (\d[\d,]* XP to [A-Z+]+ I{1,3}|The summit of the ranks)$/i);
+    expect(v.chips.length).toBeGreaterThan(0);
+    expect(v.chips.length).toBeLessThanOrEqual(3);
+    expect(v.text).not.toMatch(/VERIFIED BY SYSTEM|OBJECTIVES|LOCK IN/i);
+    expect(v.label).toMatch(/^HOLD TO BEGIN/i);
+  });
+
+  test('the ritual: letting go early drains back with no message; a full hold stamps the day and the briefing leaves', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone'] });
+    await page.evaluate(() => { localStorage.removeItem('hb_daily_insight_last_shown'); (window as any).__tb.show({}); });
+    await page.waitForTimeout(1500);
+    await holdSeal(page, 350);
+    await page.waitForTimeout(400);
+    const early = await page.evaluate(() => ({ p: getComputedStyle(document.querySelector('#tb-root .tb-seal')!).getPropertyValue('--p').trim(), stamped: document.getElementById('tb-root')!.classList.contains('tb-stamped') }));
+    expect(early.stamped).toBe(false);
+    expect(Number(early.p || 0)).toBeLessThan(0.02);
+    await holdSeal(page, 1150);
+    await expect.poll(() => view(page).then((x) => x.stamped), { timeout: 2_000 }).toBe(true);
+    expect((await view(page)).label).toBe('The day is yours.');
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
+    const today = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+    expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(today);
+  });
+
+  test('tap a chip to lead: that vow tops today’s list (saved order untouched); tap again lets it go', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone'] });
+    await page.evaluate(() => (window as any).__tb.show({}));
+    await page.waitForTimeout(1500);
+    const chips = page.locator('#tb-root .tb-chip');
+    const last = chips.last();
+    const leadName = (await last.textContent())!.trim();
+    await last.click();
+    await expect(last).toHaveClass(/tb-on/);
+    expect(await page.locator('#tb-root .tb-seg.tb-lead').count()).toBe(1);
+    await holdSeal(page, 1150);
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
+    await page.locator('#tab-habits').click();
+    const first = await page.evaluate(() => { const n = document.querySelector('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name'); return (n?.textContent || '').trim(); });
+    expect(leadName.startsWith(first) || first.startsWith(leadName)).toBe(true);
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.id));
+    expect(stored).toEqual(['tb-phone', 'tb-med', 'tb-wake', 'tb-read']);   // the saved order never moves
+  });
+
+  test('yesterday is one line and never shaming', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone', 'tb-med', 'tb-wake', 'tb-read'] });
+    expect((await page.evaluate(() => (window as any).__tb.data())).yest).toBe('Yesterday: <b>a perfect day.</b> All 4 kept.');
+    await page.evaluate((d) => { const c = (window as any).Leaderboard.__test_getCompletions(); Object.keys(c).forEach((k) => delete c[k]); c[d] = ['tb-read']; }, pt(2));
+    expect((await page.evaluate(() => (window as any).__tb.data())).yest).toBe('The streak rests. It starts again with this seal.');
+    await page.evaluate(() => { const c = (window as any).Leaderboard.__test_getCompletions(); Object.keys(c).forEach((k) => delete c[k]); });
+    expect((await page.evaluate(() => (window as any).__tb.data())).yest).toMatch(/^(Yesterday went quiet\. The gate is still open\.|Your first full day\. Four vows to begin\.)$/);
+  });
+
+  test('the owner’s Settings row previews it and saves nothing', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone'] }, { hb_board_cache_v1: JSON.stringify({ me: { role: 'owner' } }) });
+    await page.locator('#settings-btn').click();
+    await expect.poll(() => page.evaluate(() => !document.getElementById('settings-preview-briefing')!.classList.contains('hidden')), { timeout: 6_000 }).toBe(true);
+    const before = await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'));
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await page.waitForTimeout(1500);
+    await page.locator('#tb-root .tb-chip').first().click();
+    await holdSeal(page, 1150);
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
+    expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(before);
+    expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();
+  });
+});

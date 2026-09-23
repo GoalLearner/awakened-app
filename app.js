@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w977'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w978'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -34135,7 +34135,7 @@
     // (the owner's first test, 2026-09-13). Same in-place, order-preserving
     // partition; idempotent with the save-time one.
     try { sortHabitsAutoVerifyFirst(habits); } catch (_) {}
-    const todayHabits = habits.filter(isScheduledToday);
+    const todayHabits = _tbLeadFirst(habits.filter(isScheduledToday));   // W978 — the vow chosen on today's briefing leads
     updateMorningButtonVisibility();
     updateLockedInButtonVisibility();
     // W584 — jump-program guide row under the vows (visibility + wire-once).
@@ -36128,6 +36128,8 @@
     if (rateRow) rateRow.classList.toggle('hidden', !_testHunterAllowed());
     const wgmRow = document.getElementById('settings-preview-wgmvp');   // W975 — same owner gate
     if (wgmRow) wgmRow.classList.toggle('hidden', !_testHunterAllowed());
+    const tbRow = document.getElementById('settings-preview-briefing');   // W978 — same owner gate
+    if (tbRow) tbRow.classList.toggle('hidden', !_testHunterAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -59317,199 +59319,266 @@
     return true;
   }
 
-  // Composes the "{N} OBJECTIVES. {M} SYSTEM-VERIFIED. {K} ON YOU."
-  // status line. Pure function of the user's active habits + current
-  // HealthKit availability/grant/pause state.
-  function composeBriefingStatusLine() {
-    // v3 Phase 1z.283 W172 — count ACTIVE vows only. Soft-archived
-    // vows must not leak into the briefing's objective count.
-    const activeHabits = (Array.isArray(habits) ? habits.filter(_isActiveHabit) : []);
-    const total = activeHabits.length;
-    if (total === 0) return '';  // card shouldn't render anyway, defensive
-    const auto = activeHabits.filter(canAutoVerify).length;
-    const manual = total - auto;
-    if (auto === 0)         return total + ' OBJECTIVES. ALL ON YOU.';
-    if (auto === total)     return total + ' OBJECTIVES. ALL SYSTEM-VERIFIED.';
-    return total + ' OBJECTIVES. ' + auto + ' SYSTEM-VERIFIED. ' + manual + ' ON YOU.';
+  // ── W978 · TODAY'S BRIEFING v2 (Claude Design handoff 30) ───────────────
+  // Replaces the v1.1.5/1z.19 slate (every vow listed, three count tiles, a
+  // LOCK IN at the bottom of a scroll). Owner 2026-09-23: "simple, short and
+  // sweet, but interactive and fun" — the first thing a hunter sees each day.
+  // One screen, no scroll: the date + day, the streak, yesterday in one line,
+  // today as a ring (one segment per vow), the climb to the next division,
+  // the first three vows as chips (tap one to LEAD: it tops today's list),
+  // one line from the world, and the ritual — press and HOLD the seal ~1s:
+  // it fills, stamps the day number, and the briefing leaves. Letting go early
+  // just drains it back; there is no failure state and no other way out.
+  // Nothing here seals a vow or changes XP. Classes are tb- prefixed (the
+  // mock's .seal .chip .ring .bar collide app-wide).
+  const TB_LEAD_KEY = 'hb_brief_lead_v1';   // { date, id }: today's first vow, picked on the briefing
+  let _tbLive = null;
+
+  /** Today's chosen first vow leads the Habits list (display only — the saved order never moves). */
+  function _tbLeadId() {
+    try { const o = JSON.parse(localStorage.getItem(TB_LEAD_KEY) || 'null'); return (o && o.date === today) ? o.id : null; } catch (_) { return null; }
+  }
+  function _tbLeadFirst(arr) {
+    const id = _tbLeadId(); if (!id || !Array.isArray(arr)) return arr;
+    const i = arr.findIndex(function (h) { return h && h.id === id; });
+    if (i <= 0) return arr;
+    const a = arr.slice(); a.unshift(a.splice(i, 1)[0]); return a;
+  }
+  function _tbSealsOn(d, ids) {
+    const list = (completions && Array.isArray(completions[d])) ? completions[d] : [];
+    return ids ? list.filter(function (x) { return ids.has(x); }).length : list.length;
+  }
+  /** Consecutive days with a sealed vow, counting back from yesterday (and today once it has one). */
+  function _tbStreak() {
+    let d = _tbSealsOn(today) ? today : prevDay(today), n = 0;
+    while (n < 3650 && _tbSealsOn(d)) { n++; d = prevDay(d); }
+    return n;
+  }
+  function _tbYesterday(activeHabits, dayN, vowsToday) {
+    const y = prevDay(today);
+    const sched = activeHabits.filter(function (h) { try { return isHabitScheduledOn(h, y); } catch (_) { return true; } });
+    const ids = new Set(sched.map(function (h) { return h.id; }));
+    const kept = _tbSealsOn(y, ids), total = sched.length;
+    if (!kept) {
+      if (_tbSealsOn(prevDay(y))) return 'The streak rests. It starts again with this seal.';
+      if (dayN != null && dayN <= 2) return 'Your first full day. ' + (vowsToday === 1 ? 'One vow' : _tbWord(vowsToday) + ' vows') + ' to begin.';
+      return 'Yesterday went quiet. The gate is still open.';
+    }
+    if (total > 0 && kept >= total) return 'Yesterday: <b>a perfect day.</b> All ' + total + ' kept.';
+    if (total > 0 && kept / total < 0.25) return 'Yesterday: <b>' + kept + ' of ' + total + '</b> kept. Today is a new count.';
+    return 'Yesterday: <b>' + kept + ' of ' + Math.max(total, kept) + '</b> vows kept.';
+  }
+  function _tbWord(n) { return ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][n] || String(n); }
+  function _tbData() {
+    const active = (Array.isArray(habits) ? habits.filter(_isActiveHabit) : []);
+    const todays = active.filter(isScheduledToday);
+    const xp = todays.reduce(function (a, h) { return a + ((DIFFICULTY[h.difficulty] || DIFFICULTY.easy).pts || 0); }, 0);
+    const dt = new Date();
+    const dayN = (typeof getDaysSinceOrigin === 'function') ? getDaysSinceOrigin() : null;
+    let info = null; try { info = getRankDivisionInfo(totalPoints); } catch (_) {}
+    const done = new Set((completions && completions[today]) || []);
+    const open = todays.filter(function (h) { return !done.has(h.id); });
+    let morning = open.filter(function (h) { try { return getHabitTimeOfDay(h) === 'morning'; } catch (_) { return false; } });
+    const chipsFromMorning = morning.length > 0;
+    const chipSrc = (chipsFromMorning ? morning : open).slice(0, 3);
+    let world = '';
+    try {
+      const c = (typeof _wgCache === 'function') ? _wgCache() : null;
+      if (c && c.hp) world = c.status === 'slain' ? 'The Worldgate has <b>fallen</b> this week' : 'The Worldgate is <b>' + Math.floor(_wgPct(c)) + '%</b> down';
+    } catch (_) {}
+    return {
+      date: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dt.getDay()] + ' · ' + ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dt.getMonth()] + ' ' + dt.getDate(),
+      day: dayN != null ? dayN : 1,
+      streak: _tbStreak(),
+      yest: _tbYesterday(active, dayN, todays.length),
+      vows: todays.length, xp: xp,
+      rank: info ? info.majorRank : 'E',
+      isMax: !!(info && info.isMax),
+      next: info && info.nextDivisionLabel ? info.nextDivisionLabel : '',
+      to: info ? Math.max(0, Math.ceil(Number(info.xpToNextDivision) || 0)) : 0,
+      frac: info ? Math.max(0, Math.min(1, Number(info.divisionProgress) || 0)) : 0,
+      chips: chipSrc.map(function (h) { let n = h.name; try { n = habitDisplayParts(h).base || h.name; } catch (_) {} return { id: h.id, name: n }; }),
+      chipLabel: chipsFromMorning ? 'First of the morning' : 'First of the day',
+      lead: _tbLeadId(),
+      world: world,
+    };
   }
 
-  // Build a single habit row for the briefing slate. Pure HTML
-  // string -- caller injects into the appropriate group container.
-  // Layout: [stat-color dot] [name . goal + verify badge] [+XP]
-  //
-  // v3 Phase 1z.19: dot now uses stat-primary color (per Minimal
-  // Premium Polish spec) via inline `background-color: <hex>` so
-  // any of the 6 stats (red / pink / blue / yellow / orange / gold)
-  // map directly without inflating the CSS bank. The legacy
-  // .di-row-dot--{easy|medium|hard|legendary} difficulty classes
-  // are still applied for backwards compatibility -- the inline
-  // background overrides them when the premium modifier is active,
-  // and they stay readable in any rollback path.
-  function buildBriefingRow(habit) {
-    const diff = (DIFFICULTY[habit.difficulty] || DIFFICULTY.easy);
-    const parts = (typeof habitDisplayParts === 'function')
-      ? habitDisplayParts(habit) : { base: habit.name, goal: null };
-    const display = parts.goal ? (parts.base + ' . ' + parts.goal) : parts.base;
-    const statColor = (typeof getHabitStatColor === 'function')
-      ? getHabitStatColor(habit) : null;
-    const dotStyle = statColor ? ' style="background:' + statColor + ';box-shadow:0 0 4px ' + statColor + '"' : '';
-    const verifyTag = canAutoVerify(habit)
-      ? (
-          '<span class="di-row-verify briefing-row-verify">' +
-            '<svg class="briefing-row-verify-icon" width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">' +
-              '<circle cx="4.5" cy="4.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/>' +
-              '<path d="M3 4.5l1.2 1.2L6 3.8" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-            '</svg>' +
-            '<span>Apple Health verifies</span>' +
-          '</span>'
-        )
-      : '';
-    return (
-      '<div class="di-row briefing-row">' +
-        '<span class="di-row-dot briefing-row-dot di-row-dot--' + (habit.difficulty || 'easy') + '"' + dotStyle + '></span>' +
-        '<div class="di-row-main briefing-row-main">' +
-          '<span class="di-row-name briefing-row-name">' + esc(display) + '</span>' +
-          verifyTag +
-        '</div>' +
-        '<span class="di-row-xp briefing-row-xp">+' + diff.pts + '</span>' +
-      '</div>'
-    );
+  // Sound: the rank_fanfare voice (sine, 12ms attack, exponential decay).
+  function _tbTone(f, at, dur, g) {
+    try {
+      if (typeof soundEnabled !== 'undefined' && !soundEnabled) return;
+      const c = _getSfxCtx(); if (!c) return;
+      try { if (c.state === 'suspended') c.resume(); } catch (_) {}
+      const t = c.currentTime + (at || 0), o = c.createOscillator(), v = c.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(g, t + 0.012); v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(v); v.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+    } catch (_) {}
   }
+  function _tbHap(k) {
+    try {
+      const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (k === 'selection') { if (H && typeof H.selectionChanged === 'function') { H.selectionChanged(); return; } try { if (navigator.vibrate) navigator.vibrate(6); } catch (_) {} return; }
+    } catch (_) {}
+    try { _hapticTick(k === 'heavy' ? 'HEAVY' : k === 'medium' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
+  }
+  const _TB_FLAME = '<svg width="12" height="15" viewBox="0 0 12 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M6 1c.5 2.6 4.5 4.3 4.5 8.1A4.5 4.5 0 0 1 1.5 9.1C1.5 6.6 3.4 5.6 3.8 3.6c1 .9 1.4 2 1.3 3.2C6.4 5.5 6.6 3.4 6 1z"/></svg>';
+  const _TB_GATE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" aria-hidden="true"><path d="M3 18V8a7 7 0 0 1 14 0v10M6.5 18V9a3.5 3.5 0 0 1 7 0v9M1.5 18h17"/><path d="M10 5.5l-.8 2.2 1.4 1.2-.9 2.1" stroke="#f5b842"/></svg>';
+  function _tbRing(n, leadIdx) {
+    if (n <= 0) return '<svg viewBox="0 0 200 200"><circle class="tb-seg" cx="100" cy="100" r="88"></circle></svg>';
+    const C = 2 * Math.PI * 88, g = n > 20 ? 2.2 : 7, seg = C * (360 / n - g) / 360;
+    let s = '';
+    for (let i = 0; i < n; i++) s += '<circle class="tb-seg' + (i < 3 ? ' tb-am' : '') + (i === leadIdx ? ' tb-lead' : '') + '" data-i="' + i + '" cx="100" cy="100" r="88" stroke-dasharray="' + seg.toFixed(2) + ' ' + C.toFixed(2) + '" transform="rotate(' + (-90 + i * 360 / n + g / 2).toFixed(2) + ' 100 100)" style="--d:' + (320 + Math.round(i * 600 / n)) + 'ms"></circle>';
+    return '<svg viewBox="0 0 200 200" aria-hidden="true">' + s + '</svg>';
+  }
+  function _tbSealSvg() {
+    let rays = '';
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; rays += '<line x1="' + (60 + Math.cos(a) * 30).toFixed(1) + '" y1="' + (60 + Math.sin(a) * 30).toFixed(1) + '" x2="' + (60 + Math.cos(a) * 38).toFixed(1) + '" y2="' + (60 + Math.sin(a) * 38).toFixed(1) + '"/>'; }
+    return '<div class="tb-halo"></div><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="none" stroke="rgba(245,184,66,.16)" stroke-width="3.2"></circle><circle class="tb-prog" cx="60" cy="60" r="56" transform="rotate(-90 60 60)"></circle>' +
+      '<g class="tb-inner"><circle cx="60" cy="60" r="46" fill="#13132a" stroke="rgba(245,184,66,.45)" stroke-width="1"></circle><circle cx="60" cy="60" r="41" fill="none" stroke="rgba(245,184,66,.18)" stroke-width="1"></circle>' +
+      '<g class="tb-sig" fill="none" stroke="#f5b842" stroke-width="1.2" stroke-linejoin="round"><rect x="46" y="46" width="28" height="28"></rect><rect x="46" y="46" width="28" height="28" transform="rotate(45 60 60)"></rect><circle cx="60" cy="60" r="8"></circle><g stroke-width="1" opacity=".6">' + rays + '</g></g></g></svg>' +
+      '<div class="tb-ink"></div><div class="tb-num"><span class="tb-mono">Day</span><b></b></div>';
+  }
+  function _tbHtml(d) {
+    const leadIdx = d.lead ? d.chips.findIndex(function (c) { return c.id === d.lead; }) : -1;
+    const climb = d.isMax
+      ? '<div class="tb-clt tb-mono"><span>Rank ' + esc(d.rank) + '</span><span class="tb-to">The summit of the ranks</span></div><div class="tb-bar"><i data-frac="1"></i></div>'
+      : '<div class="tb-clt tb-mono"><span>Rank ' + esc(d.rank) + '</span><span class="tb-to">' + _wgmFmtN(d.to) + ' XP to ' + esc(d.next) + '</span></div><div class="tb-bar"><i data-frac="' + d.frac + '"></i></div>';
+    return '<div class="tb-sheet">' +
+      '<div class="tb-head"><div class="tb-e" style="--d:80ms"><div class="tb-mono tb-date">' + esc(d.date) + '</div><div class="tb-dayn">Day <em>' + d.day + '</em></div></div>' +
+      '<div class="tb-streak tb-mono tb-e' + (d.streak ? '' : ' tb-none') + '" style="--d:160ms">' + (d.streak ? _TB_FLAME + d.streak + '-day streak' : 'Streak begins today') + '</div></div>' +
+      '<p class="tb-yest tb-e" style="--d:220ms">' + d.yest + '</p>' +
+      '<div class="tb-ringwrap">' + _tbRing(d.vows, leadIdx) + '<div class="tb-ringc"><div class="tb-big tb-e" style="--d:320ms">0</div><div class="tb-mono tb-e" style="--d:380ms">' + (d.vows === 1 ? 'vow today' : 'vows today') + '</div><div class="tb-xp tb-e" style="--d:620ms">+' + d.xp + ' XP on the table</div></div></div>' +
+      '<div class="tb-climb tb-e" style="--d:700ms"><div class="tb-hex"><svg viewBox="0 0 44 48" fill="none" aria-hidden="true"><path d="M22 2l18 10v24L22 46 4 36V12z" stroke="#f5b842" stroke-width="1.4" fill="#13132a"></path><path d="M22 7l14 8v18l-14 8-14-8V15z" stroke="rgba(245,184,66,.25)"></path></svg><b>' + esc(d.rank) + '</b></div><div class="tb-cl">' + climb + '</div></div>' +
+      (d.chips.length ? '<div class="tb-chipsl tb-mono tb-e" style="--d:880ms"><span>' + esc(d.chipLabel) + '</span><span>Tap to lead</span></div>' +
+        '<div class="tb-chips">' + d.chips.map(function (c, i) { return '<div class="tb-chip tb-e' + (c.id === d.lead ? ' tb-on' : '') + '" role="button" tabindex="0" data-i="' + i + '" data-id="' + esc(c.id) + '" style="--d:' + (900 + i * 70) + 'ms"><i></i>' + esc(c.name) + '</div>'; }).join('') + '</div>' : '') +
+      (d.world ? '<div class="tb-world tb-e" style="--d:1120ms">' + _TB_GATE + '<span>' + d.world + '</span></div>' : '') +
+      '<div class="tb-ritual tb-sealin"><button type="button" class="tb-seal" aria-label="Hold to begin the day">' + _tbSealSvg() + '</button><div class="tb-rl"><span class="tb-mono">Hold to begin</span><span class="tb-done">The day is yours.</span></div></div>' +
+      '</div>';
+  }
+  function _wgmFmtN(n) { try { return Math.round(Number(n) || 0).toLocaleString('en-US'); } catch (_) { return String(n); } }
 
+  /** Render + run the briefing. opts.preview: the owner's Settings row (nothing saved). */
+  function _tbShow(opts) {
+    opts = opts || {};
+    const sheet = document.getElementById('daily-insight-sheet');
+    const overlay = document.getElementById('daily-insight-overlay');
+    const root = document.getElementById('tb-root');
+    if (!sheet || !overlay || !root) return false;
+    try { if (_tbLive) _tbLive.stop(); } catch (_) {}
+    const d = _tbData();
+    let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    root.className = 'tb-frame';
+    root.innerHTML = _tbHtml(d);
+    root.querySelector('.tb-num b').textContent = String(d.day);
+    overlay.classList.remove('hidden'); sheet.classList.remove('hidden');
+    const timers = []; let dead = false;
+    const at = function (ms, fn) { timers.push(setTimeout(function () { if (!dead) { try { fn(); } catch (_) {} } }, ms)); };
+    const big = root.querySelector('.tb-big'), bar = root.querySelector('.tb-bar i'), seal = root.querySelector('.tb-seal');
+    void root.offsetWidth; root.classList.add('tb-enter');
+    const frac = Number(bar.getAttribute('data-frac')) || 0;
+    if (RM) { big.textContent = d.vows; bar.style.width = (frac * 100) + '%'; }
+    else {
+      const t0 = performance.now() + 320;
+      (function tick(t) { if (dead) return; const k = Math.min(1, Math.max(0, (t - t0) / 700)); big.textContent = Math.round(d.vows * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0);
+      at(700, function () { bar.style.width = (frac * 100) + '%'; });
+    }
+    at(1850, function () { root.classList.add('tb-breathe'); });
+    let H = null; try { H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; if (H && typeof H.selectionStart === 'function') H.selectionStart(); } catch (_) {}
+
+    // Chips: tap one to LEAD today (tap again to let it go).
+    let done = false;
+    root.querySelectorAll('.tb-chip').forEach(function (c) {
+      const pick = function () {
+        if (done) return;
+        const on = !c.classList.contains('tb-on');
+        root.querySelectorAll('.tb-chip').forEach(function (x) { x.classList.remove('tb-on'); });
+        root.querySelectorAll('.tb-seg').forEach(function (x) { x.classList.remove('tb-lead'); });
+        if (on) { c.classList.add('tb-on'); const s = root.querySelector('.tb-seg[data-i="' + c.getAttribute('data-i') + '"]'); if (s) s.classList.add('tb-lead'); }
+        if (!opts.preview) {
+          try { if (on) localStorage.setItem(TB_LEAD_KEY, JSON.stringify({ date: today, id: c.getAttribute('data-id') })); else localStorage.removeItem(TB_LEAD_KEY); } catch (_) {}
+        }
+        _tbHap('selection'); _tbTone(880, 0, 0.12, 0.05);
+      };
+      c.addEventListener('click', pick);
+      c.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    });
+
+    // The ritual: hold ~1s. Early release drains back over 250ms, no message.
+    let p = 0, raf = 0, t0 = 0, held = false, ticks = 0;
+    const set = function (v) { p = v; seal.style.setProperty('--p', v); };
+    const stamp = function () {
+      done = true; held = false;
+      root.classList.remove('tb-holding'); root.classList.add('tb-stamped', 'tb-anim');
+      _tbHap('heavy');
+      [392, 523.25, 659.25, 783.99].forEach(function (fr, i) { _tbTone(fr, i * 0.06, 1.3, 0.09); });
+      _tbTone(98, 0, 0.5, 0.12);
+      at(1300, function () { root.classList.add('tb-leaving'); });
+      at(1750, function () { close(); });
+    };
+    const down = function (e) {
+      if (done || held) return;
+      if (e && e.preventDefault) e.preventDefault();
+      held = true; ticks = 0; root.classList.add('tb-holding'); _tbHap('light'); _tbTone(220, 0, 0.18, 0.08);
+      t0 = performance.now() - p * 1000; cancelAnimationFrame(raf);
+      (function step(t) {
+        if (!held || dead) return;
+        const v = Math.min(1, (t - t0) / 1000); set(v);
+        if ((ticks < 1 && v > 0.33) || (ticks < 2 && v > 0.66)) { ticks++; _tbHap('selection'); }
+        if (v >= 1) return stamp();
+        raf = requestAnimationFrame(step);
+      })(performance.now());
+    };
+    const up = function () {
+      if (!held || done) return;
+      held = false; root.classList.remove('tb-holding'); cancelAnimationFrame(raf);
+      const from = p, s = performance.now();
+      (function back(t) { if (dead) return; const k = Math.min(1, (t - s) / 250); set(from * (1 - (1 - Math.pow(1 - k, 2)))); if (k < 1 && !held) raf = requestAnimationFrame(back); })(s);
+    };
+    seal.addEventListener('pointerdown', function (e) { try { seal.setPointerCapture(e.pointerId); } catch (_) {} down(e); });
+    seal.addEventListener('pointerup', up); seal.addEventListener('pointercancel', up); seal.addEventListener('lostpointercapture', up);
+    seal.addEventListener('keydown', function (e) { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); down(e); } });
+    seal.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') up(); });
+    seal.addEventListener('contextmenu', function (e) { e.preventDefault(); });   // iOS long-press menu
+
+    const stop = function () {
+      dead = true; _tbLive = null; timers.forEach(clearTimeout); cancelAnimationFrame(raf);
+      try { if (H && typeof H.selectionEnd === 'function') H.selectionEnd(); } catch (_) {}
+    };
+    const close = function () {
+      stop();
+      if (opts.preview) { sheet.classList.add('hidden'); overlay.classList.add('hidden'); root.innerHTML = ''; }
+      else dismissDailyInsight();
+      try { if (_tbLeadId()) renderHabits(); } catch (_) {}   // the chosen vow takes the top of today's list
+    };
+    _tbLive = { stop: stop };
+    return true;
+  }
   function showDailyInsight() {
     if (!shouldShowDailyInsight()) return;
-
-    const sheet   = document.getElementById('daily-insight-sheet');
-    const overlay = document.getElementById('daily-insight-overlay');
-    if (!sheet || !overlay) return;
-
-    // ── Header: "THU · MAY 7 · DAY 11" + "TODAY'S BRIEFING" ──
-    const headerEl = document.getElementById('di-header-line');
-    if (headerEl) {
-      const d = new Date();
-      const days   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      const dayCount = getDaysSinceOrigin();
-      let line = days[d.getDay()] + ' · ' + months[d.getMonth()] + ' ' + d.getDate();
-      if (dayCount != null) line += ' · DAY ' + dayCount;
-      headerEl.textContent = line;
-    }
-
-    // ── 3-segment summary: total / verified / manual ──
-    // v3 Phase 1z.19. Replaces the legacy single-pill #di-status-line
-    // (kept in markup, hidden via CSS) with three discrete number tiles.
-    // composeBriefingStatusLine() is still called below as a defensive
-    // write to #di-status-line so any future consumer of the legacy
-    // composed string keeps working.
-    // v3 Phase 1z.283 W172 — ACTIVE vows only (mirrors
-    // composeBriefingStatusLine). Archived vows are excluded from
-    // every tile + the slate below.
-    const activeHabits = (Array.isArray(habits) ? habits.filter(_isActiveHabit) : []);
-    const total = activeHabits.length;
-    const autoCount = total === 0 ? 0 : activeHabits.filter(canAutoVerify).length;
-    const manualCount = Math.max(0, total - autoCount);
-    const totalEl    = document.getElementById('di-summary-total');
-    const verifiedEl = document.getElementById('di-summary-verified');
-    const manualEl   = document.getElementById('di-summary-manual');
-    if (totalEl)    totalEl.textContent    = total;
-    if (verifiedEl) verifiedEl.textContent = autoCount;
-    if (manualEl)   manualEl.textContent   = manualCount;
-
-    const statusEl = document.getElementById('di-status-line');
-    if (statusEl) statusEl.textContent = composeBriefingStatusLine();
-
-    // ── Habit slate, grouped by time of day ──
-    // Bucket the user's active habits, then render the three groups
-    // (morning / day / evening) in fixed order. Empty groups skipped.
-    const buckets = { morning: [], day: [], evening: [] };
-    // v3 Phase 1z.283 W172 — iterate ACTIVE vows only so soft-archived
-    // habits never appear in the briefing slate.
-    activeHabits.forEach(h => {
-      const bucket = getHabitTimeOfDay(h);
-      (buckets[bucket] || buckets.day).push(h);
-    });
-    const groupConfig = [
-      { id: 'morning', label: 'MORNING' },
-      { id: 'day',     label: 'DAY'     },
-      { id: 'evening', label: 'EVENING' },
-    ];
-    const slateEl = document.getElementById('di-slate');
-    if (slateEl) {
-      // v3 Phase 1z.19 -- section header now carries a small gold sigil
-      // dot + a horizontal rule that flexes to the right edge, and the
-      // row list is wrapped in a bordered panel (.briefing-section-panel)
-      // for the grouped-card treatment.
-      const html = groupConfig.map(g => {
-        const list = buckets[g.id];
-        if (!list.length) return '';
-        return (
-          '<div class="di-group briefing-section">' +
-            '<div class="di-group-label briefing-section-title">' +
-              '<span class="briefing-section-dot" aria-hidden="true"></span>' +
-              '<span class="briefing-section-text">' + g.label + '</span>' +
-              '<span class="briefing-section-rule" aria-hidden="true"></span>' +
-            '</div>' +
-            '<div class="briefing-section-panel">' +
-              list.map(buildBriefingRow).join('') +
-            '</div>' +
-          '</div>'
-        );
-      }).join('');
-      slateEl.innerHTML = html;
-    }
-
-    // ── WHERE YOU STAND ──
-    const xpEl     = document.getElementById('di-xp');
-    const streakEl = document.getElementById('di-streak');
-    const daysEl   = document.getElementById('di-days');
-    if (xpEl)     xpEl.textContent     = totalPoints.toLocaleString();
-    if (streakEl) streakEl.textContent = (perfectStreak && perfectStreak.count) || 0;
-    if (daysEl) {
-      const daysActive = Object.keys(completions || {}).filter(d =>
-        Array.isArray(completions[d]) && completions[d].length > 0
-      ).length;
-      daysEl.textContent = daysActive;
-    }
-
-    // ── Show ──
-    overlay.classList.remove('hidden');
-    sheet.classList.remove('hidden');
+    _tbShow({});
   }
-
   function dismissDailyInsight() {
     const sheet   = document.getElementById('daily-insight-sheet');
     const overlay = document.getElementById('daily-insight-overlay');
+    const root    = document.getElementById('tb-root');
+    try { if (_tbLive) _tbLive.stop(); } catch (_) {}
     if (sheet)   sheet.classList.add('hidden');
     if (overlay) overlay.classList.add('hidden');
+    if (root)    root.innerHTML = '';
     // Persist last-shown AFTER dismissal so an interrupted-mid-show
     // (process kill) still gets retried on next launch.
     try { localStorage.setItem('hb_daily_insight_last_shown', getDeviceLocalDate()); }
     catch (_) {}
   }
-
   function setupDailyInsight() {
-    const sheet   = document.getElementById('daily-insight-sheet');
-    const overlay = document.getElementById('daily-insight-overlay');
-    const cta     = document.getElementById('di-enter-btn');
-    if (!sheet || !overlay) return;
-
-    // v3 Phase 1z.42 -- Today's Briefing is LOCK IN-only close.
-    // On-device TestFlight feedback: swipe-down + overlay-tap were
-    // dismissing the briefing too easily before the user reviewed
-    // the day's plan. The intent is a committal review surface --
-    // user must scroll to LOCK IN and tap it to acknowledge.
-    // Mirrors the Phase 1z.40 decision for #lb-rank-sheet: long
-    // content should scroll freely; close only via the deliberate
-    // action button.
-    //
-    // Other sheets keep their existing drag-dismiss + overlay-tap
-    // behavior unchanged -- scope-limited fix.
-    if (cta) cta.addEventListener('click', dismissDailyInsight);
-    // (overlay click handler intentionally NOT wired; was previously
-    //  `overlay.addEventListener('click', dismissDailyInsight)`.)
-    // (attachSheetDismissGesture intentionally NOT called here;
-    //  was previously wired with { scrollTarget: '.di-body' }.)
+    // W978 — the ritual is the only way out (as LOCK IN was since 1z.42): no
+    // overlay tap, no swipe. _tbShow wires the seal on every render.
   }
+  /** W978 — the owner's Settings row: the real briefing, saving nothing. */
+  function previewTodaysBriefing() { return _tbShow({ preview: true }); }
+  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;
@@ -70315,6 +70384,13 @@
         if (!_testHunterAllowed()) return;
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewRankCelebrations(); } catch (_) {} }, 280);
+      });
+      // W978 — owner-only: today's briefing, as it would open tomorrow; saves nothing.
+      const tbPreviewRow = document.getElementById('settings-preview-briefing');
+      if (tbPreviewRow) tbPreviewRow.addEventListener('click', function () {
+        if (!_testHunterAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        setTimeout(function () { try { previewTodaysBriefing(); } catch (_) {} }, 280);
       });
       // W975 — owner-only: the Worldgate MVP card, as everyone and as the 1st MVP; saves nothing.
       const wgmPreviewRow = document.getElementById('settings-preview-wgmvp');
