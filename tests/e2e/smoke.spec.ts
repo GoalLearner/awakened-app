@@ -5597,7 +5597,6 @@ test.describe('BE · Rating moments (W974)', () => {
 // BF. W975 — WORLDGATE MVPs (Claude Design handoff 29): replaces the W964 ceremony
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('BF · Worldgate MVPs (W975)', () => {
-  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const KILL = (over?: Record<string, unknown>) => ({
     week: '2026-09-20', slain_at: Date.UTC(2026, 8, 24, 18), pool: 1284000, hunters: 41,
     mvps: [{ alias: 'Anthony', rank_tier: 'C', steps: 28018 }, { alias: 'Ryan', rank_tier: 'E', steps: 24550 }, { alias: 'Zynfandel', rank_tier: 'D', steps: 21907 }],
@@ -5615,7 +5614,9 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
           claimable: false, claimed: false, hunters: 41, guild: { steps: 0, hunters: 0 }, my_rank: 7,
           top: [{ alias: 'Zynfandel', steps: 30100, rank_tier: 'D' }, { alias: 'Mara', steps: 29000, rank_tier: 'C' }, { alias: 'Anthony', steps: 28018, rank_tier: 'C' }, { alias: 'Ryan', steps: 24550, rank_tier: 'E' }, { alias: 'Galilea', steps: 8848, rank_tier: 'B' }],
           wall: [], wall_count: 4, recent: [], rallied: false, kill: null }, g)));
-        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+        // '@today' = the BROWSER's local day (CI runs UTC, the dev PC runs Pacific — the 5 PM PST trap).
+        const d = new Date(); const td = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k] === '@today' ? td : (ex as any)[k]));
       } catch (_) {}
     }, [gate, extra || {}] as [Record<string, unknown>, Record<string, string>]);
     await page.reload();
@@ -5684,7 +5685,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
   });
 
   test('never on a new hunter’s first day, and the kill waits for them', async ({ page }) => {
-    await seed(page, { kill: KILL() }, { hb_onboarding_first_xp_date: today() });
+    await seed(page, { kill: KILL() }, { hb_onboarding_first_xp_date: '@today' });
     await page.evaluate(() => (window as any).__wgm.maybe());
     await page.waitForTimeout(800);
     expect(await card(page)).toBeNull();
@@ -5754,6 +5755,7 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
       try {
         if (sessionStorage.getItem('__w978')) return;
         sessionStorage.setItem('__w978', '1');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));   // the Double Dungeon coachmark stays out of the way on any UTC day
         localStorage.setItem('hb_habits', JSON.stringify(hs));
         localStorage.setItem('hb_completions', JSON.stringify(c));
         ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
@@ -5862,12 +5864,16 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
+  const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  // A day's value under BOTH calendars: CI's browser runs UTC, the dev PC's runs Pacific (the 5 PM PST trap).
+  const days = (m: Record<number, number>) => { const o: Record<string, number> = {}; Object.keys(m).forEach((k) => { const v = m[+k]; o[pt(+k)] = v; o[ptLA(+k)] = v; }); return o; };
   async function seed(page: Page, extra?: Record<string, string>) {
     await freshApp(page);
     await page.addInitScript(([ex]) => {
       try {
         if (sessionStorage.getItem('__w980')) return;
         sessionStorage.setItem('__w980', '1');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));   // the Double Dungeon coachmark stays out of the way on any UTC day
         ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
         Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
@@ -5889,7 +5895,7 @@ test.describe('BH · Hunt results (W980)', () => {
   const tap = (page: Page) => page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
 
   test('solo victory: BEATEN, FIRST KILL, the condition met, souls — tap skips, tap leaves', async ({ page }) => {
-    await seed(page, { hb_leaderboard: JSON.stringify({ steps_daily: { [pt(0)]: 8214 } }) });
+    await seed(page, { hb_leaderboard: JSON.stringify({ steps_daily: days({ 0: 8214 }) }) });
     await page.evaluate(() => (window as any).__queueBossResult({ bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 1, conditionLabel: 'Walk 6,000+ steps in a single day', souls: 120, drop: null, mercy: null }));
     await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
     await tap(page);   // skip to the end
@@ -5920,7 +5926,7 @@ test.describe('BH · Hunt results (W980)', () => {
   });
 
   test('solo escape: the best day and how short, never a tap-away — Not now leaves', async ({ page }) => {
-    await seed(page, { hb_leaderboard: JSON.stringify({ sleep_hours_daily: { [pt(1)]: 6.3, [pt(2)]: 5.1 } }) });
+    await seed(page, { hb_leaderboard: JSON.stringify({ sleep_hours_daily: days({ 1: 6.3, 2: 5.1 }) }) });
     await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_insomniac', bossName: 'The Insomniac', rank: 'D', conditionLabel: 'Sleep 7+ hours', hunt_started_at: Date.now() - 3 * 86400000 }));
     await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('defeat');
     await tap(page);   // skip; a defeat never closes on a tap
