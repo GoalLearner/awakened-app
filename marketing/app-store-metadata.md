@@ -8,37 +8,103 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
-## 3.0.7 — READY TO PASTE (W968–W975, drafted 2026-09-22, build 534)
+## 3.0.7 — READY TO PASTE (W968–W986, final 2026-09-23, build 542)
 
-### Release notes (What's New)
+Four languages. Each block is under the 4,000-character limit. Banned-word check
+done (no "fell"/"felled" in any language). Apple Health uses Apple's own name for
+the app in each language (Salud / ヘルスケア / Helse).
+
+### English (U.S.)
 
 ```
 Your vows are yours. Your glory is verified.
 
-• Tick every vow yourself. Daily walk, Sleep and Workout are ordinary
-  vows now — tap them when you've kept them. Nothing waits on Apple
-  Health to check them off for you.
+• A new morning briefing. Every day opens with your vows, your streak and the XP on the table — hold to begin. It also tells you how the Worldgate stands and when there's news from the developers.
 
-• Apple Health still powers the hunt. Your real steps, sleep and
-  workouts bring bosses down, strike the Worldgate and set every
-  leaderboard. What other hunters see stays verified.
+• Hunt results with real weight. Solo and co-op, win or lose: the kill, every hunter's share, the MVP, your souls and relics — or exactly how close you came.
 
-• Make as many vows as you like. The five-vow limit is gone. Every vow
-  you create is worth +1 XP, up to 25 in all.
+• Tick every vow yourself. Daily walk, Sleep and Workout are ordinary vows now — tap them when you've kept them.
 
-• The Worldgate crowns its MVPs. When the gate falls, the three hunters
-  who carried it take the podium and earn bonus souls. The top three in
-  Top Hunters wear MVP, 2ND and 3RD.
+• Apple Health still powers the hunt. Your real steps, sleep and workouts bring bosses down, strike the Worldgate and set every leaderboard. What other hunters see stays verified.
 
-• Updates on the Community board. News from the developers gets its own
-  section, pinned to the top each week.
+• Make as many vows as you like. The five-vow limit is gone. Every vow you create is worth +1 XP, up to 25 in all.
 
-• A Morning Routine you can finish. New hunters get six steps that fit
-  inside the first hour.
+• A new Worldgate every Sunday. Each world boss is sized to last the whole week. The top three hunters wear MVP, 2ND and 3RD — and when the gate goes down, they take the podium and earn bonus souls.
+
+• Updates on the Community board. News from the developers gets its own section, pinned each week.
+
+• A Morning Routine you can finish. New hunters get six steps that fit inside the first hour.
 ```
 
-Deliberately left out: the review cards (never advertise a rating ask) and the
-developer crown (not a player feature).
+### Spanish (Mexico)
+
+```
+Tus votos son tuyos. Tu gloria, verificada.
+
+• Un nuevo resumen matutino. Cada día empieza con tus votos, tu racha y la XP en juego — mantén presionado para comenzar. También te dice cómo va la Worldgate y cuándo hay noticias de los desarrolladores.
+
+• Resultados de cacería con peso real. En solitario o en cooperativo, ganes o pierdas: la victoria, la parte de cada cazador, el MVP, tus almas y reliquias — o exactamente qué tan cerca estuviste.
+
+• Marca cada voto tú mismo. Caminata diaria, Sueño y Entrenamiento ahora son votos normales — tócalos cuando los hayas cumplido.
+
+• La app Salud sigue impulsando la cacería. Tus pasos, tu sueño y tus entrenamientos reales derrotan jefes, golpean la Worldgate y definen cada clasificación. Lo que ven los demás cazadores sigue verificado.
+
+• Crea todos los votos que quieras. Se acabó el límite de cinco. Cada voto que crees vale +1 XP, hasta 25 en total.
+
+• Una nueva Worldgate cada domingo. Cada jefe mundial está hecho para durar toda la semana. Los tres mejores cazadores llevan MVP, 2.º y 3.º — y cuando cae la puerta, suben al podio y ganan almas extra.
+
+• Novedades en el tablero de la Comunidad. Las noticias de los desarrolladores tienen su propia sección, fijada cada semana.
+
+• Una Rutina Matutina que sí puedes terminar. Los cazadores nuevos reciben seis pasos que caben en la primera hora.
+```
+
+### Japanese
+
+```
+誓いはあなたのもの。栄光は、検証されたものだけ。
+
+• 新しい朝のブリーフィング。毎日、今日の誓い・連続記録・獲得できるXPから始まります。長押しでスタート。Worldgateの状況や、開発者からのお知らせもここで確認できます。
+
+• 手応えのあるハント結果。ソロでも協力プレイでも、勝っても負けても——撃破の瞬間、ハンターごとの貢献、MVP、獲得したソウルとレリック。届かなかったときは、あとどれだけだったかも。
+
+• 誓いは自分でチェック。「毎日のウォーキング」「睡眠」「ワークアウト」も通常の誓いになりました。守ったらタップするだけです。
+
+• ハントの力は引き続きヘルスケアから。実際の歩数・睡眠・ワークアウトがボスを倒し、Worldgateに一撃を与え、すべてのランキングを決めます。ほかのハンターに見える記録は、これまでどおり検証済みです。
+
+• 誓いは好きなだけ。5つまでの上限はなくなりました。作成した誓いはそれぞれ+1 XP、合計25個まで。
+
+• 毎週日曜日、新しいWorldgateが出現。ワールドボスは一週間かけて挑む強さに。上位3人のハンターにはMVP・2ND・3RDの称号がつき、ゲートを倒すと表彰台に立ってボーナスソウルを獲得します。
+
+• コミュニティ掲示板に「アップデート」。開発者からのお知らせ専用のセクションが、毎週トップに固定されます。
+
+• やり切れるモーニングルーティン。新しいハンターには、最初の1時間に収まる6つのステップを用意しました。
+```
+
+### Norwegian (Bokmål)
+
+```
+Løftene dine er dine. Æren din er verifisert.
+
+• En ny morgenbriefing. Hver dag starter med løftene dine, rekken din og XP-en som står på spill — hold inne for å begynne. Den forteller deg også hvordan det står til med Worldgate, og når utviklerne har nyheter.
+
+• Jaktresultater med ekte tyngde. Alene eller sammen, seier eller tap: drapet, hver jegers andel, MVP-en, sjelene og relikviene dine — eller nøyaktig hvor nær du var.
+
+• Kryss av hvert løfte selv. Daglig gåtur, Søvn og Trening er vanlige løfter nå — trykk på dem når du har holdt dem.
+
+• Helse-appen driver fortsatt jakten. Dine ekte skritt, søvn og treningsøkter tar ned bosser, slår mot Worldgate og avgjør hver toppliste. Det andre jegere ser, er fortsatt verifisert.
+
+• Lag så mange løfter du vil. Grensen på fem er borte. Hvert løfte du lager er verdt +1 XP, opptil 25 totalt.
+
+• En ny Worldgate hver søndag. Hver verdensboss er laget for å vare hele uken. De tre beste jegerne bærer MVP, 2ND og 3RD — og når porten går ned, tar de pallen og får bonussjeler.
+
+• Oppdateringer på fellesskapstavlen. Nyheter fra utviklerne får sin egen seksjon, festet øverst hver uke.
+
+• En morgenrutine du faktisk kan fullføre. Nye jegere får seks steg som passer inn i den første timen.
+```
+
+Deliberately left out: the review cards (never advertise a rating ask), the
+developer crown, the preview rows (owner/mod tools), and the strike freeze
+(a fairness fix, not a feature).
 
 ## ⚠ 3.0.6 — READY TO PASTE (W967, drafted 2026-09-20)
 
