@@ -5976,6 +5976,96 @@ test.describe('BK · Resolved topics (W990)', () => {
   });
 });
 
+// W991 — NEW means "recent and unseen"; the tier chip; one rarity palette; honest PWR sort.
+test.describe('AZ · Relic NEW + tier chip (W991)', () => {
+  async function seed(page: Page, extra: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([ex]) => {
+      try {
+        if (sessionStorage.getItem('__w991')) return;
+        sessionStorage.setItem('__w991', '1');
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        localStorage.setItem('hb_pokedex_collapsed', '[]');   // every rarity section open (a first visit starts them collapsed)
+        const d = new Date(); const ymd = (x: Date) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+        const old = new Date(); old.setDate(old.getDate() - 5);
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, String((ex as any)[k]).replace(/@today/g, ymd(d)).replace(/@old/g, ymd(old))));
+      } catch (_) {}
+    }, [extra] as [Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const inv = (cards: Record<string, unknown>) => JSON.stringify({ cards });
+  const chipCount = (page: Page, id: string, sel: string) => page.locator(`.pokedex-card[data-card-id="${id}"] ${sel}`).count();
+
+  test('NEW shows for a relic found today, EQUIPPED wins, and leaving the Items tab clears NEW', async ({ page }) => {
+    await seed(page, {
+      hb_inventory: inv({ pups_hood: { count: 1, discovered: true, first_acquired_date: '@today' }, alphas_mantle: { count: 1, discovered: true, first_acquired_date: '@today' } }),
+      hb_hunter_build: JSON.stringify({ slots: ['pups_hood', null, null, null, null, null, null, null] }),
+    });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('.pokedex-card[data-card-id="alphas_mantle"]')).toBeVisible({ timeout: 10_000 });
+    expect(await chipCount(page, 'alphas_mantle', '.archive-card-new-chip')).toBe(1);
+    expect(await chipCount(page, 'pups_hood', '.archive-card-new-chip')).toBe(0);
+    expect(await chipCount(page, 'pups_hood', '.archive-equipped-badge')).toBe(1);
+    await page.evaluate(() => document.getElementById('tab-habits')!.click());
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('.pokedex-card[data-card-id="alphas_mantle"]')).toBeVisible({ timeout: 10_000 });
+    expect(await chipCount(page, 'alphas_mantle', '.archive-card-new-chip')).toBe(0);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_relic_seen_v2') || '{}').alphas_mantle)).toBe(1);
+  });
+
+  test('a relic found five days ago is not NEW even if never viewed', async ({ page }) => {
+    await seed(page, { hb_inventory: inv({ alphas_mantle: { count: 1, discovered: true, first_acquired_date: '@old' } }) });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('.pokedex-card[data-card-id="alphas_mantle"]')).toBeVisible({ timeout: 10_000 });
+    expect(await chipCount(page, 'alphas_mantle', '.archive-card-new-chip')).toBe(0);
+  });
+
+  test('legacy hb_relic_seen_<id> keys fold into hb_relic_seen_v2 and are removed', async ({ page }) => {
+    await seed(page, { hb_inventory: inv({ alphas_mantle: { count: 1, discovered: true, first_acquired_date: '@today' } }), hb_relic_seen_alphas_mantle: '1' });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('.pokedex-card[data-card-id="alphas_mantle"]')).toBeVisible({ timeout: 10_000 });
+    expect(await chipCount(page, 'alphas_mantle', '.archive-card-new-chip')).toBe(0);
+    expect(await page.evaluate(() => [localStorage.getItem('hb_relic_seen_alphas_mantle'), JSON.parse(localStorage.getItem('hb_relic_seen_v2') || '{}').alphas_mantle])).toEqual([null, 1]);
+  });
+
+  test('the tier chip on the grid card carries the rank letter and colour', async ({ page }) => {
+    await seed(page, { hb_inventory: inv({ alphas_mantle: { count: 1, discovered: true, first_acquired_date: '@old' } }) });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    const chip = page.locator('.pokedex-card[data-card-id="alphas_mantle"] .relic-tier');
+    await expect(chip).toHaveText('E', { timeout: 10_000 });
+    await expect(chip).toHaveAttribute('data-rank', 'E');
+  });
+
+  test('the slot picker labels a mythic MEGA and wears its S chip', async ({ page }) => {
+    await seed(page, { hb_inventory: inv({ nightfall_blade: { count: 1, discovered: true, first_acquired_date: '@old' } }) });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('#armory-open-btn')).toBeVisible({ timeout: 10_000 });
+    await page.evaluate(() => document.getElementById('armory-open-btn')!.click());
+    await expect(page.locator('.gear-card[data-slot-index="3"]')).toBeVisible({ timeout: 10_000 });
+    await page.evaluate(() => (document.querySelector('.gear-card[data-slot-index="3"]') as HTMLElement).click());
+    const tile = page.locator('.build-picker-tile[data-card-id="nightfall_blade"]');
+    await expect(tile.locator('.build-picker-tile-rarity--m')).toHaveText('MEGA', { timeout: 10_000 });
+    await expect(tile.locator('.relic-tier')).toHaveAttribute('data-rank', 'S');
+  });
+
+  test('PWR sort follows the displayed upgrade-inclusive number', async ({ page }) => {
+    await seed(page, { hb_inventory: inv({
+      pendant_of_the_wakeful: { count: 1, discovered: true, first_acquired_date: '@old', upgrade_level: 3 },
+      sober_kings_gloves: { count: 1, discovered: true, first_acquired_date: '@old' },
+    }) });
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    await expect(page.locator('.pokedex-card[data-card-id="pendant_of_the_wakeful"]')).toBeVisible({ timeout: 10_000 });
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.pokedex-card:not(.pokedex-card--undiscovered) .pdx-pwr .pn'), (n: any) => Number(n.textContent)));
+    expect(rows.length).toBe(2);
+    expect(rows[0]).toBeGreaterThanOrEqual(rows[1]);
+    const first = await page.evaluate(() => document.querySelector('.pokedex-card:not(.pokedex-card--undiscovered)')!.getAttribute('data-card-id'));
+    expect(first).toBe('pendant_of_the_wakeful');
+  });
+});
+
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
   const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });

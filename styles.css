@@ -15158,8 +15158,8 @@ body.bfs-locked { overflow: hidden; }
 .archive-card--new {
   box-shadow: 0 0 14px rgba(245, 184, 66, 0.30), inset 0 1px 0 rgba(255,255,255,0.04);
 }
-.archive-card--new-rare       { box-shadow: 0 0 14px rgba(121, 180, 255, 0.40), inset 0 1px 0 rgba(255,255,255,0.04); }
-.archive-card--new-ultra_rare { box-shadow: 0 0 16px rgba(168,  85, 247, 0.45), inset 0 1px 0 rgba(255,255,255,0.04); }
+.archive-card--new-rare       { box-shadow: 0 0 14px rgba(167, 139, 250, 0.45), inset 0 1px 0 rgba(255,255,255,0.04); }   /* W991 — one rarity palette */
+.archive-card--new-ultra_rare { box-shadow: 0 0 16px rgba(245, 184,  66, 0.50), inset 0 1px 0 rgba(255,255,255,0.04); }
 .archive-card-new-chip {
   position: absolute;
   top: 7px;
@@ -15614,6 +15614,15 @@ body.bfs-locked { overflow: hidden; }
 .pdx-artfoot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 6px 6px; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,16,0), rgba(8,8,16,0.82) 62%); }
 .pdx-class { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 3px 6px 3px 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; background: rgba(8,8,16,0.55); border: 1px solid color-mix(in srgb, var(--cc, #fff) 55%, transparent); color: var(--cc, #fff); }
 .pdx-class svg { width: 10px; height: 10px; display: block; flex: none; }
+/* W991 — the tier chip: the relic's rank letter in the canonical [data-rank] colours */
+.relic-tier { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 900; letter-spacing: .06em; line-height: 1; text-transform: uppercase; color: var(--rank-color, #fff); background: var(--rank-color-bg, rgba(255,255,255,.12)); border: 1px solid var(--rank-color, #fff); box-shadow: 0 0 8px var(--rank-color-shadow, transparent); flex: none; }
+.relic-tier--lg { height: 20px; padding: 0 8px; font-size: 10px; letter-spacing: .12em; border-radius: 6px; }
+.pdx-artfoot-l { display: inline-flex; align-items: center; gap: 4px; }
+.gear-card__tier { position: absolute; bottom: 6px; left: 6px; z-index: 3; }
+.build-picker-tile-tags { position: absolute; top: 6px; left: 6px; z-index: 3; display: flex; align-items: center; gap: 4px; }
+.build-picker-tile-tags .build-picker-tile-rarity { position: static; }
+.carddetail-rarity, .reveal-card-rarity { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.carddetail-rarity-sep { opacity: .5; }
 .pdx-pwr { text-align: right; line-height: 1; }
 .pdx-pwr .pn { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 17px; font-weight: 800; line-height: 0.9; color: #f3f1fb; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
 .pdx-pwr .pl { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 6.5px; font-weight: 700; letter-spacing: 1.6px; color: rgba(255,255,255,0.6); }
@@ -15672,13 +15681,15 @@ body.bfs-locked { overflow: hidden; }
 /* Rarity tints — applied to the discovered card's art background and
    the section pip colors. Subtle so the card art (when it lands)
    can carry the visual weight. */
-.pokedex-card--common     { border-color: rgba(167, 139, 250, 0.30); }
-.pokedex-card--common     .pokedex-card-art { background: linear-gradient(135deg, rgba(167, 139, 250, 0.12), rgba(0, 0, 0, 0.40)); }
-.pokedex-card--rare       { border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 0 10px rgba(245, 158, 11, 0.18); }
-.pokedex-card--rare       .pokedex-card-art { background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(0, 0, 0, 0.40)); }
-.pokedex-card--ultra_rare { border-color: rgba(251, 191, 36, 0.55); box-shadow: 0 0 14px rgba(251, 191, 36, 0.28); }
+/* W991 — ONE rarity palette everywhere (the Armory gear-card set): common grey #9aa0bd,
+   rare purple #a78bfa, ultra gold #f5b842, mythic cyan #5ee7f5. */
+.pokedex-card--common     { border-color: rgba(154, 160, 189, 0.30); }
+.pokedex-card--common     .pokedex-card-art { background: linear-gradient(135deg, rgba(154, 160, 189, 0.12), rgba(0, 0, 0, 0.40)); }
+.pokedex-card--rare       { border-color: rgba(167, 139, 250, 0.45); box-shadow: 0 0 10px rgba(167, 139, 250, 0.20); }
+.pokedex-card--rare       .pokedex-card-art { background: linear-gradient(135deg, rgba(167, 139, 250, 0.16), rgba(0, 0, 0, 0.40)); }
+.pokedex-card--ultra_rare { border-color: rgba(245, 184, 66, 0.55); box-shadow: 0 0 14px rgba(245, 184, 66, 0.28); }
 .pokedex-card--ultra_rare .pokedex-card-art {
-  background: linear-gradient(135deg, rgba(232, 121, 249, 0.20), rgba(251, 191, 36, 0.16), rgba(0, 0, 0, 0.40));
+  background: linear-gradient(135deg, rgba(245, 184, 66, 0.20), rgba(0, 0, 0, 0.40));
 }
 
 /* Undiscovered placeholder cards. Still tap-able (toast). */
@@ -16223,8 +16234,8 @@ body.reveal-locked { overflow: hidden; }
   opacity: 0;
   animation: reveal-fade-in 0.5s 0.95s ease-out forwards;
 }
-.reveal-overlay--ultra_rare .reveal-card-rarity {
-  background: linear-gradient(90deg, #e879f9, #fbbf24, #e879f9);
+.reveal-overlay--ultra_rare .reveal-card-rarity-txt {   /* W991 — gradient on the text only; the tier chip keeps its colour */
+  background: linear-gradient(90deg, #f5b842, #fde68a, #f5b842);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -16373,14 +16384,16 @@ body.reveal-locked { overflow: hidden; }
   text-align: center;
   margin: auto;   /* W760 — with the overlay's flex-start+scroll: centers when short, scrolls when tall */
 }
-.carddetail-overlay--rare .carddetail-modal {
-  border-image: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) 1;
-  box-shadow: 0 0 18px rgba(245, 158, 11, 0.35);
+.carddetail-overlay--rare .carddetail-modal {   /* W991 — one rarity palette */
+  border-image: linear-gradient(135deg, #7c5ce6 0%, #a78bfa 100%) 1;
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.35);
 }
 .carddetail-overlay--ultra_rare .carddetail-modal {
-  border-image: linear-gradient(135deg, #e879f9 0%, #f59e0b 50%, #e879f9 100%) 1;
-  box-shadow: 0 0 22px rgba(232, 121, 249, 0.40), 0 0 22px rgba(245, 158, 11, 0.40);
+  border-image: linear-gradient(135deg, #f5b842 0%, #fde68a 50%, #f5b842 100%) 1;
+  box-shadow: 0 0 22px rgba(245, 184, 66, 0.45);
 }
+.carddetail-overlay--common .carddetail-rarity-txt { color: #9aa0bd; }
+.carddetail-overlay--rare .carddetail-rarity-txt { color: #a78bfa; }
 .carddetail-close {
   position: absolute;
   top: 10px;
@@ -16452,8 +16465,8 @@ body.reveal-locked { overflow: hidden; }
   text-transform: uppercase;
   margin-bottom: 4px;
 }
-.carddetail-overlay--ultra_rare .carddetail-rarity {
-  background: linear-gradient(90deg, #e879f9, #fbbf24, #e879f9);
+.carddetail-overlay--ultra_rare .carddetail-rarity-txt {   /* W991 — gradient on the text only */
+  background: linear-gradient(90deg, #f5b842, #fde68a, #f5b842);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -18069,11 +18082,13 @@ body.reveal-locked { overflow: hidden; }
   pointer-events: none;
 }
 /* Rarity outlines — applied via build-rarity--{c,r,u} class */
-.build-rarity--c { border-color: rgba(156, 163, 175, 0.55); }
-.build-rarity--r { border-color: rgba(96, 165, 250, 0.70);
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 18px rgba(96, 165, 250, 0.22); }
-.build-rarity--u { border-color: rgba(245, 158, 11, 0.85);
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 22px rgba(245, 158, 11, 0.35); }
+.build-rarity--c { border-color: rgba(154, 160, 189, 0.55); }   /* W991 — one rarity palette */
+.build-rarity--r { border-color: rgba(167, 139, 250, 0.70);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 18px rgba(167, 139, 250, 0.22); }
+.build-rarity--u { border-color: rgba(245, 184, 66, 0.85);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 22px rgba(245, 184, 66, 0.35); }
+.build-rarity--m { border-color: rgba(94, 231, 245, 0.85);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.55), 0 0 22px rgba(94, 231, 245, 0.35); }
 
 /* ─── Build summary block ───────────────────────────────────── */
 .hunter-build-summary {
@@ -18574,11 +18589,16 @@ body.reveal-locked { overflow: hidden; }
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.40);
 }
 .build-picker-tile-rarity--c { background: rgba(110, 110, 130, 0.88); }
-.build-picker-tile-rarity--r { background: rgba(96, 165, 250, 0.92); }
+.build-picker-tile-rarity--r { background: rgba(167, 139, 250, 0.92); }   /* W991 — one rarity palette */
 .build-picker-tile-rarity--u {
-  background: rgba(245, 158, 11, 0.95);
+  background: rgba(245, 184, 66, 0.95);
   color: #1a0f00;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 184, 66, 0.35);
+}
+.build-picker-tile-rarity--m {
+  background: rgba(94, 231, 245, 0.95);
+  color: #04141a;
+  box-shadow: 0 0 10px rgba(94, 231, 245, 0.35);
 }
 
 /* Status badge in top-right of art (EQUIPPED / SLOT N) */
@@ -29721,17 +29741,17 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .bfs-last-drop[data-rarity="mythic"] { border-color: rgba(255,210,74,0.85); box-shadow: 0 0 16px rgba(255,210,74,0.55), 0 0 26px rgba(255,93,177,0.35), inset 0 1px 0 rgba(255,255,255,0.06); }
 .bfs-last-drop[data-rarity="mythic"] .bfs-last-drop-meta { color: #ffd24a; }
 .bfs-hunt-history-row-rarity[data-rarity="mythic"] { color: #ffd24a; background: rgba(255,210,74,0.12); border: 0.5px solid rgba(255,210,74,0.6); }
-.archive-card--new-mythic { box-shadow: 0 0 20px rgba(255,210,74,0.6), 0 0 32px rgba(255,93,177,0.35), inset 0 1px 0 rgba(255,255,255,0.05); }
+.archive-card--new-mythic { box-shadow: 0 0 20px rgba(94,231,245,0.55), inset 0 1px 0 rgba(255,255,255,0.05); }   /* W991 — mythic = cyan */
 .market-sheet-art--mythic { border-color: rgba(255,210,74,0.6); background: radial-gradient(120% 120% at 50% 36%, rgba(255,210,74,0.22), rgba(255,93,177,0.12) 45%, #04040d 78%); box-shadow: 0 0 26px -5px rgba(255,210,74,0.55); }
 .market-sheet-rarity--mythic { color: #ffd24a; text-shadow: 0 0 12px rgba(255,210,74,0.4), 0 0 18px rgba(255,93,177,0.3); }
-.pokedex-card--mythic { border-color: rgba(255,210,74,0.7); box-shadow: 0 0 18px rgba(255,210,74,0.4), 0 0 26px rgba(255,93,177,0.28); }
-.pokedex-card--mythic .pokedex-card-art { background: linear-gradient(135deg, rgba(94,234,255,0.18), rgba(255,93,177,0.20), rgba(255,210,74,0.20), rgba(0,0,0,0.40)); }
+.pokedex-card--mythic { border-color: rgba(94,231,245,0.7); box-shadow: 0 0 18px rgba(94,231,245,0.40); }   /* W991 — mythic = cyan */
+.pokedex-card--mythic .pokedex-card-art { background: linear-gradient(135deg, rgba(94,231,245,0.22), rgba(0,0,0,0.40)); }
 .reveal-overlay--mythic .reveal-particles { display: block; }
 .reveal-overlay--mythic .reveal-card { border-image: linear-gradient(135deg, #5eeaff 0%, #ff5db1 35%, #ffd24a 70%, #5eeaff 100%) 1; box-shadow: 0 0 34px rgba(255,210,74,0.55), 0 0 34px rgba(255,93,177,0.5), 0 0 34px rgba(94,234,255,0.4); }
 .reveal-overlay--showing.reveal-overlay--mythic .reveal-card { animation: reveal-card-materialize 0.6s 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, reveal-card-ultra-pulse 2.6s 1.0s ease-in-out infinite; }
-.reveal-overlay--mythic .reveal-card-rarity { background: linear-gradient(90deg, #5eeaff, #ff5db1, #ffd24a, #5eeaff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.carddetail-overlay--mythic .carddetail-modal { border-image: linear-gradient(135deg, #5eeaff 0%, #ff5db1 35%, #ffd24a 70%, #5eeaff 100%) 1; box-shadow: 0 0 26px rgba(255,210,74,0.45), 0 0 26px rgba(255,93,177,0.42), 0 0 26px rgba(94,234,255,0.32); }
-.carddetail-overlay--mythic .carddetail-rarity { background: linear-gradient(90deg, #5eeaff, #ff5db1, #ffd24a, #5eeaff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.reveal-overlay--mythic .reveal-card-rarity-txt { background: linear-gradient(90deg, #5ee7f5, #a5f3fc, #5ee7f5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }   /* W991 — cyan, text only */
+.carddetail-overlay--mythic .carddetail-modal { border-image: linear-gradient(135deg, #5ee7f5 0%, #a5f3fc 50%, #5ee7f5 100%) 1; box-shadow: 0 0 26px rgba(94,231,245,0.45); }
+.carddetail-overlay--mythic .carddetail-rarity-txt { background: linear-gradient(90deg, #5ee7f5, #a5f3fc, #5ee7f5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
 /* ════════════════════════════════════════════════════════════════════════
    W296 — NIGHTFALL · THE ECLIPSE CORONATION — mythic mega-rare reveal cinematic

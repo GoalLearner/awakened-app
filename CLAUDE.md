@@ -20661,7 +20661,7 @@ Visual restyle layered on top of the v3 Phase 1z.6 controller — same `#boss-re
 
 **New localStorage keys (NOT in `CloudSync.SNAPSHOT_KEYS`):**
 - `hb_boss_result_pending` — single-slot envelope `{ bossId, bossName, defeatedAt, acknowledged, dropCardId, dropRarity, kill_count }`. 24h auto-acknowledge (`BOSS_RESULT_AUTO_ACK_MS`); read via `_readBossResultPending`, written by `_queueBossResult`, cleared by `_clearBossResultPending` (called from `closeBossResult`). Replaced when a newer defeat fires.
-- `hb_relic_seen_<cardId>` — one-shot per-relic flag. Set by `_markRelicSeen` on archive-card tap OR on overlay `View Relic` tap. Never cleared. NEW state for a relic is the inverse of this flag (modulo "the relic is actually owned").
+- `hb_relic_seen_<cardId>` — one-shot per-relic flag. Set by `_markRelicSeen` on archive-card tap OR on overlay `View Relic` tap. Never cleared. NEW state for a relic is the inverse of this flag (modulo "the relic is actually owned"). **W991 (2026-09-24) replaced this:** NEW = acquired in the last 48h AND not in the ONE synced set `hb_relic_seen_v2` (legacy keys fold in on first read); seen is marked by the detail modal, the reveal, an equip, and leaving the Items tab; EQUIPPED wins over NEW.
 
 The existing `hb_boss_result_seen_<bossId>_<kill_count>` from Phase 1z.6 is preserved — that's the **modal one-shot** (prevents the overlay from re-firing across reloads). `hb_boss_result_pending` is the **pill state** (HUNTING strip ack). Two different concerns, two keys.
 
