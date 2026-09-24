@@ -102,6 +102,13 @@ Løftene dine er dine. Æren din er verifisert.
 • En morgenrutine du faktisk kan fullføre. Nye jegere får seks steg som passer inn i den første timen.
 ```
 
+### Promotional text (170 max; can change any time without review)
+
+- **English (160):** A new Worldgate rises every Sunday. Walk, sleep and train to bring it down with every hunter, then wake to a briefing that turns your vows into the day’s quest.
+- **Spanish (159):** Cada domingo surge una nueva Worldgate. Camina, duerme y entrena para derribarla con todos los cazadores, y empieza el día con tus votos convertidos en misión.
+- **Japanese (78):** 毎週日曜日、新しいWorldgateが出現。歩いて、眠って、鍛えて、すべてのハンターと一緒に倒そう。毎朝のブリーフィングが、今日の誓いをクエストに変えます。
+- **Norwegian (149):** Hver søndag reiser en ny Worldgate seg. Gå, sov og tren for å ta den ned sammen med alle jegerne, og start dagen med løftene dine som dagens oppdrag.
+
 Deliberately left out: the review cards (never advertise a rating ask), the
 developer crown, the preview rows (owner/mod tools), and the strike freeze
 (a fairness fix, not a feature).
