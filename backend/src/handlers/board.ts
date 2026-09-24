@@ -1163,12 +1163,13 @@ export async function handleCommunityUnseenGet(request: Request, env: Env, sessi
       WHERE l.created_at > ? AND e.user_id = ? AND l.user_id != ?`,
   ).bind(since, me, me).first<{ n: number }>();
   // W973 — the newest update, so the client can keep a dot on Community until it is opened.
+  // W986 — and its title, so the morning briefing can name it.
   const upd = await env.DB.prepare(
-    `SELECT id, created_at FROM board_topics WHERE kind = 'update' AND deleted_at IS NULL AND hidden_at IS NULL ORDER BY created_at DESC LIMIT 1`,
-  ).bind().first<{ id: string; created_at: number }>();
+    `SELECT id, created_at, title FROM board_topics WHERE kind = 'update' AND deleted_at IS NULL AND hidden_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+  ).bind().first<{ id: string; created_at: number; title: string | null }>();
   const nt = Number(topics?.n) || 0, nr = Number(replies?.n) || 0, nl = Number(likes?.n) || 0;
   return jsonOk({ ok: true, since, now, board: { topics: nt, replies: nr }, likes: nl, total: nt + nr + nl,
-    update: upd ? { id: upd.id, created_at: Number(upd.created_at) || 0 } : null });
+    update: upd ? { id: upd.id, created_at: Number(upd.created_at) || 0, title: String(upd.title || '') } : null });
 }
 
 export async function handleAdminBoardOwner(request: Request, env: Env): Promise<Response> {

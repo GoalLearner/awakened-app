@@ -117,10 +117,10 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               return { up_count: [...st.replyVotes].filter((k) => k.startsWith(`${binds[0]}|`)).length };
             }
             if (/SELECT 1 AS f FROM board_follows/.test(sql)) return st.follows.has(`${binds[0]}|${binds[1]}`) ? { f: 1 } : null;
-            if (/SELECT id, created_at FROM board_topics WHERE kind = 'update'/.test(sql)) {   // W973
+            if (/SELECT id, created_at, title FROM board_topics WHERE kind = 'update'/.test(sql)) {   // W973 (+ W986 title)
               const hit = Object.entries(st.topics).filter(([, t]) => t.kind === 'update' && t.deleted_at == null && t.hidden_at == null)
                 .sort((a, b) => (b[1].created_at || 0) - (a[1].created_at || 0))[0];
-              return hit ? { id: hit[0], created_at: hit[1].created_at || 0 } : null;
+              return hit ? { id: hit[0], created_at: hit[1].created_at || 0, title: hit[1].title } : null;
             }
             if (/SELECT title FROM board_topics/.test(sql)) { const t = st.topics[binds[0] as string]; return t ? { title: t.title || 'T' } : null; }
             // W921 — the three unseen COUNTs
@@ -1000,6 +1000,7 @@ describe('W973 · Updates — the developers\' weekly voice', () => {
     const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 21', body: 'First.' });
     const u = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
     expect((u.update as { id: string }).id).toBe(a.body.id);
+    expect((u.update as { title: string }).title).toBe('Week of Sep 21');   // W986 — the briefing names it
     st.topics[a.body.id as string].hidden_at = Date.now();
     const hidden = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
     expect(hidden.update).toBeNull();

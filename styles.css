@@ -35843,6 +35843,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tb-world{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(149,150,178,.1);font-size:14px;color:var(--tb-ink2);}
 .tb-world b{color:var(--tb-ink);font-weight:600;}
 .tb-world svg{flex:none;}
+.tb-news{margin-top:10px;padding-top:0;border-top:0;}   /* W986 — rides under the Worldgate line */
+.tb-news span{min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}   /* a long title gets two lines */
 .tb-ritual{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;align-items:center;gap:12px;}
 .tb-seal{position:relative;width:108px;height:108px;padding:0;border:0;background:none;cursor:pointer;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;outline:none;border-radius:50%;}
 .tb-seal:focus-visible{box-shadow:0 0 0 2px var(--tb-violet2);}

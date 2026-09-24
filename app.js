@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.7';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.7-w985'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.7-w986'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -49014,9 +49014,14 @@
   // W973 — UPDATES. The newest developer update (from /community/unseen) keeps a
   // DOT on the tab and the BOARD pill until that topic is opened — unlike the
   // count, it survives tapping the tab. Only the id is stored, never the text.
-  let _cmUpdate = null;   // { id, created_at } | null
+  let _cmUpdate = null;   // { id, created_at, title } | null
   let _cmUpdateSeen = '';
   try { _cmUpdateSeen = localStorage.getItem('hb_board_update_seen') || ''; } catch (_) {}
+  // W986 — the last known update rides across launches (id + title, from the
+  // developers' own post), so the morning briefing can name it before the
+  // network answers. The next unseen check replaces or clears it.
+  const CM_UPDATE_LAST_KEY = 'hb_board_update_last';
+  try { const lu = JSON.parse(localStorage.getItem(CM_UPDATE_LAST_KEY) || 'null'); if (lu && lu.id) _cmUpdate = { id: String(lu.id), created_at: Number(lu.created_at) || 0, title: String(lu.title || '') }; } catch (_) {}
   function _cmUpdateUnseen() { try { return !!(_cmUpdate && _cmUpdate.id && _cmUpdate.id !== _cmUpdateSeen); } catch (_) { return false; } }   // try: the rail can paint before this block runs
   function _cmUpdateOpened(id) {
     if (!id || !_cmUpdate || id !== _cmUpdate.id || id === _cmUpdateSeen) return;
@@ -49048,7 +49053,10 @@
     const b = (u && u.board) || u || {};
     _cmUnseen = { topics: Number(b.topics) || 0, replies: Number(b.replies) || 0, likes: Number(u && u.likes) || 0 };
     const prevUnseen = _cmUpdateUnseen();
-    if (u && Object.prototype.hasOwnProperty.call(u, 'update')) _cmUpdate = (u.update && u.update.id) ? { id: String(u.update.id), created_at: Number(u.update.created_at) || 0 } : null;
+    if (u && Object.prototype.hasOwnProperty.call(u, 'update')) {
+      _cmUpdate = (u.update && u.update.id) ? { id: String(u.update.id), created_at: Number(u.update.created_at) || 0, title: String(u.update.title || '') } : null;
+      try { if (_cmUpdate) localStorage.setItem(CM_UPDATE_LAST_KEY, JSON.stringify(_cmUpdate)); else localStorage.removeItem(CM_UPDATE_LAST_KEY); } catch (_) {}   // W986
+    }
     _cmPaintBadges();
     if (prevUnseen !== _cmUpdateUnseen()) { try { document.querySelectorAll('[data-board-filters]').forEach(function (el) { el.innerHTML = _boardFiltersHtml(); }); } catch (_) {} }
   }
@@ -59413,6 +59421,9 @@
       const c = (typeof _wgCache === 'function') ? _wgCache() : null;
       if (c && c.hp) world = c.status === 'slain' ? 'The Worldgate has <b>fallen</b> this week' : 'The Worldgate is <b>' + Math.floor(_wgPct(c)) + '%</b> down';
     } catch (_) {}
+    // W986 — a developer update the hunter has not opened yet (a new topic, never a reply).
+    let news = '';
+    try { if (_cmUpdateUnseen()) news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'A new update'; } catch (_) {}
     return {
       date: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dt.getDay()] + ' · ' + ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dt.getMonth()] + ' ' + dt.getDate(),
       day: dayN != null ? dayN : 1,
@@ -59422,6 +59433,7 @@
       rank: info ? info.majorRank : 'E',
       isMax: !!(info && info.isMax),
       next: info && info.nextDivisionLabel ? info.nextDivisionLabel : '',
+      news: news,
       to: info ? Math.max(0, Math.ceil(Number(info.xpToNextDivision) || 0)) : 0,
       frac: info ? Math.max(0, Math.min(1, Number(info.divisionProgress) || 0)) : 0,
       chips: chipSrc.map(function (h) { let n = h.name; try { n = habitDisplayParts(h).base || h.name; } catch (_) {} return { id: h.id, name: n }; }),
@@ -59451,6 +59463,7 @@
     try { _hapticTick(k === 'heavy' ? 'HEAVY' : k === 'medium' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
   }
   const _TB_FLAME = '<svg width="12" height="15" viewBox="0 0 12 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M6 1c.5 2.6 4.5 4.3 4.5 8.1A4.5 4.5 0 0 1 1.5 9.1C1.5 6.6 3.4 5.6 3.8 3.6c1 .9 1.4 2 1.3 3.2C6.4 5.5 6.6 3.4 6 1z"/></svg>';
+  const _TB_NEWS = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5eead4" stroke-width="1.3" aria-hidden="true"><path d="M4 4.5h10.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V5"/><path d="M6.5 8.5h7M6.5 11.5h7M6.5 14.5h4" stroke="#f5b842"/></svg>';   // W986
   const _TB_GATE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" aria-hidden="true"><path d="M3 18V8a7 7 0 0 1 14 0v10M6.5 18V9a3.5 3.5 0 0 1 7 0v9M1.5 18h17"/><path d="M10 5.5l-.8 2.2 1.4 1.2-.9 2.1" stroke="#f5b842"/></svg>';
   function _tbRing(n, leadIdx) {
     if (n <= 0) return '<svg viewBox="0 0 200 200"><circle class="tb-seg" cx="100" cy="100" r="88"></circle></svg>';
@@ -59481,6 +59494,7 @@
       (d.chips.length ? '<div class="tb-chipsl tb-mono tb-e" style="--d:880ms"><span>' + esc(d.chipLabel) + '</span><span>Tap to lead</span></div>' +
         '<div class="tb-chips">' + d.chips.map(function (c, i) { return '<div class="tb-chip tb-e' + (c.id === d.lead ? ' tb-on' : '') + '" role="button" tabindex="0" data-i="' + i + '" data-id="' + esc(c.id) + '" style="--d:' + (900 + i * 70) + 'ms"><i></i>' + esc(c.name) + '</div>'; }).join('') + '</div>' : '') +
       (d.world ? '<div class="tb-world tb-e" style="--d:1120ms">' + _TB_GATE + '<span>' + d.world + '</span></div>' : '') +
+      (d.news ? '<div class="tb-world tb-news tb-e" style="--d:1180ms">' + _TB_NEWS + '<span>New on the Community board: <b>' + esc(d.news) + '</b></span></div>' : '') +
       '<div class="tb-ritual tb-sealin"><button type="button" class="tb-seal" aria-label="Hold to begin the day">' + _tbSealSvg() + '</button><div class="tb-rl"><span class="tb-mono">Hold to begin</span><span class="tb-done">The day is yours.</span></div></div>' +
       '</div>';
   }
@@ -59495,6 +59509,9 @@
     if (!sheet || !overlay || !root) return false;
     try { if (_tbLive) _tbLive.stop(); } catch (_) {}
     const d = _tbData();
+    // W986 — the owner's preview always shows the update line: the latest update's
+    // title even once he has opened it, or a sample when there is none yet.
+    if (opts.preview && !d.news) { try { d.news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'Your next update’s title appears here'; } catch (_) { d.news = 'Your next update’s title appears here'; } }
     let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
     root.className = 'tb-frame';
     root.innerHTML = _tbHtml(d);

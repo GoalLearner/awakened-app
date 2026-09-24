@@ -5873,6 +5873,58 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 // BH. W980 — HUNT RESULTS (Claude Design handoffs 31 + 32): solo + co-op, win + loss
 // ─────────────────────────────────────────────────────────────────────────
+// W986 — the morning briefing names a developer update the hunter has not opened.
+test.describe('BI · Briefing names a new update (W986)', () => {
+  const VOWS = [{ id: 'bi-read', name: 'Read', emoji: '•', difficulty: 'easy', type: 'build' }];
+  async function seed(page: Page, extra: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(([hs, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w986')) return;
+        sessionStorage.setItem('__w986', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [VOWS, extra] as [any[], Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const news = (page: Page) => page.evaluate(() => { const el = document.querySelector('.tb-news'); return el ? (el.textContent || '').trim() : null; });
+
+  test('an unopened update is named on the briefing', async ({ page }) => {
+    await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: 1, title: 'Week of Sep 21' }) });
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await expect.poll(() => news(page), { timeout: 6_000 }).toBe('New on the Community board: Week of Sep 21');
+  });
+
+  // The real briefing (not the owner's preview) is the one hunters see.
+  const real = (page: Page) => page.evaluate(() => (window as any).__tb.show({}));
+
+  test('once that update is opened, the line is gone', async ({ page }) => {
+    await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: 1, title: 'Week of Sep 21' }), hb_board_update_seen: 'up-1' });
+    await real(page);
+    await expect(page.locator('.tb-frame')).toBeVisible({ timeout: 6_000 });
+    await page.waitForTimeout(1500);
+    expect(await news(page)).toBeNull();
+  });
+
+  test('no update at all: no line', async ({ page }) => {
+    await seed(page, {});
+    await real(page);
+    await expect(page.locator('.tb-frame')).toBeVisible({ timeout: 6_000 });
+    await page.waitForTimeout(1500);
+    expect(await news(page)).toBeNull();
+  });
+
+  test('the owner preview always shows the line: the latest title even when opened, else a sample', async ({ page }) => {
+    await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: 1, title: 'Week of Sep 21' }), hb_board_update_seen: 'up-1' });
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await expect.poll(() => news(page), { timeout: 6_000 }).toBe('New on the Community board: Week of Sep 21');
+  });
+});
+
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
   const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
