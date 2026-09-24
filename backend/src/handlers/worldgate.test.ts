@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
-import { computeGateHp, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
+import { computeGateHp, HP_SURGE_WEEKS, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -73,6 +73,14 @@ describe('worldgate HP (W892)', () => {
     // This week's walkers put 251,138 on it by Wednesday evening; next week's gate asks their whole week.
     const next = computeGateHp([451000, 194070, 182401, 347498], 0, 0);
     expect(next).toBeGreaterThan(251138 * 1.5);
+  });
+
+  it('W988 — the launch/event weeks ask 30% more than last week; other weeks are untouched', () => {
+    const pools = [450000, 194070, 182401, 347498];
+    expect(computeGateHp(pools, 0, 0, HP_SURGE_WEEKS['2026-10-04'])).toBe(Math.round(450000 * 1.3));
+    expect(computeGateHp(pools, 0, 0, HP_SURGE_WEEKS['2026-11-01'] || 1)).toBe(450000);
+    expect(computeGateHp(pools, 0, 0, 0.5)).toBe(450000);   // a surge never LOWERS a gate
+    expect(Object.keys(HP_SURGE_WEEKS)).toEqual(['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25']);
   });
 
   it('W984 — one quiet week cannot make the next gate trivial (the median floor)', () => {

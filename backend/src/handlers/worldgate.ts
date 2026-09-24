@@ -71,10 +71,18 @@ const HP_MEDIAN_WEEKS = 4;
 // it survive (the 5% carry softens the next). The old 0.80 x median stays as a
 // floor only, so one quiet week cannot make the next gate trivial.
 const HP_LAST_WEEK_FACTOR = 1.0;
+// W988 (owner call 2026-09-24) — SURGE. The 3.0.7 launch and the App Store
+// In-App Event (Oct 4–31) are expected to bring new hunters, and a joining
+// hunter's Health sync lands their whole week at once. Gates in this window ask
+// this much MORE than last week's pool, so the fleet that arrives has something
+// to hit. One number per week; delete a week to fall back to 1.0.
+export const HP_SURGE_WEEKS: Record<string, number> = {
+  '2026-09-27': 1.3, '2026-10-04': 1.3, '2026-10-11': 1.3, '2026-10-18': 1.3, '2026-10-25': 1.3,
+};
 
 /** Pure HP math — exported so it can be tested without a database.
  *  `pools` are completed weekly pools, NEWEST FIRST (recentPools' order). */
-export function computeGateHp(pools: number[], slainStreak: number, carry: number): number {
+export function computeGateHp(pools: number[], slainStreak: number, carry: number, surge = 1): number {
   const lastWeek = (pools && typeof pools[0] === 'number' && pools[0] > 0) ? pools[0] : 0;
   const usable = (pools || []).filter((p) => typeof p === 'number' && p > 0).sort((a, b) => a - b);
   let median = 0;
@@ -82,7 +90,7 @@ export function computeGateHp(pools: number[], slainStreak: number, carry: numbe
     const m = usable.length >> 1;
     median = usable.length % 2 ? usable[m] : Math.round((usable[m - 1] + usable[m]) / 2);
   }
-  const base = Math.max(HP_MIN, Math.round(HP_LAST_WEEK_FACTOR * lastWeek), Math.round(HP_MEDIAN_FACTOR * median));
+  const base = Math.max(HP_MIN, Math.round(HP_LAST_WEEK_FACTOR * lastWeek * Math.max(1, surge || 1)), Math.round(HP_MEDIAN_FACTOR * median));
   const escalated = Math.round(base * (1 + HP_STREAK_ESCALATOR * Math.max(0, slainStreak)));
   return Math.max(1, escalated - Math.max(0, carry));
 }
@@ -271,7 +279,7 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
   }
   // W892 — HP from the fleet's own trailing output, not a headcount.
   const [pools, streak] = await Promise.all([recentPools(env, week), slainStreak(env, week)]);
-  const hp = computeGateHp(pools, streak, carry);
+  const hp = computeGateHp(pools, streak, carry, HP_SURGE_WEEKS[week] || 1);   // W988
   try {
     await env.DB.prepare('INSERT INTO world_gates (week_start, hp, status, created_at) VALUES (?, ?, ?, ?)')
       .bind(week, hp, 'open', Date.now()).run();
