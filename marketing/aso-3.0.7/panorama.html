@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Awakened 3.0.7 — App Store panorama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@800;900&family=JetBrains+Mono:wght@800&family=Inter:wght@700&display=swap" rel="stylesheet">
+<style>
+  /* The whole App Store set as ONE strip: six 1320×2868 cards side by side.
+     panorama.mjs screenshots each card's slice. Phones may sit across a seam so
+     neighbouring cards connect when they scroll by (the Habitica trick). Real
+     app pixels only: phones hold shoot.mjs captures, "pops" are enlarged crops
+     of those same captures. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 7920px; height: 2868px; overflow: hidden; background: #111; }
+  .strip { position: relative; width: 7920px; height: 2868px; }
+  .card { position: absolute; top: 0; width: 1320px; height: 2868px; overflow: hidden; }
+  .card::after { content: ''; position: absolute; inset: 0; pointer-events: none;   /* soft light from above + vignette */
+    background: radial-gradient(1200px 900px at 50% -120px, rgba(255,255,255,.22), transparent 70%),
+                radial-gradient(1500px 1400px at 50% 55%, transparent 55%, rgba(0,0,0,.28)); }
+  .doodle { position: absolute; opacity: .28; }
+  .layer { position: absolute; inset: 0; pointer-events: none; }
+
+  .copy { position: absolute; left: 0; width: 1320px; text-align: center; padding: 0 80px; z-index: 5; }
+  .kicker { display: inline-block; font: 800 34px/1 'JetBrains Mono', monospace; letter-spacing: .34em; text-transform: uppercase;
+    color: rgba(255,255,255,.92); background: rgba(0,0,0,.18); padding: 18px 30px 18px 42px; border-radius: 999px; }
+  h1 { margin-top: 38px; font: 900 124px/1.02 'Cinzel', serif; color: #fff; letter-spacing: .005em;
+    text-shadow: 0 9px 0 rgba(0,0,0,.20), 0 20px 50px rgba(0,0,0,.35); }
+  h1 em { font-style: normal; color: #ffe27a; }
+
+  .phone { position: absolute; padding: 20px; border-radius: 170px; z-index: 3;
+    background: linear-gradient(145deg, #4a4658, #1b1a24 40%, #2f2c3c 65%, #16151d);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.14), 0 60px 120px rgba(0,0,0,.45), 0 20px 40px rgba(0,0,0,.3); }
+  .screen { position: relative; border-radius: 150px; overflow: hidden; background: #0a0a18; }
+  .status { position: relative; background-size: 100% 100%; }
+  .status .time { position: absolute; font: 700 1px/1 'Inter', sans-serif; color: #fff; }
+  .status .island { position: absolute; left: 50%; transform: translateX(-50%); background: #000; }
+  .status .icons { position: absolute; display: flex; align-items: center; }
+  .screen img { display: block; width: 100%; }
+
+  .pop { position: absolute; z-index: 4; border-radius: 44px; background-repeat: no-repeat;
+    box-shadow: 0 0 0 4px rgba(255,255,255,.18), 0 40px 80px rgba(0,0,0,.45), 0 12px 24px rgba(0,0,0,.3); }
+  .item { position: absolute; z-index: 4; border-radius: 56px; overflow: hidden; background: #0c0b14;
+    box-shadow: 0 0 0 6px #f5c451, 0 0 0 10px rgba(0,0,0,.35), 0 50px 90px rgba(0,0,0,.45); }
+  .item img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .item .tag { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 20px 30px; text-align: center;
+    font: 900 44px/1.05 'Cinzel', serif; color: #fff; background: linear-gradient(180deg, transparent, rgba(0,0,0,.85) 45%); }
+  .item .tag small { display: block; margin-top: 10px; font: 800 24px/1 'JetBrains Mono', monospace; letter-spacing: .3em; color: #f5c451; }
+  .chip { position: absolute; z-index: 6; font: 900 64px/1 'Cinzel', serif; color: #fff; padding: 28px 46px; border-radius: 999px;
+    background: linear-gradient(180deg, #ffcf5a, #f29a1a); text-shadow: 0 3px 0 rgba(0,0,0,.2);
+    box-shadow: 0 0 0 6px rgba(255,255,255,.35), 0 30px 60px rgba(0,0,0,.35); }
+</style>
+</head>
+<body>
+<div class="strip" id="strip"></div>
+<script>
+  const W = 1320, H = 2868, RAW_W = 1320;
+  const strip = document.getElementById('strip');
+  const el = (tag, cls, css, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (css) e.style.cssText = css; if (html != null) e.innerHTML = html; return e; };
+
+  // ── the six cards: colour + doodles + copy ──
+  const CARDS = [
+    { bg: 'linear-gradient(165deg, #8b5cf6 0%, #6d28d9 45%, #3b0f8c 100%)', kicker: 'A habit RPG', h: 'Turn your habits<br>into an <em>RPG</em>.', top: 170 },
+    { bg: 'linear-gradient(165deg, #38bdf8 0%, #2563eb 50%, #1e3a8a 100%)', kicker: 'The daily loop', h: 'Seal vows.<br>Earn <em>XP</em>.', bottom: 250, pad: 'padding-left:470px;padding-right:40px;text-align:left' },
+    { bg: 'linear-gradient(165deg, #fb923c 0%, #ea580c 45%, #9a1c1c 100%)', kicker: 'Real steps · real bosses', h: 'Your steps<br>slay the <em>boss</em>.', top: 170 },
+    { bg: 'linear-gradient(165deg, #2dd4bf 0%, #0d9488 50%, #134e4a 100%)', kicker: 'Co-op hunts', h: 'Hunt with<br>your <em>friends</em>.', top: 170 },
+    { bg: 'linear-gradient(165deg, #f472b6 0%, #c026d3 45%, #581c87 100%)', kicker: 'The Worldgate', h: 'One monster.<br><em>Everyone.</em>', bottom: 250 },
+    { bg: 'linear-gradient(165deg, #fcd34d 0%, #f59e0b 45%, #9a3412 100%)', kicker: 'Loot', h: 'Win legendary<br><em>relics</em>.', top: 170 },
+  ];
+  const DOODLE = {
+    rune: '<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M30 4 L54 30 L30 56 L6 30 Z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg>',
+    star: '<svg viewBox="0 0 60 60" width="100%" height="100%"><path d="M30 3 L36 24 L57 30 L36 36 L30 57 L24 36 L3 30 L24 24 Z" fill="#fff"/></svg>',
+    ring: '<svg viewBox="0 0 60 60" width="100%" height="100%"><circle cx="30" cy="30" r="22" fill="none" stroke="#fff" stroke-width="5"/></svg>',
+    squig: '<svg viewBox="0 0 80 40" width="100%" height="100%"><path d="M4 30 Q 16 4 28 20 T 52 20 T 76 10" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>',
+  };
+  // deterministic scatter: [kind, x, y, size, rot]
+  const SCATTER = [['rune', 110, 700, 70, 12], ['star', 1150, 610, 54, 0], ['squig', 980, 330, 120, -18], ['ring', 90, 1500, 64, 0],
+                   ['star', 1200, 1880, 46, 20], ['rune', 1100, 2600, 80, -10], ['squig', 140, 2450, 130, 14], ['star', 260, 190, 40, 0]];
+  CARDS.forEach((c, i) => {
+    const card = el('div', 'card', `left:${i * W}px;background:${c.bg}`);
+    SCATTER.forEach(([k, x, y, s, r], j) => {
+      const flip = (i + j) % 2 ? -1 : 1;
+      card.appendChild(el('div', 'doodle', `left:${(flip < 0 ? W - x - s : x)}px;top:${y + ((i * 37) % 90)}px;width:${s}px;height:${s}px;transform:rotate(${r + i * 23}deg)`, DOODLE[k]));
+    });
+    const copy = el('div', 'copy', (c.top != null ? `top:${c.top}px;` : `bottom:${c.bottom}px;`) + `left:${i * W}px;` + (c.pad || ''),
+      `<div class="kicker">${c.kicker}</div><h1>${c.h}</h1>`);
+    card.dataset.i = i;
+    strip.appendChild(card);
+    strip.appendChild(copy);
+  });
+
+  // ── phones (strip coordinates; may cross a seam) ──
+  const ready = [];
+  function phone(file, x, y, w, rot) {
+    const s = (w - 40) / RAW_W;                 // capture → screen scale
+    const sb = Math.round(177 * s);             // 59pt status bar at 3×
+    const p = el('div', 'phone', `left:${x}px;top:${y}px;width:${w}px;transform:rotate(${rot}deg);border-radius:${Math.round(w * .144)}px`);
+    const screen = el('div', 'screen', `border-radius:${Math.round(w * .128)}px`);
+    const st = el('div', 'status', `height:${sb}px`);
+    st.appendChild(el('div', 'time', `left:${Math.round(s * 150)}px;top:${Math.round(s * 64)}px;font-size:${Math.round(s * 56)}px`, '9:41'));
+    st.appendChild(el('div', 'island', `top:${Math.round(s * 33)}px;width:${Math.round(s * 378)}px;height:${Math.round(s * 111)}px;border-radius:${Math.round(s * 56)}px`));
+    st.appendChild(el('div', 'icons', `right:${Math.round(s * 110)}px;top:${Math.round(s * 70)}px;gap:${Math.round(s * 18)}px`,
+      `<svg width="${Math.round(s * 60)}" height="${Math.round(s * 37)}" viewBox="0 0 52 32"><rect x="0" y="20" width="9" height="12" rx="2" fill="#fff"/><rect x="14" y="14" width="9" height="18" rx="2" fill="#fff"/><rect x="28" y="7" width="9" height="25" rx="2" fill="#fff"/><rect x="42" y="0" width="9" height="32" rx="2" fill="#fff"/></svg>` +
+      `<svg width="${Math.round(s * 53)}" height="${Math.round(s * 39)}" viewBox="0 0 46 34"><path d="M23 30.5l6.2-6.4a8.9 8.9 0 0 0-12.4 0z M23 3a33 33 0 0 0-22 8.4l4.4 4.5a26.6 26.6 0 0 1 35.2 0l4.4-4.5A33 33 0 0 0 23 3z M23 13.5a21.8 21.8 0 0 0-14.8 5.8l4.4 4.5a15.4 15.4 0 0 1 20.8 0l4.4-4.5A21.8 21.8 0 0 0 23 13.5z" fill="#fff"/></svg>` +
+      `<svg width="${Math.round(s * 88)}" height="${Math.round(s * 42)}" viewBox="0 0 76 36"><rect x="1.5" y="1.5" width="64" height="33" rx="10" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="3"/><rect x="6" y="6" width="55" height="24" rx="6" fill="#fff"/><rect x="69" y="12" width="5" height="12" rx="2.5" fill="rgba(255,255,255,.45)"/></svg>`));
+    const img = el('img');
+    ready.push(new Promise((res) => { img.onload = () => {
+      try { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = 1;
+        c.getContext('2d').drawImage(img, 0, 0, img.naturalWidth, 1, 0, 0, img.naturalWidth, 1);
+        st.style.backgroundImage = `url(${c.toDataURL()})`; } catch (_) {}
+      res(); }; }));
+    img.src = `raw/${file}.png`;
+    screen.appendChild(st); screen.appendChild(img); p.appendChild(screen);
+    strip.appendChild(p);
+  }
+  // an enlarged crop of a capture: box = [x0, y0, x1, y1] in capture pixels
+  function pop(file, box, x, y, w, rot, radius) {
+    const s = w / (box[2] - box[0]);
+    strip.appendChild(el('div', 'pop', `left:${x}px;top:${y}px;width:${w}px;height:${Math.round((box[3] - box[1]) * s)}px;transform:rotate(${rot}deg);` +
+      `border-radius:${radius || 44}px;background-image:url(raw/${file}.png);background-size:${Math.round(RAW_W * s)}px auto;background-position:${-Math.round(box[0] * s)}px ${-Math.round(box[1] * s)}px`));
+  }
+  function item(src, name, rarity, x, y, w, rot) {
+    strip.appendChild(el('div', 'item', `left:${x}px;top:${y}px;width:${w}px;height:${w}px;transform:rotate(${rot}deg)`,
+      `<img src="../../${src}" alt=""><div class="tag">${name}<small>${rarity}</small></div>`));
+  }
+  function chip(text, x, y, rot) { strip.appendChild(el('div', 'chip', `left:${x}px;top:${y}px;transform:rotate(${rot}deg)`, text)); }
+
+  // ── the set ──
+  // 1 → 2: the vow list, tilted across the seam; its vows pop out on card 2
+  phone('habits', 700, 820, 1060, -9);
+  pop('habits', [40, 725, 1280, 960], 60, 2230, 1140, -4, 40);                  // the live hunt, card 1
+  pop('habits', [48, 1398, 1274, 1616], 1700, 560, 1050, 3, 40);               // card 2: vows popping out
+  pop('habits', [48, 1640, 1274, 1860], 1760, 900, 1050, -2, 40);
+  pop('habits', [48, 1894, 1274, 2114], 1720, 1240, 1050, 2, 40);
+  // 3: the kill, with its spoils flying out
+  phone('victory', 2640 + 170, 860, 980, 6);
+  pop('victory', [80, 1385, 655, 1628], 2640 + 40, 2140, 640, -7, 40);         // +120 souls
+  pop('victory', [665, 1385, 1240, 1628], 2640 + 660, 2330, 640, 5, 40);       // the relic
+  // 4 → 5: the co-op win across the seam; the Worldgate podium pops on card 5
+  phone('coop', 3960 + 470, 880, 1000, 8);
+  pop('coop', [60, 1590, 1260, 1780], 3960 + 60, 2330, 1150, -3, 40);           // the MVP band
+  pop('mvp', [200, 1300, 1120, 2200], 5280 + 330, 700, 900, -4, 48);            // the podium
+  // 6: loot
+  item('assets/items/crown-of-the-ascendant.png', 'Crown of the Ascendant', 'Legendary', 6600 + 300, 760, 720, -6);
+  item('assets/items/duskforge-the-anvils-verdict.png', 'The Anvil’s Verdict', 'Ultra rare', 6600 + 60, 1560, 620, -12);
+  item('assets/items/ashen-monarchs-cape.png', 'Ashen Monarch’s Cape', 'Rare', 6600 + 640, 1720, 620, 9);
+
+  Promise.all(ready.concat([document.fonts.ready])).then(() => { document.body.dataset.ready = '1'; });
+</script>
+</body>
+</html>
