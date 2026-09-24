@@ -287,6 +287,18 @@ UPDATE_DESC="Awakened may request Health access through its HealthKit integratio
 /usr/libexec/PlistBuddy -c "Add :NSHealthUpdateUsageDescription string '$UPDATE_DESC'" "$PLIST" 2>/dev/null || \
 /usr/libexec/PlistBuddy -c "Set :NSHealthUpdateUsageDescription '$UPDATE_DESC'" "$PLIST"
 
+# ── W987 — custom URL scheme: awakened:// opens the app (App Store In-App
+# Events require a deep link; the universal-link entitlement stays off by
+# default, see §8 below). Plain Info.plist entry — no signing change. Idempotent:
+# the whole CFBundleURLTypes array is rewritten each run.
+/usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string 'com.goallearner.awakened'" "$PLIST"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string 'awakened'" "$PLIST"
+echo "  URL scheme: awakened:// ($(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes:0" "$PLIST"))"
+
 if [ ! -f "$ENTITLEMENTS" ]; then
   echo '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

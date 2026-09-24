@@ -5925,6 +5925,18 @@ test.describe('BI · Briefing names a new update (W986)', () => {
   });
 });
 
+// W987 — awakened://worldgate (the In-App Event deep link) lands on the Worldgate sheet.
+test.describe('BJ · URL scheme routes (W987)', () => {
+  test('awakened://worldgate opens the Worldgate sheet; unknown paths do nothing', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => localStorage.setItem('hb_worldgate_v1', JSON.stringify({ at: Date.now(), week: '2026-09-20', hp: 243293, pool: 120000, status: 'open', my: 4000, floor: 15000, souls: 200, hunters: 9, guild: { steps: 0, hunters: 0 }, top: [], wall: [], recent: [], kill: null })));
+    expect(await page.evaluate(() => (window as any).__routeSchemeUrl('awakened://worldgate'))).toBe(true);
+    await expect(page.locator('.wg2-hero')).toBeVisible({ timeout: 6_000 });
+    expect(await page.evaluate(() => (window as any).__routeSchemeUrl('https://example.com/i/ABC'))).toBe(false);
+    expect(await page.evaluate(() => (window as any).__routeSchemeUrl('awakened://nothing-here'))).toBe(false);
+  });
+});
+
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
   const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
