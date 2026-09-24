@@ -34488,6 +34488,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg2-tag { font-family: var(--wg-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 2px; color: var(--wg-red); margin-top: 6px; }
 .wg2-lore { font-size: 13px; color: var(--wg-ink2); line-height: 1.5; margin: 10px auto 0; max-width: 300px; }
 .wg2-lore b { color: var(--wg-ink); font-weight: 600; }
+/* W985 — the weekly rhythm: a new boss every Sunday, and when the next one rises */
+.wg2-next { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; margin: 14px auto 0; padding: 9px 16px 10px;
+  border: 1px solid rgba(245,184,66,.32); border-radius: 12px; background: rgba(245,184,66,.06); }
+.wg2-next-k { font-family: var(--wg-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: #f5b842; }
+.wg2-next-v { font-size: 13px; color: var(--wg-ink2); }
+.wg2-next-v b { color: var(--wg-ink); font-weight: 700; }
 .wg2-hpbig { margin: 16px 20px 0; text-align: center; }
 .wg2-hpbig-n { font-family: var(--wg-serif); font-size: 34px; font-weight: 700; color: var(--wg-ink); line-height: 1; font-variant-numeric: tabular-nums; }
 .wg2-hpbig-n small { font-size: 16px; color: var(--wg-ink3); font-weight: 600; margin-left: 6px; }

@@ -5597,6 +5597,17 @@ test.describe('BE · Rating moments (W974)', () => {
 // BF. W975 — WORLDGATE MVPs (Claude Design handoff 29): replaces the W964 ceremony
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('BF · Worldgate MVPs (W975)', () => {
+  // W985 — the sheet says the Worldgate is weekly, and when the next boss rises.
+  test('the sheet tells every hunter a new boss rises each Sunday, and when', async ({ page }) => {
+    await seed(page, { kill: KILL() });   // this week's gate (2026-09-20) is down
+    await page.evaluate(() => document.getElementById('wg-pulse')!.click());
+    await expect(page.locator('.wg2-next')).toBeVisible({ timeout: 8_000 });
+    const t = await page.locator('.wg2-next').innerText();
+    expect(t).toMatch(/new Worldgate boss rises every Sunday/i);
+    expect(t).toMatch(/Next: Sun 27 Sep/);
+    expect(t).not.toMatch(/\bfell(ed)?\b/i);
+  });
+
   const KILL = (over?: Record<string, unknown>) => ({
     week: '2026-09-20', slain_at: Date.UTC(2026, 8, 24, 18), pool: 1284000, hunters: 41,
     mvps: [{ alias: 'Anthony', rank_tier: 'C', steps: 28018 }, { alias: 'Ryan', rank_tier: 'E', steps: 24550 }, { alias: 'Zynfandel', rank_tier: 'D', steps: 21907 }],
