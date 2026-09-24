@@ -28,17 +28,21 @@
   .sub b { color: #f5b842; }
   .pop { position: absolute; border-radius: 40px; background: url(raw/mvp.png) no-repeat; box-shadow: 0 0 0 4px rgba(255,255,255,.16), 0 50px 100px rgba(0,0,0,.6); }
   .logo { position: absolute; font: 900 34px/1 'Cinzel', serif; letter-spacing: .12em; color: #f5b842; }
+  /* The App Store overlays the badge, name and short description bottom-left — no text in the art, and that corner stays dark. */
+  .copy, .logo { display: none; }
+  .card .veil { background: linear-gradient(90deg, rgba(5,5,11,.9) 0%, rgba(5,5,11,.45) 40%, rgba(5,5,11,.05) 100%), linear-gradient(0deg, rgba(5,5,11,.8) 0%, transparent 45%); }
+  .page .veil { background: linear-gradient(180deg, rgba(5,5,11,.15) 0%, rgba(5,5,11,.45) 50%, rgba(5,5,11,.95) 100%); }
   /* card layout */
   .card .boss { right: -120px; top: -140px; width: 1300px; height: 1300px; }
   .card .copy { left: 110px; top: 250px; width: 980px; }
-  .card .pop { right: 150px; top: 170px; width: 520px; height: 700px; background-size: 745px auto; background-position: -113px -735px; transform: rotate(-4deg); }
+  .card .pop { right: 190px; top: 130px; width: 560px; height: 760px; background-size: 745px auto; background-position: -113px -735px; transform: rotate(-4deg); }
   .card .logo { left: 110px; bottom: 90px; }
   /* page layout */
-  .page .boss { left: -110px; top: -80px; width: 1300px; height: 1300px; }
+  .page .boss { left: -110px; top: -180px; width: 1300px; height: 1300px; }
   .page .copy { left: 80px; right: 80px; top: 1080px; text-align: center; }
   .page h1 { font-size: 132px; }
   .page .sub { font-size: 28px; }
-  .page .pop { display: none; }
+  .page .pop { display: block; left: 150px; top: 230px; width: 780px; height: 1000px; background-size: 1117px auto; background-position: -170px -1100px; transform: rotate(-3deg); }
   .page .logo { left: 0; right: 0; bottom: 80px; text-align: center; }
 </style>
 </head>
