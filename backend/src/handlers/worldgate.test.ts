@@ -119,7 +119,7 @@ function wgEnv(st: WgState): Env {
           },
           all: async () => {
             if (/SELECT m\.user_id AS user_id, u\.alias AS alias/.test(sql)) {   // W975 — the podium freeze
-              const results = st.merged.slice().sort((a, b) => b.steps - a.steps || a.alias.localeCompare(b.alias)).slice(0, 3).map((r) => ({ user_id: r.user_id, alias: r.alias, steps: r.steps, rank_tier: r.rank_tier ?? null }));
+              const results = st.merged.slice().sort((a, b) => b.steps - a.steps || a.alias.localeCompare(b.alias)).slice(0, (binds[1] as number) || 3).map((r) => ({ user_id: r.user_id, alias: r.alias, steps: r.steps, rank_tier: r.rank_tier ?? null }));
               return { results, success: true, meta: {} };
             }
             if (/ORDER BY m\.steps DESC, u\.alias ASC\s+LIMIT \?3/.test(sql) && /AS me/.test(sql)) {
@@ -132,7 +132,8 @@ function wgEnv(st: WgState): Env {
               return { results, success: true, meta: {} };
             }
             if (/ORDER BY ls\.updated_at DESC/.test(sql)) {
-              const results = st.merged.slice().sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0 }));
+              const until = binds[2] as number | null;
+              const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0 }));
               return { results, success: true, meta: {} };
             }
             if (/AS f\(id\)/.test(sql)) return { results: st.friends.map((id) => ({ id })), success: true, meta: {} };
@@ -279,5 +280,59 @@ describe('W975 — Worldgate MVPs', () => {
     await kill(st);
     expect((await kill(st, g)).claimable).toBe(true);
     expect((await kill(st, meS)).claimable).toBe(false);
+  });
+});
+
+// ── W983 — once the gate falls, strikes stop counting ─────────────────────
+describe('W983 — the gate stops counting at the kill', () => {
+  const read = async (st: WgState, who: SessionPayload = meS) =>
+    (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), who)).json()) as Record<string, any>;
+  const claim = async (st: WgState, who: SessionPayload) =>
+    handleWorldgateClaim(new Request('https://x/v1/worldgate/claim', { method: 'POST' }), wgEnv(st), who);
+
+  it('steps walked after the kill move nothing on the gate: damage, pool, lists, recent, claim', async () => {
+    const st = wgFresh(); st.gate.hp = 40000;
+    const atKill = await read(st);   // this read stamps + freezes
+    expect(atKill.status).toBe('slain');
+    // Richie walks 16,000 more and syncs: past the bounty floor, past everyone.
+    st.merged[0]!.steps = 20000; st.merged[0]!.updated_at = 999;
+    const r = await read(st);
+    expect(r.my_damage).toBe(4000);
+    expect(r.pool).toBe(50000);
+    expect(r.my_rank).toBe(4);
+    expect(r.top.map((t: any) => [t.alias, t.steps])).toEqual([['RenDIESEL', 21000], ['james', 16000], ['grubbadub', 9000], ['Richie', 4000]]);
+    expect(r.wall.map((w: any) => w.alias)).toEqual(['RenDIESEL', 'james']);
+    expect(r.wall_count).toBe(2);
+    expect(r.guild).toEqual({ steps: 30000, hunters: 2 });
+    expect(r.recent.map((x: any) => x.alias)[0]).toBe('grubbadub');   // his post-kill sync is not a strike
+    expect(r.recent.some((x: any) => x.steps === 20000)).toBe(false);
+    expect(r.kill).toMatchObject({ my_steps: 4000, my_pos: 4 });
+    expect(r.claimable).toBe(false);
+    expect((await claim(st, meS)).status).toBe(403);
+    expect(JSON.stringify(r)).not.toMatch(/u-me|u-ren|user_id/);
+  });
+
+  it('an open gate still counts live', async () => {
+    const st = wgFresh();
+    st.merged[0]!.steps = 6000;
+    const r = await read(st);
+    expect(r.my_damage).toBe(6000);
+    expect(r.pool).toBe(52000);
+  });
+
+  it('a kill frozen before standings existed is completed on first read: podium numbers kept, recent stops at the kill', async () => {
+    const st = wgFresh(); st.gate.status = 'slain'; st.gate.slain_at = 250;
+    st.gate.kill_json = JSON.stringify({ pool: 48000, hunters: 4, mvps: [
+      { user_id: 'u-ren', alias: 'RenDIESEL', rank_tier: 'S', steps: 19000 },
+      { user_id: 'u-j', alias: 'james', rank_tier: 'B', steps: 16000 },
+      { user_id: 'u-g', alias: 'grubbadub', rank_tier: 'B', steps: 9000 },
+    ] });
+    const r = await read(st);
+    expect(r.pool).toBe(48000);
+    expect(r.top[0]).toMatchObject({ alias: 'RenDIESEL', steps: 19000 });   // his post-kill 2,000 do not count
+    expect(r.recent.map((x: any) => x.alias)).toEqual(['james', 'Richie']);   // only syncs at or before the kill
+    const saved = JSON.parse(st.gate.kill_json as string);
+    expect(Array.isArray(saved.standings)).toBe(true);
+    expect(saved.standings.length).toBe(4);
   });
 });
