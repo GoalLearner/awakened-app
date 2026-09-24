@@ -62,16 +62,27 @@ const HP_MEDIAN_FACTOR = 0.80;      // the fleet's median week should usually wi
 // it can be switched back on when the hunter count justifies it.
 const HP_STREAK_ESCALATOR = 0;
 const HP_MEDIAN_WEEKS = 4;
+// W984 (owner call 2026-09-23) — THE GATE LASTS UNTIL SATURDAY. The 2026-09-20
+// gate fell on Wednesday 3:38 PM PST: HP was 0.80 x the 4-week median, and a
+// fleet that grew from 5-9 walkers to 14 in three weeks outran a median that
+// lags by a month. The owner wants the fight to last the week. So the gate is
+// sized to LAST WEEK'S whole pool: the same hunters walking the same amount
+// break it on the last day. A bigger week breaks it earlier; a quieter one lets
+// it survive (the 5% carry softens the next). The old 0.80 x median stays as a
+// floor only, so one quiet week cannot make the next gate trivial.
+const HP_LAST_WEEK_FACTOR = 1.0;
 
-/** Pure HP math — exported so it can be tested without a database. */
+/** Pure HP math — exported so it can be tested without a database.
+ *  `pools` are completed weekly pools, NEWEST FIRST (recentPools' order). */
 export function computeGateHp(pools: number[], slainStreak: number, carry: number): number {
+  const lastWeek = (pools && typeof pools[0] === 'number' && pools[0] > 0) ? pools[0] : 0;
   const usable = (pools || []).filter((p) => typeof p === 'number' && p > 0).sort((a, b) => a - b);
   let median = 0;
   if (usable.length) {
     const m = usable.length >> 1;
     median = usable.length % 2 ? usable[m] : Math.round((usable[m - 1] + usable[m]) / 2);
   }
-  const base = Math.max(HP_MIN, Math.round(HP_MEDIAN_FACTOR * median));
+  const base = Math.max(HP_MIN, Math.round(HP_LAST_WEEK_FACTOR * lastWeek), Math.round(HP_MEDIAN_FACTOR * median));
   const escalated = Math.round(base * (1 + HP_STREAK_ESCALATOR * Math.max(0, slainStreak)));
   return Math.max(1, escalated - Math.max(0, carry));
 }

@@ -18,10 +18,12 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
 // Real durable weekly pools, oldest first. The in-progress week is excluded.
+// W984 — extended through 2026-09-13 (weekly_step_records, read 2026-09-23).
 const REAL_POOLS: Array<[string, number]> = [
   ['2026-06-07', 398668], ['2026-06-14', 305069], ['2026-06-21', 306299], ['2026-06-28', 371684],
   ['2026-07-05', 415105], ['2026-07-12', 352353], ['2026-07-19', 320038], ['2026-07-26', 398736],
   ['2026-08-02', 295412], ['2026-08-09', 252178], ['2026-08-16', 296492],
+  ['2026-08-23', 431000], ['2026-08-30', 347498], ['2026-09-06', 182401], ['2026-09-13', 194070],
 ];
 const CARRY_RATE = 0.05;
 
@@ -33,7 +35,7 @@ function backtest() {
   const rows: Array<{ week: string; hp: number; pool: number; won: boolean }> = [];
   for (let i = 4; i < REAL_POOLS.length; i++) {
     const [week, pool] = REAL_POOLS[i];
-    const priorPools = REAL_POOLS.slice(i - 4, i).map((w) => w[1]);
+    const priorPools = REAL_POOLS.slice(i - 4, i).map((w) => w[1]).reverse();   // newest first, as recentPools returns
     const hp = computeGateHp(priorPools, streak, carry);
     const won = pool >= hp;
     rows.push({ week, hp, pool, won });
@@ -51,11 +53,31 @@ describe('worldgate HP (W892)', () => {
     expect(hp).toBeGreaterThan(120000);
   });
 
-  it('breaks 50-80% of real weeks (the tuning target)', () => {
+  it('W984 — a real fight: over real weeks it breaks some and survives some (never a formality, never a wall)', () => {
     const { slain, total } = backtest();
     const rate = slain / total;
-    expect(rate).toBeGreaterThanOrEqual(0.5);
-    expect(rate).toBeLessThanOrEqual(0.8);
+    expect(rate).toBeGreaterThanOrEqual(0.3);
+    expect(rate).toBeLessThanOrEqual(0.7);
+  });
+
+  it('W984 — sized to last week: the same fleet walking the same breaks it on Saturday, not before', () => {
+    const last = 450000;
+    const hp = computeGateHp([last, 194070, 182401, 347498], 0, 0);   // newest first
+    expect(hp).toBe(last);
+    const perDay = last / 7;
+    expect(perDay * 6).toBeLessThan(hp);    // still standing Friday night
+    expect(perDay * 7).toBeGreaterThanOrEqual(hp);   // falls on the last day
+  });
+
+  it('W984 — the 2026-09-20 gate (fell Wednesday) would have been sized to the fleet that broke it', () => {
+    // This week's walkers put 251,138 on it by Wednesday evening; next week's gate asks their whole week.
+    const next = computeGateHp([451000, 194070, 182401, 347498], 0, 0);
+    expect(next).toBeGreaterThan(251138 * 1.5);
+  });
+
+  it('W984 — one quiet week cannot make the next gate trivial (the median floor)', () => {
+    const hp = computeGateHp([100000, 400000, 420000, 410000], 0, 0);
+    expect(hp).toBe(Math.round(0.8 * 405000));
   });
 
   it('W962 — a win streak does NOT raise the next gate (escalator off for a small fleet)', () => {
