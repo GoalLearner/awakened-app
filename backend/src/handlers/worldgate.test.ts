@@ -136,6 +136,7 @@ function wgEnv(st: WgState): Env {
               const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0 }));
               return { results, success: true, meta: {} };
             }
+            if (/AND updated_at > \?/.test(sql)) return { results: st.merged.filter((r) => (r.updated_at || 0) > (binds[1] as number)).map((r) => ({ user_id: r.user_id })), success: true, meta: {} };
             if (/AS f\(id\)/.test(sql)) return { results: st.friends.map((id) => ({ id })), success: true, meta: {} };
             if (/FROM world_gates WHERE week_start </.test(sql)) return { results: [], success: true, meta: {} };
             if (/FROM weekly_step_records/.test(sql)) return { results: [], success: true, meta: {} };
@@ -327,12 +328,15 @@ describe('W983 — the gate stops counting at the kill', () => {
       { user_id: 'u-j', alias: 'james', rank_tier: 'B', steps: 16000 },
       { user_id: 'u-g', alias: 'grubbadub', rank_tier: 'B', steps: 9000 },
     ] });
+    // Richie synced AFTER the kill (6,000 now): he gives back the overshoot, the podium keeps its numbers.
+    st.merged[0]!.steps = 6000; st.merged[0]!.updated_at = 500;
     const r = await read(st);
     expect(r.pool).toBe(48000);
     expect(r.top[0]).toMatchObject({ alias: 'RenDIESEL', steps: 19000 });   // his post-kill 2,000 do not count
-    expect(r.recent.map((x: any) => x.alias)).toEqual(['james', 'Richie']);   // only syncs at or before the kill
+    expect(r.my_damage).toBe(4000);   // 19,000 + 16,000 + 9,000 + 6,000 = 50,000 → 2,000 over the kill's 48,000
+    expect(r.recent.map((x: any) => x.alias)).toEqual(['james']);   // only syncs at or before the kill
     const saved = JSON.parse(st.gate.kill_json as string);
     expect(Array.isArray(saved.standings)).toBe(true);
-    expect(saved.standings.length).toBe(4);
+    expect(saved.standings.reduce((a: number, x: any) => a + x.steps, 0)).toBe(48000);
   });
 });

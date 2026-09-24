@@ -148,8 +148,10 @@ async function snapshotKill(env: Env, week: string): Promise<KillSnap> {
  *  request raced) is frozen on first read — its week's final standings.
  *  W983 — a kill frozen before standings existed gets them on first read: the
  *  podium keeps its frozen numbers, every hunter who has not synced since the
- *  kill is exact, and the recent strikes stop at the kill. (A hunter who synced
- *  after it carries those few steps; the podium and the pool never move.) */
+ *  kill is exact, and the recent strikes stop at the kill. Hunters who synced
+ *  AFTER it give back the overshoot — live total minus the frozen pool — shared
+ *  in proportion to their steps and rounded against them, so the standings sum
+ *  to the kill again and a late sync can never lift anyone over the floor. */
 async function killSnap(env: Env, gate: GateRow): Promise<KillSnap | null> {
   if (!gate || gate.status !== 'slain') return null;
   if (gate.kill_json) {
@@ -159,7 +161,20 @@ async function killSnap(env: Env, gate: GateRow): Promise<KillSnap | null> {
       if (Array.isArray(s.standings)) return s;
       const frozen = new Map(s.mvps.map((m) => [m.user_id, m.steps]));
       const live = await standingsOf(env, gate.week_start);
-      s.standings = live.map((r) => (frozen.has(r.user_id) ? { ...r, steps: frozen.get(r.user_id) as number } : r)).sort(byDamage);
+      let rows = live.map((r) => (frozen.has(r.user_id) ? { ...r, steps: frozen.get(r.user_id) as number } : r));
+      const slainAt = Number(gate.slain_at) || 0;
+      const excess = rows.reduce((a, r) => a + r.steps, 0) - (Number(s.pool) || 0);
+      if (slainAt && excess > 0) {
+        const lateRows = await env.DB.prepare(
+          "SELECT user_id FROM leaderboard_snapshots WHERE metric = 'step_total' AND week_start = ? AND updated_at > ?",
+        ).bind(gate.week_start, slainAt).all<{ user_id: string }>();
+        const late = new Set((lateRows.results ?? []).map((r) => r.user_id).filter((id) => !frozen.has(id)));
+        const lateSum = rows.filter((r) => late.has(r.user_id)).reduce((a, r) => a + r.steps, 0);
+        if (lateSum > 0) {
+          rows = rows.map((r) => (late.has(r.user_id) ? { ...r, steps: Math.max(0, r.steps - Math.ceil((excess * r.steps) / lateSum)) } : r));
+        }
+      }
+      s.standings = rows.sort(byDamage);
       s.recent = await recentStrikes(env, gate.week_start, Number(gate.slain_at) || null);
       const json = JSON.stringify(s);
       await env.DB.prepare('UPDATE world_gates SET kill_json = ? WHERE week_start = ?').bind(json, gate.week_start).run();
