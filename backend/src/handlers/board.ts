@@ -130,6 +130,7 @@ interface TopicRow extends AuthorRow {
   up_count?: number;          // W913
   pinned_at?: number | null;  // W913
   locked_at?: number | null;  // W914
+  resolved_at?: number | null;  // W990
 }
 
 interface Replier { alias: string; rank_label: string | null; last_at?: number }
@@ -295,6 +296,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
     voted: !!extra.voted,
     pinned: r.pinned_at != null,
     locked: r.locked_at != null,   // W914
+    resolved: r.resolved_at != null,   // W990
     repliers: extra.repliers,
     // W929 — the board row's "last reply" line: the newest replier + when.
     last_reply: extra.repliers && extra.repliers[0]
@@ -304,7 +306,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
   };
 }
 
-const TOPIC_COLS = `x.id, x.tag, x.kind, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at`;
+const TOPIC_COLS = `x.id, x.tag, x.kind, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at, x.resolved_at`;   // W990 resolved_at
 
 /** Which of these topics the caller upvoted. */
 async function votedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
@@ -403,6 +405,10 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const sortRaw = url.searchParams.get('sort') || 'latest';
   if (!(SORTS as readonly string[]).includes(sortRaw)) return jsonError(400, 'INVALID_SORT', 'sort must be latest, hot or unanswered.');
   const sort = sortRaw as Sort;
+  // W990 — state: '' (open topics, the default) or 'resolved' (only resolved).
+  const stateRaw = url.searchParams.get('state') || '';
+  if (stateRaw && stateRaw !== 'resolved') return jsonError(400, 'INVALID_STATE', "state must be empty or 'resolved'.");
+  const wantResolved = stateRaw === 'resolved' ? 1 : 0;
   const cursorRaw = url.searchParams.get('cursor') || '';
   let cUp = 0; let cAt = 0; let cId = '';
   if (cursorRaw) {
@@ -422,8 +428,9 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
         AND ${SIM_FILTER}
         AND (? = 1 OR x.hidden_at IS NULL)
         AND (? = '' OR ${WIRE_TAG_SQL} = ?)
-        AND ${BLOCK_FILTER}`;
-  const whereBinds = [modView, tag, tag, session.userId, session.userId];
+        AND ${BLOCK_FILTER}
+        AND (x.resolved_at IS NOT NULL) = ?`;
+  const whereBinds = [modView, tag, tag, session.userId, session.userId, wantResolved];
   const firstPage = !cursorRaw;
 
   // W913 — pinned topics lead the first page of every sort; the keyset list excludes them.
@@ -462,21 +469,28 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const ids = all.map((r) => r.id);
   const [voted, repliers] = await Promise.all([votedSet(env, session.userId, ids), repliersMap(env, session.userId, ids)]);
 
-  // Tag counts for the filter rail (visible topics, every tag) — first page only.
-  let counts: { all: number; improvement: number; bug: number; talk: number; update: number } | undefined;
+  // Tag counts for the filter rail (visible OPEN topics, every tag) — first page
+  // only. W990 — plus how many are resolved, for the RESOLVED pill.
+  let counts: { all: number; improvement: number; bug: number; talk: number; update: number; resolved: number } | undefined;
   if (firstPage) {
     const c = await env.DB.prepare(
       `SELECT ${WIRE_TAG_SQL} AS tag, COUNT(*) AS n
          FROM board_topics x${AUTHOR_JOIN}
         WHERE ${where}
         GROUP BY 1`,
-    ).bind(modView, '', '', session.userId, session.userId).all<{ tag: string; n: number }>();
-    counts = { all: 0, improvement: 0, bug: 0, talk: 0, update: 0 };
+    ).bind(modView, '', '', session.userId, session.userId, 0).all<{ tag: string; n: number }>();
+    counts = { all: 0, improvement: 0, bug: 0, talk: 0, update: 0, resolved: 0 };
     for (const r of c.results ?? []) {
       const n = Number(r.n) || 0;
       if (isTag(r.tag)) counts[r.tag] = n;
       counts.all += n;
     }
+    const rc = await env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM board_topics x${AUTHOR_JOIN}
+        WHERE ${where}`,
+    ).bind(modView, '', '', session.userId, session.userId, 1).first<{ n: number }>();
+    counts.resolved = Number(rc?.n) || 0;
   }
   let next_cursor: string | null = null;
   if (list.length > PAGE && last) {
@@ -985,6 +999,26 @@ export async function handleBoardPinPost(_request: Request, env: Env, session: S
   await env.DB.prepare('UPDATE board_topics SET pinned_at = ?, pinned_by = ? WHERE id = ?')
     .bind(pin ? Date.now() : null, pin ? session.userId : null, topicId).run();
   return jsonOk({ ok: true, pinned: pin });
+}
+
+// ── W990 — RESOLVED: a fixed bug or a shipped idea stops looking open ──
+// Moderators only, a toggle. Resolving also unpins (a resolved topic has no
+// business leading the Hall); reopening does not re-pin.
+export async function handleBoardTopicResolve(_request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const gate = await modGate(env, session);
+  if ('deny' in gate) return gate.deny;
+  const row = await env.DB.prepare('SELECT resolved_at FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(topicId).first<{ resolved_at: number | null }>();
+  if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const resolve = row.resolved_at == null;
+  if (resolve) {
+    await env.DB.prepare('UPDATE board_topics SET resolved_at = ?, resolved_by = ?, pinned_at = NULL, pinned_by = NULL WHERE id = ?')
+      .bind(Date.now(), session.userId, topicId).run();
+  } else {
+    await env.DB.prepare('UPDATE board_topics SET resolved_at = NULL, resolved_by = NULL WHERE id = ?').bind(topicId).run();
+  }
+  return jsonOk({ ok: true, resolved: resolve });
 }
 
 // ── W914 — moderator tools: LOCK a topic, PURGE a hunter's recent posts ──

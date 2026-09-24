@@ -34417,6 +34417,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 
 /* W914 — the spam guard: LOCKED pill, the composer's live cooldown note. */
 .board-tag--lock { color: var(--b-ink2); border: 1px solid rgba(255,255,255,0.22); padding: 2px 6px; }
+/* W990 — RESOLVED: a fixed bug or a shipped idea */
+.board-tag--resolved { color: #4ade80; background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.38); padding: 2px 6px; }
+.board-topic--resolved { opacity: 0.82; }
+.board-f--resolved i { background: #4ade80; }
+.board-chip--ok { color: #4ade80; border-color: rgba(74,222,128,0.45); }
 .board-compose-note { margin-top: 8px; font-family: var(--b-mono); font-size: 9.5px; font-weight: 800; letter-spacing: 1.2px; color: var(--b-gold); }
 .board-compose-note.hidden { display: none !important; }
 

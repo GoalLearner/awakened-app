@@ -1744,7 +1744,9 @@
   // W913 — sort = latest | hot | unanswered (pinned topics lead the first page of every sort).
   function boardTopics(tag, cursor, sort) {
     var q = [];
-    if (tag) q.push('tag=' + encodeURIComponent(tag));
+    // W990 — the RESOLVED rail is a pseudo-tag on the client: on the wire it is state=resolved, no tag.
+    if (tag === 'resolved') q.push('state=resolved');
+    else if (tag) q.push('tag=' + encodeURIComponent(tag));
     if (sort && sort !== 'latest') q.push('sort=' + encodeURIComponent(sort));
     if (cursor) q.push('cursor=' + encodeURIComponent(cursor));
     return _authedFetch('GET', '/v1/board/topics' + (q.length ? '?' + q.join('&') : '')).then(function (res) {
@@ -1777,6 +1779,8 @@
   function feedLike(eventId)                     { return _authedFetch('POST', '/v1/friends/activity/' + encodeURIComponent(eventId) + '/like'); }
   // W914 — spam guard moderator tools: lock a topic (toggle), purge a hunter's last N hours.
   function boardModLockTopic(id)                 { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/lock'); }
+  // W990 — resolve a topic (toggle): a fixed bug or a shipped idea leaves the open list.
+  function boardModResolveTopic(id)              { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/resolve'); }
   function boardModPurge(userId, hours)          { return _authedFetch('POST', '/v1/board/purge', { user_id: userId, hours: hours || 24 }); }
   // W921 — what is new for you on the Community tab since `since` (epoch ms): topics by others,
   // replies to YOUR topics, likes on YOUR feats. Feeds the badge on the tab icon.
@@ -2474,7 +2478,7 @@
     boardModDeleteTopic, boardModDeleteReply, boardModHideTopic, boardModMute, boardModUnmute,
     boardReports, boardResolveReports, boardModerators, boardGrantModerator,
     boardVote, boardModPinTopic, feedLike,   // W913
-    boardModLockTopic, boardModPurge,        // W914
+    boardModLockTopic, boardModResolveTopic, boardModPurge,        // W914
     communityUnseen,                         // W921
     boardReplyVote, boardReplyEdit, boardFollow,   // W929
     // Push notifications (W603/W604) — device-token register/unregister.

@@ -23,6 +23,7 @@ import {
   handleBoardVotePost,
   handleBoardPinPost,
   handleBoardTopicLock,
+  handleBoardTopicResolve,
   handleBoardPurgePost,
   handleCommunityUnseenGet,
   handleBoardReplyDelete,
@@ -51,7 +52,7 @@ interface State {
   consents: Set<string>;
   mutes: Record<string, number>;
   mods: Record<string, 'owner' | 'mod'>;
-  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null; kind?: string | null }>;
+  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null; kind?: string | null; resolved_at?: number | null }>;
   votes: Set<string>;     // W913 — `${topic}|${user}`
   replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string; parent_reply_id?: string | null; edited_at?: number | null }>;
   strikes: { user_id: string; created_at: number }[];   // W914
@@ -163,8 +164,16 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               return hit ? { id: hit[0], alias: hit[1].alias } : null;
             }
             if (/SELECT 1 AS one FROM users/.test(sql)) return st.users[binds[0] as string] ? { one: 1 } : null;
+            if (/COUNT\(\*\) AS n\s+FROM board_topics x/.test(sql) && !/GROUP BY/.test(sql)) {   // W990 — the resolved total
+              const wantResolved = Number(binds[5]) || 0;
+              const n = Object.values(st.topics).filter((t) => t.deleted_at == null && (binds[0] || t.hidden_at == null) && (t.resolved_at != null ? 1 : 0) === wantResolved).length;
+              return { n };
+            }
             if (/SELECT id, hidden_at, deleted_at(, locked_at)? FROM board_topics/.test(sql)) {
               const t = st.topics[binds[0] as string]; return t ? { id: binds[0], hidden_at: t.hidden_at, deleted_at: t.deleted_at, locked_at: t.locked_at ?? null } : null;
+            }
+            if (/SELECT resolved_at FROM board_topics/.test(sql)) {   // W990
+              const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { resolved_at: t.resolved_at ?? null } : null;
             }
             if (/SELECT locked_at FROM board_topics/.test(sql)) {
               const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { locked_at: t.locked_at ?? null } : null;
@@ -239,6 +248,10 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             }
             if (/INSERT INTO board_replies/.test(sql)) { st.replies[binds[0] as string] = { topic_id: binds[1] as string, deleted_at: null, author_id: binds[2] as string, body: binds[3] as string, created_at: binds[4] as number, parent_reply_id: (binds[5] as string | null) ?? null }; return ok(1); }
             if (/INSERT INTO board_strikes/.test(sql)) { st.strikes.push({ user_id: binds[0] as string, created_at: binds[2] as number }); return ok(1); }
+            if (/UPDATE board_topics SET resolved_at = \?, resolved_by = \?, pinned_at = NULL/.test(sql)) {   // W990
+              const t = st.topics[binds[2] as string]; if (t) { t.resolved_at = binds[0] as number; t.pinned_at = null; } return ok(1);
+            }
+            if (/UPDATE board_topics SET resolved_at = NULL/.test(sql)) { const t = st.topics[binds[0] as string]; if (t) t.resolved_at = null; return ok(1); }
             if (/UPDATE board_topics SET locked_at/.test(sql)) { const t = st.topics[binds[2] as string]; if (t) t.locked_at = binds[0] as number | null; return ok(1); }
             if (/UPDATE board_topics SET deleted_at = \?, deleted_by = \? WHERE author_id/.test(sql)) {
               let n = 0; for (const t of Object.values(st.topics)) if (t.author_id === binds[2] && (t.created_at || 0) > (binds[3] as number) && t.deleted_at == null) { t.deleted_at = binds[0] as number; n++; }
@@ -316,18 +329,20 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               const wantUnpinned = /x\.pinned_at IS NULL/.test(sql);
               const unanswered = /x\.reply_count = 0/.test(sql);
               const isCount = /COUNT\(\*\) AS n\s+FROM board_topics x/.test(sql);
+              const wantResolved = Number(binds[5]) || 0;   // W990 — the last bind of `where`
               let entries = Object.entries(st.topics)
                 .filter(([, t]) => t.deleted_at == null && (modView || t.hidden_at == null))
+                .filter(([, t]) => (t.resolved_at != null ? 1 : 0) === wantResolved)
                 .filter(([, t]) => !st.blocks.has(`${me}|${t.author_id}`) && !st.blocks.has(`${t.author_id}|${me}`))
                 .filter(([, t]) => !st.users[t.author_id].apple_sub.startsWith('sim_test_'))
                 .filter(() => !tag || tag === 'talk');
-              if (isCount) return { results: entries.length ? [{ tag: 'talk', n: entries.length }] : [], success: true, meta: {} };
+              if (isCount) return /GROUP BY/.test(sql) ? { results: entries.length ? [{ tag: 'talk', n: entries.length }] : [], success: true, meta: {} } : { results: [{ n: entries.length }], success: true, meta: {} };
               if (wantPinned) entries = entries.filter(([, t]) => t.pinned_at != null);
               if (wantUnpinned) entries = entries.filter(([, t]) => t.pinned_at == null);
               if (unanswered) entries = entries.filter(([, t]) => !t.reply_count);
               if (/ORDER BY x\.up_count DESC/.test(sql)) entries.sort((a, b) => (b[1].up_count || 0) - (a[1].up_count || 0));
               const results = entries
-                .map(([id, t]) => ({ id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, locked_at: t.locked_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
+                .map(([id, t]) => ({ id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, locked_at: t.locked_at ?? null, resolved_at: t.resolved_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
               return { results, success: true, meta: {} };
             }
             return { results: [], success: true, meta: {} };
@@ -634,6 +649,29 @@ describe('W913 — the v3 board: votes, pins, sorts and counts', () => {
     expect(unpin.pinned).toBe(false);
   });
 
+  // W990 — RESOLVED
+  it('only moderators resolve; a resolved topic leaves the default list, unpins, and lists under state=resolved', async () => {
+    const st = fresh();
+    const a = (await postTopic(st, me)).body as { id: string };
+    const b = (await postTopic(st, ren)).body as { id: string };
+    expect((await handleBoardTopicResolve(get('/x'), makeEnv(st), x, a.id)).status).toBe(403);
+    st.mods['u-me'] = 'owner';
+    await handleBoardPinPost(get('/x'), makeEnv(st), me, a.id);
+    const r = await json(await handleBoardTopicResolve(get('/x'), makeEnv(st), me, a.id));
+    expect(r).toMatchObject({ ok: true, resolved: true });
+    expect(st.topics[a.id]!.pinned_at).toBeNull();
+    const open = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((open.topics as Array<{ id: string }>).map((t) => t.id)).toEqual([b.id]);
+    expect(open.counts).toMatchObject({ all: 1, resolved: 1 });
+    const done = await json(await handleBoardTopicsGet(get('/v1/board/topics?state=resolved'), makeEnv(st), x));
+    expect((done.topics as Array<{ id: string; resolved: boolean }>).map((t) => [t.id, t.resolved])).toEqual([[a.id, true]]);
+    expect((await handleBoardTopicsGet(get('/v1/board/topics?state=nope'), makeEnv(st), x)).status).toBe(400);
+    const back = await json(await handleBoardTopicResolve(get('/x'), makeEnv(st), me, a.id));
+    expect(back.resolved).toBe(false);
+    const again = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((again.topics as Array<{ id: string }>).length).toBe(2);
+  });
+
   it('sort=hot orders by up_count, sort=unanswered keeps only reply_count 0, bad sort 400s', async () => {
     const st = fresh();
     const a = (await postTopic(st, me)).body as { id: string };
@@ -653,7 +691,7 @@ describe('W913 — the v3 board: votes, pins, sorts and counts', () => {
     const st = fresh();
     await postTopic(st, me); await postTopic(st, ren);
     const first = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
-    expect(first.counts).toEqual({ all: 2, improvement: 0, bug: 0, talk: 2, update: 0 });
+    expect(first.counts).toEqual({ all: 2, improvement: 0, bug: 0, talk: 2, update: 0, resolved: 0 });   // W990 resolved
     const later = await json(await handleBoardTopicsGet(get('/v1/board/topics?cursor=5%7Cdeadbeef-0000'), makeEnv(st), x));
     expect(later.counts).toBeUndefined();
   });

@@ -5937,6 +5937,45 @@ test.describe('BJ · URL scheme routes (W987)', () => {
   });
 });
 
+// W990 — RESOLVED on the Community board.
+test.describe('BK · Resolved topics (W990)', () => {
+  test('a resolved topic wears the green tag; the RESOLVED rail asks the server for state=resolved; mods get Resolve / Reopen', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => localStorage.setItem('hb_board_cache_v1', JSON.stringify({ topics: [], me: { role: 'owner' } })));
+    await page.click('#tab-social');
+    await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+    await page.evaluate(() => {
+      const now = Date.now();
+      const au = (alias: string, rank: string, id: string) => ({ author_id: id, alias, rank_label: rank, founder_seq: 0, is_mod: false, mod_role: null });
+      const w = window as any;
+      w.__seen = [];
+      const row = (id: string, title: string, resolved: boolean) => ({ id, tag: 'bug', title, preview: 'p', created_at: now - 86400000, last_activity_at: now - 3600000, reply_count: 0, up_count: 0, voted: false, pinned: false, locked: false, hidden: false, resolved, repliers: [], last_reply: null, author: au('Grubbadub', 'D', 'u-g') });
+      w.Auth.boardTopics = async (tag: string, cursor: string, sort: string) => {
+        w.__seen.push([tag || '', sort || 'latest']);
+        return tag === 'resolved'
+          ? { ok: true, next_cursor: null, counts: { all: 1, improvement: 0, bug: 1, talk: 0, update: 0, resolved: 1 }, topics: [row('cccccccc-0002', 'Sleep double-counted', true)], me: { role: 'owner' } }
+          : { ok: true, next_cursor: null, counts: { all: 1, improvement: 0, bug: 1, talk: 0, update: 0, resolved: 1 }, topics: [row('cccccccc-0001', 'Widget stuck at 0', false)], me: { role: 'owner' } };
+      };
+      w.Auth.boardTopic = async () => ({ ok: true, following: false, next_cursor: null, me: { consented: true, role: 'owner', rank_tier: 'S', topic_min_tier: 'C', reply_min_tier: 'D' },
+        topic: Object.assign(row('cccccccc-0002', 'Sleep double-counted', true), { body: 'Fixed in 3.0.8.' }), replies: [] });
+      w.__board.render();
+    });
+    // the open list: one open bug, no tag; the rail counts one resolved
+    await expect(page.locator('#board-body .board-topic')).toHaveCount(1);
+    await expect(page.locator('#board-body .board-tag--resolved')).toHaveCount(0);
+    await expect(page.locator('[data-board-tag="resolved"] .board-f-n')).toHaveText('1');
+    // the RESOLVED rail
+    await page.click('[data-board-tag="resolved"]');
+    await expect(page.locator('#board-body .board-topic--resolved .board-tag--resolved')).toHaveText('RESOLVED');
+    expect(await page.evaluate(() => (window as any).__seen.some((s: string[]) => s[0] === 'resolved'))).toBe(true);
+    // the owner's chip on the topic reads Reopen
+    await page.evaluate(() => (window as any).__board.open('cccccccc-0002'));
+    const sheet = page.locator('.board-sheet--topic');
+    await expect(sheet.locator('.board-op .board-tag--resolved')).toBeVisible();
+    await expect(sheet.locator('.board-op [data-board-mod="resolve"]')).toHaveText('Reopen');
+  });
+});
+
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
   const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
