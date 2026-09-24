@@ -15617,7 +15617,11 @@ body.bfs-locked { overflow: hidden; }
 /* W991 — the tier chip: the relic's rank letter in the canonical [data-rank] colours */
 .relic-tier { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 900; letter-spacing: .06em; line-height: 1; text-transform: uppercase; color: var(--rank-color, #fff); background: var(--rank-color-bg, rgba(255,255,255,.12)); border: 1px solid var(--rank-color, #fff); box-shadow: 0 0 8px var(--rank-color-shadow, transparent); flex: none; }
 .relic-tier--lg { height: 20px; padding: 0 8px; font-size: 10px; letter-spacing: .12em; border-radius: 6px; }
-.pdx-artfoot-l { display: inline-flex; align-items: center; gap: 4px; }
+.pdx-artfoot-l { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.pdx-pwr { flex: none; }   /* W993 — the number never gets squeezed by the chips */
+@media (max-width: 399px) {   /* W993 — narrow phones: the class chip is icon-only so PWR always fits */
+  .pdx-class { font-size: 0; gap: 0; padding: 3px 5px; letter-spacing: 0; }
+}
 .gear-card__tier { position: absolute; bottom: 6px; left: 6px; z-index: 3; }
 .build-picker-tile-tags { position: absolute; top: 6px; left: 6px; z-index: 3; display: flex; align-items: center; gap: 4px; }
 .build-picker-tile-tags .build-picker-tile-rarity { position: static; }

@@ -23,6 +23,10 @@ jobs:
           node lib/economy.test.js
           node lib/drops.test.js
 
+      # W993 — the relic ladder: a lower tier may never out-PWR a higher tier of the same rarity.
+      - name: Relic balance (displayed PWR ladder)
+        run: node tools/balance/extract.js --assert
+
       # W480-class guard: every local <script src> index.html references must exist on disk, so a
       # path-bearing JS file (like lib/economy.js) can never be silently omitted from the bundle.
       - name: Bundle completeness (index.html script graph)

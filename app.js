@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.8-w992'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.8-w993'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -2877,6 +2877,14 @@
   // E 2-4/6-8/12-15 · D 4/10/18 · C 6/14/22 · B 8/18/28 · A -/22-25/30-34
   // (common/rare/ultra; co-op pools may run 1-2 hotter — "co-op runs hot").
   // Don't improvise values — match the tier's shipped neighbors.
+  //
+  // W993 (owner 2026-09-24) — the number players SEE is displayed PWR
+  // (_relicProfile: STR×2.3 + others×1.15), where STR counts double, and the
+  // W991 tier chip now sits beside it. So the ladder is checked on DISPLAYED
+  // PWR and must never invert across tiers within a rarity (a B ultra may not
+  // out-PWR an A ultra). Bands: ultra E 12-20 · D 21-26 · C 27-31 · B 32-38 ·
+  // A 39-47 · S 48-58; rare E 5-12 · D 13-15 · C 16-22 · B 23-28 · A 29-37.
+  // `node tools/balance/extract.js --assert` (CI) fails on any inversion.
   const CARDS = {
     // ── The Insomniac (E, VIT) — signature slot: AMULET ─────
     dream_woven_hood: {
@@ -2980,7 +2988,7 @@
       tier: 'E',
       flavor: 'Torn from the beast that bites both ways. One edge for the road ahead, one for the road behind.',
       art_path: 'assets/items/twin_fang_cleaver.png',
-      bonuses: { str: 5, vit: 2, int: 0, focus: 0, will: 1, wlt: 0 },
+      bonuses: { str: 4, vit: 1, int: 0, focus: 0, will: 1, wlt: 0 },
       bonus_ranges: { str: [4,6], vit: [1,3], int: [0,0], focus: [0,0], will: [0,2], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: "A duelist's edge — Slash / Cleave / Crush / Lunge kit.",
       on_equip: null, cooldown_seconds: null,
@@ -3089,7 +3097,7 @@
       tier: 'B',
       flavor: 'A long crossbow that fells what will not kneel. One bolt, one throne — it has unmade kings from the foot of the stair.',
       art_path: 'assets/items/crownpiercer.png',
-      bonuses: { str: 2, vit: 6, int: 3, focus: 11, will: 2, wlt: 0 },
+      bonuses: { str: 2, vit: 5, int: 3, focus: 10, will: 2, wlt: 0 },
       bonus_ranges: { str: [1,3], vit: [4,8], int: [2,4], focus: [9,13], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: "A ranger's volley — Arrow Volley / Snap Shot / Flame Arrow / Tumble kit.",
       on_equip: null, cooldown_seconds: null,
@@ -3197,7 +3205,7 @@
       tier: 'B',
       flavor: 'Two notes that should never sound at once, fused into a single cold chord. It clears the mind by drowning out everything else.',
       art_path: 'assets/items/the_discordant_crown.png',
-      bonuses: { str: 0, vit: 4, int: 11, focus: 2, will: 1, wlt: 0 },
+      bonuses: { str: 0, vit: 5, int: 12, focus: 2, will: 1, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [2,6], int: [9,13], focus: [0,4], will: [0,2], wlt: [0,0] },
       set_id: 'sundered_choir', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3248,7 +3256,7 @@
       tier: 'C',
       flavor: 'Robes worn by the seat that speaks last. Three courts may argue — the verdict is already sewn into the hem.',
       art_path: 'assets/items/vestments_of_the_final_verdict.png',
-      bonuses:      { str: 0, vit: 5, int: 11, focus: 3, will: 3, wlt: 0 },
+      bonuses:      { str: 0, vit: 6, int: 12, focus: 3, will: 3, wlt: 0 },
       bonus_ranges: { str: [0,0], vit: [3,7], int: [9,13], focus: [2,4], will: [2,4], wlt: [0,0] },
       set_id: 'threefold_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3368,7 +3376,7 @@
       tier: 'E',
       flavor: 'Every step counts. These have counted thousands. Best in slot — until the trail goes further.',
       art_path: 'assets/items/trail_worn_boots.png',
-      bonuses: { str: 4, vit: 9, int: 0, focus: 2, will: 0, wlt: 0 },
+      bonuses: { str: 3, vit: 9, int: 0, focus: 2, will: 0, wlt: 0 },
       bonus_ranges: { str: [3,5], vit: [7,11], int: [0,0], focus: [1,3], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3546,7 +3554,7 @@
       tier: 'D',
       flavor: 'A heavy chestplate marked by the weight of completed sets.',
       art_path: 'assets/items/wardens-plate.png',
-      bonuses:       { str: 7, vit: 2, int: 0, focus: 0, will: 1, wlt: 0 },
+      bonuses:       { str: 5, vit: 2, int: 0, focus: 0, will: 1, wlt: 0 },
       bonus_ranges:  { str: [5,9], vit: [1,3], int: [0,0], focus: [0,0], will: [0,2], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3560,7 +3568,7 @@
       tier: 'D',
       flavor: 'A blade that grows heavier when the oath is broken. Best in slot for the STR/WILL discipline build.',
       art_path: 'assets/items/titan-oathblade.png',
-      bonuses:       { str: 12, vit: 0, int: 0, focus: 3, will: 3, wlt: 0 },
+      bonuses:       { str: 9, vit: 0, int: 0, focus: 3, will: 2, wlt: 0 },
       bonus_ranges:  { str: [10,14], vit: [0,0], int: [0,0], focus: [2,4], will: [2,4], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3690,7 +3698,7 @@
       tier: 'D',
       flavor: 'A dark mask that silences the world before recovery begins.',
       art_path: 'assets/items/tyrants-sleep-mask.png',
-      bonuses:       { str: 0, vit: 5, int: 2, focus: 3, will: 0, wlt: 0 },
+      bonuses:       { str: 0, vit: 6, int: 3, focus: 3, will: 0, wlt: 0 },
       bonus_ranges:  { str: [0,0], vit: [3,7], int: [1,3], focus: [2,4], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3704,7 +3712,7 @@
       tier: 'D',
       flavor: 'A crown worn only by those who learned that recovery is not weakness. Best in slot for the VIT/FOCUS recovery build.',
       art_path: 'assets/items/crown-of-deep-rest.png',
-      bonuses:       { str: 0, vit: 8, int: 4, focus: 6, will: 0, wlt: 0 },
+      bonuses:       { str: 0, vit: 9, int: 5, focus: 6, will: 0, wlt: 0 },
       bonus_ranges:  { str: [0,0], vit: [6,10], int: [3,5], focus: [4,8], will: [0,0], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3961,7 +3969,7 @@
       tier: 'C',
       flavor: 'A blade pulled from the kiln before the metal had finished screaming.',
       art_path: 'assets/items/kilnforged-warblade.png',
-      bonuses:      { str: 6, vit: 0, int: 2, focus: 4, will: 2, wlt: 0 },
+      bonuses:      { str: 6, vit: 0, int: 2, focus: 3, will: 2, wlt: 0 },
       bonus_ranges: { str: [4,8], vit: [0,0], int: [1,3], focus: [3,5], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3975,7 +3983,7 @@
       tier: 'C',
       flavor: 'A royal mantle woven from cooled ash and the will to endure the flame. Best in slot for the STR/FOCUS forge build.',
       art_path: 'assets/items/ashen-monarchs-cape.png',
-      bonuses:      { str: 6, vit: 4, int: 3, focus: 5, will: 4, wlt: 0 },
+      bonuses:      { str: 6, vit: 4, int: 3, focus: 4, will: 4, wlt: 0 },
       bonus_ranges: { str: [4,8], vit: [3,5], int: [2,4], focus: [3,7], will: [3,5], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -3990,7 +3998,7 @@
       tier: 'C',
       flavor: 'A crown awarded only to those who reached the summit while others turned back. Best in slot for the STR/VIT ascension build.',
       art_path: 'assets/items/crown-of-the-ascendant.png',
-      bonuses:       { str: 7, vit: 5, int: 3, focus: 3, will: 4, wlt: 0 },
+      bonuses:       { str: 6, vit: 5, int: 3, focus: 3, will: 4, wlt: 0 },
       bonus_ranges:  { str: [5,9], vit: [3,7], int: [2,4], focus: [2,4], will: [3,5], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4072,7 +4080,7 @@
       tier: 'B',
       flavor: 'A two-handed maul whose head is the broken anvil of a forge that lasted a generation. Each strike is a vow.',
       art_path: 'assets/items/hammerfall-warmaul.png',
-      bonuses:       { str: 11, vit: 0, int: 0, focus: 5, will: 2, wlt: 0 },
+      bonuses:       { str: 9, vit: 0, int: 0, focus: 4, will: 2, wlt: 0 },
       bonus_ranges:  { str: [9,13], vit: [0,0], int: [0,0], focus: [3,7], will: [1,3], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4086,7 +4094,7 @@
       tier: 'B',
       flavor: 'Forged across the lifetime of one smith who never missed a day at the bellows. Best in slot — discipline made into steel.',
       art_path: 'assets/items/gauntlets-of-ten-thousand-days.png',
-      bonuses:       { str: 15, vit: 0, int: 0, focus: 8, will: 5, wlt: 0 },
+      bonuses:       { str: 11, vit: 0, int: 0, focus: 7, will: 4, wlt: 0 },
       bonus_ranges:  { str: [13,17], vit: [0,0], int: [0,0], focus: [6,10], will: [3,7], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4144,7 +4152,7 @@
       tier: 'B',
       flavor: 'A silver band engraved with the seven marks of a week kept. The metal does not tarnish for those who do not break the chain.',
       art_path: 'assets/items/ring-of-the-unbroken-vow.png',
-      bonuses:       { str: 0, vit: 5, int: 0, focus: 4, will: 9, wlt: 0 },
+      bonuses:       { str: 0, vit: 5, int: 0, focus: 5, will: 10, wlt: 0 },
       bonus_ranges:  { str: [0,0], vit: [3,7], int: [0,0], focus: [2,6], will: [7,11], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4216,7 +4224,7 @@
       tier: 'B',
       flavor: 'Heavy travel boots once worn by a pilgrim who reached the end of every road she set out on. They do not measure haste, only return.',
       art_path: 'assets/items/boots-of-the-long-road.png',
-      bonuses:       { str: 0, vit: 2, int: 3, focus: 7, will: 6, wlt: 0 },
+      bonuses:       { str: 0, vit: 2, int: 3, focus: 8, will: 7, wlt: 0 },
       bonus_ranges:  { str: [0,0], vit: [1,3], int: [2,4], focus: [5,9], will: [4,8], wlt: [0,0] },
       set_id: null, required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4344,7 +4352,7 @@
       tier: 'S',
       flavor: 'Worn to bed by the court magi who dreamed on purpose. Seven hours under it are worth a library. Best in slot for the mage.',
       art_path: 'assets/items/circlet_of_lucid_sleep.png',
-      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 6, wlt: 0 },
+      bonuses:       { str: 4, vit: 9, int: 14, focus: 6, will: 6, wlt: 0 },
       bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [4,8], wlt: [0,0] },
       set_id: 'dreaming_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4358,7 +4366,7 @@
       tier: 'S',
       flavor: 'The court slept in shifts so the kingdom never had to. This is the cloth they slept beneath. Best in slot for the mage.',
       art_path: 'assets/items/shroud_of_the_dreaming_court.png',
-      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 5, wlt: 0 },
+      bonuses:       { str: 4, vit: 9, int: 14, focus: 6, will: 5, wlt: 0 },
       bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [3,7], wlt: [0,0] },
       set_id: 'dreaming_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4372,7 +4380,7 @@
       tier: 'S',
       flavor: 'It chimes once, softly, at the seventh hour of true sleep — the hour the Crown never reached. Best in slot for the mage.',
       art_path: 'assets/items/pendant_of_the_seventh_hour.png',
-      bonuses:       { str: 4, vit: 8, int: 13, focus: 6, will: 5, wlt: 0 },
+      bonuses:       { str: 4, vit: 9, int: 14, focus: 6, will: 5, wlt: 0 },
       bonus_ranges:  { str: [2,6], vit: [6,10], int: [11,15], focus: [4,8], will: [3,7], wlt: [0,0] },
       set_id: 'dreaming_court', required_level: null, special_effect: null,
       on_equip: null, cooldown_seconds: null,
@@ -4432,7 +4440,7 @@
       source_boss: 'the_tideless_marcher', rarity: 'ultra_rare', tier: 'A',
       flavor: 'Boots that have outlasted every road. Best in slot — they carry the rested farthest.',
       art_path: 'assets/items/striders-of-the-tideless-road.png',
-      bonuses:       { str: 2, vit: 12, int: 2, focus: 9, will: 6, wlt: 0 },
+      bonuses:       { str: 2, vit: 12, int: 2, focus: 10, will: 7, wlt: 0 },
       bonus_ranges:  { str: [0,4], vit: [10,14], int: [0,4], focus: [7,11], will: [4,8], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
@@ -4456,7 +4464,7 @@
       // STANDARD B-rares and pulls its weight in the endurance set. Kept on the
       // VIT/FOCUS/WILL identity. Buff-only — no nerf to anything. (The co-op
       // B-rares that run hotter still do, by the documented co-op carve-out.)
-      bonuses:       { str: 1, vit: 8, int: 2, focus: 7, will: 6, wlt: 0 },
+      bonuses:       { str: 1, vit: 8, int: 2, focus: 8, will: 7, wlt: 0 },
       bonus_ranges:  { str: [0,2], vit: [6,10], int: [0,4], focus: [5,9], will: [4,8], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
@@ -4485,7 +4493,7 @@
       source_boss: 'the_sleepless_ascent', rarity: 'ultra_rare', tier: 'A',
       flavor: 'A ring for those who climb toward the dawn and still sleep before it. Best in slot.',
       art_path: 'assets/items/skyward-vigil-ring.png',
-      bonuses:       { str: 2, vit: 9, int: 4, focus: 9, will: 6, wlt: 0 },
+      bonuses:       { str: 2, vit: 9, int: 4, focus: 9, will: 8, wlt: 0 },
       bonus_ranges:  { str: [0,4], vit: [7,11], int: [2,6], focus: [7,11], will: [4,8], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
@@ -4503,7 +4511,7 @@
       source_boss: 'the_sleepless_ascent', rarity: 'rare', tier: 'A',
       flavor: 'A cloak frayed by a thousand stairs and folded for a thousand nights.',
       art_path: 'assets/items/ascent-worn-cloak.png',
-      bonuses:       { str: 2, vit: 8, int: 2, focus: 6, will: 5, wlt: 0 },
+      bonuses:       { str: 2, vit: 8, int: 2, focus: 7, will: 6, wlt: 0 },
       bonus_ranges:  { str: [0,4], vit: [6,10], int: [0,4], focus: [4,8], will: [3,7], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: null, on_equip: null, cooldown_seconds: null,
     },
@@ -4514,7 +4522,7 @@
       source_boss: 'the_unbroken_anvil', rarity: 'ultra_rare', tier: 'A',
       flavor: 'A greatblade forged through labor and rest in equal measure. The second-strongest weapon in the world — and the only one that rivals Nightfall.',
       art_path: 'assets/items/duskforge-the-anvils-verdict.png',
-      bonuses:       { str: 12, vit: 5, int: 2, focus: 8, will: 7, wlt: 0 },
+      bonuses:       { str: 10, vit: 5, int: 2, focus: 7, will: 7, wlt: 0 },
       bonus_ranges:  { str: [10,14], vit: [3,7], int: [0,4], focus: [6,10], will: [5,9], wlt: [0,0] },
       set_id: 'wakeful_vigil', required_level: null, special_effect: 'A relentless single edge — Cleave / Oathstrike / Immolate kit.', on_equip: null, cooldown_seconds: null,
     },
