@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Awakened — In-App Event: The Worldgate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@800;900&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+<style>
+  /* App Store in-app event art. ?shape=card → 1920×1080 (event card, 16:9);
+     ?shape=page → 1080×1920 (event details page, 9:16). event.mjs screenshots
+     the body. Real app pixels only: the podium is a crop of raw/mvp.png. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; background: #05050b; }
+  body.card { width: 1920px; height: 1080px; }
+  body.page { width: 1080px; height: 1920px; }
+  .art { position: absolute; inset: 0; background: url(../../assets/backgrounds/lb-bg-sgate.webp) center 35% / cover no-repeat; }
+  .boss { position: absolute; background: url(../../assets/bosses/the-worldspine.png) center / cover no-repeat;
+    -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent 100%); mask-image: radial-gradient(closest-side, #000 55%, transparent 100%); opacity: .9; }
+  .veil { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5,5,11,.86) 0%, rgba(5,5,11,.55) 45%, rgba(5,5,11,.1) 100%); }
+  .page .veil { background: linear-gradient(180deg, rgba(5,5,11,.2) 0%, rgba(5,5,11,.55) 45%, rgba(5,5,11,.92) 100%); }
+  .copy { position: absolute; color: #fff; }
+  .kicker { display: inline-block; font: 800 26px/1 'JetBrains Mono', monospace; letter-spacing: .38em; text-transform: uppercase; color: #ff6b5e;
+    padding: 14px 24px 14px 34px; border: 2px solid rgba(255,107,94,.5); border-radius: 999px; background: rgba(0,0,0,.35); }
+  h1 { margin-top: 30px; font: 900 118px/1 'Cinzel', serif; letter-spacing: .01em; text-shadow: 0 8px 0 rgba(0,0,0,.25), 0 24px 60px rgba(0,0,0,.5); }
+  h1 em { font-style: normal; color: #f5b842; }
+  .sub { margin-top: 26px; font: 800 30px/1.4 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.85); }
+  .sub b { color: #f5b842; }
+  .pop { position: absolute; border-radius: 40px; background: url(raw/mvp.png) no-repeat; box-shadow: 0 0 0 4px rgba(255,255,255,.16), 0 50px 100px rgba(0,0,0,.6); }
+  .logo { position: absolute; font: 900 34px/1 'Cinzel', serif; letter-spacing: .12em; color: #f5b842; }
+  /* card layout */
+  .card .boss { right: -120px; top: -140px; width: 1300px; height: 1300px; }
+  .card .copy { left: 110px; top: 250px; width: 980px; }
+  .card .pop { right: 150px; top: 170px; width: 520px; height: 700px; background-size: 745px auto; background-position: -113px -735px; transform: rotate(-4deg); }
+  .card .logo { left: 110px; bottom: 90px; }
+  /* page layout */
+  .page .boss { left: -110px; top: -80px; width: 1300px; height: 1300px; }
+  .page .copy { left: 80px; right: 80px; top: 1080px; text-align: center; }
+  .page h1 { font-size: 132px; }
+  .page .sub { font-size: 28px; }
+  .page .pop { display: none; }
+  .page .logo { left: 0; right: 0; bottom: 80px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="art"></div>
+  <div class="boss"></div>
+  <div class="veil"></div>
+  <div class="pop"></div>
+  <div class="copy">
+    <div class="kicker">Every Sunday</div>
+    <h1>The<br>Worldgate</h1>
+    <div class="sub">One monster · <b>Everyone</b><br>Every verified step is a strike</div>
+  </div>
+  <div class="logo">AWAKENED</div>
+<script>
+  document.body.className = new URLSearchParams(location.search).get('shape') === 'page' ? 'page' : 'card';
+  document.fonts.ready.then(() => { document.body.dataset.ready = '1'; });
+</script>
+</body>
+</html>
