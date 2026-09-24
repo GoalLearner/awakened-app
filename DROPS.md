@@ -259,6 +259,28 @@ weekly bosses feel like dead weight in the roster).
 
 ---
 
+## Drop rates — rank-keyed (v1.7, W992)
+
+Owner, 2026-09-24: "E-rank gates should not have the same drop rates as A-rank
+gates." Solo E/D/C/B bosses now roll on tables keyed by the boss's **rank**
+(`lib/drops.js`, `DROP_RATES_BY_RANK`); the cadence tables remain as the weekly
+(Gray Pilgrim) row and the fallback. Same roll order (ultra → rare → common,
+first hit wins), same first-common protection per boss.
+
+| rank | ultra | rare | common | nothing | mercy: any / rare / ultra soft (+/kill, cap) / ultra hard |
+|---|---|---|---|---|---|
+| E | 12.0% | 24.6% | 55.1% | 8.2% | 2 / 5 / 8 (+.04, .35) / 15 |
+| D | 9.0% | 20.0% | 55.4% | 15.6% | 3 / 8 / 12 (+.03, .30) / 25 |
+| C | 7.0% | 15.8% | 54.0% | 23.2% | 3 / 10 / 16 (+.02, .25) / 32 |
+| B | 5.0% | 11.4% | 46.0% | 37.6% | 4 / 12 / 20 (+.02, .20) / 40 |
+| A | dropTable (8% ultra / 25% rare) | | | 67% | — / 8 / — / 25 |
+| S | dropTable (1% mythic / 30% ultra) | | | 69% | — / — / — / 30 |
+
+A and S keep their flat tables but gain bad-luck protection for the first time
+(the sheet's mercy rows now show only the layers that exist). Mythic is still a
+flat 1%, never forced, never downgraded (W703); luck still scales it (W793.1).
+Co-op tables are untouched and roll with no mercy, as before.
+
 ## Card anatomy
 
 ### Visual identity

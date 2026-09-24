@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.284';
+const CACHE_VERSION = 'v6.285';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -12,6 +12,7 @@ const PRECACHE_ASSETS = [
   '/styles.css',
   '/app.js',
   '/lib/economy.js',
+  '/lib/drops.js',
   '/sandbox.js',
   '/auth.js',
   '/simulated-leaderboard.js',

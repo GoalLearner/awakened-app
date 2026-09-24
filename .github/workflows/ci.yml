@@ -18,8 +18,10 @@ jobs:
           node-version: '20'
 
       # The economy math (XP/rank/compound/difficulty/shields) — zero deps, exits non-zero on red.
-      - name: Unit tests (economy math)
-        run: node lib/economy.test.js
+      - name: Unit tests (economy math + drop engine)
+        run: |
+          node lib/economy.test.js
+          node lib/drops.test.js
 
       # W480-class guard: every local <script src> index.html references must exist on disk, so a
       # path-bearing JS file (like lib/economy.js) can never be silently omitted from the bundle.

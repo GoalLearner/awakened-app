@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.8-w991'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.8-w992'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -686,6 +686,7 @@
   // it can never silently brick combat again. Build-side gate (prep-local-build.sh /
   // codemagic.yaml) now also fails the build if the file is missing.
   try { if (typeof AwakenedEconomy === 'undefined' || !AwakenedEconomy || !AwakenedEconomy.statLevel) console.error('[Awakened] FATAL: lib/economy.js (AwakenedEconomy) did not load — stat-level/XP math + the Ascent will break. The bundle is missing www/lib/economy.js.'); } catch (_) {}
+  try { if (typeof AwakenedDrops === 'undefined' || !AwakenedDrops || !AwakenedDrops.resolveRoll) console.error('[Awakened] FATAL: lib/drops.js (AwakenedDrops) did not load — every boss kill will fail to roll a relic. The bundle is missing www/lib/drops.js.'); } catch (_) {}   // W992
 
   // v2.1 Phase E — single point of update when Richie publishes a new
   // privacy policy URL. All references in code must go through the
@@ -1857,8 +1858,8 @@
   // Wolf FREE, once a day, automatically, until the Trail-Worn Boots are
   // theirs. It is the whole loop on rails — a real boss, real steps, a real
   // relic at the end — for someone who does not yet know that a hunt is
-  // something you choose. The trail ends the moment the boots drop (5% a
-  // kill, soft pity from 20, guaranteed at 40) and the Wolf becomes an
+  // something you choose. The trail ends the moment the boots drop (12% a
+  // kill at E since W992, soft pity from 8, guaranteed at 15) and the Wolf becomes an
   // ordinary rank-priced gate like every other.
   //
   // Three things make it free in the way that matters:
@@ -4787,61 +4788,14 @@
   //
   // ultra_rare, rare, mercy/pity thresholds, roll order, one-card-
   // max, and per-boss first-common protection are all UNCHANGED.
-  const DROP_RATES_BY_CADENCE = {
-    daily: {
-      ultra_rare:        1 / 20,                       // 5%   (unchanged)
-      rare:              1 / 12,                       // 8.33% (unchanged)
-      common:            0.5407,                       // base nothing = 40.00%
-      common_protected:  (2 / 3) + 0.13,               // 79.67% (preserved from 1z.46; protected nothing = 17.71%)
-    },
-    triweekly: {
-      ultra_rare:        0.10,                         // 10%  (unchanged)
-      rare:              0.15,                         // 15%  (unchanged)
-      common:            0.4771,                       // base nothing = 40.00%
-      common_protected:  0.78,                         // 78%   (preserved from 1z.46; protected nothing = 16.83%)
-    },
-    weekly: {
-      ultra_rare:        0.20,                         // 20%  (unchanged)
-      rare:              0.25,                         // 25%  (unchanged)
-      common:            1.00,                         // base nothing = 0% (always drops when ultra+rare miss)
-      common_protected:  1.00,                         // matches base (protected cannot be < base)
-    },
-  };
-  // Bad-luck protection thresholds per cadence. See DROPS.md notes.
-  //   any_drop_guarantee_after  — Nth consecutive no-drop forces a drop
-  //   ultra_soft_pity_after     — kills-since-ultra at which soft pity begins
-  //   ultra_soft_pity_add       — added to ultra rate per extra kill past soft floor
-  //   ultra_soft_pity_max       — ceiling for the soft-boosted ultra rate
-  //   ultra_hard_pity_after     — kills-since-ultra at which ultra is guaranteed
-  const DROP_PITY_BY_CADENCE = {
-    daily: {
-      any_drop_guarantee_after: 4,
-      // v3 Phase 1r — Rare Mercy: floor that guarantees rare-or-better
-      // when the user has gone N kills without a rare or ultra. Reset
-      // by Rare or Ultra; NOT reset by Common.
-      rare_mercy_after:         12,
-      ultra_soft_pity_after:    20,
-      ultra_soft_pity_add:      0.02,
-      ultra_soft_pity_max:      0.20,
-      ultra_hard_pity_after:    40,
-    },
-    triweekly: {
-      any_drop_guarantee_after: 3,
-      rare_mercy_after:         6,
-      ultra_soft_pity_after:    10,
-      ultra_soft_pity_add:      0.03,
-      ultra_soft_pity_max:      0.25,
-      ultra_hard_pity_after:    20,
-    },
-    weekly: {
-      any_drop_guarantee_after: 2,
-      rare_mercy_after:         4,
-      ultra_soft_pity_after:    5,
-      ultra_soft_pity_add:      0.05,
-      ultra_soft_pity_max:      0.35,
-      ultra_hard_pity_after:    8,
-    },
-  };
+  // W992 — the drop tables and the pure roll decision live in lib/drops.js
+  // (AwakenedDrops), keyed on the boss's RANK: generous at E, stepping down each
+  // rank, and A/S finally get bad-luck protection. The cadence tables remain as
+  // the weekly (Gray Pilgrim) row and the fallback.
+  const DROP_RATES_BY_CADENCE = AwakenedDrops.DROP_RATES_BY_CADENCE;
+  const DROP_PITY_BY_CADENCE  = AwakenedDrops.DROP_PITY_BY_CADENCE;
+  const DROP_RATES_BY_RANK    = AwakenedDrops.DROP_RATES_BY_RANK;
+  const DROP_PITY_BY_RANK     = AwakenedDrops.DROP_PITY_BY_RANK;
   const VALID_CADENCES = new Set(Object.keys(DROP_RATES_BY_CADENCE));
   // Resolve a boss's cadence with validation. Logs once per
   // misconfigured boss in dev so missing/invalid metadata can't
@@ -4859,11 +4813,13 @@
     }
     return 'daily';
   }
-  function dropRatesFor(bossId) {
-    return DROP_RATES_BY_CADENCE[getBossCadence(bossId)];
+  function dropRatesFor(bossId) {   // W992 — rank first (weekly cadence wins), see lib/drops.js
+    const cfg = BOSSES[bossId] || {};
+    return AwakenedDrops.ratesFor({ rank: cfg.rank, cadence: getBossCadence(bossId) });
   }
   function dropPityCfgFor(bossId) {
-    return DROP_PITY_BY_CADENCE[getBossCadence(bossId)];
+    const cfg = BOSSES[bossId] || {};
+    return AwakenedDrops.pityFor({ rank: cfg.rank, cadence: getBossCadence(bossId) });
   }
 
   // Per-rarity stack caps. Drops continue to roll at standard rates
@@ -20047,14 +20003,26 @@
   // it's been since this boss last dropped an ultra. Hard pity →
   // guaranteed (1.0). Soft pity → baseRate + N×add capped at max.
   function getEffectiveUltraRate(bossId, baseRate) {
-    const cfg = dropPityCfgFor(bossId);
-    const pity = getDropPityState(bossId);
-    if (pity.kills_since_ultra >= cfg.ultra_hard_pity_after) return 1;
-    if (pity.kills_since_ultra >= cfg.ultra_soft_pity_after) {
-      const extra = pity.kills_since_ultra - cfg.ultra_soft_pity_after + 1;
-      return Math.min(baseRate + extra * cfg.ultra_soft_pity_add, cfg.ultra_soft_pity_max);
+    return AwakenedDrops.effectiveUltraRate(dropPityCfgFor(bossId), getDropPityState(bossId).kills_since_ultra, baseRate);   // W992
+  }
+  // W992 — one pool builder for the roll, the pity pick and the simulator: every
+  // card whose source_boss is the boss, then cfg.pool overrides per rarity (the
+  // Gray Pilgrim, the Sentinel, the Worldspine, the Cloven Titan, the Grinning God).
+  function _bossDropPools(bossId) {
+    const cfg = BOSSES[bossId] || {};
+    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
+    const pools = {
+      mythic:     bossCards.filter(c => c.rarity === 'mythic'),
+      ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
+      rare:       bossCards.filter(c => c.rarity === 'rare'),
+      common:     bossCards.filter(c => c.rarity === 'common'),
+    };
+    if (cfg.pool) {
+      Object.keys(cfg.pool).forEach(function (_rk) {
+        if (Array.isArray(cfg.pool[_rk])) pools[_rk] = cfg.pool[_rk].map(function (id) { return CARDS[id]; }).filter(Boolean);
+      });
     }
-    return baseRate;
+    return pools;
   }
 
   // Force a drop when any-drop pity triggers. Picks the most
@@ -20064,12 +20032,7 @@
   // the card object the caller can hand back to rollBossDrop's
   // award path. Never throws.
   function forcePityDrop(bossId) {
-    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
-    const pools = {
-      common:     bossCards.filter(c => c.rarity === 'common'),
-      rare:       bossCards.filter(c => c.rarity === 'rare'),
-      ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
-    };
+    const pools = _bossDropPools(bossId);   // W992 — honours cfg.pool
     const inv = getInventory();
     // Helper: from a pool, prefer entries with room left under cap.
     function pickWithCapHeadroom(pool) {
@@ -20120,24 +20083,7 @@
     const cfg = BOSSES[bossId];
     if (!cfg) return null;
 
-    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
-    const pools = {
-      mythic:     bossCards.filter(c => c.rarity === 'mythic'),
-      ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
-      rare:       bossCards.filter(c => c.rarity === 'rare'),
-      common:     bossCards.filter(c => c.rarity === 'common'),
-    };
-    // W693 — explicit per-rarity pool override (cfg.pool). The Grinning God drops the
-    // three EXISTING mythics (nightfall/reverie/vigil) whose source_boss points at their
-    // canonical bosses, so a source_boss filter wouldn't pool them; list them directly
-    // without stealing them from their original sources or duplicating the cards.
-    if (cfg.pool) {
-      Object.keys(cfg.pool).forEach(function (_rk) {
-        if (Array.isArray(cfg.pool[_rk])) {
-          pools[_rk] = cfg.pool[_rk].map(function (id) { return CARDS[id]; }).filter(Boolean);
-        }
-      });
-    }
+    const pools = _bossDropPools(bossId);   // W992 — shared with forcePityDrop + simulateDrops
     const pickFromPool = (pool) => pool.length === 0
       ? null
       : pool[Math.floor(Math.random() * pool.length)];
@@ -20148,88 +20094,34 @@
     // raid MVP rolls mythic at 1.04%, not 1%). Pity/mercy still never touch mythic.
     const _luck = (dropOpts && Number(dropOpts.luck) > 1) ? Math.min(1.25, Number(dropOpts.luck)) : 1;
     const rates = dropRatesFor(bossId);
-    // Per-boss first-common protection (v3 Phase 1h). Falls back to
-    // the legacy global flag only when no per-boss entry exists.
-    const commonRate = hasPulledFirstCommonForBoss(bossId)
-      ? rates.common
-      : rates.common_protected;
-    // Soft/hard ultra pity — compute per-roll without mutating the
-    // base rate table.
-    const effectiveUltraRate = getEffectiveUltraRate(bossId, rates.ultra_rare);
-    const ultraHardForced    = effectiveUltraRate >= 1 && pools.ultra_rare.length > 0;
-
-    // Roll order: ultra → rare → common. Mutually exclusive; first
-    // hit wins.
-    let dropped = null;
-    let fromPity = false;
-    let pityType = null;
-    // W286/W287 — config-driven bespoke drop table (cfg.dropTable). No pity, no
-    // commons unless listed. Rarities rolled best-first with cumulative
-    // probability; pickFromPool splits evenly within a rarity (Erebus 3 ultras
-    // at 30% → 10% each; an A boss's 2 ultras at 8% → 4% each). Erebus =
-    // { mythic: 0.01, ultra_rare: 0.30 }; A bosses = { ultra_rare: 0.08, rare: 0.25 }.
-    // W703 — INVARIANT: EVERY mega-rare (mythic) source lives ONLY on this dropTable
-    // branch, and mythic is rolled FIRST, so a mega-rare is a FLAT 1% per kill (mythic
-    // weight = 0.01 at all three sources: Erebus, The Sleepless Crown, The Grinning God)
-    // with NO pity / mercy EVER (owner: these items are too powerful to soften).
-    // W793.1 — the ONE sanctioned luck exception (owner, 2026-07-28): the MVP
-    // carry-luck multiplier (_luck, capped 1.25×) DOES scale mythic — a 5-man raid
-    // MVP rolls mythic at 1.04%, not 1%. Everything else stands: never add a
-    // `mythic` key to the pity/mercy logic in the else branch below, and never give
-    // a mythic-dropping boss a non-dropTable config.
-    if (cfg.dropTable) {
-      const _r = Math.random();
-      let _acc = 0;
-      const _order = ['mythic', 'ultra_rare', 'rare', 'common'];
-      for (let _i = 0; _i < _order.length; _i++) {
-        const _rar = _order[_i];
-        let _p = cfg.dropTable[_rar];
-        if (typeof _p === 'number') _p = _p * _luck;   // W793.1 — MVP luck applies to ALL rarities, mythic included (owner override)
-        if (typeof _p === 'number' && _p > 0 && pools[_rar] && pools[_rar].length) {
-          _acc += _p;
-          if (_r < _acc) { dropped = pickFromPool(pools[_rar]); break; }
-        }
-      }
-    } else {
-    if (Math.random() < Math.min(1, effectiveUltraRate * _luck) && pools.ultra_rare.length) {
-      dropped = pickFromPool(pools.ultra_rare);
-      if (ultraHardForced) { fromPity = true; pityType = 'ultra_hard'; }
-      else if (effectiveUltraRate > rates.ultra_rare) { fromPity = true; pityType = 'ultra_soft'; }
-    } else if (Math.random() < Math.min(1, rates.rare * _luck) && pools.rare.length) {
-      dropped = pickFromPool(pools.rare);
-    } else if (Math.random() < Math.min(1, commonRate * _luck) && pools.common.length) {
-      dropped = pickFromPool(pools.common);
-    }
-
     const pityCfg = dropPityCfgFor(bossId);
     const pityState = getDropPityState(bossId);
 
-    // v3 Phase 1r — Rare Mercy floor. If the user is one kill shy of
-    // the rare-mercy threshold AND the current outcome is weaker than
-    // rare-or-better (i.e. no drop, or only a common), upgrade to a
-    // rare. Ultra hard pity already ran above, so an ultra outcome
-    // here is never downgraded. Rare floor; not a ceiling.
-    if (pools.rare.length &&
-        (pityState.kills_since_rare_or_better + 1) >= pityCfg.rare_mercy_after) {
-      const isRareOrBetter = dropped && (dropped.rarity === 'rare' || dropped.rarity === 'ultra_rare');
-      if (!isRareOrBetter) {
-        dropped = pickFromPool(pools.rare);
-        fromPity = true;
-        pityType = 'rare_mercy';
-      }
+    // W992 — the decision is pure and lives in lib/drops.js (AwakenedDrops.resolveRoll):
+    //   Path A (no cfg.dropTable): rank rates, ultra → rare → common first-hit-wins,
+    //     first-common protection, then rare mercy / any-drop pity / ultra soft+hard pity.
+    //   Path B (cfg.dropTable): the cumulative best-first roll (W286/W287). W703 —
+    //     mythic is rolled first at a flat 1% and is NEVER forced or downgraded by
+    //     mercy; W793.1 — luck scales every rarity, mythic included. With a pity
+    //     config (solo A/S), an ultra hard pity and a rare mercy now apply; co-op
+    //     rolls pass NO pity (their tables are untouched).
+    const out = AwakenedDrops.resolveRoll({
+      dropTable: cfg.dropTable || null,
+      rates: rates,
+      pity: (dropOpts && dropOpts.source === 'coop') ? null : pityCfg,
+      state: pityState,
+      hasFirstCommon: hasPulledFirstCommonForBoss(bossId),
+      luck: _luck,
+      avail: { mythic: pools.mythic.length, ultra_rare: pools.ultra_rare.length, rare: pools.rare.length, common: pools.common.length },
+      rng: Math.random,
+    });
+    let dropped = out.rarity ? pickFromPool(pools[out.rarity]) : null;
+    let fromPity = !!out.fromPity;
+    let pityType = out.pityType || null;
+    if (!dropped && out.forceAny) {
+      dropped = forcePityDrop(bossId);
+      if (!dropped) { fromPity = false; pityType = null; }
     }
-
-    // Any-drop pity. If all normal rolls failed AND rare-mercy didn't
-    // promote anything (e.g. rare pool empty), but the user is one
-    // kill shy of the cadence's no-drop ceiling, force a drop now.
-    if (!dropped) {
-      if (pityState.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
-        dropped = forcePityDrop(bossId);
-        if (dropped) { fromPity = true; pityType = 'any_drop'; }
-      }
-    }
-
-    } // end standard (non-Erebus) selection + pity
 
     // No drop AND no pity → record the empty kill and bail.
     if (!dropped) {
@@ -24056,60 +23948,17 @@
     const n = Math.max(1, Math.min(100000, count | 0));
     const cfg = BOSSES[bossId];
     if (!cfg) return null;
-    const pityCfg = dropPityCfgFor(bossId);
-    const rates = dropRatesFor(bossId);
-    const realPity = getDropPityState(bossId);
-    const realFirstCommon = hasPulledFirstCommonForBoss(bossId);
-    // Snapshot — sim runs against a copy.
-    const pity = Object.assign({}, realPity);
-    let firstCommon = realFirstCommon;
-    const tally = { common: 0, rare: 0, ultra_rare: 0, no_drop: 0, pity_drops: 0 };
-    for (let i = 0; i < n; i++) {
-      const effU = (pity.kills_since_ultra >= pityCfg.ultra_hard_pity_after) ? 1
-        : (pity.kills_since_ultra >= pityCfg.ultra_soft_pity_after
-            ? Math.min(rates.ultra_rare + (pity.kills_since_ultra - pityCfg.ultra_soft_pity_after + 1) * pityCfg.ultra_soft_pity_add, pityCfg.ultra_soft_pity_max)
-            : rates.ultra_rare);
-      const commonRate = firstCommon ? rates.common : rates.common_protected;
-      let outcome = null;
-      if (Math.random() < effU)        outcome = 'ultra_rare';
-      else if (Math.random() < rates.rare) outcome = 'rare';
-      else if (Math.random() < commonRate) outcome = 'common';
-      // v3 Phase 1r — Rare Mercy floor. Upgrade null / common → rare
-      // when the rare-mercy threshold is one kill away. Ultra outcome
-      // is never downgraded.
-      if ((outcome === null || outcome === 'common') &&
-          (pity.kills_since_rare_or_better + 1) >= pityCfg.rare_mercy_after) {
-        outcome = 'rare';
-        tally.pity_drops += 1;
-      }
-      if (!outcome && pity.kills_since_any_drop + 1 >= pityCfg.any_drop_guarantee_after) {
-        outcome = 'common'; // pity prefers common per forcePityDrop ordering
-        tally.pity_drops += 1;
-      }
-      if (!outcome) {
-        tally.no_drop += 1;
-        pity.kills_since_any_drop      += 1;
-        pity.kills_since_ultra         += 1;
-        pity.kills_since_rare_or_better += 1;
-      } else {
-        tally[outcome] += 1;
-        if (outcome === 'common') {
-          pity.kills_since_any_drop = 0;
-          pity.kills_since_ultra         += 1;
-          pity.kills_since_rare_or_better += 1;
-          firstCommon = true;
-        } else if (outcome === 'rare') {
-          pity.kills_since_any_drop = 0;
-          pity.kills_since_rare_or_better = 0;
-          pity.kills_since_ultra += 1;
-        } else {
-          pity.kills_since_any_drop = 0;
-          pity.kills_since_rare_or_better = 0;
-          pity.kills_since_ultra = 0;
-        }
-      }
-    }
-    return tally;
+    // W992 — the same engine the kill uses, over a cloned pity state; models the
+    // rank tables, the A/S dropTables + their new mercy, and the Gray Pilgrim.
+    const pools = _bossDropPools(bossId);
+    return AwakenedDrops.simulate({
+      dropTable: cfg.dropTable || null,
+      rates: dropRatesFor(bossId),
+      pity: dropPityCfgFor(bossId),
+      state: Object.assign({}, getDropPityState(bossId)),
+      hasFirstCommon: hasPulledFirstCommonForBoss(bossId),
+      avail: { mythic: pools.mythic.length, ultra_rare: pools.ultra_rare.length, rare: pools.rare.length, common: pools.common.length },
+    }, n);
   }
   function resetPity(bossId) {
     setDropPityState(bossId, _freshPityState());
@@ -24129,6 +23978,8 @@
       getRates:     dropRatesFor,
       RATES:        DROP_RATES_BY_CADENCE,
       PITY:         DROP_PITY_BY_CADENCE,
+      RATES_BY_RANK: DROP_RATES_BY_RANK,   // W992
+      PITY_BY_RANK:  DROP_PITY_BY_RANK,
       getCadence:   getBossCadence,
       // v3 Phase 1h — pity helpers
       getPity:      getDropPityState,
@@ -54357,24 +54208,21 @@
     if (mercyEl) {
       try {
         const m = getDropPityDisplay(id);
-        const cur1 = Math.min(m.anyDropCurrent, m.anyDropTarget);
-        const cur2 = Math.min(m.rareCurrent,    m.rareTarget);
-        const cur3 = Math.min(m.ultraCurrent,   m.ultraHardTarget);
         // W827 (Train 2, L12) — the reset rules lived only in title attrs,
         // which never show on iOS (no hover). Inline them as visible subs.
-        mercyEl.innerHTML =
-          '<div class="bfs-mercy-row">' +
-            '<span class="bfs-mercy-label">Guaranteed relic <span class="bfs-mercy-sub">any relic resets</span></span>' +
-            '<span class="bfs-mercy-val">' + cur1 + ' / ' + m.anyDropTarget + '</span>' +
-          '</div>' +
-          '<div class="bfs-mercy-row">' +
-            '<span class="bfs-mercy-label">Rare mercy <span class="bfs-mercy-sub">Rare or Ultra resets</span></span>' +
-            '<span class="bfs-mercy-val">' + cur2 + ' / ' + m.rareTarget + '</span>' +
-          '</div>' +
-          '<div class="bfs-mercy-row">' +
-            '<span class="bfs-mercy-label">Ultra mercy <span class="bfs-mercy-sub">only Ultra resets</span></span>' +
-            '<span class="bfs-mercy-val">' + cur3 + ' / ' + m.ultraHardTarget + '</span>' +
+        // W992 — a row only for a layer this rank actually has (A: rare + ultra;
+        // S: ultra only), so the sheet never promises a mercy that never fires.
+        const row = function (label, sub, cur, target) {
+          if (!Number.isFinite(target)) return '';
+          return '<div class="bfs-mercy-row">' +
+            '<span class="bfs-mercy-label">' + label + ' <span class="bfs-mercy-sub">' + sub + '</span></span>' +
+            '<span class="bfs-mercy-val">' + Math.min(cur, target) + ' / ' + target + '</span>' +
           '</div>';
+        };
+        mercyEl.innerHTML =
+          row('Guaranteed relic', 'any relic resets', m.anyDropCurrent, m.anyDropTarget) +
+          row('Rare mercy', 'Rare or Ultra resets', m.rareCurrent, m.rareTarget) +
+          row('Ultra mercy', 'only Ultra resets', m.ultraCurrent, m.ultraHardTarget);
       } catch (_) {
         mercyEl.innerHTML = '';
       }

@@ -45,11 +45,12 @@ function extractLiteral(name) {
 
 const CARDS  = eval('(' + extractLiteral('CARDS') + ')');
 const BOSSES = eval('(' + extractLiteral('BOSSES') + ')');
-const RATES  = eval('(' + extractLiteral('DROP_RATES_BY_CADENCE') + ')');
+const DROPS  = require(path.join(ROOT, 'lib', 'drops.js'));   // W992 — the tables moved out of app.js
+const RATES  = DROPS.DROP_RATES_BY_CADENCE;
 
 function effRate(boss, rarity) {
   if (boss && boss.dropTable && typeof boss.dropTable[rarity] === 'number') return boss.dropTable[rarity];
-  const r = boss && RATES[boss.cadence];
+  const r = boss && DROPS.ratesFor({ rank: boss.rank, cadence: boss.cadence });
   return r && typeof r[rarity] === 'number' ? r[rarity] : null;
 }
 

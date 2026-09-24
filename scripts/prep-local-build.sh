@@ -206,6 +206,11 @@ if ! grep -q "AwakenedEconomy" www/lib/economy.js; then
   echo "  FAIL: www/lib/economy.js present but missing the AwakenedEconomy export. Aborting."
   exit 1
 fi
+# W992 — same gate for lib/drops.js (AwakenedDrops): every boss kill rolls through it.
+if [ ! -f www/lib/drops.js ] || ! grep -q "AwakenedDrops" www/lib/drops.js; then
+  echo "  FAIL: www/lib/drops.js is MISSING or lacks the AwakenedDrops export — index.html references it; no relic could drop. Aborting."
+  exit 1
+fi
 echo "  www/lib/economy.js  OK"
 echo ""
 

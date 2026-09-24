@@ -4,7 +4,7 @@
   "description": "Awakened — Daily Habit Tracker PWA",
   "scripts": {
     "postinstall": "patch-package",
-    "test:unit": "node lib/economy.test.js",
+    "test:unit": "node lib/economy.test.js && node lib/drops.test.js",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",

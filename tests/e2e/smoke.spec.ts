@@ -6066,6 +6066,32 @@ test.describe('AZ · Relic NEW + tier chip (W991)', () => {
   });
 });
 
+// W992 — rank-keyed drop rates; the mercy panel shows only the layers a rank has.
+test.describe('BL · Rank-keyed mercy (W992)', () => {
+  test('mercy rows: E gate 2/5/15, A gate Rare+Ultra, S gate Ultra only, Gray Pilgrim keeps weekly', async ({ page }) => {
+    await freshApp(page);
+    const rows = async (id: string) => page.evaluate((bossId) => {
+      (window as any).openBossFullScreen(bossId);
+      const out = [].map.call(document.querySelectorAll('#bfs-mercy .bfs-mercy-val'), (el: any) => el.textContent.trim());
+      document.getElementById('boss-fs-overlay')!.classList.add('hidden');
+      return out;
+    }, id);
+    expect(await rows('the_steel_wolf')).toEqual(['0 / 2', '0 / 5', '0 / 15']);
+    expect(await rows('the_unbroken_anvil')).toEqual(['0 / 8', '0 / 25']);
+    expect(await rows('the_worldspine')).toEqual(['0 / 30']);
+    expect(await rows('the_gray_pilgrim')).toEqual(['0 / 2', '0 / 4', '0 / 8']);
+    const sim = await page.evaluate(() => ({
+      wolf: (window as any).Drops.simulateDrops('the_steel_wolf', 20000),
+      anvil: (window as any).Drops.simulateDrops('the_unbroken_anvil', 20000),
+      erebus: (window as any).Drops.simulateDrops('erebus_the_shadow_sovereign', 20000),
+    }));
+    expect(sim.wolf.no_drop / 20000).toBeLessThan(0.09);
+    expect(sim.wolf.ultra_rare / 20000).toBeGreaterThan(0.11);
+    expect(sim.anvil.pity_drops).toBeGreaterThan(0);
+    expect(sim.erebus.mythic / 20000).toBeLessThan(0.02);
+  });
+});
+
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
   const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
