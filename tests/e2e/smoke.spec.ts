@@ -6568,5 +6568,22 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     // a tap on the grip is not a seal
     await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"] .hlr-grip') as HTMLElement).click());
     await expect(page.locator('#completed-count')).toHaveText('0');
+    // W999 — the briefing's lead pin (W978) must not undo a drag: pin e1 as today's lead, drag e2
+    // above it, and the order holds through the re-render; the pin is retired
+    // (the pin only applies on a full rebuild, so reload: the init script re-seeds the vows in
+    // their original order — m1 back in MORNING — and the pin survives in localStorage)
+    await page.evaluate(() => { const td = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); localStorage.setItem('hb_brief_lead_v1', JSON.stringify({ date: td, id: 'e2' })); });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+    await page.click('#tab-habits');
+    await expect(page.locator('.tod-sec').first()).toBeVisible({ timeout: 10_000 });
+    expect(await secs(page)).toEqual(['morning:m1', 'day:d1', 'evening:e2,e1']);   // the pin leads
+    await drag('e1', '.habit-item[data-id="e2"]', 'top');
+    await page.waitForTimeout(500);
+    expect(await secs(page)).toEqual(['morning:m1', 'day:d1', 'evening:e1,e2']);
+    expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();
+    await page.click('#tab-profile'); await page.click('#tab-habits');
+    expect(await secs(page)).toEqual(['morning:m1', 'day:d1', 'evening:e1,e2']);   // and it holds
   });
 });
