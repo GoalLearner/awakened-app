@@ -6509,7 +6509,7 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
 
   // W996 — the six-dot grip: within a section it reorders; across sections it moves the vow
   // (its time of day follows). Pointer events are synthesized: the drag is pointer-driven.
-  test('W996: sections never overflow the screen; the grip reorders within a section and moves a vow across sections', async ({ page }) => {
+  test('W996/W997: sections never overflow the screen; the grip reorders within a section and moves a vow across sections — and the touched row never leaves the document mid-drag', async ({ page }) => {
     await seed(page, []);
     // a long vow name must not push the row past the list's right edge
     const over = await page.evaluate(() => { const L = document.getElementById('habit-list')!.getBoundingClientRect(); return Array.from(document.querySelectorAll('#habit-list .habit-item')).filter((r) => r.getBoundingClientRect().right > L.right + 1).length; });
@@ -6520,12 +6520,26 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
       const g = document.querySelector('.habit-item[data-id="' + from + '"] .hlr-grip')!; const gr = g.getBoundingClientRect();
       const t = document.querySelector(target)!.getBoundingClientRect();
       const y = mode === 'top' ? t.top + 8 : t.top + t.height / 2 + 30;
-      ev('pointerdown', gr.left + 9, gr.top + 22, g); ev('pointermove', gr.left + 9, y, g); ev('pointerup', gr.left + 9, y, g);
+      // W997 — WebKit cancels a touch whose target node is removed: the row must never be
+      // re-inserted while the pointer is down. Only the slot may move.
+      const row = g.closest('.habit-item')!; const moved: string[] = [];
+      const P = Node.prototype; const ib = P.insertBefore, ac = P.appendChild, rc = P.removeChild;
+      P.insertBefore = function (n: any, ref: any) { if (n === row) moved.push('insertBefore'); return ib.call(this, n, ref); } as any;
+      P.appendChild = function (n: any) { if (n === row) moved.push('appendChild'); return ac.call(this, n); } as any;
+      P.removeChild = function (n: any) { if (n === row) moved.push('removeChild'); return rc.call(this, n); } as any;
+      ev('pointerdown', gr.left + 9, gr.top + 22, g); ev('pointermove', gr.left + 9, y, g);
+      const mid = { moved: moved.length, slot: !!document.querySelector('.hlr-slot'), connected: row.isConnected };
+      ev('pointerup', gr.left + 9, y, g);
+      P.insertBefore = ib; P.appendChild = ac; P.removeChild = rc;
+      (window as any).__dragMid = mid;
     }, [from, target, mode] as [string, string, string]);
+    const mid = () => page.evaluate(() => (window as any).__dragMid);
     // across sections: the morning vow goes under the DAY header → first in DAY, tod = day
     await drag('m1', '.tod-sec[data-tod="day"] .tod-sh', 'below');
+    expect(await mid()).toEqual({ moved: 0, slot: true, connected: true });   // the slot travelled, the row stayed put
     await page.waitForTimeout(500);
     expect(await secs(page)).toEqual(['day:m1,d1', 'evening:e1,e2']);
+    await expect(page.locator('.hlr-slot')).toHaveCount(0);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((h: any) => h.id === 'm1').tod)).toBe('day');
     // within a section: the last evening vow goes above the first
     await drag('e2', '.habit-item[data-id="e1"]', 'top');
