@@ -6450,17 +6450,17 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await page.click('[data-todo-due="0"]');
     await page.fill('[data-todo-in]', 'Book dentist');
     await page.press('[data-todo-in]', 'Enter');
-    expect(await openRows(page)).toEqual(['Return the library book|OVERDUE', 'Book dentist|TODAY', 'Call Dad|']);
+    expect(await openRows(page)).toEqual(['Return the library book|YESTERDAY', 'Book dentist|', 'Call Dad|']);   // W1000: grouped by day — OVERDUE · TODAY · SOMEDAY
     await expect(page.locator('[data-todo-n]').first()).toHaveText('3');
     await expect(page.locator('[data-todo-in]')).toHaveValue('');
-    expect(await page.evaluate(() => { const t = JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'); return t.length + ':' + (t[2].due ? 'dated' : 'undated'); })).toBe('3:dated');
+    expect(await page.evaluate(() => { const t = JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'); return t.length + ':' + (t[0].t === 'Book dentist' && t[0].due ? 'dated,first' : 'wrong'); })).toBe('3:dated,first');   // W1000: a new to-do lands first
     // complete → +1 XP, the row moves into DONE; undo → the XP comes back
-    await page.evaluate(() => (Array.from(document.querySelectorAll('#todo-view .todo-row')).find((r) => /Book dentist/.test(r.textContent || '')) as HTMLElement).click());
+    await page.evaluate(() => ((Array.from(document.querySelectorAll('#todo-view .todo-w')).find((r) => /Book dentist/.test(r.textContent || '')) as HTMLElement).querySelector('[data-todo-bx]') as HTMLElement).click());   // W1000: the box completes
     await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 1', { timeout: 3_000 });
     expect(await points(page)).toBe('501');
     await expect(page.locator('[data-todo-n]').first()).toHaveText('2');
     await page.click('#todo-view [data-todo-dg]');
-    await page.evaluate(() => (document.querySelector('#todo-view .todo-dg .todo-row') as HTMLElement).click());
+    await page.evaluate(() => (document.querySelector('#todo-view .todo-dg .todo-w [data-todo-bx]') as HTMLElement).click());
     await expect(page.locator('#todo-view [data-todo-dg]')).toHaveCount(0);
     await page.waitForTimeout(100);
     expect(await points(page)).toBe('500');
@@ -6478,7 +6478,7 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await page.click('[data-vows-view="todo"]');
     await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 5');   // the eight-day-old one is gone
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').some((t: any) => t.id === 'old'))).toBe(false);
-    await page.evaluate(() => (document.querySelector('#todo-view .todo-row:not(.todo-row--done)') as HTMLElement).click());
+    await page.evaluate(() => (document.querySelector('#todo-view .todo-grp .todo-w [data-todo-bx]') as HTMLElement).click());
     await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 6', { timeout: 3_000 });
     expect(await points(page)).toBe('500');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').find((t: any) => t.id === 'n').xp)).toBe(false);
@@ -6585,5 +6585,89 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();
     await page.click('#tab-profile'); await page.click('#tab-habits');
     expect(await secs(page)).toEqual(['morning:m1', 'day:d1', 'evening:e1,e2']);   // and it holds
+  });
+
+  // W1000 — to-dos v2 (handoff 28): grouped by day, ADD + PRIORITY, a swipe reveals POSTPONE and
+  // DELETE (with UNDO), the edit sheet, CLEAR DONE with UNDO, and the grip reorders within a day.
+  test('W1000: to-dos v2 — groups by day, priority first, swipe to postpone or delete with undo, the edit sheet, clear done, reorder within a day', async ({ page }) => {
+    await seed(page, [
+      { id: 'a', t: 'Return the book', due: -1, rem: null, at: 1 }, { id: 'b', t: 'Buy groceries', due: 0, rem: null, at: 2 },
+      { id: 'c', t: 'Email the landlord', due: 0, rem: '18:00', at: 3 }, { id: 'd', t: 'Call Dad', due: 1, rem: null, at: 4 },
+      { id: 'e', t: 'Renew the passport', due: 3, rem: null, at: 5 }, { id: 'f', t: 'Fix the bike', due: null, rem: null, at: 6 },
+      { id: 'g', t: 'Water the plants', due: 0, rem: null, at: 7, done: Date.now() - 1000, dd: '@today', xp: true },
+    ]);
+    const groups = () => page.evaluate(() => Array.from(document.querySelectorAll('#todo-view .todo-grp')).map((g) => (g as HTMLElement).dataset.todoGrp + ':' + Array.from(g.querySelectorAll('.todo-w')).map((w) => (w as HTMLElement).dataset.todoId + (w.querySelector('.todo-row--pri') ? '!' : '')).join(',')));
+    const swipe = (id: string) => page.evaluate((id) => {
+      const w = document.querySelector('#todo-view .todo-w[data-todo-id="' + id + '"]')!; const row = w.querySelector('.todo-row')!; const r = row.getBoundingClientRect();
+      const ev = (type: string, x: number) => row.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 31, pointerType: 'touch', isPrimary: true, clientX: x, clientY: r.top + 28, button: 0 }));
+      ev('pointerdown', r.left + 150); for (let i = 1; i <= 6; i++) ev('pointermove', r.left + 150 - 20 * i); ev('pointerup', r.left + 30);
+    }, id);
+    const toast = () => page.evaluate(() => { const t = document.getElementById('todo-toast')!; return (t.classList.contains('todo-toast--on') ? '' : 'off:') + (t.firstElementChild as HTMLElement).textContent; });
+    await page.click('[data-vows-view="todo"]');
+    expect(await groups()).toEqual(['od:a', 'tdy:b,c', 'tmw:d', 'lat:e', 'sd:f']);
+    await expect(page.locator('[data-todo-n]').first()).toHaveClass(/vows-sg-n--od/);      // something is overdue → red badge
+    await expect(page.locator('#vows-header .vows-manage-btn')).toBeHidden();               // MANAGE stands down on TO-DO
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="c"] .todo-due--tdy')).toHaveText('18:00');
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="a"] .todo-due--od')).toHaveText('YESTERDAY');
+    // ADD with PRIORITY: lands first in TODAY with the gold ring, first in storage
+    await page.fill('[data-todo-in]', 'Pay the rent');
+    await expect(page.locator('[data-todo-add]')).toHaveClass(/todo-add--ok/);
+    await page.click('[data-todo-pri]');
+    await page.click('[data-todo-add]');
+    const ids = await groups();
+    expect(ids[1]).toMatch(/^tdy:[a-z0-9]+!,b,c$/);
+    expect(await page.evaluate(() => { const t = JSON.parse(localStorage.getItem('hb_todos_v1') || '[]')[0]; return t.t + '|' + (t.pri ? 'pri' : ''); })).toBe('Pay the rent|pri');
+    await expect(page.locator('[data-todo-duev]')).toHaveText('TODAY');                    // the composer resets to TODAY
+    // swipe → POSTPONE: c moves to TOMORROW, the toast says so
+    await swipe('c');
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="c"]')).toHaveClass(/todo-w--open/);
+    await page.waitForTimeout(200);
+    await page.click('#todo-view .todo-w[data-todo-id="c"] [data-todo-act="pp"]');
+    expect((await groups())[2]).toBe('tmw:c,d');
+    expect(await toast()).toBe('Moved to Tomorrow');
+    // swipe → DELETE, then UNDO brings it back
+    await swipe('d');
+    await page.waitForTimeout(200);
+    await page.click('#todo-view .todo-w[data-todo-id="d"] [data-todo-act="dl"]');
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="d"]')).toHaveCount(0);
+    expect(await toast()).toBe('Deleted');
+    await page.click('[data-todo-undo]');
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="d"]')).toHaveCount(1);
+    expect((await groups())[2]).toBe('tmw:c,d');
+    // the edit sheet: rename, a note, NONE for the day (the reminder drops with it)
+    await page.click('#todo-view .todo-w[data-todo-id="b"] [data-todo-open]');
+    await expect(page.locator('#todo-esh')).toHaveClass(/todo-esh--on/);
+    await expect(page.locator('#todo-esh [data-todo-et]')).toHaveValue('Buy groceries');
+    await page.fill('#todo-esh [data-todo-et]', 'Buy groceries for the week');
+    await page.fill('#todo-esh [data-todo-en]', 'Milk, eggs');
+    await page.click('#todo-esh [data-todo-edue] [data-v="none"]');
+    await expect(page.locator('#todo-esh [data-todo-erem]')).toHaveClass(/todo-tri--dis/);
+    await page.click('#todo-esh [data-todo-save]');
+    await expect(page.locator('#todo-esh')).not.toHaveClass(/todo-esh--on/);
+    await expect(page.locator('#todo-view .todo-grp--sd .todo-w[data-todo-id="b"] .todo-tx')).toHaveText('Buy groceries for the week');
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="b"] .todo-mt')).toContainText('Milk, eggs');
+    expect(await page.evaluate(() => { const t = JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').find((x: any) => x.id === 'b'); return [t.due, t.rem, t.note]; })).toEqual([null, null, 'Milk, eggs']);
+    // CLEAR DONE, then UNDO
+    await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 1');
+    await page.click('#todo-view [data-todo-clr]');
+    await expect(page.locator('#todo-view [data-todo-dg]')).toHaveCount(0);
+    expect(await toast()).toBe('Cleared 1 done');
+    await page.click('[data-todo-undo]');
+    await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 1');
+    // the grip reorders within a day: d above c in TOMORROW, and the order is stored
+    await page.evaluate(() => {
+      const tl = document.querySelector('#todo-view .todo-grp--tmw .todo-tl')!; const d = tl.querySelector('.todo-w[data-todo-id="d"]')!; const c = tl.querySelector('.todo-w[data-todo-id="c"]')!;
+      const g = d.querySelector('[data-todo-grip]')!; const gr = g.getBoundingClientRect(); const cr = c.getBoundingClientRect();
+      const ev = (type: string, y: number) => g.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 32, pointerType: 'touch', isPrimary: true, clientX: gr.left + 9, clientY: y, button: 0 }));
+      ev('pointerdown', gr.top + 22); ev('pointermove', cr.top + 6);
+      (window as any).__dragMid2 = { slot: !!tl.querySelector('.todo-slot'), lifted: d.classList.contains('todo-w--lift'), connected: d.isConnected };
+      ev('pointerup', cr.top + 6);
+    });
+    expect(await page.evaluate(() => (window as any).__dragMid2)).toEqual({ slot: true, lifted: true, connected: true });
+    await page.waitForTimeout(500);
+    expect((await groups())[2]).toBe('tmw:d,c');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').map((x: any) => x.id).filter((id: string) => id === 'c' || id === 'd'))).toEqual(['d', 'c']);
+    // LATER carries no grip (it is sorted by date)
+    await expect(page.locator('#todo-view .todo-grp--lat .todo-grip')).toHaveClass(/todo-grip--off/);
   });
 });
