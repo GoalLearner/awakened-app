@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.8';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.8-w994'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.8-w995'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -28854,11 +28854,18 @@
     // Everything else defaults to 'day' via the accessor below.
   };
 
+  // W995 — the three sections of the Habits tab, in the order of the day. A vow
+  // may carry its own placement (`tod`, set on the create / edit sheet); the map
+  // is the default for library vows and customs default to 'day'.
+  const _TODS = ['morning', 'day', 'evening'];
   function getHabitTimeOfDay(habit) {
     if (!habit) return 'day';
+    if (_TODS.indexOf(habit.tod) >= 0) return habit.tod;
     if (habit.custom) return 'day';
     return HABIT_TIME_OF_DAY[habit.name] || 'day';
   }
+  // The section whose hour it is: morning until 11, day until 17, evening after.
+  function _todNow() { const h = new Date().getHours(); return h < 11 ? 'morning' : h < 17 ? 'day' : 'evening'; }
 
   // Apply the map onto DEFAULT_HABITS at startup. Each habit definition
   // gets the canonical description text. Habits without an entry are
@@ -33456,6 +33463,7 @@
           } else {
             const btn = document.getElementById('tab-habits');
             if (btn) btn.click();
+            if (kind === 'todo') { try { _setHabitsView('todo'); } catch (_) {} }   // W995
           }
         } catch (_) {}
       });
@@ -33760,10 +33768,11 @@
         // HealthKit data crosses a visible threshold. Without this the
         // 1z.214 bail would skip the rebuild and the bar would go stale.
         const pBand = listMode ? ('p' + _habitProgressBand(h)) : '';
-        parts.push(h.id + ':' + checked + sBand + auto + pBand);
+        parts.push(h.id + ':' + checked + sBand + auto + pBand + getHabitTimeOfDay(h).charAt(0));   // W995 — the section
       }
       // Mode prefix busts the cache when the user toggles grid<->list.
-      return _habitsViewMode + '#' + parts.join('|');
+      // W995 — the lit section follows the hour, so the hour bucket rides along.
+      return _habitsViewMode + '#' + _todNow() + '#' + parts.join('|');
     } catch (_) {
       return null;
     }
@@ -34186,7 +34195,7 @@
       // Guard against an external script that wiped the list
       // out of band (welcome screen mount, error overlay, etc).
       // Falling back to a full render is always safe.
-      list.children.length === todayHabits.length;
+      list.querySelectorAll('.habit-item').length === todayHabits.length;   // W995 — rows live inside sections
 
     if (sameAsLast) {
       // List DOM is already correct. Still emit updateProgress()
@@ -34242,10 +34251,8 @@
       list.classList.toggle('habit-list--list', listMode);
       try { _renderVowsHeader(listMode, todayHabits); } catch (_) {}
       const buildRow = listMode ? buildListRow : buildItem;
-      const frag = document.createDocumentFragment();
-      todayHabits.forEach(h => frag.appendChild(buildRow(h)));
       list.innerHTML = '';
-      list.appendChild(frag);
+      _todBuildSections(list, todayHabits, buildRow, listMode);   // W995 — MORNING · DAY · EVENING
       bindDrag();
     }
     // v3 Phase 1z.214 — wire delegated handlers exactly once.
@@ -35787,7 +35794,7 @@
     const list = document.getElementById('habit-list');
     if (!list || !list.parentNode) return;
     let hdr = document.getElementById('vows-header');
-    if (!show) { if (hdr) hdr.classList.add('hidden'); return; }
+    if (!show) { if (hdr) hdr.classList.add('hidden'); const tv = document.getElementById('todo-view'); if (tv) tv.classList.add('hidden'); return; }   // W995 — the to-do view stands down with the header
     if (!hdr) {
       hdr = document.createElement('div');
       hdr.id = 'vows-header';
@@ -38138,6 +38145,7 @@
       }
     }
 
+    try { _todAfterToggle(id, li); } catch (_) {}   // W995 — section count + hairline; the row sinks when sealed
     if (!wasDone) { checkCompoundEffect(id); checkCustomRoutineCompound(); }
     renderRank();
     updateProgress();
@@ -39424,12 +39432,17 @@
   function _vowsSegHtml() {
     const dow = (new Date().getDay() + 6) % 7;          // Monday = 0
     const ringLen = 28.3; const off = (ringLen * (1 - (dow + 1) / 7)).toFixed(1);
+    // W995 (handoff 33) — TODAY · TO-DO · LEDGER. The control shows from day one
+    // (TO-DO needs no unlock); LEDGER joins it when the ledger unlocks (W785).
     const locked = !_historyUnlocked();
-    return '<div class="seg vows-seg' + (locked ? ' vows-seg--locked' : '') + '" data-vows-seg data-view="' + _habitsView + '" role="tablist" aria-label="Today or the Ledger">' +
+    let openN = 0; try { openN = _todoOpenCount(); } catch (_) {}
+    return '<div class="seg vows-seg' + (locked ? ' vows-seg--noledger' : '') + '" style="--seg-n:' + (locked ? 2 : 3) + '" data-vows-seg data-view="' + _habitsView + '" role="tablist" aria-label="Today, To-do or the Ledger">' +
       '<button type="button" class="seg-btn vows-sg" role="tab" data-vows-view="today" aria-selected="' + (_habitsView === 'today' ? 'true' : 'false') + '">TODAY</button>' +
+      '<button type="button" class="seg-btn vows-sg" role="tab" data-vows-view="todo" aria-selected="' + (_habitsView === 'todo' ? 'true' : 'false') + '">TO-DO<span class="vows-sg-n' + (openN ? '' : ' hidden') + '" data-todo-n>' + openN + '</span></button>' +
+      (locked ? '' :
       '<button type="button" class="seg-btn vows-sg" role="tab" data-vows-view="ledger" aria-selected="' + (_habitsView === 'ledger' ? 'true' : 'false') + '">LEDGER ' +
         '<span class="vows-sg-wk"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-opacity=".25" stroke-width="2" fill="none"/><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="' + ringLen + '" stroke-dashoffset="' + off + '" stroke-linecap="round"/></svg>WK ' + _hgWeekNum(today) + '</span>' +
-      '</button>' +
+      '</button>') +
     '</div>';
   }
   function _ensureLedgerView() {
@@ -39444,26 +39457,32 @@
   }
   function _applyHabitsView() {
     const ledger = _habitsView === 'ledger';
+    const todo = _habitsView === 'todo';   // W995
+    const away = ledger || todo;           // the vow list stands aside for either view
     const hdr = document.getElementById('vows-header');
     if (hdr) {
       hdr.classList.toggle('vows-header--ledger', ledger);
-      const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = ledger ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : 'TODAY’S VOWS';
-      const t = hdr.querySelector('[data-vows-title]'); if (t) t.textContent = ledger ? 'Your grind, written' : 'Seal your vows';
+      hdr.classList.toggle('vows-header--todo', todo);
+      const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = ledger ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : todo ? 'ONE-OFF TASKS' : 'TODAY’S VOWS';
+      const t = hdr.querySelector('[data-vows-title]'); if (t) t.textContent = ledger ? 'Your grind, written' : todo ? 'Loose ends' : 'Seal your vows';
       hdr.querySelectorAll('[data-vows-seg]').forEach(function (sg) { sg.setAttribute('data-view', _habitsView); });
       hdr.querySelectorAll('[data-vows-view]').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-vows-view') === _habitsView ? 'true' : 'false'); });
     }
     ['habit-list', 'empty-state', 'fa-program-guide'].forEach(function (id) {
       const el = document.getElementById(id); if (!el) return;
-      if (ledger) { if (!el.classList.contains('hidden')) { el.setAttribute('data-ledger-hid', '1'); el.classList.add('hidden'); } }
+      if (away) { if (!el.classList.contains('hidden')) { el.setAttribute('data-ledger-hid', '1'); el.classList.add('hidden'); } }
       else if (el.getAttribute('data-ledger-hid') === '1') { el.removeAttribute('data-ledger-hid'); el.classList.remove('hidden'); }
     });
     const host = ledger ? _ensureLedgerView() : document.getElementById('ledger-view');
     if (host) host.classList.toggle('hidden', !ledger);
+    const th = todo ? _todoEnsureView() : document.getElementById('todo-view');   // W995
+    if (th) th.classList.toggle('hidden', !todo);
+    if (todo) { try { _todoRender(); } catch (e) { _logSwallow('todo:render', e); } }
     const footer = document.getElementById('main-footer');
     if (footer && typeof currentTab !== 'undefined' && currentTab === 'habits') footer.style.display = ledger ? 'none' : '';
   }
   function _setHabitsView(view) {
-    view = view === 'ledger' ? 'ledger' : 'today';
+    view = view === 'ledger' ? 'ledger' : view === 'todo' ? 'todo' : 'today';   // W995 — the third pill
     if (view === 'ledger' && !_historyUnlocked()) { try { showHabitToast('Your ledger opens after ' + HISTORY_UNLOCK_DAYS + ' active days.'); } catch (_) {} return; }
     const changed = view !== _habitsView;
     _habitsView = view;
@@ -39480,6 +39499,383 @@
     if (b) { e.preventDefault(); _setHabitsView(b.getAttribute('data-vows-view')); }
   });
   try { window.__ledger = { open: function () { _setHabitsView('ledger'); }, close: function () { _setHabitsView('today'); }, view: function () { return _habitsView; } }; } catch (_) {}
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // W995 — VOWS BY TIME OF DAY + TO-DOS (Claude Design handoff 33)
+  // The Habits tab reads like a day: MORNING · DAY · EVENING, each a header
+  // with its count and a hairline, folding on tap; the section whose hour it
+  // is sits lit. Sealed vows sink to the bottom of their section. A third
+  // pill, TO-DO, holds one-off tasks: a composer with an optional due day and
+  // reminder, a square check (vows use a circle), +1 XP each and five a day at
+  // most, a DONE group that clears after seven days. Nothing else changes:
+  // no streak, no stat, no Perfect Day, no souls.
+  // ═══════════════════════════════════════════════════════════════════════
+  const _TOD_GLYPH = {
+    morning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17a5 5 0 0 1 10 0"/><path d="M2.5 17h19M6 20.5h12"/><path d="M12 9V6.5M6.3 11.3 4.6 9.6M17.7 11.3l1.7-1.7"/></svg>',
+    day:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M5.6 18.4l1.7-1.7M16.7 7.3l1.7-1.7"/></svg>',
+    evening: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3.2a9 9 0 1 0 6.3 14.6A8.5 8.5 0 0 1 14.5 3.2z"/><path d="M6.5 4.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z"/></svg>',
+  };
+  const _TOD_CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5 6 7.5l3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const _TODO_CHECK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7.3l2.8 2.7L11 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const _TODO_BELL = '<svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10h7l-1-1.6V6.2a2.5 2.5 0 0 0-5 0v2.2z"/><path d="M6 12h2"/></svg>';
+  const _TODO_CAL = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3" width="10" height="9" rx="2"/><path d="M2 6.5h10M5 1.5v3M9 1.5v3"/></svg>';
+  const _TODO_BELL_LG = '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10h7l-1-1.6V6.2a2.5 2.5 0 0 0-5 0v2.2z"/><path d="M6 12h2"/></svg>';
+  const _TODO_BOLT = '<svg width="8" height="11" viewBox="0 0 5 7" aria-hidden="true"><path d="M3 0 0 4h2l-.7 3L5 2.5H3l1-2.5z" fill="currentColor"/></svg>';
+  const _todFolds = new Set();   // session only, like the canvas
+  function _todReduced() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } }
+
+  // ── Sections ──
+  function _todBuildSections(list, todayHabits, buildRow, listMode) {
+    const lit = _todNow();
+    list.classList.add('habit-list--tod');
+    _TODS.forEach(function (tod) {
+      const rows = todayHabits.filter(function (h) { return getHabitTimeOfDay(h) === tod; });
+      if (!rows.length) return;   // an empty section is not drawn
+      const dn = rows.filter(function (h) { return isChecked(h.id); }).length;
+      const folded = _todFolds.has(tod);
+      const sec = document.createElement('li');
+      sec.className = 'tod-sec' + (lit === tod ? ' tod-sec--lit' : '') + (folded ? ' tod-sec--fold' : '');
+      sec.dataset.tod = tod;
+      sec.innerHTML =
+        '<div class="tod-sh" data-tod-fold role="button" tabindex="0" aria-expanded="' + (folded ? 'false' : 'true') + '">' +
+          '<span class="tod-gl">' + _TOD_GLYPH[tod] + '</span>' +
+          '<span class="tod-tt">' + tod.toUpperCase() + '</span>' +
+          '<span class="tod-ct" data-tod-ct>· ' + dn + ' OF ' + rows.length + '</span>' +
+          '<span class="tod-ch">' + _TOD_CHEV + '</span>' +
+        '</div>' +
+        '<div class="tod-hair"><i data-tod-hair style="width:' + Math.round(dn / rows.length * 100) + '%"></i></div>' +
+        '<div class="tod-list"><ul class="tod-rows habit-list habit-list--codex' + (listMode ? ' habit-list--list' : '') + '"></ul></div>';
+      const ul = sec.querySelector('.tod-rows');
+      // sealed vows sink to the bottom of their section, in their own order
+      rows.filter(function (h) { return !isChecked(h.id); }).concat(rows.filter(function (h) { return isChecked(h.id); }))
+        .forEach(function (h) { ul.appendChild(buildRow(h)); });
+      list.appendChild(sec);
+    });
+  }
+  function _todRefreshSec(sec) {
+    const rows = Array.prototype.slice.call(sec.querySelectorAll('.habit-item'));
+    const dn = rows.filter(function (r) { return isChecked(r.dataset.id); }).length;
+    const ct = sec.querySelector('[data-tod-ct]'); if (ct) ct.textContent = rows.length ? '· ' + dn + ' OF ' + rows.length : '· EMPTY';
+    const hair = sec.querySelector('[data-tod-hair]'); if (hair) hair.style.width = (rows.length ? Math.round(dn / rows.length * 100) : 0) + '%';
+  }
+  // FLIP: rows glide to their new slot instead of jumping.
+  function _todFlip(container, fn) {
+    const before = new Map();
+    container.querySelectorAll('.habit-item').forEach(function (el) { before.set(el, el.getBoundingClientRect().top); });
+    fn();
+    if (_todReduced()) return;
+    container.querySelectorAll('.habit-item').forEach(function (el) {
+      const b = before.get(el); if (b == null) return;
+      const dy = b - el.getBoundingClientRect().top; if (Math.abs(dy) < 1) return;
+      el.style.transition = 'none'; el.style.transform = 'translateY(' + dy + 'px)';
+      requestAnimationFrame(function () { el.style.transition = 'transform .2s ease'; el.style.transform = ''; setTimeout(function () { el.style.transition = ''; }, 230); });
+    });
+  }
+  // After a seal / unseal: the count and hairline at once; the row moves after
+  // the seal animation has had its moment (260ms, as on the canvas).
+  function _todAfterToggle(id, li) {
+    if (!li || !li.closest) return;
+    const sec = li.closest('.tod-sec'); if (!sec) return;
+    _todRefreshSec(sec);
+    const ul = sec.querySelector('.tod-rows'); if (!ul) return;
+    setTimeout(function () {
+      if (!li.isConnected || li.parentNode !== ul) return;
+      const cur = Array.prototype.slice.call(ul.querySelectorAll('.habit-item'));
+      const open = cur.filter(function (r) { return !isChecked(r.dataset.id); });
+      const done = cur.filter(function (r) { return isChecked(r.dataset.id); });
+      const want = open.concat(done);
+      if (want.every(function (r, i) { return r === cur[i]; })) return;
+      _todFlip(ul, function () { want.forEach(function (r) { ul.appendChild(r); }); });
+    }, _todReduced() ? 0 : 260);
+  }
+  document.addEventListener('click', function (e) {
+    const t = e.target; if (!t || !t.closest) return;
+    const sh = t.closest('[data-tod-fold]'); if (!sh) return;
+    const sec = sh.closest('.tod-sec'); if (!sec) return;
+    const tod = sec.dataset.tod;
+    if (_todFolds.has(tod)) _todFolds.delete(tod); else _todFolds.add(tod);
+    const folded = _todFolds.has(tod);
+    sec.classList.add('tod-sec--anim'); setTimeout(function () { sec.classList.remove('tod-sec--anim'); }, 260);
+    sec.classList.toggle('tod-sec--fold', folded);
+    sh.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    try { _hapticTick('LIGHT'); } catch (_) {}
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const t = e.target; if (!t || !t.closest || !t.closest('[data-tod-fold]')) return;
+    e.preventDefault(); t.click();
+  });
+
+  // ── TIME OF DAY on the create / edit sheets ──
+  let _customTod = 'day', _editTod = 'day';
+  function _todTriPaint(rowId, val) {
+    const row = document.getElementById(rowId); if (!row) return;
+    row.querySelectorAll('.tod-tri-btn').forEach(function (b) {
+      const on = b.dataset.tod === val;
+      b.classList.toggle('tod-tri-btn--on', on); b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+  document.addEventListener('click', function (e) {
+    const t = e.target; if (!t || !t.closest) return;
+    const b = t.closest('.tod-tri-btn'); if (!b) return;
+    const row = b.closest('.tod-tri'); if (!row) return;
+    const val = _TODS.indexOf(b.dataset.tod) >= 0 ? b.dataset.tod : 'day';
+    if (row.id === 'custom-tod-row') _customTod = val; else if (row.id === 'edit-tod-row') _editTod = val;
+    _todTriPaint(row.id, val);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+  });
+
+  // ── To-dos ──
+  // hb_todos_v1: [{ id, t, due: 'YYYY-MM-DD'|null, rem: 'HH:MM'|null, at, done: ms|null, dd: day done, xp: bool }]
+  const TODO_KEY = 'hb_todos_v1';
+  const TODO_XP = 1, TODO_XP_CAP = 5;            // +1 XP each, five a day at most
+  const TODO_DONE_TTL_MS = 7 * 86400000;         // the DONE group clears after seven days
+  const TODO_REM_PRESETS = ['8:00', '12:00', '18:00', '21:00'];
+  let _todos = null, _todoDgOpen = false;
+  let _todoComp = { text: '', due: null, rem: null, od: false, or: false };
+  function _todoLoad() {
+    if (_todos) return _todos;
+    try { const a = JSON.parse(localStorage.getItem(TODO_KEY) || '[]'); _todos = Array.isArray(a) ? a.filter(function (t) { return t && t.id && typeof t.t === 'string'; }) : []; }
+    catch (_) { _todos = []; }
+    _todoSweep();
+    return _todos;
+  }
+  function _todoSave() {
+    try { localStorage.setItem(TODO_KEY, JSON.stringify(_todos || [])); } catch (e) { _logSwallow('todo:save', e); }
+    try { if (typeof CloudSync !== 'undefined' && CloudSync.markLocalStateChanged) CloudSync.markLocalStateChanged('todos'); } catch (_) {}
+  }
+  function _todoSweep() {
+    if (!_todos) return;
+    const cut = Date.now() - TODO_DONE_TTL_MS, n = _todos.length;
+    _todos = _todos.filter(function (t) { return !(t.done && t.done < cut); });
+    if (_todos.length !== n) _todoSave();
+  }
+  function _todoOpenCount() { return _todoLoad().filter(function (t) { return !t.done; }).length; }
+  function _todoXpToday() { return _todoLoad().filter(function (t) { return t.done && t.xp && t.dd === today; }).length; }
+  function _todoDayDiff(due) {
+    if (!due || typeof due !== 'string' || due.length < 10) return null;
+    try {
+      const a = Date.UTC(+due.slice(0, 4), +due.slice(5, 7) - 1, +due.slice(8, 10));
+      const b = Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10));
+      const d = Math.round((a - b) / 86400000); return isFinite(d) ? d : null;
+    } catch (_) { return null; }
+  }
+  function _todoDateAt(off) {
+    const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + off);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function _todoDueLabel(off) {
+    if (off == null) return '';
+    if (off < 0) return 'OVERDUE';
+    if (off === 0) return 'TODAY';
+    if (off === 1) return 'TOMORROW';
+    const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + off);
+    return off < 7 ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][d.getDay()]
+                   : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][d.getMonth()] + ' ' + d.getDate();
+  }
+  function _todoSortKey(t) { const o = _todoDayDiff(t.due); return o == null ? 4 : o < 0 ? 0 : o === 0 ? 1 : o === 1 ? 2 : 3; }
+  function _todoRemLabel(rem) {
+    if (!rem) return '';
+    const p = String(rem).split(':'); const h = parseInt(p[0], 10), m = parseInt(p[1], 10) || 0;
+    return isFinite(h) ? (h + ':' + String(m).padStart(2, '0')) : String(rem);
+  }
+  function _todoRemKey(rem) {   // 'HH:MM' for storage / the plugin
+    const p = String(rem || '').split(':'); const h = parseInt(p[0], 10), m = parseInt(p[1], 10) || 0;
+    return isFinite(h) ? (String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')) : null;
+  }
+
+  function _todoEnsureView() {
+    let host = document.getElementById('todo-view');
+    if (host) return host;
+    const list = document.getElementById('habit-list'); if (!list || !list.parentNode) return null;
+    host = document.createElement('div'); host.id = 'todo-view'; host.className = 'todo-view hidden';
+    host.innerHTML =
+      '<div class="todo-comp" data-todo-comp>' +
+        '<div class="todo-crow">' +
+          '<input type="text" class="todo-in" placeholder="Add a to-do" data-todo-in enterkeyhint="done" aria-label="Add a to-do" maxlength="80" autocomplete="off" autocorrect="on" autocapitalize="sentences">' +
+          '<button type="button" class="todo-cb todo-cb--add hidden" data-todo-add aria-label="Add">ADD</button>' +
+          '<button type="button" class="todo-cb" data-todo-pick="due" aria-label="Due day">' + _TODO_CAL + '<span data-todo-duev></span></button>' +
+          '<button type="button" class="todo-cb" data-todo-pick="rem" aria-label="Reminder time">' + _TODO_BELL_LG + '<span data-todo-remv></span></button>' +
+        '</div>' +
+        '<div class="todo-picks" data-todo-picks="due"><div><div class="todo-prow"><span class="todo-plab">DUE</span>' +
+          '<button type="button" class="todo-pill" data-todo-due="0">TODAY</button>' +
+          '<button type="button" class="todo-pill" data-todo-due="1">TOMORROW</button>' +
+          '<span class="todo-pill todo-pill--host" data-todo-due="date">' + _TODO_CAL.replace('width="14" height="14"', 'width="11" height="11"') + '<span data-todo-datev>PICK A DATE</span><input type="date" class="todo-ghost" data-todo-date aria-label="Pick a date" tabindex="-1"></span>' +
+        '</div></div></div>' +
+        '<div class="todo-picks" data-todo-picks="rem"><div><div class="todo-prow"><span class="todo-plab">REMIND</span>' +
+          TODO_REM_PRESETS.map(function (r) { return '<button type="button" class="todo-pill" data-todo-rem="' + r + '">' + r + '</button>'; }).join('') +
+          '<span class="todo-pill todo-pill--host" data-todo-rem="other" aria-label="Another time">…<input type="time" class="todo-ghost" data-todo-time aria-label="Pick a time" tabindex="-1"></span>' +
+        '</div></div></div>' +
+      '</div>' +
+      '<div class="todo-list" data-todo-list></div>';
+    list.parentNode.insertBefore(host, list);
+    _todoWire(host);
+    return host;
+  }
+  function _todoRenderComp(host) {
+    host = host || document.getElementById('todo-view'); if (!host) return;
+    const $ = function (s) { return host.querySelector(s); };
+    const c = _todoComp;
+    const inp = $('[data-todo-in]'); if (inp && inp.value !== c.text) inp.value = c.text;
+    const add = $('[data-todo-add]'); if (add) add.classList.toggle('hidden', !c.text.trim());
+    const bd = $('[data-todo-pick="due"]'), br = $('[data-todo-pick="rem"]');
+    if (bd) { bd.classList.toggle('todo-cb--on', c.due != null); bd.classList.toggle('todo-cb--open', c.od); }
+    if (br) { br.classList.toggle('todo-cb--on', !!c.rem); br.classList.toggle('todo-cb--open', c.or); }
+    const dv = $('[data-todo-duev]'); if (dv) dv.textContent = c.due != null ? _todoDueLabel(c.due) : '';
+    const rv = $('[data-todo-remv]'); if (rv) rv.textContent = c.rem ? _todoRemLabel(c.rem) : '';
+    const pd = $('[data-todo-picks="due"]'); if (pd) pd.classList.toggle('todo-picks--open', c.od);
+    const pr = $('[data-todo-picks="rem"]'); if (pr) pr.classList.toggle('todo-picks--open', c.or);
+    const dated = c.due != null && (c.due < 0 || c.due > 1);
+    host.querySelectorAll('[data-todo-due]').forEach(function (p) { p.classList.toggle('todo-pill--on', p.dataset.todoDue === 'date' ? dated : c.due === +p.dataset.todoDue); });
+    const dl = $('[data-todo-datev]'); if (dl) dl.textContent = dated ? _todoDueLabel(c.due) : 'PICK A DATE';
+    host.querySelectorAll('[data-todo-rem]').forEach(function (p) {
+      const v = p.dataset.todoRem;
+      p.classList.toggle('todo-pill--on', v === 'other' ? (!!c.rem && TODO_REM_PRESETS.indexOf(c.rem) < 0) : v === c.rem);
+    });
+  }
+  function _todoRowHtml(t) {
+    const d = !!t.done, off = _todoDayDiff(t.due);
+    let chip = '';
+    if (!d) {
+      if (off != null) chip = '<span class="todo-due' + (off < 0 ? ' todo-due--od' : off === 0 ? ' todo-due--tdy' : '') + '">' + (t.rem ? _TODO_BELL : '') + _todoDueLabel(off) + '</span>';
+      else if (t.rem) chip = '<span class="todo-due">' + _TODO_BELL + _todoRemLabel(t.rem) + '</span>';
+    }
+    return '<div class="todo-row' + (d ? ' todo-row--done' : '') + '" data-todo-id="' + esc(t.id) + '" role="button" tabindex="0" aria-label="' + (d ? 'Undo ' : 'Complete ') + esc(t.t) + '">' +
+      '<span class="todo-bx">' + _TODO_CHECK + '</span><span class="todo-tx"><span>' + esc(t.t) + '</span></span>' + chip + '</div>';
+  }
+  function _todoRender() {
+    const host = document.getElementById('todo-view'); if (!host) return;
+    const list = host.querySelector('[data-todo-list]'); if (!list) return;
+    const all = _todoLoad();
+    const open = all.filter(function (t) { return !t.done; }).sort(function (a, b) {
+      return _todoSortKey(a) - _todoSortKey(b) || ((_todoDayDiff(a.due) == null ? 0 : _todoDayDiff(a.due)) - (_todoDayDiff(b.due) == null ? 0 : _todoDayDiff(b.due))) || ((a.at || 0) - (b.at || 0));
+    });
+    const done = all.filter(function (t) { return !!t.done; }).sort(function (a, b) { return b.done - a.done; });
+    let h = open.length ? open.map(_todoRowHtml).join('') : '<div class="todo-empty">Nothing waiting. Add a to-do above.</div>';
+    if (done.length) {
+      h += '<div class="todo-dg' + (_todoDgOpen ? ' todo-dg--open' : '') + '"><div class="todo-dgh" data-todo-dg role="button" tabindex="0" aria-expanded="' + (_todoDgOpen ? 'true' : 'false') + '"><span class="todo-bx">' + _TODO_CHECK + '</span>DONE · ' + done.length + '<span class="todo-ch">' + _TOD_CHEV + '</span></div>' +
+        '<div class="todo-dgl"><div>' + done.map(_todoRowHtml).join('') + '<div class="todo-dgn">CLEARS AFTER 7 DAYS · TAP TO UNDO</div></div></div></div>';
+    }
+    list.innerHTML = h;
+    _todoRenderComp(host);
+    _todoPaintBadge();
+  }
+  function _todoPaintBadge() {
+    const n = _todoOpenCount();
+    document.querySelectorAll('[data-todo-n]').forEach(function (b) { b.textContent = String(n); b.classList.toggle('hidden', !n); });
+  }
+  function _todoAdd() {
+    const text = (_todoComp.text || '').trim(); if (!text) return;
+    const rem = _todoComp.rem ? _todoRemKey(_todoComp.rem) : null;
+    const it = { id: uid(), t: text.slice(0, 80), due: _todoComp.due != null ? _todoDateAt(_todoComp.due) : null, rem: rem, at: Date.now(), done: null, dd: null, xp: false };
+    _todoLoad().push(it); _todoSave();
+    _todoComp = { text: '', due: null, rem: null, od: false, or: false };
+    _todoRender();
+    try { _todoArmReminder(it); } catch (_) {}
+    try { _hapticTick('LIGHT'); } catch (_) {}
+  }
+  // +1 XP on completion, at most five a day. Real rank XP (getRank reads
+  // totalPoints), so a to-do can tip a rank; nothing else moves.
+  function _todoGrantXp(n) {
+    const oldRank = getRank(totalPoints);
+    totalPoints = Math.max(0, totalPoints + n);
+    try { prUpdate('total_xp_lifetime', Math.max(0, getPR('total_xp_lifetime').value + n)); } catch (_) {}
+    save();
+    try { renderRank(); } catch (_) {}
+    try { _scheduleHeaderMetricsUpdate(); } catch (_) {}
+    if (n > 0) {
+      const nr = getRank(totalPoints);
+      if (nr.id !== oldRank.id) { levelUpQueue.push({ type: 'rank', rank: nr, oldRankId: oldRank.id }); if (!levelUpActive) { try { drainLevelUpQueue(); } catch (_) {} } }
+    }
+  }
+  function _todoComplete(it, row) {
+    if (!it || it.done || row.classList.contains('todo-row--done')) return;
+    row.classList.add('todo-row--done'); row.setAttribute('aria-label', 'Undo ' + it.t);
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    try { playSfx('habit_seal'); } catch (_) {}
+    const grant = _todoXpToday() < TODO_XP_CAP;
+    it.done = Date.now(); it.dd = today; it.xp = grant;
+    _todoSave();
+    try { _todoCancelReminder(it); } catch (_) {}
+    if (grant) {
+      _todoGrantXp(TODO_XP);
+      try {
+        const chip = document.createElement('span'); chip.className = 'todo-xp'; chip.innerHTML = _TODO_BOLT + '+' + TODO_XP + ' XP';
+        row.appendChild(chip); setTimeout(function () { chip.remove(); }, 1000);
+      } catch (_) {}
+    }
+    const RM = _todReduced();
+    setTimeout(function () { row.classList.add('todo-row--out'); setTimeout(function () { _todoRender(); }, RM ? 120 : 190); }, 520);
+  }
+  function _todoUndo(it) {
+    if (!it || !it.done) return;
+    it.done = null; it.dd = null;
+    if (it.xp) { it.xp = false; _todoGrantXp(-TODO_XP); }
+    _todoSave(); _todoRender();
+    try { _todoArmReminder(it); } catch (_) {}
+  }
+  function _todoArmReminder(it) { try { if (it && it.rem && !it.done && typeof Notif !== 'undefined' && Notif.todoSchedule) Notif.todoSchedule([it], today); } catch (_) {} }
+  function _todoCancelReminder(it) { try { if (it && typeof Notif !== 'undefined' && Notif.todoCancel) Notif.todoCancel(it.id); } catch (_) {} }
+  function _todoWire(host) {
+    const inp = host.querySelector('[data-todo-in]');
+    inp.addEventListener('input', function () { _todoComp.text = inp.value; const add = host.querySelector('[data-todo-add]'); if (add) add.classList.toggle('hidden', !inp.value.trim()); });
+    inp.addEventListener('focus', function () { host.querySelector('[data-todo-comp]').classList.add('todo-comp--focus'); });
+    inp.addEventListener('blur', function () { host.querySelector('[data-todo-comp]').classList.remove('todo-comp--focus'); });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { inp.value = ''; _todoComp.text = ''; _todoRenderComp(host); return; }
+      if (e.key !== 'Enter') return;
+      e.preventDefault(); _todoAdd(); try { inp.focus(); } catch (_) {}
+    });
+    const di = host.querySelector('[data-todo-date]');
+    di.addEventListener('click', function () { try { di.showPicker(); } catch (_) {} });
+    di.addEventListener('change', function () {
+      if (!di.value) return;
+      const off = _todoDayDiff(di.value); if (off == null) return;
+      _todoComp.due = off; _todoRenderComp(host);
+    });
+    const ti = host.querySelector('[data-todo-time]');
+    ti.addEventListener('click', function () { try { ti.showPicker(); } catch (_) {} });
+    ti.addEventListener('change', function () {
+      if (!ti.value) return;
+      const p = ti.value.split(':'); _todoComp.rem = (+p[0]) + ':' + p[1]; _todoRenderComp(host);
+    });
+    host.addEventListener('click', function (e) {
+      const t = e.target; if (!t || !t.closest) return;
+      if (t.closest('.todo-ghost')) return;                  // the native picker owns that tap
+      if (t.closest('[data-todo-add]')) { _todoAdd(); return; }
+      const pk = t.closest('[data-todo-pick]');
+      if (pk) { if (pk.dataset.todoPick === 'due') _todoComp.od = !_todoComp.od; else _todoComp.or = !_todoComp.or; _todoRenderComp(host); return; }
+      const pd = t.closest('[data-todo-due]');
+      if (pd) { const v = pd.dataset.todoDue; if (v === 'date') return; _todoComp.due = _todoComp.due === +v ? null : +v; _todoRenderComp(host); return; }
+      const pr = t.closest('[data-todo-rem]');
+      if (pr) { const v = pr.dataset.todoRem; if (v === 'other') return; _todoComp.rem = _todoComp.rem === v ? null : v; _todoRenderComp(host); return; }
+      const dg = t.closest('[data-todo-dg]');
+      if (dg) { _todoDgOpen = !_todoDgOpen; const g = dg.closest('.todo-dg'); if (g) g.classList.toggle('todo-dg--open', _todoDgOpen); dg.setAttribute('aria-expanded', _todoDgOpen ? 'true' : 'false'); return; }
+      const row = t.closest('.todo-row');
+      if (row) {
+        const it = _todoLoad().find(function (x) { return x.id === row.dataset.todoId; }); if (!it) return;
+        if (it.done) _todoUndo(it); else _todoComplete(it, row);
+      }
+    });
+    host.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const t = e.target; if (!t || !t.closest || t.tagName === 'INPUT') return;
+      if (t.closest('.todo-row') || t.closest('[data-todo-dg]')) { e.preventDefault(); t.click(); }
+    });
+  }
+  // The briefing's one line: "3 to-dos due today · 1 overdue".
+  function _todoBriefing() {
+    const open = _todoLoad().filter(function (t) { return !t.done; });
+    let due = 0, od = 0;
+    open.forEach(function (t) { const o = _todoDayDiff(t.due); if (o === 0) due++; else if (o != null && o < 0) od++; });
+    return (due || od) ? { due: due, od: od } : null;
+  }
+  function _todoBriefLine(b) {
+    const n = function (k) { return k + (k === 1 ? ' to-do' : ' to-dos'); };
+    if (b.due) return '<b>' + n(b.due) + '</b> due today' + (b.od ? ' · <span class="tb-od">' + b.od + ' overdue</span>' : '');
+    return '<span class="tb-od"><b>' + n(b.od) + '</b> overdue</span>';
+  }
+  try { window.__todo = { load: _todoLoad, render: _todoRender, add: _todoAdd, comp: function () { return _todoComp; }, folds: _todFolds }; } catch (_) {}   // QA
   function _fsSignalMet(id) {
     try {
       switch (id) {
@@ -43147,6 +43543,7 @@
     _customEmojiModeChosen = false;
     _customDays = [...ALL_DAYS];
     _customDiff = CUSTOM_HABIT_DIFFICULTY;
+    _customTod = 'day'; _todTriPaint('custom-tod-row', 'day');   // W995 — default Day
     document.getElementById('custom-name-input').value = '';
     document.getElementById('custom-error').classList.add('hidden');
     _renderCustomIconBtn();
@@ -43446,6 +43843,7 @@
       type:        'build',
       primaryStat: _customStatId,
       custom:      true,
+      tod:         _customTod,   // W995 — where the vow sits in the day
     };
     // v3 Phase 1z.270 — persist optional icon picker selection. Legacy
     // habits without iconKey still render emoji via the existing
@@ -59379,6 +59777,7 @@
     // W986 — a developer update the hunter has not opened yet (a new topic, never a reply).
     let news = '';
     try { if (_cmUpdateUnseen()) news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'A new update'; } catch (_) {}
+    let todos = null; try { todos = _todoBriefing(); } catch (_) {}   // W995 — "3 to-dos due today · 1 overdue"
     return {
       date: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dt.getDay()] + ' · ' + ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dt.getMonth()] + ' ' + dt.getDate(),
       day: dayN != null ? dayN : 1,
@@ -59389,6 +59788,7 @@
       isMax: !!(info && info.isMax),
       next: info && info.nextDivisionLabel ? info.nextDivisionLabel : '',
       news: news,
+      todos: todos,
       to: info ? Math.max(0, Math.ceil(Number(info.xpToNextDivision) || 0)) : 0,
       frac: info ? Math.max(0, Math.min(1, Number(info.divisionProgress) || 0)) : 0,
       chips: chipSrc.map(function (h) { let n = h.name; try { n = habitDisplayParts(h).base || h.name; } catch (_) {} return { id: h.id, name: n }; }),
@@ -59420,6 +59820,7 @@
   const _TB_FLAME = '<svg width="12" height="15" viewBox="0 0 12 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M6 1c.5 2.6 4.5 4.3 4.5 8.1A4.5 4.5 0 0 1 1.5 9.1C1.5 6.6 3.4 5.6 3.8 3.6c1 .9 1.4 2 1.3 3.2C6.4 5.5 6.6 3.4 6 1z"/></svg>';
   const _TB_NEWS = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5eead4" stroke-width="1.3" aria-hidden="true"><path d="M4 4.5h10.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V5"/><path d="M6.5 8.5h7M6.5 11.5h7M6.5 14.5h4" stroke="#f5b842"/></svg>';   // W986
   const _TB_GATE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" aria-hidden="true"><path d="M3 18V8a7 7 0 0 1 14 0v10M6.5 18V9a3.5 3.5 0 0 1 7 0v9M1.5 18h17"/><path d="M10 5.5l-.8 2.2 1.4 1.2-.9 2.1" stroke="#f5b842"/></svg>';
+  const _TB_TODO = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3.5"/><path d="M6.5 10.3l2.4 2.4 4.8-5.4" stroke="#f5b842"/></svg>';   // W995
   function _tbRing(n, leadIdx) {
     if (n <= 0) return '<svg viewBox="0 0 200 200"><circle class="tb-seg" cx="100" cy="100" r="88"></circle></svg>';
     const C = 2 * Math.PI * 88, g = n > 20 ? 2.2 : 7, seg = C * (360 / n - g) / 360;
@@ -59450,6 +59851,7 @@
         '<div class="tb-chips">' + d.chips.map(function (c, i) { return '<div class="tb-chip tb-e' + (c.id === d.lead ? ' tb-on' : '') + '" role="button" tabindex="0" data-i="' + i + '" data-id="' + esc(c.id) + '" style="--d:' + (900 + i * 70) + 'ms"><i></i>' + esc(c.name) + '</div>'; }).join('') + '</div>' : '') +
       (d.world ? '<div class="tb-world tb-e" style="--d:1120ms">' + _TB_GATE + '<span>' + d.world + '</span></div>' : '') +
       (d.news ? '<div class="tb-world tb-news tb-e" style="--d:1180ms">' + _TB_NEWS + '<span>New on the Community board: <b>' + esc(d.news) + '</b></span></div>' : '') +
+      (d.todos ? '<div class="tb-world tb-tdl tb-e" style="--d:1240ms">' + _TB_TODO + '<span>' + _todoBriefLine(d.todos) + '</span></div>' : '') +   // W995
       '<div class="tb-ritual tb-sealin"><button type="button" class="tb-seal" aria-label="Hold to begin the day">' + _tbSealSvg() + '</button><div class="tb-rl"><span class="tb-mono">Hold to begin</span><span class="tb-done">The day is yours.</span></div></div>' +
       '</div>';
   }
@@ -59467,6 +59869,7 @@
     // W986 — the owner's preview always shows the update line: the latest update's
     // title even once he has opened it, or a sample when there is none yet.
     if (opts.preview && !d.news) { try { d.news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'Your next update’s title appears here'; } catch (_) { d.news = 'Your next update’s title appears here'; } }
+    if (opts.preview && !d.todos) d.todos = { due: 2, od: 1 };   // W995 — the preview always shows the to-do line
     let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
     root.className = 'tb-frame';
     root.innerHTML = _tbHtml(d);
@@ -59761,6 +60164,7 @@
     // Read-only reminder display — shows the time if one is set,
     // hides the section entirely otherwise.
     refreshEditReminderUI(id);
+    _editTod = getHabitTimeOfDay(habit); _todTriPaint('edit-tod-row', _editTod);   // W995
 
     document.getElementById('edit-modal').classList.remove('hidden');
     document.getElementById('modal-overlay').classList.remove('hidden');
@@ -59881,6 +60285,7 @@
       // throw, so a render failure surfaces as a console warning
       // instead of a frozen UI. Persist is also try/caught so a
       // localStorage quota error doesn't strand the user either.
+      if (_TODS.indexOf(_editTod) >= 0) habit.tod = _editTod;   // W995 — placement only; every other field is untouched
       try { save(); } catch (e) { try { console.warn('[edit] save failed', e); } catch (_) {} }
     }
     closeEditModal();
@@ -65189,6 +65594,35 @@
       // above wiped any pending ones, so this resets the "days away" clock: they
       // only ever fire if the user goes quiet for 2/4/7 days without reopening.
       try { await scheduleComeback(); } catch (_) {}
+      try { await todoSchedule(_todoLoad(), todayStr); } catch (_) {}   // W995 — cancelAll above wiped them too
+    }
+
+    // W995 — one-shot to-do reminders. The id hashes the to-do's id (salted, the
+    // same djb2 as vows) so a reschedule replaces, never duplicates. A to-do with
+    // a due day rings on that day; without one, today at that time or tomorrow
+    // if the time has passed. The body is the to-do itself.
+    function todoNotifId(id) { return notifIdFor('todo:' + String(id)); }
+    async function todoCancel(id) {
+      const p = plugin(); if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: todoNotifId(id) }] }); } catch (_) {}
+    }
+    async function todoSchedule(list, todayStr) {
+      const p = plugin(); if (!p || !isNative()) return;
+      if (isDisabled() || isPaused()) return;
+      const now = Date.now();
+      for (const t of (Array.isArray(list) ? list : [])) {
+        if (!t || t.done || !t.rem) continue;
+        const hm = parseHM(t.rem); if (!hm) continue;
+        const at = new Date((t.due || todayStr) + 'T00:00:00');
+        if (isNaN(at.getTime())) continue;
+        at.setHours(hm.h, hm.m, 0, 0);
+        if (!t.due && at.getTime() <= now) at.setDate(at.getDate() + 1);
+        if (at.getTime() <= now) continue;
+        try {
+          await p.cancel({ notifications: [{ id: todoNotifId(t.id) }] });
+          await p.schedule({ notifications: [{ id: todoNotifId(t.id), title: 'Awakened', body: String(t.t), schedule: { at: at, allowWhileIdle: true }, extra: { kind: 'todo', todoId: t.id } }] });
+        } catch (e) { console.warn('todo schedule failed', e); }
+      }
     }
 
     // Called from toggleHabit when a user marks a habit complete TODAY.
@@ -65639,6 +66073,7 @@
       checkPermission, requestPermission, permAskedBefore,
       // mutators
       setReminder, clearReminder, rescheduleAll, onHabitCompleted, cancelAll,
+      todoSchedule, todoCancel,   // W995
       setDisabled, setPausedUntil, setDailyLimit,
       setQuietOn, setQuietStart, setQuietEnd,
       // daily digest — the default once-a-day reminder
@@ -69203,6 +69638,7 @@
       'hb_hall_finish',           // Hall of the Awakened finish ordinal cache (summit proof)
       // Core progression
       'hb_habits',
+      'hb_todos_v1',              // W995 — to-dos (bounded: done ones clear after seven days)
       'hb_completions',
       'hb_streaks',
       'hb_points',

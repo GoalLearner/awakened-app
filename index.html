@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=726">
+  <link rel="stylesheet" href="styles.css?v=727">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2231,6 +2231,14 @@
       <button class="diff-btn" data-diff="legendary" tabindex="-1">Legendary</button>
     </div>
     <div class="edit-diff-help">Difficulty is set by the habit type and can't be changed.</div>
+    <!-- W995 — TIME OF DAY, for every vow: it only places the vow in the list. -->
+    <div class="tod-lbl">TIME OF DAY</div>
+    <div class="tod-tri" id="edit-tod-row" role="radiogroup" aria-label="Time of day">
+      <button type="button" class="tod-tri-btn" data-tod="morning" role="radio" aria-checked="false">MORNING</button>
+      <button type="button" class="tod-tri-btn tod-tri-btn--on" data-tod="day" role="radio" aria-checked="true">DAY</button>
+      <button type="button" class="tod-tri-btn" data-tod="evening" role="radio" aria-checked="false">EVENING</button>
+    </div>
+    <div class="tod-hint">Time of day places the vow in your list. It changes nothing else.</div>
     <div id="edit-goal-row" class="edit-goal-row hidden">
       <span class="edit-goal-label" id="edit-goal-label">Goal</span>
       <div class="edit-goal-stepper">
@@ -2789,6 +2797,15 @@
       <div class="custom-stat-label">WHICH STAT DOES THIS TRAIN?</div>
       <div id="custom-stat-grid" class="custom-stat-grid"></div>
 
+      <!-- W995 (handoff 33) — TIME OF DAY places the vow in MORNING / DAY / EVENING. Default Day. -->
+      <div class="custom-stat-label">TIME OF DAY</div>
+      <div class="tod-tri" id="custom-tod-row" role="radiogroup" aria-label="Time of day">
+        <button type="button" class="tod-tri-btn" data-tod="morning" role="radio" aria-checked="false">MORNING</button>
+        <button type="button" class="tod-tri-btn tod-tri-btn--on" data-tod="day" role="radio" aria-checked="true">DAY</button>
+        <button type="button" class="tod-tri-btn" data-tod="evening" role="radio" aria-checked="false">EVENING</button>
+      </div>
+      <div class="tod-hint">Time of day places the vow in your list. It changes nothing else.</div>
+
       <!-- W489 — difficulty picker (easy/medium/hard; legendary intentionally omitted, anti-gaming).
            Reuses the edit modal's .diff-row/.diff-btn/.edit-diff-help styling — no new CSS. -->
       <!-- W970 — no picker: every vow you make is Easy (+1 XP), locked. -->
@@ -3184,7 +3201,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=1"></script>
-  <script src="app.js?v=1396"></script>
+  <script src="app.js?v=1397"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -3525,8 +3525,10 @@ test.describe('AJ · Health vows lead the list at once (W943)', () => {
 
     // The paint that follows the commit — no reload, no second render — leads
     // with the Health vow. Before W943 it landed last until the next launch.
-    const after = await page.evaluate(() => Array.from(document.querySelectorAll('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name')).map((e) => (e.textContent || '').trim()));
-    expect(after).toEqual(['Journal', 'Read', 'Sleep before midnight']);   // no forced sort to the top
+    // W995 — the list is sectioned by time of day now: the two hand-tapped vows keep their
+    // order in DAY; the Health vow sits in its own MORNING section, not forced to the top of DAY.
+    const after = await page.evaluate(() => Array.from(document.querySelectorAll('#habit-list .tod-sec')).map((s) => (s as HTMLElement).dataset.tod + ':' + Array.from(s.querySelectorAll('.habit-item .hlr-name, .habit-item .codex-name')).map((e) => (e.textContent || '').trim()).join(',')));
+    expect(after).toEqual(['morning:Sleep before midnight', 'day:Journal,Read']);   // no forced sort within a section
 
     // And storage agrees once the coalesced save lands.
     await page.waitForTimeout(300);
@@ -6360,5 +6362,148 @@ test.describe('BH · Hunt results (W980)', () => {
     await page.evaluate((i) => (window as any).__hr.sheet(i), ended({ id: 'w981-old', resolved_at: new Date(Date.now() - 7 * 86400000).toISOString() }));
     await page.waitForTimeout(2_200);
     expect((await view(page)).shown).toBe(false);
+  });
+});
+
+// W995 — MORNING · DAY · EVENING sections on the Habits tab; the TO-DO pill (one-off tasks,
+// +1 XP each, five a day, DONE clears after seven days); the briefing's to-do line; TIME OF
+// DAY on the create / edit sheets. Dates are the app's day (Pacific) — computed in-browser.
+test.describe('BM · Vows by time of day + to-dos (W995)', () => {
+  // freshApp's init script re-seeds hb_habits='[]' on EVERY navigation, so the vows must come
+  // from a LATER init script (it runs after freshApp's). Every due day is the APP's day (PT),
+  // computed in-browser, never the runner's.
+  async function seed(page: Page, todos: Array<Record<string, unknown>>) {
+    await freshApp(page);
+    await page.addInitScript((todos) => {
+      const pt = (off: number) => { const d = new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()) + 'T12:00:00'); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+      const v = (id: string, name: string, x?: Record<string, unknown>) => Object.assign({ id, name, emoji: '⚡', difficulty: 'easy', type: 'build', primaryStat: 'VIT' }, x || {});
+      localStorage.setItem('hb_habits', JSON.stringify([v('m1', 'Get morning sunlight'), v('d1', 'Stretch after lunch', { custom: true }), v('e1', 'Read 20 pages', { custom: true, tod: 'evening', primaryStat: 'INT' }), v('e2', 'Plan tomorrow the night before', { primaryStat: 'FOCUS' })]));
+      localStorage.setItem('hb_todos_v1', JSON.stringify(todos.map((t) => Object.assign({}, t, { due: typeof t.due === 'number' ? pt(t.due) : null, dd: t.dd === '@today' ? pt(0) : (t.dd || null) }))));
+      localStorage.setItem('hb_points', '500');
+      localStorage.setItem('hb_first_completion_bonus_v1', '1');   // no First Step bonus in the way
+      localStorage.setItem('hb_first_vow_pointer_seen', '1');
+      localStorage.setItem('hb_dd_v1', JSON.stringify({ done: true }));
+      localStorage.setItem('hb_tour_welcome_back_v1', '1');   // the First Awakened's welcome-back card would sit over every tap
+    }, todos);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+    await page.click('#tab-habits');
+    await expect(page.locator('.tod-sec').first()).toBeVisible({ timeout: 10_000 });
+  }
+  const secs = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('.tod-sec')).map((s) => (s as HTMLElement).dataset.tod + ':' + Array.from(s.querySelectorAll('.habit-item')).map((r) => (r as HTMLElement).dataset.id).join(',')));
+  const points = (page: Page) => page.evaluate(() => localStorage.getItem('hb_points'));
+  const openRows = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('#todo-view .todo-row:not(.todo-row--done)')).map((r) => (r.querySelector('.todo-tx') as HTMLElement).textContent + '|' + ((r.querySelector('.todo-due') as HTMLElement | null)?.textContent || '')));
+
+  test('the tab reads like a day: three sections in order with counts, one lit; a seal updates the count and sinks the row; a header folds', async ({ page }) => {
+    await seed(page, []);
+    expect(await secs(page)).toEqual(['morning:m1', 'day:d1', 'evening:e1,e2']);
+    await expect(page.locator('.tod-sec--lit')).toHaveCount(1);
+    await expect(page.locator('.tod-sec[data-tod="evening"] [data-tod-ct]')).toHaveText('· 0 OF 2');
+    // seal the first evening vow: the count and hairline move at once, the row sinks after the seal
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="e1"]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="evening"] [data-tod-ct]')).toHaveText('· 1 OF 2');
+    expect(await page.evaluate(() => (document.querySelector('.tod-sec[data-tod="evening"] [data-tod-hair]') as HTMLElement).style.width)).toBe('50%');
+    await page.waitForTimeout(700);
+    expect((await secs(page))[2]).toBe('evening:e2,e1');
+    // the header folds and unfolds
+    await page.evaluate(() => (document.querySelector('.tod-sec[data-tod="morning"] [data-tod-fold]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="morning"]')).toHaveClass(/tod-sec--fold/);
+    await expect(page.locator('.tod-sec[data-tod="morning"] [data-tod-fold]')).toHaveAttribute('aria-expanded', 'false');
+    await page.evaluate(() => (document.querySelector('.tod-sec[data-tod="morning"] [data-tod-fold]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="morning"]')).not.toHaveClass(/tod-sec--fold/);
+    // every row is still a vow row — the toggle went through toggleHabit
+    await expect(page.locator('#completed-count')).toHaveText('1');
+  });
+
+  test('TO-DO: the pill shows from day one with its count; Enter adds; due chips order the list; a completion pays +1 XP and undo takes it back', async ({ page }) => {
+    await seed(page, [{ id: 't1', t: 'Return the library book', due: -1, rem: null, at: 1 }, { id: 't3', t: 'Call Dad', due: null, rem: null, at: 2 }]);
+    await expect(page.locator('[data-vows-view="todo"]')).toBeVisible();
+    await expect(page.locator('[data-vows-view="ledger"]')).toHaveCount(0);   // the ledger has not unlocked yet
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('2');
+    await page.click('[data-vows-view="todo"]');
+    await expect(page.locator('[data-vows-kicker]')).toHaveText('ONE-OFF TASKS');
+    await expect(page.locator('[data-vows-title]')).toHaveText('Loose ends');
+    await expect(page.locator('#habit-list')).toBeHidden();
+    await expect(page.locator('#todo-view')).toBeVisible();
+    // compose: due TODAY, then Enter
+    await page.click('[data-todo-pick="due"]');
+    await page.click('[data-todo-due="0"]');
+    await page.fill('[data-todo-in]', 'Book dentist');
+    await page.press('[data-todo-in]', 'Enter');
+    expect(await openRows(page)).toEqual(['Return the library book|OVERDUE', 'Book dentist|TODAY', 'Call Dad|']);
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('3');
+    await expect(page.locator('[data-todo-in]')).toHaveValue('');
+    expect(await page.evaluate(() => { const t = JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'); return t.length + ':' + (t[2].due ? 'dated' : 'undated'); })).toBe('3:dated');
+    // complete → +1 XP, the row moves into DONE; undo → the XP comes back
+    await page.evaluate(() => (Array.from(document.querySelectorAll('#todo-view .todo-row')).find((r) => /Book dentist/.test(r.textContent || '')) as HTMLElement).click());
+    await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 1', { timeout: 3_000 });
+    expect(await points(page)).toBe('501');
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('2');
+    await page.click('#todo-view [data-todo-dg]');
+    await page.evaluate(() => (document.querySelector('#todo-view .todo-dg .todo-row') as HTMLElement).click());
+    await expect(page.locator('#todo-view [data-todo-dg]')).toHaveCount(0);
+    await page.waitForTimeout(100);
+    expect(await points(page)).toBe('500');
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('3');
+    // the vow list is untouched by all of this
+    await page.click('[data-vows-view="today"]');
+    await expect(page.locator('#habit-list')).toBeVisible();
+    await expect(page.locator('#completed-count')).toHaveText('0');
+  });
+
+  test('five a day: the sixth completion pays nothing; a to-do done eight days ago has cleared', async ({ page }) => {
+    const now = Date.now();
+    const done = (i: number) => ({ id: 'x' + i, t: 'Done ' + i, due: null, rem: null, at: 1, done: now - 1000 * i, dd: '@today', xp: true });
+    await seed(page, [done(1), done(2), done(3), done(4), done(5), { id: 'old', t: 'Long gone', due: null, rem: null, at: 1, done: now - 8 * 86400000, dd: '2020-01-01', xp: false }, { id: 'n', t: 'Sixth', due: null, rem: null, at: 2 }]);
+    await page.click('[data-vows-view="todo"]');
+    await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 5');   // the eight-day-old one is gone
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').some((t: any) => t.id === 'old'))).toBe(false);
+    await page.evaluate(() => (document.querySelector('#todo-view .todo-row:not(.todo-row--done)') as HTMLElement).click());
+    await expect(page.locator('#todo-view [data-todo-dg]')).toContainText('DONE · 6', { timeout: 3_000 });
+    expect(await points(page)).toBe('500');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]').find((t: any) => t.id === 'n').xp)).toBe(false);
+  });
+
+  test('the briefing carries one line — "1 to-do due today · 1 overdue"; the owner preview always shows it', async ({ page }) => {
+    await seed(page, [{ id: 't1', t: 'Return the library book', due: -1, rem: null, at: 1 }, { id: 't2', t: 'Book dentist', due: 0, rem: null, at: 2 }, { id: 't3', t: 'Call Dad', due: 3, rem: null, at: 3 }]);
+    await page.evaluate(() => (window as any).__tb.show({}));
+    await expect(page.locator('.tb-tdl')).toHaveText('1 to-do due today · 1 overdue', { timeout: 5_000 });
+    await expect(page.locator('.tb-tdl .tb-od')).toHaveText('1 overdue');
+    // nothing due → no line for hunters; the preview shows a sample (cleared in memory: a reload would re-seed)
+    await page.evaluate(() => { (window as any).__todo.load().length = 0; (window as any).__tb.show({}); });
+    await expect(page.locator('.tb-sheet')).toBeVisible();
+    await expect(page.locator('.tb-tdl')).toHaveCount(0);
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await expect(page.locator('.tb-tdl')).toHaveText('2 to-dos due today · 1 overdue');
+  });
+
+  test('TIME OF DAY on the sheets: a custom vow made with EVENING lands in the evening section; the edit sheet moves a library vow', async ({ page }) => {
+    await seed(page, []);
+    await openAddHabits(page);
+    await page.locator('#lib-create-row').click();
+    await expect(page.locator('#custom-overlay')).toBeVisible();
+    await expect(page.locator('#custom-tod-row .tod-tri-btn--on')).toHaveAttribute('data-tod', 'day');   // default Day
+    await page.locator('#custom-name-input').fill('Night stretch');
+    await page.locator('.custom-stat-btn').first().click();
+    await page.locator('.custom-icon-tile').first().click();
+    await page.locator('#custom-tod-row [data-tod="evening"]').click();
+    await page.locator('#custom-save-btn').click();
+    await expect(page.locator('#custom-overlay')).toBeHidden({ timeout: 3_000 });
+    await expect(page.locator('#lib-sheet')).toBeHidden({ timeout: 3_000 });
+    expect((await secs(page))[2]).toMatch(/^evening:e1,e2,/);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((h: any) => h.name === 'Night stretch').tod)).toBe('evening');
+    // edit a library vow: MORNING → EVENING; the morning section disappears with its only vow
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="m1"] [data-more]') as HTMLElement).click());
+    await page.click('#ctx-edit');
+    await expect(page.locator('#edit-modal')).toBeVisible();
+    await expect(page.locator('#edit-tod-row .tod-tri-btn--on')).toHaveAttribute('data-tod', 'morning');
+    await page.click('#edit-tod-row [data-tod="evening"]');
+    await page.click('#save-edit-btn');
+    await expect(page.locator('#edit-modal')).toBeHidden();
+    const after = await secs(page);
+    expect(after[0]).toBe('day:d1');
+    expect(after[1]).toMatch(/^evening:.*m1/);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((h: any) => h.id === 'm1').tod)).toBe('evening');
   });
 });

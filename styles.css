@@ -34602,8 +34602,14 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* ═══ W919 — TODAY | LEDGER (Claude Design handoff 29) ═══════════════════ */
 /* W922 — TODAY | LEDGER is the shared .seg switch; the thumb keys off data-view */
 .vows-seg { margin: 10px 0 2px; }
-.vows-seg[data-view="ledger"] { --seg-i: 1; }
-.vows-seg--locked { display: none !important; }
+/* W995 — TODAY · TO-DO · LEDGER (LEDGER joins when it unlocks; --seg-n is set inline) */
+.vows-seg[data-view="todo"] { --seg-i: 1; }
+.vows-seg[data-view="ledger"] { --seg-i: 2; }
+.vows-seg .seg-btn { font-size: 12.5px; letter-spacing: 1.4px; gap: 6px; }
+.vows-sg-n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: rgba(139,92,246,0.22); color: #a78bfa; display: inline-flex; align-items: center; justify-content: center; }
+.vows-sg-n.hidden { display: none; }
+.seg-btn[aria-selected="true"] .vows-sg-n { background: #8b5cf6; color: #fff; }
+.vows-header--todo .vows-header-bar, .vows-header--todo .vows-header-reward { display: none !important; }
 .vows-sg-wk { display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1px; color: inherit; opacity: .85; }
 .vows-sg-wk svg { transform: rotate(-90deg); }
 .vows-header--ledger .vows-header-bar, .vows-header--ledger .vows-header-reward { display: none !important; }
@@ -36048,3 +36054,99 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .hr-rm .hr-cracks path{stroke-dashoffset:0;opacity:0;transition:opacity .45s;}.hr-rm .hr-port.hr-dead .hr-cracks path{opacity:1;}
 .hr-rm .hr-sg{transform:none;opacity:0;transition:opacity .3s;}.hr-rm .hr-sg.hr-on{opacity:1;}
 .hr-rm .hr-hint.hr-on,.hr-rm .hr-veilr,.hr-rm .hr-call,.hr-rm .hr-mvp.hr-shine::after,.hr-rm .hr-kill.hr-flare::after,.hr-rm .hr-call.hr-pressed::after{animation:none!important;}
+
+
+/* ═══ W995 — VOWS BY TIME OF DAY + TO-DOS (Claude Design handoff 33) ═══
+   MORNING · DAY · EVENING sections on the Habits tab; the TO-DO view; the
+   TIME OF DAY pills on the create / edit sheets; the briefing's to-do line. */
+.habit-list.habit-list--tod { display: flex; flex-direction: column; gap: 0; }
+.tod-sec { list-style: none; margin: 4px 0 0; }
+.tod-sec:first-child { margin-top: 0; }
+.tod-sh { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 10px; padding: 8px 6px 8px 4px; border-radius: 12px; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; transition: background .2s; outline: none; }
+.tod-gl { width: 22px; height: 22px; color: #9596b2; display: flex; transition: color .2s; }
+.tod-gl svg { width: 22px; height: 22px; }
+.tod-tt { font-family: 'Cinzel', Georgia, serif; font-size: 15px; font-weight: 700; letter-spacing: 1.6px; color: #f4f4fb; transition: color .2s; }
+.tod-ct { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 1.8px; color: #9596b2; padding-top: 2px; }
+.tod-ch { color: #585a76; display: flex; transition: transform .2s; }
+.tod-sec--fold .tod-ch { transform: rotate(-90deg); }
+.tod-hair { height: 2px; border-radius: 1px; background: rgba(255,255,255,0.07); margin: 0 4px; overflow: hidden; }
+.tod-hair i { display: block; height: 100%; background: #a78bfa; transition: width .3s ease; }
+.tod-sec--lit .tod-sh { background: linear-gradient(90deg, rgba(245,184,66,0.09), rgba(245,184,66,0.02) 60%, transparent); }
+.tod-sec--lit .tod-gl, .tod-sec--lit .tod-tt { color: #f5b842; }
+.tod-sec--lit .tod-gl svg { filter: drop-shadow(0 0 5px rgba(245,184,66,0.55)); }
+.tod-sec--lit .tod-hair i { background: #f5b842; box-shadow: 0 0 8px rgba(245,184,66,0.55); }
+.tod-list { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .2s ease; }
+.tod-sec--fold .tod-list { grid-template-rows: 0fr; }
+.tod-rows { min-height: 0; }
+.tod-sec--fold .tod-rows, .tod-sec--anim .tod-rows { overflow: hidden; }   /* clip only while folded / folding, so reward chips stay free */
+.habit-list.tod-rows { padding: 10px 0 4px !important; }
+.habit-list.habit-list--list.tod-rows { padding: 10px 0 4px !important; gap: 9px; }
+.tod-sec--fold .habit-list.tod-rows { padding-top: 0 !important; padding-bottom: 0 !important; }
+/* TIME OF DAY pills (create + edit sheets) */
+.tod-lbl { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; color: #9596b2; margin: 14px 0 8px; }
+.tod-tri { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; padding: 3px; border-radius: 12px; background: #0a0a18; border: 1px solid rgba(255,255,255,0.08); }
+.tod-tri-btn { padding: 9px 0; text-align: center; border-radius: 9px; border: 1px solid transparent; background: transparent; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1px; color: #9596b2; cursor: pointer; transition: .15s; user-select: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.tod-tri-btn--on { color: #f4f4fb; background: rgba(139,92,246,0.22); border-color: rgba(139,92,246,0.5); }
+.tod-hint { font-size: 12px; color: #585a76; margin: 10px 0 0; line-height: 1.4; text-wrap: pretty; }
+/* ── TO-DO view ── */
+.todo-view { padding: 0 14px 28px; }
+.todo-view.hidden { display: none; }
+.todo-comp { margin: 12px 0 0; border-radius: 18px; background: #13132a; border: 1px solid rgba(255,255,255,0.08); transition: border-color .2s; }
+.todo-comp--focus { border-color: rgba(139,92,246,0.5); }
+.todo-crow { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 14px; min-height: 52px; }
+.todo-in { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: #f4f4fb; font: 600 15px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; padding: 0; margin: 0; border-radius: 0; box-shadow: none; }
+.todo-in::placeholder { color: #585a76; }
+.todo-cb { height: 34px; min-width: 34px; padding: 0 9px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #9596b2; display: flex; align-items: center; justify-content: center; gap: 5px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1px; cursor: pointer; transition: .15s; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; flex: none; }
+.todo-cb span:empty { display: none; }
+.todo-cb--open { border-color: rgba(139,92,246,0.5); color: #f4f4fb; }
+.todo-cb--on { border-color: rgba(139,92,246,0.5); color: #a78bfa; background: rgba(139,92,246,0.12); }
+.todo-cb--add { color: #f5b842; border-color: rgba(245,184,66,0.42); }
+.todo-cb--add.hidden { display: none; }
+.todo-picks { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
+.todo-picks--open { grid-template-rows: 1fr; }
+.todo-picks > div { min-height: 0; overflow: hidden; }
+.todo-prow { display: flex; align-items: center; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap; }
+.todo-plab { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 2px; color: #585a76; flex: none; margin-right: 4px; }
+.todo-pill { position: relative; padding: 8px 9px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: transparent; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; color: #9596b2; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; transition: .15s; user-select: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.todo-pill--on { color: #a78bfa; border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.12); }
+.todo-ghost { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; padding: 0; border: 0; cursor: pointer; -webkit-appearance: none; appearance: none; font-size: 16px; }
+.todo-row { position: relative; margin: 8px 0 0; padding: 0 12px; min-height: 54px; border-radius: 16px; background: #13132a; border: 1px solid rgba(255,255,255,0.08); display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 12px; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; transition: opacity .18s, transform .18s, border-color .2s; outline: none; }
+.todo-bx { width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; flex: none; color: #4ade80; transition: .18s; }
+.todo-bx svg { opacity: 0; transform: scale(.6); transition: .18s; }
+.todo-row--done .todo-bx { border-color: #4ade80; background: rgba(74,222,128,0.14); box-shadow: 0 0 8px rgba(74,222,128,0.3); }
+.todo-row--done .todo-bx svg { opacity: 1; transform: none; }
+.todo-tx { font-size: 15px; font-weight: 600; padding: 13px 0; line-height: 1.35; color: #f4f4fb; transition: color .18s; min-width: 0; overflow-wrap: anywhere; }
+.todo-tx span { background: linear-gradient(#9596b2, #9596b2) no-repeat 0 55% / 0% 1.5px; transition: background-size .18s ease-out; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.todo-row--done .todo-tx { color: #9596b2; }
+.todo-row--done .todo-tx span { background-size: 100% 1.5px; }
+.todo-row--out { opacity: 0; transform: translateY(10px); }
+.todo-due { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1.2px; padding: 4px 7px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.08); color: #9596b2; flex: none; display: inline-flex; align-items: center; gap: 5px; }
+.todo-due--tdy { color: #f4f4fb; border-color: rgba(255,255,255,0.16); }
+.todo-due--od { color: #ef4444; border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.08); }
+.todo-xp { position: absolute; right: 12px; top: 50%; display: flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 10px; background: linear-gradient(180deg, rgba(42,33,12,0.95), rgba(22,16,5,0.95)); border: 1px solid #f5b842; box-shadow: 0 0 24px rgba(245,184,66,0.3), inset 0 1px 0 rgba(255,255,255,0.2); color: #ffd574; font-weight: 800; font-size: 15px; white-space: nowrap; letter-spacing: .3px; pointer-events: none; z-index: 2; animation: todo-rise .95s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes todo-rise { 0% { opacity: 0; transform: translateY(-50%) scale(.8); } 15% { opacity: 1; transform: translateY(-50%) scale(1); } 70% { opacity: 1; transform: translateY(calc(-50% - 40px)); } 100% { opacity: 0; transform: translateY(calc(-50% - 52px)); } }
+.todo-dg { margin: 14px 0 0; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.14); }
+.todo-dgh { display: flex; align-items: center; gap: 8px; padding: 12px 14px; cursor: pointer; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 2px; color: #9596b2; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+.todo-dgh .todo-bx { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid rgba(74,222,128,0.6); }
+.todo-dgh .todo-bx svg { opacity: 1; transform: scale(.7); }
+.todo-dgh .todo-ch { margin-left: auto; display: flex; color: #585a76; transition: transform .2s; }
+.todo-dg--open .todo-dgh .todo-ch { transform: rotate(180deg); }
+.todo-dgl { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
+.todo-dg--open .todo-dgl { grid-template-rows: 1fr; }
+.todo-dgl > div { min-height: 0; overflow: hidden; }
+.todo-dg .todo-row { margin: 0 6px 4px; background: transparent; border-color: transparent; min-height: 44px; }
+.todo-dg .todo-row .todo-tx { padding: 9px 0; font-size: 14px; }
+.todo-dg .todo-row .todo-due { display: none; }
+.todo-dg .todo-row--done .todo-bx { box-shadow: none; background: transparent; }
+.todo-dgn { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.6px; color: #585a76; padding: 4px 14px 12px; }
+.todo-empty { margin: 34px 0 0; text-align: center; font-size: 13.5px; color: #9596b2; }
+/* the briefing's to-do line */
+.tb-tdl { margin-top: 10px; padding-top: 0; border-top: 0; }
+.tb-od { color: #ef4444; font-weight: 600; }
+.tb-od b { color: #ef4444; }
+@media (prefers-reduced-motion: reduce) {
+  .tod-list, .tod-ch, .tod-hair i, .todo-picks, .todo-dgl, .todo-bx, .todo-bx svg, .todo-tx span, .todo-row, .todo-dgh .todo-ch { transition: none !important; }
+  .todo-row--out { transform: none; transition: opacity .18s !important; }
+  .todo-xp { animation: todo-fade .8s forwards; }
+  @keyframes todo-fade { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+}
