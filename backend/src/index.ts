@@ -124,6 +124,7 @@ import {
   handleBoardPinPost,
   handleBoardTopicLock,
   handleBoardTopicResolve,   // W990
+  handleBoardTopicEdit,      // W1001
   handleBoardPurgePost,
   handleCommunityUnseenGet,   // W921
   handleBoardReplyVotePost,   // W929
@@ -192,7 +193,7 @@ const COOP_BOSS_ID_RE = /^\/v1\/coop-boss\/([0-9a-fA-F-]{8,})$/;
 // W907 — board topic routes: GET /:id, POST /:id/replies, POST /:id/delete, POST /:id/hide;
 // reply moderation POST /v1/board/replies/:id/delete. Exact /v1/board/* routes are
 // matched first so 'report', 'reports', 'moderators' can never be read as an id.
-const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin|lock|follow|resolve))?$/;   // W929 — follow; W990 — resolve
+const BOARD_TOPIC_RE = /^\/v1\/board\/topics\/([0-9a-fA-F-]{8,})(?:\/(replies|delete|hide|vote|pin|lock|follow|resolve|edit))?$/;   // W929 — follow; W990 — resolve; W1001 — edit
 // W913 — LIKE on a friend's public achievement event (toggle).
 const FEED_LIKE_RE = /^\/v1\/friends\/activity\/([A-Za-z0-9_:.-]{4,96})\/like$/;
 const BOARD_REPLY_RE = /^\/v1\/board\/replies\/([0-9a-fA-F-]{8,})\/(delete|vote|edit)$/;   // W929 — vote + edit join delete
@@ -461,6 +462,7 @@ export default {
             else if (action === 'replies' && method === 'POST') response = await handleBoardReplyPost(request, env, session, topicId, ctx);
             else if (action === 'lock' && method === 'POST') response = await handleBoardTopicLock(request, env, session, topicId);   // W914
             else if (action === 'resolve' && method === 'POST') response = await handleBoardTopicResolve(request, env, session, topicId);   // W990
+            else if (action === 'edit' && method === 'POST') response = await handleBoardTopicEdit(request, env, session, topicId);   // W1001
             else if (action === 'delete' && method === 'POST') response = await handleBoardTopicDelete(request, env, session, topicId);
             else if (action === 'hide' && method === 'POST') response = await handleBoardTopicHide(request, env, session, topicId);
             else if (action === 'vote' && method === 'POST') response = await handleBoardVotePost(request, env, session, topicId);   // W913

@@ -5978,6 +5978,50 @@ test.describe('BK · Resolved topics (W990)', () => {
   });
 });
 
+// W1001 — a topic's author (or a moderator) edits its title + body from the ··· menu.
+test.describe('BN · Edit a topic (W1001)', () => {
+  test('Edit on the OP opens the composer prefilled; SAVE posts title + body to the edit endpoint; the card wears EDITED', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => localStorage.setItem('hb_board_cache_v1', JSON.stringify({ topics: [], me: { role: 'owner' } })));
+    await page.click('#tab-social');
+    await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+    await page.evaluate(() => {
+      const now = Date.now();
+      const w = window as any;
+      w.__edits = [];
+      let title = 'Week of Sep 24', body = 'Hello all, the first draft.', edited: number | null = null;
+      const au = { author_id: 'u-me', alias: 'Richie', rank_label: 'S', founder_seq: 0, is_mod: true, mod_role: 'owner' };
+      const row = () => ({ id: 'cccccccc-0007', tag: 'update', title, preview: body.slice(0, 160), created_at: now - 86400000, last_activity_at: now - 3600000, reply_count: 0, up_count: 0, voted: false, pinned: true, locked: false, hidden: false, resolved: false, edited_at: edited, repliers: [], last_reply: null, author: au });
+      w.Auth.boardTopics = async () => ({ ok: true, next_cursor: null, counts: { all: 1, improvement: 0, bug: 0, talk: 0, update: 1, resolved: 0 }, topics: [row()], me: { role: 'owner', consented: true } });
+      w.Auth.boardTopic = async () => ({ ok: true, following: true, next_cursor: null, me: { consented: true, role: 'owner', rank_tier: 'S', topic_min_tier: 'C', reply_min_tier: 'D', author_id: 'u-me' }, topic: Object.assign(row(), { body }), replies: [] });
+      w.Auth.boardTopicEdit = async (id: string, t: string, b: string) => { w.__edits.push([id, t, b]); title = t; body = b; edited = Date.now(); return { ok: true, edited_at: edited }; };
+      w.Auth.boardMe = async () => ({ ok: true, me: { consented: true, role: 'owner', rank_tier: 'S', author_id: 'u-me' } });
+      localStorage.setItem('hb_board_consent_v1', '1');
+      w.__board.render();
+    });
+    await page.evaluate(() => (window as any).__board.open('cccccccc-0007'));
+    const sheet = page.locator('.board-sheet--topic');
+    await expect(sheet.locator('.board-op .board-op-title')).toHaveText('Week of Sep 24');
+    await expect(sheet.locator('.board-op .board-edited')).toHaveCount(0);
+    // ··· → Edit
+    await sheet.locator('.board-op [data-board-menu]').click();
+    await sheet.locator('.board-op [data-board-menu-panel] [data-board-edit]').first().click();
+    const compose = page.locator('.board-sheet--compose form[data-board-compose="edit-topic"]');
+    await expect(compose).toBeVisible();
+    await expect(compose.locator('input[name="title"]')).toHaveValue('Week of Sep 24');
+    await expect(compose.locator('textarea[name="body"]')).toHaveValue('Hello all, the first draft.');
+    await compose.locator('input[name="title"]').fill('Week of Sep 24, revised');
+    await compose.locator('textarea[name="body"]').fill('Hello all, the corrected version of this update.');
+    await compose.locator('button[type="submit"]').click();
+    await expect.poll(() => page.evaluate(() => (window as any).__edits.length)).toBe(1);
+    expect(await page.evaluate(() => (window as any).__edits[0])).toEqual(['cccccccc-0007', 'Week of Sep 24, revised', 'Hello all, the corrected version of this update.']);
+    // the topic reopens with the new title, body and the EDITED mark
+    await expect(page.locator('.board-sheet--topic .board-op .board-op-title')).toHaveText('Week of Sep 24, revised', { timeout: 5_000 });
+    await expect(page.locator('.board-sheet--topic .board-op .board-ptext')).toContainText('corrected version');
+    await expect(page.locator('.board-sheet--topic .board-op .board-edited')).toHaveText('· EDITED');
+  });
+});
+
 // W991 — NEW means "recent and unseen"; the tier chip; one rarity palette; honest PWR sort.
 test.describe('AZ · Relic NEW + tier chip (W991)', () => {
   async function seed(page: Page, extra: Record<string, string>) {

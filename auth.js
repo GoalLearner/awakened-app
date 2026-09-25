@@ -1774,6 +1774,7 @@
   // W929 — thread v4: upvote a reply (toggle), edit your own reply, follow a topic (toggle; pushed on new replies).
   function boardReplyVote(id)                    { return _authedFetch('POST', '/v1/board/replies/' + encodeURIComponent(id) + '/vote'); }
   function boardReplyEdit(id, body)              { return _authedFetch('POST', '/v1/board/replies/' + encodeURIComponent(id) + '/edit', { body: body }); }
+  function boardTopicEdit(id, title, body)       { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/edit', { title: title, body: body }); }   // W1001
   function boardFollow(id)                       { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/follow'); }
   function boardModPinTopic(id)                  { return _authedFetch('POST', '/v1/board/topics/' + encodeURIComponent(id) + '/pin'); }
   function feedLike(eventId)                     { return _authedFetch('POST', '/v1/friends/activity/' + encodeURIComponent(eventId) + '/like'); }
@@ -2481,6 +2482,7 @@
     boardModLockTopic, boardModResolveTopic, boardModPurge,        // W914
     communityUnseen,                         // W921
     boardReplyVote, boardReplyEdit, boardFollow,   // W929
+    boardTopicEdit,   // W1001
     // Push notifications (W603/W604) — device-token register/unregister.
     registerPushToken,
     unregisterPushToken,

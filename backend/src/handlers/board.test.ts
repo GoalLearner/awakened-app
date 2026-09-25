@@ -24,6 +24,7 @@ import {
   handleBoardPinPost,
   handleBoardTopicLock,
   handleBoardTopicResolve,
+  handleBoardTopicEdit,
   handleBoardPurgePost,
   handleCommunityUnseenGet,
   handleBoardReplyDelete,
@@ -52,7 +53,7 @@ interface State {
   consents: Set<string>;
   mutes: Record<string, number>;
   mods: Record<string, 'owner' | 'mod'>;
-  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null; kind?: string | null; resolved_at?: number | null }>;
+  topics: Record<string, { author_id: string; hidden_at: number | null; deleted_at: number | null; reply_count: number; last_activity_at: number; up_count?: number; pinned_at?: number | null; created_at?: number; title?: string; body?: string; hidden_by?: string | null; locked_at?: number | null; kind?: string | null; resolved_at?: number | null; edited_at?: number | null }>;
   votes: Set<string>;     // W913 — `${topic}|${user}`
   replies: Record<string, { topic_id: string; deleted_at: number | null; author_id?: string; created_at?: number; body?: string; parent_reply_id?: string | null; edited_at?: number | null }>;
   strikes: { user_id: string; created_at: number }[];   // W914
@@ -233,6 +234,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/INSERT OR IGNORE INTO board_follows/.test(sql)) { const k = `${binds[0]}|${binds[1]}`; if (st.follows.has(k)) return ok(0); st.follows.add(k); return ok(1); }
             if (/DELETE FROM board_follows/.test(sql)) { st.follows.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/UPDATE board_replies SET body = \?, edited_at/.test(sql)) { const r = st.replies[binds[2] as string]; if (r) { r.body = binds[0] as string; r.edited_at = binds[1] as number; } return ok(1); }
+            if (/UPDATE board_topics SET title = \?, body = \?, edited_at = \? WHERE id = \?/.test(sql)) { const tp = st.topics[binds[3] as string]; if (tp) { tp.title = binds[0] as string; tp.body = binds[1] as string; tp.edited_at = binds[2] as number; } return ok(1); }   // W1001
             if (/INSERT INTO board_consents/.test(sql)) { st.consents.add(binds[0] as string); return ok(1); }
             if (/INSERT INTO board_topics/.test(sql)) {
               st.topics[binds[0] as string] = { author_id: binds[1] as string, hidden_at: null, deleted_at: null, reply_count: 0, last_activity_at: binds[6] as number, up_count: 0, pinned_at: (binds[8] as number | null) ?? null, created_at: binds[5] as number, title: binds[3] as string, body: binds[4] as string, kind: (binds[7] as string | null) ?? null };
@@ -1010,6 +1012,27 @@ describe('W929 · thread v4', () => {
     st.mods['u-ren'] = 'mod';
     const delMod = await handleBoardReplyDelete(new Request('https://x', { method: 'POST' }), env, ren, 'bbbbbbbb-0001');
     expect(delMod.status).toBe(200);
+  });
+
+  it('W1001 · the author edits their topic (title + body); a stranger may not; a moderator may; it wears EDITED', async () => {
+    const st = fresh(); const env = makeEnv(st); withTopic(st);
+    const editReq = (title: string, body: string) => new Request('https://x', { method: 'POST', body: JSON.stringify({ title, body }) });
+    const stranger = await handleBoardTopicEdit(editReq('Not mine', 'trying to edit someone else'), env, me, 'aaaaaaaa-0001');
+    expect((await stranger.json() as { error: string }).error).toBe('NOT_ALLOWED');
+    expect(st.topics['aaaaaaaa-0001'].title).toBe('App Ideas');
+    const own = await handleBoardTopicEdit(editReq('App Ideas, revised', 'the author fixes the wording'), env, ren, 'aaaaaaaa-0001');
+    expect(own.status).toBe(200);
+    expect(st.topics['aaaaaaaa-0001'].title).toBe('App Ideas, revised');
+    expect(st.topics['aaaaaaaa-0001'].body).toBe('the author fixes the wording');
+    expect(st.topics['aaaaaaaa-0001'].edited_at).toBeTruthy();
+    const empty = await handleBoardTopicEdit(editReq('', 'no title'), env, ren, 'aaaaaaaa-0001');
+    expect((await empty.json() as { error: string }).error).toBe('MISSING_TITLE');
+    st.mods['u-me'] = 'mod';
+    const mod = await handleBoardTopicEdit(editReq('A moderator tidies it', 'moderators may edit any topic'), env, me, 'aaaaaaaa-0001');
+    expect(mod.status).toBe(200);
+    expect(st.topics['aaaaaaaa-0001'].title).toBe('A moderator tidies it');
+    const missing = await handleBoardTopicEdit(editReq('x', 'a topic that does not exist'), env, ren, 'aaaaaaaa-9999');
+    expect(missing.status).toBe(404);
   });
 
   it('the bell toggles a follow', async () => {

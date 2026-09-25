@@ -131,6 +131,7 @@ interface TopicRow extends AuthorRow {
   pinned_at?: number | null;  // W913
   locked_at?: number | null;  // W914
   resolved_at?: number | null;  // W990
+  edited_at?: number | null;    // W1001 — the author (or a moderator) changed the title or body
 }
 
 interface Replier { alias: string; rank_label: string | null; last_at?: number }
@@ -297,6 +298,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
     pinned: r.pinned_at != null,
     locked: r.locked_at != null,   // W914
     resolved: r.resolved_at != null,   // W990
+    edited_at: r.edited_at ? Number(r.edited_at) : null,   // W1001
     views: extra.views,   // W994 — hunters who opened it (author excluded); present ONLY for moderators
     repliers: extra.repliers,
     // W929 — the board row's "last reply" line: the newest replier + when.
@@ -307,7 +309,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
   };
 }
 
-const TOPIC_COLS = `x.id, x.tag, x.kind, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at, x.resolved_at`;   // W990 resolved_at
+const TOPIC_COLS = `x.id, x.tag, x.kind, x.title, x.body, x.created_at, x.last_activity_at, x.reply_count, x.hidden_at, x.deleted_at, x.up_count, x.pinned_at, x.locked_at, x.resolved_at, x.edited_at`;   // W990 resolved_at · W1001 edited_at
 
 /** Which of these topics the caller upvoted. */
 async function votedSet(env: Env, userId: string, ids: string[]): Promise<Set<string>> {
@@ -813,6 +815,32 @@ export async function handleBoardReplyEdit(request: Request, env: Env, session: 
   if (row.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own reply.');
   const now = Date.now();
   await env.DB.prepare('UPDATE board_replies SET body = ?, edited_at = ? WHERE id = ?').bind(text, now, replyId).run();
+  return jsonOk({ ok: true, edited_at: now });
+}
+
+/** W1001 — edit a topic's title and body. The author may; so may a moderator (an update
+ *  post is the developers' voice — a typo in it should not need a delete and repost).
+ *  Marks the topic EDITED. Tag, kind, pin, lock and resolve are untouched. */
+export async function handleBoardTopicEdit(request: Request, env: Env, session: SessionPayload, topicId: string): Promise<Response> {
+  if (!ID_RE.test(topicId)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const body = await readJson<{ title?: unknown; body?: unknown }>(request);
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
+  const title = clampText(body.title, TITLE_MAX);
+  const text = clampText(body.body, BODY_MAX);
+  if (!title) return jsonError(400, 'MISSING_TITLE', 'Give the topic a title.');
+  if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
+  if (!textIsClean(title) || !textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
+  const row = await env.DB.prepare('SELECT author_id FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(topicId).first<{ author_id: string }>();
+  if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  if (row.author_id !== session.userId) {
+    const me = await meState(env, session.userId);
+    if (!isModRole(me.role)) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own topic.');
+  }
+  const now = Date.now();
+  await env.DB.prepare('UPDATE board_topics SET title = ?, body = ?, edited_at = ? WHERE id = ?').bind(title, text, now, topicId).run();
   return jsonOk({ ok: true, edited_at: now });
 }
 
