@@ -6506,4 +6506,34 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     expect(after[1]).toMatch(/^evening:.*m1/);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((h: any) => h.id === 'm1').tod)).toBe('evening');
   });
+
+  // W996 — the six-dot grip: within a section it reorders; across sections it moves the vow
+  // (its time of day follows). Pointer events are synthesized: the drag is pointer-driven.
+  test('W996: sections never overflow the screen; the grip reorders within a section and moves a vow across sections', async ({ page }) => {
+    await seed(page, []);
+    // a long vow name must not push the row past the list's right edge
+    const over = await page.evaluate(() => { const L = document.getElementById('habit-list')!.getBoundingClientRect(); return Array.from(document.querySelectorAll('#habit-list .habit-item')).filter((r) => r.getBoundingClientRect().right > L.right + 1).length; });
+    expect(over).toBe(0);
+    await expect(page.locator('#habit-list .hlr-grip')).toHaveCount(4);
+    const drag = (from: string, target: string, mode: 'top' | 'below') => page.evaluate(([from, target, mode]) => {
+      const ev = (type: string, x: number, y: number, el: Element) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, button: 0 }));
+      const g = document.querySelector('.habit-item[data-id="' + from + '"] .hlr-grip')!; const gr = g.getBoundingClientRect();
+      const t = document.querySelector(target)!.getBoundingClientRect();
+      const y = mode === 'top' ? t.top + 8 : t.top + t.height / 2 + 30;
+      ev('pointerdown', gr.left + 9, gr.top + 22, g); ev('pointermove', gr.left + 9, y, g); ev('pointerup', gr.left + 9, y, g);
+    }, [from, target, mode] as [string, string, string]);
+    // across sections: the morning vow goes under the DAY header → first in DAY, tod = day
+    await drag('m1', '.tod-sec[data-tod="day"] .tod-sh', 'below');
+    await page.waitForTimeout(500);
+    expect(await secs(page)).toEqual(['day:m1,d1', 'evening:e1,e2']);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((h: any) => h.id === 'm1').tod)).toBe('day');
+    // within a section: the last evening vow goes above the first
+    await drag('e2', '.habit-item[data-id="e1"]', 'top');
+    await page.waitForTimeout(500);
+    expect(await secs(page)).toEqual(['day:m1,d1', 'evening:e2,e1']);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.id))).toEqual(['m1', 'd1', 'e2', 'e1']);
+    // a tap on the grip is not a seal
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"] .hlr-grip') as HTMLElement).click());
+    await expect(page.locator('#completed-count')).toHaveText('0');
+  });
 });
