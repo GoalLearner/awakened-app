@@ -8,11 +8,12 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
-## 3.0.8 — READY TO PASTE (W989–W998, final 2026-09-25, build 548)
+## 3.0.8 — READY TO PASTE (W989–W1001, final 2026-09-25, build 551)
 
 Four languages. Each block is under the 4,000-character limit. Banned-word check
 done (no "fell"/"felled"). Left out on purpose: the moderator-only view counts
 (W994), the owner/mod preview rows, and the drag fix (W997 — a fix, not a feature).
+Revised 2026-09-25 to carry W1000 (to-dos v2) and W1001 (edit a topic).
 
 **Before submitting:** the three description corrections below (Ranked PvP, Streak
 Shields, the five-hunter raid = Premium) go out WITH this version — a description only
@@ -28,13 +29,13 @@ The day in three parts. And the loose ends.
 
 • Put any vow where it belongs. Drag it by the grip to reorder, or into another part of the day. New and edited vows get a TIME OF DAY choice.
 
-• To-dos. One-off tasks now live beside your vows: "Book dentist", "Call Dad". Give one a due day and a reminder, tick it off for +1 XP (five a day), and it clears from the DONE list after a week. Your morning briefing tells you what's due.
+• To-dos. One-off tasks now live beside your vows, grouped by day: OVERDUE, TODAY, TOMORROW, LATER, SOMEDAY. Give one a due day, a reminder and a note; mark it PRIORITY to sit it first. Swipe left to postpone or delete, tap the text to edit, tick the box for +1 XP (five a day). Deleting offers UNDO. Your morning briefing tells you what's due.
 
 • Relics you can read. Every relic wears its rank letter, E through S, so strength is obvious at a glance. NEW means new: it clears once you've looked. One colour per rarity, everywhere.
 
 • Fairer drops. E-rank gates are generous; each rank up drops a little less. Rare and ultra-rare protection now covers every boss, including A and S. Twenty-four relics were re-balanced so a higher rank is never weaker than a lower one.
 
-• RESOLVED on the Community board. When a report is handled, it says so, and the fixed threads step out of the way.
+• The Community board. Edit a post you wrote, and see RESOLVED on reports that have been handled.
 ```
 
 ### Spanish (Mexico)
@@ -46,13 +47,13 @@ El día en tres partes. Y los pendientes.
 
 • Pon cada voto donde corresponde. Arrástralo por el asa para reordenarlo o llevarlo a otra parte del día. Los votos nuevos y editados tienen una opción de MOMENTO DEL DÍA.
 
-• Pendientes. Las tareas de una sola vez ahora viven junto a tus votos: "Reservar dentista", "Llamar a papá". Ponles fecha y recordatorio, márcalas por +1 XP (cinco al día) y desaparecen de la lista de HECHO al cabo de una semana. Tu informe matutino te dice qué vence hoy.
+• Pendientes. Las tareas de una sola vez ahora viven junto a tus votos, agrupadas por día: VENCIDAS, HOY, MAÑANA, MÁS ADELANTE, ALGÚN DÍA. Ponles fecha, recordatorio y una nota; márcalas como PRIORIDAD para que vayan primero. Desliza a la izquierda para posponer o borrar, toca el texto para editar, marca la casilla por +1 XP (cinco al día). Borrar ofrece DESHACER. Tu informe matutino te dice qué vence hoy.
 
 • Reliquias que se entienden. Cada reliquia lleva su letra de rango, de E a S, para que su fuerza se vea de un vistazo. NUEVO significa nuevo: se quita cuando la miras. Un color por rareza, en todas partes.
 
 • Botín más justo. Las puertas de rango E son generosas; cada rango superior suelta un poco menos. La protección de raras y ultra raras cubre ahora a todos los jefes, incluidos A y S. Veinticuatro reliquias se reequilibraron para que un rango mayor nunca sea más débil que uno menor.
 
-• RESUELTO en el tablero de la Comunidad. Cuando un reporte se atiende, lo dice, y los hilos resueltos se apartan del camino.
+• El tablero de la Comunidad. Edita una publicación que escribiste y ve RESUELTO en los reportes que ya se atendieron.
 ```
 
 ### Japanese
@@ -64,13 +65,13 @@ El día en tres partes. Y los pendientes.
 
 • 誓いを好きな場所へ。つまみをドラッグして並べ替えたり、別の時間帯へ移したりできます。新規・編集時に「時間帯」を選べます。
 
-• やることリスト。「歯医者を予約」「父に電話」のような一回きりの用事を誓いの隣に。期日とリマインダーを設定し、完了で+1 XP（1日5回まで）。完了リストは一週間で自動的に消えます。朝のブリーフィングが今日の期日を教えてくれます。
+• やることリスト。一回きりの用事を誓いの隣に、日ごとにまとめて表示します：期限切れ・今日・明日・あとで・いつか。期日・リマインダー・メモを付け、「優先」にすれば先頭に。左にスワイプで延期や削除、文字をタップで編集、チェックで+1 XP（1日5回まで）。削除は「元に戻す」ができます。朝のブリーフィングが今日の期日を教えてくれます。
 
 • 読めるレリック。すべてのレリックにEからSのランク文字が付き、強さが一目で分かります。NEWは本当に新しいものだけ。見れば消えます。レアリティごとに色はひとつ、どの画面でも同じです。
 
 • より公平なドロップ。Eランクのゲートは気前よく、ランクが上がるほど少しずつ渋くなります。レアと超レアの救済がAとSを含むすべてのボスに適用されます。24のレリックを再調整し、上のランクが下のランクより弱いことはなくなりました。
 
-• コミュニティボードに「解決済み」。報告が対処されるとその旨が表示され、解決済みのスレッドは脇へ移動します。
+• コミュニティボード。自分の投稿を編集でき、対処済みの報告には「解決済み」が表示されます。
 ```
 
 ### Norwegian (Bokmål)
@@ -82,13 +83,13 @@ Dagen i tre deler. Og løse tråder.
 
 • Legg hvert løfte der det hører hjemme. Dra det i håndtaket for å endre rekkefølgen, eller flytt det til en annen del av dagen. Nye og redigerte løfter får et valg for TID PÅ DAGEN.
 
-• Gjøremål. Engangsoppgaver bor nå ved siden av løftene dine: «Bestill tannlege», «Ring pappa». Gi dem en frist og en påminnelse, kryss av for +1 XP (fem om dagen), og de forsvinner fra GJORT-listen etter en uke. Morgenbriefen forteller deg hva som forfaller i dag.
+• Gjøremål. Engangsoppgaver bor nå ved siden av løftene dine, samlet etter dag: FORFALT, I DAG, I MORGEN, SENERE, EN DAG. Gi dem en frist, en påminnelse og et notat; merk dem PRIORITET så de går først. Sveip til venstre for å utsette eller slette, trykk på teksten for å redigere, kryss av for +1 XP (fem om dagen). Sletting kan angres. Morgenbriefen forteller deg hva som forfaller i dag.
 
 • Relikvier du kan lese. Hver relikvie bærer rangbokstaven sin, E til S, så styrken er åpenbar med ett blikk. NY betyr ny: den forsvinner når du har sett på den. Én farge per sjeldenhet, overalt.
 
 • Rettferdigere drops. Porter av rang E er rause; hver rang opp gir litt mindre. Beskyttelsen for sjeldne og ultrasjeldne dekker nå alle bosser, også A og S. Tjuefire relikvier ble balansert på nytt, så en høyere rang aldri er svakere enn en lavere.
 
-• LØST på fellesskapstavlen. Når en rapport er håndtert, står det der, og de løste trådene går til side.
+• Fellesskapstavlen. Rediger et innlegg du skrev, og se LØST på rapporter som er håndtert.
 ```
 
 ### Promotional text (170 max; can change any time without review)
