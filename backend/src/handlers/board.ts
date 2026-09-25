@@ -134,7 +134,7 @@ interface TopicRow extends AuthorRow {
 }
 
 interface Replier { alias: string; rank_label: string | null; last_at?: number }
-interface TopicExtra { voted: boolean; repliers: Replier[] }
+interface TopicExtra { voted: boolean; repliers: Replier[]; views?: number }
 
 interface ReplyRow extends AuthorRow {
   id: string;
@@ -297,6 +297,7 @@ function topicOut(r: TopicRow, full: boolean, extra: TopicExtra = { voted: false
     pinned: r.pinned_at != null,
     locked: r.locked_at != null,   // W914
     resolved: r.resolved_at != null,   // W990
+    views: extra.views,   // W994 — hunters who opened it (author excluded); present ONLY for moderators
     repliers: extra.repliers,
     // W929 — the board row's "last reply" line: the newest replier + when.
     last_reply: extra.repliers && extra.repliers[0]
@@ -468,6 +469,17 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   const all = pinned.concat(page);
   const ids = all.map((r) => r.id);
   const [voted, repliers] = await Promise.all([votedSet(env, session.userId, ids), repliersMap(env, session.userId, ids)]);
+  // W994 — moderators see how many hunters opened each topic (the author excluded).
+  const viewsBy = new Map<string, number>();
+  if (modView && ids.length) {
+    const vr = await env.DB.prepare(
+      `SELECT v.topic_id AS topic_id, COUNT(*) AS n
+         FROM board_topic_views v JOIN board_topics t ON t.id = v.topic_id
+        WHERE v.topic_id IN (${ids.map(() => '?').join(',')}) AND v.user_id != t.author_id
+        GROUP BY v.topic_id`,
+    ).bind(...ids).all<{ topic_id: string; n: number }>();
+    (vr.results ?? []).forEach((r) => viewsBy.set(r.topic_id, Number(r.n) || 0));
+  }
 
   // Tag counts for the filter rail (visible OPEN topics, every tag) — first page
   // only. W990 — plus how many are resolved, for the RESOLVED pill.
@@ -499,7 +511,7 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
       : `${Number(last.last_activity_at)}|${last.id}`;
   }
   return jsonOk({
-    topics: all.map((r) => topicOut(r, false, { voted: voted.has(r.id), repliers: repliers.get(r.id) || [] })),
+    topics: all.map((r) => topicOut(r, false, { voted: voted.has(r.id), repliers: repliers.get(r.id) || [], views: modView ? (viewsBy.get(r.id) || 0) : undefined })),
     next_cursor,
     sort,
     counts,
@@ -527,6 +539,13 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
     .bind(topicId, modView, session.userId, session.userId)
     .first<TopicRow>();
   if (!topic) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  // W994 — this hunter opened it (once per hunter, ever); the count is for moderators only.
+  try { await env.DB.prepare('INSERT OR IGNORE INTO board_topic_views (topic_id, user_id, first_at) VALUES (?, ?, ?)').bind(topicId, session.userId, Date.now()).run(); } catch { /* never block a read */ }
+  let views: number | undefined;
+  if (modView) {
+    const vc = await env.DB.prepare('SELECT COUNT(*) AS n FROM board_topic_views WHERE topic_id = ? AND user_id != ?').bind(topicId, topic.author_id).first<{ n: number }>();
+    views = Number(vc?.n) || 0;
+  }
   const replies = await env.DB.prepare(
     `SELECT x.id, x.topic_id, x.body, x.created_at, x.hidden_at, x.parent_reply_id, x.up_count, x.edited_at,
             ${AUTHOR_COLS}
@@ -550,7 +569,7 @@ export async function handleBoardTopicGet(request: Request, env: Env, session: S
     env.DB.prepare('SELECT 1 AS f FROM board_follows WHERE topic_id = ? AND user_id = ? LIMIT 1').bind(topicId, session.userId).first<{ f: number }>(),
   ]);
   return jsonOk({
-    topic: topicOut(topic, true, { voted: voted.has(topicId), repliers: repliers.get(topicId) || [] }),
+    topic: topicOut(topic, true, { voted: voted.has(topicId), repliers: repliers.get(topicId) || [], views }),
     replies: page.map((r) => replyOut(r, rvoted.has(r.id))),
     next_cursor: list.length > REPLY_PAGE && last ? String(Number(last.created_at)) : null,
     following: !!follow,   // W929 — the bell

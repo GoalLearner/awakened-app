@@ -6287,6 +6287,33 @@ test.describe('BH · Hunt results (W980)', () => {
     party: [{ user_id: 'u-a', alias: 'anthony', role: 'ally', steps: 17000, joined: true }, { user_id: 'me', alias: 'Richie', role: 'challenger', steps: 14200, joined: true }] }, over);
   const sheetBody = (page: Page) => page.evaluate(() => (document.getElementById('coop-fs-body') || { innerHTML: '' }).innerHTML);
 
+  // W994 — the "seen" count: moderators only.
+  test('a moderator sees "N SEEN" on the row and "SEEN BY N" on the sheet; a hunter sees neither', async ({ page }) => {
+    for (const role of ['owner', null] as Array<'owner' | null>) {
+      await freshApp(page);
+      await page.evaluate((r) => localStorage.setItem('hb_board_cache_v1', JSON.stringify({ topics: [], me: { role: r } })), role);
+      await page.click('#tab-social');
+      await expect(page.locator('#board-body')).toContainText(/No topics yet|Sign in with Apple|Could not load/i, { timeout: 10_000 });
+      await page.evaluate((r) => {
+        const now = Date.now(); const w = window as any;
+        const au = { author_id: 'u-me', alias: 'Richie', rank_label: 'S', founder_seq: 0, is_mod: true, mod_role: r };
+        const t: any = { id: 'dddddddd-0001', tag: 'update', title: 'Week of Sep 24', preview: 'Hello all', created_at: now - 3600000, last_activity_at: now - 3600000, reply_count: 0, up_count: 0, voted: false, pinned: true, locked: false, hidden: false, resolved: false, repliers: [], last_reply: null, author: au };
+        if (r) t.views = 9;
+        w.Auth.boardTopics = async () => ({ ok: true, next_cursor: null, counts: { all: 1, improvement: 0, bug: 0, talk: 0, update: 1, resolved: 0 }, topics: [t], me: { role: r } });
+        w.Auth.boardTopic = async () => ({ ok: true, following: false, next_cursor: null, me: { consented: true, role: r, rank_tier: 'S', topic_min_tier: 'C', reply_min_tier: 'D' }, topic: Object.assign({}, t, { body: 'Hello all.' }), replies: [] });
+        w.__board.render();
+      }, role);
+      await expect(page.locator('#board-body .board-topic')).toHaveCount(1);
+      await expect(page.locator('#board-body .board-tag--seen')).toHaveCount(role ? 1 : 0);
+      if (role) await expect(page.locator('#board-body .board-tag--seen')).toHaveText('9 SEEN');
+      await page.evaluate(() => (window as any).__board.open('dddddddd-0001'));
+      const sub = page.locator('.board-sheet--topic [data-board-sub]');
+      await expect(sub).toContainText(/REPLIES/, { timeout: 6_000 });
+      if (role) await expect(sub).toContainText('SEEN BY 9'); else await expect(sub).not.toContainText('SEEN');
+      await page.evaluate(() => { const s = document.querySelector('.board-sheet--topic'); if (s) s.remove(); });
+    }
+  });
+
   test('co-op sheet on a won hunt: the new screen over it, never the old panel — and only once', async ({ page }) => {
     await seed(page, { hb_coop_awarded: JSON.stringify({ 'w981-hunt': true }) });
     await page.evaluate((i) => (window as any).__hr.sheet(i), ended({}));

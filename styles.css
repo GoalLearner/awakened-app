@@ -34443,6 +34443,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-tag--lock { color: var(--b-ink2); border: 1px solid rgba(255,255,255,0.22); padding: 2px 6px; }
 /* W990 — RESOLVED: a fixed bug or a shipped idea */
 .board-tag--resolved { color: #4ade80; background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.38); padding: 2px 6px; }
+.board-tag--seen { color: var(--b-ink3); border: 1px dashed rgba(255,255,255,0.20); padding: 2px 6px; }   /* W994 — moderators only */
 .board-topic--resolved { opacity: 0.82; }
 .board-f--resolved i { background: #4ade80; }
 .board-chip--ok { color: #4ade80; border-color: rgba(74,222,128,0.45); }

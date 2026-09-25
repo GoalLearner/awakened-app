@@ -60,7 +60,8 @@ interface State {
   blocks: Set<string>;    // `${blocker}|${blocked}`
   feedLikes: { owner: string; liker: string; at: number }[];   // W921 — likes on feats, by owner
   replyVotes: Set<string>;   // W929 — `${reply}|${user}`
-  follows: Set<string>;      // W929 — `${topic}|${user}`
+  follows: Set<string>;
+  views?: Set<string>;   // W994 `${topic}|${user}`      // W929 — `${topic}|${user}`
   calls: { sql: string; binds: unknown[] }[];
 }
 
@@ -118,6 +119,9 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               return { up_count: [...st.replyVotes].filter((k) => k.startsWith(`${binds[0]}|`)).length };
             }
             if (/SELECT 1 AS f FROM board_follows/.test(sql)) return st.follows.has(`${binds[0]}|${binds[1]}`) ? { f: 1 } : null;
+            if (/SELECT COUNT\(\*\) AS n FROM board_topic_views WHERE topic_id = \? AND user_id != \?/.test(sql)) {   // W994
+              return { n: [...(st.views || new Set())].filter((k) => k.startsWith(binds[0] + '|') && k !== binds[0] + '|' + binds[1]).length };
+            }
             if (/SELECT id, created_at, title FROM board_topics WHERE kind = 'update'/.test(sql)) {   // W973 (+ W986 title)
               const hit = Object.entries(st.topics).filter(([, t]) => t.kind === 'update' && t.deleted_at == null && t.hidden_at == null)
                 .sort((a, b) => (b[1].created_at || 0) - (a[1].created_at || 0))[0];
@@ -225,6 +229,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/INSERT OR IGNORE INTO board_reply_votes/.test(sql)) { const k = `${binds[0]}|${binds[1]}`; if (st.replyVotes.has(k)) return ok(0); st.replyVotes.add(k); return ok(1); }
             if (/DELETE FROM board_reply_votes/.test(sql)) { st.replyVotes.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/UPDATE board_replies SET up_count/.test(sql)) return ok(1);
+            if (/INSERT OR IGNORE INTO board_topic_views/.test(sql)) { st.views = st.views || new Set(); const k = `${binds[0]}|${binds[1]}`; if (st.views.has(k)) return ok(0); st.views.add(k); return ok(1); }   // W994
             if (/INSERT OR IGNORE INTO board_follows/.test(sql)) { const k = `${binds[0]}|${binds[1]}`; if (st.follows.has(k)) return ok(0); st.follows.add(k); return ok(1); }
             if (/DELETE FROM board_follows/.test(sql)) { st.follows.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/UPDATE board_replies SET body = \?, edited_at/.test(sql)) { const r = st.replies[binds[2] as string]; if (r) { r.body = binds[0] as string; r.edited_at = binds[1] as number; } return ok(1); }
@@ -317,6 +322,11 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               const results = Object.values(st.replies).filter((r) => r.author_id === binds[0] && (r.created_at || 0) > (binds[1] as number))
                 .sort((a, b) => (b.created_at || 0) - (a.created_at || 0)).slice(0, binds[2] as number).map((r) => ({ body: r.body || '' }));
               return { results, success: true, meta: {} };
+            }
+            if (/FROM board_topic_views v JOIN board_topics t/.test(sql)) {   // W994 — per-topic counts, author excluded
+              const counts: Record<string, number> = {};
+              [...(st.views || new Set())].forEach((k) => { const [tid, uid] = k.split('|'); const t = st.topics[tid!]; if (t && t.author_id !== uid && (binds as string[]).includes(tid!)) counts[tid!] = (counts[tid!] || 0) + 1; });
+              return { results: Object.entries(counts).map(([topic_id, n]) => ({ topic_id, n })), success: true, meta: {} };
             }
             if (/SELECT topic_id FROM board_votes/.test(sql)) {
               const uid = binds[0] as string;
@@ -647,6 +657,23 @@ describe('W913 — the v3 board: votes, pins, sorts and counts', () => {
     expect(ids.length).toBe(2);
     const unpin = await json(await handleBoardPinPost(get('/x'), makeEnv(st), me, a.id));
     expect(unpin.pinned).toBe(false);
+  });
+
+  // W994 — who looked
+  it('opening a topic counts the hunter once; the count (author excluded) shows only to moderators', async () => {
+    const st = fresh();
+    const a = (await postTopic(st, me)).body as { id: string };
+    const open = async (who: SessionPayload) => json(await handleBoardTopicGet(get(`/v1/board/topics/${a.id}`), makeEnv(st), who, a.id));
+    const asX = await open(x);
+    expect((asX.topic as { views?: number }).views).toBeUndefined();   // a hunter never sees it
+    await open(x); await open(ren); await open(me);                    // x twice, the author once
+    st.mods['u-me'] = 'owner';
+    const asMod = await open(me);
+    expect((asMod.topic as { views: number }).views).toBe(2);           // x + ren; me (author) excluded
+    const list = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), me));
+    expect((list.topics as Array<{ id: string; views?: number }>).find((t) => t.id === a.id)!.views).toBe(2);
+    const listX = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((listX.topics as Array<{ views?: number }>)[0]!.views).toBeUndefined();
   });
 
   // W990 — RESOLVED
