@@ -6414,6 +6414,25 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await expect(page.locator('.tod-sec[data-tod="morning"]')).not.toHaveClass(/tod-sec--fold/);
     // every row is still a vow row — the toggle went through toggleHabit
     await expect(page.locator('#completed-count')).toHaveText('1');
+    // W998 — the seal that finishes a section folds it; a fresh render keeps it folded;
+    // opening it by hand sticks for the session; the next finishing seal folds again
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="day"] [data-tod-ct]')).toHaveText('· 1 OF 1');
+    await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/, { timeout: 3_000 });
+    await expect(page.locator('.tod-sec[data-tod="morning"]')).not.toHaveClass(/tod-sec--fold/);
+    await page.evaluate(() => { (window as any).__todDrag; document.getElementById('tab-profile')!.click(); });
+    await page.click('#tab-habits');
+    await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/);
+    await page.evaluate(() => (document.querySelector('.tod-sec[data-tod="day"] [data-tod-fold]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="day"]')).not.toHaveClass(/tod-sec--fold/);
+    await page.click('#tab-profile');
+    await page.click('#tab-habits');
+    await expect(page.locator('.tod-sec[data-tod="day"]')).not.toHaveClass(/tod-sec--fold/);   // the open sticks
+    // unseal and seal again: the finishing seal folds it once more
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="day"] [data-tod-ct]')).toHaveText('· 0 OF 1');
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"]') as HTMLElement).click());
+    await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/, { timeout: 3_000 });
   });
 
   test('TO-DO: the pill shows from day one with its count; Enter adds; due chips order the list; a completion pays +1 XP and undo takes it back', async ({ page }) => {
