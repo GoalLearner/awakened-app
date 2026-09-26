@@ -5608,6 +5608,8 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     expect(t).toMatch(/new Worldgate boss rises every Sunday/i);
     expect(t).toMatch(/Next: Sun 27 Sep/);
     expect(t).not.toMatch(/\bfell(ed)?\b/i);
+    // W1003 — a fallen gate says the number stopped on purpose (W983 freezes damage at the kill)
+    await expect(page.locator('.wg2-you .wg2-frozen')).toHaveText(/Step count frozen at the kill/);
   });
 
   const KILL = (over?: Record<string, unknown>) => ({

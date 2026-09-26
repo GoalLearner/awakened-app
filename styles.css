@@ -34548,6 +34548,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .wg2-rv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .wg2-rv b { font-family: var(--wg-serif); font-size: 16px; color: var(--wg-gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .wg2-rv small { font-family: var(--wg-mono); font-size: 7px; letter-spacing: 1.2px; color: var(--wg-ink3); margin-top: 3px; font-weight: 700; }
+.wg2-frozen { margin-top: 8px; font-family: var(--wg-mono); font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--wg-ink2); }   /* W1003 — the number stopped on purpose */
 .wg2-v { font-size: 13px; color: var(--wg-ink); line-height: 1.45; margin-top: 5px; }
 .wg2-v b { font-weight: 700; } .wg2-v span { color: var(--wg-ink2); } .wg2-ink { color: var(--wg-ink); }
 .wg2-btn { margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 13px; border-radius: 10px; font-family: var(--wg-mono); font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer; border: 1px solid transparent; transition: .2s; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
