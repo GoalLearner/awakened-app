@@ -6085,6 +6085,9 @@ test.describe('BO · Weekly-goal vows (W1005)', () => {
 // newer than this build; checked at launch AND on resume. The store lookup is stubbed and the
 // date pinned, so the suite runs any day. (The suite-wide CSS hides #upd-banner; it still mounts.)
 test.describe('BQ · Monday update banner (W791 · W1007)', () => {
+  // The banner reads the DEVICE's weekday; pin the browser to Pacific so "Sunday 9 PM" is Sunday on the
+  // UTC CI runner too (it is already Monday in UTC — the first CI run caught exactly that).
+  test.use({ timezoneId: 'America/Los_Angeles' });
   const store = (page: Page, v: string) => page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resultCount: 1, results: [{ version: v }] }) }));
   test('Monday + an older build: the strip mounts at launch, links to the store and dismisses for the day', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));   // Mon 28 Sep, 9:00 AM PST
