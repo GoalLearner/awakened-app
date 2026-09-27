@@ -5797,7 +5797,7 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     await page.mouse.down(); await page.waitForTimeout(ms); await page.mouse.up();
   }
 
-  test('one screen: the day, yesterday in a line, today as a ring, the climb, three chips — no vow list, no dead tile', async ({ page }) => {
+  test('one screen: the day, yesterday in a line, the to-do card, the climb — no vow ring, no vow chips (W1009)', async ({ page }) => {
     await seed(page, { [pt(1)]: ['tb-phone', 'tb-med'], [pt(2)]: ['tb-read'] });
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
     await page.waitForTimeout(1600);
@@ -5807,12 +5807,12 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     expect(v.day).toMatch(/^Day \d+$/);
     expect(v.streak).toBe('2-day streak');
     expect(v.yest).toBe('Yesterday: 2 of 4 vows kept.');
-    expect(v.big).toBe('4');
-    expect(v.segs).toBe(4);
-    expect(v.xp).toBe('+10 XP on the table');   // 3 medium (+3) + 1 easy (+1)
+    expect(v.segs).toBe(0);                     // W1009 — the vow ring left the briefing
+    expect(v.big).toBe('');
     expect(v.climb).toMatch(/^Rank [A-Z+]+ \| (\d[\d,]* XP to [A-Z+]+ I{1,3}|The summit of the ranks)$/i);
-    expect(v.chips.length).toBeGreaterThan(0);
-    expect(v.chips.length).toBeLessThanOrEqual(3);
+    expect(v.chips.length).toBe(0);             // …and so did the lead chips
+    await expect(page.locator('#tb-root .tb-todo .tb-tdh')).toContainText('Today’s to-dos');
+    await expect(page.locator('#tb-root .tb-todo .tb-tdr')).toHaveCount(3);   // the owner preview shows a sample
     expect(v.text).not.toMatch(/VERIFIED BY SYSTEM|OBJECTIVES|LOCK IN/i);
     expect(v.label).toMatch(/^HOLD TO BEGIN/i);
   });
@@ -5834,25 +5834,6 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(today);
   });
 
-  test('tap a chip to lead: that vow tops today’s list (saved order untouched); tap again lets it go', async ({ page }) => {
-    await seed(page, { [pt(1)]: ['tb-phone'] });
-    await page.evaluate(() => (window as any).__tb.show({}));
-    await page.waitForTimeout(1500);
-    const chips = page.locator('#tb-root .tb-chip');
-    const last = chips.last();
-    const leadName = (await last.textContent())!.trim();
-    await last.click();
-    await expect(last).toHaveClass(/tb-on/);
-    expect(await page.locator('#tb-root .tb-seg.tb-lead').count()).toBe(1);
-    await holdSeal(page, 1150);
-    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
-    await page.locator('#tab-habits').click();
-    const first = await page.evaluate(() => { const n = document.querySelector('#habit-list .habit-item .hlr-name, #habit-list .habit-item .codex-name'); return (n?.textContent || '').trim(); });
-    expect(leadName.startsWith(first) || first.startsWith(leadName)).toBe(true);
-    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.id));
-    expect(stored).toEqual(['tb-phone', 'tb-med', 'tb-wake', 'tb-read']);   // the saved order never moves
-  });
-
   test('yesterday is one line and never shaming', async ({ page }) => {
     await seed(page, { [pt(1)]: ['tb-phone', 'tb-med', 'tb-wake', 'tb-read'] });
     expect((await page.evaluate(() => (window as any).__tb.data())).yest).toBe('Yesterday: <b>a perfect day.</b> All 4 kept.');
@@ -5869,7 +5850,6 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     const before = await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'));
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
     await page.waitForTimeout(1500);
-    await page.locator('#tb-root .tb-chip').first().click();
     await holdSeal(page, 1150);
     await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
     expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(before);
@@ -6890,17 +6870,22 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/, { timeout: 3_000 });
   });
 
-  test('the briefing carries one line — "1 to-do due today · 1 overdue"; the owner preview always shows it', async ({ page }) => {
-    await seed(page, [{ id: 't1', t: 'Return the library book', due: -1, rem: null, at: 1 }, { id: 't2', t: 'Book dentist', due: 0, rem: null, at: 2 }, { id: 't3', t: 'Call Dad', due: 3, rem: null, at: 3 }]);
+  test('W1009: the briefing leads with a to-do card — overdue first, then today; nothing due names the next; none yet invites a plan; the preview always shows one', async ({ page }) => {
+    await seed(page, [{ id: 't1', t: 'Return the library book', due: -1, rem: null, at: 1 }, { id: 't2', t: 'Book dentist', due: 0, rem: '12:00', at: 2 }, { id: 't4', t: 'Pay rent', due: 0, rem: null, pri: true, at: 3 }, { id: 't3', t: 'Call Dad', due: 1, rem: null, at: 4 }]);
+    const card = () => page.evaluate(() => { const c = document.querySelector('#tb-root .tb-todo'); if (!c) return null; return { cnt: (c.querySelector('.tb-tdc')?.textContent || ''), rows: Array.from(c.querySelectorAll('.tb-tdr')).map((r) => (r.querySelector('span')!.textContent || '') + '|' + (r.querySelector('b')?.textContent || '') + (r.querySelector('i.tb-tdpri') ? '|pri' : '')), empty: c.querySelector('.tb-tde')?.textContent || '', more: c.querySelector('.tb-tdm')?.textContent || '' }; });
     await page.evaluate(() => (window as any).__tb.show({}));
-    await expect(page.locator('.tb-tdl')).toHaveText('1 to-do due today · 1 overdue', { timeout: 5_000 });
-    await expect(page.locator('.tb-tdl .tb-od')).toHaveText('1 overdue');
-    // nothing due → no line for hunters; the preview shows a sample (cleared in memory: a reload would re-seed)
+    await expect(page.locator('#tb-root .tb-todo')).toBeVisible({ timeout: 5_000 });
+    expect(await card()).toEqual({ cnt: '2 due · 1 overdue', rows: ['Return the library book|OVERDUE', 'Pay rent||pri', 'Book dentist|12:00'], empty: '', more: '' });
+    await expect(page.locator('#tb-root .tb-ringwrap, #tb-root .tb-chip')).toHaveCount(0);
+    // nothing due today (only tomorrow's): the card names the next one
+    await page.evaluate(() => { const a = (window as any).__todo.load(); for (let i = a.length - 1; i >= 0; i--) if (a[i].id !== 't3') a.splice(i, 1); (window as any).__tb.show({}); });
+    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Nothing due today.', more: 'Next · TOMORROW · Call Dad' });
+    // no to-dos at all: an invitation to plan
     await page.evaluate(() => { (window as any).__todo.load().length = 0; (window as any).__tb.show({}); });
-    await expect(page.locator('.tb-sheet')).toBeVisible();
-    await expect(page.locator('.tb-tdl')).toHaveCount(0);
+    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'No to-dos yet.', more: 'Plan the week in Habits · To-do' });
+    // the owner's preview always shows a filled card
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
-    await expect(page.locator('.tb-tdl')).toHaveText('2 to-dos due today · 1 overdue');
+    expect((await card())!.rows.length).toBe(3);
   });
 
   test('TIME OF DAY on the sheets: a custom vow made with EVENING lands in the evening section; the edit sheet moves a library vow', async ({ page }) => {

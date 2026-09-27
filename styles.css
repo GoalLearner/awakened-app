@@ -35866,15 +35866,20 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tb-streak.tb-none{color:var(--tb-ink2);border-color:rgba(149,150,178,.2);}
 .tb-yest{margin:12px 0 0;font-size:15px;line-height:1.4;color:var(--tb-ink2);text-wrap:pretty;}
 .tb-yest b{color:var(--tb-ink);font-weight:600;}
-.tb-ringwrap{position:relative;width:176px;height:176px;margin:16px auto 0;flex:none;}
-.tb-ringwrap svg{position:absolute;inset:0;overflow:visible;}
-.tb-seg{fill:none;stroke-width:7;stroke:rgba(139,92,246,.38);transition:stroke .25s,filter .25s;}
-.tb-seg.tb-am{stroke:var(--tb-gold);opacity:.55;}
-.tb-seg.tb-lead{opacity:1;filter:drop-shadow(0 0 6px var(--tb-gold));}
-.tb-ringc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.tb-big{font:700 50px/1 var(--tb-cinzel);letter-spacing:.02em;}
-.tb-ringc .tb-mono{color:var(--tb-ink2);margin-top:8px;}
-.tb-xp{margin-top:10px;color:var(--tb-gold);font:800 10.5px/1 var(--tb-mono);letter-spacing:.12em;text-transform:uppercase;}
+.tb-todo{margin-top:18px;padding:14px 14px 8px;border-radius:18px;background:var(--tb-card);border:1px solid rgba(149,150,178,.16);flex:none;}
+.tb-tdh{display:flex;align-items:center;gap:8px;color:var(--tb-ink2);padding-bottom:10px;}
+.tb-tdh svg{flex:none;width:18px;height:18px;margin:-4px 0;}
+.tb-tdc{margin-left:auto;color:var(--tb-ink);letter-spacing:.12em;white-space:nowrap;}
+.tb-tdc em{font-style:normal;color:#ef4444;}
+.tb-tdr{display:flex;align-items:center;gap:11px;min-height:40px;border-top:1px solid rgba(149,150,178,.1);font:500 15px/1.3 var(--tb-sans);color:var(--tb-ink);}
+.tb-tdr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-tdr i{flex:none;width:7px;height:7px;border:1.3px solid var(--tb-violet2);transform:rotate(45deg);margin:0 2px;}
+.tb-tdr i.tb-tdpri{border-color:var(--tb-gold);background:var(--tb-gold);box-shadow:0 0 6px var(--tb-glow);}
+.tb-tdr b{flex:none;font:800 9px/1 var(--tb-mono);letter-spacing:.12em;padding:4px 7px;border-radius:7px;border:1px solid rgba(149,150,178,.2);color:var(--tb-ink2);}
+.tb-tdr b.tb-tdod{color:#ef4444;border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08);}
+.tb-tde{border-top:1px solid rgba(149,150,178,.1);padding:12px 0 4px;font-size:15px;color:var(--tb-ink2);}
+.tb-tdm{padding:8px 0 6px;color:var(--tb-ink3);letter-spacing:.14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-tdm span{color:var(--tb-ink2);text-transform:none;letter-spacing:0;font:500 13px/1 var(--tb-sans);}
 .tb-climb{display:flex;align-items:center;gap:14px;margin-top:18px;}
 .tb-hex{flex:none;width:44px;height:48px;position:relative;display:grid;place-items:center;}
 .tb-hex svg{position:absolute;inset:0;}
@@ -35884,12 +35889,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tb-clt .tb-to{color:var(--tb-ink);}
 .tb-bar{height:4px;border-radius:2px;background:rgba(139,92,246,.22);margin-top:10px;overflow:hidden;}
 .tb-bar i{display:block;height:100%;width:0;border-radius:2px;background:linear-gradient(90deg,#c9892a,var(--tb-gold));box-shadow:0 0 10px var(--tb-glow);transition:width .8s cubic-bezier(.2,.7,.2,1);}
-.tb-chipsl{margin-top:18px;color:var(--tb-ink3);display:flex;justify-content:space-between;}
-.tb-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
-.tb-chip{display:flex;align-items:center;gap:8px;min-height:34px;max-width:100%;padding:6px 12px;border-radius:17px;background:var(--tb-card);border:1px solid rgba(149,150,178,.16);color:var(--tb-ink);font:500 13.5px/1.2 var(--tb-sans);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s,box-shadow .2s,background .2s;}
-.tb-chip i{flex:none;width:6px;height:6px;border:1px solid var(--tb-ink3);transform:rotate(45deg);transition:all .2s;}
-.tb-chip.tb-on{border-color:var(--tb-gold);box-shadow:0 0 0 3px rgba(245,184,66,.08),0 0 14px rgba(245,184,66,.18);background:#191932;}
-.tb-chip.tb-on i{background:var(--tb-gold);border-color:var(--tb-gold);box-shadow:0 0 6px var(--tb-gold);}
 .tb-world{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(149,150,178,.1);font-size:14px;color:var(--tb-ink2);}
 .tb-world b{color:var(--tb-ink);font-weight:600;}
 .tb-world svg{flex:none;}
@@ -35921,13 +35920,12 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @keyframes tb-inkout{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
 .tb-leaving .tb-sheet{transform:translateY(24px);opacity:0;}
 .tb-enter .tb-e{animation:tb-rise .42s cubic-bezier(.2,.7,.2,1) var(--d,0ms) both;}
-.tb-enter .tb-seg{animation:tb-fade .3s var(--d) both;}
 .tb-enter .tb-sealin{animation:tb-fade .6s 1250ms both;}
 .tb-breathe .tb-seal .tb-halo{animation:tb-breathe 3.2s ease-in-out infinite;}
 @keyframes tb-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes tb-fade{from{opacity:0}to{opacity:1}}
 @keyframes tb-breathe{0%,100%{opacity:.7}50%{opacity:1}}
-@media (max-height:720px){.tb-ringwrap{width:140px;height:140px;margin-top:10px;}.tb-big{font-size:40px;}.tb-climb,.tb-chipsl{margin-top:12px;}.tb-seal{width:92px;height:92px;}.tb-ritual{padding-top:12px;}}
+@media (max-height:720px){.tb-todo{margin-top:12px;}.tb-tdr{min-height:34px;}.tb-climb{margin-top:12px;}.tb-seal{width:92px;height:92px;}.tb-ritual{padding-top:12px;}}
 @media (prefers-reduced-motion:reduce){.tb-enter .tb-e{animation:tb-fade .3s var(--d,0ms) both;}.tb-breathe .tb-seal .tb-halo{animation:none;}.tb-frame.tb-stamped.tb-anim .tb-seal .tb-num{animation:tb-fade .3s both;}.tb-frame.tb-stamped.tb-anim .tb-seal .tb-ink{animation:none;}.tb-leaving .tb-sheet{transform:none;}.tb-bar i{transition:none;}}
 
 /* ── W980 · HUNT RESULTS (Claude Design handoffs 31 + 32) ──────────────────────
@@ -36279,7 +36277,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .todo-dghost { margin: 0; transform: scale(1.03); box-shadow: 0 18px 40px rgba(0,0,0,0.6); }
 .todo-dghost .todo-row { border-color: rgba(139,92,246,0.5); }
 /* the briefing's to-do line */
-.tb-tdl { margin-top: 10px; padding-top: 0; border-top: 0; }
 .tb-od { color: #ef4444; font-weight: 600; }
 .tb-od b { color: #ef4444; }
 @media (prefers-reduced-motion: reduce) {
