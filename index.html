@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=732">
+  <link rel="stylesheet" href="styles.css?v=733">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -3201,7 +3201,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=1"></script>
-  <script src="app.js?v=1406"></script>
+  <script src="app.js?v=1407"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3219,7 +3219,17 @@
          reminder picker writes hb_reminders[habitId]. They are
          independent. -->
     <div class="sched-section-label">DAYS</div>
-    <div class="sched-presets">
+    <!-- W1005 — fixed days, or a number of times a week on any days -->
+    <div class="sched-modes">
+      <button class="sched-opt" data-sched-mode="days" type="button">On these days</button>
+      <button class="sched-opt" data-sched-mode="weekly" type="button">Times a week</button>
+    </div>
+    <div class="sched-wk hidden" id="sched-wk">
+      <button class="sched-opt sched-wk-btn" data-sched-wk="-1" type="button" aria-label="Fewer times">−</button>
+      <span class="sched-wk-n" id="sched-wk-n">4× a week</span>
+      <button class="sched-opt sched-wk-btn" data-sched-wk="1" type="button" aria-label="More times">+</button>
+    </div>
+    <div class="sched-presets" id="sched-day-presets">
       <button class="sched-preset" data-preset="daily"    type="button">Daily</button>
       <button class="sched-preset" data-preset="weekdays" type="button">Weekdays</button>
       <button class="sched-preset" data-preset="weekends" type="button">Weekends</button>
@@ -3234,7 +3244,7 @@
       <button class="day-btn" data-day="Sat" type="button">S</button>
       <button class="day-btn" data-day="Sun" type="button">S</button>
     </div>
-    <p class="sched-section-help">Which days this habit appears in your list.</p>
+    <p class="sched-section-help" id="sched-days-help">Which days this habit appears in your list.</p>
 
     <div class="sched-divider"></div>
 

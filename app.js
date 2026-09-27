@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1004'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1005'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27292,6 +27292,7 @@
     // in the habits array (with streak/completions preserved) but
     // the daily-active read path stops here.
     if (!habit || habit.archived) return false;
+    if (_isWeeklyVow(habit)) return _weeklyCountsOn(habit, today);   // W1005 — counts today only when sealed or needed
     // W575 — Vertical Jump Program 14-day cycle. A habit with cycleDays is
     // active ONLY on those day-numbers (1-14) of the rolling program. The daily
     // anchors (creatine, sunlight, protein) carry NO cycleDays and stay daily, so
@@ -27304,6 +27305,36 @@
     if (!habit.days || habit.days.length === 7) return true;
     return habit.days.includes(getTodayDayName());
   }
+
+  // ── W1005 — weekly-goal vows. habit.weekly = N (1–6): N seals any days, Monday–Sunday (PT).
+  function _isWeeklyVow(h) { const n = h ? parseInt(h.weekly, 10) : 0; return n >= 1 && n <= 6; }
+  function _ptDow(dateStr) {   // 0 = Mon … 6 = Sun
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(dateStr + 'T12:00:00Z'));
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(name);
+  }
+  function _weekStartOf(dateStr) { let d = dateStr; for (let i = _ptDow(dateStr); i > 0; i--) d = prevDay(d); return d; }
+  function _sealedOn(h, dateStr) { const l = completions && completions[dateStr]; return Array.isArray(l) && l.indexOf(h.id) >= 0; }
+  function _weeklySealsBefore(h, dateStr) { let n = 0, d = _weekStartOf(dateStr); while (d < dateStr) { if (_sealedOn(h, d)) n++; d = nextDay(d); } return n; }
+  // Counts on a day when sealed that day, or when the seals still needed can no longer fit in
+  // the days left (that day included): 4× a week with none by Thursday → Thursday counts.
+  function _weeklyCountsOn(h, dateStr) {
+    if (_sealedOn(h, dateStr)) return true;
+    const need = parseInt(h.weekly, 10) - _weeklySealsBefore(h, dateStr);
+    return need > 0 && need >= 7 - _ptDow(dateStr);
+  }
+  function _weeklyState(h) {
+    const n = parseInt(h.weekly, 10), sealed = _sealedOn(h, today), k = _weeklySealsBefore(h, today) + (sealed ? 1 : 0);
+    return { n: n, k: k, met: k >= n, needed: k < n && !sealed && _weeklyCountsOn(h, today) };
+  }
+  function _weeklyLine(h) {
+    const s = _weeklyState(h);
+    const cls = 'hlr-secondary hlr-weekly' + (s.met ? ' hlr-weekly--met' : s.needed ? ' hlr-weekly--needed' : '');
+    const txt = s.k + ' of ' + s.n + (s.met ? ' · perfect week' : ' this week' + (s.needed ? ' · needed today' : ''));
+    return { cls: cls, txt: txt };
+  }
+  // shows in today's list (every day, even when it does not count today)
+  function _isListedToday(h) { return isScheduledToday(h) || (!!h && !h.archived && _isWeeklyVow(h)); }
+  try { window.__weekly = { countsOn: function (id, d) { const h = habits.find(function (x) { return x.id === id; }); return h ? _weeklyCountsOn(h, d) : null; }, weekStart: function (d) { return _weekStartOf(d || today); } }; } catch (_) {}   // QA
 
   function nextDay(dateStr) {
     const ms = Date.parse(dateStr + 'T12:00:00Z');
@@ -27336,6 +27367,7 @@
       try { start = localStorage.getItem('hb_jump_program_started'); } catch (_) {}
       if (start && dateStr < start) return false;   // YYYY-MM-DD strings compare correctly
     }
+    if (habit && _isWeeklyVow(habit)) return _weeklyCountsOn(habit, dateStr);   // W1005
     if (habit && Array.isArray(habit.cycleDays) && habit.cycleDays.length) {
       const d = _jumpCycleDayOn(dateStr);
       if (d != null) return habit.cycleDays.indexOf(d) !== -1;
@@ -27756,7 +27788,7 @@
   // otherwise completing Day 1 then Day 8 counts six phantom "missed" daily
   // days in between and check() resets the streak to 1 forever.
   function hasHabitScheduledDayBetween(habit, fromDate, toDate) {
-    if (!(habit && Array.isArray(habit.cycleDays) && habit.cycleDays.length)) {
+    if (!(habit && ((Array.isArray(habit.cycleDays) && habit.cycleDays.length) || _isWeeklyVow(habit)))) {   // W1005 — weekly vows walk day by day
       return hasScheduledDayBetween((habit && habit.days) || ALL_DAYS, fromDate, toDate);
     }
     let d = nextDay(fromDate);
@@ -30893,7 +30925,13 @@
 
   // ── STREAK / CHECK HELPERS ────────────────────────────────
   function getStreak(id) {
-    return (streaks[id] && streaks[id].count) || 0;
+    const s = streaks[id]; if (!s) return 0;
+    const h = habits.find(function (x) { return x.id === id; });
+    if (h && _isWeeklyVow(h)) {   // W1005 — alive while this week or last week met the goal
+      const wk = _weekStartOf(today);
+      return (s.wk === wk || s.wk === _weekStartOf(prevDay(wk))) ? (s.count || 0) : 0;
+    }
+    return s.count || 0;
   }
 
   function isChecked(id) {
@@ -30912,7 +30950,15 @@
     s.prevCount = s.count;
     s.prevLastDate = s.lastDate;
 
-    if (s.lastDate === today) {
+    if (habit && _isWeeklyVow(habit)) {
+      // W1005 — the streak counts WEEKS the goal was met; it moves on the seal that meets it.
+      s.prevWk = s.wk || null;
+      const wk = _weekStartOf(today);
+      if (s.wk !== wk && _weeklySealsBefore(habit, today) + 1 >= parseInt(habit.weekly, 10)) {
+        s.count = (s.wk === _weekStartOf(prevDay(wk))) ? (s.count || 0) + 1 : 1;
+        s.wk = wk;
+      }
+    } else if (s.lastDate === today) {
       // already counted today
     } else if (!s.lastDate) {
       s.count = 1;
@@ -30945,7 +30991,7 @@
       prUpdate('total_active_days', getPR('total_active_days').value + 1);
     }
     // Per-habit streak PR
-    if (habit && s.count > getPR('longest_habit_streak').value) {
+    if (habit && !_isWeeklyVow(habit) && s.count > getPR('longest_habit_streak').value) {   // W1005 — weeks are not days
       prUpdate('longest_habit_streak', s.count, { habitName: habit.name });
     }
     // ── Streak Forgiveness: comeback detection ────────────────
@@ -30974,6 +31020,7 @@
     if (s && s.lastDate === today) {
       s.count = s.prevCount || 0;
       s.lastDate = s.prevLastDate || null;
+      if ('prevWk' in s) s.wk = s.prevWk;   // W1005
     }
 
     const habit = habits.find(h => h.id === id);
@@ -33771,7 +33818,7 @@
         // HealthKit data crosses a visible threshold. Without this the
         // 1z.214 bail would skip the rebuild and the bar would go stale.
         const pBand = listMode ? ('p' + _habitProgressBand(h)) : '';
-        parts.push(h.id + ':' + checked + sBand + auto + pBand + getHabitTimeOfDay(h).charAt(0));   // W995 — the section
+        parts.push(h.id + ':' + checked + sBand + auto + pBand + getHabitTimeOfDay(h).charAt(0) + (_isWeeklyVow(h) ? 'w' + _weeklyLine(h).txt : ''));   // W995 — the section · W1005 the week
       }
       // Mode prefix busts the cache when the user toggles grid<->list.
       // W995 — the lit section follows the hour, so the hour bucket rides along.
@@ -34170,7 +34217,7 @@
     // (the owner's first test, 2026-09-13). Same in-place, order-preserving
     // partition; idempotent with the save-time one.
     try { sortHabitsAutoVerifyFirst(habits); } catch (_) {}
-    const todayHabits = _tbLeadFirst(habits.filter(isScheduledToday));   // W978 — the vow chosen on today's briefing leads
+    const todayHabits = _tbLeadFirst(habits.filter(_isListedToday));   // W1005 — weekly vows list every day   // W978 — the vow chosen on today's briefing leads
     updateMorningButtonVisibility();
     updateLockedInButtonVisibility();
     // W584 — jump-program guide row under the vows (visibility + wire-once).
@@ -35699,9 +35746,10 @@
         : '<div class="hlr-icon"></div>');
 
     // Streak flame badge (≥3), keeps the .streak-badge hook for toggleHabit.
-    const streakActive = count >= 3;
+    const isWk = _isWeeklyVow(habit);   // W1005
+    const streakActive = isWk ? count >= 2 : count >= 3;
     const streakInner = streakActive
-      ? '<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count
+      ? '<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count + (isWk ? 'W' : '')
       : '';
     const streakHtml = '<span class="hlr-streak streak-badge' + (streakActive ? ' active' : '') + '">' + streakInner + '</span>';
 
@@ -35779,6 +35827,7 @@
           '</div>' +
           '<div class="hlr-line2">' + statXpHtml + detailHtml + healthChipHtml + editHtml + '</div>' +
           secondaryHtml +
+          (isWk ? (function () { const w = _weeklyLine(habit); return '<div class="' + w.cls + '" data-weekly>' + esc(w.txt) + '</div>'; })() : '') +   // W1005
           naBadgeHtml +
         '</div>' +
         // W196 — manage moved to the "Edit" button on the stat line; the
@@ -37861,7 +37910,7 @@
       // bypassing this gate. Habits with no `days` or all 7 days
       // hit isScheduledToday's length-7 / no-field shortcut and pass
       // through normally — only custom-scheduled habits gate.
-      if (!silent && habit && typeof isScheduledToday === 'function' && !isScheduledToday(habit)) {
+      if (!silent && habit && typeof isScheduledToday === 'function' && !isScheduledToday(habit) && !_isWeeklyVow(habit)) {   // W1005 — any day is a gym day
         const nextLabel = (typeof nextScheduledDayLabel === 'function')
           ? nextScheduledDayLabel(habit)
           : null;
@@ -38138,7 +38187,7 @@
         // a span.streak-fire wrapper. Empty state: codex hides via
         // :empty CSS; legacy shows an em-dash placeholder.
         badge.innerHTML = count > 0
-          ? '<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count
+          ? '<svg width="8" height="10" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2.5 0 4 0 6c0 1.7 1.5 3 3.5 3S7 7.7 7 6c0-2-2-3.5-3.5-6z" fill="currentColor"/></svg>' + count + (_isWeeklyVow(habits.find(function (x) { return x.id === id; })) ? 'W' : '')
           : (isCodex ? '' : '—');
         if (!wasDone && count > 0) {
           // v3 Phase 1z.214 — double-rAF; no forced reflow.
@@ -39535,7 +39584,7 @@
   // completes the section folds it anyway (and forgets the open).
   const _todOpened = new Set();
   function _todSecComplete(sec) {
-    const rows = Array.prototype.slice.call(sec.querySelectorAll('.habit-item'));
+    const rows = _todCountedRows(sec);   // W1005
     return rows.length > 0 && rows.every(function (r) { return isChecked(r.dataset.id); });
   }
   function _todSetFold(sec, folded) {
@@ -39552,8 +39601,9 @@
     _TODS.forEach(function (tod) {
       const rows = todayHabits.filter(function (h) { return getHabitTimeOfDay(h) === tod; });
       if (!rows.length) return;   // an empty section is not drawn
-      const dn = rows.filter(function (h) { return isChecked(h.id); }).length;
-      const folded = _todFolds.has(tod) || (dn === rows.length && !_todOpened.has(tod));   // W998 — a finished section starts folded
+      const counted = rows.filter(isScheduledToday);   // W1005 — a weekly vow off the hook today is listed, not counted
+      const dn = counted.filter(function (h) { return isChecked(h.id); }).length;
+      const folded = _todFolds.has(tod) || (counted.length > 0 && dn === counted.length && !_todOpened.has(tod));   // W998 — a finished section starts folded
       const sec = document.createElement('li');
       sec.className = 'tod-sec' + (lit === tod ? ' tod-sec--lit' : '') + (folded ? ' tod-sec--fold' : '');
       sec.dataset.tod = tod;
@@ -39561,22 +39611,34 @@
         '<div class="tod-sh" data-tod-fold role="button" tabindex="0" aria-expanded="' + (folded ? 'false' : 'true') + '">' +
           '<span class="tod-gl">' + _TOD_GLYPH[tod] + '</span>' +
           '<span class="tod-tt">' + tod.toUpperCase() + '</span>' +
-          '<span class="tod-ct" data-tod-ct>· ' + dn + ' OF ' + rows.length + '</span>' +
+          '<span class="tod-ct" data-tod-ct>' + _todCtText(dn, counted.length) + '</span>' +
           '<span class="tod-ch">' + _TOD_CHEV + '</span>' +
         '</div>' +
-        '<div class="tod-hair"><i data-tod-hair style="width:' + Math.round(dn / rows.length * 100) + '%"></i></div>' +
+        '<div class="tod-hair"><i data-tod-hair style="width:' + (counted.length ? Math.round(dn / counted.length * 100) : 0) + '%"></i></div>' +
         '<div class="tod-list"><ul class="tod-rows habit-list habit-list--codex' + (listMode ? ' habit-list--list' : '') + '"></ul></div>';
       const ul = sec.querySelector('.tod-rows');
       // sealed vows sink to the bottom of their section, in their own order
-      rows.filter(function (h) { return !isChecked(h.id); }).concat(rows.filter(function (h) { return isChecked(h.id); }))
+      rows.filter(function (h) { return !_todDoneish(h.id); }).concat(rows.filter(function (h) { return _todDoneish(h.id); }))
         .forEach(function (h) { ul.appendChild(buildRow(h)); });
       list.appendChild(sec);
     });
   }
+  // W1005 — only the rows that count today are counted (a weekly vow off the hook is listed, not owed)
+  function _todCountedRows(sec) {
+    return Array.prototype.slice.call(sec.querySelectorAll('.habit-item')).filter(function (r) {
+      const h = habits.find(function (x) { return x.id === r.dataset.id; }); return !h || isScheduledToday(h);
+    });
+  }
+  function _todCtText(dn, total) { return total ? '· ' + dn + ' OF ' + total : '· ANY DAY'; }
+  function _todDoneish(id) {   // sealed today, or a weekly vow whose week is already won
+    if (isChecked(id)) return true;
+    const h = habits.find(function (x) { return x.id === id; });
+    return !!(h && _isWeeklyVow(h) && _weeklyState(h).met);
+  }
   function _todRefreshSec(sec) {
-    const rows = Array.prototype.slice.call(sec.querySelectorAll('.habit-item'));
+    const rows = _todCountedRows(sec);
     const dn = rows.filter(function (r) { return isChecked(r.dataset.id); }).length;
-    const ct = sec.querySelector('[data-tod-ct]'); if (ct) ct.textContent = rows.length ? '· ' + dn + ' OF ' + rows.length : '· EMPTY';
+    const ct = sec.querySelector('[data-tod-ct]'); if (ct) ct.textContent = _todCtText(dn, rows.length);
     const hair = sec.querySelector('[data-tod-hair]'); if (hair) hair.style.width = (rows.length ? Math.round(dn / rows.length * 100) : 0) + '%';
   }
   // FLIP: rows glide to their new slot instead of jumping.
@@ -39596,6 +39658,19 @@
   // the seal animation has had its moment (260ms, as on the canvas).
   function _todAfterToggle(id, li) {
     if (!li || !li.closest) return;
+    // W1005 — a weekly vow's line updates in place; the seal that meets the goal names the perfect week
+    try {
+      const wh = habits.find(function (x) { return x.id === id; });
+      if (wh && _isWeeklyVow(wh)) {
+        const w = _weeklyLine(wh), el = li.querySelector('[data-weekly]');
+        if (el) { el.className = w.cls; el.textContent = w.txt; }
+        const st = _weeklyState(wh);
+        if (isChecked(id) && st.k === st.n) {
+          let nm = wh.name; try { nm = habitDisplayParts(wh).base || wh.name; } catch (_) {}
+          try { showHabitToast('Perfect week · ' + nm + ', ' + st.n + ' of ' + st.n + '.'); } catch (_) {}
+        }
+      }
+    } catch (e) { _logSwallow('weekly:afterToggle', e); }
     const sec = li.closest('.tod-sec'); if (!sec) return;
     _todRefreshSec(sec);
     // W998 — the seal that finishes the section folds it, once the row has sunk.
@@ -39611,8 +39686,8 @@
     setTimeout(function () {
       if (!li.isConnected || li.parentNode !== ul) return;
       const cur = Array.prototype.slice.call(ul.querySelectorAll('.habit-item'));
-      const open = cur.filter(function (r) { return !isChecked(r.dataset.id); });
-      const done = cur.filter(function (r) { return isChecked(r.dataset.id); });
+      const open = cur.filter(function (r) { return !_todDoneish(r.dataset.id); });
+      const done = cur.filter(function (r) { return _todDoneish(r.dataset.id); });
       const want = open.concat(done);
       if (want.every(function (r, i) { return r === cur[i]; })) return;
       _todFlip(ul, function () { want.forEach(function (r) { ul.appendChild(r); }); });
@@ -46911,10 +46986,24 @@
     '3x':     ['Mon','Wed','Fri'],
   };
 
+  // W1005 — weekly goal: null = fixed days; 1–6 = that many times a week, any days
+  let schedFormWeekly = null;
+  function _schedPaintMode() {
+    const wk = schedFormWeekly != null;
+    document.querySelectorAll('[data-sched-mode]').forEach(function (b) { b.classList.toggle('active', (b.dataset.schedMode === 'weekly') === wk); });
+    const dp = document.getElementById('sched-day-presets'); if (dp) dp.classList.toggle('hidden', wk);
+    const dr = document.getElementById('sched-days-row'); if (dr) dr.classList.toggle('hidden', wk);
+    const box = document.getElementById('sched-wk'); if (box) box.classList.toggle('hidden', !wk);
+    const n = document.getElementById('sched-wk-n'); if (n && wk) n.textContent = schedFormWeekly + '× a week';
+    const help = document.getElementById('sched-days-help');
+    if (help) help.textContent = wk ? 'Any days you like. Hit ' + schedFormWeekly + ' by Sunday for a perfect week.' : 'Which days this habit appears in your list.';
+  }
   function openSchedulePicker(id) {
     schedHabitId = id;
     const habit = habits.find(h => h.id === id);
     schedFormDays = habit?.days ? [...habit.days] : [...ALL_DAYS];
+    schedFormWeekly = (habit && _isWeeklyVow(habit)) ? parseInt(habit.weekly, 10) : null;   // W1005
+    try { _schedPaintMode(); } catch (_) {}
     setActiveDays('sched-days-row', schedFormDays);
     syncSchedPresets();
     refreshSchedReminderUI();
@@ -46978,8 +47067,12 @@
     document.getElementById('sched-save-btn').addEventListener('click', () => {
       const habit = habits.find(h => h.id === schedHabitId);
       if (habit) {
-        if (schedFormDays.length === 7) delete habit.days;
-        else habit.days = [...schedFormDays];
+        if (schedFormWeekly != null) { habit.weekly = schedFormWeekly; delete habit.days; }   // W1005 — any days
+        else {
+          delete habit.weekly;
+          if (schedFormDays.length === 7) delete habit.days;
+          else habit.days = [...schedFormDays];
+        }
         // v3 Phase 1z.34 -- close picker BEFORE rendering so a render
         // throw can't leave the schedule sheet stuck on iOS.
         try { save(); } catch (e) { try { console.warn('[sched] save failed', e); } catch (_) {} }
@@ -47011,6 +47104,22 @@
         schedFormDays = [...SCHED_PRESETS[btn.dataset.preset]];
         setActiveDays('sched-days-row', schedFormDays);
         syncSchedPresets();
+      });
+    });
+
+    // W1005 — ON THESE DAYS | TIMES A WEEK, and the − / + for the weekly number
+    document.querySelectorAll('[data-sched-mode]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.schedMode === 'weekly') { if (schedFormWeekly == null) schedFormWeekly = (schedFormDays.length >= 1 && schedFormDays.length <= 6) ? schedFormDays.length : 4; }
+        else schedFormWeekly = null;
+        _schedPaintMode();
+      });
+    });
+    document.querySelectorAll('[data-sched-wk]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (schedFormWeekly == null) return;
+        schedFormWeekly = Math.max(1, Math.min(6, schedFormWeekly + (+b.dataset.schedWk)));
+        _schedPaintMode();
       });
     });
 

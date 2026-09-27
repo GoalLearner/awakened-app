@@ -6853,6 +6853,19 @@ footer {
   color: var(--accent);
 }
 .sched-preset:active { transform: scale(0.95); }
+/* W1005 — ON THESE DAYS | TIMES A WEEK */
+.sched-modes { display: flex; gap: 8px; margin-bottom: 10px; }
+.sched-opt { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s ease; -webkit-appearance: none; appearance: none; white-space: nowrap; }
+.sched-opt.active { background: rgba(139,92,246,0.15); border-color: var(--accent); color: var(--accent); }
+.sched-opt:active { transform: scale(0.95); }
+.sched-wk { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 8px 0 2px; }
+.sched-wk.hidden, #sched-day-presets.hidden, #sched-days-row.hidden { display: none; }
+.sched-wk-btn { width: 44px; padding: 7px 0; font-size: 18px; line-height: 1; }
+.sched-wk-n { font-family: 'Cinzel', Georgia, serif; font-size: 18px; font-weight: 700; color: var(--text-primary, #f4f4fb); min-width: 120px; text-align: center; }
+/* the weekly line on a vow row */
+.habit-item--row .hlr-weekly { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: #9596b2; }
+.habit-item--row .hlr-weekly--needed { color: #f5b842; }
+.habit-item--row .hlr-weekly--met { color: #4ade80; }   /* beats .habit-item--row .hlr-secondary */
 
 .sched-actions {
   display: flex;

@@ -5980,6 +5980,104 @@ test.describe('BK · Resolved topics (W990)', () => {
   });
 });
 
+// W1005 — weekly-goal vows: N times a week, any days; N by Sunday is the vow's perfect week.
+// A weekly vow lists every day but COUNTS toward a day only when sealed that day, or when the
+// seals still needed no longer fit in the days left. Everything date-dependent is computed from
+// the app's day (PT) in the browser, so the suite passes on any weekday.
+test.describe('BO · Weekly-goal vows (W1005)', () => {
+  async function seed(page: Page, weekly: number, extra?: { streak?: number; seals?: string[] }) {
+    await freshApp(page);
+    await page.addInitScript(([weekly, extra]) => {
+      const ptToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+      const add = (ds: string, n: number) => { const d = new Date(ds + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+      const dow = (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).indexOf(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(ptToday + 'T12:00:00Z')));
+      const monday = add(ptToday, -dow), lastMonday = add(monday, -7);
+      const v = (id: string, name: string, x?: Record<string, unknown>) => Object.assign({ id, name, emoji: '⚡', difficulty: 'easy', type: 'build', primaryStat: 'STR', custom: true, tod: 'day' }, x || {});
+      localStorage.setItem('hb_habits', JSON.stringify([v('d1', 'Read 10 pages', { primaryStat: 'INT' }), v('w1', 'Gym session', { weekly })]));
+      const comp: Record<string, string[]> = {};
+      ((extra && extra.seals) || []).forEach((ds) => { comp[ds] = ['w1']; });
+      localStorage.setItem('hb_completions', JSON.stringify(comp));
+      if (extra && extra.streak) localStorage.setItem('hb_streaks', JSON.stringify({ w1: { count: extra.streak, lastDate: add(lastMonday, 3), wk: lastMonday, prevCount: 0, prevLastDate: null } }));
+      localStorage.setItem('hb_points', '500');
+      localStorage.setItem('hb_first_completion_bonus_v1', '1');
+      localStorage.setItem('hb_first_vow_pointer_seen', '1');
+      localStorage.setItem('hb_dd_v1', JSON.stringify({ done: true }));
+      localStorage.setItem('hb_tour_welcome_back_v1', '1');
+      localStorage.setItem('hb_achievements', JSON.stringify(['first_step', 'first_blood', 'getting_started']));   // no first-ever popups over the toast
+      (window as any).__t = { ptToday, dow, monday, lastMonday };
+    }, [weekly, extra || {}] as [number, { streak?: number; seals?: string[] }]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+    await page.click('#tab-habits');
+    await expect(page.locator('.habit-item[data-id="w1"]')).toBeVisible({ timeout: 10_000 });
+    return page.evaluate(() => (window as any).__t) as Promise<{ ptToday: string; dow: number; monday: string; lastMonday: string }>;
+  }
+
+  test('the rule: a weekly vow counts on the days it is sealed, and on the days the week can no longer be won without it', async ({ page }) => {
+    // a fixed past week, Mon 14 – Sun 20 Sep 2026: 4× a week, sealed Mon and Tue
+    await seed(page, 4, { seals: ['2026-09-14', '2026-09-15'] });
+    const on = (d: string) => page.evaluate((d) => (window as any).__weekly.countsOn('w1', d), d);
+    expect(await on('2026-09-15')).toBe(true);    // sealed that day
+    expect(await on('2026-09-16')).toBe(false);   // Wed: 2 left to find in 5 days
+    expect(await on('2026-09-18')).toBe(false);   // Fri: 2 in 3 days — still room
+    expect(await on('2026-09-19')).toBe(true);    // Sat: 2 in 2 days — needed now
+    expect(await on('2026-09-20')).toBe(true);    // Sun: still 2 short — the week is lost, it counts (and breaks Perfect Day)
+    expect(await page.evaluate(() => (window as any).__weekly.weekStart('2026-09-20'))).toBe('2026-09-14');
+  });
+
+  test('the row: listed every day, counted only when it must be; the seal that meets the goal names the perfect week and moves the week streak', async ({ page }) => {
+    const t = await seed(page, 1, { streak: 2 });
+    const sunday = t.dow === 6;                        // 1× a week with none yet: needed only on Sunday
+    await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveText(sunday ? '0 of 1 this week · needed today' : '0 of 1 this week');
+    await expect(page.locator('#total-count')).toHaveText(sunday ? '2' : '1');   // off the hook: listed, not owed
+    await expect(page.locator('.habit-item[data-id="w1"] .hlr-streak')).toHaveText('2W');   // last week was won
+    // seal it (a real tap, so the toast shows at once): the goal is met — a perfect week
+    await page.click('.habit-item[data-id="w1"] .hlr-seal');
+    await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveText('1 of 1 · perfect week');
+    await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveClass(/hlr-weekly--met/);
+    await expect(page.locator('#total-count')).toHaveText('2');
+    await expect(page.locator('#completed-count')).toHaveText('1');
+    await expect(page.locator('#habit-toast, .habit-toast').filter({ hasText: /Perfect week/ }).first()).toBeVisible({ timeout: 3_000 });
+    await expect.poll(() => page.evaluate(() => { const s = JSON.parse(localStorage.getItem('hb_streaks') || '{}').w1 || {}; return s.count + '|' + s.wk; })).toBe('3|' + t.monday);
+    // unseal: back to where it was
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="w1"]') as HTMLElement).click());
+    await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveText(sunday ? '0 of 1 this week · needed today' : '0 of 1 this week');
+    await expect.poll(() => page.evaluate(() => { const s = JSON.parse(localStorage.getItem('hb_streaks') || '{}').w1 || {}; return s.count + '|' + s.wk; })).toBe('2|' + t.lastMonday);
+    // the daily vow alone makes a perfect day — unless it is Sunday and the week is still unwon
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"]') as HTMLElement).click());
+    if (sunday) await expect(page.locator('#habit-list')).not.toHaveClass(/all-complete/);
+    else await expect(page.locator('#habit-list')).toHaveClass(/all-complete/);
+  });
+
+  test('the schedule sheet sets it: TIMES A WEEK with − / +, and back to fixed days', async ({ page }) => {
+    await seed(page, 3);
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"] [data-more]') as HTMLElement).click());
+    await page.click('#ctx-schedule');
+    await expect(page.locator('#sched-sheet')).toBeVisible();
+    await expect(page.locator('[data-sched-mode="days"]')).toHaveClass(/active/);
+    await page.click('[data-sched-mode="weekly"]');
+    await expect(page.locator('#sched-days-row')).toBeHidden();
+    await expect(page.locator('#sched-wk-n')).toHaveText('4× a week');   // a daily vow starts at 4
+    await page.click('[data-sched-wk="1"]');
+    await expect(page.locator('#sched-wk-n')).toHaveText('5× a week');
+    await expect(page.locator('#sched-days-help')).toContainText('Hit 5 by Sunday for a perfect week');
+    await page.click('#sched-save-btn');
+    expect(await page.evaluate(() => { const h = JSON.parse(localStorage.getItem('hb_habits') || '[]').find((x: any) => x.id === 'd1'); return [h.weekly, h.days === undefined]; })).toEqual([5, true]);
+    await expect(page.locator('.habit-item[data-id="d1"] [data-weekly]')).toContainText('of 5');
+    // and back
+    await page.evaluate(() => (document.querySelector('.habit-item[data-id="w1"] [data-more]') as HTMLElement).click());
+    await page.click('#ctx-schedule');
+    await expect(page.locator('[data-sched-mode="weekly"]')).toHaveClass(/active/);
+    await expect(page.locator('#sched-wk-n')).toHaveText('3× a week');
+    await page.click('[data-sched-mode="days"]');
+    await expect(page.locator('#sched-days-row')).toBeVisible();
+    await page.click('#sched-save-btn');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((x: any) => x.id === 'w1').weekly)).toBeUndefined();
+    await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveCount(0);
+  });
+});
+
 // W1001 — a topic's author (or a moderator) edits its title + body from the ··· menu.
 test.describe('BN · Edit a topic (W1001)', () => {
   test('Edit on the OP opens the composer prefilled; SAVE posts title + body to the edit endpoint; the card wears EDITED', async ({ page }) => {
