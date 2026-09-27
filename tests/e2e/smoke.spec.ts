@@ -6716,4 +6716,78 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     // LATER carries no grip (it is sorted by date)
     await expect(page.locator('#todo-view .todo-grp--lat .todo-grip')).toHaveClass(/todo-grip--off/);
   });
+
+  // W1004 — repeating to-dos: Weekly (by Sunday) · Monthly (by month end) · After done (N days).
+  test('W1004: repeating to-dos — weekly lands by Sunday, completing spawns the next, undo takes it back; after-done and monthly compute the next day', async ({ page }) => {
+    await seed(page, []);
+    await page.click('[data-vows-view="todo"]');
+    const ptDay = (plusDays: number, monthsAhead?: number) => page.evaluate(([plusDays, monthsAhead]) => {
+      const d = new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()) + 'T12:00:00');
+      const e = monthsAhead != null ? new Date(d.getFullYear(), d.getMonth() + 1 + monthsAhead, 0, 12) : new Date(d.getTime() + plusDays * 86400000);
+      return e.getFullYear() + '-' + String(e.getMonth() + 1).padStart(2, '0') + '-' + String(e.getDate()).padStart(2, '0');
+    }, [plusDays, monthsAhead ?? null] as [number, number | null]);
+    const sundayOff = await page.evaluate(() => (7 - new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()) + 'T12:00:00').getDay()) % 7);
+    const store = () => page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'));
+    const settle = () => expect(page.locator('#todo-view .todo-grp .todo-row--done')).toHaveCount(0, { timeout: 3_000 });   // the completing row has left
+    const points = async () => Number(await page.evaluate(() => localStorage.getItem('hb_points')));
+    // WEEKLY from the composer: the day moves to this Sunday
+    await page.fill('[data-todo-in]', 'Water the plants');
+    await page.click('[data-todo-pick="rep"]');
+    await expect(page.locator('[data-todo-picks="rep"]')).toHaveClass(/todo-picks--open/);
+    await page.click('[data-todo-rep="week"]');
+    await expect(page.locator('[data-todo-repv]')).toHaveText('WEEKLY');
+    await page.click('[data-todo-add]');
+    let t = await store();
+    expect(t.length).toBe(1);
+    expect(t[0].rep).toEqual({ k: 'week' });
+    expect(t[0].due).toBe(await ptDay(sundayOff));
+    await expect(page.locator('#todo-view .todo-grp .todo-due svg')).toHaveCount(1);   // the ↻ on the chip
+    // complete → +1 XP, the next one due a week after this Sunday, linked as nx
+    const pts0 = await points();
+    await page.click('#todo-view .todo-grp .todo-w [data-todo-bx]');
+    await expect.poll(async () => (await store()).length).toBe(2);
+    t = await store();
+    let open = t.find((x: any) => !x.done), done = t.find((x: any) => x.done);
+    expect(open.due).toBe(await ptDay(sundayOff + 7));
+    expect(open.rep).toEqual({ k: 'week' });
+    expect(done.nx).toBe(open.id);
+    expect(await points()).toBe(pts0 + 1);
+    await settle();
+    // undo the completion → the spawned copy goes back, the XP too
+    await page.click('#todo-view [data-todo-dg]');
+    await page.click('#todo-view .todo-dg .todo-w [data-todo-bx]');
+    await expect.poll(async () => (await store()).length).toBe(1);
+    expect((await store())[0].done).toBeNull();
+    expect(await points()).toBe(pts0);
+    // AFTER DONE from the edit sheet: 3 → 4 days; completing it lands the next one 4 days out
+    await page.click('#todo-view .todo-grp .todo-w .todo-bd');
+    await expect(page.locator('#todo-esh')).toHaveClass(/todo-esh--on/);
+    await expect(page.locator('#todo-esh [data-todo-erep] .todo-tri--on')).toHaveAttribute('data-v', 'week');
+    await page.click('#todo-esh [data-todo-erep] [data-v="after"]');
+    await expect(page.locator('#todo-esh [data-todo-erepnv]')).toHaveText('3 DAYS AFTER DONE');
+    await page.click('#todo-esh [data-todo-erepn="1"]');
+    await expect(page.locator('#todo-esh [data-todo-erepnv]')).toHaveText('4 DAYS AFTER DONE');
+    await page.click('#todo-esh [data-todo-save]');
+    expect((await store())[0].rep).toEqual({ k: 'after', n: 4 });
+    await page.click('#todo-view .todo-grp .todo-w [data-todo-bx]');
+    await expect.poll(async () => (await store()).length).toBe(2);
+    open = (await store()).find((x: any) => !x.done);
+    expect(open.due).toBe(await ptDay(4));
+    expect(open.rep).toEqual({ k: 'after', n: 4 });
+    await settle();
+    // MONTHLY: the next one is due on the last day of next month
+    await page.click('#todo-view .todo-grp .todo-w .todo-bd');
+    await page.click('#todo-esh [data-todo-erep] [data-v="month"]');
+    await page.click('#todo-esh [data-todo-save]');
+    await page.click('#todo-view .todo-grp .todo-w [data-todo-bx]');
+    await expect.poll(async () => (await store()).length).toBe(3);
+    open = (await store()).find((x: any) => !x.done);
+    expect(open.rep).toEqual({ k: 'month' });
+    expect(open.due).toBe(await ptDay(0, 1));
+    await settle();
+    // deleting an open repeating to-do ends the series (nothing new appears)
+    await page.evaluate(() => { const w = document.querySelector('#todo-view .todo-grp .todo-w') as HTMLElement; (window as any).__todo.open(w.dataset.todoId); });
+    await page.click('#todo-esh [data-todo-del]');
+    await expect.poll(async () => (await store()).filter((x: any) => !x.done).length).toBe(0);
+  });
 });

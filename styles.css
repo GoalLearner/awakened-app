@@ -36232,6 +36232,14 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .todo-toast--on { transform: none; opacity: 1; pointer-events: auto; }
 .todo-toast-u { margin-left: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px; color: #f5b842; cursor: pointer; padding: 6px 8px; }
 .todo-toast-u.hidden { display: none; }
+/* W1004 — repeating to-dos */
+.todo-due--rep { color: #a78bfa; border-color: rgba(139,92,246,0.4); }
+.todo-due svg { flex: none; }
+.todo-step { display: inline-flex; align-items: center; gap: 4px; }
+.todo-step.hidden, .todo-estep.hidden { display: none; }
+.todo-pill--step { padding: 8px 11px; }
+.todo-stepv { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; color: #f4f4fb; min-width: 64px; text-align: center; white-space: nowrap; }
+.todo-estep { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
 /* the briefing's to-do line */
 .tb-tdl { margin-top: 10px; padding-top: 0; border-top: 0; }
 .tb-od { color: #ef4444; font-weight: 600; }
