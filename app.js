@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1007'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1008'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39539,8 +39539,8 @@
     if (hdr) {
       hdr.classList.toggle('vows-header--ledger', ledger);
       hdr.classList.toggle('vows-header--todo', todo);
-      const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = ledger ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : todo ? 'ONE-OFF TASKS' : 'TODAY’S VOWS';
-      const t = hdr.querySelector('[data-vows-title]'); if (t) t.textContent = ledger ? 'Your grind, written' : todo ? 'Loose ends' : 'Seal your vows';
+      const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = ledger ? 'WEEK ' + _hgWeekNum(today) + ' · THE LEDGER' : todo ? _todoHeadKicker() : 'TODAY’S VOWS';
+      const t = hdr.querySelector('[data-vows-title]'); if (t) t.textContent = ledger ? 'Your grind, written' : todo ? 'Plan the week' : 'Seal your vows';
       hdr.querySelectorAll('[data-vows-seg]').forEach(function (sg) { sg.setAttribute('data-view', _habitsView); });
       hdr.querySelectorAll('[data-vows-view]').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-vows-view') === _habitsView ? 'true' : 'false'); });
     }
@@ -39853,30 +39853,32 @@
     try { _hapticTick('LIGHT'); } catch (_) {}
   });
 
-  // ── To-dos (v2 — Claude Design handoff 28, W1000) ──
-  // hb_todos_v1: [{ id, t, due: 'YYYY-MM-DD'|null, rem: 'HH:MM'|null, pri, note, at, done: ms|null, dd, xp }]
-  // The list reads by day: OVERDUE · TODAY · TOMORROW · LATER (by date) · SOMEDAY, a
-  // priority to-do first in its day. The box completes; the text opens the edit
-  // sheet; a swipe left reveals POSTPONE and DELETE; the grip reorders within a
-  // day; DONE can be cleared. Deletes and clears offer UNDO for four seconds.
+  // ── To-dos (v3 — the weekly planner, Claude Design handoff 29, W1008) ──
+  // hb_todos_v1: [{ id, t, due: 'YYYY-MM-DD'|null, rem: 'HH:MM'|null, pri, note, rep, at, done: ms|null, dd, xp, nx }]
+  // The TO-DO tab plans the week: SUNDAY … SATURDAY of this week (PST, the Worldgate's
+  // week), today open and the rest folded, then NEXT WEEK (or LATER), then UNSCHEDULED.
+  // A done to-do stays in its day, struck through. An open one left on a past day reads
+  // OVERDUE there; one left from an earlier week rides at the top of today. The box
+  // completes; the text opens the edit sheet; a swipe left moves it to the next day or
+  // deletes it; the grip carries it to another day. Deletes offer UNDO for four seconds.
   const TODO_KEY = 'hb_todos_v1';
   const TODO_XP = 1, TODO_XP_CAP = 5;            // +1 XP each, five a day at most
-  const TODO_DONE_TTL_MS = 7 * 86400000;         // the DONE group clears after seven days
+  const TODO_DONE_TTL_MS = 7 * 86400000;         // done to-dos leave storage after seven days
   const TODO_REM_PRESETS = ['8:00', '12:00', '18:00', '21:00'];
-  const TODO_GROUPS = [
-    { k: 'od',  l: 'OVERDUE',  f: function (o) { return o != null && o < 0; } },
-    { k: 'tdy', l: 'TODAY',    f: function (o) { return o === 0; } },
-    { k: 'tmw', l: 'TOMORROW', f: function (o) { return o === 1; } },
-    { k: 'lat', l: 'LATER',    f: function (o) { return o != null && o > 1; } },
-    { k: 'sd',  l: 'SOMEDAY',  f: function (o) { return o == null; } },
-  ];
+  const _TODO_WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const _TODO_WDF = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const _TODO_MO = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
   const _TODO_TRASH = '<svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4h9M5.5 4V2.5h3V4M3.5 4l.6 7.5h5.8L10.5 4M6 6.5v3M8 6.5v3"/></svg>';
   const _TODO_FWD = '<svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7h8.5M7.5 4l3 3-3 3"/></svg>';
   const _TODO_PEN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.3 2.7l2 2L5.5 12.5l-2.8.8.8-2.8z"/><path d="M9.8 4.2l2 2"/></svg>';
   const _TODO_NOTE = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M2 3h8M2 6h8M2 9h5"/></svg>';
   const _TODO_VOW = '<svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5 10 6l-4 4.5L2 6z" stroke="currentColor" stroke-width="1.3"/></svg>';
-  let _todos = null, _todoDgOpen = false, _todoSwiped = null, _todoFlash = null, _todoEdit = null, _todoUndoFn = null, _todoToastT = 0;
-  let _todoComp = { text: '', due: 0, rem: null, pri: false, rep: null, od: false, or: false, orp: false };   // a new to-do lands under TODAY
+  const _TODO_CHEV_R = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M4.5 3 7.5 6l-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const _TODO_CHEV_L = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M7.5 3 4.5 6l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  let _todos = null, _todoSwiped = null, _todoFlash = null, _todoEdit = null, _todoEwk = 0, _todoUndoFn = null, _todoToastT = 0;
+  const _todoFolds = {};   // session only: 'd<offset>' | 'nx' → folded?
+  function _todoFreshComp() { return { text: '', due: 0, rem: null, pri: false, rep: null, cw: 0, od: false, or: false, orp: false }; }   // a new to-do lands on today
+  let _todoComp = _todoFreshComp();
   function _todoLoad() {
     if (_todos) return _todos;
     try { const a = JSON.parse(localStorage.getItem(TODO_KEY) || '[]'); _todos = Array.isArray(a) ? a.filter(function (t) { return t && t.id && typeof t.t === 'string'; }) : []; }
@@ -39894,9 +39896,6 @@
     _todos = _todos.filter(function (t) { return !(t.done && t.done < cut); });
     if (_todos.length !== n) _todoSave();
   }
-  function _todoOpenCount() { return _todoLoad().filter(function (t) { return !t.done; }).length; }
-  function _todoHasOverdue() { return _todoLoad().some(function (t) { const o = _todoDayDiff(t.due); return !t.done && o != null && o < 0; }); }
-  function _todoXpToday() { return _todoLoad().filter(function (t) { return t.done && t.xp && t.dd === today; }).length; }
   function _todoDayDiff(due) {
     if (!due || typeof due !== 'string' || due.length < 10) return null;
     try {
@@ -39909,16 +39908,27 @@
     const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + off);
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-  function _todoDueLabel(off) {
-    if (off == null) return 'NO DATE';
-    if (off === 0) return 'TODAY';
-    if (off === 1) return 'TOMORROW';
-    if (off === -1) return 'YESTERDAY';
-    const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + off);
-    return Math.abs(off) < 7 ? ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][d.getDay()]
-                             : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][d.getMonth()] + ' ' + d.getDate();
+  // ── the week (Sunday start, PST — the Worldgate's week) ──
+  function _todoDt(o) { const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + o); return d; }
+  function _todoDow0() { return new Date(today + 'T12:00:00').getDay(); }   // today's weekday, 0 = Sunday
+  function _todoDayOff(w, i) { return -_todoDow0() + 7 * w + i; }          // offset of weekday i in week w (0 = this week)
+  function _todoWkOf(o) { return Math.floor((o + _todoDow0()) / 7); }
+  function _todoWeekNum(w) { try { return _hgWeekNum(_todoDateAt(_todoDayOff(w, 3))); } catch (_) { return 0; } }
+  function _todoWeekLabel(w) {
+    const a = _todoDt(_todoDayOff(w, 0)), b = _todoDt(_todoDayOff(w, 6));
+    return _TODO_MO[a.getMonth()] + ' ' + a.getDate() + ' – ' + (a.getMonth() === b.getMonth() ? '' : _TODO_MO[b.getMonth()] + ' ') + b.getDate();
   }
   function _todoNice(s) { return s ? s.charAt(0) + s.slice(1).toLowerCase() : s; }
+  function _todoFmtDay(o) {
+    const d = _todoDt(o);
+    return o === 0 ? 'today' : _todoWkOf(o) === 0 ? _todoNice(_TODO_WDF[d.getDay()]) : _todoNice(_TODO_WD[d.getDay()]) + ', ' + _todoNice(_TODO_MO[d.getMonth()]) + ' ' + d.getDate();
+  }
+  function _todoDayChip(o) { if (o == null) return 'NO DAY'; if (o === 0) return 'TODAY'; const d = _todoDt(o); return _todoWkOf(o) === 0 ? _TODO_WD[d.getDay()] : _TODO_WD[d.getDay()] + ' ' + d.getDate(); }
+  function _todoOpenCount() {   // this week, earlier, and unscheduled — not the weeks ahead
+    return _todoLoad().filter(function (t) { if (t.done) return false; const o = _todoDayDiff(t.due); return o == null || _todoWkOf(o) <= 0; }).length;
+  }
+  function _todoHasOverdue() { return _todoLoad().some(function (t) { const o = _todoDayDiff(t.due); return !t.done && o != null && o < 0; }); }
+  function _todoXpToday() { return _todoLoad().filter(function (t) { return t.done && t.xp && t.dd === today; }).length; }
   function _todoRemLabel(rem) {
     if (!rem) return '';
     const p = String(rem).split(':'); const h = parseInt(p[0], 10), m = parseInt(p[1], 10) || 0;
@@ -39928,10 +39938,9 @@
     const p = String(rem || '').split(':'); const h = parseInt(p[0], 10), m = parseInt(p[1], 10) || 0;
     return isFinite(h) ? (String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0')) : null;
   }
-  // ── W1004 — repeating to-dos. A rule rides on the to-do ({ k: 'week' } · { k: 'month' } ·
-  // { k: 'after', n }); completing it spawns the next copy (same text, reminder, note,
-  // priority) and remembers it as `nx`, so undoing the completion takes the copy back.
-  // Deleting an open one ends the series. Week starts Monday; "weekly" is due by Sunday.
+  // ── repeating (W1004; W1008: Weekly now means every same weekday, the planner's model).
+  // { k: 'week' } · { k: 'month' } (due by month end) · { k: 'after', n }. Completing one
+  // spawns the next copy and remembers it as `nx`, so undoing the completion takes it back.
   const _TODO_REP = '<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5a4.5 4.5 0 0 1 8-2.8L12 5"/><path d="M12 2v3H9"/><path d="M11.5 7.5a4.5 4.5 0 0 1-8 2.8L2 9"/><path d="M2 12V9h3"/></svg>';
   function _todoRepNorm(r) {
     if (!r || typeof r !== 'object') return null;
@@ -39939,15 +39948,27 @@
     if (r.k === 'after') return { k: 'after', n: Math.max(1, Math.min(60, parseInt(r.n, 10) || 3)) };
     return null;
   }
-  function _todoRepShort(r) { r = _todoRepNorm(r); if (!r) return ''; return r.k === 'week' ? 'WEEKLY' : r.k === 'month' ? 'MONTHLY' : r.n + (r.n === 1 ? ' DAY' : ' DAYS'); }
-  function _todoWeekEndOff() { const dow = new Date(today + 'T12:00:00').getDay(); return (7 - dow) % 7; }   // days to this Sunday (0 on a Sunday)
+  function _todoRepShort(r, due) {
+    r = _todoRepNorm(r); if (!r) return '';
+    if (r.k === 'week') { const o = typeof due === 'number' ? due : _todoDayDiff(due); return o == null ? 'WEEKLY' : 'EVERY ' + _TODO_WD[_todoDt(o).getDay()]; }
+    return r.k === 'month' ? 'MONTHLY' : r.n + (r.n === 1 ? ' DAY' : ' DAYS');
+  }
   function _todoMonthEndOff(plus) { const d = new Date(today + 'T12:00:00'); const end = new Date(d.getFullYear(), d.getMonth() + 1 + (plus || 0), 0, 12); return Math.round((end - d) / 86400000); }
-  function _todoNextDueOff(r) { r = _todoRepNorm(r); if (!r) return null; if (r.k === 'week') return _todoWeekEndOff() + 7; if (r.k === 'month') return _todoMonthEndOff(1); return r.n; }
-  // choosing Weekly / Monthly while the day is still today (or none) moves it to the end of this week / month
-  function _todoFirstDueOff(r, cur) { r = _todoRepNorm(r); if (!r) return cur; if (r.k === 'week' && (cur == null || cur <= 1)) return _todoWeekEndOff(); if (r.k === 'month' && (cur == null || cur <= 1)) return _todoMonthEndOff(0); return cur; }
+  function _todoNextDueOff(r, dueOff) {
+    r = _todoRepNorm(r); if (!r) return null;
+    if (r.k === 'week') {   // the same weekday, the first one after today (and after its own day)
+      const base = dueOff == null ? 0 : dueOff, dw = _todoDt(base).getDay();
+      let n = Math.max(0, base) + 1; while (_todoDt(n).getDay() !== dw) n++;
+      return n;
+    }
+    if (r.k === 'month') return _todoMonthEndOff(1);
+    return r.n;
+  }
+  // choosing Monthly while the day is today (or tomorrow) moves it to the end of this month
+  function _todoFirstDueOff(r, cur) { r = _todoRepNorm(r); if (r && r.k === 'month' && cur != null && cur <= 1) return _todoMonthEndOff(0); return cur; }
   function _todoSpawnNext(it) {   // caller saves
     const r = _todoRepNorm(it.rep); if (!r) return null;
-    const off = _todoNextDueOff(r);
+    const off = _todoNextDueOff(r, _todoDayDiff(it.due));
     const nx = { id: uid(), t: it.t, due: _todoDateAt(off), rem: it.rem || null, pri: !!it.pri, note: it.note || '', rep: r, at: Date.now(), done: null, dd: null, xp: false };
     _todoLoad().unshift(nx); it.nx = nx.id;
     try { _todoArmReminder(nx); } catch (_) {}
@@ -39955,7 +39976,7 @@
   }
   function _todoById(id) { return _todoLoad().find(function (x) { return x.id === id; }) || null; }
 
-  // ── the view: composer + list ──
+  // ── the view: composer + the week ──
   function _todoEnsureView() {
     let host = document.getElementById('todo-view');
     if (host) return host;
@@ -39968,28 +39989,23 @@
           '<button type="button" class="todo-add" data-todo-add>ADD</button>' +
         '</div>' +
         '<div class="todo-cbar">' +
-          '<button type="button" class="todo-cb" data-todo-pick="due" aria-label="Due day">' + _TODO_CAL + '<span data-todo-duev>TODAY</span></button>' +
+          '<button type="button" class="todo-cb" data-todo-pick="due" aria-label="Day">' + _TODO_CAL + '<span data-todo-duev>TODAY</span></button>' +
           '<button type="button" class="todo-cb" data-todo-pick="rem" aria-label="Reminder time">' + _TODO_BELL_LG + '<span data-todo-remv>REMIND</span></button>' +
-          '<button type="button" class="todo-cb" data-todo-pick="rep" aria-label="Repeat">' + _TODO_REP + '<span data-todo-repv>REPEAT</span></button>' +   // W1004
+          '<button type="button" class="todo-cb" data-todo-pick="rep" aria-label="Repeat">' + _TODO_REP + '<span data-todo-repv>REPEAT</span></button>' +
           '<button type="button" class="todo-cb todo-cb--pri" data-todo-pri aria-pressed="false" aria-label="Priority"><b>!</b>PRIORITY</button>' +
         '</div>' +
-        '<div class="todo-picks" data-todo-picks="rep"><div><div class="todo-prow"><span class="todo-plab">REPEAT</span>' +
-          '<button type="button" class="todo-pill" data-todo-rep="week">WEEKLY</button>' +
-          '<button type="button" class="todo-pill" data-todo-rep="month">MONTHLY</button>' +
-          '<button type="button" class="todo-pill" data-todo-rep="after">AFTER DONE</button>' +
-          '<button type="button" class="todo-pill" data-todo-rep="off">OFF</button>' +
-          '<span class="todo-step hidden" data-todo-repstep><button type="button" class="todo-pill todo-pill--step" data-todo-repn="-1" aria-label="Fewer days">−</button><span class="todo-stepv" data-todo-repnv>3 DAYS AFTER</span><button type="button" class="todo-pill todo-pill--step" data-todo-repn="1" aria-label="More days">+</button></span>' +
-        '</div></div></div>' +
-        '<div class="todo-picks" data-todo-picks="due"><div><div class="todo-prow"><span class="todo-plab">DUE</span>' +
-          '<button type="button" class="todo-pill" data-todo-due="0">TODAY</button>' +
-          '<button type="button" class="todo-pill" data-todo-due="1">TOMORROW</button>' +
-          '<span class="todo-pill todo-pill--host" data-todo-due="date">' + _TODO_CAL.replace('width="14" height="14"', 'width="11" height="11"') + '<span data-todo-datev>PICK A DATE</span><input type="date" class="todo-ghost" data-todo-date aria-label="Pick a date" tabindex="-1"></span>' +
-          '<button type="button" class="todo-pill" data-todo-due="none">NO DATE</button>' +
-        '</div></div></div>' +
+        '<div class="todo-picks" data-todo-picks="due"><div><div class="todo-prow" data-todo-dayrow></div></div></div>' +
         '<div class="todo-picks" data-todo-picks="rem"><div><div class="todo-prow"><span class="todo-plab">REMIND</span>' +
           TODO_REM_PRESETS.map(function (r) { return '<button type="button" class="todo-pill" data-todo-rem="' + r + '">' + r + '</button>'; }).join('') +
           '<span class="todo-pill todo-pill--host" data-todo-rem="other" aria-label="Another time"><span data-todo-otherv>…</span><input type="time" class="todo-ghost" data-todo-time aria-label="Pick a time" tabindex="-1"></span>' +
           '<button type="button" class="todo-pill" data-todo-rem="off">OFF</button>' +
+        '</div></div></div>' +
+        '<div class="todo-picks" data-todo-picks="rep"><div><div class="todo-prow"><span class="todo-plab">REPEAT</span>' +
+          '<button type="button" class="todo-pill" data-todo-rep="week" data-todo-repwk>WEEKLY</button>' +
+          '<button type="button" class="todo-pill" data-todo-rep="month">MONTHLY</button>' +
+          '<button type="button" class="todo-pill" data-todo-rep="after">AFTER DONE</button>' +
+          '<button type="button" class="todo-pill" data-todo-rep="off">OFF</button>' +
+          '<span class="todo-step hidden" data-todo-repstep><button type="button" class="todo-pill todo-pill--step" data-todo-repn="-1" aria-label="Fewer days">−</button><span class="todo-stepv" data-todo-repnv>3 DAYS AFTER</span><button type="button" class="todo-pill todo-pill--step" data-todo-repn="1" aria-label="More days">+</button></span>' +
         '</div></div></div>' +
       '</div>' +
       '<div class="todo-list" data-todo-list></div>';
@@ -39998,90 +40014,151 @@
     _todoEnsureSheet();
     return host;
   }
+  function _todoDayPills(c) {
+    const w = c.cw || 0; let h = '<span class="todo-plab">DAY</span>';
+    for (let i = 0; i < 7; i++) {
+      const o = _todoDayOff(w, i); if (o < 0) continue;
+      const d = _todoDt(o), lbl = o === 0 ? 'TODAY' : o === 1 ? 'TOMORROW' : w === 0 ? _TODO_WD[i] : _TODO_WD[i] + ' ' + d.getDate();
+      h += '<button type="button" class="todo-pill' + (o === 0 ? ' todo-pill--tdy' : '') + (c.due === o ? ' todo-pill--on' : '') + '" data-todo-day="' + o + '">' + lbl + '</button>';
+    }
+    h += w === 0 ? '<button type="button" class="todo-pill todo-pill--nav" data-todo-cw="1">NEXT WEEK ' + _TODO_CHEV_R + '</button>'
+                 : '<button type="button" class="todo-pill todo-pill--nav" data-todo-cw="0">' + _TODO_CHEV_L + ' THIS WEEK</button>';
+    h += '<button type="button" class="todo-pill' + (c.due == null ? ' todo-pill--on' : '') + '" data-todo-day="none">NO DAY</button>';
+    return h;
+  }
   function _todoRenderComp(host) {
     host = host || document.getElementById('todo-view'); if (!host) return;
     const $ = function (s) { return host.querySelector(s); };
     const c = _todoComp;
     const inp = $('[data-todo-in]'); if (inp && inp.value !== c.text) inp.value = c.text;
     const add = $('[data-todo-add]'); if (add) add.classList.toggle('todo-add--ok', !!c.text.trim());
-    if (c.due == null) { c.rem = null; c.or = false; }   // no day, no reminder
-    const bd = $('[data-todo-pick="due"]'), br = $('[data-todo-pick="rem"]'), bp = $('[data-todo-pri]');
-    if (bd) { bd.classList.toggle('todo-cb--on', c.due != null); bd.classList.toggle('todo-cb--open', c.od); }
+    if (c.due == null) { c.rem = null; c.or = false; c.rep = null; c.orp = false; }   // no day, no reminder, no repeat
+    const bd = $('[data-todo-pick="due"]'), br = $('[data-todo-pick="rem"]'), bp = $('[data-todo-pri]'), brp = $('[data-todo-pick="rep"]');
+    if (bd) { bd.classList.toggle('todo-cb--on', c.due != null && c.due !== 0); bd.classList.toggle('todo-cb--open', c.od); }
     if (br) { br.disabled = c.due == null; br.classList.toggle('todo-cb--on', !!c.rem); br.classList.toggle('todo-cb--open', c.or); }
     if (bp) { bp.classList.toggle('todo-cb--on', !!c.pri); bp.setAttribute('aria-pressed', c.pri ? 'true' : 'false'); }
-    // W1004 — the repeat rule
-    const brp = $('[data-todo-pick="rep"]'), crp = _todoRepNorm(c.rep);
-    if (brp) { brp.classList.toggle('todo-cb--on', !!crp); brp.classList.toggle('todo-cb--open', !!c.orp); }
-    const rpv = $('[data-todo-repv]'); if (rpv) rpv.textContent = crp ? _todoRepShort(crp) : 'REPEAT';
+    const crp = _todoRepNorm(c.rep);
+    if (brp) { brp.disabled = c.due == null; brp.classList.toggle('todo-cb--on', !!crp); brp.classList.toggle('todo-cb--open', !!c.orp); }
+    const rpv = $('[data-todo-repv]'); if (rpv) rpv.textContent = crp ? _todoRepShort(crp, c.due) : 'REPEAT';
+    const wk = $('[data-todo-repwk]'); if (wk) wk.textContent = c.due != null ? 'EVERY ' + _TODO_WD[_todoDt(c.due).getDay()] : 'WEEKLY';
     const prp = $('[data-todo-picks="rep"]'); if (prp) prp.classList.toggle('todo-picks--open', !!c.orp);
     host.querySelectorAll('[data-todo-rep]').forEach(function (p) { const v = p.dataset.todoRep; p.classList.toggle('todo-pill--on', v === 'off' ? !crp : !!crp && crp.k === v); });
     const stp = $('[data-todo-repstep]'); if (stp) stp.classList.toggle('hidden', !(crp && crp.k === 'after'));
     const stv = $('[data-todo-repnv]'); if (stv && crp && crp.k === 'after') stv.textContent = crp.n + (crp.n === 1 ? ' DAY AFTER' : ' DAYS AFTER');
-    const dv = $('[data-todo-duev]'); if (dv) dv.textContent = _todoDueLabel(c.due);
+    const dv = $('[data-todo-duev]'); if (dv) dv.textContent = _todoDayChip(c.due);
     const rv = $('[data-todo-remv]'); if (rv) rv.textContent = c.rem ? _todoRemLabel(c.rem) : 'REMIND';
     const pd = $('[data-todo-picks="due"]'); if (pd) pd.classList.toggle('todo-picks--open', c.od);
     const pr = $('[data-todo-picks="rem"]'); if (pr) pr.classList.toggle('todo-picks--open', c.or);
-    const dated = c.due != null && (c.due < 0 || c.due > 1);
-    host.querySelectorAll('[data-todo-due]').forEach(function (p) { const v = p.dataset.todoDue; p.classList.toggle('todo-pill--on', v === 'none' ? c.due == null : v === 'date' ? dated : c.due === +v); });
-    const dl = $('[data-todo-datev]'); if (dl) dl.textContent = dated ? _todoDueLabel(c.due) : 'PICK A DATE';
+    const row = $('[data-todo-dayrow]'); if (row) row.innerHTML = _todoDayPills(c);
     const custom = !!c.rem && TODO_REM_PRESETS.indexOf(c.rem) < 0;
     host.querySelectorAll('[data-todo-rem]').forEach(function (p) { const v = p.dataset.todoRem; p.classList.toggle('todo-pill--on', v === 'off' ? !c.rem : v === 'other' ? custom : v === c.rem); });
     const ov = $('[data-todo-otherv]'); if (ov) ov.textContent = custom ? c.rem : '…';
   }
-  function _todoChip(t, g) {
-    const off = _todoDayDiff(t.due), rg = _todoRepNorm(t.rep) ? _TODO_REP : '';   // W1004
-    if (g === 'od') return '<span class="todo-due todo-due--od">' + rg + _todoDueLabel(off) + '</span>';
-    if (g === 'lat') return '<span class="todo-due">' + rg + _todoDueLabel(off) + (t.rem ? ' · ' + _todoRemLabel(t.rem) : '') + '</span>';
-    if (t.rem) return '<span class="todo-due todo-due--tdy">' + rg + _TODO_BELL + _todoRemLabel(t.rem) + '</span>';
-    if (rg) return '<span class="todo-due todo-due--rep">' + rg + _todoRepShort(t.rep) + '</span>';
-    return '';
+  function _todoSortRows(rows) {   // priority first, then open, then done (latest first)
+    const open = rows.filter(function (t) { return !t.done; }), done = rows.filter(function (t) { return !!t.done; }).sort(function (a, b) { return b.done - a.done; });
+    return open.filter(function (t) { return t.pri; }).concat(open.filter(function (t) { return !t.pri; }), done);
   }
-  function _todoRowHtml(t, g) {
-    const d = !!t.done, off = _todoDayDiff(t.due), next = Math.max(1, (off == null ? 0 : off) + 1);
-    return '<div class="todo-w' + (g === 'dn' ? ' todo-w--dn' : '') + (_todoSwiped === t.id ? ' todo-w--open' : '') + (_todoFlash === t.id ? ' todo-w--flash' : '') + '" data-todo-id="' + esc(t.id) + '">' +
+  function _todoChips(t, ctx) {
+    let h = '';
+    if (ctx === 'past') h += '<span class="todo-due todo-due--od">OVERDUE</span>';
+    if (ctx === 'nx') { const d = _todoDt(_todoDayDiff(t.due)); h += '<span class="todo-due">' + _TODO_WD[d.getDay()] + ' ' + d.getDate() + '</span>'; }
+    if (t.rem) h += '<span class="todo-due todo-due--tdy">' + _TODO_BELL + _todoRemLabel(t.rem) + '</span>';
+    return h ? '<span class="todo-chs">' + h + '</span>' : '';
+  }
+  function _todoRowHtml(t, ctx) {
+    const d = !!t.done, off = _todoDayDiff(t.due), tgt = (off == null || off < 0) ? 0 : off + 1, lbl = tgt === 0 ? 'TODAY' : _TODO_WD[_todoDt(tgt).getDay()];
+    const rp = _todoRepNorm(t.rep) ? _todoRepShort(t.rep, t.due) : '';
+    return '<div class="todo-w' + (d ? ' todo-w--dn' : '') + (_todoSwiped === t.id ? ' todo-w--open' : '') + (_todoFlash === t.id ? ' todo-w--flash' : '') + '" data-todo-id="' + esc(t.id) + '">' +
       '<div class="todo-acts">' +
-        (d ? '' : '<button type="button" class="todo-act" data-todo-act="pp" aria-label="Postpone">' + _TODO_FWD + (next === 1 ? 'TOMORROW' : '+1 DAY') + '</button>') +
+        (d ? '' : '<button type="button" class="todo-act" data-todo-act="pp" aria-label="Move to ' + lbl + '">' + _TODO_FWD + lbl + '</button>') +
         '<button type="button" class="todo-act todo-act--dl" data-todo-act="dl" aria-label="Delete">' + _TODO_TRASH + 'DELETE</button>' +
       '</div>' +
       '<div class="todo-row' + (d ? ' todo-row--done' : '') + (t.pri ? ' todo-row--pri' : '') + '">' +
-        (d ? '' : '<span class="todo-grip' + (g === 'lat' ? ' todo-grip--off' : '') + '" data-todo-grip role="button" aria-label="Drag to reorder">' + _GRIP_SVG + '</span>') +
+        '<span class="todo-grip" data-todo-grip role="button" aria-label="Drag to another day">' + _GRIP_SVG + '</span>' +
         '<span class="todo-bxw" data-todo-bx role="checkbox" aria-checked="' + (d ? 'true' : 'false') + '" aria-label="' + (d ? 'Undo ' : 'Complete ') + esc(t.t) + '"><span class="todo-bx">' + _TODO_CHECK + '</span></span>' +
         '<span class="todo-bd" data-todo-open role="button" tabindex="0" aria-label="Edit ' + esc(t.t) + '"><span class="todo-tx"><span>' + esc(t.t) + '</span></span>' +
-          (t.note ? '<span class="todo-mt">' + _TODO_NOTE + '<span>' + esc(t.note) + '</span></span>' : '') + '</span>' +
-        (d ? '' : _todoChip(t, g)) +
+          ((t.note || rp) ? '<span class="todo-mt">' + (rp ? '<span class="todo-rp">' + _TODO_REP + esc(rp) + '</span>' : '') + (t.note ? _TODO_NOTE + '<span>' + esc(t.note) + '</span>' : '') + '</span>' : '') + '</span>' +
+        (d ? '' : _todoChips(t, ctx)) +
         (d ? '' : '<span class="todo-ed" data-todo-open role="button" aria-label="Edit">' + _TODO_PEN + '</span>') +
       '</div></div>';
+  }
+  function _todoDaySec(i, all, carry) {
+    const o = _todoDayOff(0, i), d = _todoDt(o), past = o < 0, isToday = o === 0, k = 'd' + o;
+    let rows = all.filter(function (t) { return _todoDayDiff(t.due) === o; });
+    if (isToday) rows = carry.concat(rows);   // an open to-do from an earlier week rides at the top of today
+    rows = _todoSortRows(rows);
+    const dn = rows.filter(function (t) { return t.done; }).length, left = rows.length - dn;
+    const fold = (k in _todoFolds) ? _todoFolds[k] : !isToday;
+    const ct = !rows.length ? '· FREE' : (past && left) ? '· ' + left + ' LEFT' : dn ? '· ' + dn + ' OF ' + rows.length : '· ' + rows.length;
+    const inner = rows.length ? rows.map(function (t) { const to = _todoDayDiff(t.due); return _todoRowHtml(t, (!t.done && to != null && to < 0) ? 'past' : 'day'); }).join('')
+                              : (isToday ? '<div class="todo-empty">Nothing waiting.<small>NEW TO-DOS LAND HERE</small></div>' : '');
+    return '<section class="todo-day' + (past ? ' todo-day--past' : ' todo-dsec') + (isToday ? ' todo-day--lit' : '') + (fold ? ' todo-day--fold' : '') + '" data-todo-k="' + k + '" data-todo-o="' + o + '">' +
+      '<div class="todo-dsh" data-todo-fold role="button" tabindex="0" aria-expanded="' + (fold ? 'false' : 'true') + '">' +
+        '<span class="todo-dnum">' + d.getDate() + '</span>' +
+        '<span class="todo-dtt">' + _TODO_WDF[i] + (isToday ? '<small>TODAY</small>' : '') + '</span>' +
+        '<span class="todo-dct' + (past && left ? ' todo-dct--od' : '') + '">' + ct + '</span>' +
+        '<span class="todo-ch">' + _TOD_CHEV + '</span>' +
+      '</div>' +
+      '<div class="todo-dhair"><i style="width:' + (rows.length ? Math.round(dn / rows.length * 100) : 0) + '%"></i></div>' +
+      '<div class="todo-dlist"><div class="todo-tl">' + inner + '</div></div></section>';
+  }
+  function _todoNextSec(all) {
+    const sat = _todoDayOff(0, 6);
+    const rows = _todoSortRows(all.filter(function (t) { const o = _todoDayDiff(t.due); return o != null && o > sat; }));
+    if (!rows.length) return '';
+    const fold = ('nx' in _todoFolds) ? _todoFolds.nx : true, left = rows.filter(function (t) { return !t.done; }).length;
+    const lbl = rows.every(function (t) { return _todoDayDiff(t.due) <= sat + 7; }) ? 'NEXT WEEK' : 'LATER';
+    return '<section class="todo-day todo-nx' + (fold ? ' todo-day--fold' : '') + '" data-todo-k="nx">' +
+      '<div class="todo-dsh" data-todo-fold role="button" tabindex="0" aria-expanded="' + (fold ? 'false' : 'true') + '">' +
+        '<span class="todo-dnum">' + _TODO_CHEV_R + '</span><span class="todo-dtt">' + lbl + '</span><span class="todo-dct">· ' + left + '</span><span class="todo-ch">' + _TOD_CHEV + '</span>' +
+      '</div><div class="todo-dhair"><i style="width:0%"></i></div>' +
+      '<div class="todo-dlist"><div class="todo-tl">' + rows.map(function (t) { return _todoRowHtml(t, 'nx'); }).join('') + '</div></div></section>';
+  }
+  function _todoUnSec(all) {
+    const rows = _todoSortRows(all.filter(function (t) { return _todoDayDiff(t.due) == null; }));
+    if (!rows.length) return '';
+    return '<section class="todo-grp todo-un todo-dsec" data-todo-k="un" data-todo-o="">' +
+      '<div class="todo-gh">UNSCHEDULED<span class="todo-gn">' + rows.filter(function (t) { return !t.done; }).length + '</span><span class="todo-gl"></span></div>' +
+      '<div class="todo-tl">' + rows.map(function (t) { return _todoRowHtml(t, 'un'); }).join('') + '</div></section>';
   }
   function _todoRender() {
     const host = document.getElementById('todo-view'); if (!host) return;
     const list = host.querySelector('[data-todo-list]'); if (!list) return;
-    const all = _todoLoad();
-    const open = all.filter(function (t) { return !t.done; });
-    const done = all.filter(function (t) { return !!t.done; }).sort(function (a, b) { return b.done - a.done; });
+    const all = _todoLoad(), sun = _todoDayOff(0, 0);
+    const carry = all.filter(function (t) { const o = _todoDayDiff(t.due); return !t.done && o != null && o < sun; });
     let h = '';
-    TODO_GROUPS.forEach(function (g) {
-      let rows = open.filter(function (t) { return g.f(_todoDayDiff(t.due)); });
-      if (!rows.length) return;
-      if (g.k === 'lat') rows = rows.slice().sort(function (a, b) { return _todoDayDiff(a.due) - _todoDayDiff(b.due); });
-      rows = rows.filter(function (t) { return t.pri; }).concat(rows.filter(function (t) { return !t.pri; }));   // a priority sits first in its day
-      h += '<section class="todo-grp todo-grp--' + g.k + '" data-todo-grp="' + g.k + '"><div class="todo-gh">' + g.l + '<span class="todo-gn">' + rows.length + '</span><span class="todo-gl"></span></div>' +
-           '<div class="todo-tl">' + rows.map(function (t) { return _todoRowHtml(t, g.k); }).join('') + '</div></section>';
-    });
-    if (!open.length) h += '<div class="todo-empty">Nothing waiting.<small>NEW TO-DOS LAND UNDER TODAY</small></div>';
-    if (done.length) {
-      h += '<div class="todo-dg' + (_todoDgOpen ? ' todo-dg--open' : '') + '"><div class="todo-dgh" data-todo-dg role="button" tabindex="0" aria-expanded="' + (_todoDgOpen ? 'true' : 'false') + '"><span class="todo-bx">' + _TODO_CHECK + '</span>DONE · ' + done.length +
-           '<span class="todo-clr" data-todo-clr role="button">CLEAR</span><span class="todo-ch">' + _TOD_CHEV + '</span></div>' +
-           '<div class="todo-dgl"><div><div class="todo-tl">' + done.map(function (t) { return _todoRowHtml(t, 'dn'); }).join('') + '</div><div class="todo-dgn">CLEARS AFTER 7 DAYS · TAP THE BOX TO UNDO</div></div></div></div>';
-    }
+    for (let i = 0; i < 7; i++) h += _todoDaySec(i, all, carry);
+    h += _todoNextSec(all) + _todoUnSec(all);
     list.innerHTML = h;
     _todoFlash = null;
     _todoRenderComp(host);
     _todoPaintBadge();
+    _todoPaintHead();
+  }
+  // re-render with rows gliding to their new places (keyed by id: the elements are new)
+  function _todoFlipRender() {
+    const list = document.querySelector('#todo-view [data-todo-list]'); if (!list) { _todoRender(); return; }
+    const before = {};
+    list.querySelectorAll('.todo-w').forEach(function (el) { before[el.dataset.todoId] = el.getBoundingClientRect().top; });
+    _todoRender();
+    if (_todReduced()) return;
+    list.querySelectorAll('.todo-w').forEach(function (el) {
+      const b = before[el.dataset.todoId]; if (b == null) return;
+      const dy = b - el.getBoundingClientRect().top; if (Math.abs(dy) < 1) return;
+      el.style.transition = 'none'; el.style.transform = 'translateY(' + dy + 'px)';
+      requestAnimationFrame(function () { el.style.transition = 'transform .2s ease'; el.style.transform = ''; setTimeout(function () { el.style.transition = ''; }, 230); });
+    });
   }
   function _todoPaintBadge() {
     const n = _todoOpenCount(), od = n > 0 && _todoHasOverdue();
     document.querySelectorAll('[data-todo-n]').forEach(function (b) { b.textContent = String(n); b.classList.toggle('hidden', !n); b.classList.toggle('vows-sg-n--od', od); });
   }
+  function _todoHeadKicker() { return 'WEEK ' + _todoWeekNum(0) + ' · ' + _todoWeekLabel(0); }
+  function _todoPaintHead() {
+    const hdr = document.getElementById('vows-header'); if (!hdr || !hdr.classList.contains('vows-header--todo')) return;
+    const k = hdr.querySelector('[data-vows-kicker]'); if (k) k.textContent = _todoHeadKicker();
+  }
+  function _todoUnfoldFor(o) { const k = o == null ? null : o > _todoDayOff(0, 6) ? 'nx' : 'd' + o; if (k) _todoFolds[k] = false; }
   // ── toast with UNDO ──
   function _todoToast(msg, undo) {
     const el = document.getElementById('todo-toast'); if (!el) return;
@@ -40101,11 +40178,14 @@
   function _todoAdd() {
     const text = (_todoComp.text || '').trim(); if (!text) return;
     const c = _todoComp;
-    const it = { id: uid(), t: text.slice(0, 80), due: c.due != null ? _todoDateAt(c.due) : null, rem: c.due == null ? null : (c.rem ? _todoRemKey(c.rem) : null), pri: !!c.pri, note: '', rep: _todoRepNorm(c.rep), at: Date.now(), done: null, dd: null, xp: false };   // W1004 rep
+    const it = { id: uid(), t: text.slice(0, 80), due: c.due != null ? _todoDateAt(c.due) : null, rem: c.due == null ? null : (c.rem ? _todoRemKey(c.rem) : null), pri: !!c.pri, note: '', rep: c.due == null ? null : _todoRepNorm(c.rep), at: Date.now(), done: null, dd: null, xp: false };
     _todoLoad().unshift(it); _todoSave();
     _todoFlash = it.id;
-    _todoComp = { text: '', due: 0, rem: null, pri: false, rep: null, od: false, or: false, orp: false };
+    _todoUnfoldFor(c.due);
+    const planned = c.due != null && _todoWkOf(c.due) > 0 ? c.due : null;
+    _todoComp = _todoFreshComp();
     _todoRender();
+    if (planned != null) _todoToast('Planned for ' + _todoFmtDay(planned));
     try { _todoArmReminder(it); } catch (_) {}
     try { _hapticTick('LIGHT'); } catch (_) {}
   }
@@ -40135,7 +40215,7 @@
     it.done = Date.now(); it.dd = today; it.xp = grant;
     let spawned = null; try { spawned = _todoSpawnNext(it); } catch (e) { _logSwallow('todo:repeat', e); }   // W1004
     _todoSave();
-    if (spawned) { try { _todoToast('Repeats · next ' + _todoNice(_todoDueLabel(spawned.off))); } catch (_) {} }
+    if (spawned) { try { _todoToast('Repeats · next ' + _todoFmtDay(spawned.off)); } catch (_) {} }
     try { _todoCancelReminder(it); } catch (_) {}
     if (grant) {
       _todoGrantXp(TODO_XP);
@@ -40144,8 +40224,7 @@
         row.appendChild(chip); setTimeout(function () { chip.remove(); }, 1000);
       } catch (_) {}
     }
-    const RM = _todReduced();
-    setTimeout(function () { w.classList.add('todo-w--out'); setTimeout(function () { _todoRender(); }, RM ? 120 : 190); }, 520);
+    setTimeout(function () { _todoFlipRender(); }, _todReduced() ? 150 : 520);   // it stays in its day, struck through
   }
   function _todoUndoDone(it) {
     if (!it || !it.done) return;
@@ -40156,7 +40235,7 @@
       it.nx = null;
     }
     if (it.xp) { it.xp = false; _todoGrantXp(-TODO_XP); }
-    _todoSave(); _todoRender();
+    _todoSave(); _todoFlipRender();
     try { _todoArmReminder(it); } catch (_) {}
   }
   function _todoDelete(id) {
@@ -40172,20 +40251,14 @@
     };
     if (w && !_todReduced()) { w.classList.add('todo-w--out'); setTimeout(fin, 180); } else fin();
   }
-  function _todoClearDone() {
-    const arr = _todoLoad(); const gone = arr.filter(function (t) { return t.done; }); if (!gone.length) return;
-    _todos = arr.filter(function (t) { return !t.done; }); _todoSave(); _todoRender();
+  function _todoMoveNextDay(it) {   // the swipe's move: the next day (an overdue or undated one comes to today)
+    const off = _todoDayDiff(it.due), to = (off == null || off < 0) ? 0 : off + 1;
+    it.due = _todoDateAt(to);
+    _todoSwiped = null; _todoUnfoldFor(to);
     try { _hapticTick('LIGHT'); } catch (_) {}
-    _todoToast('Cleared ' + gone.length + ' done', function () { _todos = _todoLoad().concat(gone); _todoSave(); _todoRender(); });
-  }
-  function _todoPostpone(it) {
-    const off = _todoDayDiff(it.due);
-    it.due = _todoDateAt(Math.max(1, (off == null ? 0 : off) + 1));
-    _todoSwiped = null;
-    try { _hapticTick('LIGHT'); } catch (_) {}
-    _todoSave(); _todoRender();
+    _todoSave(); _todoFlipRender();
     try { _todoCancelReminder(it); _todoArmReminder(it); } catch (_) {}
-    _todoToast('Moved to ' + _todoNice(_todoDueLabel(_todoDayDiff(it.due))));
+    _todoToast('Moved to ' + _todoFmtDay(to));
   }
   function _todoCloseSwipe() {
     document.querySelectorAll('#todo-view .todo-w--open').forEach(function (w) { w.classList.remove('todo-w--open'); });
@@ -40194,7 +40267,7 @@
   function _todoArmReminder(it) { try { if (it && it.rem && it.due && !it.done && typeof Notif !== 'undefined' && Notif.todoSchedule) Notif.todoSchedule([it], today); } catch (_) {} }
   function _todoCancelReminder(it) { try { if (it && typeof Notif !== 'undefined' && Notif.todoCancel) Notif.todoCancel(it.id); } catch (_) {} }
 
-  // ── the edit sheet (a bottom sheet over the tab) ──
+  // ── the edit sheet (a bottom sheet over the tab): any day of any week ──
   function _todoEnsureSheet() {
     if (document.getElementById('todo-esh')) return;
     const scrim = document.createElement('div'); scrim.id = 'todo-scrim'; scrim.className = 'todo-scrim'; scrim.setAttribute('data-todo-scrim', '');
@@ -40204,14 +40277,14 @@
       '<div class="todo-grab"></div>' +
       '<div class="todo-shd"><div><div class="todo-eye">TO-DO</div><h3 class="todo-h3">Edit</h3></div><button type="button" class="todo-save" data-todo-save>SAVE</button></div>' +
       '<div class="todo-fl">TASK</div><input class="todo-fld" type="text" data-todo-et aria-label="Task" maxlength="80" autocomplete="off">' +
-      '<div class="todo-fl">DUE</div>' + tri('data-todo-edue', [
-        '<span data-v="0">TODAY</span>', '<span data-v="1">TOMORROW</span>',
-        '<span data-v="date" class="todo-pill--host"><span data-todo-edatev>DATE</span><input type="date" class="todo-ghost" data-todo-edate aria-label="Pick a date" tabindex="-1"></span>',
-        '<span data-v="none">NONE</span>']) +
+      '<div class="todo-fl">DAY</div>' +
+      '<div class="todo-enav"><span class="todo-arr" data-todo-ewk="-1" role="button" aria-label="Previous week">' + _TODO_CHEV_L + '</span><span class="todo-wkl" data-todo-ewkl></span><span class="todo-arr" data-todo-ewk="1" role="button" aria-label="Next week">' + _TODO_CHEV_R + '</span></div>' +
+      '<div class="todo-tri todo-tri--days" data-todo-eday></div>' +
+      '<button type="button" class="todo-pill todo-nod" data-todo-enone>NO DAY YET</button>' +
       '<div class="todo-fl">REMIND</div>' + tri('data-todo-erem', TODO_REM_PRESETS.map(function (r) { return '<span data-v="' + r + '">' + r + '</span>'; }).concat([
         '<span data-v="other" class="todo-pill--host"><span data-todo-eotherv>…</span><input type="time" class="todo-ghost" data-todo-etime aria-label="Pick a time" tabindex="-1"></span>',
         '<span data-v="off">OFF</span>'])) +
-      '<div class="todo-fl">REPEAT</div>' + tri('data-todo-erep', ['<span data-v="off">OFF</span>', '<span data-v="week">WEEKLY</span>', '<span data-v="month">MONTHLY</span>', '<span data-v="after">AFTER DONE</span>']) +   // W1004
+      '<div class="todo-fl">REPEAT</div>' + tri('data-todo-erep', ['<span data-v="off">OFF</span>', '<span data-v="week" data-todo-erepwk>WEEKLY</span>', '<span data-v="month">MONTHLY</span>', '<span data-v="after">AFTER DONE</span>']) +
       '<div class="todo-estep hidden" data-todo-estep><button type="button" class="todo-pill todo-pill--step" data-todo-erepn="-1" aria-label="Fewer days">−</button><span class="todo-stepv" data-todo-erepnv>3 DAYS AFTER DONE</span><button type="button" class="todo-pill todo-pill--step" data-todo-erepn="1" aria-label="More days">+</button></div>' +
       '<div class="todo-swrow" data-todo-epri role="switch" aria-checked="false"><span><b>Priority</b><small>GOLD RING · SITS FIRST IN ITS DAY</small></span><span class="todo-swt"></span></div>' +
       '<div class="todo-fl">NOTES</div><textarea class="todo-fld" rows="2" data-todo-en placeholder="Anything to remember?" aria-label="Notes" maxlength="200"></textarea>' +
@@ -40228,35 +40301,39 @@
       if (t.closest('[data-todo-save]')) { _todoSaveSheet(); return; }
       if (t.closest('[data-todo-del]')) { const id = _todoEdit && _todoEdit.id; _todoCloseSheet(); if (id != null) _todoDelete(id); return; }
       if (t.closest('[data-todo-conv]')) { _todoMakeVow(); return; }
-      const ed = t.closest('[data-todo-edue] [data-v]');
-      if (ed && _todoEdit) { const v = ed.dataset.v; if (v === 'date') return; _todoEdit.due = v === 'none' ? null : +v; if (_todoEdit.due == null) _todoEdit.rem = null; _todoRenderSheet(); return; }
+      if (!_todoEdit) return;
+      const ed = t.closest('[data-todo-eday] [data-v]');
+      if (ed) { _todoEdit.due = +ed.dataset.v; _todoEdit.due = _todoFirstDueOff(_todoEdit.rep, _todoEdit.due); _todoRenderSheet(); return; }
+      if (t.closest('[data-todo-enone]')) { _todoEdit.due = null; _todoEdit.rem = null; _todoEdit.rep = null; _todoRenderSheet(); return; }
+      const ew = t.closest('[data-todo-ewk]');
+      if (ew) { _todoEwk += +ew.dataset.todoEwk; _todoRenderSheet(); return; }
       const er = t.closest('[data-todo-erem] [data-v]');
-      if (er && _todoEdit) { const v = er.dataset.v; if (v === 'other') return; _todoEdit.rem = v === 'off' ? null : v; _todoRenderSheet(); return; }
-      const ern = t.closest('[data-todo-erepn]');   // W1004
-      if (ern && _todoEdit) { const r = _todoRepNorm(_todoEdit.rep); if (r && r.k === 'after') { r.n = Math.max(1, Math.min(60, r.n + (+ern.dataset.todoErepn))); _todoEdit.rep = r; _todoRenderSheet(); } return; }
+      if (er) { const v = er.dataset.v; if (v === 'other') return; _todoEdit.rem = v === 'off' ? null : v; _todoRenderSheet(); return; }
+      const ern = t.closest('[data-todo-erepn]');
+      if (ern) { const r = _todoRepNorm(_todoEdit.rep); if (r && r.k === 'after') { r.n = Math.max(1, Math.min(60, r.n + (+ern.dataset.todoErepn))); _todoEdit.rep = r; _todoRenderSheet(); } return; }
       const erp = t.closest('[data-todo-erep] [data-v]');
-      if (erp && _todoEdit) {
+      if (erp) {
         const v = erp.dataset.v, prev = _todoRepNorm(_todoEdit.rep);
         _todoEdit.rep = v === 'off' ? null : v === 'after' ? { k: 'after', n: (prev && prev.k === 'after') ? prev.n : 3 } : { k: v };
         _todoEdit.due = _todoFirstDueOff(_todoEdit.rep, _todoEdit.due);
         _todoRenderSheet(); return;
       }
-      if (t.closest('[data-todo-epri]') && _todoEdit) { _todoEdit.pri = !_todoEdit.pri; _todoRenderSheet(); try { _hapticTick('LIGHT'); } catch (_) {} return; }
+      if (t.closest('[data-todo-epri]')) { _todoEdit.pri = !_todoEdit.pri; _todoRenderSheet(); try { _hapticTick('LIGHT'); } catch (_) {} return; }
     });
     const et = sh.querySelector('[data-todo-et]'), en = sh.querySelector('[data-todo-en]');
     et.addEventListener('input', function () { if (_todoEdit) _todoEdit.t = et.value; });
     et.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); _todoSaveSheet(); } });
     en.addEventListener('input', function () { if (_todoEdit) _todoEdit.note = en.value; });
-    const di = sh.querySelector('[data-todo-edate]'), ti = sh.querySelector('[data-todo-etime]');
-    di.addEventListener('click', function () { try { di.showPicker(); } catch (_) {} });
-    di.addEventListener('change', function () { if (!di.value || !_todoEdit) return; const off = _todoDayDiff(di.value); if (off == null) return; _todoEdit.due = off; _todoRenderSheet(); });
+    const ti = sh.querySelector('[data-todo-etime]');
     ti.addEventListener('click', function () { try { ti.showPicker(); } catch (_) {} });
     ti.addEventListener('change', function () { if (!ti.value || !_todoEdit) return; const p = ti.value.split(':'); _todoEdit.rem = (+p[0]) + ':' + p[1]; _todoRenderSheet(); });
   }
   function _todoOpenSheet(id) {
     const it = _todoById(id); if (!it) return;
     _todoEnsureSheet(); _todoCloseSwipe();
-    _todoEdit = { id: it.id, t: it.t, note: it.note || '', due: _todoDayDiff(it.due), rem: it.rem ? _todoRemLabel(it.rem) : null, pri: !!it.pri, rep: _todoRepNorm(it.rep) };   // W1004 rep
+    const off = _todoDayDiff(it.due);
+    _todoEdit = { id: it.id, t: it.t, note: it.note || '', due: off, rem: it.rem ? _todoRemLabel(it.rem) : null, pri: !!it.pri, rep: _todoRepNorm(it.rep) };
+    _todoEwk = off == null ? 0 : _todoWkOf(off);
     const sh = document.getElementById('todo-esh');
     sh.querySelector('[data-todo-et]').value = _todoEdit.t; sh.querySelector('[data-todo-en]').value = _todoEdit.note;
     _todoRenderSheet();
@@ -40269,15 +40346,23 @@
   }
   function _todoRenderSheet() {
     const e = _todoEdit, sh = document.getElementById('todo-esh'); if (!e || !sh) return;
-    const dated = e.due != null && (e.due < 0 || e.due > 1);
-    sh.querySelectorAll('[data-todo-edue] [data-v]').forEach(function (p) { const v = p.dataset.v; p.classList.toggle('todo-tri--on', v === 'none' ? e.due == null : v === 'date' ? dated : e.due === +v); });
-    sh.querySelector('[data-todo-edatev]').textContent = dated ? _todoDueLabel(e.due) : 'DATE';
+    const w = _todoEwk;
+    sh.querySelector('[data-todo-ewkl]').innerHTML = '<b>WK ' + _todoWeekNum(w) + '</b>' + _todoWeekLabel(w);
+    let days = '';
+    for (let i = 0; i < 7; i++) {
+      const o = _todoDayOff(w, i), d = _todoDt(o);
+      days += '<span data-v="' + o + '" class="' + (e.due === o ? 'todo-tri--on' : '') + (o < 0 ? ' todo-day-past' : '') + (o === 0 ? ' todo-day-tdy' : '') + '" role="button" aria-label="' + _todoNice(_TODO_WDF[i]) + ' ' + d.getDate() + '"><i>' + _TODO_WD[i].charAt(0) + '</i><b>' + d.getDate() + '</b></span>';
+    }
+    sh.querySelector('[data-todo-eday]').innerHTML = days;
+    sh.querySelector('[data-todo-enone]').classList.toggle('todo-pill--on', e.due == null);
     const er = sh.querySelector('[data-todo-erem]'); er.classList.toggle('todo-tri--dis', e.due == null);
     const custom = !!e.rem && TODO_REM_PRESETS.indexOf(e.rem) < 0;
     er.querySelectorAll('[data-v]').forEach(function (p) { const v = p.dataset.v; p.classList.toggle('todo-tri--on', v === 'off' ? !e.rem : v === 'other' ? custom : e.rem === v); });
     sh.querySelector('[data-todo-eotherv]').textContent = custom ? e.rem : '…';
-    const erep = _todoRepNorm(e.rep);   // W1004
-    sh.querySelectorAll('[data-todo-erep] [data-v]').forEach(function (p) { const v = p.dataset.v; p.classList.toggle('todo-tri--on', v === 'off' ? !erep : !!erep && erep.k === v); });
+    const erep = _todoRepNorm(e.rep), rt = sh.querySelector('[data-todo-erep]');
+    rt.classList.toggle('todo-tri--dis', e.due == null);
+    rt.querySelectorAll('[data-v]').forEach(function (p) { const v = p.dataset.v; p.classList.toggle('todo-tri--on', v === 'off' ? !erep : !!erep && erep.k === v); });
+    sh.querySelector('[data-todo-erepwk]').textContent = e.due != null ? 'EVERY ' + _TODO_WD[_todoDt(e.due).getDay()] : 'WEEKLY';
     const est = sh.querySelector('[data-todo-estep]'); est.classList.toggle('hidden', !(erep && erep.k === 'after'));
     if (erep && erep.k === 'after') sh.querySelector('[data-todo-erepnv]').textContent = erep.n + (erep.n === 1 ? ' DAY AFTER DONE' : ' DAYS AFTER DONE');
     const pri = sh.querySelector('[data-todo-epri]'); pri.querySelector('.todo-swt').classList.toggle('todo-swt--on', !!e.pri); pri.setAttribute('aria-checked', e.pri ? 'true' : 'false');
@@ -40285,20 +40370,24 @@
   function _todoSaveSheet() {
     const e = _todoEdit; if (!e) return;
     const it = _todoById(e.id);
+    let moved = null;
     if (it) {
       const sh = document.getElementById('todo-esh');
+      if (_todoDayDiff(it.due) !== e.due) moved = e.due;
       it.t = ((sh.querySelector('[data-todo-et]').value || '').trim() || it.t).slice(0, 80);
       it.note = (sh.querySelector('[data-todo-en]').value || '').trim().slice(0, 200);
       it.due = e.due == null ? null : _todoDateAt(e.due);
       it.rem = e.due == null ? null : (e.rem ? _todoRemKey(e.rem) : null);
       it.pri = !!e.pri;
-      it.rep = _todoRepNorm(e.rep);   // W1004
+      it.rep = e.due == null ? null : _todoRepNorm(e.rep);
       _todoSave();
       try { _todoCancelReminder(it); _todoArmReminder(it); } catch (_) {}
+      if (moved != null) _todoUnfoldFor(moved);
     }
     _todoCloseSheet();
     try { _hapticTick('LIGHT'); } catch (_) {}
     _todoRender();
+    if (moved != null && _todoWkOf(moved) > 0) _todoToast('Moved to ' + _todoFmtDay(moved));
   }
   // "Make it a vow": the custom-vow sheet opens with the task as the name. The to-do stays.
   function _todoMakeVow() {
@@ -40312,8 +40401,8 @@
     } catch (err) { _logSwallow('todo:makeVow', err); }
   }
 
-  // ── wiring: composer, list taps, swipe, grip ──
-  let _todoSw = null, _todoSwMovedAt = 0;
+  // ── wiring: composer, list taps, folds, swipe, grip ──
+  let _todoSw = null, _todoSwMovedAt = -1e9;
   function _todoWire(host) {
     const inp = host.querySelector('[data-todo-in]'), comp = host.querySelector('[data-todo-comp]');
     inp.addEventListener('input', function () { _todoComp.text = inp.value; const add = host.querySelector('[data-todo-add]'); if (add) add.classList.toggle('todo-add--ok', !!inp.value.trim()); });
@@ -40322,32 +40411,42 @@
     inp.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { inp.value = ''; _todoComp.text = ''; _todoRenderComp(host); return; }
       if (e.key !== 'Enter') return;
-      e.preventDefault(); _todoAdd(); try { inp.focus(); } catch (_) {}
+      e.preventDefault(); _todoAdd(); try { inp.focus({ preventScroll: true }); } catch (_) {}
     });
-    const di = host.querySelector('[data-todo-date]');
-    di.addEventListener('click', function () { try { di.showPicker(); } catch (_) {} });
-    di.addEventListener('change', function () { if (!di.value) return; const off = _todoDayDiff(di.value); if (off == null) return; _todoComp.due = off; _todoRenderComp(host); });
     const ti = host.querySelector('[data-todo-time]');
     ti.addEventListener('click', function () { try { ti.showPicker(); } catch (_) {} });
-    ti.addEventListener('change', function () { if (!ti.value) return; const p = ti.value.split(':'); _todoComp.rem = (+p[0]) + ':' + p[1]; _todoRenderComp(host); });
+    ti.addEventListener('change', function () { if (!ti.value) return; const p = ti.value.split(':'); _todoComp.rem = (+p[0]) + ':' + p[1]; _todoComp.or = false; _todoRenderComp(host); });
     host.addEventListener('click', function (e) {
       const t = e.target; if (!t || !t.closest) return;
       if (t.closest('.todo-ghost') || t.closest('[data-todo-grip]')) return;
-      if (Date.now() - _todoSwMovedAt < 120) return;                      // the click a mouse fires at the end of a swipe is not a tap
+      if (performance.now() - _todoSwMovedAt < 120) return;                      // the click a mouse fires at the end of a swipe is not a tap
       if (_todoSwiped != null && !t.closest('.todo-w--open')) _todoCloseSwipe();
       if (t.closest('[data-todo-add]')) { _todoAdd(); return; }
+      const fold = t.closest('[data-todo-fold]');
+      if (fold) {
+        const sec = fold.closest('.todo-day'); if (!sec) return;
+        const now = !sec.classList.contains('todo-day--fold');
+        _todoFolds[sec.dataset.todoK] = now;
+        sec.classList.add('todo-day--anim'); setTimeout(function () { sec.classList.remove('todo-day--anim'); }, 260);
+        sec.classList.toggle('todo-day--fold', now); fold.setAttribute('aria-expanded', now ? 'false' : 'true');
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        return;
+      }
       const pk = t.closest('[data-todo-pick]');
-      if (pk) {   // one picker open at a time: DUE · REMIND · REPEAT (W1004)
+      if (pk) {   // one picker open at a time: DAY · REMIND · REPEAT
         if (pk.disabled) return;
         const k = pk.dataset.todoPick, key = k === 'due' ? 'od' : k === 'rem' ? 'or' : 'orp', was = !!_todoComp[key];
         _todoComp.od = false; _todoComp.or = false; _todoComp.orp = false; _todoComp[key] = !was;
+        if (key === 'od' && !was) _todoComp.cw = (_todoComp.due != null && _todoWkOf(_todoComp.due) > 0) ? 1 : 0;
         _todoRenderComp(host); return;
       }
-      const pd = t.closest('[data-todo-due]');
-      if (pd) { const v = pd.dataset.todoDue; if (v === 'date') return; _todoComp.due = v === 'none' ? null : +v; _todoRenderComp(host); return; }
+      const pd = t.closest('[data-todo-day]');
+      if (pd) { const v = pd.dataset.todoDay; _todoComp.due = v === 'none' ? null : +v; _todoComp.due = _todoFirstDueOff(_todoComp.rep, _todoComp.due); _todoComp.od = false; _todoRenderComp(host); return; }
+      const cw = t.closest('[data-todo-cw]');
+      if (cw) { _todoComp.cw = +cw.dataset.todoCw; _todoRenderComp(host); return; }
       const pr = t.closest('[data-todo-rem]');
-      if (pr) { const v = pr.dataset.todoRem; if (v === 'other') return; _todoComp.rem = v === 'off' ? null : v; _todoRenderComp(host); return; }
-      const rn = t.closest('[data-todo-repn]');   // W1004 — the AFTER DONE stepper
+      if (pr) { const v = pr.dataset.todoRem; if (v === 'other') return; _todoComp.rem = v === 'off' ? null : v; _todoComp.or = false; _todoRenderComp(host); return; }
+      const rn = t.closest('[data-todo-repn]');   // the AFTER DONE stepper
       if (rn) { const r = _todoRepNorm(_todoComp.rep); if (r && r.k === 'after') { r.n = Math.max(1, Math.min(60, r.n + (+rn.dataset.todoRepn))); _todoComp.rep = r; _todoRenderComp(host); } return; }
       const rp = t.closest('[data-todo-rep]');
       if (rp) {
@@ -40357,11 +40456,8 @@
         _todoRenderComp(host); return;
       }
       if (t.closest('[data-todo-pri]')) { _todoComp.pri = !_todoComp.pri; _todoRenderComp(host); try { _hapticTick('LIGHT'); } catch (_) {} return; }
-      if (t.closest('[data-todo-clr]')) { _todoClearDone(); return; }
-      const dg = t.closest('[data-todo-dg]');
-      if (dg) { _todoDgOpen = !_todoDgOpen; const g = dg.closest('.todo-dg'); if (g) g.classList.toggle('todo-dg--open', _todoDgOpen); dg.setAttribute('aria-expanded', _todoDgOpen ? 'true' : 'false'); return; }
       const act = t.closest('[data-todo-act]');
-      if (act) { const w = act.closest('.todo-w'); const it = w && _todoById(w.dataset.todoId); if (!it) return; if (act.dataset.todoAct === 'dl') _todoDelete(it.id); else _todoPostpone(it); return; }
+      if (act) { const w = act.closest('.todo-w'); const it = w && _todoById(w.dataset.todoId); if (!it) return; if (act.dataset.todoAct === 'dl') _todoDelete(it.id); else _todoMoveNextDay(it); return; }
       const bx = t.closest('[data-todo-bx]');
       if (bx) { _todoToggleBox(bx); return; }
       const op = t.closest('[data-todo-open]');
@@ -40370,9 +40466,9 @@
     host.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       const t = e.target; if (!t || !t.closest || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
-      if (t.closest('[data-todo-open]') || t.closest('[data-todo-dg]') || t.closest('[data-todo-bx]')) { e.preventDefault(); t.click(); }
+      if (t.closest('[data-todo-open]') || t.closest('[data-todo-fold]') || t.closest('[data-todo-bx]')) { e.preventDefault(); t.click(); }
     });
-    // swipe left on a row: POSTPONE + DELETE slide in from the right
+    // swipe left on a row: MOVE (to the next day) + DELETE slide in from the right
     host.addEventListener('pointerdown', function (e) {
       if (_todoDrag || (typeof _todDrag !== 'undefined' && _todDrag)) return;
       const row = e.target.closest && e.target.closest('.todo-row'); if (!row || e.target.closest('[data-todo-grip]')) return;
@@ -40399,27 +40495,30 @@
       const open = s.x < -s.W / 2; s.w.classList.toggle('todo-w--open', open);
       _todoSwiped = open ? s.w.dataset.todoId : null;
       if (open) { try { _hapticTick('LIGHT'); } catch (_) {} }
-      if (s.moved) _todoSwMovedAt = Date.now();
+      if (s.moved) _todoSwMovedAt = performance.now();
     };
     document.addEventListener('pointerup', swEnd); document.addEventListener('pointercancel', swEnd);
   }
-  // the grip: reorder within the day (never across days — the day is the date). Same
-  // slot discipline as the vows (W997): the touched row never leaves the document mid-drag.
+  // the grip carries an open to-do to another day (any day from today on, or UNSCHEDULED;
+  // never a past day). Same slot discipline as the vows (W997): the touched row never
+  // leaves the document mid-drag. Only the dragged to-do's day changes.
   let _todoDrag = null;
   document.addEventListener('pointerdown', function (e) {
     const t = e.target; if (!t || !t.closest || _todoDrag) return;
-    const g = t.closest('[data-todo-grip]'); if (!g || g.classList.contains('todo-grip--off')) return;
+    const g = t.closest('[data-todo-grip]'); if (!g) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const w = g.closest('.todo-w'), tl = g.closest('.todo-tl'); if (!w || !tl) return;
+    const w = g.closest('.todo-w'), tl = g.closest('.todo-tl'); if (!w || !tl || w.classList.contains('todo-w--dn')) return;
     e.preventDefault(); _todoCloseSwipe();
     const r = w.getBoundingClientRect();
     const host = document.createElement('div'); host.className = 'todo-ghost-host';
-    const ghost = w.cloneNode(true); ghost.classList.add('todo-ghost'); ghost.classList.remove('todo-w--flash', 'todo-w--open');
+    const ghost = w.cloneNode(true); ghost.classList.add('todo-dghost'); ghost.classList.remove('todo-w--flash', 'todo-w--open');
     host.appendChild(ghost); host.style.width = r.width + 'px'; host.style.left = r.left + 'px'; host.style.top = r.top + 'px';
     document.body.appendChild(host);
     const slot = document.createElement('div'); slot.className = 'todo-slot'; slot.style.height = r.height + 'px';
     w.parentNode.insertBefore(slot, w); w.classList.add('todo-w--lift');
-    _todoDrag = { w: w, slot: slot, host: host, tl: tl, dy: e.clientY - r.top, pid: e.pointerId, y: e.clientY, key: null, scroller: _todDragScroller(tl), raf: 0 };
+    const list = document.querySelector('#todo-view [data-todo-list]');
+    if (list) list.classList.add('todo-list--dragging');
+    _todoDrag = { w: w, slot: slot, host: host, dy: e.clientY - r.top, pid: e.pointerId, y: e.clientY, key: null, scroller: _todDragScroller(tl), raf: 0 };
     try { g.setPointerCapture(e.pointerId); } catch (_) {}
     try { _hapticTick('LIGHT'); } catch (_) {}
     _todoDrag.raf = requestAnimationFrame(_todoDragLoop);
@@ -40441,29 +40540,55 @@
   }
   function _todoDragPlace() {
     const d = _todoDrag; if (!d) return; const y = d.y;
-    const rows = Array.prototype.slice.call(d.tl.querySelectorAll('.todo-w')).filter(function (x) { return x !== d.w; });
+    let target = null;
+    document.querySelectorAll('#todo-view .todo-dsec').forEach(function (sec) { const r = sec.getBoundingClientRect(); if (y >= r.top && y <= r.bottom) target = sec; });
+    if (!target) return;
+    if (target.classList.contains('todo-day--fold')) {
+      const dl = target.querySelector('.todo-dlist'); if (dl) dl.style.transition = 'none';   // opens at once: rows must not slide under the finger
+      target.classList.remove('todo-day--fold'); _todoFolds[target.dataset.todoK] = false;
+      const sh = target.querySelector('[data-todo-fold]'); if (sh) sh.setAttribute('aria-expanded', 'true');
+    }
+    const tl = target.querySelector('.todo-tl'); if (!tl) return;
+    const empty = tl.querySelector('.todo-empty'); if (empty) empty.remove();
+    const rows = Array.prototype.slice.call(tl.querySelectorAll('.todo-w')).filter(function (x) { return x !== d.w; });
     let idx = rows.length;
     for (let i = 0; i < rows.length; i++) { const rr = rows[i].getBoundingClientRect(); if (y < rr.top + rr.height / 2) { idx = i; break; } }
-    const key = 'i:' + idx; if (key === d.key) return; d.key = key;
-    _todFlipEls(d.tl, '.todo-w', function () { if (idx >= rows.length) d.tl.appendChild(d.slot); else d.tl.insertBefore(d.slot, rows[idx]); });
+    const key = target.dataset.todoK + ':' + idx; if (key === d.key) return; d.key = key;
+    const list = document.querySelector('#todo-view [data-todo-list]');
+    _todFlipEls(list || tl, '.todo-w', function () { if (idx >= rows.length) tl.appendChild(d.slot); else tl.insertBefore(d.slot, rows[idx]); });
   }
   function _todoDrop(e) {
     const d = _todoDrag; if (!d || (e && e.pointerId != null && e.pointerId !== d.pid)) return;
     if (e && e.clientY != null) { d.y = e.clientY; try { _todoDragPlace(); } catch (_) {} }
     _todoDrag = null; cancelAnimationFrame(d.raf);
+    const list = document.querySelector('#todo-view [data-todo-list]'); if (list) list.classList.remove('todo-list--dragging');
     const RM = _todReduced(); const r = d.slot.getBoundingClientRect();
+    const sec = d.slot.closest('[data-todo-o]');
     try { if (d.slot.parentNode) d.slot.parentNode.insertBefore(d.w, d.slot); } catch (_) {}
     try { d.slot.remove(); } catch (_) {}
     d.w.classList.remove('todo-w--lift');
     d.host.style.transition = RM ? 'none' : 'top .18s ease, left .18s ease'; d.host.style.top = r.top + 'px'; d.host.style.left = r.left + 'px';
     setTimeout(function () { d.host.remove(); }, RM ? 0 : 180);
-    _todoSwMovedAt = Date.now();   // the click that trails a drop is not a tap
+    _todoSwMovedAt = performance.now();   // the click that trails a drop is not a tap
     try {
-      const ids = Array.prototype.slice.call(document.querySelectorAll('#todo-view .todo-grp .todo-w')).map(function (x) { return x.dataset.todoId; });
-      const arr = _todoLoad(); const byId = {}; arr.forEach(function (x) { byId[x.id] = x; });
-      const open = ids.map(function (id) { return byId[id]; }).filter(Boolean), rest = arr.filter(function (x) { return ids.indexOf(x.id) < 0; });
-      const next = open.concat(rest);
-      if (next.some(function (x, i) { return x !== arr[i]; })) { _todos = next; _todoSave(); try { _hapticTick('LIGHT'); } catch (_) {} }
+      const arr = _todoLoad(); const it = _todoById(d.w.dataset.todoId);
+      let changed = false;
+      if (it && sec && sec.classList.contains('todo-dsec')) {   // the dragged to-do takes the day it landed in
+        const o = sec.dataset.todoO === '' ? null : +sec.dataset.todoO;
+        if (_todoDayDiff(it.due) !== o) {
+          it.due = o == null ? null : _todoDateAt(o);
+          if (o == null) { it.rem = null; it.rep = null; }
+          changed = true;
+          try { _todoCancelReminder(it); _todoArmReminder(it); } catch (_) {}
+        }
+      }
+      // DOM order → storage order (the rows in the droppable days, as they now stand)
+      const ids = Array.prototype.slice.call(document.querySelectorAll('#todo-view .todo-dsec .todo-w')).map(function (x) { return x.dataset.todoId; });
+      const byId = {}; arr.forEach(function (x) { byId[x.id] = x; });
+      const inDom = ids.map(function (id) { return byId[id]; }).filter(Boolean), rest = arr.filter(function (x) { return ids.indexOf(x.id) < 0; });
+      const next = inDom.concat(rest);
+      if (next.some(function (x, i) { return x !== arr[i]; })) { _todos = next; changed = true; }
+      if (changed) { _todoSave(); try { _hapticTick('LIGHT'); } catch (_) {} }
     } catch (err) { _logSwallow('todo:drop', err); }
     setTimeout(function () { _todoRender(); }, RM ? 0 : 220);
   }
@@ -40491,7 +40616,7 @@
     if (b.due) return '<b>' + n(b.due) + '</b> due today' + (b.od ? ' · <span class="tb-od">' + b.od + ' overdue</span>' : '');
     return '<span class="tb-od"><b>' + n(b.od) + '</b> overdue</span>';
   }
-  try { window.__todo = { load: _todoLoad, render: _todoRender, add: _todoAdd, comp: function () { return _todoComp; }, folds: _todFolds, open: _todoOpenSheet, edit: function () { return _todoEdit; }, undo: _todoToastUndo }; } catch (_) {}   // QA
+  try { window.__todo = { load: _todoLoad, render: _todoRender, add: _todoAdd, comp: function () { return _todoComp; }, folds: _todoFolds, open: _todoOpenSheet, edit: function () { return _todoEdit; }, undo: _todoToastUndo }; } catch (_) {}   // QA
   function _fsSignalMet(id) {
     try {
       switch (id) {
