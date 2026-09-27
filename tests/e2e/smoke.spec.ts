@@ -6081,6 +6081,37 @@ test.describe('BO · Weekly-goal vows (W1005)', () => {
   });
 });
 
+// W791 · W1007 — the Monday update banner: shown only when the App Store's live version is
+// newer than this build; checked at launch AND on resume. The store lookup is stubbed and the
+// date pinned, so the suite runs any day. (The suite-wide CSS hides #upd-banner; it still mounts.)
+test.describe('BQ · Monday update banner (W791 · W1007)', () => {
+  const store = (page: Page, v: string) => page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resultCount: 1, results: [{ version: v }] }) }));
+  test('Monday + an older build: the strip mounts at launch, links to the store and dismisses for the day', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));   // Mon 28 Sep, 9:00 AM PST
+    await store(page, '99.0.0');
+    await freshApp(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    expect(await page.evaluate(() => localStorage.getItem('hb_update_banner_seen'))).toBe('2026-09-28');
+  });
+  test('Monday + the current build (store not newer): no strip', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));
+    await store(page, '0.0.1');
+    await freshApp(page);
+    await page.waitForTimeout(2_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+  });
+  test('W1007 — left open on Sunday, resumed on Monday: the strip mounts on resume', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-27T21:00:00-07:00'));   // Sun night
+    await store(page, '99.0.0');
+    await freshApp(page);
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);                // not a Monday
+    await page.clock.setFixedTime(new Date('2026-09-28T07:30:00-07:00'));   // Monday morning, same session
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+  });
+});
+
 // W1006 — a new week never reads as last week's fallen gate (the owner's 2:20 AM PST briefing, Sun 27 Sep).
 test.describe('BP · A new Worldgate week (W1006)', () => {
   test('last week\'s slain cache: the briefing says a new Worldgate rises and the pulse reads NEW, never DOWN', async ({ page }) => {
