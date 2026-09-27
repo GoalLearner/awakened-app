@@ -2222,8 +2222,11 @@ test.describe('Z · Worldgate placement (W933 → W934)', () => {
   test('the header pulse is the one Worldgate surface: no card on Habits or Co-op; the pulse opens the sheet', async ({ page }) => {
     await page.addInitScript(() => {
       try {
+        const t = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());   // W1006 — THIS week (PT, Sunday start)
+        const dw = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(t + 'T12:00:00Z')));
+        const wk = new Date(Date.parse(t + 'T00:00:00Z') - dw * 86400000).toISOString().slice(0, 10);
         localStorage.setItem('hb_worldgate_v1', JSON.stringify({
-          at: Date.now(), week: '2026-09-06', hp: 334875, pool: 102825, status: 'live', my: 13831, floor: 0, souls: 0,
+          at: Date.now(), week: wk, hp: 334875, pool: 102825, status: 'live', my: 13831, floor: 0, souls: 0,
           claimable: false, claimed: false, hunters: 5, guild: { steps: 0, hunters: 0 }, my_rank: 3,
           top: [{ alias: 'Grubbadub', steps: 40000 }, { alias: 'RenDIESEL', steps: 30000 }], wall: [], wall_count: 0, recent: [], rallied: false,
         }));
@@ -6075,6 +6078,27 @@ test.describe('BO · Weekly-goal vows (W1005)', () => {
     await page.click('#sched-save-btn');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((x: any) => x.id === 'w1').weekly)).toBeUndefined();
     await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveCount(0);
+  });
+});
+
+// W1006 — a new week never reads as last week's fallen gate (the owner's 2:20 AM PST briefing, Sun 27 Sep).
+test.describe('BP · A new Worldgate week (W1006)', () => {
+  test('last week\'s slain cache: the briefing says a new Worldgate rises and the pulse reads NEW, never DOWN', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => {
+      const t = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+      const dw = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' }).format(new Date(t + 'T12:00:00Z')));
+      const last = new Date(Date.parse(t + 'T00:00:00Z') - (dw + 7) * 86400000).toISOString().slice(0, 10);
+      localStorage.setItem('hb_worldgate_v1', JSON.stringify({ at: Date.now(), week: last, hp: 243293, pool: 249248, status: 'slain', my: 4000, floor: 15000, souls: 200, hunters: 13, guild: { steps: 0, hunters: 0 }, top: [], wall: [], recent: [], kill: null }));
+      const v = (id: string, name: string) => ({ id, name, emoji: '⚡', difficulty: 'easy', type: 'build', primaryStat: 'VIT', custom: true });
+      localStorage.setItem('hb_habits', JSON.stringify([v('a1', 'Read 10 pages')]));
+    });
+    await page.evaluate(() => { (window as any).__worldgate(); (window as any).__tb.show({}); });
+    await expect(page.locator('.tb-sheet')).toBeVisible();
+    await expect(page.locator('.tb-world').first()).toHaveText(/^A new Worldgate rises · The /);
+    await expect(page.locator('.tb-world').first()).not.toContainText('fallen');
+    await expect(page.locator('#wg-pulse .wg-pulse-pct')).toHaveText('NEW');
+    await expect(page.locator('#wg-pulse')).not.toHaveClass(/wg-pulse--down/);
   });
 });
 
