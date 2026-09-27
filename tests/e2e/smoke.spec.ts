@@ -6855,13 +6855,15 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await expect(page.locator('.tod-sec[data-tod="day"] [data-tod-ct]')).toHaveText('· 1 OF 1');
     await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/, { timeout: 3_000 });
     await expect(page.locator('.tod-sec[data-tod="morning"]')).not.toHaveClass(/tod-sec--fold/);
-    await page.evaluate(() => { (window as any).__todDrag; document.getElementById('tab-profile')!.click(); });
-    await page.click('#tab-habits');
+    // tab switches go through element.click(): a rank achievement popup can sit over the tab bar here
+    const tab = (id: string) => page.evaluate((id) => document.getElementById(id)!.click(), id);
+    await tab('tab-profile');
+    await tab('tab-habits');
     await expect(page.locator('.tod-sec[data-tod="day"]')).toHaveClass(/tod-sec--fold/);
     await page.evaluate(() => (document.querySelector('.tod-sec[data-tod="day"] [data-tod-fold]') as HTMLElement).click());
     await expect(page.locator('.tod-sec[data-tod="day"]')).not.toHaveClass(/tod-sec--fold/);
-    await page.click('#tab-profile');
-    await page.click('#tab-habits');
+    await tab('tab-profile');
+    await tab('tab-habits');
     await expect(page.locator('.tod-sec[data-tod="day"]')).not.toHaveClass(/tod-sec--fold/);   // the open sticks
     // unseal and seal again: the finishing seal folds it once more
     await page.evaluate(() => (document.querySelector('.habit-item[data-id="d1"]') as HTMLElement).click());
