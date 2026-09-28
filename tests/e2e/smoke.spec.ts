@@ -6233,6 +6233,33 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     await expect(page.locator('[data-todo-pick="note"]')).not.toHaveClass(/todo-cb--on/);
   });
 
+  test('W1012: until the first note, the toast after ADD offers ADD A NOTE — it opens the sheet on the notes box; once a note exists the offer retires', async ({ page }) => {
+    await seed(page, []);
+    const act = () => page.evaluate(() => { const u = document.querySelector('#todo-toast [data-todo-undo]') as HTMLElement; return u.classList.contains('hidden') ? '' : (u.textContent || ''); });
+    await page.fill('[data-todo-in]', 'Groceries');
+    await page.click('[data-todo-add]');
+    expect(await toast(page)).toBe('Added for today');
+    expect(await act()).toBe('ADD A NOTE');
+    await page.click('#todo-toast [data-todo-undo]');
+    await expect(page.locator('#todo-esh')).toHaveClass(/todo-esh--on/);
+    await expect(page.locator('#todo-esh [data-todo-en]')).toBeFocused();
+    await page.fill('#todo-esh [data-todo-en]', 'Milk, eggs');
+    await page.click('#todo-esh [data-todo-save]');
+    expect((await store(page))[0].note).toBe('Milk, eggs');
+    expect(await page.evaluate(() => localStorage.getItem('hb_todo_noted'))).toBe('1');
+    await page.waitForTimeout(4300);                                                   // let the last toast go
+    await page.fill('[data-todo-in]', 'Call Dad');
+    await page.click('[data-todo-add]');
+    expect(await toast(page)).toMatch(/^off:/);                                        // a this-week add says nothing now
+    await page.click('[data-todo-pick="due"]');
+    await page.click('[data-todo-cw="1"]');
+    await page.click('[data-todo-dayrow] [data-todo-day="5"]');
+    await page.fill('[data-todo-in]', 'Book flights');
+    await page.click('[data-todo-add]');
+    expect(await toast(page)).toBe('Planned for Mon, Oct 5');
+    expect(await act()).toBe('');                                                      // …and a planned one carries no offer
+  });
+
   test('five a day: the sixth completion pays nothing; a to-do done eight days ago has cleared', async ({ page }) => {
     const now = WED.getTime();
     const done = (i: number) => ({ id: 'x' + i, t: 'Done ' + i, due: 0, done: now - 1000 * i, dd: '@today', xp: true });
