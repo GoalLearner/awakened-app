@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1009'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1010'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -39877,7 +39877,16 @@
   const _TODO_CHEV_L = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M7.5 3 4.5 6l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   let _todos = null, _todoSwiped = null, _todoFlash = null, _todoEdit = null, _todoEwk = 0, _todoUndoFn = null, _todoToastT = 0;
   const _todoFolds = {};   // session only: 'd<offset>' | 'nx' → folded?
-  function _todoFreshComp() { return { text: '', due: 0, rem: null, pri: false, rep: null, cw: 0, od: false, or: false, orp: false }; }   // a new to-do lands on today
+  function _todoFreshComp() { return { text: '', due: 0, days: [0], dt: false, rem: null, pri: false, rep: null, cw: 0, od: false, or: false, orp: false }; }   // a new to-do lands on today
+  // W1010 — the DAY picker takes several days (TUE + THU): ADD makes one to-do on each.
+  // `days` is the set (sorted offsets; empty = NO DAY); `due` stays its first day for the rest.
+  function _todoSetDays(c, arr) {
+    const s = []; (arr || []).forEach(function (o) { if (o != null && s.indexOf(o) < 0) s.push(o); });
+    s.sort(function (a, b) { return a - b; });
+    c.days = s; c.due = s.length ? s[0] : null;
+  }
+  function _todoCompDays(c) { return Array.isArray(c.days) ? c.days : (c.due == null ? [] : [c.due]); }
+  function _todoJoin(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
   let _todoComp = _todoFreshComp();
   function _todoLoad() {
     if (_todos) return _todos;
@@ -40019,7 +40028,7 @@
     for (let i = 0; i < 7; i++) {
       const o = _todoDayOff(w, i); if (o < 0) continue;
       const d = _todoDt(o), lbl = o === 0 ? 'TODAY' : o === 1 ? 'TOMORROW' : w === 0 ? _TODO_WD[i] : _TODO_WD[i] + ' ' + d.getDate();
-      h += '<button type="button" class="todo-pill' + (o === 0 ? ' todo-pill--tdy' : '') + (c.due === o ? ' todo-pill--on' : '') + '" data-todo-day="' + o + '">' + lbl + '</button>';
+      h += '<button type="button" class="todo-pill' + (o === 0 ? ' todo-pill--tdy' : '') + (_todoCompDays(c).indexOf(o) >= 0 ? ' todo-pill--on' : '') + '" data-todo-day="' + o + '" aria-pressed="' + (_todoCompDays(c).indexOf(o) >= 0 ? 'true' : 'false') + '">' + lbl + '</button>';
     }
     h += w === 0 ? '<button type="button" class="todo-pill todo-pill--nav" data-todo-cw="1">NEXT WEEK ' + _TODO_CHEV_R + '</button>'
                  : '<button type="button" class="todo-pill todo-pill--nav" data-todo-cw="0">' + _TODO_CHEV_L + ' THIS WEEK</button>';
@@ -40039,13 +40048,14 @@
     if (bp) { bp.classList.toggle('todo-cb--on', !!c.pri); bp.setAttribute('aria-pressed', c.pri ? 'true' : 'false'); }
     const crp = _todoRepNorm(c.rep);
     if (brp) { brp.disabled = c.due == null; brp.classList.toggle('todo-cb--on', !!crp); brp.classList.toggle('todo-cb--open', !!c.orp); }
-    const rpv = $('[data-todo-repv]'); if (rpv) rpv.textContent = crp ? _todoRepShort(crp, c.due) : 'REPEAT';
-    const wk = $('[data-todo-repwk]'); if (wk) wk.textContent = c.due != null ? 'EVERY ' + _TODO_WD[_todoDt(c.due).getDay()] : 'WEEKLY';
+    const rpv = $('[data-todo-repv]'); if (rpv) rpv.textContent = crp ? (crp.k === 'week' && _todoCompDays(c).length > 1 ? 'WEEKLY' : _todoRepShort(crp, c.due)) : 'REPEAT';
+    const cds = _todoCompDays(c);
+    const wk = $('[data-todo-repwk]'); if (wk) wk.textContent = cds.length && cds.length <= 3 ? 'EVERY ' + cds.map(function (o) { return _TODO_WD[_todoDt(o).getDay()]; }).join(' · ') : 'WEEKLY';
     const prp = $('[data-todo-picks="rep"]'); if (prp) prp.classList.toggle('todo-picks--open', !!c.orp);
     host.querySelectorAll('[data-todo-rep]').forEach(function (p) { const v = p.dataset.todoRep; p.classList.toggle('todo-pill--on', v === 'off' ? !crp : !!crp && crp.k === v); });
     const stp = $('[data-todo-repstep]'); if (stp) stp.classList.toggle('hidden', !(crp && crp.k === 'after'));
     const stv = $('[data-todo-repnv]'); if (stv && crp && crp.k === 'after') stv.textContent = crp.n + (crp.n === 1 ? ' DAY AFTER' : ' DAYS AFTER');
-    const dv = $('[data-todo-duev]'); if (dv) dv.textContent = _todoDayChip(c.due);
+    const dv = $('[data-todo-duev]'); if (dv) { const ds = _todoCompDays(c); dv.textContent = ds.length > 3 ? ds.length + ' DAYS' : ds.length > 1 ? ds.map(function (o) { return o === 0 ? 'TODAY' : _todoDayChip(o).split(' ')[0]; }).join(' · ') : _todoDayChip(c.due); }
     const rv = $('[data-todo-remv]'); if (rv) rv.textContent = c.rem ? _todoRemLabel(c.rem) : 'REMIND';
     const pd = $('[data-todo-picks="due"]'); if (pd) pd.classList.toggle('todo-picks--open', c.od);
     const pr = $('[data-todo-picks="rem"]'); if (pr) pr.classList.toggle('todo-picks--open', c.or);
@@ -40177,16 +40187,19 @@
   // ── actions ──
   function _todoAdd() {
     const text = (_todoComp.text || '').trim(); if (!text) return;
-    const c = _todoComp;
-    const it = { id: uid(), t: text.slice(0, 80), due: c.due != null ? _todoDateAt(c.due) : null, rem: c.due == null ? null : (c.rem ? _todoRemKey(c.rem) : null), pri: !!c.pri, note: '', rep: c.due == null ? null : _todoRepNorm(c.rep), at: Date.now(), done: null, dd: null, xp: false };
-    _todoLoad().unshift(it); _todoSave();
-    _todoFlash = it.id;
-    _todoUnfoldFor(c.due);
-    const planned = c.due != null && _todoWkOf(c.due) > 0 ? c.due : null;
+    const c = _todoComp, days = _todoCompDays(c), list = days.length ? days : [null];
+    const made = list.map(function (o) {
+      return { id: uid(), t: text.slice(0, 80), due: o != null ? _todoDateAt(o) : null, rem: o == null ? null : (c.rem ? _todoRemKey(c.rem) : null), pri: !!c.pri, note: '', rep: o == null ? null : _todoRepNorm(c.rep), at: Date.now(), done: null, dd: null, xp: false };
+    });
+    const arr = _todoLoad(); for (let i = made.length - 1; i >= 0; i--) arr.unshift(made[i]);
+    _todoSave();
+    _todoFlash = made[0].id;
+    list.forEach(function (o) { _todoUnfoldFor(o); });
     _todoComp = _todoFreshComp();
     _todoRender();
-    if (planned != null) _todoToast('Planned for ' + _todoFmtDay(planned));
-    try { _todoArmReminder(it); } catch (_) {}
+    if (days.length > 1) _todoToast('Added for ' + _todoJoin(days.map(function (o) { return _todoFmtDay(o); })));
+    else if (days.length === 1 && _todoWkOf(days[0]) > 0) _todoToast('Planned for ' + _todoFmtDay(days[0]));
+    made.forEach(function (it) { try { _todoArmReminder(it); } catch (_) {} });
     try { _hapticTick('LIGHT'); } catch (_) {}
   }
   // +1 XP on completion, at most five a day. Real rank XP (getRank reads
@@ -40441,7 +40454,18 @@
         _todoRenderComp(host); return;
       }
       const pd = t.closest('[data-todo-day]');
-      if (pd) { const v = pd.dataset.todoDay; _todoComp.due = v === 'none' ? null : +v; _todoComp.due = _todoFirstDueOff(_todoComp.rep, _todoComp.due); _todoComp.od = false; _todoRenderComp(host); return; }
+      if (pd) {
+        const v = pd.dataset.todoDay, cur = _todoCompDays(_todoComp).slice();
+        if (v === 'none') { _todoSetDays(_todoComp, []); _todoComp.dt = true; _todoComp.od = false; }
+        else {
+          const o = +v;
+          if (!_todoComp.dt) { _todoComp.dt = true; cur.length = 0; cur.push(o); }   // the first tap replaces the TODAY default; later taps add days
+          else { const i = cur.indexOf(o); if (i >= 0) cur.splice(i, 1); else cur.push(o); }
+          _todoSetDays(_todoComp, cur.map(function (x) { return _todoFirstDueOff(_todoComp.rep, x); }));
+        }
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        _todoRenderComp(host); return;
+      }
       const cw = t.closest('[data-todo-cw]');
       if (cw) { _todoComp.cw = +cw.dataset.todoCw; _todoRenderComp(host); return; }
       const pr = t.closest('[data-todo-rem]');
@@ -40452,7 +40476,7 @@
       if (rp) {
         const v = rp.dataset.todoRep, prev = _todoRepNorm(_todoComp.rep);
         _todoComp.rep = v === 'off' ? null : v === 'after' ? { k: 'after', n: (prev && prev.k === 'after') ? prev.n : 3 } : { k: v };
-        _todoComp.due = _todoFirstDueOff(_todoComp.rep, _todoComp.due);
+        _todoSetDays(_todoComp, _todoCompDays(_todoComp).map(function (x) { return _todoFirstDueOff(_todoComp.rep, x); }));
         _todoRenderComp(host); return;
       }
       if (t.closest('[data-todo-pri]')) { _todoComp.pri = !_todoComp.pri; _todoRenderComp(host); try { _hapticTick('LIGHT'); } catch (_) {} return; }

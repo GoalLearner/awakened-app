@@ -6184,6 +6184,32 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     expect(await points(page)).toBe(500);
   });
 
+  test('W1010: several days at once — the first tap replaces TODAY, the next ones add; ADD makes one to-do on each day, repeat and all', async ({ page }) => {
+    await seed(page, []);
+    await page.click('[data-todo-pick="due"]');
+    await page.click('[data-todo-dayrow] [data-todo-day="2"]');
+    await expect(page.locator('[data-todo-duev]')).toHaveText('FRI');                  // replaced the TODAY default
+    await page.click('[data-todo-dayrow] [data-todo-day="3"]');
+    await page.click('[data-todo-cw="1"]');                                            // choices carry across the weeks
+    await page.click('[data-todo-dayrow] [data-todo-day="5"]');
+    await expect(page.locator('[data-todo-duev]')).toHaveText('FRI · SAT · MON');
+    await page.click('[data-todo-dayrow] [data-todo-day="5"]');                        // tap again to drop a day
+    await expect(page.locator('[data-todo-duev]')).toHaveText('FRI · SAT');
+    await page.click('[data-todo-cw="0"]');
+    await expect(page.locator('[data-todo-dayrow] [aria-pressed="true"]')).toHaveCount(2);
+    await page.click('[data-todo-pick="rep"]');
+    await expect(page.locator('[data-todo-rep="week"]')).toHaveText('EVERY FRI · SAT');
+    await page.click('[data-todo-rep="week"]');
+    await page.fill('[data-todo-in]', 'Walk the dog');
+    await page.click('[data-todo-add]');
+    const t = await store(page);
+    expect(t.map((x: any) => x.t + '|' + x.due + '|' + (x.rep && x.rep.k))).toEqual(['Walk the dog|' + pt(2) + '|week', 'Walk the dog|' + pt(3) + '|week']);
+    expect(t[0].id).not.toBe(t[1].id);
+    expect(await toast(page)).toBe('Added for Friday and Saturday');
+    expect((await days(page)).slice(5, 7)).toEqual(['d2:' + t[0].id, 'd3:' + t[1].id]);   // both days opened
+    await expect(page.locator('[data-todo-duev]')).toHaveText('TODAY');                 // and the composer is back to today
+  });
+
   test('five a day: the sixth completion pays nothing; a to-do done eight days ago has cleared', async ({ page }) => {
     const now = WED.getTime();
     const done = (i: number) => ({ id: 'x' + i, t: 'Done ' + i, due: 0, done: now - 1000 * i, dd: '@today', xp: true });
