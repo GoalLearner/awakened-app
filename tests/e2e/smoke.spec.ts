@@ -6210,6 +6210,29 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     await expect(page.locator('[data-todo-duev]')).toHaveText('TODAY');                 // and the composer is back to today
   });
 
+  test('W1011: NOTE in the add bar — the box opens under the bar, the note rides on every copy, the bar resets', async ({ page }) => {
+    await seed(page, []);
+    const tops = await page.evaluate(() => Array.from(document.querySelectorAll('.todo-cbar .todo-cb')).map((b) => Math.round(b.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);                                                // five buttons, one line
+    await page.fill('[data-todo-in]', 'Groceries');
+    await page.click('[data-todo-pick="note"]');
+    await expect(page.locator('[data-todo-picks="note"]')).toHaveClass(/todo-picks--open/);
+    await expect(page.locator('[data-todo-note]')).toHaveAttribute('placeholder', 'Milk, eggs, bread…');
+    await expect(page.locator('[data-todo-note]')).toBeFocused();
+    await page.fill('[data-todo-note]', 'Milk, eggs, bread');
+    await expect(page.locator('[data-todo-pick="note"]')).toHaveClass(/todo-cb--on/);
+    await page.click('[data-todo-pick="due"]');                                        // one panel at a time
+    await expect(page.locator('[data-todo-picks="note"]')).not.toHaveClass(/todo-picks--open/);
+    await page.click('[data-todo-dayrow] [data-todo-day="0"]');
+    await page.click('[data-todo-dayrow] [data-todo-day="2"]');
+    await page.click('[data-todo-add]');
+    const t = await store(page);
+    expect(t.map((x: any) => x.t + '|' + x.due + '|' + x.note)).toEqual(['Groceries|' + pt(0) + '|Milk, eggs, bread', 'Groceries|' + pt(2) + '|Milk, eggs, bread']);
+    await expect(page.locator('#todo-view .todo-w[data-todo-id="' + t[0].id + '"] .todo-mt')).toContainText('Milk, eggs, bread');
+    await expect(page.locator('[data-todo-note]')).toHaveValue('');
+    await expect(page.locator('[data-todo-pick="note"]')).not.toHaveClass(/todo-cb--on/);
+  });
+
   test('five a day: the sixth completion pays nothing; a to-do done eight days ago has cleared', async ({ page }) => {
     const now = WED.getTime();
     const done = (i: number) => ({ id: 'x' + i, t: 'Done ' + i, due: 0, done: now - 1000 * i, dd: '@today', xp: true });

@@ -36118,13 +36118,17 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .todo-in::placeholder { color: #585a76; }
 .todo-add { height: 36px; padding: 0 14px; border-radius: 11px; border: 1px solid rgba(139,92,246,0.5); background: #8b5cf6; color: #fff; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px; cursor: pointer; opacity: .35; transition: .15s; flex: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .todo-add--ok { opacity: 1; box-shadow: 0 0 14px rgba(139,92,246,0.35); }
-.todo-cbar { display: flex; gap: 6px; padding: 4px 12px 10px; flex-wrap: wrap; }
-.todo-cb { height: 30px; padding: 0 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #9596b2; display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer; transition: .15s; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.todo-cbar { display: flex; gap: 4px; padding: 4px 10px 10px; flex-wrap: wrap; }
+.todo-cb { height: 30px; padding: 0 6px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #9596b2; display: inline-flex; align-items: center; gap: 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 8.5px; font-weight: 800; letter-spacing: .5px; cursor: pointer; transition: .15s; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .todo-cb:disabled { opacity: .4; cursor: default; }
 .todo-cb--open { border-color: rgba(139,92,246,0.5); color: #f4f4fb; }
 .todo-cb--on { border-color: rgba(139,92,246,0.5); color: #a78bfa; background: rgba(139,92,246,0.12); }
 .todo-cb--pri b { font-family: 'Cinzel', Georgia, serif; font-size: 13px; line-height: 1; font-weight: 700; }
 .todo-cb--pri.todo-cb--on { border-color: rgba(245,184,66,0.42); color: #f5b842; background: rgba(245,184,66,0.1); }
+.todo-prow--note { display: block; }
+.todo-cnote { display: block; width: 100%; box-sizing: border-box; min-height: 68px; resize: none; background: #0a0a18; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 12px; color: #f4f4fb; font: 500 15px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; outline: 0; -webkit-appearance: none; appearance: none; }
+.todo-cnote:focus { border-color: rgba(139,92,246,0.5); }
+.todo-cnote::placeholder { color: #585a76; }
 .todo-picks { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s ease; }
 .todo-picks--open { grid-template-rows: 1fr; }
 .todo-picks > div { min-height: 0; overflow: hidden; }
