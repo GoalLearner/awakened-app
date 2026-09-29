@@ -6138,7 +6138,7 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     await expect(page.locator('#todo-view [data-todo-k="d0"]')).toHaveClass(/todo-day--fold/);
   });
 
-  test('the composer plans any day: DAY pills from today on, NEXT WEEK, NO DAY; a completion stays in its day and pays +1 XP, undo takes it back', async ({ page }) => {
+  test('the composer plans any day: DAY pills from today on, NEXT WEEK, NO DAY; a completion stays in its day (no XP — W1013), undo brings it back', async ({ page }) => {
     await seed(page, []);
     await expect(page.locator('#todo-view [data-todo-k="d0"] .todo-empty')).toContainText('Nothing waiting.');
     await page.click('[data-todo-pick="due"]');
@@ -6170,13 +6170,13 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     await page.fill('[data-todo-in]', 'Fix the bike');
     await page.click('[data-todo-add]');
     await expect(page.locator('#todo-view .todo-un .todo-w')).toHaveCount(1);
-    // today: add, complete (+1 XP, stays in today struck through), tap again to undo
+    // today: add, complete (stays in today struck through, no XP), tap again to undo
     await page.fill('[data-todo-in]', 'Buy groceries');
     await page.click('[data-todo-add]');
     const id = (await store(page))[0].id;
     await box(page, id);
     await expect(ct(page, 'd0')).toHaveText('· 1 OF 1', { timeout: 3_000 });
-    expect(await points(page)).toBe(501);
+    expect(await points(page)).toBe(500);
     await page.waitForTimeout(700);
     await expect(page.locator('#todo-view [data-todo-k="d0"] .todo-w[data-todo-id="' + id + '"] .todo-row--done')).toHaveCount(1);
     await box(page, id);
@@ -6260,16 +6260,21 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     expect(await act()).toBe('');                                                      // …and a planned one carries no offer
   });
 
-  test('five a day: the sixth completion pays nothing; a to-do done eight days ago has cleared', async ({ page }) => {
+  test('W1013: to-dos pay no XP and have no daily cap — ten in a row pay nothing; undoing one an older build paid for takes that XP back; a to-do done eight days ago has cleared', async ({ page }) => {
     const now = WED.getTime();
-    const done = (i: number) => ({ id: 'x' + i, t: 'Done ' + i, due: 0, done: now - 1000 * i, dd: '@today', xp: true });
-    await seed(page, [done(1), done(2), done(3), done(4), done(5), { id: 'old', t: 'Long gone', due: null, done: now - 8 * 86400000, dd: '2020-01-01' }, { id: 'n', t: 'Sixth', due: 0 }]);
-    await expect(ct(page, 'd0')).toHaveText('· 5 OF 6');
+    const open = (i: number) => ({ id: 'n' + i, t: 'Task ' + i, due: 0 });
+    await seed(page, [...Array.from({ length: 10 }, (_, i) => open(i)), { id: 'legacy', t: 'Paid before', due: 0, done: now - 5000, dd: '@today', xp: true }, { id: 'old', t: 'Long gone', due: null, done: now - 8 * 86400000, dd: '2020-01-01' }]);
+    await expect(ct(page, 'd0')).toHaveText('· 1 OF 11');
     expect(await byId(page, 'old')).toBeUndefined();
-    await box(page, 'n');
-    await expect(ct(page, 'd0')).toHaveText('· 6 OF 6', { timeout: 3_000 });
-    expect(await points(page)).toBe(500);
-    expect((await byId(page, 'n')).xp).toBe(false);
+    for (let i = 0; i < 10; i++) await box(page, 'n' + i);
+    await expect(ct(page, 'd0')).toHaveText('· 11 OF 11', { timeout: 3_000 });
+    expect(await points(page)).toBe(500);                                             // nothing paid
+    expect((await store(page)).filter((x: any) => x.xp).map((x: any) => x.id)).toEqual(['legacy']);
+    await expect(page.locator('#todo-view .todo-xp')).toHaveCount(0);                 // no +XP chip
+    await page.waitForTimeout(700);
+    await box(page, 'legacy');                                                         // undo a completion an older build paid for
+    await expect.poll(() => points(page)).toBe(499);
+    expect((await byId(page, 'legacy')).xp).toBe(false);
   });
 
   test('swipe moves a to-do to the next day (an overdue one comes to today) or deletes it with undo; the edit sheet plans any week', async ({ page }) => {
@@ -6357,7 +6362,7 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     expect(open).toMatchObject({ due: pt(7), rep: { k: 'week' } });
     expect(done.nx).toBe(open.id);
     expect(await toast(page)).toBe('Repeats · next Wed, Oct 7');
-    expect(await points(page)).toBe(501);
+    expect(await points(page)).toBe(500);
     await page.waitForTimeout(700);
     await box(page, done.id);                                                         // undo: the spawned copy goes back
     await expect.poll(async () => (await store(page)).length).toBe(1);
@@ -6877,7 +6882,7 @@ test.describe('BH · Hunt results (W980)', () => {
 });
 
 // W995 — MORNING · DAY · EVENING sections on the Habits tab; the TO-DO pill (one-off tasks,
-// +1 XP each, five a day, DONE clears after seven days); the briefing's to-do line; TIME OF
+// no XP since W1013, done ones clear after seven days); the briefing's to-do line; TIME OF
 // DAY on the create / edit sheets. Dates are the app's day (Pacific) — computed in-browser.
 test.describe('BM · Vows by time of day + to-dos (W995)', () => {
   // freshApp's init script re-seeds hb_habits='[]' on EVERY navigation, so the vows must come
