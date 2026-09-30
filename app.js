@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1016'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1017'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -40202,6 +40202,15 @@
     if (u) { try { u(); } catch (e) { _logSwallow('todo:undo', e); } }
   }
   // ── actions ──
+  // W1017 — the briefing's "Have an appointment or errand today?" box: one to-do, due today.
+  function _todoQuickAdd(text) {
+    const t = String(text || '').trim().slice(0, 80); if (!t) return null;
+    const it = { id: uid(), t: t, due: today, rem: null, pri: false, note: '', rep: null, at: Date.now(), done: null, dd: null, xp: false };
+    _todoLoad().unshift(it); _todoSave();
+    try { if (document.getElementById('todo-view')) _todoRender(); } catch (_) {}
+    try { _todoPaintBadge(); } catch (_) {}
+    return it;
+  }
   function _todoAdd() {
     const text = (_todoComp.text || '').trim(); if (!text) return;
     const c = _todoComp, days = _todoCompDays(c), list = days.length ? days : [null];
@@ -60680,8 +60689,7 @@
       if (!_isWeeklyVow(h) && weak.x.s >= 6 && weak.r <= 0.3) lines.push('If every day is too much, make it 3 times a week.');
       else if (listed) { lines.push('It’s first on today’s list.'); lead = h.id; }
     } else if (w.K && !allPerfect) {
-      if (perfect) lines.push(perfect === 1 ? 'One perfect day.' : perfect + ' perfect days.');
-      else { const st = _tbStreak(); if (st >= 3) lines.push('Your streak is ' + st + ' days.'); }
+      if (perfect) lines.push(perfect === 1 ? 'One perfect day.' : perfect + ' perfect days.');   // W1017 — no streak line
     }
     // W1015 — the facts DeepSeek may use (the rules above decide them; the words are its own)
     let strong = null;
@@ -60691,7 +60699,7 @@
     const facts = {
       kept: w.K, total: w.S, prev_kept: prior.length ? prior[0] : null,
       best: !!best && !allPerfect, perfect_week: allPerfect, perfect_days: perfect,
-      days_active: w.any.filter(Boolean).length, streak: _tbStreak(),
+      days_active: w.any.filter(Boolean).length,   // W1017 — the streak stays out of the recap
       weak: weak ? { name: _tbVowName(weak.x.h), kept: weak.x.k, of: weak.x.s, weekly: _isWeeklyVow(weak.x.h) } : null,
       strong: strong ? { name: _tbVowName(strong.x.h), kept: strong.x.k, of: strong.x.s } : null,
       suggestion: weak ? (lead ? 'first_today' : lines.some(function (l) { return l.indexOf('3 times a week') >= 0; }) ? 'weekly_goal' : null) : null,
@@ -60830,7 +60838,10 @@
     } else if (t.any) {
       body = '<div class="tb-tde">Nothing due today.</div>' + (t.next ? '<div class="tb-tdm tb-mono">Next · ' + esc(t.next.day) + ' · <span>' + esc(t.next.t) + '</span></div>' : '');
     } else {
-      body = '<div class="tb-tde">No to-dos yet.</div><div class="tb-tdm tb-mono">Plan the week in Habits · To-do</div>';
+      // W1017 — no to-dos yet: ask for the first one right here
+      body = '<div class="tb-tde">Have an appointment or errand today?</div>' +
+        '<div class="tb-tdadd"><input type="text" class="tb-tdin" data-tb-tdin maxlength="80" placeholder="Add it to your to-do list" aria-label="Add a to-do for today" enterkeyhint="done" autocomplete="off" autocapitalize="sentences">' +
+        '<button type="button" class="tb-tdgo" data-tb-tdgo>ADD</button></div>';
     }
     return '<div class="tb-todo tb-e" style="--d:320ms"><div class="tb-tdh tb-mono">' + _TB_TODO + '<span>Today’s to-dos</span>' + (cnt ? '<span class="tb-tdc">' + cnt + '</span>' : '') + '</div>' + body + '</div>';
   }
@@ -60873,7 +60884,7 @@
       else { const p = _tbRecapPrefetch(!!opts.preview); if (p) { d.recap.pending = true; wkWait = p; } }
     }
     if (!opts.preview && d.recap && d.recap.lead) { try { localStorage.setItem(TB_LEAD_KEY, JSON.stringify({ date: today, id: d.recap.lead })); } catch (_) {} }
-    if (opts.preview && !(d.todos && d.todos.items.length)) d.todos = { due: 2, od: 1, any: true, next: null, items: [{ t: 'Return the library book', od: true, rem: '', pri: false }, { t: 'Book the dentist', od: false, rem: '12:00', pri: true }, { t: 'Call Dad', od: false, rem: '', pri: false }] };   // the preview always shows the card
+    // W1017 — the preview shows the real to-do card (with no to-dos, that is the add box)
     let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
     root.className = 'tb-frame';
     root.innerHTML = _tbHtml(d);
@@ -60887,6 +60898,26 @@
     if (RM) bar.style.width = (frac * 100) + '%';
     else at(700, function () { bar.style.width = (frac * 100) + '%'; });
     at(1850, function () { root.classList.add('tb-breathe'); });
+    // W1017 — the first to-do, straight from the briefing. In the preview nothing is saved.
+    let addedTodo = false;
+    (function wireTdAdd() {
+      const box = root.querySelector('.tb-todo'); if (!box) return;
+      const inp = box.querySelector('[data-tb-tdin]'), go = box.querySelector('[data-tb-tdgo]'); if (!inp || !go) return;
+      const add = function () {
+        if (dead) return;
+        const v = (inp.value || '').trim(); if (!v) { try { inp.focus(); } catch (_) {} return; }
+        if (opts.preview) d.todos = { due: 1, od: 0, any: true, next: null, items: [{ t: v.slice(0, 80), od: false, rem: '', pri: false }] };
+        else { try { _todoQuickAdd(v); d.todos = _todoBrief(); addedTodo = true; } catch (e) { _logSwallow('tb:quickadd', e); } }
+        try { inp.blur(); } catch (_) {}
+        const tmp = document.createElement('div');
+        tmp.innerHTML = _tbTodoHtml(d.todos, d.recap ? ((window.innerHeight || 800) <= 720 ? 2 : 3) : 4);
+        const fresh = tmp.firstElementChild;
+        if (fresh) { fresh.classList.remove('tb-e'); fresh.classList.add('tb-todo--added'); box.replaceWith(fresh); }
+        _tbHap('light'); _tbTone(660, 0, 0.12, 0.05); _tbTone(990, 0.08, 0.16, 0.05);
+      };
+      go.addEventListener('click', add);
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    })();
     // W1015 — the words land when DeepSeek answers (or the rules sentence after a short wait)
     if (wkWait) {
       Promise.race([wkWait, new Promise(function (res) { setTimeout(res, opts.preview ? 4000 : 1500); })]).then(function () {
@@ -60962,6 +60993,7 @@
         if (d.recap && d.recap.ws) { try { localStorage.setItem(TB_RECAP_KEY, d.recap.ws); } catch (_) {} }   // once a week
         dismissDailyInsight();
         if (d.recap && d.recap.lead) { try { renderHabits(); } catch (_) {} }   // the hardest vow leads today's list
+        if (addedTodo) { try { switchTab('habits'); _setHabitsView('todo'); } catch (e) { _logSwallow('tb:toTodo', e); } }   // W1017 — land on the planner
       }
     };
     _tbLive = { stop: stop };

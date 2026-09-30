@@ -38,7 +38,7 @@ function makeEnv(opts?: { rateLimited?: boolean; cached?: string[] | null; key?:
 const session: SessionPayload = { userId: 'user-abc', alias: 'Richie' };
 const WS = ptMondayOf(new Date());
 const FACTS: RecapFacts = {
-  kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7, streak: 12,
+  kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7,
   weak: { name: 'Sleep', kept: 3, of: 7, weekly: false }, strong: { name: 'Read', kept: 7, of: 7 }, suggestion: 'first_today',
 };
 const req = (body: unknown) => new Request('https://x/v1/recap/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -51,6 +51,7 @@ describe('checkSentences', () => {
     expect(checkSentences(['You kept 24 of 28 vows.', 'Sleep slipped to 3 of 7 days; it is first on today\'s list.'], FACTS)).toEqual(['You kept 24 of 28 vows.', 'Sleep slipped to 3 of 7 days; it is first on today\'s list.']);
   });
   it('rejects a number the facts do not hold', () => { expect(checkSentences(['You kept 25 of 28 vows. Sleep is next.'], FACTS)).toBeNull(); });
+  it('rejects a streak count now that the streak is not a fact', () => { expect(checkSentences(['You kept 24 of 28 vows over a 12 day run. Sleep is first today.'], FACTS)).toBeNull(); });
   it('rejects hype, shaming and the banned word', () => {
     expect(checkSentences(['Great week! Sleep is first today.'], FACTS)).toBeNull();
     expect(checkSentences(['You failed Sleep this week.'], FACTS)).toBeNull();
@@ -64,6 +65,7 @@ describe('checkSentences', () => {
 
 describe('parseFacts', () => {
   it('accepts valid facts and trims a vow name', () => { expect(parseFacts({ ...FACTS, weak: { ...FACTS.weak, name: '  Sleep <b>  ' } })!.weak!.name).toBe('Sleep b'); });
+  it('ignores a streak an older build still sends', () => { expect(parseFacts({ ...FACTS, streak: 12 })).toEqual(FACTS); });
   it('rejects nonsense', () => {
     expect(parseFacts({ ...FACTS, kept: 30 })).toBeNull();
     expect(parseFacts({ ...FACTS, perfect_days: 9 })).toBeNull();

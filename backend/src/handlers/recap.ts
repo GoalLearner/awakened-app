@@ -24,7 +24,6 @@ export interface RecapFacts {
   perfect_week: boolean;
   perfect_days: number;
   days_active: number;
-  streak: number;
   weak: { name: string; kept: number; of: number; weekly: boolean } | null;
   strong: { name: string; kept: number; of: number } | null;
   suggestion: 'first_today' | 'weekly_goal' | null;
@@ -59,8 +58,9 @@ export function parseFacts(raw: unknown): RecapFacts | null {
   const kept = int(f.kept, 0, 2000), total = int(f.total, 1, 2000);
   if (kept === null || total === null || kept > total) return null;
   const prev = f.prev_kept === null || f.prev_kept === undefined ? null : int(f.prev_kept, 0, 2000);
-  const pd = int(f.perfect_days, 0, 7), da = int(f.days_active, 0, 7), st = int(f.streak, 0, 5000);
-  if (pd === null || da === null || st === null) return null;
+  // W1017 — the streak is not a recap fact (older builds still send it; it is ignored)
+  const pd = int(f.perfect_days, 0, 7), da = int(f.days_active, 0, 7);
+  if (pd === null || da === null) return null;
   let weak: RecapFacts['weak'] = null;
   if (f.weak && typeof f.weak === 'object') {
     const w = f.weak as Record<string, unknown>;
@@ -75,12 +75,12 @@ export function parseFacts(raw: unknown): RecapFacts | null {
     if (name && k !== null && of !== null && k <= of) strong = { name, kept: k, of };
   }
   const sug = f.suggestion === 'first_today' || f.suggestion === 'weekly_goal' ? f.suggestion : null;
-  return { kept, total, prev_kept: prev, best: f.best === true, perfect_week: f.perfect_week === true, perfect_days: pd, days_active: da, streak: st, weak, strong, suggestion: weak ? sug : null };
+  return { kept, total, prev_kept: prev, best: f.best === true, perfect_week: f.perfect_week === true, perfect_days: pd, days_active: da, weak, strong, suggestion: weak ? sug : null };
 }
 
 /** Every number the message is allowed to say. */
 export function allowedNumbers(f: RecapFacts): Set<number> {
-  const s = new Set<number>([f.kept, f.total, f.perfect_days, f.days_active, f.streak, 7]);
+  const s = new Set<number>([f.kept, f.total, f.perfect_days, f.days_active, 7]);
   if (f.prev_kept !== null) { s.add(f.prev_kept); if (f.kept > f.prev_kept) s.add(f.kept - f.prev_kept); }
   if (f.weak) { s.add(f.weak.kept); s.add(f.weak.of); }
   if (f.strong) { s.add(f.strong.kept); s.add(f.strong.of); }

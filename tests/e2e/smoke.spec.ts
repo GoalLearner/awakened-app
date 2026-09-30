@@ -5813,7 +5813,7 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     expect(v.climb).toMatch(/^Rank [A-Z+]+ \| (\d[\d,]* XP to [A-Z+]+ I{1,3}|The summit of the ranks)$/i);
     expect(v.chips.length).toBe(0);             // …and so did the lead chips
     await expect(page.locator('#tb-root .tb-todo .tb-tdh')).toContainText('Today’s to-dos');
-    await expect(page.locator('#tb-root .tb-todo .tb-tdr')).toHaveCount(3);   // the owner preview shows a sample
+    await expect(page.locator('#tb-root .tb-todo [data-tb-tdin]')).toBeVisible();   // W1017 — no to-dos: the preview shows the real card, the add box
     expect(v.text).not.toMatch(/VERIFIED BY SYSTEM|OBJECTIVES|LOCK IN/i);
     expect(v.label).toMatch(/^HOLD TO BEGIN/i);
   });
@@ -6156,7 +6156,7 @@ test.describe('BS · Monday recap (W1014)', () => {
     const calls = await page.evaluate(() => (window as any).__recapCalls);
     expect(calls).toHaveLength(1);
     expect(calls[0].ws).toBe('2026-10-05');
-    expect(calls[0].facts).toEqual({ kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7, streak: calls[0].facts.streak,
+    expect(calls[0].facts).toEqual({ kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7,
       weak: { name: 'Sleep', kept: 3, of: 7, weekly: false }, strong: { name: 'Get morning sunlight', kept: 7, of: 7 }, suggestion: 'first_today' });
     expect(JSON.stringify(calls[0].facts)).not.toMatch(/alias|steps|sleep_min|user/i);
     // a second look this week: the stored words, at once, no second call
@@ -7087,12 +7087,37 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     // nothing due today (only tomorrow's): the card names the next one
     await page.evaluate(() => { const a = (window as any).__todo.load(); for (let i = a.length - 1; i >= 0; i--) if (a[i].id !== 't3') a.splice(i, 1); (window as any).__tb.show({}); });
     expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Nothing due today.', more: 'Next · TOMORROW · Call Dad' });
-    // no to-dos at all: an invitation to plan
+    // W1017 — no to-dos at all: the card asks for the first one, right there
     await page.evaluate(() => { (window as any).__todo.load().length = 0; (window as any).__tb.show({}); });
-    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'No to-dos yet.', more: 'Plan the week in Habits · To-do' });
-    // the owner's preview always shows a filled card
+    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Have an appointment or errand today?', more: '' });
+    await expect(page.locator('#tb-root [data-tb-tdin]')).toHaveAttribute('placeholder', 'Add it to your to-do list');
+    // the owner's preview adds to the card but saves nothing
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
-    expect((await card())!.rows.length).toBe(3);
+    await page.fill('#tb-root [data-tb-tdin]', 'Preview only');
+    await page.click('#tb-root [data-tb-tdgo]');
+    expect((await card())!.rows).toEqual(['Preview only|']);
+    expect(await page.evaluate(() => (window as any).__todo.load().length)).toBe(0);   // nothing was added
+  });
+
+  test('W1017: the first to-do from the briefing — ADD puts it on today, the card shows it, and starting the day lands on the planner', async ({ page }) => {
+    await seed(page, []);
+    await page.evaluate(() => (window as any).__tb.show({}));
+    await expect(page.locator('#tb-root [data-tb-tdin]')).toBeVisible({ timeout: 5_000 });
+    await page.fill('#tb-root [data-tb-tdin]', 'Dentist at 3');
+    await page.press('#tb-root [data-tb-tdin]', 'Enter');
+    await expect(page.locator('#tb-root .tb-todo .tb-tdr span')).toHaveText('Dentist at 3');
+    await expect(page.locator('#tb-root .tb-todo .tb-tdc')).toHaveText('1 due');
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'));
+    const todayPT = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()));
+    expect(stored.map((t: any) => t.t + '|' + t.due + '|' + t.xp)).toEqual(['Dentist at 3|' + todayPT + '|false']);
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('1');
+    await page.waitForTimeout(1500);
+    const box = (await page.locator('#tb-root .tb-seal').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(1150); await page.mouse.up();
+    await expect(page.locator('#todo-view')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-vows-view="todo"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#todo-view [data-todo-k="d0"] .todo-w')).toHaveCount(1);
   });
 
   test('TIME OF DAY on the sheets: a custom vow made with EVENING lands in the evening section; the edit sheet moves a library vow', async ({ page }) => {
