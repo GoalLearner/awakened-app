@@ -6237,7 +6237,7 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
     await expect(page.locator('[data-vows-kicker]')).toHaveText('WEEK 40 · SEP 27 – OCT 3');
     await expect(page.locator('[data-vows-title]')).toHaveText('Plan the week');
     await expect(page.locator('#vows-header .vows-manage-btn')).toBeHidden();
-    await expect(page.locator('[data-todo-n]').first()).toHaveText('6');             // z a b c d f — not next week, not done
+    await expect(page.locator('[data-todo-n]').first()).toHaveText('4');             // W1016 — today's list only: z a (overdue) + b c (today); not d (tomorrow), e, f
     await expect(page.locator('[data-todo-n]').first()).toHaveClass(/vows-sg-n--od/);
     expect(await days(page)).toEqual(['d-3~:', 'd-2~:p', 'd-1~:a', 'd0:b,z,c,g', 'd1~:d', 'd2~:', 'd3~:', 'nx~:e', 'un:f']);
     await expect(page.locator('#todo-view [data-todo-k="d0"] .todo-dtt')).toHaveText('WEDNESDAY' + 'TODAY');
