@@ -5806,7 +5806,8 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     expect(v.date).toMatch(/^(SUN|MON|TUE|WED|THU|FRI|SAT) · [A-Z]{3} \d{1,2}$/);
     expect(v.day).toMatch(/^Day \d+$/);
     expect(v.streak).toBe('2-day streak');
-    expect(v.yest).toBe('Yesterday: 2 of 4 vows kept.');
+    expect((await page.evaluate(() => (window as any).__tb.data())).yest).toBe('Yesterday: <b>2 of 4</b> vows kept.');
+    await expect(page.locator('#tb-root .tb-wk')).toBeVisible();                 // W1014 — the owner preview always carries the Monday recap
     expect(v.segs).toBe(0);                     // W1009 — the vow ring left the briefing
     expect(v.big).toBe('');
     expect(v.climb).toMatch(/^Rank [A-Z+]+ \| (\d[\d,]* XP to [A-Z+]+ I{1,3}|The summit of the ranks)$/i);
@@ -6058,6 +6059,93 @@ test.describe('BO · Weekly-goal vows (W1005)', () => {
     await page.click('#sched-save-btn');
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').find((x: any) => x.id === 'w1').weekly)).toBeUndefined();
     await expect(page.locator('.habit-item[data-id="w1"] [data-weekly]')).toHaveCount(0);
+  });
+});
+
+// W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
+// in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
+test.describe('BS · Monday recap (W1014)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  const MON = new Date('2026-10-05T09:00:00-07:00');
+  const pt = (off: number) => { const d = new Date(2026, 9, 5 + off, 12); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const VOWS = ['a', 'b', 'c', 's'].map((id, i) => ({ id, name: ['Get morning sunlight', 'Read', 'Meditate', 'Sleep'][i], emoji: '•', difficulty: 'easy', type: 'build' }));
+  // days: offsets -7..-1 are last week (Mon..Sun); -28..-8 the three weeks before
+  async function seed(page: Page, lastWeek: (off: number) => string[], before: (off: number) => string[], at: Date = MON) {
+    const comp: Record<string, string[]> = {};
+    for (let off = -28; off <= -1; off++) { const ids = off >= -7 ? lastWeek(off) : before(off); if (ids.length) comp[pt(off)] = ids; }
+    await page.clock.setFixedTime(at);
+    await freshApp(page);
+    await page.addInitScript(([hs, c]) => {
+      try {
+        if (sessionStorage.getItem('__w1014')) return;
+        sessionStorage.setItem('__w1014', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        localStorage.setItem('hb_completions', JSON.stringify(c));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1'].forEach((k) => localStorage.setItem(k, '1'));
+      } catch (_) {}
+    }, [VOWS, comp] as [any[], Record<string, string[]>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  const card = (page: Page) => page.evaluate(() => {
+    const c = document.querySelector('#tb-root .tb-wk'); if (!c) return null;
+    return { range: (c.querySelector('.tb-wkh span:last-child') as HTMLElement).textContent, of: (c.querySelector('.tb-wkn .tb-mono') as HTMLElement).textContent,
+      lines: Array.from(c.querySelectorAll('.tb-wkt p')).map((p) => p.textContent), gold: c.classList.contains('tb-wk--gold'),
+      dots: Array.from(c.querySelectorAll('.tb-wkdd')).map((d) => (d.className.match(/tb-wkdd--(\w)/) || [])[1] || '-').join('') };
+  });
+  const show = (page: Page) => page.evaluate(() => (window as any).__tb.show({}));
+  async function holdSeal(page: Page) {
+    const box = (await page.locator('#tb-root .tb-seal').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.waitForTimeout(1150); await page.mouse.up();
+  }
+
+  test('a normal week: the count, the hardest vow, and it leads today; seen once — the next briefing this week goes back to yesterday', async ({ page }) => {
+    // three weeks of everything kept, then last week Sleep only Mon/Wed/Fri
+    await seed(page, (off) => ['a', 'b', 'c'].concat([-7, -5, -3].includes(off) ? ['s'] : []), () => ['a', 'b', 'c', 's']);
+    await show(page);
+    await expect(page.locator('#tb-root .tb-wk')).toBeVisible({ timeout: 5_000 });
+    expect(await card(page)).toEqual({ range: 'SEP 28 – OCT 4', of: 'of 28 vows', gold: false, dots: 'pkpkpkk',
+      lines: ['You kept 24 of 28 vows last week.', 'Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'] });
+    await expect(page.locator('#tb-root [data-tb-wkn]')).toHaveText('24', { timeout: 3_000 });
+    await expect(page.locator('#tb-root .tb-yest')).toHaveCount(0);                          // last week replaces yesterday
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_brief_lead_v1') || 'null'))).toEqual({ date: '2026-10-05', id: 's' });
+    await page.waitForTimeout(1500);
+    await holdSeal(page);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('hb_week_recap_seen')), { timeout: 4_000 }).toBe('2026-10-05');
+    await page.waitForTimeout(2000);
+    await show(page);
+    await expect(page.locator('#tb-root .tb-yest')).toBeVisible();
+    await expect(page.locator('#tb-root .tb-wk')).toHaveCount(0);
+    // the owner's preview always shows it
+    await page.evaluate(() => (window as any).__previewTodaysBriefing());
+    await expect(page.locator('#tb-root .tb-wk')).toBeVisible();
+  });
+
+  test('a perfect week is one gold line; a best week names itself and suggests a weekly goal for a vow kept once', async ({ page }) => {
+    await seed(page, () => ['a', 'b', 'c', 's'], () => ['a', 'b', 'c', 's']);
+    await show(page);
+    await expect(page.locator('#tb-root .tb-wk')).toBeVisible({ timeout: 5_000 });
+    expect(await card(page)).toMatchObject({ gold: true, dots: 'ppppppp', lines: ['A perfect week: every vow, all 7 days.'] });
+    await expect(page.locator('#tb-root .tb-wk')).toHaveClass(/tb-wk--pop/, { timeout: 3_000 });
+  });
+
+  test('best week: more kept than any of the weeks before; the vow kept once gets the 3-a-week suggestion', async ({ page }) => {
+    // the weeks before: a, b daily; c and s only on Mondays → 16 a week. Last week: a, b, c daily + s once → 22.
+    const monday = (off: number) => [-28, -21, -14].includes(off);
+    await seed(page, (off) => ['a', 'b', 'c'].concat(off === -4 ? ['s'] : []), (off) => ['a', 'b'].concat(monday(off) ? ['c', 's'] : []));
+    await show(page);
+    await expect(page.locator('#tb-root .tb-wk')).toBeVisible({ timeout: 5_000 });
+    expect(await card(page)).toMatchObject({ gold: true, lines: ['Your best week yet: 22 of 28 vows kept.', 'Sleep was your hardest vow: 1 of 7 days.', 'If every day is too much, make it 3 times a week.'] });
+    expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();   // a suggestion, not a lead
+  });
+
+  test('a quiet week is one kind line; skipped Monday, it still shows on Tuesday', async ({ page }) => {
+    await seed(page, () => [], () => ['a', 'b', 'c', 's'], new Date('2026-10-06T08:00:00-07:00'));
+    expect(await page.evaluate(() => (window as any).__tb.recap())).toMatchObject({ K: 0, S: 28, lines: ['Last week was quiet. This week starts fresh today.'] });
+    await show(page);
+    expect(await card(page)).toMatchObject({ lines: ['Last week was quiet. This week starts fresh today.'], dots: '-------' });
   });
 });
 
