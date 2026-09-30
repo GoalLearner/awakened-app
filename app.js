@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1014'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1015'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -15306,6 +15306,7 @@
           // regardless of the audio context (must NOT sit behind the `c` guard),
           // self-throttled + stub-gated inside Auth.reportAppOpen, fire-and-forget.
           try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen(); } catch (_) {}
+          try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {}   // W1015 — the Monday recap words
           // W833 — step backfill on resume too, not just the cold-boot +5s
           // timer: an iOS warm resume re-enters here without ever re-running
           // boot, and a user who opens the app for <5s can kill the timer
@@ -15317,6 +15318,7 @@
       // W526 — retention ping on initial launch (deferred ~1.5s so the session is
       // restored from storage and Auth is ready). No-op if not signed in.
       try { setTimeout(function () { try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen(); } catch (_) {} }, 1500); } catch (_) {}
+      try { setTimeout(function () { try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {} }, 600); } catch (_) {}   // W1015
     } catch (_) {}
   })();
 
@@ -60679,9 +60681,22 @@
       if (perfect) lines.push(perfect === 1 ? 'One perfect day.' : perfect + ' perfect days.');
       else { const st = _tbStreak(); if (st >= 3) lines.push('Your streak is ' + st + ' days.'); }
     }
+    // W1015 — the facts DeepSeek may use (the rules above decide them; the words are its own)
+    let strong = null;
+    w.per.filter(function (x) { return x.est && x.s >= 3 && !(weak && x === weak.x); }).forEach(function (x) {
+      const r = x.k / x.s; if (!strong || r > strong.r || (r === strong.r && x.s > strong.x.s)) strong = { x: x, r: r };
+    });
+    const facts = {
+      kept: w.K, total: w.S, prev_kept: prior.length ? prior[0] : null,
+      best: !!best && !allPerfect, perfect_week: allPerfect, perfect_days: perfect,
+      days_active: w.any.filter(Boolean).length, streak: _tbStreak(),
+      weak: weak ? { name: _tbVowName(weak.x.h), kept: weak.x.k, of: weak.x.s, weekly: _isWeeklyVow(weak.x.h) } : null,
+      strong: strong ? { name: _tbVowName(strong.x.h), kept: strong.x.k, of: strong.x.s } : null,
+      suggestion: weak ? (lead ? 'first_today' : lines.some(function (l) { return l.indexOf('3 times a week') >= 0; }) ? 'weekly_goal' : null) : null,
+    };
     const a = new Date(w.days[0] + 'T12:00:00'), b = new Date(w.days[6] + 'T12:00:00');
     return {
-      ws: thisWs, K: w.K, S: w.S, lines: lines.slice(0, 3), tone: tone, lead: lead,
+      ws: thisWs, K: w.K, S: w.S, lines: lines.slice(0, 3), tone: tone, lead: lead, facts: facts,
       range: _TB_MON[a.getMonth()] + ' ' + a.getDate() + ' – ' + (a.getMonth() === b.getMonth() ? '' : _TB_MON[b.getMonth()] + ' ') + b.getDate(),
       dots: w.dayS.map(function (s, i) { return s && w.dayK[i] === s ? 'p' : (w.dayK[i] || w.any[i]) ? 'k' : ''; }),
     };
@@ -60695,8 +60710,30 @@
       '<div class="tb-wkh tb-mono"><span>Last week</span><span>' + esc(r.range) + '</span></div>' +
       '<div class="tb-wkm"><div class="tb-wkn"><b data-tb-wkn>0</b><span class="tb-mono">of ' + r.S + ' vows</span></div>' +
         '<div class="tb-wkd" aria-hidden="true">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (l, i) { return '<span class="tb-wkdd' + (r.dots[i] ? ' tb-wkdd--' + r.dots[i] : '') + '" style="--i:' + i + '"><i></i><em>' + l + '</em></span>'; }).join('') + '</div></div>' +
-      '<div class="tb-wkt">' + r.lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>' +
+      (r.pending ? '<div class="tb-wkt tb-wkt--wait" data-tb-wkt aria-busy="true"><i></i><i></i></div>'
+                 : '<div class="tb-wkt" data-tb-wkt>' + r.lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>') +
       '</div>';
+  }
+  // W1015 — this week's words from DeepSeek (server-checked, stored once per hunter per week).
+  // Asked for at launch and on resume, so they are usually ready before the briefing opens.
+  const TB_RECAP_AI_KEY = 'hb_recap_ai';   // { ws, lines }
+  let _tbRecapInflight = null;
+  function _tbRecapAi(ws) {
+    try { const o = JSON.parse(localStorage.getItem(TB_RECAP_AI_KEY) || 'null'); return (o && o.ws === ws && Array.isArray(o.lines) && o.lines.length) ? o.lines : null; } catch (_) { return null; }
+  }
+  function _tbRecapPrefetch(force) {
+    try {
+      if (_tbRecapInflight) return _tbRecapInflight;
+      if (!(window.Auth && typeof Auth.fetchRecapText === 'function')) return null;
+      const r = _tbRecap({ force: !!force }); if (!r || !r.facts || !r.ws) return null;
+      if (_tbRecapAi(r.ws)) return null;
+      _tbRecapInflight = Promise.resolve(Auth.fetchRecapText(r.ws, r.facts)).then(function (res) {
+        if (res && res.ok && Array.isArray(res.text) && res.text.length) {
+          try { localStorage.setItem(TB_RECAP_AI_KEY, JSON.stringify({ ws: r.ws, lines: res.text.slice(0, 3).map(String) })); } catch (_) {}
+        }
+      }).catch(function () {}).then(function () { _tbRecapInflight = null; });
+      return _tbRecapInflight;
+    } catch (_) { return null; }
   }
   function _tbWord(n) { return ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][n] || String(n); }
   function _tbData() {
@@ -60826,6 +60863,13 @@
     if (opts.preview && !d.news) { try { d.news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'Your next update’s title appears here'; } catch (_) { d.news = 'Your next update’s title appears here'; } }
     if (opts.preview && !d.recap) { try { d.recap = _tbRecap({ force: true }); } catch (_) {} }
     if (opts.preview && !d.recap) d.recap = { ws: '', K: 38, S: 43, tone: 'plain', lead: null, range: 'SEP 28 – OCT 4', dots: ['p', 'k', 'p', 'k', 'p', 'p', 'k'], lines: ['You kept 38 of 43 vows last week, 4 more than the week before.', 'Sleep was your hardest vow: 2 of 7 days.', 'It’s first on today’s list.'] };
+    let wkWait = null;   // W1015
+    if (d.recap && d.recap.ws) {
+      d.recap.rules = d.recap.lines;
+      const ai = _tbRecapAi(d.recap.ws);
+      if (ai) d.recap.lines = ai;
+      else { const p = _tbRecapPrefetch(!!opts.preview); if (p) { d.recap.pending = true; wkWait = p; } }
+    }
     if (!opts.preview && d.recap && d.recap.lead) { try { localStorage.setItem(TB_LEAD_KEY, JSON.stringify({ date: today, id: d.recap.lead })); } catch (_) {} }
     if (opts.preview && !(d.todos && d.todos.items.length)) d.todos = { due: 2, od: 1, any: true, next: null, items: [{ t: 'Return the library book', od: true, rem: '', pri: false }, { t: 'Book the dentist', od: false, rem: '12:00', pri: true }, { t: 'Call Dad', od: false, rem: '', pri: false }] };   // the preview always shows the card
     let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
@@ -60841,6 +60885,16 @@
     if (RM) bar.style.width = (frac * 100) + '%';
     else at(700, function () { bar.style.width = (frac * 100) + '%'; });
     at(1850, function () { root.classList.add('tb-breathe'); });
+    // W1015 — the words land when DeepSeek answers (or the rules sentence after a short wait)
+    if (wkWait) {
+      Promise.race([wkWait, new Promise(function (res) { setTimeout(res, opts.preview ? 4000 : 1500); })]).then(function () {
+        if (dead) return;
+        const box = root.querySelector('[data-tb-wkt]'); if (!box || !box.classList.contains('tb-wkt--wait')) return;
+        const lines = _tbRecapAi(d.recap.ws) || d.recap.rules;
+        box.classList.remove('tb-wkt--wait'); box.removeAttribute('aria-busy'); box.classList.add('tb-wkt--in');
+        box.innerHTML = lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('');
+      });
+    }
     // W1014 — the recap: the number counts up, the seven days fill in, a best / perfect week shimmers
     const wk = root.querySelector('.tb-wk');
     if (wk && d.recap) {
@@ -60956,7 +61010,7 @@
     step(0);
   }
   try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow, sheet: function (inst) { _coopOpenHuntDetail(inst, false); }, sheetNow: function (id) { return _coopSheetResult(id); } }; } catch (_) {}   // QA
-  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap }; } catch (_) {}   // QA
+  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap, recapPrefetch: _tbRecapPrefetch }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;

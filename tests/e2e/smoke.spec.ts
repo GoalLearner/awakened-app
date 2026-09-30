@@ -6141,6 +6141,42 @@ test.describe('BS · Monday recap (W1014)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();   // a suggestion, not a lead
   });
 
+  // W1015 — DeepSeek writes the words from the phone's facts; the rules sentence is the fallback.
+  const normal = (off: number) => ['a', 'b', 'c'].concat([-7, -5, -3].includes(off) ? ['s'] : []);
+  const RULES = ['You kept 24 of 28 vows last week.', 'Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'];
+  test('W1015: the words come from the server when ready — only facts are sent, never a name; stored for the week', async ({ page }) => {
+    await seed(page, normal, () => ['a', 'b', 'c', 's']);
+    await page.evaluate(() => {
+      (window as any).__recapCalls = [];
+      (window as any).Auth.fetchRecapText = async (ws: string, facts: unknown) => { (window as any).__recapCalls.push({ ws, facts }); return { ok: true, source: 'ai', text: ['You kept 24 of 28 vows, and Read held at 7 of 7.', 'Sleep came in at 3 of 7; it is first on today’s list.'] }; };
+      localStorage.removeItem('hb_recap_ai');
+    });
+    await show(page);
+    await expect.poll(() => card(page).then((c) => c && c.lines), { timeout: 4_000 }).toEqual(['You kept 24 of 28 vows, and Read held at 7 of 7.', 'Sleep came in at 3 of 7; it is first on today’s list.']);
+    const calls = await page.evaluate(() => (window as any).__recapCalls);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].ws).toBe('2026-10-05');
+    expect(calls[0].facts).toEqual({ kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7, streak: calls[0].facts.streak,
+      weak: { name: 'Sleep', kept: 3, of: 7, weekly: false }, strong: { name: 'Get morning sunlight', kept: 7, of: 7 }, suggestion: 'first_today' });
+    expect(JSON.stringify(calls[0].facts)).not.toMatch(/alias|steps|sleep_min|user/i);
+    // a second look this week: the stored words, at once, no second call
+    await page.evaluate(() => (window as any).__tb.show({}));
+    expect((await card(page))!.lines).toEqual(['You kept 24 of 28 vows, and Read held at 7 of 7.', 'Sleep came in at 3 of 7; it is first on today’s list.']);
+    await expect(page.locator('#tb-root .tb-wkt--wait')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).__recapCalls.length)).toBe(1);
+  });
+
+  test('W1015: when the server is slow or has no words, the rules sentence lands after a short wait', async ({ page }) => {
+    await seed(page, normal, () => ['a', 'b', 'c', 's']);
+    await page.evaluate(() => { (window as any).Auth.fetchRecapText = () => new Promise(() => {}); localStorage.removeItem('hb_recap_ai'); });
+    await show(page);
+    await expect(page.locator('#tb-root .tb-wkt--wait')).toHaveCount(1);
+    await expect.poll(() => card(page).then((c) => c && c.lines), { timeout: 4_000 }).toEqual(RULES);
+    // no key on the server (text: null) — straight to the rules sentence
+    await page.evaluate(() => { (window as any).Auth.fetchRecapText = async () => ({ ok: true, text: null, source: 'none' }); (window as any).__tb.show({}); });
+    await expect.poll(() => card(page).then((c) => c && c.lines), { timeout: 3_000 }).toEqual(RULES);
+  });
+
   test('a quiet week is one kind line; skipped Monday, it still shows on Tuesday', async ({ page }) => {
     await seed(page, () => [], () => ['a', 'b', 'c', 's'], new Date('2026-10-06T08:00:00-07:00'));
     expect(await page.evaluate(() => (window as any).__tb.recap())).toMatchObject({ K: 0, S: 28, lines: ['Last week was quiet. This week starts fresh today.'] });

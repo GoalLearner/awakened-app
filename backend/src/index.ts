@@ -135,6 +135,7 @@ import {
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
 // W871 (Wave 2 Train B) — THE WORLDGATE.
 import { handleWorldgateGet, handleWorldgateClaim, handleWorldgateRally } from './handlers/worldgate';
+import { handleRecapText } from './handlers/recap';   // W1015
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
   handleAasaGet,
@@ -488,6 +489,8 @@ export default {
             response = await handleTowerFriendsGet(request, env, session);
           } else if (path === '/v1/tower/avenge' && method === 'POST') {
             response = await handleTowerAvengePost(request, env, session);
+          } else if (path === '/v1/recap/text' && method === 'POST') {
+            response = await handleRecapText(request, env, session);   // W1015 — the Monday recap
           } else if (path === '/v1/worldgate' && method === 'GET') {
             // W871 — one server, one monster.
             response = await handleWorldgateGet(request, env, session);

@@ -182,6 +182,11 @@ export interface Env {
    *  blocks, moderation) and a read bucket. Never shared with a background drain. */
   RL_BOARD_WRITE: RateLimit;
   RL_BOARD_READ: RateLimit;
+  /** W1015 — the Monday recap: 3/min per user (the text is stored once per week anyway). */
+  RL_RECAP: RateLimit;
+  /** W1015 — DeepSeek key for the Monday recap. Optional: without it the app shows its own rules sentence.
+   *  Set with `npx wrangler secret put DEEPSEEK_API_KEY` (from backend/). */
+  DEEPSEEK_API_KEY?: string;
   /** W637 — self-healing IAP reconcile (POST /v1/users/me/entitlements/reconcile).
    *  DEDICATED bucket (never shared) because the handler makes an external
    *  RevenueCat REST call; 12/min per user is far above legit usage (called after

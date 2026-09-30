@@ -360,3 +360,11 @@ name = "RL_BOARD_READ"
 type = "ratelimit"
 namespace_id = "1028"
 simple = { limit = 30, period = 60 }  # 30/min per user — board + topic reads
+
+# W1015 — the Monday recap (DeepSeek). The text is stored once per hunter per week
+# (recap_texts), so this only guards a misbehaving client. 1029 is the next free id.
+[[unsafe.bindings]]
+name = "RL_RECAP"
+type = "ratelimit"
+namespace_id = "1029"
+simple = { limit = 3, period = 60 }  # 3/min per user

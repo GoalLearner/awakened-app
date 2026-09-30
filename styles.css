@@ -35896,6 +35896,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 @keyframes tb-wk-burst{0%{opacity:1;transform:rotate(var(--a)) translateX(0);}100%{opacity:0;transform:rotate(var(--a)) translateX(var(--r));}}
 @media (prefers-reduced-motion:reduce){.tb-wk::after,.tb-wkb{display:none;}.tb-wkdd i{transition:none;}.tb-frame.tb-enter .tb-wk{animation:none;}}
 @media (max-height:720px){.tb-wk{margin-top:10px;padding:11px 14px 10px;}.tb-wkn b{font-size:32px;}.tb-wkt{margin-top:8px;}.tb-wkt p{font-size:13.5px;}}
+.tb-wkt--wait i{display:block;height:12px;border-radius:6px;margin:7px 0 0;background:linear-gradient(90deg,rgba(149,150,178,.1),rgba(149,150,178,.26),rgba(149,150,178,.1));background-size:200% 100%;animation:tb-wk-skel 1.1s linear infinite;}
+.tb-wkt--wait i:nth-child(2){width:68%;}
+@keyframes tb-wk-skel{to{background-position:-200% 0;}}
+.tb-wkt--in p{animation:tb-fade .45s both;}
+@media (prefers-reduced-motion:reduce){.tb-wkt--wait i,.tb-wkt--in p{animation:none;}}
 .tb-todo{margin-top:18px;padding:14px 14px 8px;border-radius:18px;background:var(--tb-card);border:1px solid rgba(149,150,178,.16);flex:none;}
 .tb-tdh{display:flex;align-items:center;gap:8px;color:var(--tb-ink2);padding-bottom:10px;}
 .tb-tdh svg{flex:none;width:18px;height:18px;margin:-4px 0;}

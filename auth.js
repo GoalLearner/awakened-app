@@ -2338,6 +2338,12 @@
   }
 
   // W871 — THE WORLDGATE: the whole server as one raid party.
+  // W1015 — the Monday recap in DeepSeek's words. Posts last week's facts (never a name,
+  // steps or sleep); the server checks and stores the words once per week.
+  // → { ok, text: string[] | null, source: 'ai' | 'cache' | 'none' }
+  async function fetchRecapText(weekStart, facts) {
+    return _authedFetch('POST', '/v1/recap/text', { week_start: weekStart, facts: facts });
+  }
   async function fetchWorldgate() {
     const u = readUser();
     const gate = _stubGate(u);
@@ -2404,6 +2410,7 @@
     // W871 — the Worldgate
     fetchWorldgate,
     claimWorldgate,
+    fetchRecapText,   // W1015
     rallyWorldgate,   // W916
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
