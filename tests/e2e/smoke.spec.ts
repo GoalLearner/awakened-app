@@ -6107,7 +6107,7 @@ test.describe('BS · Monday recap (W1014)', () => {
     await show(page);
     await expect(page.locator('#tb-root .tb-wk')).toBeVisible({ timeout: 5_000 });
     expect(await card(page)).toEqual({ range: 'SEP 28 – OCT 4', of: 'of 28 vows', gold: false, dots: 'pkpkpkk',
-      lines: ['You kept 24 of 28 vows last week.', 'Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'] });
+      lines: ['Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'] });   // W1019 — never the count the card shows
     await expect(page.locator('#tb-root [data-tb-wkn]')).toHaveText('24', { timeout: 3_000 });
     await expect(page.locator('#tb-root .tb-yest')).toHaveCount(0);                          // last week replaces yesterday
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_brief_lead_v1') || 'null'))).toEqual({ date: '2026-10-05', id: 's' });
@@ -6137,13 +6137,13 @@ test.describe('BS · Monday recap (W1014)', () => {
     await seed(page, (off) => ['a', 'b', 'c'].concat(off === -4 ? ['s'] : []), (off) => ['a', 'b'].concat(monday(off) ? ['c', 's'] : []));
     await show(page);
     await expect(page.locator('#tb-root .tb-wk')).toBeVisible({ timeout: 5_000 });
-    expect(await card(page)).toMatchObject({ gold: true, lines: ['Your best week yet: 22 of 28 vows kept.', 'Sleep was your hardest vow: 1 of 7 days.', 'If every day is too much, make it 3 times a week.'] });
+    expect(await card(page)).toMatchObject({ gold: true, lines: ['Your best week yet.', 'Sleep was your hardest vow: 1 of 7 days.', 'If every day is too much, make it 3 times a week.'] });
     expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();   // a suggestion, not a lead
   });
 
   // W1015 — DeepSeek writes the words from the phone's facts; the rules sentence is the fallback.
   const normal = (off: number) => ['a', 'b', 'c'].concat([-7, -5, -3].includes(off) ? ['s'] : []);
-  const RULES = ['You kept 24 of 28 vows last week.', 'Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'];
+  const RULES = ['Sleep was your hardest vow: 3 of 7 days.', 'It’s first on today’s list.'];
   test('W1015: the words come from the server when ready — only facts are sent, never a name; stored for the week', async ({ page }) => {
     await seed(page, normal, () => ['a', 'b', 'c', 's']);
     await page.evaluate(() => {
@@ -6156,8 +6156,8 @@ test.describe('BS · Monday recap (W1014)', () => {
     const calls = await page.evaluate(() => (window as any).__recapCalls);
     expect(calls).toHaveLength(1);
     expect(calls[0].ws).toBe('2026-10-05');
-    expect(calls[0].facts).toEqual({ kept: 24, total: 28, prev_kept: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7,
-      weak: { name: 'Sleep', kept: 3, of: 7, weekly: false }, strong: { name: 'Get morning sunlight', kept: 7, of: 7 }, suggestion: 'first_today' });
+    expect(calls[0].facts).toEqual({ kept: 24, total: 28, best: false, perfect_week: false, perfect_days: 3, days_active: 7,
+      weak: { name: 'Sleep', kept: 3, of: 7, weekly: false }, missed: null, suggestion: 'first_today' });
     expect(JSON.stringify(calls[0].facts)).not.toMatch(/alias|steps|sleep_min|user/i);
     // a second look this week: the stored words, at once, no second call
     await page.evaluate(() => (window as any).__tb.show({}));
@@ -6175,6 +6175,18 @@ test.describe('BS · Monday recap (W1014)', () => {
     // no key on the server (text: null) — straight to the rules sentence
     await page.evaluate(() => { (window as any).Auth.fetchRecapText = async () => ({ ok: true, text: null, source: 'none' }); (window as any).__tb.show({}); });
     await expect.poll(() => card(page).then((c) => c && c.lines), { timeout: 3_000 }).toEqual(RULES);
+  });
+
+  test('W1019: a near-perfect week names exactly what was missed and when — never the count the card already shows', async ({ page }) => {
+    // everything kept except Read and Sleep on Saturday (2 misses)
+    await seed(page, (off) => off === -2 ? ['a', 'c'] : ['a', 'b', 'c', 's'], () => ['a', 'b', 'c', 's']);
+    const r = await page.evaluate(() => (window as any).__tb.recap());
+    expect(r.lines).toEqual(['Only 2 missed all week: Read and Sleep on Saturday.']);
+    expect(r.facts).toMatchObject({ kept: 26, total: 28, weak: null, missed: [{ name: 'Read', day: 'Saturday' }, { name: 'Sleep', day: 'Saturday' }], suggestion: null });
+    expect(r.facts).not.toHaveProperty('streak');
+    expect(r.facts).not.toHaveProperty('prev_kept');
+    expect(r.dots.join('')).toBe('pppppkp');
+    expect(r.lines.join(' ')).not.toMatch(/26 of 28/);
   });
 
   test('a quiet week is one kind line; skipped Monday, it still shows on Tuesday', async ({ page }) => {
@@ -7089,7 +7101,9 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Nothing due today.', more: 'Next · TOMORROW · Call Dad' });
     // W1017 — no to-dos at all: the card asks for the first one, right there
     await page.evaluate(() => { (window as any).__todo.load().length = 0; (window as any).__tb.show({}); });
-    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Have an appointment or errand today?', more: '' });
+    expect(await card()).toEqual({ cnt: '', rows: [], empty: 'Have an appointment or errand this week?', more: '' });
+    await expect(page.locator('#tb-root [data-tb-tdday]')).toHaveCount(7);                 // W1018 — today + the six days after
+    await expect(page.locator('#tb-root .tb-tdday--on')).toHaveText('TODAY');
     await expect(page.locator('#tb-root [data-tb-tdin]')).toHaveAttribute('placeholder', 'Add it to your to-do list');
     // the owner's preview adds to the card but saves nothing
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
@@ -7118,6 +7132,23 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
     await expect(page.locator('#todo-view')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('[data-vows-view="todo"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#todo-view [data-todo-k="d0"] .todo-w')).toHaveCount(1);
+  });
+
+  test('W1018: planning ahead from the briefing — pick a day in the row and the to-do lands there; the card names it as next', async ({ page }) => {
+    await seed(page, []);
+    await page.evaluate(() => (window as any).__tb.show({}));
+    await expect(page.locator('#tb-root [data-tb-tdin]')).toBeVisible({ timeout: 5_000 });
+    const label = (await page.locator('#tb-root [data-tb-tdday="2"]').textContent())!.trim();
+    await page.click('#tb-root [data-tb-tdday="2"]');
+    await expect(page.locator('#tb-root .tb-tdday--on')).toHaveText(label);
+    await expect(page.locator('#tb-root [data-tb-tdday="0"]')).toHaveAttribute('aria-pressed', 'false');
+    await page.fill('#tb-root [data-tb-tdin]', 'Dentist at 3');
+    await page.click('#tb-root [data-tb-tdgo]');
+    const want = await page.evaluate(() => { const d = new Date(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()) + 'T12:00:00'); d.setDate(d.getDate() + 2); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+    expect((await page.evaluate(() => JSON.parse(localStorage.getItem('hb_todos_v1') || '[]'))).map((t: any) => t.t + '|' + t.due)).toEqual(['Dentist at 3|' + want]);
+    await expect(page.locator('#tb-root .tb-todo .tb-tde')).toHaveText('Nothing due today.');
+    await expect(page.locator('#tb-root .tb-todo .tb-tdm')).toHaveText('Next · ' + label + ' · Dentist at 3');
+    await expect(page.locator('[data-todo-n]').first()).toBeHidden();                      // the badge is today's list only
   });
 
   test('TIME OF DAY on the sheets: a custom vow made with EVENING lands in the evening section; the edit sheet moves a library vow', async ({ page }) => {

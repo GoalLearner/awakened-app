@@ -35906,6 +35906,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tb-tdin:focus{border-color:rgba(167,139,250,.6);}
 .tb-tdin::placeholder{color:var(--tb-ink3);}
 .tb-tdgo{flex:none;height:42px;padding:0 16px;border-radius:12px;border:1px solid rgba(139,92,246,.5);background:var(--tb-violet);color:#fff;font:800 10px/1 var(--tb-mono);letter-spacing:.14em;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.tb-tddays{display:flex;gap:5px;padding:0 0 9px;}
+.tb-tdday{flex:1 1 0;min-width:0;height:30px;padding:0;border-radius:9px;border:1px solid rgba(149,150,178,.2);background:transparent;color:var(--tb-ink2);font:800 8.5px/1 var(--tb-mono);letter-spacing:.06em;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.15s;}
+.tb-tdday:first-child{flex:1.35 1 0;color:var(--tb-gold);}
+.tb-tdday--on{color:var(--tb-ink);border-color:rgba(167,139,250,.6);background:rgba(139,92,246,.22);}
+.tb-tdday:first-child.tb-tdday--on{color:var(--tb-gold);border-color:rgba(245,184,66,.5);background:rgba(245,184,66,.1);}
 .tb-todo--added{animation:tb-fade .4s both;}
 .tb-todo{margin-top:18px;padding:14px 14px 8px;border-radius:18px;background:var(--tb-card);border:1px solid rgba(149,150,178,.16);flex:none;}
 .tb-tdh{display:flex;align-items:center;gap:8px;color:var(--tb-ink2);padding-bottom:10px;}
