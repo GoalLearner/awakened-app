@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1019'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1020'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -4883,7 +4883,8 @@
     if (!_souls) return;
     const balanceEl = document.getElementById('souls-balance');
     if (balanceEl) {
-      balanceEl.textContent = _souls.balance.toLocaleString('en-US');
+      balanceEl.setAttribute('data-souls', String(_souls.balance));   // the true total at once; the digits roll up to it (W1020)
+      _soulsTween(balanceEl, Number(_souls.balance) || 0);
     }
     // Brief pulse animation on the badge to signal a change. Re-trigger
     // by removing+forcing reflow+re-adding the class.
@@ -32307,6 +32308,9 @@
       }
       if (!_divShown) { levelUpActive = false; drainLevelUpQueue(); }
     }
+    else if (item.type === 'statUp') {   // W1020
+      try { showStatUps(item); } catch (_) { levelUpActive = false; drainLevelUpQueue(); }
+    }
     else if (item.type === 'statToast') {
       // W476 — lightweight stat level-up toast (the in-between levels). Non-blocking
       // like the sub-rank toast: free the queue lock immediately so trailing items
@@ -35212,6 +35216,8 @@
                 '<span class="sc-hero-class-name">' + esc((cls.name || '').toUpperCase()) + '</span>' +
                 '<span class="sc-tap-cue" aria-hidden="true">›</span>' +   // W490 — tappability cue (class details)
               '</span>' +
+              // W1020 — the equipped Arena title, as a chip (nothing when no title is equipped)
+              (function () { let t = null; try { const eq = getEquippedArenaTitle(); t = eq && eq.name; } catch (_) {} return t ? '<span class="sc-title-chip">' + esc(String(t).toUpperCase()) + '</span>' : ''; })() +
             '</div>' +
             // Italic awakening / class flavor line
             '<div class="sc-awakening-msg">' + esc(cls.desc) + '</div>' +
@@ -35237,6 +35243,10 @@
           const src         = getAvatarSrc();
           const justChanged = (_lastAvatarSrc !== null) && (_lastAvatarSrc !== src);
           _lastAvatarSrc    = src;
+          const _hOpenN = todaySched > 0 ? habits.filter(isScheduledToday).filter(function (h) { return !isChecked(h.id); }).length : 0;
+          const _hState = (todaySched > 0 && !_hOpenN) ? ' sc-hunter--done' : (_hOpenN > 0 && new Date().getHours() >= 18) ? ' sc-hunter--risk' : '';
+          let _hGlow = '#8b5cf6';
+          try { let top = null, lv = -1; STATS.forEach(function (st) { if (st.id === 'WLT') return; const l = statLevel((stats[st.id] && stats[st.id].pts) || 0); if (l > lv) { lv = l; top = st; } }); if (top && top.color) _hGlow = top.color; } catch (_) {}
           return '<div class="sc-portrait-frame">' +
             // Hex grid backdrop (decorative SVG, aria-hidden)
             '<svg class="sc-portrait-hex" viewBox="0 0 390 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
@@ -35254,12 +35264,21 @@
             '<span class="sc-portrait-corner sc-portrait-corner--br" aria-hidden="true"></span>' +
             // Avatar + radar
             '<div class="sc-portrait-row">' +
-              '<div class="sc-avatar-row">' +
-                '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
-                     'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to change your look" ' +
-                     'loading="eager" ' +
-                     'role="button" tabindex="0" ' +
-                     'style="cursor:pointer">' +
+              // W1020 — the living hunter: a slow idle float, a floor glow in the colour of the
+              // strongest stat, a steady gold glow once today is sealed — and after 6 PM, with
+              // vows still open, the figure flickers (owner: evening only, never an all-day alarm).
+              '<div class="sc-avatar-row sc-hunter' + _hState + '" style="--sc-glow:' + _hGlow + '80">' +
+                '<span class="sc-hunter-floor" aria-hidden="true"></span>' +
+                '<span class="sc-hunter-fig">' +
+                  '<img id="sc-avatar-img" class="sc-avatar' + (justChanged ? ' sc-avatar-changed' : '') + '" ' +
+                       'src="' + src + '" alt="' + esc(cls.name) + ' avatar — tap to change your look" ' +
+                       'loading="eager" ' +
+                       'role="button" tabindex="0" ' +
+                       'style="cursor:pointer">' +
+                  (_hState === ' sc-hunter--risk'
+                    ? '<img class="sc-hunter-g sc-hunter-g1" src="' + src + '" alt="" aria-hidden="true"><img class="sc-hunter-g sc-hunter-g2" src="' + src + '" alt="" aria-hidden="true">'
+                    : '') +
+                '</span>' +
                 '<span class="sc-avatar-cue" aria-hidden="true">✎</span>' +   // W493 — "tap to change your look" cue
               '</div>' +
               '<div id="sc-radar-wrap" class="sc-radar-wrap"></div>' +
@@ -35284,15 +35303,10 @@
             '<span class="sc-metric-lbl">Days Active</span>' +
           '</div>' +
         '</div>' +
-        // W861 (Wave 2, Hunter's License pt 1) — the manhwa STATUS WINDOW
-        // opener. Delegated handler (data-open-statuswindow) — this card
-        // re-renders, one-time bindings die (the W822 lesson).
-        '<button type="button" class="sw-open-btn" data-open-statuswindow role="button" aria-label="Open your Status Window">' +
-          '<span class="sw-open-glyph" aria-hidden="true">⟐</span> STATUS WINDOW' +
-        '</button>' +
-        // W905 — the Shadow Army strip left this card; since W909 it lives on the Co-op
-        // tab (index.html). The share CTA is a text link.
-        '<button type="button" class="sc-share-link" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'Share my hunter card</button>' +
+        // W1020 — one SHARE CARD button (the design's gold button). The STATUS WINDOW button left
+        // the Status tab (owner 2026-10-01: "Share only"); the Shadow Army strip has lived on
+        // the Co-op tab since W909.
+        '<button type="button" class="sc-share-btn" data-bkshare data-bk-source="profile">' + _bksShareIconSvg() + 'SHARE CARD</button>' +
       '</div>';
 
     requestAnimationFrame(() => {
@@ -38126,19 +38140,21 @@
       // non-blocking TOAST per stat per completion. Fixes the 1z.276A "modal flood"
       // (a single tap could cross Lv2/3/4 → three stacked modals) while still making
       // each stat advance feel acknowledged on a single-habit completion.
+      // W1020 — every level gets the LEVEL UP screen now, and every stat that rose on this
+      // seal shares ONE screen (so a single tap still can never stack screens — the W476 worry).
+      const _statUps = [];
       STATS.forEach(st => {
         const oldLv = oldStatLevels[st.id];
         const newLv = statLevel(stats[st.id]?.pts || 0);
         if (newLv <= oldLv) return;
-        let topMilestone = 0;
+        let bonusPts = 0;
         for (let lv = oldLv + 1; lv <= newLv; lv++) {
           const bonusThr = STAT_BONUS_THRESHOLDS.find(t => t.level === lv);
-          if (bonusThr) { levelUpQueue.push({ type: 'stat', stat: st, level: lv, bonusPts: bonusThr.pts }); topMilestone = lv; }
+          if (bonusThr) bonusPts += bonusThr.pts;
         }
-        // Toast the final level reached — unless it was itself a milestone modal,
-        // which already owns the moment.
-        if (newLv !== topMilestone) levelUpQueue.push({ type: 'statToast', stat: st, level: newLv });
+        _statUps.push({ stat: st, from: oldLv, to: newLv, bonusPts: bonusPts });
       });
+      if (_statUps.length) levelUpQueue.push({ type: 'statUp', ups: _statUps });
 
       // v3 Phase 1z.275C — Sub-rank celebration.
       // Transaction-based: fires only when THIS XP gain advances the
@@ -38242,6 +38258,7 @@
     const done  = todayHabits.filter(h => isChecked(h.id)).length;
     document.getElementById('completed-count').textContent = done;
     document.getElementById('total-count').textContent = total;
+    try { _tvRender(); } catch (_) {}   // W1020 — the header's open-vow list
     const pct = total === 0 ? 0 : (done / total) * 100;
     document.getElementById('progress-bar').style.width = pct + '%';
     // v3 Phase 1z.284 W195 — keep the List View "Seal your vows" bar in
@@ -60029,12 +60046,7 @@
     } else {
       wrap.classList.add('hidden');
     }
-    // v3 Phase 1o — keep the pack-progress modal body in sync if open.
-    // The footer strip is hidden via CSS; the modal is now the user-facing
-    // surface. Mirroring here means every state-change site that already
-    // calls renderCompoundProgress (init, tab switch, habit toggle) keeps
-    // the modal fresh without new wiring.
-    syncPackProgressModalBody(rows);
+    // (W1020 — the Routine Progress popup that mirrored these rows is removed.)
     // W514/W515 — keep the vows-header compound-reward caption fresh on every
     // toggle (the meter math changes as habits are completed).
     try { _renderVowsCompoundReward(); } catch (_) {}
@@ -60119,68 +60131,126 @@
     } catch (e) { try { _logSwallow('vowsCompoundReward', e); } catch (_) {} }
   }
 
-  // v3 Phase 1o — pack-progress modal (the new home for routine progress).
-  // The top "X / Y HABITS TODAY" tile opens this; the persistent footer
-  // strip is hidden via CSS. Body re-uses the cp-prog-row rows built by
-  // renderCompoundProgress so streak / shield / honest / add-missing chips
-  // continue to use the existing delegated handlers.
-  function syncPackProgressModalBody(rowsHtml) {
-    const body  = document.getElementById('pp-body');
-    const empty = document.getElementById('pp-empty');
-    if (!body || !empty) return;
-    if (rowsHtml) {
-      body.innerHTML = rowsHtml;
-      empty.classList.add('hidden');
+  // ── W1020 · the header's vow list (Claude Design "Status Tab · Interactive", owner picks) ──
+  // Tapping the "N / M" counter no longer opens the Routine Progress popup (removed, owner
+  // 2026-10-01). It drops down the vows STILL OPEN today, and a tap seals one right there,
+  // from any tab. Sealing goes through the same path as the list row (toggleHabit), so XP,
+  // streaks, celebrations and the perfect day behave exactly the same.
+  var _tvOpen = false;   // var: read by updateProgress() before this line runs at boot
+  var _TV_CHEV = '<svg width="9" height="13" viewBox="0 0 9 14" fill="none" aria-hidden="true"><path d="M1.5 1.5 7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function _tvRender() {
+    const box = document.getElementById('today-vows'), strip = document.getElementById('today-strip');
+    if (!box || !strip) return;
+    strip.classList.toggle('today-strip--open', _tvOpen);
+    strip.setAttribute('aria-expanded', _tvOpen ? 'true' : 'false');
+    box.classList.toggle('tv-drop--open', _tvOpen);
+    if (!_tvOpen) return;
+    const todays = (Array.isArray(habits) ? habits : []).filter(isScheduledToday);
+    const open = todays.filter(function (h) { return !isChecked(h.id); });
+    let h = '<div class="tv-head"><span>VOWS LEFT TODAY</span><span class="tv-count">' + open.length + '<i> / ' + todays.length + '</i></span></div>';
+    if (!open.length) {
+      h += '<div class="tv-empty">' + (todays.length ? 'Every vow is sealed. The day is complete.' : 'No vows scheduled today.') + '</div>';
     } else {
-      body.innerHTML = '';
-      empty.classList.remove('hidden');
+      h += '<div class="tv-list">' + open.map(function (hb) {
+        let stat = null, color = '#a78bfa', nm = hb.name;
+        try { stat = getHabitPrimaryStat(hb); color = getHabitStatColor(hb) || color; } catch (_) {}
+        try { nm = habitDisplayParts(hb).base || hb.name; } catch (_) {}
+        let xp = 0; try { xp = diffPts(hb.difficulty); } catch (_) {}
+        let icon = ''; try { icon = habitIconHtml(hb, { size: 28, eager: true }); } catch (_) {}
+        return '<div class="tv-row" data-tv-id="' + esc(hb.id) + '" role="button" tabindex="0" aria-label="Seal ' + esc(nm) + '">' +
+          '<span class="tv-ic">' + icon + '</span>' +
+          '<span class="tv-nm">' + esc(nm) + '</span>' +
+          (stat ? '<span class="tv-chip" style="color:' + color + ';background:' + color + '1f">+' + xp + ' ' + esc(stat) + '</span>' : '') +
+          '<span class="tv-ring" aria-hidden="true"></span>' +
+        '</div>';
+      }).join('') + '</div>';
     }
+    box.innerHTML = h;
   }
-  function openPackProgressModal() {
-    // Force a render so the body is up-to-date even if the user hadn't
-    // visited the Habits tab yet this session.
-    try { renderCompoundProgress(); } catch (_) {}
-    const overlay = document.getElementById('pack-progress-overlay');
-    const modal   = document.getElementById('pack-progress-modal');
-    if (!overlay || !modal) return;
-    overlay.classList.remove('hidden');
-    modal.classList.remove('hidden');
+  function _tvSeal(id) {
+    const hb = (habits || []).find(function (x) { return String(x.id) === String(id); }); if (!hb || isChecked(hb.id)) return;
+    // the list row, when it is on screen, takes the tap itself (sections, sinks and bursts stay in step)
+    const li = document.querySelector('#habit-list .habit-item[data-id="' + (window.CSS && CSS.escape ? CSS.escape(String(hb.id)) : String(hb.id)) + '"]');
+    try { if (li && li.offsetParent !== null) li.click(); else toggleHabit(hb.id, li || null); }
+    catch (e) { _logSwallow('tv:seal', e); }
+    try { if (!isChecked(hb.id)) return; } catch (_) {}
+    const row = document.querySelector('#today-vows .tv-row[data-tv-id="' + (window.CSS && CSS.escape ? CSS.escape(String(hb.id)) : String(hb.id)) + '"]');
+    if (row && !_todReduced()) { row.classList.add('tv-row--out'); setTimeout(_tvRender, 240); } else _tvRender();
+    try { if (currentTab === 'profile') renderProfile(); } catch (_) {}   // the hunter stops flickering the moment the day is sealed
   }
-  function closePackProgressModal() {
-    const overlay = document.getElementById('pack-progress-overlay');
-    const modal   = document.getElementById('pack-progress-modal');
-    if (overlay) overlay.classList.add('hidden');
-    if (modal)   modal.classList.add('hidden');
-  }
-  function setupPackProgressModal() {
-    const tile    = document.getElementById('today-strip');
-    const overlay = document.getElementById('pack-progress-overlay');
-    const closeBtn= document.getElementById('pp-close-btn');
-    if (tile) {
-      tile.addEventListener('click', e => {
-        // The souls badge + any other tappable child should keep their own
-        // behavior. Anything that bubbles up from inside a <button> is a
-        // child action, not a tile tap.
-        const t = e.target;
-        if (t && t.closest && t.closest('button')) return;
-        // W829 — the W811/W827 #vitals-grid branch is gone with the Vitals
-        // Row itself (owner call): the whole tile is the routine-breakdown
-        // tap again, as it was pre-W810.
-        openPackProgressModal();
-      });
-      tile.addEventListener('keydown', e => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        openPackProgressModal();
-      });
+  function setupTodayVows() {
+    const strip = document.getElementById('today-strip'); if (!strip) return;
+    strip.setAttribute('aria-label', 'Vows left today — tap to open the list');
+    strip.setAttribute('aria-expanded', 'false');
+    const right = strip.querySelector('.today-strip-right');
+    if (right && !right.querySelector('.tv-chev')) { const c = document.createElement('span'); c.className = 'tv-chev'; c.innerHTML = _TV_CHEV; right.appendChild(c); }
+    if (!document.getElementById('today-vows')) {
+      const box = document.createElement('div'); box.id = 'today-vows'; box.className = 'tv-drop';
+      strip.parentNode.insertBefore(box, strip.nextSibling);
+      box.addEventListener('click', function (e) { const r = e.target.closest && e.target.closest('[data-tv-id]'); if (r) _tvSeal(r.getAttribute('data-tv-id')); });
+      box.addEventListener('keydown', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; const r = e.target.closest && e.target.closest('[data-tv-id]'); if (r) { e.preventDefault(); _tvSeal(r.getAttribute('data-tv-id')); } });
     }
-    if (overlay)  overlay.addEventListener('click', closePackProgressModal);
-    if (closeBtn) closeBtn.addEventListener('click', closePackProgressModal);
-    document.addEventListener('keydown', e => {
-      if (e.key !== 'Escape') return;
-      const modal = document.getElementById('pack-progress-modal');
-      if (modal && !modal.classList.contains('hidden')) closePackProgressModal();
+    const flip = function () { _tvOpen = !_tvOpen; _tvRender(); try { _hapticTick('LIGHT'); } catch (_) {} };
+    strip.addEventListener('click', function (e) {
+      const t = e.target; if (t && t.closest && t.closest('button')) return;   // a child button (the 2X XP pill) keeps its own tap
+      flip();
     });
+    strip.addEventListener('keydown', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); flip(); });
+  }
+  try { window.__tv = { render: _tvRender, open: function (v) { _tvOpen = v !== false; _tvRender(); }, isOpen: function () { return _tvOpen; } }; } catch (_) {}   // QA
+
+  // ── W1020 · the LEVEL UP screen for every stat level (one screen for every stat that rose) ──
+  // Was: a modal only at levels 5/10/15/20 and a toast for the rest (W476). The owner picked the
+  // design's burst for every level and ONE screen when several stats rise on the same seal, so a
+  // single tap can never stack screens. Milestone levels keep their bonus rank-XP line and chime.
+  // item = { type: 'statUp', ups: [{ stat, from, to, bonusPts }] }
+  function showStatUps(item) {
+    const done = function () { levelUpActive = false; drainLevelUpQueue(); };
+    const ups = (item && Array.isArray(item.ups)) ? item.ups.filter(function (u) { return u && u.stat && u.to > u.from; }) : [];
+    if (!ups.length || _newHunterQuiet()) { done(); return; }   // W940 — day one stays quiet (the levels are still gained)
+    const lead = ups[0].stat, c = lead.color || '#a78bfa';
+    const bonus = ups.reduce(function (s, u) { return s + (u.bonusPts || 0); }, 0);
+    const maxed = ups.some(function (u) { return u.to >= 20; });
+    if (bonus) { try { playSfx('stat_chime'); } catch (_) {} }
+    try { _hapticTick(maxed ? 'SUCCESS' : bonus ? 'HEAVY' : 'MEDIUM'); } catch (_) {}
+    let ov = document.getElementById('statup-ov');
+    if (!ov) { ov = document.createElement('div'); ov.id = 'statup-ov'; ov.className = 'statup-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Stat level up'); document.body.appendChild(ov); }
+    let burst = '';
+    for (let i = 0; i < 16; i++) burst += '<i style="--a:' + (i * 22.5) + 'deg;--dl:' + ((i % 4) * 0.06) + 's;background:' + (i % 3 ? c : '#f5b842') + '"></i>';
+    const body = ups.length === 1
+      ? '<div class="statup-stat" style="color:' + c + ';text-shadow:0 0 28px ' + c + '">' + esc(lead.id) + '</div>' +
+        '<div class="statup-lv"><span class="statup-from">' + ups[0].from + '</span><span class="statup-arrow">→</span><span class="statup-to">' + ups[0].to + '</span></div>'
+      : '<div class="statup-rows">' + ups.map(function (u) {
+          return '<div class="statup-row"><span class="statup-rs" style="color:' + (u.stat.color || c) + '">' + esc(u.stat.id) + '</span><span class="statup-from">' + u.from + '</span><span class="statup-arrow">→</span><span class="statup-to">' + u.to + '</span></div>';
+        }).join('') + '</div>';
+    ov.style.setProperty('--su-c', c);
+    ov.innerHTML = '<div class="statup-burst" aria-hidden="true">' + burst + '</div>' +
+      '<div class="statup-card">' +
+        '<div class="statup-kick">' + (maxed ? 'STAT MASTERED' : 'LEVEL UP') + '</div>' + body +
+        (bonus ? '<div class="statup-bonus">BONUS +' + bonus + ' XP</div>' : '') +
+        '<div class="statup-tap">TAP TO CONTINUE</div>' +
+      '</div>';
+    ov.classList.add('statup-ov--on');
+    let timer = 0, closed = false;
+    const close = function () { if (closed) return; closed = true; clearTimeout(timer); ov.classList.remove('statup-ov--on'); ov.onclick = null; ov.innerHTML = ''; done(); };
+    ov.onclick = null;
+    setTimeout(function () { ov.onclick = close; }, 400);   // a stray tap from the seal must not close it at once
+    timer = setTimeout(close, maxed ? 5000 : 3200);
+  }
+
+  // ── W1020 · souls count up to the new total (the number used to jump) ──
+  var _soulsShown = null, _soulsRaf = 0;   // var: refreshSoulsDisplay() runs before this line at boot
+  function _soulsTween(el, to) {
+    cancelAnimationFrame(_soulsRaf);
+    const from = _soulsShown;
+    if (from == null || from === to || _todReduced() || document.hidden) { _soulsShown = to; el.textContent = to.toLocaleString('en-US'); return; }
+    const t0 = performance.now(), dur = 900;
+    (function step(now) {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      _soulsShown = Math.round(from + (to - from) * e);
+      el.textContent = _soulsShown.toLocaleString('en-US');
+      if (k < 1) _soulsRaf = requestAnimationFrame(step); else _soulsShown = to;
+    })(t0);
   }
 
   // ── PR STRIP RENDERING ───────────────────────────────────
@@ -71706,7 +71776,7 @@
     setupDailyInsight();
     setupCompoundPopup();
     setupBonusInfoPopup();
-    setupPackProgressModal();
+    setupTodayVows();   // W1020 — the counter opens the vows still open (the Routine Progress popup is gone)
     setupPRDetailSheet();
     setupBossesPanel();
     setupQuestsGate();

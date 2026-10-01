@@ -6062,6 +6062,114 @@ test.describe('BO · Weekly-goal vows (W1005)', () => {
   });
 });
 
+// W1020 — Status tab · Interactive (Claude Design), the owner's picks: the header counter opens
+// the vows still open (sealable there; the Routine Progress popup is gone), a LEVEL UP screen for
+// every stat level (one screen for every stat that rose), the living hunter (evening flicker
+// only), the title chip, one SHARE CARD button, souls counting up.
+test.describe('BT · Status tab interactive (W1020)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  // names matter: a vow named like a goal-based one (Read, Get morning sunlight…) will not seal without a goal
+  const custom = (id: string, name: string, stat: string, x?: Record<string, unknown>) => Object.assign({ id, name, emoji: '⚡', difficulty: 'easy', type: 'build', primaryStat: stat, custom: true }, x || {});
+  async function seed(page: Page, habits: Array<Record<string, unknown>>, extra?: Record<string, string>, at?: Date) {
+    if (at) await page.clock.setFixedTime(at);
+    await freshApp(page);
+    await page.addInitScript(([hs, ex]) => {
+      try {
+        if (sessionStorage.getItem('__w1020')) return;
+        sessionStorage.setItem('__w1020', '1');
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        localStorage.setItem('hb_points', '500');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1', 'hb_first_vow_pointer_seen'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_achievements', JSON.stringify(['first_step', 'first_blood', 'getting_started']));
+        Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
+      } catch (_) {}
+    }, [habits, extra || {}] as [any[], Record<string, string>]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+  }
+  const rows = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('#today-vows .tv-row')).map((r) => (r.querySelector('.tv-nm') as HTMLElement).textContent + '|' + ((r.querySelector('.tv-chip') as HTMLElement | null)?.textContent || '')));
+
+  test('the counter opens the vows still open; a tap seals one from any tab; the Routine Progress popup is gone', async ({ page }) => {
+    await seed(page, [custom('a', 'Call a friend', 'FOCUS'), custom('b', 'Tidy the desk', 'INT'), custom('c', 'Meditate', 'FOCUS', { difficulty: 'medium' })]);
+    await page.click('#tab-habits');
+    await expect(page.locator('#today-vows')).not.toHaveClass(/tv-drop--open/);
+    await page.click('#today-strip .today-strip-left');
+    await expect(page.locator('#today-vows')).toHaveClass(/tv-drop--open/);
+    await expect(page.locator('#today-strip')).toHaveAttribute('aria-expanded', 'true');
+    expect(await rows(page)).toEqual(['Call a friend|+1 FOCUS', 'Tidy the desk|+1 INT', 'Meditate|+1 FOCUS']);   // custom vows are locked to +1 XP (W970)
+    await expect(page.locator('#today-vows .tv-count')).toHaveText('3 / 3');
+    await expect(page.locator('#pack-progress-modal')).toHaveCount(0);
+    // seal one from the list: the counter, the list row and the dropdown all follow
+    await page.click('#today-vows [data-tv-id="b"]');
+    await expect(page.locator('#completed-count')).toHaveText('1');
+    await expect(page.locator('#habit-list .habit-item[data-id="b"]')).toHaveClass(/completed/);
+    await expect.poll(() => rows(page)).toEqual(['Call a friend|+1 FOCUS', 'Meditate|+1 FOCUS']);
+    // from another tab (no list row on screen): still seals
+    await page.evaluate(() => document.getElementById('tab-profile')!.click());
+    await page.click('#today-vows [data-tv-id="a"]');
+    await expect(page.locator('#completed-count')).toHaveText('2');
+    await page.click('#today-vows [data-tv-id="c"]');
+    await expect(page.locator('#completed-count')).toHaveText('3');
+    await expect(page.locator('#today-vows .tv-empty')).toHaveText('Every vow is sealed. The day is complete.', { timeout: 4_000 });
+    expect(await page.evaluate(() => { const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); return (JSON.parse(localStorage.getItem('hb_completions') || '{}')[d] || []).length; })).toBe(3);
+    // tap again: it closes
+    await page.click('#today-strip .today-strip-left');
+    await expect(page.locator('#today-vows')).not.toHaveClass(/tv-drop--open/);
+  });
+
+  test('LEVEL UP for every level: one stat gets the big screen; two stats rising on one seal share one screen', async ({ page }) => {
+    const stats = JSON.stringify({ STR: { pts: 4 }, VIT: { pts: 4 }, INT: { pts: 0 }, FOCUS: { pts: 4 }, WILL: { pts: 0 }, WLT: { pts: 0 } });
+    await seed(page, [custom('f', 'Deep work', 'FOCUS'), { id: 'cw', name: 'Cardio workout', emoji: '•', difficulty: 'easy', type: 'build', goal: { value: 30, unit: 'min' } }, custom('z', 'Left open', 'WILL')], { hb_stats: stats });   // one vow stays open: no Perfect Day screen ahead of the level-up
+    await page.click('#tab-habits');
+    await page.evaluate(() => (document.querySelector('#habit-list .habit-item[data-id="f"]') as HTMLElement).click());
+    const ov = page.locator('#statup-ov');
+    await expect(ov).toHaveClass(/statup-ov--on/, { timeout: 6_000 });
+    await expect(ov.locator('.statup-kick')).toHaveText('LEVEL UP');
+    await expect(ov.locator('.statup-stat')).toHaveText('FOCUS');
+    await expect(ov.locator('.statup-lv')).toHaveText('1→2');
+    await expect(ov.locator('.statup-tap')).toHaveText('TAP TO CONTINUE');
+    await expect(page.locator('.habit-toast--statlvl')).toHaveCount(0);                      // the old toast is retired
+    await page.waitForTimeout(500);
+    await ov.click();
+    await expect(ov).not.toHaveClass(/statup-ov--on/);
+    // Cardio workout trains STR and VIT: both rise, one screen
+    await page.evaluate(() => (document.querySelector('#habit-list .habit-item[data-id="cw"]') as HTMLElement).click());
+    await expect(ov).toHaveClass(/statup-ov--on/, { timeout: 6_000 });
+    await expect(ov.locator('.statup-row')).toHaveCount(2);
+    expect(await ov.locator('.statup-row').allTextContents()).toEqual(['STR1→2', 'VIT1→2']);
+    await expect(ov.locator('.statup-stat')).toHaveCount(0);
+  });
+
+  test('the Status tab: the hunter is steady by day, flickers after 6 PM with vows open, glows once sealed; title chip, one SHARE CARD', async ({ page }) => {
+    await seed(page, [custom('a', 'Tidy the desk', 'INT')], { hb_arena_title: 'rt_duelist', hb_arena_v2: JSON.stringify({ highestCleared: 20 }) }, new Date('2026-10-01T19:30:00-07:00'));
+    await page.evaluate(() => document.getElementById('tab-profile')!.click());
+    await expect(page.locator('#status-content .sc-hunter')).toHaveClass(/sc-hunter--risk/, { timeout: 6_000 });
+    await expect(page.locator('#status-content .sc-hunter-g')).toHaveCount(2);
+    await expect(page.locator('#status-content .sc-title-chip')).toHaveText('DUELIST');
+    await expect(page.locator('#status-content .sc-share-btn[data-bkshare]')).toHaveText('SHARE CARD');
+    await expect(page.locator('#status-content [data-open-statuswindow], #status-content .sc-share-link')).toHaveCount(0);
+    await expect(page.locator('#sc-avatar-img')).toHaveCount(1);
+    // seal the day from the header: the flicker stops, the glow comes on
+    await page.click('#today-strip .today-strip-left');
+    await page.click('#today-vows [data-tv-id="a"]');
+    await expect(page.locator('#status-content .sc-hunter')).toHaveClass(/sc-hunter--done/, { timeout: 6_000 });
+    await expect(page.locator('#status-content .sc-hunter-g')).toHaveCount(0);
+  });
+
+  test('by day the hunter never flickers; with no title there is no chip; souls roll up to the true total', async ({ page }) => {
+    await seed(page, [custom('a', 'Tidy the desk', 'INT')], {}, new Date('2026-10-01T10:00:00-07:00'));
+    await page.evaluate(() => document.getElementById('tab-profile')!.click());
+    await expect(page.locator('#status-content .sc-hunter')).toHaveCount(1, { timeout: 6_000 });
+    await expect(page.locator('#status-content .sc-hunter')).not.toHaveClass(/sc-hunter--risk|sc-hunter--done/);
+    await expect(page.locator('#status-content .sc-title-chip')).toHaveCount(0);
+    const total = await page.evaluate(() => document.getElementById('souls-balance')!.getAttribute('data-souls'));
+    expect(total).toMatch(/^\d+$/);
+    await expect(page.locator('#souls-balance')).toHaveText(Number(total).toLocaleString('en-US'), { timeout: 4_000 });
+  });
+});
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {

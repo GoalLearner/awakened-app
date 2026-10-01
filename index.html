@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=741">
+  <link rel="stylesheet" href="styles.css?v=742">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -558,7 +558,7 @@
            bridge didn't report granted, so most sessions never showed it;
            the owner chose removal over repair. The count cluster keeps its
            ids + tap → routine breakdown. -->
-      <div id="today-strip" class="today-strip" role="button" tabindex="0" aria-label="Habits progress — tap for routine breakdown">
+      <div id="today-strip" class="today-strip" role="button" tabindex="0" aria-label="Vows left today — tap to open the list">
         <div class="today-strip-left">
           <span id="completed-count" class="today-strip-value">0</span>
           <span class="today-strip-divider">/</span>
@@ -3003,19 +3003,8 @@
        and opens this modal. Body is populated by renderPackProgressIntoTarget
        (same builder that fed the retired footer strip), so streak / shield /
        honest-day / add-missing chips all keep working. -->
-  <div id="pack-progress-overlay" class="pack-progress-overlay hidden"></div>
-  <div id="pack-progress-modal" class="pack-progress-modal hidden" role="dialog" aria-labelledby="pp-title" aria-modal="true">
-    <div class="pp-card">
-      <button id="pp-close-btn" class="pp-close-btn" aria-label="Close">✕</button>
-      <div id="pp-title" class="pp-title">Routine Progress</div>
-      <div class="pp-subtitle">Today's pack completion + active bonuses.</div>
-      <div id="pp-body" class="pp-body"></div>
-      <div id="pp-empty" class="pp-empty hidden">
-        No active routines yet.<br>
-        <span class="pp-empty-sub">Add the Morning Routine or Locked-In pack from <b>Add Habits</b>.</span>
-      </div>
-    </div>
-  </div>
+  <!-- W1020 — the Routine Progress popup (#pack-progress-modal) is REMOVED (owner 2026-10-01): the header
+       counter now opens the vows still open today (#today-vows, built by setupTodayVows). -->
 
   <!-- Bonus Info popup — explains Compound Effect + Locked-In bonus mechanics + ROI -->
   <div id="bonus-info-overlay" class="bonus-info-overlay hidden"></div>
@@ -3201,7 +3190,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=1"></script>
-  <script src="app.js?v=1421"></script>
+  <script src="app.js?v=1422"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
