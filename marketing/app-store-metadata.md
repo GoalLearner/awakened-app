@@ -8,6 +8,119 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.9 — READY TO PASTE (W1002–W1022, final 2026-10-02, HEAD `6c5c9c4`)
+
+Four languages. Each block is under the 4,000-character limit. Banned-word check
+done (no "fell"/"felled"). Left out on purpose: the update banner on resume (W1007,
+plumbing), the TO-DO badge count (W1016, a correction), the removed Routine Progress
+popup and Status Window button, and the old-account move to the new Jump Program.
+
+**Before submitting:**
+- **DeepSeek.** The Monday recap sends last week's numbers and up to three vow names
+  (no name, no account id) to DeepSeek to be worded. Add DeepSeek to the privacy policy
+  (hosted on Netlify, not in this repo) and review the App Privacy answers. Apple's
+  guideline 5.1.2(i) asks for disclosure and permission before personal data goes to a
+  third-party AI; whether vow names count is a judgement call, so say what is sent in
+  the App Review notes.
+- **Build.** Submit a build cut from `6c5c9c4` (Tree identity tag `3.0.9-w1022`).
+- The in-app What's New sheet has no 3.0.9 entry (its last is 3.0.7). Updaters simply
+  see no sheet; adding one needs a new build.
+
+### English (U.S.)
+
+```
+Plan the week. Train on your days.
+
+• Plan the whole week. The To-do tab now lays your tasks out Monday to Sunday. Drag one to another day, or add it to several days at once. Make it repeat: weekly, monthly, or a set number of days after you finish it. A NOTE button in the add bar keeps the details (a grocery list, an address).
+
+• To-dos are for keeping track, not for points. Add as many as you like. They no longer pay XP; your vows do.
+
+• A briefing that starts with what's due. Your morning briefing opens with today's to-dos, and if you have none yet you can add your first right there, for any day this week. Mondays open with a short recap of the week you just had, written for you.
+
+• Vows that fit a real week. Set a vow to a number of times a week (the gym four times, any days). Skipping Monday never breaks Monday; the week only breaks if you come up short.
+
+• See what's left from anywhere. Tap the vows counter at the top to open the vows still open today, and seal them right there.
+
+• A Status tab that moves. Every stat level gets its own LEVEL UP moment, your hunter stands beside your stats and glows gold when the day is sealed, and one button shares your card.
+
+• Vertical Jump Program, rebuilt. Four sessions in every 14 days: two plyometric, two strength, each listed in order with its sets. Pick the day you start, and the app tells you which day you're on and when the next session is.
+
+• Fixes. Stair-climb hunts now show each hunter's flights and the true time. A new week's Worldgate no longer reads as last week's. When the Worldgate is down, your share says your step count froze at the kill.
+```
+
+### Spanish (Mexico)
+
+```
+Planea la semana. Entrena en tus días.
+
+• Planea toda la semana. La pestaña Pendientes ahora ordena tus tareas de lunes a domingo. Arrastra una a otro día o agrégala a varios días a la vez. Haz que se repita: cada semana, cada mes o cierto número de días después de terminarla. Un botón de NOTA en la barra de agregar guarda los detalles (la lista del súper, una dirección).
+
+• Los pendientes son para organizarte, no para sumar puntos. Agrega todos los que quieras. Ya no dan XP; tus votos sí.
+
+• Un resumen que empieza por lo que vence. Tu resumen matutino abre con los pendientes de hoy y, si aún no tienes ninguno, puedes agregar el primero ahí mismo, para cualquier día de esta semana. Los lunes abre con un repaso breve de la semana que acabas de tener, escrito para ti.
+
+• Votos que caben en una semana real. Pon un voto en un número de veces por semana (el gimnasio cuatro veces, los días que sea). Saltarte el lunes no rompe el lunes; la semana solo se rompe si te quedas corto.
+
+• Ve lo que falta desde cualquier lugar. Toca el contador de votos de arriba para abrir los que siguen abiertos hoy y cumplirlos ahí mismo.
+
+• Una pestaña Estado con vida. Cada nivel de atributo tiene su propio momento de subida de nivel, tu cazador aparece junto a tus atributos y brilla en dorado cuando completas el día, y un solo botón comparte tu tarjeta.
+
+• Programa de Salto Vertical, renovado. Cuatro sesiones cada 14 días: dos de pliometría y dos de fuerza, cada una en orden y con sus series. Elige el día en que empiezas y la app te dice en qué día vas y cuándo es la próxima sesión.
+
+• Correcciones. Las cacerías de escaleras ahora muestran los pisos de cada cazador y el tiempo real. La Worldgate de una semana nueva ya no aparece como la de la semana pasada. Cuando la Worldgate es derrotada, tu parte avisa que tu conteo de pasos se congeló en ese momento.
+```
+
+### Japanese
+
+```
+一週間を計画する。自分の日に鍛える。
+
+• 一週間まるごと計画。やることタブが月曜から日曜までの並びになりました。別の日へドラッグしたり、複数の日にまとめて追加したりできます。繰り返しも設定できます：毎週、毎月、または完了から指定した日数後。追加バーの「メモ」ボタンで、買い物リストや住所などの詳細を残せます。
+
+• やることは整理のためのもので、ポイント稼ぎのためではありません。いくつでも追加できます。XPは付かなくなりました。XPを生むのは誓いです。
+
+• 期日から始まるブリーフィング。朝のブリーフィングは今日のやることを最初に表示します。まだひとつもなければ、その場で今週の好きな日に最初のひとつを追加できます。月曜日は、先週をふり返るあなた向けの短いまとめから始まります。
+
+• 現実の一週間に合う誓い。誓いを「週に何回」で設定できます（ジムを週4回、曜日は自由）。月曜に休んでも月曜は途切れません。回数が足りなかったときだけ、その週が途切れます。
+
+• どこからでも残りを確認。画面上部の誓いカウンターをタップすると、今日まだ残っている誓いが開き、その場で果たせます。
+
+• 動きのあるステータスタブ。ステータスのレベルが上がるたびにレベルアップの演出が入り、ハンターがステータスの横に立ち、一日をやり切ると金色に輝きます。カードの共有はボタンひとつです。
+
+• 垂直跳びプログラムを一新。14日間に4回のセッション：プライオメトリクス2回、筋力2回。それぞれ順番どおりに、セット数つきで表示します。開始日を選べば、今が何日目か、次のセッションがいつかをアプリが教えてくれます。
+
+• 修正。階段ハントの結果に、各ハンターが上った階数と正しい所要時間が表示されるようになりました。新しい週のWorldgateが先週のものとして表示される問題を修正しました。Worldgate撃破後、歩数が撃破時点で確定したことを表示します。
+```
+
+### Norwegian (Bokmål)
+
+```
+Planlegg uken. Tren på dine dager.
+
+• Planlegg hele uken. Gjøremål-fanen legger nå oppgavene dine ut fra mandag til søndag. Dra en til en annen dag, eller legg den til på flere dager samtidig. La den gjenta seg: ukentlig, månedlig eller et bestemt antall dager etter at du er ferdig. En NOTAT-knapp i legg til-feltet tar vare på detaljene (handlelisten, en adresse).
+
+• Gjøremål er for oversikt, ikke for poeng. Legg til så mange du vil. De gir ikke lenger XP; det gjør løftene dine.
+
+• En briefing som starter med det som forfaller. Morgenbriefen åpner med dagens gjøremål, og har du ingen ennå, kan du legge til det første der og da, for hvilken som helst dag denne uken. Mandager åpner med en kort oppsummering av uken du nettopp hadde, skrevet til deg.
+
+• Løfter som passer en ekte uke. Sett et løfte til et antall ganger i uken (trening fire ganger, hvilke dager som helst). Å hoppe over mandag bryter aldri mandagen; uken brytes bare hvis du kommer til kort.
+
+• Se hva som gjenstår, uansett hvor du er. Trykk på løftetelleren øverst for å åpne løftene som fortsatt står åpne i dag, og fullfør dem der.
+
+• En Status-fane som lever. Hvert nytt nivå får sitt eget øyeblikk, jegeren din står ved siden av egenskapene dine og lyser gull når dagen er fullført, og én knapp deler kortet ditt.
+
+• Vertikalhopp-programmet, bygget på nytt. Fire økter hver 14. dag: to plyometriske og to styrkeøkter, hver i riktig rekkefølge med settene sine. Velg dagen du starter, så forteller appen hvilken dag du er på og når neste økt er.
+
+• Rettelser. Trappejakter viser nå hver jegers etasjer og riktig tid. En ny ukes Worldgate vises ikke lenger som forrige ukes. Når Worldgate er nede, sier din andel at skrittellingen ble låst i det øyeblikket.
+```
+
+### Promotional text (170 max; can change any time without review)
+
+- **English (164):** Plan your week beside your vows: to-dos by day, vows a few times a week, a briefing that starts with what's due, and a Jump Program that begins on the day you pick.
+- **Spanish (161):** Planea tu semana junto a tus votos: pendientes por día, votos varias veces por semana, un resumen que empieza por lo que vence y un Programa de Salto a tu ritmo.
+- **Japanese (67):** 誓いの隣で一週間を計画。日ごとのやること、週に数回の誓い、期日から始まるブリーフィング、そして好きな日に始められる垂直跳びプログラム。
+- **Norwegian (164):** Planlegg uken ved siden av løftene dine: gjøremål per dag, løfter noen ganger i uken, en briefing som starter med det som forfaller, og et hopp-program fra din dag.
+
 ## 3.0.8 — READY TO PASTE (W989–W1001, final 2026-09-25, build 551)
 
 Four languages. Each block is under the 4,000-character limit. Banned-word check
