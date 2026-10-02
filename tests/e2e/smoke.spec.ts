@@ -7244,6 +7244,27 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(d.time).toBe('14h 22m');
   });
 
+  // W1022 — the owner's own hunt (2026-10-02): a won Hollow Monarch read 0 fl / 0 fl, 0 of 20, "Done in
+  // 24h 00m". The server carries a flights-only hunt's flights under `steps`, and stamps resolved_at
+  // as SQLite UTC with no zone. These are that hunt's real rows.
+  test('W1022: a flights hunt shows the flights climbed and the true time, exactly as the server sends it', async ({ page }) => {
+    await seed(page);
+    const inst = { id: 'dd029f4a', boss_id: 'the_hollow_monarch', status: 'completed', result: 'success', goal_steps: 20, combined_steps: 20,
+      challenger: { user_id: 'u-a', alias: 'anthony', steps: 11 }, partner: { user_id: 'u-r', alias: 'richie', steps: 9 },
+      starts_at: '2026-10-01T14:39:41.562Z', ends_at: '2026-10-02T14:39:41.562Z', resolved_at: '2026-10-02 13:32:22', updated_at: '2026-10-02 13:32:22' };
+    const d = await page.evaluate((i) => (window as any).__hr.coop(i, {}), inst);
+    expect(d.unit).toBe('flights');
+    expect(d.party.map((p: any) => p.s)).toEqual([11, 9]);
+    expect(d.goal).toBe(20);
+    expect(d.time).toBe('22h 53m');
+    // a dual hunt still reads its own two keys
+    const both = await page.evaluate(() => (window as any).__hr.coop({ boss_id: 'the_gaunt_wardens', goal_steps: 20000, goal_flights: 15,
+      challenger: { user_id: 'u-a', alias: 'anthony', steps: 12000, flights: 9 }, partner: { user_id: 'u-r', alias: 'richie', steps: 9000, flights: 7 },
+      starts_at: '2026-10-01T14:00:00.000Z', resolved_at: '2026-10-01 20:30:00' }, {}));
+    expect(both.party.map((p: any) => [p.s, p.f])).toEqual([[12000, 9], [9000, 7]]);
+    expect([both.goal, both.fgoal, both.time]).toEqual([20000, 15, '6h 30m']);
+  });
+
   test('none of the four screens ever says fell / felled', async ({ page }) => {
     await seed(page);
     const texts: string[] = [];
