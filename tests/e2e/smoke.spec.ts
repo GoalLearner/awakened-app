@@ -3974,6 +3974,10 @@ test.describe('AN · Perfect Day only (W948)', () => {
         ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1',
          'hb_tour_day7_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        // W1020 — every stat level now gets its LEVEL UP screen, and on a weekend (stat points
+        // doubled) three WILL vows cross Level 2 and that screen leads the Perfect Day seal. Start
+        // WILL clear of a threshold so this suite watches the same thing on every day of the week.
+        localStorage.setItem('hb_stats', JSON.stringify({ STR: { pts: 0 }, VIT: { pts: 0 }, INT: { pts: 0 }, FOCUS: { pts: 0 }, WILL: { pts: 6 }, WLT: { pts: 0 } }));
         if (logged) {
           // Two vows already kept and today's Perfect Day already on the books:
           // the last tap completes the routine but cannot open a second seal.
@@ -6092,7 +6096,8 @@ test.describe('BT · Status tab interactive (W1020)', () => {
   const rows = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('#today-vows .tv-row')).map((r) => (r.querySelector('.tv-nm') as HTMLElement).textContent + '|' + ((r.querySelector('.tv-chip') as HTMLElement | null)?.textContent || '')));
 
   test('the counter opens the vows still open; a tap seals one from any tab; the Routine Progress popup is gone', async ({ page }) => {
-    await seed(page, [custom('a', 'Call a friend', 'FOCUS'), custom('b', 'Tidy the desk', 'INT'), custom('c', 'Meditate', 'FOCUS', { difficulty: 'medium' })]);
+    // a Thursday: on Fri–Sun the chips honestly read +2 (weekend double)
+    await seed(page, [custom('a', 'Call a friend', 'FOCUS'), custom('b', 'Tidy the desk', 'INT'), custom('c', 'Meditate', 'FOCUS', { difficulty: 'medium' })], {}, new Date('2026-10-01T10:00:00-07:00'));
     await page.click('#tab-habits');
     await expect(page.locator('#today-vows')).not.toHaveClass(/tv-drop--open/);
     await page.click('#today-strip .today-strip-left');
@@ -6167,6 +6172,263 @@ test.describe('BT · Status tab interactive (W1020)', () => {
     const total = await page.evaluate(() => document.getElementById('souls-balance')!.getAttribute('data-souls'));
     expect(total).toMatch(/^\d+$/);
     await expect(page.locator('#souls-balance')).toHaveText(Number(total).toLocaleString('en-US'), { timeout: 4_000 });
+  });
+});
+
+// W1021 — the Jump Program is the Jump Manual's: Days 1, 4, 8 and 11 of a 14-day cycle that
+// counts from the day the hunter picked (onboarding "When do you start?", or the guide row's
+// sheet). Each session lists in the manual's own order; the other ten days are rest (the three
+// dailies only); an account on the prototype program is moved over and asked for its start day.
+test.describe('BU · Jump Program by the manual (W1021)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  const NOW = new Date('2026-10-05T10:00:00-07:00');   // a Monday
+  const D1  = ['Depth Jumps (4x8)', 'Side to Side Box Jumps (4x8)', 'Weighted Explosions (3x8)', 'Medicine Ball Approach (4x6-8)', 'Zig Zags (3x10 + 2 back and forth)', 'Medicine Throws (3x8)', 'Rim Jumps (4 sets)', 'Speed Rope (3x30 sec)'];
+  const D4  = ['Explosion Squats (5 sets)', 'Explosion Calf Raises (5 sets)', 'Dead Lifts (5 sets)', 'Ham Curls (5 sets)', 'In Place Lunges (3x6)', 'Hang Cleans (3x6)', 'Knee Drives (5 sets)'];
+  const D8  = ['Sprints (4x25-50yd)', 'Lunge Jumps (4x6-10)', '1 Leg Chair Rockets (4 sets)', 'Medicine Throws (3x8)', 'Zig Zags (3x10 + 2 back and forth)', 'Rim Jumps (4 sets)', 'Weighted Explosions (3x8)', 'Finishing Sprints (4x25-50yd)'];
+  const D11 = ['Explosion Squats (5 sets)', 'Hang Cleans (3x6)', 'Ham Curls (5 sets)', 'Explosion Calf Raises (5 sets)', 'In Place Lunges (3x6)', 'Dead Lifts (5 sets)', 'Knee Drives (5 sets)'];
+  const DAILIES = ['Creatine', 'Sunlight', 'Daily Protein Goal'];
+  const QUIET = ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1', 'hb_first_vow_pointer_seen'];
+
+  // A jump hunter, seeded from the app's own templates. `start` = the date of Day 1 (null = none chosen).
+  async function seedJump(page: Page, start: string | null) {
+    await page.clock.setFixedTime(NOW);
+    await freshApp(page);
+    const rows = await page.evaluate(() => JSON.stringify((window as any).__jump.rows()));
+    await page.addInitScript(([hs, st, quiet]) => {
+      try {
+        if (sessionStorage.getItem('__w1021')) return;
+        sessionStorage.setItem('__w1021', '1');
+        localStorage.setItem('hb_habits', hs as string);
+        localStorage.setItem('hb_onboarding_goal', 'jump_program');
+        localStorage.setItem('hb_path', 'jump_program');
+        localStorage.setItem('hb_jump_v', '2');
+        if (st) localStorage.setItem('hb_jump_program_started', st as string);
+        localStorage.setItem('hb_points', '500');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        (quiet as string[]).forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_achievements', JSON.stringify(['first_step', 'first_blood', 'getting_started']));
+      } catch (_) {}
+    }, [rows, start, QUIET] as [string, string | null, string[]]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+  }
+  // today's list, top to bottom, by vow name
+  const listed = (page: Page) => page.evaluate(() => {
+    const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ id: string; name: string }>;
+    return Array.from(document.querySelectorAll('#habit-list .habit-item')).map((el) => (hs.find((h) => h.id === (el as HTMLElement).dataset.id) || { name: '?' }).name);
+  });
+  const day = (n: number) => { const d = new Date(Date.UTC(2026, 9, 5, 12) - (n - 1) * 86400000); return d.toISOString().slice(0, 10); };   // the start date that makes TODAY Day n
+  const guide = (page: Page) => page.evaluate(() => [(document.querySelector('#fa-program-guide .fa-guide-eyebrow') as HTMLElement).textContent, (document.querySelector('#fa-program-guide .fa-guide-line') as HTMLElement).textContent]);
+  const setStart = (page: Page, ds: string) => page.evaluate((d) => (window as any).__jump.setStart(d), ds);
+
+  test('Days 1, 4, 8 and 11 list the manual in the manual order; every other day is the dailies; Day 15 is Day 1 again', async ({ page }) => {
+    await seedJump(page, '2026-10-05');
+    await page.click('#tab-habits');
+    const sessions: Record<number, string[]> = { 1: D1, 4: D4, 8: D8, 11: D11, 15: D1 };
+    for (let n = 1; n <= 15; n++) {
+      await setStart(page, day(n));
+      const names = await listed(page);
+      const training = names.filter((x) => DAILIES.indexOf(x) < 0);
+      expect(training, 'Day ' + n).toEqual(sessions[n] || []);
+      expect(names.filter((x) => DAILIES.indexOf(x) >= 0).sort(), 'dailies on Day ' + n).toEqual(DAILIES.slice().sort());
+    }
+    // the header's vow list (W1020) follows the same order
+    await setStart(page, day(8));
+    await page.evaluate(() => (window as any).__tv.open(true));
+    const tv = await page.evaluate(() => Array.from(document.querySelectorAll('#today-vows .tv-nm')).map((el) => el.textContent));
+    expect(tv.filter((x) => DAILIES.indexOf(x as string) < 0)).toEqual(D8);
+  });
+
+  test('the templates agree with the sessions; the pack seeds 22 vows; the prototype exercises are gone from the library', async ({ page }) => {
+    await page.clock.setFixedTime(NOW);
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const j = (window as any).__jump;
+      return { t: j.templates() as Array<{ name: string; cycleDays: number[] | null }>, s: j.sessions as Record<string, { label: string; names: string[] }>, rows: j.rows().length };
+    });
+    expect(r.rows).toBe(22);
+    expect(r.t.length).toBe(22);
+    expect(Object.keys(r.s)).toEqual(['1', '4', '8', '11']);
+    expect([r.s['1'].names, r.s['4'].names, r.s['8'].names, r.s['11'].names]).toEqual([D1, D4, D8, D11]);
+    expect([r.s['1'].label, r.s['4'].label, r.s['8'].label, r.s['11'].label]).toEqual(['PLYOMETRICS', 'STRENGTH', 'PLYOMETRICS', 'STRENGTH']);
+    for (const d of Object.keys(r.s)) for (const nm of r.s[d].names) {
+      const tpl = r.t.find((x) => x.name === nm);
+      expect(tpl && tpl.cycleDays, nm + ' on Day ' + d).toContain(Number(d));
+    }
+    for (const tpl of r.t) for (const d of tpl.cycleDays || []) expect(r.s[String(d)].names, tpl.name).toContain(tpl.name);
+    expect(r.t.filter((x) => !x.cycleDays).map((x) => x.name)).toEqual(DAILIES);
+    expect(r.t.some((x) => /Warmup|Max Effort|Box Squats|Power Cleans/.test(x.name))).toBe(false);
+  });
+
+  test('the guide row names the program day: a session, a rest day with the next session, the days before Day 1', async ({ page }) => {
+    await seedJump(page, '2026-10-05');
+    await page.click('#tab-habits');
+    expect(await guide(page)).toEqual(['DAY 1 OF 14 · PLYOMETRICS', '8 exercises today, in order.']);
+    await setStart(page, day(2));  expect(await guide(page)).toEqual(['DAY 2 OF 14 · REST', 'Next session Wednesday.']);
+    await setStart(page, day(3));  expect(await guide(page)).toEqual(['DAY 3 OF 14 · REST', 'Next session tomorrow.']);
+    await setStart(page, day(4));  expect(await guide(page)).toEqual(['DAY 4 OF 14 · STRENGTH', '7 exercises today, in order.']);
+    await setStart(page, day(12)); expect(await guide(page)).toEqual(['DAY 12 OF 14 · REST', 'Next session Thursday.']);
+    await setStart(page, '2026-10-07'); expect(await guide(page)).toEqual(['DAY 1 STARTS WED', 'Keep the dailies until then.']);
+    await setStart(page, '2026-10-06'); expect(await guide(page)).toEqual(['DAY 1 STARTS TOMORROW', 'Keep the dailies until then.']);
+    expect((await listed(page)).slice().sort()).toEqual(DAILIES.slice().sort());   // before Day 1: the dailies only
+    // rest days are never owed: only the day's own session is scheduled, and nothing before the start
+    await setStart(page, day(4));   // started Fri 2 Oct
+    const sch = await page.evaluate(() => { const j = (window as any).__jump; return [j.scheduledOn('Explosion Squats (5 sets)', '2026-10-05'), j.scheduledOn('Explosion Squats (5 sets)', '2026-10-04'), j.scheduledOn('Depth Jumps (4x8)', '2026-10-02'), j.scheduledOn('Depth Jumps (4x8)', '2026-10-05'), j.scheduledOn('Creatine', '2026-10-03'), j.scheduledOn('Creatine', '2026-10-01')]; });
+    expect(sch).toEqual([true, false, true, false, true, false]);
+  });
+
+  test('the sheet moves Day 1: seven days, the sessions it gives, SAVE restarts the cycle and the check-offs stay', async ({ page }) => {
+    await seedJump(page, day(4));
+    await page.click('#tab-habits');
+    await page.evaluate(() => { const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]'); const h = hs.find((x: any) => x.name === 'Explosion Squats (5 sets)'); (document.querySelector('#habit-list .habit-item[data-id="' + h.id + '"]') as HTMLElement).click(); });
+    await expect(page.locator('#completed-count')).toHaveText('1');
+    await page.evaluate(() => { document.querySelectorAll('#statup-ov, #ach-popup').forEach((x) => x.remove()); (document.getElementById('fa-program-guide') as HTMLElement).click(); });
+    const sh = page.locator('#jump-sh');
+    await expect(sh).toHaveClass(/jump-sh--on/);
+    await expect(sh.locator('[data-jump-t]')).toHaveText('Change start day');
+    await expect(sh.locator('[data-jump-save]')).toBeDisabled();                       // Day 1 (Fri 2 Oct) is behind us: nothing is preselected
+    expect(await sh.locator('.jd-chip').allTextContents()).toEqual(['TODAY', 'TUE6', 'WED7', 'THU8', 'FRI9', 'SAT10', 'SUN11']);
+    await page.evaluate(() => (document.querySelectorAll('#jump-sh .jd-chip')[2] as HTMLElement).click());
+    await expect(sh.locator('.jd-chip--on')).toHaveText('WED7');
+    await expect(sh.locator('[data-jump-note]')).toHaveText('SESSIONS · WED 7 · SAT 10 · WED 14 · SAT 17');
+    await page.evaluate(() => (document.querySelector('#jump-sh [data-jump-save]') as HTMLElement).click());
+    await expect(sh).not.toHaveClass(/jump-sh--on/);
+    expect(await page.evaluate(() => localStorage.getItem('hb_jump_program_started'))).toBe('2026-10-07');
+    expect(await guide(page)).toEqual(['DAY 1 STARTS WED', 'Keep the dailies until then.']);
+    expect((await listed(page)).slice().sort()).toEqual(DAILIES.slice().sort());
+    expect(await page.evaluate(() => (JSON.parse(localStorage.getItem('hb_completions') || '{}')['2026-10-05'] || []).length)).toBe(1);   // the check-off is still in the book
+    // the same row replays the walkthrough
+    await page.evaluate(() => (document.getElementById('fa-program-guide') as HTMLElement).click());
+    await expect(sh.locator('[data-jump-how]')).toHaveText('How the program works');
+  });
+
+  test('an account on the prototype program is moved over: old exercises archived, the manual added, and it is asked for its start day', async ({ page }) => {
+    await page.clock.setFixedTime(NOW);
+    await freshApp(page);
+    await page.addInitScript((quiet) => {
+      try {
+        if (sessionStorage.getItem('__w1021m')) return;
+        sessionStorage.setItem('__w1021m', '1');
+        const mk = (id: string, name: string, cd?: number[]) => Object.assign({ id, name, emoji: '•', difficulty: 'easy', type: 'build', library: 'jump_program', primaryStat: 'STR' }, cd ? { cycleDays: cd } : {});
+        localStorage.setItem('hb_habits', JSON.stringify([
+          mk('o1', 'Creatine'), mk('o2', 'Sunlight'), mk('o3', 'Daily Protein Goal'),
+          mk('o4', 'Proper Sprint & CNS Warmup', [1, 8]), mk('o5', 'Depth Jumps (4x5)', [1]), mk('o6', 'Max Effort Jumps (4x3)', [1, 3, 8, 10]),
+          mk('o7', 'Heavy Barbell Back Squats (5x5)', [5, 12]), { id: 'c1', name: 'Call a friend', emoji: '⚡', difficulty: 'easy', type: 'build', primaryStat: 'WILL', custom: true },
+        ]));
+        localStorage.setItem('hb_onboarding_goal', 'jump_program');
+        localStorage.setItem('hb_jump_program_started', '2026-08-20');
+        localStorage.setItem('hb_completions', JSON.stringify({ '2026-09-07': ['o5', 'o1'] }));
+        localStorage.setItem('hb_points', '500');
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        (quiet as string[]).forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_achievements', JSON.stringify(['first_step', 'first_blood', 'getting_started']));
+      } catch (_) {}
+    }, QUIET);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+    const st = await page.evaluate(() => {
+      const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ id: string; name: string; archived?: boolean; cycleDays?: number[] }>;
+      return {
+        archived: hs.filter((h) => h.archived).map((h) => h.id).sort(),
+        active: hs.filter((h) => !h.archived).length,
+        training: hs.filter((h) => !h.archived && h.cycleDays).length,
+        custom: hs.some((h) => h.id === 'c1' && !h.archived),
+        v: localStorage.getItem('hb_jump_v'), start: localStorage.getItem('hb_jump_program_started'),
+        book: (JSON.parse(localStorage.getItem('hb_completions') || '{}')['2026-09-07'] || []).length,
+      };
+    });
+    expect(st).toEqual({ archived: ['o4', 'o5', 'o6', 'o7'], active: 23, training: 19, custom: true, v: '2', start: null, book: 2 });
+    // no start day: the dailies and the custom vow only, the row asks, and the sheet opens once
+    expect((await listed(page)).slice().sort()).toEqual(DAILIES.concat(['Call a friend']).sort());
+    expect(await guide(page)).toEqual(['PICK YOUR START DAY', 'Tap to choose when Day 1 begins.']);
+    const sh = page.locator('#jump-sh');
+    await expect(sh).toHaveClass(/jump-sh--on/, { timeout: 8_000 });
+    await expect(sh.locator('[data-jump-t]')).toHaveText('When do you start?');
+    await expect(sh.locator('.jd-chip--on')).toHaveText('TODAY');
+    await page.evaluate(() => (document.querySelector('#jump-sh [data-jump-save]') as HTMLElement).click());
+    expect(await page.evaluate(() => localStorage.getItem('hb_jump_program_started'))).toBe('2026-10-05');
+    expect(await guide(page)).toEqual(['DAY 1 OF 14 · PLYOMETRICS', '8 exercises today, in order.']);
+    expect((await listed(page)).filter((x) => DAILIES.indexOf(x) < 0 && x !== 'Call a friend')).toEqual(D1);
+  });
+
+  test('onboarding asks the Jump Program for its start day, and no other path', async ({ page }) => {
+    await page.clock.setFixedTime(NOW);
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w1021o')) return;
+        sessionStorage.setItem('__w1021o', '1');
+        localStorage.setItem('hb_cloud_restore_dismissed', '1');
+        localStorage.setItem('hb_whats_new_seen', '99.99.99');
+        localStorage.setItem('hb_fri_banner_2026-10-05', '1');
+        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
+      } catch (_) {}
+    });
+    await page.goto('/');
+    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      const q = (s: string) => root.querySelector(s) as HTMLElement;
+      const shown = () => (root.querySelector('.cn-scr.cn-shown, .scr.show') as HTMLElement | null)?.id || null;
+      w.Health.isAvailable = () => true; w.Health.permissionStatus = () => 'granted'; w.Health.requestPermissions = async () => 'granted';
+      w.Health.getStepsBetween = async () => 31204; w.Health.getStepsToday = async () => 7318;
+      w.Auth.fetchLeaderboardTop = async () => ({ ok: true, metric: 'step_total', me: { rank: 1, current_value: 31204 }, top: [] });
+      q('#cn-touch').click(); await wait(1100);
+      const f = q('#cin-nameField') as HTMLInputElement; f.value = 'Richie'; f.dispatchEvent(new Event('input'));
+      q('#cin-nameConfirm').click(); await wait(300);
+      q('#cn-healthBtn').click(); await wait(900);
+      q('#cn-s3 [data-cn-next]').click(); await wait(900);
+      if (root.querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
+      q('#cn-huntAlone').click(); await wait(200);
+      q('#cn-s6 [data-cn-next]').click(); await wait(200);
+      // Make Your Own (the default) walks straight past the start-day screen
+      q('#cn-s7 [data-cn-next]').click(); await wait(300);
+      const customLands = shown();
+      w.__cinShow(7); await wait(200);
+      (root.querySelector('[data-cn-pack="morning"]') as HTMLElement).click();
+      q('#cn-s7 [data-cn-next]').click(); await wait(300);
+      const morningLands = shown();
+      w.__cinShow(7); await wait(200);
+      (root.querySelector('[data-cn-pack="jump_program"]') as HTMLElement).click();
+      q('#cn-s7 [data-cn-next]').click(); await wait(300);
+      const jumpLands = shown();
+      const chips = Array.from(root.querySelectorAll('#cn-jdays .jd-chip')).map((c) => c.textContent);
+      const first = { on: (root.querySelector('#cn-jdays .jd-chip--on') as HTMLElement).textContent, note: q('#cn-jnote').textContent };
+      (root.querySelectorAll('#cn-jdays .jd-chip')[2] as HTMLElement).click();
+      const picked = { on: (root.querySelector('#cn-jdays .jd-chip--on') as HTMLElement).textContent, note: q('#cn-jnote').textContent };
+      q('#cn-s7j [data-cn-next]').click(); await wait(500);
+      const afterStart = shown();
+      if (q('#cn-wolf').classList.contains('cn-armed')) { q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1000); }
+      q('#cn-enter').click(); await wait(2200);
+      // the notification ask stands between ENTER and the vows being made
+      for (let i = 0; i < 20 && !JSON.parse(localStorage.getItem('hb_habits') || '[]').length; i++) {
+        const nb = document.getElementById('notif-explain-enable') as HTMLElement | null;
+        if (nb && nb.offsetParent) nb.click();
+        await wait(300);
+      }
+      await wait(800);
+      const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ name: string; archived?: boolean }>;
+      return {
+        customLands, morningLands, jumpLands, chips, first, picked, afterStart,
+        start: localStorage.getItem('hb_jump_program_started'), v: localStorage.getItem('hb_jump_v'), goal: localStorage.getItem('hb_onboarding_goal'),
+        vows: hs.filter((h) => !h.archived).length,
+      };
+    });
+    expect(r.customLands).toBe('cn-s8');
+    expect(r.morningLands).not.toBe('cn-s7j');
+    expect(r.jumpLands).toBe('cn-s7j');
+    expect(r.chips).toEqual(['TODAY', 'TUE6', 'WED7', 'THU8', 'FRI9', 'SAT10', 'SUN11']);
+    expect(r.first).toEqual({ on: 'TODAY', note: 'SESSIONS · MON 5 · THU 8 · MON 12 · THU 15' });
+    expect(r.picked).toEqual({ on: 'WED7', note: 'SESSIONS · WED 7 · SAT 10 · WED 14 · SAT 17' });
+    expect(r.afterStart).toBe('cn-s8');
+    expect([r.start, r.v, r.goal, r.vows]).toEqual(['2026-10-07', '2', 'jump_program', 22]);
+    // before Day 1 the list is the dailies, and the row says when Day 1 begins
+    await expect.poll(async () => (await listed(page)).slice().sort(), { timeout: 8_000 }).toEqual(DAILIES.slice().sort());
+    expect(await guide(page)).toEqual(['DAY 1 STARTS WED', 'Keep the dailies until then.']);
   });
 });
 

@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=742">
+  <link rel="stylesheet" href="styles.css?v=743">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -345,6 +345,21 @@
         <span class="cn-k">The vow</span>
         <h2 class="cn-t">Choose a path.</h2>
         <div class="cn-paths" id="cn-paths"></div>
+      </div>
+      <div class="cn-guide cn-guide-md"><img src="assets/coach/first-awakened-idle.png" alt="" aria-hidden="true"></div>
+      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
+    </section>
+
+    <!-- 7½ · WHEN DO YOU START? (W1021) — Jump Program only; every other
+         path walks past it on the same tick. Chips are built by
+         _jumpChipsHtml (the same row as the sheet on the guide row). -->
+    <section class="cn-scr" id="cn-s7j" data-dot="5">
+      <div class="cn-c">
+        <span class="cn-k">Vertical Jump Program</span>
+        <h2 class="cn-t">When do you start?</h2>
+        <p class="cn-b">Day 1 lands on the day you pick.</p>
+        <div class="jd-row" id="cn-jdays" role="radiogroup" aria-label="Start day"></div>
+        <div class="jd-note" id="cn-jnote"></div>
       </div>
       <div class="cn-guide cn-guide-md"><img src="assets/coach/first-awakened-idle.png" alt="" aria-hidden="true"></div>
       <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
@@ -742,7 +757,7 @@
            program walkthrough (the same beats as the first-run welcome).
            Hidden for everyone else; renderHabits() toggles visibility. -->
       <button id="fa-program-guide" class="fa-guide hidden" type="button"
-              aria-label="The First Awakened — hear the program explained again">
+              aria-label="Your jump program — the day you are on. Tap to change the start day or hear it explained.">
         <span class="fa-guide-portrait" aria-hidden="true">
           <img src="assets/coach/first-awakened-scroll.png" alt="" loading="lazy" decoding="async">
         </span>
@@ -3190,7 +3205,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=1"></script>
-  <script src="app.js?v=1422"></script>
+  <script src="app.js?v=1423"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

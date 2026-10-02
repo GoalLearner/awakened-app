@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1020'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1021'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27274,39 +27274,45 @@
     return day === 'Fri' || day === 'Sat' || day === 'Sun';
   }
 
-  // W575/W580 — Vertical Jump Program 14-day cycle, CALENDAR-LOCKED (owner
-  // requirement: the program runs on its Monday/Wednesday/Friday grid, not on
-  // "days since signup"). Day number (1-14) for an arbitrary calendar date:
+  // W575 · W1021 — Vertical Jump Program, a 14-day cycle that counts from the day the
+  // hunter chose. hb_jump_program_started IS the date of Day 1 (picked in onboarding, or on
+  // the guide row's sheet). Day number (1-14) for a calendar date:
   //
-  //   day = weekday(date) + (weekA ? 0 : 7)     Mon=1 … Sun=7
+  //   day = (whole days from the start date) mod 14, plus 1
   //
-  // so Day 1/8 are ALWAYS Mondays (plyometrics), 3/10 Wednesdays (strength &
-  // mechanics), 5/12 Fridays (strength), weekends 6-7/13-14 off. Week A is
-  // anchored to the FIRST MONDAY ON/AFTER signup (hb_jump_program_started =
-  // signup date): a Monday signup starts Week A immediately; a mid-week signup
-  // lands in Week B content for the remainder of that week (Wed/Fri sessions
-  // are identical A/B — only Monday plyo varies) and their first Monday is
-  // Day 1, so nobody's first plyo session is the Week-B variation. Weekend
-  // signups idle on Day 13/14 (dailies only) and start clean Monday.
-  // Null if not started, pre-start, or unparseable. Weeks are compared via
-  // noon-UTC ms (DST-proof); weekday via local-noon parse (calendar-exact).
+  // so Day 1, 4, 8 and 11 land wherever the hunter put them, and the fortnight repeats
+  // forever. The W580 weekday lock (Day 1 = always a Monday) is retired with the prototype
+  // program. Null when no start is chosen, before the start date, or unparseable — and a
+  // training vow with no day number is NOT scheduled (see isScheduledToday). Days are
+  // compared at noon UTC (DST-proof).
   function _jumpCycleDayOn(dateStr) {
     try {
       const start = localStorage.getItem('hb_jump_program_started');
-      if (!start) return null;
+      if (!start || !dateStr) return null;
       if (dateStr < start) return null;   // YYYY-MM-DD strings compare correctly
-      const dowIdx = (ds) => { const d = new Date(ds + 'T12:00:00'); if (isNaN(d.getTime())) return null; return (d.getDay() + 6) % 7; };   // Mon=0..Sun=6
-      const noonMs = (ds) => Date.parse(ds + 'T12:00:00Z');
-      const sDow = dowIdx(start), dDow = dowIdx(dateStr);
-      if (sDow == null || dDow == null || isNaN(noonMs(start)) || isNaN(noonMs(dateStr))) return null;
-      const anchorMonMs = noonMs(start) + (sDow === 0 ? 0 : (7 - sDow)) * 86400000;   // first Monday on/after signup = Week A
-      const dateMonMs   = noonMs(dateStr) - dDow * 86400000;                          // Monday of the date's week
-      const weeks = Math.round((dateMonMs - anchorMonMs) / (7 * 86400000));
-      const parity = ((weeks % 2) + 2) % 2;   // 0 = week A (days 1-7), 1 = week B (days 8-14)
-      return dDow + 1 + parity * 7;
+      const a = Date.parse(start + 'T12:00:00Z'), b = Date.parse(dateStr + 'T12:00:00Z');
+      if (isNaN(a) || isNaN(b)) return null;
+      return (Math.round((b - a) / 86400000) % JUMP_CYCLE_LEN) + 1;
     } catch (_) { return null; }
   }
   function _jumpCycleDayToday() { return _jumpCycleDayOn(getDeviceLocalDate()); }
+  function _jumpAddDays(dateStr, n) { return new Date(Date.parse(dateStr + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+  // The manual's order for today's session: the jump training vows keep the slots they hold
+  // in `list` but are re-sorted to JUMP_SESSIONS (a vow shared by two days sits differently
+  // in each). Everything else stays exactly where it is.
+  function _jumpOrderToday(list) {
+    try {
+      const ses = JUMP_SESSIONS[_jumpCycleDayToday()];
+      if (!ses || !Array.isArray(list)) return list;
+      const at = [], mine = [];
+      list.forEach(function (h, i) { if (h && h.library === 'jump_program' && ses.names.indexOf(h.name) >= 0) { at.push(i); mine.push(h); } });
+      if (mine.length < 2) return list;
+      mine.sort(function (x, y) { return ses.names.indexOf(x.name) - ses.names.indexOf(y.name); });
+      const out = list.slice();
+      at.forEach(function (i, k) { out[i] = mine[k]; });
+      return out;
+    } catch (_) { return list; }
+  }
 
   function isScheduledToday(habit) {
     // v3 Phase 1z.283 — Soft archive guard. Archived vows do NOT
@@ -27323,7 +27329,9 @@
     if (Array.isArray(habit.cycleDays) && habit.cycleDays.length) {
       const d = _jumpCycleDayToday();
       if (d != null) return habit.cycleDays.indexOf(d) !== -1;
-      return true;   // no program-start anchor yet -> show it (don't hide all training)
+      // W1021 — no start day chosen, or Day 1 still ahead: no session today (it used to
+      // fail open and list every exercise of the fortnight at once)
+      return habit.library !== 'jump_program';
     }
     if (!habit.days || habit.days.length === 7) return true;
     return habit.days.includes(getTodayDayName());
@@ -27394,7 +27402,7 @@
     if (habit && Array.isArray(habit.cycleDays) && habit.cycleDays.length) {
       const d = _jumpCycleDayOn(dateStr);
       if (d != null) return habit.cycleDays.indexOf(d) !== -1;
-      return true;
+      return habit.library !== 'jump_program';   // W1021 — no start day: a jump session is not owed
     }
     return isScheduledOn(habit && habit.days, dateStr);
   }
@@ -27896,51 +27904,63 @@
     // seeded + fully visible ONLY when hb_onboarding_goal === 'jump_program'.
     // Undefined library on all other habits = unrestricted (backward compat).
     //
-    // TRUE 14-DAY ROTATING CYCLE (W575 engine · W576 real program · W580
-    // calendar lock). `cycleDays` lists the day-numbers (1-14) a TRAINING
-    // habit is active. Day numbers are CALENDAR-LOCKED to weekdays (see
-    // _jumpCycleDayOn): 1/8 = Mondays (plyo), 3/10 = Wednesdays (strength &
-    // mechanics), 5/12 = Fridays (strength), 2/4/9/11 = Tue/Thu recovery,
-    // 6/7/13/14 = weekends off. Week A anchors to the first Monday on/after
-    // signup and the A/B fortnight repeats forever. The A/B periodization is
-    // WHY this is a 14-day cycle, not a weekly split: Day 1 and Day 8 are both
-    // Monday plyo but differ — Day 1 = Depth Jumps + Weighted Explosions,
-    // Day 8 = Broad Jumps + Band-Assisted Jumps. Habits with NO cycleDays are
-    // DAILY ANCHORS (creatine / sunlight / protein): they run every day incl.
-    // recovery/rest days and keep the compound streak alive on off days. This
-    // is Richie's prototype program (indices 49-66); exercise names carry the
-    // sets×reps prescription.
+    // W1021 — THE JUMP MANUAL (owner 2026-10-02). The program is the manual's
+    // 14-day cycle, and the app carries its four training days: Day 1 and Day 8
+    // (plyometrics), Day 4 and Day 11 (strength). The other ten days are rest.
+    // `cycleDays` lists the day-numbers a TRAINING vow is active. Day 1 is the
+    // date the hunter picked (hb_jump_program_started — see _jumpCycleDayOn);
+    // the old Mon/Wed/Fri calendar lock (W580) and the prototype exercises
+    // (W576) are retired. Vows with NO cycleDays are DAILY ANCHORS (creatine /
+    // sunlight / protein): they run every day, rest days included, and keep the
+    // compound streak alive between sessions. Exercise names carry the sets.
+    // The order a day's vows are listed in is JUMP_SESSIONS below, NOT the
+    // index order here (a vow shared by two days sits differently in each).
     //   Daily anchors — every day (no cycleDays):
     { emoji: '💊', name: 'Creatine',                                difficulty: 'easy',                            library: 'jump_program' },  // 49
     { emoji: '☀️', name: 'Sunlight',                                difficulty: 'easy',                            library: 'jump_program' },  // 50
     { emoji: '🥩', name: 'Daily Protein Goal',                      difficulty: 'easy',                            library: 'jump_program' },  // 51
-    //   W581 — SESSION ORDER. The daily list renders habits in template-index
-    //   order (seeding sorts ascending), so ascending index here MUST equal
-    //   the program's in-session exercise order for EVERY cycle day. Warmups
-    //   ALWAYS precede their session's exercises (Richie's rule). This single
-    //   total order reproduces all five sessions exactly:
-    //     D1  = 52,53,54,55,59  (warmup, sprints, depth, weighted, max jumps)
-    //     D8  = 52,53,56,57,59  (warmup, sprints, broad, band, max jumps)
-    //     D3/10 = 58,59,60,61   (CNS warmup, max jumps, box squats, calves)
-    //     D5/12 = 62..66        (squats, cleans, lunges, RDLs, calves)
-    //   Max Effort Jumps sits at 59 — after BOTH warmups and all plyo
-    //   variation work — because it's exercise #5 on Mondays and #2 (right
-    //   after the warmup) on Wednesdays.
-    { emoji: '🏃', name: 'Proper Sprint & CNS Warmup',              difficulty: 'easy',   cycleDays: [1, 8],       library: 'jump_program' },  // 52
-    { emoji: '💨', name: 'Max Effort Sprints (4x30-50yd)',          difficulty: 'hard',   cycleDays: [1, 8],       library: 'jump_program' },  // 53
-    { emoji: '🤸', name: 'Depth Jumps (4x5)',                       difficulty: 'hard',   cycleDays: [1],          library: 'jump_program' },  // 54
-    { emoji: '💥', name: 'Weighted Explosions (3x5)',               difficulty: 'medium', cycleDays: [1],          library: 'jump_program' },  // 55
-    { emoji: '🐸', name: 'Max Effort Broad Jumps (3x5)',            difficulty: 'hard',   cycleDays: [8],          library: 'jump_program' },  // 56
-    { emoji: '🪢', name: 'Band Assisted Jumps (3x8-10)',            difficulty: 'medium', cycleDays: [8],          library: 'jump_program' },  // 57
-    { emoji: '🔥', name: 'Proper CNS Warmup',                       difficulty: 'easy',   cycleDays: [3, 10],      library: 'jump_program' },  // 58
-    { emoji: '🦘', name: 'Max Effort Jumps (4x3)',                  difficulty: 'hard',   cycleDays: [1, 3, 8, 10], library: 'jump_program' },  // 59
-    { emoji: '🏋️', name: 'Heavy Barbell Box Squats (3x3)',          difficulty: 'hard',   cycleDays: [3, 10],      library: 'jump_program' },  // 60
-    { emoji: '🦵', name: 'Sitting Calf Raises (4x12-15)',           difficulty: 'medium', cycleDays: [3, 10],      library: 'jump_program' },  // 61
-    { emoji: '🏋️', name: 'Heavy Barbell Back Squats (5x5)',         difficulty: 'hard',   cycleDays: [5, 12],      library: 'jump_program' },  // 62
-    { emoji: '⚡', name: 'Power Cleans (3x3)',                      difficulty: 'hard',   cycleDays: [5, 12],      library: 'jump_program' },  // 63
-    { emoji: '🚶', name: 'Walking Lunges (3x8)',                    difficulty: 'medium', cycleDays: [5, 12],      library: 'jump_program' },  // 64
-    { emoji: '🏋️', name: 'Romanian Deadlifts (3x10)',              difficulty: 'medium', cycleDays: [5, 12],      library: 'jump_program' },  // 65
-    { emoji: '🦵', name: 'Explosion Standing Calf Raises (4x12-15)', difficulty: 'medium', cycleDays: [5, 12],     library: 'jump_program' },  // 66
+    //   Day 1 — plyometrics:
+    { emoji: '🤸', name: 'Depth Jumps (4x8)',                       difficulty: 'hard',   cycleDays: [1],          library: 'jump_program' },  // 52
+    { emoji: '📦', name: 'Side to Side Box Jumps (4x8)',            difficulty: 'hard',   cycleDays: [1],          library: 'jump_program' },  // 53
+    { emoji: '💥', name: 'Weighted Explosions (3x8)',               difficulty: 'medium', cycleDays: [1, 8],       library: 'jump_program' },  // 54
+    { emoji: '🏀', name: 'Medicine Ball Approach (4x6-8)',          difficulty: 'medium', cycleDays: [1],          library: 'jump_program' },  // 55
+    { emoji: '⚡', name: 'Zig Zags (3x10 + 2 back and forth)',      difficulty: 'medium', cycleDays: [1, 8],       library: 'jump_program' },  // 56
+    { emoji: '🏐', name: 'Medicine Throws (3x8)',                   difficulty: 'medium', cycleDays: [1, 8],       library: 'jump_program' },  // 57
+    { emoji: '🦘', name: 'Rim Jumps (4 sets)',                      difficulty: 'hard',   cycleDays: [1, 8],       library: 'jump_program' },  // 58
+    { emoji: '🪢', name: 'Speed Rope (3x30 sec)',                   difficulty: 'easy',   cycleDays: [1],          library: 'jump_program' },  // 59
+    //   Day 8 — plyometrics (the vows Day 1 does not have):
+    { emoji: '💨', name: 'Sprints (4x25-50yd)',                     difficulty: 'hard',   cycleDays: [8],          library: 'jump_program' },  // 60
+    { emoji: '🐸', name: 'Lunge Jumps (4x6-10)',                    difficulty: 'hard',   cycleDays: [8],          library: 'jump_program' },  // 61
+    { emoji: '🚀', name: '1 Leg Chair Rockets (4 sets)',            difficulty: 'medium', cycleDays: [8],          library: 'jump_program' },  // 62
+    { emoji: '💨', name: 'Finishing Sprints (4x25-50yd)',           difficulty: 'hard',   cycleDays: [8],          library: 'jump_program' },  // 63
+    //   Day 4 and Day 11 — strength:
+    { emoji: '🏋️', name: 'Explosion Squats (5 sets)',               difficulty: 'hard',   cycleDays: [4, 11],      library: 'jump_program' },  // 64
+    { emoji: '🦵', name: 'Explosion Calf Raises (5 sets)',          difficulty: 'medium', cycleDays: [4, 11],      library: 'jump_program' },  // 65
+    { emoji: '🏋️', name: 'Dead Lifts (5 sets)',                     difficulty: 'hard',   cycleDays: [4, 11],      library: 'jump_program' },  // 66
+    { emoji: '🦵', name: 'Ham Curls (5 sets)',                      difficulty: 'medium', cycleDays: [4, 11],      library: 'jump_program' },  // 67
+    { emoji: '🚶', name: 'In Place Lunges (3x6)',                   difficulty: 'medium', cycleDays: [4, 11],      library: 'jump_program' },  // 68
+    { emoji: '⚡', name: 'Hang Cleans (3x6)',                       difficulty: 'hard',   cycleDays: [4, 11],      library: 'jump_program' },  // 69
+    { emoji: '🦿', name: 'Knee Drives (5 sets)',                    difficulty: 'medium', cycleDays: [4, 11],      library: 'jump_program' },  // 70
+  ];
+
+  // W1021 — the four training days of the Jump Manual, each in the manual's own order. This is
+  // the ONE source for how a session is listed (_jumpOrderToday) and what the day is called on
+  // the guide row. Every name must be a jump template above whose cycleDays holds that day
+  // (checked by the BU suite).
+  const JUMP_CYCLE_LEN = 14;
+  const JUMP_SESSIONS = {
+    1:  { label: 'PLYOMETRICS', names: ['Depth Jumps (4x8)', 'Side to Side Box Jumps (4x8)', 'Weighted Explosions (3x8)', 'Medicine Ball Approach (4x6-8)', 'Zig Zags (3x10 + 2 back and forth)', 'Medicine Throws (3x8)', 'Rim Jumps (4 sets)', 'Speed Rope (3x30 sec)'] },
+    4:  { label: 'STRENGTH',    names: ['Explosion Squats (5 sets)', 'Explosion Calf Raises (5 sets)', 'Dead Lifts (5 sets)', 'Ham Curls (5 sets)', 'In Place Lunges (3x6)', 'Hang Cleans (3x6)', 'Knee Drives (5 sets)'] },
+    8:  { label: 'PLYOMETRICS', names: ['Sprints (4x25-50yd)', 'Lunge Jumps (4x6-10)', '1 Leg Chair Rockets (4 sets)', 'Medicine Throws (3x8)', 'Zig Zags (3x10 + 2 back and forth)', 'Rim Jumps (4 sets)', 'Weighted Explosions (3x8)', 'Finishing Sprints (4x25-50yd)'] },
+    11: { label: 'STRENGTH',    names: ['Explosion Squats (5 sets)', 'Hang Cleans (3x6)', 'Ham Curls (5 sets)', 'Explosion Calf Raises (5 sets)', 'In Place Lunges (3x6)', 'Dead Lifts (5 sets)', 'Knee Drives (5 sets)'] },
+  };
+  // The prototype program's training vows (W576), retired by W1021. Kept ONLY so
+  // _jumpMigrateV2 can find and archive them on an account that still holds them.
+  const OLD_JUMP_TRAINING_NAMES = [
+    'Proper Sprint & CNS Warmup', 'Max Effort Sprints (4x30-50yd)', 'Depth Jumps (4x5)', 'Weighted Explosions (3x5)',
+    'Max Effort Broad Jumps (3x5)', 'Band Assisted Jumps (3x8-10)', 'Proper CNS Warmup', 'Max Effort Jumps (4x3)',
+    'Heavy Barbell Box Squats (3x3)', 'Sitting Calf Raises (4x12-15)', 'Heavy Barbell Back Squats (5x5)', 'Power Cleans (3x3)',
+    'Walking Lunges (3x8)', 'Romanian Deadlifts (3x10)', 'Explosion Standing Calf Raises (4x12-15)',
   ];
 
   const OB_CATEGORIES = [
@@ -28000,6 +28020,14 @@
     'Walking Lunges (3x8)': 'STR', 'Romanian Deadlifts (3x10)': 'STR',
     'Explosion Standing Calf Raises (4x12-15)': 'STR',
     'Max Effort Broad Jumps (3x5)': 'STR', 'Band Assisted Jumps (3x8-10)': 'STR',
+    // W1021 — the Jump Manual's Days 1, 4, 8, 11 (the names above are the retired prototype,
+    // kept so its archived vows still resolve)
+    'Depth Jumps (4x8)': 'STR', 'Side to Side Box Jumps (4x8)': 'STR', 'Weighted Explosions (3x8)': 'STR',
+    'Medicine Ball Approach (4x6-8)': 'STR', 'Zig Zags (3x10 + 2 back and forth)': 'STR', 'Medicine Throws (3x8)': 'STR',
+    'Rim Jumps (4 sets)': 'STR', 'Speed Rope (3x30 sec)': 'VIT', 'Sprints (4x25-50yd)': 'STR', 'Lunge Jumps (4x6-10)': 'STR',
+    '1 Leg Chair Rockets (4 sets)': 'STR', 'Finishing Sprints (4x25-50yd)': 'STR', 'Explosion Squats (5 sets)': 'STR',
+    'Explosion Calf Raises (5 sets)': 'STR', 'Dead Lifts (5 sets)': 'STR', 'Ham Curls (5 sets)': 'STR',
+    'In Place Lunges (3x6)': 'STR', 'Hang Cleans (3x6)': 'STR', 'Knee Drives (5 sets)': 'STR',
   };
   // Enrich each habit definition with its primary stat — single source of truth
   DEFAULT_HABITS.forEach(h => { h.primaryStat = HABIT_PRIMARY_STAT[h.name] || 'FOCUS'; });
@@ -28099,6 +28127,26 @@
     'Explosion Standing Calf Raises (4x12-15)': 'assets/habit-icons/icon-strength.png',
     'Max Effort Broad Jumps (3x5)':             'assets/habit-icons/icon-broadjump.png',
     'Band Assisted Jumps (3x8-10)':             'assets/habit-icons/icon-bandjump.png',
+    // W1021 — the Jump Manual's Days 1, 4, 8, 11 (no new art: the W578 set + the strength icon)
+    'Depth Jumps (4x8)':                        'assets/habit-icons/icon-depthjump.png',
+    'Side to Side Box Jumps (4x8)':             'assets/habit-icons/icon-broadjump.png',
+    'Weighted Explosions (3x8)':                'assets/habit-icons/icon-weightedjump.png',
+    'Medicine Ball Approach (4x6-8)':           'assets/habit-icons/icon-maxjump.png',
+    'Zig Zags (3x10 + 2 back and forth)':       'assets/habit-icons/icon-sprint.png',
+    'Medicine Throws (3x8)':                    'assets/habit-icons/icon-strength.png',
+    'Rim Jumps (4 sets)':                       'assets/habit-icons/icon-maxjump.png',
+    'Speed Rope (3x30 sec)':                    'assets/habit-icons/icon-bandjump.png',
+    'Sprints (4x25-50yd)':                      'assets/habit-icons/icon-sprint.png',
+    'Lunge Jumps (4x6-10)':                     'assets/habit-icons/icon-broadjump.png',
+    '1 Leg Chair Rockets (4 sets)':             'assets/habit-icons/icon-maxjump.png',
+    'Finishing Sprints (4x25-50yd)':            'assets/habit-icons/icon-sprint.png',
+    'Explosion Squats (5 sets)':                'assets/habit-icons/icon-strength.png',
+    'Explosion Calf Raises (5 sets)':           'assets/habit-icons/icon-strength.png',
+    'Dead Lifts (5 sets)':                      'assets/habit-icons/icon-strength.png',
+    'Ham Curls (5 sets)':                       'assets/habit-icons/icon-strength.png',
+    'In Place Lunges (3x6)':                    'assets/habit-icons/icon-walk.png',
+    'Hang Cleans (3x6)':                        'assets/habit-icons/icon-strength.png',
+    'Knee Drives (5 sets)':                     'assets/habit-icons/icon-sprint.png',
   };
 
   // v3 Phase 1z.270 — Custom-habit icon picker catalog.
@@ -29058,10 +29106,11 @@
       bonusLabel: '🦘 JUMP PROGRAM BONUS',
       packLabel:  'Jump Program Bonus',
       library: 'jump_program',
-      // W575/W576 — seed the WHOLE 14-day program (3 daily anchors + 15 training).
-      // Safe to seed everything: the cycleDays scheduler shows only each day's
-      // 3-8 habits, so the daily view never clutters. Indices 49-66.
-      habits:  [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+      // W575 · W1021 — seed the WHOLE program (3 daily anchors + the 19 training vows of
+      // the manual's Days 1, 4, 8, 11). Safe to seed everything: the cycleDays scheduler
+      // shows only each day's vows, so the daily view never clutters. Indices 49-70
+      // (22 vows; MAX_ACTIVE_HABITS is 25).
+      habits:  [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70],
     },
   ];
 
@@ -34243,7 +34292,7 @@
     // (the owner's first test, 2026-09-13). Same in-place, order-preserving
     // partition; idempotent with the save-time one.
     try { sortHabitsAutoVerifyFirst(habits); } catch (_) {}
-    const todayHabits = _tbLeadFirst(habits.filter(_isListedToday));   // W1005 — weekly vows list every day   // W978 — the vow chosen on today's briefing leads
+    const todayHabits = _tbLeadFirst(_jumpOrderToday(habits.filter(_isListedToday)));   // W1021 — a jump session in the manual's order   // W1005 — weekly vows list every day   // W978 — the vow chosen on today's briefing leads
     updateMorningButtonVisibility();
     updateLockedInButtonVisibility();
     // W584 — jump-program guide row under the vows (visibility + wire-once).
@@ -41241,27 +41290,38 @@
     ]},
   ];
 
-  // W580 — Vertical Jump Program welcome (owner spec). Jump-path users get
+  // W580 · W1021 — Vertical Jump Program welcome (owner spec). Jump-path users get
   // THIS instead of FA_FIRST_VOW_BEATS: The First Awakened drops the mythic
   // register and explains, in a normal tone, how the program is laid out and
-  // how to use the exercises. Content must stay true to the engine: calendar-
-  // locked Mon/Wed/Fri sessions, Tue/Thu recovery, weekends off, two-week A/B
-  // rotation, daily anchors every day, sets×reps in each habit name.
-  const FA_JUMP_WELCOME_BEATS = [
-    { pose: 'speaking', lines: [
-      'You chose the Vertical Jump Program. Here is how it works.',
-      'You train Monday, Wednesday and Friday. Tuesday and Thursday are recovery. Weekends are off.',
-      'Monday is plyometrics. Wednesday is strength and mechanics. Friday is heavy strength.',
-    ]},
-    { pose: 'pointing', lines: [
-      'On a training day, that day\'s exercises appear on your list with sets and reps in the name. Do them, then check each one off.',
-      'Rest days show no lifting. That is by design. Every second Monday the jump work changes \u2014 two weeks make one cycle.',
-    ]},
-    { pose: 'nodding', lines: [
-      'Creatine, sunlight and your protein goal run every day, rest days included. They drive recovery and keep your streak.',
-      'Your first full cycle begins on Monday. Until then, keep the dailies. Now go.',
-    ]},
-  ];
+  // how to use the exercises. Content must stay true to the engine: a 14-day
+  // cycle counted from the hunter's own start day, sessions on Days 1, 4, 8 and
+  // 11 (1 and 8 jump work, 4 and 11 strength), rest on every other day, daily
+  // anchors every day, the sets in each vow's name. Built fresh each time: the
+  // closing line names the start day.
+  function _faJumpWelcomeBeats() {
+    let close = 'Now go.';
+    try {
+      const s = _jumpState();
+      if (s.kind === 'before') close = 'Day 1 is ' + (s.inDays === 1 ? 'tomorrow' : _jumpWd(s.start, true)) + '. Until then, keep the dailies. Now go.';
+      else if (s.kind === 'none') close = 'Pick your start day on the row under your vows. Now go.';
+      else if (s.kind === 'session' && s.day === 1) close = 'Day 1 is today. Now go.';
+    } catch (_) {}
+    return [
+      { pose: 'speaking', lines: [
+        'You chose the Vertical Jump Program. Here is how it works.',
+        'The program runs in 14-day cycles. You train on Day 1, Day 4, Day 8 and Day 11. Every other day is rest.',
+        'Days 1 and 8 are jump work. Days 4 and 11 are strength.',
+      ]},
+      { pose: 'pointing', lines: [
+        'On a training day, that day\'s exercises appear on your list in order, with the sets in the name. Do them, then check each one off.',
+        'Rest days show no exercises. That is by design. After Day 14 the cycle begins again at Day 1.',
+      ]},
+      { pose: 'nodding', lines: [
+        'Creatine, sunlight and your protein goal run every day, rest days included. They drive recovery and keep your streak.',
+        close,
+      ]},
+    ];
+  }
 
   // v3 Phase 1z.282C — One-time welcome for existing users.
   // Fires once on first app launch after the W167 upgrade for users
@@ -41629,7 +41689,7 @@
     if (localStorage.getItem('hb_tour_first_vow_v1') === '1') return false;
     // W940 — a first-day hunter already heard this from the onboarding pact.
     // Marked seen so it never auto-shows later either. Jump-program hunters are
-    // the exception: theirs is the walkthrough of a calendar-locked program,
+    // the exception: theirs is the walkthrough of a 14-day program,
     // not an acknowledgment.
     try {
       const _jumpWalk = (typeof _jumpProgramUnlocked === 'function') && _jumpProgramUnlocked();
@@ -41666,7 +41726,7 @@
     const _isJumpUser = (typeof _jumpProgramUnlocked === 'function') && _jumpProgramUnlocked();
     return _faRunCoachmark({
       context: _isJumpUser ? 'jump_welcome' : 'first_vow',
-      beats: _isJumpUser ? FA_JUMP_WELCOME_BEATS : FA_FIRST_VOW_BEATS,
+      beats: _isJumpUser ? _faJumpWelcomeBeats() : FA_FIRST_VOW_BEATS,
       cta: _isJumpUser ? 'START TRAINING' : 'BEGIN',
       storageKey: 'hb_tour_first_vow_v1',
       onDismiss: _onDismiss,
@@ -41676,10 +41736,10 @@
   // tappable guide row under the vows (jump users only; #fa-program-guide,
   // toggled in renderHabits) and re-delivers the SAME welcome beats on demand.
   // No storageKey → _faRunCoachmark persists nothing; replayable forever. Only
-  // the closing line is swapped: "your first full cycle begins on Monday" is
-  // signup-time copy and would read wrong weeks into the program.
+  // the closing line is swapped: "Day 1 is Monday" is signup-time copy and
+  // would read wrong weeks into the program.
   function _faJumpProgramReplayBeats() {
-    const beats = FA_JUMP_WELCOME_BEATS.map(function (b) { return { pose: b.pose, lines: b.lines.slice() }; });
+    const beats = _faJumpWelcomeBeats();
     const last = beats[beats.length - 1];
     last.lines[last.lines.length - 1] = 'That is the whole design. Check today’s list and do the work. Now go.';
     return beats;
@@ -41691,15 +41751,172 @@
       cta: 'BACK TO TRAINING',
     });
   }
-  let _faGuideWired = false;
+
+  // ── W1021 · where the program stands, and the day the hunter starts it ──
+  // The guide row under the vows now says which day of the 14 it is (training on only four
+  // of them, nobody can keep count), and a tap opens a sheet that moves Day 1 or replays the
+  // walkthrough. The same seven-day row is the onboarding screen "When do you start?".
+  var _JUMP_WD  = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  var _JUMP_WDF = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  function _jumpStart() { try { return localStorage.getItem('hb_jump_program_started') || null; } catch (_) { return null; } }
+  function _jumpWd(ds, full) { const i = new Date(ds + 'T12:00:00Z').getUTCDay(); return (full ? _JUMP_WDF : _JUMP_WD)[i]; }
+  function _jumpDom(ds) { return parseInt(String(ds).slice(8), 10); }
+  function _jumpDaysTo(from, to) { return Math.round((Date.parse(to + 'T12:00:00Z') - Date.parse(from + 'T12:00:00Z')) / 86400000); }
+  // none (no start chosen) · before (Day 1 still ahead) · session · rest
+  function _jumpState() {
+    const t = getDeviceLocalDate(), start = _jumpStart();
+    if (!start) return { kind: 'none' };
+    if (t < start) return { kind: 'before', inDays: _jumpDaysTo(t, start), start: start };
+    const d = _jumpCycleDayOn(t);
+    if (d == null) return { kind: 'none' };
+    const ses = JUMP_SESSIONS[d];
+    if (ses) return { kind: 'session', day: d, label: ses.label, count: ses.names.length };
+    let k = 1;
+    while (k < JUMP_CYCLE_LEN && !JUMP_SESSIONS[((d - 1 + k) % JUMP_CYCLE_LEN) + 1]) k++;
+    return { kind: 'rest', day: d, nextIn: k, next: _jumpAddDays(t, k) };
+  }
+  function _jumpGuideText() {
+    const s = _jumpState();
+    if (s.kind === 'session') return { eyebrow: 'DAY ' + s.day + ' OF ' + JUMP_CYCLE_LEN + ' · ' + s.label, line: s.count + ' exercises today, in order.' };
+    if (s.kind === 'rest')    return { eyebrow: 'DAY ' + s.day + ' OF ' + JUMP_CYCLE_LEN + ' · REST', line: 'Next session ' + (s.nextIn === 1 ? 'tomorrow' : _jumpWd(s.next, true)) + '.' };
+    if (s.kind === 'before')  return { eyebrow: 'DAY 1 STARTS ' + (s.inDays === 1 ? 'TOMORROW' : _jumpWd(s.start)), line: 'Keep the dailies until then.' };
+    return { eyebrow: 'PICK YOUR START DAY', line: 'Tap to choose when Day 1 begins.' };
+  }
+  // Today + the next six days. `sel` is the chosen date (YYYY-MM-DD, device-local) or null.
+  function _jumpChipsHtml(sel) {
+    const t = getDeviceLocalDate();
+    let h = '';
+    for (let i = 0; i < 7; i++) {
+      const ds = _jumpAddDays(t, i), on = ds === sel;
+      h += '<button type="button" class="jd-chip' + (on ? ' jd-chip--on' : '') + '" data-jd="' + ds + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + (i === 0 ? 'Today' : _jumpWd(ds, true) + ' ' + _jumpDom(ds)) + '">' +
+        (i === 0 ? '<b>TODAY</b>' : '<i>' + _jumpWd(ds) + '</i><b>' + _jumpDom(ds) + '</b>') + '</button>';
+    }
+    return h;
+  }
+  // the first four sessions a start date gives, by date: Day 1, 4, 8, 11
+  function _jumpSessionsLine(start) {
+    if (!start) return '';
+    return 'SESSIONS · ' + Object.keys(JUMP_SESSIONS).map(function (d) { const ds = _jumpAddDays(start, parseInt(d, 10) - 1); return _jumpWd(ds) + ' ' + _jumpDom(ds); }).join(' · ');
+  }
+  function _jumpSetStart(ds) {
+    try { localStorage.setItem('hb_jump_program_started', ds); localStorage.setItem('hb_jump_v', '2'); } catch (_) {}
+    try { if (typeof save === 'function') save(); } catch (_) {}
+    try { _lastHabitsRenderFingerprint = null; renderHabits(); updateProgress(); } catch (e) { _logSwallow('jump:setStart', e); }
+  }
+  function _jumpNeedsStart() {
+    if (!_jumpProgramUnlocked() || _jumpStart()) return false;
+    return (Array.isArray(habits) ? habits : []).some(function (h) { return h && !h.archived && h.library === 'jump_program' && Array.isArray(h.cycleDays) && h.cycleDays.length; });
+  }
+
+  var _jumpSheetSel = null;
+  function _jumpEnsureSheet() {
+    if (document.getElementById('jump-sh')) return;
+    const sc = document.createElement('div'); sc.id = 'jump-scrim'; sc.className = 'jump-scrim';
+    const sh = document.createElement('div'); sh.id = 'jump-sh'; sh.className = 'jump-sh'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Jump program start day');
+    sh.innerHTML = '<div class="jump-sh-grab" aria-hidden="true"></div>' +
+      '<div class="jump-sh-k">VERTICAL JUMP PROGRAM</div>' +
+      '<div class="jump-sh-t" data-jump-t></div>' +
+      '<div class="jump-sh-s" data-jump-s></div>' +
+      '<div class="jd-row" data-jump-days role="radiogroup" aria-label="Start day"></div>' +
+      '<div class="jd-note" data-jump-note></div>' +
+      '<button type="button" class="jump-sh-save" data-jump-save>SAVE</button>' +
+      '<button type="button" class="jump-sh-how" data-jump-how>How the program works</button>';
+    document.body.appendChild(sc); document.body.appendChild(sh);
+    sc.addEventListener('click', closeJumpSheet);
+    sh.addEventListener('click', function (e) {
+      const t = e.target;
+      const chip = t.closest && t.closest('[data-jd]');
+      if (chip) { _jumpSheetSel = chip.getAttribute('data-jd'); try { _hapticTick('LIGHT'); } catch (_) {} _jumpRenderSheet(); return; }
+      if (t.closest && t.closest('[data-jump-how]')) { closeJumpSheet(); try { showJumpProgramReplay(); } catch (_) {} return; }
+      if (t.closest && t.closest('[data-jump-save]')) {
+        const ds = _jumpSheetSel; if (!ds) return;
+        closeJumpSheet();
+        _jumpSetStart(ds);
+        const off = _jumpDaysTo(getDeviceLocalDate(), ds);
+        try { showHabitToast(off <= 0 ? 'Day 1 is today.' : 'Day 1 starts ' + (off === 1 ? 'tomorrow' : _jumpWd(ds, true)) + '.'); } catch (_) {}
+      }
+    });
+  }
+  function _jumpRenderSheet() {
+    const sh = document.getElementById('jump-sh'); if (!sh) return;
+    const fresh = !_jumpStart();
+    sh.querySelector('[data-jump-t]').textContent = fresh ? 'When do you start?' : 'Change start day';
+    sh.querySelector('[data-jump-s]').textContent = fresh ? 'Day 1 lands on the day you pick.' : 'The cycle restarts at Day 1 on the day you pick. Your history stays.';
+    sh.querySelector('[data-jump-days]').innerHTML = _jumpChipsHtml(_jumpSheetSel);
+    sh.querySelector('[data-jump-note]').textContent = _jumpSessionsLine(_jumpSheetSel);
+    sh.querySelector('[data-jump-save]').disabled = !_jumpSheetSel;
+  }
+  function openJumpSheet() {
+    _jumpEnsureSheet();
+    const t = getDeviceLocalDate(), start = _jumpStart();
+    // a start still inside the seven-day row is shown as chosen; with none, today is offered
+    _jumpSheetSel = !start ? t : (start >= t && _jumpDaysTo(t, start) < 7 ? start : null);
+    _jumpRenderSheet();
+    document.getElementById('jump-scrim').classList.add('jump-scrim--on');
+    document.getElementById('jump-sh').classList.add('jump-sh--on');
+  }
+  function closeJumpSheet() {
+    const sc = document.getElementById('jump-scrim'), sh = document.getElementById('jump-sh');
+    if (sc) sc.classList.remove('jump-scrim--on');
+    if (sh) sh.classList.remove('jump-sh--on');
+  }
+
+  // An account still on the prototype program (W576) moves to the manual's: the old training
+  // vows are archived (their history stays in the Ledger), the manual's are added, and the
+  // start day is cleared so the hunter chooses where Day 1 lands. Once, at boot, after load();
+  // an empty list waits (a reinstall is restored first, and the restore reloads).
+  function _jumpMigrateV2() {
+    try {
+      if (!_jumpProgramUnlocked()) return false;
+      if (localStorage.getItem('hb_jump_v') === '2') return false;
+      if (!Array.isArray(habits) || !habits.length) return false;
+      habits.forEach(function (h) { if (h && !h.archived && OLD_JUMP_TRAINING_NAMES.indexOf(h.name) >= 0) h.archived = true; });
+      const have = {};
+      habits.forEach(function (h) { if (h && !h.archived) have[h.name] = 1; });
+      const pack = getPackById('jump_program');
+      ((pack && pack.habits) || []).forEach(function (idx) {
+        const def = DEFAULT_HABITS[idx];
+        if (!def || !Array.isArray(def.cycleDays) || have[def.name]) return;
+        const row = _buildQuickPickHabitRow(idx);   // { def, newH }
+        if (row && row.newH) habits.push(row.newH);
+      });
+      localStorage.removeItem('hb_jump_program_started');
+      localStorage.setItem('hb_jump_v', '2');
+      if (typeof save === 'function') save();
+      return true;
+    } catch (e) { try { _logSwallow('jump:migrate', e); } catch (_) {} return false; }
+  }
+  try {
+    window.__jump = {   // QA
+      dayOn: _jumpCycleDayOn, sessions: JUMP_SESSIONS, state: _jumpState, guide: _jumpGuideText, open: openJumpSheet, setStart: _jumpSetStart, migrate: _jumpMigrateV2,
+      templates: function () { return DEFAULT_HABITS.filter(function (d) { return d.library === 'jump_program'; }).map(function (d) { return { name: d.name, cycleDays: d.cycleDays || null }; }); },
+      rows: function () { return getPackById('jump_program').habits.map(function (i) { const r = _buildQuickPickHabitRow(i); return r && r.newH; }).filter(Boolean); },
+      scheduledOn: function (name, ds) { const h = habits.find(function (x) { return x && !x.archived && x.name === name; }); return h ? isHabitScheduledOn(h, ds) : null; },
+    };
+  } catch (_) {}
+
+  let _faGuideWired = false, _jumpAsked = false;
   function _faGuideSync() {
     const el = document.getElementById('fa-program-guide');
     if (!el) return;
     const show = (typeof _jumpProgramUnlocked === 'function') && _jumpProgramUnlocked();
     el.classList.toggle('hidden', !show);
-    if (show && !_faGuideWired) {
+    if (!show) return;
+    try {   // W1021 — the row names the program day
+      const g = _jumpGuideText();
+      const eb = el.querySelector('.fa-guide-eyebrow'), ln = el.querySelector('.fa-guide-line');
+      if (eb) eb.textContent = g.eyebrow;
+      if (ln) ln.textContent = g.line;
+    } catch (_) {}
+    if (!_faGuideWired) {
       _faGuideWired = true;
-      el.addEventListener('click', function () { try { showJumpProgramReplay(); } catch (_) {} });
+      el.addEventListener('click', function () { try { openJumpSheet(); } catch (_) {} });
+    }
+    // an account with no start day (moved over from the prototype program) is asked once a launch
+    if (!_jumpAsked && currentTab === 'habits' && _jumpNeedsStart()) {
+      _jumpAsked = true;
+      const ask = function () { if (_jumpNeedsStart()) openJumpSheet(); };
+      if (!_stageDefer('jumpstart', 60, ask)) ask();
     }
   }
 
@@ -42006,7 +42223,7 @@
     // Surfaces the hunter opened. Nothing automatic lands on top of them either.
     ['sheet',    'dom',  function () {
       return ['fa-manual-overlay', 'mv-overlay', 'system-full-overlay', 'arena-overlay', 'boss-fs-overlay'].some(_stageVis)
-        || _stageOn('#hunt-list-overlay');
+        || _stageOn('#hunt-list-overlay') || _stageOn('.jump-sh--on');   // W1021 — the jump start-day sheet
     }],
   ];
   function _stageBusyKeys(except, pri) {
@@ -60145,7 +60362,7 @@
     strip.setAttribute('aria-expanded', _tvOpen ? 'true' : 'false');
     box.classList.toggle('tv-drop--open', _tvOpen);
     if (!_tvOpen) return;
-    const todays = (Array.isArray(habits) ? habits : []).filter(isScheduledToday);
+    const todays = _jumpOrderToday((Array.isArray(habits) ? habits : []).filter(isScheduledToday));   // W1021
     const open = todays.filter(function (h) { return !isChecked(h.id); });
     let h = '<div class="tv-head"><span>VOWS LEFT TODAY</span><span class="tv-count">' + open.length + '<i> / ' + todays.length + '</i></span></div>';
     if (!open.length) {
@@ -64389,9 +64606,9 @@
       x.setAttribute('aria-checked', on ? 'true' : 'false');
     });
 
-    const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cin-scr-training', 'cn-s8'];
+    const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cn-s7j', 'cin-scr-training', 'cn-s8'];   // W1021 — cn-s7j: the jump program's start day
     const VOW_INDEX = 7;          // where SKIP lands — the one choice nobody skips past
-    const TRAINING_INDEX = 8;
+    const TRAINING_INDEX = 9;
     let idx = 0;
 
     const chrome = q('#cn-chrome');
@@ -64425,6 +64642,12 @@
       if (id === 'cn-s4') _runBoard();
       if (id === 'cn-s5') _runHunt();
       if (id === 'cn-s7') _runVow();
+      if (id === 'cn-s7j') {
+        // W1021 — only the Jump Program asks for a start day; every other path
+        // walks past on the same tick (the screen never paints).
+        if (state.pack !== 'jump_program') { show(i + 1); return; }
+        _runJumpStart();
+      }
       if (isTraining) {
         // Conditional, exactly as in 1z.273G: no training habits in the
         // chosen pack → advance on the SAME tick so the screen can never
@@ -64929,6 +65152,30 @@
       }));
     }
 
+    // ── 7½ · WHEN DO YOU START? (W1021, Jump Program only) ─────────
+    // Seven days, today first. Day 1 of the 14 lands on the one picked.
+    function _runJumpStart() {
+      const host = q('#cn-jdays');
+      if (!host) return;
+      if (!state.jumpStart) state.jumpStart = getDeviceLocalDate();
+      const paint = () => {
+        host.innerHTML = _jumpChipsHtml(state.jumpStart);
+        const note = q('#cn-jnote');
+        if (note) note.textContent = _jumpSessionsLine(state.jumpStart);
+      };
+      paint();
+      if (host.dataset.wired) return;
+      host.dataset.wired = '1';
+      host.addEventListener('click', (e) => {
+        const b = e.target.closest && e.target.closest('[data-jd]');
+        if (!b) return;
+        _cinPlaySfx('vow');
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        state.jumpStart = b.getAttribute('data-jd');
+        paint();
+      });
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // v3 Phase 1z.273G — Training Week (inserted between Path and Pact)
     //
@@ -65408,11 +65655,12 @@
         // W574 — the goal flag is server-authoritative (user-state UPSERT ->
         // users.onboarding_goal) and partitions the jump library.
         try { localStorage.setItem('hb_onboarding_goal', selectedPackId === 'jump_program' ? 'jump_program' : 'default'); } catch (_) {}
-        // W575 — anchor the 14-day jump cycle to today so cycleDays habits
-        // schedule off day one.
+        // W575 · W1021 — Day 1 of the 14-day jump cycle is the day the hunter
+        // picked on "When do you start?" (today when the screen was skipped).
         try {
-          if (selectedPackId === 'jump_program' && !localStorage.getItem('hb_jump_program_started')) {
-            localStorage.setItem('hb_jump_program_started', getDeviceLocalDate());
+          if (selectedPackId === 'jump_program') {
+            localStorage.setItem('hb_jump_program_started', state.jumpStart || getDeviceLocalDate());
+            localStorage.setItem('hb_jump_v', '2');
           }
         } catch (_) {}
 
@@ -70762,7 +71010,8 @@
       'hb_coop_pacts',            // W663 — per-friend co-op Pact streak (Snapchat-style)
       'hb_journey_start',         // W553 — any% "time to summit" clock start (first day in Awakened)
       'hb_onboarding_goal',       // W574 — Vertical Jump Program goal flag ('jump_program'|'default'); server mirrors it to the queryable users.onboarding_goal column
-      'hb_jump_program_started',  // W575 — 14-day jump-cycle start anchor (device-local YYYY-MM-DD); cycleDays habits schedule off this
+      'hb_jump_program_started',  // W575 · W1021 — the date of Day 1 of the jump cycle (device-local YYYY-MM-DD, chosen by the hunter); cycleDays habits schedule off this
+      'hb_jump_v',                // W1021 — '2' once the account is on the Jump Manual's program (see _jumpMigrateV2)
       'hb_summit_finished_at',    // W553 — local F100 finish stamp (offline-stable end anchor)
       // W818 — THE ASCENT joins cloud sync (the wipe incident: hb_arena_v2 was
       // never allowlisted, so a purge+restore rebuilt every key EXCEPT the
@@ -71252,6 +71501,7 @@
     // reads totalPoints. See migrateXPToNewThresholds() for rationale.
     try { migrateXPToNewThresholds(); } catch (_) {}
     try { _migrateLegsToBoots(); } catch (_) {}   // W569 — consolidate the retired 'legs' slot into 'boots'
+    try { _jumpMigrateV2(); } catch (_) {}        // W1021 — the prototype jump program gives way to the manual's
     today = getPTDate();
     histViewYear  = parseInt(today.slice(0, 4), 10);
     histViewMonth = parseInt(today.slice(5, 7), 10) - 1;

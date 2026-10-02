@@ -36418,3 +36418,28 @@ body.combat-active #app * { animation-play-state: paused !important; }
   .statup-ov--on, .statup-card, .statup-to { animation: none; }
   .statup-burst { display: none; }
 }
+
+/* ── W1021 · Jump Program by the manual: the start-day row (onboarding + sheet), the sheet ── */
+.jd-row { display: flex; gap: 6px; }
+.jd-chip { flex: 1 1 0; min-width: 0; height: 54px; padding: 0; border-radius: 12px; border: 1px solid rgba(149,150,178,.22); background: rgba(255,255,255,.03); color: #9492ac; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+.jd-chip i { font: 800 8.5px/1 'JetBrains Mono', ui-monospace, monospace; font-style: normal; letter-spacing: 1px; }
+.jd-chip b { font: 700 16px/1 'Cinzel', Georgia, serif; color: #f3f1fb; }
+.jd-chip:first-child { flex: 1.6 1 0; }
+.jd-chip:first-child b { font: 800 9px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.2px; color: #f5b842; }
+.jd-chip--on { border-color: rgba(245,184,66,.65); background: rgba(245,184,66,.1); color: #f5b842; }
+.jd-note { min-height: 13px; margin-top: 12px; font: 800 9px/1.4 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1.1px; color: #9492ac; text-align: center; }
+#cin-onboarding .jd-row { margin-top: 18px; }
+
+.jump-scrim { position: fixed; inset: 0; background: rgba(5,5,14,0.62); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 9000; }
+.jump-scrim--on { opacity: 1; pointer-events: auto; }
+.jump-sh { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9001; background: #13132a; border: 1px solid rgba(255,255,255,0.08); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 0 18px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); max-width: 560px; margin: 0 auto; }
+.jump-sh--on { transform: none; }
+.jump-sh-grab { width: 38px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.16); margin: 9px auto 14px; }
+.jump-sh-k { font: 800 9px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 2.2px; color: #f5b842; }
+.jump-sh-t { margin-top: 8px; font: 700 21px/1.15 'Cinzel', Georgia, serif; color: #f3f1fb; }
+.jump-sh-s { margin: 6px 0 16px; font-size: 13.5px; line-height: 1.35; color: #9492ac; }
+.jump-sh-save { margin-top: 16px; width: 100%; height: 48px; border-radius: 14px; border: 1px solid rgba(245,184,66,.5); background: linear-gradient(180deg, rgba(245,184,66,.18), rgba(245,184,66,.06)); color: #f5b842; font: 800 11.5px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 2px; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: opacity .15s ease, transform .12s ease; }
+.jump-sh-save:active { transform: scale(.98); }
+.jump-sh-save:disabled { opacity: .35; cursor: default; }
+.jump-sh-how { display: block; margin: 12px auto 0; padding: 8px 10px; background: none; border: 0; color: #9492ac; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .jump-scrim, .jump-sh, .jd-chip, .jump-sh-save { transition: none; } }
