@@ -6432,6 +6432,117 @@ test.describe('BU · Jump Program by the manual (W1021)', () => {
   });
 });
 
+// W1023 — "finish strong": one reminder at 9:45 PM device-local, only for a hunter who is nearly
+// at a perfect day (82%+ of today's vows sealed, or exactly one left). Today only; a hunter's own
+// quiet hours win; nothing for anyone else.
+test.describe('BV · Finish strong (W1023)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  const AT_2PM = new Date('2026-10-05T14:00:00-07:00');   // a Monday
+  const QUIET = ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1', 'hb_first_vow_pointer_seen'];
+  // `n` custom vows, the first `sealed` of them kept today (the names are not goal-based ones).
+  async function seed(page: Page, n: number, sealed: number, extra?: Record<string, string>, at?: Date) {
+    await page.clock.setFixedTime(at || AT_2PM);
+    await freshApp(page);
+    await page.addInitScript(([count, done, ex, quiet]) => {
+      try {
+        if (sessionStorage.getItem('__w1023')) return;
+        sessionStorage.setItem('__w1023', '1');
+        const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+        const hs = Array.from({ length: count as number }, (_, i) => ({ id: 'v' + i, name: 'Vow number ' + (i + 1), emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }));
+        localStorage.setItem('hb_habits', JSON.stringify(hs));
+        localStorage.setItem('hb_completions', JSON.stringify({ '2026-10-01': ['v0'], [ymd]: hs.slice(0, done as number).map((h) => h.id) }));
+        localStorage.setItem('hb_stats', JSON.stringify({ STR: { pts: 0 }, VIT: { pts: 0 }, INT: { pts: 0 }, FOCUS: { pts: 0 }, WILL: { pts: 60 }, WLT: { pts: 0 } }));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        (quiet as string[]).forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_achievements', JSON.stringify(['first_step', 'first_blood', 'getting_started']));
+        Object.keys(ex as Record<string, string>).forEach((k) => localStorage.setItem(k, (ex as Record<string, string>)[k]));
+      } catch (_) {}
+    }, [n, sealed, extra || {}, QUIET] as [number, number, Record<string, string>, string[]]);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+  }
+  // Arm the reminder against a stand-in for the phone's notification plugin; returns what was scheduled.
+  const arm = (page: Page) => page.evaluate(async () => {
+    const w = window as any;
+    const calls: any[] = [], cancels: number[] = [];
+    const prev = w.Capacitor;
+    w.Capacitor = { isNativePlatform: () => true, Plugins: { LocalNotifications: {
+      schedule: async (o: any) => { o.notifications.forEach((n: any) => calls.push({ id: n.id, title: n.title, body: n.body, at: new Date(n.schedule.at).getTime(), kind: n.extra && n.extra.kind })); },
+      cancel: async (o: any) => { o.notifications.forEach((n: any) => cancels.push(n.id)); },
+      getPending: async () => ({ notifications: [] }), checkPermissions: async () => ({ display: 'granted' }),
+    } } };
+    let ok = false;
+    try { ok = await w.Notif.scheduleLastCall(); } finally { w.Capacitor = prev; }
+    return { ok, calls, cancels };
+  });
+
+  test('who gets it: 82% or more, or exactly one vow left — never a perfect day, never an untouched one', async ({ page }) => {
+    await seed(page, 6, 5);
+    const r = await page.evaluate(() => { const e = (window as any).__lastCall.eligible; return [[23, 25], [21, 25], [20, 25], [4, 5], [3, 5], [1, 2], [25, 25], [0, 1], [0, 25], [0, 0]].map((p) => e(p[0], p[1])); });
+    expect(r).toEqual([true, true, false, true, false, true, false, false, false, false]);
+  });
+
+  test('one vow left: 9:45 PM today, and the reminder names the vow', async ({ page }) => {
+    await seed(page, 6, 5);
+    const copy = await page.evaluate(() => (window as any).__lastCall.copy());
+    expect(copy.title.length).toBeGreaterThan(0);
+    expect(copy.body).toContain('Vow number 6');
+    const r = await arm(page);
+    expect(r.ok).toBe(true);
+    expect(r.calls.length).toBe(1);
+    expect(r.calls[0].id).toBe(99991);
+    expect(r.calls[0].kind).toBe('lastcall');
+    expect(r.calls[0].at).toBe(new Date('2026-10-05T21:45:00-07:00').getTime());
+    expect(r.calls[0].body).toContain('Vow number 6');
+    expect(r.cancels).toContain(99991);   // re-arming always replaces the last one
+  });
+
+  test('two left of 25 counts them; 20 of 25 gets nothing; a perfect day gets nothing', async ({ page }) => {
+    await seed(page, 25, 23);
+    const r = await arm(page);
+    expect(r.ok).toBe(true);
+    expect(r.calls[0].title + ' ' + r.calls[0].body).toMatch(/\b2\b/);
+    expect(r.calls[0].title + ' ' + r.calls[0].body).not.toMatch(/\{|\bfell(ed)?\b/i);
+    // seal one more from the list: still eligible, now it names the last vow
+    await page.evaluate(() => (document.querySelector('#habit-list .habit-item[data-id="v23"]') as HTMLElement).click());
+    const one = await page.evaluate(() => (window as any).__lastCall.copy());
+    expect(one.body).toContain('Vow number 25');
+    // and the last: the day is perfect, nothing is scheduled
+    await page.evaluate(() => { document.querySelectorAll('#statup-ov, #ach-popup').forEach((x) => x.remove()); (document.querySelector('#habit-list .habit-item[data-id="v24"]') as HTMLElement).click(); });
+    expect(await page.evaluate(() => (window as any).__lastCall.copy())).toBeNull();
+    const done = await arm(page);
+    expect([done.ok, done.calls.length]).toEqual([false, 0]);
+  });
+
+  test('not eligible, too late, or told to be quiet: nothing is scheduled', async ({ page }) => {
+    await seed(page, 25, 20);                                    // 80%, five left
+    expect(await page.evaluate(() => (window as any).__lastCall.copy())).toBeNull();
+    expect((await arm(page)).calls.length).toBe(0);
+    // the clock: 9:45 PM today when it is still ahead, nothing once it has passed (never tomorrow)
+    const t = await page.evaluate(() => { const f = (window as any).__lastCall.fireAt; return [f(Date.parse('2026-10-05T14:00:00-07:00')), f(Date.parse('2026-10-05T21:45:00-07:00')), f(Date.parse('2026-10-05T22:10:00-07:00'))]; });
+    expect(t).toEqual([new Date('2026-10-05T21:45:00-07:00').getTime(), null, null]);
+  });
+
+  test('a hunter whose own quiet hours cover 9:45 PM, or who turned reminders off, is left alone', async ({ page }) => {
+    await seed(page, 6, 5, { hb_notif_quiet_start: '21:00' });
+    expect((await arm(page)).calls.length).toBe(0);
+    await page.evaluate(() => { localStorage.removeItem('hb_notif_quiet_start'); });
+    expect((await arm(page)).calls.length).toBe(1);              // the default 10 PM–7 AM window does not cover it
+    await page.evaluate(() => { localStorage.setItem('hb_notif_disabled', '1'); });
+    expect((await arm(page)).calls.length).toBe(0);
+  });
+});
+
+test.describe('BV · Finish strong, west of Pacific (W1023)', () => {
+  test.use({ timezoneId: 'Pacific/Honolulu' });
+  test('where 9:45 PM local is already the next Pacific day, there is no reminder', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-05T14:00:00-10:00'));
+    await freshApp(page);
+    // 9:45 PM in Honolulu is 12:45 AM Pacific: the habit day has turned
+    expect(await page.evaluate(() => (window as any).__lastCall.fireAt(Date.parse('2026-10-05T14:00:00-10:00')))).toBeNull();
+  });
+});
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {

@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.9';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.9-w1022'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.9-w1023'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -28279,6 +28279,16 @@
   // Pacific leaderboard reset) at 10 AM device-local. Singleton lane 99997.
   const WEEKLY_RESET_TIME = '10:00';
   const WEEKLY_RESET_NOTIF_ID = 99997; // reserved; distinct from CHECKIN/MIDDAY
+  // W1023 — "finish strong" (owner 2026-10-04, from Galilea sealing 23 of 25 every day and
+  // never the evening vow): ONE reminder at 9:45 PM device-local, only for a hunter who is
+  // nearly at a perfect day — 82% or more of today's vows sealed, or exactly one vow left.
+  // Nobody else gets it. 9:45 and not 11 PM on purpose: Quiet Hours default to 10 PM–7 AM
+  // and the Settings screen says so; the reminder stays outside the window it promises
+  // (and is skipped when a hunter's own quiet hours cover 9:45). Dated one-shot for TODAY
+  // only — it never rolls to tomorrow, because today's count means nothing tomorrow.
+  const LASTCALL_TIME = '21:45';
+  const LASTCALL_NOTIF_ID = 99991; // reserved; clear of 99989, 99992-99999 and the digest lane
+  const LASTCALL_MIN_PCT = 82;
 
   // ── W586 — NOTIFICATION COPY LIBRARY (competitive/emotional revamp) ──────────
   // Plain, punchy, modern-app voice (Duolingo/Strava energy — NOT lore). Every
@@ -28486,6 +28496,21 @@
         { title: 'Quick one before bed?', body: "The day's almost gone. One vow now and you didn't let it slip." },
       ],
     },
+    // W1023 — finish strong. `one` names the vow that is left ({habit}); `few` counts them.
+    lastcall: {
+      one: [
+        { title: 'One vow from a perfect day', body: "{habit} is all that's left. Seal it before the day ends." },
+        { title: 'Finish strong', body: '{N} of {TOTAL} sealed. Only {habit} is still open.' },
+        { title: 'One left tonight', body: 'Seal {habit} and today is a perfect day.' },
+        { title: 'So close', body: 'Just {habit} stands between you and a perfect day.' },
+      ],
+      few: [
+        { title: '{M} vows from a perfect day', body: "You've sealed {N} of {TOTAL}. Finish the last {M} before the day ends." },
+        { title: 'Finish strong', body: '{N} of {TOTAL} sealed. The last {M} make it a perfect day.' },
+        { title: 'Almost a perfect day', body: '{M} vows still open out of {TOTAL}. Close them out tonight.' },
+        { title: 'So close', body: 'Only {M} left. Seal them and the day is perfect.' },
+      ],
+    },
     weekly: {
       competitive: [
         { title: 'Board resets tomorrow', body: "You're #{rank} of {total}. One more walk could bump you up before Sunday wipes it. 🏃" },
@@ -28601,6 +28626,43 @@
     const vars = { N: completed, M: (total - completed), TOTAL: total };
     return _notifResolve(NOTIF.checkin[state], vars, completed);
   }
+
+  // W1023 — who gets the finish-strong reminder: at least one vow sealed, at least one still
+  // open, and either 82%+ sealed or exactly one left (so a five-vow hunter at 4 of 5 = 80%
+  // is not shut out by the percentage).
+  function lastCallEligible(completed, total) {
+    if (!(total > 0) || completed >= total || completed < 1) return false;
+    return (completed / total) * 100 >= LASTCALL_MIN_PCT || (total - completed) === 1;
+  }
+  // {title, body} for right now, or null when this hunter is not eligible.
+  function pickLastCallCopy() {
+    const p = getTodaysHabitProgress();
+    if (!lastCallEligible(p.completed, p.total)) return null;
+    const left = p.total - p.completed;
+    let name = null;
+    if (left === 1) {
+      try {
+        const t = getPTDate(), done = (completions && completions[t]) || [];
+        const open = habits.filter(isScheduledToday).filter(function (h) { return done.indexOf(h.id) === -1; })[0];
+        if (open) name = (typeof habitBaseName === 'function' ? habitBaseName(open) : open.name) || null;
+      } catch (_) {}
+    }
+    const vars = { N: p.completed, M: left, TOTAL: p.total, habit: name };
+    return _notifResolve(left === 1 && name ? NOTIF.lastcall.one : NOTIF.lastcall.few, vars, p.completed);
+  }
+  // 9:45 PM TODAY in device-local time, or null when it has passed — or when 9:45 local is
+  // already the next Pacific day (the habit day is Pacific; west of it the day has turned).
+  function computeLastCallDate(nowMs) {
+    const now = new Date(nowMs != null ? nowMs : Date.now());
+    const hm = /^(\d{1,2}):(\d{2})$/.exec(LASTCALL_TIME);
+    const t = new Date(now.getTime());
+    t.setHours(+hm[1], +hm[2], 0, 0);
+    if (t.getTime() <= now.getTime()) return null;
+    const pt = function (d) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(d); };
+    if (pt(t) !== pt(now)) return null;
+    return t;
+  }
+  try { window.__lastCall = { eligible: lastCallEligible, copy: pickLastCallCopy, fireAt: function (ms) { const d = computeLastCallDate(ms); return d ? d.getTime() : null; } }; } catch (_) {}   // QA
 
   function getTodaysHabitProgress() {
     try {
@@ -37970,6 +38032,7 @@
 
     if (wasDone) {
       uncheck(id);
+      try { Notif.scheduleLastCall(); } catch (_) {}   // W1023
       if (li) {
         li.classList.remove('completed');
         const cb = li.querySelector('.habit-cb');
@@ -66676,7 +66739,7 @@
     // a numeric range that won't collide with notifIdFor() habit hashes.
     const DIGEST_NOTIF_ID  = 1;
     // W900 — the digest's one-shot lane (7 days), clear of every reserved id:
-    // comeback 99994-6, shield 99993, 99992 (retired W909, keep reserved), pilgrim 99989, weekly 99997,
+    // comeback 99994-6, shield 99993, 99992 (retired W909, keep reserved), last call 99991 (W1023), pilgrim 99989, weekly 99997,
     // midday 99998, check-in 99999.
     const DIGEST_RUN_DAYS = 7;
     const DIGEST_ID_BASE  = 99970;   // 99970..99976
@@ -67240,7 +67303,46 @@
       if (!p || !isNative()) return;
       try { await p.cancel({ notifications: [{ id: CHECKIN_NOTIF_ID }] }); } catch (_) {}
     }
+    // ── W1023 — finish strong (9:45 PM local, today only, nearly-perfect days only) ──
+    // Re-armed from scheduleDailyCheckin, so every path that refreshes the 7 PM
+    // check-in (app open, a seal, day reset, settings) refreshes this too: one more
+    // seal either drops it (the day is perfect) or rewrites its count.
+    async function cancelLastCall() {
+      const p = plugin();
+      if (!p || !isNative()) return;
+      try { await p.cancel({ notifications: [{ id: LASTCALL_NOTIF_ID }] }); } catch (_) {}
+    }
+    async function scheduleLastCall() {
+      await cancelLastCall();
+      const p = plugin();
+      if (!p || !isNative()) return false;
+      if (isDisabled() || isPaused()) return false;
+      if (isDayOne()) return false;
+      const hm = parseHM(LASTCALL_TIME);
+      if (hm && isInQuietHours(hm)) return false;   // a hunter's own quiet hours win
+      const fireAt = computeLastCallDate();
+      if (!fireAt) return false;
+      const lc = pickLastCallCopy();
+      if (!lc || !lc.body) return false;
+      try {
+        await p.schedule({
+          notifications: [{
+            id:       LASTCALL_NOTIF_ID,
+            title:    lc.title,
+            body:     lc.body,
+            schedule: { at: fireAt, allowWhileIdle: true },
+            extra:    { kind: 'lastcall' },
+          }],
+        });
+        return true;
+      } catch (e) {
+        console.warn('lastcall schedule failed', e);
+        return false;
+      }
+    }
+
     async function scheduleDailyCheckin() {
+      try { await scheduleLastCall(); } catch (_) {}   // W1023 — before the early returns below
       // Always cancel the previous schedule first — if we're allowed to
       // re-arm, we'll do it below; if not (disabled/paused/etc.), the
       // cancel ensures no stale ping fires.
@@ -67472,6 +67574,7 @@
       dailyDigestTime, setDailyDigest, clearDailyDigest, reapplyDigest,
       // daily check-in (7 PM local — progress-aware copy)
       scheduleDailyCheckin, cancelDailyCheckin, reapplyCheckin,
+      scheduleLastCall, cancelLastCall,   // W1023 — finish strong (9:45 PM, nearly-perfect days)
       // mid-day check-in (1 PM local — souls/streak/caught-up conditional)
       scheduleMidDayCheckin, cancelMidDayCheckin, reapplyMidDay,
       // weekly-reset reminder (Saturday — final day before the Sunday-PT reset)
