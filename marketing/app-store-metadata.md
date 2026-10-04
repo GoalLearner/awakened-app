@@ -8,6 +8,54 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.10 — READY TO PASTE (W1023, final 2026-10-04, HEAD `112df7f`, tag `3.0.10-w1024`)
+
+One change: the 9:45 PM finish-strong reminder. Four languages, each far under the
+4,000-character limit. Banned-word check done. Promotional text: keep 3.0.9's.
+
+**Before submitting:** DeepSeek in the privacy policy / App Privacy answers is still
+owed from 3.0.9 (see the 3.0.9 section).
+
+### English (U.S.)
+
+```
+Finish strong.
+
+• A late reminder, only when you've earned it. If you've sealed most of today's vows, or have just one left, Awakened sends one reminder at 9:45 PM to close out a perfect day. With one vow left, it names it. Everyone else hears nothing.
+
+• It respects your Quiet Hours and your reminder settings.
+```
+
+### Spanish (Mexico)
+
+```
+Termina con fuerza.
+
+• Un recordatorio tardío, solo cuando te lo ganaste. Si ya cumpliste casi todos los votos de hoy, o te falta solo uno, Awakened te envía un recordatorio a las 9:45 p. m. para cerrar un día perfecto. Si te falta un voto, te dice cuál. Los demás no reciben nada.
+
+• Respeta tus Horas de Silencio y tu configuración de recordatorios.
+```
+
+### Japanese
+
+```
+最後までやり切る。
+
+• がんばった日だけ届く、夜のリマインダー。今日の誓いのほとんどを果たしているか、残りがあとひとつのとき、午後9時45分に一度だけ通知が届き、パーフェクトデーの仕上げを後押しします。残りがひとつなら、その誓いの名前も表示します。それ以外の人には届きません。
+
+• おやすみ時間とリマインダーの設定はそのまま尊重されます。
+```
+
+### Norwegian (Bokmål)
+
+```
+Avslutt sterkt.
+
+• En sen påminnelse, bare når du har fortjent den. Har du fullført de fleste av dagens løfter, eller har bare ett igjen, sender Awakened én påminnelse klokken 21.45 for å lande en perfekt dag. Er det ett løfte igjen, nevner den hvilket. Alle andre får ingenting.
+
+• Den respekterer stilletidene og påminnelsesinnstillingene dine.
+```
+
 ## 3.0.9 — READY TO PASTE (W1002–W1022, final 2026-10-02, HEAD `6c5c9c4`)
 
 Four languages. Each block is under the 4,000-character limit. Banned-word check
