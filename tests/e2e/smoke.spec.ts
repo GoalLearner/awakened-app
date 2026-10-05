@@ -4190,6 +4190,38 @@ test.describe('AP · The hunt row (W951)', () => {
     hunt_started_at: Date.now() - 3 * HOUR, hunt_expires_at: Date.now() + 21 * HOUR, ...(over || {}),
   });
 
+  // W1026 — the co-op step upload is rate-limited per minute, and the app used to post once per
+  // live hunt: a hunter on eight hunts starved the oldest ones (their ally saw a frozen total).
+  // Every live hunt's steps now go in ONE request.
+  test('W1026: eight live hunts upload in one request; a dual hunt sends both streams; 25 events to a request', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const posts: any[][] = [];
+      const hk = { sb: w.Health.getStepsBetween, fb: w.Health.getFlightsClimbedBetween, sv: w.Auth.submitVerifiedEvents };
+      w.Health.getStepsBetween = async () => 4321;
+      w.Health.getFlightsClimbedBetween = async () => 7;
+      w.Auth.submitVerifiedEvents = async (ev: any[]) => { posts.push(ev); return { ok: true }; };
+      const mk = (i: number, boss: string, status = 'active') => ({ id: 'inst-' + i, boss_id: boss, status, starts_at: new Date(Date.now() - 3600_000).toISOString(), ends_at: new Date(Date.now() + 3600_000).toISOString() });
+      try {
+        const eight = Array.from({ length: 8 }, (_, i) => mk(i, i === 7 ? 'the_gaunt_wardens' : 'the_twin_maw'));
+        const n1 = await w.__coopSubmitMany(eight.concat([mk(99, 'the_twin_maw', 'pending') as any]));
+        const first = posts.slice();
+        posts.length = 0;
+        const n2 = await w.__coopSubmitMany(Array.from({ length: 30 }, (_, i) => mk(100 + i, 'the_twin_maw')));
+        return { n1, requests1: first.length, ids: first[0].map((e: any) => e.boss_instance_id), types: first[0].map((e: any) => e.event_type), unique: new Set(first[0].map((e: any) => e.client_event_id)).size,
+          n2, sizes2: posts.map((p) => p.length) };
+      } finally { w.Health.getStepsBetween = hk.sb; w.Health.getFlightsClimbedBetween = hk.fb; w.Auth.submitVerifiedEvents = hk.sv; }
+    });
+    expect(r.requests1).toBe(1);                                  // not eight
+    expect(r.n1).toBe(9);                                         // seven steps hunts + the dual hunt's two streams; the pending hunt sends nothing
+    expect(new Set(r.ids).size).toBe(8);
+    expect(r.ids).not.toContain('inst-99');
+    expect(r.types.filter((t: string) => t === 'flights_total').length).toBe(1);
+    expect(r.unique).toBe(9);
+    expect([r.n2, r.sizes2]).toEqual([30, [25, 5]]);              // the server takes 25 events a request
+  });
+
   // W1025 — the Myrmidon King's id (the_sleepless_crown) is not its picture's name; YOUR HUNTS
   // drew a broken image. Every co-op boss must resolve to a picture that is really there.
   test('W1025: every co-op boss has a picture that loads, the Myrmidon King included', async ({ page }) => {

@@ -169,11 +169,20 @@ simple = { limit = 10, period = 60 }  # 10/min per user
 # (namespace_id 1009) removed. RL_DUELS_WRITE (namespace_id 1010)
 # kept because handleDuelsResolve and handleVerifiedEventsSubmit
 # still use it.
+# W1026 — 6/min → 30/min. This bucket's real job today is the co-op step upload
+# (POST /v1/verified-events), and every client through 3.0.9 sends ONE request PER
+# LIVE HUNT on each background sync (every 30 s). A hunter with more than a handful
+# of hunts blew through 6/min, and because the hunts are walked in list order the
+# SAME ones (the oldest) lost every time: RenDIESEL, on eight hunts at once, landed
+# 9–11 uploads on each newer hunt and exactly ONE on the hunt he shared with
+# Anthony, whose combined total then looked frozen (Anthony's board post,
+# 2026-10-05). 3.0.10 sends every hunt's steps in one request; 30/min keeps the
+# builds already in the field working. Each call is a handful of cheap inserts.
 [[unsafe.bindings]]
 name = "RL_DUELS_WRITE"
 type = "ratelimit"
 namespace_id = "1010"
-simple = { limit = 6, period = 60 }   # 6/min per user
+simple = { limit = 30, period = 60 }  # 30/min per user (W1026; was 6)
 
 # W663 — dedicated bucket for the INTERACTIVE friend-Echo summon. Same fix class
 # as RL_COOP_WRITE (W463): handlePvpEchoFriend used to share RL_DUELS_WRITE (6/min)
@@ -278,7 +287,7 @@ simple = { limit = 30, period = 60 }  # 30/min per user
 name = "RL_COOP_WRITE"
 type = "ratelimit"
 namespace_id = "1019"
-simple = { limit = 20, period = 60 }  # 20/min per user
+simple = { limit = 40, period = 60 }  # 40/min per user (W1026; was 20 — the background sync resolves EVERY live hunt, so eight hunts at two syncs a minute is 16 before a single tap)
 
 # Per-user retention tracking (owner-requested). Guards POST /v1/users/me/app-open
 # — a fire-and-forget lifecycle ping written on launch + foreground. The write is
