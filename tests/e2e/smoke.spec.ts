@@ -4190,6 +4190,27 @@ test.describe('AP · The hunt row (W951)', () => {
     hunt_started_at: Date.now() - 3 * HOUR, hunt_expires_at: Date.now() + 21 * HOUR, ...(over || {}),
   });
 
+  // W1025 — the Myrmidon King's id (the_sleepless_crown) is not its picture's name; YOUR HUNTS
+  // drew a broken image. Every co-op boss must resolve to a picture that is really there.
+  test('W1025: every co-op boss has a picture that loads, the Myrmidon King included', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(async () => {
+      const b = (window as any).__bossArt;
+      const out: Array<{ id: string; path: string; ok: boolean; type: string }> = [];
+      for (const id of b.coopIds() as string[]) {
+        const path = b.path(id);
+        let ok = false, type = '';
+        try { const res = await fetch(path, { cache: 'no-store' }); ok = res.ok; type = res.headers.get('content-type') || ''; } catch (_) {}
+        out.push({ id, path, ok, type });
+      }
+      return { out, king: b.path('the_sleepless_crown'), wolf: b.path('the_steel_wolf') };
+    });
+    expect(r.king).toBe('assets/bosses/the-myrmidon-king.png');
+    expect(r.wolf).toBe('assets/bosses/the-steel-wolf.png');   // a solo boss is untouched
+    expect(r.out.length).toBeGreaterThanOrEqual(10);
+    expect(r.out.filter((x) => !x.ok || x.type.indexOf('image') < 0).map((x) => x.id + ' → ' + x.path)).toEqual([]);
+  });
+
   test('the hunt the hunter is on leads the tab, with live steps, and opens on tap', async ({ page }) => {
     await hunter(page, { the_steel_wolf: wolf() });
     const row = page.locator('#hunt-row');
