@@ -6596,6 +6596,27 @@ test.describe('BV · Finish strong, west of Pacific (W1023)', () => {
   });
 });
 
+// W1027 — "today's steps" is the DEVICE's own day. It was the Pacific date at the device's
+// midnight: right in Pacific time, and east of it a late-night read returned all of yesterday
+// and filed it under today, so the week held that day twice and a new week opened already
+// holding Saturday (Anthony, Central time: the board froze at Saturday's count for two days).
+for (const c of [
+  { tz: 'America/Chicago',     now: '2026-10-04T05:30:00Z', start: '2026-10-04T05:00:00.000Z', why: 'Sunday 12:30 AM Central is still Saturday in Pacific: the count starts at Sunday midnight Central, not Saturday' },
+  { tz: 'America/Los_Angeles', now: '2026-10-04T05:30:00Z', start: '2026-10-03T07:00:00.000Z', why: 'Pacific time is unchanged: Saturday midnight Pacific' },
+  { tz: 'Pacific/Honolulu',    now: '2026-10-04T08:00:00Z', start: '2026-10-03T10:00:00.000Z', why: 'Saturday 10 PM in Honolulu is already Sunday in Pacific: the count still starts at Saturday midnight Honolulu, never in the future' },
+]) {
+  test.describe('BW · Steps today is the device day (W1027) · ' + c.tz, () => {
+    test.use({ timezoneId: c.tz });
+    test(c.why, async ({ page }) => {
+      await page.clock.setFixedTime(new Date(c.now));
+      await freshApp(page);
+      const start = await page.evaluate(() => (window as any).Health._stepsTodayStartISO());
+      expect(start).toBe(c.start);
+      expect(Date.parse(start)).toBeLessThanOrEqual(Date.parse(c.now));
+    });
+  });
+}
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {
