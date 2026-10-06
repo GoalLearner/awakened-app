@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.11';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.11-w1029'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.11-w1030'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22012,7 +22012,43 @@
     firstCoop: 'hb_review_first_coop_done',
     pdayCount: 'hb_review_pday_count',
     pdayLast:  'hb_review_pday_last',
+    bossOwed:  'hb_review_boss_owed',   // W1030 — '1' while the first-boss moment is still owed (the first boss came on day one)
   };
+  // W1030 — the first-boss rating moment is not thrown away when the first boss comes on a
+  // hunter's FIRST DAY. Day one stays quiet (W940), and most new hunters beat a boss on it —
+  // onboarding has them strike the Steel Wolf, and Kristy beat The Carouser three minutes
+  // after joining (2026-10-05) — so for them the strongest early moment never produced a
+  // card. Now a day-one first boss leaves the moment OWED, and the next boss win after day
+  // one pays it (the card then says "Boss defeated", not "First boss"). firstBoss itself is
+  // still set at the true first kill: the first_boss_kill funnel event reads it.
+  //   → 'first' (the true first boss, off day one) · 'owed' (a later win pays the debt) · null
+  function _rmBossMoment() {
+    var had = !!_rvGet(_RV.firstBoss);
+    _rvSet(_RV.firstBoss, '1');
+    var quiet = false; try { quiet = !!_newHunterQuiet(); } catch (_) {}
+    if (!had) {
+      if (quiet) { _rvSet(_RV.bossOwed, '1'); return null; }
+      _rvSet(_RV.bossOwed, '1');   // owed until its card is really shown: an ask dropped for spacing is not lost
+      return 'first';
+    }
+    if (quiet || _rmShown().indexOf('boss') >= 0) return null;
+    var owed = _rvGet(_RV.bossOwed);
+    // A hunter who joined in the last 30 days on a build before this one: their day-one first
+    // boss set firstBoss and left no debt on record. Treat it as owed once.
+    if (owed == null) {
+      try {
+        var d0 = localStorage.getItem('hb_onboarding_first_xp_date');
+        var age = d0 ? (Date.now() - new Date(d0 + 'T00:00:00').getTime()) / 86400000 : 999;
+        owed = (age >= 0 && age <= 30) ? '1' : '0';
+        _rvSet(_RV.bossOwed, owed);
+      } catch (_) { owed = '0'; }
+    }
+    return owed === '1' ? 'owed' : null;   // stays owed until the card is actually shown (_rmShown)
+  }
+  function _rmArmBoss(cfg) {
+    var m = _rmBossMoment();
+    if (m) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '', first: m === 'first' });
+  }
   var _RV2 = {
     asks:      'hb_review_asks_v2',        // JSON array of unix-ms timestamps, pruned to 365d
     notNow:    'hb_review_notnow_at',      // unix ms of the last "Not now"
@@ -22198,7 +22234,7 @@
       why: 'Write down what your perfect day holds — someone reading is trying to build their first.',
     },
     boss: {
-      eyebrow: 'First boss defeated',
+      eyebrow: function (c) { return c && c.first === false ? 'Boss defeated' : 'First boss defeated'; },   // W1030 — an owed moment is not the first boss
       seal: function (c) {
         var r = esc(String(c.bossRank || ''));
         return '<defs><mask id="rm-cut-boss" maskUnits="userSpaceOnUse" x="-10" y="-10" width="140" height="140"><rect x="-10" y="-10" width="140" height="140" fill="#fff" stroke="none"></rect><g class="rm-cutr" transform="translate(102.6 30.2) rotate(30)" stroke="#000" stroke-width="7"><path pathLength="1" d="M-7-15q2.2 15 0 30"></path><path pathLength="1" d="M0-15q2.2 15 0 30"></path><path pathLength="1" d="M7-15q2.2 15 0 30"></path></g>' + (r ? '<rect x="48" y="102" width="24" height="20" rx="5" fill="#000" stroke="none"></rect>' : '') + '</mask></defs>' +
@@ -22209,7 +22245,10 @@
           '<g class="rm-fx"></g></g>';
       },
       title: function (c) { return '<span class="rm-d">' + esc(c.bossName || 'The boss') + '</span><br>has fallen.'; },
-      stat: function (c) { return c.bossRank ? '<span class="rm-d">' + esc(String(c.bossRank)) + '</span>-rank boss · first kill' : 'First kill'; },
+      stat: function (c) {
+        var first = !(c && c.first === false);
+        return c.bossRank ? '<span class="rm-d">' + esc(String(c.bossRank)) + '</span>-rank boss' + (first ? ' · first kill' : '') : (first ? 'First kill' : 'Boss defeated');
+      },
       long: function (c) { return String(c.bossName || '').length > 16; },
       feel: 'Every blow was a step you took.',
       why: 'Tell the next hunter how you brought it down; nobody believes a walk can kill a boss until they read it from someone who did.',
@@ -22426,7 +22465,7 @@
     ov.innerHTML =
       '<div class="rm-scrim"></div><div class="rm-tilt">' +
         '<article class="rm-card rm-m-' + moment + '" role="dialog" aria-modal="true" aria-labelledby="rm-title">' +
-          '<p class="rm-eyebrow">' + esc(def.eyebrow) + '</p>' +
+          '<p class="rm-eyebrow">' + esc(typeof def.eyebrow === 'function' ? def.eyebrow(ctx) : def.eyebrow) + '</p>' +
           '<div class="rm-seal"><svg viewBox="0 0 120 120" aria-hidden="true">' + def.seal(ctx) + '</svg></div>' +
           '<h3 class="rm-title' + (def.long && def.long(ctx) ? ' rm-title--long' : '') + '" id="rm-title">' + def.title(ctx) + '</h3>' +
           '<p class="rm-stat">' + def.stat(ctx) + '</p>' +
@@ -22543,7 +22582,7 @@
     step(0);
   }
   try { window.__previewRatingMoments = previewRatingMoments; } catch (_) {}
-  try { window.__rm = { arm: _reviewArm, flush: _reviewFlush, eligible: _reviewEligible, checkWeek: _rmCheckWeek, maybe: _maybeReviewPrompt, shown: _rmShown }; } catch (_) {}   // QA
+  try { window.__rm = { arm: _reviewArm, flush: _reviewFlush, eligible: _reviewEligible, checkWeek: _rmCheckWeek, maybe: _maybeReviewPrompt, shown: _rmShown, bossMoment: _rmBossMoment, show: _rmShow }; } catch (_) {}   // QA
 
   // ════════════════════════════════════════════════════════════════════════
   // W542 — DEV TEST PANEL (hidden; long-press the Settings "Version" line ~0.85s).
@@ -22571,7 +22610,7 @@
     } catch (e) { _devToast(e); }
   }
   function _devResetReview() {
-    try { ['hb_rm_shown_v1', 'hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last', 'hb_review_asks_v2', 'hb_review_notnow_at', 'hb_review_shown_at', 'hb_review_summit_armed'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
+    try { ['hb_rm_shown_v1', 'hb_review_prompt_v1_seen', 'hb_review_first_boss_done', 'hb_review_boss_owed', 'hb_review_first_coop_done', 'hb_review_pday_count', 'hb_review_pday_last', 'hb_review_asks_v2', 'hb_review_notnow_at', 'hb_review_shown_at', 'hb_review_summit_armed'].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
     _reviewPending = null; _devToast('Review ladder reset');
   }
   // W847 — QA hooks (console-reachable even with the dev panel dead):
@@ -24123,8 +24162,7 @@
         if (_firstKill) {
           try {
             try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-            var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
-            if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' });
+            _rmArmBoss(cfg);   // W1030 — first boss, or the moment owed from a day-one first boss
           } catch (_) {}
         }
         // Re-render the Quests panel so the streak progress + kill
@@ -24247,8 +24285,7 @@
         if (_firstKill) {
           try {
             try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-            var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
-            if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' });
+            _rmArmBoss(cfg);   // W1030 — first boss, or the moment owed from a day-one first boss
           } catch (_) {}
         }
         try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
@@ -24378,8 +24415,7 @@
     announceKillAndDrop(cfg, reward, dropped);
     // W541 — solo boss win → mark first-boss + arm the review pre-prompt (fires on modal close).
     try { if (!_rvGet(_RV.firstBoss) && typeof window.__funnelEmit === 'function') window.__funnelEmit('first_boss_kill', id); } catch (_) {}   // W850 (V2c)
-    var _rmFirstBoss = !_rvGet(_RV.firstBoss); _rvSet(_RV.firstBoss, '1');
-    try { if (_rmFirstBoss) _reviewArm('boss', { bossName: (cfg && cfg.name) || 'the boss', bossRank: (cfg && cfg.rank) || '' }); } catch (_) {}
+    try { _rmArmBoss(cfg); } catch (_) {}   // W1030 — first boss, or the moment owed from a day-one first boss
     // v3 Phase 1z.165 — Guild Hall feat row. Boss kills are per-day
     // idempotent on (boss_id, kill_count) so the same kill can't
     // double-emit even if _awardSingleShotKill is called twice (e.g.
@@ -71183,6 +71219,7 @@
       'hb_review_notnow_at',
       'hb_review_first_boss_done',
       'hb_review_first_coop_done',
+      'hb_review_boss_owed',     // W1030 — the first-boss moment still owed after a day-one first boss
       'hb_review_pday_count',
       'hb_review_pday_last',
       'hb_rm_shown_v1',          // W974 — rating moments already shown (each once, ever)

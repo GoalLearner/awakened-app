@@ -6679,6 +6679,50 @@ test.describe('BX · The pop-up leads to the marks (W1029)', () => {
   });
 });
 
+// W1030 — the first-boss rating moment is not thrown away when the first boss comes on a hunter's
+// first day (day one stays quiet, and most new hunters beat a boss on it). It stays OWED, and the
+// next boss win after day one pays it, on a card that no longer says "First".
+test.describe('BY · The first-boss moment survives day one (W1030)', () => {
+  const ymd = (off: number) => { const d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const state = (page: Page, keys: Record<string, string | null>) => page.evaluate((k) => {
+    ['hb_review_first_boss_done', 'hb_review_boss_owed', 'hb_rm_shown_v1', 'hb_onboarding_first_xp_date'].forEach((x) => localStorage.removeItem(x));
+    Object.keys(k).forEach((x) => { if (k[x] != null) localStorage.setItem(x, k[x] as string); });
+  }, keys);
+  const moment = (page: Page) => page.evaluate(() => { const m = (window as any).__rm.bossMoment(); return [m, localStorage.getItem('hb_review_first_boss_done'), localStorage.getItem('hb_review_boss_owed')]; });
+
+  test('day one: no card and the moment is owed; the next win after day one pays it, once', async ({ page }) => {
+    await freshApp(page);
+    await state(page, { hb_onboarding_first_xp_date: ymd(0) });
+    expect(await moment(page)).toEqual([null, '1', '1']);            // the first boss, on day one: quiet, but owed
+    expect(await moment(page)).toEqual([null, '1', '1']);            // a second boss the same day: still quiet
+    await page.evaluate((d) => localStorage.setItem('hb_onboarding_first_xp_date', d), ymd(-1));
+    expect(await moment(page)).toEqual(['owed', '1', '1']);          // day two: this win is the moment
+    expect(await moment(page)).toEqual(['owed', '1', '1']);          // and stays so until the card is really shown
+    await page.evaluate(() => localStorage.setItem('hb_rm_shown_v1', JSON.stringify(['boss'])));
+    expect((await moment(page))[0]).toBeNull();                      // shown once, ever
+  });
+
+  test('off day one the true first boss is still "first"; a veteran is not handed a late card; a recent joiner from an older build is', async ({ page }) => {
+    await freshApp(page);
+    await state(page, { hb_onboarding_first_xp_date: ymd(-5) });
+    expect(await moment(page)).toEqual(['first', '1', '1']);
+    await state(page, { hb_onboarding_first_xp_date: ymd(-60), hb_review_first_boss_done: '1' });
+    expect(await moment(page)).toEqual([null, '1', '0']);            // joined long ago: nothing owed
+    await state(page, { hb_onboarding_first_xp_date: ymd(-1), hb_review_first_boss_done: '1' });
+    expect(await moment(page)).toEqual(['owed', '1', '1']);          // Kristy's case: first boss on day one, on 3.0.9
+  });
+
+  test('the owed card does not claim a first: "Boss defeated", no "first kill"', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => (window as any).__rm.show('boss', { bossName: 'The Glass Strider', bossRank: 'E', first: false }, { preview: true }));
+    await expect(page.locator('#review-pp-overlay .rm-eyebrow')).toHaveText('Boss defeated');
+    await expect(page.locator('#review-pp-overlay .rm-stat')).toHaveText('E-rank boss');
+    await page.evaluate(() => (window as any).__rm.show('boss', { bossName: 'The Steel Wolf', bossRank: 'E', first: true }, { preview: true }));
+    await expect(page.locator('#review-pp-overlay .rm-eyebrow')).toHaveText('First boss defeated');
+    await expect(page.locator('#review-pp-overlay .rm-stat')).toHaveText('E-rank boss · first kill');
+  });
+});
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {
