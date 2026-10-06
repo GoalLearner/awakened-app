@@ -34,7 +34,7 @@ export const WORLDGATE_RECENT = 6;       // latest strikers (by last verified sy
 // moves afterwards even though the week's list keeps climbing until Sunday.
 // They are paid this bonus on top of the bounty, through the same claim.
 export const WORLDGATE_MVP_BONUS = [150, 100, 50];
-const CARRY_RATE = 0.05;
+// (W1031 — the 5% carry after a survived gate is gone: a lost gate now eases the next by 10%.)
 
 // W892 (3.0.1 C11) — HP FROM WHAT THE FLEET ACTUALLY WALKS.
 //
@@ -71,14 +71,56 @@ const HP_MEDIAN_WEEKS = 4;
 // it survive (the 5% carry softens the next). The old 0.80 x median stays as a
 // floor only, so one quiet week cannot make the next gate trivial.
 const HP_LAST_WEEK_FACTOR = 1.0;
-// W988 (owner call 2026-09-24) — SURGE. The 3.0.7 launch and the App Store
-// In-App Event (Oct 4–31) are expected to bring new hunters, and a joining
-// hunter's Health sync lands their whole week at once. Gates in this window ask
-// this much MORE than last week's pool, so the fleet that arrives has something
-// to hit. One number per week; delete a week to fall back to 1.0.
-export const HP_SURGE_WEEKS: Record<string, number> = {
-  '2026-09-27': 1.3, '2026-10-04': 1.3, '2026-10-11': 1.3, '2026-10-18': 1.3, '2026-10-25': 1.3,
-};
+// W988's launch SURGE (x1.3 through October) is retired by W1031: the gate of
+// 2026-09-27 asked 640,528 of a fleet that walked 366,068, and the next one
+// still asked 30% more than that.
+
+// W1031 (owner call 2026-10-06) — THE GATE ANSWERS TO HOW THE LAST ONE WENT.
+// "I want it to auto adjust according to past or failed weekly gates." Sizing by
+// last week's steps alone ignored the result: a lost gate was followed by one
+// just as far out of reach. Now the outcome sets the next size.
+//   LOST (survived): the next gate asks 90% of what the fleet walked last week,
+//     so the same hunters walking the same amount win with a little room. Each
+//     further loss in a row takes another 10% off (80%, 70%, floor 60%): it
+//     keeps easing until the fleet wins. The old 5% carry and the median floor
+//     are not applied here — both would fight the easing.
+//   WON (slain): the next gate is the BEATEN gate's size, grown by how early it
+//     went down — Saturday x1.0, Friday x1.1, Thursday x1.2, Wednesday or
+//     earlier x1.3. It grows only as fast as the fleet proves it can handle.
+//   NO PRIOR GATE: computeGateHp below (last week's steps / the median floor).
+// Never below HP_MIN.
+const HP_LOSS_STEP = 0.10;
+const HP_LOSS_FLOOR = 0.60;
+const HP_WIN_BY_DAY = [1.3, 1.3, 1.3, 1.3, 1.2, 1.1, 1.0];   // Sun..Sat (Pacific) the gate went down
+
+/** Pacific weekday (0 Sun .. 6 Sat) on which a gate was beaten, or 6 when the kill was
+ *  only recorded after its week had ended (settled at the next week's first read). */
+export function gateKillDay(weekStart: string, slainAt: number | null | undefined): number {
+  if (!slainAt || !Number.isFinite(slainAt)) return 6;
+  const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date(slainAt));
+  const a = Date.parse(weekStart + 'T00:00:00Z'), b = Date.parse(dayKey + 'T00:00:00Z');
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 6;
+  const d = Math.round((b - a) / 86400000);
+  return d >= 0 && d <= 6 ? d : 6;
+}
+
+/** Pure sizing of the NEXT gate from how the last one went (W1031).
+ *  `pools` are completed weekly pools, newest first; `prior` is the most recent earlier
+ *  gate AFTER it has been settled; `lossStreak` counts survived gates in a row ending at it. */
+export function computeNextGateHp(
+  pools: number[],
+  prior: { week_start: string; hp: number; status: string; slain_at: number | null } | null,
+  lossStreak: number,
+): number {
+  if (!prior || (prior.status !== 'slain' && prior.status !== 'survived')) return computeGateHp(pools, 0, 0);
+  if (prior.status === 'survived') {
+    const lastWeek = (pools && typeof pools[0] === 'number' && pools[0] > 0) ? pools[0] : 0;
+    const factor = Math.max(HP_LOSS_FLOOR, 1 - HP_LOSS_STEP * Math.max(1, lossStreak || 1));
+    return Math.max(HP_MIN, Math.round(lastWeek * factor));
+  }
+  const grow = HP_WIN_BY_DAY[gateKillDay(prior.week_start, prior.slain_at)] || 1;
+  return Math.max(HP_MIN, Math.round(Math.max(0, prior.hp) * grow));
+}
 
 /** Pure HP math — exported so it can be tested without a database.
  *  `pools` are completed weekly pools, NEWEST FIRST (recentPools' order). */
@@ -243,16 +285,13 @@ async function recentPools(env: Env, beforeWeek: string): Promise<number[]> {
   return (rows.results ?? []).map((r) => r.pool ?? 0);
 }
 
-/** How many gates in a row the fleet has broken (drives the escalator). */
-async function slainStreak(env: Env, beforeWeek: string): Promise<number> {
+/** How many gates in a row the fleet has LOST, newest first (drives the easing, W1031). */
+async function lossStreak(env: Env, beforeWeek: string): Promise<number> {
   const rows = await env.DB.prepare(
     'SELECT status FROM world_gates WHERE week_start < ? ORDER BY week_start DESC LIMIT 8',
   ).bind(beforeWeek).all<{ status: string }>();
   let n = 0;
-  for (const r of rows.results ?? []) {
-    if (r.status === 'slain') n++;
-    else break;
-  }
+  for (const r of rows.results ?? []) { if (r.status === 'survived') n++; else break; }
   return n;
 }
 
@@ -260,8 +299,7 @@ async function slainStreak(env: Env, beforeWeek: string): Promise<number> {
 async function ensureGate(env: Env, week: string): Promise<GateRow> {
   let gate = await env.DB.prepare('SELECT * FROM world_gates WHERE week_start = ?').bind(week).first<GateRow>();
   if (gate) return gate;
-  // Settle the most recent prior open gate (survived = keep 5% carry).
-  let carry = 0;
+  // Settle the most recent prior open gate.
   const prior = await env.DB.prepare(
     "SELECT * FROM world_gates WHERE status = 'open' AND week_start < ? ORDER BY week_start DESC LIMIT 1",
   ).bind(week).first<GateRow>();
@@ -272,14 +310,19 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
         .bind(Date.now(), prior.week_start).run();
       await snapshotKill(env, prior.week_start);   // W975 — its final standings are the podium
     } else {
-      carry = Math.floor(priorPool * CARRY_RATE);
       await env.DB.prepare("UPDATE world_gates SET status = 'survived' WHERE week_start = ? AND status = 'open'")
         .bind(prior.week_start).run();
     }
   }
-  // W892 — HP from the fleet's own trailing output, not a headcount.
-  const [pools, streak] = await Promise.all([recentPools(env, week), slainStreak(env, week)]);
-  const hp = computeGateHp(pools, streak, carry, HP_SURGE_WEEKS[week] || 1);   // W988
+  // W1031 — sized by how the last gate went (it may have been beaten mid-week, so it is
+  // read again here, settled, rather than taken from `prior`, which only finds an OPEN one).
+  const [pools, last, losses] = await Promise.all([
+    recentPools(env, week),
+    env.DB.prepare('SELECT week_start, hp, status, slain_at FROM world_gates WHERE week_start < ? ORDER BY week_start DESC LIMIT 1')
+      .bind(week).first<{ week_start: string; hp: number; status: string; slain_at: number | null }>(),
+    lossStreak(env, week),
+  ]);
+  const hp = computeNextGateHp(pools, last ?? null, losses);
   try {
     await env.DB.prepare('INSERT INTO world_gates (week_start, hp, status, created_at) VALUES (?, ?, ?, ?)')
       .bind(week, hp, 'open', Date.now()).run();

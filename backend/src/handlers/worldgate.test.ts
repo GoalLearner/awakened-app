@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
-import { computeGateHp, HP_SURGE_WEEKS, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
+import { computeGateHp, computeNextGateHp, gateKillDay, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -75,12 +75,10 @@ describe('worldgate HP (W892)', () => {
     expect(next).toBeGreaterThan(251138 * 1.5);
   });
 
-  it('W988 — the launch/event weeks ask 30% more than last week; other weeks are untouched', () => {
+  it('a surge factor (the retired W988 launch surge) can raise the bootstrap size and never lowers it', () => {
     const pools = [450000, 194070, 182401, 347498];
-    expect(computeGateHp(pools, 0, 0, HP_SURGE_WEEKS['2026-10-04'])).toBe(Math.round(450000 * 1.3));
-    expect(computeGateHp(pools, 0, 0, HP_SURGE_WEEKS['2026-11-01'] || 1)).toBe(450000);
-    expect(computeGateHp(pools, 0, 0, 0.5)).toBe(450000);   // a surge never LOWERS a gate
-    expect(Object.keys(HP_SURGE_WEEKS)).toEqual(['2026-09-27', '2026-10-04', '2026-10-11', '2026-10-18', '2026-10-25']);
+    expect(computeGateHp(pools, 0, 0, 1.3)).toBe(Math.round(450000 * 1.3));
+    expect(computeGateHp(pools, 0, 0, 0.5)).toBe(450000);
   });
 
   it('W984 — one quiet week cannot make the next gate trivial (the median floor)', () => {
@@ -212,6 +210,63 @@ function wgFresh(): WgState {
   };
 }
 beforeEach(() => { mockNotify.mockClear(); });
+
+// W1031 — the next gate answers to how the last one went (owner 2026-10-06: "auto adjust
+// according to past or failed weekly gates").
+describe('W1031 — the gate is sized by the last result', () => {
+  const at = (iso: string) => Date.parse(iso);
+  it('after a LOSS it asks 90% of what the fleet walked; each further loss takes another 10%, down to 60%', () => {
+    const lost = { week_start: '2026-09-27', hp: 640528, status: 'survived', slain_at: null };
+    // the real case: the 640,528 gate survived a fleet that walked 366,068
+    expect(computeNextGateHp([366068, 492714, 194070, 182401], lost, 1)).toBe(Math.round(366068 * 0.9));
+    expect(computeNextGateHp([300000], lost, 2)).toBe(240000);
+    expect(computeNextGateHp([300000], lost, 3)).toBe(210000);
+    expect(computeNextGateHp([300000], lost, 4)).toBe(180000);
+    expect(computeNextGateHp([300000], lost, 9)).toBe(180000);                  // the floor: 60%
+    // no carry, and the median floor does not fight the easing
+    expect(computeNextGateHp([200000, 600000, 620000, 610000], lost, 1)).toBe(180000);
+  });
+  it('after a WIN it is the beaten gate, grown by how early it went down', () => {
+    const won = (slainAt: number) => ({ week_start: '2026-09-20', hp: 243293, status: 'slain', slain_at: slainAt });
+    expect(computeNextGateHp([492714], won(at('2026-09-26T19:00:00Z')), 0)).toBe(243293);                       // Saturday noon PST: the same size
+    expect(computeNextGateHp([492714], won(at('2026-09-25T19:00:00Z')), 0)).toBe(Math.round(243293 * 1.1));     // Friday
+    expect(computeNextGateHp([492714], won(at('2026-09-24T19:00:00Z')), 0)).toBe(Math.round(243293 * 1.2));     // Thursday
+    expect(computeNextGateHp([492714], won(at('2026-09-23T22:38:00Z')), 0)).toBe(Math.round(243293 * 1.3));     // Wednesday 3:38 PM PST, as it happened
+    expect(computeNextGateHp([492714], won(at('2026-09-20T19:00:00Z')), 0)).toBe(Math.round(243293 * 1.3));     // the first day
+    // it grows from the GATE, not from everything walked after the kill
+    expect(computeNextGateHp([900000], won(at('2026-09-23T22:38:00Z')), 0)).toBeLessThan(400000);
+  });
+  it('a kill only recorded after its week ended counts as a last-day kill', () => {
+    expect(gateKillDay('2026-09-20', at('2026-09-27T08:00:00Z'))).toBe(6);       // settled early the next Sunday
+    expect(gateKillDay('2026-09-20', null)).toBe(6);
+    expect(gateKillDay('2026-09-20', at('2026-09-27T06:59:00Z'))).toBe(6);       // Saturday 11:59 PM PDT
+    expect(gateKillDay('2026-09-20', at('2026-09-20T07:01:00Z'))).toBe(0);       // Sunday 12:01 AM PDT
+    expect(computeNextGateHp([1], { week_start: '2026-09-20', hp: 300000, status: 'slain', slain_at: at('2026-09-27T08:00:00Z') }, 0)).toBe(300000);
+  });
+  it('never under the floor; with no earlier gate it falls back to last week and the median', () => {
+    expect(computeNextGateHp([50000], { week_start: 'x', hp: 1, status: 'survived', slain_at: null }, 1)).toBe(120000);
+    expect(computeNextGateHp([0], { week_start: 'x', hp: 1, status: 'survived', slain_at: null }, 1)).toBe(120000);
+    expect(computeNextGateHp([10], { week_start: '2026-09-20', hp: 50000, status: 'slain', slain_at: at('2026-09-23T22:00:00Z') }, 0)).toBe(120000);
+    expect(computeNextGateHp([450000, 194070, 182401, 347498], null, 0)).toBe(computeGateHp([450000, 194070, 182401, 347498], 0, 0));
+    expect(computeNextGateHp([450000], { week_start: 'x', hp: 9, status: 'open', slain_at: null }, 0)).toBe(450000);   // an unsettled row is not a result
+  });
+  it('replayed over the last six real gates it would have been won more often than lost', () => {
+    // [week, hp as it was, pool walked, real result] — from production, 2026-08-23 .. 2026-09-27
+    let prior: { week_start: string; hp: number; status: string; slain_at: number | null } | null = null;
+    let losses = 0, wins = 0;
+    const weeks: Array<[string, number]> = [['2026-08-23', 431000], ['2026-08-30', 347498], ['2026-09-06', 182401], ['2026-09-13', 250000], ['2026-09-20', 492714], ['2026-09-27', 366068]];
+    let last = 256746;   // the week before
+    for (const [week, pool] of weeks) {
+      const hp = computeNextGateHp([last], prior, losses);
+      const won = pool >= hp;
+      if (won) { wins++; losses = 0; } else losses++;
+      // a win is taken as a last-day kill here (the replay has no kill time)
+      prior = { week_start: week, hp, status: won ? 'slain' : 'survived', slain_at: null };
+      last = pool;
+    }
+    expect(wins).toBeGreaterThanOrEqual(4);
+  });
+});
 
 describe('W916 — the Worldgate v2 read side', () => {
   it('reports hunters striking, the guild share, top strikers with me, my rank, the Kill Wall and recent strikers', async () => {
