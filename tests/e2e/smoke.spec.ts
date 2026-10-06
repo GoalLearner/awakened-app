@@ -6723,6 +6723,53 @@ test.describe('BY · The first-boss moment survives day one (W1030)', () => {
   });
 });
 
+// W1032 — a bought skin that was never worn goes on at the next launch. The purchase flow equips
+// a skin when it unlocks, but a late store confirmation leaves it waiting in the wardrobe (the
+// first paying hunter was still in the free Ranger look three days after buying Dawnbringer).
+test.describe('BZ · A bought skin gets worn (W1032)', () => {
+  // The server's answer for this hunter: `skins` oldest purchase first.
+  const refresh = (page: Page, skins: string[]) => page.evaluate(async (owned) => {
+    const w = window as any;
+    const keep = w.Auth.fetchEntitlements;
+    w.Auth.fetchEntitlements = async () => ({ ok: true, skins: owned, premium: false, member: false, founder_seq: null });
+    try { await w.__skins.refresh(); } finally { w.Auth.fetchEntitlements = keep; }
+    return { equipped: w.__skins.equipped(), worn: w.__skins.worn() };
+  }, skins);
+  const DAWN = 'avatar-skin-dawnbringer.png', STAR = 'avatar-skin-stardust.png', NULLP = 'avatar-skin-nullprotocol.png';
+
+  test('owned, never worn, in a free look: it goes on once — and taking it off afterwards sticks', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => { localStorage.setItem('hb_avatar_skin', 'avatar-ranger.png'); localStorage.removeItem('hb_skins_worn_v1'); });
+    const first = await refresh(page, [DAWN]);
+    expect(first).toEqual({ equipped: DAWN, worn: [DAWN] });
+    await expect(page.locator('.habit-toast')).toContainText('Dawnbringer is on');
+    // the hunter takes it off: it is never put back for them
+    await page.evaluate(() => localStorage.setItem('hb_avatar_skin', 'avatar-ranger.png'));
+    expect((await refresh(page, [DAWN])).equipped).toBe('avatar-ranger.png');
+  });
+
+  test('a hunter already in a paid look is left alone; a skin bought later still goes on', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate((n) => { localStorage.setItem('hb_avatar_skin', n); localStorage.removeItem('hb_skins_worn_v1'); }, NULLP);
+    // first time the list is kept: everything owned counts as seen, nothing changes
+    expect(await refresh(page, [STAR, DAWN, NULLP])).toEqual({ equipped: NULLP, worn: [STAR, DAWN, NULLP] });
+    // a NEW purchase whose unlock came late: the newest one goes on at the next check
+    const next = await refresh(page, [STAR, DAWN, NULLP, 'avatar-skin-emberforged.png']);
+    expect(next.equipped).toBe('avatar-skin-emberforged.png');
+    expect(next.worn).toContain('avatar-skin-emberforged.png');
+  });
+
+  test('nothing owned changes nothing; the wardrobe being open is left to the hunter', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => { localStorage.setItem('hb_avatar_skin', 'avatar-ranger.png'); localStorage.removeItem('hb_skins_worn_v1'); });
+    expect((await refresh(page, [])).equipped).toBe('avatar-ranger.png');
+    await page.evaluate(() => (window as any).__openWardrobe());
+    expect((await refresh(page, [DAWN])).equipped).toBe('avatar-ranger.png');        // choosing right now: hands off
+    await page.evaluate(() => { document.getElementById('wd-sheet')!.classList.add('hidden'); document.getElementById('wd-overlay')!.classList.add('hidden'); });
+    expect((await refresh(page, [DAWN])).equipped).toBe(DAWN);                        // closed without wearing it: now it goes on
+  });
+});
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {
