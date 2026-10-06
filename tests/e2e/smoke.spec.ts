@@ -6617,6 +6617,68 @@ for (const c of [
   });
 }
 
+// W1029 — the pop-up says "Achievement unlocked"; the list is Habits › LEDGER › MARKS and nothing
+// joined the two (a hunter at S+ asked where the achievements are). A tap on a real achievement
+// now opens that list; left alone it still goes away by itself.
+test.describe('BX · The pop-up leads to the marks (W1029)', () => {
+  async function hunter(page: Page, unlocked: boolean) {
+    await freshApp(page);
+    await page.addInitScript((open: boolean) => {
+      try {
+        if (sessionStorage.getItem('__w1029')) return;
+        sessionStorage.setItem('__w1029', '1');
+        const old = new Date(); old.setDate(old.getDate() - 5);
+        const oymd = old.getFullYear() + '-' + String(old.getMonth() + 1).padStart(2, '0') + '-' + String(old.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w1029-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_onboarding_first_xp_date', oymd);
+        if (open) localStorage.setItem('hb_history_unlocked_v1', '1');
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+      } catch (_) {}
+    }, unlocked);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(2500);
+    await page.evaluate(() => { document.querySelectorAll('#awakened-splash').forEach((x) => x.remove()); (document.getElementById('tab-profile') as HTMLElement).click(); });
+  }
+  const show = (page: Page, ach: Record<string, string>) => page.evaluate((a) => (window as any).__ach.show(a), ach);
+  const WEEK = { id: 'week_warrior', category: 'streaks', name: 'Week Warrior', desc: '7-day streak on any habit' };
+
+  test('a tap on a real achievement opens Habits › LEDGER › MARKS, from any tab', async ({ page }) => {
+    await hunter(page, true);
+    await show(page, WEEK);
+    const pop = page.locator('#ach-popup');
+    await expect(pop).toBeVisible();
+    await expect(pop.locator('.ach-popup-hint')).toHaveText('Tap to see your marks');
+    await pop.click();
+    await expect(pop).toBeHidden();
+    await expect(page.locator('.hg-view-tab--active')).toHaveText('MARKS');
+    await expect(page.locator('#history-content .hg-ach-header')).toBeVisible();
+    await expect(page.locator('#history-content .hg-ach-row').first()).toBeVisible();
+  });
+
+  test('left alone it only goes away; an ad-hoc pop-up and a locked Ledger only dismiss', async ({ page }) => {
+    await hunter(page, true);
+    // an ad-hoc pop-up (a stat bonus, weekend warrior) is not in the list: it only dismisses
+    await show(page, { name: 'Weekend Warrior', desc: 'Double XP today', label: 'BONUS' });
+    const pop = page.locator('#ach-popup');
+    await expect(pop.locator('.ach-popup-hint')).toHaveText('Tap to dismiss');
+    await pop.click();
+    await expect(pop).toBeHidden();
+    await expect(page.locator('#status-content')).toBeVisible();          // still on the Status tab
+    // a real one, never tapped: gone after four seconds, and the hunter is where they were
+    await page.waitForTimeout(600);
+    await show(page, WEEK);
+    await expect(pop).toBeVisible();
+    await expect(pop).toBeHidden({ timeout: 6_000 });
+    await expect(page.locator('#status-content')).toBeVisible();
+    // the Ledger not open yet: there is nowhere to lead, so the hint does not promise it
+    await page.evaluate(() => { localStorage.removeItem('hb_history_unlocked_v1'); });
+    const locked = await page.evaluate(() => { (window as any).__ach.show({ id: 'week_warrior', name: 'Week Warrior', desc: 'x' }); return ((document.querySelector('#ach-popup .ach-popup-hint') as HTMLElement).textContent); });
+    expect(locked).toBe('Tap to dismiss');
+  });
+});
+
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)
 // in 1-3 plain sentences. Clock pinned to Monday 5 Oct 2026, 9:00 AM PST; last week = Sep 28 – Oct 4.
 test.describe('BS · Monday recap (W1014)', () => {

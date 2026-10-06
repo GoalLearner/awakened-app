@@ -36443,3 +36443,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .jump-sh-save:disabled { opacity: .35; cursor: default; }
 .jump-sh-how { display: block; margin: 12px auto 0; padding: 8px 10px; background: none; border: 0; color: #9492ac; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) { .jump-scrim, .jump-sh, .jd-chip, .jump-sh-save { transition: none; } }
+
+/* W1029 — the achievement pop-up's hint when a tap leads to the MARKS list: an invitation, so it is readable */
+.ach-popup-hint.ach-popup-hint--go { color: #f5b842; opacity: .9; letter-spacing: .3px; }
