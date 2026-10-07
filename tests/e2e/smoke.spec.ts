@@ -7973,3 +7973,47 @@ test.describe('BM · Vows by time of day + to-dos (W995)', () => {
   // W1000 — to-dos v2 (handoff 28): grouped by day, ADD + PRIORITY, a swipe reveals POSTPONE and
   // DELETE (with UNDO), the edit sheet, CLEAR DONE with UNDO, and the grip reorders within a day.
 });
+
+// W1033 — the ready hunt, groundwork: which solo boss does one day's number beat. Nothing is
+// scheduled or shown from it yet; the sheet waits on the design.
+test.describe('CA · The ready hunt, groundwork (W1033)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  test('the ladders are the one-day, one-metric solo bosses, easiest first', async ({ page }) => {
+    await freshApp(page);
+    const l = await page.evaluate(() => { const r = (window as any).__readyHunt; return ['steps', 'flights', 'sleep'].map((m) => r.ladder(m).map((x: any) => x.bossId + ':' + x.rank + ':' + x.bar)); });
+    expect(l[0]).toEqual(['the_steel_wolf:E:6000', 'the_glass_strider:D:7500', 'the_marathon_wraith:C:10000']);
+    expect(l[1]).toEqual(['the_carouser:E:5', 'the_ascendant_colossus:C:10', 'the_unbroken_anvil:A:15']);
+    expect(l[2]).toEqual(['the_insomniac:E:7', 'the_dream_tyrant:D:7.5']);
+  });
+
+  test('a new hunter is offered only what their rank can start; nothing below the bar', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => { const p = (window as any).__readyHunt.pick; return [p('steps', 5999), p('steps', 6000), p('steps', 25000), p('sleep', 8), p('flights', 0), p('steps', NaN)]; });
+    expect(r[0]).toBeNull();
+    expect(r[1]).toMatchObject({ bossId: 'the_steel_wolf', bar: 6000, value: 6000, also: [] });
+    expect(r[2].bossId).toBe('the_steel_wolf');          // E-rank hunter: the D and C gates are shut
+    expect(r[3].bossId).toBe('the_insomniac');
+    expect(r[4]).toBeNull();
+    expect(r[5]).toBeNull();
+  });
+
+  test('a boss already beaten today is not offered again', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const p = (window as any).__readyHunt.pick;
+      const before = p('steps', 9000);
+      localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { streak: 0, kill_count: 1, last_defeated_at: new Date().toISOString(), last_eval_date: null, engaged: false, engaged_at: null } }));
+      const after = p('steps', 9000);
+      localStorage.removeItem('hb_bosses');
+      return [before && before.bossId, after];
+    });
+    expect(r).toEqual(['the_steel_wolf', null]);
+  });
+
+  test('a hunt notification opens its boss; an unknown one lands on Habits', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => { const o = (window as any).__readyHunt.open; return [o('not_a_boss'), o(''), o('the_twin_maw'), o('the_steel_wolf')]; });
+    expect(r).toEqual([false, false, false, true]);
+    await expect(page.locator('#boss-fs-overlay')).toBeVisible();
+  });
+});
