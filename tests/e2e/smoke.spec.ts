@@ -8017,3 +8017,190 @@ test.describe('CA · The ready hunt, groundwork (W1033)', () => {
     await expect(page.locator('#boss-fs-overlay')).toBeVisible();
   });
 });
+
+// W1034 — the ready hunt, in-app (Claude Design handoff 30): a hunter whose real day already
+// clears a boss is told (the sheet rises once a day, the hunt row says it the rest of the day)
+// and finishes it with one free STRIKE.
+test.describe('CB · The ready hunt (W1034)', () => {
+  type H = { steps?: number; flights?: number; sleepH?: number; granted?: boolean };
+  async function hunter(page: Page, bosses: Record<string, unknown>, extra?: Record<string, string>) {
+    await freshApp(page);
+    await page.addInitScript(({ bosses, extra }: { bosses: Record<string, unknown>; extra: Record<string, string> }) => {
+      try {
+        if (sessionStorage.getItem('__w1034_seeded')) return;
+        sessionStorage.setItem('__w1034_seeded', '1');
+        const old = new Date(); old.setDate(old.getDate() - 3);
+        const oymd = old.getFullYear() + '-' + String(old.getMonth() + 1).padStart(2, '0') + '-' + String(old.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w1034-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_bosses', JSON.stringify(bosses));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        localStorage.setItem('hb_souls', JSON.stringify({ balance: 40, totalEarned: 40, totalSpent: 0 }));
+        localStorage.setItem('hb_onboarding_first_xp_date', oymd);
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
+         'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+        Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v));
+      } catch (_) {}
+    }, { bosses, extra: extra || {} });
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(2200);   // the Habits tick has run (with no Health on the web: nothing offered)
+  }
+  // Stand in for Apple Health, then scan. The same numbers answer the scan and the kill resolver.
+  async function health(page: Page, o: H) {
+    await page.evaluate(async (o) => {
+      const w = window as any, Hh = w.Health, d = new Date();
+      const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      Hh.isAvailable = () => true;
+      Hh.permissionStatus = () => (o.granted === false ? 'denied' : 'granted');
+      Hh.getStepsToday = async () => o.steps || 0;
+      Hh.getStepsBetween = async () => o.steps || 0;
+      Hh.getFlightsClimbedToday = async () => o.flights || 0;
+      Hh.getFlightsClimbedBetween = async () => o.flights || 0;
+      Hh.getSleepBetween = async () => ({ samples: [], byDate: o.sleepH ? { [ymd]: { totalAsleepHours: o.sleepH } } : {} });
+      Hh.getSleepLastNight = async () => null;
+      Hh.getAnyWorkoutsToday = async () => null;
+      Hh.getStrengthWorkoutsToday = async () => null;
+      await w.__readyHunt.scan();
+    }, o);
+  }
+  const souls = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls') || '{}'));
+  const boss = (page: Page, id: string) => page.evaluate((id) => (JSON.parse(localStorage.getItem('hb_bosses') || '{}')[id] || {}), id);
+  const OLD = new Date(Date.now() - 3 * 86400_000).toISOString();
+
+  test('the day already clears the Wolf: the sheet rises once, the row says it, a reload does not pop again', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 9632 });
+    const sheet = page.locator('#rh-sheet.rh-sheet--on');
+    await expect(sheet).toBeVisible({ timeout: 8000 });
+    await expect(sheet.locator('.rh-name')).toHaveText('The Steel Wolf');
+    await expect(sheet.locator('.rh-chip')).toHaveText(/E rank/i);
+    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    await expect(sheet.locator('.rh-call')).toHaveText(/strike/i);
+    await expect(sheet.locator('.rh-quiet')).toHaveText('No cost. The work is already done.');
+    await expect(sheet.locator('.rh-also')).toHaveCount(0);            // an E-rank hunter: only the Wolf
+    const row = page.locator('#hunt-row.hunt-row--ready');
+    await expect(row).toContainText('9,632 steps today');
+    await expect(row).toContainText('The Steel Wolf is ready');
+    expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);   // nothing lands on top of it
+    // closing leaves the row; the row reopens the sheet
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await expect(sheet).toHaveCount(0);
+    await row.click();
+    await expect(sheet).toBeVisible();
+    // the same day, after a reload: the row is back, the sheet stays down
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(2200);
+    await health(page, { steps: 9632 });
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toBeVisible();
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    expect(await page.evaluate(() => (localStorage.getItem('hb_funnel_queue') || '').split('ready_hunt_shown').length - 1)).toBe(1);
+  });
+
+  test('STRIKE is free, wins on the spot, and hands over to the result already struck', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 9632 });
+    await expect(page.locator('#rh-sheet.rh-sheet--on')).toBeVisible({ timeout: 8000 });
+    await page.locator('#rh-sheet [data-rh-strike]').click();
+    const res = page.locator('#boss-result-overlay');
+    await expect(res.locator('.hr-port.hr-dead')).toBeVisible({ timeout: 5000 });   // no second strike: it opens struck
+    await expect(res.locator('.hr-boss')).toHaveText('The Steel Wolf');
+    await expect(res.locator('.hr-stamp.hr-on')).toHaveText(/beaten/i, { timeout: 5000 });
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await expect(page.locator('.rh-fly')).toHaveCount(0);
+    const s = await souls(page), b = await boss(page, 'the_steel_wolf');
+    expect(s.totalSpent || 0).toBe(0);                       // no fee
+    expect(s.balance).toBeGreaterThanOrEqual(90);            // 40 + the 50-soul kill
+    expect([b.kill_count, b.engaged]).toEqual([1, false]);
+    expect(await page.evaluate(() => localStorage.getItem('hb_first_hunt_free_used'))).toBeNull();   // the banked freebie is not spent
+    expect(await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '')).toContain('ready_hunt_strike');
+    // beaten today: nothing left to offer on 9,632 steps for an E-rank hunter
+    expect(await page.evaluate(() => (window as any).__readyHunt.lead())).toBeNull();
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toHaveCount(0);
+  });
+
+  test('two bosses on one number: the higher rank is offered, one line swaps to the other', async ({ page }) => {
+    await hunter(page, { the_glass_strider: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: OLD } });   // the D gate is open
+    await health(page, { steps: 9632 });
+    const sheet = page.locator('#rh-sheet.rh-sheet--on');
+    await expect(sheet.locator('.rh-name')).toHaveText('The Glass Strider', { timeout: 8000 });
+    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*7,500 steps today/i, { timeout: 4000 });
+    await expect(sheet.locator('.rh-also')).toHaveText(/Also ready · The Steel Wolf/i);
+    await sheet.locator('.rh-also').click();
+    await expect(sheet.locator('.rh-name')).toHaveText('The Steel Wolf');
+    await expect(sheet.locator('.rh-also')).toHaveText(/Also ready · The Glass Strider/i);
+    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    // strike the Wolf: the Strider is still on offer afterwards, on the row
+    await sheet.locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    expect((await boss(page, 'the_steel_wolf')).kill_count).toBe(1);
+    expect(await page.evaluate(() => (window as any).__readyHunt.lead().bossId)).toBe('the_glass_strider');
+  });
+
+  test('sleep reads in hours and minutes; flights in whole numbers', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { sleepH: 7 + 40 / 60 });
+    const sheet = page.locator('#rh-sheet.rh-sheet--on');
+    await expect(sheet.locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
+    await expect(sheet.locator('.rh-pl')).toHaveText(/7 h 40 m\s*\/\s*7 h last night/i, { timeout: 4000 });
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('7 h 40 m last night');
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await health(page, { flights: 6 });
+    await page.evaluate(() => (window as any).__readyHunt.openSheet());
+    await expect(sheet.locator('.rh-name')).toHaveText('The Carouser');
+    await expect(sheet.locator('.rh-pl')).toHaveText(/6\s*\/\s*5 flights today/i, { timeout: 4000 });
+  });
+
+  test('nothing is offered: below the bar, Health not granted, day one, beaten today, already engaged', async ({ page }) => {
+    await hunter(page, {});
+    const lead = () => page.evaluate(() => { const o = (window as any).__readyHunt.lead(); return o && o.bossId; });
+    await health(page, { steps: 5999, flights: 4, sleepH: 6.9 });
+    expect(await lead()).toBeNull();
+    await health(page, { steps: 9632, granted: false });
+    expect(await lead()).toBeNull();
+    await health(page, { steps: 9632 });
+    expect(await lead()).toBe('the_steel_wolf');
+    // already engaged: it resolves on its own
+    await page.evaluate(() => localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now(), hunt_expires_at: Date.now() + 3600_000 } })));
+    expect(await lead()).toBeNull();
+    // beaten today
+    await page.evaluate(() => localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } })));
+    expect(await lead()).toBeNull();
+    // day one stays quiet
+    await page.evaluate(() => { localStorage.setItem('hb_bosses', '{}'); const d = new Date(); localStorage.setItem('hb_onboarding_first_xp_date', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); });
+    await health(page, { steps: 9632 });
+    expect(await lead()).toBeNull();
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toHaveCount(0);
+  });
+
+  test('Apple Health disagrees at the strike: no win is shown, no souls move, the hunt is left running', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 9632 });
+    await expect(page.locator('#rh-sheet.rh-sheet--on')).toBeVisible({ timeout: 8000 });
+    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 0; });
+    const before = await souls(page);
+    await page.locator('#rh-sheet [data-rh-strike]').click();
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0, { timeout: 5000 });
+    await page.waitForTimeout(900);
+    await expect(page.locator('#boss-result-overlay')).toBeHidden();
+    const s = await souls(page), b = await boss(page, 'the_steel_wolf');
+    expect([s.balance, s.totalSpent || 0]).toEqual([before.balance, 0]);
+    expect([b.engaged, b.kill_count || 0]).toEqual([true, 0]);
+  });
+
+  test('three hunts already running: a ready strike is outside the three', async ({ page }) => {
+    const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 3600_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
+    // (the live Dream Tyrant hunt keeps the D gate open, so 9,632 steps offers the Strider)
+    await hunter(page, { the_insomniac: run, the_carouser: run, the_dream_tyrant: run });
+    await health(page, { steps: 9632 });
+    await expect(page.locator('#rh-sheet.rh-sheet--on .rh-name')).toHaveText('The Glass Strider', { timeout: 8000 });
+    await page.locator('#rh-sheet [data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    expect((await boss(page, 'the_glass_strider')).kill_count).toBe(1);
+    expect((await boss(page, 'the_insomniac')).engaged).toBe(true);
+  });
+});

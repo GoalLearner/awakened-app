@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.11';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.11-w1033'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.11-w1034'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1651,12 +1651,13 @@
   // The hunt to offer for `value` (steps, flights, or hours slept): the HARDEST boss the
   // number clears that this hunter can start right now (gate open, not already beaten
   // today). `also` = the easier ones it clears too. null when it clears none.
-  function readyHuntPick(metric, value) {
+  function readyHuntPick(metric, value, skip) {
     const v = Number(value);
     if (!(v > 0)) return null;
     const ok = readyHuntLadder(metric).filter(function (r) {
       if (v < r.bar) return false;
       try {
+        if (skip && skip(r.bossId)) return false;
         if (!isGateUnlocked(r.rank)) return false;
         if (!canEngageBossNow(r.bossId, BOSSES[r.bossId]).ok) return false;
       } catch (_) { return false; }
@@ -1667,6 +1668,91 @@
     return { bossId: top.bossId, rank: top.rank, bar: top.bar, value: v, metric: metric, also: ok.slice(0, -1).map(function (r) { return r.bossId; }).reverse() };
   }
   try { window.__readyHunt = { ladder: readyHuntLadder, pick: readyHuntPick }; } catch (_) {}   // QA
+
+  // W1034 — THE READY HUNT, in-app (owner 2026-10-07, Claude Design handoff 30). A hunter
+  // whose real day already clears a boss is TOLD, and finishes it with one button: the
+  // sheet rises by itself once a day, the hunt row carries the fact the rest of the day,
+  // and STRIKE engages + wins in the same tap, FREE (owner call). Built for the hunter who
+  // walks 9,000 steps a day and has never opened the dungeon.
+  // The scan reads what the kill resolver reads (today's steps and flights, last night's
+  // sleep keyed to today), so a boss it calls ready is a boss the resolver will kill.
+  // Engaged bosses are left out: they resolve on their own and show their own result.
+  // Not built here: the phone notification and the sheet's not-ready states (deferred).
+  const RH_POP_KEY = 'hb_ready_hunt_popped_v1';
+  const RH_UNITS = { steps: 'steps today', flights: 'flights today', sleep: 'last night' };
+  const RH_SCAN_EVERY_MS = 60000;
+  let _readyHunt = { day: '', offers: [], at: 0 };
+  let _rhScanning = null;
+  function _rhFmt(metric, v) {
+    if (metric !== 'sleep') return Math.round(Number(v) || 0).toLocaleString('en-US');
+    const m = Math.max(0, Math.floor((Number(v) || 0) * 60 + 1e-6));
+    return Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' m' : '');
+  }
+  function _rhHealthOk() {
+    try { return !!(Health && Health.isAvailable() && Health.permissionStatus() === 'granted'); } catch (_) { return false; }
+  }
+  async function _rhRead(metric) {
+    try {
+      if (metric === 'steps') return Number(await Health.getStepsToday()) || 0;
+      if (metric === 'flights') return Number(await Health.getFlightsClimbedToday()) || 0;
+      const now = Date.now();
+      const res = await Health.getSleepBetween(new Date(_startOfLocalDayMs(now) - 12 * 3600 * 1000).toISOString(), new Date(now).toISOString());
+      const e = res && res.byDate && res.byDate[_localDateKey(now)];
+      return (e && typeof e.totalAsleepHours === 'number') ? e.totalAsleepHours : 0;
+    } catch (_) { return 0; }
+  }
+  function _rhEngaged(bossId) { try { return getBossState(bossId).engaged === true; } catch (_) { return true; } }
+  async function _readyHuntScan(force) {
+    if (_rhScanning) return _rhScanning;
+    if (!force && Date.now() - _readyHunt.at < RH_SCAN_EVERY_MS) return _readyHunt;
+    _rhScanning = (async function () {
+      const offers = [];
+      try {
+        const quiet = (typeof needsOnboarding !== 'undefined' && needsOnboarding === true) || _newHunterQuiet();
+        if (!quiet && _rhHealthOk()) {
+          for (const metric of ['steps', 'flights', 'sleep']) {
+            const o = readyHuntPick(metric, await _rhRead(metric), _rhEngaged);
+            if (o) offers.push(o);
+          }
+        }
+      } catch (_) {}
+      // highest rank first; on a tie last night's sleep leads in the morning, steps after
+      const R = 'EDCBAS', am = new Date().getHours() < 12;
+      const M = am ? ['sleep', 'steps', 'flights'] : ['steps', 'flights', 'sleep'];
+      offers.sort(function (a, b) { return (R.indexOf(b.rank) - R.indexOf(a.rank)) || (M.indexOf(a.metric) - M.indexOf(b.metric)); });
+      _readyHunt = { day: getDeviceLocalDate(), offers: offers, at: Date.now() };
+      return _readyHunt;
+    })();
+    try { return await _rhScanning; }
+    finally {
+      _rhScanning = null;
+      try { _renderHuntRow(); } catch (_) {}
+      try { _rhMaybePop(); } catch (_) {}
+    }
+  }
+  // Still true right now? (the day turned, the boss was engaged or beaten since the scan)
+  function _rhLive(o) {
+    try {
+      if (!o || _readyHunt.day !== getDeviceLocalDate()) return false;
+      return !_rhEngaged(o.bossId) && canEngageBossNow(o.bossId, BOSSES[o.bossId]).ok;
+    } catch (_) { return false; }
+  }
+  // The offer to show: the scan's lead, falling to an easier boss the same number clears.
+  function _rhLead() {
+    for (const o of _readyHunt.offers) {
+      if (_rhLive(o)) return o;
+      for (const id of (o.also || [])) {
+        const alt = { bossId: id, rank: BOSSES[id].rank, bar: _readyHuntBar(BOSSES[id]).bar, value: o.value, metric: o.metric, also: [] };
+        if (_rhLive(alt)) return alt;
+      }
+    }
+    return null;
+  }
+  try {
+    window.__readyHunt.scan = function () { return _readyHuntScan(true); };
+    window.__readyHunt.lead = _rhLead;
+    window.__readyHunt.openSheet = function () { const o = _rhLead(); if (o) openReadyHunt(o); return !!o; };
+  } catch (_) {}   // QA
 
   // High-level expiration helper — duration-based math (24h / 3d / 7d /
   // fallback). Three stamp sites call this: engageBoss,
@@ -2662,6 +2748,10 @@
     const cfg = BOSSES[bossId];
     if (!cfg) return false;
     const _auto = !!(opts && opts.auto);
+    // W1034 — opts.ready: the ready hunt's STRIKE. The bar is already met, so the hunt is
+    // over in the same second: no fee (owner call), no banked free credit spent, outside
+    // the three-hunt cap, no Red Gate, and nothing said (the strike is the confirmation).
+    const _ready = !!(opts && opts.ready);
     const state = getBossState(bossId);
     if (state.engaged === true) return true; // already engaged, no-op
     // Engage gate (1z.72 daily kill-lock; the 1z.58 Friday-only gate
@@ -2688,7 +2778,7 @@
       } catch (_) {}
       return false;
     }
-    if (!_wolfTrailIs(bossId) && countEngagedBosses() >= MAX_ENGAGED_BOSSES) {   // W952 — the trail is outside the three
+    if (!_ready && !_wolfTrailIs(bossId) && countEngagedBosses() >= MAX_ENGAGED_BOSSES) {   // W952 — the trail is outside the three
       try {
         if (typeof showHabitToast === 'function') {
           showHabitToast('You can only hunt 3 bosses at once. Disengage one first.');
@@ -2711,7 +2801,8 @@
     // W889 — resolve WHY this engage is free through the SAME function the
     // button label uses, so the two can never disagree. Each branch keeps its
     // own credit consumption + toast.
-    const _freeReason = _engageFreeReason(bossId, cfg);
+    const _freeReason = _ready ? null : _engageFreeReason(bossId, cfg);
+    if (_ready) cost = 0;   // W1034
     try {
       if (_freeReason === 'first') {
         cost = 0;
@@ -2766,7 +2857,7 @@
     // roll when the first comes up empty.
     state.red_gate = false;
     try {
-      if (!cfg.coopOnly && ['C', 'B', 'A', 'S'].indexOf(cfg.rank) !== -1) {
+      if (!_ready && !cfg.coopOnly && ['C', 'B', 'A', 'S'].indexOf(cfg.rank) !== -1) {
         let h = 5381; const s = 'redgate:' + bossId + ':' + _engageNow;
         for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
         if (Math.abs(h) % 100 < 7) {
@@ -2796,7 +2887,7 @@
       // W952 — an automatic trail engage says nothing here. Once-ever the tick
       // explains the trail itself; after that a daily "Now hunting" would be
       // the app talking to itself every morning.
-      if (typeof showHabitToast === 'function' && !_inOnboarding && !_auto) {
+      if (typeof showHabitToast === 'function' && !_inOnboarding && !_auto && !_ready) {
         showHabitToast('Now hunting ' + cfg.name + '.' + (cost > 0 ? ' -' + cost + ' souls.' : ''));
       }
     } catch (_) {}
@@ -20593,6 +20684,7 @@
   // stack in _bossResultQueue and drain one-at-a-time, each waiting
   // for the prior modal to close before the next opens.
   let _bossResultQueue = [];
+  let _rhHold = null;   // W1034 — boss id of a ready strike in flight
   let _bossResultBusy  = false;
   let _bossResultCurrent = null;
 
@@ -21506,6 +21598,7 @@
 
   function _drainBossResultQueue() {
     if (_bossResultBusy) return;
+    if (_rhHold) return;   // W1034 — a ready strike is playing; it hands the result over itself
     const next = _bossResultQueue.shift();
     if (!next) {
       // v3 Phase 1z.73 — queue is empty. Chain to the cinematic
@@ -21860,7 +21953,17 @@
       T.push([t + 400, function () { on('.hr-mood'); }], [t + 800, function () { on('.hr-acts'); if (near) el.classList.add('hr-near'); S.done = true; }]);
     }
     S.steps = T.sort(function (a, b) { return a[0] - b[0]; });
-    S.steps.forEach(function (st, i) { S.timers.push(setTimeout(function () { if (S.dead) return; S.i = i + 1; try { st[1](); } catch (_) {} }, st[0])); });
+    // W1034 — opts.struck: the strike already happened in the ready-hunt sheet. The
+    // portrait opens in place, grey and cracked, and the timeline picks up where the
+    // boss's name lands (its 2,100 ms step), a beat after the sheet's portrait arrives.
+    let i0 = 0, shift = 0;
+    if (opts.struck && d.kind === 'victory') {
+      S.skipping = true; el.classList.add('hr-skip');
+      while (i0 < S.steps.length && S.steps[i0][0] < 2100) { try { S.steps[i0][1](); } catch (_) {} i0++; }
+      S.i = i0; shift = 2100 - 460;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('hr-skip'); S.skipping = false; }); });
+    }
+    S.steps.forEach(function (st, i) { if (i < i0) return; S.timers.push(setTimeout(function () { if (S.dead) return; S.i = i + 1; try { st[1](); } catch (_) {} }, st[0] - shift)); });
 
     const stop = function () { S.dead = true; S.timers.forEach(clearTimeout); S.raf.forEach(cancelAnimationFrame); if (_hrLive && _hrLive.el === el) _hrLive = null; };
     const skip = function () {
@@ -21892,7 +21995,7 @@
     return true;
   }
 
-  function _showBossResult(evt) {
+  function _showBossResult(evt, showOpts) {
     const overlay = document.getElementById('boss-result-overlay');
     if (!overlay) { _bossResultBusy = false; return; }
 
@@ -21919,6 +22022,7 @@
     try { d = _hrData(evt); } catch (_) {}
     if (!d) d = { kind: isFailed ? 'defeat' : 'victory', solo: true, boss: evt.bossName || 'The boss', rank: String(evt.rank || 'E'), art: getBossArtPath(evt.bossId), short: _hrShort(evt.bossName), cond: evt.conditionLabel || 'Kill condition', kill: Math.max(1, evt.kill_count | 0), souls: evt.souls, relic: null };
     _hrShow(overlay, d, {
+      struck: !!(showOpts && showOpts.struck),   // W1034
       onClose: function () { closeBossResult(); },
       onAgain: function () {
         const id = evt.bossId;
@@ -34343,17 +34447,25 @@
     // paint would blink the row away. Placement below handles the pointer
     // instead: it is a question of WHERE the row goes, not WHETHER.
     try { if (items.length) { _huntRowIdleHidden = false; localStorage.removeItem(HUNT_ROW_IDLE_KEY); } } catch (_) {}
-    if (!items.length) {
+    // W1034 — a hunt the day has already won leads the row (a kill waiting to be claimed
+    // still comes first), and shows even where the idle line was dismissed.
+    let _ready = null;
+    try { if (!(items.length && items[0].defeated)) _ready = _rhLead(); } catch (_) {}
+    if (!items.length && !_ready) {
       try { if (!_huntRowIdleHidden) _huntRowIdleHidden = localStorage.getItem(HUNT_ROW_IDLE_KEY) === '1'; } catch (_) {}
       if (_huntRowIdleHidden) { kill(); return; }
     }
 
     const row = existing || document.createElement('div');
     row.id = 'hunt-row';
-    row.className = 'hunt-row' + (items.length ? (items[0].defeated ? ' hunt-row--won' : '') : ' hunt-row--idle');
+    row.className = 'hunt-row' + (_ready ? ' hunt-row--ready' : items.length ? (items[0].defeated ? ' hunt-row--won' : '') : ' hunt-row--idle');
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
-    row.innerHTML = items.length
+    row.innerHTML = _ready
+      ? ('<span class="hunt-row-swords" aria-hidden="true">' + RH_SWORDS + '</span>' +
+         '<span class="hunt-row-ready-text">' + esc(_rhFmt(_ready.metric, _ready.value) + ' ' + RH_UNITS[_ready.metric]) + ' · <b>' + esc(BOSSES[_ready.bossId].name) + ' is ready</b></span>' +
+         '<span class="hunt-row-chev" aria-hidden="true">›</span>')
+      : items.length
       ? _huntRowHtml(items[0], items.length - 1)
       : ('<span class="hunt-row-spark" aria-hidden="true">⚔</span>' +
          '<span class="hunt-row-idle-text">No hunt running. <b>Bosses fall to real steps, sleep and workouts</b> — start one.</span>' +
@@ -34381,6 +34493,7 @@
       // answer; the boss is one more tap from there. The single exception is a
       // kill waiting to be claimed — its own line reads "tap to claim", so it
       // must claim, or the card is lying about what the tap does.
+      if (_ready) { try { _hapticTick('LIGHT'); } catch (_) {} openReadyHunt(_rhLead() || _ready); return; }   // W1034
       if (items.length) {
         if (items[0].defeated) { try { items[0].open(); } catch (_) {} }
         else { _openHuntList(); }
@@ -34388,6 +34501,193 @@
     };
   }
   try { window.__renderHuntRow = _renderHuntRow; } catch (_) {}   // QA hook
+
+  // ── W1034 · THE READY HUNT SHEET (Claude Design handoff 30) ─────────────
+  // One bottom sheet: the boss, one line of proof, one button, one quiet line. Only the
+  // READY state exists (the bar is met, the button is STRIKE); the sheet never opens
+  // for anything else. Two bosses on one number: the highest rank is offered and one
+  // small line swaps to the other. Never a list.
+  const RH_SWORDS = '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 3l16 16M19 3 3 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5l2 2M5 15l2 2" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>';
+  const RH_COLORS = { steps: '#4ade80', flights: '#f59e0b', sleep: '#60a5fa' };
+  let _rhView = null;      // { offer, bossId } — what the sheet is showing
+  let _rhBusy = false;     // a strike is in flight; the sheet cannot be closed or tapped
+  let _rhTimers = [];
+  function _rhRM() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } }
+  function _rhEnsureSheet() {
+    if (document.getElementById('rh-sheet')) return;
+    const sc = document.createElement('div'); sc.id = 'rh-scrim'; sc.className = 'rh-scrim';
+    const sh = document.createElement('div'); sh.id = 'rh-sheet'; sh.className = 'rh-sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'A hunt is ready');
+    sh.innerHTML = '<button type="button" class="rh-handle" data-rh-close aria-label="Close"></button><div class="rh-sb" data-rh-body></div>';
+    document.body.appendChild(sc); document.body.appendChild(sh);
+    sc.addEventListener('click', function () { closeReadyHunt(); });
+    sh.addEventListener('click', function (e) {
+      const t = e.target;
+      if (_rhBusy || !t.closest) return;
+      if (t.closest('[data-rh-close]')) { closeReadyHunt(); return; }
+      const also = t.closest('[data-rh-also]');
+      if (also) { _rhSwap(also.getAttribute('data-rh-also')); return; }
+      if (t.closest('[data-rh-strike]')) _rhStrike();
+    });
+  }
+  function _rhBodyHtml(v) {
+    const o = v.offer, id = v.bossId, cfg = BOSSES[id], bar = _readyHuntBar(cfg).bar;
+    // the other boss this number clears: the easier one from the lead, the lead from the easier one
+    const otherId = id === o.bossId ? (o.also || [])[0] : o.bossId;
+    const other = otherId && _rhLive({ bossId: otherId }) ? BOSSES[otherId] : null;
+    return '' +
+      '<div class="rh-port"><div class="rh-in"><img class="rh-art" src="' + esc(getBossArtPath(id) || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+        '<svg class="rh-cracks" viewBox="0 0 100 100" aria-hidden="true">' + _HR_CRACKS.map(function (p) { return '<path d="' + p + '" pathLength="1"></path>'; }).join('') + '</svg>' +
+        '<div class="rh-flash"></div></div></div>' +
+      '<span class="rh-chip" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + ' rank</span>' +
+      '<h2 class="rh-name">' + esc(cfg.name) + '</h2>' +
+      (other ? '<button type="button" class="rh-also" data-rh-also="' + esc(otherId) + '">Also ready · <b>' + esc(other.name) + '</b> ›</button>' : '') +
+      '<div class="rh-proof"><div class="rh-pl"><span><b class="rh-num">' + esc(_rhFmt(o.metric, 0)) + '</b> / ' + esc(_rhFmt(o.metric, bar)) + ' ' + RH_UNITS[o.metric] + '</span></div>' +
+        '<div class="rh-track"><i class="rh-fill"></i></div></div>' +
+      '<button type="button" class="rh-call" data-rh-strike>Strike</button>' +
+      '<p class="rh-quiet">No cost. The work is already done.</p>';
+  }
+  // The bar fills and the number counts up to the hunter's own, 600 ms; a flash as it lands.
+  function _rhFill() {
+    const sh = document.getElementById('rh-sheet'); if (!sh || !_rhView) return;
+    const o = _rhView.offer, fill = sh.querySelector('.rh-fill'), num = sh.querySelector('.rh-num'), track = sh.querySelector('.rh-track');
+    if (!fill || !num) return;
+    const done = function () { num.textContent = _rhFmt(o.metric, o.value); fill.style.width = '100%'; };
+    if (_rhRM()) { done(); return; }
+    requestAnimationFrame(function () { fill.style.width = '100%'; });
+    const t0 = performance.now(), view = _rhView;
+    (function g(t) {
+      if (_rhView !== view) return;
+      const k = Math.min(1, (t - t0) / 600);
+      num.textContent = _rhFmt(o.metric, o.value * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(g); else { done(); if (track) track.classList.add('rh-done'); }
+    })(t0);
+  }
+  function _rhRender() {
+    const sh = document.getElementById('rh-sheet'); if (!sh || !_rhView) return;
+    sh.style.setProperty('--rh-mc', RH_COLORS[_rhView.offer.metric]);
+    sh.querySelector('[data-rh-body]').innerHTML = _rhBodyHtml(_rhView);
+  }
+  function openReadyHunt(offer, opts) {
+    if (!offer || !_rhLive(offer) || _rhBusy) return false;
+    _rhEnsureSheet();
+    const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
+    sc.className = 'rh-scrim'; sh.className = 'rh-sheet';
+    _rhView = { offer: offer, bossId: offer.bossId };
+    _rhRender();
+    // two frames, so the rise is a transition and not a jump
+    requestAnimationFrame(function () { requestAnimationFrame(function () { sc.classList.add('rh-scrim--on'); sh.classList.add('rh-sheet--on'); }); });
+    _rhTimers.push(setTimeout(_rhFill, _rhRM() ? 0 : 260));
+    if (opts && opts.auto) { try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_shown', offer.bossId); } catch (_) {} }
+    return true;
+  }
+  function closeReadyHunt() {
+    if (_rhBusy) return;
+    _rhTimers.forEach(clearTimeout); _rhTimers = [];
+    _rhView = null;
+    const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
+    if (sc) sc.classList.remove('rh-scrim--on');
+    if (sh) sh.classList.remove('rh-sheet--on');
+  }
+  function _rhSwap(bossId) {
+    if (!_rhView || !BOSSES[bossId]) return;
+    const sb = document.querySelector('#rh-sheet [data-rh-body]');
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    _rhView = { offer: _rhView.offer, bossId: bossId };
+    if (sb) sb.classList.add('rh-swap');
+    _rhTimers.push(setTimeout(function () { _rhRender(); if (sb) sb.classList.remove('rh-swap'); _rhFill(); }, _rhRM() ? 0 : 160));
+  }
+  // STRIKE: engage (free) and let the resolver read Apple Health. Only a kill the
+  // resolver confirms is celebrated; anything else leaves an honest running hunt.
+  async function _rhStrike() {
+    if (_rhBusy || !_rhView) return;
+    const id = _rhView.bossId, sh = document.getElementById('rh-sheet');
+    const btn = sh && sh.querySelector('.rh-call');
+    _rhBusy = true;
+    if (btn) btn.classList.add('rh-pressed');
+    let killed = false;
+    try {
+      const before = getBossState(id).kill_count || 0;
+      _rhHold = id;
+      if (engageBoss(id, { ready: true })) {
+        await resolveBossHuntsAcrossWindow();
+        killed = (getBossState(id).kill_count || 0) > before;
+      }
+    } catch (_) {}
+    if (!killed) {
+      _rhHold = null; _rhBusy = false;
+      const running = _rhEngaged(id);
+      closeReadyHunt();
+      _readyHunt.at = 0;
+      try { _renderHuntRow(); } catch (_) {}
+      try { if (running) showHabitToast('The hunt is running. It ends at midnight.'); } catch (_) {}
+      _drainBossResultQueue();
+      return;
+    }
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_strike', id); } catch (_) {}
+    const port = sh.querySelector('.rh-port'), track = sh.querySelector('.rh-track'), rm = _rhRM();
+    if (port) { port.classList.add('rh-dead'); if (!rm) port.classList.add('rh-hit'); }
+    if (track && !rm) { track.classList.remove('rh-done'); void track.offsetWidth; track.classList.add('rh-done'); }
+    try { _hapticTick('HEAVY'); } catch (_) {}
+    try { _hrTone(_HR_N.A1, 0, 0.5, 0.14); } catch (_) {}
+    setTimeout(function () { _rhHandoff(id); }, rm ? 200 : 500);
+  }
+  // The hand-off: the result screen opens underneath, already struck; the sheet's
+  // portrait travels to the result's portrait; the sheet and the scrim let go.
+  function _rhHandoff(id) {
+    const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
+    const port = sh && sh.querySelector('.rh-port');
+    const from = port ? port.getBoundingClientRect() : null;
+    let evt = null;
+    for (let i = 0; i < _bossResultQueue.length; i++) {
+      if (_bossResultQueue[i] && _bossResultQueue[i].bossId === id && _bossResultQueue[i].outcome !== 'failed') { evt = _bossResultQueue.splice(i, 1)[0]; break; }
+    }
+    _rhHold = null;
+    const finish = function () {
+      _rhBusy = false;
+      closeReadyHunt();
+      if (sc) sc.classList.remove('rh-scrim--solid');
+      if (sh) sh.classList.remove('rh-sheet--gone');
+      _readyHunt.at = 0;
+      try { _renderHuntRow(); } catch (_) {}
+      if (!evt) _drainBossResultQueue();
+    };
+    if (!evt) { finish(); return; }
+    _bossResultBusy = true;
+    _stageBigMoment = true;
+    try { _showBossResult(evt, { struck: true }); } catch (_) { _bossResultBusy = false; }
+    const target = document.querySelector('#boss-result-overlay .hr-port');
+    const to = target ? target.getBoundingClientRect() : null;
+    if (_rhRM() || !from || !to || !to.width) { finish(); return; }
+    const fly = port.cloneNode(true);
+    fly.classList.remove('rh-hit'); fly.classList.add('rh-fly');
+    fly.style.cssText = 'left:' + from.left + 'px;top:' + from.top + 'px;width:' + from.width + 'px;height:' + from.height + 'px;';
+    document.body.appendChild(fly);
+    port.style.visibility = 'hidden';
+    sc.classList.add('rh-scrim--solid'); sh.classList.add('rh-sheet--gone');
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      fly.style.left = to.left + 'px'; fly.style.top = to.top + 'px'; fly.style.width = to.width + 'px'; fly.style.height = to.height + 'px';
+    }); });
+    setTimeout(function () { finish(); setTimeout(function () { try { fly.remove(); } catch (_) {} }, 220); }, 440);
+  }
+  // Once a day, on the Habits tab, when its turn comes: the sheet rises by itself.
+  function _rhMaybePop() {
+    const today = getDeviceLocalDate();
+    const can = function () {
+      try {
+        if (currentTab !== 'habits' || document.hidden || _rhBusy) return null;
+        if (localStorage.getItem(RH_POP_KEY) === getDeviceLocalDate()) return null;
+        if (document.querySelector('.rh-sheet--on')) return null;
+        return _rhLead();
+      } catch (_) { return null; }
+    };
+    if (!can()) return;
+    const ask = function () {
+      const o = can(); if (!o) return;
+      try { localStorage.setItem(RH_POP_KEY, today); } catch (_) {}
+      openReadyHunt(o, { auto: true });
+    };
+    if (!_stageDefer('readyhunt', 60, ask)) ask();
+  }
 
   // W953 — one hunt running is a hunter with room for another and no reason
   // to go looking. The Carouser is the second E-rank gate: no rank to reach,
@@ -34635,6 +34935,7 @@
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
       try { _wolfTrailTick(); } catch (_) {}   // W952
+      try { _readyHuntScan(); } catch (_) {}   // W1034 — after the trail, which may have engaged the Wolf
     }, 1500);
   }
 
@@ -42461,7 +42762,8 @@
     // Surfaces the hunter opened. Nothing automatic lands on top of them either.
     ['sheet',    'dom',  function () {
       return ['fa-manual-overlay', 'mv-overlay', 'system-full-overlay', 'arena-overlay', 'boss-fs-overlay'].some(_stageVis)
-        || _stageOn('#hunt-list-overlay') || _stageOn('.jump-sh--on');   // W1021 — the jump start-day sheet
+        || _stageOn('#hunt-list-overlay') || _stageOn('.jump-sh--on')   // W1021 — the jump start-day sheet
+        || _stageOn('.rh-sheet--on');   // W1034 — the ready hunt
     }],
   ];
   function _stageBusyKeys(except, pri) {
@@ -72678,6 +72980,7 @@
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
       try { _wolfTrailTick(); } catch (_) {}   // W952 — a new day usually arrives with a foreground
+      try { _readyHuntScan(true); } catch (_) {}   // W1034 — the Health caches were just cleared
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background
       // cycling doesn't hammer the workers.
