@@ -8204,3 +8204,30 @@ test.describe('CB · The ready hunt (W1034)', () => {
     expect((await boss(page, 'the_insomniac')).engaged).toBe(true);
   });
 });
+
+// W1035 — the Shadow Army says how it works at the three moments a hunter meets it.
+test.describe('CC · The Shadow Army explains itself (W1035)', () => {
+  test('after a kill the toast says what to do; the ceremony says what a shadow does; the roster says how to get more', async ({ page }) => {
+    await freshApp(page);
+    const t = await page.evaluate(() => { const f = (window as any).__shadowToast; return [f('the_carouser'), f('the_steel_wolf'), f('the_insomniac')]; });
+    expect(t[0]).toBe('The Carouser’s shadow can rise. 3 flights within 48 hours, and it is yours.');
+    expect(t[1]).toBe('The Steel Wolf’s shadow can rise. 3,000 steps within 48 hours, and it is yours.');
+    expect(t[2]).toContain('one night of 3.5h+ sleep within 48 hours');
+    expect(t.join(' ')).not.toMatch(/extraction|!|\bfell(ed)?\b/i);
+    // the ceremony
+    await page.evaluate(() => (window as any).__arise('the_carouser'));
+    await expect(page.locator('.arise-does.show')).toHaveText('It marches with you in the Ascent. +1% power.', { timeout: 6000 });
+    await page.waitForTimeout(400);
+    await page.locator('.arise-overlay').click();
+    await expect(page.locator('.arise-overlay')).toHaveCount(0);
+    // an E-rank hunter has one slot: a second shadow is raised but cannot march
+    await page.evaluate(() => (window as any).__arise('the_steel_wolf'));
+    await expect(page.locator('.arise-does.show')).toHaveText(/Your slots are full/, { timeout: 6000 });
+    await page.waitForTimeout(400);
+    await page.locator('.arise-overlay').click();
+    // the roster
+    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Beat a boss, then do half of it again within 48 hours. Its shadow rises.');
+    await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
+  });
+});
