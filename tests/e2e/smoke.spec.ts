@@ -7271,6 +7271,41 @@ test.describe('BQ · Monday update banner (W791 · W1007)', () => {
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
   });
+  // W1036 — back after a week or more: the strip shows that day, whatever the weekday.
+  const lastSeen = (page: Page, daysAgo: number) => page.addInitScript((d) => {
+    try { if (sessionStorage.getItem('__w1036')) return; sessionStorage.setItem('__w1036', '1'); localStorage.setItem('hb_update_last_seen_at', String(Date.now() - (d as number) * 86400000)); } catch (_) {}
+  }, daysAgo);
+  test('W1036 — a Saturday, back after 8 days on an older build: the strip mounts; it is once for the day', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-10T07:32:00-07:00'));   // Sat 10 Oct
+    await store(page, '99.0.0');
+    await lastSeen(page, 8);
+    await freshApp(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    expect(await page.evaluate(() => [localStorage.getItem('hb_update_banner_seen'), localStorage.getItem('hb_update_away_day')])).toEqual(['2026-10-10', '2026-10-10']);
+    await page.evaluate(() => (window as any).closeUpdateBanner());
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+  });
+  test('W1036 — a Saturday, seen two days ago (or never before): no strip; back after 8 days on the current build: no strip', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-10T07:32:00-07:00'));
+    await store(page, '99.0.0');
+    await lastSeen(page, 2);
+    await freshApp(page);
+    await page.waitForTimeout(2_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    // never seen before (a first launch of this build): nothing to measure an absence from
+    await page.evaluate(() => { localStorage.removeItem('hb_update_last_seen_at'); document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    // away long enough, but the store has nothing newer
+    await page.unroute('**/itunes.apple.com/lookup**');
+    await store(page, '0.0.1');
+    await page.evaluate(() => { localStorage.removeItem('hb_store_version'); localStorage.setItem('hb_update_last_seen_at', String(Date.now() - 9 * 86400000)); document.dispatchEvent(new Event('visibilitychange')); });
+    await page.waitForTimeout(2_000);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+  });
 });
 
 // W1006 — a new week never reads as last week's fallen gate (the owner's 2:20 AM PST briefing, Sun 27 Sep).
