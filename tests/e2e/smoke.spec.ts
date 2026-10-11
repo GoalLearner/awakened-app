@@ -8485,3 +8485,25 @@ test.describe('CC · The Shadow Army explains itself (W1035)', () => {
     await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
   });
 });
+
+// W1040 — signing out tells the server to stop sending this phone the account's notifications.
+test.describe('CD · Sign-out forgets the push token (W1040)', () => {
+  test('a known token is unregistered once, with the session still valid; no token, no call; a slow server never blocks', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(async () => {
+      const w = window as any; const calls: string[] = [];
+      const real = w.Auth.unregisterPushToken;
+      w.Auth.unregisterPushToken = async (t: string) => { calls.push(t); return { ok: true }; };
+      const none = await w.Push.forget();                       // APNs never handed us a token this session
+      w.__push.setToken('a'.repeat(64));
+      const first = await w.Push.forget();
+      const again = await w.Push.forget();                      // already forgotten
+      w.Auth.unregisterPushToken = async () => { throw new Error('offline'); };
+      w.__push.setToken('b'.repeat(64));
+      const failed = await w.Push.forget();                     // an error is swallowed
+      w.Auth.unregisterPushToken = real;
+      return { none, first, again, failed, calls, left: w.__push.token() };
+    });
+    expect(r).toEqual({ none: false, first: true, again: false, failed: false, calls: ['a'.repeat(64)], left: null });
+  });
+});
