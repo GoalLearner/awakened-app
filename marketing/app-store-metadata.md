@@ -8,6 +8,84 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.11 — READY TO PASTE (W1025–W1036, final 2026-10-10, HEAD `12e6acd`, tag `3.0.11-w1036`)
+
+Four languages, each far under the 4,000-character limit. Banned-word check done (no
+"fell"/"felled"). Left out on purpose: the first-boss rating moment (W1030), the
+Worldgate sizing (W1031, server-side and already live), and the update banner for
+returning hunters (W1036, plumbing). Promotional text: keep 3.0.9's.
+
+**Before submitting:** DeepSeek in the privacy policy / App Privacy answers is still
+owed from 3.0.9 (see the 3.0.9 section).
+
+### English (U.S.)
+
+```
+A hunt is ready.
+
+• When today's steps, flights of stairs or last night's sleep already beat a boss, Awakened tells you. One tap on STRIKE and the boss is yours. No cost.
+
+• The Shadow Army explains itself. After a kill you're told exactly what raises that boss's shadow, and what a shadow does for you in the Ascent.
+
+Also in this update:
+• Steps now count correctly for hunters outside Pacific time.
+• Group hunt progress updates reliably, even with many hunts running.
+• Tap an achievement pop-up to see all your marks.
+• A skin you buy is equipped the next time you open the app.
+• The Myrmidon King shows his portrait in Your Hunts.
+```
+
+### Spanish (Mexico)
+
+```
+Una cacería está lista.
+
+• Cuando tus pasos de hoy, los pisos que subiste o tu sueño de anoche ya vencen a un jefe, Awakened te lo dice. Un toque en STRIKE y el jefe es tuyo. Sin costo.
+
+• El Ejército de Sombras se explica solo. Después de cada victoria sabrás exactamente qué hace surgir la sombra de ese jefe, y qué hace una sombra por ti en el Ascenso.
+
+También en esta actualización:
+• Los pasos ahora se cuentan bien para cazadores fuera de la hora del Pacífico.
+• El progreso de las cacerías en grupo se actualiza de forma confiable, incluso con muchas cacerías activas.
+• Toca el aviso de un logro para ver todas tus marcas.
+• Un aspecto que compras queda equipado la próxima vez que abres la app.
+• El Rey Mirmidón ahora muestra su retrato en Tus Cacerías.
+```
+
+### Japanese
+
+```
+狩りの準備ができています。
+
+• 今日の歩数、上った階数、昨夜の睡眠がすでにボスを倒せる数字に届いていると、Awakenedが知らせます。STRIKEを一度タップするだけで、ボスはあなたのもの。コストはかかりません。
+
+• 影の軍団がわかりやすくなりました。ボスを倒すと、その影を呼び起こすために何をすればよいか、そして影がアセントで何をしてくれるのかがはっきり表示されます。
+
+そのほかの変更:
+• 太平洋時間以外の地域でも、歩数が正しく数えられるようになりました。
+• グループ狩りの進み具合が、狩りの数が多くても安定して更新されます。
+• 実績のポップアップをタップすると、すべての刻印が見られます。
+• 購入したスキンは、次にアプリを開いたときに装備されます。
+• ミュルミドンの王の肖像が「あなたの狩り」に表示されます。
+```
+
+### Norwegian (Bokmål)
+
+```
+En jakt er klar.
+
+• Når dagens skritt, etasjer eller nattens søvn allerede slår en boss, sier Awakened fra. Ett trykk på STRIKE, og bossen er din. Uten kostnad.
+
+• Skyggehæren forklarer seg selv. Etter en seier får du vite nøyaktig hva som reiser skyggen til den bossen, og hva en skygge gjør for deg i Oppstigningen.
+
+Også i denne oppdateringen:
+• Skritt telles nå riktig for jegere utenfor stillehavstid.
+• Fremdriften i gruppejakter oppdateres pålitelig, også med mange jakter i gang.
+• Trykk på et prestasjonsvarsel for å se alle merkene dine.
+• Et skin du kjøper, tas i bruk neste gang du åpner appen.
+• Myrmidonkongen viser nå portrettet sitt i Dine jakter.
+```
+
 ## 3.0.10 — READY TO PASTE (W1023, final 2026-10-04, HEAD `112df7f`, tag `3.0.10-w1024`)
 
 One change: the 9:45 PM finish-strong reminder. Four languages, each far under the
