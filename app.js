@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.12';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.12-w1038'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.12-w1039'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1678,7 +1678,7 @@
   // sleep keyed to today), so a boss it calls ready is a boss the resolver will kill.
   // Engaged bosses are left out: they resolve on their own and show their own result.
   // Not built here: the phone notification and the sheet's not-ready states (deferred).
-  const RH_POP_KEY = 'hb_ready_hunt_popped_v1';
+  const RH_SEEN_KEY = 'hb_ready_hunt_seen_v1';   // { day, ids } — bosses already announced today
   const RH_UNITS = { steps: 'steps today', flights: 'flights today', sleep: 'last night' };
   const RH_SCAN_EVERY_MS = 60000;
   let _readyHunt = { day: '', offers: [], at: 0 };
@@ -1702,28 +1702,74 @@
     } catch (_) { return 0; }
   }
   function _rhEngaged(bossId) { try { return getBossState(bossId).engaged === true; } catch (_) { return true; } }
+  // W1039 — Apple Health for the length of ONE scan: the same question is asked once. Nineteen
+  // bosses share a handful of reads (today's steps, each of the last few days, the week's flights).
+  function _rhHealthMemo() {
+    const cache = new Map(), H = {};
+    ['getStepsBetween', 'getFlightsClimbedBetween', 'getSleepBetween', 'getStrengthWorkoutsBetween', 'getActiveEnergyBetween'].forEach(function (name) {
+      if (typeof Health[name] !== 'function') return;
+      H[name] = function (a, b) {
+        const k = name + '|' + a + '|' + b;
+        if (!cache.has(k)) cache.set(k, (async function () { return Health[name](a, b); })());
+        return cache.get(k);
+      };
+    });
+    return H;
+  }
+  // W1039 (owner 2026-10-11: days already finished count) — the window a boss is judged on when
+  // the hunter has NOT started it: today for a one-day boss, the last N days for a back-to-back
+  // one, the last seven for the weekly one. A DAY IS SPENT ONCE PER BOSS: the window never
+  // reaches back to (or past) the day of that boss's last kill, or a steady walker would beat a
+  // two-day boss every single day.
+  function _rhWindowFor(cfg, state, now) {
+    let n = 1;
+    if (cfg.cadence === 'weekly') n = 7;
+    else if (typeof cfg.consecutiveDays === 'number') n = cfg.consecutiveDays;
+    else if (typeof cfg.consecutiveNights === 'number') n = cfg.consecutiveNights;
+    const d = new Date(_startOfLocalDayMs(now)); d.setDate(d.getDate() - (n - 1));
+    let start = d.getTime();
+    try {
+      if (n > 1 && state && state.last_defeated_at && (state.kill_count || 0) > 0) {
+        const k = new Date(state.last_defeated_at); k.setHours(0, 0, 0, 0); k.setDate(k.getDate() + 1);
+        if (k.getTime() > start) start = k.getTime();
+      }
+    } catch (_) {}
+    return { start: start, evalEnd: now, lookBack: n > 1 };
+  }
+  // One boss: is it beaten already? Rank-unlocked, not running, not beaten today, and the
+  // resolver's own rules (dry) say the window wins. Returns the offer, or null.
+  async function _rhEvalBoss(id, now, H) {
+    const cfg = BOSSES[id];
+    if (!cfg || cfg.coopOnly) return null;
+    if (!isGateUnlocked(cfg.rank) || _rhEngaged(id) || !canEngageBossNow(id, cfg).ok) return null;
+    const st = getBossState(id);
+    const w = _rhWindowFor(cfg, st, now);
+    const ev = await _bossEvalWindow(id, cfg, JSON.parse(JSON.stringify(st)), w.start, w.evalEnd, now, true, H);
+    if (!ev || !ev.defeated) return null;
+    const o = { bossId: id, rank: cfg.rank, startMs: w.lookBack ? w.start : 0 };
+    // a one-number boss shows the hunter's own number, when the quick read agrees with the judge
+    const b = _readyHuntBar(cfg);
+    if (b) { const v = await _rhRead(b.metric); if (v >= b.bar) { o.metric = b.metric; o.value = v; o.bar = b.bar; } }
+    return o;
+  }
   async function _readyHuntScan(force) {
     if (_rhScanning) return _rhScanning;
     if (!force && Date.now() - _readyHunt.at < RH_SCAN_EVERY_MS) return _readyHunt;
     _rhScanning = (async function () {
       const offers = [];
-      // W1038 (owner 2026-10-11: "build the first boss kill") — day one is no longer quiet
-      // here. A hunter's first day is the day a first kill matters most, and the Wolf's
-      // trail only covers steps: someone who slept seven hours has already beaten the
-      // Insomniac the minute they finish onboarding. Only onboarding itself still waits.
+      // W1038 — day one is not quiet here: a first day is when a first kill matters most.
+      // Only onboarding itself still waits.
       const onboarding = (typeof needsOnboarding !== 'undefined' && needsOnboarding === true);
       try {
         if (!onboarding && _rhHealthOk()) {
-          for (const metric of ['steps', 'flights', 'sleep']) {
-            const o = readyHuntPick(metric, await _rhRead(metric), _rhEngaged);
-            if (o) offers.push(o);
+          const now = Date.now(), H = _rhHealthMemo();
+          for (const id of Object.keys(BOSSES)) {
+            try { const o = await _rhEvalBoss(id, now, H); if (o) offers.push(o); } catch (_) {}
           }
         }
       } catch (_) {}
-      // highest rank first; on a tie last night's sleep leads in the morning, steps after
-      const R = 'EDCBAS', am = new Date().getHours() < 12;
-      const M = am ? ['sleep', 'steps', 'flights'] : ['steps', 'flights', 'sleep'];
-      offers.sort(function (a, b) { return (R.indexOf(b.rank) - R.indexOf(a.rank)) || (M.indexOf(a.metric) - M.indexOf(b.metric)); });
+      const R = 'EDCBAS';
+      offers.sort(function (a, b) { return R.indexOf(b.rank) - R.indexOf(a.rank); });   // highest rank leads
       // a scan made during onboarding is not stamped: the first one after it must not wait a minute
       _readyHunt = { day: getDeviceLocalDate(), offers: offers, at: onboarding ? 0 : Date.now() };
       return _readyHunt;
@@ -1742,21 +1788,13 @@
       return !_rhEngaged(o.bossId) && canEngageBossNow(o.bossId, BOSSES[o.bossId]).ok;
     } catch (_) { return false; }
   }
-  // The offer to show: the scan's lead, falling to an easier boss the same number clears.
-  function _rhLead() {
-    for (const o of _readyHunt.offers) {
-      if (_rhLive(o)) return o;
-      for (const id of (o.also || [])) {
-        const alt = { bossId: id, rank: BOSSES[id].rank, bar: _readyHuntBar(BOSSES[id]).bar, value: o.value, metric: o.metric, also: [] };
-        if (_rhLive(alt)) return alt;
-      }
-    }
-    return null;
-  }
+  function _rhLiveOffers() { return _readyHunt.offers.filter(_rhLive); }
+  function _rhLead() { return _rhLiveOffers()[0] || null; }
   try {
     window.__readyHunt.scan = function () { return _readyHuntScan(true); };
     window.__readyHunt.lead = _rhLead;
-    window.__readyHunt.openSheet = function () { const o = _rhLead(); if (o) openReadyHunt(o); return !!o; };
+    window.__readyHunt.offers = function () { return _rhLiveOffers().map(function (o) { return o.bossId; }); };
+    window.__readyHunt.openSheet = function () { const l = _rhLiveOffers(); if (l.length) openReadyHunt(l); return l.length; };
   } catch (_) {}   // QA
 
   // High-level expiration helper — duration-based math (24h / 3d / 7d /
@@ -2185,6 +2223,347 @@
     }
     return { best: best, hitIndex: hitIndex };
   }
+  // W1039 — the per-boss rules of the resolver, in one place. `dry` answers the question
+  // ("would this window beat it, and on which day?") without touching anything: nothing is
+  // saved, nothing is awarded. The ready-hunt scan asks with dry = true and the resolver
+  // judges with dry = false, so the two can never disagree. `H` is Apple Health, or a
+  // read-through cache of it for the length of one scan.
+  async function _bossEvalWindow(id, cfg, state, start, evalEnd, now, dry, H) {
+    let _day = null;
+    const _persist = function () { if (!dry) setBossState(id, state); };
+    const _kill = function (day) { _day = day; if (!dry) _awardHuntKillFromBackfill(id, cfg, day); };
+    let defeated = false;
+
+    // ── v3 Phase 1z.271B / W262 / W263 — B-rank back-to-back pair ──
+    // Three bosses (Forge of Ten Thousand Days, Vow Keeper, Patient
+    // Flame) require N CONSECUTIVE qualifying days/nights inside the
+    // 2-day hunt window (W262 — was 5-of-7 weekly). Branches sit at the TOP
+    // of the chain so they take precedence over the single-pass
+    // branches, which we also guard below with !cfg.consecutiveDays /
+    // !cfg.consecutiveNights so a B-rank boss with both stepThreshold
+    // AND consecutiveDays can't accidentally fire the single-day path.
+
+    // ── Multi-metric "all-of, every day" consecutive boss ──
+    // W287 — generalizes the W286 Erebus branch. Every day in the run must
+    // hit ALL the metrics this boss declares (any of stepThreshold /
+    // workoutMinutes / flightThreshold / sleepHours); AND them per day, then
+    // scan for `consecutiveDays` back-to-back days. Covers S Erebus (3
+    // pillars) and the A duals (one active pillar + sleep). Single-metric
+    // branches below are guarded with !cfg.dailyAllOf so this can't fire them.
+    if (cfg.dailyAllOf === true && typeof cfg.consecutiveDays === 'number') {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      let _sleepByDate = {};
+      if (typeof cfg.sleepHours === 'number' && typeof H.getSleepBetween === 'function') {
+        let _sr = null;
+        try { _sr = await H.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sr = null; }
+        _sleepByDate = (_sr && _sr.byDate) || {};
+      }
+      const flags = [];
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        let ok = true;
+        if (ok && typeof cfg.stepThreshold === 'number') {
+          let steps = null;
+          try { steps = (typeof H.getStepsBetween === 'function') ? await H.getStepsBetween(sIso, eIso) : null; } catch (_) { steps = null; }
+          ok = typeof steps === 'number' && steps >= cfg.stepThreshold;
+        }
+        if (ok && typeof cfg.workoutMinutes === 'number') {
+          let workouts = null;
+          try { workouts = (typeof H.getStrengthWorkoutsBetween === 'function') ? await H.getStrengthWorkoutsBetween(sIso, eIso) : null; } catch (_) { workouts = null; }
+          const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+          let totalMin = 0;
+          for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
+          ok = totalMin >= cfg.workoutMinutes;
+        }
+        if (ok && typeof cfg.flightThreshold === 'number') {
+          let flights = null;
+          try { flights = (typeof H.getFlightsClimbedBetween === 'function') ? await H.getFlightsClimbedBetween(sIso, eIso) : null; } catch (_) { flights = null; }
+          ok = typeof flights === 'number' && flights >= cfg.flightThreshold;
+        }
+        if (ok && typeof cfg.sleepHours === 'number') {
+          const _se = _sleepByDate[dayIso];
+          const sleepHrs = _se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0;
+          ok = sleepHrs >= cfg.sleepHours;
+        }
+        flags.push(ok);
+      }
+      const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
+      const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
+      state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
+      _persist();
+      if (scan.hitIndex >= 0) {
+        _kill(days[scan.hitIndex]);
+        defeated = true;
+      }
+    }
+
+    // ── B-rank steps boss (Patient Flame) ──────────────────
+    if (!defeated &&
+        cfg.dailyAllOf !== true &&
+        typeof cfg.consecutiveDays === 'number' &&
+        typeof cfg.stepThreshold === 'number' &&
+        typeof H.getStepsBetween === 'function') {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      const flags = [];
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        let steps = null;
+        try { steps = await H.getStepsBetween(sIso, eIso); } catch (_) { steps = null; }
+        flags.push(typeof steps === 'number' && steps >= cfg.stepThreshold);
+      }
+      // today is still accruing steps — pending, never run-breaking
+      const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
+      const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
+      state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
+      _persist();
+      if (scan.hitIndex >= 0) {
+        _kill(days[scan.hitIndex]);
+        defeated = true;
+      }
+    }
+
+    // ── B-rank workout boss (Forge of Ten Thousand Days) ───
+    // Counts days inside the window where TOTAL workout minutes
+    // for that day reach the threshold. Uses getAnyWorkoutsToday
+    // semantics adapted to a window via getStrengthWorkoutsBetween;
+    // we sum durations per day from the returned sample list.
+    if (!defeated &&
+        cfg.dailyAllOf !== true &&
+        typeof cfg.consecutiveDays === 'number' &&
+        typeof cfg.workoutMinutes === 'number' &&
+        typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
+        typeof H.getStrengthWorkoutsBetween === 'function') {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      const flags = [];
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        let workouts = null;
+        try { workouts = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+        // Sum duration_min across all qualifying workouts that day.
+        // Helper already pre-filters to workouts >= its per-sample
+        // minimum, so any item in the list counts.
+        let totalMin = 0;
+        for (const w of list) {
+          const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0;
+          if (m > 0) totalMin += m;
+        }
+        flags.push(totalMin >= cfg.workoutMinutes);
+      }
+      // today's training may still be ahead — pending, never run-breaking
+      const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
+      const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
+      state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
+      _persist();
+      if (scan.hitIndex >= 0) {
+        _kill(days[scan.hitIndex]);
+        defeated = true;
+      }
+    }
+
+    // ── B-rank sleep boss (Vow Keeper) ─────────────────────
+    if (!defeated &&
+        typeof cfg.consecutiveNights === 'number' &&
+        typeof cfg.sleepHours === 'number' &&
+        typeof H.getSleepBetween === 'function') {
+      // Widened window so a sleep block ending on the first morning
+      // inside the hunt is captured (same +12h padding pattern as the
+      // single-night branch below).
+      const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
+      const eIso = new Date(evalEnd).toISOString();
+      let res = null;
+      try { res = await H.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
+      const byDate = (res && res.byDate) || {};
+      const days = _huntWindowLocalDays(start, evalEnd);
+      const flags = days.map((dayIso) => {
+        const entry = byDate[dayIso];
+        const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
+        return hours >= cfg.sleepHours;
+      });
+      // a night's data is final by the morning its byDate key lands
+      // on, so there is no pending tail for sleep
+      const scan = _consecRunScan(flags, cfg.consecutiveNights, false);
+      state.qualifying_progress = Math.min(scan.best, cfg.consecutiveNights);
+      _persist();
+      if (scan.hitIndex >= 0) {
+        _kill(days[scan.hitIndex]);
+        defeated = true;
+      }
+    }
+
+    // ── Steps bosses ───────────────────────────────────────
+    // v3 Phase 1z.69 — also mirrors max-per-day step count into
+    // state.step_progress so the boss-card + detail label can
+    // render live "N / threshold steps" without a second query.
+    // Benefits Steel Wolf and Glass Strider too, not just the
+    // new Marathon Wraith.
+    // v3 Phase 1z.271B — guard against B-rank qualifying-days
+    // bosses (Patient Flame) so they don't also fire the single-
+    // day defeat path here.
+    if (!defeated &&
+        typeof cfg.consecutiveDays !== 'number' &&
+        typeof cfg.stepThreshold === 'number' && typeof H.getStepsBetween === 'function') {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      let maxStepsInDay = 0;
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        let steps = null;
+        try { steps = await H.getStepsBetween(sIso, eIso); } catch (_) { continue; }
+        if (typeof steps === 'number') {
+          if (steps > maxStepsInDay) maxStepsInDay = steps;
+          if (steps >= cfg.stepThreshold) {
+            state.step_progress = Math.min(steps, cfg.stepThreshold);
+            _persist();
+            _kill(dayIso);
+            defeated = true;
+            break;
+          }
+        }
+      }
+      if (!defeated && maxStepsInDay > 0) {
+        state.step_progress = Math.min(maxStepsInDay, cfg.stepThreshold);
+        _persist();
+      }
+    }
+    // ── Dual-condition boss (Furnace Knight) ───────────────
+    // v3 Phase 1z.67. AND-gated: requires BOTH a verified strength
+    // workout AND >= activeEnergyKcal inside the hunt window.
+    // Branched before the single-condition workout / energy paths
+    // so the dual config doesn't get caught by them. Writes
+    // state.strength_done + state.energy_progress for the live
+    // dual-condition detail label. Either metric returning null
+    // (permission denied / unavailable) leaves the condition
+    // unmet — no false defeat.
+    if (!defeated &&
+        typeof cfg.workoutMinutes === 'number' &&
+        typeof cfg.activeEnergyKcal === 'number' &&
+        typeof H.getStrengthWorkoutsBetween === 'function' &&
+        typeof H.getActiveEnergyBetween === 'function') {
+      const sIso = new Date(start).toISOString();
+      const eIso = new Date(evalEnd).toISOString();
+      let workouts = null;
+      let kcal     = null;
+      try { workouts = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+      try { kcal     = await H.getActiveEnergyBetween(sIso, eIso);     } catch (_) { kcal = null; }
+      const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+      const strengthDone = list.length >= 1;
+      state.strength_done = strengthDone;
+      if (typeof kcal === 'number') {
+        state.energy_progress = Math.min(kcal, cfg.activeEnergyKcal);
+      }
+      _persist();
+      if (strengthDone && typeof kcal === 'number' && kcal >= cfg.activeEnergyKcal) {
+        const dayKey = (typeof getDeviceLocalDate === 'function')
+          ? getDeviceLocalDate()
+          : new Date().toISOString().slice(0, 10);
+        _kill(dayKey);
+        defeated = true;
+      }
+    }
+    // ── Flights boss (Ascendant Colossus) ──────────────────
+    // v3 Phase 1z.63. Cumulative kill condition: every verified
+    // flight inside [hunt_started_at, evalEnd] counts. Single
+    // window query — total >= flightThreshold defeats. Writes
+    // state.flight_progress for the live "N / 10 flights" detail
+    // label even before the threshold is hit.
+    else if (cfg.dailyAllOf !== true && typeof cfg.flightThreshold === 'number' && typeof H.getFlightsClimbedBetween === 'function') {
+      const sIso = new Date(start).toISOString();
+      const eIso = new Date(evalEnd).toISOString();
+      let flights = null;
+      try { flights = await H.getFlightsClimbedBetween(sIso, eIso); } catch (_) { flights = null; }
+      if (typeof flights === 'number') {
+        // Mirror progress into state so the detail screen can render
+        // the live count without re-querying. Cap at threshold for
+        // display sanity.
+        state.flight_progress = Math.min(flights, cfg.flightThreshold);
+        _persist();
+        if (flights >= cfg.flightThreshold) {
+          // Use the device-local day of the resolver tick as the
+          // last_eval_date — matches the workout-boss pattern when
+          // an exact qualifying day isn't meaningful.
+          const dayKey = (typeof getDeviceLocalDate === 'function')
+            ? getDeviceLocalDate()
+            : new Date().toISOString().slice(0, 10);
+          _kill(dayKey);
+          defeated = true;
+        }
+      }
+      // flights === null → HealthKit unavailable or denied. Skip
+      // silently; don't expire here, let the timer handle it below.
+    }
+    // ── Workout boss (Iron Warden) ─────────────────────────
+    // v3 Phase 1z.271B — guard against B-rank qualifying-days
+    // bosses (Forge of Ten Thousand Days) so they don't also
+    // fire Iron Warden's first-qualifying-workout defeat here.
+    else if (typeof cfg.workoutMinutes === 'number' &&
+             typeof cfg.consecutiveDays !== 'number' &&
+             typeof H.getStrengthWorkoutsBetween === 'function') {
+      const sIso = new Date(start).toISOString();
+      const eIso = new Date(evalEnd).toISOString();
+      let workouts = null;
+      try { workouts = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
+      const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+      // Pick the device-local day of the first qualifying workout
+      // so last_eval_date is meaningful. Helper already returns
+      // workouts >= cfg.workoutMinutes per its filter.
+      const first = list && list.length ? list[0] : null;
+      if (first) {
+        const dayKey = (function(iso){
+          try {
+            const d = new Date(iso);
+            return d.getFullYear() + '-' +
+              String(d.getMonth() + 1).padStart(2, '0') + '-' +
+              String(d.getDate()).padStart(2, '0');
+          } catch (_) { return getDeviceLocalDate(); }
+        })(first.startDate || new Date(start).toISOString());
+        _kill(dayKey);
+        defeated = true;
+      }
+    }
+    // ── Single-night sleep boss (Insomniac, Dream Tyrant) ──
+    // v3 Phase 1z.271B — guard against B-rank qualifying-nights
+    // bosses (Vow Keeper) so they don't also fire the first-
+    // qualifying-night defeat here.
+    else if (typeof cfg.sleepHours === 'number' && cfg.streakTarget === 1 &&
+             typeof cfg.consecutiveNights !== 'number' &&
+             typeof H.getSleepBetween === 'function') {
+      // Look at a slightly widened window so a sleep block that
+      // ENDED on the first morning inside the hunt is captured
+      // (the byDate key uses sleep-onset shifted +4h; a Sun→Mon
+      // sleep block keyed to Mon would otherwise be edge-case).
+      const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
+      const eIso = new Date(evalEnd).toISOString();
+      let res = null;
+      try { res = await H.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
+      const byDate = (res && res.byDate) || {};
+      // Only credit nights whose key falls inside the hunt window
+      // (start..end). Iterate the same day list as the steps path.
+      const days = _huntWindowLocalDays(start, evalEnd);
+      for (const dayIso of days) {
+        const entry = byDate[dayIso];
+        const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
+        if (hours >= cfg.sleepHours) {
+          _kill(dayIso);
+          defeated = true;
+          break;
+        }
+      }
+    }
+    return { defeated: defeated, day: _day };
+  }
+
   async function resolveBossHuntsAcrossWindow() {
     if (typeof Health === 'undefined' || !Health || !Health.isAvailable) return;
     if (!Health.isAvailable()) return;
@@ -2255,335 +2634,8 @@
         }
       }
 
-      let defeated = false;
-
-      // ── v3 Phase 1z.271B / W262 / W263 — B-rank back-to-back pair ──
-      // Three bosses (Forge of Ten Thousand Days, Vow Keeper, Patient
-      // Flame) require N CONSECUTIVE qualifying days/nights inside the
-      // 2-day hunt window (W262 — was 5-of-7 weekly). Branches sit at the TOP
-      // of the chain so they take precedence over the single-pass
-      // branches, which we also guard below with !cfg.consecutiveDays /
-      // !cfg.consecutiveNights so a B-rank boss with both stepThreshold
-      // AND consecutiveDays can't accidentally fire the single-day path.
-
-      // ── Multi-metric "all-of, every day" consecutive boss ──
-      // W287 — generalizes the W286 Erebus branch. Every day in the run must
-      // hit ALL the metrics this boss declares (any of stepThreshold /
-      // workoutMinutes / flightThreshold / sleepHours); AND them per day, then
-      // scan for `consecutiveDays` back-to-back days. Covers S Erebus (3
-      // pillars) and the A duals (one active pillar + sleep). Single-metric
-      // branches below are guarded with !cfg.dailyAllOf so this can't fire them.
-      if (cfg.dailyAllOf === true && typeof cfg.consecutiveDays === 'number') {
-        const days = _huntWindowLocalDays(start, evalEnd);
-        let _sleepByDate = {};
-        if (typeof cfg.sleepHours === 'number' && typeof Health.getSleepBetween === 'function') {
-          let _sr = null;
-          try { _sr = await Health.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sr = null; }
-          _sleepByDate = (_sr && _sr.byDate) || {};
-        }
-        const flags = [];
-        for (const dayIso of days) {
-          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
-          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
-          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
-          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-          let ok = true;
-          if (ok && typeof cfg.stepThreshold === 'number') {
-            let steps = null;
-            try { steps = (typeof Health.getStepsBetween === 'function') ? await Health.getStepsBetween(sIso, eIso) : null; } catch (_) { steps = null; }
-            ok = typeof steps === 'number' && steps >= cfg.stepThreshold;
-          }
-          if (ok && typeof cfg.workoutMinutes === 'number') {
-            let workouts = null;
-            try { workouts = (typeof Health.getStrengthWorkoutsBetween === 'function') ? await Health.getStrengthWorkoutsBetween(sIso, eIso) : null; } catch (_) { workouts = null; }
-            const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-            let totalMin = 0;
-            for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
-            ok = totalMin >= cfg.workoutMinutes;
-          }
-          if (ok && typeof cfg.flightThreshold === 'number') {
-            let flights = null;
-            try { flights = (typeof Health.getFlightsClimbedBetween === 'function') ? await Health.getFlightsClimbedBetween(sIso, eIso) : null; } catch (_) { flights = null; }
-            ok = typeof flights === 'number' && flights >= cfg.flightThreshold;
-          }
-          if (ok && typeof cfg.sleepHours === 'number') {
-            const _se = _sleepByDate[dayIso];
-            const sleepHrs = _se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0;
-            ok = sleepHrs >= cfg.sleepHours;
-          }
-          flags.push(ok);
-        }
-        const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
-        const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
-        state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
-        setBossState(id, state);
-        if (scan.hitIndex >= 0) {
-          _awardHuntKillFromBackfill(id, cfg, days[scan.hitIndex]);
-          defeated = true;
-        }
-      }
-
-      // ── B-rank steps boss (Patient Flame) ──────────────────
-      if (!defeated &&
-          cfg.dailyAllOf !== true &&
-          typeof cfg.consecutiveDays === 'number' &&
-          typeof cfg.stepThreshold === 'number' &&
-          typeof Health.getStepsBetween === 'function') {
-        const days = _huntWindowLocalDays(start, evalEnd);
-        const flags = [];
-        for (const dayIso of days) {
-          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
-          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
-          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
-          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-          let steps = null;
-          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { steps = null; }
-          flags.push(typeof steps === 'number' && steps >= cfg.stepThreshold);
-        }
-        // today is still accruing steps — pending, never run-breaking
-        const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
-        const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
-        state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
-        setBossState(id, state);
-        if (scan.hitIndex >= 0) {
-          _awardHuntKillFromBackfill(id, cfg, days[scan.hitIndex]);
-          defeated = true;
-        }
-      }
-
-      // ── B-rank workout boss (Forge of Ten Thousand Days) ───
-      // Counts days inside the window where TOTAL workout minutes
-      // for that day reach the threshold. Uses getAnyWorkoutsToday
-      // semantics adapted to a window via getStrengthWorkoutsBetween;
-      // we sum durations per day from the returned sample list.
-      if (!defeated &&
-          cfg.dailyAllOf !== true &&
-          typeof cfg.consecutiveDays === 'number' &&
-          typeof cfg.workoutMinutes === 'number' &&
-          typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
-          typeof Health.getStrengthWorkoutsBetween === 'function') {
-        const days = _huntWindowLocalDays(start, evalEnd);
-        const flags = [];
-        for (const dayIso of days) {
-          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
-          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
-          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
-          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-          let workouts = null;
-          try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-          const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-          // Sum duration_min across all qualifying workouts that day.
-          // Helper already pre-filters to workouts >= its per-sample
-          // minimum, so any item in the list counts.
-          let totalMin = 0;
-          for (const w of list) {
-            const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0;
-            if (m > 0) totalMin += m;
-          }
-          flags.push(totalMin >= cfg.workoutMinutes);
-        }
-        // today's training may still be ahead — pending, never run-breaking
-        const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
-        const scan = _consecRunScan(flags, cfg.consecutiveDays, pendingTail);
-        state.qualifying_progress = Math.min(scan.best, cfg.consecutiveDays);
-        setBossState(id, state);
-        if (scan.hitIndex >= 0) {
-          _awardHuntKillFromBackfill(id, cfg, days[scan.hitIndex]);
-          defeated = true;
-        }
-      }
-
-      // ── B-rank sleep boss (Vow Keeper) ─────────────────────
-      if (!defeated &&
-          typeof cfg.consecutiveNights === 'number' &&
-          typeof cfg.sleepHours === 'number' &&
-          typeof Health.getSleepBetween === 'function') {
-        // Widened window so a sleep block ending on the first morning
-        // inside the hunt is captured (same +12h padding pattern as the
-        // single-night branch below).
-        const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
-        const eIso = new Date(evalEnd).toISOString();
-        let res = null;
-        try { res = await Health.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
-        const byDate = (res && res.byDate) || {};
-        const days = _huntWindowLocalDays(start, evalEnd);
-        const flags = days.map((dayIso) => {
-          const entry = byDate[dayIso];
-          const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
-          return hours >= cfg.sleepHours;
-        });
-        // a night's data is final by the morning its byDate key lands
-        // on, so there is no pending tail for sleep
-        const scan = _consecRunScan(flags, cfg.consecutiveNights, false);
-        state.qualifying_progress = Math.min(scan.best, cfg.consecutiveNights);
-        setBossState(id, state);
-        if (scan.hitIndex >= 0) {
-          _awardHuntKillFromBackfill(id, cfg, days[scan.hitIndex]);
-          defeated = true;
-        }
-      }
-
-      // ── Steps bosses ───────────────────────────────────────
-      // v3 Phase 1z.69 — also mirrors max-per-day step count into
-      // state.step_progress so the boss-card + detail label can
-      // render live "N / threshold steps" without a second query.
-      // Benefits Steel Wolf and Glass Strider too, not just the
-      // new Marathon Wraith.
-      // v3 Phase 1z.271B — guard against B-rank qualifying-days
-      // bosses (Patient Flame) so they don't also fire the single-
-      // day defeat path here.
-      if (!defeated &&
-          typeof cfg.consecutiveDays !== 'number' &&
-          typeof cfg.stepThreshold === 'number' && typeof Health.getStepsBetween === 'function') {
-        const days = _huntWindowLocalDays(start, evalEnd);
-        let maxStepsInDay = 0;
-        for (const dayIso of days) {
-          const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
-          const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
-          const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
-          const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-          let steps = null;
-          try { steps = await Health.getStepsBetween(sIso, eIso); } catch (_) { continue; }
-          if (typeof steps === 'number') {
-            if (steps > maxStepsInDay) maxStepsInDay = steps;
-            if (steps >= cfg.stepThreshold) {
-              state.step_progress = Math.min(steps, cfg.stepThreshold);
-              setBossState(id, state);
-              _awardHuntKillFromBackfill(id, cfg, dayIso);
-              defeated = true;
-              break;
-            }
-          }
-        }
-        if (!defeated && maxStepsInDay > 0) {
-          state.step_progress = Math.min(maxStepsInDay, cfg.stepThreshold);
-          setBossState(id, state);
-        }
-      }
-      // ── Dual-condition boss (Furnace Knight) ───────────────
-      // v3 Phase 1z.67. AND-gated: requires BOTH a verified strength
-      // workout AND >= activeEnergyKcal inside the hunt window.
-      // Branched before the single-condition workout / energy paths
-      // so the dual config doesn't get caught by them. Writes
-      // state.strength_done + state.energy_progress for the live
-      // dual-condition detail label. Either metric returning null
-      // (permission denied / unavailable) leaves the condition
-      // unmet — no false defeat.
-      if (!defeated &&
-          typeof cfg.workoutMinutes === 'number' &&
-          typeof cfg.activeEnergyKcal === 'number' &&
-          typeof Health.getStrengthWorkoutsBetween === 'function' &&
-          typeof Health.getActiveEnergyBetween === 'function') {
-        const sIso = new Date(start).toISOString();
-        const eIso = new Date(evalEnd).toISOString();
-        let workouts = null;
-        let kcal     = null;
-        try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-        try { kcal     = await Health.getActiveEnergyBetween(sIso, eIso);     } catch (_) { kcal = null; }
-        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-        const strengthDone = list.length >= 1;
-        state.strength_done = strengthDone;
-        if (typeof kcal === 'number') {
-          state.energy_progress = Math.min(kcal, cfg.activeEnergyKcal);
-        }
-        setBossState(id, state);
-        if (strengthDone && typeof kcal === 'number' && kcal >= cfg.activeEnergyKcal) {
-          const dayKey = (typeof getDeviceLocalDate === 'function')
-            ? getDeviceLocalDate()
-            : new Date().toISOString().slice(0, 10);
-          _awardHuntKillFromBackfill(id, cfg, dayKey);
-          defeated = true;
-        }
-      }
-      // ── Flights boss (Ascendant Colossus) ──────────────────
-      // v3 Phase 1z.63. Cumulative kill condition: every verified
-      // flight inside [hunt_started_at, evalEnd] counts. Single
-      // window query — total >= flightThreshold defeats. Writes
-      // state.flight_progress for the live "N / 10 flights" detail
-      // label even before the threshold is hit.
-      else if (cfg.dailyAllOf !== true && typeof cfg.flightThreshold === 'number' && typeof Health.getFlightsClimbedBetween === 'function') {
-        const sIso = new Date(start).toISOString();
-        const eIso = new Date(evalEnd).toISOString();
-        let flights = null;
-        try { flights = await Health.getFlightsClimbedBetween(sIso, eIso); } catch (_) { flights = null; }
-        if (typeof flights === 'number') {
-          // Mirror progress into state so the detail screen can render
-          // the live count without re-querying. Cap at threshold for
-          // display sanity.
-          state.flight_progress = Math.min(flights, cfg.flightThreshold);
-          setBossState(id, state);
-          if (flights >= cfg.flightThreshold) {
-            // Use the device-local day of the resolver tick as the
-            // last_eval_date — matches the workout-boss pattern when
-            // an exact qualifying day isn't meaningful.
-            const dayKey = (typeof getDeviceLocalDate === 'function')
-              ? getDeviceLocalDate()
-              : new Date().toISOString().slice(0, 10);
-            _awardHuntKillFromBackfill(id, cfg, dayKey);
-            defeated = true;
-          }
-        }
-        // flights === null → HealthKit unavailable or denied. Skip
-        // silently; don't expire here, let the timer handle it below.
-      }
-      // ── Workout boss (Iron Warden) ─────────────────────────
-      // v3 Phase 1z.271B — guard against B-rank qualifying-days
-      // bosses (Forge of Ten Thousand Days) so they don't also
-      // fire Iron Warden's first-qualifying-workout defeat here.
-      else if (typeof cfg.workoutMinutes === 'number' &&
-               typeof cfg.consecutiveDays !== 'number' &&
-               typeof Health.getStrengthWorkoutsBetween === 'function') {
-        const sIso = new Date(start).toISOString();
-        const eIso = new Date(evalEnd).toISOString();
-        let workouts = null;
-        try { workouts = await Health.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-        // Pick the device-local day of the first qualifying workout
-        // so last_eval_date is meaningful. Helper already returns
-        // workouts >= cfg.workoutMinutes per its filter.
-        const first = list && list.length ? list[0] : null;
-        if (first) {
-          const dayKey = (function(iso){
-            try {
-              const d = new Date(iso);
-              return d.getFullYear() + '-' +
-                String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                String(d.getDate()).padStart(2, '0');
-            } catch (_) { return getDeviceLocalDate(); }
-          })(first.startDate || new Date(start).toISOString());
-          _awardHuntKillFromBackfill(id, cfg, dayKey);
-          defeated = true;
-        }
-      }
-      // ── Single-night sleep boss (Insomniac, Dream Tyrant) ──
-      // v3 Phase 1z.271B — guard against B-rank qualifying-nights
-      // bosses (Vow Keeper) so they don't also fire the first-
-      // qualifying-night defeat here.
-      else if (typeof cfg.sleepHours === 'number' && cfg.streakTarget === 1 &&
-               typeof cfg.consecutiveNights !== 'number' &&
-               typeof Health.getSleepBetween === 'function') {
-        // Look at a slightly widened window so a sleep block that
-        // ENDED on the first morning inside the hunt is captured
-        // (the byDate key uses sleep-onset shifted +4h; a Sun→Mon
-        // sleep block keyed to Mon would otherwise be edge-case).
-        const sIso = new Date(start - 12 * 3600 * 1000).toISOString();
-        const eIso = new Date(evalEnd).toISOString();
-        let res = null;
-        try { res = await Health.getSleepBetween(sIso, eIso); } catch (_) { res = null; }
-        const byDate = (res && res.byDate) || {};
-        // Only credit nights whose key falls inside the hunt window
-        // (start..end). Iterate the same day list as the steps path.
-        const days = _huntWindowLocalDays(start, evalEnd);
-        for (const dayIso of days) {
-          const entry = byDate[dayIso];
-          const hours = entry && typeof entry.totalAsleepHours === 'number' ? entry.totalAsleepHours : 0;
-          if (hours >= cfg.sleepHours) {
-            _awardHuntKillFromBackfill(id, cfg, dayIso);
-            defeated = true;
-            break;
-          }
-        }
-      }
+      const _ev = await _bossEvalWindow(id, cfg, state, start, evalEnd, now, false, Health);
+      const defeated = _ev.defeated;
       // ── Expire stale hunts ─────────────────────────────────
       if (!defeated && end && now > end) {
         _expireBossHunt(id);
@@ -2754,8 +2806,11 @@
     if (!cfg) return false;
     const _auto = !!(opts && opts.auto);
     // W1034 — opts.ready: the ready hunt's STRIKE. The bar is already met, so the hunt is
-    // over in the same second: no fee (owner call), no banked free credit spent, outside
-    // the three-hunt cap, no Red Gate, and nothing said (the strike is the confirmation).
+    // over in the same second: outside the three-hunt cap, no Red Gate, and nothing said (the
+    // strike is the confirmation). W1039 (owner 2026-10-11): THE ENTRANCE FEE IS NOT WAIVED.
+    // It is not taken here, though: _rhStrike checks the hunter can pay before it engages,
+    // and takes the fee (or spends the free credit) only once Apple Health confirms the kill,
+    // so nobody pays for a win that did not happen.
     const _ready = !!(opts && opts.ready);
     const state = getBossState(bossId);
     if (state.engaged === true) return true; // already engaged, no-op
@@ -2845,7 +2900,9 @@
     }
     if (cost > 0 && !spendSouls(cost, 'engage_' + bossId)) return false; // W355 (V3)
     state.engaged = true;
-    const _engageNow = Date.now();
+    // W1039 — a ready strike on a look-back boss starts its hunt where the scan's window
+    // started, so the resolver judges the very days the hunter was shown.
+    const _engageNow = (_ready && opts.startMs > 0 && opts.startMs < Date.now()) ? opts.startMs : Date.now();
     state.engaged_at = new Date(_engageNow).toISOString();
     // v3 Phase 1z.43 — stamp explicit hunt window. Engagement IS the
     // start; expiration derives from cfg via the central helper.
@@ -34487,7 +34544,7 @@
     row.setAttribute('tabindex', '0');
     row.innerHTML = _ready
       ? ('<span class="hunt-row-swords" aria-hidden="true">' + RH_SWORDS + '</span>' +
-         '<span class="hunt-row-ready-text">' + esc(_rhFmt(_ready.metric, _ready.value) + ' ' + RH_UNITS[_ready.metric]) + ' · <b>' + esc(BOSSES[_ready.bossId].name) + ' is ready</b></span>' +
+         '<span class="hunt-row-ready-text">' + _rhRowText() + '</span>' +
          '<span class="hunt-row-chev" aria-hidden="true">›</span>')
       : items.length
       ? _huntRowHtml(items[0], items.length - 1)
@@ -34517,7 +34574,7 @@
       // answer; the boss is one more tap from there. The single exception is a
       // kill waiting to be claimed — its own line reads "tap to claim", so it
       // must claim, or the card is lying about what the tap does.
-      if (_ready) { try { _hapticTick('LIGHT'); } catch (_) {} openReadyHunt(_rhLead() || _ready); return; }   // W1034
+      if (_ready) { try { _hapticTick('LIGHT'); } catch (_) {} openReadyHunt(_rhLiveOffers()); return; }   // W1034
       if (items.length) {
         if (items[0].defeated) { try { items[0].open(); } catch (_) {} }
         else { _openHuntList(); }
@@ -34532,11 +34589,59 @@
   // for anything else. Two bosses on one number: the highest rank is offered and one
   // small line swaps to the other. Never a list.
   const RH_SWORDS = '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 3l16 16M19 3 3 19" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5l2 2M5 15l2 2" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>';
-  const RH_COLORS = { steps: '#4ade80', flights: '#f59e0b', sleep: '#60a5fa' };
-  let _rhView = null;      // { offer, bossId } — what the sheet is showing
+  let _rhView = null;      // { offers } — what the sheet is showing
   let _rhBusy = false;     // a strike is in flight; the sheet cannot be closed or tapped
   let _rhTimers = [];
+  const RH_TICK = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.5 5 9l4.5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
   function _rhRM() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { return false; } }
+  // The hunt row's line: the hunter's number and the boss, or how many are ready.
+  function _rhRowText() {
+    const l = _rhLiveOffers();
+    if (l.length > 1) return '<b>' + l.length + ' hunts are ready</b>';
+    const o = l[0]; if (!o) return '';
+    return (o.metric ? esc(_rhFmt(o.metric, o.value) + ' ' + RH_UNITS[o.metric]) + ' · ' : '') + '<b>' + esc(BOSSES[o.bossId].name) + ' is ready</b>';
+  }
+  // What the hunter did, in one line: their own number, or the boss's condition.
+  function _rhCondText(o) {
+    return o.metric ? _rhFmt(o.metric, o.value) + ' ' + RH_UNITS[o.metric] : (BOSSES[o.bossId].killCondShort || 'Condition met');
+  }
+  // W1039 — the fees. Bosses are struck CHEAPEST FIRST and each win's souls are in the purse
+  // before the next fee is asked, so 40 souls can walk the Wolf, the Strider and the Wraith
+  // (pay 25, win 50, pay 50, win 100, pay 100). A fee the purse cannot meet at its turn is
+  // not waived: that boss is left out, and says what is missing. Free credits (first hunt,
+  // the stone's debt, the altar's gift) are honoured as on any engage, one boss each.
+  function _rhPlan(offers, preview) {
+    let bal = 0, first = false, stone = false, altar = false;
+    try { bal = getSoulsBalance(); first = _firstHuntFreeAvailable(); stone = localStorage.getItem('hb_stone_free_engage') === '1'; altar = localStorage.getItem('hb_dd_free_engage') === '1'; } catch (_) {}
+    const have = bal;
+    const order = offers.slice().sort(function (a, b) { return engageCostSouls(a.rank) - engageCostSouls(b.rank); });
+    const by = {};
+    let fees = 0, ok = 0;
+    order.forEach(function (o) {
+      let cost = engageCostSouls(o.rank), free = null;
+      if (cost > 0 && !preview) {
+        if (first) { free = 'first'; first = false; } else if (stone) { free = 'stone'; stone = false; } else if (altar) { free = 'altar'; altar = false; }
+      }
+      if (free) cost = 0;
+      const can = preview || bal >= cost;
+      by[o.bossId] = { cost: cost, free: free, ok: can, need: can ? 0 : cost - bal };
+      if (can) { ok += 1; fees += cost; bal += killRewardSouls(o.rank) - cost; }
+    });
+    return { by: by, order: order, fees: fees, ok: ok, have: have, total: offers.length };
+  }
+  function _rhFreeLine(reason) {
+    return reason === 'first' ? 'Your first hunt is free' : reason === 'stone' ? 'Free: the stone’s debt' : 'Free: the altar’s gift';
+  }
+  function _rhQuietHtml(list, plan) {
+    const n = function (v) { return Math.round(v).toLocaleString('en-US'); };
+    if (list.length === 1) {
+      const p = plan.by[list[0].bossId];
+      if (!p.ok) return '<p class="rh-quiet rh-quiet--red">Costs ' + n(p.cost) + ' · you have ' + n(plan.have) + '. Seal vows to earn souls.</p>';
+      return '<p class="rh-quiet">' + (p.free ? _rhFreeLine(p.free) : 'Costs ' + n(p.cost) + ' souls · you have ' + n(plan.have)) + '</p>';
+    }
+    if (!plan.ok) return '<p class="rh-quiet rh-quiet--red">You have ' + n(plan.have) + ' souls. Seal vows to earn more.</p>';
+    return '<p class="rh-quiet">Fees ' + n(plan.fees) + ' souls · you have ' + n(plan.have) + (plan.fees > plan.have ? '. Each win pays for the next.' : '') + '</p>';
+  }
   function _rhEnsureSheet() {
     if (document.getElementById('rh-sheet')) return;
     const sc = document.createElement('div'); sc.id = 'rh-scrim'; sc.className = 'rh-scrim';
@@ -34548,35 +34653,53 @@
       const t = e.target;
       if (_rhBusy || !t.closest) return;
       if (t.closest('[data-rh-close]')) { closeReadyHunt(); return; }
-      const also = t.closest('[data-rh-also]');
-      if (also) { _rhSwap(also.getAttribute('data-rh-also')); return; }
       if (t.closest('[data-rh-strike]')) _rhStrike();
     });
   }
-  function _rhBodyHtml(v) {
-    const o = v.offer, id = v.bossId, cfg = BOSSES[id], bar = _readyHuntBar(cfg).bar;
-    // the other boss this number clears: the easier one from the lead, the lead from the easier one
-    const otherId = id === o.bossId ? (o.also || [])[0] : o.bossId;
-    const other = otherId && _rhLive({ bossId: otherId }) ? BOSSES[otherId] : null;
-    return '' +
-      '<div class="rh-port"><div class="rh-in"><img class="rh-art" src="' + esc(getBossArtPath(id) || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-        '<svg class="rh-cracks" viewBox="0 0 100 100" aria-hidden="true">' + _HR_CRACKS.map(function (p) { return '<path d="' + p + '" pathLength="1"></path>'; }).join('') + '</svg>' +
-        '<div class="rh-flash"></div></div></div>' +
-      '<span class="rh-chip" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + ' rank</span>' +
-      '<h2 class="rh-name">' + esc(cfg.name) + '</h2>' +
-      (other ? '<button type="button" class="rh-also" data-rh-also="' + esc(otherId) + '">Also ready · <b>' + esc(other.name) + '</b> ›</button>' : '') +
-      '<div class="rh-proof"><div class="rh-pl"><span><b class="rh-num">' + esc(_rhFmt(o.metric, 0)) + '</b> / ' + esc(_rhFmt(o.metric, bar)) + ' ' + RH_UNITS[o.metric] + '</span></div>' +
-        '<div class="rh-track"><i class="rh-fill"></i></div></div>' +
-      '<button type="button" class="rh-call" data-rh-strike>Strike</button>' +
-      '<p class="rh-quiet">No cost. The work is already done.</p>';
+  function _rhPortHtml(id) {
+    return '<div class="rh-port"><div class="rh-in"><img class="rh-art" src="' + esc(getBossArtPath(id) || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<svg class="rh-cracks" viewBox="0 0 100 100" aria-hidden="true">' + _HR_CRACKS.map(function (p) { return '<path d="' + p + '" pathLength="1"></path>'; }).join('') + '</svg>' +
+      '<div class="rh-flash"></div></div></div>';
   }
-  // The bar fills and the number counts up to the hunter's own, 600 ms; a flash as it lands.
+  function _rhBodyHtml(v) {
+    const list = v.offers, lead = list[0], cfg = BOSSES[lead.bossId];
+    const plan = v.plan = _rhPlan(list, v.preview);
+    const quiet = _rhQuietHtml(list, plan);
+    const call = function (label) {
+      return plan.ok ? '<button type="button" class="rh-call" data-rh-strike>' + label + '</button>'
+                     : '<button type="button" class="rh-call rh-call--off" disabled>Not enough souls</button>';
+    };
+    if (list.length === 1) {
+      return _rhPortHtml(lead.bossId) +
+        '<span class="rh-chip" data-rank="' + esc(cfg.rank) + '">' + esc(cfg.rank) + ' rank</span>' +
+        '<h2 class="rh-name">' + esc(cfg.name) + '</h2>' +
+        '<div class="rh-proof"><div class="rh-pl">' + (lead.metric
+          ? '<span><b class="rh-num">' + esc(_rhFmt(lead.metric, 0)) + '</b> / ' + esc(_rhFmt(lead.metric, lead.bar)) + ' ' + RH_UNITS[lead.metric] + '</span>'
+          : '<span class="rh-cond">' + RH_TICK + esc(_rhCondText(lead)) + '</span>') + '</div>' +
+          '<div class="rh-track"><i class="rh-fill"></i></div></div>' +
+        call('Strike') + quiet;
+    }
+    // W1039 (owner: one button for all) — several at once: a row each, one STRIKE ALL.
+    return '<div class="rh-many">' + list.length + ' hunts are ready</div>' +
+      _rhPortHtml(lead.bossId) +
+      '<div class="rh-list">' + list.map(function (o) {
+        const c = BOSSES[o.bossId], p = plan.by[o.bossId];
+        return '<div class="rh-row' + (p.ok ? '' : ' rh-row--short') + '" data-rh-row="' + esc(o.bossId) + '">' +
+          '<img class="rh-row-art" src="' + esc(getBossArtPath(o.bossId) || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+          '<span class="rh-row-main"><span class="rh-row-name">' + esc(c.name) + '</span>' +
+            (p.ok ? '<span class="rh-row-cond">' + RH_TICK + esc(_rhCondText(o)) + '</span>'
+                  : '<span class="rh-row-cond rh-row-cond--short">Need ' + Math.round(p.need).toLocaleString('en-US') + ' more souls</span>') + '</span>' +
+          '<span class="rh-chip rh-chip--sm" data-rank="' + esc(c.rank) + '">' + esc(c.rank) + '</span></div>';
+      }).join('') + '</div>' +
+      call(plan.ok === list.length ? 'Strike all' : 'Strike ' + plan.ok + ' of ' + list.length) + quiet;
+  }
+  // One boss with a number: the bar fills and the number counts up to the hunter's own, 600 ms.
   function _rhFill() {
     const sh = document.getElementById('rh-sheet'); if (!sh || !_rhView) return;
-    const o = _rhView.offer, fill = sh.querySelector('.rh-fill'), num = sh.querySelector('.rh-num'), track = sh.querySelector('.rh-track');
-    if (!fill || !num) return;
-    const done = function () { num.textContent = _rhFmt(o.metric, o.value); fill.style.width = '100%'; };
-    if (_rhRM()) { done(); return; }
+    const o = _rhView.offers[0], fill = sh.querySelector('.rh-fill'), num = sh.querySelector('.rh-num'), track = sh.querySelector('.rh-track');
+    if (!fill) return;
+    const done = function () { if (num) num.textContent = _rhFmt(o.metric, o.value); fill.style.width = '100%'; };
+    if (_rhRM() || !num) { if (_rhRM()) done(); else requestAnimationFrame(function () { fill.style.width = '100%'; }); return; }
     requestAnimationFrame(function () { fill.style.width = '100%'; });
     const t0 = performance.now(), view = _rhView;
     (function g(t) {
@@ -34586,22 +34709,20 @@
       if (k < 1) requestAnimationFrame(g); else { done(); if (track) track.classList.add('rh-done'); }
     })(t0);
   }
-  function _rhRender() {
-    const sh = document.getElementById('rh-sheet'); if (!sh || !_rhView) return;
-    sh.style.setProperty('--rh-mc', RH_COLORS[_rhView.offer.metric]);
-    sh.querySelector('[data-rh-body]').innerHTML = _rhBodyHtml(_rhView);
-  }
-  function openReadyHunt(offer, opts) {
-    if (!offer || !_rhLive(offer) || _rhBusy) return false;
+  function openReadyHunt(offers, opts) {
+    const _preview = !!(opts && opts.preview);   // W1039 — the owner's Settings preview: sample offers, nothing real
+    const list = (Array.isArray(offers) ? offers : [offers]).filter(function (o) { return _preview || _rhLive(o); });
+    if (!list.length || _rhBusy) return false;
     _rhEnsureSheet();
     const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
-    sc.className = 'rh-scrim'; sh.className = 'rh-sheet';
-    _rhView = { offer: offer, bossId: offer.bossId };
-    _rhRender();
+    sc.className = 'rh-scrim'; sh.className = 'rh-sheet' + (list.length > 1 ? ' rh-sheet--many' : '');
+    _rhView = { offers: list, preview: _preview, then: (opts && opts.then) || null };
+    sh.style.setProperty('--rh-mc', (list.length === 1 && list[0].metric) ? ({ steps: '#4ade80', flights: '#f59e0b', sleep: '#60a5fa' })[list[0].metric] : '#f5b842');
+    sh.querySelector('[data-rh-body]').innerHTML = _rhBodyHtml(_rhView);
     // two frames, so the rise is a transition and not a jump
     requestAnimationFrame(function () { requestAnimationFrame(function () { sc.classList.add('rh-scrim--on'); sh.classList.add('rh-sheet--on'); }); });
     _rhTimers.push(setTimeout(_rhFill, _rhRM() ? 0 : 260));
-    if (opts && opts.auto) { try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_shown', offer.bossId); } catch (_) {} }
+    if (opts && opts.auto) { try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_shown', list.map(function (o) { return o.bossId; }).join(',')); } catch (_) {} }
     return true;
   }
   function closeReadyHunt() {
@@ -34612,52 +34733,73 @@
     if (sc) sc.classList.remove('rh-scrim--on');
     if (sh) sh.classList.remove('rh-sheet--on');
   }
-  function _rhSwap(bossId) {
-    if (!_rhView || !BOSSES[bossId]) return;
-    const sb = document.querySelector('#rh-sheet [data-rh-body]');
-    try { _hapticTick('LIGHT'); } catch (_) {}
-    _rhView = { offer: _rhView.offer, bossId: bossId };
-    if (sb) sb.classList.add('rh-swap');
-    _rhTimers.push(setTimeout(function () { _rhRender(); if (sb) sb.classList.remove('rh-swap'); _rhFill(); }, _rhRM() ? 0 : 160));
+  // A hunt this strike opened and Apple Health did not confirm is taken back, quietly: the
+  // hunter never chose to start it.
+  function _rhUndoEngage(id) {
+    try { const st = getBossState(id); if (st.engaged !== true) return; _clearBossHuntFields(st); setBossState(id, st); } catch (_) {}
   }
-  // STRIKE: engage (free) and let the resolver read Apple Health. Only a kill the
-  // resolver confirms is celebrated; anything else leaves an honest running hunt.
+  // STRIKE / STRIKE ALL: engage every boss on the sheet (free), let the resolver read Apple
+  // Health ONCE, and celebrate only what it confirms. Each kill goes down the ordinary kill
+  // path, so each pays its own souls, rolls its own relic and queues its own result screen.
   async function _rhStrike() {
     if (_rhBusy || !_rhView) return;
-    const id = _rhView.bossId, sh = document.getElementById('rh-sheet');
+    if (_rhView.preview) { _rhPreviewStrike(); return; }   // W1039 — the Settings preview engages nothing
+    const list = _rhView.offers.slice(), sh = document.getElementById('rh-sheet');
     const btn = sh && sh.querySelector('.rh-call');
     _rhBusy = true;
     if (btn) btn.classList.add('rh-pressed');
-    let killed = false;
+    const killed = [];
+    let short = 0;
     try {
-      const before = getBossState(id).kill_count || 0;
-      _rhHold = id;
-      if (engageBoss(id, { ready: true })) {
+      _rhHold = true;
+      // W1039 — cheapest first, one at a time: the purse is re-read before every fee, so a win
+      // really does pay for the next, and a fee the hunter cannot meet is never waived.
+      const plan = _rhPlan(list, false);
+      for (const o of plan.order) {
+        const id = o.bossId, p = plan.by[id];
+        if (!p.ok || getSoulsBalance() < p.cost) { short += 1; continue; }
+        if (_rhEngaged(id)) continue;
+        const was = getBossState(id).kill_count || 0;
+        if (!engageBoss(id, { ready: true, startMs: o.startMs || 0 })) continue;
         await resolveBossHuntsAcrossWindow();
-        killed = (getBossState(id).kill_count || 0) > before;
+        if ((getBossState(id).kill_count || 0) > was) {
+          killed.push(id);
+          // the fee (or the free credit) is spent now that Apple Health has confirmed the kill
+          try {
+            if (p.free === 'first') { localStorage.setItem('hb_first_hunt_free_used', '1'); if (typeof window.__funnelEmit === 'function') window.__funnelEmit('first_hunt_engaged', id); }
+            else if (p.free === 'stone') localStorage.removeItem('hb_stone_free_engage');
+            else if (p.free === 'altar') localStorage.removeItem('hb_dd_free_engage');
+            else if (p.cost > 0) spendSouls(p.cost, 'engage_' + id);
+          } catch (_) {}
+        } else {
+          _rhUndoEngage(id);
+        }
       }
     } catch (_) {}
-    if (!killed) {
+    if (!killed.length) {
       _rhHold = null; _rhBusy = false;
-      const running = _rhEngaged(id);
       closeReadyHunt();
       _readyHunt.at = 0;
       try { _renderHuntRow(); } catch (_) {}
-      try { if (running) showHabitToast('The hunt is running. It ends at midnight.'); } catch (_) {}
+      try { showHabitToast(short ? 'Not enough souls for the entrance fee.' : 'Apple Health has not confirmed it yet. Try again in a moment.'); } catch (_) {}
       _drainBossResultQueue();
+      try { _readyHuntScan(true); } catch (_) {}
       return;
     }
-    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_strike', id); } catch (_) {}
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_strike', killed.join(',')); } catch (_) {}
     const port = sh.querySelector('.rh-port'), track = sh.querySelector('.rh-track'), rm = _rhRM();
     if (port) { port.classList.add('rh-dead'); if (!rm) port.classList.add('rh-hit'); }
     if (track && !rm) { track.classList.remove('rh-done'); void track.offsetWidth; track.classList.add('rh-done'); }
+    sh.querySelectorAll('.rh-row').forEach(function (r) { if (killed.indexOf(r.getAttribute('data-rh-row')) !== -1) r.classList.add('rh-row--dead'); });
     try { _hapticTick('HEAVY'); } catch (_) {}
     try { _hrTone(_HR_N.A1, 0, 0.5, 0.14); } catch (_) {}
-    setTimeout(function () { _rhHandoff(id); }, rm ? 200 : 500);
+    // the portrait is the lead's: it can only travel to the lead's own result
+    const leadId = list[0].bossId, first = killed.indexOf(leadId) !== -1 ? leadId : killed[0];
+    setTimeout(function () { _rhHandoff(first, first === leadId); }, rm ? 200 : 500);
   }
-  // The hand-off: the result screen opens underneath, already struck; the sheet's
-  // portrait travels to the result's portrait; the sheet and the scrim let go.
-  function _rhHandoff(id) {
+  // The hand-off: the first result opens underneath, already struck; the sheet's portrait
+  // travels to it; the sheet and the scrim let go. The other results follow from the queue.
+  function _rhHandoff(id, canFly) {
     const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
     const port = sh && sh.querySelector('.rh-port');
     const from = port ? port.getBoundingClientRect() : null;
@@ -34674,14 +34816,21 @@
       _readyHunt.at = 0;
       try { _renderHuntRow(); } catch (_) {}
       if (!evt) _drainBossResultQueue();
+      try { _readyHuntScan(true); } catch (_) {}
     };
     if (!evt) { finish(); return; }
     _bossResultBusy = true;
     _stageBigMoment = true;
     try { _showBossResult(evt, { struck: true }); } catch (_) { _bossResultBusy = false; }
+    _rhFly(port, from, canFly, finish);
+  }
+  // The sheet's portrait travels to the result screen's portrait (already open underneath),
+  // then `finish` lets the sheet and the scrim go. No journey under reduced motion.
+  function _rhFly(port, from, canFly, finish) {
+    const sc = document.getElementById('rh-scrim'), sh = document.getElementById('rh-sheet');
     const target = document.querySelector('#boss-result-overlay .hr-port');
     const to = target ? target.getBoundingClientRect() : null;
-    if (_rhRM() || !from || !to || !to.width) { finish(); return; }
+    if (!canFly || _rhRM() || !port || !from || !to || !to.width) { finish(); return; }
     const fly = port.cloneNode(true);
     fly.classList.remove('rh-hit'); fly.classList.add('rh-fly');
     fly.style.cssText = 'left:' + from.left + 'px;top:' + from.top + 'px;width:' + from.width + 'px;height:' + from.height + 'px;';
@@ -34693,29 +34842,86 @@
     }); });
     setTimeout(function () { finish(); setTimeout(function () { try { fly.remove(); } catch (_) {} }, 220); }, 440);
   }
+  // W1039 — the owner's Settings row. The real sheet with sample hunts: several bosses and
+  // STRIKE ALL, then one boss and STRIKE. The strike plays and a sample result follows, but
+  // no hunt is started, no kill is recorded, no souls move. Closing the sheet ends it.
+  function previewReadyHunt() {
+    const many = [
+      { bossId: 'the_marathon_wraith', rank: 'C', metric: 'steps', value: 10412, bar: 10000 },
+      { bossId: 'the_glass_strider', rank: 'D', metric: 'steps', value: 10412, bar: 7500 },
+      { bossId: 'the_iron_warden', rank: 'D' },
+      { bossId: 'the_insomniac', rank: 'E', metric: 'sleep', value: 7 + 40 / 60, bar: 7 },
+    ];
+    const one = [{ bossId: 'the_steel_wolf', rank: 'E', metric: 'steps', value: 9632, bar: 6000 }];
+    return openReadyHunt(many, { preview: true, then: function () { openReadyHunt(one, { preview: true }); } });
+  }
+  function _rhPreviewStrike() {
+    const view = _rhView, sh = document.getElementById('rh-sheet');
+    if (!view || !sh) return;
+    const lead = view.offers[0], cfg = BOSSES[lead.bossId];
+    const btn = sh.querySelector('.rh-call'), port = sh.querySelector('.rh-port'), track = sh.querySelector('.rh-track'), rm = _rhRM();
+    _rhBusy = true;
+    if (btn) btn.classList.add('rh-pressed');
+    if (port) { port.classList.add('rh-dead'); if (!rm) port.classList.add('rh-hit'); }
+    if (track && !rm) { track.classList.remove('rh-done'); void track.offsetWidth; track.classList.add('rh-done'); }
+    sh.querySelectorAll('.rh-row').forEach(function (r) { r.classList.add('rh-row--dead'); });
+    try { _hapticTick('HEAVY'); } catch (_) {}
+    try { _hrTone(_HR_N.A1, 0, 0.5, 0.14); } catch (_) {}
+    setTimeout(function () {
+      const ov = document.getElementById('boss-result-overlay');
+      const from = port ? port.getBoundingClientRect() : null;
+      const end = function () {
+        if (ov) { ov.classList.add('hidden'); ov.setAttribute('aria-hidden', 'true'); ov.innerHTML = ''; }
+        document.body.classList.remove('bro-locked');
+        if (view.then) setTimeout(function () { try { view.then(); } catch (_) {} }, 250);
+      };
+      const finish = function () {
+        const sc = document.getElementById('rh-scrim');
+        _rhBusy = false;
+        closeReadyHunt();
+        if (sc) sc.classList.remove('rh-scrim--solid');
+        sh.classList.remove('rh-sheet--gone');
+      };
+      if (!ov) { finish(); end(); return; }
+      const d = { kind: 'victory', solo: true, boss: cfg.name, rank: cfg.rank, art: getBossArtPath(lead.bossId), short: _hrShort(cfg.name), kill: 1,
+        cond: cfg.killCondShort || 'Kill condition', souls: killRewardSouls(cfg.rank), relic: { n: 'A sealed relic', r: 'Rare · revealed next' } };
+      if (lead.metric) { d.did = lead.metric === 'sleep' ? Math.round(lead.value * 60) : lead.value; d.ask = lead.metric === 'sleep' ? Math.round(lead.bar * 60) : lead.bar; d.fmt = lead.metric === 'sleep' ? 'hm' : lead.metric; }
+      _hrShow(ov, d, { struck: true, onClose: end, onAgain: end });
+      ov.classList.remove('hidden'); ov.setAttribute('aria-hidden', 'false'); document.body.classList.add('bro-locked');
+      _rhFly(port, from, true, finish);
+    }, rm ? 200 : 500);
+  }
+  try { window.__previewReadyHunt = previewReadyHunt; } catch (_) {}   // QA
   function _rhKillsEver() {
     try { const all = loadBosses(); return Object.keys(all).reduce(function (n, k) { return n + ((all[k] && all[k].kill_count) | 0); }, 0); } catch (_) { return 0; }
   }
-  // Once a day, on the Habits tab, when its turn comes: the sheet rises by itself.
+  function _rhSeen() {
+    try { const s = JSON.parse(localStorage.getItem(RH_SEEN_KEY) || 'null'); return (s && s.day === getDeviceLocalDate() && Array.isArray(s.ids)) ? s.ids : []; } catch (_) { return []; }
+  }
+  // W1039 (owner: in the app, each time) — the sheet rises whenever a boss becomes ready that
+  // has not been announced today, on the Habits tab, when its turn comes. It shows everything
+  // ready at that moment; a boss is announced once a day, the row keeps the rest.
   function _rhMaybePop() {
-    const today = getDeviceLocalDate();
     const can = function () {
       try {
         if (currentTab !== 'habits' || document.hidden || _rhBusy) return null;
-        if (localStorage.getItem(RH_POP_KEY) === getDeviceLocalDate()) return null;
         if (document.querySelector('.rh-sheet--on')) return null;
-        // W1038 — on day one the sheet rises for a FIRST kill only. A hunter whose steps
-        // already took the Wolf on the trail has had their moment; a second boss the same
-        // hour would bury the first vow. (The row still offers it once the First Mark is made.)
+        const live = _rhLiveOffers(), seen = _rhSeen();
+        if (!live.some(function (o) { return seen.indexOf(o.bossId) === -1; })) return null;
+        // W1038 — on day one the sheet rises for a FIRST kill only (the row still offers the rest).
         if (_newHunterQuiet() && _rhKillsEver() > 0) return null;
-        return _rhLead();
+        return live;
       } catch (_) { return null; }
     };
     if (!can()) return;
     const ask = function () {
-      const o = can(); if (!o) return;
-      try { localStorage.setItem(RH_POP_KEY, today); } catch (_) {}
-      openReadyHunt(o, { auto: true });
+      const live = can(); if (!live) return;
+      try {
+        const ids = _rhSeen();
+        live.forEach(function (o) { if (ids.indexOf(o.bossId) === -1) ids.push(o.bossId); });
+        localStorage.setItem(RH_SEEN_KEY, JSON.stringify({ day: getDeviceLocalDate(), ids: ids }));
+      } catch (_) {}
+      openReadyHunt(live, { auto: true });
     };
     if (!_stageDefer('readyhunt', 60, ask)) ask();
   }
@@ -36872,6 +37078,8 @@
     if (tbRow) tbRow.classList.toggle('hidden', !_previewAllowed());
     const hrRow = document.getElementById('settings-preview-hunts');   // W980 — same owner gate
     if (hrRow) hrRow.classList.toggle('hidden', !_previewAllowed());
+    const rhRow = document.getElementById('settings-preview-readyhunt');   // W1039 — same owner gate
+    if (rhRow) rhRow.classList.toggle('hidden', !_previewAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -72899,6 +73107,13 @@
         if (!_previewAllowed()) return;
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewHuntResults(); } catch (_) {} }, 280);
+      });
+      // W1039 — owner-only: the ready-hunt sheet and its strike; saves nothing.
+      const rhPreviewRow = document.getElementById('settings-preview-readyhunt');
+      if (rhPreviewRow) rhPreviewRow.addEventListener('click', function () {
+        if (!_previewAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        setTimeout(function () { try { previewReadyHunt(); } catch (_) {} }, 280);
       });
       // W978 — owner-only: today's briefing, as it would open tomorrow; saves nothing.
       const tbPreviewRow = document.getElementById('settings-preview-briefing');

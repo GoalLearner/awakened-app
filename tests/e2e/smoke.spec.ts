@@ -7665,7 +7665,7 @@ test.describe('BH · Hunt results (W980)', () => {
   test('a mod sees the preview rows, never Test as a new hunter', async ({ page }) => {
     await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'mod' } }) });
     await page.locator('#settings-btn').click();
-    const ids = ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts'];
+    const ids = ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt'];
     await expect.poll(() => page.evaluate((xs) => xs.every((x) => !document.getElementById(x)!.classList.contains('hidden')), ids), { timeout: 6_000 }).toBe(true);
     expect(await page.evaluate(() => document.getElementById('settings-test-hunter')!.classList.contains('hidden'))).toBe(true);
   });
@@ -7674,7 +7674,7 @@ test.describe('BH · Hunt results (W980)', () => {
     await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: null } }) });
     await page.locator('#settings-btn').click();
     await page.waitForTimeout(800);
-    const shown = await page.evaluate(() => ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-test-hunter']
+    const shown = await page.evaluate(() => ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt', 'settings-test-hunter']
       .filter((x) => !document.getElementById(x)!.classList.contains('hidden')));
     expect(shown).toEqual([]);
   });
@@ -8053,11 +8053,13 @@ test.describe('CA · The ready hunt, groundwork (W1033)', () => {
   });
 });
 
-// W1034 — the ready hunt, in-app (Claude Design handoff 30): a hunter whose real day already
-// clears a boss is told (the sheet rises once a day, the hunt row says it the rest of the day)
-// and finishes it with one free STRIKE.
-test.describe('CB · The ready hunt (W1034)', () => {
-  type H = { steps?: number; flights?: number; sleepH?: number; granted?: boolean };
+// W1034 · W1038 · W1039 — the ready hunt: a hunter whose real Apple Health data already beats a
+// solo boss (any of the nineteen, at or below their rank) is told in the app, and finishes it
+// with one free tap. Several at once: one STRIKE ALL, each boss paying its own reward.
+test.describe('CB · The ready hunt (W1034 · W1039)', () => {
+  // One day of Apple Health. `days[0]` is today, `days[1]` yesterday, and so on.
+  type Day = { steps?: number; flights?: number; sleepH?: number; workoutMin?: number; kcal?: number };
+  type H = Day & { granted?: boolean; days?: Record<number, Day> };
   async function hunter(page: Page, bosses: Record<string, unknown>, extra?: Record<string, string>) {
     await freshApp(page);
     await page.addInitScript(({ bosses, extra }: { bosses: Record<string, unknown>; extra: Record<string, string> }) => {
@@ -8069,7 +8071,7 @@ test.describe('CB · The ready hunt (W1034)', () => {
         localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w1034-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
         localStorage.setItem('hb_bosses', JSON.stringify(bosses));
         localStorage.setItem('hb_bosses_engagement_migrated', '1');
-        localStorage.setItem('hb_souls', JSON.stringify({ balance: 40, totalEarned: 40, totalSpent: 0 }));
+        localStorage.setItem('hb_souls', JSON.stringify({ balance: 500, totalEarned: 500, totalSpent: 0, lastDailyBonusDate: '2999-01-01' }));
         localStorage.setItem('hb_onboarding_first_xp_date', oymd);
         ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
          'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
@@ -8082,18 +8084,26 @@ test.describe('CB · The ready hunt (W1034)', () => {
     await page.locator('#tab-habits').click();
     await page.waitForTimeout(2200);   // the Habits tick has run (with no Health on the web: nothing offered)
   }
-  // Stand in for Apple Health, then scan. The same numbers answer the scan and the kill resolver.
+  // Stand in for Apple Health, day by day, then scan. The scan and the kill resolver read the same stand-in.
   async function health(page: Page, o: H) {
     await page.evaluate(async (o) => {
-      const w = window as any, Hh = w.Health, d = new Date();
-      const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const w = window as any, Hh = w.Health;
+      const days: Record<string, any> = Object.assign({}, o.days || {});
+      if (!days[0]) days[0] = { steps: o.steps, flights: o.flights, sleepH: o.sleepH, workoutMin: o.workoutMin, kcal: o.kcal };
+      const ymd = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const ago = (iso: string) => { const a = new Date(iso); a.setHours(0, 0, 0, 0); const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((t.getTime() - a.getTime()) / 86400000); };
+      // every local day a [start, end] range touches, as days-ago
+      const span = (s: string, e: string) => { const out: number[] = []; for (let n = ago(s); n >= Math.max(0, ago(e)); n--) out.push(n); return out; };
+      const day = (n: number) => days[n] || {};
       Hh.isAvailable = () => true;
       Hh.permissionStatus = () => (o.granted === false ? 'denied' : 'granted');
-      Hh.getStepsToday = async () => o.steps || 0;
-      Hh.getStepsBetween = async () => o.steps || 0;
-      Hh.getFlightsClimbedToday = async () => o.flights || 0;
-      Hh.getFlightsClimbedBetween = async () => o.flights || 0;
-      Hh.getSleepBetween = async () => ({ samples: [], byDate: o.sleepH ? { [ymd]: { totalAsleepHours: o.sleepH } } : {} });
+      Hh.getStepsToday = async () => day(0).steps || 0;
+      Hh.getFlightsClimbedToday = async () => day(0).flights || 0;
+      Hh.getStepsBetween = async (s: string, e: string) => span(s, e).reduce((a, n) => a + (day(n).steps || 0), 0);
+      Hh.getFlightsClimbedBetween = async (s: string, e: string) => span(s, e).reduce((a, n) => a + (day(n).flights || 0), 0);
+      Hh.getActiveEnergyBetween = async (s: string, e: string) => span(s, e).reduce((a, n) => a + (day(n).kcal || 0), 0);
+      Hh.getStrengthWorkoutsBetween = async (s: string, e: string) => span(s, e).filter((n) => day(n).workoutMin).map((n) => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(9, 0, 0, 0); return { duration_min: day(n).workoutMin, startDate: d.toISOString() }; });
+      Hh.getSleepBetween = async () => { const byDate: Record<string, any> = {}; Object.keys(days).forEach((k) => { if (days[k].sleepH) { const d = new Date(); d.setDate(d.getDate() - Number(k)); byDate[ymd(d)] = { totalAsleepHours: days[k].sleepH }; } }); return { samples: [], byDate }; };
       Hh.getSleepLastNight = async () => null;
       Hh.getAnyWorkoutsToday = async () => null;
       Hh.getStrengthWorkoutsToday = async () => null;
@@ -8102,29 +8112,34 @@ test.describe('CB · The ready hunt (W1034)', () => {
   }
   const souls = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls') || '{}'));
   const boss = (page: Page, id: string) => page.evaluate((id) => (JSON.parse(localStorage.getItem('hb_bosses') || '{}')[id] || {}), id);
-  const OLD = new Date(Date.now() - 3 * 86400_000).toISOString();
+  const offers = (page: Page) => page.evaluate(() => (window as any).__readyHunt.offers() as string[]);
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86400_000).toISOString();
+  // A kill a few days back opens that boss's rank gate (the app's own grandfather rule).
+  const past = (n = 5) => ({ kill_count: 1, streak: 0, engaged: false, last_defeated_at: daysAgo(n) });
+  const GATE = { D: { the_iron_warden: past() }, C: { the_furnace_knight: past() }, B: { the_forge_of_ten_thousand_days: past(9) }, A: { the_unbroken_anvil: past() }, S: { the_worldspine: past() } };
+  const sheet = (page: Page) => page.locator('#rh-sheet.rh-sheet--on');
+  // a purse of exactly `n` souls once the app has added today's 15-soul login bonus
+  const purse = (n: number) => ({ hb_souls: JSON.stringify({ balance: n - 15, totalEarned: n - 15, totalSpent: 0 }) });
 
   test('the day already clears the Wolf: the sheet rises once, the row says it, a reload does not pop again', async ({ page }) => {
     await hunter(page, {});
     await health(page, { steps: 9632 });
-    const sheet = page.locator('#rh-sheet.rh-sheet--on');
-    await expect(sheet).toBeVisible({ timeout: 8000 });
-    await expect(sheet.locator('.rh-name')).toHaveText('The Steel Wolf');
-    await expect(sheet.locator('.rh-chip')).toHaveText(/E rank/i);
-    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
-    await expect(sheet.locator('.rh-call')).toHaveText(/strike/i);
-    await expect(sheet.locator('.rh-quiet')).toHaveText('No cost. The work is already done.');
-    await expect(sheet.locator('.rh-also')).toHaveCount(0);            // an E-rank hunter: only the Wolf
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf');
+    await expect(sheet(page).locator('.rh-chip')).toHaveText(/E rank/i);
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/^strike$/i);
+    await expect(sheet(page).locator('.rh-quiet')).toHaveText('Your first hunt is free');
+    await expect(sheet(page).locator('.rh-row')).toHaveCount(0);            // one boss: no list
     const row = page.locator('#hunt-row.hunt-row--ready');
     await expect(row).toContainText('9,632 steps today');
     await expect(row).toContainText('The Steel Wolf is ready');
     expect(await page.evaluate(() => (window as any).__stage.busy())).toBe(true);   // nothing lands on top of it
-    // closing leaves the row; the row reopens the sheet
     await page.locator('#rh-sheet [data-rh-close]').click();
-    await expect(sheet).toHaveCount(0);
+    await expect(sheet(page)).toHaveCount(0);
     await row.click();
-    await expect(sheet).toBeVisible();
-    // the same day, after a reload: the row is back, the sheet stays down
+    await expect(sheet(page)).toBeVisible();
+    // the same day, after a reload: the row is back, the sheet stays down (already announced)
     await page.reload();
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
     await page.locator('#tab-habits').click();
@@ -8139,7 +8154,7 @@ test.describe('CB · The ready hunt (W1034)', () => {
   test('STRIKE is free, wins on the spot, and hands over to the result already struck', async ({ page }) => {
     await hunter(page, {});
     await health(page, { steps: 9632 });
-    await expect(page.locator('#rh-sheet.rh-sheet--on')).toBeVisible({ timeout: 8000 });
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
     await page.locator('#rh-sheet [data-rh-strike]').click();
     const res = page.locator('#boss-result-overlay');
     await expect(res.locator('.hr-port.hr-dead')).toBeVisible({ timeout: 5000 });   // no second strike: it opens struck
@@ -8148,99 +8163,200 @@ test.describe('CB · The ready hunt (W1034)', () => {
     await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
     await expect(page.locator('.rh-fly')).toHaveCount(0);
     const s = await souls(page), b = await boss(page, 'the_steel_wolf');
-    expect(s.totalSpent || 0).toBe(0);                       // no fee
-    expect(s.balance).toBeGreaterThanOrEqual(90);            // 40 + the 50-soul kill
+    expect(s.totalSpent || 0).toBe(0);                       // a first hunt is free, as on any engage
+    expect(s.balance).toBeGreaterThanOrEqual(550);           // the 50-soul kill
     expect([b.kill_count, b.engaged]).toEqual([1, false]);
-    expect(await page.evaluate(() => localStorage.getItem('hb_first_hunt_free_used'))).toBeNull();   // the banked freebie is not spent
+    expect(await page.evaluate(() => localStorage.getItem('hb_first_hunt_free_used'))).toBe('1');   // and that credit is now spent
     expect(await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '')).toContain('ready_hunt_strike');
-    // beaten today: nothing left to offer on 9,632 steps for an E-rank hunter
-    expect(await page.evaluate(() => (window as any).__readyHunt.lead())).toBeNull();
+    expect(await offers(page)).toEqual([]);
     await expect(page.locator('#hunt-row.hunt-row--ready')).toHaveCount(0);
   });
 
-  test('two bosses on one number: the higher rank is offered, one line swaps to the other', async ({ page }) => {
-    await hunter(page, { the_glass_strider: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: OLD } });   // the D gate is open
-    await health(page, { steps: 9632 });
-    const sheet = page.locator('#rh-sheet.rh-sheet--on');
-    await expect(sheet.locator('.rh-name')).toHaveText('The Glass Strider', { timeout: 8000 });
-    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*7,500 steps today/i, { timeout: 4000 });
-    await expect(sheet.locator('.rh-also')).toHaveText(/Also ready · The Steel Wolf/i);
-    await sheet.locator('.rh-also').click();
-    await expect(sheet.locator('.rh-name')).toHaveText('The Steel Wolf');
-    await expect(sheet.locator('.rh-also')).toHaveText(/Also ready · The Glass Strider/i);
-    await expect(sheet.locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
-    // strike the Wolf: the Strider is still on offer afterwards, on the row
-    await sheet.locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
-    expect((await boss(page, 'the_steel_wolf')).kill_count).toBe(1);
-    expect(await page.evaluate(() => (window as any).__readyHunt.lead().bossId)).toBe('the_glass_strider');
+  test('W1039 — 10,400 steps at C rank: three hunts on one sheet, STRIKE ALL, three kills each paying its own reward', async ({ page }) => {
+    await hunter(page, { ...GATE.D, ...GATE.C }, purse(40));
+    await health(page, { steps: 10400 });
+    expect(await offers(page)).toEqual(['the_marathon_wraith', 'the_glass_strider', 'the_steel_wolf']);   // highest rank leads
+    await expect(sheet(page).locator('.rh-many')).toHaveText('3 hunts are ready', { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-row')).toHaveCount(3);
+    await expect(sheet(page).locator('.rh-row-name')).toHaveText(['The Marathon Wraith', 'The Glass Strider', 'The Steel Wolf']);
+    await expect(sheet(page).locator('.rh-row-cond').first()).toContainText('10,400 steps today');
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/strike all/i);
+    // the fees are not waived: 25 + 50 + 100 from a purse of 40, each win paying for the next
+    await expect(sheet(page).locator('.rh-quiet')).toHaveText('Fees 175 souls · you have 40. Each win pays for the next.');
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('3 hunts are ready');
+    const before = await souls(page);
+    const ledgerBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]').length);
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Marathon Wraith', { timeout: 6000 });   // the lead's result first
+    const r = await page.evaluate(() => {
+      const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      const ledger = JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]');
+      const hist = JSON.parse(localStorage.getItem('hb_hunt_history') || '[]');
+      const ids = ['the_marathon_wraith', 'the_glass_strider', 'the_steel_wolf'];
+      return {
+        kills: ids.map((i) => (b[i] || {}).kill_count || 0), engaged: ids.map((i) => !!(b[i] || {}).engaged),
+        paid: ledger.length,
+        hist: ids.map((i) => hist.filter((h: any) => JSON.stringify(h).indexOf(i) !== -1).length),
+      };
+    });
+    expect(r.kills).toEqual([1, 1, 1]);
+    expect(r.engaged).toEqual([false, false, false]);
+    expect(r.paid - ledgerBefore).toBeGreaterThanOrEqual(3);  // three separate soul payouts, not one
+    expect(r.hist).toEqual([1, 1, 1]);                       // three separate kills in the hunt record (each rolled its own drop)
+    const after = await souls(page);
+    expect(after.totalSpent).toBe(25 + 50 + 100);            // every entrance fee paid
+    expect(after.balance - before.balance).toBeGreaterThanOrEqual((200 + 100 + 50) - 175);
+    // the other two results follow, one after another
+    const seen = new Set<string>();
+    for (let i = 0; i < 40 && seen.size < 3; i++) {
+      const name = await page.evaluate(() => { const o = document.getElementById('boss-result-overlay'); const n = o && !o.classList.contains('hidden') && o.querySelector('.hr-boss'); return n ? n.textContent : ''; });
+      if (name) { seen.add(name); await page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame') as HTMLElement; if (f) { f.click(); f.click(); } }); }
+      await page.waitForTimeout(450);
+    }
+    expect([...seen].sort()).toEqual(['The Glass Strider', 'The Marathon Wraith', 'The Steel Wolf']);
+  });
+
+  test('W1039 — the rank lock stays: an E-rank hunter with 10,400 steps is offered the Wolf alone', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 10400, flights: 22, workoutMin: 40, kcal: 500, sleepH: 6 });
+    expect(await offers(page)).toEqual(['the_steel_wolf', 'the_carouser']);   // the two E bosses the day beats; nothing above
+  });
+
+  test('W1039 — workouts count: ten minutes takes the Iron Warden; a strength workout and 300 kcal the Furnace Knight', async ({ page }) => {
+    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past() });   // D and C gates open
+    await health(page, { workoutMin: 20, kcal: 120 });
+    expect(await offers(page)).toEqual(['the_iron_warden']);
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Iron Warden', { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-cond')).toContainText(/workout/i);     // no single number: the condition, ticked
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await health(page, { workoutMin: 20, kcal: 340 });
+    expect(await offers(page)).toEqual(['the_furnace_knight', 'the_iron_warden']);
+    await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });   // rises again: the Knight is new today
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Furnace Knight', { timeout: 6000 });
+    expect([(await boss(page, 'the_furnace_knight')).kill_count, (await boss(page, 'the_iron_warden')).kill_count]).toEqual([1, 1]);
+  });
+
+  test('W1039 — days already finished count: 10,000 steps yesterday and today is the Patient Flame, never started', async ({ page }) => {
+    await hunter(page, { ...GATE.B });
+    await health(page, { days: { 0: { steps: 10400 } } });
+    expect(await offers(page)).not.toContain('the_patient_flame');                       // today alone is one day of two
+    await page.evaluate(() => (window as any).closeReadyHunt && (window as any).closeReadyHunt());
+    await page.locator('#rh-sheet [data-rh-close]').click({ timeout: 4000 }).catch(() => {});
+    await health(page, { days: { 0: { steps: 10400 }, 1: { steps: 11020 } } });
+    const o = await offers(page);
+    expect(o[0]).toBe('the_patient_flame');                                               // B rank leads
+    await page.evaluate(() => (window as any).__readyHunt.openSheet());
+    await expect(sheet(page).locator('.rh-row-name').first()).toHaveText('The Patient Flame', { timeout: 8000 });
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Patient Flame', { timeout: 6000 });
+    const b = await boss(page, 'the_patient_flame');
+    expect([b.kill_count, b.engaged]).toEqual([1, false]);
+    expect((await souls(page)).totalSpent || 0).toBeGreaterThanOrEqual(200);   // the B-rank fee, with the others on the sheet
+  });
+
+  test('W1039 — a day is spent once per boss: yesterday\'s kill cannot lend its day to today', async ({ page }) => {
+    const twoDays = { days: { 0: { steps: 10400 }, 1: { steps: 11020 }, 2: { steps: 10100 } } };
+    await hunter(page, { ...GATE.B, the_patient_flame: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: daysAgo(1) } });
+    await health(page, twoDays);
+    expect(await offers(page)).not.toContain('the_patient_flame');     // the window may only start today: one day of two
+    await page.evaluate(() => { const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}'); b.the_patient_flame.last_defeated_at = new Date(Date.now() - 2 * 86400000).toISOString(); localStorage.setItem('hb_bosses', JSON.stringify(b)); });
+    await health(page, twoDays);
+    expect(await offers(page)).toContain('the_patient_flame');         // killed two days ago: yesterday and today are both fresh
+  });
+
+  test('W1039 — three days and a week: Erebus on three full days, the Gray Pilgrim on 56 flights in seven', async ({ page }) => {
+    const d = { steps: 10400, flights: 10 };
+    await hunter(page, { ...GATE.C, ...GATE.S });
+    await health(page, { days: { 0: d, 1: d, 2: d, 3: { flights: 9 }, 4: { flights: 9 }, 5: { flights: 9 }, 6: { flights: 9 } } });   // 66 flights this week
+    const o = await offers(page);
+    expect(o).toContain('erebus_the_shadow_sovereign');
+    expect(o).toContain('the_gray_pilgrim');
+    expect(o[0]).toBe('erebus_the_shadow_sovereign');                  // S rank leads
+    // two full days is not three
+    await page.evaluate(() => (window as any).closeReadyHunt && (window as any).closeReadyHunt());
+    await health(page, { days: { 0: d, 1: d, 2: { steps: 4000, flights: 10 } } });
+    expect(await offers(page)).not.toContain('erebus_the_shadow_sovereign');
+  });
+
+  test('W1039 — asking changes nothing: a scan with a dozen bosses ready leaves bosses and souls untouched', async ({ page }) => {
+    const d = { steps: 15400, flights: 22, sleepH: 8, workoutMin: 45, kcal: 600 };
+    await hunter(page, { ...GATE.D, ...GATE.C, ...GATE.B, ...GATE.A, ...GATE.S });
+    const snap = () => page.evaluate(() => [localStorage.getItem('hb_bosses'), localStorage.getItem('hb_souls'), localStorage.getItem('hb_souls_ledger'), localStorage.getItem('hb_hunt_history')]);
+    const before = await snap();
+    await health(page, { days: { 0: d, 1: d, 2: d, 3: d, 4: d, 5: d, 6: d } });
+    expect((await offers(page)).length).toBeGreaterThanOrEqual(12);
+    expect(await snap()).toEqual(before);
+    await expect(sheet(page).locator('.rh-row').first()).toBeVisible({ timeout: 8000 });
+    // the list scrolls inside the sheet; the button stays on screen
+    const box = await sheet(page).locator('.rh-call').boundingBox();
+    expect(box && box.y + box.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight));
   });
 
   test('sleep reads in hours and minutes; flights in whole numbers', async ({ page }) => {
     await hunter(page, {});
     await health(page, { sleepH: 7 + 40 / 60 });
-    const sheet = page.locator('#rh-sheet.rh-sheet--on');
-    await expect(sheet.locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
-    await expect(sheet.locator('.rh-pl')).toHaveText(/7 h 40 m\s*\/\s*7 h last night/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/7 h 40 m\s*\/\s*7 h last night/i, { timeout: 4000 });
     await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('7 h 40 m last night');
     await page.locator('#rh-sheet [data-rh-close]').click();
     await health(page, { flights: 6 });
-    await page.evaluate(() => (window as any).__readyHunt.openSheet());
-    await expect(sheet.locator('.rh-name')).toHaveText('The Carouser');
-    await expect(sheet.locator('.rh-pl')).toHaveText(/6\s*\/\s*5 flights today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Carouser', { timeout: 8000 });      // new today: it rises by itself
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/6\s*\/\s*5 flights today/i, { timeout: 4000 });
+  });
+
+  test('W1039 — it rises again for a boss that becomes ready later, and not twice for the same one', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 6830 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 8000 });
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await health(page, { steps: 7100 });                              // nothing new
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await health(page, { steps: 7100, flights: 5 });                  // the Carouser is new
+    await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });   // and the unstruck Wolf rides along
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await health(page, { steps: 7300, flights: 6 });
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('2 hunts are ready');
   });
 
   test('nothing is offered: below the bar, Health not granted, beaten today, already engaged', async ({ page }) => {
     await hunter(page, {});
-    const lead = () => page.evaluate(() => { const o = (window as any).__readyHunt.lead(); return o && o.bossId; });
     await health(page, { steps: 5999, flights: 4, sleepH: 6.9 });
-    expect(await lead()).toBeNull();
+    expect(await offers(page)).toEqual([]);
     await health(page, { steps: 9632, granted: false });
-    expect(await lead()).toBeNull();
+    expect(await offers(page)).toEqual([]);
     await health(page, { steps: 9632 });
-    expect(await lead()).toBe('the_steel_wolf');
-    // already engaged: it resolves on its own
+    expect(await offers(page)).toEqual(['the_steel_wolf']);
     await page.evaluate(() => localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now(), hunt_expires_at: Date.now() + 3600_000 } })));
-    expect(await lead()).toBeNull();
-    // beaten today
+    expect(await offers(page)).toEqual([]);                            // already engaged: it resolves on its own
     await page.evaluate(() => localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } })));
-    expect(await lead()).toBeNull();
+    expect(await offers(page)).toEqual([]);                            // beaten today
     await page.evaluate(() => (window as any).__renderHuntRow());
     await expect(page.locator('#hunt-row.hunt-row--ready')).toHaveCount(0);
   });
 
-  // W1038 — day one: the sheet rises for a FIRST kill, and only for a first kill.
-  const TODAY = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  test('W1038 — day one, slept seven hours: the Insomniac is offered at once and one STRIKE is the first kill', async ({ page }) => {
-    const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
-    // a hunter fresh out of onboarding: joined today, no First Mark yet, the Wolf already running on the trail
-    await hunter(page, { the_steel_wolf: run }, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
-    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
-    await health(page, { steps: 2100, sleepH: 7 + 40 / 60 });
-    const sheet = page.locator('#rh-sheet.rh-sheet--on');
-    await expect(sheet.locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
-    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
-    await sheet.locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
-    expect((await boss(page, 'the_insomniac')).kill_count).toBe(1);
-    expect((await boss(page, 'the_steel_wolf')).engaged).toBe(true);     // the trail's hunt is untouched
-    expect((await souls(page)).totalSpent || 0).toBe(0);
-  });
-  test('W1038 — day one with a kill already made: nothing rises by itself, the offer waits on the row', async ({ page }) => {
-    await hunter(page, { the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } }, { hb_onboarding_first_xp_date: TODAY() });
-    await health(page, { sleepH: 7 + 40 / 60 });
-    expect(await page.evaluate(() => (window as any).__readyHunt.lead().bossId)).toBe('the_insomniac');
-    await page.waitForTimeout(1500);
-    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
-    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
-    // during onboarding itself nothing is offered at all
-    await page.evaluate(() => { localStorage.removeItem('hb_bosses'); });
+  test('Apple Health disagrees at the strike: no win is shown, no souls move, and no hunt is left behind', async ({ page }) => {
+    await hunter(page, { ...GATE.D });
+    await health(page, { steps: 9632 });
+    await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });
+    // at the strike Health now reports 7,000: the Wolf still dies, the Strider (7,500) does not
+    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 7000; });
+    const before = await souls(page);
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Steel Wolf', { timeout: 6000 });
+    const st = await boss(page, 'the_glass_strider');
+    expect([!!st.engaged, st.kill_count || 0]).toEqual([false, 0]);     // taken back, quietly: no hunt, no kill
+    expect((await boss(page, 'the_steel_wolf')).kill_count).toBe(1);
+    expect(((await souls(page)).totalSpent || 0) - (before.totalSpent || 0)).toBe(25);   // the Wolf's fee; nothing for the kill that did not happen
   });
 
-  test('Apple Health disagrees at the strike: no win is shown, no souls move, the hunt is left running', async ({ page }) => {
+  test('Apple Health confirms nothing at the strike: the sheet closes, nothing is engaged, nothing is paid', async ({ page }) => {
     await hunter(page, {});
     await health(page, { steps: 9632 });
-    await expect(page.locator('#rh-sheet.rh-sheet--on')).toBeVisible({ timeout: 8000 });
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
     await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 0; });
     const before = await souls(page);
     await page.locator('#rh-sheet [data-rh-strike]').click();
@@ -8249,19 +8365,97 @@ test.describe('CB · The ready hunt (W1034)', () => {
     await expect(page.locator('#boss-result-overlay')).toBeHidden();
     const s = await souls(page), b = await boss(page, 'the_steel_wolf');
     expect([s.balance, s.totalSpent || 0]).toEqual([before.balance, 0]);
-    expect([b.engaged, b.kill_count || 0]).toEqual([true, 0]);
+    expect([!!b.engaged, b.kill_count || 0]).toEqual([false, 0]);
+    expect(await page.evaluate(() => localStorage.getItem('hb_first_hunt_free_used'))).toBeNull();   // the free credit is not burnt on a miss
   });
 
-  test('three hunts already running: a ready strike is outside the three', async ({ page }) => {
+  test('W1039 — the entrance fee is not waived: a purse that cannot pay gets no boss', async ({ page }) => {
+    // not a first hunt (the Wolf was beaten two days ago), 20 souls, the Wolf costs 25
+    await hunter(page, { the_steel_wolf: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: daysAgo(2) } }, purse(20));
+    await health(page, { steps: 9632 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/not enough souls/i);
+    await expect(sheet(page).locator('.rh-call')).toBeDisabled();
+    await expect(sheet(page).locator('.rh-quiet')).toHaveText('Costs 25 · you have 20. Seal vows to earn souls.');
+    await sheet(page).locator('.rh-call').click({ force: true });
+    await page.waitForTimeout(900);
+    const b = await boss(page, 'the_steel_wolf');
+    expect([b.kill_count, !!b.engaged]).toEqual([1, false]);
+    expect((await souls(page)).balance).toBe(20);
+    await expect(page.locator('#boss-result-overlay')).toBeHidden();
+  });
+
+  test('W1039 — a fee out of reach leaves that boss out: two of three are struck, the third says what is missing', async ({ page }) => {
+    // E bosses cost 25 each, the A-rank Anvil 400. From 30 souls: 30 - 25 + 50 = 55, 55 - 25 + 50 = 80, and 80 is not 400.
+    await hunter(page, { ...GATE.A }, purse(30));
+    await health(page, { steps: 9632, flights: 15 });
+    expect(await offers(page)).toEqual(['the_unbroken_anvil', 'the_steel_wolf', 'the_carouser']);
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/strike 2 of 3/i, { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-row--short .rh-row-name')).toHaveText('The Unbroken Anvil');
+    await expect(sheet(page).locator('.rh-row--short .rh-row-cond')).toHaveText(/need 320 more souls/i);
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    const anvil = await boss(page, 'the_unbroken_anvil');
+    expect([(await boss(page, 'the_steel_wolf')).kill_count, (await boss(page, 'the_carouser')).kill_count, anvil.kill_count, !!anvil.engaged]).toEqual([1, 1, 1, false]);
+    const s = await souls(page);
+    expect([s.totalSpent, s.balance]).toEqual([50, 80]);
+    expect(await offers(page)).toEqual(['the_unbroken_anvil']);        // still his, when he can pay
+  });
+
+  test('three hunts already running: ready strikes are outside the three', async ({ page }) => {
     const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 3600_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
-    // (the live Dream Tyrant hunt keeps the D gate open, so 9,632 steps offers the Strider)
+    // (the live Dream Tyrant hunt keeps the D gate open, so 9,632 steps beats the Strider too)
     await hunter(page, { the_insomniac: run, the_carouser: run, the_dream_tyrant: run });
     await health(page, { steps: 9632 });
-    await expect(page.locator('#rh-sheet.rh-sheet--on .rh-name')).toHaveText('The Glass Strider', { timeout: 8000 });
-    await page.locator('#rh-sheet [data-rh-strike]').click();
+    await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });
+    await sheet(page).locator('[data-rh-strike]').click();
     await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
-    expect((await boss(page, 'the_glass_strider')).kill_count).toBe(1);
+    expect([(await boss(page, 'the_glass_strider')).kill_count, (await boss(page, 'the_steel_wolf')).kill_count]).toEqual([1, 1]);
     expect((await boss(page, 'the_insomniac')).engaged).toBe(true);
+  });
+
+  test('W1039 — the Settings preview: several bosses then one, the strike plays, and nothing is saved', async ({ page }) => {
+    await hunter(page, {});
+    const snap = () => page.evaluate(() => [localStorage.getItem('hb_bosses'), localStorage.getItem('hb_souls'), localStorage.getItem('hb_souls_ledger'), localStorage.getItem('hb_hunt_history'), localStorage.getItem('hb_ready_hunt_seen_v1')]);
+    const before = await snap();
+    await page.evaluate(() => (window as any).__previewReadyHunt());
+    await expect(sheet(page).locator('.rh-many')).toHaveText('4 hunts are ready', { timeout: 6000 });
+    await expect(sheet(page).locator('.rh-row-name')).toHaveText(['The Marathon Wraith', 'The Glass Strider', 'The Iron Warden', 'The Insomniac']);
+    await sheet(page).locator('[data-rh-strike]').click();
+    const res = page.locator('#boss-result-overlay');
+    await expect(res.locator('.hr-boss')).toHaveText('The Marathon Wraith', { timeout: 6000 });
+    await expect(res.locator('.hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    await page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame') as HTMLElement; f.click(); f.click(); });
+    // then the single-boss sheet
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 6000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    expect(await snap()).toEqual(before);                    // no hunt, no kill, no souls, nothing marked as announced
+  });
+
+  // W1038 — day one: the sheet rises for a FIRST kill, and only for a first kill.
+  const TODAY = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  test('W1038 — day one, slept seven hours: the Insomniac is offered at once and one STRIKE is the first kill', async ({ page }) => {
+    const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
+    await hunter(page, { the_steel_wolf: run }, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    await health(page, { steps: 2100, sleepH: 7 + 40 / 60 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    expect((await boss(page, 'the_insomniac')).kill_count).toBe(1);
+    expect((await boss(page, 'the_steel_wolf')).engaged).toBe(true);     // the trail's hunt is untouched
+    expect((await souls(page)).totalSpent || 0).toBe(25);                // the Insomniac's entrance fee
+  });
+  test('W1038 — day one with a kill already made: nothing rises by itself, the offer waits on the row', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } }, { hb_onboarding_first_xp_date: TODAY() });
+    await health(page, { sleepH: 7 + 40 / 60 });
+    expect(await offers(page)).toEqual(['the_insomniac']);
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
   });
 });
 
