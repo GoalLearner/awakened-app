@@ -95,6 +95,19 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM pvp_queue WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM pvp_matches WHERE p1_user_id = ? OR p2_user_id = ?', uid, uid);
 
+  // W1040 — user-keyed tables added since W721 that have no cascade and were never purged
+  // (the 2026-10-11 review). Erasure completeness (Apple 5.1.1(v)); each its own guarded
+  // statement, as above. client_errors and funnel_events hold free text the device sent.
+  await bestEffortDelete(env, 'DELETE FROM client_errors WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM funnel_events WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM win_back_pushes WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM pact_flame_pushes WHERE user_a = ? OR user_b = ?', uid, uid);
+  await bestEffortDelete(env, 'DELETE FROM invite_redemptions WHERE redeemer_user_id = ? OR inviter_user_id = ?', uid, uid);
+  await bestEffortDelete(env, 'DELETE FROM invite_codes WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM coop_emotes WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM coop_emote_cooldowns WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM board_topic_views WHERE user_id = ?', uid);
+
   // ── Core deletion (MUST succeed) ──
   // user_state_snapshots has no FK on users.id (kept independent so the schema
   // can evolve without coupling), so its cascade is manual.

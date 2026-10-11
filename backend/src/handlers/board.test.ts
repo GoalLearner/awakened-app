@@ -100,6 +100,17 @@ function makeEnv(st: State, rlWriteOk = true): Env {
         st.calls.push({ sql, binds });
         const api = {
           first: async () => {
+            // W1040 — the reads the hardening added or widened
+            if (/SELECT 1 FROM board_blocks WHERE \(blocker_id = \? AND blocked_id = \?\) OR/.test(sql)) {
+              return (st.blocks.has(`${binds[0]}|${binds[1]}`) || st.blocks.has(`${binds[1]}|${binds[0]}`)) ? { 1: 1 } : null;
+            }
+            if (/SELECT 1 FROM board_moderators WHERE user_id = \?/.test(sql)) return st.mods[binds[0] as string] ? { 1: 1 } : null;
+            if (/SELECT id, author_id, hidden_at, deleted_at, locked_at FROM board_topics/.test(sql)) {
+              const tp = st.topics[binds[0] as string]; return tp ? { id: binds[0], author_id: tp.author_id, hidden_at: tp.hidden_at, deleted_at: tp.deleted_at, locked_at: tp.locked_at ?? null } : null;
+            }
+            if (/SELECT id, author_id, topic_id, parent_reply_id, deleted_at FROM board_replies/.test(sql)) {
+              const r = st.replies[binds[0] as string]; return r ? { id: binds[0], author_id: r.author_id ?? 'u-x', topic_id: r.topic_id, parent_reply_id: r.parent_reply_id ?? null, deleted_at: r.deleted_at } : null;
+            }
             // W929 — thread v4 reads
             if (/SELECT id, topic_id, parent_reply_id, deleted_at FROM board_replies/.test(sql)) {
               const r = st.replies[binds[0] as string]; return r ? { id: binds[0], topic_id: r.topic_id, parent_reply_id: r.parent_reply_id ?? null, deleted_at: r.deleted_at } : null;
@@ -220,7 +231,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               if (!t || t.deleted_at != null) return null;
               if (t.hidden_at != null && !modView) return null;
               const me = binds[2] as string;
-              if (st.blocks.has(`${me}|${t.author_id}`) || st.blocks.has(`${t.author_id}|${me}`)) return null;
+              if (st.blocks.has(`${me}|${t.author_id}`) || (st.blocks.has(`${t.author_id}|${me}`) && !st.mods[me])) return null;
               return { id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 };
             }
             return null;
@@ -279,6 +290,11 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/SET hidden_at = \?, hidden_by = 'auto'/.test(sql)) {
               const t = st.topics[binds[1] as string]; if (t && t.hidden_at == null) { t.hidden_at = binds[0] as number; t.hidden_by = 'auto'; return ok(1); } return ok(0);
             }
+            if (/UPDATE board_reports SET resolved_at/.test(sql)) {   // W1040 — reports settled
+              const prefix = `${binds[2]}|${binds[3]}|`; let n = 0;
+              for (const k of [...st.reports]) if (k.startsWith(prefix)) { st.reports.delete(k); n++; }
+              return ok(n);
+            }
             if (/INSERT OR IGNORE INTO board_blocks/.test(sql)) { st.blocks.add(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/DELETE FROM board_blocks/.test(sql)) { st.blocks.delete(`${binds[0]}|${binds[1]}`); return ok(1); }
             if (/UPDATE board_topics SET deleted_at/.test(sql)) {
@@ -304,7 +320,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               const results = [...st.replyVotes].filter((k) => k.endsWith(`|${uid}`)).map((k) => ({ reply_id: k.split('|')[0] }));
               return { results, success: true, meta: {} };
             }
-            if (/SELECT user_id FROM board_moderators/.test(sql)) return { results: Object.keys(st.mods).map((user_id) => ({ user_id })), success: true, meta: {} };
+            if (/^\s*SELECT user_id FROM board_moderators/.test(sql)) return { results: Object.keys(st.mods).map((user_id) => ({ user_id })), success: true, meta: {} };
             if (/SELECT created_at FROM board_topics WHERE author_id/.test(sql)) {
               const results = Object.values(st.topics).filter((t) => t.author_id === binds[0] && (t.created_at || 0) > (binds[1] as number))
                 .map((t) => ({ created_at: t.created_at || 0 })).sort((a, b) => b.created_at - a.created_at);
@@ -345,7 +361,7 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               let entries = Object.entries(st.topics)
                 .filter(([, t]) => t.deleted_at == null && (modView || t.hidden_at == null))
                 .filter(([, t]) => (t.resolved_at != null ? 1 : 0) === wantResolved)
-                .filter(([, t]) => !st.blocks.has(`${me}|${t.author_id}`) && !st.blocks.has(`${t.author_id}|${me}`))
+                .filter(([, t]) => !st.blocks.has(`${me}|${t.author_id}`) && !(st.blocks.has(`${t.author_id}|${me}`) && !st.mods[me]))
                 .filter(([, t]) => !st.users[t.author_id].apple_sub.startsWith('sim_test_'))
                 .filter(() => !tag || tag === 'talk');
               if (isCount) return /GROUP BY/.test(sql) ? { results: entries.length ? [{ tag: 'talk', n: entries.length }] : [], success: true, meta: {} } : { results: [{ n: entries.length }], success: true, meta: {} };
@@ -492,6 +508,97 @@ describe('reports', () => {
     expect((await json(self)).error).toBe('SELF_REPORT');
     const bad = await handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'ugly' }), makeEnv(st), x, ctx);
     expect((await json(bad)).error).toBe('INVALID_REASON');
+  });
+});
+
+describe('W1040 · the 2026-10-11 security review', () => {
+  it('a block aimed at a moderator hides nothing from that moderator (a hunter cannot post out of their sight)', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const tp = await postTopic(st, x);   // Guake posts
+    await handleBoardBlockPost(post('/v1/board/block', { user_id: 'u-me' }), makeEnv(st), x, false);   // and blocks the owner
+    const modList = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), me));
+    expect((modList.topics as { author: { alias: string } }[]).map((r) => r.author.alias)).toEqual(['Guake']);
+    const open = await handleBoardTopicGet(get('/v1/board/topics/' + tp.body.id), makeEnv(st), me, tp.body.id as string);
+    expect(open.status).toBe(200);
+    // the same block against an ordinary hunter still hides in both directions
+    await handleBoardBlockPost(post('/v1/board/block', { user_id: 'u-y' }), makeEnv(st), x, false);
+    const plain = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), y));
+    expect((plain.topics as unknown[]).length).toBe(0);
+    // and the SQL itself carries the exemption
+    const sql = st.calls.map((c) => c.sql).find((s) => /FROM board_topics x/.test(s) && /board_blocks/.test(s)) || '';
+    expect(sql).toMatch(/blocked_id = \?\s+AND blocked_id NOT IN \(SELECT user_id FROM board_moderators\)/);
+  });
+
+  it('a hunter blocked by a topic\'s author cannot reply under it; a moderator still can', async () => {
+    const st = fresh();
+    const tp = await postTopic(st, x); const id = tp.body.id as string;
+    const reply = (who: SessionPayload) => handleBoardReplyPost(post('/v1/board/topics/' + id + '/replies', { body: 'a perfectly ordinary reply here' }), makeEnv(st), who, id, ctx);
+    st.blocks.add('u-x|u-y');   // Guake blocked Minn
+    expect((await reply(y)).status).toBe(404);
+    expect((await reply(ren)).status).toBe(200);   // someone not blocked
+    st.blocks.clear(); st.blocks.add('u-y|u-x');   // the other direction: Minn blocked Guake
+    expect((await reply(y)).status).toBe(404);
+    st.mods['u-y'] = 'mod';
+    expect((await reply(y)).status).toBe(200);
+  });
+
+  it('an edit is a write: a muted hunter cannot edit, and an edit cannot smuggle in a link or a phone number', async () => {
+    const st = fresh(); const env = makeEnv(st);
+    st.topics['aaaaaaaa-0001'] = { author_id: 'u-x', hidden_at: null, deleted_at: null, reply_count: 1, last_activity_at: 1, created_at: 1, title: 'App Ideas', body: 'B' };
+    st.replies['bbbbbbbb-0001'] = { topic_id: 'aaaaaaaa-0001', deleted_at: null, author_id: 'u-x', created_at: 2, body: 'hello everyone here' };
+    const er = (body: string) => handleBoardReplyEdit(new Request('https://x', { method: 'POST', body: JSON.stringify({ body }) }), env, x, 'bbbbbbbb-0001');
+    const et = (title: string, body: string) => handleBoardTopicEdit(new Request('https://x', { method: 'POST', body: JSON.stringify({ title, body }) }), env, x, 'aaaaaaaa-0001');
+    expect((await er('still a perfectly ordinary reply')).status).toBe(200);
+    const link = await er('join my group at https://t.me/somewhere today');
+    expect(link.status).toBe(400);
+    expect(st.replies['bbbbbbbb-0001'].body).toBe('still a perfectly ordinary reply');
+    const phone = await et('App Ideas', 'call me on +1 415 555 0134 for the details');
+    expect(phone.status).toBe(400);
+    expect(st.topics['aaaaaaaa-0001'].body).toBe('B');
+    st.mutes['u-x'] = Date.now() + 3600_000;
+    expect(((await (await er('a muted hunter keeps talking')).json()) as { error: string }).error).toBe('MUTED');
+    expect(((await (await et('App Ideas', 'a muted hunter rewrites the topic')).json()) as { error: string }).error).toBe('MUTED');
+    // a moderator's edit is not filtered (an update post may carry a link)
+    st.mods['u-me'] = 'owner';
+    const mod = await handleBoardTopicEdit(new Request('https://x', { method: 'POST', body: JSON.stringify({ title: 'App Ideas', body: 'the notes are at https://example.com/notes for everyone' }) }), env, me, 'aaaaaaaa-0001');
+    expect(mod.status).toBe(200);
+  });
+
+  it('a moderator\'s post is never hidden by a count; an ordinary post still is', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const mine = await postTopic(st, me); const theirs = await postTopic(st, x, { title: 'Another topic here', body: 'A second topic on the board.' });
+    const report = (id: string, who: SessionPayload) => handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), who, ctx);
+    for (const who of [x, y, ren]) await report(mine.body.id as string, who);
+    expect(st.topics[mine.body.id as string].hidden_at).toBeNull();
+    let last: Record<string, unknown> = {};
+    for (const who of [me, y, ren]) last = await json(await report(theirs.body.id as string, who));
+    expect(last.auto_hidden).toBe(true);
+    expect(st.topics[theirs.body.id as string].hidden_at).not.toBeNull();
+  });
+
+  it('a moderator bringing a topic back settles its reports, so the next report does not hide it again', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const tp = await postTopic(st, x); const id = tp.body.id as string;
+    const report = (who: SessionPayload) => handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), who, ctx);
+    for (const who of [me, y, ren]) await report(who);
+    expect(st.topics[id].hidden_at).not.toBeNull();
+    const unhide = await handleBoardTopicHide(new Request('https://x', { method: 'POST' }), makeEnv(st), me, id);
+    expect(await unhide.json()).toMatchObject({ ok: true, hidden: false });
+    expect([...st.reports].filter((k) => k.startsWith('topic|' + id + '|')).length).toBe(0);
+    const again = await json(await report(y));   // one of the original reporters tries again
+    expect(again.auto_hidden).toBe(false);
+    expect(st.topics[id].hidden_at).toBeNull();
+  });
+
+  it('a hidden topic cannot be followed by a hunter (no push snippets of hidden threads)', async () => {
+    const st = fresh();
+    const tp = await postTopic(st, x); const id = tp.body.id as string;
+    st.topics[id].hidden_at = 123;
+    const f = await handleBoardFollowPost(new Request('https://x', { method: 'POST' }), makeEnv(st), y, id);
+    expect(f.status).toBe(404);
+    st.mods['u-y'] = 'mod';
+    const m = await handleBoardFollowPost(new Request('https://x', { method: 'POST' }), makeEnv(st), y, id);
+    expect(m.status).toBe(200);
   });
 });
 

@@ -111,13 +111,24 @@ export function checkSentences(raw: unknown, f: RecapFacts): string[] | null {
   if (!Array.isArray(raw) || raw.length < 1 || raw.length > 3) return null;
   const out: string[] = [];
   const allowed = allowedNumbers(f);
+  const names = [f.weak ? f.weak.name : '', ...(f.missed || []).map((m) => m.name)]
+    .map((s) => String(s || '').toLowerCase()).filter((s) => /\d/.test(s));
   let words = 0;
   for (const r of raw) {
     if (typeof r !== 'string') return null;
     const t = r.replace(/\s+/g, ' ').trim();
     if (t.length < 3 || t.length > 150) return null;
     if (SHAMING.test(t) || BANNED.test(t) || HYPE.test(t) || FILLER.test(t)) return null;
-    const nums = (t.match(/\d+/g) || []).map(Number);
+    // W1040 — a number that is part of a vow's own name is not a statistic ("Read 20 pages"):
+    // it used to fail the check every time, so that hunter never got a note and every request
+    // paid for two more model calls.
+    let scan = t;
+    for (const nm of names) {
+      for (let at = scan.toLowerCase().indexOf(nm); nm && at >= 0; at = scan.toLowerCase().indexOf(nm)) {
+        scan = scan.slice(0, at) + ' ' + scan.slice(at + nm.length);
+      }
+    }
+    const nums = (scan.match(/\d+/g) || []).map(Number);
     for (const n of nums) if (!allowed.has(n)) return null;
     if (nums.length > 2) return null;                                         // no number pile-ups
     if (f.total > 7 && nums.includes(f.total)) return null;                   // the card already shows kept of total
@@ -168,13 +179,16 @@ async function callDeepSeek(env: Env, facts: RecapFacts, lastText: string | null
   return (JSON.parse(content) as { sentences?: unknown }).sentences;
 }
 
-/** Stored as { v, s }. A bare array is a W1015 (v1) message. */
-function readStored(text: string): { v: number; s: string[] } | null {
+/** W1040 — how many times a week's note may be asked of the model before the rules sentence stands. */
+const RECAP_MAX_ATTEMPTS = 3;
+
+/** Stored as { v, s, n? }. A bare array is a W1015 (v1) message. `n` counts failed attempts (W1040). */
+function readStored(text: string): { v: number; s: string[]; n: number } | null {
   try {
     const o = JSON.parse(text) as unknown;
-    if (Array.isArray(o)) return { v: 1, s: o.map(String) };
-    const r = o as { v?: unknown; s?: unknown };
-    if (r && typeof r.v === 'number' && Array.isArray(r.s)) return { v: r.v, s: r.s.map(String) };
+    if (Array.isArray(o)) return { v: 1, s: o.map(String), n: 0 };
+    const r = o as { v?: unknown; s?: unknown; n?: unknown };
+    if (r && typeof r.v === 'number' && Array.isArray(r.s)) return { v: r.v, s: r.s.map(String), n: Number(r.n) || 0 };
   } catch { /* unreadable = no message */ }
   return null;
 }
@@ -191,11 +205,16 @@ export async function handleRecapText(request: Request, env: Env, session: Sessi
   if (!facts) return jsonError(400, 'BAD_FACTS', 'Facts did not validate.');
 
   // once per hunter per week (per message version)
+  let attempts = 0;
   try {
     const hit = await env.DB.prepare('SELECT text FROM recap_texts WHERE user_id = ? AND week_start = ?').bind(session.userId, ws).first<{ text: string }>();
     const st = hit && hit.text ? readStored(hit.text) : null;
     if (st && st.v === RECAP_VERSION && st.s.length) return jsonOk({ ok: true, text: st.s, source: 'cache' });
+    // W1040 SECURITY — a failed note used to be forgotten, so every request called the model
+    // twice more, for ever (about 8,600 paid calls a day from one account). Failures are counted.
+    if (st && st.v === RECAP_VERSION) attempts = st.n;
   } catch { /* fall through — a cache miss only costs a call */ }
+  if (attempts >= RECAP_MAX_ATTEMPTS) return jsonOk({ ok: true, text: null, source: 'none' });
 
   if (!env.DEEPSEEK_API_KEY) return jsonOk({ ok: true, text: null, source: 'none' });
 
@@ -211,7 +230,13 @@ export async function handleRecapText(request: Request, env: Env, session: Sessi
     try { text = checkSentences(await callDeepSeek(env, facts, lastText, temp), facts); } catch { text = null; }
     if (text) break;
   }
-  if (!text) return jsonOk({ ok: true, text: null, source: 'none' });
+  if (!text) {
+    try {
+      await env.DB.prepare('INSERT OR REPLACE INTO recap_texts (user_id, week_start, text, created_at) VALUES (?, ?, ?, ?)')
+        .bind(session.userId, ws, JSON.stringify({ v: RECAP_VERSION, s: [], n: attempts + 1 }), Date.now()).run();
+    } catch { /* the count is a guard; the reply is the same either way */ }
+    return jsonOk({ ok: true, text: null, source: 'none' });
+  }
 
   try {
     await env.DB.prepare('INSERT OR REPLACE INTO recap_texts (user_id, week_start, text, created_at) VALUES (?, ?, ?, ?)')

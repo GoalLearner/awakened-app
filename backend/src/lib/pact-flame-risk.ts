@@ -22,6 +22,7 @@
 import type { Env } from '../env';
 import { notifyUser, pushConfigured } from './apns';
 import { ptDayKey, prevDay, sqliteUtcToMs } from './pact-streak';
+import { chunks } from './chunk';
 
 const RISK_PT_HOUR = 19; // 7 PM Pacific
 const MIN_STREAK = 2;
@@ -140,17 +141,21 @@ export async function sweepPactFlameRisk(
     const list = rows.results ?? [];
     const ids = list.map((r) => r.id).filter((x): x is string => !!x);
     if (ids.length) {
-      const ph = ids.map(() => '?').join(', ');
-      const pr = await env.DB.prepare(
-        `SELECT instance_id, user_id FROM coop_boss_participants WHERE instance_id IN (${ph})`,
-      )
-        .bind(...ids)
-        .all<{ instance_id: string; user_id: string }>();
+      // W1040 — sliced: D1 refuses more than 100 bound parameters, and the 180-day window held
+      // 433 started hunts by 2026-10-11, so this sweep was failing (caught and logged) nightly.
       const byInstance = new Map<string, string[]>();
-      for (const p of pr.results ?? []) {
-        const a = byInstance.get(p.instance_id) ?? [];
-        a.push(p.user_id);
-        byInstance.set(p.instance_id, a);
+      for (const slice of chunks(ids)) {
+        const ph = slice.map(() => '?').join(', ');
+        const pr = await env.DB.prepare(
+          `SELECT instance_id, user_id FROM coop_boss_participants WHERE instance_id IN (${ph})`,
+        )
+          .bind(...slice)
+          .all<{ instance_id: string; user_id: string }>();
+        for (const p of pr.results ?? []) {
+          const a = byInstance.get(p.instance_id) ?? [];
+          a.push(p.user_id);
+          byInstance.set(p.instance_id, a);
+        }
       }
       for (const r of list) {
         r.participant_ids = [r.challenger_user_id, ...(r.id ? byInstance.get(r.id) ?? [] : [])];
@@ -163,11 +168,14 @@ export async function sweepPactFlameRisk(
 
     // Aliases for the personalized body ("… with James —").
     const userIds = [...new Set(atRisk.flatMap((p) => [p.a, p.b]))];
-    const ph = userIds.map(() => '?').join(', ');
-    const ur = await env.DB.prepare(`SELECT id, alias FROM users WHERE id IN (${ph})`)
-      .bind(...userIds)
-      .all<{ id: string; alias: string }>();
-    const aliasById = new Map((ur.results ?? []).map((u) => [u.id, u.alias]));
+    const aliasById = new Map<string, string>();
+    for (const slice of chunks(userIds)) {   // W1040 — same 100-parameter ceiling
+      const ph = slice.map(() => '?').join(', ');
+      const ur = await env.DB.prepare(`SELECT id, alias FROM users WHERE id IN (${ph})`)
+        .bind(...slice)
+        .all<{ id: string; alias: string }>();
+      for (const u of ur.results ?? []) aliasById.set(u.id, u.alias);
+    }
 
     let sent = 0;
     for (const pair of atRisk) {

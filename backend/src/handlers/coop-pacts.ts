@@ -13,6 +13,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { computePacts, ptDayKey, type WinRow } from '../lib/pact-streak';
+import { chunks } from '../lib/chunk';
 
 // A single user's lifetime STARTED co-op hunts is tiny (needs a partner and a
 // fee-gated multi-hour window). This cap is a pure safety ceiling far above any
@@ -57,12 +58,14 @@ export async function handleCoopPacts(
   // Attach each win's full roster (challenger + participant rows) in one batch query.
   const ids = list.map((r) => r.id).filter((x): x is string => !!x);
   const rosterByInstance = new Map<string, string[]>();
-  if (ids.length) {
-    const ph = ids.map(() => '?').join(', ');
+  // W1040 — one query per slice of ids: D1 refuses more than 100 bound parameters, and this
+  // list has one per started hunt (it failed outright for a hunter past 100 hunts).
+  for (const slice of chunks(ids)) {
+    const ph = slice.map(() => '?').join(', ');
     const pr = await env.DB.prepare(
       `SELECT instance_id, user_id FROM coop_boss_participants WHERE instance_id IN (${ph})`,
     )
-      .bind(...ids)
+      .bind(...slice)
       .all<{ instance_id: string; user_id: string }>();
     for (const p of pr.results ?? []) {
       const a = rosterByInstance.get(p.instance_id) ?? [];

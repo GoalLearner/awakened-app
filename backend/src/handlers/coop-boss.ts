@@ -507,7 +507,7 @@ export async function validateBossInstanceForUser(
   userId: string,
   instanceId: string,
   eventType?: string,
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string; days?: number }> {
   const row = await env.DB.prepare(
     `SELECT boss_id, challenger_user_id, partner_user_id, partner2_user_id, status, starts_at, ends_at
        FROM coop_boss_instances WHERE id = ?`,
@@ -554,7 +554,10 @@ export async function validateBossInstanceForUser(
   const lateBound = (bossMetric(row.boss_id) === 'steps_sleep' && eventType === SLEEP_EVENT_TYPE)
     ? SLEEP_SUBMIT_GRACE_MS : 60000;
   if (Number.isFinite(endMs) && now > endMs + lateBound) return { ok: false, reason: 'AFTER_WINDOW' };
-  return { ok: true };
+  // W1040 — the window in whole days, for the caller's per-day plausibility ceiling.
+  const days = (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs)
+    ? Math.max(1, Math.ceil((endMs - startMs) / 86_400_000)) : 4;
+  return { ok: true, days };
 }
 
 // ── POST /v1/coop-boss — create (invite a friend) ───────────────────
@@ -1458,11 +1461,22 @@ export async function handleCoopBossResolve(
     // (W677: 2 or 3) is now OWED a drop; each claims atomically before granting
     // client-side.
     const winners = participantIds(row);
-    await env.DB.batch(
-      winners.map((uid) =>
-        env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, uid),
-      ),
-    );
+    // W1040 SECURITY — awards only for a hunt that really ended COMPLETED. The insert used to run
+    // whether or not the UPDATE above won: a cancel landing between the load and the UPDATE left
+    // a cancelled hunt with claimable award rows. (Re-checked, not just `changes > 0`, so a
+    // resolver that lost the race to another resolver still back-fills the rows.)
+    let _won = Number(upd?.meta?.changes ?? 0) > 0;
+    if (!_won) {
+      const cur = await loadInstance(env, id);
+      _won = !!cur && cur.status === 'completed';
+    }
+    if (_won) {
+      await env.DB.batch(
+        winners.map((uid) =>
+          env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, uid),
+        ),
+      );
+    }
     // W662 — push EVERY hunter that the hunt is won, EXACTLY ONCE. All clients
     // poll /resolve (and re-poll), but the `WHERE status='active'` guard means
     // only the request that actually flipped the row gets changes>0 — every later
@@ -2029,8 +2043,10 @@ export async function handleCoopBossEmote(
   }
   const instanceId = typeof body.instanceId === 'string' ? body.instanceId : '';
   const emoteKey = typeof body.emote === 'string' ? body.emote : '';
-  const text = COOP_EMOTES[emoteKey];
-  if (!instanceId || !text) {
+  // W1040 SECURITY — an OWN key only: "constructor" or "__proto__" resolved to a function on
+  // the object's prototype, and its source text went out as a push to the whole party.
+  const text = Object.prototype.hasOwnProperty.call(COOP_EMOTES, emoteKey) ? COOP_EMOTES[emoteKey] : undefined;
+  if (!instanceId || typeof text !== 'string' || !text) {
     return jsonError(400, 'INVALID_EMOTE', 'instanceId and a known emote key are required.');
   }
 
@@ -2050,20 +2066,25 @@ export async function handleCoopBossEmote(
   // Checked server-side so a modded client can't spam pushes at a party. The
   // 429 carries retry_after_ms so the client can mirror the true remaining time.
   const now = Date.now();
-  const cool = await env.DB.prepare('SELECT sent_at FROM coop_emote_cooldowns WHERE user_id = ?')
-    .bind(session.userId)
-    .first<{ sent_at: number | null }>();
-  const lastAt = Number(cool?.sent_at ?? 0);
-  if (lastAt && now - lastAt < COOP_EMOTE_COOLDOWN_MS) {
+  // W1040 SECURITY — claim the cooldown in ONE guarded statement. It used to read the stamp and
+  // then write it, so a burst of parallel requests all read the old stamp and all got through
+  // (each one a push to every party member).
+  const claim = await env.DB.prepare(
+    `INSERT INTO coop_emote_cooldowns (user_id, sent_at) VALUES (?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET sent_at = excluded.sent_at
+       WHERE coop_emote_cooldowns.sent_at IS NULL OR coop_emote_cooldowns.sent_at <= ?`,
+  )
+    .bind(session.userId, now, now - COOP_EMOTE_COOLDOWN_MS)
+    .run();
+  if (!(Number(claim?.meta?.changes ?? 0) > 0)) {
+    const cool = await env.DB.prepare('SELECT sent_at FROM coop_emote_cooldowns WHERE user_id = ?')
+      .bind(session.userId)
+      .first<{ sent_at: number | null }>();
+    const lastAt = Number(cool?.sent_at ?? now);
     return jsonError(429, 'EMOTE_COOLDOWN', 'Your next battle cry is not ready yet.', {
-      retry_after_ms: COOP_EMOTE_COOLDOWN_MS - (now - lastAt),
+      retry_after_ms: Math.max(0, COOP_EMOTE_COOLDOWN_MS - (now - lastAt)),
     });
   }
-  await env.DB.prepare(
-    'INSERT INTO coop_emote_cooldowns (user_id, sent_at) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET sent_at = excluded.sent_at',
-  )
-    .bind(session.userId, now)
-    .run();
 
   // W801 — persist the cry so every partner's battle log can show it (the push
   // alone evaporated; owner: "popped up on push but not in the message center").

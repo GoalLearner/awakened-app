@@ -41,6 +41,7 @@ import { handleAdminRetention } from './handlers/admin-retention';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
 import { handleEntitlementsGet } from './handlers/iap-entitlements';
+import { capRequestBody, bodyCapFor } from './lib/body-cap';
 import { handleEntitlementsReconcile } from './handlers/iap-reconcile';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
 import { handleHallFinishPost, handleHallGet } from './handlers/hall-of-awakened';
@@ -210,6 +211,14 @@ export default {
       return handlePreflight();
     }
 
+    // W1040 SECURITY — no body is read past its route's ceiling (see lib/body-cap.ts).
+    // Counted as it streams, so a missing or false Content-Length changes nothing.
+    {
+      const capped = await capRequestBody(request, bodyCapFor(new URL(request.url).pathname));
+      if (!capped) return withCors(jsonError(413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.'));
+      request = capped;
+    }
+
     const startMs = Date.now();
     const url = new URL(request.url);
     const path = url.pathname;
@@ -329,8 +338,10 @@ export default {
           try {
             session = await verifySessionJwt(authHeader.slice(7), env);
           } catch (err) {
-            const detail = err instanceof Error ? err.message : 'Session verification failed.';
-            response = jsonError(401, 'INVALID_SESSION', detail);
+            // W1040 SECURITY — a static detail (the W739 rule this one path had missed): the
+            // verifier's own message named the failure mode and the signing-key state.
+            console.warn('session verify failed:', err instanceof Error ? err.message : err);   // routine (expired tokens), so not an error
+            response = jsonError(401, 'INVALID_SESSION', 'Session is invalid or has expired.');
             logRequest(method, path, response.status, Date.now() - startMs);
             return withCors(response);
           }
@@ -508,7 +519,11 @@ export default {
           } else if (path === '/v1/users/me/entitlements' && method === 'GET') {
             // W297 — owned cosmetic skin ids (real-money IAP). Source of truth
             // for skin ownership; the client caches it display-only.
-            response = await handleEntitlementsGet(request, env, session);
+            // W1040 — the one session route that had no limiter.
+            const _rl = await env.RL_USER_ACCOLADES_READ.limit({ key: 'ent:' + session.userId });
+            response = _rl.success
+              ? await handleEntitlementsGet(request, env, session)
+              : jsonError(429, 'RATE_LIMITED', 'Slow down.');
           } else if (path === '/v1/users/me/entitlements/reconcile' && method === 'POST') {
             // W637 — self-healing grant. Reads the caller's authoritative
             // purchases from RevenueCat's REST API and grants any missing

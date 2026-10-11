@@ -27,6 +27,14 @@ import { jsonOk } from '../lib/responses';
 const EVENTS_MAX_PER_CALL = 10;
 const EVENT_NAME_RE = /^[a-z0-9_.-]{1,40}$/i;
 const FUNNEL_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+// W1040 SECURITY — one account could add 60 rows a minute for ever (no per-user ceiling, no
+// dedupe). The real client emits a few events a day; 300 is far above any honest hunter.
+const FUNNEL_MAX_PER_USER_PER_DAY = 300;
+// W1040 — the prune ran on EVERY event-carrying ping, and until migration 0067 adds the
+// created_at index it is a full table scan. One ping in twenty is plenty for a 90-day window.
+const FUNNEL_PRUNE_ONE_IN = 20;
+/** Test seam for the sampled prune. */
+export const _sample = { roll: (): number => Math.random() };
 
 function clamp(v: unknown, max: number): string | null {
   if (typeof v !== 'string') return null;
@@ -77,29 +85,41 @@ export async function handleAppOpenPost(
   let accepted = 0;
   const rawEvents = body && Array.isArray(body.events) ? body.events : [];
   if (rawEvents.length > 0) {
+    // W1040 — how much of today's per-user allowance is left (uses idx_funnel_events_user_time).
+    let room = FUNNEL_MAX_PER_USER_PER_DAY;
+    try {
+      const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM funnel_events WHERE user_id = ? AND created_at >= ?')
+        .bind(session.userId, nowMs - 86_400_000).first<{ n: number }>();
+      room -= Number(c?.n ?? 0);
+    } catch { /* the count is a guard, never a reason to fail a ping */ }
     const stmts = [];
+    let offered = 0;
     for (const raw of rawEvents.slice(0, EVENTS_MAX_PER_CALL)) {
       const r = raw as Record<string, unknown> | null;
       const name = clamp(r?.e, 40);
       if (!name || !EVENT_NAME_RE.test(name)) continue; // skip junk, accept the rest
       const detail = clamp(r?.d, 200);
+      offered += 1;
+      if (stmts.length >= room) continue;   // over the daily allowance: acknowledged, not stored
       stmts.push(
         env.DB.prepare(
           'INSERT INTO funnel_events (user_id, created_at, event, detail, build) VALUES (?, ?, ?, ?, ?)',
         ).bind(session.userId, nowMs, name, detail, build),
       );
     }
-    if (stmts.length > 0) {
-      // Self-bounding retention, same posture as client_errors: inline so the
-      // table can never outgrow the window even if crons stall.
+    // Self-bounding retention, same posture as client_errors: inline so the table can
+    // never outgrow the window even if crons stall — now on a sample of pings.
+    if (stmts.length > 0 && _sample.roll() * FUNNEL_PRUNE_ONE_IN < 1) {
       stmts.push(
         env.DB.prepare('DELETE FROM funnel_events WHERE created_at < ?').bind(
           nowMs - FUNNEL_RETENTION_MS,
         ),
       );
-      await env.DB.batch(stmts);
-      accepted = stmts.length - 1; // minus the prune
     }
+    if (stmts.length > 0) await env.DB.batch(stmts);
+    // Every well-formed event is reported accepted, stored or not, so the client clears
+    // its queue instead of re-sending what the allowance will only drop again.
+    accepted = offered;
   }
 
   return jsonOk({ ok: true, date_utc: dateUtc, events_accepted: accepted });

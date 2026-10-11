@@ -183,12 +183,18 @@ function mapFriendRow(
   // Merge optional rank fields only when the friend has a summary.
   // rankLabel + rank_tier are NOT NULL on the summary row, so their
   // presence is the gate. rank_points is NEVER returned to friends in v1.
+  // W1040 SECURITY — someone you have only ASKED has agreed to nothing. A request used to hand
+  // back their exact XP (packed into rankSortValue), their kill and drop totals, and the time
+  // of their last sync, so anyone could watch when any hunter was last in the app just by
+  // sending a request. Until they accept, an outgoing request shows the public rank badge only.
+  const unanswered = direction === 'outgoing';
   if (joined.rank_label && joined.rank_tier) {
     out.rankTier      = joined.rank_tier;
     out.rankDivision  = joined.rank_division; // may be null for S+
     out.rankLabel     = joined.rank_label;
-    out.rankSortValue = joined.rank_sort_value ?? 0;
+    out.rankSortValue = unanswered ? 0 : (joined.rank_sort_value ?? 0);
     out.prestige      = joined.prestige ?? 0; // W453 — 0 unless S+
+    if (unanswered) return out;
 
     if (typeof joined.server_updated_at === 'number' && Number.isFinite(joined.server_updated_at)) {
       out.rankUpdatedAt = new Date(joined.server_updated_at).toISOString();
@@ -310,7 +316,8 @@ export async function handleFriendsList(
     const joined = joinedMap.get(oid) ?? null;
     const serialized = mapFriendRow(row, session.userId, joined);
     if (!serialized) continue;
-    serialized.member = (joined?.founder_seq != null) || premiumSet.has(oid);   // W700
+    // W1040 — whether someone pays is theirs to show once they accept (or when THEY asked).
+    serialized.member = serialized.direction === 'outgoing' ? false : ((joined?.founder_seq != null) || premiumSet.has(oid));   // W700
     if (serialized.status === 'accepted') friends.push(serialized);
     else if (serialized.direction === 'incoming') incoming.push(serialized);
     else outgoing.push(serialized);
@@ -318,6 +325,9 @@ export async function handleFriendsList(
 
   return jsonOk({ ok: true, friends, incoming, outgoing });
 }
+
+/** W1040 — how many unanswered outgoing requests one hunter may hold. */
+const MAX_OUTGOING_PENDING = 30;
 
 // ─────────────────────────────────────────────────────────────
 // POST /v1/friends/request   body: { alias }
@@ -415,6 +425,15 @@ export async function handleFriendsRequest(
         }),
       );
     return jsonOk({ ok: true, friend, autoAccepted: true });
+  }
+
+  // W1040 SECURITY — a ceiling on requests waiting for an answer. Without one, a single
+  // account could send a "wants to join your guild" push to every hunter, ten a minute.
+  const waiting = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM friends WHERE status = 'pending' AND requester_user_id = ?",
+  ).bind(session.userId).first<{ n: number }>();
+  if (Number(waiting?.n ?? 0) >= MAX_OUTGOING_PENDING) {
+    return jsonError(429, 'TOO_MANY_PENDING', 'You have too many requests waiting. Let some be answered first.');
   }
 
   // Otherwise — create a fresh pending row.

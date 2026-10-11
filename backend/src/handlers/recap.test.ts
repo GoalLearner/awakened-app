@@ -141,7 +141,28 @@ describe('POST /v1/recap/text', () => {
     const { env, calls } = makeEnv();
     expect(await (await handleRecapText(req({ week_start: WS, facts: FACTS }), env, session)).json()).toEqual({ ok: true, text: null, source: 'none' });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(calls.some((c) => /INSERT/.test(c.sql))).toBe(false);
+    // W1040 — the failure is COUNTED (an empty note, n = 1), so it cannot be retried for ever
+    const ins = calls.filter((c) => /INSERT OR REPLACE INTO recap_texts/.test(c.sql));
+    expect(ins.length).toBe(1);
+    expect(JSON.parse(ins[0].binds[2] as string)).toEqual({ v: RECAP_VERSION, s: [], n: 1 });
+  });
+  it('W1040: after three counted failures the model is not called again that week', async () => {
+    const fetchSpy = vi.fn(async () => deepseekReply(GOOD));
+    vi.stubGlobal('fetch', fetchSpy);
+    const { env } = makeEnv({ cachedRaw: JSON.stringify({ v: RECAP_VERSION, s: [], n: 3 }) });
+    expect(await (await handleRecapText(req({ week_start: WS, facts: FACTS }), env, session)).json()).toEqual({ ok: true, text: null, source: 'none' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    // two failures so far: one more try is allowed, and a good note is stored and returned
+    const second = makeEnv({ cachedRaw: JSON.stringify({ v: RECAP_VERSION, s: [], n: 2 }) });
+    expect(((await (await handleRecapText(req({ week_start: WS, facts: FACTS }), second.env, session)).json()) as { source: string }).source).toBe('ai');
+  });
+  it('W1040: a number inside a vow\'s own name is not a statistic ("Read 20 pages")', () => {
+    const f: RecapFacts = { ...FACTS, weak: { name: 'Read 20 pages', kept: 3, of: 7, weekly: false } };
+    expect(checkSentences(['Read 20 pages was the one that slipped: 3 of 7 days.'], f)).toEqual(['Read 20 pages was the one that slipped: 3 of 7 days.']);
+    // a number that is NOT in the facts and NOT in a name is still refused
+    expect(checkSentences(['Read 20 pages slipped on 5 of 9 days.'], f)).toBeNull();
+    const near: RecapFacts = { ...NEAR, missed: [{ name: 'Run 5K', day: 'Saturday' }] };
+    expect(checkSentences(['Only Saturday slipped: Run 5K.'], near)).toEqual(['Only Saturday slipped: Run 5K.']);
   });
   it('a DeepSeek outage returns text null, never an error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));

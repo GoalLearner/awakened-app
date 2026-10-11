@@ -4,13 +4,13 @@
  * other handler tests), extended with a batch() capture.
  */
 import { describe, expect, it } from 'vitest';
-import { handleAppOpenPost } from './app-open';
+import { handleAppOpenPost, _sample } from './app-open';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
 interface Captured { sql: string; binds: unknown[] }
 
-function makeEnv(opts?: { rateLimited?: boolean }) {
+function makeEnv(opts?: { rateLimited?: boolean; todayCount?: number }) {
   const calls: Captured[] = [];
   const batches: Captured[][] = [];
   const mkStmt = (sql: string) => ({
@@ -20,7 +20,7 @@ function makeEnv(opts?: { rateLimited?: boolean }) {
       return {
         __captured: captured,
         run: async () => ({ success: true, meta: { changes: 1 } }),
-        first: async () => null,
+        first: async () => (/COUNT\(\*\) AS n FROM funnel_events WHERE user_id = \?/.test(sql) ? { n: opts?.todayCount ?? 0 } : null),
         all: async () => ({ results: [], success: true, meta: {} }),
       };
     },
@@ -71,6 +71,7 @@ describe('POST /v1/users/me/app-open (W834)', () => {
   });
 
   it('accepts batched funnel events and reports the accepted count', async () => {
+    _sample.roll = () => 0;   // this ping is one of the sampled prunes
     const { env, batches } = makeEnv();
     const res = await handleAppOpenPost(
       makeReq({
@@ -94,6 +95,30 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     expect(inserts[0].binds[3]).toBe('weekly_insights');
     // Inline retention prune rides the same batch.
     expect(batches[0].some((c) => /DELETE FROM funnel_events WHERE created_at </.test(c.sql))).toBe(true);
+  });
+
+  // W1040 — the 2026-10-11 review: the prune was a full scan on every ping, and one account
+  // could add rows without limit.
+  it('W1040: most pings do not prune (it is sampled), and the events still land', async () => {
+    _sample.roll = () => 0.99;
+    const { env, batches } = makeEnv();
+    const res = await handleAppOpenPost(makeReq({ events: [{ e: 'paywall_impression' }] }), env, session);
+    expect(((await res.json()) as { events_accepted: number }).events_accepted).toBe(1);
+    expect(batches[0].length).toBe(1);
+    expect(batches[0].some((c) => /DELETE FROM funnel_events/.test(c.sql))).toBe(false);
+  });
+
+  it('W1040: a hunter at the daily allowance is acknowledged but nothing more is stored', async () => {
+    _sample.roll = () => 0;
+    const { env, batches, calls } = makeEnv({ todayCount: 300 });
+    const res = await handleAppOpenPost(makeReq({ events: [{ e: 'a_one' }, { e: 'a_two' }] }), env, session);
+    expect(((await res.json()) as { events_accepted: number }).events_accepted).toBe(2);   // so the client clears its queue
+    expect(batches.length).toBe(0);
+    expect(calls.some((c) => /INSERT INTO funnel_events/.test(c.sql))).toBe(false);
+    // two short of the allowance: two are stored, the third is dropped
+    const near = makeEnv({ todayCount: 298 });
+    await handleAppOpenPost(makeReq({ events: [{ e: 'a_one' }, { e: 'a_two' }, { e: 'a_three' }] }), near.env, session);
+    expect(near.batches[0].filter((c) => /INSERT INTO funnel_events/.test(c.sql)).length).toBe(2);
   });
 
   it('caps events at 10 per call', async () => {

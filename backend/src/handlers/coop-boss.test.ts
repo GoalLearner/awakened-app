@@ -118,7 +118,15 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
             }
             return null;
           },
-          run: async () => ({ success: true, meta: { changes: 1 } }),
+          run: async () => {
+            // W1040 — the cooldown is claimed in one guarded upsert: it writes only when there is
+            // no stamp yet, or the stamp is older than the cutoff bound third.
+            if (sql.includes('INTO coop_emote_cooldowns')) {
+              const free = opts.emoteSentAt == null || opts.emoteSentAt <= (args[2] as number);
+              return { success: true, meta: { changes: free ? 1 : 0 } };
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
         }),
       };
     },
@@ -631,6 +639,27 @@ describe('POST /v1/coop-boss/emote (W747)', () => {
     expect(body.retry_after_ms).toBeLessThanOrEqual(30 * 60 * 1000);
   });
 
+  it('W1040: the cooldown is claimed in one guarded statement (no read-then-write gap for a burst to slip through)', async () => {
+    const log: string[] = [];
+    const db = makeDb({ instance: ACTIVE }, log);
+    const res = await handleCoopBossEmote(emoteReq({ instanceId: 'inst-1', emote: 'rally' }), makeEnv(db), session('u1'));
+    expect(res.status).toBe(200);
+    const claim = log.find((s) => s.includes('INTO coop_emote_cooldowns')) || '';
+    expect(claim).toMatch(/ON CONFLICT\(user_id\) DO UPDATE SET sent_at = excluded\.sent_at\s+WHERE coop_emote_cooldowns\.sent_at IS NULL OR coop_emote_cooldowns\.sent_at <= \?/);
+    // and nothing reads the stamp before claiming it
+    expect(log.findIndex((s) => s.includes('SELECT sent_at FROM coop_emote_cooldowns'))).toBe(-1);
+  });
+
+  it('W1040: only an OWN emote key is a cry ("constructor" and "__proto__" are not)', async () => {
+    for (const emote of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      mockNotify.mockClear();
+      const res = await handleCoopBossEmote(emoteReq({ instanceId: 'inst-1', emote }), makeEnv(makeDb({ instance: ACTIVE })), session('u1'));
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EMOTE');
+      expect(mockNotify).not.toHaveBeenCalled();
+    }
+  });
+
   it('a cry AFTER the window (1h+ ago) is accepted again', async () => {
     const db = makeDb({ instance: ACTIVE, emoteSentAt: Date.now() - (60 * 60 * 1000 + 60000) });
     const res = await handleCoopBossEmote(
@@ -861,5 +890,45 @@ describe('W925 — fan-out duo summons', () => {
     const sqlLog: string[] = [];
     await handleCoopBossCreate(createWith(['u2']), makeEnv(makeDb({ running: 0 }, sqlLog)), session('u1'));
     expect(sqlLog.filter((q) => q.includes('INSERT INTO coop_boss_instances')).length).toBe(1);
+  });
+});
+
+// ── W1040 — awards are written only for a hunt that really ended completed ──
+describe('W1040 — the resolve race and the award rows', () => {
+  const WON = { ...PENDING_ROW, status: 'active', partner_joined_at: '2026-07-12 01:00:00', starts_at: new Date(Date.now() - 3600_000).toISOString(), ends_at: new Date(Date.now() + 3600_000).toISOString() };
+  /** A goal-met hunt whose UPDATE loses the race; the row then reads back as `after`. */
+  function racing(after: string, batched: string[]) {
+    const base = makeDb({ instance: WON });
+    let reads = 0;
+    return {
+      prepare: (sql: string) => {
+        const stmt = (base as unknown as { prepare: (s: string) => { bind: (...a: unknown[]) => Record<string, unknown> } }).prepare(sql);
+        return {
+          bind: (...a: unknown[]) => {
+            const b = stmt.bind(...a) as Record<string, unknown>;
+            if (/FROM verified_events/.test(sql)) return { ...b, all: async () => ({ results: [{ user_id: 'u1', event_type: 'steps_total', s: 10000 }, { user_id: 'u2', event_type: 'steps_total', s: 7000 }], success: true, meta: {} }) };
+            if (/SET status = 'completed'/.test(sql)) return { ...b, run: async () => ({ success: true, meta: { changes: 0 } }) };
+            if (/SELECT \* FROM coop_boss_instances/.test(sql)) return { ...b, first: async () => (reads++ === 0 ? { ...WON } : { ...WON, status: after }) };
+            if (/INTO coop_boss_awards/.test(sql)) return { ...b, run: async () => { batched.push(sql); return { success: true, meta: { changes: 1 } }; } };
+            return b;
+          },
+        };
+      },
+      batch: async (stmts: Array<{ run: () => Promise<unknown> }>) => Promise.all(stmts.map((s) => s.run())),
+    } as unknown as D1Database;
+  }
+  const resolveReq = () => new Request('http://test/v1/coop-boss/inst-1/resolve', { method: 'POST' });
+
+  it('a cancel that lands first leaves NO award rows behind', async () => {
+    const batched: string[] = [];
+    const res = await handleCoopBossResolve(resolveReq(), makeEnv(racing('cancelled', batched)), session('u1'), 'inst-1');
+    expect(res.status).toBe(200);
+    expect(batched.length).toBe(0);
+  });
+
+  it('losing the race to ANOTHER resolver still back-fills the award rows (one per hunter)', async () => {
+    const batched: string[] = [];
+    await handleCoopBossResolve(resolveReq(), makeEnv(racing('completed', batched)), session('u1'), 'inst-1');
+    expect(batched.length).toBe(2);
   });
 });

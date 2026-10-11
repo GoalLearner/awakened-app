@@ -151,9 +151,10 @@ export async function handleUserStatePost(
     return jsonError(400, 'INVALID_TIMESTAMP', 'client_updated_at is not a valid ISO 8601 string.');
   }
 
-  const appVersion = typeof body.app_version === 'string' ? body.app_version : null;
-  const deviceId = typeof body.device_id === 'string' ? body.device_id : null;
-  const checksum = typeof body.checksum === 'string' ? body.checksum : null;
+  // W1040 — the three envelope strings were stored at any length; clamp them.
+  const appVersion = typeof body.app_version === 'string' ? body.app_version.slice(0, 40) : null;
+  const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 128) : null;
+  const checksum = typeof body.checksum === 'string' ? body.checksum.slice(0, 128) : null;
 
   if (body.state === undefined || body.state === null) {
     return jsonError(400, 'INVALID_STATE', 'state field is required (object).');

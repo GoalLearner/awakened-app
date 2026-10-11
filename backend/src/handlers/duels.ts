@@ -74,6 +74,15 @@ const ALLOWED_EVENT_SOURCES = new Set([
 const MAX_EVENTS_PER_BATCH = 25;
 // W686 — per-type flat sanity caps at ingest (physical impossibility bounds).
 const EVENT_VALUE_CAPS: Record<string, number> = { sleep_minutes_total: 10080 };
+// W1040 SECURITY — per-hunter, per-day plausibility ceilings for co-op submissions, scaled
+// by the hunt's window (a 24h duo: 50,000 steps; an 80h raid: four days' worth). The step
+// line is leaderboard-submit's STEP_TOTAL_PER_DAY_CEILING. Not anti-cheat (a forged client
+// can still lie inside human limits) but a single request can no longer finish any hunt
+// with one absurd number. Largest real values on record at the time: 44,375 steps, 181 flights.
+const COOP_VALUE_PER_DAY: Record<string, number> = { steps_total: 50_000, flights_total: 300 };
+// W1040 SECURITY — every stored string has a ceiling. The real client sends ids of about 64
+// characters and ISO timestamps; nothing legitimate comes near these.
+const EVENT_FIELD_MAX = { id: 128, short: 40, stamp: 48, metadata: 1024 };
 const DUEL_REWARD_REASON = 'duel_win';
 // v3 Phase 1z.155 — loser stake deduction reason. Pairs with the
 // winner-side DUEL_REWARD_REASON above; both inserts share the
@@ -764,7 +773,7 @@ export async function handleVerifiedEventsSubmit(
   const errors: Array<{ index: number; reason: string }> = [];
   // W371 — cache co-op instance validations within the batch so a batch of
   // N step events for the same instance costs one lookup, not N.
-  const bossCache = new Map<string, { ok: boolean; reason?: string }>();
+  const bossCache = new Map<string, { ok: boolean; reason?: string; days?: number }>();
 
   for (let i = 0; i < events.length; i++) {
     const e = events[i] || {};
@@ -795,6 +804,18 @@ export async function handleVerifiedEventsSubmit(
     }
 
     if (!clientEventId) { errors.push({ index: i, reason: 'MISSING_CLIENT_EVENT_ID' }); continue; }
+    // W1040 SECURITY — this route stored nine client strings with no length check at all.
+    if (clientEventId.length > EVENT_FIELD_MAX.id || metric.length > EVENT_FIELD_MAX.short ||
+        occurredAt.length > EVENT_FIELD_MAX.stamp ||
+        (duelId !== null && duelId.length > EVENT_FIELD_MAX.id) ||
+        (bossInstanceId !== null && bossInstanceId.length > EVENT_FIELD_MAX.id) ||
+        (metricDate !== null && metricDate.length > EVENT_FIELD_MAX.short) ||
+        (windowStart !== null && windowStart.length > EVENT_FIELD_MAX.stamp) ||
+        (windowEnd !== null && windowEnd.length > EVENT_FIELD_MAX.stamp) ||
+        (clientCreated !== null && clientCreated.length > EVENT_FIELD_MAX.stamp) ||
+        (metadata !== null && metadata.length > EVENT_FIELD_MAX.metadata)) {
+      errors.push({ index: i, reason: 'FIELD_TOO_LONG' }); continue;
+    }
     if (!ALLOWED_EVENT_TYPES.has(eventType)) {
       errors.push({ index: i, reason: 'INVALID_EVENT_TYPE' }); continue;
     }
@@ -824,6 +845,18 @@ export async function handleVerifiedEventsSubmit(
         bossCache.set(bossCacheKey, v);
       }
       if (!v.ok) { errors.push({ index: i, reason: v.reason || 'BOSS_INSTANCE_INVALID' }); continue; }
+      const perDay = COOP_VALUE_PER_DAY[eventType];
+      if (perDay !== undefined && value > perDay * (v.days || 1)) {
+        errors.push({ index: i, reason: 'INVALID_VALUE' }); continue;
+      }
+    } else {
+      // W1040 SECURITY — an event tied to no co-op hunt is read by nothing: duels are retired
+      // (none active or pending), the client stopped writing them on 2026-06-12, and the last
+      // such row in production is from May. Storing them anyway was an open door to fill the
+      // database from one account. They are acknowledged (so an old device's queue drains) and
+      // dropped.
+      duplicates += 1;
+      continue;
     }
 
     try {

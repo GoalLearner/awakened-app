@@ -17,7 +17,7 @@ describe('CORS preflight (1z.192)', () => {
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
     expect(res.headers.get('Access-Control-Allow-Methods')).toBe(
-      'GET, POST, PUT, OPTIONS',
+      'GET, POST, PUT, DELETE, OPTIONS',   // W1040 — DELETE: leave the raid finder, unregister a push token
     );
   });
 

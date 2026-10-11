@@ -239,6 +239,30 @@ function meOut(me: Me) {
   };
 }
 
+/** W1040 — is there a block between these two hunters, in either direction? */
+async function blockedBetween(env: Env, a: string, b: string): Promise<boolean> {
+  if (!a || !b || a === b) return false;
+  const row = await env.DB.prepare(
+    'SELECT 1 FROM board_blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?) LIMIT 1',
+  ).bind(a, b, b, a).first();
+  return !!row;
+}
+
+/** W1040 SECURITY — what an EDIT must pass. Editing skipped the write gate altogether: a muted
+ *  hunter could go on publishing through posts they already had, and a post could be edited
+ *  into a link or a phone number after it cleared the filter. An edit is a write: consent,
+ *  no mute, and the same junk filter as a new post (moderators exempt from the filter, as on
+ *  posting). No rank check: the post already exists. */
+function editDeny(me: Me, title: string | null, text: string): Response | null {
+  if (me.sim) return jsonError(403, 'SIM_READ_ONLY', 'Simulated hunters cannot post.');
+  if (isModRole(me.role)) return null;
+  if (!me.consented) return jsonError(403, 'CONSENT_REQUIRED', 'Read and accept the community rules first.');
+  if (me.muted_until) return jsonError(403, 'MUTED', 'You are muted.', { muted_until: me.muted_until });
+  const junk = (title ? junkReason(title, 'title') : null) || junkReason(text, 'body');
+  if (junk) return jsonError(400, junk.code, junk.detail);
+  return null;
+}
+
 /** The write gate every posting route shares: rate limit → sim → consent → mute → rank. */
 async function writeGate(env: Env, session: SessionPayload, kind: 'topic' | 'reply'): Promise<{ me: Me } | { deny: Response }> {
   const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
@@ -380,8 +404,12 @@ const AUTHOR_JOIN = `
 const AUTHOR_COLS = `x.author_id AS author_id, u.alias AS alias, pps.rank_label AS rank_label,
             pps.founder_seq AS founder_seq, (bm.user_id IS NOT NULL) AS is_mod, bm.role AS mod_role`;
 /** Symmetric block exclusion, bound twice with the caller's id. */
+// W1040 SECURITY — a block aimed AT a moderator hides nothing from that moderator. Before
+// this, anyone could read the moderator list, block each of them, and post where no
+// moderator could see or act (a moderator opening the post got a 404).
 const BLOCK_FILTER = `x.author_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
-       AND x.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)`;
+       AND x.author_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?
+                                  AND blocked_id NOT IN (SELECT user_id FROM board_moderators))`;
 
 /** Resolve an alias to a user (case- and space-insensitive, as friends.ts does). */
 async function findUserByAlias(env: Env, raw: string): Promise<{ id: string; alias: string } | null> {
@@ -722,18 +750,26 @@ export async function handleBoardReplyPost(request: Request, env: Env, session: 
   const text = clampText(body.body, BODY_MAX);
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
   if (!textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
-  const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at, locked_at FROM board_topics WHERE id = ? LIMIT 1')
-    .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null; locked_at: number | null }>();
+  const topic = await env.DB.prepare('SELECT id, author_id, hidden_at, deleted_at, locked_at FROM board_topics WHERE id = ? LIMIT 1')
+    .bind(topicId).first<{ id: string; author_id: string; hidden_at: number | null; deleted_at: number | null; locked_at: number | null }>();
   if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
   if (topic.hidden_at != null && !isModRole(gate.me.role)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  // W1040 SECURITY — blocks were enforced on reads only: a blocked hunter who kept a topic's id
+  // could go on replying under it, in view of everyone but the person who blocked them.
+  if (!isModRole(gate.me.role) && await blockedBetween(env, session.userId, topic.author_id)) {
+    return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  }
   if (topic.locked_at != null && !isModRole(gate.me.role)) return jsonError(403, 'TOPIC_LOCKED', 'This topic is locked.');   // W914
   // W929 — a reply may answer a TOP-LEVEL reply of this topic (one level of nesting).
   let parentId: string | null = null;
   if (typeof body.parent_reply_id === 'string' && body.parent_reply_id) {
     if (!ID_RE.test(body.parent_reply_id)) return jsonError(400, 'BAD_PARENT', 'That reply is not on this topic.');
-    const parent = await env.DB.prepare('SELECT id, topic_id, parent_reply_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
-      .bind(body.parent_reply_id).first<{ id: string; topic_id: string; parent_reply_id: string | null; deleted_at: number | null }>();
+    const parent = await env.DB.prepare('SELECT id, author_id, topic_id, parent_reply_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
+      .bind(body.parent_reply_id).first<{ id: string; author_id: string; topic_id: string; parent_reply_id: string | null; deleted_at: number | null }>();
     if (!parent || parent.deleted_at != null || parent.topic_id !== topicId || parent.parent_reply_id) {
+      return jsonError(400, 'BAD_PARENT', 'That reply is not on this topic.');
+    }
+    if (!isModRole(gate.me.role) && await blockedBetween(env, session.userId, parent.author_id)) {   // W1040
       return jsonError(400, 'BAD_PARENT', 'That reply is not on this topic.');
     }
     parentId = parent.id;
@@ -813,6 +849,8 @@ export async function handleBoardReplyEdit(request: Request, env: Env, session: 
     .bind(replyId).first<{ author_id: string; deleted_at: number | null }>();
   if (!row || row.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such reply.');
   if (row.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own reply.');
+  const denied = editDeny(await meState(env, session.userId), null, text);   // W1040
+  if (denied) return denied;
   const now = Date.now();
   await env.DB.prepare('UPDATE board_replies SET body = ?, edited_at = ? WHERE id = ?').bind(text, now, replyId).run();
   return jsonOk({ ok: true, edited_at: now });
@@ -835,10 +873,12 @@ export async function handleBoardTopicEdit(request: Request, env: Env, session: 
   const row = await env.DB.prepare('SELECT author_id FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
     .bind(topicId).first<{ author_id: string }>();
   if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
-  if (row.author_id !== session.userId) {
-    const me = await meState(env, session.userId);
-    if (!isModRole(me.role)) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own topic.');
+  const meS = await meState(env, session.userId);
+  if (row.author_id !== session.userId && !isModRole(meS.role)) {
+    return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own topic.');
   }
+  const denied = editDeny(meS, title, text);   // W1040
+  if (denied) return denied;
   const now = Date.now();
   await env.DB.prepare('UPDATE board_topics SET title = ?, body = ?, edited_at = ? WHERE id = ?').bind(title, text, now, topicId).run();
   return jsonOk({ ok: true, edited_at: now });
@@ -852,6 +892,10 @@ export async function handleBoardFollowPost(_request: Request, env: Env, session
   const topic = await env.DB.prepare('SELECT id, hidden_at, deleted_at FROM board_topics WHERE id = ? LIMIT 1')
     .bind(topicId).first<{ id: string; hidden_at: number | null; deleted_at: number | null }>();
   if (!topic || topic.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  if (topic.hidden_at != null) {   // W1040 — it was read and never checked: followers got push snippets of a hidden topic
+    const me = await meState(env, session.userId);
+    if (!isModRole(me.role)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  }
   const ins = await env.DB.prepare('INSERT OR IGNORE INTO board_follows (topic_id, user_id, created_at) VALUES (?, ?, ?)')
     .bind(topicId, session.userId, Date.now()).run();
   let following = true;
@@ -887,7 +931,11 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
   ).bind(kind, id).first<{ n: number }>();
   const n = countRow ? Number(countRow.n) : 0;
   let autoHidden = false;
-  if (n >= AUTO_HIDE_REPORTS && target.hidden_at == null) {
+  // W1040 SECURITY — three accounts could hide ANY post, the developers' pinned update included.
+  // A moderator's post is reviewed by a person, never hidden by a count.
+  const authorIsMod = !!(await env.DB.prepare('SELECT 1 FROM board_moderators WHERE user_id = ? LIMIT 1')
+    .bind(target.author_id).first());
+  if (!authorIsMod && n >= AUTO_HIDE_REPORTS && target.hidden_at == null) {
     const upd = await env.DB.prepare(`UPDATE ${table} SET hidden_at = ?, hidden_by = 'auto' WHERE id = ? AND hidden_at IS NULL`)
       .bind(now, id).run();
     autoHidden = !!(upd.meta && Number(upd.meta.changes) >= 1);
@@ -1004,6 +1052,13 @@ export async function handleBoardTopicHide(_request: Request, env: Env, session:
   const hide = row.hidden_at == null;
   await env.DB.prepare('UPDATE board_topics SET hidden_at = ?, hidden_by = ? WHERE id = ?')
     .bind(hide ? Date.now() : null, hide ? session.userId : null, topicId).run();
+  if (!hide) {
+    // W1040 SECURITY — a moderator bringing a topic back has judged its reports. They used to stay
+    // open, so the count was still at three and ANY further report (even a repeat) hid it again.
+    await env.DB.prepare(
+      'UPDATE board_reports SET resolved_at = ?, resolved_by = ? WHERE target_kind = ? AND target_id = ? AND resolved_at IS NULL',
+    ).bind(Date.now(), session.userId, 'topic', topicId).run();
+  }
   return jsonOk({ ok: true, hidden: hide });
 }
 

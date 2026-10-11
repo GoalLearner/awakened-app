@@ -23,7 +23,10 @@
 // (GET/POST) remain unaffected.
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+  // W1040 — DELETE added. The two DELETE routes (leave the raid finder, unregister a push
+  // token) were being refused at preflight inside the app's WebView, exactly as PUT once was:
+  // "leave the finder" did not leave, and a signed-out phone kept its push registration.
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
   'Access-Control-Max-Age': '86400',
 };

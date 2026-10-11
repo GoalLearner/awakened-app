@@ -93,6 +93,8 @@ function sanitizeCombatant(raw: any): RawCombatant {
 export class MatchRoom {
   state: DurableObjectState;
   env: Env;
+  /** W1040 — when a heartbeat last wrote the match to storage (see webSocketMessage). */
+  pingSavedAt = 0;
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
@@ -488,7 +490,15 @@ export class MatchRoom {
     const m = await this.load();
     if (!m) return;
     m.lastSeen[slot] = Date.now(); m.connected[slot] = true;
-    if (msg.type === 'ping') { try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* */ } await this.save(m); return; }
+    if (msg.type === 'ping') {
+      try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* */ }
+      // W1040 SECURITY — a heartbeat used to write the whole match to storage every time, so a
+      // socket sending pings in a loop was an unmetered stream of billed writes. lastSeen only
+      // needs to be roughly current: one write per 15 seconds is plenty.
+      const t = Date.now();
+      if (t - this.pingSavedAt >= 15000) { this.pingSavedAt = t; await this.save(m); }
+      return;
+    }
     if (msg.type === 'resync') { await this.save(m); try { ws.send(JSON.stringify({ type: 'state', ...this.view(m, userId) })); } catch { /* */ } return; }
     if (msg.type === 'forfeit') { await this.doForfeit(userId); return; }
     if (msg.type === 'submit_move') {

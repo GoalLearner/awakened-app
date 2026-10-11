@@ -287,9 +287,19 @@ export async function handlePvpWs(request: Request, env: Env): Promise<Response>
   const url = new URL(request.url);
   const code = String(url.searchParams.get('code') || '').toUpperCase();
   const token = url.searchParams.get('token') || '';
-  if (!code) return jsonError(400, 'NO_CODE', 'code required');
+  // W1040 SECURITY — a code is six characters from genCode's alphabet; anything else used to
+  // wake a brand-new Durable Object per request.
+  if (!/^[A-Z0-9]{4,12}$/.test(code)) return jsonError(400, 'NO_CODE', 'code required');
   let session: SessionPayload;
   try { session = await verifySessionJwt(token, env); } catch { return jsonError(401, 'INVALID_SESSION', 'bad token'); }
+  // W1040 — the upgrade sits before the Bearer gate, so it missed both the W585 limiter and
+  // the W740 "account deleted" check that every other PvP route has.
+  const rl = await env.RL_PVP_ACTION.limit({ key: 'ws:' + session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  try {
+    const alive = await env.DB.prepare('SELECT 1 FROM users WHERE id = ? LIMIT 1').bind(session.userId).first();
+    if (!alive) return jsonError(401, 'SESSION_REVOKED', 'This account no longer exists.');
+  } catch { /* a D1 blip degrades to the stateless check, as on the Bearer gate */ }
   const stub = env.MATCH.get(env.MATCH.idFromName(code));
   const headers = new Headers(request.headers);
   headers.set('X-PvP-User', session.userId);

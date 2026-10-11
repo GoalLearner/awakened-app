@@ -116,6 +116,23 @@ describe('GET /v1/friends (batched serialization)', () => {
     expect(body.incoming[0].alias).toBe('bravo');
   });
 
+  // W1040 — the 2026-10-11 review: sending a request used to return the target's exact XP,
+  // totals and last-sync time before they had agreed to anything.
+  it('W1040: an unanswered outgoing request shows the public rank badge and nothing else', async () => {
+    const calls: Capture[] = [];
+    const res = await handleFriendsList(req(), makeEnv(makeDb(rows, profiles, calls, [{ user_id: 'C' }])), session('me'));
+    const body = (await res.json()) as { friends: Array<Record<string, unknown>>; outgoing: Array<Record<string, unknown>> };
+    const c = body.outgoing[0];
+    expect([c.user_id, c.rankTier, c.rankLabel]).toEqual(['C', 'A', 'A II']);
+    expect(c.rankSortValue).toBe(0);                       // the XP was packed in here
+    for (const k of ['rankUpdatedAt', 'achievementsUpdatedAt', 'bossesSlainTotal', 'ultraRareDropsTotal', 'verifiedStreakLabel']) expect(c[k]).toBeUndefined();
+    expect(c.member).toBe(false);                          // C pays, but has not accepted
+    // an accepted friend is unchanged
+    const a = body.friends[0];
+    expect([a.rankSortValue, a.bossesSlainTotal]).toEqual([4200, 12]);
+    expect(typeof a.rankUpdatedAt).toBe('string');
+  });
+
   it('fires the profile read exactly ONCE (N+1 removed) with an IN() over distinct ids', async () => {
     const calls: Capture[] = [];
     await handleFriendsList(req(), makeEnv(makeDb(rows, profiles, calls)), session('me'));
