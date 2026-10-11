@@ -36518,6 +36518,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .rh-call.rh-call--off { background: #0e0e22; border: 1px solid rgba(255, 255, 255, 0.08); color: #585a76; box-shadow: none; cursor: default; }
 .rh-row.rh-row--short { opacity: .55; border-color: rgba(255, 255, 255, 0.08); }
 .rh-row-cond.rh-row-cond--short { color: #ef4444; }
+.rh-preview { margin-top: 12px; font: 800 9px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 2.2px; text-transform: uppercase; color: #a78bfa; }
 .rh-quiet { margin: 12px 0 0; min-height: 17px; font: 400 12.5px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; color: #9596b2; }
 @media (max-height: 700px) { .rh-port { width: 156px; height: 156px; margin-top: 14px; } .rh-proof, .rh-call { margin-top: 18px; } }
 @media (prefers-reduced-motion: reduce) {

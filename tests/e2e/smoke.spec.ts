@@ -8402,6 +8402,23 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(await offers(page)).toEqual(['the_unbroken_anvil']);        // still his, when he can pay
   });
 
+  test('W1041 — a free credit goes to the dearest boss on the sheet, not the first one struck', async ({ page }) => {
+    // 30 souls, the stone's free hunt banked. The Wolf and the Carouser cost 25 each, the Anvil 400.
+    // Spent on the Anvil, the credit opens all three (0, then 25 from 830, then 25).
+    await hunter(page, { ...GATE.A }, { ...purse(30), hb_stone_free_engage: '1' });
+    await health(page, { steps: 9632, flights: 15 });
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/strike all/i, { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-row--short')).toHaveCount(0);
+    await expect(sheet(page).locator('.rh-quiet')).toHaveText('Fees 50 souls · you have 30. Each win pays for the next.');
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Unbroken Anvil', { timeout: 6000 });
+    const k = async (id: string) => (await boss(page, id)).kill_count;
+    expect([await k('the_unbroken_anvil'), await k('the_steel_wolf'), await k('the_carouser')]).toEqual([2, 1, 1]);
+    const s = await souls(page);
+    expect(s.totalSpent).toBe(50);                                  // two E-rank fees; the Anvil rode the credit
+    expect(await page.evaluate(() => localStorage.getItem('hb_stone_free_engage'))).toBeNull();   // and the credit is spent
+  });
+
   test('three hunts already running: ready strikes are outside the three', async ({ page }) => {
     const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 3600_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
     // (the live Dream Tyrant hunt keeps the D gate open, so 9,632 steps beats the Strider too)
@@ -8421,11 +8438,28 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await page.evaluate(() => (window as any).__previewReadyHunt());
     await expect(sheet(page).locator('.rh-many')).toHaveText('4 hunts are ready', { timeout: 6000 });
     await expect(sheet(page).locator('.rh-row-name')).toHaveText(['The Marathon Wraith', 'The Glass Strider', 'The Iron Warden', 'The Insomniac']);
+    await expect(sheet(page).locator('.rh-preview')).toHaveText(/preview · nothing is saved/i);   // W1041 — it says what it is
     await sheet(page).locator('[data-rh-strike]').click();
     const res = page.locator('#boss-result-overlay');
     await expect(res.locator('.hr-boss')).toHaveText('The Marathon Wraith', { timeout: 6000 });
     await expect(res.locator('.hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
-    await page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame') as HTMLElement; f.click(); f.click(); });
+    // W1041 — a victory for EVERY boss on the sheet, as the real strike plays: the lead, then
+    // the rest cheapest first; each with its own souls and its own relic line (one has none).
+    const shown: string[] = [];
+    for (let i = 0; i < 60 && shown.length < 4; i++) {
+      const cur = await page.evaluate(() => {
+        const o = document.getElementById('boss-result-overlay');
+        if (!o || o.classList.contains('hidden')) return null;
+        const q = (s: string) => { const n = o.querySelector(s); return n ? (n.textContent || '').trim() : ''; };
+        return { name: q('.hr-boss'), relic: q('.hr-reward .hr-rn') };
+      });
+      if (cur && cur.name && !shown.some((s) => s.startsWith(cur.name + '|'))) shown.push(cur.name + '|' + cur.relic);
+      await page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame') as HTMLElement; if (f) { f.click(); f.click(); } });
+      await page.waitForTimeout(350);
+    }
+    expect(shown).toEqual([
+      'The Marathon Wraith|A sealed relic', 'The Insomniac|Drowsy Signet', 'The Glass Strider|Glassstep Band', 'The Iron Warden|Souls only this time',
+    ]);
     // then the single-boss sheet
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 6000 });
     await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
