@@ -8,6 +8,79 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.12 — READY TO PASTE (W1037–W1039, drafted 2026-10-11, HEAD `d3f3dfb`, tag `3.0.12-w1039`)
+
+Four languages, each far under the 4,000-character limit. Banned-word check done.
+Left out on purpose: the owner-only Settings preview. Match to the shipped build
+before pasting: if more lands in 3.0.12, add it here first.
+
+**Before submitting:** DeepSeek in the privacy policy / App Privacy answers is still
+owed from 3.0.9 (see the 3.0.9 section).
+
+### English (U.S.)
+
+```
+Every boss you've already beaten, in one tap.
+
+• Awakened now checks every solo boss, from E rank to S. If your steps, stairs, sleep or workouts have already met a boss's condition, the app tells you.
+
+• Several ready at once? One STRIKE ALL beats them together. Each boss pays its own souls and rolls its own relic.
+
+• Days you've already put in count. Two good days in a row can finish a two-day boss you never started.
+
+• The entrance fee still applies, and each win can pay for the next.
+
+• New hunters can win their first boss on day one, as soon as last night's sleep or today's steps are enough.
+```
+
+### Spanish (Mexico)
+
+```
+Cada jefe que ya venciste, en un solo toque.
+
+• Awakened ahora revisa a todos los jefes en solitario, del rango E al S. Si tus pasos, escaleras, sueño o entrenamientos ya cumplieron la condición de un jefe, la app te lo dice.
+
+• ¿Varios listos a la vez? Un solo STRIKE ALL los vence juntos. Cada jefe paga sus propias almas y tira su propia reliquia.
+
+• Los días que ya hiciste cuentan. Dos buenos días seguidos pueden terminar un jefe de dos días que nunca empezaste.
+
+• La cuota de entrada se sigue cobrando, y cada victoria puede pagar la siguiente.
+
+• Los cazadores nuevos pueden vencer a su primer jefe el primer día, en cuanto el sueño de anoche o los pasos de hoy alcancen.
+```
+
+### Japanese
+
+```
+すでに倒したボスを、ワンタップで。
+
+• EランクからSランクまで、すべてのソロボスをチェックするようになりました。歩数、階段、睡眠、ワークアウトがボスの条件をすでに満たしていれば、アプリが知らせます。
+
+• 複数のボスが同時に準備できたら、STRIKE ALL ひとつでまとめて撃破。ボスごとにソウルが支払われ、ボスごとにレリックの抽選が行われます。
+
+• すでに積み重ねた日もカウントされます。良い日が2日続けば、始めていなかった2日間のボスも倒せます。
+
+• 入場料はこれまでどおり必要です。勝利で得たソウルを次の入場料に充てられます。
+
+• 新しいハンターは、昨夜の睡眠や今日の歩数が足りていれば、初日に最初のボスを倒せます。
+```
+
+### Norwegian (Bokmål)
+
+```
+Hver boss du allerede har slått, med ett trykk.
+
+• Awakened sjekker nå alle solobosser, fra E-rang til S. Har skrittene, trappene, søvnen eller treningen din allerede oppfylt kravet til en boss, sier appen fra.
+
+• Flere klare samtidig? Én STRIKE ALL slår dem sammen. Hver boss betaler sine egne sjeler og triller sin egen relikvie.
+
+• Dagene du allerede har lagt inn, teller. To gode dager på rad kan fullføre en todagersboss du aldri startet.
+
+• Inngangsavgiften gjelder fortsatt, og hver seier kan betale for den neste.
+
+• Nye jegere kan slå sin første boss allerede første dag, så snart nattens søvn eller dagens skritt holder.
+```
+
 ## 3.0.11 — READY TO PASTE (W1025–W1036, final 2026-10-10, HEAD `12e6acd`, tag `3.0.11-w1036`)
 
 Four languages, each far under the 4,000-character limit. Banned-word check done (no
