@@ -8190,7 +8190,7 @@ test.describe('CB · The ready hunt (W1034)', () => {
     await expect(sheet.locator('.rh-pl')).toHaveText(/6\s*\/\s*5 flights today/i, { timeout: 4000 });
   });
 
-  test('nothing is offered: below the bar, Health not granted, day one, beaten today, already engaged', async ({ page }) => {
+  test('nothing is offered: below the bar, Health not granted, beaten today, already engaged', async ({ page }) => {
     await hunter(page, {});
     const lead = () => page.evaluate(() => { const o = (window as any).__readyHunt.lead(); return o && o.bossId; });
     await health(page, { steps: 5999, flights: 4, sleepH: 6.9 });
@@ -8205,11 +8205,36 @@ test.describe('CB · The ready hunt (W1034)', () => {
     // beaten today
     await page.evaluate(() => localStorage.setItem('hb_bosses', JSON.stringify({ the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } })));
     expect(await lead()).toBeNull();
-    // day one stays quiet
-    await page.evaluate(() => { localStorage.setItem('hb_bosses', '{}'); const d = new Date(); localStorage.setItem('hb_onboarding_first_xp_date', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); });
-    await health(page, { steps: 9632 });
-    expect(await lead()).toBeNull();
+    await page.evaluate(() => (window as any).__renderHuntRow());
     await expect(page.locator('#hunt-row.hunt-row--ready')).toHaveCount(0);
+  });
+
+  // W1038 — day one: the sheet rises for a FIRST kill, and only for a first kill.
+  const TODAY = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  test('W1038 — day one, slept seven hours: the Insomniac is offered at once and one STRIKE is the first kill', async ({ page }) => {
+    const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
+    // a hunter fresh out of onboarding: joined today, no First Mark yet, the Wolf already running on the trail
+    await hunter(page, { the_steel_wolf: run }, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    await health(page, { steps: 2100, sleepH: 7 + 40 / 60 });
+    const sheet = page.locator('#rh-sheet.rh-sheet--on');
+    await expect(sheet.locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
+    await sheet.locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-stamp.hr-on')).toBeVisible({ timeout: 6000 });
+    expect((await boss(page, 'the_insomniac')).kill_count).toBe(1);
+    expect((await boss(page, 'the_steel_wolf')).engaged).toBe(true);     // the trail's hunt is untouched
+    expect((await souls(page)).totalSpent || 0).toBe(0);
+  });
+  test('W1038 — day one with a kill already made: nothing rises by itself, the offer waits on the row', async ({ page }) => {
+    await hunter(page, { the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } }, { hb_onboarding_first_xp_date: TODAY() });
+    await health(page, { sleepH: 7 + 40 / 60 });
+    expect(await page.evaluate(() => (window as any).__readyHunt.lead().bossId)).toBe('the_insomniac');
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
+    // during onboarding itself nothing is offered at all
+    await page.evaluate(() => { localStorage.removeItem('hb_bosses'); });
   });
 
   test('Apple Health disagrees at the strike: no win is shown, no souls move, the hunt is left running', async ({ page }) => {
