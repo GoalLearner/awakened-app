@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Awakened: Habit RPG — product page header + search results art</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@800;900&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
+<style>
+  /* App Store Connect "Header and Search Results" art (new in Oct 2026).
+     ?shape=header → 3840×1646 (product page header). A phone shows only the MIDDLE of it
+     (roughly the central 1,900 px), wider devices show more: everything that must be read
+     sits in that middle, the bosses straddle its edges, the wings are atmosphere.
+     ?shape=search → 3840×2560 (search results card, 3:2). Shown about 360 pt wide, so the
+     type is huge on purpose. Real app pixels only: the phone is raw/habits.png. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow: hidden; background: #07070f; }
+  body.header { width: 3840px; height: 1646px; }
+  body.search { width: 3840px; height: 2560px; }
+  .abs { position: absolute; }
+  .bg { inset: 0; background: url(../../assets/backgrounds/lb-bg-sgate.webp) center 40% / cover no-repeat; filter: saturate(1.1) brightness(.75); }
+  .boss { background: center / cover no-repeat; -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 100%); mask-image: radial-gradient(closest-side, #000 52%, transparent 100%); }
+  .wolf { background-image: url(../../assets/bosses/the-steel-wolf.png); }
+  .king { background-image: url(../../assets/bosses/the-myrmidon-king.png); }
+  .word { font: 900 236px/1 'Cinzel', serif; letter-spacing: .03em; color: #f5b842; text-shadow: 0 10px 0 rgba(0,0,0,.35), 0 0 120px rgba(245,184,66,.35), 0 30px 80px rgba(0,0,0,.7); white-space: nowrap; }
+  .tag { font: 800 74px/1 'JetBrains Mono', monospace; letter-spacing: .5em; padding-left: .5em; text-transform: uppercase; color: #f4f4fb; text-shadow: 0 6px 30px rgba(0,0,0,.9); white-space: nowrap; }
+
+  /* ── header ── */
+  .header .wolf { left: 700px; top: 60px; width: 1500px; height: 1500px; opacity: .95; }
+  .header .king { left: 1700px; top: 40px; width: 1540px; height: 1540px; opacity: .95; }
+  .header .veil { inset: 0; background:
+    radial-gradient(900px 520px at 50% 56%, rgba(7,7,15,.82), rgba(7,7,15,0) 100%),
+    linear-gradient(180deg, rgba(7,7,15,.7) 0%, rgba(7,7,15,.15) 30%, rgba(7,7,15,.25) 62%, #0a0a18 100%),
+    linear-gradient(90deg, rgba(7,7,15,.75) 0%, rgba(7,7,15,0) 22%, rgba(7,7,15,0) 78%, rgba(7,7,15,.75) 100%); }
+  .header .lock { left: 0; right: 0; top: 690px; display: flex; flex-direction: column; align-items: center; gap: 56px; }
+  .header .rule { width: 520px; height: 5px; background: linear-gradient(90deg, transparent, #f5b842, transparent); }
+
+  /* ── search ── */
+  .search .bg { background-image: url(../../assets/backgrounds/bg_s.webp); filter: saturate(1.15) brightness(.6); }
+  .search .wolf { right: -260px; top: 120px; width: 2500px; height: 2500px; opacity: .9; }
+  .search .veil { inset: 0; background:
+    linear-gradient(90deg, #07070f 0%, rgba(7,7,15,.94) 34%, rgba(7,7,15,.45) 62%, rgba(7,7,15,.1) 100%),
+    linear-gradient(0deg, rgba(7,7,15,.85) 0%, transparent 35%); }
+  .search .brand { left: 220px; top: 250px; font: 800 78px/1 'JetBrains Mono', monospace; letter-spacing: .3em; text-transform: uppercase; color: #f5b842; white-space: nowrap; }
+  .search h1 { left: 210px; top: 600px; font: 900 292px/1.08 'Cinzel', serif; letter-spacing: .005em; color: #fff; text-shadow: 0 12px 0 rgba(0,0,0,.3), 0 30px 90px rgba(0,0,0,.7); white-space: nowrap; }
+  .search h1 em { font-style: normal; color: #f5b842; }
+  .search .sub { left: 220px; top: 1400px; font: 800 94px/1.55 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.9); white-space: nowrap; }
+  .search .sub b { color: #4ade80; }
+  .search .pills { left: 220px; top: 1900px; display: flex; gap: 44px; }
+  .search .pill { font: 800 82px/1 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; padding: 44px 58px; border-radius: 999px; border: 5px solid; background: rgba(0,0,0,.45); }
+  .pill.s { color: #4ade80; border-color: rgba(74,222,128,.6); }
+  .pill.z { color: #60a5fa; border-color: rgba(96,165,250,.6); }
+  .pill.w { color: #f59e0b; border-color: rgba(245,158,11,.6); }
+  .search .phone { right: 230px; top: 170px; width: 1150px; height: 2560px; border-radius: 150px 150px 0 0; padding: 34px 34px 0; background: #1b1b2e; transform: rotate(4deg); transform-origin: 50% 0;
+    box-shadow: 0 0 0 6px rgba(255,255,255,.14), 0 0 160px rgba(139,92,246,.4), 0 80px 160px rgba(0,0,0,.75); }
+  .search .phone i { display: block; width: 100%; height: 100%; border-radius: 118px 118px 0 0; background: #0a0a18 url(raw/habits.png) center top / 100% auto no-repeat; }
+</style>
+</head>
+<body>
+  <div class="abs bg"></div>
+  <div class="abs boss wolf"></div>
+  <div class="abs boss king only-header"></div>
+  <div class="abs veil"></div>
+
+  <div class="abs lock only-header">
+    <div class="word">AWAKENED</div>
+    <div class="rule"></div>
+    <div class="tag">Habit RPG</div>
+  </div>
+
+  <div class="abs brand only-search">Awakened: Habit RPG</div>
+  <h1 class="abs only-search">Real habits.<br><em>Real bosses.</em></h1>
+  <div class="abs sub only-search"><b>Steps</b>, sleep and workouts<br>bring the bosses down</div>
+  <div class="abs pills only-search"><span class="pill s">Steps</span><span class="pill z">Sleep</span><span class="pill w">Workouts</span></div>
+  <div class="abs phone only-search"><i></i></div>
+<script>
+  const shape = new URLSearchParams(location.search).get('shape') === 'search' ? 'search' : 'header';
+  document.body.className = shape;
+  document.querySelectorAll(shape === 'search' ? '.only-header' : '.only-search').forEach((e) => e.remove());
+  document.fonts.ready.then(() => { document.body.dataset.ready = '1'; });
+</script>
+</body>
+</html>
