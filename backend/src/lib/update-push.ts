@@ -20,6 +20,10 @@
  * runs that end a page short mark the day completed, and later runs stop at
  * the completed flag before touching the App Store lookup.
  *
+ * W1044 — the live version comes from the first source that answers: Apple's lookup, the
+ * App Store web page, then the hunters' own phones (see storeRelease). The lookup alone was
+ * refused from this network on every Monday the journal has, so the push had never gone out.
+ *
  * Overlap-safe: the cursor advance is a compare-and-swap (WHERE cursor = old),
  * and the CLAIM happens BEFORE the sends — two overlapping runs can never send
  * the same page twice (the loser just re-reads the fresher row).
@@ -210,22 +214,51 @@ const RELEASE_WINDOW_DAYS = 8;
 // numeric weekdays; scheduled() no longer keys dispatch on it (index.ts).
 export const UPDATE_PUSH_CRON = '*/5 16-17 * * MON';
 
+/** W1044 — who answered: Apple's lookup API, the App Store web page, or the hunters' phones. */
+export type StoreSource = 'lookup' | 'page' | 'reports';
+
 export interface StoreRelease {
   fresh: boolean;
   version: string | null;
   released_at: string | null;
   age_days: number | null;
-  /** null when fresh; otherwise why not: STALE, HTTP_<status>, NO_RELEASE_DATE, FETCH_<message>. */
+  /** null when fresh; otherwise why not: STALE, or every source's own reason joined with "+"
+   *  (lookup:HTTP_<status> / lookup:FETCH_<message> / lookup:NO_RELEASE_DATE, page:…, reports:…). */
   reason: string | null;
+  /** Lookup attempts made (the page and the reports are one try each). */
   attempts: number;
+  /** W1044 — the source that answered; null when none did. */
+  source: StoreSource | null;
+  /** W1044 — the sources that did not answer before it, each with its reason. */
+  tried: string[];
+}
+
+interface Probe {
+  version: string | null;
+  iso: string | null;
+  reason: string;
+}
+
+function graded(version: string | null, iso: string, attempts: number, source: StoreSource, tried: string[]): StoreRelease {
+  const ageMs = Date.now() - Date.parse(iso);
+  const fresh = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= RELEASE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return {
+    fresh,
+    version,
+    released_at: iso,
+    age_days: Number.isFinite(ageMs) ? Math.round((ageMs / 86400000) * 100) / 100 : null,
+    reason: fresh ? null : 'STALE',
+    attempts,
+    source,
+    tried,
+  };
 }
 
 // W835 — the lookup surfaces the live store VERSION so the per-user gate can
-// compare against reported builds. fresh:false → no broadcast at all.
+// compare against reported builds.
 // W904 — two attempts (Apple's lookup is occasionally flaky from datacenter
-// egress) and a REASON on every non-fresh result, which the cron journals.
-// Exported for the admin status route. Still FAIL CLOSED.
-export async function storeRelease(): Promise<StoreRelease> {
+// egress) and a REASON on every failure, which the cron journals.
+async function fromLookup(): Promise<Probe & { attempts: number }> {
   const MAX_ATTEMPTS = 2;
   let reason = 'UNKNOWN';
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -241,24 +274,135 @@ export async function storeRelease(): Promise<StoreRelease> {
         results?: { currentVersionReleaseDate?: string; version?: string }[];
       };
       const r0 = data.results && data.results[0];
-      const iso = r0 && r0.currentVersionReleaseDate;
+      const iso = (r0 && r0.currentVersionReleaseDate) || null;
       const version = (r0 && typeof r0.version === 'string' && r0.version) || null;
-      if (!iso) return { fresh: false, version, released_at: null, age_days: null, reason: 'NO_RELEASE_DATE', attempts: attempt };
-      const ageMs = Date.now() - Date.parse(iso);
-      const fresh = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= RELEASE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-      return {
-        fresh,
-        version,
-        released_at: iso,
-        age_days: Number.isFinite(ageMs) ? Math.round((ageMs / 86400000) * 100) / 100 : null,
-        reason: fresh ? null : 'STALE',
-        attempts: attempt,
-      };
+      return { version, iso, reason: iso ? '' : 'NO_RELEASE_DATE', attempts: attempt };
     } catch (e) {
       reason = 'FETCH_' + (e instanceof Error ? e.message : String(e)).slice(0, 80);
     }
   }
-  return { fresh: false, version: null, released_at: null, age_days: null, reason, attempts: MAX_ATTEMPTS };
+  return { version: null, iso: null, reason, attempts: MAX_ATTEMPTS };
+}
+
+// W1044 — the lookup above is refused from Cloudflare's network: HTTP 403 on every Monday the
+// journal has (2026-09-07 … 2026-10-12), so this push never went out. Measured 2026-10-12 from
+// a Worker: seven shapes of the lookup request (hosts, paths, user agents) all 403; the App
+// Store's own web page answers 200 and carries the live version twice, once in its data and
+// once in its markup. Either is enough; both are read so one redesign does not blind it.
+const STORE_PAGE_URL = `https://apps.apple.com/us/app/id${APP_STORE_ID}`;
+const STORE_PAGE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
+const STORE_PAGE_TIMEOUT_MS = 10_000;
+
+/** The live version and its release time, as the App Store web page states them. Exported for tests. */
+export function parseStorePage(html: string): { version: string | null; iso: string | null } {
+  if (typeof html !== 'string' || html.indexOf('id' + APP_STORE_ID) === -1) return { version: null, iso: null };   // not our listing
+  // Its data: "primarySubtitle":"Version 3.0.12","secondarySubtitle":"Mon Oct 12 2026 18:02:35 GMT+0000 (Coordinated Universal Time)"
+  const j = html.match(/"primarySubtitle"\s*:\s*"Version (\d+\.\d+\.\d+)"\s*,\s*"secondarySubtitle"\s*:\s*"([^"]{6,90})"/);
+  if (j) {
+    const ms = Date.parse(j[2].replace(/\s*\([^)]*\)\s*$/, ''));
+    if (Number.isFinite(ms)) return { version: j[1], iso: new Date(ms).toISOString() };
+  }
+  // Its markup: <span>Version 3.0.12</span> <time datetime="2026-10-12">. A date with no time
+  // reads as midnight UTC, up to a day early, which the 8-day window absorbs.
+  const h = html.match(/>Version (\d+\.\d+\.\d+)<\/span>\s*<time datetime="(\d{4}-\d{2}-\d{2}(?:T[0-9:.]+Z?)?)"/);
+  if (h) {
+    const ms = Date.parse(h[2]);
+    if (Number.isFinite(ms)) return { version: h[1], iso: new Date(ms).toISOString() };
+  }
+  return { version: (j && j[1]) || (h && h[1]) || null, iso: null };
+}
+
+async function fromPage(): Promise<Probe> {
+  try {
+    const res = await fetch(STORE_PAGE_URL, {
+      headers: { accept: 'text/html', 'accept-language': 'en-US,en;q=0.9', 'user-agent': STORE_PAGE_UA },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(STORE_PAGE_TIMEOUT_MS),
+    });
+    if (!res.ok) return { version: null, iso: null, reason: `HTTP_${res.status}` };
+    const p = parseStorePage(await res.text());
+    return { version: p.version, iso: p.iso, reason: p.iso ? '' : p.version ? 'NO_RELEASE_DATE' : 'NO_VERSION' };
+  } catch (e) {
+    return { version: null, iso: null, reason: 'FETCH_' + (e instanceof Error ? e.message : String(e)).slice(0, 80) };
+  }
+}
+
+// W1044 — the last resort: what the hunters' own phones read. Apple answers a phone's lookup
+// (the update banner has always used it), and since 3.0.13 the app passes the answer along as a
+// `store_version` funnel event, detail "3.0.12|2026-10-12T18:02:35Z". The newest version reported
+// in the last two weeks wins. One guard: a version above every build anyone has opened is not a
+// version a phone was offered, so one account cannot name a release that does not exist.
+export const STORE_REPORT_EVENT = 'store_version';
+const REPORT_LOOKBACK_MS = 14 * 24 * 60 * 60 * 1000;
+const INSTALLED_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000;
+
+function cmpTriple(a: [number, number, number], b: [number, number, number]): number {
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return 0;
+}
+
+async function fromReports(env: Env): Promise<Probe> {
+  try {
+    const now = Date.now();
+    const installed = await env.DB.prepare('SELECT DISTINCT build FROM app_opens WHERE date_utc >= ? AND build IS NOT NULL')
+      .bind(new Date(now - INSTALLED_LOOKBACK_MS).toISOString().slice(0, 10))
+      .all<{ build: string | null }>();
+    let top: [number, number, number] | null = null;
+    for (const r of installed.results ?? []) {
+      const t = verTriple(r.build);
+      if (t && (!top || cmpTriple(t, top) > 0)) top = t;
+    }
+    if (!top) return { version: null, iso: null, reason: 'NO_INSTALLED_BUILD' };
+    const rows = await env.DB.prepare(
+      `SELECT detail, MAX(created_at) AS last_at
+         FROM funnel_events
+        WHERE event = ? AND created_at > ?
+        GROUP BY detail
+        ORDER BY last_at DESC
+        LIMIT 40`,
+    )
+      .bind(STORE_REPORT_EVENT, now - REPORT_LOOKBACK_MS)
+      .all<{ detail: string | null; last_at: number }>();
+    let best: { t: [number, number, number]; version: string; iso: string | null } | null = null;
+    for (const r of rows.results ?? []) {
+      const m = /^(\d+\.\d+\.\d+)(?:\|(.{4,40}))?$/.exec(String(r.detail || '').trim());
+      const t = m && verTriple(m[1]);
+      if (!m || !t || cmpTriple(t, top) > 0) continue;
+      const ms = m[2] ? Date.parse(m[2]) : NaN;
+      const iso = Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+      const c = best ? cmpTriple(t, best.t) : 1;
+      if (c > 0 || (c === 0 && best && !best.iso && iso)) best = { t, version: m[1], iso };
+    }
+    if (!best) return { version: null, iso: null, reason: 'NONE' };
+    return { version: best.version, iso: best.iso, reason: best.iso ? '' : 'NO_RELEASE_DATE' };
+  } catch (e) {
+    return { version: null, iso: null, reason: 'DB_' + (e instanceof Error ? e.message : String(e)).slice(0, 60) };
+  }
+}
+
+/** The live App Store release, from the first source that answers with a version AND a date:
+ *  Apple's lookup, then the App Store web page, then the hunters' phones (needs `env`).
+ *  An answer is final even when it says STALE; only silence moves on to the next source.
+ *  Still FAIL CLOSED: no source, no broadcast. Exported for the admin status route. */
+export async function storeRelease(env?: Env): Promise<StoreRelease> {
+  const tried: string[] = [];
+  const a = await fromLookup();
+  if (a.iso) return graded(a.version, a.iso, a.attempts, 'lookup', tried);
+  tried.push('lookup:' + a.reason);
+  let version = a.version;
+
+  const b = await fromPage();
+  if (b.version && b.iso) return graded(b.version, b.iso, a.attempts, 'page', tried);
+  tried.push('page:' + b.reason);
+  version = version || b.version;
+
+  if (env) {
+    const c = await fromReports(env);
+    if (c.version && c.iso) return graded(c.version, c.iso, a.attempts, 'reports', tried);
+    tried.push('reports:' + c.reason);
+    version = version || c.version;
+  }
+  return { fresh: false, version, released_at: null, age_days: null, reason: tried.join('+'), attempts: a.attempts, source: null, tried };
 }
 
 // W904 — cron_runs journal (migration 0054). `once` dedupes per (day,
@@ -321,7 +465,7 @@ export async function runUpdatePushCron(env: Env, cron?: string): Promise<void> 
   } catch {
     /* fall through — runUpdatePushPage re-reads the ledger itself */
   }
-  const release = await storeRelease();
+  const release = await storeRelease(env);
   if (!release.fresh) {
     console.log(`[update-push] ${dayKey}: no App Store release in the last ${RELEASE_WINDOW_DAYS}d — broadcast skipped (W820)`);
     await journal(env, cron, dayKey, `SKIP_NOT_FRESH:${release.reason || 'UNKNOWN'}`, release, true);
@@ -340,7 +484,7 @@ export async function runUpdatePushCron(env: Env, cron?: string): Promise<void> 
  *  target under the W835 per-user gate, the ledger tail, and the journal. */
 export async function updatePushStatus(env: Env): Promise<Record<string, unknown>> {
   const pt = ptParts();
-  const release = await storeRelease();
+  const release = await storeRelease(env);
   // The ledger's cursor is a user id (keyset pagination) — project it to a flag
   // so the payload carries no identifiers, matching the counts-only audience.
   const ledger = await env.DB.prepare(

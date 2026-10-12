@@ -5,7 +5,7 @@
  * mocked global fetch (APNs) so the real apns.ts pipeline runs.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { runUpdatePushCron, runUpdatePushPage, storeRelease, UPDATE_PUSH_CRON } from './update-push';
+import { parseStorePage, runUpdatePushCron, runUpdatePushPage, storeRelease, STORE_REPORT_EVENT, UPDATE_PUSH_CRON } from './update-push';
 import type { Env } from '../env';
 
 interface MockState {
@@ -18,6 +18,8 @@ interface MockState {
   casLoseOnce?: boolean; // simulate a concurrent run winning the claim
   buildsByUser?: Record<string, string | null>; // W835 — latest app_opens.build per user
   cronRuns?: unknown[][]; // W904 — cron_runs journal rows (bind args: job, cron, day_key, decision, detail, ...)
+  reports?: { detail: string | null; at: number }[]; // W1044 — store_version funnel events
+  installed?: string[]; // W1044 — builds anyone has opened lately (app_opens.build)
 }
 
 function makeEnv(state: MockState): Env {
@@ -66,6 +68,17 @@ function makeEnv(state: MockState): Env {
               success: true,
               meta: {},
             };
+          }
+          if (/^SELECT DISTINCT build FROM app_opens/.test(sql)) {   // W1044 — what anyone runs
+            return { results: (state.installed || []).map((build) => ({ build })), success: true, meta: {} };
+          }
+          if (/FROM funnel_events/.test(sql)) {   // W1044 — the phones' reports, grouped by detail
+            const since = args[1] as number;
+            const by = new Map<string | null, number>();
+            (state.reports || []).filter((r) => args[0] === STORE_REPORT_EVENT && r.at > since)
+              .forEach((r) => by.set(r.detail, Math.max(by.get(r.detail) || 0, r.at)));
+            const results = [...by.entries()].map(([detail, last_at]) => ({ detail, last_at })).sort((x, y) => y.last_at - x.last_at);
+            return { results, success: true, meta: {} };
           }
           if (/FROM device_tokens/.test(sql)) {
             // notifyUser's per-user token read
@@ -332,18 +345,20 @@ describe('runUpdatePushCron (W904)', () => {
     expect(decisionsOf(st)).toEqual([]);
   });
 
-  it('lookup unreachable on both attempts → SKIP_NOT_FRESH with FETCH_ reason (fail closed, but visibly)', async () => {
+  it('nothing reachable (lookup twice, then the page) and no reports → SKIP_NOT_FRESH naming every source (fail closed, but visibly)', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-31T16:30:00Z'));
     const fetchMock = vi.fn().mockRejectedValue(new Error('socket hang up'));
     vi.stubGlobal('fetch', fetchMock);
     const st = cronState();
     await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);   // W1044 — two lookups, one page
     expect(st.cursor).toBe('');
-    expect(decisionsOf(st)).toEqual(['SKIP_NOT_FRESH:FETCH_socket hang up']); // the reason is part of the once-key
+    const why = 'lookup:FETCH_socket hang up+page:FETCH_socket hang up+reports:NO_INSTALLED_BUILD';
+    expect(decisionsOf(st)).toEqual(['SKIP_NOT_FRESH:' + why]); // the reason is part of the once-key
     const detail = detailOf(st);
-    expect(detail.reason).toBe('FETCH_socket hang up');
+    expect(detail.reason).toBe(why);
+    expect(detail.source).toBeNull();
     expect(detail.attempts).toBe(2);
   });
 });
@@ -370,16 +385,16 @@ describe('storeRelease (W904)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('two HTTP failures → not fresh, HTTP_<status> reason', async () => {
+  it('every request refused → not fresh, each source named with its HTTP status', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('forbidden', { status: 403 })));
     const r = await storeRelease();
-    expect(r).toMatchObject({ fresh: false, version: null, reason: 'HTTP_403', attempts: 2 });
+    expect(r).toMatchObject({ fresh: false, version: null, reason: 'lookup:HTTP_403+page:HTTP_403', attempts: 2, source: null });
   });
 
-  it('a body with no release date → NO_RELEASE_DATE, version still surfaced', async () => {
+  it('a lookup body with no release date is not an answer: the page is asked, and the version is still surfaced', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ results: [{ version: '3.0.1' }] }), { status: 200 })));
     const r = await storeRelease();
-    expect(r).toMatchObject({ fresh: false, version: '3.0.1', reason: 'NO_RELEASE_DATE', attempts: 1 });
+    expect(r).toMatchObject({ fresh: false, version: '3.0.1', reason: 'lookup:NO_RELEASE_DATE+page:NO_VERSION', attempts: 1 });
   });
 
   it('leading whitespace in the body (what Apple actually returns) parses', async () => {
@@ -389,6 +404,163 @@ describe('storeRelease (W904)', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(body, { status: 200 })));
     const r = await storeRelease();
     expect(r.fresh).toBe(true);
+  });
+});
+
+// ── W1044 — the lookup is refused from Cloudflare's network (HTTP 403 on every Monday the
+// journal has), so the push had never gone out. Two more sources stand behind it. ──
+const PAGE_HEAD = '<link rel="canonical" href="https://apps.apple.com/us/app/awakened-habit-rpg/id6764727990">';
+const PAGE_DATA = '{"$kind":"TitledParagraph","text":"Every boss.","style":"overview","primarySubtitle":"Version 3.0.12","secondarySubtitle":"Mon Oct 12 2026 18:02:35 GMT+0000 (Coordinated Universal Time)"}';
+const PAGE_MARKUP = '<div class="metadata svelte-1t5dyc5"><span class="svelte-1t5dyc5">Version 3.0.12</span> <time datetime="2026-10-12" class="svelte-1t5dyc5">3h ago</time></div>';
+const PAGE_HISTORY = '{"primarySubtitle":"3.0.11","secondarySubtitle":"Sun Oct 11 2026 18:13:44 GMT+0000 (Coordinated Universal Time)"}<span class="x">3.0.11</span> <time datetime="2026-10-11" class="x">1d ago</time>';
+const storePage = (...parts: string[]) => new Response('<html>' + parts.join('\n') + '</html>', { status: 200, headers: { 'content-type': 'text/html' } });
+/** Routes by host, as the real thing does: the lookup API and the web page are different doors. */
+function apple(lookup: () => Response | Promise<Response>, page: () => Response | Promise<Response>) {
+  return vi.fn(async (url: unknown) => (String(url).includes('itunes.apple.com') ? lookup() : page()));
+}
+const refused = () => new Response('', { status: 403 });
+
+describe('parseStorePage (W1044)', () => {
+  it('reads the version and the exact release time from the page data', () => {
+    expect(parseStorePage(PAGE_HEAD + PAGE_DATA + PAGE_HISTORY)).toEqual({ version: '3.0.12', iso: '2026-10-12T18:02:35.000Z' });
+  });
+  it('reads them from the markup alone (the date is the day, at midnight UTC)', () => {
+    expect(parseStorePage(PAGE_HEAD + PAGE_MARKUP + PAGE_HISTORY)).toEqual({ version: '3.0.12', iso: '2026-10-12T00:00:00.000Z' });
+  });
+  it('the data wins when both are there; an older version in the history is never taken for the live one', () => {
+    expect(parseStorePage(PAGE_HEAD + PAGE_HISTORY + PAGE_MARKUP + PAGE_DATA)).toEqual({ version: '3.0.12', iso: '2026-10-12T18:02:35.000Z' });
+    expect(parseStorePage(PAGE_HEAD + PAGE_HISTORY)).toEqual({ version: null, iso: null });
+  });
+  it('a page for some other app, an empty page, or not a string at all → nothing', () => {
+    expect(parseStorePage(PAGE_DATA + PAGE_MARKUP)).toEqual({ version: null, iso: null });
+    expect(parseStorePage('')).toEqual({ version: null, iso: null });
+    expect(parseStorePage(undefined as unknown as string)).toEqual({ version: null, iso: null });
+  });
+  it('a version with a date nobody can read is a version with no date', () => {
+    const bad = PAGE_DATA.replace('Mon Oct 12 2026 18:02:35 GMT+0000 (Coordinated Universal Time)', 'sometime soon');
+    expect(parseStorePage(PAGE_HEAD + bad)).toEqual({ version: '3.0.12', iso: null });
+  });
+});
+
+describe('storeRelease — three sources (W1044)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('the lookup refused (what production sees) → the App Store page answers', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));   // the Monday after 3.0.12
+    const f = apple(refused, () => storePage(PAGE_HEAD, PAGE_DATA, PAGE_MARKUP));
+    vi.stubGlobal('fetch', f);
+    const r = await storeRelease();
+    expect(r).toMatchObject({ fresh: true, version: '3.0.12', released_at: '2026-10-12T18:02:35.000Z', reason: null, source: 'page', tried: ['lookup:HTTP_403'] });
+    expect(r.age_days).toBeCloseTo(6.94, 2);
+    expect(f).toHaveBeenCalledTimes(3);
+    expect(String(f.mock.calls[2][0])).toBe('https://apps.apple.com/us/app/id6764727990');
+  });
+
+  it('an answer from the lookup is final, stale or not: the page is never asked', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    const page = vi.fn(() => storePage(PAGE_HEAD, PAGE_DATA));
+    vi.stubGlobal('fetch', apple(() => lookupResponse('3.0.11', '2026-09-30T12:00:00Z'), page));
+    expect(await storeRelease()).toMatchObject({ fresh: false, version: '3.0.11', reason: 'STALE', source: 'lookup', tried: [] });
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it('the page is final too: a stale page does not go on to the reports', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-30T17:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, () => storePage(PAGE_HEAD, PAGE_DATA)));
+    const st = cronState({ installed: ['3.0.13-w1045'], reports: [{ detail: '3.0.13|2026-11-29T10:00:00Z', at: Date.now() - 3600_000 }] });
+    expect(await storeRelease(makeEnv(st))).toMatchObject({ fresh: false, version: '3.0.12', reason: 'STALE', source: 'page' });
+  });
+
+  it('lookup refused and the page down → the newest version the phones reported', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, () => new Response('', { status: 503 })));
+    const now = Date.now();
+    const st = cronState({
+      installed: ['3.0.10-w1024', '3.0.12-w1041', '3.0.13-w1045'],
+      reports: [
+        { detail: '3.0.11|2026-10-11T18:13:44Z', at: now - 7 * 86400_000 },
+        { detail: '3.0.12|2026-10-12T18:02:35Z', at: now - 2 * 86400_000 },
+        { detail: '3.0.12|2026-10-12T18:02:35Z', at: now - 3600_000 },
+      ],
+    });
+    const r = await storeRelease(makeEnv(st));
+    expect(r).toMatchObject({ fresh: true, version: '3.0.12', released_at: '2026-10-12T18:02:35.000Z', source: 'reports', tried: ['lookup:HTTP_403', 'page:HTTP_503'] });
+  });
+
+  it('a report naming a version above every installed build is ignored', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, refused));
+    const now = Date.now();
+    const st = cronState({
+      installed: ['3.0.12-w1041', '3.0.13-w1045'],
+      reports: [{ detail: '9.9.9|2026-10-19T00:00:00Z', at: now - 60_000 }, { detail: '3.0.12|2026-10-12T18:02:35Z', at: now - 3600_000 }],
+    });
+    expect(await storeRelease(makeEnv(st))).toMatchObject({ fresh: true, version: '3.0.12', source: 'reports' });
+    st.reports = [{ detail: '9.9.9|2026-10-19T00:00:00Z', at: now - 60_000 }];
+    expect(await storeRelease(makeEnv(st))).toMatchObject({ fresh: false, version: null, source: null, reason: 'lookup:HTTP_403+page:HTTP_403+reports:NONE' });
+  });
+
+  it('reports: junk is skipped, two weeks is the limit, and a version needs a date from some phone', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, refused));
+    const now = Date.now();
+    const st = cronState({ installed: ['3.0.13-w1045'], reports: [{ detail: 'not a version', at: now - 1000 }, { detail: null, at: now - 1000 }, { detail: '3.0.12|2026-10-12T18:02:35Z', at: now - 15 * 86400_000 }] });
+    expect((await storeRelease(makeEnv(st))).reason).toBe('lookup:HTTP_403+page:HTTP_403+reports:NONE');
+    st.reports = [{ detail: '3.0.12', at: now - 1000 }];
+    expect(await storeRelease(makeEnv(st))).toMatchObject({ fresh: false, version: '3.0.12', reason: 'lookup:HTTP_403+page:HTTP_403+reports:NO_RELEASE_DATE' });
+    st.reports.push({ detail: '3.0.12|2026-10-12T18:02:35Z', at: now - 5000 });
+    expect(await storeRelease(makeEnv(st))).toMatchObject({ fresh: true, version: '3.0.12', source: 'reports' });
+    // nobody has opened any build lately: there is nothing to hold a report against
+    st.installed = [];
+    expect((await storeRelease(makeEnv(st))).reason).toBe('lookup:HTTP_403+page:HTTP_403+reports:NO_INSTALLED_BUILD');
+  });
+
+  it('without a database (no env) the reports are simply not a source', async () => {
+    vi.stubGlobal('fetch', apple(refused, () => storePage(PAGE_HEAD)));
+    expect(await storeRelease()).toMatchObject({ fresh: false, tried: ['lookup:HTTP_403', 'page:NO_VERSION'] });
+  });
+});
+
+describe('runUpdatePushCron — the push goes out when only the page answers (W1044)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('MONDAY 9 AM PT, lookup 403, page fresh → the page runs under the version gate and the journal names the source', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, () => storePage(PAGE_HEAD, PAGE_DATA, PAGE_MARKUP)));
+    const st = cronState({ users: ['u1', 'u2', 'u3'], buildsByUser: { u1: '3.0.12-w1041', u2: '3.0.11-w1036', u3: '3.0.10-w1024' } });
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(st.sent).toBe(2);            // u1 already has 3.0.12
+    expect(st.completed).toBe(1);
+    expect(decisionsOf(st)).toEqual(['PAGE']);
+    const detail = detailOf(st);
+    expect(detail.release).toMatchObject({ fresh: true, version: '3.0.12', source: 'page', tried: ['lookup:HTTP_403'] });
+    expect(detail.page).toMatchObject({ sent: 2, skipped_current: 1 });
+  });
+
+  it('MONDAY 9 AM PT, lookup 403, page down, phones reported → the push still goes out', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T16:30:00Z'));
+    vi.stubGlobal('fetch', apple(refused, () => new Response('', { status: 500 })));
+    const st = cronState({
+      users: ['u1', 'u2'], buildsByUser: { u1: '3.0.13-w1045', u2: '3.0.11-w1036' },
+      installed: ['3.0.13-w1045', '3.0.11-w1036'], reports: [{ detail: '3.0.12|2026-10-12T18:02:35Z', at: Date.now() - 3600_000 }],
+    });
+    await runUpdatePushCron(makeEnv(st), '*/2 * * * *');
+    expect(st.sent).toBe(1);            // u1 runs a newer build than the store's
+    expect(detailOf(st).release).toMatchObject({ source: 'reports', version: '3.0.12' });
   });
 });
 
