@@ -41,6 +41,9 @@ export const BOARD_TAGS = ['improvement', 'bug', 'talk', 'update'] as const;
 export const UPDATE_TAG = 'update';
 /** The wire tag for a stored row. */
 const WIRE_TAG_SQL = `CASE WHEN x.kind = 'update' THEN 'update' ELSE x.tag END`;
+// W1043 — ALL carries one update: the newest (the same one /v1/community/unseen names).
+// Older updates stay on the UPDATES rail. True for every topic that is not an older update.
+const ONE_UPDATE_SQL = `(COALESCE(x.kind, '') != 'update' OR x.id = (SELECT n.id FROM board_topics n WHERE n.kind = 'update' AND n.deleted_at IS NULL AND n.hidden_at IS NULL ORDER BY n.created_at DESC, n.id DESC LIMIT 1))`;
 export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
 export const AUTO_HIDE_REPORTS = 3;
@@ -460,8 +463,11 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
         AND (? = 1 OR x.hidden_at IS NULL)
         AND (? = '' OR ${WIRE_TAG_SQL} = ?)
         AND ${BLOCK_FILTER}
-        AND (x.resolved_at IS NOT NULL) = ?`;
-  const whereBinds = [modView, tag, tag, session.userId, session.userId, wantResolved];
+        AND (x.resolved_at IS NOT NULL) = ?
+        AND (? = 0 OR ${ONE_UPDATE_SQL})`;
+  // W1043 — the one-update rule is the ALL rail's alone: a tag rail and RESOLVED list everything.
+  const oneUpdate = !tag && !wantResolved ? 1 : 0;
+  const whereBinds = [modView, tag, tag, session.userId, session.userId, wantResolved, oneUpdate];
   const firstPage = !cursorRaw;
 
   // W913 — pinned topics lead the first page of every sort; the keyset list excludes them.
@@ -516,22 +522,24 @@ export async function handleBoardTopicsGet(request: Request, env: Env, session: 
   let counts: { all: number; improvement: number; bug: number; talk: number; update: number; resolved: number } | undefined;
   if (firstPage) {
     const c = await env.DB.prepare(
-      `SELECT ${WIRE_TAG_SQL} AS tag, COUNT(*) AS n
+      `SELECT ${WIRE_TAG_SQL} AS tag, COUNT(*) AS n,
+              SUM(CASE WHEN ${ONE_UPDATE_SQL} THEN 1 ELSE 0 END) AS shown
          FROM board_topics x${AUTHOR_JOIN}
         WHERE ${where}
         GROUP BY 1`,
-    ).bind(modView, '', '', session.userId, session.userId, 0).all<{ tag: string; n: number }>();
+    ).bind(modView, '', '', session.userId, session.userId, 0, 0).all<{ tag: string; n: number; shown: number }>();
     counts = { all: 0, improvement: 0, bug: 0, talk: 0, update: 0, resolved: 0 };
     for (const r of c.results ?? []) {
       const n = Number(r.n) || 0;
       if (isTag(r.tag)) counts[r.tag] = n;
-      counts.all += n;
+      // W1043 — a rail's pill counts every topic on it; ALL counts what ALL lists.
+      counts.all += Number(r.shown) || 0;
     }
     const rc = await env.DB.prepare(
       `SELECT COUNT(*) AS n
          FROM board_topics x${AUTHOR_JOIN}
         WHERE ${where}`,
-    ).bind(modView, '', '', session.userId, session.userId, 1).first<{ n: number }>();
+    ).bind(modView, '', '', session.userId, session.userId, 1, 0).first<{ n: number }>();
     counts.resolved = Number(rc?.n) || 0;
   }
   let next_cursor: string | null = null;

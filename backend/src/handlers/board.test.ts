@@ -356,21 +356,34 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               const wantPinned = /x\.pinned_at IS NOT NULL/.test(sql);
               const wantUnpinned = /x\.pinned_at IS NULL/.test(sql);
               const unanswered = /x\.reply_count = 0/.test(sql);
-              const isCount = /COUNT\(\*\) AS n\s+FROM board_topics x/.test(sql);
-              const wantResolved = Number(binds[5]) || 0;   // W990 — the last bind of `where`
+              const isCount = /COUNT\(\*\) AS n\b/.test(sql);   // W1043 — the tag counts now carry a second column
+              const wantResolved = Number(binds[5]) || 0;   // W990
+              const oneUpdate = Number(binds[6]) || 0;      // W1043 — the last bind of `where`
+              const wire = (t: { kind?: string | null }) => (t.kind === 'update' ? 'update' : 'talk');
+              // The newest visible update, picked as ONE_UPDATE_SQL picks it.
+              const newest = Object.entries(st.topics)
+                .filter(([, t]) => t.kind === 'update' && t.deleted_at == null && t.hidden_at == null)
+                .sort((a, b) => ((b[1].created_at || 0) - (a[1].created_at || 0)) || (a[0] < b[0] ? 1 : -1))[0];
+              const shownInAll = ([id, t]: [string, { kind?: string | null }]) => t.kind !== 'update' || (!!newest && newest[0] === id);
               let entries = Object.entries(st.topics)
                 .filter(([, t]) => t.deleted_at == null && (modView || t.hidden_at == null))
                 .filter(([, t]) => (t.resolved_at != null ? 1 : 0) === wantResolved)
                 .filter(([, t]) => !st.blocks.has(`${me}|${t.author_id}`) && !(st.blocks.has(`${t.author_id}|${me}`) && !st.mods[me]))
                 .filter(([, t]) => !st.users[t.author_id].apple_sub.startsWith('sim_test_'))
-                .filter(() => !tag || tag === 'talk');
-              if (isCount) return /GROUP BY/.test(sql) ? { results: entries.length ? [{ tag: 'talk', n: entries.length }] : [], success: true, meta: {} } : { results: [{ n: entries.length }], success: true, meta: {} };
+                .filter(([, t]) => !tag || tag === wire(t));
+              if (oneUpdate) entries = entries.filter(shownInAll);
+              if (isCount) {
+                if (!/GROUP BY/.test(sql)) return { results: [{ n: entries.length }], success: true, meta: {} };
+                const by: Record<string, { tag: string; n: number; shown: number }> = {};
+                entries.forEach((e) => { const k = wire(e[1]); const g = by[k] || (by[k] = { tag: k, n: 0, shown: 0 }); g.n++; if (shownInAll(e)) g.shown++; });
+                return { results: Object.values(by), success: true, meta: {} };
+              }
               if (wantPinned) entries = entries.filter(([, t]) => t.pinned_at != null);
               if (wantUnpinned) entries = entries.filter(([, t]) => t.pinned_at == null);
               if (unanswered) entries = entries.filter(([, t]) => !t.reply_count);
               if (/ORDER BY x\.up_count DESC/.test(sql)) entries.sort((a, b) => (b[1].up_count || 0) - (a[1].up_count || 0));
               const results = entries
-                .map(([id, t]) => ({ id, tag: 'talk', title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, locked_at: t.locked_at ?? null, resolved_at: t.resolved_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
+                .map(([id, t]) => ({ id, tag: 'talk', kind: t.kind ?? null, title: 'T', body: 'B', created_at: 1, last_activity_at: t.last_activity_at, reply_count: t.reply_count, hidden_at: t.hidden_at, deleted_at: null, up_count: t.up_count || 0, pinned_at: t.pinned_at ?? null, locked_at: t.locked_at ?? null, resolved_at: t.resolved_at ?? null, author_id: t.author_id, alias: st.users[t.author_id].alias, rank_label: 'E', founder_seq: 0, is_mod: st.mods[t.author_id] ? 1 : 0 }));
               return { results, success: true, meta: {} };
             }
             return { results: [], success: true, meta: {} };
@@ -1186,6 +1199,73 @@ describe('W973 · Updates — the developers\' weekly voice', () => {
     const q = st.calls.find((c) => /FROM board_topics x/.test(c.sql))!;
     expect(q.sql).toContain("CASE WHEN x.kind = 'update' THEN 'update' ELSE x.tag END");
     expect((await json(r)).counts).toMatchObject({ update: 0 });
+  });
+
+  // W1043 — ALL carries one update; the rest stay on the UPDATES rail.
+  it('ALL lists only the newest update; UPDATES lists every one; the counts say the same', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 24', body: 'First.' });
+    const b = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 5', body: 'Second.' });
+    const c = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 12', body: 'Third.' });
+    const t = await postTopic(st, ren);
+    const [ia, ib, ic, it_] = [a, b, c, t].map((r) => r.body.id as string);
+    st.topics[ia].created_at = 1000; st.topics[ib].created_at = 2000; st.topics[ic].created_at = 3000;
+    const ids = (o: Record<string, unknown>) => (o.topics as Array<{ id: string; tag: string }>).map((r) => r.id).sort();
+
+    for (const sort of ['latest', 'hot', 'unanswered']) {
+      const all = await json(await handleBoardTopicsGet(get('/v1/board/topics?sort=' + sort), makeEnv(st), x));
+      expect(ids(all), sort).toEqual([ic, it_].sort());
+      expect(all.counts, sort).toMatchObject({ all: 2, update: 3, talk: 1 });
+    }
+    const upd = await json(await handleBoardTopicsGet(get('/v1/board/topics?tag=update'), makeEnv(st), x));
+    expect(ids(upd)).toEqual([ia, ib, ic].sort());
+    expect(upd.counts).toMatchObject({ all: 2, update: 3 });
+    expect((upd.topics as Array<{ tag: string }>).every((r) => r.tag === 'update')).toBe(true);
+  });
+
+  it('an older update that someone pins by hand still stays off ALL', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 24', body: 'First.' });
+    const b = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 12', body: 'Second.' });
+    const [ia, ib] = [a, b].map((r) => r.body.id as string);
+    st.topics[ia].created_at = 1000; st.topics[ib].created_at = 2000;
+    st.topics[ia].pinned_at = 5000;
+    const all = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((all.topics as Array<{ id: string }>).map((r) => r.id)).toEqual([ib]);
+  });
+
+  it('when the newest update is hidden or deleted, the one before it takes its place on ALL (for moderators too)', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const a = await postTopic(st, me, { tag: 'update', title: 'Week of Sep 24', body: 'First.' });
+    const b = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 12', body: 'Second.' });
+    const [ia, ib] = [a, b].map((r) => r.body.id as string);
+    st.topics[ia].created_at = 1000; st.topics[ib].created_at = 2000;
+    st.topics[ib].hidden_at = Date.now();
+    const hunter = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((hunter.topics as Array<{ id: string }>).map((r) => r.id)).toEqual([ia]);
+    expect(hunter.counts).toMatchObject({ all: 1, update: 1 });
+    // A moderator still sees the hidden one on UPDATES, and the same single update on ALL.
+    const mod = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), me));
+    expect((mod.topics as Array<{ id: string }>).map((r) => r.id)).toEqual([ia]);
+    expect(mod.counts).toMatchObject({ all: 1, update: 2 });
+    st.topics[ib].hidden_at = null; st.topics[ib].deleted_at = Date.now();
+    const gone = await json(await handleBoardTopicsGet(get('/v1/board/topics'), makeEnv(st), x));
+    expect((gone.topics as Array<{ id: string }>).map((r) => r.id)).toEqual([ia]);
+  });
+
+  it('the rule is sent as the last bind of the list filter: on for ALL, off for a tag rail and RESOLVED', async () => {
+    const flag = async (qs: string) => {
+      const st = fresh();
+      await handleBoardTopicsGet(get('/v1/board/topics' + qs), makeEnv(st), x);
+      const q = st.calls.find((c) => /FROM board_topics x/.test(c.sql) && /x\.pinned_at IS NOT NULL/.test(c.sql))!;
+      expect(q.sql).toContain("COALESCE(x.kind, '') != 'update' OR x.id = (SELECT n.id FROM board_topics n");
+      return q.binds[6];
+    };
+    expect(await flag('')).toBe(1);
+    expect(await flag('?sort=hot')).toBe(1);
+    expect(await flag('?tag=update')).toBe(0);
+    expect(await flag('?tag=talk')).toBe(0);
+    expect(await flag('?state=resolved')).toBe(0);
   });
 
   it('unseen names the newest visible update so the app can keep a dot until it is opened', async () => {
