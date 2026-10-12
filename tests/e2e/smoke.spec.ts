@@ -43,6 +43,10 @@ import { test, expect, Page } from '@playwright/test';
 // Both are non-essential to every smoke spec, so hide them outright for EVERY test,
 // before any app script runs, by injecting CSS. Date/timezone/timing independent.
 test.beforeEach(async ({ page }) => {
+  // W1045 — the app now asks the App Store for its live version on every launch (it was Mondays
+  // only). The suite answers for Apple: nothing to report, so no banner, no event and no network.
+  // A spec that wants an answer routes the lookup itself (the later route wins).
+  await page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"resultCount":0,"results":[]}' }));
   await page.addInitScript(() => {
     // W679 — the Monday update-reminder banner (#upd-banner) is a fixed top strip;
     // on a UTC-Monday CI run it would fire and could intercept top-of-screen taps
@@ -7239,20 +7243,30 @@ test.describe('BR · Weekly to-do planner (W1008)', () => {
   });
 });
 
-// W791 · W1007 — the Monday update banner: shown only when the App Store's live version is
-// newer than this build; checked at launch AND on resume. The store lookup is stubbed and the
-// date pinned, so the suite runs any day. (The suite-wide CSS hides #upd-banner; it still mounts.)
-test.describe('BQ · Monday update banner (W791 · W1007)', () => {
+// W791 · W1007 · W1045 — the update banner: shown only when the App Store's live version is
+// newer than this build; checked at launch AND on resume. A version not announced yet shows on
+// any day, once; after that it is the Monday reminder (or the day a hunter returns). The store
+// lookup is stubbed and the date pinned, so the suite runs any day. (The suite-wide CSS hides
+// #upd-banner; it still mounts.)
+test.describe('BQ · Update banner (W791 · W1007 · W1036 · W1045)', () => {
   // The banner reads the DEVICE's weekday; pin the browser to Pacific so "Sunday 9 PM" is Sunday on the
   // UTC CI runner too (it is already Monday in UTC — the first CI run caught exactly that).
   test.use({ timezoneId: 'America/Los_Angeles' });
-  const store = (page: Page, v: string) => page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resultCount: 1, results: [{ version: v }] }) }));
+  const store = (page: Page, v: string, released?: string) => page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ resultCount: 1, results: [released ? { version: v, currentVersionReleaseDate: released } : { version: v }] }) }));
+  // "This hunter has already been shown version v" — what is left is the weekly reminder.
+  const told = (page: Page, v: string) => page.addInitScript((ver) => {
+    try { if (sessionStorage.getItem('__w1045')) return; sessionStorage.setItem('__w1045', '1'); localStorage.setItem('hb_update_banner_ver', ver as string); } catch (_) {}
+  }, v);
+  const resume = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const marks = (page: Page) => page.evaluate(() => [localStorage.getItem('hb_update_banner_ver'), localStorage.getItem('hb_update_banner_seen')]);
+  const dismiss = async (page: Page) => { await page.evaluate(() => (window as any).closeUpdateBanner()); await page.waitForTimeout(600); };
+
   test('Monday + an older build: the strip mounts at launch, links to the store and dismisses for the day', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));   // Mon 28 Sep, 9:00 AM PST
     await store(page, '99.0.0');
     await freshApp(page);
     await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
-    expect(await page.evaluate(() => localStorage.getItem('hb_update_banner_seen'))).toBe('2026-09-28');
+    expect(await marks(page)).toEqual(['99.0.0', '2026-09-28']);
   });
   test('Monday + the current build (store not newer): no strip', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));
@@ -7260,37 +7274,130 @@ test.describe('BQ · Monday update banner (W791 · W1007)', () => {
     await freshApp(page);
     await page.waitForTimeout(2_500);
     await expect(page.locator('#upd-banner')).toHaveCount(0);
+    expect(await marks(page)).toEqual([null, null]);
   });
-  test('W1007 — left open on Sunday, resumed on Monday: the strip mounts on resume', async ({ page }) => {
+  test('W1045 — the store gives no answer (the suite default): no strip, nothing marked, nothing queued', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-28T09:00:00-07:00'));
+    await freshApp(page);
+    await page.waitForTimeout(2_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    expect(await marks(page)).toEqual([null, null]);
+    expect(await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '')).not.toContain('store_version');
+  });
+  test('W1007 — a version already announced: nothing on Sunday, the Monday reminder mounts on resume', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-09-27T21:00:00-07:00'));   // Sun night
     await store(page, '99.0.0');
+    await told(page, '99.0.0');
     await freshApp(page);
     await page.waitForTimeout(1_500);
-    await expect(page.locator('#upd-banner')).toHaveCount(0);                // not a Monday
+    await expect(page.locator('#upd-banner')).toHaveCount(0);                // announced, and not a Monday
     await page.clock.setFixedTime(new Date('2026-09-28T07:30:00-07:00'));   // Monday morning, same session
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await resume(page);
     await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
   });
+
+  // W1045 — a version the hunter has not been shown yet: any day, once.
+  test('W1045 — a Wednesday, an older build, a version not announced yet: the strip mounts once; then it waits for Monday', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-14T10:00:00-07:00'));   // Wed 14 Oct
+    await store(page, '99.0.0');
+    await freshApp(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    expect(await marks(page)).toEqual(['99.0.0', '2026-10-14']);
+    await dismiss(page);
+    await resume(page);
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);                // once
+    await page.clock.setFixedTime(new Date('2026-10-15T10:00:00-07:00'));   // Thursday: announced, so nothing
+    await resume(page);
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    await page.clock.setFixedTime(new Date('2026-10-19T09:00:00-07:00'));   // Monday, still not updated: the reminder
+    await resume(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    expect(await marks(page)).toEqual(['99.0.0', '2026-10-19']);
+  });
+  test('W1045 — a version newer than the one announced shows again, whatever the day', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-15T10:00:00-07:00'));   // Thu 15 Oct
+    await store(page, '99.0.1');
+    await told(page, '99.0.0');
+    await freshApp(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    expect(await marks(page)).toEqual(['99.0.1', '2026-10-15']);
+  });
+  test('W1045 — a release that lands while the app is open shows on the next return, six hours on', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-14T08:00:00-07:00'));   // Wed 8 AM: nothing newer
+    await store(page, '0.0.1');
+    await freshApp(page);
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    await page.unroute('**/itunes.apple.com/lookup**');
+    await store(page, '99.0.0');                                             // the release
+    await page.clock.setFixedTime(new Date('2026-10-14T11:00:00-07:00'));   // 3 h on: the 6 h answer still stands
+    await resume(page);
+    await page.waitForTimeout(1_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    await page.clock.setFixedTime(new Date('2026-10-14T14:30:00-07:00'));   // 6.5 h on: asked again
+    await resume(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+  });
+  test('W1045 — day one stays quiet: nothing shows and nothing is marked, so it shows the next day', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-14T10:00:00-07:00'));
+    await store(page, '99.0.0');
+    await page.addInitScript(() => { try { localStorage.setItem('hb_onboarding_first_xp_date', '2026-10-14'); } catch (_) {} });
+    await freshApp(page);
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    await page.waitForTimeout(2_500);
+    await expect(page.locator('#upd-banner')).toHaveCount(0);
+    expect(await marks(page)).toEqual([null, null]);
+    await page.clock.setFixedTime(new Date('2026-10-15T10:00:00-07:00'));
+    await resume(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+  });
+  test('W1045 — the phone passes the store\'s answer along: one event a day per version, with the release time', async ({ page }) => {
+    const sent = () => page.evaluate(() => { try { return (JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]') as Array<{ e: string; d?: string }>).filter((x) => x.e === 'store_version').map((x) => x.d); } catch (_) { return ['unreadable']; } });
+    const again = async () => { await page.evaluate(() => localStorage.removeItem('hb_store_version')); await resume(page); await page.waitForTimeout(1_500); };
+    await page.clock.setFixedTime(new Date('2026-10-14T10:00:00-07:00'));
+    await store(page, '0.0.1', '2026-10-12T18:02:35Z');                     // nothing newer than this build: still worth telling the server
+    await freshApp(page);
+    await expect.poll(sent, { timeout: 8_000 }).toEqual(['0.0.1|2026-10-12T18:02:35Z']);
+    await again();
+    expect(await sent()).toEqual(['0.0.1|2026-10-12T18:02:35Z']);            // same version, same day: once
+    await page.unroute('**/itunes.apple.com/lookup**');
+    await store(page, '0.0.2');                                              // a new version, and Apple gave no date
+    await again();
+    expect(await sent()).toEqual(['0.0.1|2026-10-12T18:02:35Z', '0.0.2']);
+    await page.clock.setFixedTime(new Date('2026-10-15T10:00:00-07:00'));   // the next day: said once more
+    await again();
+    expect(await sent()).toEqual(['0.0.1|2026-10-12T18:02:35Z', '0.0.2', '0.0.2']);
+    // a version that is not three numbers is never passed along
+    await page.unroute('**/itunes.apple.com/lookup**');
+    await store(page, '<b>9</b>');
+    await page.evaluate(() => localStorage.removeItem('hb_store_version_sent'));
+    await again();
+    expect((await sent()).length).toBe(3);
+  });
+
   // W1036 — back after a week or more: the strip shows that day, whatever the weekday.
   const lastSeen = (page: Page, daysAgo: number) => page.addInitScript((d) => {
     try { if (sessionStorage.getItem('__w1036')) return; sessionStorage.setItem('__w1036', '1'); localStorage.setItem('hb_update_last_seen_at', String(Date.now() - (d as number) * 86400000)); } catch (_) {}
   }, daysAgo);
-  test('W1036 — a Saturday, back after 8 days on an older build: the strip mounts; it is once for the day', async ({ page }) => {
+  test('W1036 — a Saturday, back after 8 days on an older build already announced: the strip mounts; it is once for the day', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-10T07:32:00-07:00'));   // Sat 10 Oct
     await store(page, '99.0.0');
+    await told(page, '99.0.0');
     await lastSeen(page, 8);
     await freshApp(page);
     await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
     expect(await page.evaluate(() => [localStorage.getItem('hb_update_banner_seen'), localStorage.getItem('hb_update_away_day')])).toEqual(['2026-10-10', '2026-10-10']);
-    await page.evaluate(() => (window as any).closeUpdateBanner());
-    await page.waitForTimeout(600);
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await dismiss(page);
+    await resume(page);
     await page.waitForTimeout(1_500);
     await expect(page.locator('#upd-banner')).toHaveCount(0);
   });
   test('W1036 — a Saturday, seen two days ago (or never before): no strip; back after 8 days on the current build: no strip', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-10T07:32:00-07:00'));
     await store(page, '99.0.0');
+    await told(page, '99.0.0');
     await lastSeen(page, 2);
     await freshApp(page);
     await page.waitForTimeout(2_500);
