@@ -13,11 +13,13 @@
   <title>Awakened</title>
   <!-- Cinzel — used for the "Awakened" wordmark in the app header. Loaded
        with display=swap so the system font shows during fetch and gets
-       replaced once Cinzel is ready (no layout-shift flash). -->
+       replaced once Cinzel is ready (no layout-shift flash).
+       W1050 — Grenze Gotisch, Chakra Petch and Alegreya Sans are Onboarding
+       v4's type ("Carved"): onboarding first, the rest of the app later. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=749">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=750">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -85,51 +87,11 @@
   </div>
 
   <!-- Sign in with Apple gate (v2.1 Phase A). Sits OUTSIDE the main
-       tab system; renders before app.js mounts anything. Two-step
-       flow: Apple authorize → alias picker → reload into main app.
-       See BACKEND.md §4 (Auth Flow) for the design contract. -->
-  <div id="signin-gate" class="signin-gate sg-v2 hidden">
-    <!-- W939 — SIGN IN v2 (Claude Design handoff 32). The first screen every
-         download sees. The E-rank Gate full-bleed (the same art the Dungeon
-         shows, assets/gates/gate-e-rank.png), the logo mark, one action. -->
-    <div class="sg-art" aria-hidden="true"><img src="assets/gates/gate-e-rank.png" alt="" decoding="async"></div>
-    <div class="signin-gate-inner">
-      <div id="signin-step-apple" class="signin-step sg-step">
-        <div class="sg-lock"><img src="assets/awknd-logo.png" alt="" aria-hidden="true"><span class="sg-k">Awakened</span></div>
-        <div class="sg-rule" aria-hidden="true"></div>
-        <!-- .signin-title / .signin-blurb are the W816 hooks: a hunter whose
-             session expired sees "Welcome back, NAME" here instead. -->
-        <h1 class="signin-title sg-t">The Gate is open.</h1>
-        <p class="signin-blurb sg-fl">Only the named may cross. Sign in to claim your hunter name, carry your progress between devices, and take a place on the <b>global leaderboard</b>.</p>
-        <button id="signin-apple-btn" type="button" class="sg-apple" aria-label="Sign in with Apple">
-          <svg class="sg-apple-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.7c.02 2.9 2.54 3.86 2.57 3.87-.02.07-.4 1.38-1.33 2.73-.8 1.17-1.63 2.33-2.94 2.35-1.29.02-1.7-.76-3.17-.76-1.47 0-1.93.74-3.14.79-1.26.05-2.23-1.26-3.03-2.42-1.65-2.39-2.9-6.74-1.22-9.68.84-1.46 2.34-2.39 3.96-2.41 1.24-.02 2.4.83 3.17.83.76 0 2.18-1.03 3.67-.88.63.03 2.38.25 3.51 1.9-.09.06-2.1 1.23-2.05 3.68zM13.95 5.5c.67-.81 1.12-1.94 1-3.06-.96.04-2.13.64-2.82 1.45-.62.72-1.16 1.87-1.01 2.97 1.07.08 2.16-.55 2.83-1.36z"/></svg><span class="sg-apple-text">Sign in with Apple</span>
-        </button>
-        <div id="signin-apple-error" class="signin-error sg-err" role="alert"></div>
-        <!-- W930 — the W329 "Try it first" guest entry is gone (owner call,
-             2026-09-08): every new install signs in with Apple. Guests could not
-             be reached by any retention lever (no push token, no cloud save, no
-             board) and left no trace in the funnel. Existing guest sessions keep
-             playing through the gate's isGuest() branch + the Settings claim CTA. -->
-        <!-- W823 (Train 2, L12 privacy-footnote) — keep in sync with what
-             lbSubmitAllMetrics actually sends.
-             W939 — the old closing line, "Everything else stays on your device",
-             was never true: CloudSync uploads every hb_ key as a private backup
-             (POST /v1/users/me/state), and this screen's own headline promises
-             progress that follows you between devices. Say what actually leaves. -->
-        <p class="signin-footnote sg-s">We send your <b>hunter name</b> and verified totals — steps, highest floor, collection count — to power the leaderboards, and keep a <b>private backup</b> of your progress so it follows you to a new phone.</p>
-      </div>
-      <div id="signin-step-alias" class="signin-step hidden">
-        <div class="signin-brand">AWAKENED</div>
-        <h1 class="signin-title">Claim Your Hunter Name</h1>
-        <p class="signin-blurb">This is how you'll appear on the leaderboard.</p>
-        <input id="signin-alias-input" type="text" class="signin-alias-input" maxlength="20" placeholder="HunterShadow" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
-        <div class="signin-alias-hint">3–20 characters · letters, numbers, spaces, _ and - only</div>
-        <div id="signin-alias-suggestions" class="signin-suggestions"></div>
-        <div id="signin-alias-error" class="signin-error" role="alert"></div>
-        <button id="signin-alias-continue" type="button" class="signin-alias-continue">Continue</button>
-      </div>
-    </div>
-  </div>
+       tab system; shown before app.js mounts anything. See BACKEND.md §4.
+       W1050 — the gate is the first two beats of Onboarding v4 (the mark,
+       then Sign in with Apple in the Gate's light). app.js builds it here:
+       setupSignInGateIfNeeded → _obCore + _obGateScreen. -->
+  <div id="signin-gate" class="signin-gate hidden"></div>
 
   <!-- W330 — Guest deferred-claim modal. Reuses the signin-gate CSS. A guest
        signs in here to claim a permanent account; their local progress is
@@ -215,231 +177,12 @@
     </div>
   </div>
 
-  <!-- Cinematic onboarding — the whole visible first run. Legacy
-       #welcome-screen / #path-screen / #onboarding markup above stays in
-       the DOM as a safety fallback (showCinematicOnboarding falls back to
-       _legacyShowWelcomeScreen if this container is missing) and is not
-       reachable from the redirected showWelcomeScreen() path. The screens
-       inside are W936's; the one survivor of 1z.233 is the training-week
-       screen, which still carries its original .scr / .cin-tw-* names. -->
-  <div id="cin-onboarding" class="cin-onboarding hidden" aria-hidden="true">
-
-    <!-- W936 — ONBOARDING v2, "Direction A" (Claude Design handoff 31). Nine
-         screens: mark → name → witness → reveal → board → hunt → ascent →
-         vow → (training week) → pact. Every number on these screens is read
-         from the live game — the seven-day step total comes from Apple Health,
-         the board rows and the hunter's rank come from the real weekly board,
-         the Twin Maw's goal and drops come from COOP_BOSSES + CARDS, and the
-         Steel Wolf's fall is the real kill through evaluateSteelWolfForDay.
-         Art is the art the hunter will meet again inside the app.
-         Class names are `cn-` prefixed and used NOWHERE else, so nothing
-         leaks in either direction with the app's 35k-line stylesheet. -->
-    <div class="cn-chrome" id="cn-chrome">
-      <div class="cn-dots" id="cn-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <button class="cn-skip" id="cn-skip" type="button">SKIP</button>
-    </div>
-
-    <!-- 0 · THE MARK -->
-    <section class="cn-scr" id="cn-s0" data-i="0" data-nochrome>
-      <div class="cn-c cn-mid">
-        <button class="cn-sigil" id="cn-sigil" type="button" aria-label="Touch the mark"></button>
-        <p class="cn-fl">A new hunter stirs in the dark.<br>The System has been waiting.</p>
-        <span class="cn-k cn-tapline" id="cn-touch" role="button" tabindex="0">Touch the mark</span>
-      </div>
-    </section>
-
-    <!-- 1 · THE NAME -->
-    <section class="cn-scr" id="cn-s1" data-i="1" data-dot="0">
-      <div class="cn-c cn-mid">
-        <span class="cn-sigil cn-sigil-sm cn-lit" id="cn-sigil-sm" aria-hidden="true"></span>
-        <span class="cn-k">The System asks</span>
-        <h2 class="cn-t">What do they call you?</h2>
-        <input class="cn-field" id="cin-nameField" placeholder="hunter name" maxlength="20" autocomplete="off"
-               autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done">
-        <p class="cn-err" id="cin-nameError" style="display:none"></p>
-        <div class="cin-name-suggestions" id="cin-nameSuggestions" style="display:none"></div>
-        <!-- W947 — v3: the hunter picks the bust they walk in wearing -->
-        <div class="cn-busts" id="cn-busts" role="radiogroup" aria-label="Choose your look">
-          <button type="button" class="cn-bust-o cn-on" data-cn-bust="base" role="radio" aria-checked="true"><img src="assets/busts/avatar-base-bust.webp" alt=""><span>HUNTER</span></button>
-          <button type="button" class="cn-bust-o" data-cn-bust="ranger" role="radio" aria-checked="false"><img src="assets/busts/avatar-ranger-bust.webp" alt=""><span>RANGER</span></button>
-          <button type="button" class="cn-bust-o" data-cn-bust="warrior" role="radio" aria-checked="false"><img src="assets/busts/avatar-warrior-bust.webp" alt=""><span>WARRIOR</span></button>
-        </div>
-        <button type="button" class="cn-lore" id="cin-glossary-open">Hunter, mark, vow — what the System means</button>
-      </div>
-      <div class="cn-foot"><button type="button" class="cn-cta cn-off" id="cin-nameConfirm" disabled>CONFIRM</button></div>
-    </section>
-
-    <!-- 2 · THE WITNESS (onboarding owns the Apple Health ask — W936) -->
-    <section class="cn-scr" id="cn-s2" data-i="2" data-dot="1">
-      <div class="cn-c">
-        <span class="cn-k">The witness</span>
-        <h2 class="cn-t">The System reads your steps.</h2>
-        <p class="cn-b cn-say">Apple Health. Steps, sleep, workouts. Nothing can be faked.</p>
-        <p class="cn-s cn-say">They stay on your phone. Awakened never sees them leave it.</p>
-      </div>
-      <div class="cn-guide cn-guide-lg"><img src="assets/coach/first-awakened-speaking.png" alt="" aria-hidden="true"></div>
-      <div class="cn-foot"><button type="button" class="cn-cta cn-nt" id="cn-healthBtn">CONTINUE</button></div>
-    </section>
-
-    <!-- 3 · THE REVEAL — the road lights with the count -->
-    <section class="cn-scr cn-road" id="cn-s3" data-i="3" data-dot="1">
-      <div class="cn-rd"><img id="cn-roadimg" src="assets/backgrounds/lb-bg-100k.webp" alt="" aria-hidden="true"></div>
-      <div class="cn-scrub" id="cn-scrub" aria-hidden="true"></div>
-      <div class="cn-c cn-mid">
-        <span class="cn-k">Last 7 days</span>
-        <div class="cn-n"><span id="cn-steps7">0</span><small>STEPS</small></div>
-        <p class="cn-b" id="cn-revealLine"></p>
-        <span class="cn-hint" id="cn-rhint"><i></i>DRAG THE ROAD · YOUR STEPS ARE THE LIGHT</span>
-      </div>
-      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
-    </section>
-
-    <!-- 4 · THE BOARD — the real weekly Steps board -->
-    <section class="cn-scr" id="cn-s4" data-i="4" data-dot="2">
-      <div class="cn-c">
-        <span class="cn-k">Weekly steps</span>
-        <h2 class="cn-t">Every rank on this board was walked.</h2>
-        <div class="cn-rows" id="cn-rows"></div>
-        <p class="cn-s">Resets Sunday 12:00 AM Pacific · Apple Health is the only source</p>
-      </div>
-      <div class="cn-guide cn-guide-sm"><img src="assets/coach/first-awakened-pointing.png" alt="" aria-hidden="true"></div>
-      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
-    </section>
-
-    <!-- 5 · THE HUNT — The Twin Maw, its real goal and its real drop pool -->
-    <section class="cn-scr cn-art" id="cn-s5" data-i="5" data-dot="3">
-      <div class="cn-hero"><img id="cn-mawimg" src="assets/bosses/the-twin-maw.png" alt="The Twin Maw"></div>
-      <div class="cn-c cn-lift">
-        <div class="cn-boss">
-          <div><span class="cn-k">The hunt</span><h2 class="cn-t">The Twin Maw</h2></div>
-          <span class="cn-rank" id="cn-mawRank">E-RANK · DUO</span>
-        </div>
-        <p class="cn-b" id="cn-mawLine"></p>
-        <div class="cn-drops" id="cn-drops"></div>
-        <div class="cn-party" id="cn-party"><span class="cn-wait"><i></i><span id="cn-partyText"></span></span></div>
-      </div>
-      <div class="cn-foot">
-        <button type="button" class="cn-cta" id="cn-summon">SUMMON A FRIEND</button>
-        <button type="button" class="cn-quiet" id="cn-huntAlone" data-cn-next>HUNT ALONE</button>
-      </div>
-    </section>
-
-    <!-- 6 · THE ASCENT -->
-    <section class="cn-scr cn-art" id="cn-s6" data-i="6" data-dot="4">
-      <div class="cn-hero cn-tall">
-        <img src="assets/backgrounds/lb-bg-floor100.webp" alt="The Ascent">
-        <span class="cn-floor1">FLOOR 1</span>
-      </div>
-      <div class="cn-c cn-lift">
-        <span class="cn-k">The ascent</span>
-        <h2 class="cn-t">Floor 1 of 100.<br>The summit has a name.</h2>
-        <p class="cn-b">Every floor is a day kept. The beacon at the top is lit for whoever arrives.</p>
-        <span class="cn-k cn-vio">Floor 100 · The Hall of the Awakened</span>
-      </div>
-      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
-    </section>
-
-    <!-- 7 · THE VOW — the real packs, with their real vow counts -->
-    <section class="cn-scr" id="cn-s7" data-i="7" data-dot="5">
-      <div class="cn-c">
-        <span class="cn-k">The vow</span>
-        <h2 class="cn-t">Choose a path.</h2>
-        <div class="cn-paths" id="cn-paths"></div>
-      </div>
-      <div class="cn-guide cn-guide-md"><img src="assets/coach/first-awakened-idle.png" alt="" aria-hidden="true"></div>
-      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
-    </section>
-
-    <!-- 7½ · WHEN DO YOU START? (W1021) — Jump Program only; every other
-         path walks past it on the same tick. Chips are built by
-         _jumpChipsHtml (the same row as the sheet on the guide row). -->
-    <section class="cn-scr" id="cn-s7j" data-dot="5">
-      <div class="cn-c">
-        <span class="cn-k">Vertical Jump Program</span>
-        <h2 class="cn-t">When do you start?</h2>
-        <p class="cn-b">Day 1 lands on the day you pick.</p>
-        <div class="jd-row" id="cn-jdays" role="radiogroup" aria-label="Start day"></div>
-        <div class="jd-note" id="cn-jnote"></div>
-      </div>
-      <div class="cn-guide cn-guide-md"><img src="assets/coach/first-awakened-idle.png" alt="" aria-hidden="true"></div>
-      <div class="cn-foot"><button type="button" class="cn-cta" data-cn-next>CONTINUE</button></div>
-    </section>
-
-    <!-- 4½ · TRAINING WEEK (v3 Phase 1z.273G)
-         Conditional cinematic between Path and the Pact. Only renders when
-         the chosen pack contains a training-type habit (Workout, Cardio
-         workout, Sprint session, Mobility & Stretching, Whole-body
-         strength). Otherwise show() auto-advances past without flashing
-         the screen. Pre-lights each row's recommended days from
-         DEFAULT_HABITS.defaultDays (1z.273E). Tap a seal to toggle. The
-         CTA writes per-habit `days` overrides into obConfig so
-         _completeOnboardingFinish picks them up (1z.273E precedence).
-         data-step matches the Path screen (3) so the goal-gradient dot
-         stays anchored to the "Path zone" through this sub-step. -->
-    <section class="scr" data-step="3" id="cin-scr-training">
-      <div class="kicker rise" style="margin-bottom:6px">The oath of rest</div>
-      <h1 class="title rise" style="margin:0 0 4px;font-size:25px">The rhythm you<br/>train at</h1>
-      <div class="stanza rise d1" style="font-size:15px;margin-top:6px;max-width:300px">
-        A vow only matters on the days you swore it. Pick the days your training counts.
-      </div>
-      <div class="cin-tw-rows rise d2" id="cin-tw-rows"></div>
-      <div class="cin-tw-reassure rise d3">
-        <span class="cin-tw-star" aria-hidden="true">✦</span>
-        Rest days are not missed days.
-      </div>
-      <div class="rise d3" style="margin-top:14px;width:100%;max-width:320px">
-        <button type="button" class="cta" id="cin-twNext">Seal these days</button>
-      </div>
-      <button type="button" class="cin-tw-ghost rise d3" id="cin-twSkip">You can change this any time</button>
-    </section>
-
-    <!-- 8 · THE PACT — the first gate. The Steel Wolf is ENGAGED for real here
-         once the hunter holds it down (W947 — v3 hold to strike; the strike
-         drains exactly the share of 6,000 walked today, never more)
-         (a hunter's first engage is free, W771) and, when Apple Health already
-         shows the day's 6,000 steps, killed for real through
-         evaluateSteelWolfForDay: real souls, real drop roll, real once-per-day
-         claim. The relic on this screen is the relic now in the armory. When
-         the day is short, or Health is closed, the screen says so instead. -->
-    <section class="cn-scr" id="cn-s8" data-i="8" data-dot="5">
-      <div class="cn-c">
-        <span class="cn-k cn-g">The first gate</span>
-        <h2 class="cn-t" id="cn-pactTitle">Strike the Wolf.</h2>
-        <div class="cn-wolf" id="cn-wolf">
-          <img src="assets/bosses/the-steel-wolf.png" alt="The Steel Wolf">
-          <div class="cn-hp"><i id="cn-hpi"></i></div>
-          <span class="cn-strike" aria-hidden="true">HOLD TO STRIKE</span>
-          <span class="cn-pop">FALLEN</span>
-          <div class="cn-wt">
-            <div><div class="cn-wn">The Steel Wolf</div><div class="cn-ws" id="cn-wolfSub"></div></div>
-            <span class="cn-rank">E-RANK</span>
-          </div>
-        </div>
-        <div id="cn-pactBody"></div>
-      </div>
-      <div class="cn-foot"><button type="button" class="cn-cta cn-off" id="cn-enter" disabled>ENTER</button></div>
-    </section>
-
-    <!-- W472 — optional lore primer. The cinematic introduces several in-world
-         terms (Hunter, Mark, Vow, the System) atmosphere-first; this quiet, opt-in
-         glossary (the info dot on the naming screen) gives a cold new user a
-         foothold WITHOUT breaking the cinematic's flow. Path-to-A: onboarding clarity. -->
-    <div id="cin-glossary" class="cin-glossary hidden" role="dialog" aria-modal="true" aria-labelledby="cin-glossary-title" aria-hidden="true">
-      <div class="cin-glossary-card">
-        <div class="cin-glossary-kicker">The system, in plain words</div>
-        <h2 id="cin-glossary-title" class="cin-glossary-title">Before you begin</h2>
-        <dl class="cin-glossary-list">
-          <div class="cin-glossary-row"><dt>Hunter</dt><dd>You — the one who answered the call to change.</dd></div>
-          <div class="cin-glossary-row"><dt>Mark</dt><dd>A single completed habit. The system counts only what you do.</dd></div>
-          <div class="cin-glossary-row"><dt>Vow</dt><dd>A habit you swear to keep. You choose the days; the chain is your power.</dd></div>
-          <div class="cin-glossary-row"><dt>The System</dt><dd>The quiet law that tracks your discipline and ranks your growth.</dd></div>
-        </dl>
-        <button type="button" id="cin-glossary-close" class="cin-glossary-close">Understood</button>
-      </div>
-    </div>
-    <div class="cn-preview-note" id="cn-preview-note" hidden>PREVIEW · NOTHING IS SAVED</div>
-    <div class="fadeblack" id="cin-fb" aria-hidden="true"></div>
-  </div>
+  <!-- Onboarding — the whole visible first run. W1050: Onboarding v4, "The
+       Awakening" (Claude Design handoff 29). Every screen is built by
+       showCinematicOnboarding in app.js, fresh on each run, so this is only
+       the container. The legacy #welcome-screen / #path-screen / #onboarding
+       markup above stays as the fallback for a page that lost it. -->
+  <div id="cin-onboarding" class="cin-onboarding hidden" aria-hidden="true"></div>
 
   <div id="app">
     <header>
@@ -3205,7 +2948,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=1"></script>
-  <script src="app.js?v=1448"></script>
+  <script src="app.js?v=1449"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

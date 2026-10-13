@@ -81,177 +81,65 @@
     const gate = document.getElementById('signin-gate');
     if (!gate) return false; // gate markup missing — fail open
     gate.classList.remove('hidden');
-    // v3 Phase 1i — fade out the splash so the gate is visible.
-    // Splash hides itself once min-visible-time elapses.
-    try {
-      const splash = document.getElementById('awakened-splash');
-      if (splash) {
-        setTimeout(() => {
-          splash.classList.add('is-hidden');
-          setTimeout(() => { try { splash.remove(); } catch (_) {} }, 700);
-        }, 1800);
+    gate.classList.add('ob4-host');
+
+    // W1050 — the gate is the first two beats of Onboarding v4: the mark is
+    // held, the dark splits, and Sign in with Apple rises in the Gate's light.
+    // The engine (_obCore / _obGateScreen, far below) is a pair of hoisted
+    // functions that read nothing of this file's state, because none of it
+    // exists yet at this point.
+    // W816 — RETURNING-hunter copy. To a hunter whose session hit the pre-W815
+    // 90-day cliff the stock gate reads as "your account is gone" (both testers
+    // reported exactly that). If this device plainly carried a hunter (an
+    // hb_name), the gate greets them by name and says the truth: signing in
+    // RECONNECTS the account. Detection is hb_name-presence only (never
+    // totalPoints<=0 — the W-known trap).
+    let welcome = '';
+    try { welcome = localStorage.getItem('hb_name') || ''; } catch (_) {}
+    // v3 Phase 1z.245 — a success reloads into the main app. The Apple identity
+    // token is persisted (auth.js _savePending), the isApplePending() pass above
+    // lets the app mount, and onboarding's name screen calls completeSignIn()
+    // with the hunter's chosen name.
+    const signIn = async () => {
+      try {
+        if (!window.Auth.isNative()) return { error: 'Sign in with Apple is only available in the iOS app.' };
+        const response = await window.Auth.signInWithApple();
+        if (!response) return null;   // cancelled, or no response: stay on the gate
+        window.location.reload();
+        return { ok: true };
+      } catch (e) {
+        return { error: (e && e.message === 'NATIVE_ONLY') ? 'Sign in with Apple is only available in the iOS app.' : 'Sign in failed. Please try again.' };
       }
-    } catch (_) {}
-
-    // Determine which step to show:
-    //   no user → step "apple" (sign in)
-    //   user but no alias → step "alias" (alias picker)
-    const stepApple = document.getElementById('signin-step-apple');
-    const stepAlias = document.getElementById('signin-step-alias');
-    // v3 Phase 1z.245 — the legacy `user && !user.alias` branch (which
-    // showed the alias picker) is unreachable now: Apple Sign-In reloads
-    // before alias claim, and the gate exits early on isApplePending().
-    // Always show the Apple step; alias step stays hidden as a safety
-    // fallback for any cached HTML.
-    if (stepApple) stepApple.classList.remove('hidden');
-    if (stepAlias) stepAlias.classList.add('hidden');
-
-    // W816 — RETURNING-hunter gate copy. The stock "Sign in to begin / Claim
-    // your hunter identity" reads like a fresh install; to a hunter whose
-    // session hit the pre-W815 90-day cliff it reads as "your account is gone"
-    // (both testers reported exactly that). If this device plainly carried a
-    // hunter (an hb_name), greet them by name and say the truth: signing in
-    // RECONNECTS the existing account — nothing was lost. Detection is
-    // hb_name-presence only (never totalPoints<=0 — the W-known trap).
+    };
+    let ob = null;
     try {
-      let name = ''; try { name = localStorage.getItem('hb_name') || ''; } catch (_) {}
-      if (name) {
-        const t = stepApple && stepApple.querySelector('.signin-title');
-        const b = stepApple && stepApple.querySelector('.signin-blurb');
-        if (t) t.textContent = 'Welcome back, ' + name;
-        if (b) b.textContent = 'Your session expired while you were away. Sign in with Apple to reconnect — your hunter, souls, streaks, and kill log are exactly where you left them.';
-      }
-    } catch (_) {}
-
-    // Wire Apple-sign-in button.
-    const appleBtn = document.getElementById('signin-apple-btn');
-    const appleErr = document.getElementById('signin-apple-error');
-    if (appleBtn) {
-      appleBtn.addEventListener('click', async () => {
-        if (appleErr) appleErr.textContent = '';
-        appleBtn.disabled = true;
-        // W939 — the Sign in v2 busy state: the button holds a spinner while
-        // Apple's sheet is up and through the reload, so a success never
-        // flashes back to an idle button before the app mounts.
-        appleBtn.classList.add('is-busy');
-        let reloading = false;
-        try {
-          if (!window.Auth.isNative()) {
-            if (appleErr) appleErr.textContent = 'Sign in with Apple is only available in the iOS app.';
-            return;
-          }
-          const response = await window.Auth.signInWithApple();
-          if (!response) {
-            // user cancelled or no response — stay on the apple step
-            return;
-          }
-          // v3 Phase 1z.245 — Reload into the main app. The Apple
-          // identity token is now persisted (auth.js _savePending),
-          // the gate's new isApplePending() short-circuit will return
-          // false, the main app mounts, and the cinematic onboarding's
-          // name screen calls completeSignIn() with the user's chosen
-          // hunter name. No more alias-picker step.
-          reloading = true;
-          window.location.reload();
-          return;
-        } catch (e) {
-          if (e && e.message === 'NATIVE_ONLY') {
-            if (appleErr) appleErr.textContent = 'Sign in with Apple is only available in the iOS app.';
-          } else {
-            if (appleErr) appleErr.textContent = 'Sign in failed — please try again.';
-          }
-        } finally {
-          if (!reloading) {
-            appleBtn.disabled = false;
-            appleBtn.classList.remove('is-busy');
-          }
-        }
-      });
+      ob = _obCore(gate, {});
+      ob.add('gate', _obGateScreen(ob, { welcomeName: welcome, signIn: signIn }));
+    } catch (e) {
+      // The first screen of the app must never be a blank one.
+      ob = null;
+      try { console.warn('[ob] gate failed', e); } catch (_) {}
+      gate.innerHTML = '<button id="signin-apple-btn" type="button" style="position:absolute;left:24px;right:24px;bottom:48px;height:50px;border:0;border-radius:10px;background:#fff;color:#000;font:600 19px -apple-system,sans-serif">Sign in with Apple</button>';
+      gate.firstChild.addEventListener('click', () => { signIn(); });
     }
+    // v3 Phase 1i — fade out the splash so the gate is visible. The mark's own
+    // clock (its prompt, its tap fallback) starts as the splash lifts.
+    let splash = null;
+    try { splash = document.getElementById('awakened-splash'); } catch (_) {}
+    if (splash) {
+      setTimeout(() => {
+        splash.classList.add('is-hidden');
+        setTimeout(() => { try { splash.remove(); } catch (_) {} }, 700);
+      }, 1800);
+    }
+    if (ob) setTimeout(() => { try { ob.go('gate'); } catch (_) {} }, splash ? 1500 : 0);
+    try { window.__ob = ob; } catch (_) {}   // QA hook
 
     // W930 — the W329 "Try it first" guest entry is gone: every new install
     // signs in with Apple. Existing guest sessions still mount through the
-    // gate's isGuest() branch above and keep the Settings claim CTA.
-
-    // Wire alias-continue button. v2.1.0 Phase B: this calls the
-    // real backend at /v1/auth/verify, replacing the Phase A stub.
-    const aliasBtn = document.getElementById('signin-alias-continue');
-    const aliasErr = document.getElementById('signin-alias-error');
-    const aliasIn  = document.getElementById('signin-alias-input');
-    const suggBox  = document.getElementById('signin-alias-suggestions');
-
-    function renderSuggestions(suggested) {
-      if (!suggBox) return;
-      suggBox.innerHTML = '';
-      if (!Array.isArray(suggested) || suggested.length === 0) return;
-      const label = document.createElement('div');
-      label.className = 'signin-suggestions-label';
-      label.textContent = 'Try one of these:';
-      suggBox.appendChild(label);
-      suggested.forEach((s) => {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'signin-suggestion-chip';
-        chip.textContent = s;
-        chip.addEventListener('click', () => {
-          if (aliasIn) {
-            aliasIn.value = s;
-            aliasIn.focus();
-          }
-          if (aliasErr) aliasErr.textContent = '';
-          suggBox.innerHTML = '';
-        });
-        suggBox.appendChild(chip);
-      });
-    }
-
-    const submitAlias = async () => {
-      if (!aliasIn || !aliasBtn) return;
-      const value = aliasIn.value;
-      if (suggBox) suggBox.innerHTML = '';
-      if (!window.Auth.validateAlias(value)) {
-        if (aliasErr) aliasErr.textContent = '3–20 chars, letters/numbers/space/_/- only.';
-        return;
-      }
-      aliasBtn.disabled = true;
-      if (aliasErr) aliasErr.textContent = 'Signing in…';
-      let result;
-      try {
-        result = await window.Auth.completeSignIn(value);
-      } catch (e) {
-        result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' };
-      }
-      if (result && result.ok) {
-        // v3 Phase 1j — alias is now the canonical hunter-name claim.
-        // Lock it so no downstream UI exposes a rename path.
-        try { localStorage.setItem('hb_hunter_name_claimed', '1'); } catch (_) {}
-        // Reload to mount the main app from the signed-in state.
-        window.location.reload();
-        return;
-      }
-      const code = result && result.code;
-      if (code === 'ALIAS_TAKEN' && result.suggested && result.suggested.length > 0) {
-        if (aliasErr) aliasErr.textContent = result.reason || 'That alias is taken.';
-        renderSuggestions(result.suggested);
-      } else if (code === 'ALIAS_INVALID') {
-        if (aliasErr) aliasErr.textContent = result.reason || 'Alias not allowed.';
-      } else if (code === 'APPLE_TOKEN_INVALID' || code === 'NO_PENDING_TOKEN') {
-        // Reset to the Apple-sign-in step.
-        if (stepAlias) stepAlias.classList.add('hidden');
-        if (stepApple) stepApple.classList.remove('hidden');
-        const appleErr2 = document.getElementById('signin-apple-error');
-        if (appleErr2) appleErr2.textContent = result.reason || 'Sign in expired — please try again.';
-      } else if (code === 'NETWORK') {
-        if (aliasErr) aliasErr.textContent = 'Could not reach server. Check your connection.';
-      } else {
-        if (aliasErr) aliasErr.textContent = (result && result.reason) || 'Sign in failed. Try again.';
-      }
-      aliasBtn.disabled = false;
-    };
-    if (aliasBtn) aliasBtn.addEventListener('click', submitAlias);
-    if (aliasIn) aliasIn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); submitAlias(); }
-    });
+    // isGuest() branch above and keep the Settings claim CTA. The legacy
+    // in-gate alias picker went with its markup (W1050); it had been
+    // unreachable since 1z.245.
 
     return true; // gate took over; caller halts main app setup
   }
@@ -272,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1049'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1050'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -65341,177 +65229,6 @@
   // rank math is touched. The visual is the reward; the first real
   // habit completion still credits XP normally.
   // ─────────────────────────────────────────────────────────
-  // v3 Phase 1z.244 — Cinematic onboarding SFX. All sounds are
-  // generated via WebAudio (no assets), share one AudioContext
-  // (window.__cinSfxCtx), honor the existing soundEnabled prefs
-  // (hb_sound localStorage), and fail silently on any error —
-  // autoplay blocks, missing AudioContext, suspended state, anything.
-  // Onboarding progression never depends on audio.
-  //
-  // Sound moments:
-  //   ignite — first sigil tap on screen 1 (low awakening pulse)
-  //   chime  — name confirmed on screen 2 (system recognizes you)
-  //   tap    — Why pick on screen 3 (quiet rune)
-  //   vow    — Path pick on screen 4 (deeper selection)
-  //   seal   — "Step into the circle" on screen 5 (pact)
-  //   reward — first-reward peak on screen 6 (shimmer)
-  //   gate   — "Enter Awakened" on screen 7 (gate opens)
-  function _cinSfxAllowed() {
-    return (typeof soundEnabled === 'undefined') || soundEnabled;
-  }
-  function _cinGetSfxCtx() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return null;
-      if (!window.__cinSfxCtx) window.__cinSfxCtx = new Ctx();
-      const c = window.__cinSfxCtx;
-      if (c.state === 'suspended') { try { c.resume(); } catch (_) {} }
-      return c;
-    } catch (_) { return null; }
-  }
-  function _cinPlaySfx(kind) {
-    try {
-      if (!_cinSfxAllowed()) return;
-      const ctx = _cinGetSfxCtx();
-      if (!ctx) return;
-      const t0 = ctx.currentTime;
-      const dest = ctx.destination;
-
-      // Tiny helper — creates osc+gain envelope and schedules cleanly.
-      const tone = (opts) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = opts.type || 'sine';
-        o.frequency.setValueAtTime(opts.fStart, t0 + (opts.delay || 0));
-        if (typeof opts.fEnd === 'number') {
-          o.frequency.exponentialRampToValueAtTime(
-            opts.fEnd, t0 + (opts.delay || 0) + (opts.sweep || opts.dur)
-          );
-        }
-        g.gain.setValueAtTime(0.0001, t0 + (opts.delay || 0));
-        g.gain.exponentialRampToValueAtTime(
-          opts.peak, t0 + (opts.delay || 0) + (opts.attack || 0.04)
-        );
-        g.gain.exponentialRampToValueAtTime(
-          0.0001, t0 + (opts.delay || 0) + opts.dur
-        );
-        o.connect(g); g.connect(dest);
-        o.start(t0 + (opts.delay || 0));
-        o.stop(t0 + (opts.delay || 0) + opts.dur + 0.05);
-      };
-
-      switch (kind) {
-        case 'ignite': {
-          tone({ type: 'sine', fStart: 80, fEnd: 220,
-                 peak: 0.14, attack: 0.18, dur: 0.55, sweep: 0.45 });
-          tone({ type: 'sine', fStart: 320, fEnd: 540,
-                 peak: 0.06, attack: 0.10, dur: 0.40, sweep: 0.30, delay: 0.10 });
-          break;
-        }
-        case 'chime': {
-          tone({ type: 'sine', fStart: 660, peak: 0.10, attack: 0.03, dur: 0.28 });
-          tone({ type: 'sine', fStart: 880, peak: 0.09, attack: 0.03, dur: 0.32, delay: 0.08 });
-          break;
-        }
-        case 'tap': {
-          tone({ type: 'triangle', fStart: 520, fEnd: 380,
-                 peak: 0.08, attack: 0.02, dur: 0.16, sweep: 0.10 });
-          break;
-        }
-        case 'vow': {
-          tone({ type: 'sine', fStart: 180, fEnd: 340,
-                 peak: 0.12, attack: 0.06, dur: 0.40, sweep: 0.22 });
-          tone({ type: 'triangle', fStart: 90, fEnd: 170,
-                 peak: 0.05, attack: 0.06, dur: 0.42, sweep: 0.25, delay: 0.03 });
-          break;
-        }
-        case 'seal': {
-          tone({ type: 'sine', fStart: 220, fEnd: 440,
-                 peak: 0.10, attack: 0.10, dur: 0.45, sweep: 0.32 });
-          tone({ type: 'sine', fStart: 110, fEnd: 220,
-                 peak: 0.08, attack: 0.10, dur: 0.55, sweep: 0.40, delay: 0.05 });
-          break;
-        }
-        case 'reward': {
-          // Three-note ascending shimmer with sine + triangle pair
-          const notes = [
-            { f: 660,  dly: 0.00 },
-            { f: 880,  dly: 0.12 },
-            { f: 1320, dly: 0.24 },
-          ];
-          notes.forEach(n => {
-            tone({ type: 'sine',     fStart: n.f, peak: 0.12,
-                   attack: 0.05, dur: 0.85, delay: n.dly });
-            tone({ type: 'triangle', fStart: n.f, peak: 0.06,
-                   attack: 0.05, dur: 0.85, delay: n.dly });
-          });
-          break;
-        }
-        case 'gate': {
-          tone({ type: 'sine', fStart: 330, fEnd: 660,
-                 peak: 0.12, attack: 0.08, dur: 0.55, sweep: 0.45 });
-          tone({ type: 'triangle', fStart: 220, fEnd: 440,
-                 peak: 0.06, attack: 0.08, dur: 0.50, sweep: 0.40, delay: 0.05 });
-          break;
-        }
-      }
-    } catch (_) {}
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // W936 — ONBOARDING v2 ("Direction A", Claude Design handoff 31)
-  //
-  // Replaces the 1z.233 cinematic outright. The old flow asked the
-  // hunter three questions (name, why, path) and then showed them a
-  // symbolic "+25 XP"; it never showed them the game. W935's dig into
-  // the two-minute bounce found the cost: onboarding had exactly one
-  // funnel event, 62% of new hunters took "Make Your Own" and were
-  // seeded nothing, and the Apple Health ask fired AFTER the flow —
-  // so a new hunter could finish onboarding having seen no board, no
-  // boss, no relic, and no reason the app is worth a second open.
-  //
-  // The new flow shows the game with the game's own data:
-  //   0 MARK    the sigil, no chrome
-  //   1 NAME    claims the alias (unchanged backend path)
-  //   2 WITNESS onboarding now OWNS the Apple Health ask (was W935's
-  //             post-onboarding pre-prompt; single neutral button
-  //             straight to the system sheet, 5.1.1(iv)) and its
-  //             funnel events ride along unchanged
-  //   3 REVEAL  the hunter's real rolling seven-day step total, the
-  //             100K-Club road brightening with the count
-  //   4 BOARD   the real weekly Steps board with the hunter's REAL
-  //             rank — a dash, never a guess, until the server agrees
-  //   5 HUNT    The Twin Maw at its real 14,000-step goal with its
-  //             real three-relic drop pool; SUMMON opens the real
-  //             share sheet and nothing is claimed until it sends
-  //   6 ASCENT  Floor 1 of 100, the app's own Floor 100 art
-  //   7 VOW     the real packs with their real vow counts
-  //   – TRAIN   the 1z.273G training-week screen, unchanged, still
-  //             conditional on the pack carrying a training habit
-  //   8 PACT    the Steel Wolf, ENGAGED for real (a hunter's first
-  //             engage is free, W771) and — when Apple Health already
-  //             shows the day's 6,000 — KILLED for real through
-  //             evaluateSteelWolfForDay. Real souls, real drop roll,
-  //             real once-per-day claim. The relic on the screen is
-  //             the relic in the armory.
-  //
-  // Nothing here simulates. Every branch that cannot show a true
-  // number says so instead.
-  // ═══════════════════════════════════════════════════════════
-
-  // The four-point star, drawn once. Same path the rest of the app uses.
-  function _cnPaintSigil(el) {
-    if (!el) return;
-    el.innerHTML = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
-      '<path d="M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z" fill="#f5b842"/></svg>';
-  }
-  function _cnFmt(n) {
-    try { return Number(n).toLocaleString('en-US'); } catch (_) { return String(n); }
-  }
-  function _cnReduced() {
-    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-    catch (_) { return false; }
-  }
   // W947 — the name screen's busts → the avatar file each one wears. HUNTER is
   // the class default, so it names no file.
   function _cnBustFile(bust) {
@@ -65602,317 +65319,740 @@
   }
   try { window.__openTestHunterSheet = openTestHunterSheet; } catch (_) {}
 
-  // W937 — REPLAY (read-only). Seeing onboarding again used to mean wiping the
-  // device, which for the owner means deleting the account he is signed into.
-  // In preview the flow reads but never writes: no alias claim, no permission
-  // flags, no funnel events, no leaderboard submit, no engage, no kill, no
-  // habits, no XP. ENTER just closes it. A ribbon says so the whole time, so
-  // the one screen that would otherwise be a claim — the Steel Wolf's fall —
-  // is honest as a preview of what a first run looks like.
-  // W947 — every run after the first starts from the markup index.html
-  // shipped. A replay in the same session used to reuse the first run's
-  // elements with the first run's listeners still attached, so its ENTER
-  // (and now its hold-to-strike) ran the real, non-preview handlers too.
-  let _cnPristineHtml = null;
+  // ═══════════════════════════════════════════════════════════
+  // W1050 — ONBOARDING v4, "The Awakening" (Claude Design handoff 29)
+  //
+  // Owner, 2026-10-13: "make it more interactive, fun as a first
+  // impression ... I don't like the generic AI coded fonts." Every beat
+  // is now one touch that pays back, and the game moment (the Steel
+  // Wolf) moved from the ninth screen to the fifth.
+  //
+  //   0 MARK     hold; the dark splits open into the Gate        } the
+  //   1 GATE     Sign in with Apple rises in the Gate's light    } sign-in gate
+  //   2 NAME     letters strike a hunter's license; the look turns the card
+  //   3 WITNESS  the guide speaks, once; ONE neutral button to the iOS sheet
+  //   4 REVEAL   the real seven-day total runs up and becomes Steel Wolves
+  //   5 WOLF     hold to strike: the REAL engage, and the REAL kill at 6,000
+  //   6 BOARD    the real weekly board; the hunter's row climbs to its place
+  //   7 HUNT     The Twin Maw arrives; its real relics turn face up
+  //   8 ASCENT   drag up through a hundred floors
+  //   9 VOW      three banners, one sworn; (start day) (training days); ENTER
+  //
+  // Beats 0-1 are the sign-in gate itself (setupSignInGateIfNeeded, top of
+  // this file). A successful sign-in reloads, so a first run opens on the
+  // name. A replay (W937) is already signed in and walks all ten.
+  //
+  // Where the port departs from the handoff, on purpose:
+  //  · The witness keeps W935's single neutral button and no "Not now".
+  //    Apple rejected a Health pre-permission screen once (2.2.1 build 61)
+  //    for offering anything beside it (5.1.1(iv)). Declined is what the
+  //    first read says after the real sheet, never a button of ours.
+  //  · No "Allow Apple Health" retry on the Wolf or the board: iOS shows its
+  //    sheet once, so the button could only ever do nothing.
+  //  · The E-rank stamp lands when the server takes the name (there is no
+  //    availability check to ask while the hunter types).
+  //  · The board shows the hunters around the row, and the row only climbs
+  //    on a total the server has confirmed. Otherwise it carries a dash.
+  //  · "Nothing else." is cut from the sign-in fine print: the app also
+  //    sends crash and usage reports, so the line was not true.
+  //  · Make Your Own still starts empty (W944) and training days are still
+  //    picked per vow: owner's two answers the same day.
+  // Nothing here simulates. A branch that cannot show a true number says so.
+  // ═══════════════════════════════════════════════════════════
+
+  // The engine. The sign-in gate calls it before any of this file's own
+  // state exists, so it reads nothing but its arguments, the DOM and window.
+  function _obCore(host, opts) {
+    opts = opts || {};
+    const MARK = 'M20 1l4.6 14.4L40 20l-15.4 4.6L20 40l-4.6-15.4L0 20l15.4-4.6z';
+    const LOOKS = [{ k: 'base', l: 'Hunter' }, { k: 'ranger', l: 'Ranger' }, { k: 'warrior', l: 'Warrior' }];
+    const BEAT = { gate: 0, name: 2, witness: 3, reveal: 4, wolf: 5, board: 6, hunt: 7, ascent: 8, vow: 9 };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+    const fmt = (n) => { try { return Math.round(n).toLocaleString('en-US'); } catch (_) { return String(Math.round(n)); } };
+    const escH = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+
+    // The seam: the crack the mark opened stays as a hairline of gold along
+    // the top and lengthens with each beat. It is the progress bar.
+    let notches = '';
+    for (let i = 1; i <= 9; i++) notches += '<i class="ob4-seam-n" style="left:' + (i * 10) + '%"></i>';
+    const root = el('<div class="ob4-root"><div class="ob4-seam" aria-hidden="true"><div class="ob4-seam-track"></div>' + notches +
+      '<div class="ob4-seam-fill"></div></div><button class="ob4-skip" type="button" disabled>Skip</button><div class="ob4-stage"></div></div>');
+    host.innerHTML = '';
+    host.appendChild(root);
+    const stage = root.querySelector('.ob4-stage');
+    const rm = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
+    root.classList.toggle('ob4-rm', rm());
+
+    const ctx = {
+      MARK: MARK, LOOKS: LOOKS, root: root, stage: stage, el: el, fmt: fmt, clamp: clamp, easeOut: easeOut, esc: escH, rm: rm,
+      U: { name: '', look: 'base', rank: 'E', floor: 1, relic: false },
+      D: { steps7: null, today: null, health: null },
+      S: {}, order: [], cur: null, leaving: false, fxLog: [],
+    };
+
+    // Haptics carry every moment when the phone is muted; sounds are short
+    // WebAudio effects (no assets) behind the app's own sound switch.
+    const SND = {
+      crack:  [['noise', 1800, 0.7, 0.16, 0.005, 0.22], ['sine', 90, 40, 0.16, 0.01, 0.5], ['triangle', 600, 180, 0.05, 0.005, 0.18, 0.02]],
+      type:   [['triangle', 880, 660, 0.03, 0.004, 0.06]],
+      stamp:  [['sine', 150, 70, 0.14, 0.005, 0.22], ['noise', 900, 0.8, 0.06, 0.004, 0.09]],
+      turn:   [['triangle', 420, 620, 0.04, 0.01, 0.14]],
+      seal:   [['sine', 220, 440, 0.09, 0.08, 0.42], ['sine', 110, 220, 0.06, 0.08, 0.5, 0.04]],
+      tick:   [['triangle', 1040, 880, 0.035, 0.004, 0.07]],
+      hit:    [['noise', 1200, 0.6, 0.18, 0.004, 0.18], ['sine', 120, 45, 0.18, 0.005, 0.35]],
+      burst:  [['sine', 660, 0, 0.1, 0.04, 0.7], ['sine', 880, 0, 0.09, 0.04, 0.7, 0.1], ['sine', 1320, 0, 0.08, 0.04, 0.8, 0.2], ['triangle', 1320, 0, 0.04, 0.04, 0.8, 0.2]],
+      pass:   [['triangle', 520, 780, 0.04, 0.01, 0.12]],
+      arrive: [['sine', 60, 30, 0.18, 0.02, 0.8], ['noise', 400, 0.5, 0.1, 0.02, 0.5]],
+      flip:   [['triangle', 700, 420, 0.04, 0.006, 0.1]],
+      open:   [['sine', 330, 660, 0.11, 0.08, 0.6], ['triangle', 220, 440, 0.05, 0.08, 0.55, 0.05], ['noise', 2400, 0.6, 0.05, 0.1, 0.7, 0.15]],
+    };
+    const note = (s) => { ctx.fxLog.push(s); if (ctx.fxLog.length > 60) ctx.fxLog.shift(); };
+    // One shared context. iOS only lets sound start from a touch, and the first
+    // sound here (the crack) fires while the finger is still down, so every touch
+    // inside the flow wakes it.
+    const audio = () => {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx || localStorage.getItem('hb_sound') === 'off') return null;
+        if (!window.__cinSfxCtx) window.__cinSfxCtx = new Ctx();
+        const c = window.__cinSfxCtx;
+        if (c.state === 'suspended') { const p = c.resume(); if (p && p.catch) p.catch(() => {}); }
+        return c;
+      } catch (_) { return null; }
+    };
+    root.addEventListener('pointerdown', audio, true);
+    root.addEventListener('pointerup', audio, true);
+    ctx.fx = {
+      hap: (kind) => {
+        const k = String(kind || 'light').toUpperCase();
+        note('hap:' + k);
+        try {
+          const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+          if (H) { if (k === 'SUCCESS') H.notification({ type: 'SUCCESS' }); else H.impact({ style: k }); }
+        } catch (_) {}
+      },
+      // each voice: [kind, frequency, sweep-to (noise: Q), peak, attack, length, delay]
+      snd: (key) => {
+        note('snd:' + key);
+        try {
+          const spec = SND[key];
+          if (!spec) return;
+          const c = audio();
+          if (!c) return;
+          spec.forEach((s) => {
+            const at = c.currentTime + (s[6] || 0);
+            const g = c.createGain();
+            g.gain.setValueAtTime(0.0001, at);
+            g.gain.exponentialRampToValueAtTime(s[3], at + s[4]);
+            g.gain.exponentialRampToValueAtTime(0.0001, at + s[5]);
+            g.connect(c.destination);
+            let src;
+            if (s[0] === 'noise') {
+              const len = Math.max(1, Math.floor(c.sampleRate * s[5]));
+              const buf = c.createBuffer(1, len, c.sampleRate);
+              const d = buf.getChannelData(0);
+              for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+              src = c.createBufferSource();
+              src.buffer = buf;
+              const f = c.createBiquadFilter();
+              f.type = 'bandpass'; f.frequency.value = s[1]; f.Q.value = s[2] || 0.8;
+              src.connect(f); f.connect(g);
+            } else {
+              src = c.createOscillator();
+              src.type = s[0];
+              src.frequency.setValueAtTime(s[1], at);
+              if (s[2]) src.frequency.exponentialRampToValueAtTime(s[2], at + s[5] * 0.8);
+              src.connect(g);
+            }
+            src.start(at);
+            src.stop(at + s[5] + 0.05);
+          });
+        } catch (_) {}
+      },
+    };
+
+    // Timers and tweens belong to the screen that started them and die with it.
+    const timers = new Set(), rafs = new Set();
+    ctx.after = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+    ctx.tween = (dur, step, done) => {
+      let id = 0, t0 = 0;
+      const f = (t) => {
+        if (!t0) t0 = t;
+        const p = clamp((t - t0) / dur, 0, 1);
+        step(p);
+        if (p < 1) { id = requestAnimationFrame(f); rafs.add(id); } else if (done) done();
+      };
+      id = requestAnimationFrame(f); rafs.add(id);
+      return () => cancelAnimationFrame(id);
+    };
+    ctx.cancelAll = () => { timers.forEach(clearTimeout); timers.clear(); rafs.forEach(cancelAnimationFrame); rafs.clear(); };
+    // A System line types itself: 24 ms a character, a breath at each full stop.
+    // The returned function finishes it at once (a tap on the window).
+    ctx.typeInto = (p, text, done) => {
+      p.hidden = false; p.classList.remove('is-done'); p.textContent = '';
+      let i = 0, over = false;
+      const end = () => { if (over) return; over = true; p.textContent = text; p.classList.add('is-done'); if (done) done(); };
+      const step = () => {
+        if (over) return;
+        p.textContent = text.slice(0, ++i);
+        if (i < text.length) ctx.after('.?'.indexOf(text[i - 1]) >= 0 ? 240 : (rm() ? 12 : 24), step); else end();
+      };
+      step();
+      return end;
+    };
+
+    // The hunter's license: struck on the name screen, carried through the Gate at the end.
+    ctx.licenseHTML = (o) => {
+      o = o || {};
+      const U = ctx.U;
+      const look = LOOKS.filter((l) => l.k === U.look)[0] || LOOKS[0];
+      const letters = U.name
+        ? U.name.split('').map((c) => '<span class="ob4-ch">' + escH(c) + '</span>').join('')
+        : '<span class="ob4-ph">unnamed</span>';
+      return '<div class="ob4-lic"><img class="ob4-lic-bust" src="assets/busts/avatar-' + look.k + '-bust.webp" alt="">' +
+        '<div class="ob4-lic-main"><div class="ob4-lic-k">Hunter’s license</div>' +
+        '<div class="ob4-lic-name">' + letters + (o.caret ? '<i class="ob4-caret"></i>' : '') + '</div>' +
+        '<div class="ob4-lic-row"><span class="ob4-lic-look">' + look.l + '</span><span class="ob4-lic-sub">' + escH(o.sub || ('Floor ' + (U.floor || 1))) + '</span></div></div>' +
+        '<div class="ob4-stamp' + (o.stamped ? ' is-on' : '') + '">' + escH(U.rank || 'E') + '</div>' +
+        '<svg class="ob4-lic-wm" viewBox="0 0 40 40" aria-hidden="true"><path d="' + MARK + '"></path></svg></div>';
+    };
+
+    // Skip is offered from the board (beat 6) to the vow. Before that it has
+    // to be out of reach, not just out of sight: a faded button is still the
+    // first stop for a keyboard and is still read out by VoiceOver. There it
+    // would stand beside the witness's one Health button (5.1.1(iv)), let the
+    // name screen be passed without the alias claim, and on the sign-in gate
+    // hand off into nothing. Disabled here, visibility:hidden in the stylesheet.
+    const skipBtn = root.querySelector('.ob4-skip');
+    ctx.setBeat = (b) => {
+      const canSkip = b >= 6 && b < 10;
+      root.classList.toggle('ob4-chrome', b >= 1);
+      root.classList.toggle('ob4-canskip', canSkip);
+      skipBtn.disabled = !canSkip;
+      root.querySelector('.ob4-seam-fill').style.width = (clamp(b, 0, 10) * 10) + '%';
+    };
+
+    // The handoff: ENTER opens the Gate a second time and the license goes through.
+    const hand = el('<div class="ob4-hand" aria-hidden="true"><img class="ob4-gate-art" src="assets/gates/gate-e-rank.png" alt="">' +
+      '<div class="ob4-dark ob4-dark-l"></div><div class="ob4-dark ob4-dark-r"></div><div class="ob4-seamglow"></div>' +
+      '<div class="ob4-hand-card"></div><div class="ob4-hand-flash"></div></div>');
+    stage.appendChild(hand);
+
+    ctx.add = (name, inst) => { inst.name = name; ctx.S[name] = inst; ctx.order.push(name); stage.insertBefore(inst.el, hand); return inst; };
+    ctx.go = (name, o) => {
+      const nxt = ctx.S[name];
+      if (!nxt || ctx.leaving) return;
+      const cur = ctx.cur;
+      ctx.cancelAll();
+      if (cur && cur !== nxt) {
+        if (cur.exit) cur.exit();
+        cur.el.classList.remove('is-on');
+        cur.el.classList.add('is-out');
+        setTimeout(() => cur.el.classList.remove('is-out'), 280);
+      } else if (cur === nxt) {
+        if (cur.exit) cur.exit();
+        cur.el.classList.remove('is-on');
+        void cur.el.offsetWidth;
+      }
+      ctx.cur = nxt;
+      nxt.el.classList.add('is-on');
+      ctx.setBeat(BEAT[name] || 0);
+      nxt.enter(o || {});
+    };
+    ctx.next = () => {
+      const n = ctx.order[ctx.order.indexOf(ctx.cur.name) + 1];
+      if (n) ctx.go(n); else ctx.handoff();
+    };
+    ctx.handoff = () => {
+      if (ctx.leaving) return;
+      ctx.leaving = true;
+      ctx.cancelAll();
+      if (ctx.cur && ctx.cur.exit) ctx.cur.exit();
+      hand.querySelector('.ob4-hand-card').innerHTML = ctx.licenseHTML({ stamped: true, sub: ctx.U.relic ? '1 relic' : '' });
+      hand.classList.remove('is-split');
+      hand.classList.add('is-on');
+      ctx.setBeat(10);
+      ctx.fx.hap('success');
+      ctx.fx.snd('open');
+      requestAnimationFrame(() => requestAnimationFrame(() => hand.classList.add('is-split')));
+      setTimeout(() => {
+        root.classList.add('is-leaving');
+        try { if (opts.onDone) opts.onDone(); } catch (e) { try { console.warn('[ob] handoff failed', e); } catch (_) {} }
+      }, rm() ? 1300 : 2000);
+    };
+    skipBtn.addEventListener('click', () => {
+      if (!root.classList.contains('ob4-canskip')) return;   // only where it is offered
+      ctx.fx.hap('light');
+      ctx.handoff();
+    });
+    return ctx;
+  }
+
+  // 0 + 1 · the mark, then the gate. `g.signIn` (the sign-in gate) puts Apple's
+  // own button under the copy; `g.carry` (a replay, already signed in) puts a
+  // plain one there. Like _obCore, this reads nothing of the file's own state.
+  function _obGateScreen(ctx, g) {
+    g = g || {};
+    const el = ctx.el, clamp = ctx.clamp;
+    const APPLE = 'M16.37 12.7c-.03-2.6 2.13-3.85 2.22-3.91-1.21-1.77-3.09-2.01-3.76-2.04-1.6-.16-3.12.94-3.93.94-.81 0-2.06-.92-3.39-.89-1.74.03-3.35 1.01-4.25 2.57-1.81 3.14-.46 7.8 1.3 10.35.86 1.25 1.89 2.65 3.24 2.6 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.03 2.28-1.27 3.14-2.52.99-1.45 1.4-2.85 1.42-2.92-.03-.01-2.72-1.04-2.74-4.15zM13.78 5.06c.72-.87 1.2-2.08 1.07-3.28-1.03.04-2.29.69-3.03 1.56-.66.77-1.25 2-1.09 3.18 1.15.09 2.33-.59 3.05-1.46z';
+    // nine hairline cracks running from the mark to the edges
+    let cracks = '';
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + 0.3, len = 250 + ((i * 37) % 130);
+      let pts = '195,422';
+      for (let k = 1; k <= 5; k++) {
+        const r = len * k / 5, j = ((i * 13 + k * 29) % 21 - 10) * 1.7;
+        pts += ' ' + (195 + Math.cos(a) * r + Math.cos(a + Math.PI / 2) * j).toFixed(1) + ',' + (422 + Math.sin(a) * r + Math.sin(a + Math.PI / 2) * j).toFixed(1);
+      }
+      cracks += '<polyline pathLength="1" points="' + pts + '"></polyline>';
+    }
+    // W823 / W939 — the fine print says what actually leaves the phone; keep it
+    // in step with lbSubmitAllMetrics and CloudSync.
+    const action = g.signIn
+      ? '<button class="ob4-apple" id="signin-apple-btn" type="button" aria-label="Sign in with Apple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + APPLE + '"></path></svg><span>Sign in with Apple</span></button>' +
+        '<div class="ob4-err" id="signin-apple-error" role="alert"></div>' +
+        '<p class="ob4-fine ob4-gate-fine">We send your hunter name and verified totals to power the boards, and keep a private backup so your progress follows you.</p>'
+      : '<button class="ob4-btn ob4-gate-carry" type="button">Carry on</button>';
+    const e = el('<section class="ob4-s ob4-full ob4-s-gate">' +
+      '<img class="ob4-gate-art" src="assets/gates/gate-e-rank.png" alt="" decoding="async"><div class="ob4-gate-veil"></div>' +
+      '<div class="ob4-dark ob4-dark-l"></div><div class="ob4-dark ob4-dark-r"></div><div class="ob4-seamglow"></div>' +
+      '<svg class="ob4-cracks" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true">' + cracks + '</svg>' +
+      '<button class="ob4-mark" type="button" aria-label="Hold the mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + ctx.MARK + '"></path><path class="ob4-mark-hot" d="' + ctx.MARK + '"></path></svg></button>' +
+      '<div class="ob4-mark-prompt">Hold the mark</div>' +
+      '<div class="ob4-gate-copy"><div class="ob4-wordmark"><img src="assets/awknd-logo.png" alt="">Awakened</div><div class="ob4-rule"></div>' +
+      '<h1 class="ob4-title ob4-gate-t"></h1><p class="ob4-body ob4-gate-b"></p>' + action + '</div></section>');
+    // W816 — a returning hunter (the device still holds their name) is told the truth.
+    e.querySelector('.ob4-gate-t').textContent = g.welcomeName ? ('Welcome back, ' + g.welcomeName) : 'The Gate is open.';
+    e.querySelector('.ob4-gate-b').textContent = g.welcomeName
+      ? 'Your session expired while you were away. Sign in to reconnect. Nothing was lost.'
+      : 'Only the named may cross.';
+
+    const mark = e.querySelector('.ob4-mark'), prompt = e.querySelector('.ob4-mark-prompt');
+    const apple = e.querySelector('.ob4-apple'), err = e.querySelector('.ob4-err'), carry = e.querySelector('.ob4-gate-carry');
+    let c = 0, raf = 0, holding = false, done = false, t0 = 0, fallback = false, downAt = 0, autoing = false;
+    const setC = (v) => { c = v; e.style.setProperty('--ob4-c', v.toFixed(3)); e.classList.toggle('is-shiver', holding && v > 0.6 && !ctx.rm()); };
+    // Full charge: the dark splits along the crack and the Gate stands behind it.
+    function burst() {
+      if (done) return;
+      done = true; holding = false;
+      cancelAnimationFrame(raf);
+      e.classList.remove('is-shiver');
+      setC(1);
+      ctx.fx.hap('heavy'); ctx.fx.snd('crack');
+      e.classList.add('is-split');
+      ctx.setBeat(1);
+      ctx.after(650, () => e.classList.add('is-open'));
+    }
+    function loop(t) {
+      if (!holding) return;
+      setC(clamp((t - t0) / 1400, 0, 1));
+      if (c >= 1) { burst(); return; }
+      raf = requestAnimationFrame(loop);
+    }
+    function auto() {
+      if (done || autoing) return;
+      autoing = true;
+      const from = c;
+      ctx.fx.hap('medium');
+      ctx.tween(550, (p) => setC(from + (1 - from) * p), burst);
+    }
+    mark.addEventListener('pointerdown', (ev) => {
+      if (done || autoing) return;
+      ev.preventDefault();
+      try { mark.setPointerCapture(ev.pointerId); } catch (_) {}
+      holding = true;
+      downAt = performance.now();
+      t0 = downAt - c * 1400;
+      ctx.fx.hap('light');
+      raf = requestAnimationFrame(loop);
+    });
+    const up = () => {
+      if (!holding || done) return;
+      holding = false;
+      cancelAnimationFrame(raf);
+      e.classList.remove('is-shiver');
+      if (fallback && performance.now() - downAt < 240) { auto(); return; }
+      const from = c;
+      ctx.tween(300, (p) => setC(from * (1 - p)));   // let go early and it cools
+    };
+    mark.addEventListener('pointerup', up);
+    mark.addEventListener('pointercancel', up);
+    mark.addEventListener('lostpointercapture', up);
+    // A keyboard, a switch or VoiceOver opens it in one press: no hold is ever a wall.
+    mark.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); auto(); } });
+    mark.addEventListener('click', (ev) => { if (ev.detail === 0) auto(); });
+    mark.addEventListener('contextmenu', (ev) => ev.preventDefault());
+
+    if (apple) {
+      apple.addEventListener('click', async () => {
+        if (apple.classList.contains('is-busy')) return;
+        err.textContent = '';
+        // W939 — the button holds its spinner while Apple's sheet is up and
+        // through the reload, so a success never flashes back to an idle button.
+        apple.classList.add('is-busy');
+        apple.disabled = true;
+        ctx.fx.hap('light');
+        let r = null;
+        try { r = await g.signIn(); } catch (_) { r = { error: 'Sign in failed. Please try again.' }; }
+        if (r && r.ok) return;
+        if (r && r.error) err.textContent = r.error;
+        apple.classList.remove('is-busy');
+        apple.disabled = false;
+      });
+    }
+    if (carry) carry.addEventListener('click', () => { ctx.fx.hap('light'); if (g.carry) g.carry(); });
+
+    return {
+      el: e,
+      enter: (o) => {
+        e.classList.remove('is-split', 'is-open', 'is-shiver');
+        if (apple) { apple.classList.remove('is-busy'); apple.disabled = false; }
+        done = false; holding = false; fallback = false; autoing = false;
+        setC(0);
+        prompt.textContent = 'Hold the mark';
+        ctx.setBeat(0);
+        if (o && o.open) { done = true; setC(1); e.classList.add('is-split', 'is-open'); ctx.setBeat(1); return; }
+        ctx.after(3000, () => { if (!done) { fallback = true; prompt.textContent = 'Hold the mark · or tap'; } });
+      },
+      exit: () => { holding = false; cancelAnimationFrame(raf); },
+    };
+  }
+  // QA — the sign-in gate, mounted on a page that is already signed in.
+  try {
+    window.__obGatePreview = function (name) {
+      const gate = document.getElementById('signin-gate');
+      gate.classList.remove('hidden');
+      gate.classList.add('ob4-host');
+      const c = _obCore(gate, {});
+      c.add('gate', _obGateScreen(c, { welcomeName: name || '', signIn: async () => ({ error: 'Sign in with Apple is only available in the iOS app.' }) }));
+      c.go('gate');
+      return c;
+    };
+  } catch (_) {}
+
+  // W937 — REPLAY (read-only) is `opts.preview`: the flow reads but never
+  // writes. No alias claim, no permission flags, no funnel events, no board
+  // submit, no engage, no kill, no habits, no XP; ENTER just closes it, and a
+  // ribbon says so the whole time.
   function showCinematicOnboarding(opts) {
     const preview = !!(opts && opts.preview);
-    let root = document.getElementById('cin-onboarding');
-    if (root && root.querySelector('#cn-s0')) {
-      if (_cnPristineHtml === null) {
-        _cnPristineHtml = root.innerHTML;
-      } else {
-        const fresh = root.cloneNode(false);
-        fresh.innerHTML = _cnPristineHtml;
-        root.replaceWith(fresh);
-        root = fresh;
-      }
-    }
-    if (!root || !root.querySelector('#cn-s0')) {
+    const host = document.getElementById('cin-onboarding');
+    if (!host) {
       if (preview) {
         try { showHabitToast('The opening is unavailable in this build.'); } catch (_) {}
         return;
       }
-      console.warn('[cin] v2 markup missing — falling back to legacy welcome');
+      console.warn('[cin] onboarding container missing — falling back to legacy welcome');
       _legacyShowWelcomeScreen();
       return;
     }
-    root.classList.remove('hidden');
-    root.classList.toggle('cn-preview', preview);
-    root.setAttribute('aria-hidden', 'false');
-    {
-      const note = root.querySelector('#cn-preview-note');
-      if (note) note.hidden = !preview;
-      const fb = root.querySelector('#cin-fb');
-      if (fb) fb.classList.remove('on');
-    }
+    host.classList.remove('hidden');
+    host.classList.add('ob4-host');
+    host.classList.toggle('ob4-preview', preview);
+    host.setAttribute('aria-hidden', 'false');
 
-    const q  = (sel) => root.querySelector(sel);
-    const qq = (sel) => Array.from(root.querySelectorAll(sel));
-
-    _cnPaintSigil(q('#cn-sigil'));
-    _cnPaintSigil(q('#cn-sigil-sm'));
-
-    // Everything the flow learns. `health` is true once a read came back
-    // under a granted permission, false when the ask was refused, and
-    // null where HealthKit does not exist at all (web preview, Android).
-    const state = {
-      name:     '',
-      pack:     'custom',   // Make Your Own is preselected (handoff 31)
-      steps7:   null,
-      today:    null,
-      health:   null,
-      summoned: false,
-      bust:     'base',     // W947 — HUNTER / RANGER / WARRIOR on the name screen
-    };
-    // A replay opens on the path this hunter actually walks, wearing the
-    // look they wear.
+    const ctx = _obCore(host, { onDone: _finish });
+    const el = ctx.el, fmt = ctx.fmt, clamp = ctx.clamp, easeOut = ctx.easeOut, escH = ctx.esc;
+    const U = ctx.U, D = ctx.D;
+    U.pack = 'custom';        // Make Your Own until a banner is sworn (and what SKIP lands on)
+    U.jumpStart = null;
+    U.summoned = false;
     if (preview) {
-      try {
-        const p = localStorage.getItem('hb_path');
-        if (p && typeof getPackById === 'function' && getPackById(p)) state.pack = p;
-      } catch (_) {}
+      ctx.root.classList.add('ob4-isprev');
+      ctx.root.appendChild(el('<div class="ob4-ribbon" id="cn-preview-note">Preview · nothing is saved</div>'));
+      // A replay wears the look this hunter wears, at the rank and floor they hold.
       try {
         const skin = getEquippedSkin();
-        state.bust = skin === 'avatar-ranger.png' ? 'ranger' : (skin === 'avatar-warrior.png' ? 'warrior' : 'base');
+        U.look = skin === 'avatar-ranger.png' ? 'ranger' : (skin === 'avatar-warrior.png' ? 'warrior' : 'base');
       } catch (_) {}
+      try { U.rank = (getRank(totalPoints) || {}).id || 'E'; } catch (_) {}
+      try { U.floor = getAscentState().currentFloor || 1; } catch (_) {}
     }
-    qq('[data-cn-bust]').forEach((x) => {
-      const on = x.dataset.cnBust === state.bust;
-      x.classList.toggle('cn-on', on);
-      x.setAttribute('aria-checked', on ? 'true' : 'false');
-    });
+    const wolfCfg = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
+    const WOLF_NEED = (wolfCfg && wolfCfg.stepThreshold) || 6000;
+    const WOLF_RANK = (wolfCfg && wolfCfg.rank) || 'E';
+    const emit = (name, detail) => {
+      if (preview) return;
+      try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit(name, detail); } catch (_) {}
+    };
 
-    const order = ['cn-s0', 'cn-s1', 'cn-s2', 'cn-s3', 'cn-s4', 'cn-s5', 'cn-s6', 'cn-s7', 'cn-s7j', 'cin-scr-training', 'cn-s8'];   // W1021 — cn-s7j: the jump program's start day
-    const VOW_INDEX = 7;          // where SKIP lands — the one choice nobody skips past
-    const TRAINING_INDEX = 9;
-    let idx = 0;
-
-    const chrome = q('#cn-chrome');
-    const dots   = q('#cn-dots');
-    const skip   = q('#cn-skip');
-
-    function show(i) {
-      idx = i;
-      const id = order[i];
-      order.forEach((sid, k) => {
-        const el = root.querySelector('#' + sid);
-        if (!el) return;
-        el.classList.toggle('cn-shown', k === i);
-        el.classList.toggle('show', k === i);   // the training screen still uses the 1z.233 .show
-      });
-      const cur = root.querySelector('#' + id);
-      const isTraining = (i === TRAINING_INDEX);
-      const dot = isTraining ? 5 : parseInt((cur && cur.dataset.dot) || '-1', 10);
-      chrome.hidden = !!(cur && 'nochrome' in cur.dataset);
-      chrome.classList.toggle('cn-onart', !!(cur && cur.classList.contains('cn-art')));
-      Array.from(dots.children).forEach((d, k) => d.classList.toggle('cn-on', dot >= 0 && k <= dot));
-      // No SKIP on the witness screen. Apple rejected a Health pre-permission
-      // sheet once already (2.2.1 build 61) for offering anything beside the
-      // single neutral button; a skip in the chrome would read the same way.
-      // The board, hunt and ascent are pure show-and-tell, so they can be
-      // walked past. W947 — not the reveal: its road is dragged, and the drag
-      // surface sits under the chrome.
-      skip.style.visibility = (i >= 4 && i < VOW_INDEX) ? 'visible' : 'hidden';
-
-      if (id === 'cn-s3') _runReveal();
-      if (id === 'cn-s4') _runBoard();
-      if (id === 'cn-s5') _runHunt();
-      if (id === 'cn-s7') _runVow();
-      if (id === 'cn-s7j') {
-        // W1021 — only the Jump Program asks for a start day; every other path
-        // walks past on the same tick (the screen never paints).
-        if (state.pack !== 'jump_program') { show(i + 1); return; }
-        _runJumpStart();
-      }
-      if (isTraining) {
-        // Conditional, exactly as in 1z.273G: no training habits in the
-        // chosen pack → advance on the SAME tick so the screen can never
-        // paint for a frame.
-        const t = _cinCollectTrainingHabits();
-        if (t.length === 0) { show(i + 1); return; }
-        _cinRenderTrainingScreen(t);
-      }
-      if (id === 'cn-s8') _runPact();
+    // One Apple Health read for the whole flow: the rolling seven-day total
+    // (the reveal) and today (the Steel Wolf's kill condition).
+    async function _readHealth() {
+      try {
+        if (typeof Health === 'undefined' || !Health.isAvailable()) { D.health = null; return; }
+        const end   = new Date();
+        const start = new Date(end.getTime());
+        start.setDate(start.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+        let week = null, today = null;
+        try { week  = await Health.getStepsBetween(start.toISOString(), end.toISOString()); } catch (_) {}
+        try { today = await Health.getStepsToday(); } catch (_) {}
+        if (typeof week  === 'number' && Number.isFinite(week))  D.steps7 = Math.round(week);
+        if (typeof today === 'number' && Number.isFinite(today)) D.today  = Math.round(today);
+        const granted = (typeof Health.permissionStatus === 'function') && Health.permissionStatus() === 'granted';
+        D.health = !!(granted && (D.steps7 !== null || D.today !== null));
+      } catch (_) { D.health = false; }
     }
-    function next() { if (idx < order.length - 1) show(idx + 1); }
 
-    qq('[data-cn-next]').forEach((b) => b.addEventListener('click', next));
-    skip.addEventListener('click', () => show(VOW_INDEX));
-    try { window.__cinShow = show; } catch (_) {}   // QA hook
-
-    // ── 0 · THE MARK ───────────────────────────────────────────
-    {
-      let lit = false;
-      const sig = q('#cn-sigil');
-      const light = () => {
-        if (lit) return;
-        lit = true;
-        sig.classList.add('cn-lit');
-        _cinPlaySfx('ignite');
-        try { _hapticTick('MEDIUM'); } catch (_) {}
-        setTimeout(() => show(1), _cnReduced() ? 120 : 900);
+    // The real weekly Steps board. Asked for as soon as Health answers, and once
+    // more as the Wolf arrives: by then the week uploaded on the witness screen
+    // has had time to land, so the server can say where this hunter stands.
+    let _boardP = null, _boardLast = { top: [], me: null };
+    function _fetchBoard(fresh) {
+      if (fresh || !_boardP) {
+        _boardP = (async () => {
+          try {
+            const r = await window.Auth.fetchLeaderboardTop('step_total', 20);
+            if (r && r.ok) { _boardLast = { top: Array.isArray(r.top) ? r.top : [], me: r.me || null }; }
+          } catch (_) {}
+          return _boardLast;
+        })();
+      }
+      return _boardP;
+    }
+    function _boardMine(f) {
+      const alias = (typeof lbGetMyAlias === 'function') ? (lbGetMyAlias() || '') : '';
+      const row = (alias ? f.top.filter((r) => r && r.alias === alias)[0] : null) || f.me || null;
+      return {
+        alias: alias,
+        rank:  (row && typeof row.rank === 'number') ? row.rank : null,
+        value: (row && typeof row.current_value === 'number') ? row.current_value : null,
       };
-      sig.addEventListener('click', light);
-      const touch = q('#cn-touch');
-      touch.addEventListener('click', light);
-      touch.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); light(); }
-      });
     }
 
-    // ── 1 · THE NAME ───────────────────────────────────────────
-    // The single place the hunter name is captured, and (on iOS first
-    // run) the place the Apple Sign-In alias is claimed. Unchanged from
-    // 1z.245 apart from losing the typewriter acknowledgement — CONFIRM
-    // now goes straight to the witness.
-    const field   = q('#cin-nameField');
-    const confirm = q('#cin-nameConfirm');
-    const errEl   = q('#cin-nameError');
-    const suggBox = q('#cin-nameSuggestions');
+    // ── 0 + 1 · THE MARK, THE GATE (a replay only: a first run did this to sign in)
+    if (preview) ctx.add('gate', _obGateScreen(ctx, { carry: () => ctx.go('name') }));
 
-    function _setConfirmEnabled(on) {
-      confirm.disabled = !on;
-      confirm.classList.toggle('cn-off', !on);
-    }
-    // W947 — v3: the bust choice appears with the second letter.
-    function _syncBusts() {
-      q('#cn-busts').classList.toggle('cn-show', field.value.trim().length >= 2);
-    }
-    qq('[data-cn-bust]').forEach((b) => b.addEventListener('click', () => {
-      state.bust = b.dataset.cnBust;
-      qq('[data-cn-bust]').forEach((x) => {
-        x.classList.toggle('cn-on', x === b);
-        x.setAttribute('aria-checked', x === b ? 'true' : 'false');
-      });
-      try { _hapticTick('LIGHT'); } catch (_) {}
-    }));
-    field.addEventListener('input', () => {
-      _syncBusts();
-      _setConfirmEnabled(field.value.trim().length >= 2);
-      if (errEl) errEl.style.display = 'none';
-      if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
-    });
-    field.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !confirm.disabled) _confirmName();
-    });
-    confirm.addEventListener('click', _confirmName);
+    // ── 2 · THE NAME ───────────────────────────────────────────
+    // The single place the hunter name is captured and, on a first run, the
+    // place the Apple Sign-In alias is claimed (1z.245).
+    ctx.add('name', (() => {
+      const e = el('<section class="ob4-s ob4-s-name"><div class="ob4-kicker ob4-dim">The System asks</div><h1 class="ob4-title">What do they call you?</h1>' +
+        '<div class="ob4-lic-wrap">' + ctx.licenseHTML({ caret: true }) + '</div>' +
+        '<label class="ob4-field"><input id="cin-nameField" type="text" maxlength="20" placeholder="Your hunter name" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Hunter name"><span class="ob4-field-n">0 / 20</span></label>' +
+        '<div class="ob4-err" id="cin-nameError" role="alert"></div><div class="ob4-sugg" id="cin-nameSuggestions"></div>' +
+        '<div class="ob4-looks" role="radiogroup" aria-label="Choose your look">' + ctx.LOOKS.map((l) =>
+          '<button class="ob4-look" type="button" role="radio" data-ob-look="' + l.k + '"><img src="assets/busts/avatar-' + l.k + '-bust.webp" alt=""><span>' + l.l + '</span></button>').join('') + '</div>' +
+        '<div class="ob4-grow"></div><div class="ob4-foot"><button class="ob4-btn is-off" id="cin-nameConfirm" type="button" disabled>Confirm</button></div></section>');
+      const lic = e.querySelector('.ob4-lic'), bust = e.querySelector('.ob4-lic-bust'), nameEl = e.querySelector('.ob4-lic-name');
+      const lookL = e.querySelector('.ob4-lic-look'), stamp = e.querySelector('.ob4-stamp'), input = e.querySelector('#cin-nameField');
+      const counter = e.querySelector('.ob4-field-n'), err = e.querySelector('#cin-nameError'), sugg = e.querySelector('#cin-nameSuggestions');
+      const confirm = e.querySelector('#cin-nameConfirm'), looks = Array.from(e.querySelectorAll('.ob4-look'));
+      let val = '', chars = [], busy = false;
 
-    function _showNameError(msg, suggested) {
-      if (errEl) {
-        errEl.textContent = msg || 'Could not claim that name.';
-        errEl.style.display = 'block';
+      // Each letter strikes the card; only what changed is redrawn.
+      function renderChars(v) {
+        const ph = nameEl.querySelector('.ob4-ph');
+        if (ph) ph.remove();
+        let common = 0;
+        while (common < chars.length && common < v.length && chars[common].textContent === v[common]) common++;
+        chars.splice(common).forEach((s) => s.remove());
+        const caret = nameEl.querySelector('.ob4-caret');
+        for (let i = common; i < v.length; i++) {
+          const s = document.createElement('span');
+          s.className = 'ob4-ch';
+          s.textContent = v[i];
+          nameEl.insertBefore(s, caret);
+          chars.push(s);
+        }
+        if (!v.length) {
+          const p = document.createElement('span');
+          p.className = 'ob4-ph';
+          p.textContent = 'unnamed';
+          nameEl.insertBefore(p, caret);
+        }
       }
-      if (Array.isArray(suggested) && suggested.length && suggBox) {
-        suggBox.innerHTML = '';
-        const label = document.createElement('div');
-        label.className = 'cin-name-suggestions-label';
-        label.textContent = 'Try one of these:';
-        suggBox.appendChild(label);
+      function setErr(msg, suggested) {
+        err.textContent = msg || '';
+        nameEl.classList.toggle('is-taken', !!msg);
+        sugg.innerHTML = '';
+        if (!Array.isArray(suggested)) return;
         suggested.slice(0, 3).forEach((s) => {
           const chip = document.createElement('button');
           chip.type = 'button';
-          chip.className = 'cin-name-suggestion-chip';
           chip.textContent = s;
-          chip.addEventListener('click', () => {
-            field.value = s;
-            field.dispatchEvent(new Event('input'));
-            try { field.focus(); } catch (_) {}
-          });
-          suggBox.appendChild(chip);
+          chip.addEventListener('click', () => { setVal(String(s).slice(0, 20), false); try { input.focus(); } catch (_) {} });
+          sugg.appendChild(chip);
         });
-        suggBox.style.display = 'block';
       }
-    }
-
-    async function _confirmName() {
-      const name = field.value.trim();
-      if (!name || confirm.disabled) return;
-      if (errEl) errEl.style.display = 'none';
-      if (suggBox) { suggBox.style.display = 'none'; suggBox.innerHTML = ''; }
-
-      const Auth = window.Auth;
-      // A replay never touches the alias — the name is already claimed.
-      const pending = !preview && !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
-      // W329 — validate for BOTH pending and already-claimed (a claimed
-      // name is reused verbatim as the alias at the deferred claim).
-      if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
-        _showNameError('3–20 chars · letters, numbers, spaces, _ and - only.');
-        return;
+      function sync() {
+        counter.classList.toggle('is-check', busy);
+        counter.textContent = busy ? 'checking' : (val.length + ' / 20');
+        const ok = !busy && val.trim().length >= 2 && !/[^A-Za-z0-9 _-]/.test(val);
+        confirm.classList.toggle('is-off', !ok);
+        confirm.disabled = !ok;
       }
-      if (pending) {
-        _setConfirmEnabled(false);
-        let result;
-        try { result = await Auth.completeSignIn(name); }
-        catch (e) { result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' }; }
-        if (!result || !result.ok) {
-          const code = result && result.code;
-          if (code === 'ALIAS_TAKEN') {
-            _showNameError(result.reason || 'That name is taken.', result.suggested);
-          } else if (code === 'ALIAS_INVALID') {
-            _showNameError(result.reason || 'Name rejected by the system.');
-          } else if (code === 'NO_PENDING_TOKEN' || code === 'APPLE_TOKEN_INVALID') {
-            _showNameError('Sign-in expired. Please restart the app and sign in again.');
-          } else if (code === 'NETWORK') {
-            _showNameError('Connection error. Try again.');
-          } else {
-            _showNameError((result && result.reason) || 'Could not claim that name.');
-          }
-          _setConfirmEnabled(true);
+      function setVal(v, typed) {
+        const grew = v.length > val.length;
+        val = v;
+        if (input.value !== v) input.value = v;
+        renderChars(v);
+        if (grew && typed) { ctx.fx.hap('light'); ctx.fx.snd('type'); }
+        stamp.classList.remove('is-on');
+        setErr(/[^A-Za-z0-9 _-]/.test(v) ? 'Letters, numbers, spaces, _ and - only.' : '');
+        sync();
+      }
+      input.addEventListener('input', () => setVal(input.value, true));
+      input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !confirm.disabled) confirmName(); });
+
+      // The look turns the card: edge-on, the face swaps, back.
+      function paintLook() {
+        const l = ctx.LOOKS.filter((x) => x.k === U.look)[0] || ctx.LOOKS[0];
+        bust.src = 'assets/busts/avatar-' + l.k + '-bust.webp';
+        lookL.textContent = l.l;
+        looks.forEach((b) => {
+          const on = b.dataset.obLook === U.look;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+      }
+      looks.forEach((b) => b.addEventListener('click', () => {
+        const k = b.dataset.obLook;
+        if (k === U.look) return;
+        U.look = k;
+        ctx.fx.hap('light'); ctx.fx.snd('turn');
+        if (ctx.rm()) { paintLook(); return; }
+        looks.forEach((x) => x.classList.toggle('is-on', x === b));
+        lic.classList.remove('is-turnback');
+        lic.classList.add('is-turn');
+        ctx.after(270, () => { paintLook(); lic.classList.add('is-turnback'); lic.classList.remove('is-turn'); });
+      }));
+
+      async function confirmName() {
+        const name = val.trim();
+        if (!name || busy || confirm.disabled) return;
+        setErr('');
+        const Auth = window.Auth;
+        // A replay never touches the alias: the name is already claimed.
+        const pending = !preview && !!(Auth && typeof Auth.isApplePending === 'function' && Auth.isApplePending());
+        // W329 — validate for BOTH pending and already-claimed (a claimed
+        // name is reused verbatim as the alias at the deferred claim).
+        if (Auth && typeof Auth.validateAlias === 'function' && !Auth.validateAlias(name)) {
+          setErr('3 to 20 letters, numbers, spaces, _ or -.');
           return;
         }
-      }
-      state.name = name;
-      // W947 — a Ranger or Warrior pick is equipped as the hunter's look (the
-      // Wardrobe's free skins); HUNTER keeps the class default. A replay
-      // shows the choice and equips nothing.
-      if (!preview) {
-        const file = _cnBustFile(state.bust);
-        if (file) {
-          try { setEquippedSkin(file); } catch (_) {}
-          try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}
+        if (pending) {
+          busy = true; sync();
+          let result;
+          try { result = await Auth.completeSignIn(name); }
+          catch (e2) { result = { ok: false, code: 'NETWORK', reason: 'Could not reach server.' }; }
+          busy = false; sync();
+          if (!result || !result.ok) {
+            const code = result && result.code;
+            if (code === 'ALIAS_TAKEN') setErr('Taken. The System knows another ' + name + '.', result.suggested);
+            else if (code === 'ALIAS_INVALID') setErr(result.reason || 'The System rejects that name.');
+            else if (code === 'NO_PENDING_TOKEN' || code === 'APPLE_TOKEN_INVALID') setErr('Sign-in expired. Close the app and sign in again.');
+            else if (code === 'NETWORK') setErr('No connection. Try again.');
+            else setErr((result && result.reason) || 'Could not claim that name.');
+            return;
+          }
         }
+        U.name = name;
+        // W947 — a Ranger or Warrior pick is equipped as the hunter's look (the
+        // Wardrobe's free skins); HUNTER keeps the class default. A replay
+        // shows the choice and equips nothing.
+        if (!preview) {
+          const file = _cnBustFile(U.look);
+          if (file) {
+            try { setEquippedSkin(file); } catch (_) {}
+            try { _maybeSubmitPublicRankSummary('avatar-change'); } catch (_) {}
+          }
+        }
+        // The name is theirs: the rank is stamped on the license, then the witness.
+        confirm.classList.add('is-off');
+        confirm.disabled = true;
+        stamp.classList.add('is-on');
+        ctx.fx.hap('medium'); ctx.fx.snd('stamp');
+        ctx.after(ctx.rm() ? 300 : 620, () => ctx.go('witness'));
       }
-      _cinPlaySfx('chime');
-      try { _hapticTick('MEDIUM'); } catch (_) {}
-      show(2);
-    }
+      confirm.addEventListener('click', confirmName);
 
-    // W472 — the lore primer survives as a quiet line under the field.
-    {
-      const glossOpen  = q('#cin-glossary-open');
-      const glossModal = q('#cin-glossary');
-      const glossClose = q('#cin-glossary-close');
-      if (glossOpen && glossModal) {
-        glossOpen.addEventListener('click', (e) => {
-          e.preventDefault(); e.stopPropagation();
-          glossModal.classList.remove('hidden');
-          glossModal.setAttribute('aria-hidden', 'false');
-        });
-        const closeGloss = () => {
-          glossModal.classList.add('hidden');
-          glossModal.setAttribute('aria-hidden', 'true');
-        };
-        if (glossClose) glossClose.addEventListener('click', closeGloss);
-        glossModal.addEventListener('click', (e) => { if (e.target === glossModal) closeGloss(); });
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && !glossModal.classList.contains('hidden')) closeGloss();
-        });
+      // Pre-fill: Apple Sign-In's given name if a claim is pending (1z.245),
+      // else whatever is already on disk.
+      let prefill = '';
+      try {
+        if (window.Auth && typeof window.Auth.isApplePending === 'function' && window.Auth.isApplePending() &&
+            typeof window.Auth.getPendingGivenName === 'function') {
+          const gn = window.Auth.getPendingGivenName();
+          if (gn && String(gn).trim()) prefill = String(gn).trim().slice(0, 20);
+        }
+      } catch (_) {}
+      if (!prefill) {
+        try {
+          const claimed = (localStorage.getItem('hb_name') || '').trim();
+          if (claimed && claimed !== 'Hunter') prefill = claimed.slice(0, 20);
+        } catch (_) {}
       }
-    }
+      paintLook();
+      setVal(prefill, false);
 
-    // ── 2 · THE WITNESS — onboarding owns the Apple Health ask ──
-    // This screen IS the pre-permission sheet W935 shipped: one neutral
-    // button, no exit offered before the system prompt (App Review
-    // 5.1.1(iv)). The three W935 funnel events fire from here now, so
-    // grant-vs-deny stays as measurable as it was.
-    {
-      const btn = q('#cn-healthBtn');
-      let asking = false;
+      return {
+        el: e,
+        enter: () => {
+          stamp.classList.remove('is-on');
+          sync();
+          if (!val) ctx.after(500, () => { try { input.focus({ preventScroll: true }); } catch (_) {} });
+        },
+      };
+    })());
+
+    // ── 3 · THE WITNESS — onboarding owns the Apple Health ask ──
+    // This screen IS the pre-permission sheet W935 shipped: the guide says
+    // what is read and where it stays, then ONE neutral button opens the
+    // system prompt and no exit is offered beside it (App Review 5.1.1(iv)).
+    // The three W935 funnel events fire from here, so grant-vs-deny stays
+    // as measurable as it was.
+    ctx.add('witness', (() => {
+      const L1 = 'I am the First Awakened. The System reads only what the body did. Steps. Sleep. Workouts.';
+      const L2 = 'It reads them from Apple Health. They stay on your phone. Awakened never sees them leave it.';
+      const e = el('<section class="ob4-s ob4-s-witness"><div class="ob4-kicker ob4-dim">The witness</div><h1 class="ob4-title">The System reads your steps.</h1>' +
+        '<div class="ob4-sys"><div class="ob4-sys-tag">System</div><p class="ob4-say ob4-typed ob4-l1"></p><p class="ob4-say ob4-typed ob4-l2" hidden></p></div><div class="ob4-grow"></div>' +
+        '<div class="ob4-guide"><img src="assets/coach/first-awakened-speaking.png" alt=""></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn" id="cn-healthBtn" type="button">Continue</button></div></section>');
+      const l1 = e.querySelector('.ob4-l1'), l2 = e.querySelector('.ob4-l2'), sys = e.querySelector('.ob4-sys');
+      const guide = e.querySelector('.ob4-guide img'), btn = e.querySelector('#cn-healthBtn');
+      let finish = null, asking = false, onward = '';
+      // Stop whatever is still typing and leave the first line whole.
+      const said = () => {
+        finish = null;
+        ctx.cancelAll();
+        l1.hidden = false; l1.textContent = L1; l1.classList.add('is-done');
+      };
+      function speak() {
+        l2.hidden = true;
+        finish = ctx.typeInto(l1, L1, () => { finish = ctx.typeInto(l2, L2, () => { finish = null; }); });
+      }
+      sys.addEventListener('click', () => {
+        if (!finish || onward) return;
+        said();
+        l2.hidden = false; l2.textContent = L2; l2.classList.add('is-done');
+      });
+      function granted() {
+        said();
+        guide.src = 'assets/coach/first-awakened-pointing.png';
+        ctx.fx.hap('light'); ctx.fx.snd('tick');
+        onward = 'reveal';
+        ctx.typeInto(l2, 'Reading.', () => ctx.after(600, () => ctx.go('reveal')));
+      }
+      function declined() {
+        said();
+        guide.src = 'assets/coach/first-awakened-idle.png';
+        onward = 'wolf';
+        ctx.typeInto(l2, 'Then it cannot see you. The door stays open.');
+        btn.textContent = 'Carry on';
+        btn.classList.add('ob4-ghost');
+        btn.classList.remove('is-off');
+      }
       btn.addEventListener('click', async () => {
-        if (asking) return;
+        if (onward === 'wolf') { ctx.go('wolf'); return; }
+        if (asking || onward) return;
         asking = true;
+        btn.classList.add('is-off');
         const available = !!(typeof Health !== 'undefined' && Health.isAvailable && Health.isAvailable());
-        if (!available) { state.health = null; asking = false; next(); return; }
+        if (!available) { D.health = null; asking = false; ctx.go('wolf'); return; }
 
         // Replay: read what Health already allows, ask for nothing, record
         // nothing. A hunter who has never granted it sees the closed branch,
@@ -65921,21 +66061,18 @@
           await _readHealth();
           _fetchBoard();
           asking = false;
-          next();
+          if (ctx.cur !== inst) return;
+          if (D.health === true) granted(); else declined();
           return;
         }
 
         try { localStorage.setItem('hb_healthkit_prompted', '1'); } catch (_) {}
-        try {
-          if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_shown', 'onboarding');
-        } catch (_) {}
+        emit('health_prompt_shown', 'onboarding');
 
         let result = 'unknown';
         try { result = await Health.requestPermissions(); } catch (_) { result = 'unknown'; }
-        try {
-          localStorage.setItem('hb_hk_answered_v1', '1');
-          if (typeof window.__funnelEmit === 'function') window.__funnelEmit('health_prompt_answered', String(result || 'unknown'));
-        } catch (_) {}
+        try { localStorage.setItem('hb_hk_answered_v1', '1'); } catch (_) {}
+        emit('health_prompt_answered', String(result || 'unknown'));
 
         // iOS resolves requestAuthorization even on Don't Allow, so the
         // first read is the only honest tell — and it is the same read
@@ -65944,244 +66081,448 @@
         try {
           if (localStorage.getItem('hb_hk_first_read_v1') !== '1') {
             localStorage.setItem('hb_hk_first_read_v1', '1');
-            if (typeof window.__funnelEmit === 'function') {
-              window.__funnelEmit('health_first_read',
-                state.steps7 == null ? 'null' : (state.steps7 > 0 ? 'steps' : 'zero'));
-            }
+            emit('health_first_read', D.steps7 == null ? 'null' : (D.steps7 > 0 ? 'steps' : 'zero'));
           }
         } catch (_) {}
         try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ force: true }); } catch (_) {}
 
-        if (state.health === true) {
-          // Get the week onto the board now so screen 4 has a real rank
-          // to show, and let the ordinary verifiers catch up behind it.
-          try { if (typeof state.today === 'number') lbRecordStepsToday(state.today); } catch (_) {}
+        if (D.health === true) {
+          // Get the week onto the board now so the board screen has a real
+          // rank to show, and let the ordinary verifiers catch up behind it.
+          try { if (typeof D.today === 'number') lbRecordStepsToday(D.today); } catch (_) {}
           try { lbBackfillMissedStepDays(); } catch (_) {}
           try { autoVerifySleep(); } catch (_) {}
           try { autoVerifyStrengthTraining(); } catch (_) {}
         }
-        _fetchBoard();   // two screens of runway before the board mounts
+        _fetchBoard();
         asking = false;
-        next();
+        if (ctx.cur !== inst) return;
+        if (D.health === true) granted(); else declined();
       });
-    }
+      const inst = {
+        el: e,
+        enter: () => {
+          asking = false; onward = '';
+          guide.src = 'assets/coach/first-awakened-speaking.png';
+          btn.textContent = 'Continue';
+          btn.classList.remove('ob4-ghost', 'is-off');
+          l1.textContent = ''; l2.textContent = '';
+          speak();
+        },
+        exit: () => { finish = null; },
+      };
+      return inst;
+    })());
 
-    // One Apple Health read for the whole flow: the rolling seven-day
-    // total (the reveal) and today (the Steel Wolf's kill condition).
-    async function _readHealth() {
-      try {
-        if (typeof Health === 'undefined' || !Health.isAvailable()) { state.health = null; return; }
-        const end   = new Date();
-        const start = new Date(end.getTime());
-        start.setDate(start.getDate() - 6);
-        start.setHours(0, 0, 0, 0);
-        let week = null, today = null;
-        try { week  = await Health.getStepsBetween(start.toISOString(), end.toISOString()); } catch (_) {}
-        try { today = await Health.getStepsToday(); } catch (_) {}
-        if (typeof week  === 'number' && Number.isFinite(week))  state.steps7 = Math.round(week);
-        if (typeof today === 'number' && Number.isFinite(today)) state.today  = Math.round(today);
-        const granted = (typeof Health.permissionStatus === 'function') && Health.permissionStatus() === 'granted';
-        state.health = !!(granted && (state.steps7 !== null || state.today !== null));
-      } catch (_) { state.health = false; }
-    }
+    // ── 4 · THE REVEAL ─────────────────────────────────────────
+    // The week runs up, the road lights with it, and then the number is put
+    // in the game's own terms: one Steel Wolf per day's worth of steps.
+    ctx.add('reveal', (() => {
+      const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+      const WOLF = 'assets/bosses/the-steel-wolf.png';
+      const e = el('<section class="ob4-s ob4-full ob4-s-reveal"><img class="ob4-road" src="assets/backgrounds/lb-bg-100k.webp" alt=""><div class="ob4-road-veil"></div>' +
+        '<div class="ob4-reveal-copy"><div class="ob4-kicker">Last 7 days · Apple Health</div><div class="ob4-num ob4-num-xl" id="cn-steps7">0</div><div class="ob4-reveal-unit">steps</div>' +
+        '<div class="ob4-wolves"></div><p class="ob4-say ob4-convert" id="cn-revealLine"></p></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn is-off" id="cn-strikeOne" type="button" disabled>Strike one</button></div></section>');
+      const num = e.querySelector('#cn-steps7'), wolves = e.querySelector('.ob4-wolves'), conv = e.querySelector('.ob4-convert'), btn = e.querySelector('#cn-strikeOne');
+      let total = 0;
+      btn.addEventListener('click', () => { if (btn.disabled) return; ctx.fx.hap('medium'); ctx.go('wolf'); });
+      const setP = (p) => { e.style.setProperty('--ob4-p', p.toFixed(3)); num.textContent = fmt(total * p); };
+      const head = (cls, delay) => {
+        const w = document.createElement('span');
+        w.className = 'ob4-wolfhead' + (cls ? ' ' + cls : '');
+        w.innerHTML = '<img src="' + WOLF + '" alt="">';
+        w.style.animationDelay = delay + 's';
+        wolves.appendChild(w);
+        return w;
+      };
+      function convert() {
+        const n = Math.floor(total / WOLF_NEED), frac = (total % WOLF_NEED) / WOLF_NEED;
+        wolves.innerHTML = '';
+        const show = Math.min(n, 7);
+        for (let i = 0; i < show; i++) head('', i * 0.12);
+        if (n > 7) {
+          const m = document.createElement('span');
+          m.className = 'ob4-num ob4-num-l';
+          m.style.color = 'var(--ob4-gold)';
+          m.textContent = '×' + n;
+          wolves.appendChild(m);
+        } else if (frac > 0 && total > 0) {
+          head('is-part', show * 0.12).style.setProperty('--ob4-f', Math.round(frac * 100) + '%');
+        }
+        let k = 0;
+        const tick = () => { if (k++ < show) { ctx.fx.hap('light'); ctx.fx.snd('tick'); ctx.after(120, tick); } };
+        tick();
+        conv.textContent = total === 0 ? 'Health holds no steps yet. Carry your phone.'
+          : n === 0 ? 'Not yet one Steel Wolf. Tonight changes that.'
+          : 'That is ' + (n <= 12 ? WORDS[n] : fmt(n)) + ' Steel ' + (n === 1 ? 'Wolf' : 'Wolves') + '.';
+        btn.textContent = (D.today || 0) > 0 ? 'Strike one' : 'Carry on';
+        ctx.after(show * 120 + 200, () => { conv.classList.add('is-on'); btn.classList.remove('is-off'); btn.disabled = false; });
+      }
+      return {
+        el: e,
+        enter: () => {
+          // The reveal is skipped when Health is closed: there is nothing true to count.
+          if (D.health !== true) { ctx.go('wolf'); return; }
+          total = (typeof D.steps7 === 'number') ? D.steps7 : (D.today || 0);
+          wolves.innerHTML = '';
+          conv.classList.remove('is-on'); conv.textContent = '';
+          btn.classList.add('is-off');
+          btn.disabled = true;
+          setP(0);
+          let q = 0;
+          ctx.tween(ctx.rm() ? 900 : 1400, (t) => {
+            const v = easeOut(t);
+            setP(v);
+            if (v >= (q + 1) * 0.25 && q < 3) { q++; ctx.fx.hap('light'); ctx.fx.snd('tick'); }
+          }, convert);
+        },
+      };
+    })());
 
-    // ── 3 · THE REVEAL ─────────────────────────────────────────
-    // W947 — v3: once the count lands, the hunter can drag the road and the
-    // light (and the number) follow the finger, from dark to their own week.
-    const _reveal = { total: 0, on: false, p: 1 };
-    function _setRevealP(p) {
-      _reveal.p = p;
-      q('#cn-steps7').textContent = _cnFmt(Math.round(_reveal.total * p));
-      q('#cn-s3').style.setProperty('--cn-p', String(p));
-    }
-    function _armScrub() {
-      _reveal.on = true;
-      _reveal.p = 1;
-      q('#cn-rhint').classList.add('cn-show');
-    }
-    {
-      const pad = q('#cn-scrub');
-      let down = false, x0 = 0, p0 = 1;
-      pad.addEventListener('pointerdown', (e) => {
-        if (!_reveal.on) return;
-        down = true; x0 = e.clientX; p0 = _reveal.p;
-        try { pad.setPointerCapture(e.pointerId); } catch (_) {}
-        q('#cn-roadimg').style.animationPlayState = 'paused';
-        try { _hapticTick('LIGHT'); } catch (_) {}
-      });
-      pad.addEventListener('pointermove', (e) => {
-        if (!down) return;
-        _setRevealP(Math.max(0, Math.min(1, p0 + (e.clientX - x0) / 260)));
+    // ── 5 · THE FIRST GATE — hold to strike the Steel Wolf ──────
+    // The strike landing is where the hunt becomes real: the Wolf is ENGAGED
+    // (a hunter's first engage is free, W771) and, when Apple Health already
+    // shows the day's 6,000, KILLED through evaluateSteelWolfForDay: real
+    // souls, real drop roll, real once-per-(boss, day) claim. The bar drains
+    // exactly the share of the threshold walked today, never more. Health
+    // closed, or no HealthKit: nothing to strike, nothing engaged.
+    ctx.add('wolf', (() => {
+      const e = el('<section class="ob4-s ob4-full ob4-s-wolf"><div class="ob4-wolf-art"><img src="assets/bosses/the-steel-wolf.png" alt="The Steel Wolf"></div><div class="ob4-wolf-veil"></div><div class="ob4-slash"></div>' +
+        '<div class="ob4-wolf-top"><div class="ob4-kicker">The first gate · ' + escH(WOLF_RANK) + '-rank</div><h1 class="ob4-boss">The Steel Wolf</h1>' +
+        '<div class="ob4-hp"><div class="ob4-hp-bar"><i id="cn-hpi"></i></div><div class="ob4-hp-txt" id="cn-wolfSub"></div></div></div>' +
+        '<div class="ob4-wolf-bottom"><div class="ob4-ammo"><span class="ob4-num ob4-num-l ob4-today">0</span><span>steps today</span></div>' +
+        '<button class="ob4-hold" id="cn-wolf" type="button" aria-label="Hold to strike the Steel Wolf"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="ob4-ring-t" cx="50" cy="50" r="47"></circle><circle class="ob4-ring-f" cx="50" cy="50" r="47" pathLength="1"></circle></svg><span class="ob4-hold-l">Hold to strike</span></button>' +
+        '<div class="ob4-stamp-big" id="cn-wolfStamp"></div><div class="ob4-result" id="cn-pactBody"></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn ob4-carry is-off" id="cn-wolfNext" type="button" disabled>Carry on</button></div></div></section>');
+      const hold = e.querySelector('.ob4-hold'), label = e.querySelector('.ob4-hold-l'), bar = e.querySelector('#cn-hpi'), hptxt = e.querySelector('#cn-wolfSub');
+      const ammo = e.querySelector('.ob4-ammo'), todayEl = e.querySelector('.ob4-today'), stamp = e.querySelector('#cn-wolfStamp');
+      const result = e.querySelector('#cn-pactBody'), carry = e.querySelector('#cn-wolfNext');
+      let c = 0, raf = 0, holding = false, done = false, locked = false, t0 = 0, fallback = false, downAt = 0, autoing = false;
+      const setC = (v) => { c = v; e.style.setProperty('--ob4-c', v.toFixed(3)); };
+      const openCarry = () => { carry.classList.remove('is-off'); carry.disabled = false; };
+
+      // What the strike actually did. A replay shows the shape of the gate,
+      // never the hunt: no engage, no kill, no roll, and the relic named is
+      // the Wolf's signature drop, labelled as a preview.
+      function strike(today) {
+        if (preview) {
+          if (today < WOLF_NEED) return { kind: today > 0 ? 'bleeds' : 'unmoved' };
+          let card = null, souls = 0;
+          try { card = CARDS[_CN_WOLF_PREVIEW_RELIC] || null; } catch (_) {}
+          try { souls = killRewardSouls(WOLF_RANK); } catch (_) {}
+          return { kind: 'beaten', card: card, souls: souls, preview: true };
+        }
+        let engaged = false;
+        try { engaged = (typeof engageBoss === 'function') && !!engageBoss('the_steel_wolf'); } catch (_) {}
+        if (engaged && today >= WOLF_NEED) {
+          // The day is already won, so run the REAL kill. The usual toast and
+          // boss-result modal are captured instead of shown: this screen IS
+          // the announcement, and two of them would be one too many.
+          let captured = null;
+          try {
+            _cinKillCapture = [];
+            evaluateSteelWolfForDay(today, getDeviceLocalDate());
+            captured = _cinKillCapture[0] || null;
+          } catch (e2) {
+            console.warn('[cin] steel wolf kill failed', e2);
+          } finally {
+            _cinKillCapture = null;
+          }
+          if (captured) return { kind: 'beaten', card: (captured.dropInfo && captured.dropInfo.card) || null, souls: captured.soulsReward | 0 };
+        }
+        // Past the threshold but no kill fired: today's claim is already spent.
+        if (today >= WOLF_NEED) return { kind: 'claimed' };
+        return { kind: today > 0 ? 'bleeds' : 'unmoved' };
+      }
+
+      function burst() {
+        if (ctx.rm()) return;
+        const b = document.createElement('div');
+        b.className = 'ob4-burst';
+        b.style.top = '42%';
+        for (let i = 0; i < 18; i++) {
+          const p = document.createElement('i'), a = Math.random() * Math.PI * 2, r = 70 + Math.random() * 120;
+          p.style.setProperty('--dx', (Math.cos(a) * r).toFixed(0) + 'px');
+          p.style.setProperty('--dy', (Math.sin(a) * r).toFixed(0) + 'px');
+          p.style.animationDelay = (Math.random() * 0.15).toFixed(2) + 's';
+          b.appendChild(p);
+        }
+        e.appendChild(b);
+        ctx.after(1300, () => b.remove());
+      }
+      function outcome(r, today) {
+        e.classList.add('is-done');
+        e.dataset.outcome = r.kind;
+        stamp.classList.remove('ob4-ember');
+        if (r.kind === 'beaten') {
+          e.classList.add('is-beaten');
+          if (r.card && !r.preview) U.relic = true;
+          stamp.textContent = 'Beaten';
+          stamp.classList.add('is-on');
+          ctx.fx.hap('success'); ctx.fx.snd('burst');
+          burst();
+          ctx.after(350, () => {
+            if (r.card) {
+              const meta = String(RARITY_LABELS[r.card.rarity] || r.card.rarity || '') + (r.card.slot ? ' · ' + r.card.slot : '') + (r.preview ? ' · preview' : ' · yours');
+              result.innerHTML = '<div class="ob4-relic-card"><img src="' + escH(r.card.art_path || '') + '" alt=""><div><div class="ob4-rn">' + escH(r.card.name) + '</div>' +
+                '<div class="ob4-rr">' + escH(meta) + '</div></div>' + (r.souls > 0 ? '<div class="ob4-stat">Souls<b>+' + fmt(r.souls) + '</b></div>' : '') + '</div>';
+            } else if (r.souls > 0) {
+              result.innerHTML = '<p class="ob4-body"><b>+' + fmt(r.souls) + '</b> souls.</p>';
+            }
+            openCarry();
+          });
+          return;
+        }
+        if (r.kind === 'claimed') {
+          e.classList.add('is-beaten');
+          stamp.textContent = 'Beaten';
+          stamp.classList.add('is-on');
+          result.innerHTML = '<p class="ob4-body">Today’s kill is already claimed. <b>It returns tomorrow.</b></p>';
+        } else if (r.kind === 'bleeds') {
+          stamp.textContent = 'It bleeds';
+          stamp.classList.add('ob4-ember', 'is-on');
+          result.innerHTML = '<p class="ob4-body">Walk <b>' + fmt(WOLF_NEED - today) + '</b> more today and it is beaten tonight.</p>';
+        } else {
+          stamp.textContent = 'Unmoved';
+          stamp.classList.add('ob4-ember', 'is-on');
+          result.innerHTML = '<p class="ob4-body">Nothing landed. <b>Walk, then come back.</b></p>';
+        }
+        ctx.fx.hap('medium');
+        openCarry();
+      }
+      function hit() {
+        if (done) return;
+        done = true; holding = false;
+        cancelAnimationFrame(raf);
+        e.classList.remove('is-charging');
+        setC(1);
+        const today = D.today || 0, share = clamp(today / WOLF_NEED, 0, 1);
+        const r = strike(today);
+        ctx.fx.hap('heavy'); ctx.fx.snd('hit');
+        e.classList.add('is-hit');
+        if (today > 0) {
+          const d = document.createElement('span');
+          d.className = 'ob4-num ob4-dmg';
+          d.textContent = '−' + fmt(today);
+          e.appendChild(d);
+          ctx.after(1300, () => d.remove());
+        }
+        bar.style.width = ((1 - share) * 100) + '%';
+        hptxt.innerHTML = today >= WOLF_NEED
+          ? '<span class="ob4-num">' + fmt(today) + '</span> of ' + fmt(WOLF_NEED) + ' · beaten today'
+          : '<span class="ob4-num">' + fmt(WOLF_NEED - today) + '</span> steps left today';
+        ctx.after(ctx.rm() ? 400 : 750, () => outcome(r, today));
+      }
+      function loop(t) {
+        if (!holding) return;
+        setC(clamp((t - t0) / 900, 0, 1));
+        if (c >= 1) { hit(); return; }
+        raf = requestAnimationFrame(loop);
+      }
+      function auto() {
+        if (done || locked || autoing) return;
+        autoing = true;
+        ctx.fx.hap('medium');
+        e.classList.add('is-charging');
+        const from = c;
+        ctx.tween(450, (p) => setC(from + (1 - from) * p), hit);
+      }
+      hold.addEventListener('pointerdown', (ev) => {
+        if (done || locked || autoing) return;
+        ev.preventDefault();
+        try { hold.setPointerCapture(ev.pointerId); } catch (_) {}
+        holding = true;
+        downAt = performance.now();
+        t0 = downAt - c * 900;
+        e.classList.add('is-charging');
+        ctx.fx.hap('light');
+        raf = requestAnimationFrame(loop);
       });
       const up = () => {
-        if (!down) return;
-        down = false;
-        q('#cn-roadimg').style.animationPlayState = '';
+        if (!holding || done) return;
+        holding = false;
+        cancelAnimationFrame(raf);
+        e.classList.remove('is-charging');
+        if (fallback && performance.now() - downAt < 240) { auto(); return; }
+        const from = c;
+        ctx.tween(250, (p) => setC(from * (1 - p)));
       };
-      pad.addEventListener('pointerup', up);
-      pad.addEventListener('pointercancel', up);
-    }
+      hold.addEventListener('pointerup', up);
+      hold.addEventListener('pointercancel', up);
+      hold.addEventListener('lostpointercapture', up);
+      // Keyboard, switch and VoiceOver users strike in one press.
+      hold.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); auto(); } });
+      hold.addEventListener('click', (ev) => { if (ev.detail === 0) auto(); });
+      hold.addEventListener('contextmenu', (ev) => ev.preventDefault());
+      carry.addEventListener('click', () => { if (carry.disabled) return; ctx.fx.hap('light'); ctx.next(); });
 
-    function _runReveal() {
-      const el   = q('#cn-steps7');
-      const line = q('#cn-revealLine');
-      const scr  = q('#cn-s3');
-      scr.style.setProperty('--cn-p', '0');
-      const total = (state.health === true) ? (state.steps7 || 0) : 0;
-      scr.classList.toggle('cn-unlit', !(state.health === true && total > 0));
-      _reveal.total = total;
-      _reveal.on = false;
-      q('#cn-rhint').classList.remove('cn-show');
+      let ran = false;
+      return {
+        el: e,
+        enter: () => {
+          // The strike is the real hunt, so it lands once; coming back shows what it did.
+          if (ran) return;
+          ran = true;
+          if (D.health === true) _fetchBoard(true);
+          todayEl.textContent = fmt(D.today || 0);
+          hptxt.innerHTML = '<span class="ob4-num">' + fmt(WOLF_NEED) + '</span> steps in a day';
+          if (D.health !== true) {
+            locked = true;
+            e.classList.add('is-locked', 'is-done');
+            e.dataset.outcome = 'locked';
+            ammo.hidden = true;
+            result.innerHTML = '<div class="ob4-sys ob4-wide"><div class="ob4-sys-tag">System</div><p class="ob4-say">It cannot see you. Open Health, then strike.</p></div>';
+            carry.classList.add('ob4-ghost');
+            openCarry();
+            return;
+          }
+          ctx.after(2500, () => { if (!done && !autoing) { fallback = true; label.innerHTML = 'Hold to strike<small>or tap</small>'; } });
+        },
+        exit: () => { holding = false; cancelAnimationFrame(raf); },
+      };
+    })());
 
-      if (state.health === null) {
-        el.textContent = '—';
-        line.innerHTML = 'Apple Health lives on your iPhone. <b>The System reads your steps there.</b>';
-        return;
+    // ── 6 · THE BOARD ──────────────────────────────────────────
+    // The real weekly Steps board, shown as the hunters either side of where
+    // this one stands. Their row enters at the bottom and climbs to its place
+    // as the count runs, but ONLY on a total the server has confirmed: until
+    // the first upload lands it carries a dash, never a position inferred
+    // from a slice of the top twenty (W386).
+    ctx.add('board', (() => {
+      const e = el('<section class="ob4-s ob4-s-board"><div class="ob4-kicker ob4-dim">Weekly steps · live board</div><h1 class="ob4-title">Every rank here was walked.</h1>' +
+        '<div class="ob4-rows" id="cn-rows"></div><p class="ob4-say ob4-gap" id="cn-gap"></p><div class="ob4-grow"></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn ob4-ghost" id="cn-boardNext" type="button">Onward</button></div></section>');
+      const rows = e.querySelector('#cn-rows'), gap = e.querySelector('#cn-gap');
+      e.querySelector('#cn-boardNext').addEventListener('click', () => { ctx.fx.hap('light'); ctx.next(); });
+      let me = null, mine = { rank: null, value: null }, shown = [], climbed = false, ran = false;
+      const bustOf = (file) => { let s = ''; try { s = _bustSrc(file) || _bustSrc('avatar-base.png'); } catch (_) {} return s; };
+      const rowHTML = (o) => '<div class="ob4-row' + (o.me ? ' is-me is-enter' : '') + '"><span class="ob4-r">' + (o.rank == null ? '—' : o.rank) + '</span>' +
+        '<span class="ob4-bust">' + (o.bust ? '<img src="' + escH(o.bust) + '" alt="">' : '') + '</span>' +
+        '<div class="ob4-nm">' + escH(o.name) + (o.me ? '<small></small>' : '') + '</div>' +
+        '<span class="ob4-v ob4-num">' + (o.value == null ? '—' : fmt(o.value)) + '</span></div>';
+      // Up to three of the hunters just above this one and the rest just below.
+      function pick(top, alias, v) {
+        const n = (window.innerHeight < 700) ? 4 : 5;
+        const others = top.filter((r) => r && typeof r.current_value === 'number' && !(alias && r.alias === alias));
+        if (v == null) return others.slice(0, n);
+        const above = others.filter((r) => r.current_value >= v).sort((x, y) => x.current_value - y.current_value);
+        const below = others.filter((r) => r.current_value < v).sort((x, y) => y.current_value - x.current_value);
+        const b = Math.min(below.length, n - Math.min(above.length, 3));
+        const a = Math.min(above.length, n - b);
+        return above.slice(0, a).concat(below.slice(0, b)).sort((x, y) => y.current_value - x.current_value);
       }
-      if (state.health === false) {
-        el.textContent = '—';
-        line.innerHTML = 'Health is closed. The System reads nothing yet. <b>The door stays open.</b>';
-        return;
+      function place(cur) {
+        const els = Array.from(rows.children), first = new Map(els.map((x) => [x, x.offsetTop]));
+        const others = els.filter((x) => x !== me);
+        rows.insertBefore(me, others[shown.filter((r) => r.current_value >= cur).length] || null);
+        if (ctx.rm()) return;
+        Array.from(rows.children).forEach((x) => {
+          const dy = first.get(x) - x.offsetTop;
+          if (!dy) return;
+          x.style.transition = 'none';
+          x.style.transform = 'translateY(' + dy + 'px)';
+          void x.offsetHeight;
+          x.style.transition = '';
+          x.style.transform = '';
+        });
       }
-      if (total <= 0) {
-        el.textContent = '0';
-        line.innerHTML = 'Health holds no steps yet. <b>Carry your phone. The System counts from here.</b>';
-        return;
+      function settle() {
+        const target = mine.value;
+        me.querySelector('.ob4-v').textContent = fmt(target);
+        me.querySelector('.ob4-r').textContent = mine.rank == null ? '—' : mine.rank;
+        const above = shown.filter((r) => r.current_value >= target).sort((x, y) => x.current_value - y.current_value)[0];
+        gap.textContent = !above ? 'No one above you this week.'
+          : (above.current_value === target ? 'Level with ' + above.alias + '.' : fmt(above.current_value - target) + ' steps to pass ' + above.alias + '.');
+        gap.classList.add('is-on');
+        ctx.fx.hap('medium'); ctx.fx.snd('seal');
       }
-      line.innerHTML = 'You walked ' + _cnFmt(total) + ' steps this week. <b>The System was not watching. It is now.</b>';
-      if (_cnReduced()) {
-        _setRevealP(1);
-        _armScrub();
-        return;
+      function climb() {
+        if (climbed || mine.value == null || !me) return;
+        climbed = true;
+        me.classList.remove('is-wait', 'is-enter');
+        me.querySelector('small').textContent = U.rank + '-rank';
+        ctx.fx.hap('light');
+        const target = mine.value, v = me.querySelector('.ob4-v');
+        let passed = 0;
+        ctx.tween(ctx.rm() ? 1100 : 1700, (t) => {
+          const cur = target * easeOut(t);
+          v.textContent = fmt(cur);
+          const below = shown.filter((r) => r.current_value < cur).length;
+          if (below > passed) { passed = below; place(cur); ctx.fx.hap('light'); ctx.fx.snd('pass'); }
+        }, () => { place(target); settle(); });
       }
-      const t0 = performance.now();
-      (function frame(t) {
-        const p = Math.min(1, (t - t0) / 900);
-        _setRevealP(1 - Math.pow(1 - p, 3));
-        if (p < 1) requestAnimationFrame(frame);
-        else _armScrub();
-      })(t0);
-    }
-
-    // ── 4 · THE BOARD ──────────────────────────────────────────
-    // The real weekly Steps board. The hunter's row carries their REAL
-    // rank when the server has one; until the first upload lands it
-    // carries a dash, never a position inferred from a slice of a
-    // top-20 (the top-10-plus-pinned-YOU shape is deliberate, W386).
-    let _boardP = null;
-    function _fetchBoard() {
-      if (!_boardP) {
-        _boardP = (async () => {
-          try {
-            const r = await window.Auth.fetchLeaderboardTop('step_total', 20);
-            if (r && r.ok) return { top: Array.isArray(r.top) ? r.top : [], me: r.me || null };
-          } catch (_) {}
-          return { top: [], me: null };
-        })();
+      async function run() {
+        const f = await Promise.race([_fetchBoard(), new Promise((res) => setTimeout(() => res(_boardLast), 2500))]);
+        if (ctx.cur !== inst) return;   // the hunter walked on while the fetch was in flight
+        mine = _boardMine(f);
+        if (D.health !== true) mine.value = null;
+        shown = pick(f.top, mine.alias, mine.value);
+        // A board of one is not a board. If nobody else came back (offline, a
+        // dev stub, a cold server), walk past instead of showing an empty promise.
+        if (!shown.length) { ctx.next(); return; }
+        rows.innerHTML = shown.map((r) => rowHTML({ rank: r.rank, name: r.alias || 'Hunter', value: r.current_value, bust: bustOf(r.avatar_id || '') })).join('') +
+          rowHTML({ me: true, rank: null, name: U.name || mine.alias || 'You', value: mine.value == null ? null : 0, bust: 'assets/busts/avatar-' + U.look + '-bust.webp' });
+        me = rows.querySelector('.is-me');
+        const small = me.querySelector('small');
+        if (D.health !== true) { small.textContent = 'Open Health to take your place'; return; }
+        if (mine.value == null) { small.textContent = U.rank + '-rank'; return; }
+        small.textContent = 'Take your place';
+        me.classList.add('is-wait');
+        me.addEventListener('click', climb);
+        ctx.after(3000, climb);
       }
-      return _boardP;
-    }
+      const inst = {
+        el: e,
+        enter: () => {
+          if (ran) { if (!climbed && me && mine.value != null) ctx.after(3000, climb); return; }
+          ran = true;
+          run();
+        },
+      };
+      return inst;
+    })());
 
-    let _boardRan = false;
-    async function _runBoard() {
-      if (_boardRan) return;
-      _boardRan = true;
-      const host = q('#cn-rows');
-      const fetched = await _fetchBoard();
-      if (idx !== 4) return;   // the hunter walked on while the fetch was in flight
-      const top = fetched.top, me = fetched.me;
-
-      const myAlias = (typeof lbGetMyAlias === 'function') ? (lbGetMyAlias() || '') : '';
-      const mine    = myAlias ? top.find((r) => r && r.alias === myAlias) : null;
-      const myRank  = (mine && typeof mine.rank === 'number') ? mine.rank
-                    : (me && typeof me.rank === 'number') ? me.rank : null;
-      const myValue = (mine && typeof mine.current_value === 'number') ? mine.current_value
-                    : (me && typeof me.current_value === 'number') ? me.current_value
-                    : (state.health === true ? (state.steps7 || 0) : null);
-
-      let myRankLabel = 'RANK E';
-      try {
-        myRankLabel = 'RANK ' + String(getRank(totalPoints).label || 'E').replace(/\s*rank\s*$/i, '').toUpperCase();
-      } catch (_) {}
-      let myAvatar = _cnBustFile(state.bust);   // W947 — the bust picked on the name screen
-      if (!myAvatar) { try { myAvatar = (typeof getAvatarSrc === 'function') ? getAvatarSrc() : ''; } catch (_) {} }
-
-      const others = top
-        .filter((r) => r && !(myAlias && r.alias === myAlias))
-        .slice(0, 4)
-        .map((r) => ({ rank: r.rank, alias: r.alias, value: r.current_value, avatar: r.avatar_id || '', bg: r.card_bg || '' }));
-      // A board of one is not a board. If nobody else came back — offline,
-      // a dev stub, a cold server — walk past the screen instead of showing
-      // an empty promise. Same-tick, so it never paints.
-      if (!others.length) { show(idx + 1); return; }
-
-      const rows = others.concat([{
-        rank: myRank, alias: state.name || myAlias || 'You', value: myValue,
-        avatar: myAvatar, bg: '', me: true, sub: myRankLabel,
-      }]);
-      // Ordered by the number each hunter walked (nulls last). The RANK
-      // column still shows only what the server has agreed to — a dash
-      // until the hunter's first upload lands, never a position inferred
-      // from a slice of the top twenty.
-      rows.sort((x, y) => (x.value == null ? 1 : (y.value == null ? -1 : y.value - x.value)));
-
-      host.innerHTML = rows.map((r) => {
-        let bg = '';
-        try { bg = r.bg ? (_cardBgArt(r.bg) || '') : ''; } catch (_) { bg = ''; }
-        if (!bg) bg = 'assets/backgrounds/bg_e.webp';
-        let bust = '';
-        try { bust = _bustSrc(r.avatar) || _bustSrc('avatar-base.png'); } catch (_) {}
-        return '<div class="cn-row' + (r.me ? ' cn-me' : '') + '">' +
-          '<img class="cn-bgi" src="' + esc(bg) + '" alt="" aria-hidden="true">' +
-          '<span class="cn-r">' + (r.rank == null ? '—' : r.rank) + '</span>' +
-          '<span class="cn-bust">' + (bust ? '<img src="' + esc(bust) + '" alt="" aria-hidden="true">' : '') + '</span>' +
-          '<div class="cn-nm">' + esc(r.alias || 'Hunter') +
-            (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</div>' +
-          '<span class="cn-v">' + (r.value == null ? '—' : _cnFmt(r.value)) + '</span>' +
-        '</div>';
-      }).join('');
-    }
-
-    // ── 5 · THE HUNT ───────────────────────────────────────────
-    function _runHunt() {
+    // ── 7 · THE HUNT — The Twin Maw, its real goal and its real drop pool ──
+    ctx.add('hunt', (() => {
       const cfg  = (typeof COOP_BOSSES !== 'undefined') ? COOP_BOSSES.the_twin_maw : null;
       const goal = (cfg && cfg.coopGoalSteps) || 14000;
-      q('#cn-mawRank').textContent = ((cfg && cfg.rank) || 'E') + '-RANK · DUO';
-      q('#cn-mawLine').innerHTML =
-        'Falls at <b>' + _cnFmt(goal) + '</b> combined steps. Summon a friend — the relic drops for both.';
-
-      const host = q('#cn-drops');
-      if (host.childElementCount) return;
       let pool = [];
-      try {
-        pool = Object.keys(CARDS).map((k) => CARDS[k]).filter((c) => c && c.source_boss === 'the_twin_maw');
-      } catch (_) {}
+      try { pool = Object.keys(CARDS).map((k) => CARDS[k]).filter((c) => c && c.source_boss === 'the_twin_maw'); } catch (_) {}
       const weight = { common: 0, rare: 1, ultra_rare: 2, mythic: 3 };
       pool.sort((a, b) => (weight[a.rarity] || 0) - (weight[b.rarity] || 0));
-      host.innerHTML = pool.slice(0, 3).map((c) => {
+      const relicHTML = pool.slice(0, 3).map((c, i) => {
         const ultra = (c.rarity === 'ultra_rare' || c.rarity === 'mythic');
-        const label = ((RARITY_LABELS[c.rarity] || c.rarity || '') +
-                       ((c.slot && !ultra) ? ' · ' + c.slot : '')).toUpperCase();
-        return '<div class="cn-drop' + (ultra ? ' cn-ur' : '') + '">' +
-          '<img src="' + esc(c.art_path || '') + '" alt="" aria-hidden="true">' +
-          '<div class="cn-dn">' + esc(c.name) + '<div class="cn-dr">' + esc(label) + '</div></div></div>';
+        const label = String(RARITY_LABELS[c.rarity] || c.rarity || '') + ((c.slot && !ultra) ? ' · ' + c.slot : '');
+        return '<button class="ob4-relic' + (ultra ? ' ob4-ur' : '') + '" type="button" aria-label="Turn relic ' + (i + 1) + '"><div class="ob4-relic-in">' +
+          '<div class="ob4-relic-back"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="' + ctx.MARK + '"></path></svg></div>' +
+          '<div class="ob4-relic-front"><img src="' + escH(c.art_path || '') + '" alt=""><div>' + escH(c.name) + '<small>' + escH(label) + '</small></div></div></div></button>';
       }).join('');
-    }
-
-    // SUMMON opens the real iOS share sheet with the hunter's own
-    // invite link. Nothing on this screen changes until an invite
-    // actually goes out — a cancelled sheet leaves it as it was.
-    {
-      const btn = q('#cn-summon');
-      btn.addEventListener('click', async () => {
-        if (state.summoned) { next(); return; }
-        const cfg  = (typeof COOP_BOSSES !== 'undefined') ? COOP_BOSSES.the_twin_maw : null;
-        const goal = (cfg && cfg.coopGoalSteps) || 14000;
+      const e = el('<section class="ob4-s ob4-full ob4-s-hunt"><div class="ob4-maw"><img id="cn-mawimg" src="assets/bosses/the-twin-maw.png" alt="The Twin Maw"><div class="ob4-maw-flash"></div></div>' +
+        '<div class="ob4-hunt-copy"><div><div class="ob4-kicker">The hunt · ' + escH((cfg && cfg.rank) || 'E') + '-rank · Duo</div><h1 class="ob4-boss">The Twin Maw</h1></div>' +
+        '<p class="ob4-body" id="cn-mawLine"><b>' + fmt(goal) + '</b> combined steps. The relic drops for both.</p>' +
+        '<div class="ob4-relics" id="cn-drops">' + relicHTML + '</div><div class="ob4-turnp" id="cn-party">' + (relicHTML ? '<span class="ob4-prompt">Turn the relics</span>' : '') + '</div><div class="ob4-grow"></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn" id="cn-summon" type="button">Summon a friend</button><button class="ob4-quiet" id="cn-huntAlone" type="button">Hunt alone</button></div></div></section>');
+      const relics = Array.from(e.querySelectorAll('.ob4-relic')), turnp = e.querySelector('#cn-party');
+      const summon = e.querySelector('#cn-summon'), alone = e.querySelector('#cn-huntAlone');
+      relics.forEach((b) => b.addEventListener('click', () => {
+        if (b.classList.contains('is-up')) return;
+        b.classList.add('is-up');
+        ctx.fx.hap('light'); ctx.fx.snd('flip');
+        if (!U.summoned && relics.every((r) => r.classList.contains('is-up'))) turnp.innerHTML = '';
+      }));
+      alone.addEventListener('click', () => { ctx.fx.hap('light'); ctx.next(); });
+      // SUMMON opens the real iOS share sheet with the hunter's own invite
+      // link. Nothing on this screen changes until an invite actually goes
+      // out: a cancelled sheet leaves it as it was.
+      summon.addEventListener('click', async () => {
+        if (U.summoned) { ctx.next(); return; }
+        ctx.fx.hap('light');
         const url    = (typeof _inviteShareUrl === 'function') ? _inviteShareUrl() : '';
         const suffix = (typeof _inviteCodeSuffix === 'function') ? _inviteCodeSuffix() : '';
-        const text = 'Hunt The Twin Maw with me on Awakened — ' + _cnFmt(goal) +
+        const text = 'Hunt The Twin Maw with me on Awakened — ' + fmt(goal) +
                      ' combined steps and the relic drops for both of us.' + suffix;
-        try { if (!preview && typeof window.__funnelEmit === 'function') window.__funnelEmit('share_opened', 'onboarding_summon'); } catch (_) {}
+        emit('share_opened', 'onboarding_summon');
         let sent = false;
         if (navigator.share) {
           try { await navigator.share({ title: 'Awakened', text: text, url: url || undefined }); sent = true; }
@@ -66191,85 +66532,87 @@
           catch (_) { sent = false; }
         }
         if (!sent) return;
-        state.summoned = true;
-        try { if (!preview && typeof window.__funnelEmit === 'function') window.__funnelEmit('onboarding_summon_sent'); } catch (_) {}
-        try { _hapticTick('SUCCESS'); } catch (_) {}
-        q('#cn-mawimg').src = 'assets/bosses/the-twin-maw-summons.png';
-        q('#cn-partyText').textContent = 'WAITING ON YOUR ALLY · INVITE SENT';
-        q('#cn-party').classList.add('cn-sent');
-        btn.textContent = 'CONTINUE';
-        btn.classList.add('cn-nt');
-        const alone = q('#cn-huntAlone');
-        if (alone) alone.style.display = 'none';
+        U.summoned = true;
+        emit('onboarding_summon_sent');
+        ctx.fx.hap('medium'); ctx.fx.snd('seal');
+        e.querySelector('#cn-mawimg').src = 'assets/bosses/the-twin-maw-summons.png';
+        turnp.innerHTML = '<span class="ob4-chip"><i></i>Invite sent · the hunt opens when they answer</span>';
+        summon.textContent = 'Onward';
+        summon.classList.add('ob4-ghost');
+        alone.style.visibility = 'hidden';
       });
-    }
-
-    // ── 7 · THE VOW ────────────────────────────────────────────
-    // The real packs, with the real number of vows each one seeds.
-    function _runVow() {
-      const host = q('#cn-paths');
-      if (host.childElementCount) return;
-      host.innerHTML = ['morning', 'custom', 'jump_program'].map((id) => {
-        const pack = (typeof getPackById === 'function') ? getPackById(id) : null;
-        if (!pack) return '';
-        let n = 0;
-        try { n = (getPackHabitDefs(id) || []).length; } catch (_) {}
-        const sub = (id === 'custom') ? 'Yours' : (n + (n === 1 ? ' vow' : ' vows'));
-        return '<button type="button" class="cn-path' + (id === state.pack ? ' cn-on' : '') + '" data-cn-pack="' + esc(id) + '">' +
-          '<span><span class="cn-pn">' + esc(pack.name) + '</span>' +
-          '<span class="cn-ps">' + esc(sub) + '</span></span>' +
-          '<span class="cn-pr">E</span></button>';
-      }).join('');
-      qq('[data-cn-pack]').forEach((b) => b.addEventListener('click', () => {
-        _cinPlaySfx('vow');
-        try { _hapticTick('LIGHT'); } catch (_) {}
-        qq('[data-cn-pack]').forEach((x) => x.classList.toggle('cn-on', x === b));
-        state.pack = b.dataset.cnPack;
-      }));
-    }
-
-    // ── 7½ · WHEN DO YOU START? (W1021, Jump Program only) ─────────
-    // Seven days, today first. Day 1 of the 14 lands on the one picked.
-    function _runJumpStart() {
-      const host = q('#cn-jdays');
-      if (!host) return;
-      if (!state.jumpStart) state.jumpStart = getDeviceLocalDate();
-      const paint = () => {
-        host.innerHTML = _jumpChipsHtml(state.jumpStart);
-        const note = q('#cn-jnote');
-        if (note) note.textContent = _jumpSessionsLine(state.jumpStart);
+      function bolt() {
+        if (ctx.rm()) return;
+        e.classList.add('is-bolt');
+        ctx.after(90, () => e.classList.remove('is-bolt'));
+        ctx.after(1800 + Math.random() * 3200, bolt);
+      }
+      let arrived = false;
+      return {
+        el: e,
+        enter: () => {
+          e.classList.remove('is-bolt');
+          if (arrived) { bolt(); return; }
+          arrived = true;
+          e.classList.add('is-arrive');
+          ctx.fx.hap('heavy'); ctx.fx.snd('arrive');
+          ctx.after(900, () => { e.classList.remove('is-arrive'); bolt(); });
+        },
       };
-      paint();
-      if (host.dataset.wired) return;
-      host.dataset.wired = '1';
-      host.addEventListener('click', (e) => {
-        const b = e.target.closest && e.target.closest('[data-jd]');
-        if (!b) return;
-        _cinPlaySfx('vow');
-        try { _hapticTick('LIGHT'); } catch (_) {}
-        state.jumpStart = b.getAttribute('data-jd');
-        paint();
-      });
-    }
+    })());
 
-    // ═══════════════════════════════════════════════════════════════
-    // v3 Phase 1z.273G — Training Week (inserted between Path and Pact)
-    //
-    // - Mounts only when the chosen pack contains a training-type habit
-    //   (see _CIN_TRAINING_HABIT_NAMES below).
-    // - Pre-lights each row's recommended days from
-    //   DEFAULT_HABITS.defaultDays (1z.273E).
-    // - Tap a seal to toggle. Last-day removal is refused (zero days
-    //   impossible) — the seal shakes and the rest line warns amber.
-    // - All 7 lit → "Every day" tag, no `days` field written (existing
-    //   "missing days = daily" contract from edit sheet / 1z.273E).
-    // - CTA "Seal these days" writes per-habit overrides into obConfig
-    //   so _completeOnboardingFinish picks them up via its existing
-    //   cfg.days precedence (1z.273E).
-    // - Ghost "You can change this any time" advances without writing,
-    //   leaving each habit's defaultDays in effect.
-    // - No backend changes. No migration. No new schedule object.
-    // ═══════════════════════════════════════════════════════════════
+    // ── 8 · THE ASCENT — drag up through the tower, let go, settle ──
+    ctx.add('ascent', (() => {
+      const e = el('<section class="ob4-s ob4-full ob4-s-ascent"><div class="ob4-tower" id="cn-tower"><img src="assets/backgrounds/lb-bg-floor100.webp" alt="The Ascent"><div class="ob4-beacon"></div>' +
+        '<div class="ob4-clouds"><i style="left:-10%;top:28%;--d:520px"></i><i style="left:40%;top:48%;--d:420px"></i><i style="left:10%;top:68%;--d:620px"></i><i style="left:50%;top:12%;--d:360px"></i></div></div>' +
+        '<div class="ob4-floor"><span class="ob4-kicker">Floor</span><span class="ob4-num ob4-num-xl" id="cn-floorN">1</span><span class="ob4-floor-of">of 100</span></div>' +
+        '<div class="ob4-ascent-copy"><h1 class="ob4-title">Every floor is a day kept.</h1><div class="ob4-hall">Floor 100 · The Hall of the Awakened</div><div class="ob4-prompt ob4-dragup">Drag up</div></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn ob4-ghost" id="cn-ascentNext" type="button">Onward</button></div></section>');
+      const tower = e.querySelector('.ob4-tower'), n = e.querySelector('#cn-floorN'), hall = e.querySelector('.ob4-hall');
+      const floor = e.querySelector('.ob4-floor'), drag = e.querySelector('.ob4-dragup');
+      let p = 0, down = false, y0 = 0, p0 = 0, cancel = null;
+      const setP = (v) => {
+        p = v;
+        e.style.setProperty('--ob4-p', v.toFixed(3));
+        const f = 1 + Math.round(v * 99);
+        n.textContent = f;
+        floor.classList.toggle('is-top', f >= 100);
+        hall.classList.toggle('is-lit', f >= 100);
+      };
+      tower.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        if (cancel) cancel();
+        down = true; y0 = ev.clientY; p0 = p;
+        try { tower.setPointerCapture(ev.pointerId); } catch (_) {}
+        ctx.fx.hap('light');
+        drag.style.opacity = 0;
+      });
+      tower.addEventListener('pointermove', (ev) => {
+        if (!down) return;
+        const v = clamp(p0 + (y0 - ev.clientY) / 380, 0, 1);
+        if (v >= 1 && p < 1) { ctx.fx.hap('medium'); ctx.fx.snd('seal'); }
+        setP(v);
+      });
+      const up = () => {
+        if (!down) return;
+        down = false;
+        const from = p;
+        if (from > 0) ctx.fx.hap('light');
+        cancel = ctx.tween(700, (t) => setP(from * (1 - easeOut(t))));
+      };
+      tower.addEventListener('pointerup', up);
+      tower.addEventListener('pointercancel', up);
+      tower.addEventListener('lostpointercapture', up);
+      e.querySelector('#cn-ascentNext').addEventListener('click', () => { ctx.fx.hap('light'); ctx.next(); });
+      return { el: e, enter: () => { down = false; drag.style.opacity = ''; setP(0); }, exit: () => { down = false; } };
+    })());
+
+    // ── 9 · THE VOW ────────────────────────────────────────────
+    // The real packs with the real vows each one seeds. Three banners; the
+    // chosen one lifts and lights and its vows fan out beneath. SWEAR IT
+    // stamps it, then the two questions only some paths ask: when the Jump
+    // Program starts (W1021) and which days each training vow counts
+    // (1z.273G). The last button is ENTER.
     const _CIN_TRAINING_HABIT_NAMES = new Set([
       'Workout',
       'Cardio workout',
@@ -66277,455 +66620,222 @@
       'Mobility & Stretching',
       'Whole-body strength', // future, harmless if absent from pack
     ]);
-    const _CIN_DAY_NAMES   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    const _CIN_DAY_LETTERS = ['M','T','W','T','F','S','S'];
-    const _CIN_QUICK_PRESETS = {
-      3: ['Mon','Wed','Fri'],
-      4: ['Mon','Tue','Thu','Sat'],
-      5: ['Mon','Tue','Wed','Thu','Fri'],
-      7: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    };
-
-    // Collect training habits from the pack currently chosen on Path.
-    // Returns array of { idx, base } where idx is the DEFAULT_HABITS
-    // index and base is the habit definition. Empty array → screen
-    // auto-skips.
-    function _cinCollectTrainingHabits() {
+    const _CIN_DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // Training habits of a pack: [{ idx (DEFAULT_HABITS index), base }].
+    function _cinCollectTrainingHabits(packId) {
       try {
-        const packId = state.pack || 'morning';
-        if (typeof getPackById !== 'function') return [];
-        const pack = getPackById(packId);
+        const pack = (typeof getPackById === 'function') ? getPackById(packId) : null;
         if (!pack || !Array.isArray(pack.habits)) return [];
         const out = [];
         pack.habits.forEach((idx) => {
           const base = DEFAULT_HABITS[idx];
-          if (!base) return;
-          if (_CIN_TRAINING_HABIT_NAMES.has(base.name)) out.push({ idx, base });
+          if (base && _CIN_TRAINING_HABIT_NAMES.has(base.name)) out.push({ idx: idx, base: base });
         });
         return out;
       } catch (_) { return []; }
     }
+    const _twDays = new Map();   // idx → Set of day names
+    try { window.__obTraining = _CIN_TRAINING_HABIT_NAMES; } catch (_) {}   // QA: name a vow here and its path asks for days
 
-    // Per-row in-memory state: idx → { days: Set<string>, rec: string }.
-    // `rec` is the recommended-days signature for "Recommended" tag detection.
-    const _cinTrainingRowState = new Map();
+    ctx.add('vow', (() => {
+      const ART = {
+        morning:      ['assets/backgrounds/lb-hero.webp', '62% 30%'],
+        custom:       ['assets/backgrounds/bg_e.webp', '50% 70%'],
+        jump_program: ['assets/backgrounds/lb-bg-arena.webp', '50% 70%'],
+      };
+      const packs = ['morning', 'custom', 'jump_program'].map((id) => {
+        const pack = (typeof getPackById === 'function') ? getPackById(id) : null;
+        if (!pack) return null;
+        let defs = [];
+        try { defs = (getPackHabitDefs(id) || []).filter(Boolean); } catch (_) {}
+        return { id: id, name: pack.name, defs: defs, sub: (id === 'custom') ? 'Yours' : (defs.length + (defs.length === 1 ? ' vow' : ' vows')) };
+      }).filter(Boolean);
+      const e = el('<section class="ob4-s ob4-s-vow"><div class="ob4-kicker ob4-dim">The vow</div><h1 class="ob4-title ob4-vow-t">Choose a path.</h1>' +
+        '<div class="ob4-vow-main" style="display:contents"><div class="ob4-banners" id="cn-paths">' + packs.map((p) =>
+          '<button class="ob4-banner" type="button" data-cn-pack="' + escH(p.id) + '"><img src="' + ART[p.id][0] + '" alt="" style="object-position:' + ART[p.id][1] + '">' +
+          '<span class="ob4-banner-rk">E</span><span class="ob4-sworn">Sworn</span><span class="ob4-banner-t"><span class="ob4-banner-n">' + escH(p.name) + '</span>' +
+          '<span class="ob4-banner-c">' + escH(p.sub) + '</span></span></button>').join('') + '</div><div class="ob4-fan" id="cn-fan"></div></div>' +
+        '<div class="ob4-sub ob4-sub-when"><div class="jd-row" id="cn-jdays" role="radiogroup" aria-label="Start day"></div><div class="jd-note" id="cn-jnote"></div></div>' +
+        '<div class="ob4-sub ob4-sub-rhythm"><div class="ob4-tws" id="cin-tw-rows"></div></div>' +
+        '<div class="ob4-foot"><button class="ob4-btn is-off" id="cn-enter" type="button" disabled>Swear it</button></div></section>');
+      const banners = Array.from(e.querySelectorAll('.ob4-banner')), bwrap = e.querySelector('.ob4-banners'), fan = e.querySelector('#cn-fan');
+      const main = e.querySelector('.ob4-vow-main'), title = e.querySelector('.ob4-vow-t'), subWhen = e.querySelector('.ob4-sub-when');
+      const subRhythm = e.querySelector('.ob4-sub-rhythm'), jdays = e.querySelector('#cn-jdays'), jnote = e.querySelector('#cn-jnote');
+      const twRows = e.querySelector('#cin-tw-rows'), swear = e.querySelector('#cn-enter');
+      let phase = 'pick', picked = null, steps = [], training = [];
+      const lit = (on) => { swear.classList.toggle('is-off', !on); swear.disabled = !on; };
 
-    function _cinRecKey(arr) { return arr.slice().sort().join(','); }
-
-    function _cinRenderTrainingScreen(trainingHabits) {
-      const rowsHost = root.querySelector('#cin-tw-rows');
-      if (!rowsHost) return;
-      rowsHost.innerHTML = '';
-      _cinTrainingRowState.clear();
-
-      trainingHabits.forEach(({ idx, base }, i) => {
-        const recDays = Array.isArray(base.defaultDays) ? base.defaultDays.slice() : _CIN_DAY_NAMES.slice();
-        const initialDays = new Set(recDays);
-        _cinTrainingRowState.set(idx, { days: initialDays, rec: _cinRecKey(recDays) });
-
-        const row = document.createElement('div');
-        row.className = 'cin-tw-row r' + Math.min(i + 1, 4);
-        row.dataset.idx = String(idx);
-        row.innerHTML =
-          '<div class="cin-tw-rowtop">' +
-            '<div class="cin-tw-rowname">' +
-              '<div class="cin-tw-nm">' + esc(base.name) + '</div>' +
-              '<div class="cin-tw-freq">' +
-                '<span class="cin-tw-days"></span>' +
-                '<span class="cin-tw-tag"></span>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="cin-tw-seals"></div>' +
-          '<div class="cin-tw-restline"><span class="cin-tw-pip"></span><span class="cin-tw-rt"></span></div>' +
-          '<button type="button" class="cin-tw-quick-toggle">Quick set <span class="cin-tw-chev">⌄</span></button>' +
-          '<div class="cin-tw-quick-pills"><div>' +
-            '<button type="button" class="cin-tw-pill" data-n="3">3×</button>' +
-            '<button type="button" class="cin-tw-pill" data-n="4">4×</button>' +
-            '<button type="button" class="cin-tw-pill" data-n="5">5×</button>' +
-            '<button type="button" class="cin-tw-pill" data-n="7">Daily</button>' +
-          '</div></div>';
-        rowsHost.appendChild(row);
-
-        const sealsHost = row.querySelector('.cin-tw-seals');
-        _CIN_DAY_NAMES.forEach((dayName, d) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'cin-tw-seal' + (initialDays.has(dayName) ? ' lit' : '');
-          btn.textContent = _CIN_DAY_LETTERS[d];
-          btn.dataset.day = dayName;
-          btn.addEventListener('click', () => _cinTwToggleSeal(idx, dayName, btn));
-          sealsHost.appendChild(btn);
+      function fanOut(p) {
+        const jump = p.id === 'jump_program';
+        const cap = jump ? 3 : p.defs.length;
+        let rest = p.defs.length - cap;
+        if (p.id === 'custom') { fan.innerHTML = '<div class="ob4-more">You choose your first vow inside.</div>'; return; }
+        let h = '';
+        if (jump) {
+          h += '<div class="ob4-slats">';
+          for (let i = 0; i < p.defs.length; i++) h += '<i style="--i:' + i + ';--h:' + (((i * 7) % 10) / 10) + '"></i>';
+          h += '</div>';
+        }
+        p.defs.slice(0, cap).forEach((d, i) => {
+          let icon = '', health = false;
+          try { icon = habitIconHtml(d, { size: 32 }); } catch (_) {}
+          try { health = !!isHealthAutoVerifiableHabit(d); } catch (_) {}
+          h += '<div class="ob4-vow" style="--i:' + (i + (jump ? 1 : 0)) + '"><span class="ob4-vi">' + icon + '</span><span class="ob4-vn">' + escH(d.name) + '</span>' +
+            '<span class="ob4-vm' + (health ? ' ob4-live' : '') + '">' + (health ? 'Health' : 'By hand') + '</span></div>';
         });
-
-        row.querySelector('.cin-tw-quick-toggle').addEventListener('click', () => {
-          row.classList.toggle('cin-tw-quick-open');
+        fan.innerHTML = h;
+        // Only as many vows as the screen holds; the rest are counted, never clipped.
+        const more = document.createElement('div');
+        more.className = 'ob4-more';
+        const say = () => { more.textContent = '+' + rest + ' more' + (jump ? ', in order' : ''); };
+        if (rest > 0) { say(); fan.appendChild(more); }
+        const rowsEl = Array.from(fan.querySelectorAll('.ob4-vow'));
+        const over = () => fan.scrollHeight > fan.clientHeight + 1;
+        while (over() && rowsEl.length > 1) {
+          rowsEl.pop().remove();
+          rest++;
+          say();
+          if (!more.parentNode) fan.appendChild(more);
+        }
+      }
+      function pick(id) {
+        picked = packs.filter((p) => p.id === id)[0] || null;
+        if (!picked) return;
+        banners.forEach((b) => {
+          const on = b.dataset.cnPack === id;
+          b.classList.toggle('is-on', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
-        row.querySelectorAll('.cin-tw-pill').forEach((p) => {
-          p.addEventListener('click', () => _cinTwApplyPreset(idx, parseInt(p.dataset.n, 10)));
-        });
+        bwrap.classList.add('has-pick');
+        fanOut(picked);
+        lit(true);
+        ctx.fx.hap('medium'); ctx.fx.snd('seal');
+      }
+      banners.forEach((b) => b.addEventListener('click', () => { if (phase === 'pick') pick(b.dataset.cnPack); }));
 
-        _cinTwUpdateRow(idx);
+      // W1021 — seven days, today first. Day 1 of the 14 lands on the one picked.
+      function paintWhen() {
+        jdays.innerHTML = _jumpChipsHtml(U.jumpStart);
+        jnote.textContent = _jumpSessionsLine(U.jumpStart);
+      }
+      jdays.addEventListener('click', (ev) => {
+        const b = ev.target.closest && ev.target.closest('[data-jd]');
+        if (!b) return;
+        ctx.fx.hap('light'); ctx.fx.snd('tick');
+        U.jumpStart = b.getAttribute('data-jd');
+        paintWhen();
       });
-    }
+      // 1z.273G — each training vow's days, pre-lit from DEFAULT_HABITS.defaultDays
+      // (1z.273E). A vow cannot be left with no day at all.
+      function paintTw(idx, warn) {
+        const row = twRows.querySelector('.ob4-tw[data-idx="' + idx + '"]'), days = _twDays.get(idx);
+        if (!row || !days) return;
+        row.querySelectorAll('.ob4-day').forEach((d) => {
+          const on = days.has(d.dataset.d);
+          d.classList.toggle('is-on', on);
+          d.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        const sum = row.querySelector('.ob4-rhythm-sum'), n = days.size;
+        sum.classList.toggle('is-warn', !!warn);
+        sum.textContent = warn ? 'A vow needs at least one day.'
+          : (n === 7 ? 'Every day' : _CIN_DAY_NAMES.filter((d) => days.has(d)).join(' · ') + ' · ' + n + (n === 1 ? ' day' : ' days') + ' a week');
+      }
+      function showRhythm() {
+        twRows.innerHTML = training.map((t) => '<div class="ob4-tw" data-idx="' + t.idx + '"><div class="ob4-tw-n">' + escH(t.base.name) + '</div><div class="ob4-days">' +
+          _CIN_DAY_NAMES.map((d) => '<button class="ob4-day" type="button" data-d="' + d + '"><i></i>' + d + '</button>').join('') + '</div><div class="ob4-rhythm-sum"></div></div>').join('');
+        training.forEach((t) => {
+          if (!_twDays.has(t.idx)) _twDays.set(t.idx, new Set(Array.isArray(t.base.defaultDays) ? t.base.defaultDays : _CIN_DAY_NAMES));
+          paintTw(t.idx);
+        });
+      }
+      twRows.addEventListener('click', (ev) => {
+        const d = ev.target.closest && ev.target.closest('.ob4-day');
+        if (!d) return;
+        const idx = parseInt(d.closest('.ob4-tw').dataset.idx, 10), days = _twDays.get(idx);
+        if (!days) return;
+        if (days.has(d.dataset.d)) {
+          if (days.size === 1) { paintTw(idx, true); setTimeout(() => paintTw(idx), 1600); return; }
+          days.delete(d.dataset.d);
+        } else {
+          days.add(d.dataset.d);
+        }
+        ctx.fx.hap('light'); ctx.fx.snd('tick');
+        paintTw(idx);
+      });
 
-    function _cinTwToggleSeal(idx, dayName, btn) {
-      const s = _cinTrainingRowState.get(idx);
-      if (!s) return;
-      const reduced = (() => {
-        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-        catch (_) { return false; }
-      })();
-      if (s.days.has(dayName)) {
-        // Last-day guard — zero days is impossible.
-        if (s.days.size === 1) {
-          if (!reduced) {
-            try { btn.classList.remove('cin-tw-shake'); void btn.offsetWidth; btn.classList.add('cin-tw-shake'); }
-            catch (_) {}
-          }
-          _cinTwWarnRest(idx);
+      function step() {
+        phase = steps.shift() || 'enter';
+        main.style.display = (phase === 'enter') ? 'contents' : 'none';
+        subWhen.classList.toggle('is-on', phase === 'when');
+        subRhythm.classList.toggle('is-on', phase === 'rhythm');
+        if (phase === 'when') {
+          title.textContent = 'When do you start?';
+          if (!U.jumpStart) U.jumpStart = getDeviceLocalDate();
+          paintWhen();
+        } else if (phase === 'rhythm') {
+          title.textContent = 'The rhythm you train at.';
+          showRhythm();
+        }
+        swear.textContent = steps.length ? 'Next' : 'Enter';
+        lit(true);
+      }
+      swear.addEventListener('click', () => {
+        if (swear.disabled) return;
+        if (phase === 'pick') {
+          const b = banners.filter((x) => x.classList.contains('is-on'))[0];
+          if (!b || !picked) return;
+          U.pack = picked.id;
+          b.classList.add('is-sworn');
+          ctx.fx.hap('medium'); ctx.fx.snd('stamp');
+          lit(false);
+          training = _cinCollectTrainingHabits(picked.id);
+          steps = [];
+          if (picked.id === 'jump_program') steps.push('when');
+          if (training.length) steps.push('rhythm');
+          phase = 'sworn';
+          ctx.after(ctx.rm() ? 400 : 850, step);
           return;
         }
-        s.days.delete(dayName);
-        btn.classList.remove('lit');
-      } else {
-        s.days.add(dayName);
-        btn.classList.add('lit');
-        if (!reduced) {
-          try { btn.classList.remove('cin-tw-pop'); void btn.offsetWidth; btn.classList.add('cin-tw-pop'); }
-          catch (_) {}
-        }
-      }
-      _cinTwUpdateRow(idx);
-    }
-
-    function _cinTwApplyPreset(idx, n) {
-      const s = _cinTrainingRowState.get(idx);
-      if (!s) return;
-      const pattern = _CIN_QUICK_PRESETS[n];
-      if (!pattern) return;
-      s.days = new Set(pattern);
-      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
-      if (!row) return;
-      const sealEls = row.querySelectorAll('.cin-tw-seal');
-      const reduced = (() => {
-        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-        catch (_) { return false; }
-      })();
-      sealEls.forEach((el, d) => {
-        const dayName = _CIN_DAY_NAMES[d];
-        const lit = s.days.has(dayName);
-        el.classList.toggle('lit', lit);
-        if (lit && !reduced) {
-          try { el.classList.remove('cin-tw-pop'); void el.offsetWidth; el.classList.add('cin-tw-pop'); }
-          catch (_) {}
-        }
+        if (steps.length) { ctx.fx.hap('light'); step(); return; }
+        ctx.fx.hap('heavy');
+        ctx.handoff();
       });
-      _cinTwUpdateRow(idx);
-    }
-
-    function _cinTwWarnRest(idx) {
-      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
-      if (!row) return;
-      const rl = row.querySelector('.cin-tw-restline');
-      const rt = row.querySelector('.cin-tw-rt');
-      rl.classList.add('cin-tw-warn');
-      rt.textContent = 'A vow needs at least one day.';
-      clearTimeout(row._cinTwWarnT);
-      row._cinTwWarnT = setTimeout(() => {
-        rl.classList.remove('cin-tw-warn');
-        _cinTwUpdateRow(idx);
-      }, 1600);
-    }
-
-    function _cinTwUpdateRow(idx) {
-      const s = _cinTrainingRowState.get(idx);
-      const row = root.querySelector('.cin-tw-row[data-idx="' + idx + '"]');
-      if (!s || !row) return;
-      const sortedDays = _CIN_DAY_NAMES.filter((d) => s.days.has(d));
-      const count = sortedDays.length;
-      const rest  = 7 - count;
-      const daysStr = sortedDays
-        .map((d) => _CIN_DAY_LETTERS[_CIN_DAY_NAMES.indexOf(d)])
-        .join(' · ');
-      const tagEl  = row.querySelector('.cin-tw-tag');
-      const daysEl = row.querySelector('.cin-tw-days');
-      if (count === 7) {
-        daysEl.textContent = 'Every day';
-        tagEl.textContent  = 'Every day';
-        tagEl.className    = 'cin-tw-tag cin-tw-tag-evd';
-      } else {
-        daysEl.textContent = daysStr;
-        if (_cinRecKey(sortedDays) === s.rec) {
-          tagEl.textContent = 'Recommended';
-          tagEl.className   = 'cin-tw-tag cin-tw-tag-rec';
-        } else {
-          tagEl.textContent = 'Custom';
-          tagEl.className   = 'cin-tw-tag cin-tw-tag-cus';
-        }
-      }
-      const rl = row.querySelector('.cin-tw-restline');
-      rl.classList.remove('cin-tw-warn');
-      const rt = row.querySelector('.cin-tw-rt');
-      if (count === 7)       rt.textContent = 'No rest days — train with care.';
-      else if (rest === 1)   rt.textContent = '1 rest day — and it is not a miss.';
-      else                   rt.textContent = rest + ' rest days — and not one is a miss.';
-      // sync quick-set pills
-      row.querySelectorAll('.cin-tw-pill').forEach((p) => {
-        const n = parseInt(p.dataset.n, 10);
-        const preset = _CIN_QUICK_PRESETS[n] || [];
-        p.classList.toggle('on', n === count && _cinRecKey(sortedDays) === _cinRecKey(preset));
-      });
-    }
-
-    // CTA — commit per-row overrides into obConfig and advance to Pact.
-    {
-      const ctaBtn = root.querySelector('#cin-twNext');
-      if (ctaBtn) {
-        ctaBtn.addEventListener('click', () => {
+      // A replay opens on the path this hunter actually walks.
+      let first = preview;
+      return {
+        el: e,
+        enter: () => {
+          if (!first || phase !== 'pick') return;
+          first = false;
           try {
-            _cinTrainingRowState.forEach((s, idx) => {
-              const chosen = _CIN_DAY_NAMES.filter((d) => s.days.has(d));
-              const prior = (typeof obConfig !== 'undefined' && obConfig.get) ? (obConfig.get(idx) || {}) : {};
-              // Always write `days` here so _completeOnboardingFinish
-              // can distinguish "user opted into all 7" from "untouched
-              // → use defaultDays". A length-7 array still results in
-              // no `days` field on the saved habit (1z.273E length<7
-              // gate) so the daily-default contract is preserved.
-              obConfig.set(idx, Object.assign({}, prior, { days: chosen.slice() }));
-            });
-          } catch (e) { console.warn('[cin] training-week commit failed', e); }
-          next();
-        });
-      }
-    }
-
-    // Ghost skip — accept recommended defaults (defaultDays from 1z.273E
-    // already applies), advance without writing overrides.
-    {
-      const ghostBtn = root.querySelector('#cin-twSkip');
-      if (ghostBtn) ghostBtn.addEventListener('click', () => next());
-    }
-
-    // ── 8 · THE PACT ───────────────────────────────────────────
-    // The first gate, told three ways, and only ever the true one.
-    // W947 — v3 hold to strike. With Health open the hunter holds the Wolf
-    // down and its HP drains to exactly the share of the threshold walked
-    // today; releasing early keeps the damage. The strike landing is where
-    // the hunt becomes real (engage, and the kill when today is past the
-    // threshold). ENTER waits for the strike. Health closed, or no HealthKit:
-    // nothing to strike, nothing engaged, ENTER is open.
-    function _cnWalkRowHtml(healthOn, left, need) {
-      const note = healthOn ? _cnFmt(left) + ' LEFT TODAY · READ FROM HEALTH' : 'NEEDS APPLE HEALTH';
-      return '<div class="cn-vows"><div class="cn-vow"><span class="cn-o"></span>' +
-        '<div class="cn-vn">Walk ' + _cnFmt(need) + '<small>' + note + '</small></div>' +
-        (healthOn ? '<span class="cn-tag">OPEN</span>' : '') + '</div></div>';
-    }
-    function _cnEnterOpen(on) {
-      const enter = q('#cn-enter');
-      enter.disabled = !on;
-      enter.classList.toggle('cn-off', !on);
-    }
-
-    const _pact = { ran: false, need: 6000, today: 0, hp: 100, target: 100, holding: false, struck: false, last: 0 };
-
-    function _runPact() {
-      if (_pact.ran) return;
-      _pact.ran = true;
-      const wolf  = q('#cn-wolf');
-      const body  = q('#cn-pactBody');
-      const title = q('#cn-pactTitle');
-      const sub   = q('#cn-wolfSub');
-      const hpi   = q('#cn-hpi');
-      const cfg   = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
-      _pact.need  = (cfg && cfg.stepThreshold) || 6000;
-      _pact.today = (typeof state.today === 'number') ? state.today : 0;
-      wolf.className = 'cn-wolf';
-      hpi.style.width = '100%';
-      _pact.hp = 100;
-
-      if (state.health !== true) {
-        wolf.classList.add('cn-lock');
-        title.textContent = 'The Wolf waits behind Health.';
-        sub.textContent   = 'FALLS AT ' + _cnFmt(_pact.need) + ' IN A DAY';
-        body.innerHTML =
-          '<p class="cn-b">Open Health and it will see you coming. <b>Then the first win is the walk.</b></p>' +
-          _cnWalkRowHtml(false, _pact.need, _pact.need);
-        _cnEnterOpen(true);
-        return;
-      }
-
-      _pact.target = Math.max(0, 100 - Math.min(100, (_pact.today / _pact.need) * 100));
-      wolf.classList.add('cn-armed');
-      wolf.setAttribute('role', 'button');
-      wolf.setAttribute('tabindex', '0');
-      wolf.setAttribute('aria-label', 'Hold to strike the Steel Wolf');
-      title.textContent = 'Strike the Wolf.';
-      sub.textContent   = _cnFmt(_pact.today) + ' STEPS TODAY · HOLD';
-      body.innerHTML = '<p class="cn-b">Hold it down. <b>Every step you walked today lands.</b></p>';
-      _cnEnterOpen(false);
-    }
-
-    function _pactLoop(t) {
-      if (!_pact.holding) return;
-      const dt = Math.min(50, t - _pact.last);
-      _pact.last = t;
-      _pact.hp = Math.max(_pact.target, _pact.hp - dt * 0.075);
-      q('#cn-hpi').style.width = _pact.hp + '%';
-      if (_pact.hp <= _pact.target) { _pact.holding = false; _strikeLands(); return; }
-      requestAnimationFrame(_pactLoop);
-    }
-    {
-      const wolf = q('#cn-wolf');
-      const armed = () => wolf.classList.contains('cn-armed') && !_pact.struck;
-      wolf.addEventListener('pointerdown', (e) => {
-        if (!armed() || _pact.holding) return;
-        _pact.holding = true;
-        _pact.last = performance.now();
-        wolf.classList.add('cn-holding');
-        try { wolf.setPointerCapture(e.pointerId); } catch (_) {}
-        try { _hapticTick('LIGHT'); } catch (_) {}
-        requestAnimationFrame(_pactLoop);
-      });
-      const release = () => {
-        if (!_pact.holding) return;
-        _pact.holding = false;
-        wolf.classList.remove('cn-holding');
-        q('#cn-wolfSub').textContent = Math.round(100 - _pact.hp) + '% STRUCK · HOLD AGAIN';
+            const p = localStorage.getItem('hb_path');
+            if (p && packs.some((x) => x.id === p)) pick(p);
+          } catch (_) {}
+        },
       };
-      wolf.addEventListener('pointerup', release);
-      wolf.addEventListener('pointercancel', release);
-      wolf.addEventListener('contextmenu', (e) => { if (armed()) e.preventDefault(); });
-      // Keyboard and switch users strike in one press.
-      wolf.addEventListener('keydown', (e) => {
-        if (!armed() || (e.key !== 'Enter' && e.key !== ' ')) return;
-        e.preventDefault();
-        _pact.holding = false;
-        _pact.hp = _pact.target;
-        q('#cn-hpi').style.width = _pact.hp + '%';
-        _strikeLands();
-      });
-    }
-
-    function _strikeLands() {
-      if (_pact.struck) return;
-      _pact.struck = true;
-      const wolf  = q('#cn-wolf');
-      const body  = q('#cn-pactBody');
-      const title = q('#cn-pactTitle');
-      const sub   = q('#cn-wolfSub');
-      const cfg   = (typeof BOSSES !== 'undefined') ? BOSSES.the_steel_wolf : null;
-      const need  = _pact.need, today = _pact.today;
-      wolf.classList.remove('cn-holding', 'cn-armed');
-      wolf.removeAttribute('role');
-      wolf.removeAttribute('tabindex');
-      _cinPlaySfx('reward');
-
-      const fellScreen = (card, souls, preview) => {
-        wolf.classList.add('cn-fell');
-        q('#cn-hpi').style.width = '0%';
-        title.textContent = 'It falls.';
-        sub.textContent   = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
-        let html = '';
-        if (card) {
-          const rl = String(RARITY_LABELS[card.rarity] || card.rarity || '').toUpperCase();
-          const meta = rl + (card.slot ? ' · ' + String(card.slot).toUpperCase() : '') + (preview ? ' · PREVIEW ONLY' : ' · IN YOUR ARMORY');
-          html += '<div class="cn-relic">' +
-            '<img src="' + esc(card.art_path || '') + '" alt="" aria-hidden="true">' +
-            '<div><div class="cn-rn">' + esc(card.name) + '</div>' +
-            '<div class="cn-rr">' + esc(meta) + '</div></div></div>';
-        }
-        html += '<div class="cn-stat"><img src="assets/stat-icons/stat-vit.png" alt="" aria-hidden="true">' +
-          esc(((cfg && cfg.statDomain) || 'VIT') + ' GATE · RANK ' + ((cfg && cfg.rank) || 'E')) +
-          '<b class="cn-far">' + (souls > 0 ? '+' + _cnFmt(souls) + ' SOULS · ' : '') +
-          '+' + ONBOARDING_FIRST_AWAKENING_XP + ' XP</b></div>';
-        body.innerHTML = html;
-        try { _hapticTick('HEAVY'); } catch (_) {}
-      };
-      const spentScreen = (engaged) => {
-        const left = Math.max(0, need - today);
-        wolf.classList.add('cn-spent');
-        title.textContent = engaged ? 'The Wolf is engaged.' : 'The Wolf is waiting.';
-        if (left > 0) {
-          sub.textContent = _cnFmt(left) + ' STEPS LEFT TODAY';
-          body.innerHTML =
-            '<p class="cn-b">It bleeds. <b>Tonight, the first win is the walk.</b> ' + _cnFmt(left) + ' steps and it falls.</p>' +
-            _cnWalkRowHtml(true, left, need);
-        } else {
-          // Past the threshold but no kill fired: today's claim is already spent.
-          sub.textContent = _cnFmt(today) + ' / ' + _cnFmt(need) + ' STEPS TODAY';
-          body.innerHTML = '<p class="cn-b">Today’s kill is already claimed. <b>It returns tomorrow.</b></p>';
-        }
-        try { _hapticTick('MEDIUM'); } catch (_) {}
-      };
-
-      // Replay: the shape of the gate, never the hunt. No engage, no kill, no
-      // roll — the relic named is the Wolf's signature drop, labelled as such.
-      if (preview) {
-        if (today >= need) {
-          let card = null;
-          try { card = CARDS[_CN_WOLF_PREVIEW_RELIC] || null; } catch (_) {}
-          let souls = 0;
-          try { souls = killRewardSouls((cfg && cfg.rank) || 'E'); } catch (_) {}
-          fellScreen(card, souls, true);
-        } else {
-          spentScreen(false);
-        }
-        setTimeout(() => _cnEnterOpen(true), 900);
-        return;
-      }
-
-      // From here the hunt is real. A hunter's first engage is free (W771).
-      let engaged = false;
-      try { engaged = (typeof engageBoss === 'function') && !!engageBoss('the_steel_wolf'); } catch (_) {}
-
-      if (engaged && today >= need) {
-        // The day is already won, so run the REAL kill: real souls, real
-        // drop roll, real once-per-(boss, day) claim. The usual toast and
-        // boss-result modal are captured instead of shown — this screen
-        // IS the announcement, and two of them would be one too many.
-        let captured = null;
-        try {
-          _cinKillCapture = [];
-          evaluateSteelWolfForDay(today, getDeviceLocalDate());
-          captured = _cinKillCapture[0] || null;
-        } catch (e) {
-          console.warn('[cin] steel wolf kill failed', e);
-        } finally {
-          _cinKillCapture = null;
-        }
-        if (captured) {
-          fellScreen(captured.dropInfo && captured.dropInfo.card, captured.soulsReward | 0, false);
-          setTimeout(() => _cnEnterOpen(true), 900);
-          return;
-        }
-        // The kill did not actually fire (already claimed today, or the
-        // engage was refused). Say what IS true.
-      }
-      spentScreen(engaged);
-      setTimeout(() => _cnEnterOpen(true), 900);
-    }
+    })());
 
     // ── ENTER — commit and hand off ────────────────────────────
-    q('#cn-enter').addEventListener('click', () => {
-      if (q('#cn-enter').disabled) return;   // W947 — the strike opens it
-      _cinPlaySfx('gate');
-      if (preview) {
-        root.classList.add('hidden');
-        root.classList.remove('cn-preview');
-        root.setAttribute('aria-hidden', 'true');
-        const note = root.querySelector('#cn-preview-note');
-        if (note) note.hidden = true;
-        return;
-      }
+    // Runs as the license goes through the Gate (and on SKIP, which lands on
+    // Make Your Own). A replay closes and commits nothing.
+    function _finish() {
+      host.classList.add('ob4-out');   // the Gate's light fades into the app
+      const close = () => {
+        host.classList.add('hidden');
+        host.classList.remove('ob4-preview', 'ob4-out');
+        host.setAttribute('aria-hidden', 'true');
+        host.innerHTML = '';
+        try { if (window.__ob === ctx) window.__ob = null; } catch (_) {}
+      };
+      if (preview) { setTimeout(close, 450); return; }
       try {
-        const n = state.name || (localStorage.getItem('hb_name') || '').trim() || 'Hunter';
+        const n = U.name || (localStorage.getItem('hb_name') || '').trim() || 'Hunter';
         playerName = n;
         localStorage.setItem('hb_name', playerName);
         localStorage.setItem('hb_welcomed', '1');
         localStorage.setItem('hb_hunter_name_claimed', '1');
 
-        selectedPackId = state.pack || 'custom';
+        selectedPackId = U.pack || 'custom';
         localStorage.setItem('hb_path', selectedPackId);
         try { localStorage.setItem('hb_mr_version', 'v2'); } catch (_) {}   // W971 — new hunters get the v2 morning
         // W574 — the goal flag is server-authoritative (user-state UPSERT ->
@@ -66735,7 +66845,7 @@
         // picked on "When do you start?" (today when the screen was skipped).
         try {
           if (selectedPackId === 'jump_program') {
-            localStorage.setItem('hb_jump_program_started', state.jumpStart || getDeviceLocalDate());
+            localStorage.setItem('hb_jump_program_started', U.jumpStart || getDeviceLocalDate());
             localStorage.setItem('hb_jump_v', '2');
           }
         } catch (_) {}
@@ -66748,51 +66858,34 @@
           // and the First Vow picker is the first thing on the Habits tab.
           // (W936 seeded Daily walk + Sleep here; the owner, testing as a new
           // hunter, found two vows he never chose. Steps still reach the
-          // board and the step bosses without a walk vow — the witness
+          // board and the step bosses without a walk vow: the witness
           // screen asks for Health on every path since W935.)
         }
+        // 1z.273G — the training days picked for this path's vows. `days` is
+        // always written so _completeOnboardingFinish can tell "all seven" from
+        // "untouched"; a length-7 array still saves no `days` field (1z.273E).
+        _cinCollectTrainingHabits(selectedPackId).forEach((t) => {
+          const days = _twDays.get(t.idx);
+          if (!days) return;
+          const prior = (typeof obConfig !== 'undefined' && obConfig.get) ? (obConfig.get(t.idx) || {}) : {};
+          obConfig.set(t.idx, Object.assign({}, prior, { days: _CIN_DAY_NAMES.filter((d) => days.has(d)) }));
+        });
       } catch (e) { console.warn('[cin] commit failed', e); }
 
-      const fb = root.querySelector('#cin-fb');
-      if (fb) fb.classList.add('on');
-      setTimeout(() => {
-        root.classList.add('hidden');
-        root.setAttribute('aria-hidden', 'true');
-        try {
-          // The canonical end-of-onboarding pipeline: notification prompt →
-          // habit creation → first-awakening XP → reveal of #app.
-          if (typeof runOnboardingNotifPrompt === 'function') {
-            runOnboardingNotifPrompt(() => _completeOnboardingFinish());
-          } else if (typeof _completeOnboardingFinish === 'function') {
-            _completeOnboardingFinish();
-          }
-        } catch (e) { console.warn('[cin] handoff failed', e); }
-      }, 850);
-    });
-
-    // Pre-fill the name field: Apple Sign-In's given name if a claim is
-    // pending (1z.245), else whatever is already on disk.
-    try {
-      let prefill = '';
+      setTimeout(close, 500);
       try {
-        if (window.Auth && typeof window.Auth.isApplePending === 'function' &&
-            window.Auth.isApplePending() &&
-            typeof window.Auth.getPendingGivenName === 'function') {
-          const gn = window.Auth.getPendingGivenName();
-          if (gn && String(gn).trim()) prefill = String(gn).trim().slice(0, 20);
+        // The canonical end-of-onboarding pipeline: notification prompt →
+        // habit creation → first-awakening XP → reveal of #app.
+        if (typeof runOnboardingNotifPrompt === 'function') {
+          runOnboardingNotifPrompt(() => _completeOnboardingFinish());
+        } else if (typeof _completeOnboardingFinish === 'function') {
+          _completeOnboardingFinish();
         }
-      } catch (_) {}
-      if (!prefill) {
-        const claimed = (localStorage.getItem('hb_name') || '').trim();
-        if (claimed && claimed !== 'Hunter') prefill = claimed;
-      }
-      if (prefill && field) {
-        field.value = prefill;
-        try { field.dispatchEvent(new Event('input')); } catch (_) {}
-      }
-    } catch (_) {}
+      } catch (e) { console.warn('[cin] handoff failed', e); }
+    }
 
-    show(0);
+    try { window.__ob = ctx; } catch (_) {}   // QA hook: __ob.go('wolf'), __ob.D, __ob.U
+    ctx.go(preview ? 'gate' : 'name');
   }
 
   // Legacy welcome screen — keep callable as `_legacyShowWelcomeScreen`

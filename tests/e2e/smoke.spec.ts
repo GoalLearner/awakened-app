@@ -2129,12 +2129,63 @@ test.describe('V · My order (W926)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 // W. W930 — the sign-in gate offers Sign in with Apple only (guest entry deleted)
 // ─────────────────────────────────────────────────────────────────────────
+/**
+ * W1050 — boot a genuinely signed-out page so the REAL gate controller
+ * (setupSignInGateIfNeeded) mounts the mark and the gate. Auth is patched the
+ * instant auth.js assigns it, so the localhost dev sign-in stands down before
+ * app.js asks for it. `name` leaves an hb_name behind, the way a hunter whose
+ * session expired does (W816).
+ */
+async function signedOutGate(page: Page, opts: { name?: string } = {}) {
+  await page.addInitScript((o) => {
+    try { if (o.name) localStorage.setItem('hb_name', o.name); } catch (_) {}
+    let auth: any;
+    Object.defineProperty(window, 'Auth', {
+      configurable: true,
+      get() { return auth; },
+      set(v) { v.devSignInIfLocalhost = () => false; auth = v; },
+    });
+  }, opts);
+  await page.goto('/');
+  // The mark goes up as the splash lifts, about a second and a half after boot.
+  await expect(page.locator('#signin-gate .ob4-s-gate')).toHaveClass(/is-on/, { timeout: 15_000 });
+}
+/** The middle of the mark, for real pointer events. */
+async function markCentre(page: Page, host = '#signin-gate') {
+  const b = await page.locator(host + ' .ob4-mark').boundingBox();
+  return { x: b!.x + b!.width / 2, y: b!.y + b!.height / 2 };
+}
+/** How far the hold has charged a screen (the --ob4-c the mark and the Wolf both drive). */
+function charge(page: Page, sel: string) {
+  return page.evaluate((s) => parseFloat((document.querySelector(s) as HTMLElement).style.getPropertyValue('--ob4-c') || '0'), sel);
+}
+/**
+ * Record, in the page, every state a hold screen passes through: [charge, classes]
+ * each time either changes. A test can then say what happened DURING a hold
+ * without racing it from out here. Read it back with chargeSeen().
+ */
+async function watchCharge(page: Page, sel: string) {
+  await page.evaluate((s) => {
+    const el = document.querySelector(s) as HTMLElement;
+    const seen: Array<[number, string]> = [];
+    (window as any).__chargeSeen = seen;
+    new MutationObserver(() => {
+      seen.push([parseFloat(el.style.getPropertyValue('--ob4-c') || '0'), el.className]);
+    }).observe(el, { attributes: true, attributeFilter: ['class', 'style'] });
+  }, sel);
+}
+function chargeSeen(page: Page) {
+  return page.evaluate(() => (window as any).__chargeSeen as Array<[number, string]>);
+}
+
 test.describe('W · Sign-in gate (W930)', () => {
   test('no "Try it first" guest button or note; the existing-guest claim path remains', async ({ page }) => {
     await freshApp(page);
-    // The gate markup is in the DOM whether or not it is showing.
+    // W1050 — the gate is built by app.js when it is needed, so a signed-in
+    // page carries only its empty container. Exactly one, and nothing in it.
     await expect(page.locator('#signin-gate')).toHaveCount(1);
-    await expect(page.locator('#signin-apple-btn')).toHaveCount(1);
+    await expect(page.locator('#signin-gate')).toBeHidden();
+    await expect(page.locator('#signin-apple-btn')).toHaveCount(0);
     await expect(page.locator('#signin-guest-btn')).toHaveCount(0);
     await expect(page.locator('.signin-guest-note')).toHaveCount(0);
     await expect(page.locator('#guest-claim-apple')).toHaveCount(1);
@@ -2143,6 +2194,59 @@ test.describe('W · Sign-in gate (W930)', () => {
     expect(hasStartGuest).toBe('undefined');
     const hasIsGuest = await page.evaluate(() => typeof (window as any).Auth.isGuest);
     expect(hasIsGuest).toBe('function');
+  });
+
+  test('signed out, the gate offers the mark and Sign in with Apple and no other way in', async ({ page }) => {
+    await signedOutGate(page);
+    await expect(page.locator('#signin-gate')).toHaveCount(1);
+    await expect(page.locator('#signin-gate')).toBeVisible();
+    await expect(page.locator('#signin-apple-btn')).toHaveCount(1);
+    await expect(page.locator('#signin-guest-btn')).toHaveCount(0);
+    await expect(page.locator('.signin-guest-note')).toHaveCount(0);
+    const r = await page.evaluate(() => {
+      const gate = document.getElementById('signin-gate') as HTMLElement;
+      return {
+        buttons: Array.from(gate.querySelectorAll('button')).map((b) => b.getAttribute('aria-label') || (b.textContent || '').trim()),
+        text: gate.textContent || '',
+        screens: (window as any).__ob.order,
+      };
+    });
+    // Two controls on the whole screen: the mark, and Apple's button. (The Skip
+    // in the list is the engine's own, shown from the board on; the gate has no board.)
+    expect(r.buttons).toEqual(['Skip', 'Hold the mark', 'Sign in with Apple']);
+    expect(r.screens).toEqual(['gate']);
+    expect(r.text).not.toMatch(/try it first|guest|not now|maybe later/i);
+
+    // That Skip must be out of reach, not just out of sight: a faded button is
+    // still the first stop for a keyboard and still read out by VoiceOver, and
+    // here it would hand off into nothing and leave a dark screen with no way
+    // to sign in.
+    const skip = page.locator('#signin-gate .ob4-skip');
+    await expect(skip).toBeHidden();
+    await expect(skip).toBeDisabled();
+    await expect(skip).toHaveCSS('pointer-events', 'none');
+    // What assistive tech is offered while the dark is shut: the mark, and only the mark.
+    await expect(page.locator('#signin-gate').getByRole('button')).toHaveCount(1);
+    await expect(page.locator('#signin-gate').getByRole('button', { name: 'Hold the mark' })).toHaveCount(1);
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement).className)).toBe('ob4-mark');
+    await skip.evaluate((b) => (b as HTMLElement).click());   // and a click that reaches it anyway does nothing
+    await page.evaluate(() => (window as any).__ob.go('gate', { open: true }));
+    expect(await page.evaluate(() => (window as any).__ob.leaving)).toBe(false);
+    await expect(page.locator('#signin-gate .ob4-hand')).not.toHaveClass(/is-on/);
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
+    await expect(skip).toBeHidden();   // the opened gate is still not a place to skip from
+  });
+
+  test('on the web, Sign in with Apple says it is an iOS feature and stays on the gate', async ({ page }) => {
+    await signedOutGate(page);
+    await page.evaluate(() => (window as any).__ob.go('gate', { open: true }));
+    await page.locator('#signin-apple-btn').click();
+    await expect(page.locator('#signin-apple-error')).toHaveText('Sign in with Apple is only available in the iOS app.');
+    // The button comes back: the hunter can try again.
+    await expect(page.locator('#signin-apple-btn')).toBeEnabled();
+    await expect(page.locator('#signin-apple-btn')).not.toHaveClass(/is-busy/);
+    await expect(page.locator('#signin-gate')).toBeVisible();
   });
 });
 
@@ -2353,299 +2457,886 @@ test.describe('AB · Honest step uploads (W935)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// AC. W936 — onboarding v2: the flow shows the real game, with real numbers
+// W1050 — Onboarding v4 harness (AC, AD, AM and BU drive the same flow)
+//
+// Every screen is built by showCinematicOnboarding in app.js, fresh on each
+// run, and `window.__ob` is the live engine: __ob.cur.name is the screen that
+// is up, __ob.go(name) jumps to one, __ob.D is what Apple Health answered,
+// __ob.U is the hunter being made, __ob.fxLog the haptics and sounds fired.
+// The flow runs on timers and animation frames, so these helpers wait on
+// state and never on a guessed number of milliseconds.
 // ─────────────────────────────────────────────────────────────────────────
-test.describe('AC · Onboarding v2 (W936)', () => {
-  /**
-   * Boot straight into the cinematic. Deliberately does NOT use freshApp():
-   * that helper seeds hb_habits='[]' precisely to keep this overlay away, and
-   * waits on a tab bar the overlay is covering.
-   */
-  async function freshOnboarding(page: Page) {
-    await page.addInitScript(() => {
-      try {
-        localStorage.setItem('hb_cloud_restore_dismissed', '1');
-        localStorage.setItem('hb_whats_new_seen', '99.99.99');
-        const d = new Date();
-        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + ymd, '1');
-        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed',
-         'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
-      } catch (_) {}
-    });
-    await page.goto('/');
-    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
-    await page.evaluate(() => {
-      const s = document.getElementById('awakened-splash');
-      if (s) s.remove();
-    });
-  }
+const OB = '#cin-onboarding';
+
+/** The onboarding screen that is up, or null once the flow has closed. */
+function obScreen(page: Page) {
+  return page.evaluate(() => { const ob = (window as any).__ob; return (ob && ob.cur && ob.cur.name) || null; });
+}
+async function obOn(page: Page, name: string, timeout = 8_000) {
+  await expect.poll(() => obScreen(page), { timeout, message: 'the onboarding screen that is up' }).toBe(name);
+}
+
+/**
+ * Boot straight into a first run. Deliberately does NOT use freshApp(): that
+ * helper seeds hb_habits='[]' precisely to keep this overlay away, and waits
+ * on a tab bar the overlay is covering. A first run opens on the NAME: the
+ * mark and the gate were the sign-in screen, before the reload (suite AF).
+ */
+async function obFirstRun(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('hb_cloud_restore_dismissed', '1');
+      localStorage.setItem('hb_whats_new_seen', '99.99.99');
+      const d = new Date();
+      const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                  String(d.getDate()).padStart(2, '0');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_avatar_skin',
+       'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
+    } catch (_) {}
+  });
+  await page.goto('/');
+  await expect(page.locator(OB + ' .ob4-s-name')).toHaveClass(/is-on/, { timeout: 15_000 });
+  await page.evaluate(() => {
+    const s = document.getElementById('awakened-splash');
+    if (s) s.remove();
+  });
+}
+
+type ObWorld = { health?: 'granted' | 'denied' | 'none'; today?: number | null; week?: number | null; board?: unknown };
+/**
+ * Stub the two things the flow reads from outside itself: the native Health
+ * bridge (web has none) and the weekly board. Everything else — the Twin
+ * Maw's goal, its drop pool, the Steel Wolf's threshold, the packs, the
+ * reward numbers — comes from the app's own tables and is asserted as such.
+ * `health: 'none'` is a phone with no HealthKit at all; 'denied' is the iOS
+ * sheet answered Don't Allow (it still resolves, and every read comes back empty).
+ */
+async function obWorld(page: Page, world: ObWorld) {
+  await page.evaluate((o) => {
+    const w = window as any;
+    const health = o.health || 'granted';
+    const on = health === 'granted';
+    w.Health.isAvailable        = () => health !== 'none';
+    w.Health.permissionStatus   = () => (on ? 'granted' : 'denied');
+    w.Health.requestPermissions = async () => { w.__askedPermission = true; return on ? 'granted' : 'denied'; };
+    w.Health.getStepsBetween    = async () => (on && typeof o.week === 'number' ? o.week : null);
+    w.Health.getStepsToday      = async () => (on && typeof o.today === 'number' ? o.today : null);
+    w.Auth.fetchLeaderboardTop  = async () => (o.board || { ok: true, metric: 'step_total', me: null, top: [] });
+  }, world);
+}
+/** A short weekly board with the hunter's place on it as the SERVER reports it (`me`). */
+function obBoard(mine: number | null, rank = 4) {
+  return {
+    ok: true, metric: 'step_total',
+    me: mine == null ? null : { rank, current_value: mine },
+    top: [
+      { rank: 1, alias: 'Galilea',   current_value: 51144, avatar_id: 'avatar-ranger.png',  card_bg: null },
+      { rank: 2, alias: 'RenDIESEL', current_value: 44910, avatar_id: 'avatar-warrior.png', card_bg: null },
+      { rank: 3, alias: 'Grubbadub', current_value: 38207, avatar_id: 'avatar-mage.png',    card_bg: null },
+      { rank: 5, alias: 'Anthony',   current_value: 29560, avatar_id: 'avatar-paladin.png', card_bg: null },
+    ],
+  };
+}
+
+/** Jump to a screen through the QA hook, optionally saying what Health answered first. */
+async function obGo(page: Page, name: string, health?: { health?: boolean | null; today?: number | null; steps7?: number | null }) {
+  await page.evaluate(([n, d]) => {
+    const ob = (window as any).__ob;
+    if (d) Object.assign(ob.D, d);
+    ob.go(n);
+  }, [name, health || null] as [string, object | null]);
+}
+/** Name the hunter and confirm: the license is stamped, then the witness speaks. */
+async function obName(page: Page, name = 'Richie') {
+  await page.locator('#cin-nameField').fill(name);
+  await page.locator('#cin-nameConfirm').click();
+  await obOn(page, 'witness');
+}
+/** Wait for the reveal's count to land, then STRIKE ONE through to the Wolf. */
+async function obRevealToWolf(page: Page) {
+  await obOn(page, 'reveal');
+  await expect(page.locator('#cn-strikeOne')).not.toHaveClass(/is-off/, { timeout: 8_000 });
+  await page.locator('#cn-strikeOne').click();
+  await obOn(page, 'wolf');
+}
+/** Strike in one press (the keyboard path of hold-to-strike) and wait for the verdict. */
+async function obStrike(page: Page) {
+  await page.locator('#cn-wolf').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#cn-wolfNext')).toBeEnabled({ timeout: 8_000 });
+  return page.locator(OB + ' .ob4-s-wolf').getAttribute('data-outcome');
+}
+/** The Steel Wolf as the hunt ledger has it. */
+function obWolfState(page: Page) {
+  return page.evaluate(() => JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || null);
+}
+/**
+ * After ENTER (or Skip) the Gate opens a second time and the license goes
+ * through, about two seconds; then the notification ask stands between the
+ * flow and the vows being made. Answer it the way a hunter does and wait for
+ * the first-awakening grant, the last thing the finish pipeline stamps.
+ */
+async function obFinish(page: Page) {
+  await expect.poll(() => page.evaluate(() => {
+    const nb = document.getElementById('notif-explain-enable') as HTMLElement | null;
+    if (nb && nb.offsetParent) nb.click();
+    return localStorage.getItem('hb_onboarding_first_xp_awarded_v1');
+  }), { timeout: 15_000, message: 'onboarding finished' }).toBe('1');
+  await expect(page.locator(OB)).toBeHidden({ timeout: 5_000 });
+}
+
+/**
+ * The System speaks for itself. With Health stubbed open on a live account the
+ * app's own verifiers run behind a replay, and one of them can complete a
+ * hidden quest and say so in a System Notice. The stage holds a notice behind
+ * the onboarding overlay unless the hunter touched the screen in the last
+ * second and a half (W950), and a walk is nothing but touches. It is not the
+ * flow's doing: acknowledge it the way a hunter would and carry on.
+ */
+async function obAcknowledgeNotices(page: Page) {
+  await page.addLocatorHandler(page.locator('#aw-notice .awn-ok'), async (ok) => { await ok.click(); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AC. W936 → W1050 — onboarding v4: the flow shows the real game, with real
+//     numbers, and every beat is one touch that pays back
+// ─────────────────────────────────────────────────────────────────────────
+test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
+  const funnel = (page: Page) => page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '');
+  // Skip out of reach: not merely faded, but disabled and gone from the tab
+  // order and from what VoiceOver reads (a faded button is neither).
+  const SKIP_OFF = () => {
+    const ob = (window as any).__ob;
+    const b = ob.root.querySelector('.ob4-skip') as HTMLButtonElement, cs = getComputedStyle(b);
+    return !ob.root.classList.contains('ob4-canskip') && b.disabled && cs.pointerEvents === 'none' && cs.visibility === 'hidden';
+  };
 
   /**
-   * Stub the two things the flow reads from outside itself: the native Health
-   * bridge (web has none) and the weekly board. Everything else — the Twin
-   * Maw's goal, its drop pool, the Steel Wolf's threshold, the packs, the
-   * reward numbers — comes from the app's own tables and is asserted as such.
+   * Walk a first run from the name to the struck Wolf with Health granted, the
+   * way a thumb does, and hand back what each screen showed and what it moved.
    */
-  async function walkToPact(page: Page, todaySteps: number, weekSteps: number) {
-    return page.evaluate(async ({ today, week }) => {
-      const w = window as any;
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  async function walkToStrike(page: Page, todaySteps: number, weekSteps: number) {
+    await obWorld(page, { today: todaySteps, week: weekSteps, board: obBoard(weekSteps) });
+    await obName(page, 'Richie');
+
+    await page.locator('#cn-healthBtn').click();
+    await obOn(page, 'reveal');
+    await expect(page.locator('#cn-strikeOne')).not.toHaveClass(/is-off/, { timeout: 8_000 });
+    const reveal = await page.evaluate(() => ({
+      total: (document.querySelector('#cn-steps7') as HTMLElement).textContent,
+      line:  (document.querySelector('#cn-revealLine') as HTMLElement).textContent,
+      prompted:  localStorage.getItem('hb_healthkit_prompted'),
+      answered:  localStorage.getItem('hb_hk_answered_v1'),
+      firstRead: localStorage.getItem('hb_hk_first_read_v1'),
+      funnel:    localStorage.getItem('hb_funnel_queue') || '',
+    }));
+    await page.locator('#cn-strikeOne').click();
+    await obOn(page, 'wolf');
+
+    // Nothing is real until the strike: the Wolf waits, CARRY ON is closed.
+    const beforeStrike = await page.evaluate(() => ({
+      sub:     (document.querySelector('#cn-wolfSub') as HTMLElement).textContent,
+      today:   (document.querySelector('#cin-onboarding .ob4-today') as HTMLElement).textContent,
+      outcome: (document.querySelector('#cin-onboarding .ob4-s-wolf') as HTMLElement).dataset.outcome || null,
+      carryOn: !(document.querySelector('#cn-wolfNext') as HTMLButtonElement).disabled,
+      engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+      souls:   (JSON.parse(localStorage.getItem('hb_souls') || '{}').balance | 0),
+    }));
+    // Pin the drop roll before the strike. The Steel Wolf's kill rolls the real
+    // E-rank table, which can honestly roll NO relic; the assertions below need
+    // one to have landed. 0 takes the guaranteed branch (0 < any rate).
+    await page.evaluate(() => { Math.random = () => 0; });
+    const outcome = await obStrike(page);
+    const wolf = await page.evaluate(() => {
       const root = document.getElementById('cin-onboarding') as HTMLElement;
-      const q = (s: string) => root.querySelector(s) as HTMLElement;
-
-      w.Health.isAvailable       = () => true;
-      w.Health.permissionStatus  = () => 'granted';
-      w.Health.requestPermissions = async () => 'granted';
-      w.Health.getStepsBetween   = async () => week;
-      w.Health.getStepsToday     = async () => today;
-      w.Auth.fetchLeaderboardTop = async () => ({
-        ok: true, metric: 'step_total',
-        me: { rank: 4, current_value: week },
-        top: [
-          { rank: 1, alias: 'Galilea',   current_value: 51144, avatar_id: 'avatar-ranger.png',  card_bg: null },
-          { rank: 2, alias: 'RenDIESEL', current_value: 44910, avatar_id: 'avatar-warrior.png', card_bg: null },
-          { rank: 3, alias: 'Grubbadub', current_value: 38207, avatar_id: 'avatar-mage.png',    card_bg: null },
-          { rank: 5, alias: 'Anthony',   current_value: 29560, avatar_id: 'avatar-paladin.png', card_bg: null },
-        ],
-      });
-
-      q('#cn-touch').click();
-      await wait(1100);
-      const nameField = q('#cin-nameField') as HTMLInputElement;
-      nameField.value = 'Richie';
-      nameField.dispatchEvent(new Event('input'));
-      q('#cin-nameConfirm').click();
-      await wait(300);
-      const onWitness = !!document.querySelector('#cn-s2.cn-shown');
-
-      q('#cn-healthBtn').click();
-      await wait(900);
-      const reveal = {
-        line:  (q('#cn-revealLine') || {} as any).textContent || '',
-        unlit: q('#cn-s3').classList.contains('cn-unlit'),
-      };
-      const prompted = localStorage.getItem('hb_healthkit_prompted');
-      const funnel   = localStorage.getItem('hb_funnel_queue') || '';
-
-      q('#cn-s3 [data-cn-next]').click();
-      await wait(900);
-      const board = Array.from(root.querySelectorAll('#cn-rows .cn-row')).map((el) => ({
-        me:   el.classList.contains('cn-me'),
-        rank: (el.querySelector('.cn-r') as HTMLElement).textContent,
-        val:  (el.querySelector('.cn-v') as HTMLElement).textContent,
-      }));
-
-      q('#cn-s4 [data-cn-next]').click();
-      await wait(200);
-      const hunt = {
-        line:  (q('#cn-mawLine') as HTMLElement).textContent || '',
-        drops: Array.from(root.querySelectorAll('#cn-drops .cn-drop .cn-dn')).map((el) => el.childNodes[0].textContent),
-      };
-
-      q('#cn-s5 #cn-huntAlone').click();   // HUNT ALONE — no share sheet in a test
-      await wait(200);
-      q('#cn-s6 [data-cn-next]').click();  // the ascent
-      await wait(200);
-      const paths = Array.from(root.querySelectorAll('#cn-paths .cn-path')).map((el) => ({
-        name: (el.querySelector('.cn-pn') as HTMLElement).textContent,
-        sub:  (el.querySelector('.cn-ps') as HTMLElement).textContent,
-        on:   el.classList.contains('cn-on'),
-      }));
-      // Pin the drop roll before the pact mounts. The Steel Wolf's kill rolls the
-      // real E-rank table, which can honestly roll NO relic; the assertions below
-      // need one to have landed. 0 takes the guaranteed branch (0 < any rate).
-      Math.random = () => 0;
-      q('#cn-s7 [data-cn-next]').click();  // custom carries no training habit → straight to the pact
-      await wait(400);
-      // W947 — nothing is real until the strike: the Wolf waits armed, ENTER closed.
-      const beforeStrike = {
-        armed:   q('#cn-wolf').classList.contains('cn-armed'),
-        title:   (q('#cn-pactTitle') as HTMLElement).textContent,
-        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
-        engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
-      };
-      // Strike in one press (the keyboard path of hold-to-strike).
-      q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      await wait(1000);
-
       const inv = JSON.parse(localStorage.getItem('hb_inventory') || '{}');
+      const txt = (s: string) => { const e = root.querySelector(s) as HTMLElement | null; return e ? (e.textContent || '') : null; };
       return {
-        onWitness, prompted, funnel, reveal, board, hunt, paths, beforeStrike,
-        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
-        pact: {
-          shown:  !!document.querySelector('#cn-s8.cn-shown'),
-          fell:   q('#cn-wolf').classList.contains('cn-fell'),
-          locked: q('#cn-wolf').classList.contains('cn-lock'),
-          title:  (q('#cn-pactTitle') as HTMLElement).textContent,
-          sub:    (q('#cn-wolfSub') as HTMLElement).textContent,
-          relic:  root.querySelector('#cn-pactBody .cn-rn') ? (root.querySelector('#cn-pactBody .cn-rn') as HTMLElement).textContent : null,
-          stat:   root.querySelector('#cn-pactBody .cn-stat') ? (root.querySelector('#cn-pactBody .cn-stat') as HTMLElement).textContent : null,
-          vows:   Array.from(root.querySelectorAll('#cn-pactBody .cn-vow .cn-vn')).map((el) => el.childNodes[0].textContent),
-          firstWin: ((root.querySelector('#cn-pactBody .cn-b b') || {}).textContent || ''),
-        },
-        wolfState:  JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || null,
+        stamp: txt('#cn-wolfStamp'),
+        sub:   txt('#cn-wolfSub'),
+        bar:   parseFloat((root.querySelector('#cn-hpi') as HTMLElement).style.width),
+        body:  txt('#cn-pactBody'),
+        relic: txt('#cn-pactBody .ob4-rn'),
+        meta:  txt('#cn-pactBody .ob4-rr'),
+        stat:  txt('#cn-pactBody .ob4-stat'),
+        state:      JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || null,
         killClaim:  Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_the_steel_wolf') === 0),
         ownedCards: Object.keys(inv.cards || {}).filter((id) => ((inv.cards[id] || {}).count | 0) > 0),
+        souls:      (JSON.parse(localStorage.getItem('hb_souls') || '{}').balance | 0),
         queuedBossResult: localStorage.getItem('hb_boss_result_queue'),
+        carriesRelic: !!(window as any).__ob.U.relic,
       };
-    }, { today: todaySteps, week: weekSteps });
+    });
+    return { reveal, beforeStrike, outcome, wolf };
+  }
+  /** ...and on from the struck Wolf, through the board, the hunt and the Ascent, to the vow. */
+  async function walkOnToVow(page: Page) {
+    await page.locator('#cn-wolfNext').click();
+
+    // The row waits at the bottom; a tap (or three seconds) sends it up the board.
+    await obOn(page, 'board');
+    await expect(page.locator('#cn-rows .ob4-row.is-me')).toHaveClass(/is-wait/);
+    await page.locator('#cn-rows .ob4-row.is-me').click();
+    await expect(page.locator('#cn-gap')).toHaveClass(/is-on/, { timeout: 8_000 });
+    const board = await page.evaluate(() => ({
+      rows: Array.from(document.querySelectorAll('#cn-rows .ob4-row')).map((el) => ({
+        me:   el.classList.contains('is-me'),
+        rank: (el.querySelector('.ob4-r') as HTMLElement).textContent,
+        val:  (el.querySelector('.ob4-v') as HTMLElement).textContent,
+      })),
+      gap: (document.querySelector('#cn-gap') as HTMLElement).textContent,
+    }));
+    await page.locator('#cn-boardNext').click();
+
+    await obOn(page, 'hunt');
+    const hunt = await page.evaluate(() => ({
+      kicker: (document.querySelector('#cin-onboarding .ob4-s-hunt .ob4-kicker') as HTMLElement).textContent,
+      line:   (document.querySelector('#cn-mawLine') as HTMLElement).textContent || '',
+      drops:  Array.from(document.querySelectorAll('#cn-drops .ob4-relic-front div')).map((el) => el.childNodes[0].textContent),
+    }));
+    await page.locator('#cn-huntAlone').click();   // HUNT ALONE — no share sheet in this walk
+
+    await obOn(page, 'ascent');
+    await page.locator('#cn-ascentNext').click();
+
+    await obOn(page, 'vow');
+    const paths = await page.evaluate(() => ({
+      banners: Array.from(document.querySelectorAll('#cn-paths [data-cn-pack]')).map((el) => ({
+        id:   (el as HTMLElement).dataset.cnPack,
+        name: (el.querySelector('.ob4-banner-n') as HTMLElement).textContent,
+        sub:  (el.querySelector('.ob4-banner-c') as HTMLElement).textContent,
+        on:   el.classList.contains('is-on'),
+      })),
+      swear:   (document.querySelector('#cn-enter') as HTMLElement).textContent,
+      swearOn: !(document.querySelector('#cn-enter') as HTMLButtonElement).disabled,
+    }));
+    return { board, hunt, paths };
   }
 
+  // ── 2 · the name ───────────────────────────────────────────
+  test('the name is struck onto the license a letter at a time, and Confirm waits for a real one', async ({ page }) => {
+    await obFirstRun(page);
+    const field = page.locator('#cin-nameField'), confirm = page.locator('#cin-nameConfirm');
+    const counter = page.locator(OB + ' .ob4-field-n'), err = page.locator('#cin-nameError');
+    const letters = () => page.locator(OB + ' .ob4-s-name .ob4-lic-name .ob4-ch').allTextContents();
+    await expect(field).toHaveAttribute('maxlength', '20');
+
+    await field.fill('');
+    expect(await letters()).toEqual([]);
+    await expect(page.locator(OB + ' .ob4-s-name .ob4-lic-name .ob4-ph')).toHaveText('unnamed');
+    await expect(counter).toHaveText('0 / 20');
+    await expect(confirm).toBeDisabled();
+
+    // Typed, each letter is its own strike: a span on the card, a tick in the hand.
+    const before = await page.evaluate(() => (window as any).__ob.fxLog.filter((x: string) => x === 'snd:type').length);
+    await field.pressSequentially('R');
+    expect(await letters()).toEqual(['R']);
+    await expect(counter).toHaveText('1 / 20');
+    await expect(confirm).toBeDisabled();           // one letter is not a name
+    await field.pressSequentially('i');
+    expect(await letters()).toEqual(['R', 'i']);
+    await expect(counter).toHaveText('2 / 20');
+    await expect(confirm).toBeEnabled();
+    expect(await page.evaluate(() => (window as any).__ob.fxLog.filter((x: string) => x === 'snd:type').length)).toBe(before + 2);
+
+    // Two letters pass the button but not the alias rule (3 to 20): said inline, and the flow stays here.
+    await confirm.click();
+    await expect(err).toHaveText('3 to 20 letters, numbers, spaces, _ or -.');
+    await expect(page.locator(OB + ' .ob4-s-name .ob4-lic-name')).toHaveClass(/is-taken/);
+    await expect(page.locator(OB + ' .ob4-s-name .ob4-stamp')).not.toHaveClass(/is-on/);
+    expect(await obScreen(page)).toBe('name');
+
+    // A character the boards cannot carry is refused as it is typed.
+    await field.fill('Richie!');
+    await expect(err).toHaveText('Letters, numbers, spaces, _ and - only.');
+    await expect(confirm).toBeDisabled();
+
+    await field.fill('Richie');
+    await expect(err).toHaveText('');
+    expect(await letters()).toEqual(['R', 'i', 'c', 'h', 'i', 'e']);
+    await expect(counter).toHaveText('6 / 20');
+    await expect(confirm).toBeEnabled();
+    // The stamp lands when the name is taken, then the witness speaks.
+    await confirm.click();
+    await expect(page.locator(OB + ' .ob4-s-name .ob4-stamp')).toHaveClass(/is-on/);
+    await obOn(page, 'witness');
+    expect(await page.evaluate(() => (window as any).__ob.U.name)).toBe('Richie');
+  });
+
+  test('a pending Apple sign-in claims the name here: a taken one offers others, a free one stamps the license', async ({ page }) => {
+    await obFirstRun(page);
+    await page.evaluate(() => {
+      const w = window as any;
+      w.__claims = [];
+      w.Auth.isApplePending = () => true;
+      w.Auth.completeSignIn = async (name: string) => {
+        w.__claims.push(name);
+        await new Promise((res) => setTimeout(res, 300));   // long enough to see the screen hold
+        if (name === 'Offline') throw new Error('fetch failed');
+        if (name === 'Richie') return { ok: false, code: 'ALIAS_TAKEN', suggested: ['Richie7', 'Richie_X', 'RichieTheBold', 'Richie4'] };
+        return { ok: true, alias: name };
+      };
+    });
+    const field = page.locator('#cin-nameField'), confirm = page.locator('#cin-nameConfirm');
+    const err = page.locator('#cin-nameError'), chips = page.locator('#cin-nameSuggestions button');
+    const stamp = page.locator(OB + ' .ob4-s-name .ob4-stamp');
+
+    await field.fill('Richie');
+    await confirm.click();
+    // While the server is asked, the counter says so and the button cannot be pressed twice.
+    await expect(page.locator(OB + ' .ob4-field-n')).toHaveText('checking');
+    await expect(confirm).toBeDisabled();
+    await expect(err).toHaveText('Taken. The System knows another Richie.');
+    expect(await chips.allTextContents()).toEqual(['Richie7', 'Richie_X', 'RichieTheBold']);   // three at most
+    await expect(stamp).not.toHaveClass(/is-on/);
+    await expect(confirm).toBeEnabled();
+    expect(await obScreen(page)).toBe('name');
+
+    // A suggestion fills the field (and the license), and clears the complaint.
+    await chips.nth(1).click();
+    await expect(field).toHaveValue('Richie_X');
+    expect((await page.locator(OB + ' .ob4-s-name .ob4-lic-name .ob4-ch').allTextContents()).join('')).toBe('Richie_X');
+    await expect(err).toHaveText('');
+    await expect(chips).toHaveCount(0);
+
+    // No connection is said plainly and nothing is stamped.
+    await field.fill('Offline');
+    await confirm.click();
+    await expect(err).toHaveText('No connection. Try again.');
+    await expect(stamp).not.toHaveClass(/is-on/);
+
+    await field.fill('Richie_X');
+    await confirm.click();
+    await expect(stamp).toHaveClass(/is-on/);
+    await expect(stamp).toHaveText('E');
+    await obOn(page, 'witness');
+    expect(await page.evaluate(() => (window as any).__claims)).toEqual(['Richie', 'Offline', 'Richie_X']);
+  });
+
+  test('the name Apple gave is already on the license when the screen opens', async ({ page }) => {
+    // The pending claim has to be there before app.js builds the screen.
+    await page.addInitScript(() => {
+      let auth: any;
+      Object.defineProperty(window, 'Auth', {
+        configurable: true,
+        get() { return auth; },
+        set(v) { v.isApplePending = () => true; v.getPendingGivenName = () => '  Richmond  '; auth = v; },
+      });
+    });
+    await obFirstRun(page);
+    await expect(page.locator('#cin-nameField')).toHaveValue('Richmond');
+    expect((await page.locator(OB + ' .ob4-s-name .ob4-lic-name .ob4-ch').allTextContents()).join('')).toBe('Richmond');
+    await expect(page.locator(OB + ' .ob4-field-n')).toHaveText('8 / 20');
+    await expect(page.locator('#cin-nameConfirm')).toBeEnabled();
+  });
+
+  // ── 3 · the witness ────────────────────────────────────────
+  test('the witness offers ONE neutral button and no way round it; a grant is read once and recorded', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { today: 7318, week: 31204, board: obBoard(31204) });
+    await obName(page, 'Richie');
+
+    // App Review 5.1.1(iv): nothing beside the button that opens the iOS sheet.
+    const w = await page.evaluate(() => {
+      const s = document.querySelector('#cin-onboarding .ob4-s-witness') as HTMLElement;
+      return {
+        buttons: Array.from(s.querySelectorAll('button')).map((b) => (b.textContent || '').trim()),
+        links: s.querySelectorAll('a').length,
+        text: s.textContent || '',
+      };
+    });
+    expect(w.buttons).toEqual(['Continue']);
+    expect(w.links).toBe(0);
+    expect(w.text).not.toMatch(/not now|maybe later|skip|no thanks/i);
+    expect(await page.evaluate(SKIP_OFF)).toBe(true);
+    // The same holds for a hunter using VoiceOver or a switch: of everything
+    // the flow has mounted, the one button they are offered here is this one.
+    await expect(page.locator(OB).getByRole('button')).toHaveText(['Continue']);
+    // Nothing is asked, flagged or reported until the button is pressed.
+    expect(await page.evaluate(() => [localStorage.getItem('hb_healthkit_prompted'), !!(window as any).__askedPermission])).toEqual([null, false]);
+    // The guide types what is read and where it stays; a tap on the System
+    // window finishes the line at once, and still asks nothing.
+    await page.locator(OB + ' .ob4-s-witness .ob4-sys').click();
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l1')).toHaveText('I am the First Awakened. The System reads only what the body did. Steps. Sleep. Workouts.');
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveText('It reads them from Apple Health. They stay on your phone. Awakened never sees them leave it.');
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveClass(/is-done/);
+    expect(await page.evaluate(() => !!(window as any).__askedPermission)).toBe(false);
+
+    await page.locator('#cn-healthBtn').click();
+    // Granted: the guide says it is reading, and the reveal follows.
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveText('Reading.');
+    await obOn(page, 'reveal');
+    const r = await page.evaluate(() => ({
+      asked:     !!(window as any).__askedPermission,
+      prompted:  localStorage.getItem('hb_healthkit_prompted'),
+      answered:  localStorage.getItem('hb_hk_answered_v1'),
+      firstRead: localStorage.getItem('hb_hk_first_read_v1'),
+      D:         (window as any).__ob.D,
+    }));
+    expect(r).toEqual({ asked: true, prompted: '1', answered: '1', firstRead: '1', D: { steps7: 31204, today: 7318, health: true } });
+    // The three W935 funnel events, so grant-vs-deny stays measurable.
+    const q = JSON.parse(await funnel(page)) as Array<{ e: string; d: string }>;
+    const health = q.filter((x) => /^health_/.test(x.e));
+    expect(health).toEqual([
+      { e: 'health_prompt_shown', d: 'onboarding' },
+      { e: 'health_prompt_answered', d: 'granted' },
+      { e: 'health_first_read', d: 'steps' },
+    ]);
+  });
+
+  test('Health refused: the guide says so, CARRY ON leads to a Wolf behind the gate, and the board keeps a dash', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { health: 'denied', board: obBoard(31204) });
+    await obName(page, 'Richie');
+    const btn = page.locator('#cn-healthBtn');
+    await btn.click();
+
+    // Declined is what the first read says after the real sheet, never a button of ours.
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveText('Then it cannot see you. The door stays open.');
+    await expect(btn).toHaveText('Carry on');
+    expect(await obScreen(page)).toBe('witness');
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('#cin-onboarding .ob4-s-witness button')).length)).toBe(1);
+    const q = await funnel(page);
+    expect(q).toContain('health_prompt_shown');
+    expect(q).toContain('health_prompt_answered');
+    expect(q).toContain('"e":"health_first_read","d":"null"');
+    expect(await page.evaluate(() => [localStorage.getItem('hb_healthkit_prompted'), localStorage.getItem('hb_hk_answered_v1'), localStorage.getItem('hb_hk_first_read_v1')])).toEqual(['1', '1', '1']);
+
+    await btn.click();
+    await obOn(page, 'wolf');   // straight past the reveal: there is nothing true to count
+    const wolf = page.locator(OB + ' .ob4-s-wolf');
+    await expect(wolf).toHaveAttribute('data-outcome', 'locked');
+    await expect(wolf).toHaveClass(/is-locked/);
+    await expect(page.locator('#cn-wolf')).toBeHidden();   // nothing to strike
+    await expect(page.locator('#cn-pactBody')).toContainText('It cannot see you. Open Health, then strike.');
+    // No retry button: iOS shows its sheet once, so one could only ever do nothing.
+    expect(await wolf.locator('button:visible').allTextContents()).toEqual(['Carry on']);
+    await expect(page.locator('#cn-wolfNext')).toBeEnabled();
+    expect(((await obWolfState(page)) || {}).engaged).not.toBe(true);
+    // The reveal refuses to open on a closed Health, even when asked for by name.
+    await obGo(page, 'reveal');
+    expect(await obScreen(page)).toBe('wolf');
+
+    await page.locator('#cn-wolfNext').click();
+    await obOn(page, 'board');
+    const me = page.locator('#cn-rows .ob4-row.is-me');
+    await expect(me.locator('small')).toHaveText('Open Health to take your place');
+    await expect(me.locator('.ob4-r')).toHaveText('—');
+    await expect(me.locator('.ob4-v')).toHaveText('—');   // the server knows a total; Health is closed, so it is not shown
+    await expect(me).not.toHaveClass(/is-wait/);
+    await expect(page.locator('#cn-rows .ob4-row')).toHaveCount(5);
+    await expect(page.locator('#cn-gap')).toHaveText('');
+    expect(((await obWolfState(page)) || {}).engaged).not.toBe(true);
+  });
+
+  test('a phone with no HealthKit goes straight to the locked Wolf, asks nothing, and walks past an empty board', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { health: 'none' });   // and nobody on the board
+    await obName(page, 'Richie');
+    await page.locator('#cn-healthBtn').click();
+    await obOn(page, 'wolf');
+    await expect(page.locator(OB + ' .ob4-s-wolf')).toHaveAttribute('data-outcome', 'locked');
+    const r = await page.evaluate(() => ({
+      asked:    !!(window as any).__askedPermission,
+      prompted: localStorage.getItem('hb_healthkit_prompted'),
+      answered: localStorage.getItem('hb_hk_answered_v1'),
+      funnel:   localStorage.getItem('hb_funnel_queue') || '',
+      engaged:  !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+    }));
+    expect(r.asked).toBe(false);
+    expect(r.prompted).toBeNull();
+    expect(r.answered).toBeNull();
+    expect(r.funnel).not.toContain('health_prompt');
+    expect(r.engaged).toBe(false);
+
+    // A board of one is not a board: CARRY ON lands on the hunt, one screen further.
+    await page.locator('#cn-wolfNext').click();
+    await obOn(page, 'hunt');
+    await expect(page.locator('#cn-rows .ob4-row')).toHaveCount(0);
+  });
+
+  // ── 4 · the reveal ─────────────────────────────────────────
+  test('the reveal runs up the real week and counts it in Steel Wolves', async ({ page }) => {
+    test.slow();   // the count runs up five times over
+    await obFirstRun(page);
+    await obWorld(page, { today: 7318, week: 31204, board: obBoard(31204) });
+    await obName(page, 'Richie');
+    await page.locator('#cn-healthBtn').click();
+    await obOn(page, 'reveal');
+    const strikeOne = page.locator('#cn-strikeOne');
+    const heads = page.locator(OB + ' .ob4-wolves .ob4-wolfhead');
+    const part  = page.locator(OB + ' .ob4-wolves .ob4-wolfhead.is-part');
+    const line  = page.locator('#cn-revealLine');
+
+    // 31,204 = five whole Wolves (6,000 each) and a part of a sixth.
+    await expect(strikeOne).not.toHaveClass(/is-off/, { timeout: 8_000 });
+    await expect(page.locator('#cn-steps7')).toHaveText('31,204');
+    await expect(line).toHaveText('That is five Steel Wolves.');
+    await expect(heads).toHaveCount(6);
+    await expect(part).toHaveCount(1);
+    expect(await part.evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-f'))).toBe('20%');   // 1,204 of 6,000
+    await expect(strikeOne).toHaveText('Strike one');
+
+    // The same screen, told other weeks.
+    const show = async (steps7: number, today: number) => {
+      await obGo(page, 'reveal', { health: true, steps7, today });
+      await expect(strikeOne).not.toHaveClass(/is-off/, { timeout: 8_000 });
+    };
+    await show(0, 0);
+    await expect(page.locator('#cn-steps7')).toHaveText('0');
+    await expect(line).toHaveText('Health holds no steps yet. Carry your phone.');
+    await expect(heads).toHaveCount(0);
+    await expect(strikeOne).toHaveText('Carry on');   // nothing walked today: nothing to strike with
+
+    await show(4200, 4200);
+    await expect(page.locator('#cn-steps7')).toHaveText('4,200');
+    await expect(line).toHaveText('Not yet one Steel Wolf. Tonight changes that.');
+    await expect(heads).toHaveCount(1);
+    await expect(part).toHaveCount(1);
+
+    await show(6000, 900);
+    await expect(line).toHaveText('That is one Steel Wolf.');
+    await expect(heads).toHaveCount(1);
+    await expect(part).toHaveCount(0);
+
+    // More than seven do not fit: seven heads and the count.
+    await show(61000, 9000);
+    await expect(line).toHaveText('That is ten Steel Wolves.');
+    await expect(heads).toHaveCount(7);
+    await expect(page.locator(OB + ' .ob4-wolves .ob4-num')).toHaveText('×10');
+  });
+
+  // ── the whole walk ─────────────────────────────────────────
   test('the flow asks for Apple Health itself and then shows the hunter their own week, rank, and hunt', async ({ page }) => {
-    await freshOnboarding(page);
-    const r = await walkToPact(page, 7318, 31204);
+    test.slow();   // nine screens of real animation
+    await obFirstRun(page);
+    const r = { ...(await walkToStrike(page, 7318, 31204)), ...(await walkOnToVow(page)) };
 
-    // The ask lives inside the flow now (it used to fire after it, W935).
-    expect(r.onWitness).toBe(true);
-    expect(r.prompted).toBe('1');
-    expect(r.funnel).toContain('health_prompt_shown');
-    expect(r.funnel).toContain('onboarding');
-    expect(r.funnel).toContain('health_prompt_answered');
-    expect(r.funnel).toContain('health_first_read');
+    // The ask lives inside the flow (it used to fire after it, W935).
+    expect(r.reveal.prompted).toBe('1');
+    expect(r.reveal.answered).toBe('1');
+    expect(r.reveal.firstRead).toBe('1');
+    expect(r.reveal.funnel).toContain('health_prompt_shown');
+    expect(r.reveal.funnel).toContain('onboarding');
+    expect(r.reveal.funnel).toContain('health_prompt_answered');
+    expect(r.reveal.funnel).toContain('health_first_read');
 
-    // The reveal is the hunter's own seven days, and the road is lit.
-    expect(r.reveal.line).toContain('31,204');
-    expect(r.reveal.unlit).toBe(false);
+    // The reveal is the hunter's own seven days.
+    expect(r.reveal.total).toBe('31,204');
+    expect(r.reveal.line).toBe('That is five Steel Wolves.');
 
     // The board carries the rank the SERVER gave, positioned by the number walked.
-    const me = r.board.find((x) => x.me);
+    const me = r.board.rows.find((x) => x.me);
     expect(me).toBeTruthy();
     expect(me!.rank).toBe('4');
     expect(me!.val).toBe('31,204');
-    expect(r.board.map((x) => x.rank)).toEqual(['1', '2', '3', '4', '5']);
+    expect(r.board.rows.map((x) => x.rank)).toEqual(['1', '2', '3', '4', '5']);
+    expect(r.board.gap).toBe('7,003 steps to pass Grubbadub.');
 
     // The hunt reads its goal and its drop pool out of the game's own tables.
+    expect(r.hunt.kicker).toBe('The hunt · E-rank · Duo');
     expect(r.hunt.line).toContain('14,000');
     expect(r.hunt.drops).toEqual(['Twin-Fang Cleaver', 'The Twofold Gaze', 'Bothsight, the Long Hunt']);
 
-    // The paths are the real packs with their real vow counts.
-    expect(r.paths.map((p) => p.name)).toEqual(['Morning Routine', 'Make Your Own', 'Vertical Jump Program']);
-    expect(r.paths[0].sub).toBe('6 vows');   // W971 — the six-step morning
-    expect(r.paths[1].on).toBe(true);
+    // The paths are the real packs with their real vow counts, and none is
+    // chosen for the hunter: SWEAR IT waits for a banner.
+    expect(r.paths.banners.map((p) => p.name)).toEqual(['Morning Routine', 'Make Your Own', 'Vertical Jump Program']);
+    expect(r.paths.banners.map((p) => p.sub)).toEqual(['6 vows', 'Yours', '22 vows']);   // W971 — the six-step morning
+    expect(r.paths.banners.some((p) => p.on)).toBe(false);
+    expect([r.paths.swear, r.paths.swearOn]).toEqual(['Swear it', false]);
   });
 
   test('a day already past 6,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
-    await freshOnboarding(page);
-    const r = await walkToPact(page, 7318, 31204);
+    await obFirstRun(page);
+    const r = await walkToStrike(page, 7318, 31204);
 
-    expect(r.beforeStrike).toEqual({ armed: true, title: 'Strike the Wolf.', enterOn: false, engaged: false });
-    expect(r.pact.shown).toBe(true);
-    expect(r.pact.fell).toBe(true);
-    expect(r.enterOn).toBe(true);
-    expect(r.pact.title).toBe('It falls.');
-    expect(r.pact.sub).toBe('7,318 / 6,000 STEPS TODAY');
+    expect(r.beforeStrike).toMatchObject({ sub: '6,000 steps in a day', today: '7,318', outcome: null, carryOn: false, engaged: false });
+    expect(r.outcome).toBe('beaten');
+    expect(r.wolf.stamp).toBe('Beaten');
+    expect(r.wolf.sub).toBe('7,318 of 6,000 · beaten today');
+    expect(r.wolf.bar).toBe(0);
 
     // Real kill: the boss ledger moved, the once-per-(boss, day) reward was
     // claimed, and the relic on the screen is the relic in the armory.
-    expect(r.wolfState).toBeTruthy();
-    expect(r.wolfState.kill_count).toBe(1);
-    expect(r.wolfState.last_hunt_outcome).toBe('defeated');
-    expect(r.killClaim.length).toBe(1);
-    expect(r.pact.relic).toBeTruthy();
-    expect(r.ownedCards.length).toBe(1);
-    // The screen's reward line is sourced, not written: E-rank kill souls plus
-    // the first-awakening XP constant.
-    expect(r.pact.stat).toContain('+50 SOULS');
-    expect(r.pact.stat).toContain('+5 XP');   // W941 — the onboarding grant
+    expect(r.wolf.state).toBeTruthy();
+    expect(r.wolf.state.kill_count).toBe(1);
+    expect(r.wolf.state.last_hunt_outcome).toBe('defeated');
+    expect(r.wolf.killClaim.length).toBe(1);
+    expect(r.wolf.relic).toBeTruthy();
+    expect(r.wolf.meta).toMatch(/ · yours$/);
+    expect(r.wolf.ownedCards.length).toBe(1);
+    expect(r.wolf.carriesRelic).toBe(true);   // and the license says so on its way through the Gate
+    // The screen's reward line is sourced, not written: E-rank kill souls, and
+    // the same number is in the purse.
+    expect(r.wolf.stat).toBe('Souls+50');
+    expect(r.wolf.souls - r.beforeStrike.souls).toBe(50);
     // And it announced itself exactly once — nothing queued to pop behind it.
-    expect(r.queuedBossResult).toBeNull();
+    expect(r.wolf.queuedBossResult).toBeNull();
   });
 
   test('a day still short of 6,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
-    await freshOnboarding(page);
-    const r = await walkToPact(page, 3860, 18860);
+    test.slow();   // the one walk that goes from the name all the way into the app
+    await obFirstRun(page);
+    const r = await walkToStrike(page, 3860, 18860);
+    await walkOnToVow(page);
 
-    expect(r.pact.fell).toBe(false);
-    expect(r.pact.locked).toBe(false);
-    expect(r.pact.title).toBe('The Wolf is engaged.');
-    expect(r.pact.sub).toBe('2,140 STEPS LEFT TODAY');
-    expect(r.wolfState.kill_count).toBe(0);
-    expect(r.killClaim.length).toBe(0);
-    // W947 — v3: the night's win is the walk the Wolf is waiting on.
-    expect(r.pact.vows).toEqual(['Walk 6,000']);
-    expect(r.pact.firstWin).toBe('Tonight, the first win is the walk.');
+    expect(r.outcome).toBe('bleeds');
+    expect(r.wolf.stamp).toBe('It bleeds');
+    expect(r.wolf.sub).toBe('2,140 steps left today');
+    expect(r.wolf.bar).toBeCloseTo(35.67, 1);   // 3,860 of 6,000 struck, the rest stands
+    expect(r.wolf.body).toBe('Walk 2,140 more today and it is beaten tonight.');
+    expect(r.wolf.state.engaged).toBe(true);
+    expect(r.wolf.state.kill_count).toBe(0);
+    expect(r.wolf.killClaim.length).toBe(0);
+    expect(r.wolf.relic).toBeNull();
+    expect(r.wolf.souls).toBe(r.beforeStrike.souls);
 
-    const seeded = await page.evaluate(async () => {
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      (document.querySelector('#cn-enter') as HTMLElement).click();
-      await wait(1200);
-      const cont = Array.from(document.querySelectorAll('button'))
-        .find((b) => /Continue/i.test(b.textContent || '') && (b as HTMLElement).offsetParent);
-      if (cont) (cont as HTMLElement).click();
-      await wait(1500);
-      return {
-        habits: JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name),
-        path:   localStorage.getItem('hb_path'),
-        name:   localStorage.getItem('hb_name'),
-        xp:     localStorage.getItem('hb_onboarding_first_xp_awarded_v1'),
-        firstVowPicker: (() => {
-          const e = document.getElementById('empty-state');
-          return !!e && !e.classList.contains('hidden') && !e.classList.contains('empty-state--rest-day')
-            && document.querySelectorAll('#empty-state-quickgrid [data-quickpick-idx]').length > 0;
-        })(),
-      };
-    });
+    // Swear Make Your Own and go through the Gate.
+    await page.locator('[data-cn-pack="custom"]').click();
+    await expect(page.locator('#cn-fan')).toHaveText('You choose your first vow inside.');
+    await page.locator('#cn-enter').click();
+    await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-sworn/);
+    const enter = page.locator('#cn-enter');
+    await expect(enter).toHaveText('Enter');
+    await expect(enter).toBeEnabled();
+    // No question is asked of this path: no start day, no training days.
+    await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
+    await enter.click();
+    // The license goes through the Gate with the name and the rank on it.
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/);
+    expect((await page.locator(OB + ' .ob4-hand-card .ob4-ch').allTextContents()).join('')).toBe('Richie');
+    await expect(page.locator(OB + ' .ob4-hand-card .ob4-stamp')).toHaveClass(/is-on/);
+    await obFinish(page);
+
+    const seeded = await page.evaluate(() => ({
+      habits: JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name),
+      path:   localStorage.getItem('hb_path'),
+      name:   localStorage.getItem('hb_name'),
+      xp:     localStorage.getItem('hb_onboarding_first_xp_awarded_v1'),
+      welcomed: localStorage.getItem('hb_welcomed'),
+      firstVowPicker: (() => {
+        const e = document.getElementById('empty-state');
+        return !!e && !e.classList.contains('hidden') && !e.classList.contains('empty-state--rest-day')
+          && document.querySelectorAll('#empty-state-quickgrid [data-quickpick-idx]').length > 0;
+      })(),
+    }));
     // W944 — Make Your Own seeds nothing; the First Vow picker takes over.
     expect(seeded.habits).toEqual([]);
     expect(seeded.firstVowPicker).toBe(true);
     expect(seeded.path).toBe('custom');
     expect(seeded.name).toBe('Richie');
     expect(seeded.xp).toBe('1');
+    expect(seeded.welcomed).toBe('1');
+    // The Wolf engaged in the flow is still being hunted in the app.
+    expect((await obWolfState(page)).engaged).toBe(true);
   });
 
-  test('Health refused leaves the Wolf behind the gate rather than engaged', async ({ page }) => {
-    await freshOnboarding(page);
-    const r = await page.evaluate(async () => {
-      const w = window as any;
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const root = document.getElementById('cin-onboarding') as HTMLElement;
-      const q = (s: string) => root.querySelector(s) as HTMLElement;
-      w.Health.isAvailable        = () => true;
-      w.Health.permissionStatus   = () => 'denied';
-      w.Health.requestPermissions = async () => 'denied';
-      w.Health.getStepsBetween    = async () => null;
-      w.Health.getStepsToday      = async () => null;
-      w.Auth.fetchLeaderboardTop  = async () => ({ ok: true, metric: 'step_total', me: null, top: [] });
+  // ── 6 · the board ──────────────────────────────────────────
+  test('the board shows the hunters either side of the row, which climbs to the place the server gave it', async ({ page }) => {
+    await obFirstRun(page);
+    // The live top twenty with this hunter ninth. The dev session's alias is the
+    // board's name for them; the total is the SERVER's, not what Health said.
+    const alias = await page.evaluate(() => (window as any).Auth.getCurrentUser().alias as string);
+    const top = Array.from({ length: 20 }, (_, i) => ({
+      rank: i + 1, alias: 'H' + String(i + 1).padStart(2, '0'), current_value: 62000 - 2000 * (i + 1), avatar_id: 'avatar-base.png', card_bg: null,
+    }));
+    top[8] = { rank: 9, alias, current_value: 43210, avatar_id: 'avatar-base.png', card_bg: null };
+    await obWorld(page, { today: 2100, week: 43900, board: { ok: true, metric: 'step_total', me: null, top } });
+    await obName(page, 'Richie');
+    await obGo(page, 'board', { health: true, today: 2100, steps7: 43900 });
+    await obOn(page, 'board');
 
-      q('#cn-touch').click();
-      await wait(1100);
-      const f = q('#cin-nameField') as HTMLInputElement;
-      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
-      q('#cin-nameConfirm').click();
-      await wait(300);
-      q('#cn-healthBtn').click();
-      await wait(900);
-      const reveal = { text: (q('#cn-revealLine') as HTMLElement).textContent, unlit: q('#cn-s3').classList.contains('cn-unlit') };
-      q('#cn-s3 [data-cn-next]').click();
-      await wait(700);
-      // An empty board is walked past, not shown: the hunter should now be on
-      // the hunt, one screen further than the CONTINUE they tapped.
-      const skippedBoard = !!document.querySelector('#cn-s5.cn-shown');
-      q('#cn-s5 #cn-huntAlone').click();
-      await wait(150);
-      q('#cn-s6 [data-cn-next]').click();
-      await wait(150);
-      q('#cn-s7 [data-cn-next]').click();
-      await wait(400);
-      return {
-        reveal, skippedBoard,
-        locked: q('#cn-wolf').classList.contains('cn-lock'),
-        title:  (q('#cn-pactTitle') as HTMLElement).textContent,
-        enterOn: !(q('#cn-enter') as HTMLButtonElement).disabled,
-        engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
-        funnel: localStorage.getItem('hb_funnel_queue') || '',
-      };
+    const rows = () => page.evaluate(() => Array.from(document.querySelectorAll('#cn-rows .ob4-row')).map((el) =>
+      [(el.querySelector('.ob4-r') as HTMLElement).textContent, (el.querySelector('.ob4-nm') as HTMLElement).childNodes[0].textContent,
+       (el.querySelector('.ob4-v') as HTMLElement).textContent].join(' ') + (el.classList.contains('is-me') ? ' *' : '')));
+    const me = page.locator('#cn-rows .ob4-row.is-me');
+    // Three above and two below, with the row waiting underneath at zero and no rank yet.
+    await expect(me).toHaveClass(/is-wait/);
+    expect(await rows()).toEqual(['6 H06 50,000', '7 H07 48,000', '8 H08 46,000', '10 H10 42,000', '11 H11 40,000', '— Richie 0 *']);
+    await expect(me.locator('small')).toHaveText('Take your place');
+    await expect(page.locator('#cn-gap')).not.toHaveClass(/is-on/);
+
+    await me.click();
+    await expect(page.locator('#cn-gap')).toHaveClass(/is-on/, { timeout: 8_000 });
+    expect(await rows()).toEqual(['6 H06 50,000', '7 H07 48,000', '8 H08 46,000', '9 Richie 43,210 *', '10 H10 42,000', '11 H11 40,000']);
+    await expect(page.locator('#cn-gap')).toHaveText('2,790 steps to pass H08.');
+    await expect(me.locator('small')).toHaveText('E-rank');
+    await expect(me).not.toHaveClass(/is-wait/);
+    expect(await page.evaluate(() => (window as any).__ob.fxLog.filter((x: string) => x === 'snd:pass').length)).toBeGreaterThanOrEqual(1);
+  });
+
+  test('a hunter the server has no row for yet carries a dash and does not climb', async ({ page }) => {
+    await obFirstRun(page);
+    // Health is open and has a week, but the first upload has not landed.
+    await obWorld(page, { today: 2100, week: 43900, board: obBoard(null) });
+    await obName(page, 'Richie');
+    await obGo(page, 'board', { health: true, today: 2100, steps7: 43900 });
+    await obOn(page, 'board');
+    const me = page.locator('#cn-rows .ob4-row.is-me');
+    await expect(me.locator('small')).toHaveText('E-rank');
+    await expect(me.locator('.ob4-r')).toHaveText('—');
+    await expect(me.locator('.ob4-v')).toHaveText('—');
+    await expect(me).not.toHaveClass(/is-wait/);
+    // A tap does nothing (there is nowhere true to climb to): still last, still a dash.
+    await me.click();
+    const r = await page.evaluate(() => {
+      const els = Array.from(document.querySelectorAll('#cn-rows .ob4-row'));
+      return { last: els[els.length - 1].classList.contains('is-me'), n: els.length, gap: (document.querySelector('#cn-gap') as HTMLElement).className,
+               fx: (window as any).__ob.fxLog.filter((x: string) => x === 'snd:pass' || x === 'snd:seal').length };
     });
-    expect(r.reveal.unlit).toBe(true);
-    expect(r.reveal.text).toContain('Health is closed');
-    expect(r.skippedBoard).toBe(true);
-    expect(r.locked).toBe(true);
-    expect(r.title).toBe('The Wolf waits behind Health.');
-    expect(r.engaged).toBe(false);
-    expect(r.enterOn).toBe(true);   // nothing to strike, so nothing to wait for
-    expect(r.funnel).toContain('health_prompt_answered');
+    expect(r).toEqual({ last: true, n: 5, gap: 'ob4-say ob4-gap', fx: 0 });
+    await expect(me.locator('.ob4-v')).toHaveText('—');
+    // The other hunters are the real top of the board, in order.
+    expect(await page.locator('#cn-rows .ob4-row:not(.is-me) .ob4-r').allTextContents()).toEqual(['1', '2', '3', '5']);
+  });
+
+  // ── 9 · the vow, and the finish ────────────────────────────
+  test('Morning Routine fans out its real vows, and ENTER makes exactly those in the app', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { health: 'none' });
+    await obName(page, 'Richie');
+    await obGo(page, 'vow');
+    await obOn(page, 'vow');
+    const swear = page.locator('#cn-enter');
+    await expect(swear).toHaveText('Swear it');
+    await expect(swear).toBeDisabled();
+    await expect(page.locator('#cn-paths [data-cn-pack]')).toHaveCount(3);
+
+    const morning = page.locator('[data-cn-pack="morning"]');
+    await morning.click();
+    await expect(morning).toHaveClass(/is-on/);
+    await expect(morning).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#cn-paths')).toHaveClass(/has-pick/);
+    const fan = await page.locator('#cn-fan .ob4-vow .ob4-vn').allTextContents();
+    expect(fan.length).toBe(6);                       // W971 — the six-step morning, all on one screen
+    expect(fan).toContain('Hydrate');
+    await expect(page.locator('#cn-fan .ob4-more')).toHaveCount(0);
+    // A second thought is allowed until it is sworn.
+    await page.locator('[data-cn-pack="jump_program"]').click();
+    await expect(page.locator('#cn-fan .ob4-more')).toContainText('more, in order');
+    await morning.click();
+    await expect(page.locator('#cn-paths [data-cn-pack].is-on')).toHaveCount(1);
+
+    await swear.click();
+    await expect(morning).toHaveClass(/is-sworn/);
+    await expect(swear).toHaveText('Enter');
+    await expect(swear).toBeEnabled();
+    // Sworn is sworn: the other banners no longer answer, and this path is asked nothing more.
+    await page.locator('[data-cn-pack="custom"]').click({ force: true });
+    await expect(morning).toHaveClass(/is-on/);
+    await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
+
+    await swear.click();
+    await obFinish(page);
+    // The overlay is gone and left nothing behind it.
+    const cin = await page.evaluate(() => {
+      const h = document.getElementById('cin-onboarding') as HTMLElement;
+      return { hidden: h.classList.contains('hidden'), aria: h.getAttribute('aria-hidden'), html: h.innerHTML, ob: (window as any).__ob };
+    });
+    expect(cin).toEqual({ hidden: true, aria: 'true', html: '', ob: null });
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((h: any) => h.name).sort()), { timeout: 8_000 })
+      .toEqual(fan.slice().sort());
+    const r = await page.evaluate(() => ({
+      welcomed: localStorage.getItem('hb_welcomed'), path: localStorage.getItem('hb_path'), name: localStorage.getItem('hb_name'),
+      claimed: localStorage.getItem('hb_hunter_name_claimed'), goal: localStorage.getItem('hb_onboarding_goal'),
+      days: JSON.parse(localStorage.getItem('hb_habits') || '[]').filter((h: any) => h.days).length,
+    }));
+    expect(r).toEqual({ welcomed: '1', path: 'morning', name: 'Richie', claimed: '1', goal: 'default', days: 0 });
+    // And the app underneath is the app: the tab answers and lists the six vows.
+    await page.evaluate(() => { document.querySelectorAll('#statup-ov, #ach-popup').forEach((x) => x.remove()); });
+    await expect(page.locator('#app')).toBeVisible();
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#tab-habits.active')).toBeVisible();
+    await expect(page.locator('#habit-list .habit-item')).toHaveCount(6, { timeout: 10_000 });
+  });
+
+  test('a path with a training vow asks which days it counts; the last day cannot be taken away', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { health: 'none' });
+    await obName(page, 'Richie');
+    // QA hook: treat one of the Morning Routine's vows as a training vow.
+    await page.evaluate(() => (window as any).__obTraining.add('Hydrate'));
+    await obGo(page, 'vow');
+    await obOn(page, 'vow');
+    await page.locator('[data-cn-pack="morning"]').click();
+    const btn = page.locator('#cn-enter');
+    await btn.click();
+    await expect(page.locator(OB + ' .ob4-vow-t')).toHaveText('The rhythm you train at.');
+    await expect(page.locator(OB + ' .ob4-sub-rhythm')).toHaveClass(/is-on/);
+    await expect(page.locator(OB + ' .ob4-sub-when')).not.toHaveClass(/is-on/);
+    await expect(btn).toHaveText('Enter');
+
+    const row = page.locator('#cin-tw-rows .ob4-tw');
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.ob4-tw-n')).toHaveText('Hydrate');
+    const sum = row.locator('.ob4-rhythm-sum');
+    const day = (d: string) => row.locator('.ob4-day[data-d="' + d + '"]');
+    // No default cadence on this vow, so all seven start lit.
+    await expect(row.locator('.ob4-day.is-on')).toHaveCount(7);
+    await expect(sum).toHaveText('Every day');
+    for (const d of ['Tue', 'Thu', 'Sat', 'Sun']) await day(d).click();
+    await expect(sum).toHaveText('Mon · Wed · Fri · 3 days a week');
+    await expect(day('Tue')).toHaveAttribute('aria-pressed', 'false');
+    await day('Wed').click();
+    await day('Fri').click();
+    await expect(sum).toHaveText('Mon · 1 day a week');
+    // The last one stays, and the row says why.
+    await day('Mon').click();
+    await expect(sum).toHaveText('A vow needs at least one day.');
+    await expect(sum).toHaveClass(/is-warn/);
+    await expect(day('Mon')).toHaveAttribute('aria-pressed', 'true');
+    await expect(row.locator('.ob4-day.is-on')).toHaveCount(1);
+    await day('Wed').click();
+    await day('Fri').click();
+    await expect(row.locator('.ob4-day.is-on')).toHaveCount(3);
+
+    await btn.click();
+    await obFinish(page);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').length), { timeout: 8_000 }).toBe(6);
+    const made = await page.evaluate(() => (JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ name: string; days?: string[] }>)
+      .filter((h) => h.days).map((h) => h.name + ': ' + (h.days as string[]).join(' ')));
+    expect(made).toEqual(['Hydrate: Mon Wed Fri']);   // the picked days, on that vow and no other
+  });
+
+  // ── Skip ───────────────────────────────────────────────────
+  test('Skip is offered from the board on, and lands in the app on Make Your Own', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { today: 2100, week: 43900, board: obBoard(43900, 3) });
+    const skip = page.locator(OB + ' .ob4-skip');
+    await expect(skip).toHaveText('Skip');
+    // The name, the witness, the reveal and the Wolf must each be met. A click
+    // that reaches the button anyway (a script, a stale layout) goes nowhere.
+    expect(await page.evaluate(SKIP_OFF)).toBe(true);
+    await expect(skip).toBeHidden();
+    await skip.evaluate((b) => (b as HTMLElement).click());
+    expect(await page.evaluate(() => [(window as any).__ob.leaving, (window as any).__ob.cur.name])).toEqual([false, 'name']);
+    await obName(page, 'Richie');
+    expect(await page.evaluate(SKIP_OFF)).toBe(true);
+    for (const scr of ['reveal', 'wolf']) {
+      await obGo(page, scr, { health: true, today: 2100, steps7: 43900 });
+      await obOn(page, scr);
+      expect(await page.evaluate(SKIP_OFF), scr).toBe(true);
+    }
+    for (const scr of ['board', 'hunt', 'ascent', 'vow']) {
+      await obGo(page, scr);
+      await obOn(page, scr);
+      expect(await page.evaluate(SKIP_OFF), scr).toBe(false);
+      await expect(skip).toBeVisible();
+      await expect(skip).toBeEnabled();
+      await expect(skip).toHaveCSS('pointer-events', 'auto');
+    }
+    await expect(skip).toHaveCSS('opacity', '1');
+
+    await skip.click();
+    await obFinish(page);
+    const r = await page.evaluate(() => ({
+      welcomed: localStorage.getItem('hb_welcomed'), path: localStorage.getItem('hb_path'), name: localStorage.getItem('hb_name'),
+      habits: JSON.parse(localStorage.getItem('hb_habits') || '[]').length,
+      hidden: (document.getElementById('cin-onboarding') as HTMLElement).classList.contains('hidden'),
+    }));
+    expect(r).toEqual({ welcomed: '1', path: 'custom', name: 'Richie', habits: 0, hidden: true });
+    await expect(page.locator('#tab-habits')).toBeVisible();
   });
 });
 
@@ -2653,16 +3344,23 @@ test.describe('AC · Onboarding v2 (W936)', () => {
 // AD. W937 — replaying the awakening changes nothing
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AD · Replay the awakening (W937)', () => {
-  // The keys a real first run WOULD write. Asserted by name rather than by a
-  // blanket snapshot: the app keeps running behind the overlay and writes its
-  // own leaderboard, breadcrumb and beacon keys on its own schedule.
+  // The keys a real first run WOULD write.
   const WATCHED = [
     'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1',
     'hb_habits', 'hb_path', 'hb_name', 'hb_bosses', 'hb_inventory', 'hb_souls',
     'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed',
     'hb_onboarding_first_xp_awarded_v1', 'hb_onboarding_goal',
     'hb_first_hunt_free_used', 'hb_funnel_queue',
+    'hb_avatar_skin', 'hb_jump_program_started', 'hb_mr_version',   // W947 · W1021 · W971
   ];
+  // The app keeps running behind the overlay and writes its own keys on its
+  // own schedule. These are the ones an idle, signed-in page writes too
+  // (measured over three minutes): the shadow and pilgrim ticks eight seconds
+  // after boot, CloudSync's bookkeeping, the leaderboard cache, the breadcrumb
+  // log, and the hall's once-a-day greeting on the first tap of any kind.
+  // None of them is hunter state, so a leak from the replay could not hide here.
+  const BACKGROUND = (k: string) => /^hb_(cloud_|lb_cache_)/.test(k) ||
+    ['hb_shadows_v1', 'hb_pilgrim_arc_v1', 'hb_health_verify_debug_v1', 'hb_hall_greet_date'].indexOf(k) >= 0;
 
   async function establishedAccount(page: Page) {
     await freshApp(page);
@@ -2674,83 +3372,162 @@ test.describe('AD · Replay the awakening (W937)', () => {
       }));
     });
   }
-
-  /** Drive the whole replay and hand back what it showed and what it moved. */
-  async function replay(page: Page, watched: string[]) {
-    return page.evaluate(async (WATCH) => {
-      const w = window as any;
-      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
-      const before: Record<string, string | null> = {};
-      WATCH.forEach((k: string) => { before[k] = localStorage.getItem(k); });
-
-      w.__replayOnboarding();
-      await wait(500);
-      const root = document.getElementById('cin-onboarding') as HTMLElement;
-      const q = (s: string) => root.querySelector(s) as HTMLElement;
-      const opened = {
-        preview: root.classList.contains('cn-preview'),
-        ribbon:  !(document.getElementById('cn-preview-note') as HTMLElement).hidden,
-        name:    (q('#cin-nameField') as HTMLInputElement).value,
-      };
-
-      q('#cn-touch').click();             await wait(1100);
-      q('#cin-nameConfirm').click();      await wait(400);
-      q('#cn-healthBtn').click();         await wait(1200);
-      const reveal = (q('#cn-revealLine') as HTMLElement).textContent || '';
-      q('#cn-s3 [data-cn-next]').click(); await wait(900);
-      // The board is skipped when nobody else is on it, so advance from
-      // whichever screen is actually showing.
-      const afterReveal = (document.querySelector('.cn-scr.cn-shown') as HTMLElement).id;
-      if (afterReveal === 'cn-s4') { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
-      q('#cn-s5 #cn-huntAlone').click();  await wait(250);
-      q('#cn-s6 [data-cn-next]').click(); await wait(250);
-      q('#cn-s7 [data-cn-next]').click(); await wait(700);
-      if (q('#cn-wolf').classList.contains('cn-armed')) {
-        q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        await wait(1000);
-      }
-      const pact = {
-        shown:  !!document.querySelector('#cn-s8.cn-shown'),
-        fell:   q('#cn-wolf').classList.contains('cn-fell'),
-        locked: q('#cn-wolf').classList.contains('cn-lock'),
-        title:  (q('#cn-pactTitle') as HTMLElement).textContent,
-        relic:  (root.querySelector('#cn-pactBody .cn-rr') as HTMLElement | null)?.textContent || '',
-      };
-      q('#cn-enter').click();             await wait(1200);
-
-      return {
-        opened, reveal, pact,
-        askedPermission: !!w.__askedPermission,
-        touched:   WATCH.filter((k: string) => localStorage.getItem(k) !== before[k]),
-        killFlags: Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0),
-        closed:    root.classList.contains('hidden') && !root.classList.contains('cn-preview'),
-        wolf:      JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf,
-      };
-    }, watched);
+  const snapshot = (page: Page) => page.evaluate(() => {
+    const all: Record<string, string | null> = {};
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) as string; all[k] = localStorage.getItem(k); }
+    return all;
+  });
+  const changed = (a: Record<string, string | null>, b: Record<string, string | null>) =>
+    Array.from(new Set(Object.keys(a).concat(Object.keys(b)))).filter((k) => a[k] !== b[k]).sort();
+  /**
+   * The whole of localStorage, read once the boot has finished writing to it:
+   * a launch runs its one-time migrations a second or two in, and a "before"
+   * taken ahead of them would blame them on the replay. Settled means a full
+   * second in which nothing but the background keys moved.
+   */
+  async function settled(page: Page) {
+    let last = await snapshot(page);
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(1_000);
+      const now = await snapshot(page);
+      if (!changed(last, now).some((k) => !BACKGROUND(k))) return now;
+      last = now;
+    }
+    throw new Error('localStorage never settled after boot');
   }
 
-  test('the replay writes none of the keys a first run would', async ({ page }) => {
+  /**
+   * Drive the whole replay, from the mark to ENTER, and hand back what it
+   * showed. W1050 — a replay is already signed in, so it is the one walk that
+   * plays all ten beats: the mark and the gate come first, with a plain
+   * CARRY ON where Apple's button stands on the real gate.
+   */
+  async function replay(page: Page) {
+    await page.evaluate(() => (window as any).__replayOnboarding());
+    await obOn(page, 'gate');
+    const opened = await page.evaluate(() => {
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      const note = document.getElementById('cn-preview-note') as HTMLElement;
+      return {
+        preview: root.classList.contains('ob4-preview'),
+        ribbon:  !!note && !!note.offsetParent && !note.hidden,
+        ribbonText: note ? note.textContent : null,
+        order:   (window as any).__ob.order,
+        apple:   root.querySelectorAll('#signin-apple-btn').length,   // nobody signs in twice
+      };
+    });
+    // The mark, in one press; then the gate's plain button.
+    await page.locator(OB + ' .ob4-mark').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(OB + ' .ob4-s-gate')).toHaveClass(/is-open/, { timeout: 5_000 });
+    await page.locator(OB + ' .ob4-gate-carry').click();
+
+    await obOn(page, 'name');
+    const name = await page.locator('#cin-nameField').inputValue();
+    // The look can be turned and is shown; a replay equips nothing.
+    await page.locator('[data-ob-look="warrior"]').click();
+    await expect(page.locator('[data-ob-look="warrior"]')).toHaveAttribute('aria-checked', 'true');
+    await page.locator('#cin-nameConfirm').click();
+
+    await obOn(page, 'witness');
+    await page.locator('#cn-healthBtn').click();
+    // Health already granted: the reveal. Otherwise the closed branch, exactly
+    // what a first run would show this hunter, with CARRY ON to the Wolf.
+    await expect.poll(async () => {
+      const scr = await obScreen(page);
+      return scr === 'reveal' || (scr === 'witness' && (await page.locator('#cn-healthBtn').textContent()) === 'Carry on') || scr === 'wolf';
+    }, { timeout: 8_000 }).toBe(true);
+    let reveal = '';
+    if ((await obScreen(page)) === 'reveal') {
+      await expect(page.locator('#cn-strikeOne')).not.toHaveClass(/is-off/, { timeout: 8_000 });
+      reveal = (await page.locator('#cn-steps7').textContent()) || '';
+      await page.locator('#cn-strikeOne').click();
+    } else if ((await obScreen(page)) === 'witness') {
+      await page.locator('#cn-healthBtn').click();
+    }
+
+    await obOn(page, 'wolf');
+    const wolfScr = page.locator(OB + ' .ob4-s-wolf');
+    if ((await wolfScr.getAttribute('data-outcome')) !== 'locked') await obStrike(page);
+    await expect(page.locator('#cn-wolfNext')).toBeEnabled({ timeout: 8_000 });
+    const wolf = {
+      outcome: await wolfScr.getAttribute('data-outcome'),
+      body:    (await page.locator('#cn-pactBody').textContent()) || '',
+      relic:   (await page.locator('#cn-pactBody .ob4-rr').count()) ? ((await page.locator('#cn-pactBody .ob4-rr').textContent()) || '') : '',
+    };
+    await page.locator('#cn-wolfNext').click();
+
+    // The board is skipped when nobody else is on it, so advance from
+    // whichever screen is actually showing.
+    await expect.poll(() => obScreen(page), { timeout: 8_000 }).toMatch(/^(board|hunt)$/);
+    const sawBoard = (await obScreen(page)) === 'board';
+    if (sawBoard) await page.locator('#cn-boardNext').click();
+    await obOn(page, 'hunt');
+    await page.locator('#cn-huntAlone').click();
+    await obOn(page, 'ascent');
+    await page.locator('#cn-ascentNext').click();
+
+    // The vow opens on the path this hunter actually walks.
+    await obOn(page, 'vow');
+    const path = await page.evaluate(() => Array.from(document.querySelectorAll('#cn-paths [data-cn-pack].is-on')).map((b) => (b as HTMLElement).dataset.cnPack));
+    const enter = page.locator('#cn-enter');
+    await enter.click();                                   // SWEAR IT
+    await expect(enter).toHaveText('Enter');
+    await expect(enter).toBeEnabled();
+    await enter.click();
+    await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
+
+    const closed = await page.evaluate(() => {
+      const root = document.getElementById('cin-onboarding') as HTMLElement;
+      return root.classList.contains('hidden') && !root.classList.contains('ob4-preview') && root.innerHTML === '' && (window as any).__ob === null;
+    });
+    return {
+      opened, name, reveal, wolf, sawBoard, path, closed,
+      askedPermission: await page.evaluate(() => !!(window as any).__askedPermission),
+      killFlags: await page.evaluate(() => Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0)),
+      wolfState: await obWolfState(page),
+      notifAsk:  await page.locator('#notif-explain-enable').isVisible(),
+    };
+  }
+
+  test('the replay opens on the mark under its ribbon and writes none of the keys a first run would', async ({ page }) => {
+    test.slow();
     await establishedAccount(page);
-    const r = await replay(page, WATCHED);
+    // Nobody else on the board, and no network: the replay walks past it.
+    await page.evaluate(() => { (window as any).Auth.fetchLeaderboardTop = async () => ({ ok: true, metric: 'step_total', me: null, top: [] }); });
+    const before = await settled(page);
+    const r = await replay(page);
+    const after = await snapshot(page);
 
     expect(r.opened.preview).toBe(true);
     expect(r.opened.ribbon).toBe(true);
-    expect(r.opened.name).toBe('Richie');   // the claimed name, prefilled, never re-claimed
-    expect(r.pact.shown).toBe(true);
+    expect(r.opened.ribbonText).toBe('Preview · nothing is saved');
+    // All ten beats, the mark first.
+    expect(r.opened.order).toEqual(['gate', 'name', 'witness', 'reveal', 'wolf', 'board', 'hunt', 'ascent', 'vow']);
+    expect(r.opened.apple).toBe(0);
+    expect(r.name).toBe('Richie');   // the claimed name, prefilled, never re-claimed
     // No HealthKit in a browser, so the flow shows exactly what a first run
     // would show a hunter who has not connected it.
-    expect(r.pact.locked).toBe(true);
-    expect(r.pact.title).toBe('The Wolf waits behind Health.');
+    expect(r.reveal).toBe('');
+    expect(r.wolf.outcome).toBe('locked');
+    expect(r.wolf.body).toContain('It cannot see you. Open Health, then strike.');
+    expect(r.sawBoard).toBe(false);
+    expect(r.path).toEqual(['custom']);
 
-    expect(r.touched).toEqual([]);
+    const moved = changed(before, after);
+    expect(moved.filter((k) => WATCHED.indexOf(k) >= 0)).toEqual([]);
+    // Byte for byte: nothing else moved either, bar what the app writes on an idle page.
+    expect(moved.filter((k) => !BACKGROUND(k))).toEqual([]);
     expect(r.killFlags).toEqual([]);
     expect(r.closed).toBe(true);
-    expect(r.wolf.kill_count).toBe(3);
-    expect(r.wolf.engaged).toBe(false);
-    expect(r.wolf.last_eval_date).toBe('2020-01-01');
+    expect(r.notifAsk).toBe(false);          // ENTER closes it; the finish pipeline never runs
+    expect(r.wolfState.kill_count).toBe(3);
+    expect(r.wolfState.engaged).toBe(false);
+    expect(r.wolfState.last_eval_date).toBe('2020-01-01');
   });
 
   test('a day past 6,000 shows the fall as a preview and still leaves the hunt alone', async ({ page }) => {
+    test.slow();
     await establishedAccount(page);
     await page.evaluate(() => {
       const w = window as any;
@@ -2767,19 +3544,26 @@ test.describe('AD · Replay the awakening (W937)', () => {
     // Only the hunt-side keys here: with Health stubbed granted the app's own
     // auto-verify runs behind the overlay and legitimately moves souls and the
     // funnel queue, which has nothing to do with the replay.
-    const r = await replay(page, ['hb_bosses', 'hb_inventory', 'hb_habits', 'hb_path',
-                                  'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_first_hunt_free_used']);
+    const HUNT = ['hb_bosses', 'hb_inventory', 'hb_habits', 'hb_path', 'hb_name', 'hb_avatar_skin',
+                  'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_first_hunt_free_used'];
+    await obAcknowledgeNotices(page);
+    const before = await snapshot(page);
+    const r = await replay(page);
+    const after = await snapshot(page);
 
-    expect(r.reveal).toContain('34,112');
-    expect(r.pact.fell).toBe(true);
-    expect(r.pact.relic).toContain('PREVIEW ONLY');   // shown, never rolled, never granted
+    expect(r.reveal).toBe('34,112');
+    expect(r.wolf.outcome).toBe('beaten');
+    expect(r.wolf.relic).toMatch(/ · preview$/);      // shown, never rolled, never granted
     expect(r.askedPermission).toBe(false);            // the permission is already answered
-    expect(r.touched).toEqual([]);
+    expect(r.sawBoard).toBe(true);
+    expect(changed(before, after).filter((k) => HUNT.indexOf(k) >= 0)).toEqual([]);
     expect(r.killFlags).toEqual([]);
-    expect(r.wolf.kill_count).toBe(3);
-    expect(r.wolf.engaged).toBe(false);
+    expect(r.closed).toBe(true);
+    expect(r.wolfState.kill_count).toBe(3);
+    expect(r.wolfState.engaged).toBe(false);
   });
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // AE. W938 — TEST HUNTER: the account is set aside, nothing is sent, and
@@ -2864,7 +3648,8 @@ test.describe('AE · Test as a new hunter (W938)', () => {
 
     // A fresh install: the cinematic, the TEST HUNTER bar, the account set aside.
     await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    // W1050 — a first run opens on the name (the mark and the gate are the sign-in screen).
+    await expect(page.locator('#cin-onboarding .ob4-s-name')).toHaveClass(/is-on/, { timeout: 15_000 });
     const during = await page.evaluate(async () => {
       const w = window as any;
       const backend = 'https://awakened-backend.richmondcampano93.workers.dev';
@@ -3002,7 +3787,7 @@ test.describe('AE · Test as a new hunter (W938)', () => {
       }),
     ]);
     await expect(page.locator('#awk-sandbox-bar')).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
+    await expect(page.locator('#cin-onboarding .ob4-s-name')).toHaveClass(/is-on/, { timeout: 15_000 });
     const r = await page.evaluate(() => ({
       leak: localStorage.getItem('hb_w938_leak'),
       leakSetAside: localStorage.getItem('hbsb_hb_w938_leak'),
@@ -3018,34 +3803,149 @@ test.describe('AE · Test as a new hunter (W938)', () => {
 // AF. W939 — Sign in v2: the first screen after download
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AF · Sign in v2 (W939)', () => {
+  // W1050 — the first screen is the mark now, and the W939 gate (art, copy,
+  // Apple's button, the footnote) is what holding it opens.
+  const GATE = '#signin-gate .ob4-s-gate';
+
   test('the Gate art, the new copy and a truthful footnote', async ({ page }) => {
-    await freshApp(page);
+    await signedOutGate(page);
+    await page.evaluate(() => (window as any).__ob.go('gate', { open: true }));
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
     const r = await page.evaluate(() => {
       const gate = document.getElementById('signin-gate') as HTMLElement;
       const btn = document.getElementById('signin-apple-btn') as HTMLButtonElement;
-      document.getElementById('app')!.classList.add('hidden');
-      gate.classList.remove('hidden');
       return {
-        v2: gate.classList.contains('sg-v2'),
-        art: (gate.querySelector('.sg-art img') as HTMLImageElement | null)?.getAttribute('src') || null,
-        logo: (gate.querySelector('.sg-lock img') as HTMLImageElement | null)?.getAttribute('src') || null,
-        title: (gate.querySelector('.signin-title') as HTMLElement).textContent,
-        blurb: (gate.querySelector('.signin-blurb') as HTMLElement).textContent,
-        foot: (gate.querySelector('.signin-footnote') as HTMLElement).textContent,
+        host: gate.classList.contains('ob4-host'),
+        art: (gate.querySelector('.ob4-s-gate .ob4-gate-art') as HTMLImageElement | null)?.getAttribute('src') || null,
+        logo: (gate.querySelector('.ob4-wordmark img') as HTMLImageElement | null)?.getAttribute('src') || null,
+        title: (gate.querySelector('.ob4-gate-t') as HTMLElement).textContent,
+        blurb: (gate.querySelector('.ob4-gate-b') as HTMLElement).textContent,
+        foot: (gate.querySelector('.ob4-gate-fine') as HTMLElement).textContent || '',
         buttonText: (btn.textContent || '').replace(/\s+/g, ' ').trim(),
         buttonBg: getComputedStyle(btn).backgroundColor,
+        buttonInk: getComputedStyle(btn).color,
       };
     });
-    expect(r.v2).toBe(true);
+    expect(r.host).toBe(true);
     expect(r.art).toBe('assets/gates/gate-e-rank.png');
     expect(r.logo).toBe('assets/awknd-logo.png');
     expect(r.title).toBe('The Gate is open.');
-    expect(r.blurb).toContain('carry your progress between devices');
+    expect(r.blurb).toBe('Only the named may cross.');
     // The old line was untrue: CloudSync backs up every hb_ key.
     expect(r.foot).not.toContain('Everything else stays on your device');
+    // W1050 — and so was the handoff's "Nothing else.": crash and usage reports leave the phone too.
+    expect(r.foot).not.toMatch(/nothing else/i);
     expect(r.foot).toContain('private backup');
+    expect(r.foot).toContain('hunter name');
     expect(r.buttonText).toBe('Sign in with Apple');
     expect(r.buttonBg).toBe('rgb(255, 255, 255)');
+    expect(r.buttonInk).toBe('rgb(0, 0, 0)');
+  });
+
+  test('holding the mark splits the dark, then the Gate opens and Sign in with Apple rises', async ({ page }) => {
+    await signedOutGate(page);
+    const gate = page.locator(GATE);
+    const apple = page.locator('#signin-apple-btn');
+    await expect(page.locator('#signin-gate .ob4-mark-prompt')).toHaveText('Hold the mark');
+    await expect(apple).toBeHidden();   // in the DOM, behind the dark, until the Gate opens
+    await watchCharge(page, GATE);
+
+    const c = await markCentre(page);
+    await page.mouse.move(c.x, c.y);
+    const t0 = Date.now();
+    await page.mouse.down();
+    await expect(gate).toHaveClass(/is-split/, { timeout: 5_000 });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(1300);   // 1.4 s: a hold, not a touch
+    await page.mouse.up();
+    await expect(gate).toHaveClass(/is-open/);
+    await expect(apple).toBeVisible();
+
+    const seen = await chargeSeen(page);
+    const split = (cls: string) => /is-split/.test(cls);
+    // While it is held the charge only climbs, through the middle, with the dark still shut...
+    const dark = seen.filter(([, cls]) => !split(cls)).map(([v]) => v);
+    expect(dark.some((v) => v > 0.2 && v < 0.8)).toBe(true);
+    expect(dark.every((v, i) => i === 0 || v >= dark[i - 1])).toBe(true);
+    // ...the dark splits only at full charge, and the Gate opens after the split, not with it.
+    expect((seen.find(([, cls]) => split(cls)) as [number, string])[0]).toBe(1);
+    const order = seen.map(([, cls]) => (split(cls) ? 'split' : 'dark') + (/is-open/.test(cls) ? '+open' : ''))
+      .filter((st, i, all) => i === 0 || all[i - 1] !== st);
+    expect(order.filter((st) => st !== 'dark')).toEqual(['split', 'split+open']);
+    // The crack is felt and heard (the haptic carries it when the phone is muted).
+    const fx = await page.evaluate(() => (window as any).__ob.fxLog as string[]);
+    expect(fx).toContain('hap:HEAVY');
+    expect(fx).toContain('snd:crack');
+  });
+
+  test('letting go early cools the mark; a tap opens it only once the three-second fallback is offered', async ({ page }) => {
+    await signedOutGate(page);
+    const gate = page.locator(GATE);
+    const prompt = page.locator('#signin-gate .ob4-mark-prompt');
+    const fx = () => page.evaluate(() => (window as any).__ob.fxLog.join(' '));
+    const c = await markCentre(page);
+    await page.mouse.move(c.x, c.y);
+
+    // Let go early (a quarter of the hold it asks for): the charge rises, then
+    // drains back to nothing, and the dark stays shut.
+    await watchCharge(page, GATE);
+    await page.mouse.down();
+    await page.waitForTimeout(350);
+    await page.mouse.up();
+    await expect.poll(() => charge(page, GATE)).toBe(0);
+    const peak = Math.max(...(await chargeSeen(page)).map(([v]) => v));
+    expect(peak).toBeGreaterThan(0.1);
+    expect(peak).toBeLessThan(1);
+    await expect(gate).not.toHaveClass(/is-split/);
+
+    // A tap inside the first three seconds is just a very short hold. (go('gate')
+    // re-enters the screen, which restarts its clock, so this cannot race it.)
+    await page.evaluate(() => (window as any).__ob.go('gate'));
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(prompt).toHaveText('Hold the mark');
+    expect(await fx()).not.toContain('hap:MEDIUM');   // the tap-to-open path never started
+    await expect(prompt).toHaveText('Hold the mark · or tap', { timeout: 6_000 });
+    await expect(gate).not.toHaveClass(/is-split/);   // three seconds on, still shut
+
+    // Now a tap is enough: no hold is ever a wall.
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(gate).toHaveClass(/is-open/, { timeout: 5_000 });
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
+  });
+
+  test('a keyboard, a switch or VoiceOver opens the mark in one press', async ({ page }) => {
+    await signedOutGate(page);
+    await page.locator('#signin-gate .ob4-mark').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(GATE)).toHaveClass(/is-open/, { timeout: 5_000 });
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
+  });
+
+  test('W816: a hunter whose session expired is greeted by name and told nothing was lost', async ({ page }) => {
+    await signedOutGate(page, { name: 'Richie' });
+    await page.evaluate(() => (window as any).__ob.go('gate', { open: true }));
+    await expect(page.locator('#signin-gate .ob4-gate-t')).toHaveText('Welcome back, Richie');
+    await expect(page.locator('#signin-gate .ob4-gate-b')).toHaveText('Your session expired while you were away. Sign in to reconnect. Nothing was lost.');
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
+  });
+
+  test('the gate preview hook mounts the same screen on a signed-in page', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const ctx = (window as any).__obGatePreview('Mira');
+      ctx.go('gate', { open: true });
+      const gate = document.getElementById('signin-gate') as HTMLElement;
+      return {
+        count: document.querySelectorAll('#signin-gate').length,
+        roots: gate.querySelectorAll('.ob4-root').length,
+        open: (gate.querySelector('.ob4-s-gate') as HTMLElement).classList.contains('is-open'),
+        title: (gate.querySelector('.ob4-gate-t') as HTMLElement).textContent,
+      };
+    });
+    expect(r).toEqual({ count: 1, roots: 1, open: true, title: 'Welcome back, Mira' });
+    await page.locator('#signin-apple-btn').click();
+    await expect(page.locator('#signin-apple-error')).toHaveText('Sign in with Apple is only available in the iOS app.');
   });
 
   test('the button spins while Apple\'s sheet is up and comes back when it is cancelled', async ({ page }) => {
@@ -3072,6 +3972,10 @@ test.describe('AF · Sign in v2 (W939)', () => {
     });
     await page.goto('/');
     await expect(page.locator('#signin-gate')).toBeVisible({ timeout: 15_000 });
+    // W1050 — Apple's button stands behind the mark; open the Gate first.
+    await expect(page.locator(GATE)).toHaveClass(/is-on/, { timeout: 15_000 });
+    await page.evaluate(() => (window as any).__ob.go('gate', { open: true }));
+    await expect(page.locator('#signin-apple-btn')).toBeVisible();
     const r = await page.evaluate(async () => {
       const btn = document.getElementById('signin-apple-btn') as HTMLButtonElement;
       const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -3763,204 +4667,408 @@ test.describe('AL · No list-view tip (W946)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// AM. W947 — Onboarding v3 (Claude Design handoff 27, "Interactive")
+// AM. W947 → W1050 — Onboarding v4, the touches: every beat is one touch
+//     that pays back (the look, the hold, the relics, the tower), in the
+//     carved type the owner picked
 // ─────────────────────────────────────────────────────────────────────────
-test.describe('AM · Onboarding v3 (W947)', () => {
-  async function boot(page: Page) {
-    await page.addInitScript(() => {
-      try {
-        if (sessionStorage.getItem('__w947_boot')) return;
-        sessionStorage.setItem('__w947_boot', '1');
-        localStorage.setItem('hb_cloud_restore_dismissed', '1');
-        localStorage.setItem('hb_whats_new_seen', '99.99.99');
-        const d = new Date();
-        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + ymd, '1');
-        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_avatar_skin',
-         'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
-      } catch (_) {}
+test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
+  const WOLF = OB + ' .ob4-s-wolf';
+  /** A first run with Health open: 3,860 today, 18,860 this week, one hunter above on the board. */
+  async function boot(page: Page, today = 3860, week = 18860) {
+    await obFirstRun(page);
+    await obWorld(page, {
+      today, week,
+      board: { ok: true, metric: 'step_total', me: { rank: 2, current_value: week },
+               top: [{ rank: 1, alias: 'Galilea', current_value: 51144, avatar_id: 'avatar-ranger.png', card_bg: null }] },
     });
-    await page.goto('/');
-    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
-    await page.evaluate((steps) => {
-      const s = document.getElementById('awakened-splash'); if (s) s.remove();
-      const w = window as any;
-      w.Health.isAvailable        = () => true;
-      w.Health.permissionStatus   = () => 'granted';
-      w.Health.requestPermissions = async () => 'granted';
-      w.Health.getStepsBetween    = async () => 18860;
-      w.Health.getStepsToday      = async () => 3860;
-      w.Auth.fetchLeaderboardTop  = async () => ({
-        ok: true, metric: 'step_total', me: { rank: 4, current_value: 18860 },
-        top: [{ rank: 1, alias: 'Galilea', current_value: 51144, avatar_id: 'avatar-ranger.png', card_bg: null }],
-      });
-    }, 0);
   }
+  /** Straight to the Wolf with Health answered, as the witness would leave it. */
+  async function toWolf(page: Page, today: number, week = 18860) {
+    await obGo(page, 'wolf', { health: true, today, steps7: week });
+    await obOn(page, 'wolf');
+  }
+  const engaged = async (page: Page) => !!((await obWolfState(page)) || {}).engaged;
+  const fxLog = (page: Page) => page.evaluate(() => (window as any).__ob.fxLog.join(' '));
 
-  test('the bust appears with the second letter, is worn on the board, and equips the look', async ({ page }) => {
+  test('the look turns the license, equips the skin, and is worn on the board', async ({ page }) => {
     await boot(page);
-    await page.locator('#cn-touch').click();
-    await expect(page.locator('#cn-s1')).toHaveClass(/cn-shown/, { timeout: 5_000 });
-    const busts = page.locator('#cn-busts');
-    await page.locator('#cin-nameField').fill('R');
-    await expect(busts).not.toHaveClass(/cn-show/);
-    await page.locator('#cin-nameField').fill('Richie');
-    await expect(busts).toHaveClass(/cn-show/);
-    await expect(page.locator('[data-cn-bust="base"]')).toHaveClass(/cn-on/);
+    const lic = page.locator(OB + ' .ob4-s-name .ob4-lic');
+    const look = (k: string) => page.locator('[data-ob-look="' + k + '"]');
+    await expect(page.locator('[data-ob-look]')).toHaveCount(3);
+    // HUNTER (the class default) is the look until another is picked.
+    await expect(look('base')).toHaveAttribute('aria-checked', 'true');
+    await expect(lic.locator('.ob4-lic-look')).toHaveText('Hunter');
+    await expect(lic.locator('.ob4-lic-bust')).toHaveAttribute('src', /avatar-base-bust/);
 
-    await page.locator('[data-cn-bust="warrior"]').click();
-    await expect(page.locator('[data-cn-bust="warrior"]')).toHaveAttribute('aria-checked', 'true');
-    await expect(page.locator('[data-cn-bust="base"]')).not.toHaveClass(/cn-on/);
-    await page.locator('#cin-nameConfirm').click();
-    await expect(page.locator('#cn-s2')).toHaveClass(/cn-shown/);
+    await look('warrior').click();
+    await expect(look('warrior')).toHaveClass(/is-on/);
+    await expect(look('base')).not.toHaveClass(/is-on/);
+    // The card turns edge-on, the face swaps, and it turns back.
+    await expect(lic.locator('.ob4-lic-look')).toHaveText('Warrior');
+    await expect(lic.locator('.ob4-lic-bust')).toHaveAttribute('src', /avatar-warrior-bust/);
+    await expect(look('warrior')).toHaveAttribute('aria-checked', 'true');
+    await expect(look('base')).toHaveAttribute('aria-checked', 'false');
+    await expect(lic).toHaveClass(/is-turnback/);
+    await expect(lic).not.toHaveClass(/is-turn( |$)/);
+    expect(await fxLog(page)).toContain('snd:turn');
+    // Nothing is equipped until the name is confirmed.
+    expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBeNull();
+
+    await obName(page, 'Richie');
     expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBe('avatar-warrior.png');
 
-    await page.locator('#cn-healthBtn').click();
-    await expect(page.locator('#cn-s3')).toHaveClass(/cn-shown/, { timeout: 5_000 });
-    await page.locator('#cn-s3 [data-cn-next]').click();
-    const meBust = page.locator('#cn-rows .cn-row.cn-me .cn-bust img');
-    await expect(meBust).toHaveAttribute('src', /avatar-warrior-bust/, { timeout: 5_000 });
+    await obGo(page, 'board', { health: true, today: 3860, steps7: 18860 });
+    await obOn(page, 'board');
+    const me = page.locator('#cn-rows .ob4-row.is-me');
+    await expect(me.locator('.ob4-bust img')).toHaveAttribute('src', /avatar-warrior-bust/, { timeout: 5_000 });
+    // Left alone, the row takes its place by itself after three seconds: a tap is never a wall.
+    await expect(me).toHaveClass(/is-wait/);
+    await expect(page.locator('#cn-gap')).toHaveClass(/is-on/, { timeout: 10_000 });
+    await expect(page.locator('#cn-gap')).toHaveText('32,284 steps to pass Galilea.');
+    await expect(me.locator('.ob4-r')).toHaveText('2');
+    await expect(me.locator('.ob4-v')).toHaveText('18,860');
   });
 
-  test('the road can be dragged once the count lands, and the number follows the light', async ({ page }) => {
+  test('holding the Wolf strikes it: letting go early cools and engages nothing, the full hold lands the real engage', async ({ page }) => {
     await boot(page);
-    await page.evaluate(async () => {
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      (document.querySelector('#cn-touch') as HTMLElement).click(); await wait(1100);
-      const f = document.querySelector('#cin-nameField') as HTMLInputElement;
-      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
-      (document.querySelector('#cin-nameConfirm') as HTMLElement).click(); await wait(300);
-      (document.querySelector('#cn-healthBtn') as HTMLElement).click();
-    });
-    await expect(page.locator('#cn-s3')).toHaveClass(/cn-shown/, { timeout: 5_000 });
-    await expect(page.locator('#cn-rhint')).toHaveClass(/cn-show/, { timeout: 3_000 });
-    await expect(page.locator('#cn-steps7')).toHaveText('18,860');
-    await expect(page.locator('#cn-skip')).toBeHidden();
+    await toWolf(page, 3860);
+    const hold = page.locator('#cn-wolf'), next = page.locator('#cn-wolfNext');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('6,000 steps in a day');
+    await expect(page.locator(OB + ' .ob4-today')).toHaveText('3,860');
+    await expect(page.locator(OB + ' .ob4-hold-l')).toHaveText('Hold to strike');
+    await expect(next).toBeDisabled();
 
-    const pad = await page.locator('#cn-scrub').boundingBox();
-    const x = pad!.x + pad!.width * 0.8, y = pad!.y + pad!.height * 0.5;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x - 130, y, { steps: 6 });   // half the 260px throw
-    const mid = await page.evaluate(() => ({
-      n: (document.querySelector('#cn-steps7') as HTMLElement).textContent,
-      p: parseFloat(getComputedStyle(document.querySelector('#cn-s3') as HTMLElement).getPropertyValue('--cn-p')),
-    }));
-    await page.mouse.up();
-    expect(mid.p).toBeGreaterThan(0.45);
-    expect(mid.p).toBeLessThan(0.55);
-    expect(mid.n).toBe((Math.round(18860 * mid.p)).toLocaleString('en-US'));
-  });
-
-  test('holding the Wolf strikes it: a short hold keeps the damage, the full hold engages it and opens ENTER', async ({ page }) => {
-    await boot(page);
-    await page.evaluate(async () => {
-      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const q = (s: string) => document.querySelector(s) as HTMLElement;
-      q('#cn-touch').click(); await wait(1100);
-      const f = q('#cin-nameField') as HTMLInputElement;
-      f.value = 'Richie'; f.dispatchEvent(new Event('input'));
-      q('#cin-nameConfirm').click(); await wait(300);
-      q('#cn-healthBtn').click(); await wait(900);
-      q('#cn-s3 [data-cn-next]').click(); await wait(900);
-      if (document.querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
-      q('#cn-huntAlone').click(); await wait(200);
-      q('#cn-s6 [data-cn-next]').click(); await wait(200);
-      q('#cn-s7 [data-cn-next]').click(); await wait(400);
-    });
-    const wolf = page.locator('#cn-wolf');
-    await expect(wolf).toHaveClass(/cn-armed/);
-    await expect(page.locator('#cn-enter')).toBeDisabled();
-    await expect(page.locator('#cn-wolfSub')).toHaveText('3,860 STEPS TODAY · HOLD');
-
-    const box = await wolf.boundingBox();
+    const box = await hold.boundingBox();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    // A short hold (a quarter of a second of the nine tenths) charges the ring and nothing else.
+    await watchCharge(page, WOLF);
     await page.mouse.down();
     await page.waitForTimeout(250);
     await page.mouse.up();
-    await expect(page.locator('#cn-wolfSub')).toHaveText(/^\d+% STRUCK · HOLD AGAIN$/);
-    const partial = await page.evaluate(() => ({
-      width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
-      engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
-    }));
-    expect(partial.width).toBeLessThan(100);
-    expect(partial.width).toBeGreaterThan(35.66);   // never past the share walked today
-    expect(partial.engaged).toBe(false);
-    await expect(page.locator('#cn-enter')).toBeDisabled();
+    await expect.poll(() => charge(page, WOLF)).toBe(0);
+    const short = await chargeSeen(page);
+    const peak = Math.max(...short.map(([v]) => v));
+    expect(peak).toBeGreaterThan(0.1);
+    expect(peak).toBeLessThan(1);
+    expect(short.some(([, cls]) => /is-charging/.test(cls))).toBe(true);
+    await expect(page.locator(WOLF)).not.toHaveClass(/is-charging|is-hit|is-done/);
+    expect(await page.locator(WOLF).getAttribute('data-outcome')).toBeNull();
+    expect(await engaged(page)).toBe(false);
+    await expect(next).toBeDisabled();
+    expect((await page.evaluate(() => (document.querySelector('#cn-hpi') as HTMLElement).style.width))).toBe('');   // the bar has not moved
 
+    // The full nine tenths of a second.
+    const t0 = Date.now();
     await page.mouse.down();
-    await page.waitForTimeout(1400);
+    await expect(page.locator(WOLF)).toHaveClass(/is-hit/, { timeout: 5_000 });
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(800);
     await page.mouse.up();
-    await expect(page.locator('#cn-pactTitle')).toHaveText('The Wolf is engaged.');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('2,140 STEPS LEFT TODAY');
+    await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'bleeds', { timeout: 5_000 });
+    await expect(page.locator('#cn-wolfStamp')).toHaveText('It bleeds');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('2,140 steps left today');
+    await expect(page.locator('#cn-pactBody')).toHaveText('Walk 2,140 more today and it is beaten tonight.');
     const done = await page.evaluate(() => ({
       width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
       engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
+      kills: Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0).length,
     }));
     expect(done.width).toBeCloseTo(35.67, 1);   // 3,860 of 6,000 struck, the rest stands
     expect(done.engaged).toBe(true);
-    await expect(page.locator('#cn-enter')).toBeEnabled({ timeout: 2_000 });
+    expect(done.kills).toBe(0);
+    await expect(next).toBeEnabled();
+    await expect(hold).toBeHidden();            // one strike: the hold is spent
+    const fx = await fxLog(page);
+    expect(fx).toContain('hap:HEAVY');
+    expect(fx).toContain('snd:hit');
+  });
+
+  test('a tap strikes only once the fallback is offered; nothing walked leaves the Wolf unmoved', async ({ page }) => {
+    await boot(page, 0, 9000);
+    await toWolf(page, 0, 9000);
+    const hold = page.locator('#cn-wolf');
+    const box = await hold.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    // Inside the first two and a half seconds a tap is only a very short hold.
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(page.locator(OB + ' .ob4-hold-l')).toHaveText('Hold to strike');
+    expect(await fxLog(page)).not.toContain('hap:MEDIUM');
+    await expect(page.locator(OB + ' .ob4-hold-l small')).toHaveText('or tap', { timeout: 6_000 });
+    expect(await page.locator(WOLF).getAttribute('data-outcome')).toBeNull();   // two and a half seconds on, unstruck
+    expect(await engaged(page)).toBe(false);
+
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'unmoved', { timeout: 5_000 });
+    await expect(page.locator('#cn-wolfStamp')).toHaveText('Unmoved');
+    await expect(page.locator('#cn-pactBody')).toHaveText('Nothing landed. Walk, then come back.');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('6,000 steps left today');
+    expect(await page.evaluate(() => (document.querySelector('#cn-hpi') as HTMLElement).style.width)).toBe('100%');
+    await expect(page.locator(OB + ' .ob4-dmg')).toHaveCount(0);   // no damage number for no damage
+    // The hunt is on all the same: the walk still counts tonight.
+    expect(await engaged(page)).toBe(true);
+    await expect(page.locator('#cn-wolfNext')).toBeEnabled();
+  });
+
+  test('a kill already claimed today is not paid twice: the Wolf reads beaten and returns tomorrow', async ({ page }) => {
+    // W465 pays a kill once per (boss, day). When today's claim is already
+    // spent as the flow reaches the Wolf (a restored account, a second pass),
+    // the strike still lands but nothing is paid, rolled or announced twice.
+    await page.addInitScript(() => {
+      try {
+        const d = new Date();
+        const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_kill_reward_the_steel_wolf_' + ymd, '1');
+      } catch (_) {}
+    });
+    await boot(page, 7318, 31204);
+    await toWolf(page, 7318, 31204);
+    const purse = () => page.evaluate(() => {
+      const inv = JSON.parse(localStorage.getItem('hb_inventory') || '{}');
+      return {
+        souls:  (JSON.parse(localStorage.getItem('hb_souls') || '{}').balance | 0),
+        relics: Object.keys(inv.cards || {}).filter((id) => ((inv.cards[id] || {}).count | 0) > 0).length,
+      };
+    });
+    const before = await purse();
+    await page.evaluate(() => { Math.random = () => 0; });   // a roll, if one were made, would land
+    expect(await obStrike(page)).toBe('claimed');
+    await expect(page.locator('#cn-wolfStamp')).toHaveText('Beaten');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('7,318 of 6,000 · beaten today');
+    await expect(page.locator('#cn-pactBody')).toHaveText('Today’s kill is already claimed. It returns tomorrow.');
+    await expect(page.locator('#cn-pactBody .ob4-relic-card')).toHaveCount(0);
+    expect(await purse()).toEqual(before);
+    expect(await page.evaluate(() => [(window as any).__ob.U.relic, localStorage.getItem('hb_boss_result_queue')])).toEqual([false, null]);
+    await expect(page.locator('#cn-wolfNext')).toBeEnabled();
+  });
+
+  test('the Twin Maw arrives; its relics turn face up; a sent invite changes the screen and a cancelled one does not', async ({ page }) => {
+    await boot(page);
+    await obName(page, 'Richie');
+    await obGo(page, 'hunt');
+    await obOn(page, 'hunt');
+    expect(await fxLog(page)).toContain('snd:arrive');
+    await expect(page.locator(OB + ' .ob4-s-hunt .ob4-boss')).toHaveText('The Twin Maw');
+    // The real goal and the real drop pool, out of the game's own tables.
+    await expect(page.locator('#cn-mawLine')).toHaveText('14,000 combined steps. The relic drops for both.');
+    const relics = page.locator('#cn-drops .ob4-relic');
+    await expect(relics).toHaveCount(3);
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('#cn-drops .ob4-relic-front')).map((f) => ({
+      name: (f.querySelector('div') as HTMLElement).childNodes[0].textContent,
+      art:  /^assets\/.+\.(png|webp)$/.test((f.querySelector('img') as HTMLImageElement).getAttribute('src') || ''),
+    })))).toEqual([
+      { name: 'Twin-Fang Cleaver', art: true }, { name: 'The Twofold Gaze', art: true }, { name: 'Bothsight, the Long Hunt', art: true },
+    ]);
+    await expect(page.locator('#cn-party')).toHaveText('Turn the relics');
+
+    // Face down until touched; each tap turns one, and the prompt goes with the last.
+    await expect(page.locator('#cn-drops .ob4-relic.is-up')).toHaveCount(0);
+    for (let i = 0; i < 3; i++) {
+      await relics.nth(i).click();
+      await expect(relics.nth(i)).toHaveClass(/is-up/);
+      await expect(page.locator('#cn-drops .ob4-relic.is-up')).toHaveCount(i + 1);
+      if (i < 2) await expect(page.locator('#cn-party')).toHaveText('Turn the relics');
+    }
+    await expect(page.locator('#cn-party')).toHaveText('');
+    expect((await fxLog(page)).split('snd:flip').length - 1).toBe(3);
+    await relics.nth(0).click();   // a turned relic stays turned
+    await expect(relics.nth(0)).toHaveClass(/is-up/);
+
+    const summon = page.locator('#cn-summon'), alone = page.locator('#cn-huntAlone'), maw = page.locator('#cn-mawimg');
+    const share = (ok: boolean) => page.evaluate((good) => {
+      (window as any).__shared = [];
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: async (data: unknown) => { (window as any).__shared.push(data); if (!good) throw new DOMException('Share canceled', 'AbortError'); },
+      });
+    }, ok);
+    // The sheet was opened and dismissed: nothing went out, so nothing changes.
+    await share(false);
+    await summon.click();
+    await expect.poll(() => page.evaluate(() => (window as any).__shared.length)).toBe(1);
+    await expect(summon).toHaveText('Summon a friend');
+    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw.png');
+    await expect(alone).toBeVisible();
+    await expect(page.locator('#cn-party .ob4-chip')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).__ob.U.summoned)).toBe(false);
+    let q = await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '');
+    expect(q).toContain('share_opened');
+    expect(q).not.toContain('onboarding_summon_sent');
+
+    // The invite goes out: the Maw answers, the chip says so, and the button moves on.
+    await share(true);
+    await summon.click();
+    await expect(summon).toHaveText('Onward');
+    await expect(summon).toHaveClass(/ob4-ghost/);
+    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw-summons.png');
+    await expect(page.locator('#cn-party .ob4-chip')).toHaveText('Invite sent · the hunt opens when they answer');
+    await expect(alone).toBeHidden();
+    const sent = await page.evaluate(() => (window as any).__shared[0] as { title: string; text: string });
+    expect(sent.title).toBe('Awakened');
+    expect(sent.text).toContain('Hunt The Twin Maw with me on Awakened');
+    expect(sent.text).toContain('14,000 combined steps');
+    q = await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '');
+    expect(q).toContain('onboarding_summon_sent');
+    await summon.click();
+    await obOn(page, 'ascent');
+  });
+
+  test('the tower follows the drag: a hundred floors up, the Hall lights, and letting go settles back to one', async ({ page }) => {
+    await boot(page);
+    await obGo(page, 'ascent');
+    await obOn(page, 'ascent');
+    const floor = page.locator('#cn-floorN'), hall = page.locator(OB + ' .ob4-hall');
+    await expect(floor).toHaveText('1');
+    await expect(hall).toHaveText('Floor 100 · The Hall of the Awakened');
+    await expect(hall).not.toHaveClass(/is-lit/);
+    // Wait out the screen's entrance so the pointer lands on a settled tower.
+    await expect(page.locator('#cn-ascentNext')).toBeVisible();
+    const box = await page.locator('#cn-tower').boundingBox();
+    const x = box!.x + box!.width / 2, y = 620;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 190, { steps: 6 });   // half the 380px throw
+    await expect(floor).toHaveText('51');
+    await expect(hall).not.toHaveClass(/is-lit/);
+    expect(parseFloat(await page.locator(OB + ' .ob4-s-ascent').evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-p')))).toBeCloseTo(0.5, 2);
+    await page.mouse.move(x, y - 380, { steps: 6 });
+    await expect(floor).toHaveText('100');
+    await expect(hall).toHaveClass(/is-lit/);
+    await expect(page.locator(OB + ' .ob4-floor')).toHaveClass(/is-top/);
+    await page.mouse.move(x, y - 470, { steps: 3 });   // there is no floor 101
+    await expect(floor).toHaveText('100');
+    expect(await fxLog(page)).toContain('snd:seal');
+
+    await page.mouse.up();
+    await expect(floor).toHaveText('1', { timeout: 4_000 });
+    await expect(hall).not.toHaveClass(/is-lit/);
+    await page.locator('#cn-ascentNext').click();
+    await obOn(page, 'vow');
   });
 
   test('a replay in the same session as a first run leaves the first run\'s handlers behind', async ({ page }) => {
+    test.slow();
     await boot(page);
-    const r = await page.evaluate(async () => {
-      const w = window as any;
-      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
-      const root = () => document.getElementById('cin-onboarding') as HTMLElement;
-      const q = (s: string) => root().querySelector(s) as HTMLElement;
-      const walk = async () => {
-        q('#cn-touch').click(); await wait(1100);
-        const f = q('#cin-nameField') as HTMLInputElement;
-        if (!f.value) { f.value = 'Richie'; f.dispatchEvent(new Event('input')); }
-        q('#cin-nameConfirm').click(); await wait(300);
-        q('#cn-healthBtn').click(); await wait(900);
-        q('#cn-s3 [data-cn-next]').click(); await wait(900);
-        if (root().querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
-        q('#cn-huntAlone').click(); await wait(200);
-        q('#cn-s6 [data-cn-next]').click(); await wait(200);
-        q('#cn-s7 [data-cn-next]').click(); await wait(400);
-        q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        await wait(1000);
-        q('#cn-enter').click(); await wait(2200);
-      };
-      // The real first run with Health refused: its Wolf is never struck, so
-      // before W947 its strike handler stayed live on the shared element.
-      w.Health.permissionStatus   = () => 'denied';
-      w.Health.requestPermissions = async () => 'denied';
-      w.Health.getStepsBetween    = async () => null;
-      w.Health.getStepsToday      = async () => null;
-      await walk();
-      document.querySelectorAll('button').forEach((b) => {
-        if (/^(continue|not now|maybe later)$/i.test((b.textContent || '').trim()) && (b as HTMLElement).offsetParent) (b as HTMLElement).click();
-      });
-      await wait(600);
-      const KEYS = ['hb_habits', 'hb_path', 'hb_name', 'hb_bosses', 'hb_inventory', 'hb_onboarding_first_xp_awarded_v1', 'hb_avatar_skin'];
-      const before: Record<string, string | null> = {};
-      KEYS.forEach((k) => { before[k] = localStorage.getItem(k); });
+    // W952 — the Wolf's trail opens a new hunter's hunt on its own, a second or
+    // so after they land in the app. This hunter has stood it down for today,
+    // so the only thing that could engage the Wolf below is a strike.
+    await page.evaluate(() => {
+      const d = new Date();
+      localStorage.setItem('hb_wolf_trail_skip', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+    });
+    await obAcknowledgeNotices(page);
+    // The real first run with Health refused: its Wolf is never struck, so
+    // before W947 its strike handler stayed live on the shared element.
+    await obWorld(page, { health: 'denied' });
+    await obName(page, 'Richie');
+    await page.locator('#cn-healthBtn').click();
+    await expect(page.locator('#cn-healthBtn')).toHaveText('Carry on');
+    await page.locator('#cn-healthBtn').click();
+    await obOn(page, 'wolf');
+    await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'locked');
+    await page.locator('#cn-wolfNext').click();
+    await obOn(page, 'hunt');                       // nobody on the board: walked past
+    await page.locator('#cn-huntAlone').click();
+    await obOn(page, 'ascent');
+    await page.locator('#cn-ascentNext').click();
+    await obOn(page, 'vow');
+    await page.locator('[data-cn-pack="custom"]').click();
+    await page.locator('#cn-enter').click();
+    await expect(page.locator('#cn-enter')).toHaveText('Enter');
+    await page.locator('#cn-enter').click();
+    await obFinish(page);
+    await page.evaluate(() => { document.querySelectorAll('#statup-ov, #ach-popup').forEach((x) => x.remove()); });
 
-      // Health opened later; the replay arms the Wolf.
-      w.Health.permissionStatus   = () => 'granted';
-      w.Health.getStepsBetween    = async () => 18860;
-      w.Health.getStepsToday      = async () => 3860;
-      w.__replayOnboarding(); await wait(600);
-      const preview = root().classList.contains('cn-preview');
-      await walk();   // the replay, same session, same page
+    const KEYS = ['hb_habits', 'hb_path', 'hb_name', 'hb_bosses', 'hb_inventory', 'hb_onboarding_first_xp_awarded_v1', 'hb_avatar_skin'];
+    const read = () => page.evaluate((keys) => keys.map((k) => localStorage.getItem(k)), KEYS);
+    const before = await read();
+
+    // Health opened later; the replay arms a Wolf of its own.
+    await obWorld(page, { today: 3860, week: 18860 });
+    await page.evaluate(() => (window as any).__replayOnboarding());
+    await obOn(page, 'gate');
+    expect(await page.evaluate(() => (document.getElementById('cin-onboarding') as HTMLElement).classList.contains('ob4-preview'))).toBe(true);
+    await page.locator(OB + ' .ob4-mark').focus();
+    await page.keyboard.press('Enter');
+    await page.locator(OB + ' .ob4-gate-carry').click();
+    await obOn(page, 'name');
+    await expect(page.locator('#cin-nameField')).toHaveValue('Richie');
+    await page.locator('#cin-nameConfirm').click();
+    await obOn(page, 'witness');
+    await page.locator('#cn-healthBtn').click();
+    await obRevealToWolf(page);
+    // Not the first run's locked Wolf: a fresh one, waiting to be struck.
+    expect(await page.locator(WOLF).getAttribute('data-outcome')).toBeNull();
+    await expect(page.locator('#cn-wolf')).toBeVisible();
+    expect(await obStrike(page)).toBe('bleeds');      // shown; a replay engages nothing
+    expect(await engaged(page)).toBe(false);
+    const r = await page.evaluate(() => ({
+      onlyOneRoot: document.querySelectorAll('#cin-onboarding').length,
+      oneEngine:   document.querySelectorAll('#cin-onboarding .ob4-root').length,
+      oneWolf:     document.querySelectorAll('#cn-wolf').length,
+    }));
+    expect(r).toEqual({ onlyOneRoot: 1, oneEngine: 1, oneWolf: 1 });
+    await page.locator('#cn-wolfNext').click();
+    await obOn(page, 'hunt');
+    await page.locator('#cn-huntAlone').click();
+    await obOn(page, 'ascent');
+    await page.locator('#cn-ascentNext').click();
+    await obOn(page, 'vow');
+    await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-on/);
+    await page.locator('#cn-enter').click();
+    await expect(page.locator('#cn-enter')).toHaveText('Enter');
+    await page.locator('#cn-enter').click();
+    await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
+    expect(await read()).toEqual(before);
+  });
+
+  test('the type is the carved pairing, and the block stays inside the iOS 15 floor', async ({ page }) => {
+    await obFirstRun(page);
+    const r = await page.evaluate(() => {
+      const fam = (sel: string) => getComputedStyle(document.querySelector(sel) as HTMLElement).fontFamily.replace(/["']/g, '');
+      const btn = getComputedStyle(document.querySelector('#cin-nameConfirm') as HTMLElement);
       return {
-        preview,
-        closed: root().classList.contains('hidden'),
-        replayArmedThenPreviewed: !!root().querySelector('#cn-wolf.cn-spent'),
-        onlyOneRoot: document.querySelectorAll('#cin-onboarding').length,
-        touched: KEYS.filter((k) => localStorage.getItem(k) !== before[k]),
+        fonts: Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map((l) => (l as HTMLLinkElement).href).filter((h) => h.indexOf('fonts.googleapis.com') >= 0).join(' '),
+        title: fam('#cin-onboarding .ob4-s-name .ob4-title'),
+        licence: fam('#cin-onboarding .ob4-s-name .ob4-lic-name'),
+        button: btn.fontFamily.replace(/["']/g, ''),
+        buttonInk: btn.color,
+        buttonBg: btn.backgroundColor,
+        counter: fam('#cin-onboarding .ob4-field-n'),
+        body: fam('#cin-onboarding .ob4-root'),
+        field: fam('#cin-nameField'),
       };
     });
-    expect(r.preview).toBe(true);
-    expect(r.replayArmedThenPreviewed).toBe(true);
-    expect(r.onlyOneRoot).toBe(1);
-    expect(r.closed).toBe(true);
-    expect(r.touched).toEqual([]);
+    // index.html asks Google Fonts for all three.
+    expect(r.fonts).toContain('Grenze+Gotisch');
+    expect(r.fonts).toContain('Chakra+Petch');
+    expect(r.fonts).toContain('Alegreya+Sans');
+    // Display, HUD, body.
+    expect(r.title).toMatch(/^Grenze Gotisch\b/);
+    expect(r.licence).toMatch(/^Grenze Gotisch\b/);
+    expect(r.button).toMatch(/^Chakra Petch\b/);
+    expect(r.counter).toMatch(/^Chakra Petch\b/);
+    expect(r.body).toMatch(/^Alegreya Sans\b/);
+    expect(r.field).toMatch(/^Alegreya Sans\b/);
+    // A button keeps its own face and its own ink: dark on gold. (The handoff's
+    // `.ob-root button` reset outranked `.ob-btn` and took both away.)
+    expect(r.buttonInk).toBe('rgb(26, 18, 0)');
+    expect(r.buttonBg).toBe('rgb(245, 184, 66)');
+
+    // color-mix() needs iOS 16.2; the app's floor is iOS 15.
+    const css = await (await page.request.get('/styles.css')).text();
+    const start = css.indexOf('ONBOARDING v4');
+    expect(start).toBeGreaterThan(0);
+    const next = css.indexOf('/* ═', start);
+    const block = css.slice(start, next > start ? next : undefined);
+    expect(block).toContain('.ob4-root{');
+    expect(block).toContain('.ob4-hand');
+    expect((block.match(/\.ob4-/g) || []).length).toBeGreaterThan(400);   // the whole block, not a sliver of it
+    expect(block).not.toContain('color-mix(');
   });
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // AN. W948 — the last vow of the day opens the Perfect Day seal and nothing else
@@ -6415,78 +7523,60 @@ test.describe('BU · Jump Program by the manual (W1021)', () => {
   });
 
   test('onboarding asks the Jump Program for its start day, and no other path', async ({ page }) => {
+    test.slow();   // three first runs, the last one walked end to end
     await page.clock.setFixedTime(NOW);
-    await page.addInitScript(() => {
-      try {
-        if (sessionStorage.getItem('__w1021o')) return;
-        sessionStorage.setItem('__w1021o', '1');
-        localStorage.setItem('hb_cloud_restore_dismissed', '1');
-        localStorage.setItem('hb_whats_new_seen', '99.99.99');
-        localStorage.setItem('hb_fri_banner_2026-10-05', '1');
-        ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
-      } catch (_) {}
-    });
-    await page.goto('/');
-    await expect(page.locator('#cn-s0')).toHaveClass(/cn-shown/, { timeout: 15_000 });
-    await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); });
-    const r = await page.evaluate(async () => {
-      const w = window as any;
-      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
-      const root = document.getElementById('cin-onboarding') as HTMLElement;
-      const q = (s: string) => root.querySelector(s) as HTMLElement;
-      const shown = () => (root.querySelector('.cn-scr.cn-shown, .scr.show') as HTMLElement | null)?.id || null;
-      w.Health.isAvailable = () => true; w.Health.permissionStatus = () => 'granted'; w.Health.requestPermissions = async () => 'granted';
-      w.Health.getStepsBetween = async () => 31204; w.Health.getStepsToday = async () => 7318;
-      w.Auth.fetchLeaderboardTop = async () => ({ ok: true, metric: 'step_total', me: { rank: 1, current_value: 31204 }, top: [] });
-      q('#cn-touch').click(); await wait(1100);
-      const f = q('#cin-nameField') as HTMLInputElement; f.value = 'Richie'; f.dispatchEvent(new Event('input'));
-      q('#cin-nameConfirm').click(); await wait(300);
-      q('#cn-healthBtn').click(); await wait(900);
-      q('#cn-s3 [data-cn-next]').click(); await wait(900);
-      if (root.querySelector('#cn-s4.cn-shown')) { q('#cn-s4 [data-cn-next]').click(); await wait(250); }
-      q('#cn-huntAlone').click(); await wait(200);
-      q('#cn-s6 [data-cn-next]').click(); await wait(200);
-      // Make Your Own (the default) walks straight past the start-day screen
-      q('#cn-s7 [data-cn-next]').click(); await wait(300);
-      const customLands = shown();
-      w.__cinShow(7); await wait(200);
-      (root.querySelector('[data-cn-pack="morning"]') as HTMLElement).click();
-      q('#cn-s7 [data-cn-next]').click(); await wait(300);
-      const morningLands = shown();
-      w.__cinShow(7); await wait(200);
-      (root.querySelector('[data-cn-pack="jump_program"]') as HTMLElement).click();
-      q('#cn-s7 [data-cn-next]').click(); await wait(300);
-      const jumpLands = shown();
-      const chips = Array.from(root.querySelectorAll('#cn-jdays .jd-chip')).map((c) => c.textContent);
-      const first = { on: (root.querySelector('#cn-jdays .jd-chip--on') as HTMLElement).textContent, note: q('#cn-jnote').textContent };
-      (root.querySelectorAll('#cn-jdays .jd-chip')[2] as HTMLElement).click();
-      const picked = { on: (root.querySelector('#cn-jdays .jd-chip--on') as HTMLElement).textContent, note: q('#cn-jnote').textContent };
-      q('#cn-s7j [data-cn-next]').click(); await wait(500);
-      const afterStart = shown();
-      if (q('#cn-wolf').classList.contains('cn-armed')) { q('#cn-wolf').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1000); }
-      q('#cn-enter').click(); await wait(2200);
-      // the notification ask stands between ENTER and the vows being made
-      for (let i = 0; i < 20 && !JSON.parse(localStorage.getItem('hb_habits') || '[]').length; i++) {
-        const nb = document.getElementById('notif-explain-enable') as HTMLElement | null;
-        if (nb && nb.offsetParent) nb.click();
-        await wait(300);
-      }
-      await wait(800);
-      const hs = JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ name: string; archived?: boolean }>;
-      return {
-        customLands, morningLands, jumpLands, chips, first, picked, afterStart,
-        start: localStorage.getItem('hb_jump_program_started'), v: localStorage.getItem('hb_jump_v'), goal: localStorage.getItem('hb_onboarding_goal'),
-        vows: hs.filter((h) => !h.archived).length,
-      };
-    });
-    expect(r.customLands).toBe('cn-s8');
-    expect(r.morningLands).not.toBe('cn-s7j');
-    expect(r.jumpLands).toBe('cn-s7j');
-    expect(r.chips).toEqual(['TODAY', 'TUE6', 'WED7', 'THU8', 'FRI9', 'SAT10', 'SUN11']);
-    expect(r.first).toEqual({ on: 'TODAY', note: 'SESSIONS · MON 5 · THU 8 · MON 12 · THU 15' });
-    expect(r.picked).toEqual({ on: 'WED7', note: 'SESSIONS · WED 7 · SAT 10 · WED 14 · SAT 17' });
-    expect(r.afterStart).toBe('cn-s8');
-    expect([r.start, r.v, r.goal, r.vows]).toEqual(['2026-10-07', '2', 'jump_program', 22]);
+    // W1050 — a sworn banner cannot be unsworn, so each path gets its own first
+    // run (obFirstRun wipes the same keys on every load). The other two paths
+    // go from SWEAR IT straight to ENTER with no question in between.
+    for (const pack of ['custom', 'morning']) {
+      await obFirstRun(page);
+      await obGo(page, 'vow');
+      await obOn(page, 'vow');
+      await page.locator('[data-cn-pack="' + pack + '"]').click();
+      await page.locator('#cn-enter').click();
+      await expect(page.locator('#cn-enter')).toHaveText('Enter');
+      await expect(page.locator('#cn-enter')).toBeEnabled();
+      await expect(page.locator(OB + ' .ob4-sub-when'), pack).not.toHaveClass(/is-on/);
+      await expect(page.locator(OB + ' .ob4-vow-t'), pack).toHaveText('Choose a path.');
+      await expect(page.locator('#cn-jdays .jd-chip'), pack).toHaveCount(0);
+    }
+
+    // The Jump Program, walked the way a hunter walks it.
+    await obFirstRun(page);
+    await obWorld(page, { today: 7318, week: 31204, board: { ok: true, metric: 'step_total', me: { rank: 1, current_value: 31204 }, top: [] } });
+    await obName(page, 'Richie');
+    await page.locator('#cn-healthBtn').click();
+    await obRevealToWolf(page);
+    await obStrike(page);
+    await page.locator('#cn-wolfNext').click();
+    await obOn(page, 'hunt');   // nobody else on the board: walked past
+    await page.locator('#cn-huntAlone').click();
+    await obOn(page, 'ascent');
+    await page.locator('#cn-ascentNext').click();
+    await obOn(page, 'vow');
+
+    const btn = page.locator('#cn-enter');
+    await page.locator('[data-cn-pack="jump_program"]').click();
+    await btn.click();   // SWEAR IT
+    await expect(page.locator(OB + ' .ob4-vow-t')).toHaveText('When do you start?');
+    await expect(page.locator(OB + ' .ob4-sub-when')).toHaveClass(/is-on/);
+    await expect(btn).toHaveText('Enter');
+    const chips = page.locator('#cn-jdays .jd-chip');
+    expect(await chips.allTextContents()).toEqual(['TODAY', 'TUE6', 'WED7', 'THU8', 'FRI9', 'SAT10', 'SUN11']);
+    await expect(page.locator('#cn-jdays .jd-chip--on')).toHaveText('TODAY');
+    await expect(page.locator('#cn-jnote')).toHaveText('SESSIONS · MON 5 · THU 8 · MON 12 · THU 15');
+    await chips.nth(2).click();
+    await expect(page.locator('#cn-jdays .jd-chip--on')).toHaveText('WED7');
+    await expect(page.locator('#cn-jnote')).toHaveText('SESSIONS · WED 7 · SAT 10 · WED 14 · SAT 17');
+    // The start day is the only question this path is asked: ENTER is next.
+    await btn.click();
+    await obFinish(page);   // the notification ask stands between ENTER and the vows being made
+
+    await expect.poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_habits') || '[]') as Array<{ archived?: boolean }>).filter((h) => !h.archived).length), { timeout: 8_000 }).toBe(22);
+    const r = await page.evaluate(() => ({
+      start: localStorage.getItem('hb_jump_program_started'), v: localStorage.getItem('hb_jump_v'), goal: localStorage.getItem('hb_onboarding_goal'), path: localStorage.getItem('hb_path'),
+    }));
+    expect(r).toEqual({ start: '2026-10-07', v: '2', goal: 'jump_program', path: 'jump_program' });
     // before Day 1 the list is the dailies, and the row says when Day 1 begins
     await expect.poll(async () => (await listed(page)).slice().sort(), { timeout: 8_000 }).toEqual(DAILIES.slice().sort());
     expect(await guide(page)).toEqual(['DAY 1 STARTS WED', 'Keep the dailies until then.']);
