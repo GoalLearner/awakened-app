@@ -48,6 +48,10 @@ test.beforeEach(async ({ page }) => {
   // A spec that wants an answer routes the lookup itself (the later route wins).
   await page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"resultCount":0,"results":[]}' }));
   await page.addInitScript(() => {
+    // W1047 — every solo kill now rolls 1 in 20 for a shadow, and a hit plays a full-screen
+    // ceremony. Many specs kill bosses; the suite pins the dice to "never" so none of them can
+    // meet one by chance. Suite CC rolls its own.
+    (window as any).__shadowDice = () => 1;
     // W679 — the Monday update-reminder banner (#upd-banner) is a fixed top strip;
     // on a UTC-Monday CI run it would fire and could intercept top-of-screen taps
     // (same failure class as the Friday overlay). Hide it in the suite like the rest.
@@ -8777,15 +8781,16 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   });
 });
 
-// W1035 — the Shadow Army says how it works at the three moments a hunter meets it.
-test.describe('CC · The Shadow Army explains itself (W1035)', () => {
-  test('after a kill the toast says what to do; the ceremony says what a shadow does; the roster says how to get more', async ({ page }) => {
+// W1035 · W1047 — the Shadow Army. A shadow used to be earned in a 48-hour window after the kill;
+// since W1047 it DROPS: every solo kill rolls 1 in 20 for that boss's shadow, pure luck.
+test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
+  const HIT = 0.049, MISS = 0.05;   // the roll is `random < 1/20`
+  const luck = (page: Page, v: number) => page.evaluate((v) => { const w = window as any; w.__rolls = 0; w.__shadowLuck(() => { w.__rolls++; return v; }); }, v);
+  const kill = (page: Page, id: string) => page.evaluate((id) => { const s = (window as any).__shadowKill(id); return { pending: Object.keys(s.pending), owned: Object.keys(s.extracted), windows: Object.keys(s.windows), rolls: (window as any).__rolls }; }, id);
+  const seal = async (page: Page) => { await expect(page.locator('.arise-does.show')).toBeVisible({ timeout: 8000 }); await page.waitForTimeout(400); await page.locator('.arise-overlay').click(); };
+
+  test('the words: the roster and every solo boss say the odds; the ceremony says what a shadow does', async ({ page }) => {
     await freshApp(page);
-    const t = await page.evaluate(() => { const f = (window as any).__shadowToast; return [f('the_carouser'), f('the_steel_wolf'), f('the_insomniac')]; });
-    expect(t[0]).toBe('The Carouser’s shadow can rise. 3 flights within 48 hours, and it is yours.');
-    expect(t[1]).toBe('The Steel Wolf’s shadow can rise. 3,000 steps within 48 hours, and it is yours.');
-    expect(t[2]).toContain('one night of 3.5h+ sleep within 48 hours');
-    expect(t.join(' ')).not.toMatch(/extraction|!|\bfell(ed)?\b/i);
     // the ceremony
     await page.evaluate(() => (window as any).__arise('the_carouser'));
     await expect(page.locator('.arise-does.show')).toHaveText('It marches with you in the Ascent. +1% power.', { timeout: 6000 });
@@ -8799,8 +8804,95 @@ test.describe('CC · The Shadow Army explains itself (W1035)', () => {
     await page.locator('.arise-overlay').click();
     // the roster
     await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
-    await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Beat a boss, then do half of it again within 48 hours. Its shadow rises.');
+    await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Every boss you beat has a 1 in 20 chance to leave its shadow.');
     await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
+    const words = await page.evaluate(() => (document.getElementById('shadow-roster') as HTMLElement).textContent || '');
+    expect(words).not.toMatch(/48 hours|extraction|half|!|\bfell(ed)?\b/i);
+    await page.locator('#shadow-roster .sw-close').click();
+    // the boss sheet: the one place a hunter with no shadows learns they exist. A boss whose
+    // shadow is not owned says the odds.
+    await page.evaluate(() => (window as any).__readyHunt.open('the_glass_strider'));
+    await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 20.');
+  });
+
+  test('a miss says nothing and opens no window; a hit raises the shadow, once, and the boss never rolls again', async ({ page }) => {
+    await freshApp(page);
+    await luck(page, MISS);
+    expect(await kill(page, 'the_carouser')).toEqual({ pending: [], owned: [], windows: [], rolls: 1 });
+    await page.waitForTimeout(900);
+    await expect(page.locator('.arise-overlay')).toHaveCount(0);
+    expect(await page.evaluate(() => /shadow/i.test(document.body.innerText))).toBe(false);
+    await luck(page, HIT);
+    const won = await kill(page, 'the_carouser');
+    expect([won.pending, won.rolls]).toEqual([['the_carouser'], 1]);
+    await seal(page);
+    await expect(page.locator('.arise-overlay')).toHaveCount(0);
+    const after = await page.evaluate(() => { const s = (window as any).__shadows(); return { owned: Object.keys(s.extracted), pending: Object.keys(s.pending), marching: s.active }; });
+    expect(after).toEqual({ owned: ['the_carouser'], pending: [], marching: ['the_carouser'] });
+    expect(await page.evaluate(() => (localStorage.getItem('hb_funnel_queue') || '').split('arise_extracted').length - 1)).toBe(1);
+    // owned: the dice are not even picked up
+    await luck(page, HIT);
+    expect((await kill(page, 'the_carouser')).rolls).toBe(0);
+  });
+
+  test('1 in 20: the edge of the roll, and twenty thousand real ones', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const w = window as any;
+      const at = (v: number) => { w.__shadowLuck(() => v); return w.__shadowRoll(); };
+      const edge = [at(0), at(0.0499), at(0.05), at(0.999)];
+      w.__shadowLuck(null);                                   // the real dice
+      let hits = 0; for (let i = 0; i < 20000; i++) if (w.__shadowRoll()) hits++;
+      return { edge, hits };
+    });
+    expect(r.edge).toEqual([true, true, false, false]);
+    expect(r.hits).toBeGreaterThan(800);                      // 1,000 expected; far outside chance either way
+    expect(r.hits).toBeLessThan(1200);
+  });
+
+  test('no roll for a co-op boss or on a hunter\'s first day', async ({ page }) => {
+    await freshApp(page);
+    await luck(page, HIT);
+    expect(await kill(page, 'the_twin_maw')).toMatchObject({ pending: [], rolls: 0 });
+    await page.evaluate(() => { const d = new Date(); localStorage.setItem('hb_onboarding_first_xp_date', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); });
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    expect(await kill(page, 'the_steel_wolf')).toMatchObject({ pending: [], rolls: 0 });
+    await page.evaluate(() => localStorage.removeItem('hb_onboarding_first_xp_date'));
+    expect((await kill(page, 'the_steel_wolf')).pending).toEqual(['the_steel_wolf']);
+  });
+
+  test('two drops from one strike rise one after the other', async ({ page }) => {
+    await freshApp(page);
+    await luck(page, HIT);
+    // one STRIKE ALL: both kills land in the same moment
+    const both = await page.evaluate(() => { const w = window as any; w.__shadowKill('the_carouser'); return Object.keys(w.__shadowKill('the_steel_wolf').pending).sort(); });
+    expect(both).toEqual(['the_carouser', 'the_steel_wolf']);
+    await expect(page.locator('.arise-overlay')).toHaveCount(1, { timeout: 8000 });
+    await seal(page);
+    await expect(page.locator('.arise-name.show')).toHaveCount(0, { timeout: 4000 });   // the first has gone
+    await expect(page.locator('.arise-overlay')).toHaveCount(1, { timeout: 8000 });    // the second, by itself
+    await seal(page);
+    await expect(page.locator('.arise-overlay')).toHaveCount(0, { timeout: 4000 });
+    expect(await page.evaluate(() => { const s = (window as any).__shadows(); return [Object.keys(s.extracted).sort(), Object.keys(s.pending)]; })).toEqual([['the_carouser', 'the_steel_wolf'], []]);
+  });
+
+  test('a drop won before the app was closed rises at the next launch; a window from the old rule is still honoured', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w1047')) return; sessionStorage.setItem('__w1047', '1');
+        localStorage.setItem('hb_shadows_v1', JSON.stringify({ extracted: {}, active: [], pending: { the_insomniac: Date.now() - 60000 },
+          windows: { the_steel_wolf: { killAt: Date.now() - 3600000, until: Date.now() + 40 * 3600000, lastCheck: Date.now() } } }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    await expect(page.locator('.arise-overlay')).toHaveCount(1, { timeout: 20_000 });
+    await expect(page.locator('.arise-name.show')).toHaveText('Shadow of The Insomniac has joined your army.', { timeout: 6000 });
+    await seal(page);
+    // the open window is untouched, and its boss still says so
+    expect(await page.evaluate(() => Object.keys((window as any).__shadows().windows))).toEqual(['the_steel_wolf']);
+    await page.evaluate(() => (window as any).__readyHunt.open('the_steel_wolf'));
+    await expect(page.locator('#bfs-shadow-line')).toHaveText(/EXTRACTION OPEN — 3,000 steps within \d+h, and it rises\./, { timeout: 8000 });
   });
 });
 

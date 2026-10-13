@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1046'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1047'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7853,22 +7853,43 @@
   // Loyalty: any verified-activity day feeds the army. Three consecutive
   // zero days and the shadows kneel DORMANT — bonus paused, NEVER deleted
   // (no punishment beyond pause; one active day wakes them).
+  //
+  // W1047 (owner 2026-10-12: "random events like getting pet drops in RPGs") — A SHADOW IS A
+  // DROP NOW, NOT A TASK. The extraction window above is retired: every solo kill ROLLS for
+  // that boss's shadow, 1 in SHADOW_DROP_ONE_IN, the same on every boss, and it is pure luck
+  // (owner's three calls: random only, 1 in 20, no bad-luck protection). A hit plays the ARISE
+  // ceremony after the kill's own result screen. Nothing is said on a miss.
+  //   - Still one shadow per boss, forever; slots, power, loyalty: all unchanged.
+  //   - A window already open when this build arrives is HONOURED until it runs out (the hunter
+  //     was told "within 48 hours, and it is yours"); no new one ever opens.
+  //   - A hunter's first day does not roll (the day-one quiet rule): a drop is never spent unseen.
   // ═══════════════════════════════════════════════════════════════════════
   const SHADOWS_KEY = 'hb_shadows_v1';
   const SHADOW_SLOTS = { E: 1, D: 2, C: 3, B: 4, A: 5, S: 6, 'S+': 6 };
-  const SHADOW_WINDOW_MS = 48 * 3600 * 1000;
+  const SHADOW_WINDOW_MS = 48 * 3600 * 1000;   // legacy windows only (W1047)
   const SHADOW_DORMANT_DAYS = 3;
+  const SHADOW_DROP_ONE_IN = 20;               // W1047 — owner's number
+  // The dice. window.__shadowDice stands in for them in the test suite, which pins them to
+  // "never" so a kill in some other spec cannot raise a ceremony 1 time in 20.
+  function _shadowRolls() {
+    try {
+      const dice = (typeof window.__shadowDice === 'function') ? window.__shadowDice : Math.random;
+      return dice() < 1 / SHADOW_DROP_ONE_IN;
+    } catch (_) { return false; }
+  }
+  const SHADOW_HOW = 'Every boss you beat has a 1 in ' + SHADOW_DROP_ONE_IN + ' chance to leave its shadow.';
   function _shLoad() {
     try {
       const s = JSON.parse(localStorage.getItem(SHADOWS_KEY) || 'null') || {};
       s.extracted = s.extracted || {};   // bossId → { at, name }
       s.active    = Array.isArray(s.active) ? s.active : [];
-      s.windows   = s.windows || {};     // bossId → { killAt, until, lastCheck }
+      s.windows   = s.windows || {};     // bossId → { killAt, until, lastCheck } — legacy since W1047
+      s.pending   = s.pending || {};     // W1047 — bossId → at: a drop won, its ceremony not played yet
       s.zeroDays  = s.zeroDays | 0;
       s.dormant   = !!s.dormant;
       s.loyaltyDay = s.loyaltyDay || null;
       return s;
-    } catch (_) { return { extracted: {}, active: [], windows: {}, zeroDays: 0, dormant: false, loyaltyDay: null }; }
+    } catch (_) { return { extracted: {}, active: [], windows: {}, pending: {}, zeroDays: 0, dormant: false, loyaltyDay: null }; }
   }
   function _shSave(s) { try { localStorage.setItem(SHADOWS_KEY, JSON.stringify(s)); } catch (_) {} _w2Sync('shadows'); }
   function _shSlots() {
@@ -7881,28 +7902,40 @@
       return Math.min(s.active.length, _shSlots());
     } catch (_) { return 0; }
   }
-  /** Called at every solo kill site: opens (or refreshes) the 48h window. */
+  /** Called at every solo kill site, once per kill: the roll. */
   function _shadowOnBossKill(bossId) {
     try {
       const cfg = BOSSES[bossId]; if (!cfg || cfg.coopOnly) return;
       const s = _shLoad();
-      if (s.extracted[bossId]) return;                       // one shadow per boss, forever
-      s.windows[bossId] = { killAt: Date.now(), until: Date.now() + SHADOW_WINDOW_MS, lastCheck: 0 };
+      if (s.extracted[bossId] || s.pending[bossId]) return;   // one shadow per boss, forever
+      if (_newHunterQuiet()) return;                          // W940 — day one stays quiet: no roll
+      if (!_shadowRolls()) return;                            // nothing is said on a miss
+      // Won. Kept as `pending` until its ceremony has played, so a closed app cannot lose it.
+      s.pending[bossId] = Date.now();
+      delete s.windows[bossId];                               // a window left from the old rule is moot
       _shSave(s);
-      // W940 — the window still opens; a first-day hunter just isn't told yet.
-      // W950 — told on the next task, after the kill's result screen has claimed
-      // the stage, so the toast waits for it instead of landing on top.
-      // W1035 (owner 2026-10-08: "I wish this was more clear") — the toast used to announce
-      // "an extraction window" and stop there. It now says what to do and by when.
-      if (!_newHunterQuiet()) { setTimeout(function () { try { showHabitToast(_shadowWindowToast(cfg)); } catch (_) {} }, 0); }
-      try { renderShadowStrip(); } catch (_) {}
+      try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('arise_extracted', bossId); } catch (_) {}   // W894 — the only server-side trace of a shadow
+      setTimeout(_shadowPendingTick, 0);                      // after the kill site has queued its result screen
     } catch (_) {}
   }
-  // W1035 — "Its shadow can rise. 3 flights within 48 hours, and it is yours."
-  function _shadowWindowToast(cfg) {
-    return (cfg && cfg.name ? cfg.name + '’s shadow' : 'Its shadow') + ' can rise. ' + _shadowRiseCondText(cfg) + ' within 48 hours, and it is yours.';
+  // The kill's own result screen comes first; the shadow rises after it. One ceremony at a time:
+  // each one's seal calls back here for the next (two drops in one STRIKE ALL).
+  let _shadowPendingTimer = 0;
+  function _shadowPendingTick() {
+    try {
+      const s = _shLoad();
+      const ids = Object.keys(s.pending).filter(function (id) { return !s.extracted[id] && !!BOSSES[id]; });
+      if (!ids.length) return;
+      if (document.querySelector('.arise-overlay')) return;   // one is playing; its seal comes back here
+      if (_bossResultBusy || _bossResultQueue.length || _rhHold) {
+        clearTimeout(_shadowPendingTimer);
+        _shadowPendingTimer = setTimeout(_shadowPendingTick, 900);
+        return;
+      }
+      _ariseCeremony(ids[0]);
+    } catch (_) {}
   }
-  /** 50%-of-kill-condition summary for the boss-sheet strip. */
+  /** 50%-of-kill-condition summary: the boss sheet's line for a LEGACY window still open (W1047). */
   function _shadowRiseCondText(cfg) {
     const parts = [];
     if (typeof cfg.stepThreshold === 'number')  parts.push(Math.ceil(cfg.stepThreshold * 0.5).toLocaleString('en-US') + ' steps');
@@ -7987,6 +8020,7 @@
   }
   let _shadowTickBusy = false;
   function _shadowTick() {
+    try { _shadowPendingTick(); } catch (_) {}   // W1047 — a drop won before the app was closed
     if (_shadowTickBusy) return;
     const s = _shLoad();
     const ids = Object.keys(s.windows);
@@ -8060,11 +8094,12 @@
     if (_stageDefer('arise:' + bossId, 65, function () { _ariseCeremony(bossId); }, ['arise'])) return;
     s.extracted[bossId] = { at: Date.now(), name: 'Shadow of ' + (cfg.name || 'the Slain') };
     delete s.windows[bossId];
+    delete s.pending[bossId];   // W1047 — it has risen
     if (s.active.indexOf(bossId) === -1 && s.active.length < _shSlots()) s.active.push(bossId);
     _shSave(s);
     let reduced = false;
     try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
-    if (reduced) { try { showHabitToast('ARISE — ' + s.extracted[bossId].name + ' joins your army.'); } catch (_) {} try { renderShadowStrip(); } catch (_) {} return; }
+    if (reduced) { try { showHabitToast('ARISE — ' + s.extracted[bossId].name + ' joins your army.'); } catch (_) {} try { renderShadowStrip(); } catch (_) {} setTimeout(_shadowPendingTick, 600); return; }
     const ov = document.createElement('div');
     ov.className = 'arise-overlay';
     ov.innerHTML =
@@ -8103,6 +8138,7 @@
       setTimeout(function () { try { ov.remove(); } catch (_) {} }, 400);
       try { renderShadowStrip(); } catch (_) {}
       try { recordGuildActivity('boss_kill', { bossId: bossId, bossName: s.extracted[bossId].name, rank: cfg.rank || null, dayDate: getPTDate() }, 'shadow_arise_' + bossId); } catch (_) {}
+      setTimeout(_shadowPendingTick, 600);   // W1047 — another drop from the same strike, if there is one
     };
     ov.addEventListener('click', function () { if (Date.now() - (s.extracted[bossId].at || 0) > 2800) seal(); });
     setTimeout(seal, 14000);   // failsafe
@@ -8123,7 +8159,7 @@
           '<div class="shr-sub">' + esc(cfg.rank || '?') + '-RANK SHADOW' + (s.dormant ? ' · KNEELING' : marching ? ' · MARCHING' : ' · AT REST') + '</div></div>' +
           '<button type="button" class="shr-toggle' + (marching ? ' on' : '') + '" data-shadow-toggle="' + esc(id) + '">' + (marching ? 'MARCHING' : 'REST') + '</button>' +
         '</div>';
-      }).join('') : '<div class="shr-empty">No shadows yet. Defeat a boss, then repeat half its trial within 48 hours — and command it to rise.</div>';
+      }).join('') : '<div class="shr-empty">No shadows yet. ' + SHADOW_HOW + '</div>';
       const ov = document.createElement('div');
       ov.id = 'shadow-roster'; ov.className = 'sw-overlay';
       ov.innerHTML =
@@ -8131,7 +8167,7 @@
           '<div class="sw-titlebar">SHADOW ARMY</div>' +
           '<div class="shr-slots">' + Math.min(s.active.length, slots) + ' MARCHING · ' + slots + ' SLOT' + (slots === 1 ? '' : 'S') + ' AT YOUR RANK' + (s.dormant ? ' · THE ARMY KNEELS (unfed ' + s.zeroDays + ' days)' : '') + '</div>' +
           rows +
-          (ids.length ? '<div class="shr-how">Beat a boss, then do half of it again within 48 hours. Its shadow rises.</div>' : '') +
+          (ids.length ? '<div class="shr-how">' + SHADOW_HOW + '</div>' : '') +
           '<div class="sw-foot">EACH MARCHING SHADOW: +1% ASCENT POWER.<br>SHADOWS KNEEL AT THE THRESHOLD OF MILESTONE FLOORS.</div>' +
           '<button type="button" class="sw-close" aria-label="Close">CLOSE</button>' +
         '</div>';
@@ -8175,7 +8211,10 @@
     // W862 QA — __shadows() state; __arise(bossId) forces the ceremony.
     window.__shadows = function () { return _shLoad(); };
     window.__arise = function (bossId) { _ariseCeremony(bossId || 'the_steel_wolf'); };
-    window.__shadowToast = function (bossId) { return _shadowWindowToast(BOSSES[bossId]); };   // W1035 QA
+    // W1047 QA — __shadowLuck(fn) stands in for the dice; __shadowKill(id) is the kill site's call.
+    window.__shadowLuck = function (fn) { window.__shadowDice = (typeof fn === 'function') ? fn : null; };   // null = the real dice
+    window.__shadowKill = function (bossId) { _shadowOnBossKill(bossId); return _shLoad(); };
+    window.__shadowRoll = _shadowRolls;
   } catch (_) {}
 
   // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
@@ -24507,7 +24546,7 @@
         // W869 — RED GATE: the sealed hunt pays double + a mercy re-roll below.
         const _rgBonus_1 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_1 > 0) earnSouls(_rgBonus_1, 'red_gate_kill_' + id);
-        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
+        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 · W1047 — the roll for this boss's shadow
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
         let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
@@ -24634,7 +24673,7 @@
         // W869 — RED GATE double + mercy re-roll (per-day boss path).
         const _rgBonus_3 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_3 > 0) earnSouls(_rgBonus_3, 'red_gate_kill_' + id);
-        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 — ARISE extraction window
+        if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 · W1047 — the roll for this boss's shadow
         let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill && !dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
@@ -24752,7 +24791,7 @@
     // W869 — RED GATE double + mercy re-roll (single-shot kill path).
     const _rgBonus_4 = (state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
     if (_rgBonus_4 > 0) earnSouls(_rgBonus_4, 'red_gate_kill_' + id);
-    try { _shadowOnBossKill(id); } catch (_) {}   // W862 — ARISE extraction window
+    try { _shadowOnBossKill(id); } catch (_) {}   // W862 · W1047 — the roll for this boss's shadow
     let dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
     if (!dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869 — the seal's second roll
     // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
@@ -56366,8 +56405,9 @@
           const hrsLeft = Math.max(1, Math.ceil((shState.windows[id].until - Date.now()) / 3600000));
           shl.textContent = '◈ EXTRACTION OPEN — ' + _shadowRiseCondText(cfg) + ' within ' + hrsLeft + 'h, and it rises.';
           shl.classList.remove('hidden');
-        } else if (!cfg.coopOnly && (state.kill_count || 0) > 0) {
-          shl.textContent = '◈ Its shadow waits. Defeat it again to open an extraction window.';
+        } else if (!cfg.coopOnly) {
+          // W1047 — the one place a hunter with no shadows learns they exist: every solo boss says it.
+          shl.textContent = '◈ Its shadow rises on 1 kill in ' + SHADOW_DROP_ONE_IN + '.';
           shl.classList.remove('hidden');
         } else {
           shl.classList.add('hidden');
