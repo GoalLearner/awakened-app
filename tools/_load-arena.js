@@ -67,6 +67,12 @@ sandbox.globalThis = sandbox; sandbox.self = windowStub;
 const code = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 const ctx = vm.createContext(sandbox);
 let loadErr = null;
+// The two libraries index.html loads BEFORE app.js (W471 economy, W992 drops). Since W992 app.js
+// reads AwakenedDrops at load, so without these the IIFE threw before the Arena export and
+// every sim in tools/ died with "Arena.simAscent not exposed".
+for (const lib of ['economy.js', 'drops.js']) {
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'lib', lib), 'utf8'), ctx, { filename: 'lib/' + lib });
+}
 try { vm.runInContext(code, ctx, { filename: 'app.js' }); } catch (e) { loadErr = e; }
 const Arena = windowStub.Arena || win.Arena;
 if (!Arena || !Arena.simAscent) {
