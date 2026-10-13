@@ -6687,11 +6687,16 @@ test.describe('BX · The pop-up leads to the marks (W1029)', () => {
 // first day (day one stays quiet, and most new hunters beat a boss on it). It stays OWED, and the
 // next boss win after day one pays it, on a card that no longer says "First".
 test.describe('BY · The first-boss moment survives day one (W1030)', () => {
-  const ymd = (off: number) => { const d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const state = (page: Page, keys: Record<string, string | null>) => page.evaluate((k) => {
-    ['hb_review_first_boss_done', 'hb_review_boss_owed', 'hb_rm_shown_v1', 'hb_onboarding_first_xp_date'].forEach((x) => localStorage.removeItem(x));
-    Object.keys(k).forEach((x) => { if (k[x] != null) localStorage.setItem(x, k[x] as string); });
-  }, keys);
+  // A day `off` days from today, as the BROWSER counts days. ('@day:-1' is turned into a date
+  // inside the page: a date made in the test process can be a day ahead of the browser's, since
+  // the process runs in UTC and the browser in the machine's zone, and these specs then failed
+  // every evening on a Pacific machine.)
+  const ymd = (off: number) => '@day:' + off;
+  const state = (page: Page, keys: Record<string, string | null>, keep = false) => page.evaluate(({ k, keep }) => {
+    const day = (v: string) => { if (v.indexOf('@day:') !== 0) return v; const d = new Date(); d.setDate(d.getDate() + Number(v.slice(5))); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    if (!keep) ['hb_review_first_boss_done', 'hb_review_boss_owed', 'hb_rm_shown_v1', 'hb_onboarding_first_xp_date'].forEach((x) => localStorage.removeItem(x));
+    Object.keys(k).forEach((x) => { if (k[x] != null) localStorage.setItem(x, day(k[x] as string)); });
+  }, { k: keys, keep });
   const moment = (page: Page) => page.evaluate(() => { const m = (window as any).__rm.bossMoment(); return [m, localStorage.getItem('hb_review_first_boss_done'), localStorage.getItem('hb_review_boss_owed')]; });
 
   test('day one: no card and the moment is owed; the next win after day one pays it, once', async ({ page }) => {
@@ -6699,7 +6704,7 @@ test.describe('BY · The first-boss moment survives day one (W1030)', () => {
     await state(page, { hb_onboarding_first_xp_date: ymd(0) });
     expect(await moment(page)).toEqual([null, '1', '1']);            // the first boss, on day one: quiet, but owed
     expect(await moment(page)).toEqual([null, '1', '1']);            // a second boss the same day: still quiet
-    await page.evaluate((d) => localStorage.setItem('hb_onboarding_first_xp_date', d), ymd(-1));
+    await state(page, { hb_onboarding_first_xp_date: ymd(-1) }, true);   // the same hunter, a day later
     expect(await moment(page)).toEqual(['owed', '1', '1']);          // day two: this win is the moment
     expect(await moment(page)).toEqual(['owed', '1', '1']);          // and stays so until the card is really shown
     await page.evaluate(() => localStorage.setItem('hb_rm_shown_v1', JSON.stringify(['boss'])));
@@ -8183,7 +8188,12 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
         ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
          'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
-        Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v));
+        // '@today' = the BROWSER's own date. A date made in the test process can be a day ahead of
+        // the browser (the process runs in UTC, the browser in the machine's zone), which made the
+        // day-one specs fail every evening on a Pacific machine.
+        const now = new Date();
+        const tymd = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v === '@today' ? tymd : v));
       } catch (_) {}
     }, { bosses, extra: extra || {} });
     await page.reload();
@@ -8576,7 +8586,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   });
 
   // W1038 — day one: the sheet rises for a FIRST kill, and only for a first kill.
-  const TODAY = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const TODAY = () => '@today';   // the browser's own date, filled in by hunter()
   test('W1038 — day one, slept seven hours: the Insomniac is offered at once and one STRIKE is the first kill', async ({ page }) => {
     const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
     await hunter(page, { the_steel_wolf: run }, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
@@ -8597,6 +8607,173 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await page.waitForTimeout(1500);
     await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
     await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
+  });
+
+  // W1046 — the phone notification. A native watcher posts it (it cannot run here); these pin
+  // what the app hands it, and what a tap on it does.
+  type Watch = { v: number; on: boolean; at: number; pausedUntil: number; quiet: { start: string; end: string } | null; hold: string; seenDay: string; seen: string[];
+    hunts: Array<{ id: string; name: string; metric: string; bar: number; beaten: string; until: number }> };
+  const watch = (page: Page) => page.evaluate(() => (window as any).__readyHunt.watch() as Watch);
+  const today = (page: Page) => page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+  const ids = (w: Watch) => w.hunts.map((h) => h.id).sort();
+
+  test('W1046 — the watch list: the one-number bosses at or below the hunter\'s rank, each with its doors', async ({ page }) => {
+    await hunter(page, {
+      ...GATE.D, ...GATE.C,
+      the_steel_wolf: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() },
+      the_carouser: { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 },
+    });
+    await health(page, {});
+    const w = await watch(page), day = await today(page);
+    expect(w).toMatchObject({ v: 1, on: true, pausedUntil: 0, quiet: { start: '22:00', end: '07:00' }, hold: '', seenDay: day, seen: [] });
+    expect(Math.abs(Date.now() - w.at)).toBeLessThan(60_000);
+    // E, D and C are open; the A-rank Anvil is not. Compound and many-day bosses are never on it.
+    expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_marathon_wraith', 'the_steel_wolf']);
+    const by = Object.fromEntries(w.hunts.map((h) => [h.id, h]));
+    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 10000, beaten: '', until: 0 });
+    expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 10 });
+    expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 7 });
+    expect(by.the_dream_tyrant).toMatchObject({ metric: 'sleep', bar: 7.5 });
+    expect(by.the_steel_wolf.beaten).toBe(day);                       // beaten today: the watcher leaves it alone
+    expect(by.the_carouser.until).toBeGreaterThan(Date.now() + 19 * 3600_000);   // running: it resolves on its own
+  });
+
+  test('W1046 — the hunter\'s doors ride along: Health off, notifications off, a pause, quiet hours off, a fee out of reach', async ({ page }) => {
+    await hunter(page, { ...GATE.D, ...GATE.C }, purse(30));
+    await health(page, {});
+    let w = await watch(page);
+    expect(w.on).toBe(true);
+    expect(ids(w)).toEqual(['the_carouser', 'the_insomniac', 'the_steel_wolf']);   // 30 souls: an E-rank fee (25), not a D (50) or a C (100)
+    const until = Date.now() + 3 * 3600_000;
+    await page.evaluate((u) => { localStorage.setItem('hb_notif_paused_until', String(u)); localStorage.setItem('hb_notif_quiet_enabled', '0'); }, until);
+    w = await watch(page);
+    expect([w.on, w.pausedUntil, w.quiet]).toEqual([true, until, null]);
+    await page.evaluate(() => { localStorage.setItem('hb_notif_disabled', '1'); });
+    expect((await watch(page)).on).toBe(false);
+    await page.evaluate(() => { localStorage.removeItem('hb_notif_disabled'); localStorage.setItem('hb_notif_quiet_start', '21:30'); localStorage.setItem('hb_notif_quiet_enabled', '1'); });
+    w = await watch(page);
+    expect([w.on, w.quiet]).toEqual([true, { start: '21:30', end: '07:00' }]);
+    await health(page, { granted: false });
+    expect((await watch(page)).on).toBe(false);
+  });
+
+  test('W1046 — day one: a first kill may be announced, and after it the phone is held for the day', async ({ page }) => {
+    await hunter(page, {}, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
+    await health(page, {});
+    expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
+    expect((await watch(page)).hold).toBe('');
+    await page.evaluate(() => { localStorage.setItem('hb_bosses', JSON.stringify({ the_insomniac: { engaged: false, kill_count: 1, streak: 0, last_defeated_at: new Date().toISOString() } })); });
+    expect((await watch(page)).hold).toBe(await today(page));
+  });
+
+  test('W1046 — a boss the sheet has announced is passed on as seen, so the phone stays quiet about it', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 9632 });
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
+    const w = await watch(page);
+    expect([w.seenDay, w.seen]).toEqual([await today(page), ['the_steel_wolf']]);
+  });
+
+  test('W1046 — the list is written through the Filesystem plugin when it changes, and only then', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, {});
+    const writes = await page.evaluate(() => {
+      const w = window as any, real = w.Capacitor, out: any[] = [];
+      w.Capacitor = { isNativePlatform: () => true, Plugins: { Filesystem: { writeFile: (o: any) => { out.push(o); return Promise.resolve(); } } } };
+      try {
+        w.__readyHunt.watchSync();
+        w.__readyHunt.watchSync();                                  // nothing changed: not written again
+        localStorage.setItem('hb_notif_disabled', '1');
+        w.__readyHunt.watchSync();                                  // the hunter turned notifications off: written
+      } finally { w.Capacitor = real; localStorage.removeItem('hb_notif_disabled'); }
+      return out;
+    });
+    expect(writes.length).toBe(2);
+    expect(writes.map((o) => [o.path, o.directory, o.encoding])).toEqual([['ready-hunt-watch.json', 'LIBRARY', 'utf8'], ['ready-hunt-watch.json', 'LIBRARY', 'utf8']]);
+    const sent = writes.map((o) => JSON.parse(o.data) as Watch);
+    expect(sent.map((x) => x.on)).toEqual([true, false]);
+    expect(ids(sent[0])).toEqual(['the_carouser', 'the_insomniac', 'the_steel_wolf']);
+    // on the web (no plugin) the same call is a quiet no-op
+    expect(await page.evaluate(() => typeof (window as any).__readyHunt.watchSync())).toBe('object');
+  });
+
+  test('W1046 — a tap on the notification: the sheet rises for what is ready, even a boss announced earlier today', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 9632 });
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
+    await page.locator('#rh-sheet [data-rh-close]').click();
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+    await page.evaluate(() => (window as any).__readyHunt.scan());
+    await page.waitForTimeout(1200);
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);          // announced: a plain look does not raise it again
+    expect(await page.evaluate(() => (window as any).__readyHunt.open('the_steel_wolf'))).toBe(true);
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf');
+    await expect(sheet(page).locator('.rh-call')).toHaveText(/^strike$/i);
+    await expect(page.locator('#boss-fs-overlay')).toBeHidden();
+  });
+
+  test('W1046 — a tap when nothing is ready after all opens the boss itself, never nothing', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { steps: 120 });
+    expect(await page.evaluate(() => (window as any).__readyHunt.open('the_steel_wolf'))).toBe(true);
+    await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
+  });
+
+  test('W1046 — the words: the hunter\'s own number, the boss by name, and no shouting', async ({ page }) => {
+    await freshApp(page);
+    const t = await page.evaluate(() => { const n = (window as any).__readyHunt.noteText; return [n('steps', 10412, 1, 'The Marathon Wraith'), n('flights', 12, 2, 'x'), n('sleep', 7 + 40 / 60, 3, 'x'), n('sleep', 8, 1, 'The Insomniac')]; });
+    expect(t).toEqual([
+      { title: 'A hunt is ready', body: '10,412 steps today. The Marathon Wraith is yours.' },
+      { title: '2 hunts are ready', body: '12 flights today. One tap takes both.' },
+      { title: '3 hunts are ready', body: '7 h 40 m last night. One tap takes all 3.' },
+      { title: 'A hunt is ready', body: '8 h last night. The Insomniac is yours.' },
+    ]);
+    expect(JSON.stringify(t)).not.toMatch(/!|\bfell/i);
+  });
+
+  test('W1046 — signing out, and a TEST HUNTER run, both leave the phone with nothing to say', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, {});
+    expect((await watch(page)).on).toBe(true);
+    const r = await page.evaluate(async () => {
+      const w = window as any, real = w.Capacitor, realBox = w.__awkSandbox, out: any[] = [];
+      w.__awkSandbox = { active: () => true };
+      const inSandbox = w.__readyHunt.watch().on;
+      w.__awkSandbox = realBox;
+      const web = await w.__readyHunt.watchOff();                   // no plugin on the web: nothing to write
+      w.Capacitor = { isNativePlatform: () => true, Plugins: { Filesystem: { writeFile: (o: any) => { out.push(o); return Promise.resolve(); } } } };
+      let phone = false;
+      try { phone = await w.__readyHunt.watchOff(); } finally { w.Capacitor = real; }
+      return { inSandbox, web, phone, out };
+    });
+    expect([r.inSandbox, r.web, r.phone, r.out.length]).toEqual([false, false, true, 1]);
+    expect([r.out[0].path, r.out[0].directory]).toEqual(['ready-hunt-watch.json', 'LIBRARY']);
+    expect(JSON.parse(r.out[0].data)).toMatchObject({ v: 1, on: false, hunts: [], seen: [] });
+  });
+
+  test('W1046 — the owner\'s preview posts the notification the watcher would, with today\'s real numbers when there are any', async ({ page }) => {
+    await hunter(page, { ...GATE.D, ...GATE.C });
+    await expect(page.locator('#settings-preview-readyhunt-note')).toHaveClass(/hidden/);   // not the owner: no row
+    const preview = () => page.evaluate(() => {
+      const w = window as any, real = w.Capacitor, out: any[] = [];
+      w.Capacitor = { Plugins: { LocalNotifications: { schedule: (o: any) => { out.push(o); return Promise.resolve(); } } } };
+      let note: any = null;
+      try { note = w.__readyHunt.previewNote(); } finally { w.Capacitor = real; }
+      return { note: note && { id: note.id, title: note.title, body: note.body, extra: note.extra, inMs: new Date(note.schedule.at).getTime() - Date.now() }, sent: out.length };
+    });
+    expect(await page.evaluate(() => (window as any).__readyHunt.previewNote())).toBeNull();   // the web has no notifications to send
+    await health(page, { steps: 120 });
+    let p = await preview();                    // nothing ready: the sample
+    expect(p.sent).toBe(1);
+    expect(p.note).toMatchObject({ id: 88146, title: 'A hunt is ready', body: '6,412 steps today. The Steel Wolf is yours.', extra: { kind: 'hunt', bossId: 'the_steel_wolf' } });
+    expect(p.note.inMs).toBeGreaterThan(6000);
+    expect(p.note.inMs).toBeLessThan(9000);
+    await health(page, { steps: 10400 });       // three step bosses at C rank
+    await expect(sheet(page)).toBeVisible({ timeout: 8000 });
+    p = await preview();
+    expect(p.note).toMatchObject({ title: '3 hunts are ready', body: '10,400 steps today. One tap takes all 3.', extra: { kind: 'hunt', bossId: 'the_marathon_wraith' } });
   });
 });
 
@@ -8648,3 +8825,68 @@ test.describe('CD · Sign-out forgets the push token (W1040)', () => {
     expect(r).toEqual({ none: false, first: true, again: false, failed: false, calls: ['a'.repeat(64)], left: null });
   });
 });
+
+// W1046 — Apple Health now wakes the app in the background (the Ready Hunt watcher), and iOS
+// builds the web view on that wake. A boot there would ping app-open, seal vows and sync for a
+// hunter who never opened anything, so on the phone a page that is hidden at load waits.
+test.describe('CE · A launch nobody can see does not start the app (W1046)', () => {
+  // The first load of the spec is "the phone, in the background": native, hidden, no frame painted.
+  const background = (page: Page) => page.addInitScript(() => {
+    const w = window as any;
+    if (sessionStorage.getItem('__w1046_boot')) return;
+    sessionStorage.setItem('__w1046_boot', '1');
+    w.__vis = 'hidden'; w.__native = false;
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => w.__vis });
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => w.__vis === 'hidden' });
+    w.Capacitor = { isNativePlatform: () => w.__native, getPlatform: () => (w.__native ? 'ios' : 'web'), Plugins: {} };
+    // "The phone" only from the moment the page has loaded: while the scripts are read it is still
+    // the web, because the sign-in gate at the top of app.js has no local stand-in on a phone.
+    // This listener is registered before app.js's own, so it runs first.
+    document.addEventListener('DOMContentLoaded', () => { w.__native = true; });
+    w.__frames = []; window.requestAnimationFrame = ((cb: FrameRequestCallback) => { w.__frames.push(cb); return 0; }) as typeof window.requestAnimationFrame;
+  });
+  const booted = (page: Page) => page.evaluate(() => (window as any).__booted());
+  // from here on the page is an ordinary web page again, so the boot that follows is the one every other spec runs
+  const plain = (page: Page) => page.evaluate(() => { const w = window as any; w.__native = false; w.__vis = 'visible'; });
+
+  test('hidden at load on the phone: nothing starts, nothing is sent; it boots the moment it is seen', async ({ page }) => {
+    const pings: string[] = [];
+    page.on('request', (r) => { if (/app-open|\/v1\/users\/me\/state/.test(r.url())) pings.push(r.url()); });
+    await background(page);
+    await freshApp(page);                       // the tab bar is plain HTML: it is there with or without a boot
+    await page.waitForTimeout(1500);
+    expect(await booted(page)).toBe(false);
+    expect(pings).toEqual([]);
+    expect(await page.evaluate(() => localStorage.getItem('hb_update_last_seen_at'))).toBeNull();   // init never ran
+    await plain(page);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    expect(await booted(page)).toBe(true);
+    await page.locator('#tab-habits').click();
+    await expect(page.locator('#habits-section, #tab-habits.active').first()).toBeVisible();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('hb_update_last_seen_at')), { timeout: 8_000 }).not.toBeNull();
+  });
+
+  test('a painted frame, or a touch, is enough to start it; a visible launch and the web never wait', async ({ page }) => {
+    await background(page);
+    await freshApp(page);
+    expect(await booted(page)).toBe(false);
+    // two frames: only a page someone can see paints them
+    await plain(page);
+    await page.evaluate(() => { const w = window as any; const run = () => { const f = w.__frames.splice(0); f.forEach((cb: FrameRequestCallback) => cb(0)); }; run(); run(); });
+    expect(await booted(page)).toBe(true);
+    // the same page loaded again is an ordinary visible load (the init script stands down): no wait at all
+    await page.reload();
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    expect(await booted(page)).toBe(true);
+  });
+
+  test('held, then touched: the touch itself starts it', async ({ page }) => {
+    await background(page);
+    await freshApp(page);
+    expect(await booted(page)).toBe(false);
+    await plain(page);
+    await page.evaluate(() => { (window as any).__vis = 'hidden'; document.dispatchEvent(new Event('pointerdown', { bubbles: true })); });
+    expect(await booted(page)).toBe(true);
+  });
+});
+

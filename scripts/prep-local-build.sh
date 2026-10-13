@@ -27,6 +27,9 @@
 # Usage:
 #   bash scripts/prep-local-build.sh                       # prep only
 #   bash scripts/prep-local-build.sh 81                    # prep + set build number to 81
+#   READY_HUNT_BG=0 bash scripts/prep-local-build.sh 81    # same, WITHOUT the Ready Hunt background
+#                                                          # watcher (step 8d) — the escape hatch if an
+#                                                          # archive ever fails on that file or its entitlement
 #
 # Exit nonzero on any failure. Verbose by default so a stuck step is obvious.
 # ─────────────────────────────────────────────────────────────────────
@@ -396,6 +399,104 @@ SWIFT
   fi
 else
   echo "  ⚠ AppDelegate.swift not found at $APPDELEGATE — push forwarding NOT applied"
+fi
+echo ""
+
+# ── 8d. Ready Hunt background watcher (W1046) ───────────────────────
+# native/readyhunt/ReadyHuntWatcher.swift is woken by Apple Health in the background and
+# posts the "A hunt is ready" notification. `cap sync` never adds hand-written Swift, so each
+# run: copy the file into the App target, call it once from AppDelegate at launch, and add the
+# HealthKit background-delivery entitlement. Idempotent, and written not to stop the build:
+# if a piece cannot be installed, all of it is taken out again and the app is what it was.
+# The one thing that can still fail an Archive is signing: under manual signing an entitlement
+# the provisioning profile lacks is refused (the W604/W607 push lesson). So the key is written
+# only when a profile for this app carries it; otherwise the watcher is installed but asleep,
+# and the script says how to wake it. READY_HUNT_BG=0 takes all of it out on purpose (see Usage).
+echo "── [8d] Ready Hunt watcher (W1046) ──"
+RH_SRC="native/readyhunt/ReadyHuntWatcher.swift"
+RH_DST="ios/App/App/ReadyHuntWatcher.swift"
+RH_KEY="com.apple.developer.healthkit.background-delivery"
+rh_target() {   # $1 = add | remove — the file's membership of the App target
+  (cd ios/App && RH_MODE="$1" ruby -e "
+    require 'xcodeproj'
+    project = Xcodeproj::Project.open('App.xcodeproj')
+    target = project.targets.find { |t| t.name == 'App' }
+    raise 'App target not found' unless target
+    group = project.main_group['App']
+    raise 'App group not found' unless group
+    ref = group.files.find { |f| f.path == 'ReadyHuntWatcher.swift' }
+    if ENV['RH_MODE'] == 'add'
+      ref ||= group.new_file('ReadyHuntWatcher.swift')
+      target.add_file_references([ref]) unless target.source_build_phase.files_references.include?(ref)
+      puts '  ReadyHuntWatcher.swift: in the App target'
+    elsif ref
+      target.source_build_phase.remove_file_reference(ref)
+      ref.remove_from_project
+      puts '  ReadyHuntWatcher.swift: out of the App target'
+    end
+    project.save
+  ")
+}
+rh_remove() {
+  # The call goes first: with it gone, a file left behind in the target still compiles on its own.
+  if [ -f "$APPDELEGATE" ]; then sed -i '' '/ReadyHuntWatcher\.shared\.start()/d' "$APPDELEGATE"; fi
+  if rh_target remove; then rm -f "$RH_DST"; fi   # never delete a file the project still lists
+  /usr/libexec/PlistBuddy -c "Delete :$RH_KEY" "$ENTITLEMENTS" 2>/dev/null || true
+}
+# Does a provisioning profile for THIS app carry the background-delivery entitlement?
+# Echoes yes | no | unknown (unknown = no profile for the app was found to ask, e.g. automatic signing).
+rh_profile() {
+  local dir f xml state="unknown"
+  for dir in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+    [ -d "$dir" ] || continue
+    for f in "$dir"/*.mobileprovision; do
+      [ -f "$f" ] || continue
+      xml="$(security cms -D -i "$f" 2>/dev/null || true)"
+      case "$xml" in *".com.goallearner.awakened</string>"*) ;; *) continue ;; esac   # the app's own, not the widget's
+      case "$xml" in *"$RH_KEY"*) echo "yes"; return 0 ;; *) state="no" ;; esac
+    done
+  done
+  echo "$state"
+}
+rh_call() {   # one line at the top of application(_:didFinishLaunchingWithOptions:)
+  if grep -q 'ReadyHuntWatcher.shared.start()' "$APPDELEGATE"; then return 0; fi
+  RH_APPDELEGATE="$APPDELEGATE" ruby -e "
+    path = ENV['RH_APPDELEGATE']
+    src = File.read(path)
+    hit = src.sub!(/(didFinishLaunchingWithOptions[^\n]*\{[ \t]*\n)/) { \$1 + \"        ReadyHuntWatcher.shared.start()   // W1046: the Ready Hunt watcher\n\" }
+    raise 'didFinishLaunchingWithOptions not found in AppDelegate.swift' unless hit
+    File.write(path, src)
+  "
+}
+if [ "${READY_HUNT_BG:-1}" = "0" ]; then
+  rh_remove
+  echo "  Ready Hunt watcher: OFF (READY_HUNT_BG=0). This build sends no phone notification for a ready hunt."
+elif [ ! -f "$RH_SRC" ] || [ ! -f "$APPDELEGATE" ]; then
+  echo "  ⚠ $RH_SRC or $APPDELEGATE not found — Ready Hunt watcher NOT installed"
+else
+  cp -f "$RH_SRC" "$RH_DST"
+  if rh_target add && rh_call; then
+    echo "  AppDelegate launch call: $(grep -c 'ReadyHuntWatcher.shared.start()' "$APPDELEGATE") ✓"
+    RH_PROFILE="$(rh_profile)"
+    if [ "$RH_PROFILE" = "no" ]; then
+      /usr/libexec/PlistBuddy -c "Delete :$RH_KEY" "$ENTITLEMENTS" 2>/dev/null || true
+      echo "  ⚠ No provisioning profile for com.goallearner.awakened carries"
+      echo "    $RH_KEY, so the entitlement was NOT written (it would fail the Archive)."
+      echo "    The watcher is installed but iOS will not wake it: this build sends no phone"
+      echo "    notification for a ready hunt. To turn it on: developer.apple.com → Profiles →"
+      echo "    edit and re-save 'Awakened App Store Manual', download it, double-click it, and"
+      echo "    run this script again."
+    else
+      /usr/libexec/PlistBuddy -c "Add :$RH_KEY bool true" "$ENTITLEMENTS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Set :$RH_KEY true" "$ENTITLEMENTS" || \
+      echo "  ⚠ $RH_KEY could not be written to $ENTITLEMENTS"
+      echo "  $RH_KEY: $(/usr/libexec/PlistBuddy -c "Print :$RH_KEY" "$ENTITLEMENTS" 2>/dev/null || echo 'not set') (profile check: $RH_PROFILE)"
+      echo "  Ready Hunt watcher: installed ✓"
+    fi
+  else
+    rh_remove
+    echo "  ⚠ Ready Hunt watcher could NOT be installed — taken out again; the build goes on without it"
+  fi
 fi
 echo ""
 

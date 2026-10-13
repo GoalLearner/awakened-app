@@ -272,7 +272,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1045'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1046'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1677,7 +1677,7 @@
   // The scan reads what the kill resolver reads (today's steps and flights, last night's
   // sleep keyed to today), so a boss it calls ready is a boss the resolver will kill.
   // Engaged bosses are left out: they resolve on their own and show their own result.
-  // Not built here: the phone notification and the sheet's not-ready states (deferred).
+  // The phone notification is W1046, below. Not built: the sheet's not-ready states (deferred).
   const RH_SEEN_KEY = 'hb_ready_hunt_seen_v1';   // { day, ids } — bosses already announced today
   const RH_UNITS = { steps: 'steps today', flights: 'flights today', sleep: 'last night' };
   const RH_SCAN_EVERY_MS = 60000;
@@ -1779,6 +1779,7 @@
       _rhScanning = null;
       try { _renderHuntRow(); } catch (_) {}
       try { _rhMaybePop(); } catch (_) {}
+      try { _rhWatchSync(); _rhClearPhoneNote(); } catch (_) {}   // W1046
     }
   }
   // Still true right now? (the day turned, the boss was engaged or beaten since the scan)
@@ -1795,6 +1796,137 @@
     window.__readyHunt.lead = _rhLead;
     window.__readyHunt.offers = function () { return _rhLiveOffers().map(function (o) { return o.bossId; }); };
     window.__readyHunt.openSheet = function () { const l = _rhLiveOffers(); if (l.length) openReadyHunt(l); return l.length; };
+  } catch (_) {}   // QA
+
+  // W1046 — THE READY HUNT, ON THE PHONE (owner 2026-10-12: "add the phone notification for a
+  // ready hunt"). This file only reads Apple Health while the app is open, so a hunter who
+  // walked 10,000 steps and never opened it was told nothing. A small native watcher
+  // (native/readyhunt/ReadyHuntWatcher.swift, installed by scripts/prep-local-build.sh 8d) is
+  // woken by Apple Health in the background, reads today's number the way this file does, and
+  // posts "A hunt is ready" itself. It knows nothing about bosses: THIS is the list it may
+  // announce, written to Library/ready-hunt-watch.json whenever it changes.
+  //   - Only one-number, one-day bosses are on it (steps, flights, sleep: _readyHuntBar). The
+  //     tap opens the sheet, which offers everything that is ready, whatever its rule.
+  //   - The same doors as the sheet: the rank lock, a boss beaten today, a hunt already
+  //     running, a fee the hunter cannot pay, and a boss the sheet has announced today.
+  //   - The hunter's own notification settings (off, paused, quiet hours) ride along.
+  // The watcher only announces. A tap opens the app, which checks again before it offers a strike.
+  const RH_WATCH_FILE = 'ready-hunt-watch.json';
+  const RH_WATCH_REWRITE_MS = 6 * 3600 * 1000;   // the watcher goes quiet when its list is a week old
+  const RH_PHONE_NOTE_ID = 88146;                // the watcher's one notification (it replaces itself)
+  let _rhWatchLast = { sig: '', at: 0 };
+  function _rhWatchPayload() {
+    const now = Date.now(), today = getDeviceLocalDate();
+    const out = { v: 1, on: false, at: now, pausedUntil: 0, quiet: null, hold: '', seenDay: today, seen: [], hunts: [] };
+    try {
+      const onboarding = (typeof needsOnboarding !== 'undefined' && needsOnboarding === true);
+      const sandbox = !!(window.__awkSandbox && window.__awkSandbox.active && window.__awkSandbox.active());   // a TEST HUNTER run is not the hunter
+      out.on = !onboarding && !sandbox && _rhHealthOk() && localStorage.getItem('hb_notif_disabled') !== '1';
+      out.pausedUntil = parseInt(localStorage.getItem('hb_notif_paused_until') || '0', 10) || 0;
+      if ((localStorage.getItem('hb_notif_quiet_enabled') || '1') === '1') {
+        out.quiet = { start: localStorage.getItem('hb_notif_quiet_start') || '22:00', end: localStorage.getItem('hb_notif_quiet_end') || '07:00' };
+      }
+      // W1038 — on a hunter's first day the sheet rises for a FIRST kill only; so does the phone.
+      if (_newHunterQuiet() && _rhKillsEver() > 0) out.hold = today;
+      out.seen = _rhSeen();
+      let bal = 0, credit = false;
+      try {
+        bal = getSoulsBalance();
+        credit = _firstHuntFreeAvailable() || localStorage.getItem('hb_stone_free_engage') === '1' || localStorage.getItem('hb_dd_free_engage') === '1';
+      } catch (_) {}
+      for (const id of Object.keys(BOSSES)) {
+        const cfg = BOSSES[id], b = _readyHuntBar(cfg);
+        if (!b || !isGateUnlocked(cfg.rank)) continue;                 // the rank lock stays
+        if (!credit && engageCostSouls(cfg.rank) > bal) continue;     // the sheet could not strike it
+        const st = getBossState(id) || {};
+        out.hunts.push({
+          id: id, name: cfg.name, metric: b.metric, bar: b.bar,
+          beaten: (st.last_defeated_at && (st.kill_count || 0) > 0) ? _localDateKey(st.last_defeated_at) : '',
+          until: st.engaged === true ? (Number(_bossHuntExpiresMs(st, cfg)) || (now + 86400000)) : 0,
+        });
+      }
+    } catch (_) {}
+    return out;
+  }
+  // Written when it changes, and at least every six hours of use so its date stays fresh.
+  // A no-op on the web and on any build without the Filesystem plugin.
+  function _rhWatchSync() {
+    try {
+      const p = _rhWatchPayload();
+      const body = JSON.stringify(p);
+      const sig = body.replace(/"at":\d+,/, '');
+      if (sig === _rhWatchLast.sig && p.at - _rhWatchLast.at < RH_WATCH_REWRITE_MS) return p;
+      const cap = window.Capacitor;
+      const fs = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem;
+      if (!fs || typeof fs.writeFile !== 'function') return p;
+      _rhWatchLast = { sig: sig, at: p.at };
+      Promise.resolve(fs.writeFile({ path: RH_WATCH_FILE, data: body, directory: 'LIBRARY', encoding: 'utf8' }))
+        .catch(function () { _rhWatchLast = { sig: '', at: 0 }; });
+      return p;
+    } catch (_) { return null; }
+  }
+  // The app is open and has just looked: whatever the watcher's notification said is answered.
+  function _rhClearPhoneNote() {
+    try {
+      if (document.hidden) return;
+      const cap = window.Capacitor;
+      const ln = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.LocalNotifications;
+      if (ln && typeof ln.removeDeliveredNotifications === 'function') {
+        Promise.resolve(ln.removeDeliveredNotifications({ notifications: [{ id: RH_PHONE_NOTE_ID, title: '', body: '' }] })).catch(function () {});
+      }
+    } catch (_) {}
+  }
+  // Signing out: the next person on this phone is not this hunter. One empty, switched-off list.
+  function _rhWatchOff() {
+    try {
+      _rhWatchLast = { sig: '', at: 0 };
+      const cap = window.Capacitor;
+      const fs = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Filesystem;
+      if (!fs || typeof fs.writeFile !== 'function') return Promise.resolve(false);
+      const body = JSON.stringify({ v: 1, on: false, at: Date.now(), pausedUntil: 0, quiet: null, hold: '', seenDay: '', seen: [], hunts: [] });
+      return Promise.resolve(fs.writeFile({ path: RH_WATCH_FILE, data: body, directory: 'LIBRARY', encoding: 'utf8' })).then(function () { return true; }, function () { return false; });
+    } catch (_) { return Promise.resolve(false); }
+  }
+  // The watcher's words, kept here too (ReadyHuntCopy in the Swift file says exactly this): the
+  // hunter's own number, the boss by name, no exclamation mark.
+  function _rhNoteText(metric, value, count, leadName) {
+    const head = _rhFmt(metric, value) + ' ' + RH_UNITS[metric];
+    return {
+      title: count === 1 ? 'A hunt is ready' : count + ' hunts are ready',
+      body: head + '. ' + (count === 1 ? leadName + ' is yours.' : count === 2 ? 'One tap takes both.' : 'One tap takes all ' + count + '.'),
+    };
+  }
+  // Owner-only (Settings): the notification as the watcher would post it, eight seconds from now,
+  // so its look on the lock screen and its tap can be checked without waiting for Apple Health.
+  // It uses today's real numbers when a one-number boss is ready, and the Steel Wolf's bar when not.
+  function previewReadyHuntNote() {
+    try {
+      const cap = window.Capacitor;
+      const ln = cap && cap.Plugins && cap.Plugins.LocalNotifications;
+      if (!ln || typeof ln.schedule !== 'function') { try { showHabitToast('Notifications only arrive on the phone.'); } catch (_) {} return null; }
+      const live = _rhLiveOffers().filter(function (o) { return !!o.metric; });
+      const lead = live[0];
+      const group = lead ? live.filter(function (o) { return o.metric === lead.metric; }) : [];
+      const text = lead
+        ? _rhNoteText(lead.metric, lead.value, group.length, BOSSES[lead.bossId].name)
+        : _rhNoteText('steps', 6412, 1, BOSSES.the_steel_wolf.name);
+      const note = { id: RH_PHONE_NOTE_ID, title: text.title, body: text.body, schedule: { at: new Date(Date.now() + 8000) }, extra: { kind: 'hunt', bossId: lead ? lead.bossId : 'the_steel_wolf' } };
+      Promise.resolve(ln.schedule({ notifications: [note] })).catch(function () {});
+      try { showHabitToast('It arrives in 8 seconds. Leave the app to see it.'); } catch (_) {}
+      return note;
+    } catch (_) { return null; }
+  }
+  // Leaving the app is the last moment this file can speak for the hunter: hand over the list as it stands.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') { try { _rhWatchSync(); } catch (_) {} }
+  });
+  // A tap on the watcher's notification: until the sheet has had its turn on the stage (90 s at
+  // most) it rises for whatever is ready, announced today or not (see _notifOpenHunt, _rhMaybePop).
+  let _rhFromNotif = { id: '', at: 0 };
+  function _rhAsked() { return !!_rhFromNotif.id && Date.now() - _rhFromNotif.at < 90000; }
+  try {
+    window.__readyHunt.watch = _rhWatchPayload; window.__readyHunt.watchSync = _rhWatchSync; window.__readyHunt.watchOff = _rhWatchOff;
+    window.__readyHunt.noteText = _rhNoteText; window.__readyHunt.previewNote = previewReadyHuntNote;
   } catch (_) {}   // QA
 
   // High-level expiration helper — duration-based math (24h / 3d / 7d /
@@ -33936,14 +34068,31 @@
   // reminder), we route them to the Habits tab. The Capacitor plugin
   // emits 'localNotificationActionPerformed' with the notification's
   // ID + payload — we listen once on init and switch tabs from there.
-  // W1033 — a 'hunt' notification names its boss; open it over the Habits tab. Returns
-  // false for an unknown boss so the tap still lands on Habits.
+  // W1033 — a 'hunt' notification names its boss. Returns false for an unknown boss so the
+  // tap still lands on Habits.
+  // W1046 — the notification said a hunt is ready, so the tap lands on the Ready Hunt sheet:
+  // look again (the app decides, the watcher only announced), and the sheet rises for whatever
+  // is ready now, with one STRIKE. If nothing is ready after all (Apple Health disagrees, or
+  // it was struck on another path), the boss itself opens instead, so a tap never lands on nothing.
   function _notifOpenHunt(bossId) {
     try {
       if (!bossId || !BOSSES[bossId] || !_readyHuntBar(BOSSES[bossId])) return false;
       const btn = document.getElementById('tab-habits');
       if (btn) btn.click();
-      openBossFullScreen(bossId);
+      _rhFromNotif = { id: bossId, at: Date.now() };
+      Promise.resolve(_readyHuntScan(true)).then(function () {
+        if (_rhFromNotif.id !== bossId) return;            // the sheet rose and took it
+        if (!_rhLiveOffers().length) {
+          _rhFromNotif = { id: '', at: 0 };
+          try { openBossFullScreen(bossId); } catch (_) {}
+          return;
+        }
+        // The scan asked for the sheet. A tap can land while the app is still starting (the
+        // Habits tab not up yet, the stage busy): ask again until it has risen.
+        [400, 1500, 4000, 9000].forEach(function (ms) {
+          setTimeout(function () { if (_rhFromNotif.id === bossId) { try { _rhMaybePop(); } catch (_) {} } }, ms);
+        });
+      }).catch(function () {});
       return true;
     } catch (_) { return false; }
   }
@@ -34945,6 +35094,7 @@
         if (currentTab !== 'habits' || document.hidden || _rhBusy) return null;
         if (document.querySelector('.rh-sheet--on')) return null;
         const live = _rhLiveOffers(), seen = _rhSeen();
+        if (live.length && _rhAsked()) return live;   // W1046 — the hunter tapped "A hunt is ready"
         if (!live.some(function (o) { return seen.indexOf(o.bossId) === -1; })) return null;
         // W1038 — on day one the sheet rises for a FIRST kill only (the row still offers the rest).
         if (_newHunterQuiet() && _rhKillsEver() > 0) return null;
@@ -34959,6 +35109,8 @@
         live.forEach(function (o) { if (ids.indexOf(o.bossId) === -1) ids.push(o.bossId); });
         localStorage.setItem(RH_SEEN_KEY, JSON.stringify({ day: getDeviceLocalDate(), ids: ids }));
       } catch (_) {}
+      _rhFromNotif = { id: '', at: 0 };                    // W1046 — the tap has its answer
+      try { _rhWatchSync(); } catch (_) {}                 // W1046 — announced here: the phone stays quiet about these
       openReadyHunt(live, { auto: true });
     };
     if (!_stageDefer('readyhunt', 60, ask)) ask();
@@ -37118,6 +37270,8 @@
     if (hrRow) hrRow.classList.toggle('hidden', !_previewAllowed());
     const rhRow = document.getElementById('settings-preview-readyhunt');   // W1039 — same owner gate
     if (rhRow) rhRow.classList.toggle('hidden', !_previewAllowed());
+    const rhnRow = document.getElementById('settings-preview-readyhunt-note');   // W1046 — same owner gate
+    if (rhnRow) rhnRow.classList.toggle('hidden', !_previewAllowed());
   }
   try { window.__previewRankCelebrations = previewRankCelebrations; } catch (_) {}
 
@@ -64313,6 +64467,8 @@
           // W1040 — while the session still exists: drop this phone's push registration
           // (1.5 s at most; a slow network never keeps a hunter signed in).
           try { await Promise.race([Push.forget(), new Promise((r) => setTimeout(r, 1500))]); } catch (_) {}
+          // W1046 — and its Ready Hunt watcher: no "A hunt is ready" for someone who signed out.
+          try { await Promise.race([_rhWatchOff(), new Promise((r) => setTimeout(r, 800))]); } catch (_) {}
           try { window.Auth.clearUser(); } catch (_) {}
           window.location.reload();
         }, 600);
@@ -73170,6 +73326,13 @@
         try { closeSettings(); } catch (_) {}
         setTimeout(function () { try { previewReadyHunt(); } catch (_) {} }, 280);
       });
+      // W1046 — owner-only: the phone notification, eight seconds from now.
+      const rhNoteRow = document.getElementById('settings-preview-readyhunt-note');
+      if (rhNoteRow) rhNoteRow.addEventListener('click', function () {
+        if (!_previewAllowed()) return;
+        try { closeSettings(); } catch (_) {}
+        try { previewReadyHuntNote(); } catch (_) {}
+      });
       // W978 — owner-only: today's briefing, as it would open tomorrow; saves nothing.
       const tbPreviewRow = document.getElementById('settings-preview-briefing');
       if (tbPreviewRow) tbPreviewRow.addEventListener('click', function () {
@@ -73663,5 +73826,35 @@
     setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 700);
   });
 
-  document.addEventListener('DOMContentLoaded', init);
+  // W1046 — A LAUNCH NOBODY CAN SEE DOES NOT START THE APP. Apple Health now wakes the app in
+  // the background for the Ready Hunt watcher (native/readyhunt), and iOS builds the web view on
+  // that wake too. A boot there would send the app-open ping, seal vows from Apple Health,
+  // resolve hunts and sync, every hour, for a hunter who never opened anything, and every count
+  // of who is active would be wrong. So on the phone, a page that is HIDDEN when it finishes
+  // loading waits, and boots the moment it can be seen.
+  //   - A launch that is visible (every launch a person makes) is unchanged: init runs where it
+  //     always ran. Off the phone nothing is held at all.
+  //   - The wait ends on ANY sign of being seen: visibility, a painted frame, focus, a touch. A
+  //     wrong "hidden" can therefore only delay a boot by a moment, never prevent one.
+  let _booted = false;
+  function _boot() { if (_booted) return; _booted = true; init(); }
+  function _bootHeld() {
+    try {
+      const cap = window.Capacitor;
+      return !!(cap && cap.isNativePlatform && cap.isNativePlatform()) && document.visibilityState === 'hidden';
+    } catch (_) { return false; }
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!_bootHeld()) { _boot(); return; }
+    const seen = function () { if (document.visibilityState !== 'hidden') _boot(); };
+    document.addEventListener('visibilitychange', seen);
+    window.addEventListener('pageshow', seen);
+    window.addEventListener('focus', seen);
+    ['touchstart', 'pointerdown', 'keydown'].forEach(function (ev) {
+      document.addEventListener(ev, _boot, { capture: true, passive: true });
+    });
+    // a frame is only painted for a page someone can see
+    try { requestAnimationFrame(function () { requestAnimationFrame(_boot); }); } catch (_) {}
+  });
+  try { window.__booted = function () { return _booted; }; } catch (_) {}   // QA
 })();
