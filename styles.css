@@ -25454,26 +25454,35 @@ button.guildhall-summary-tile:active {
   letter-spacing: 2.5px;
 }
 
-/* ── Browse link ────────────────────────────────────────────── */
+/* ── Browse the full library ────────────────────────────────────
+   W1049 (owner 2026-10-13: "browse the full library needs to be more apparent") — it was an
+   11px grey line of text with no outline, and read as a footnote. It is a button: the second
+   one on the screen, in the app's violet so it never competes with the gold commit above it. */
 .empty-state .ev-browse {
   margin-top: 8px;
-  padding: 8px 0 4px;
+  padding: 10px 16px;
+  border-radius: 12px;
   text-align: center;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 11px;
-  letter-spacing: 1.5px;
-  color: #5c5c78;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #c4b5fd;
   text-transform: uppercase;
-  background: transparent;
-  border: 0;
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.45);
   cursor: pointer;
   width: 100%;
+  transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
 }
 .empty-state .ev-browse:hover,
 .empty-state .ev-browse:focus {
-  color: #a78bfa;
+  color: #ddd6fe;
+  background: rgba(167, 139, 250, 0.14);
+  border-color: rgba(167, 139, 250, 0.7);
   outline: none;
 }
+.empty-state .ev-browse:active { transform: scale(0.98); }
 
 /* ── W584 — Jump-program guide row (The First Awakened under the vows) ── */
 .fa-guide {
