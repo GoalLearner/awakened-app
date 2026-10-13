@@ -8877,6 +8877,66 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(await page.evaluate(() => { const s = (window as any).__shadows(); return [Object.keys(s.extracted).sort(), Object.keys(s.pending)]; })).toEqual([['the_carouser', 'the_steel_wolf'], []]);
   });
 
+  // W1048 — late bloom: the army stays small until the top ranks, and at S every shadow marches.
+  const army = (page: Page, points: number, owned: string[], marching: string[], extra?: Record<string, unknown>) => page.addInitScript(({ points, owned, marching, extra }) => {
+    try {
+      if (sessionStorage.getItem('__w1048')) return; sessionStorage.setItem('__w1048', '1');
+      localStorage.setItem('hb_points', String(points));
+      const extracted: Record<string, { at: number; name: string }> = {};
+      owned.forEach((id, i) => { extracted[id] = { at: 1000 + i, name: 'Shadow of ' + id }; });
+      localStorage.setItem('hb_shadows_v1', JSON.stringify(Object.assign({ extracted, active: marching, windows: {}, pending: {} }, extra || {})));
+    } catch (_) {}
+  }, { points, owned, marching, extra: extra || {} });
+  const SOLO = ['the_insomniac', 'the_steel_wolf', 'the_carouser', 'the_iron_warden', 'the_glass_strider', 'the_dream_tyrant', 'the_marathon_wraith', 'the_furnace_knight',
+    'the_ascendant_colossus', 'the_gray_pilgrim', 'the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame', 'the_unbroken_anvil'];
+  const marchingNow = (page: Page) => page.evaluate(() => { const w = window as any; return { n: w.__shadowMarching(), slots: w.__shadowSlots(), active: w.__shadows().active as string[] }; });
+
+  test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
+    expect(r).toEqual([1, 2, 4, 7, 12, 19, 19, 1]);
+  });
+
+  test('W1048 — an S-rank hunter held to the old five: every shadow marches, by itself, and each is worth 1%', async ({ page }) => {
+    await army(page, 14000, SOLO.slice(0, 8), SOLO.slice(0, 5));
+    await freshApp(page);
+    const m = await marchingNow(page);
+    expect([m.n, m.slots]).toEqual([8, 19]);
+    expect(m.active.slice().sort()).toEqual(SOLO.slice(0, 8).sort());
+    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 19 SLOTS AT YOUR RANK/);
+    await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
+  });
+
+  test('W1048 — an A-rank hunter with fourteen: twelve march (oldest first), two wait, and a rest by hand is kept', async ({ page }) => {
+    await army(page, 7000, SOLO, SOLO.slice(0, 5));
+    await freshApp(page);
+    let m = await marchingNow(page);
+    expect([m.n, m.slots]).toEqual([12, 12]);
+    expect(m.active).toEqual(SOLO.slice(0, 12));                       // oldest first
+    // rest one by hand: the slot stays free until the hunter fills it (growth is what fills, not a free slot)
+    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await page.locator('#shadow-roster [data-shadow-toggle="the_insomniac"]').click();
+    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^11 MARCHING · 12 SLOTS AT YOUR RANK/);
+    await page.reload();
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    m = await marchingNow(page);
+    expect([m.n, m.active.indexOf('the_insomniac')]).toEqual([11, -1]);
+  });
+
+  test('W1048 — a D-rank hunter with three: two march; the third waits for C rank, then marches without being asked', async ({ page }) => {
+    await army(page, 300, SOLO.slice(0, 3), [SOLO[0]], { slotsSeen: 1 });   // D rank is 100 to 599
+    await freshApp(page);
+    const m = await marchingNow(page);
+    expect([m.n, m.slots, m.active]).toEqual([2, 2, SOLO.slice(0, 2)]);
+    // C rank: four slots
+    await page.evaluate(() => { localStorage.setItem('hb_points', '700'); });   // C rank starts at 600
+    await page.reload();
+    await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
+    const c = await marchingNow(page);
+    expect([c.n, c.slots]).toEqual([3, 4]);
+  });
+
   test('a drop won before the app was closed rises at the next launch; a window from the old rule is still honoured', async ({ page }) => {
     await page.addInitScript(() => {
       try {
