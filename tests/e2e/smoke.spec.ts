@@ -2520,7 +2520,16 @@ async function obWorld(page: Page, world: ObWorld) {
     w.Health.isAvailable        = () => health !== 'none';
     w.Health.permissionStatus   = () => (on ? 'granted' : 'denied');
     w.Health.requestPermissions = async () => { w.__askedPermission = true; return on ? 'granted' : 'denied'; };
-    w.Health.getStepsBetween    = async () => (on && typeof o.week === 'number' ? o.week : null);
+    // The week for a span of days, today for anything shorter. The app reads single
+    // days through this same call, and handing it the whole week as one day made a
+    // 34,000-step day: THE LONG DAY (a hidden quest, 20,000 in a day) fired and paid
+    // 30 souls into the middle of whichever test the tick landed in (CI, 2026-10-14).
+    w.Health.getStepsBetween    = async (s: string, e: string) => {
+      if (!on) return null;
+      const days = (new Date(e).getTime() - new Date(s).getTime()) / 86400000;
+      const v = days > 1.5 ? o.week : o.today;
+      return typeof v === 'number' ? v : null;
+    };
     w.Health.getStepsToday      = async () => (on && typeof o.today === 'number' ? o.today : null);
     w.Auth.fetchLeaderboardTop  = async () => (o.board || { ok: true, metric: 'step_total', me: null, top: [] });
   }, world);
@@ -3359,8 +3368,12 @@ test.describe('AD · Replay the awakening (W937)', () => {
   // after boot, CloudSync's bookkeeping, the leaderboard cache, the breadcrumb
   // log, and the hall's once-a-day greeting on the first tap of any kind.
   // None of them is hunter state, so a leak from the replay could not hide here.
+  // hb_stirs_v1 joins them for one reason: before 6 AM on the device's clock the
+  // hidden-quest tick notes the dawn (_stirsTick, `dawns`). Local runs never saw it;
+  // CI did, the first time this suite ran just after midnight UTC (2026-10-14).
+  // A quest actually firing would still show: it pays souls, and hb_souls is WATCHED.
   const BACKGROUND = (k: string) => /^hb_(cloud_|lb_cache_)/.test(k) ||
-    ['hb_shadows_v1', 'hb_pilgrim_arc_v1', 'hb_health_verify_debug_v1', 'hb_hall_greet_date'].indexOf(k) >= 0;
+    ['hb_shadows_v1', 'hb_pilgrim_arc_v1', 'hb_health_verify_debug_v1', 'hb_hall_greet_date', 'hb_stirs_v1'].indexOf(k) >= 0;
 
   async function establishedAccount(page: Page) {
     await freshApp(page);
@@ -3534,7 +3547,9 @@ test.describe('AD · Replay the awakening (W937)', () => {
       w.Health.isAvailable        = () => true;
       w.Health.permissionStatus   = () => 'granted';
       w.Health.requestPermissions = async () => { w.__askedPermission = true; return 'granted'; };
-      w.Health.getStepsBetween    = async () => 34112;
+      // the week for a span of days, today for a single one (see obWorld)
+      w.Health.getStepsBetween    = async (s: string, e: string) =>
+        ((new Date(e).getTime() - new Date(s).getTime()) / 86400000 > 1.5 ? 34112 : 9040);
       w.Health.getStepsToday      = async () => 9040;   // well past the Wolf's 6,000
       w.Auth.fetchLeaderboardTop  = async () => ({
         ok: true, me: { rank: 2, current_value: 34112 },
