@@ -9328,7 +9328,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await page.evaluate(async (o) => {
       const w = window as any, Hh = w.Health;
       const days: Record<string, any> = Object.assign({}, o.days || {});
-      if (!days[0]) days[0] = { steps: o.steps, flights: o.flights, sleepH: o.sleepH, workoutMin: o.workoutMin, kcal: o.kcal };
+      if (!days[0]) days[0] = { steps: o.steps, flights: o.flights, sleepH: o.sleepH, workoutMin: o.workoutMin, kcal: o.kcal, runMin: (o as any).runMin };
       const ymd = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       const ago = (iso: string) => { const a = new Date(iso); a.setHours(0, 0, 0, 0); const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((t.getTime() - a.getTime()) / 86400000); };
       // every local day a [start, end] range touches, as days-ago
@@ -9342,6 +9342,15 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
       Hh.getFlightsClimbedBetween = async (s: string, e: string) => span(s, e).reduce((a, n) => a + (day(n).flights || 0), 0);
       Hh.getActiveEnergyBetween = async (s: string, e: string) => span(s, e).reduce((a, n) => a + (day(n).kcal || 0), 0);
       Hh.getStrengthWorkoutsBetween = async (s: string, e: string) => span(s, e).filter((n) => day(n).workoutMin).map((n) => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(9, 0, 0, 0); return { duration_min: day(n).workoutMin, startDate: d.toISOString() }; });
+      // W1054 — any workout type: `workoutMin` is strength training (both readers see it), `runMin` a run
+      // (only the any-type reader sees it), `manualMin` one typed into the Health app (neither does).
+      Hh.getAnyWorkoutsBetween = async (s: string, e: string) => span(s, e).flatMap((n) => {
+        const at = new Date(); at.setDate(at.getDate() - n); at.setHours(9, 0, 0, 0);
+        const out: any[] = [];
+        if (day(n).workoutMin) out.push({ duration_min: day(n).workoutMin, startDate: at.toISOString(), activityName: 'Traditional Strength Training' });
+        if (day(n).runMin) out.push({ duration_min: day(n).runMin, startDate: at.toISOString(), activityName: 'Running' });
+        return out;
+      });
       Hh.getSleepBetween = async () => { const byDate: Record<string, any> = {}; Object.keys(days).forEach((k) => { if (days[k].sleepH) { const d = new Date(); d.setDate(d.getDate() - Number(k)); byDate[ymd(d)] = { totalAsleepHours: days[k].sleepH }; } }); return { samples: [], byDate }; };
       Hh.getSleepLastNight = async () => null;
       Hh.getAnyWorkoutsToday = async () => null;
@@ -9474,6 +9483,21 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await sheet(page).locator('[data-rh-strike]').click();
     await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Furnace Knight', { timeout: 6000 });
     expect([(await boss(page, 'the_furnace_knight')).kill_count, (await boss(page, 'the_iron_warden')).kill_count]).toEqual([1, 1]);
+  });
+
+  // W1054 — owner 2026-10-14: "Yes Iron Warden fix". RenDIESEL's 31-minute workout posted "verified
+  // workout" and never offered the Warden: the look-back read strength training only.
+  test('W1054 — any workout type takes the Iron Warden: a run counts, a few minutes do not, the Knight still wants strength', async ({ page }) => {
+    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past() });   // D and C gates open
+    await health(page, { runMin: 5, kcal: 500 } as any);
+    expect(await offers(page)).toEqual([]);                                  // five minutes is not ten
+    await health(page, { runMin: 31, kcal: 500 } as any);
+    expect(await offers(page)).toEqual(['the_iron_warden']);                 // a run is a workout; the Furnace Knight's rule says strength
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Iron Warden', { timeout: 8000 });
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Iron Warden', { timeout: 6000 });
+    expect((await boss(page, 'the_iron_warden')).kill_count).toBe(1);
+    expect((await boss(page, 'the_furnace_knight')).kill_count || 0).toBe(0);
   });
 
   test('W1039 — days already finished count: 10,000 steps yesterday and today is the Patient Flame, never started', async ({ page }) => {
@@ -9750,8 +9774,10 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(w).toMatchObject({ v: 1, on: true, pausedUntil: 0, quiet: { start: '22:00', end: '07:00' }, hold: '', seenDay: day, seen: [] });
     expect(Math.abs(Date.now() - w.at)).toBeLessThan(60_000);
     // E, D and C are open; the A-rank Anvil is not. Compound and many-day bosses are never on it.
-    expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_marathon_wraith', 'the_steel_wolf']);
+    // W1054 — the Iron Warden rides along as today's workout minutes, any type.
+    expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_iron_warden', 'the_marathon_wraith', 'the_steel_wolf']);
     const by = Object.fromEntries(w.hunts.map((h) => [h.id, h]));
+    expect(by.the_iron_warden).toMatchObject({ name: 'The Iron Warden', metric: 'workout', bar: 10 });
     expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 10000, beaten: '', until: 0 });
     expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 10 });
     expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 7 });

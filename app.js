@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1053'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1054'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1567,7 +1567,7 @@
   // Engaged bosses are left out: they resolve on their own and show their own result.
   // The phone notification is W1046, below. Not built: the sheet's not-ready states (deferred).
   const RH_SEEN_KEY = 'hb_ready_hunt_seen_v1';   // { day, ids } — bosses already announced today
-  const RH_UNITS = { steps: 'steps today', flights: 'flights today', sleep: 'last night' };
+  const RH_UNITS = { steps: 'steps today', flights: 'flights today', sleep: 'last night', workout: 'workout minutes today' };
   const RH_SCAN_EVERY_MS = 60000;
   let _readyHunt = { day: '', offers: [], at: 0 };
   let _rhScanning = null;
@@ -1594,7 +1594,7 @@
   // bosses share a handful of reads (today's steps, each of the last few days, the week's flights).
   function _rhHealthMemo() {
     const cache = new Map(), H = {};
-    ['getStepsBetween', 'getFlightsClimbedBetween', 'getSleepBetween', 'getStrengthWorkoutsBetween', 'getActiveEnergyBetween'].forEach(function (name) {
+    ['getStepsBetween', 'getFlightsClimbedBetween', 'getSleepBetween', 'getStrengthWorkoutsBetween', 'getAnyWorkoutsBetween', 'getActiveEnergyBetween'].forEach(function (name) {
       if (typeof Health[name] !== 'function') return;
       H[name] = function (a, b) {
         const k = name + '|' + a + '|' + b;
@@ -1703,6 +1703,18 @@
   const RH_WATCH_REWRITE_MS = 6 * 3600 * 1000;   // the watcher goes quiet when its list is a week old
   const RH_PHONE_NOTE_ID = 88146;                // the watcher's one notification (it replaces itself)
   let _rhWatchLast = { sig: '', at: 0 };
+  // W1054 (owner: "any workout verified gets that notification") — what the phone may watch: the
+  // one-number bosses, and the one-day workout boss (the Iron Warden) as today's workout minutes,
+  // any type, manual entries dropped (the watcher counts them as app.js does). Its own list, so
+  // the sheet's ladders (readyHuntLadder, readyHuntPick) are unchanged.
+  function _rhWatchBar(cfg) {
+    const b = _readyHuntBar(cfg);
+    if (b) return b;
+    if (!cfg || cfg.coopOnly || cfg.cadence !== 'daily' || cfg.streakTarget !== 1) return null;
+    if (!(Number(cfg.workoutMinutes) > 0) || typeof cfg.consecutiveDays === 'number' || cfg.dailyAllOf === true) return null;
+    if (Number(cfg.activeEnergyKcal) > 0 || Number(cfg.stepThreshold) > 0 || Number(cfg.flightThreshold) > 0 || Number(cfg.sleepHours) > 0) return null;
+    return { metric: 'workout', bar: Number(cfg.workoutMinutes) };
+  }
   function _rhWatchPayload() {
     const now = Date.now(), today = getDeviceLocalDate();
     const out = { v: 1, on: false, at: now, pausedUntil: 0, quiet: null, hold: '', seenDay: today, seen: [], hunts: [] };
@@ -1723,7 +1735,7 @@
         credit = _firstHuntFreeAvailable() || localStorage.getItem('hb_stone_free_engage') === '1' || localStorage.getItem('hb_dd_free_engage') === '1';
       } catch (_) {}
       for (const id of Object.keys(BOSSES)) {
-        const cfg = BOSSES[id], b = _readyHuntBar(cfg);
+        const cfg = BOSSES[id], b = _rhWatchBar(cfg);
         if (!b || !isGateUnlocked(cfg.rank)) continue;                 // the rank lock stays
         if (!credit && engageCostSouls(cfg.rank) > bal) continue;     // the sheet could not strike it
         const st = getBossState(id) || {};
@@ -2248,6 +2260,30 @@
   // saved, nothing is awarded. The ready-hunt scan asks with dry = true and the resolver
   // judges with dry = false, so the two can never disagree. `H` is Apple Health, or a
   // read-through cache of it for the length of one scan.
+  // W1054 — THE WORKOUT BOSSES COUNT ANY WORKOUT, as their own words say: the Iron Warden "Any
+  // qualifying workout activity counts", the Forge and the Sleepless Ascent "Any Apple Health
+  // workout type counts", and as the live Iron Warden check has since 1z.129. This look-back judge
+  // (the hunts it resolves, and every Ready Hunt offer) read strength training only, so a run, a
+  // ride or a class never made a ready hunt: RenDIESEL, 2026-10-13, 31 workout minutes, "verified
+  // workout" on the feed, no boss. The Furnace Knight keeps the strength reader: its rule names
+  // Strength Training. Manual entries are dropped by the reader either way (W799).
+  async function _bossWorkoutsBetween(H, sIso, eIso) {
+    let list = null;
+    try { if (typeof H.getAnyWorkoutsBetween === 'function') list = await H.getAnyWorkoutsBetween(sIso, eIso); } catch (_) { list = null; }
+    if (list == null) {
+      try { if (typeof H.getStrengthWorkoutsBetween === 'function') list = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { list = null; }
+    }
+    return list;
+  }
+  function _bossWorkoutsUsable(H) {
+    return typeof H.getAnyWorkoutsBetween === 'function' || typeof H.getStrengthWorkoutsBetween === 'function';
+  }
+  function _bossWorkoutMinutes(workouts) {
+    const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
+    let total = 0;
+    for (const w of list) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) total += m; }
+    return total;
+  }
   async function _bossEvalWindow(id, cfg, state, start, evalEnd, now, dry, H) {
     let _day = null;
     const _persist = function () { if (!dry) setBossState(id, state); };
@@ -2291,12 +2327,7 @@
           ok = typeof steps === 'number' && steps >= cfg.stepThreshold;
         }
         if (ok && typeof cfg.workoutMinutes === 'number') {
-          let workouts = null;
-          try { workouts = (typeof H.getStrengthWorkoutsBetween === 'function') ? await H.getStrengthWorkoutsBetween(sIso, eIso) : null; } catch (_) { workouts = null; }
-          const wlist = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-          let totalMin = 0;
-          for (const w of wlist) { const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0; if (m > 0) totalMin += m; }
-          ok = totalMin >= cfg.workoutMinutes;
+          ok = _bossWorkoutMinutes(await _bossWorkoutsBetween(H, sIso, eIso)) >= cfg.workoutMinutes;   // W1054 — any workout
         }
         if (ok && typeof cfg.flightThreshold === 'number') {
           let flights = null;
@@ -2350,15 +2381,14 @@
 
     // ── B-rank workout boss (Forge of Ten Thousand Days) ───
     // Counts days inside the window where TOTAL workout minutes
-    // for that day reach the threshold. Uses getAnyWorkoutsToday
-    // semantics adapted to a window via getStrengthWorkoutsBetween;
-    // we sum durations per day from the returned sample list.
+    // for that day reach the threshold, any workout type (W1054;
+    // it read strength training only until then).
     if (!defeated &&
         cfg.dailyAllOf !== true &&
         typeof cfg.consecutiveDays === 'number' &&
         typeof cfg.workoutMinutes === 'number' &&
         typeof cfg.activeEnergyKcal !== 'number' &&  // not the dual-condition boss
-        typeof H.getStrengthWorkoutsBetween === 'function') {
+        _bossWorkoutsUsable(H)) {
       const days = _huntWindowLocalDays(start, evalEnd);
       const flags = [];
       for (const dayIso of days) {
@@ -2366,18 +2396,7 @@
         const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
         const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
         const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
-        let workouts = null;
-        try { workouts = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-        const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-        // Sum duration_min across all qualifying workouts that day.
-        // Helper already pre-filters to workouts >= its per-sample
-        // minimum, so any item in the list counts.
-        let totalMin = 0;
-        for (const w of list) {
-          const m = (w && typeof w.duration_min === 'number') ? w.duration_min : 0;
-          if (m > 0) totalMin += m;
-        }
-        flags.push(totalMin >= cfg.workoutMinutes);
+        flags.push(_bossWorkoutMinutes(await _bossWorkoutsBetween(H, sIso, eIso)) >= cfg.workoutMinutes);
       }
       // today's training may still be ahead — pending, never run-breaking
       const pendingTail = days.length > 0 && days[days.length - 1] === _localDateKey(new Date(now));
@@ -2526,30 +2545,24 @@
     // ── Workout boss (Iron Warden) ─────────────────────────
     // v3 Phase 1z.271B — guard against B-rank qualifying-days
     // bosses (Forge of Ten Thousand Days) so they don't also
-    // fire Iron Warden's first-qualifying-workout defeat here.
+    // fire Iron Warden's defeat here. W1054 — any workout type, and
+    // a day's minutes must reach the bar ("at least 10 minutes ...
+    // today"): the strength reader it used counted one strength set
+    // of any length as the kill.
     else if (typeof cfg.workoutMinutes === 'number' &&
              typeof cfg.consecutiveDays !== 'number' &&
-             typeof H.getStrengthWorkoutsBetween === 'function') {
-      const sIso = new Date(start).toISOString();
-      const eIso = new Date(evalEnd).toISOString();
-      let workouts = null;
-      try { workouts = await H.getStrengthWorkoutsBetween(sIso, eIso); } catch (_) { workouts = null; }
-      const list = Array.isArray(workouts) ? workouts : (workouts && workouts.workouts) || [];
-      // Pick the device-local day of the first qualifying workout
-      // so last_eval_date is meaningful. Helper already returns
-      // workouts >= cfg.workoutMinutes per its filter.
-      const first = list && list.length ? list[0] : null;
-      if (first) {
-        const dayKey = (function(iso){
-          try {
-            const d = new Date(iso);
-            return d.getFullYear() + '-' +
-              String(d.getMonth() + 1).padStart(2, '0') + '-' +
-              String(d.getDate()).padStart(2, '0');
-          } catch (_) { return getDeviceLocalDate(); }
-        })(first.startDate || new Date(start).toISOString());
-        _kill(dayKey);
-        defeated = true;
+             _bossWorkoutsUsable(H)) {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        if (_bossWorkoutMinutes(await _bossWorkoutsBetween(H, sIso, eIso)) >= cfg.workoutMinutes) {
+          _kill(dayIso);
+          defeated = true;
+          break;
+        }
       }
     }
     // ── Single-night sleep boss (Insomniac, Dream Tyrant) ──

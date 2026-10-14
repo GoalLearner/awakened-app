@@ -27,10 +27,12 @@ import UserNotifications
 /// offers the strike. The numbers below must stay in step with `app.js`:
 ///   - `ReadyHuntMath.total`      = _totalFromHealthSamples (W799 manual entries dropped, W681 sources)
 ///   - `ReadyHuntMath.sleepHours` = getSleepBetween (the night keyed to today, time covered)
+///   - `ReadyHuntMath.workoutMinutes` = getAnyWorkoutsBetween summed (W1054: the Iron Warden,
+///     any workout type, manual entries dropped, a workout under a minute ignored)
 final class ReadyHuntWatcher {
     static let shared = ReadyHuntWatcher()
 
-    static let metrics: [String] = ["steps", "flights", "sleep"]
+    static let metrics: [String] = ["steps", "flights", "sleep", "workout"]
     static let maxPerDay: Int = 3
     static let minGapSeconds: Double = 2 * 60 * 60
     static let staleSeconds: Double = 7 * 24 * 60 * 60
@@ -69,6 +71,7 @@ final class ReadyHuntWatcher {
         if metric == "steps" { return HKObjectType.quantityType(forIdentifier: .stepCount) }
         if metric == "flights" { return HKObjectType.quantityType(forIdentifier: .flightsClimbed) }
         if metric == "sleep" { return HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
+        if metric == "workout" { return HKObjectType.workoutType() }
         return nil
     }
 
@@ -88,7 +91,9 @@ final class ReadyHuntWatcher {
             me.check(metric) { done() }
         }
         store.execute(query)
-        store.enableBackgroundDelivery(for: type, frequency: .hourly) { _, _ in }
+        // A finished workout is one sample, written once: Apple Health may hand it over at once.
+        let often: HKUpdateFrequency = metric == "workout" ? .immediate : .hourly
+        store.enableBackgroundDelivery(for: type, frequency: often) { _, _ in }
     }
 
     // MARK: - One check
@@ -176,6 +181,8 @@ final class ReadyHuntWatcher {
             let list: [HKSample] = samples ?? []
             if metric == "sleep" {
                 done(ReadyHuntMath.sleepHours(list, now))
+            } else if metric == "workout" {
+                done(ReadyHuntMath.workoutMinutes(list))
             } else {
                 done(ReadyHuntMath.total(list))
             }
@@ -431,6 +438,21 @@ enum ReadyHuntMath {
         return best.rounded()
     }
 
+    /// app.js `getAnyWorkoutsBetween` summed: every workout started today, any type, its length
+    /// from start to end; one typed into the Health app or logged by a Shortcut never counts,
+    /// and one shorter than a minute is noise (HEALTHKIT_WORKOUT_SAMPLE_MIN_MIN).
+    static func workoutMinutes(_ samples: [HKSample]) -> Double {
+        var total: Double = 0
+        for sample in samples {
+            guard let workout = sample as? HKWorkout else { continue }
+            if isManual(workout.sourceRevision.source.bundleIdentifier) { continue }
+            let seconds: Double = workout.endDate.timeIntervalSince(workout.startDate)
+            let minutes: Double = seconds / 60
+            if minutes >= 1 { total += minutes }
+        }
+        return total
+    }
+
     /// app.js `getSleepBetween`: the night keyed to today is every asleep sample whose start,
     /// moved on four hours, lands on today; its length is the time COVERED, not the sum (two
     /// trackers on one night do not double it). In-bed and awake samples are not sleep.
@@ -488,6 +510,7 @@ enum ReadyHuntCopy {
         let rounded: Double = value.rounded()
         let text: String = formatter.string(from: NSNumber(value: rounded)) ?? String(Int(rounded))
         if metric == "steps" { return "\(text) steps today" }
+        if metric == "workout" { return "\(text) workout minutes today" }
         return "\(text) flights today"
     }
 
