@@ -4718,11 +4718,39 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
   const engaged = async (page: Page) => !!((await obWolfState(page)) || {}).engaged;
   const fxLog = (page: Page) => page.evaluate(() => (window as any).__ob.fxLog.join(' '));
 
+  // W1055 — owner 2026-10-14: "make 3 of the females starters free - we need female avatars".
+  test('W1055 — a woman\'s look is picked here, equipped free, and worn in the app without a purchase', async ({ page }) => {
+    await boot(page);
+    const lic = page.locator(OB + ' .ob4-s-name .ob4-lic');
+    const row = page.locator(OB + ' .ob4-looks');
+    // one row that scrolls: the fourth look is cut by the edge, so there is plainly more
+    const fit = await row.evaluate((el) => ({ scroll: el.scrollWidth, width: el.clientWidth, h: (el.querySelector('.ob4-look') as HTMLElement).getBoundingClientRect().height }));
+    expect(fit.scroll).toBeGreaterThan(fit.width);
+    expect(fit.h).toBeGreaterThanOrEqual(80);
+    await page.locator('[data-ob-look="tempest"]').click();
+    await expect(lic.locator('.ob4-lic-look')).toHaveText('Tempest');
+    await expect(lic.locator('.ob4-lic-bust')).toHaveAttribute('src', /avatar-skin-tempest-bust/);
+    await obName(page, 'Richie');
+    expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBe('avatar-skin-tempest.png');
+    // free: it renders with no entitlement at all, where a paid skin nobody bought falls back
+    const r = await page.evaluate(() => {
+      const w = window as any;
+      const free = ['avatar-skin-bloodmoon.png', 'avatar-skin-tempest.png', 'avatar-skin-frostweaver.png'];
+      return {
+        allowed: free.map((f) => w.__skinFileAllowed ? w.__skinFileAllowed(f) : null),
+        verdant: w.__skinFileAllowed ? w.__skinFileAllowed('avatar-skin-verdant.png') : null,
+      };
+    });
+    expect(r).toEqual({ allowed: [true, true, true], verdant: false });
+  });
+
   test('the look turns the license, equips the skin, and is worn on the board', async ({ page }) => {
     await boot(page);
     const lic = page.locator(OB + ' .ob4-s-name .ob4-lic');
     const look = (k: string) => page.locator('[data-ob-look="' + k + '"]');
-    await expect(page.locator('[data-ob-look]')).toHaveCount(3);
+    // W1055 — six looks, three of them women, interleaved
+    expect(await page.locator('[data-ob-look]').evaluateAll((els) => els.map((e) => e.getAttribute('data-ob-look'))))
+      .toEqual(['base', 'bloodmoon', 'ranger', 'tempest', 'warrior', 'frostweaver']);
     // HUNTER (the class default) is the look until another is picked.
     await expect(look('base')).toHaveAttribute('aria-checked', 'true');
     await expect(lic.locator('.ob4-lic-look')).toHaveText('Hunter');
