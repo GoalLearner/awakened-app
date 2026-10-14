@@ -3108,12 +3108,9 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await expect(page.locator('#cn-fan [data-ob-pick]')).toHaveCount(0);
     await page.locator('#cn-enter').click();
     await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-sworn/);
-    const enter = page.locator('#cn-enter');
-    await expect(enter).toHaveText('Enter');
-    await expect(enter).toBeEnabled();
-    // No question is asked of this path: no start day, no training days.
+    // No question is asked of this path (no start day, no training days), so once the
+    // stamp has landed it goes through the Gate by itself: no second tap (W1056).
     await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
-    await enter.click();
     // The license goes through the Gate with the name and the rank on it.
     await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/);
     expect((await page.locator(OB + ' .ob4-hand-card .ob4-ch').allTextContents()).join('')).toBe('Richie');
@@ -3231,14 +3228,13 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     await swear.click();
     await expect(morning).toHaveClass(/is-sworn/);
-    await expect(swear).toHaveText('Enter');
-    await expect(swear).toBeEnabled();
-    // Sworn is sworn: the other banners no longer answer, and this path is asked nothing more.
+    // Sworn is sworn: the other banners no longer answer, this path is asked nothing more,
+    // and it goes through the Gate by itself once the stamp has landed (W1056).
     await page.locator('[data-cn-pack="custom"]').click({ force: true });
     await expect(morning).toHaveClass(/is-on/);
     await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
 
-    await swear.click();
     await obFinish(page);
     // The overlay is gone and left nothing behind it.
     const cin = await page.evaluate(() => {
@@ -3271,6 +3267,33 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     // the hunter's own tap is what brings it up
     await page.locator('#cin-nameField').click();
     await expect(page.locator('#cin-nameField')).toBeFocused();
+  });
+
+  // W1056 — owner, on the phone: "Remove by hand ... if they click swear it then it automatically
+  // enters ... I do like the sworn animation though".
+  test('W1056 — the vows say Health or nothing, and SWEAR IT stamps and goes through the Gate in one tap', async ({ page }) => {
+    await obFirstRun(page);
+    await obWorld(page, { health: 'none' });
+    await obName(page, 'Richie');
+    await obGo(page, 'vow');
+    await obOn(page, 'vow');
+    await page.locator('[data-cn-pack="morning"]').click();
+    await expect(page.locator('#cn-fan .ob4-vow')).not.toHaveCount(0);
+    expect(await page.locator('#cn-fan').innerText()).not.toMatch(/by hand/i);
+    // only a Health tag remains; every tag on the screen reads Health
+    for (const tag of await page.locator('#cn-fan .ob4-vm').allTextContents()) expect(tag).toBe('Health');
+    const swear = page.locator('#cn-enter');
+    const taps: number[] = [];
+    await page.exposeFunction('__tap', () => taps.push(1));
+    await page.evaluate(() => document.getElementById('cn-enter')!.addEventListener('click', () => (window as any).__tap()));
+    await swear.click();
+    // the stamp has its moment, then the Gate opens with no second tap
+    await expect(page.locator('[data-cn-pack="morning"]')).toHaveClass(/is-sworn/);
+    await expect(page.locator(OB + ' .ob4-hand')).not.toHaveClass(/is-on/);
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
+    expect(taps.length).toBe(1);
+    await obFinish(page);
+    expect(await page.evaluate(() => localStorage.getItem('hb_path'))).toBe('morning');
   });
 
   test('a path with a training vow asks which days it counts; the last day cannot be taken away', async ({ page }) => {
@@ -3497,10 +3520,7 @@ test.describe('AD · Replay the awakening (W937)', () => {
     await obOn(page, 'vow');
     const path = await page.evaluate(() => Array.from(document.querySelectorAll('#cn-paths [data-cn-pack].is-on')).map((b) => (b as HTMLElement).dataset.cnPack));
     const enter = page.locator('#cn-enter');
-    await enter.click();                                   // SWEAR IT
-    await expect(enter).toHaveText('Enter');
-    await expect(enter).toBeEnabled();
-    await enter.click();
+    await enter.click();                                   // SWEAR IT: the replay closes by itself (W1056)
     await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
 
     const closed = await page.evaluate(() => {
@@ -5030,9 +5050,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.locator('#cn-ascentNext').click();
     await obOn(page, 'vow');
     await page.locator('[data-cn-pack="custom"]').click();
-    await page.locator('#cn-enter').click();
-    await expect(page.locator('#cn-enter')).toHaveText('Enter');
-    await page.locator('#cn-enter').click();
+    await page.locator('#cn-enter').click();   // SWEAR IT, and the Gate opens by itself (W1056)
     await obFinish(page);
     await page.evaluate(() => { document.querySelectorAll('#statup-ov, #ach-popup').forEach((x) => x.remove()); });
 
@@ -5072,9 +5090,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.locator('#cn-ascentNext').click();
     await obOn(page, 'vow');
     await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-on/);
-    await page.locator('#cn-enter').click();
-    await expect(page.locator('#cn-enter')).toHaveText('Enter');
-    await page.locator('#cn-enter').click();
+    await page.locator('#cn-enter').click();   // SWEAR IT, and the Gate opens by itself (W1056)
     await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
     expect(await read()).toEqual(before);
   });
@@ -7583,15 +7599,14 @@ test.describe('BU · Jump Program by the manual (W1021)', () => {
     await page.clock.setFixedTime(NOW);
     // W1050 — a sworn banner cannot be unsworn, so each path gets its own first
     // run (obFirstRun wipes the same keys on every load). The other two paths
-    // go from SWEAR IT straight to ENTER with no question in between.
+    // go from SWEAR IT straight through the Gate with no question in between (W1056).
     for (const pack of ['custom', 'morning']) {
       await obFirstRun(page);
       await obGo(page, 'vow');
       await obOn(page, 'vow');
       await page.locator('[data-cn-pack="' + pack + '"]').click();
       await page.locator('#cn-enter').click();
-      await expect(page.locator('#cn-enter')).toHaveText('Enter');
-      await expect(page.locator('#cn-enter')).toBeEnabled();
+      await expect(page.locator(OB + ' .ob4-hand'), pack).toHaveClass(/is-on/, { timeout: 4_000 });
       await expect(page.locator(OB + ' .ob4-sub-when'), pack).not.toHaveClass(/is-on/);
       await expect(page.locator(OB + ' .ob4-vow-t'), pack).toHaveText('Choose a path.');
       await expect(page.locator('#cn-jdays .jd-chip'), pack).toHaveCount(0);
