@@ -3102,9 +3102,10 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     // Swear Make Your Own and go through the Gate.
     await page.locator('[data-cn-pack="custom"]').click();
-    // W1052 — the path offers its vows right here; this hunter picks none of them.
-    await expect(page.locator('#cn-fan [data-ob-pick]')).toHaveCount(6);
-    await expect(page.locator('[data-cn-pack="custom"] .ob4-banner-c')).toHaveText('0 / 5');
+    // W1053 — the vows are chosen inside, from the whole library (W1052's six-vow
+    // picker here read as all there is).
+    await expect(page.locator('#cn-fan')).toHaveText('You choose your first vow inside.');
+    await expect(page.locator('#cn-fan [data-ob-pick]')).toHaveCount(0);
     await page.locator('#cn-enter').click();
     await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-sworn/);
     const enter = page.locator('#cn-enter');
@@ -3259,69 +3260,6 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await page.locator('#tab-habits').click();
     await expect(page.locator('#tab-habits.active')).toBeVisible();
     await expect(page.locator('#habit-list .habit-item')).toHaveCount(6, { timeout: 10_000 });
-  });
-
-  // W1052 — owner, after his first run on a phone: "click on the habits that you want
-  // to add on the onboarding. Let's do 5 habits max just for the onboarding."
-  test('W1052 — Make Your Own picks its vows on the spot: five at most, and exactly those are made', async ({ page }) => {
-    await obFirstRun(page);
-    await obWorld(page, { health: 'none' });
-    await obName(page, 'Richie');
-    await obGo(page, 'vow');
-    await obOn(page, 'vow');
-    const custom = page.locator('[data-cn-pack="custom"]');
-    const count = custom.locator('.ob4-banner-c');
-    await expect(count).toHaveText('Yours');
-    await custom.click();
-    // The same curated vows the First Vow picker offers inside, from the app's own table.
-    const rows = page.locator('#cn-fan [data-ob-pick]');
-    const offered = await rows.locator('.ob4-vn').allTextContents();
-    expect(offered).toEqual(['Hydrate', 'Sleep', 'Daily walk', 'Meditate & Breathwork', 'Get morning sunlight', 'Read'].map((n) => expect.stringContaining(n.split(' ')[0])));
-    expect(offered.length).toBe(6);
-    await expect(count).toHaveText('0 / 5');
-    // every row is a real tap target and nothing is clipped
-    const h = await rows.first().evaluate((el) => el.getBoundingClientRect().height);
-    expect(h).toBeGreaterThanOrEqual(44);
-
-    // five go on; the sixth does not, and says nothing
-    for (let i = 0; i < 5; i++) await rows.nth(i).click();
-    await expect(count).toHaveText('5 / 5');
-    await expect(page.locator('#cn-fan')).toHaveClass(/is-full/);
-    await rows.nth(5).click();
-    await expect(rows.nth(5)).not.toHaveClass(/is-on/);
-    await expect(count).toHaveText('5 / 5');
-    // a pick comes off again, and its place can go to the sixth
-    await rows.nth(0).click();
-    await expect(count).toHaveText('4 / 5');
-    await rows.nth(5).click();
-    await expect(page.locator('#cn-fan [data-ob-pick].is-on')).toHaveCount(5);
-    const chosen = await page.locator('#cn-fan [data-ob-pick].is-on .ob4-vn').allTextContents();
-    expect(chosen).not.toContain(offered[0]);
-
-    // looking at another path and coming back keeps the picks; the other banner is not counting
-    await page.locator('[data-cn-pack="morning"]').click();
-    await expect(count).toHaveText('Yours');
-    await custom.click();
-    await expect(count).toHaveText('5 / 5');
-    await expect(page.locator('#cn-fan [data-ob-pick].is-on')).toHaveCount(5);
-
-    await page.locator('#cn-enter').click();
-    await expect(custom).toHaveClass(/is-sworn/);
-    // once sworn the picks are settled
-    await rows.nth(0).click();
-    await expect(rows.nth(0)).not.toHaveClass(/is-on/);
-    const enter = page.locator('#cn-enter');
-    await expect(enter).toHaveText('Enter');
-    await expect(enter).toBeEnabled();
-    await enter.click();
-    await obFinish(page);
-    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]').map((x: any) => x.name).sort()), { timeout: 8_000 })
-      .toEqual(chosen.slice().sort());
-    expect(await page.evaluate(() => localStorage.getItem('hb_path'))).toBe('custom');
-    // Health vows keep their goals (the same defaults the First Vow picker gives them)
-    const goals = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_habits') || '[]')
-      .filter((x: any) => typeof x.stepGoal === 'number' || typeof x.sleepGoalHours === 'number').length);
-    expect(goals).toBe(2);
   });
 
   test('W1052 — the name screen never opens the keyboard by itself', async ({ page }) => {
