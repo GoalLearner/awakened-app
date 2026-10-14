@@ -31,6 +31,22 @@ export const PRODUCT_TO_SKIN: Readonly<Record<string, string>> = {
   'com.goallearner.awakened.skin.bloodmoon':     'avatar-skin-bloodmoon.png',
 };
 
+// W1055 — three of the female line are FREE starter looks (owner 2026-10-14: "make 3 of the
+// females starters free - we need female avatars"). They keep their avatar-skin-* file names, so
+// the art and any saved avatar_id stay valid, but no entitlement is needed to show them anywhere.
+// Nobody had bought any of the four (skin_entitlements, that day). Their store products stay in
+// PRODUCT_TO_SKIN above so a past receipt still resolves; the client no longer sells them.
+export const FREE_STARTER_SKINS: ReadonlySet<string> = new Set([
+  'avatar-skin-bloodmoon.png',
+  'avatar-skin-tempest.png',
+  'avatar-skin-frostweaver.png',
+]);
+/** A paid skin: shown on a public card or as a PvP combatant only when owned. */
+export function skinNeedsEntitlement(file: string): boolean {
+  const f = String(file || '').toLowerCase();
+  return /^avatar-skin-/.test(f) && !FREE_STARTER_SKINS.has(f);
+}
+
 /** Resolve a store product id to its skin catalog id, or null if unknown. */
 export function skinForProduct(productId: string): string | null {
   return PRODUCT_TO_SKIN[productId] ?? null;

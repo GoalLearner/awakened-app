@@ -865,20 +865,32 @@ describe('PUT /v1/users/me/public-profile-summary — premium-skin ownership (W7
   it('unowned premium skin avatar_id is stripped', async () => {
     const db = makeSkinDb([]);
     const res = await handlePublicProfileSummaryPut(
-      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-bloodmoon.png' }), makeEnv(db), session);
+      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-verdant.png' }), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = db._calls();
     expect(calls.some((c) => /skin_entitlements/.test(c.sql))).toBe(true);
-    expect(upsertOf(calls)?.binds.includes('avatar-skin-bloodmoon.png')).toBe(false);
+    expect(upsertOf(calls)?.binds.includes('avatar-skin-verdant.png')).toBe(false);
   });
 
   it('owned premium skin avatar_id is kept verbatim', async () => {
-    const db = makeSkinDb(['avatar-skin-bloodmoon.png']);
+    const db = makeSkinDb(['avatar-skin-verdant.png']);
     const res = await handlePublicProfileSummaryPut(
-      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-bloodmoon.png' }), makeEnv(db), session);
+      makeReq({ ...validPayload, cardBg: null, avatarId: 'avatar-skin-verdant.png' }), makeEnv(db), session);
     expect(res.status).toBe(200);
-    expect(upsertOf(db._calls())?.binds.includes('avatar-skin-bloodmoon.png')).toBe(true);
+    expect(upsertOf(db._calls())?.binds.includes('avatar-skin-verdant.png')).toBe(true);
   });
+
+  // W1055 — three of the female line are free starter looks.
+  it.each(['avatar-skin-bloodmoon.png', 'avatar-skin-tempest.png', 'avatar-skin-frostweaver.png'])(
+    'the free starter %s is kept with no ownership probe', async (file) => {
+      const db = makeSkinDb([]);
+      const res = await handlePublicProfileSummaryPut(
+        makeReq({ ...validPayload, cardBg: null, avatarId: file }), makeEnv(db), session);
+      expect(res.status).toBe(200);
+      const calls = db._calls();
+      expect(calls.some((c) => /skin_entitlements/.test(c.sql))).toBe(false);
+      expect(upsertOf(calls)?.binds.includes(file)).toBe(true);
+    });
 
   it('a free class avatar is kept with no ownership probe', async () => {
     const db = makeSkinDb([]);

@@ -57,6 +57,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { maybeGrantFounderMark } from '../lib/founder-mark';
 import { readEntitlements } from './iap-entitlements';
+import { skinNeedsEntitlement } from '../lib/skin-products';
 import { resolveOathsOnFirstKill } from './oaths';   // W867 — Oathbound fulfillment
 
 // W706 — the member card-background catalog (ids only; art + achievement mapping
@@ -587,8 +588,9 @@ export async function handlePublicProfileSummaryPut(
   // leaderboards/friends (the cross-user value of the purchase). Same coercion model as
   // cardBg membership: read entitlements ONCE, quietly coerce an unowned/non-member
   // value to the default — never a 4xx (a stale heartbeat must not break the submit).
+  // W1055 — the free starter skins (FREE_STARTER_SKINS) need no entitlement.
   const _avatarNeedsCheck =
-    v.avatarId.set && typeof v.avatarId.value === 'string' && /^avatar-skin-/i.test(v.avatarId.value);
+    v.avatarId.set && typeof v.avatarId.value === 'string' && skinNeedsEntitlement(v.avatarId.value);
   const _combatantNeedsCheck =
     v.combatant.set && typeof v.combatant.value === 'string' && /"avatar":"avatar-skin-/i.test(v.combatant.value);
   if ((v.cardBg.set && v.cardBg.value !== null) || _avatarNeedsCheck || _combatantNeedsCheck) {
@@ -600,7 +602,7 @@ export async function handlePublicProfileSummaryPut(
     if (_combatantNeedsCheck) {
       try {
         const cj = JSON.parse(v.combatant.value as string);
-        if (cj && typeof cj.avatar === 'string' && /^avatar-skin-/i.test(cj.avatar) && !ent.skins.includes(cj.avatar)) {
+        if (cj && typeof cj.avatar === 'string' && skinNeedsEntitlement(cj.avatar) && !ent.skins.includes(cj.avatar)) {
           cj.avatar = '';
           v.combatant = { set: true, value: JSON.stringify(cj) };
         }
