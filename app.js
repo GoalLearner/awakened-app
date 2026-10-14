@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1050'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1051'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -65207,28 +65207,6 @@
     } catch (_) {}
   }
 
-  // ─────────────────────────────────────────────────────────
-  // v3 Phase 1z.233 — Cinematic Onboarding (Direction A)
-  //
-  // ClaudeDesign-led 7-screen first-run reveal that replaces the
-  // legacy showWelcomeScreen → showPathScreen → showOnboarding chain
-  // for brand-new users. The legacy markup is kept in the DOM as a
-  // safety fallback but is unreachable from the redirected entry
-  // below. At "Enter Awakened" the same functional contract as
-  // `_completeOnboardingFinish` is honored:
-  //   • playerName + hb_name persisted
-  //   • hb_welcomed=1, hb_hunter_name_claimed=1
-  //   • selectedPackId + hb_path persisted
-  //   • habits[] built from the chosen pack's DEFAULT_HABITS indices
-  //   • runOnboardingNotifPrompt → _completeOnboardingFinish path
-  //     reused (so the App Store-compliant notification prompt still
-  //     fires at the end). For 'custom' pack the user enters the
-  //     app with zero habits and adds them from the Habits tab.
-  //
-  // The "+25 XP" cinematic on screen 6 is SYMBOLIC — no XP / streak /
-  // rank math is touched. The visual is the reward; the first real
-  // habit completion still credits XP normally.
-  // ─────────────────────────────────────────────────────────
   // W947 — the name screen's busts → the avatar file each one wears. HUNTER is
   // the class default, so it names no file.
   function _cnBustFile(bust) {
@@ -72009,187 +71987,14 @@
   }
   try { _armSplashLongTimer(); } catch (_) {}
 
-  // ── Educational onboarding (5-card intro) ──────────────────
-  // Independent of the existing #welcome-screen / #path-screen
-  // / #onboarding flow. This one is purely teaching content; the
-  // existing flow still handles name + path + habit picker.
+  // The 5-card educational intro (v3 Phase 1i) was retired at 1z.235 and its
+  // plumbing removed at W1051. Its key is still flipped on every launch so what
+  // reads it keeps seeing "intro seen", as returning hunters always were.
   const INTRO_OB_VERSION_KEY = 'hb_onboarding_seen_v2';
-  const INTRO_OB_STEPS = [
-    {
-      kicker:  'CHAPTER 1 OF 5',
-      title:   'Discipline Becomes Power',
-      body:    'Awakened turns your real-life habits into hunter progression. Complete the work. Earn XP. Build the person you said you would become.',
-      visual:  '⚜',
-      cta:     'Begin',
-    },
-    {
-      kicker:  'CHAPTER 2 OF 5',
-      title:   'Train Your Six Stats',
-      body:    'Every habit strengthens a different part of your character — strength, recovery, learning, focus, willpower, and wealth.',
-      visual:  '',
-      cta:     'Continue',
-      extra:   'stats',
-    },
-    {
-      kicker:  'CHAPTER 3 OF 5',
-      title:   'The System Is Honest',
-      body:    'Steps, sleep, and bedtime can be verified through Apple Health. If the data proves it, your hunter earns it.',
-      visual:  '✦',
-      cta:     'Continue',
-    },
-    {
-      kicker:  'CHAPTER 4 OF 5',
-      title:   'Hunt Bosses. Earn Relics.',
-      body:    'Bosses are defeated through real discipline. Win the hunt to earn souls, discover relics, and unlock rare drops.',
-      visual:  '☠',
-      cta:     'Continue',
-    },
-    {
-      kicker:  'CHAPTER 5 OF 5',
-      title:   'Shape Your Hunter Build',
-      body:    'Equip earned gear in your Armory. Helm, Weapon, Plate, Gloves, Boots, and Ring — your build reflects the path you are building.',
-      visual:  '',
-      cta:     'Enter Awakened',
-      extra:   'slots',
-    },
-  ];
-  let _introObStep = 0;
-  let _introObOnComplete = null;
-
-  function shouldShowIntroOnboarding() {
-    // v3 Phase 1z.235 — Legacy "Chapter 1 of 5 · Discipline Becomes
-    // Power" intro splash retired. The 1z.233 cinematic onboarding is
-    // now the only first-run experience. We still flip the v2 version
-    // key so any code that reads it stays consistent with the prior
-    // contract (returning users are treated as having "seen" the
-    // intro). The whole _renderIntroObStep / INTRO_OB_STEPS plumbing
-    // is kept in the file for rollback safety but is unreachable.
+  function _markIntroOnboardingSeen() {
     try {
-      if (localStorage.getItem(INTRO_OB_VERSION_KEY) !== '1') {
-        localStorage.setItem(INTRO_OB_VERSION_KEY, '1');
-      }
+      if (localStorage.getItem(INTRO_OB_VERSION_KEY) !== '1') localStorage.setItem(INTRO_OB_VERSION_KEY, '1');
     } catch (_) {}
-    return false;
-  }
-
-  function _renderIntroObExtra(step) {
-    const wrap = document.getElementById('intro-ob-extra');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    if (step.extra === 'stats') {
-      const stats = [
-        { id: 'STR',   name: 'Strength' },
-        { id: 'VIT',   name: 'Recovery' },
-        { id: 'INT',   name: 'Learning' },
-        { id: 'FOCUS', name: 'Discipline' },
-        { id: 'WILL',  name: 'Resilience' },
-        { id: 'WLT',   name: 'Wealth' },
-      ];
-      wrap.innerHTML = '<div class="intro-ob-stat-grid">' +
-        stats.map(s => '<div class="intro-ob-stat-pill">' +
-          '<div class="intro-ob-stat-pill-id">' + s.id + '</div>' +
-          '<div class="intro-ob-stat-pill-name">' + s.name + '</div>' +
-        '</div>').join('') +
-      '</div>';
-    } else if (step.extra === 'slots') {
-      const slots = ['HELM', 'WEAPON', 'ARMOR', 'GLOVES', 'BOOTS', 'RING'];
-      // Mark first two "filled" purely visually for the preview.
-      wrap.innerHTML = '<div class="intro-ob-slot-grid">' +
-        slots.map((label, i) => '<div class="intro-ob-slot-tile' +
-          (i < 2 ? ' intro-ob-slot-tile--filled' : '') + '">' + label + '</div>').join('') +
-      '</div>';
-    }
-  }
-
-  function _renderIntroObStep(idx) {
-    _introObStep = idx;
-    const step = INTRO_OB_STEPS[idx];
-    if (!step) return;
-    const kicker = document.getElementById('intro-ob-kicker');
-    const title  = document.getElementById('intro-ob-title');
-    const body   = document.getElementById('intro-ob-body');
-    const visual = document.getElementById('intro-ob-visual');
-    const back   = document.getElementById('intro-ob-back');
-    const next   = document.getElementById('intro-ob-next');
-    if (kicker) kicker.textContent = step.kicker;
-    if (title)  title.textContent  = step.title;
-    if (body)   body.textContent   = step.body;
-    if (visual) {
-      if (step.visual) {
-        visual.style.display = 'flex';
-        visual.textContent = step.visual;
-      } else {
-        visual.style.display = 'none';
-      }
-    }
-    if (back) back.style.visibility = idx === 0 ? 'hidden' : 'visible';
-    if (next) next.textContent = step.cta;
-    _renderIntroObExtra(step);
-    // Re-fire card-rise animation
-    const card = document.getElementById('intro-ob-card');
-    if (card) {
-      card.classList.remove('is-leaving');
-      // Force reflow so the animation restarts
-      // eslint-disable-next-line no-unused-expressions
-      void card.offsetWidth;
-      card.style.animation = '';
-      card.style.animation = 'intro-ob-card-rise 0.42s cubic-bezier(0.34, 1.3, 0.64, 1) both';
-    }
-    // Progress dots
-    const dotsWrap = document.getElementById('intro-ob-progress');
-    if (dotsWrap) {
-      dotsWrap.innerHTML = INTRO_OB_STEPS.map((_, i) =>
-        '<span class="intro-ob-dot' + (i === idx ? ' is-active' : '') + '"></span>'
-      ).join('');
-    }
-  }
-
-  function showIntroOnboarding(onComplete) {
-    _introObOnComplete = (typeof onComplete === 'function') ? onComplete : null;
-    const el = document.getElementById('intro-onboarding');
-    if (!el) { if (_introObOnComplete) _introObOnComplete(); return; }
-    _introObStep = 0;
-    _renderIntroObStep(0);
-    el.classList.remove('hidden');
-  }
-
-  function hideIntroOnboarding() {
-    const el = document.getElementById('intro-onboarding');
-    if (el) el.classList.add('hidden');
-  }
-
-  function completeIntroOnboarding() {
-    try { localStorage.setItem(INTRO_OB_VERSION_KEY, '1'); } catch (_) {}
-    hideIntroOnboarding();
-    const cb = _introObOnComplete; _introObOnComplete = null;
-    if (cb) try { cb(); } catch (_) {}
-  }
-
-  function setupIntroOnboarding() {
-    const back = document.getElementById('intro-ob-back');
-    const next = document.getElementById('intro-ob-next');
-    const skip = document.getElementById('intro-ob-skip');
-    if (back) {
-      back.addEventListener('click', () => {
-        if (_introObStep > 0) _renderIntroObStep(_introObStep - 1);
-      });
-    }
-    if (next) {
-      next.addEventListener('click', () => {
-        if (_introObStep < INTRO_OB_STEPS.length - 1) {
-          _renderIntroObStep(_introObStep + 1);
-        } else {
-          completeIntroOnboarding();
-        }
-      });
-    }
-    if (skip) {
-      skip.addEventListener('click', () => {
-        if (window.confirm('Skip the intro? You can re-read it later in Settings.')) {
-          completeIntroOnboarding();
-        }
-      });
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -73769,10 +73574,8 @@
       try { _wrMaybeShowWeekRecap(); } catch (_) {}
     }, 1200);
 
-    // v3 Phase 1i — Splash hide + educational onboarding gate.
-    // Splash fades out as soon as we know which flow to run. New
-    // users see the 5-card intro before the existing welcome flow.
-    try { setupIntroOnboarding(); } catch (_) {}
+    // v3 Phase 1i — the splash fades out as soon as we know which flow to run.
+    _markIntroOnboardingSeen();
     const enterFirstRunFlow = () => {
       // v3 Phase 1z.236 — Always route first-run through the cinematic
       // flow (via showWelcomeScreen → showCinematicOnboarding). The
@@ -73819,18 +73622,8 @@
       }
     };
 
-    if (shouldShowIntroOnboarding()) {
-      // Brand-new user: hide splash → show intro → on completion,
-      // resume the existing first-run path (welcome → path → habits).
-      try { hideSplash(); } catch (_) {}
-      showIntroOnboarding(() => {
-        try { enterFirstRunFlow(); } catch (_) {}
-      });
-    } else {
-      // Existing user (or intro already seen): straight through.
-      try { hideSplash(); } catch (_) {}
-      enterFirstRunFlow();
-    }
+    try { hideSplash(); } catch (_) {}
+    enterFirstRunFlow();
   }
 
   // ── W679 — Weekly (Monday) update-reminder banner (ClaudeDesign handoff-20).
