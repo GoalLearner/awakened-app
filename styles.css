@@ -34632,8 +34632,6 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .ob4-sys-tag{position:absolute;top:-9px;left:14px;padding:0 6px;background:var(--ob4-night);font:600 .6875rem/1.2 var(--ob4-hud);letter-spacing:.1em;text-transform:uppercase;color:var(--ob4-gold)}
 .ob4-sys .ob4-say{font-style:normal;font-weight:500;font-size:1.0625rem}
 .ob4-sys .ob4-say+.ob4-say{margin-top:8px}
-.ob4-typed::after{content:'';display:inline-block;width:2px;height:1em;background:var(--ob4-gold);vertical-align:-2px;margin-left:2px;animation:ob4-blink .8s steps(1) infinite}
-.ob4-typed.is-done::after{display:none}
 .ob4-guide{position:absolute;right:-10px;bottom:calc(var(--ob4-sb) + 116px);width:210px;height:230px;pointer-events:none;z-index:0}
 .ob4-guide::before{content:'';position:absolute;left:14%;right:14%;bottom:4px;height:22px;border-radius:50%;background:rgba(0,0,0,.65);filter:blur(10px)}
 .ob4-guide img{position:relative;width:100%;height:100%;object-fit:contain;object-position:bottom;display:block;filter:drop-shadow(-6px 0 12px rgba(245,184,66,.25)) drop-shadow(0 0 1px rgba(245,184,66,.6));transition:opacity .3s}
@@ -34890,6 +34888,13 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .ob4-tw{display:flex;flex-direction:column;gap:8px;flex:none}
 .ob4-tw-n{font-family:var(--ob4-display);font-weight:var(--ob4-dw2);font-size:1.25rem;line-height:1.1}
 .ob4-rhythm-sum.is-warn{color:var(--ob4-ember)}
+/* W1052 — Make Your Own: the vows are picked here, up to five */
+.ob4-fan.ob4-fan-pick{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ob4-pick{width:100%;border:0;text-align:left;cursor:pointer;transition:box-shadow .2s,background .2s,opacity .2s}
+.ob4-pick-mark{width:12px;height:12px;flex:none;margin:0 4px 0 6px;transform:rotate(45deg);border:1.5px solid var(--ob4-ink3);border-radius:2px;transition:background .2s,border-color .2s}
+.ob4-pick.is-on{box-shadow:inset 0 0 0 1.5px var(--ob4-gold);background:rgba(245,184,66,.07)}
+.ob4-pick.is-on .ob4-pick-mark{background:var(--ob4-gold);border-color:var(--ob4-gold)}
+.ob4-fan-pick.is-full .ob4-pick:not(.is-on){opacity:.4}
 .ob4-root .jd-row{gap:6px}
 .ob4-root .jd-chip{height:60px;border:0;border-radius:12px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px var(--ob4-line);color:var(--ob4-ink2)}
 .ob4-root .jd-chip i{font:600 .6875rem/1 var(--ob4-hud);font-style:normal;letter-spacing:.05em}
