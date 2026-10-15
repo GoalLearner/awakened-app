@@ -10099,7 +10099,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
 
   // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".
   // The matchup's YOUR POWER is the number the fight uses; the boosts open what each one added.
-  test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, and the army kneels on a milestone', async ({ page }) => {
+  test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, on a milestone too (W1060)', async ({ page }) => {
     await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 19 });
     await page.addInitScript(() => {
       try {
@@ -10147,11 +10147,17 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator('#arena-body .mx')).not.toHaveClass(/mx-panel-open/);
     await expect(page.locator('#arena-body .mx-stakes')).toContainText('Defeat spends a life');
 
-    // floor 90, a milestone: nothing boosts it, and the army is shown kneeling
+    // floor 90, a milestone: the boosts count there too (W1060, owner 2026-10-15: "I want boosts to
+    // be allowed"); no banner was planted on 90, so Blood and the army only
     await matchup('[data-ar="rematch"][data-floor="90"]');
-    await expect(page.locator('#arena-body .mx--boss .mx-marks')).toHaveText('KNEELS AT THE THRESHOLD');
-    await expect(page.locator('#mx-you')).toHaveText(String(base));
-    expect(await nums('#arena-body .mx-sheet .mx-pl .v')).toEqual([base, base]);
+    await expect(page.locator('#arena-body .mx--boss .mx-marks')).toHaveText(/\+10%.*\+4\.5%/);
+    const pl90 = await nums('#arena-body .mx-sheet .mx-pl .v');
+    expect(pl90[0]).toBe(base);
+    expect(pl90.length).toBe(4);
+    expect(Math.abs(pl90[3] - base * 1.1 * 1.045)).toBeLessThanOrEqual(2);
+    await expect(page.locator('#mx-you')).toHaveText(String(pl90[3]), { timeout: 3000 });
+    // and the roster no longer promises a kneel
+    expect(await page.evaluate(() => document.body.innerText)).not.toMatch(/KNEELS AT THE THRESHOLD/);
   });
 
   // W1059 — owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
