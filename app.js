@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1056'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1057'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7771,10 +7771,21 @@
   // opens: E 1, D 2, C 4, B 7, A 12, and at S every shadow marches. It was E1 D2 C3 B4 A5 S6,
   // which left the 7th to 19th drops with nothing to do. S is counted from the boss table (19
   // solo bosses today), so a new solo boss brings its own slot.
-  // Each marching shadow is still +1% on REGULAR floors only; every tenth floor is fought
-  // without the army, so no wall moved. Real-engine sim that day, a strong A-rank build on
-  // floor 85: 4% with no shadows, 15% with 6, 31% with 12, 52% with all 19.
+  // Shadows count on REGULAR floors only; every tenth floor is fought without the army, so no
+  // wall moved. (Real-engine sim that day at a flat 1% each, a strong A-rank build on floor 85:
+  // 4% with no shadows, 15% with 6, 31% with 12, 52% with all 19.)
   const SHADOW_SLOTS = { E: 1, D: 2, C: 4, B: 7, A: 12 };
+  // W1057 (owner 2026-10-14: "let shadows scale... the higher boss shadows give more percentage";
+  // of three curves he picked MIDDLE) — a shadow is worth what its boss was: E 0.75%, D 1%,
+  // C 1.25%, B 1.5%, A 1.75%, S 2%. It was a flat 1%. Full army +26% (was +19%); an A-rank
+  // hunter's best twelve +19.5% (was +12%). Sim that day, strong A-rank build, regular floors:
+  // floor 75 91% (was 84%), 85 54% (31%), 95 15% (9%). Milestone floors still meet no army.
+  const SHADOW_RANK_PCT = { E: 0.75, D: 1, C: 1.25, B: 1.5, A: 1.75, S: 2 };
+  function _shPct(bossId) {
+    const r = (BOSSES[bossId] || {}).rank;
+    return SHADOW_RANK_PCT[r === 'S+' ? 'S' : r] || SHADOW_RANK_PCT.E;
+  }
+  function _shPctText(p) { return String(Math.round(p * 100) / 100); }
   function _shSoloCount() {
     let n = 0;
     try { for (const id in BOSSES) { if (BOSSES[id] && !BOSSES[id].coopOnly) n++; } } catch (_) {}
@@ -7818,7 +7829,8 @@
     try {
       const s = _shLoad(), slots = _shSlots();
       if ((s.slotsSeen | 0) >= slots) return;
-      const owned = Object.keys(s.extracted).sort(function (a, b) { return ((s.extracted[a] || {}).at || 0) - ((s.extracted[b] || {}).at || 0); });
+      // W1057 — the strongest step in first (then the oldest), now that shadows are not equal
+      const owned = Object.keys(s.extracted).sort(function (a, b) { return (_shPct(b) - _shPct(a)) || (((s.extracted[a] || {}).at || 0) - ((s.extracted[b] || {}).at || 0)); });
       s.active = s.active.filter(function (id) { return !!s.extracted[id]; });
       for (let i = 0; i < owned.length && s.active.length < slots; i++) {
         if (s.active.indexOf(owned[i]) === -1) s.active.push(owned[i]);
@@ -7833,6 +7845,20 @@
       const s = _shLoad();
       if (s.dormant) return 0;
       return Math.min(s.active.length, _shSlots());
+    } catch (_) { return 0; }
+  }
+  // W1057 — the army's power: each marching shadow at its boss's rank (the strongest count first
+  // should a list ever hold more than the slots).
+  function _shadowPowerPct() {
+    try {
+      _shFillSlots();
+      const s = _shLoad();
+      if (s.dormant) return 0;
+      const ids = s.active.filter(function (id) { return !!s.extracted[id]; })
+        .sort(function (a, b) { return _shPct(b) - _shPct(a); }).slice(0, _shSlots());
+      let p = 0;
+      ids.forEach(function (id) { p += _shPct(id); });
+      return Math.round(p * 100) / 100;
     } catch (_) { return 0; }
   }
   /** Called at every solo kill site, once per kill: the roll. */
@@ -8059,7 +8085,7 @@
       const doesEl = ov.querySelector('.arise-does');
       if (doesEl) {
         doesEl.textContent = s.active.indexOf(bossId) !== -1
-          ? 'It marches with you in the Ascent. +1% power.'
+          ? 'It marches with you in the Ascent. +' + _shPctText(_shPct(bossId)) + '% power.'
           : 'Your slots are full. Rest a shadow in the Co-op tab to let it march.';
         doesEl.classList.add('show');
       }
@@ -8091,7 +8117,7 @@
         return '<div class="shr-row">' +
           '<img class="shr-art" src="' + esc(getBossArtPath(id)) + '" alt="" onerror="this.style.display=\'none\'">' +
           '<div class="shr-main"><div class="shr-name">' + esc(s.extracted[id].name) + '</div>' +
-          '<div class="shr-sub">' + esc(cfg.rank || '?') + '-RANK SHADOW' + (s.dormant ? ' · KNEELING' : marching ? ' · MARCHING' : ' · AT REST') + '</div></div>' +
+          '<div class="shr-sub">' + esc(cfg.rank || '?') + '-RANK SHADOW · +' + _shPctText(_shPct(id)) + '%' + (s.dormant ? ' · KNEELING' : marching ? ' · MARCHING' : ' · AT REST') + '</div></div>' +
           '<button type="button" class="shr-toggle' + (marching ? ' on' : '') + '" data-shadow-toggle="' + esc(id) + '">' + (marching ? 'MARCHING' : 'REST') + '</button>' +
         '</div>';
       }).join('') : '<div class="shr-empty">No shadows yet. ' + SHADOW_HOW + '</div>';
@@ -8103,7 +8129,7 @@
           '<div class="shr-slots">' + Math.min(s.active.length, slots) + ' MARCHING · ' + slots + ' SLOT' + (slots === 1 ? '' : 'S') + ' AT YOUR RANK' + (s.dormant ? ' · THE ARMY KNEELS (unfed ' + s.zeroDays + ' days)' : '') + '</div>' +
           rows +
           (ids.length ? '<div class="shr-how">' + SHADOW_HOW + '</div>' : '') +
-          '<div class="sw-foot">EACH MARCHING SHADOW: +1% ASCENT POWER.<br>SHADOWS KNEEL AT THE THRESHOLD OF MILESTONE FLOORS.</div>' +
+          '<div class="sw-foot">A SHADOW ADDS ASCENT POWER BY ITS BOSS\'S RANK: E 0.75% TO S 2%.<br>SHADOWS KNEEL AT THE THRESHOLD OF MILESTONE FLOORS.</div>' +
           '<button type="button" class="sw-close" aria-label="Close">CLOSE</button>' +
         '</div>';
       document.body.appendChild(ov);
@@ -8136,7 +8162,7 @@
     if (!n) { host.classList.add('hidden'); host.innerHTML = ''; return; }
     const marching = _shadowActiveCount();
     host.innerHTML = '<span class="shs-glyph" aria-hidden="true">◈</span> SHADOW ARMY · ' + n + ' RAISED · ' +
-      (s.dormant ? 'KNEELING' : marching + ' MARCHING (+' + marching + '%)') + ' ›';
+      (s.dormant ? 'KNEELING' : marching + ' MARCHING (+' + _shPctText(_shadowPowerPct()) + '%)') + ' ›';
     host.classList.remove('hidden');
   }
   try {
@@ -8154,6 +8180,7 @@
     // W1048 QA — slots for a rank (or the hunter's own), and how many march right now.
     window.__shadowSlots = function (rankId) { return rankId ? _shSlotsFor(rankId) : _shSlots(); };
     window.__shadowMarching = _shadowActiveCount;
+    window.__shadowPct = function (id) { return id ? _shPct(id) : _shadowPowerPct(); };   // W1057 QA
   } catch (_) {}
 
   // ─── v3 Phase 1z.165 — Guild Activity (dedicated event store) ──
@@ -12972,17 +12999,19 @@
       player.power   = player.attack + player.defense + player.edge;
       player.bloodHot = true;
     }
-    // W862 — THE SHADOW ARMY (owner-blessed): +1% per marching shadow on
+    // W862 — THE SHADOW ARMY (owner-blessed): marching shadows add power on
     // regular floors; shadows kneel at every milestone threshold, so the
-    // sim-verified walls never meet the army.
-    const _shN = (f % 10 !== 0) ? _shadowActiveCount() : 0;
-    if (_shN > 0) {
-      const _shM = 1 + 0.01 * _shN;
+    // sim-verified walls never meet the army. W1057 — each at its boss's
+    // rank (SHADOW_RANK_PCT), no longer a flat 1%.
+    const _shP = (f % 10 !== 0) ? _shadowPowerPct() : 0;
+    if (_shP > 0) {
+      const _shM = 1 + _shP / 100;
       player.attack  = player.attack  * _shM;
       player.defense = player.defense * _shM;
       player.edge    = player.edge    * _shM;
       player.power   = player.attack + player.defense + player.edge;
-      player.shadows = _shN;
+      player.shadows = _shadowActiveCount();
+      player.shadowPct = _shP;
     }
     // W870 — a friend's banner on a regular floor lends +1% (milestone floors
     // exempt — the house kneel rule). Sync fires here too (TTL-throttled).
@@ -15068,8 +15097,8 @@
       ? '<div class="ar-bloodhot-chip">BLOOD STILL HOT · +10% POWER</div>'
       : '';
     // W862 — the marching army's chip (violet, beside the crimson one).
-    const shadowChip = (m.player && m.player.shadows)
-      ? '<div class="ar-shadow-chip">SHADOW ARMY · +' + m.player.shadows + '% POWER</div>'
+    const shadowChip = (m.player && m.player.shadowPct)
+      ? '<div class="ar-shadow-chip">SHADOW ARMY · +' + _shPctText(m.player.shadowPct) + '% POWER</div>'
       : '';
     // W870 — the Tower remembers your friends.
     const bannerChip = (m.player && m.player.bannerAlias)
@@ -56351,7 +56380,7 @@
           shl.classList.remove('hidden');
         } else if (!cfg.coopOnly) {
           // W1047 — the one place a hunter with no shadows learns they exist: every solo boss says it.
-          shl.textContent = '◈ Its shadow rises on 1 kill in ' + SHADOW_DROP_ONE_IN + '.';
+          shl.textContent = '◈ Its shadow rises on 1 kill in ' + SHADOW_DROP_ONE_IN + ', worth +' + _shPctText(_shPct(id)) + '% in the Ascent.';   // W1057
           shl.classList.remove('hidden');
         } else {
           shl.classList.add('hidden');

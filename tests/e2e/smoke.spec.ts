@@ -9980,7 +9980,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await freshApp(page);
     // the ceremony
     await page.evaluate(() => (window as any).__arise('the_carouser'));
-    await expect(page.locator('.arise-does.show')).toHaveText('It marches with you in the Ascent. +1% power.', { timeout: 6000 });
+    await expect(page.locator('.arise-does.show')).toHaveText('It marches with you in the Ascent. +0.75% power.', { timeout: 6000 });   // an E-rank shadow (W1057)
     await page.waitForTimeout(400);
     await page.locator('.arise-overlay').click();
     await expect(page.locator('.arise-overlay')).toHaveCount(0);
@@ -10000,7 +10000,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // shadow is not owned says the odds.
     await page.evaluate(() => (window as any).__readyHunt.open('the_glass_strider'));
     await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 8000 });
-    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 20.');
+    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 20, worth +1% in the Ascent.');   // a D-rank boss (W1057)
   });
 
   test('a miss says nothing and opens no window; a hit raises the shadow, once, and the boss never rolls again', async ({ page }) => {
@@ -10078,6 +10078,25 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     'the_ascendant_colossus', 'the_gray_pilgrim', 'the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame', 'the_unbroken_anvil'];
   const marchingNow = (page: Page) => page.evaluate(() => { const w = window as any; return { n: w.__shadowMarching(), slots: w.__shadowSlots(), active: w.__shadows().active as string[] }; });
 
+  // W1057 — owner 2026-10-14: "the higher boss shadows give more percentage" (curve: MIDDLE).
+  test('W1057 — a shadow is worth its boss\'s rank: E 0.75, D 1, C 1.25, B 1.5, A 1.75, S 2; the army adds them up', async ({ page }) => {
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine']);
+    await freshApp(page);
+    const r = await page.evaluate(() => {
+      const w = window as any;
+      return {
+        each: ['the_insomniac', 'the_glass_strider', 'the_marathon_wraith', 'the_patient_flame', 'the_unbroken_anvil', 'the_worldspine'].map((id) => w.__shadowPct(id)),
+        army: w.__shadowPct(),
+      };
+    });
+    expect(r.each).toEqual([0.75, 1, 1.25, 1.5, 1.75, 2]);
+    expect(r.army).toBe(4.5);                                  // 0.75 + 1.75 + 2
+    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'S-RANK' })).toContainText('+2%');
+    await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'E-RANK' })).toContainText('+0.75%');
+    await expect(page.locator('#shadow-roster .sw-foot')).toContainText('E 0.75% TO S 2%');
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
@@ -10095,12 +10114,14 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
   });
 
-  test('W1048 — an A-rank hunter with fourteen: twelve march (oldest first), two wait, and a rest by hand is kept', async ({ page }) => {
+  test('W1048 — an A-rank hunter with fourteen: twelve march (strongest first, W1057), two wait, and a rest by hand is kept', async ({ page }) => {
     await army(page, 7000, SOLO, SOLO.slice(0, 5));
     await freshApp(page);
     let m = await marchingNow(page);
     expect([m.n, m.slots]).toEqual([12, 12]);
-    expect(m.active).toEqual(SOLO.slice(0, 12));                       // oldest first
+    // the five already marching stay; the seven that join are the strongest of the rest, oldest first among equals
+    expect(m.active).toEqual(SOLO.slice(0, 5).concat(['the_unbroken_anvil', 'the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame',
+      'the_marathon_wraith', 'the_furnace_knight', 'the_ascendant_colossus']));
     // rest one by hand: the slot stays free until the hunter fills it (growth is what fills, not a free slot)
     await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
     await page.locator('#shadow-roster [data-shadow-toggle="the_insomniac"]').click();
