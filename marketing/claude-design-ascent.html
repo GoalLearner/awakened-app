@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ascent Design Briefs</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1c1a17;--mute:#6b665c;--line:#ddd7ca;--gold:#a8741a;--btn:#1c1a17;--btnink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0d18;--card:#15152a;--ink:#ece9f5;--mute:#9a97b3;--line:#2a2a48;--gold:#f5b842;--btn:#f5b842;--btnink:#1b1405}}
+:root[data-theme="dark"]{--bg:#0d0d18;--card:#15152a;--ink:#ece9f5;--mute:#9a97b3;--line:#2a2a48;--gold:#f5b842;--btn:#f5b842;--btnink:#1b1405}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:820px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:26px;margin:0 0 6px}p.sub{color:var(--mute);margin:0 0 22px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:0 0 18px}
+h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);margin:0 0 4px}
+p.lead{margin:0 0 14px;color:var(--mute)}
+h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px}
+ol{margin:0;padding-left:20px}li{margin:0 0 8px}code{font-size:13px;background:rgba(127,127,127,.14);padding:1px 5px;border-radius:5px;word-break:break-all}
+.bar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}
+button{font:600 15px/1 inherit;background:var(--btn);color:var(--btnink);border:0;border-radius:10px;padding:13px 18px;cursor:pointer}
+.ok{color:var(--mute);font-size:14px}
+pre{margin:0;white-space:pre-wrap;word-wrap:break-word;font:13.5px/1.55 ui-monospace,Menlo,Consolas,monospace;max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:14px;background:rgba(127,127,127,.06)}
+</style></head><body><main>
+<h1>Ascent design briefs</h1>
+<p class="sub">Two briefs for Claude Design, one chat each. Copy one, paste it in, attach its screenshots.</p>
+<section><h2>1. The Tower</h2><p class="lead">The screen you see on entering the Ascent.</p><h3>Attach</h3><ol><li>Your screenshot of the Ascent at floor 100 (the First Awakened card and the floor list).</li><li>Optional, the art it may use, from the app's <code>assets</code> folder: <code>assets/arena/foe_balanced.webp</code>, <code>foe_aggressor.webp</code>, <code>foe_sentinel.webp</code>, <code>foe_trickster.webp</code>, <code>foe_glasscannon.webp</code>, <code>foe_juggernaut.webp</code>, <code>assets/arena/boss_50.webp</code>, <code>assets/coach/first-awakened-idle.png</code>. The screenshot alone is enough to start.</li></ol><h3>Paste</h3><div class="bar"><button type="button" data-copy="tower">Copy brief 1</button><span class="ok" id="ok-tower" data-w="1038 words">1038 words</span></div><pre id="b-tower">Redesign **the Tower**: the screen a hunter sees on entering the Ascent in **Awakened:
+Habit RPG**, a dark fantasy habit tracker. Kept vows raise stats, stats and relics make
+power, and power climbs a 100-floor tower. The owner's ask:
+
+&gt; I do want to revamp this page to make it more inviting and aesthetic for users when
+&gt; they go into the tower. Overall less is more and just interactive for the user is best.
+
+## What the tower is (facts the design must respect)
+
+- 100 floors in ten bands of ten, each with a name and a rank tier: The Threshold
+  (1–10, E), The Undercroft (11–20, E), The Ashen Climb (D), The Hollow Reach (D), The
+  Gilded Tier (C), The Riven Span (C), The Stormcrown (B), The Pale Expanse (B), The
+  Sovereign Steps (A), The Summit (91–100, S).
+- Every floor is one foe. Regular foes come in six styles (Neutral, Melee, Magic,
+  Ranged, Intense Melee, Intense Magic), one painted portrait per style. Every tenth
+  floor is a milestone boss with its own painting. Floor 100 is The First Awakened,
+  the final boss.
+- A win climbs one floor. Free hunters may lose twice a day, then the climb closes
+  until tomorrow (two hearts). Members never run out (∞ and a PREMIUM tag).
+- Any beaten floor can be fought again at any time, free, never costing a life. The
+  first win on a beaten floor each day pays a small souls bounty ("+16"), up to 150
+  souls a day; floors that no longer pay today show nothing.
+- Hunters climb for weeks: the strongest are in the 90s, most are between 10 and 60.
+
+## What is wrong today
+
+The screen is a ledger: one card for the next fight, then every beaten floor as an
+identical grey row, newest first. A hunter at floor 100 scrolls past 99 of them.
+Nothing says *tower*: no height, no sense of where you stand or of what is above. The
+foe's painting is a thumbnail. Bands are a thin rule line.
+
+## What to design
+
+One screen, 390 × 844, that feels like standing inside the tower.
+
+1. **The next fight is the moment.** The foe's painting large, its name, its style, the
+   floor and the band. Under it, as today, one read line ("An even read — the Awakened
+   favors **Flame Arrow**." with "≈43%" to its right) and one gold **FIGHT** button.
+   Tapping the style line still unfolds the foe's known moves (floors 51 and up).
+2. **Where you stand.** The whole climb at a glance: how high you are, how much is
+   above. The app already draws a small tower silhouette that fills bottom-up on its
+   Home card; this screen may echo it.
+3. **The climb behind you, folded.** Each band is one line or one tile (name, tier,
+   "10 of 10", its milestone boss), closed by default; tap to open its floors. Open,
+   it shows the beaten floors, each tappable to fight again, with the "+16" bounty
+   where it still pays. Only the current band is open on entry.
+4. **The header stays small:** THE ASCENT; the equipped title chip ("Grandmaster", taps
+   to the titles); POWER (taps to its breakdown); LIVES (two hearts, or ∞ with PREMIUM)
+   with the "?" combat-styles button; EXIT.
+
+Interactive means a tap or a scroll reveals more; nothing explains itself in a
+sentence. The owner's standing rule: minimal information per screen, and no
+instructions for anything self-explanatory.
+
+## States to show
+
+| State | What changes |
+|---|---|
+| Mid-climb, regular foe next | Floor 47, The Gilded Tier, 6 of 10; a Melee foe; free hunter with 1 of 2 lives |
+| Milestone boss next | Floor 50; the boss painting; the moment is heavier |
+| The summit | Floor 100, The First Awakened, 99 floors behind (the attached screenshot) |
+| First visit | Floor 1, nothing behind; the whole tower is above |
+| Out of lives | Free hunter, 0 of 2: FIGHT becomes a quiet locked state ("the climb resumes tomorrow"); beaten floors stay open |
+| Tower climbed | All 100 beaten: no next fight; one button, ENTER THE HALL |
+
+## Optional, only if it fits without clutter
+
+Friends already leave marks in the tower: a **banner** on a floor a friend beat this week,
+and an **echo** where a friend lost this week. If the climb view can carry a friend's
+mark on a floor without a line of text, show it. If not, leave it out.
+
+## What stays exactly as it is
+
+The fight itself; the matchup screen that FIGHT opens (separate brief); every floor
+rule above; lives, rematches and the bounty; the titles screen; the power breakdown.
+
+## Visual language (this is a live app; match it)
+
+- Background near-black navy `#0a0a18` to `#0e0e24`; cards `#15132f`, 16px radius;
+  gold `#f5b842` for the next fight, FIGHT, milestones and bounties; violet `#a78bfa` /
+  `#8b5cf6` for structure and styles; teal `#5eead4` for the foe's move; ink `#f5f3fb`
+  / `#9090a8` / `#6b6b86`. Bands may tint by the app's rank colours: E `#8b5cf6`,
+  D `#22d3ee`, C `#34d399`, B `#fbbf24`, A `#ef4444`, S `#e879f9`.
+- Fonts: **Cinzel** 700 for names, **Cormorant Garamond** italic for the read line,
+  **JetBrains Mono** 800 uppercase, wide-tracked, for labels, numbers and buttons.
+- Art: square framed paintings. Use dark placeholders with the foe's initial; the app
+  supplies the paintings (six style portraits, nine milestone bosses, The First
+  Awakened). Any band backdrop must be CSS or inline SVG: the design must look
+  finished with no new paintings.
+- **No phone frame, no status bar, no home indicator.** Must also work at 375 × 667,
+  with FIGHT visible without scrolling.
+
+## Motion
+
+On entry the view settles on the hunter's floor (a short rise, about 600 ms). Bands
+open and close in about 200 ms. Reduced motion: no rise, instant open.
+
+## Tone
+
+A system addressing a hunter: plain, a little severe, proud. No exclamation marks, no
+emoji, nothing cute. Never use the words "fell" or "felled".
+
+## Deliver
+
+One HTML file with the screen in all six states, the band open/close working, and the
+known-moves unfold. CSS variables for the tokens, inline SVG, small JS for the
+interactions.</pre></section>
+<section><h2>2. The Matchup + boosts</h2><p class="lead">The screen FIGHT opens, with the shadows shown.</p><h3>Attach</h3><ol><li>Your two screenshots of the floor 99 matchup (the top, and scrolled down to the loadout).</li></ol><h3>Paste</h3><div class="bar"><button type="button" data-copy="matchup">Copy brief 2</button><span class="ok" id="ok-matchup" data-w="1122 words">1122 words</span></div><pre id="b-matchup">Redesign **the Matchup**, the screen between the tower and the fight in **Awakened:
+Habit RPG** (a dark fantasy habit tracker), and make the hunter's **boosts** visible on
+it, the Shadow Army first. The owner's ask:
+
+&gt; I want to make sure the shadows get shown on this stats page for the boosts.
+&gt; Overall less is more and just interactive for the user is best.
+
+## What the screen shows today, top to bottom
+
+FLOOR 99 · the hunter's avatar vs the foe's portrait, names, style tags · the type
+read (EVEN MATCH, or a super / weak tag) · YOUR POWER 5163 vs FLOOR POWER 5325 · a
+band (EVEN) with "≈47% WIN" · **FIGHT** · **Tale of the Tape**: ATTACK (Melee) 1909 vs
+2574, DEFENSE (Magic) 1575 vs 1420, EDGE (Ranged) 1679 vs 1331; each row taps open to
+show how the hunter's number is made (each stat's level, earned from vows, plus its
+relic bonus, summing exactly to the row) · a one-line verdict · **On the Line** (a new
+floor: victory climbs a floor, defeat spends a life; a beaten floor: "Reclaim · +16
+souls", or nothing at stake) · **Your Loadout** (eight relic slots, tap one for its
+bonuses, a totals bar, ADJUST IN ARMORY →).
+
+Milestone bosses (every tenth floor) use a heavier version of the same screen: a
+ribbon, a large portrait, the boss's taunt, CHALLENGE BOSS.
+
+## The boosts (real rules; the fight already uses them)
+
+They multiply the hunter's attack, defense and edge, on **regular floors only**. On
+milestone floors (10, 20 … 100) none of them apply; the army "kneels at the threshold".
+
+- **Shadow Army.** Each solo boss a hunter brings down has a 1 in 20 chance to raise
+  its shadow. A marching shadow adds power by its boss's rank: E +0.75%, D +1%,
+  C +1.25%, B +1.5%, A +1.75%, S +2%. How many march depends on the hunter's rank
+  (E 1, D 2, C 4, B 7, A 12, S all 19); the rest wait. Example: Shadow of The Steel
+  Wolf (E), of The Unbroken Anvil (A), of The Worldspine (S) = +4.5%. Shadows are
+  managed in the Shadow Army roster (march or rest each one).
+- **Blood Still Hot.** +10% for 30 minutes after a verified workout.
+- **A friend's banner.** +1% on a floor a friend beat this week ("RAVEN’S BANNER").
+
+Worked example with all three, base power 5,163: Blood +516, then Shadows +256, then
+Banner +59 = **5,994 in the fight**. Show each boost as whole points that sum exactly
+to the fight number.
+
+**The gap to close:** today YOUR POWER and the win odds leave out the shadows and the
+banner, although the fight counts them. The Tale of the Tape rows include them, but
+their breakdown does not list them. The boosts appear only as small pills under the
+floor label. On the new screen, the number shown is the number the fight uses, and
+the hunter can see what lifted it.
+
+## What to design
+
+1. **Above the fold, only what decides the fight:** you vs the foe, the two powers
+   (yours is the fight power), the odds, FIGHT.
+2. **The boosts at a glance:** one compact mark by your power. For the army, its
+   marching shadows as small sigils or portraits with the total ("+4.5%"); Blood and
+   Banner as their own small marks when active. Tap → a small panel: base power, each
+   boost and what it adds, fight power. For the army, each marching shadow (name, rank,
+   +%) and one link to the roster.
+3. **Milestone floor:** the army shown kneeling (dimmed, no number), so the hunter sees
+   why their number did not rise. A few words at most.
+4. **No boosts:** nothing extra on screen. No empty slot, no upsell.
+5. **Tale of the Tape:** an opened row's breakdown gains a "Shadows +N" line (and Blood
+   / Banner when active), so its parts still sum to the row.
+6. **Less below FIGHT.** Today three modules stack under the button. Keep the Tale of
+   the Tape, the stakes and the loadout reachable but folded: for example the stakes as
+   one line and the loadout one tap deep. The form is your call. Nothing that matters
+   may be lost: on a new floor, the fact that a loss spends a life must be visible
+   before FIGHT.
+
+The "echo" line stays when it applies ("Raven knelt here this week. Win — and avenge
+them.").
+
+## States to show
+
+| State | Detail |
+|---|---|
+| Regular floor, army marching | Floor 99, the three shadows above (+4.5%) |
+| Regular floor, all three boosts | Army +4.5%, Blood Still Hot +10%, a friend's banner +1% (the worked example) |
+| Boosts panel open | The breakdown and the shadow list |
+| Milestone boss | Floor 90 boss intro; the army kneels; no boost applies |
+| No boosts | No shadows, no recent workout, no banner |
+| A Tale row open | ATTACK opened, its parts including the boosts summing to the row |
+
+## What stays exactly as it is
+
+The fight, its odds model and its numbers; the boost rules above; the roster screen;
+the Armory; the tower screen (separate brief).
+
+## Visual language (this is a live app; match it)
+
+- Background near-black navy `#0a0a18`; cards `#15132f`, 16px radius; gold `#f5b842`
+  for your power, FIGHT and the banner; violet `#8b5cf6` / `#b79cff` for the Shadow
+  Army (◈ is its glyph); crimson `#e5484d` for Blood Still Hot; teal `#5eead4` for a
+  super matchup; ink `#f5f3fb` / `#9090a8` / `#6b6b86`. Shadow ranks use the app's rank
+  colours: E `#8b5cf6`, D `#22d3ee`, C `#34d399`, B `#fbbf24`, A `#ef4444`,
+  S `#e879f9`.
+- Fonts: **Cinzel** 700 for names, **JetBrains Mono** 800 uppercase, wide-tracked, for
+  labels, numbers and buttons, system sans for sentences.
+- Art: the avatar and foe portraits are square framed paintings; use dark placeholders.
+  Shadow sigils must be CSS or inline SVG (no new paintings).
+- **No phone frame, no status bar, no home indicator.** Canvas 390 × 844; at 375 × 667
+  FIGHT must be visible without scrolling.
+
+## Motion
+
+When the screen opens, your power counts up from base to fight power as each boost
+mark lights in turn (about 700 ms total). The boosts panel opens in about 200 ms.
+Reduced motion: the final number, no count.
+
+## Tone
+
+A system addressing a hunter: plain, a little severe, proud. No exclamation marks, no
+emoji, nothing cute. Never use the words "fell" or "felled".
+
+## Deliver
+
+One HTML file with the screen in all six states, the boosts panel and a Tale row
+opening, and the count-up. CSS variables for the tokens, inline SVG, small JS for the
+interactions.</pre></section>
+</main><script>
+document.querySelectorAll('[data-copy]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var id=btn.getAttribute('data-copy'),t=document.getElementById('b-'+id).textContent,ok=document.getElementById('ok-'+id);
+    function done(){ok.textContent='Copied';setTimeout(function(){ok.textContent=ok.getAttribute('data-w');},2500);}
+    function fallback(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');done();}catch(e){ok.textContent='Select the text and copy it';}a.remove();}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fallback);}else{fallback();}
+  });
+});
+</script></body></html>
