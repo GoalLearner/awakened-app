@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1061'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1062'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8103,6 +8103,19 @@
     ov.addEventListener('click', function () { if (Date.now() - (s.extracted[bossId].at || 0) > 2800) seal(); });
     setTimeout(seal, 14000);   // failsafe
   }
+  // March or rest one shadow, up to the rank's slots (the roster, and W1062 the matchup's panel).
+  // A rest by hand is kept: _shFillSlots only fills slots that are new.
+  function _shToggleMarch(id) {
+    const cur = _shLoad();
+    if (!cur.extracted[id]) return { ok: false };
+    cur.active = cur.active.filter(function (x) { return !!cur.extracted[x]; });
+    const i = cur.active.indexOf(id);
+    if (i !== -1) cur.active.splice(i, 1);
+    else if (cur.active.length < _shSlots()) cur.active.push(id);
+    else { try { showHabitToast('All ' + _shSlots() + ' slots march already. Rest one first.'); } catch (_) {} return { ok: false }; }
+    _shSave(cur);
+    return { ok: true, marching: i === -1 };
+  }
   /** Roster sheet: march/rest toggles up to the rank slot cap. */
   function openShadowRoster() {
     try {
@@ -8134,18 +8147,16 @@
         '</div>';
       document.body.appendChild(ov);
       requestAnimationFrame(function () { ov.classList.add('on'); });
-      const close = function () { ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260); };
+      const close = function () {
+        ov.classList.remove('on'); setTimeout(function () { try { ov.remove(); } catch (_) {} }, 260);
+        try { _mxRefresh(); } catch (_) {}   // W1062 — a matchup behind it re-reads the army
+      };
       ov.addEventListener('click', function (e) {
         if (e.target === ov) { close(); return; }
         const t = e.target.closest && e.target.closest('[data-shadow-toggle]');
         if (!t) return;
         const id = t.getAttribute('data-shadow-toggle');
-        const cur = _shLoad();
-        const i = cur.active.indexOf(id);
-        if (i !== -1) cur.active.splice(i, 1);
-        else if (cur.active.length < _shSlots()) cur.active.push(id);
-        else { try { showHabitToast('All ' + _shSlots() + ' slots march already. Rest one first.'); } catch (_) {} return; }
-        _shSave(cur);
+        if (!_shToggleMarch(id).ok) return;
         openShadowRoster();   // re-render
         try { renderShadowStrip(); } catch (_) {}
       });
@@ -15042,6 +15053,17 @@
         .sort(function (a, b) { return _shPct(b) - _shPct(a); }).slice(0, _shSlots());
     } catch (_) { return []; }
   }
+  // W1062 — every shadow a hunter owns, strongest first, so a rested one can march from the panel.
+  function _mxOwned() {
+    if (_ascTestBuild) return _ascTestBuild.army.slice();
+    try {
+      const s = _shLoad();
+      if (s.dormant) return [];
+      return Object.keys(s.extracted).sort(function (a, b) {
+        return (_shPct(b) - _shPct(a)) || (((s.extracted[a] || {}).at || 0) - ((s.extracted[b] || {}).at || 0));
+      });
+    } catch (_) { return []; }
+  }
   // Whole numbers that sum exactly to `total`, each as close to its share as it can be (largest remainder).
   function _mxSplit(exact, total) {
     const out = exact.map(function (v) { return Math.floor(v); });
@@ -15103,43 +15125,54 @@
     return claimed ? 'Already claimed today. Nothing at stake.'
       : capHit ? 'Daily reclaim cap reached. Nothing at stake.' : 'Nothing at stake.';
   }
-  function _mxMarksHtml(c, marching) {
-    const sigs = '<span class="mx-sigs">' + marching.slice(0, 6).map(function (id) { return _mxSigil(id, 14); }).join('') + '</span>';
-    const open = '<div class="mx-marks" data-ar="mxpanel" role="button" tabindex="0" aria-label="Your boosts">';
-    if (!c.steps.length) return '';
-    return open + c.steps.map(function (s, i) {
-      if (s.id === 'army') return '<span class="mx-mark army" data-i="' + i + '">' + sigs + '+' + _shPctText(s.pct) + '%</span>';
-      if (s.id === 'blood') return '<span class="mx-mark blood" data-i="' + i + '">' + MX_BLOOD_SVG + '+10%</span>';
+  function _mxMarksHtml(c, marching, owned) {
+    const sigs = function (ids) { return '<span class="mx-sigs">' + ids.slice(0, 6).map(function (id) { return _mxSigil(id, 14); }).join('') + '</span>'; };
+    // W1062 — a hunter whose shadows all rest still gets the army's mark, so the panel is a tap away
+    const resting = (owned.length && !c.steps.some(function (x) { return x.id === 'army'; }))
+      ? '<span class="mx-mark army rest">' + sigs(owned) + 'AT REST</span>' : '';
+    if (!c.steps.length && !resting) return '';
+    return '<div class="mx-marks" data-ar="mxpanel" role="button" tabindex="0" aria-label="Your boosts">' + c.steps.map(function (x, i) {
+      if (x.id === 'army') return '<span class="mx-mark army" data-i="' + i + '">' + sigs(marching) + '+' + _shPctText(x.pct) + '%</span>';
+      if (x.id === 'blood') return '<span class="mx-mark blood" data-i="' + i + '">' + MX_BLOOD_SVG + '+10%</span>';
       return '<span class="mx-mark banner" data-i="' + i + '">' + MX_BANNER_SVG + '+1%</span>';
-    }).join('') + '</div>';
+    }).join('') + resting + '</div>';
   }
-  // The panel the marks open: base power, what each boost added, the fight power.
-  function _mxSheetHtml(m, c, marching) {
+  // The panel the marks open: base power, what each boost added, the fight power. W1062 — every
+  // shadow owned is listed, and a tap marches or rests it (a test build's army is fixed).
+  function _mxSheetHtml(m, c, marching, owned) {
     let names = {};
     try { names = _shLoad().extracted || {}; } catch (_) {}
+    const canToggle = !_ascTestBuild;
+    const slots = _ascTestBuild ? owned.length : _shSlots();
     const list = function () {
-      return '<div class="mx-shl">' + marching.map(function (id) {
-        const r = _mxRankOf(id);
+      return '<div class="mx-shl">' + owned.map(function (id) {
+        const r = _mxRankOf(id), on = marching.indexOf(id) !== -1;
         const nm = (names[id] && names[id].name) || ('Shadow of ' + ((BOSSES[id] || {}).name || ''));
-        return '<div class="mx-sh">' + _mxSigil(id, 18) + '<span>' + esc(nm) + '</span>' +
+        const inner = _mxSigil(id, 18) + '<span class="nm">' + esc(nm) + '</span>' +
           '<span class="rk" style="color:' + MX_RANK_COLOR[r] + '">' + r + '</span>' +
-          '<span class="pc">+' + _shPctText(_shPct(id)) + '%</span></div>';
+          '<span class="pc">+' + _shPctText(_shPct(id)) + '%</span>' +
+          '<span class="st">' + (on ? 'MARCHING' : 'AT REST') + '</span>';
+        return canToggle
+          ? '<button type="button" class="mx-sh' + (on ? ' on' : '') + '" data-ar="mxmarch" data-id="' + esc(id) + '">' + inner + '</button>'
+          : '<div class="mx-sh on">' + inner + '</div>';
       }).join('') + '<button type="button" class="mx-roster" data-ar="mxroster">SHADOW ARMY ROSTER →</button></div>';
     };
-    const body = c.steps.map(function (s) {
-        if (s.id === 'blood') {
-          let min = 0; try { min = Math.max(1, Math.ceil((_bloodHotUntilMs - Date.now()) / 60000)); } catch (_) {}
-          return '<div class="mx-pl blood"><span class="k">' + MX_BLOOD_SVG + '<span>Blood Still Hot<small>10%' + (min ? ' · ' + min + ' MIN LEFT' : '') + '</small></span></span>' +
-            '<span class="v">+' + s.add + '</span></div>';
-        }
-        if (s.id === 'army') {
-          return '<div class="mx-pl army"><span class="k"><span class="gl">◈</span><span>Shadow Army<small>' +
-            (marching.length === 1 ? '1 MARCHES' : marching.length + ' MARCH') + ' · +' + _shPctText(s.pct) + '%</small></span></span>' +
-            '<span class="v">+' + s.add + '</span></div>' + list();
-        }
-        return '<div class="mx-pl banner"><span class="k">' + MX_BANNER_SVG + '<span>' + esc(m.player.bannerAlias) + '’s banner<small>1% · BEAT THIS FLOOR THIS WEEK</small></span></span>' +
-          '<span class="v">+' + s.add + '</span></div>';
-      }).join('');
+    const armyLine = function (add, pct) {
+      return '<div class="mx-pl army"><span class="k"><span class="gl">◈</span><span>Shadow Army<small>' +
+        marching.length + ' OF ' + slots + ' MARCHING · +' + _shPctText(pct) + '%</small></span></span>' +
+        '<span class="v">+' + add + '</span></div>' + list();
+    };
+    let body = c.steps.map(function (x) {
+      if (x.id === 'blood') {
+        let min = 0; try { min = Math.max(1, Math.ceil((_bloodHotUntilMs - Date.now()) / 60000)); } catch (_) {}
+        return '<div class="mx-pl blood"><span class="k">' + MX_BLOOD_SVG + '<span>Blood Still Hot<small>10%' + (min ? ' · ' + min + ' MIN LEFT' : '') + '</small></span></span>' +
+          '<span class="v">+' + x.add + '</span></div>';
+      }
+      if (x.id === 'army') return armyLine(x.add, x.pct);
+      return '<div class="mx-pl banner"><span class="k">' + MX_BANNER_SVG + '<span>' + esc(m.player.bannerAlias) + '’s banner<small>1% · BEAT THIS FLOOR THIS WEEK</small></span></span>' +
+        '<span class="v">+' + x.add + '</span></div>';
+    }).join('');
+    if (owned.length && !c.steps.some(function (x) { return x.id === 'army'; })) body += armyLine(0, 0);
     return '<div class="mx-scrim" data-ar="mxclose"></div>' +
       '<div class="mx-sheet" role="dialog" aria-label="Your power">' +
         '<div class="mx-sh-h"><span>YOUR POWER · FLOOR ' + m.floor + '</span>' +
@@ -15147,6 +15180,25 @@
         '<div class="mx-pl base"><span class="k">Base power</span><span class="v">' + c.baseD + '</span></div>' + body +
         '<div class="mx-pl final"><span class="k">FIGHT POWER</span><span class="v">' + c.fight + '</span></div>' +
       '</div>';
+  }
+  // W1062 — march or rest a shadow from the panel: the fight power is re-read at once and the
+  // panel stays open. Never mid-fight, never in a test build.
+  function _mxToggleMarch(id) {
+    if (_ascTestBuild || _arSess || !_arMatchup || (_arView !== 'vs' && _arView !== 'bossintro')) return;
+    if (!_shToggleMarch(id).ok) return;
+    try { _hapticTick('LIGHT'); } catch (_) {}
+    try { renderShadowStrip(); } catch (_) {}
+    _mxRefresh(true);
+  }
+  // Re-read the matchup (the army may have changed) and draw it again, still.
+  function _mxRefresh(keepPanel) {
+    if (_arSess || !_arMatchup || (_arView !== 'vs' && _arView !== 'bossintro')) return;
+    const ov = document.getElementById('arena-overlay');
+    if (!ov || ov.classList.contains('hidden')) return;   // the roster also opens from the profile
+    const root = document.querySelector('#arena-body .mx');
+    const panel = keepPanel || !!(root && root.classList.contains('mx-panel-open'));
+    _arMatchup = arenaMatchup(_arMatchup.floor);
+    _mxRender(_arView === 'bossintro', { panel: panel, still: true });
   }
   // Tale of the Tape: you vs the foe per role. An opened row shows how your number is made:
   // each stat's level (earned from vows), relics, then each boost; the lines sum to the row.
@@ -15217,13 +15269,13 @@
         '<button type="button" class="mx-arm" data-ar="armory">ADJUST IN ARMORY →</button></div></div>';
   }
   // The count-up: base power to fight power in ~700 ms while each boost mark lights in turn.
-  function _mxCountUp(c) {
+  function _mxCountUp(c, still) {
     const el = document.getElementById('mx-you');
     if (!el || !c) return;
     const marks = Array.prototype.slice.call(document.querySelectorAll('#arena-body .mx-mark[data-i]'));
     if (_mxRaf) { try { cancelAnimationFrame(_mxRaf); } catch (_) {} _mxRaf = 0; }
     const done = function () { _mxRaf = 0; el.textContent = c.fight; marks.forEach(function (mk) { mk.classList.add('lit'); }); };
-    if (!c.steps.length || _arReduceMotion()) { done(); return; }
+    if (!c.steps.length || still || _arReduceMotion()) { done(); return; }
     marks.forEach(function (mk) { mk.classList.remove('lit'); });
     el.textContent = c.baseD;
     const n = c.steps.length, seg = 700 / n;
@@ -15241,11 +15293,12 @@
     // a paused frame loop (a hidden page) must never leave the base number showing
     setTimeout(function () { if (_mxRaf && el.isConnected) { try { cancelAnimationFrame(_mxRaf); } catch (_) {} done(); } }, 1500);
   }
-  function _mxRender(boss) {
+  function _mxRender(boss, opts) {
+    opts = opts || {};   // W1062 — { panel: open the boosts panel, still: no count-up, no sting }
     _arView = boss ? 'bossintro' : 'vs';
     _arBodyMode(false);
     const m = _arMatchup, P = m.player, F = m.bot, apex = boss && m.floor === ASCENT_FLOORS;
-    const c = _mxCalc(m), marching = _mxMarching();
+    const c = _mxCalc(m), marching = _mxMarching(), owned = _mxOwned();
     _mxLast = c;
     const playerArch = _arenaArchOf(P), foeArch = F.archKey || _arenaArchOf(F);
     const eff = _arenaEffectiveness(playerArch, foeArch);
@@ -15255,7 +15308,7 @@
     let echo = '';
     try { const ec = _towerEchoFor(m.floor); if (ec) echo = '<div class="mx-echo">' + esc(ec.alias) + ' knelt here this week. Win — and avenge them.</div>'; } catch (_) {}
     const taunt = boss ? ((ASCENT_BOSSES[m.floor] || {}).taunt || 'You should not have climbed this high.') : '';
-    const marks = _mxMarksHtml(c, marching);
+    const marks = _mxMarksHtml(c, marching, owned);
     const top = boss
       ? '<span class="mx-ribbon">FLOOR ' + m.floor + ' · ' + (apex ? 'SUMMIT' : 'MILESTONE') + '</span>'   // fits beside EXIT at 375
       : '<span class="mx-floor">FLOOR ' + m.floor + '</span>';
@@ -15281,12 +15334,13 @@
           '<span>FLOOR ' + m.floor + (apex ? ' · THE SUMMIT' : boss ? ' · MILESTONE' : '') + '</span></button>' +
         '<div class="mx-stakes">' + _mxStakesHtml(m) + '</div>' + echo +
         _mxTapeHtml(m, c, boss) + _mxLoadoutHtml() +
-        (marks ? _mxSheetHtml(m, c, marching) : '') +
+        (marks ? _mxSheetHtml(m, c, marching, owned) : '') +
       '</div>'
     );
     const b = _arBody(); if (b) b.classList.add('ar-body--mx');
-    _mxCountUp(c);
-    if (eff.key === 'super') { try { playSfx('ar_super'); } catch (_) {} }
+    if (opts.panel) { const root = b && b.querySelector('.mx'); if (root) root.classList.add('mx-panel-open'); }
+    _mxCountUp(c, opts.still);
+    if (eff.key === 'super' && !opts.still) { try { playSfx('ar_super'); } catch (_) {} }
   }
   // Regular floor / milestone boss: one screen (W1058).
   function _arRenderVs() { _mxRender(false); }
@@ -17484,6 +17538,7 @@
         } catch (_) {}
       }
       else if (a === 'mxreplay') _mxCountUp(_mxLast);
+      else if (a === 'mxmarch')  _mxToggleMarch(act.getAttribute('data-id'));   // W1062
       else if (a === 'mxroster') { try { openShadowRoster(); } catch (_) {} }
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   { if (typeof _arView === 'string' && _arView.indexOf('pvp') === 0) { try { _pvpTeardown(); } catch (_) {} } _arRenderTower(); }   // W414 — leaving a PvP sub-view to the tower tears down its socket/timers

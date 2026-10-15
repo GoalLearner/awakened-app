@@ -10268,6 +10268,67 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(await progress()).toEqual(before);
   });
 
+  // W1062 — owner 2026-10-15: "I would like the ability to turn on the marching from this screen".
+  const intoMatchup = async (page: Page, floor: number) => {
+    await page.addInitScript((floor) => {
+      try {
+        localStorage.setItem('hb_ascent_opening_seen_v1', '1');
+        localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: floor, highestCleared: floor - 1, wins: 0, losses: 0, streak: 0, bestStreak: 0,
+          dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+      } catch (_) {}
+    }, floor);
+    await freshApp(page);
+    await page.evaluate(async () => {
+      (document.querySelector('[data-tab="profile"]') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      (document.getElementById('sc-arena-btn') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click();
+    });
+    await expect(page.locator('#arena-body .mx')).toBeVisible();
+  };
+  const tap = (page: Page, sel: string) => page.evaluate((sel) => (document.querySelector('#arena-body ' + sel) as HTMLElement).click(), sel);
+  const marchingIds = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_shadows_v1') || '{}').active || []).slice().sort());
+
+  test('W1062 — the matchup\'s panel marches or rests each shadow; the power follows at once and a resting army still has its mark', async ({ page }) => {
+    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 19 });
+    await intoMatchup(page, 99);
+    const M = '#arena-body';
+    await expect(page.locator(M + ' .mx-marks')).toHaveText('+0.75%');
+    await tap(page, '.mx-marks');
+    await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
+    await expect(page.locator(M + ' .mx-sh .st')).toHaveText(['AT REST', 'AT REST', 'MARCHING']);   // strongest first
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 19 MARCHING/);
+    // the Worldspine marches: saved, the panel stays open, the number on the screen is the panel's
+    await tap(page, '.mx-sh[data-id="the_worldspine"]');
+    await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
+    await expect(page.locator(M + ' .mx-sh[data-id="the_worldspine"] .st')).toHaveText('MARCHING');
+    await expect(page.locator(M + ' .mx-marks')).toHaveText('+2.75%');
+    expect(await marchingIds(page)).toEqual(['the_carouser', 'the_worldspine']);
+    const fight = ((await page.locator(M + ' .mx-pl.final .v').textContent()) || '').trim();
+    await expect(page.locator('#mx-you')).toHaveText(fight);
+    // all at rest: the army keeps a mark, and the panel lists every shadow at +0
+    await tap(page, '.mx-sh[data-id="the_worldspine"]');
+    await tap(page, '.mx-sh[data-id="the_carouser"]');
+    expect(await marchingIds(page)).toEqual([]);
+    await expect(page.locator(M + ' .mx-marks')).toHaveText('AT REST');
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 19 MARCHING/);
+    await expect(page.locator(M + ' .mx-sh')).toHaveCount(3);
+    // and the roster agrees
+    await tap(page, '.mx-sh[data-id="the_unbroken_anvil"]');
+    expect(await marchingIds(page)).toEqual(['the_unbroken_anvil']);
+  });
+
+  test('W1062 — the panel keeps the rank\'s slots: an E-rank hunter with one marching cannot march a second', async ({ page }) => {
+    await army(page, 0, ['the_carouser', 'the_steel_wolf'], ['the_carouser']);
+    await intoMatchup(page, 9);
+    await tap(page, '.mx-marks');
+    await expect(page.locator('#arena-body .mx-pl.army small')).toHaveText(/1 OF 1 MARCHING/);
+    await tap(page, '.mx-sh[data-id="the_steel_wolf"]');
+    await expect(page.locator('#arena-body .mx-sh[data-id="the_steel_wolf"] .st')).toHaveText('AT REST');
+    expect(await marchingIds(page)).toEqual(['the_carouser']);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
