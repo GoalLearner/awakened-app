@@ -10223,6 +10223,51 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator(T + ' .tw-rb .c.on')).toHaveCount(100);
   });
 
+  // W1061 — owner 2026-10-15: "yes add the test button" (the max relic set and every shadow, to feel it).
+  test('W1061 — Test the max build: owner only; the Ascent fights with it, nothing counts, and leaving ends it', async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_ascent_opening_seen_v1', '1');
+        localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 47, highestCleared: 46, wins: 3, losses: 1, streak: 0, bestStreak: 2,
+          dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    const progress = () => page.evaluate(() => { const a = JSON.parse(localStorage.getItem('hb_arena_v2') || '{}'); return [a.currentFloor, a.highestCleared, a.wins, a.losses, a.reclaimSouls, localStorage.getItem('hb_hunter_build'), (() => { const sh = JSON.parse(localStorage.getItem('hb_shadows_v1') || '{}'); return JSON.stringify([Object.keys(sh.extracted || {}), sh.active || []]); })()]; });
+    const before = await progress();
+    // not the owner: the door does nothing
+    await page.evaluate(() => (window as any).__openMaxBuildTest());
+    await page.waitForTimeout(500);
+    await expect(page.locator('#arena-overlay')).toBeHidden();
+    // the owner
+    await page.evaluate(() => { const bc = JSON.parse(localStorage.getItem('hb_board_cache_v1') || '{}'); bc.me = Object.assign({}, bc.me || {}, { role: 'owner' }); localStorage.setItem('hb_board_cache_v1', JSON.stringify(bc)); });
+    await page.evaluate(() => (window as any).__openMaxBuildTest());
+    const T = '#arena-body .tw';
+    await expect(page.locator(T + ' .tw-chip.test')).toHaveText(/TEST BUILD/, { timeout: 4000 });
+    const power = parseInt(((await page.locator(T + ' .tw-power .num').textContent()) || '').replace(/[^0-9]/g, ''), 10);
+    expect(power).toBeGreaterThan(5500);                                   // every stat 20, the best relic in every slot
+    await page.evaluate(() => (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click());
+    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+26%/);    // all nineteen shadows
+    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(19);
+    await expect(page.locator('#arena-body .mx-stakes')).toHaveText('Test build. Nothing counts.');
+    await expect(page.locator('#arena-body .mx-ldt-h')).toContainText('8 RELICS');
+    expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(false);
+    // the chip ends it: the real build is back, and the climb counts again
+    await page.evaluate(() => (window as any).openArena(true, true));
+    await page.evaluate(() => (document.querySelector('#arena-body [data-ar="twtestend"]') as HTMLElement).click());
+    await expect(page.locator(T + ' .tw-chip.test')).toHaveCount(0);
+    const real = parseInt(((await page.locator(T + ' .tw-power .num').textContent()) || '').replace(/[^0-9]/g, ''), 10);
+    expect(real).toBeLessThan(power);
+    expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(true);
+    // leaving the Arena ends it too
+    await page.evaluate(() => (window as any).openArena(true, true));
+    await page.evaluate(() => (document.getElementById('arena-close') as HTMLElement).click());
+    await expect(page.locator('#arena-overlay')).toBeHidden();
+    expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(true);
+    // nothing was written
+    expect(await progress()).toEqual(before);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });

@@ -34733,6 +34733,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tw-brand { font: 800 11px/1 var(--tw-mono); letter-spacing: 0.3em; color: var(--tw-gold); white-space: nowrap; }
 .tw-chip { min-width: 0; overflow: hidden; white-space: nowrap; font: 800 10px/1 var(--tw-mono); letter-spacing: 0.06em; color: var(--tw-gold); background: none; border: 1px solid rgba(245,184,66,0.4); border-radius: 999px; padding: 7px 10px; display: inline-flex; gap: 6px; align-items: center; }
 .tw-chip svg { flex: none; }
+.tw-chip.test { color: #c4b5fd; border-color: rgba(167,139,250,0.6); background: rgba(139,92,246,0.12); }   /* W1061 */
 .tw-r2 { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8px; height: 40px; }
 .tw-lbl { font: 800 9px/1 var(--tw-mono); letter-spacing: 0.24em; color: var(--tw-ink3); display: flex; gap: 6px; align-items: center; }
 .tw-power { background: none; border: 0; color: inherit; text-align: left; padding: 0; }

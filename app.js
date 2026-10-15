@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1060'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1061'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -12953,6 +12953,58 @@
   try { window.__bloodHot = function (on) { if (on === true) _bloodHotUntilMs = Date.now() + 30 * 60000; if (on === false) _bloodHotUntilMs = 0; return { until: _bloodHotUntilMs, active: _bloodHotNow() }; }; } catch (_) {}
 
   // Build the player's combatant object (live stats + gear).
+  // ── W1061 · TEST THE MAX BUILD (owner tool; owner 2026-10-15: "yes add the test button") ──
+  // Settings, owner only. Opens the Ascent with the best build there is: every stat at level 20,
+  // the best relic in every slot (Nightfall), its sets, every relic upgraded, and all nineteen solo
+  // shadows marching. It lives in memory and inside the Arena only: the tower, the matchup and the
+  // fight read it (_arenaFightStatline, _ascArmyPct, the kit, the attunement); the profile summary,
+  // the boards and PvP keep reading the real build. Every fight is an exhibition (no floor, no life,
+  // no souls, no tower events), and leaving the Arena ends it. Nothing is written.
+  const ASC_TEST_SLOTS = ['crown_of_eternal_night', 'amulet_of_the_endless_stair', 'mantle_of_the_long_vigil', 'nightfall_blade',
+    'mantle_of_the_sovereign', 'forgewarden_gauntlets', 'greaves_of_the_umbral_throne', 'skyward_vigil_ring'];   // EQUIPMENT_SLOTS order = the balance sim's max build
+  let _ascTestBuild = null;
+  // Gear from a set of relics: their bonuses; with invest 'sets' or 'max' the active set bonuses
+  // (single highest tier per set, as _activeSetBonuses); with 'max' every upgradeable relic at
+  // RELIC_UPGRADE_MAX on its dominant stat. Shared by the balance sim and the test build.
+  function _ascBuildGear(ids, invest) {
+    const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
+    ids.forEach((id) => {
+      const c = CARDS[id];
+      if (c && c.bonuses) ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach((k) => { gear[k] += (c.bonuses[k] || 0); });
+    });
+    if (invest === 'sets' || invest === 'max') {
+      const setCounts = {};
+      ids.forEach((id) => { const c = CARDS[id]; if (c && c.set_id) setCounts[c.set_id] = (setCounts[c.set_id] || 0) + 1; });
+      Object.keys(setCounts).forEach((sid) => {
+        const set = (typeof SET_BONUSES !== 'undefined') ? SET_BONUSES[sid] : null;
+        if (!set || !set.tiers) return;
+        let best = null;
+        for (const t of set.tiers) if (setCounts[sid] >= t.pieces && (!best || t.pieces > best.pieces)) best = t;
+        if (best && best.bonus) Object.keys(best.bonus).forEach((k) => { if (Object.prototype.hasOwnProperty.call(gear, k)) gear[k] += (best.bonus[k] | 0); });
+      });
+    }
+    if (invest === 'max') {
+      ids.forEach((id) => {
+        const c = CARDS[id];
+        if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null) return;   // commons / unpriced tiers are not upgradeable
+        const dom = _relicDominantStatKey(c);
+        if (dom && Object.prototype.hasOwnProperty.call(gear, dom)) gear[dom] += RELIC_UPGRADE_MAX;
+      });
+    }
+    return gear;
+  }
+  function _ascMakeTestBuild() {
+    const slots = ASC_TEST_SLOTS.map((id) => (CARDS[id] ? id : null));
+    const gear = _ascBuildGear(slots.filter(Boolean), 'max');
+    const sline = { STR: 20 + gear.str, VIT: 20 + gear.vit, INT: 20 + gear.int, FOCUS: 20 + gear.focus, WILL: 20 + gear.will, WLT: 20 + gear.wlt };
+    const army = Object.keys(BOSSES).filter((id) => BOSSES[id] && !BOSSES[id].coopOnly).sort((a, b) => _shPct(b) - _shPct(a));
+    let pct = 0; army.forEach((id) => { pct += _shPct(id); });
+    return { slots: slots, gear: gear, sline: sline, weapon: slots[3], army: army, armyPct: Math.round(pct * 100) / 100 };
+  }
+  // What the Arena fights with: the test build while one runs, else the real statline.
+  function _arenaFightStatline() { return _ascTestBuild ? Object.assign({}, _ascTestBuild.sline) : _arenaPlayerStatline(); }
+  function _ascFightPower() { try { return _arenaCombatProfile(_arenaFightStatline()).power; } catch (_) { return 0; } }
+  function _ascArmyPct() { return _ascTestBuild ? _ascTestBuild.armyPct : _shadowPowerPct(); }
   function _ascentPlayerCombatant() {
     // W480 — the DISPLAY path (_ascPlayerPower) wraps these two calls in try/catch, but
     // this FIGHT path was unwrapped: any throw here propagated uncaught out of the tap
@@ -12962,7 +13014,7 @@
     // tower can never be bricked by it again — you still get into the fight at a floor of 1s.)
     let sline, profile;
     try {
-      sline   = _arenaPlayerStatline();
+      sline   = _arenaFightStatline();   // W1061 — the test build while one runs
       profile = _arenaCombatProfile(sline);
       if (!profile || !Number.isFinite(profile.power)) throw new Error('non-finite power');
     } catch (_) {
@@ -13002,14 +13054,14 @@
     // W862 — THE SHADOW ARMY (owner-blessed): marching shadows add power.
     // W1057 — each at its boss's rank (SHADOW_RANK_PCT), no longer a flat 1%.
     // W1060 — on every floor (they no longer kneel at milestone floors).
-    const _shP = _shadowPowerPct();
+    const _shP = _ascArmyPct();   // W1061 — all nineteen in a test build
     if (_shP > 0) {
       const _shM = 1 + _shP / 100;
       player.attack  = player.attack  * _shM;
       player.defense = player.defense * _shM;
       player.edge    = player.edge    * _shM;
       player.power   = player.attack + player.defense + player.edge;
-      player.shadows = _shadowActiveCount();
+      player.shadows = _ascTestBuild ? _ascTestBuild.army.length : _shadowActiveCount();
       player.shadowPct = _shP;
     }
     // W870 — a friend's banner on a floor lends +1% (W1060: milestone floors too).
@@ -13025,7 +13077,8 @@
     }
     return {
       floor: f,
-      advances: (f === st.currentFloor && st.highestCleared < ASCENT_FLOORS && f > st.highestCleared),
+      advances: !_ascTestBuild && (f === st.currentFloor && st.highestCleared < ASCENT_FLOORS && f > st.highestCleared),
+      test: !!_ascTestBuild,   // W1061 — a test-build fight counts for nothing
       player: player,
       bot:    _ascentOpponent(f),
       livesLeft: ascentLivesLeft(),
@@ -13232,7 +13285,7 @@
     return 'Bare Fists';
   }
   function _arenaAttuned(playerArch) {
-    try { const b = getHunterBuild(); const id = b && b.slots ? b.slots[3] : null; const list = id && _WEAPON_ATTUNE[id]; if (list && list.indexOf(playerArch) !== -1) return _ATTUNED_MULT; } catch (_) {}
+    try { const b = getHunterBuild(); const id = _ascTestBuild ? _ascTestBuild.weapon : (b && b.slots ? b.slots[3] : null); const list = id && _WEAPON_ATTUNE[id]; if (list && list.indexOf(playerArch) !== -1) return _ATTUNED_MULT; } catch (_) {}
     return 1;
   }
   // W757 -- the EXECUTE is a MAX-UPGRADE reward: any ULTRA-RARE+ weapon at relic
@@ -13257,9 +13310,10 @@
   function _arenaPlayerKit() {
     let wid = null;
     try { const b = getHunterBuild(); if (b && Array.isArray(b.slots)) wid = b.slots[3]; } catch (_) {}
+    if (_ascTestBuild) wid = _ascTestBuild.weapon;   // W1061 — the test build's weapon, fully upgraded
     let ids = (wid && WEAPON_MOVES[wid]) ? WEAPON_MOVES[wid] : WEAPON_MOVES.unarmed;
     // W757 -- a maxed ultra+ weapon has EARNED its execute.
-    const exe = (wid && _weaponExecuteUnlocked(wid)) ? _weaponExecuteId(wid) : null;
+    const exe = (wid && (_ascTestBuild || _weaponExecuteUnlocked(wid))) ? _weaponExecuteId(wid) : null;
     if (exe && ids.indexOf(exe) === -1) ids = ids.concat(exe);
     return ids.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
   }
@@ -13942,7 +13996,7 @@
       // keeps clear-once, and the handler swallows the violation by design.
       if (won) { try { _towerOnFloorCleared(m.floor); } catch (_) {} }   // W870 plant/avenge, W893 any win
       if (!won) { try { _towerOnRunEnded(m.floor); } catch (_) {} }   // W870 — kneel here
-    } else if (won && m.floor <= st.highestCleared) {
+    } else if (won && !m.test && m.floor <= st.highestCleared) {   // W1061 — no Reclaim in a test build
       // W439 — Reclaim the Floor: the first won re-fight of a CLEARED floor TODAY pays a small
       // souls bounty (bounded by the per-floor-once-per-day guard + the global daily cap). Souls
       // only — no XP/loot/relics — so the rated climb + verified-effort purity stay untouched.
@@ -14287,40 +14341,12 @@
         if (BIS[slot] !== undefined && CARDS[opts.bisOverride[slot]]) BIS[slot] = opts.bisOverride[slot];
       });
     }
-    const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
-    Object.keys(BIS).forEach((slot) => {
-      const c = CARDS[BIS[slot]];
-      if (c && c.bonuses) ['str', 'vit', 'int', 'focus', 'will', 'wlt'].forEach((k) => { gear[k] += (c.bonuses[k] || 0); });
-    });
-    // W510 — INSTRUMENT FIX: the LIVE combat path (_aggregateBuildBonuses) folds in
-    // W495/W506 SET BONUSES + W494 RELIC UPGRADES, but this sim historically built the
-    // statline from BiS card bonuses ONLY. So it under-reported the true ceiling and the
-    // fixed F100 wall silently softened every time a relic/upgrade/set shipped, unseen.
-    // opts.invest models the real investment spread so the balance check stops measuring a
-    // phantom: 'gear' (BiS only — legacy, byte-identical default), 'sets' (+ active set
-    // bonuses), 'max' (+ both sets AND maxed relic upgrades = the true min-maxed ceiling).
+    // W510 — the LIVE combat path (_aggregateBuildBonuses) folds in W495/W506 SET BONUSES + W494
+    // RELIC UPGRADES; opts.invest models that spread: 'gear' (BiS only — legacy default), 'sets'
+    // (+ active set bonuses), 'max' (+ maxed relic upgrades = the true min-maxed ceiling).
+    // W1061 — the arithmetic lives in _ascBuildGear, which the owner's test build shares.
     const invest = opts.invest || 'gear';
-    if (invest === 'sets' || invest === 'max') {
-      // Active set bonuses over the BiS build — mirrors _activeSetBonuses' single-highest-tier rule.
-      const setCounts = {};
-      Object.keys(BIS).forEach((slot) => { const c = CARDS[BIS[slot]]; if (c && c.set_id) setCounts[c.set_id] = (setCounts[c.set_id] || 0) + 1; });
-      Object.keys(setCounts).forEach((sid) => {
-        const set = (typeof SET_BONUSES !== 'undefined') ? SET_BONUSES[sid] : null;
-        if (!set || !set.tiers) return;
-        let best = null;
-        for (const t of set.tiers) if (setCounts[sid] >= t.pieces && (!best || t.pieces > best.pieces)) best = t;
-        if (best && best.bonus) Object.keys(best.bonus).forEach((k) => { if (Object.prototype.hasOwnProperty.call(gear, k)) gear[k] += (best.bonus[k] | 0); });
-      });
-    }
-    if (invest === 'max') {
-      // Maxed relic upgrades — +RELIC_UPGRADE_MAX to each upgradeable relic's dominant stat (W494).
-      Object.keys(BIS).forEach((slot) => {
-        const c = CARDS[BIS[slot]];
-        if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null) return;   // commons / unpriced tiers are not upgradeable
-        const dom = _relicDominantStatKey(c);
-        if (dom && Object.prototype.hasOwnProperty.call(gear, dom)) gear[dom] += RELIC_UPGRADE_MAX;
-      });
-    }
+    const gear = _ascBuildGear(Object.keys(BIS).map((slot) => BIS[slot]), invest);
     // W510 — opts.gearScale scales the GEAR contribution (base-20 innate stats are
     // untouched) so the sim can model the whole player spectrum, not just the whale:
     // gearScale 0 = a base-only fresh build, ~0.4 ≈ a strong-but-unmaxed A-rank build
@@ -14670,7 +14696,8 @@
     try {
       const base = {};
       STATS.forEach(st => { base[st.id] = statLevel((stats[st.id] && stats[st.id].pts) || 0); });
-      totalDisp  = _arD(_arenaCombatProfile(_arenaPlayerStatline()).power);
+      if (_ascTestBuild) STATS.forEach(st => { base[st.id] = 20; });   // W1061 — the test build's levels
+      totalDisp  = _arD(_arenaCombatProfile(_arenaFightStatline()).power);
       statsDisp  = _arD(_arenaCombatProfile(base).power);
       relicsDisp = Math.max(0, totalDisp - statsDisp);
     } catch (_) {}
@@ -14732,12 +14759,14 @@
     const left = ascentLivesLeft();
     let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
     // W272 — POWER, the climb's own number (vows → stats + relics → power); tap for the breakdown
-    let pwr = 0; try { pwr = _arD(_ascPlayerPower()); } catch (_) {}
+    let pwr = 0; try { pwr = _arD(_ascFightPower()); } catch (_) {}
     let hearts = '';
     if (!member) { const n = Math.max(ASCENT_DAILY_LIVES, left); for (let i = 0; i < n; i++) hearts += TW_I.heart(i < left); }
     return '<header class="tw-hdr">' +
       '<div class="tw-r1"><span class="tw-brand">THE ASCENT</span>' +
-        '<button class="tw-chip" data-ar="titles" type="button">' + (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') + TW_I.chevR + '</button></div>' +
+        (_ascTestBuild
+          ? '<button class="tw-chip test" data-ar="twtestend" type="button">TEST BUILD ✕</button></div>'   // W1061
+          : '<button class="tw-chip" data-ar="titles" type="button">' + (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') + TW_I.chevR + '</button></div>') +
       '<div class="tw-r2">' +
         '<button class="tw-power" data-ar="powerinfo" type="button" aria-label="What makes up your power"><span class="tw-lbl">POWER ' + TW_I.info + '</span>' +
           '<span class="num">' + pwr.toLocaleString('en-US') + '</span></button>' +
@@ -14751,13 +14780,13 @@
   function _twBoostMult(f) {
     let m = 1;
     try { if (_bloodHotNow()) m *= 1.10; } catch (_) {}
-    try { m *= 1 + _shadowPowerPct() / 100; } catch (_) {}
+    try { m *= 1 + _ascArmyPct() / 100; } catch (_) {}
     try { if (_towerBannerFor(f)) m *= 1.01; } catch (_) {}
     return m;
   }
   // One italic read line: difficulty phrase + the foe's favored move + ≈odds.
   function _twReadHtml(info) {
-    const you = _ascPlayerPower() * _twBoostMult(info.floor), foe = info.opponent.power;
+    const you = _ascFightPower() * _twBoostMult(info.floor), foe = info.opponent.power;
     const o = _ascOdds(you, foe);
     const r = you / Math.max(1, foe);
     const phrase = _arWireBand(o) ? 'Dead even'
@@ -14866,7 +14895,7 @@
     try { _audWantMusic('arena_menu'); } catch (_) {}   // W248 — lofi menu loop (no-op if already playing)
     _arBodyMode(true);
     const st = getAscentState();
-    const left = ascentLivesLeft();   // W620 — Infinity for members, so FIGHT never locks
+    const left = _ascTestBuild ? Infinity : ascentLivesLeft();   // W620 — Infinity for members, so FIGHT never locks (W1061: and in a test build)
     const done = st.highestCleared >= ASCENT_FLOORS;
     const cur = Math.min(st.currentFloor, ASCENT_FLOORS);
     const curBandIdx = done ? ASCENT_BANDS.length - 1 : ASCENT_BANDS.indexOf(_ascentBandFor(cur));
@@ -14932,6 +14961,7 @@
   }
   function _ldtCardAt(i) {
     try { let s = []; const b = getHunterBuild(); if (b && Array.isArray(b.slots)) s = b.slots;
+      if (_ascTestBuild) s = _ascTestBuild.slots;   // W1061
       const id = s[i]; return (id && typeof CARDS !== 'undefined') ? CARDS[id] : null; } catch (_) { return null; }
   }
   function _ldtBonuses(card) {
@@ -15004,6 +15034,7 @@
   }
   // The shadows that march into the fight's power, strongest first (as _shadowPowerPct counts them).
   function _mxMarching() {
+    if (_ascTestBuild) return _ascTestBuild.army.slice();   // W1061
     try {
       const s = _shLoad();
       if (s.dormant) return [];
@@ -15055,6 +15086,7 @@
   }
   // The stakes in one line. A new floor always says that a loss spends a life.
   function _mxStakesHtml(m) {
+    if (m.test) return 'Test build. Nothing counts.';   // W1061
     const st = getAscentState();
     if (m.advances) {
       const win = m.floor >= ASCENT_FLOORS ? 'Victory takes the summit.'
@@ -15120,7 +15152,8 @@
   // each stat's level (earned from vows), relics, then each boost; the lines sum to the row.
   function _mxTapeHtml(m, c, boss) {
     let gear = {}; try { gear = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
-    const lvl = function (id) { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
+    let lvl = function (id) { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
+    if (_ascTestBuild) { gear = _ascTestBuild.gear; lvl = function () { return 20; }; }   // W1061
     const boostName = function (id) { return id === 'army' ? 'Shadows' : id === 'blood' ? 'Blood Still Hot' : esc(m.player.bannerAlias) + '’s banner'; };
     const bl = function (cls, k, v) { return '<div class="mx-bl' + (cls ? ' ' + cls : '') + '"><span>' + k + '</span><span class="v">' + v + '</span></div>'; };
     const rows = MX_ROLES.map(function (r, i) {
@@ -15173,6 +15206,7 @@
         '<span class="nm">' + esc(card.name || 'Relic') + '</span></div>';
     }
     let totals = {}; try { totals = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
+    if (_ascTestBuild) totals = _ascTestBuild.gear;   // W1061
     const keys = ['str', 'vit', 'int', 'focus', 'will'].filter(function (k) { return Math.round(Number(totals[k]) || 0) > 0; });
     const sum = keys.reduce(function (a, k) { return a + Math.round(Number(totals[k])); }, 0);
     const tot = keys.map(function (k) { return '<span>+' + Math.round(Number(totals[k])) + ' ' + k.toUpperCase() + '</span>'; }).join('');
@@ -17203,8 +17237,11 @@
           : (f.reclaimedSouls > 0   // W439 — Reclaim the Floor payout
               ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after" style="color:#f5b842">+' + f.reclaimedSouls + ' SOULS RECLAIMED</span></div>' +
                   '<div class="lbl">' + Math.max(0, ASCENT_RECLAIM_DAILY_CAP - ((f.state && f.state.reclaimSouls) || 0)) + ' SOULS LEFT TO RECLAIM TODAY</div></div>'
-              : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
-                  '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>'));
+              : (_arMatchup.test   // W1061 — a test-build fight
+                  ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">TEST BUILD</span></div>' +
+                      '<div class="lbl">NOTHING COUNTS</div></div>'
+                  : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
+                      '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>')));
     _arSet(
       '<div class="ar-result-hero">' +
         '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
@@ -17223,7 +17260,7 @@
       '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
       '<div class="ar-spacer"></div>' +
       '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
-      (won ? '<button class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + (f.floorCleared || _arMatchup.floor) + '" data-boss-name="' + esc((f.bossCleared && f.bossCleared.name) || (_arMatchup.bot && _arMatchup.bot.name) || ('Floor ' + (f.floorCleared || _arMatchup.floor))) + '">' + _bksShareIconSvg() + 'Share this win</button>' : '') +
+      (won && !_arMatchup.test ? '<button class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + (f.floorCleared || _arMatchup.floor) + '" data-boss-name="' + esc((f.bossCleared && f.bossCleared.name) || (_arMatchup.bot && _arMatchup.bot.name) || ('Floor ' + (f.floorCleared || _arMatchup.floor))) + '">' + _bksShareIconSvg() + 'Share this win</button>' : '') +
       '<button class="ar-ghost" data-ar="titles">View Titles</button>'
     );
     // sound + haptics (W280 — rating count-up + rating sfx removed with rating)
@@ -17286,9 +17323,11 @@
   }
 
   // ── open / close + wiring ─────────────────────────────────────────  // ── open / close + wiring ─────────────────────────────────────────
-  function openArena(skipOpening) {
+  function openArena(skipOpening, testBuild) {
     const ov = document.getElementById('arena-overlay');
     if (!ov) return;
+    _ascTestBuild = testBuild ? _ascMakeTestBuild() : null;   // W1061 — only the owner's test door passes it
+    if (testBuild) skipOpening = true;
     setupArena();
     _arClearTimers();
     // W248 — opening the Arena is a user gesture: unlock the context, start the
@@ -17324,6 +17363,7 @@
     _arClearTimers();
     try { _pvpTeardown(); } catch (_) {}   // W404 — a live duel never outlives the Arena overlay
     _arSess = null;
+    _ascTestBuild = null;   // W1061 — leaving the Arena ends a test build
     try { _AUD.want = null; _audStopMusic(0.25); } catch (_) {}   // W243/W248 — music never outlives the Arena
     ov.classList.add('hidden');
     ov.setAttribute('aria-hidden', 'true');
@@ -17452,6 +17492,7 @@
       else if (a === 'twmoves') { const h = document.getElementById('tw-hero'); if (h) h.classList.toggle('unfold'); }
       else if (a === 'twband')  { const t = act.closest('.tw-band'); if (t) t.classList.toggle('open'); }
       else if (a === 'twrail')  { _twGoBand(parseInt(act.getAttribute('data-b'), 10)); }
+      else if (a === 'twtestend') { _ascTestBuild = null; _arRenderTower(); }   // W1061 — back to your own build
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
       else if (a === 'powerinfo') { try { _arOpenPowerBreakdown(); } catch (_) {} }   // W518 — habit→power thread keystone
@@ -65393,6 +65434,8 @@
   function syncTestHunterRow() {
     const row = document.getElementById('settings-test-hunter');
     if (row) row.classList.toggle('hidden', !_testHunterAllowed());
+    const mx = document.getElementById('settings-test-maxbuild');   // W1061 — same owner gate
+    if (mx) mx.classList.toggle('hidden', !_testHunterAllowed());
     try { syncPreviewCelebrationsRow(); } catch (_) {}   // W966 — same owner gate
   }
   function openTestHunterSheet() {
@@ -65437,6 +65480,13 @@
     });
   }
   try { window.__openTestHunterSheet = openTestHunterSheet; } catch (_) {}
+  // W1061 — Test the max build: straight into the Ascent with it; nothing to set aside.
+  function openMaxBuildTest() {
+    if (!_testHunterAllowed()) return;
+    try { closeSettings(); } catch (_) {}
+    setTimeout(() => { try { openArena(true, true); } catch (e) { console.warn('[test build] failed', e); } }, 220);
+  }
+  try { window.__openMaxBuildTest = openMaxBuildTest; } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════
   // W1050 — ONBOARDING v4, "The Awakening" (Claude Design handoff 29)
@@ -73412,6 +73462,11 @@
       const testRow = document.getElementById('settings-test-hunter');
       if (testRow) testRow.addEventListener('click', function () {
         try { openTestHunterSheet(); } catch (_) {}
+      });
+      // W1061 — owner-only: the Ascent with the max build and all shadows; nothing counts.
+      const maxRow = document.getElementById('settings-test-maxbuild');
+      if (maxRow) maxRow.addEventListener('click', function () {
+        try { openMaxBuildTest(); } catch (_) {}
       });
       // W966 — owner-only: watch the celebrations without waiting to cross a
       // division. Settings closes first so the screen is not behind the sheet.
