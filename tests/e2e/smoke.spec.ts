@@ -10097,6 +10097,63 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator('#shadow-roster .sw-foot')).toContainText('E 0.75% TO S 2%');
   });
 
+  // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".
+  // The matchup's YOUR POWER is the number the fight uses; the boosts open what each one added.
+  test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, and the army kneels on a milestone', async ({ page }) => {
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 19 });
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('hb_ascent_opening_seen_v1', '1');
+        localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 99, highestCleared: 98, wins: 0, losses: 0, streak: 0, bestStreak: 0,
+          dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+        localStorage.setItem('hb_tower_friends_v1', JSON.stringify({ at: Date.now() + 3600e3, banners: [{ floor: 99, alias: 'Raven' }], echoes: [], my_defeat: null, souls: 0 }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    // into the tower, then the matchup for `floor` (DOM clicks: no popup can take the tap)
+    const matchup = (sel: string) => page.evaluate(async (sel) => {
+      const w = window as any;
+      if (typeof w.openArena === 'function') w.openArena(true);
+      else { (document.querySelector('[data-tab="profile"]') as HTMLElement).click(); await new Promise((r) => setTimeout(r, 400)); (document.getElementById('sc-arena-btn') as HTMLElement).click(); }
+      await new Promise((r) => setTimeout(r, 400));
+      (document.querySelector('#arena-body ' + sel) as HTMLElement).click();
+    }, sel);
+    const nums = (sel: string) => page.locator(sel).evaluateAll((els) => els.map((e) => parseInt((e.textContent || '').replace(/[^0-9-]/g, ''), 10)));
+
+    await page.evaluate(() => (window as any).__bloodHot(true));
+    await matchup('[data-ar="fight"]');
+    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+10%.*\+4\.5%.*\+1%/);
+    // the panel: base + each boost = the fight power, and that is the number on the screen
+    const pl = await nums('#arena-body .mx-sheet .mx-pl .v');
+    const base = pl[0], fight = pl[pl.length - 1], adds = pl.slice(1, -1);
+    expect(adds.length).toBe(3);
+    expect(base + adds.reduce((a, b) => a + b, 0)).toBe(fight);
+    expect(Math.abs(fight - base * 1.1 * 1.045 * 1.01)).toBeLessThanOrEqual(2);
+    await expect(page.locator('#mx-you')).toHaveText(String(fight), { timeout: 3000 });
+    // the tape: three rows that sum to the fight power, each row's lines summing to the row
+    const rows = await nums('#arena-body .mx-row .y');
+    expect(rows.reduce((a, b) => a + b, 0)).toBe(fight);
+    const brk = await page.locator('#arena-body .mx-row').evaluateAll((els) => els.map((r) => {
+      const v = (e: Element) => parseInt((e.textContent || '').replace(/[^0-9-]/g, ''), 10);
+      const parts = Array.from(r.querySelectorAll('.mx-bl:not(.sum) .v')).map(v);
+      return [parts.reduce((a, b) => a + b, 0), v(r.querySelector('.mx-bl.sum .v') as Element), Array.from(r.querySelectorAll('.mx-bl.army')).length];
+    }));
+    brk.forEach((b) => { expect(b[0]).toBe(b[1]); expect(b[2]).toBe(1); });
+    // a tap on the marks opens the panel, strongest shadow first
+    await page.locator('#arena-body .mx-marks').click();
+    await expect(page.locator('#arena-body .mx')).toHaveClass(/mx-panel-open/);
+    await expect(page.locator('#arena-body .mx-sh .pc')).toHaveText(['+2%', '+1.75%', '+0.75%']);
+    await page.locator('#arena-body .mx-x').click();
+    await expect(page.locator('#arena-body .mx')).not.toHaveClass(/mx-panel-open/);
+    await expect(page.locator('#arena-body .mx-stakes')).toContainText('Defeat spends a life');
+
+    // floor 90, a milestone: nothing boosts it, and the army is shown kneeling
+    await matchup('[data-ar="rematch"][data-floor="90"]');
+    await expect(page.locator('#arena-body .mx--boss .mx-marks')).toHaveText('KNEELS AT THE THRESHOLD');
+    await expect(page.locator('#mx-you')).toHaveText(String(base));
+    expect(await nums('#arena-body .mx-sheet .mx-pl .v')).toEqual([base, base]);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });

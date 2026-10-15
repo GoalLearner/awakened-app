@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1057'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1058'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14458,7 +14458,7 @@
     } catch (_) {}
   };
   function _arBody() { return document.getElementById('arena-body'); }
-  function _arSet(html) { const b = _arBody(); if (b) b.innerHTML = html; }
+  function _arSet(html) { const b = _arBody(); if (b) { b.classList.remove('ar-body--mx'); b.innerHTML = html; } }   // W1058 — the Matchup re-adds its own padding
   function _arBodyMode(tower) { const b = _arBody(); if (b) b.classList.toggle('ar-body--bleed', !!tower); }
   function _arD(n) { return Math.round((Number(n) || 0) * _ASC_DISP); }
   function _arFoeSil() {
@@ -14654,17 +14654,6 @@
       const btn = el.querySelector('#ao-begin-btn');
       if (btn) btn.addEventListener('click', () => dismiss(false));
     } catch (_) {}
-  }
-  function _ascDiffHtml(you, foe) {
-    const d = _ascDiff(you, foe), o = _ascOdds(you, foe);
-    return '<span class="asc-diff"><span class="pill ' + d.cls + '"><span class="d"></span>' + d.key + '</span>' +
-      '<span class="odds">≈ <b>' + o + '%</b> WIN</span></span>';
-  }
-  function _ascFaceoffHtml(you, foe) {
-    return '<div class="asc-faceoff">' +
-      '<div class="side"><div class="v you">' + _arD(you) + '</div><div class="l">YOUR POWER</div></div>' +
-      '<div class="vs">vs</div>' +
-      '<div class="side"><div class="v foe">' + _arD(foe) + '</div><div class="l">FLOOR POWER</div></div></div>';
   }
   function _ascStar() {
     return '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.4 5 5.4.6-4 3.7 1.1 5.3L10 18.4 5.1 16l1.1-5.3-4-3.7 5.4-.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
@@ -14907,79 +14896,7 @@
   }
   // ── cinematic helpers (W215) ──────────────────────────────────────
   // ── W222 fill modules (presentation only — real engine state) ─────
-  // Tale of the Tape: role-by-role you-vs-foe (ATTACK/DEFENSE/EDGE), ×10
-  // display, tap a row to expand your stat + relic breakdown + the matchup.
-  function _ascTaleHtml(m) {
-    const P = m.player, F = m.bot;
-    let gear = {}; try { gear = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
-    const lvl = (id) => { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
-    const playerArch = _arenaArchOf(P), foeArch = F.archKey || _arenaArchOf(F);
-    const eff = _arenaEffectiveness(playerArch, foeArch);
-    const foeLabel = (ASCENT_ARCHETYPES[foeArch] || {}).label || 'Foe';
-    const roles = [
-      { key: 'ATTACK',  label: 'ATTACK · Melee',   pv: P.attack,  fv: F.attack,  parts: [['STR', 2.3]] },
-      { key: 'DEFENSE', label: 'DEFENSE · Magic',  pv: P.defense, fv: F.defense, parts: [['INT', 1.15], ['VIT', 1.15]] },
-      { key: 'EDGE',    label: 'EDGE · Ranged',    pv: P.edge,    fv: F.edge,    parts: [['FOCUS', 1.15], ['WILL', 1.15]] },
-    ];
-    let rows = '';
-    roles.forEach((r) => {
-      const pv = _arD(r.pv), fv = _arD(r.fv), max = Math.max(pv, fv, 1);
-      const youLead = pv >= fv;
-      // Per-stat contribution to the role value: (level + gear) × weight × 10.
-      // These sum EXACTLY to pv — the point is to show HOW the breakdown reaches
-      // the total (STR→608 + FOCUS→260 = 868), which the old "Lv 8 · Lv 8 · +48
-      // relic" line could not.
-      const partHtml = r.parts.map((p) => {
-        const id = p[0], w = p[1], lv = lvl(id), g = Math.round(gear[id.toLowerCase()] || 0);
-        const contrib = Math.round((lv + g) * w * _ASC_DISP);
-        return '<span class="cp"><span class="s">' + id + '</span><span class="src">Lv ' + lv +
-          (g > 0 ? ' <b class="rel">+' + g + '</b>' : '') + '</span><span class="ct">' + contrib + '</span></span>';
-      }).join('');
-      const detail = '<div class="asc-tale-calc">' + partHtml +
-        '<span class="cp total"><span class="s">' + r.label + '</span><span class="src"></span>' +
-        '<span class="ct">' + pv + '</span></span></div>' +
-        '<div class="asc-tale-note">' + (youLead ? 'You lead this exchange.' : 'They lead this exchange.') + '</div>';
-      rows += '<div class="asc-tale-row" data-ar="tale" data-role="' + r.key + '">' +
-        '<div class="asc-tale-head">' +
-          '<span class="pv' + (youLead ? ' lead' : '') + '">' + pv + '</span>' +
-          '<span class="mid"><span class="rk">' + r.label + '<svg width="8" height="5" viewBox="0 0 8 5" class="chev"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg></span>' +
-            '<span class="asc-tale-bars"><span class="b you"><i style="width:' + Math.round(pv / max * 100) + '%"></i></span>' +
-              '<span class="b foe"><i style="width:' + Math.round(fv / max * 100) + '%"></i></span></span></span>' +
-          '<span class="fv' + (youLead ? '' : ' lead') + '">' + fv + '</span>' +
-        '</div><div class="asc-tale-detail">' + detail + '</div></div>';
-    });
-    // W766 — the verdict tells BOTH truths: type matchup AND raw power. The old
-    // neutral branch said "An even match" whenever no type advantage existed —
-    // over a 4,255-vs-5,592 tape (F100, owner report) that read as a flat lie.
-    // ±12% total-power gap = material; inside the band the tape genuinely is close.
-    const pTot = (P.attack || 0) + (P.defense || 0) + (P.edge || 0);
-    const fTot = (F.attack || 0) + (F.defense || 0) + (F.edge || 0);
-    const gap = pTot > 0 ? (fTot - pTot) / pTot : 0;
-    const powerClause = gap > 0.12
-      ? ' They out-power you across the tape — every stat you close in the Armory counts.'
-      : gap < -0.12
-      ? ' And you out-power them across the tape.'
-      : '';
-    const typeLine = eff.key === 'super'
-      ? (eff.tier === 'mild'
-          ? 'Your style has the edge on the ' + esc(foeLabel) + ' — <b class="sup">' + esc(eff.label) + '</b>.'
-          : 'Your style counters the ' + esc(foeLabel) + ' — <b class="sup">' + esc(eff.label) + '</b>.')
-      : eff.key === 'weak'
-      ? (eff.tier === 'mild'
-          ? 'The ' + esc(foeLabel) + ' resists your style — <b class="wk">' + esc(eff.label) + '</b>.'
-          : 'The ' + esc(foeLabel) + ' counters your style — <b class="wk">' + esc(eff.label) + '</b>.')
-      : (powerClause
-          ? 'No type advantage either way.'
-          : 'A dead-even match — no type advantage either way.');
-    const verdict = typeLine + powerClause;
-    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">TALE OF THE TAPE</span><span class="a dim">TAP A ROW</span></div>' +
-      '<div class="asc-tale">' + rows + '<div class="asc-tale-read">' + verdict + '</div></div></div>';
-  }
-  // Your Loadout: full 8-slot grid (ClaudeDesign "Loadout Module") — rarity gem
-  // + primary bonus per cell, tap to expand full bonuses, a totals bar across
-  // all gear, deep-links to the Armory modal. Read-only display.
-  const _LDT_ACCENT = { common: '#c8c6d8', rare: '#5eead4', ultra_rare: '#a78bfa', 'ultra-rare': '#a78bfa', ultra: '#a78bfa' };
-  const _LDT_RNAME  = { common: 'COMMON', rare: 'RARE', ultra_rare: 'ULTRA-RARE', 'ultra-rare': 'ULTRA-RARE', ultra: 'ULTRA-RARE' };
+  // Loadout slot helpers (W1058's folded loadout reads them).
   function _ldtSlotLabels() {
     try { if (typeof EQUIPMENT_SLOTS !== 'undefined') return EQUIPMENT_SLOTS.map((s) => s.label); } catch (_) {}
     return ['HELM', 'AMULET', 'CAPE', 'WEAPON', 'ARMOR', 'GLOVES', 'BOOTS', 'RING'];
@@ -14991,73 +14908,6 @@
   function _ldtBonuses(card) {
     const b = (card && card.bonuses) || {};
     return Object.keys(b).filter((k) => (b[k] || 0) !== 0).map((k) => [k.toUpperCase(), b[k]]).sort((a, c) => c[1] - a[1]);
-  }
-  // expand strip for a tapped cell (full bonuses + rarity name)
-  function _ascLoadExpHtml(i) {
-    const card = _ldtCardAt(i);
-    if (!card) return '';
-    const col = _LDT_ACCENT[card.rarity] || '#c8c6d8';
-    const pills = _ldtBonuses(card).map((p) => '<span class="pill" style="color:' + col + '">+' + p[1] + ' ' + esc(p[0]) + '</span>').join('');
-    return '<span class="lgem" style="background:' + col + ';box-shadow:0 0 7px ' + col + '88"></span>' +
-      '<div class="meta"><div class="t"><span class="nm">' + esc(card.name || 'Relic') + '</span>' +
-      '<span class="rr" style="color:' + col + '">' + (_LDT_RNAME[card.rarity] || 'COMMON') + '</span></div>' +
-      '<div class="sl">' + esc(_ldtSlotLabels()[i] || '') + '</div></div><div class="pills">' + pills + '</div>';
-  }
-  function _ascLoadoutHtml() {
-    const labels = _ldtSlotLabels();
-    let cells = '';
-    for (let i = 0; i < labels.length; i++) {
-      const card = _ldtCardAt(i);
-      if (!card) {
-        cells += '<div class="asc-load-cell empty"><span class="sl">' + esc(labels[i]) + '</span><span class="mt">＋ Empty</span></div>';
-        continue;
-      }
-      const col = _LDT_ACCENT[card.rarity] || '#c8c6d8';
-      const bl = _ldtBonuses(card), prim = bl[0] || ['', 0];
-      cells += '<div class="asc-load-cell" data-ar="loadcell" data-slot="' + i + '">' +
-        '<div class="top"><span class="ldt-gem" style="background:' + col + '"></span><span class="sl">' + esc(labels[i]) + '</span></div>' +
-        '<div class="bn" style="color:' + col + '">+' + prim[1] + ' ' + esc(prim[0]) + (bl.length > 1 ? '<span class="pl"> +</span>' : '') + '</div>' +
-        '<div class="nm">' + esc(card.name || 'Relic') + '</div></div>';
-    }
-    let totals = {}; try { totals = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
-    const tparts = ['str', 'vit', 'int', 'focus', 'will', 'wlt']
-      .filter((k) => (totals[k] || 0) > 0).map((k) => '+' + Math.round(totals[k]) + ' ' + k.toUpperCase());
-    const totalsHtml = tparts.length ? tparts.join('<span class="dot"> · </span>') : '—';
-    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">YOUR LOADOUT</span>' +
-      '<span class="a link" data-ar="armory">ADJUST IN ARMORY →</span></div>' +
-      '<div class="asc-loadout-panel"><div class="asc-loadgrid">' + cells + '</div>' +
-      '<div class="asc-load-exp" id="asc-load-exp"></div>' +
-      '<div class="asc-load-totals"><span class="lbl">TOTAL GEAR BONUS</span><span class="v">' + totalsHtml + '</span></div></div></div>';
-  }
-  // On the Line — honest stakes (as-built: a boss loss costs rating + a life).
-  function _ascStakesHtml(m) {
-    const st = getAscentState();
-    const boss = ASCENT_BOSSES[m.floor] || {};
-    // W280 — arena rating wiped. The stakes are the CLIMB: a win ascends a
-    // floor, a loss spends one of the day's lives. No points, no rating.
-    if (!m.advances) {
-      // W439 — Reclaim the Floor: a won re-fight of a cleared floor pays a daily-capped souls
-      // bounty (first win per floor per day). Surface it in place of "nothing at stake".
-      const cleared = m.floor <= st.highestCleared;
-      const claimed = st.reclaimFloors.indexOf(m.floor) !== -1;
-      const capHit = st.reclaimSouls >= ASCENT_RECLAIM_DAILY_CAP;
-      const payable = cleared && !claimed && !capHit;
-      const txt = payable
-        ? '<b class="exb-bounty">Reclaim &middot; +' + _ascentReclaimBounty(m.floor) + ' souls</b> &mdash; your first win on this floor today.'
-        : 'Nothing at stake' + (claimed ? ' &mdash; reclaimed today.' : capHit ? ' &mdash; daily reclaim cap reached.' : ' &mdash; floor already cleared.') +
-          '<br><span class="dim">Replay for the fight, or to chase a FLAWLESS.</span>';
-      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
-        '<div class="asc-stakes exhibition"><div class="exb"><div class="exb-tag">' + (payable ? 'RECLAIM' : 'EXHIBITION') + '</div>' +
-        '<div class="exb-txt">' + txt + '</div></div></div></div>';
-    }
-    const nextFloor = Math.min(ASCENT_FLOORS, m.floor + 1);
-    const winRows = '<div class="row"><span class="v">▲</span><span class="d">' +
-      (m.floor >= ASCENT_FLOORS ? 'The summit — the First Awakened falls'
-        : (_ascentIsBoss(m.floor) ? 'Slay the boss · ascend to floor ' + nextFloor : 'Ascend to floor ' + nextFloor)) + '</span></div>';
-    const loseTxt = 'A life spent.<br><span class="dim">Grow stronger, return.</span>';
-    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">ON THE LINE</span></div>' +
-      '<div class="asc-stakes"><div class="col"><div class="lbl win">ON VICTORY</div>' + winRows + '</div>' +
-      '<div class="vdiv"></div><div class="col"><div class="lbl">ON DEFEAT</div><div class="txt">' + loseTxt + '</div></div></div></div>';
   }
   // Fight Recap — blow-by-blow + honest stats (dmg = winning-side rolls).
   function _ascRecapHtml(f) {
@@ -15085,80 +14935,302 @@
       '<div class="asc-recap">' + lines +
       '<div class="asc-recap-stats">' + stat(dealt, 'DMG DEALT') + stat(taken, 'DMG TAKEN', taken === 0) + stat(rounds.length, 'ROUNDS') + '</div></div></div>';
   }
-  // VS intro — your avatar vs the foe portrait. Portrait hook (_arFoeArt)
-  // shows Midjourney NPC art when present, silhouette otherwise.
-  function _arRenderVs() {
-    _arView = 'vs';
-    _arBodyMode(false);
-    // W857 — a blood-hot matchup displays the BUFFED power (the number the
-    // fight actually uses), plus the chip under the floor label.
-    const m = _arMatchup, you = (m.player && m.player.bloodHot) ? Math.round(m.player.power) : _ascPlayerPower(), foe = m.bot.power;
-    const bloodHotChip = (m.player && m.player.bloodHot)
-      ? '<div class="ar-bloodhot-chip">BLOOD STILL HOT · +10% POWER</div>'
-      : '';
-    // W862 — the marching army's chip (violet, beside the crimson one).
-    const shadowChip = (m.player && m.player.shadowPct)
-      ? '<div class="ar-shadow-chip">SHADOW ARMY · +' + _shPctText(m.player.shadowPct) + '% POWER</div>'
-      : '';
-    // W870 — the Tower remembers your friends.
-    const bannerChip = (m.player && m.player.bannerAlias)
-      ? '<div class="ar-banner-chip">⚑ ' + esc(m.player.bannerAlias) + '’S BANNER · +1%</div>'
-      : '';
-    let echoLine = '';
+  // ── W1058 · THE MATCHUP (ClaudeDesign handoff 31, "The Matchup — Boosts") ─────────
+  // Owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts",
+  // "less is more and just interactive". YOUR POWER is the FIGHT power now: the boosts the
+  // fight applies on regular floors (Blood Still Hot, then the Shadow Army, then a friend's
+  // banner, the engine's own order in arenaMatchup) light up as marks under it while the
+  // number counts up, and a tap on them shows what each one added. Until W1058 the number
+  // and the odds left out the army and the banner although the fight counted them. Below
+  // FIGHT: the stakes in one line, the Tale of the Tape (its rows sum to the fight power; an
+  // opened row lists the boosts too), the loadout one tap deep. One renderer serves regular
+  // floors and milestone bosses (the boss intro is this screen with a ribbon, a taunt and a
+  // bigger portrait; the army kneels there, shown dimmed).
+  const MX_ROLES = [
+    { key: 'ATTACK',  style: 'Melee',  parts: [['STR', 2.3]] },
+    { key: 'DEFENSE', style: 'Magic',  parts: [['INT', 1.15], ['VIT', 1.15]] },
+    { key: 'EDGE',    style: 'Ranged', parts: [['FOCUS', 1.15], ['WILL', 1.15]] },
+  ];
+  const MX_RANK_COLOR = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9' };
+  const MX_X_SVG = '<svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const MX_CHEV = '<svg class="mx-chev" viewBox="0 0 9 6" aria-hidden="true"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>';
+  const MX_BLOOD_SVG = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6c2.6 3.6 4.6 6.1 4.6 8.6a4.6 4.6 0 0 1-9.2 0C3.4 7.7 5.4 5.2 8 1.6Z" fill="currentColor"/></svg>';
+  const MX_BANNER_SVG = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4.5 2.5h8.5l-2.6 3.3 2.6 3.2H4.5Z" fill="currentColor"/></svg>';
+  let _mxRaf = 0;
+  let _mxLast = null;   // the open matchup's numbers, for the count-up replay
+  function _mxRankOf(bossId) { const r = (BOSSES[bossId] || {}).rank; return r === 'S+' ? 'S' : (r || 'E'); }
+  // A shadow's sigil: a diamond in its boss's rank colour; the mark inside says what the boss
+  // asked for (steps a diamond, stairs a bar, sleep a dot, anything else an upright).
+  function _mxSigil(bossId, size) {
+    const cfg = BOSSES[bossId] || {};
+    const c = MX_RANK_COLOR[_mxRankOf(bossId)] || MX_RANK_COLOR.E;
+    const kinds = ['stepThreshold', 'flightThreshold', 'sleepHours', 'workoutMinutes'].filter(function (k) { return Number(cfg[k]) > 0; });
+    const k = kinds.length === 1 ? kinds[0] : 'other';
+    const inner = k === 'stepThreshold' ? '<path d="M8 5.1 10.9 8 8 10.9 5.1 8Z" fill="' + c + '"/>'
+      : k === 'flightThreshold' ? '<rect x="5" y="6.6" width="6" height="2.8" rx=".6" fill="' + c + '"/>'
+      : k === 'sleepHours' ? '<circle cx="8" cy="8" r="1.9" fill="' + c + '"/>'
+      : '<rect x="7.2" y="4.2" width="1.6" height="7.6" rx=".8" fill="' + c + '"/>';
+    return '<svg class="mx-sig" width="' + size + '" height="' + size + '" viewBox="0 0 16 16" aria-hidden="true">' +
+      '<path d="M8 1.4 14.6 8 8 14.6 1.4 8Z" fill="' + c + '" fill-opacity=".14" stroke="' + c + '" stroke-width="1.2" stroke-linejoin="round"/>' + inner + '</svg>';
+  }
+  // The shadows that march into the fight's power, strongest first (as _shadowPowerPct counts them).
+  function _mxMarching() {
     try {
-      const _ec = _towerEchoFor(m.floor);
-      if (_ec) echoLine = '<div class="ar-echo-line">' + esc(_ec.alias) + ' knelt here this week. Win — and avenge them.</div>';
-    } catch (_) {}
-    // Deterministic (no dice) — safe to show before the fight is resolved.
-    const playerArch = _arenaArchOf(m.player);
-    const foeArch = m.bot.archKey || _arenaArchOf(m.bot);
+      const s = _shLoad();
+      if (s.dormant) return [];
+      return s.active.filter(function (id) { return !!s.extracted[id]; })
+        .sort(function (a, b) { return _shPct(b) - _shPct(a); }).slice(0, _shSlots());
+    } catch (_) { return []; }
+  }
+  // Whole numbers that sum exactly to `total`, each as close to its share as it can be (largest remainder).
+  function _mxSplit(exact, total) {
+    const out = exact.map(function (v) { return Math.floor(v); });
+    const order = exact.map(function (v, i) { return [v - Math.floor(v), i]; }).sort(function (a, b) { return b[0] - a[0]; });
+    let rem = total - out.reduce(function (a, b) { return a + b; }, 0);
+    for (let k = 0; rem > 0; k++, rem--) out[order[k % order.length][1]]++;
+    for (let k = order.length - 1; rem < 0; k--, rem++) out[order[((k % order.length) + order.length) % order.length][1]]--;
+    return out;
+  }
+  // Every number on the screen, display scale. Each boost is whole points in the fight's
+  // order, and the last one lands exactly on the fight power, so the panel always sums.
+  function _mxCalc(m) {
+    const P = m.player, F = m.bot, regular = m.floor % 10 !== 0;
+    const steps = [];
+    if (regular && P.bloodHot) steps.push({ id: 'blood', rate: 0.10 });
+    if (regular && P.shadowPct > 0) steps.push({ id: 'army', rate: P.shadowPct / 100, pct: P.shadowPct });
+    if (regular && P.bannerAlias) steps.push({ id: 'banner', rate: 0.01 });
+    const fight = _arD(P.power);
+    const baseD = steps.length ? _arD(_ascentPlayerCombatant().power) : fight;
+    let cum = baseD;
+    steps.forEach(function (s, i) {
+      const next = i === steps.length - 1 ? fight : Math.round(cum * (1 + s.rate));
+      s.add = next - cum; s.cum = next; cum = next;
+    });
+    const disp = function (v) { return (Number(v) || 0) * _ASC_DISP; };
+    const foePow = _arD(F.power);
+    return {
+      regular: regular, baseD: baseD, fight: fight, steps: steps, foePow: foePow,
+      you: _mxSplit([P.attack, P.defense, P.edge].map(disp), fight),
+      foe: _mxSplit([F.attack, F.defense, F.edge].map(disp), foePow),
+    };
+  }
+  function _mxVerdict(c, boss) {
+    const keys = ['attack', 'defense', 'edge'];
+    const mine = keys.filter(function (k, i) { return c.you[i] >= c.foe[i]; });
+    const theirs = keys.filter(function (k, i) { return c.you[i] < c.foe[i]; });
+    const join = function (a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0]; };
+    const who = boss ? 'It takes' : 'They take';
+    if (!theirs.length) return 'You take every column.';
+    if (!mine.length) return who + ' every column.';
+    return who + ' ' + join(theirs) + '. You take ' + join(mine) + '.';
+  }
+  // The stakes in one line. A new floor always says that a loss spends a life.
+  function _mxStakesHtml(m) {
+    const st = getAscentState();
+    if (m.advances) {
+      const win = m.floor >= ASCENT_FLOORS ? 'Victory takes the summit.'
+        : 'Victory ' + (_ascentIsBoss(m.floor) ? 'opens' : 'climbs to') + ' Floor ' + (m.floor + 1) + '.';
+      const left = ascentLivesLeft();
+      if (!Number.isFinite(left)) return win + ' Unlimited attempts.';
+      return win + ' <b class="r">Defeat spends a life</b> — ' + left + (left === 1 ? ' remains.' : ' remain.');
+    }
+    const claimed = st.reclaimFloors.indexOf(m.floor) !== -1;
+    const capHit = st.reclaimSouls >= ASCENT_RECLAIM_DAILY_CAP;
+    if (m.floor <= st.highestCleared && !claimed && !capHit) {
+      return '<b class="g">Reclaim · +' + _ascentReclaimBounty(m.floor) + ' souls</b> — your first win here today.';
+    }
+    return claimed ? 'Already claimed today. Nothing at stake.'
+      : capHit ? 'Daily reclaim cap reached. Nothing at stake.' : 'Nothing at stake.';
+  }
+  function _mxMarksHtml(c, marching) {
+    const sigs = '<span class="mx-sigs">' + marching.slice(0, 6).map(function (id) { return _mxSigil(id, 14); }).join('') + '</span>';
+    const open = '<div class="mx-marks" data-ar="mxpanel" role="button" tabindex="0" aria-label="Your boosts">';
+    if (!c.regular) return marching.length ? open + '<span class="mx-mark kneel">' + sigs + 'KNEELS AT THE THRESHOLD</span></div>' : '';
+    if (!c.steps.length) return '';
+    return open + c.steps.map(function (s, i) {
+      if (s.id === 'army') return '<span class="mx-mark army" data-i="' + i + '">' + sigs + '+' + _shPctText(s.pct) + '%</span>';
+      if (s.id === 'blood') return '<span class="mx-mark blood" data-i="' + i + '">' + MX_BLOOD_SVG + '+10%</span>';
+      return '<span class="mx-mark banner" data-i="' + i + '">' + MX_BANNER_SVG + '+1%</span>';
+    }).join('') + '</div>';
+  }
+  // The panel the marks open: base power, what each boost added, the fight power.
+  function _mxSheetHtml(m, c, marching) {
+    let names = {};
+    try { names = _shLoad().extracted || {}; } catch (_) {}
+    const list = function (dim) {
+      return '<div class="mx-shl' + (dim ? ' dim' : '') + '">' + marching.map(function (id) {
+        const r = _mxRankOf(id);
+        const nm = (names[id] && names[id].name) || ('Shadow of ' + ((BOSSES[id] || {}).name || ''));
+        return '<div class="mx-sh">' + _mxSigil(id, 18) + '<span>' + esc(nm) + '</span>' +
+          '<span class="rk" style="color:' + MX_RANK_COLOR[r] + '">' + r + '</span>' +
+          '<span class="pc">+' + _shPctText(_shPct(id)) + '%</span></div>';
+      }).join('') + '<button type="button" class="mx-roster" data-ar="mxroster">SHADOW ARMY ROSTER →</button></div>';
+    };
+    const body = !c.regular
+      ? '<div class="mx-kneel-note">Milestone floor. No boost applies — the army kneels at the threshold.</div>' + (marching.length ? list(true) : '')
+      : c.steps.map(function (s) {
+        if (s.id === 'blood') {
+          let min = 0; try { min = Math.max(1, Math.ceil((_bloodHotUntilMs - Date.now()) / 60000)); } catch (_) {}
+          return '<div class="mx-pl blood"><span class="k">' + MX_BLOOD_SVG + '<span>Blood Still Hot<small>10%' + (min ? ' · ' + min + ' MIN LEFT' : '') + '</small></span></span>' +
+            '<span class="v">+' + s.add + '</span></div>';
+        }
+        if (s.id === 'army') {
+          return '<div class="mx-pl army"><span class="k"><span class="gl">◈</span><span>Shadow Army<small>' +
+            (marching.length === 1 ? '1 MARCHES' : marching.length + ' MARCH') + ' · +' + _shPctText(s.pct) + '%</small></span></span>' +
+            '<span class="v">+' + s.add + '</span></div>' + list(false);
+        }
+        return '<div class="mx-pl banner"><span class="k">' + MX_BANNER_SVG + '<span>' + esc(m.player.bannerAlias) + '’s banner<small>1% · BEAT THIS FLOOR THIS WEEK</small></span></span>' +
+          '<span class="v">+' + s.add + '</span></div>';
+      }).join('');
+    return '<div class="mx-scrim" data-ar="mxclose"></div>' +
+      '<div class="mx-sheet" role="dialog" aria-label="Your power">' +
+        '<div class="mx-sh-h"><span>YOUR POWER · FLOOR ' + m.floor + '</span>' +
+          '<button type="button" class="mx-x" data-ar="mxclose" aria-label="Close">' + MX_X_SVG + '</button></div>' +
+        '<div class="mx-pl base"><span class="k">Base power</span><span class="v">' + c.baseD + '</span></div>' + body +
+        '<div class="mx-pl final"><span class="k">FIGHT POWER</span><span class="v">' + c.fight + '</span></div>' +
+      '</div>';
+  }
+  // Tale of the Tape: you vs the foe per role. An opened row shows how your number is made:
+  // each stat's level (earned from vows), relics, then each boost; the lines sum to the row.
+  function _mxTapeHtml(m, c, boss) {
+    let gear = {}; try { gear = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
+    const lvl = function (id) { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
+    const boostName = function (id) { return id === 'army' ? 'Shadows' : id === 'blood' ? 'Blood Still Hot' : esc(m.player.bannerAlias) + '’s banner'; };
+    const bl = function (cls, k, v) { return '<div class="mx-bl' + (cls ? ' ' + cls : '') + '"><span>' + k + '</span><span class="v">' + v + '</span></div>'; };
+    const rows = MX_ROLES.map(function (r, i) {
+      const yv = c.you[i], fv = c.foe[i], max = Math.max(yv, fv, 1), lead = yv >= fv;
+      let exactBase = 0, relicExact = 0;
+      const lv = r.parts.map(function (p) {
+        const l = lvl(p[0]), g = Number(gear[p[0].toLowerCase()]) || 0;
+        exactBase += (l + g) * p[1] * _ASC_DISP;
+        relicExact += g * p[1] * _ASC_DISP;
+        return [p[0], Math.round(l * p[1] * _ASC_DISP)];
+      });
+      // the row before boosts: the rounded base, or the row itself when nothing boosts it
+      const before = c.steps.length ? Math.round(exactBase) : yv;
+      const lvSum = lv.reduce(function (a, p) { return a + p[1]; }, 0);
+      let relics = 0;
+      if (relicExact > 0) relics = before - lvSum;
+      else lv[lv.length - 1][1] += before - lvSum;   // no relics: rounding lands on the last level
+      let cur = before;
+      const boosts = c.steps.map(function (s, j) {
+        const add = j === c.steps.length - 1 ? yv - cur : Math.round(cur * s.rate);
+        cur += add;
+        return bl(s.id, boostName(s.id), '+' + add);
+      }).join('');
+      const lines = lv.map(function (p) { return bl('', p[0] + ' level', p[1]); }).join('') +
+        (relics ? bl('', 'Relics', '+' + relics) : '') + boosts + bl('sum', r.key, yv);
+      return '<div class="mx-row' + (lead ? ' lead' : '') + '" data-ar="mxrow">' +
+        '<div class="mx-row-h"><span class="y">' + yv + '</span>' +
+          '<div class="mx-row-c"><div class="mx-row-l">' + r.key + '<em>· ' + r.style + '</em>' + MX_CHEV + '</div>' +
+            '<div class="mx-bars"><i><b style="width:' + (yv / max * 100).toFixed(1) + '%"></b></i><i><b style="width:' + (fv / max * 100).toFixed(1) + '%"></b></i></div></div>' +
+          '<span class="f">' + fv + '</span></div>' +
+        '<div class="mx-brk">' + lines + '</div></div>';
+    }).join('');
+    return '<div class="mx-kick"><span>TALE OF THE TAPE</span><span class="act">TAP A ROW</span></div>' +
+      '<div class="mx-tape">' + rows + '<div class="mx-verdict">' + _mxVerdict(c, boss) + '</div></div>';
+  }
+  // Your Loadout, folded: one line, eight relics one tap deep.
+  function _mxLoadoutHtml() {
+    const labels = _ldtSlotLabels();
+    let n = 0, cells = '';
+    for (let i = 0; i < labels.length; i++) {
+      const card = _ldtCardAt(i);
+      if (!card) {
+        cells += '<div class="mx-cell empty"><span class="s">' + esc(labels[i]) + '</span><span class="b">＋</span><span class="nm">Empty</span></div>';
+        continue;
+      }
+      n++;
+      const bl = _ldtBonuses(card), prim = bl[0] || ['', 0];
+      cells += '<div class="mx-cell" data-ar="mxcell" data-slot="' + i + '"><span class="s">' + esc(labels[i]) + '</span>' +
+        '<span class="b">+' + prim[1] + ' ' + esc(prim[0]) + (bl.length > 1 ? '<i>+</i>' : '') + '</span>' +
+        '<span class="nm">' + esc(card.name || 'Relic') + '</span></div>';
+    }
+    let totals = {}; try { totals = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
+    const keys = ['str', 'vit', 'int', 'focus', 'will'].filter(function (k) { return Math.round(Number(totals[k]) || 0) > 0; });
+    const sum = keys.reduce(function (a, k) { return a + Math.round(Number(totals[k])); }, 0);
+    const tot = keys.map(function (k) { return '<span>+' + Math.round(Number(totals[k])) + ' ' + k.toUpperCase() + '</span>'; }).join('');
+    return '<div class="mx-ldt"><div class="mx-ldt-h" data-ar="mxldt" role="button" tabindex="0"><span>YOUR LOADOUT</span>' +
+        '<span class="r">' + (n ? n + (n === 1 ? ' RELIC' : ' RELICS') + ' · +' + sum : 'NO RELICS') + MX_CHEV + '</span></div>' +
+      '<div class="mx-ldt-b"><div class="mx-grid">' + cells + '</div><div class="mx-detail" id="mx-detail"></div>' +
+        (tot ? '<div class="mx-tot">TOTAL GEAR BONUS ' + tot + '</div>' : '') +
+        '<button type="button" class="mx-arm" data-ar="armory">ADJUST IN ARMORY →</button></div></div>';
+  }
+  // The count-up: base power to fight power in ~700 ms while each boost mark lights in turn.
+  function _mxCountUp(c) {
+    const el = document.getElementById('mx-you');
+    if (!el || !c) return;
+    const marks = Array.prototype.slice.call(document.querySelectorAll('#arena-body .mx-mark[data-i]'));
+    if (_mxRaf) { try { cancelAnimationFrame(_mxRaf); } catch (_) {} _mxRaf = 0; }
+    const done = function () { _mxRaf = 0; el.textContent = c.fight; marks.forEach(function (mk) { mk.classList.add('lit'); }); };
+    if (!c.steps.length || _arReduceMotion()) { done(); return; }
+    marks.forEach(function (mk) { mk.classList.remove('lit'); });
+    el.textContent = c.baseD;
+    const n = c.steps.length, seg = 700 / n;
+    let start = null;
+    const tick = function (ts) {
+      if (!el.isConnected) { _mxRaf = 0; return; }
+      if (start === null) start = ts;
+      const t = Math.min(ts - start, 700), i = Math.min(n - 1, Math.floor(t / seg));
+      const from = i ? c.steps[i - 1].cum : c.baseD, to = c.steps[i].cum, f = Math.min(1, (t - i * seg) / seg);
+      el.textContent = Math.round(from + (to - from) * f);
+      marks.forEach(function (mk, k) { if (k <= i) mk.classList.add('lit'); });
+      if (t < 700) _mxRaf = requestAnimationFrame(tick); else done();
+    };
+    _mxRaf = requestAnimationFrame(tick);
+    // a paused frame loop (a hidden page) must never leave the base number showing
+    setTimeout(function () { if (_mxRaf && el.isConnected) { try { cancelAnimationFrame(_mxRaf); } catch (_) {} done(); } }, 1500);
+  }
+  function _mxRender(boss) {
+    _arView = boss ? 'bossintro' : 'vs';
+    _arBodyMode(false);
+    const m = _arMatchup, P = m.player, F = m.bot, apex = boss && m.floor === ASCENT_FLOORS;
+    const c = _mxCalc(m), marching = _mxMarching();
+    _mxLast = c;
+    const playerArch = _arenaArchOf(P), foeArch = F.archKey || _arenaArchOf(F);
     const eff = _arenaEffectiveness(playerArch, foeArch);
-    const paLabel = (ASCENT_ARCHETYPES[playerArch] || {}).label || 'Balanced';
-    const effBadge = (eff.key === 'super' || eff.key === 'weak')
-      ? '<span class="ar-tag ' + eff.key + '">' + eff.label + '</span>'
-      : '<span class="ar-vs-even">EVEN MATCH</span>';
+    const paLabel = (ASCENT_ARCHETYPES[playerArch] || {}).label || 'Neutral';
+    const o = _ascOdds(P.power, F.power), d = _ascDiff(P.power, F.power);
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    let echo = '';
+    try { const ec = _towerEchoFor(m.floor); if (ec) echo = '<div class="mx-echo">' + esc(ec.alias) + ' knelt here this week. Win — and avenge them.</div>'; } catch (_) {}
+    const taunt = boss ? ((ASCENT_BOSSES[m.floor] || {}).taunt || 'You should not have climbed this high.') : '';
+    const marks = _mxMarksHtml(c, marching);
+    const top = boss
+      ? '<span class="mx-ribbon">FLOOR ' + m.floor + ' · ' + (apex ? 'SUMMIT' : 'MILESTONE') + '</span>'   // fits beside EXIT at 375
+      : '<span class="mx-floor">FLOOR ' + m.floor + '</span>';
     _arSet(
-      '<div class="ar-versus">' +
-        '<div class="ar-vs-floor">FLOOR ' + m.floor + '</div>' + bloodHotChip + shadowChip + bannerChip + echoLine +
-        '<div class="ar-vs-row">' +
-          '<div class="ar-vs-side you"><div class="ar-vs-med">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div><div class="ar-vs-name">' + esc(m.player.name) + '</div>' +
-            '<div style="margin-top:5px">' + _ascArchHtml(paLabel) + '</div></div>' +
-          '<div class="ar-vs-bolt">VS</div>' +
-          '<div class="ar-vs-side foe"><div class="ar-vs-med">' + _arFoeArt(m.bot, false) + '</div><div class="ar-vs-name">' + esc(m.bot.name) + '</div>' +
-            '<div style="margin-top:5px">' + _ascArchHtml(m.bot.archetype) + '</div></div>' +
+      '<div class="mx' + (boss ? ' mx--boss' : '') + (apex ? ' mx--apex' : '') + '">' +
+        '<div class="mx-top">' + top + '</div>' +
+        '<div class="mx-hero">' +
+          '<div class="mx-fighter you"><div class="mx-portrait you">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+            '<div class="mx-name">' + esc(P.name) + '</div><span class="mx-tag">' + esc(paLabel.toUpperCase()) + '</span></div>' +
+          '<div class="mx-vs">VS</div>' +
+          '<div class="mx-fighter foe"><div class="mx-portrait foe">' + _arFoeArt(F, boss) + '</div>' +
+            '<div class="mx-name">' + esc(F.name) + '</div><span class="mx-tag">' + (boss ? 'BOSS · ' : '') + esc(String(F.archetype || '').toUpperCase()) + '</span></div>' +
         '</div>' +
-        '<div class="ar-vs-eff">' + effBadge + '</div>' +
-        '<div class="ar-vs-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
-        (_arWireBand(_ascOdds(you, foe)) ? '<div class="ar-vs-wire"><span class="word">DEAD EVEN</span><span class="sub">this one goes to the wire</span></div>' : '') +
-        '<div class="ar-vs-go">' + _ascDiffHtml(you, foe) + '</div>' +
-        '<button class="ar-cta" data-ar="introgo">FIGHT<span class="ar-cta-sub">FLOOR ' + m.floor + '</span></button>' +
-        '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
+        '<div class="mx-read' + (eff.key === 'super' ? ' super' : eff.key === 'weak' ? ' weak' : '') + '">' + esc(eff.label) + '</div>' +
+        (taunt ? '<div class="mx-taunt">“' + esc(taunt) + '”</div>' : '') +
+        '<div class="mx-power' + (marks ? ' has-marks' : '') + '"><div class="mx-pw-row">' +
+          '<div class="mx-pw you"><div class="n" id="mx-you" data-ar="mxreplay">' + c.fight + '</div><div class="l">YOUR POWER</div></div>' +
+          '<div class="mx-pw-vs">VS</div>' +
+          '<div class="mx-pw foe"><div class="n">' + c.foePow + '</div><div class="l">' + (boss ? 'BOSS POWER' : 'FLOOR POWER') + '</div></div>' +
+        '</div>' + marks + '</div>' +
+        '<div class="mx-odds"><span class="mx-band' + (d.cls === 'tough' ? ' out' : '') + '"><i></i>' + d.key + '</span><span>≈ <b>' + o + '%</b> WIN</span></div>' +
+        '<button class="mx-fight" data-ar="introgo" type="button"><b>' + (apex ? 'CHALLENGE' : boss ? 'CHALLENGE BOSS' : 'FIGHT') + '</b>' +
+          '<span>FLOOR ' + m.floor + (apex ? ' · THE SUMMIT' : boss ? ' · MILESTONE' : '') + '</span></button>' +
+        '<div class="mx-stakes">' + _mxStakesHtml(m) + '</div>' + echo +
+        _mxTapeHtml(m, c, boss) + _mxLoadoutHtml() +
+        (marks ? _mxSheetHtml(m, c, marching) : '') +
       '</div>'
     );
+    const b = _arBody(); if (b) b.classList.add('ar-body--mx');
+    _mxCountUp(c);
     if (eff.key === 'super') { try { playSfx('ar_super'); } catch (_) {} }
   }
-  // Boss / summit entrance — portrait, name, taunt, faceoff.
-  function _arRenderBossIntro() {
-    _arView = 'bossintro';
-    _arBodyMode(false);
-    const m = _arMatchup, boss = ASCENT_BOSSES[m.floor] || {}, apex = m.floor === 100;
-    const you = _ascPlayerPower(), foe = m.bot.power;
-    const taunt = boss.taunt || 'You should not have climbed this high.';
-    _arSet(
-      '<div class="ar-bossintro' + (apex ? ' apex' : '') + '">' +
-        '<div class="ar-bi-ribbon">' + (apex ? '✦ THE SUMMIT · FINAL BOSS ✦' : '✦ MILESTONE BOSS · FLOOR ' + m.floor + ' ✦') + '</div>' +
-        '<div class="ar-bi-med">' + _arFoeArt(m.bot, true) + '</div>' +
-        '<div class="ar-bi-name">' + esc(m.bot.name) + '</div>' +
-        '<div class="ar-bi-arch">' + _ascArchHtml(m.bot.archetype) + '</div>' +
-        '<div class="ar-bi-taunt">“' + esc(taunt) + '”</div>' +
-        '<div class="ar-bi-faceoff">' + _ascFaceoffHtml(you, foe) + '</div>' +
-        (_arWireBand(_ascOdds(you, foe)) ? '<div class="ar-vs-wire"><span class="word">DEAD EVEN</span><span class="sub">this one goes to the wire</span></div>' : '') +
-        '<button class="ar-cta" data-ar="introgo">' + (apex ? 'CHALLENGE THE FIRST AWAKENED' : 'CHALLENGE BOSS') + '</button>' +
-        '<div class="asc-fill-stack">' + _ascTaleHtml(m) + _ascStakesHtml(m) + _ascLoadoutHtml() + '</div>' +
-      '</div>'
-    );
-  }
+  // Regular floor / milestone boss: one screen (W1058).
+  function _arRenderVs() { _mxRender(false); }
+  function _arRenderBossIntro() { _mxRender(true); }
   // Open the VS / boss preview for a floor. The matchup is NOT resolved or
   // committed here — that happens only when the player taps FIGHT (introgo),
   // so backing out of the preview never silently spends a fight. The preview
@@ -17323,21 +17395,30 @@
       }
       else if (a === 'skip')    { if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
       else if (a === 'koresult'){ if (!_arFight || _arView === 'result') return; _arClearTimers(); _arRevealing = false; _arRenderResult(); }
-      else if (a === 'tale')    { try { act.classList.toggle('open'); } catch (_) {} }   // expand a tale-of-the-tape row
-      else if (a === 'loadcell'){                                                       // expand a loadout cell's full bonuses
+      // W1058 — the Matchup: the boosts panel, a Tale row (one open at a time), the folded
+      // loadout and a relic's bonuses, the count-up replay, the roster.
+      else if (a === 'mxpanel' || a === 'mxclose') {
+        const root = act.closest('.mx'); if (root) root.classList.toggle('mx-panel-open', a === 'mxpanel');
+      }
+      else if (a === 'mxrow')   {
+        const was = act.classList.contains('open');
+        document.querySelectorAll('#arena-body .mx-row.open').forEach((el) => el.classList.remove('open'));
+        if (!was) act.classList.add('open');
+      }
+      else if (a === 'mxldt')   { const l = act.closest('.mx-ldt'); if (l) l.classList.toggle('open'); }
+      else if (a === 'mxcell')  {
         try {
-          const i = parseInt(act.getAttribute('data-slot'), 10);
-          const exp = document.getElementById('asc-load-exp');
-          if (!exp) return;
-          const grid = act.parentNode;
-          if (grid) grid.querySelectorAll('.asc-load-cell.sel').forEach((el) => { if (el !== act) el.classList.remove('sel'); });
-          if (exp.getAttribute('data-open') === String(i)) {
-            exp.className = 'asc-load-exp'; exp.innerHTML = ''; exp.removeAttribute('data-open'); act.classList.remove('sel');
-          } else {
-            exp.innerHTML = _ascLoadExpHtml(i); exp.className = 'asc-load-exp open'; exp.setAttribute('data-open', String(i)); act.classList.add('sel');
-          }
+          const det = document.getElementById('mx-detail');
+          const was = act.classList.contains('sel');
+          document.querySelectorAll('#arena-body .mx-cell.sel').forEach((el) => el.classList.remove('sel'));
+          if (was) { if (det) det.textContent = ''; return; }
+          act.classList.add('sel');
+          const card = _ldtCardAt(parseInt(act.getAttribute('data-slot'), 10));
+          if (det && card) det.textContent = (card.name || 'Relic') + ' · ' + _ldtBonuses(card).map((p) => '+' + p[1] + ' ' + p[0]).join(' · ');
         } catch (_) {}
       }
+      else if (a === 'mxreplay') _mxCountUp(_mxLast);
+      else if (a === 'mxroster') { try { openShadowRoster(); } catch (_) {} }
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   { if (typeof _arView === 'string' && _arView.indexOf('pvp') === 0) { try { _pvpTeardown(); } catch (_) {} } _arRenderTower(); }   // W414 — leaving a PvP sub-view to the tower tears down its socket/timers
       else if (a === 'hall')    _arRenderHall();
@@ -60544,17 +60625,6 @@
           try { _arStartFight(Math.max(1, Math.min(100, floor || 1))); } catch (_) {}
           setTimeout(function () { try { _arCommitFight(); } catch (_) {} }, 700);
         }, 500);
-      };
-      // W766 — sibling preview: render the Tale of the Tape for a MOCK matchup so
-      // the verdict/bars logic can be verified in a browser without climbing to a
-      // real prefight. p/f = {attack, defense, edge}; fArch = foe archKey.
-      window.__ascTalePreview = function (p, f, fArch) {
-        try {
-          return _ascTaleHtml({
-            player: Object.assign({ attack: 100, defense: 100, edge: 100 }, p),
-            bot: Object.assign({ attack: 100, defense: 100, edge: 100, archKey: fArch || 'neutral', name: 'Mock Foe' }, f),
-          });
-        } catch (e) { return 'ERR: ' + e.message; }
       };
     } catch (_) {}
   }
