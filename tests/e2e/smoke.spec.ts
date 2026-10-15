@@ -10154,6 +10154,69 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(await nums('#arena-body .mx-sheet .mx-pl .v')).toEqual([base, base]);
   });
 
+  // W1059 — owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
+  // they go into the tower". The next fight, a rail of the whole climb, the climb behind folded by band.
+  test('W1059 — the tower: the next fight, a 100-cell rail, bands folded with the current one open; the odds match the matchup', async ({ page }) => {
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 19 });
+    const arena = (o: Record<string, unknown>) => page.evaluate(async (o) => {
+      const a = Object.assign({ rating: 1000, bestRating: 1000, currentFloor: 47, highestCleared: 46, wins: 0, losses: 0, streak: 0, bestStreak: 0,
+        dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }, o);
+      localStorage.setItem('hb_arena_v2', JSON.stringify(a));
+      const w = window as any;
+      if (typeof w.openArena === 'function') w.openArena(true);
+      else { (document.querySelector('[data-tab="profile"]') as HTMLElement).click(); await new Promise((r) => setTimeout(r, 400)); (document.getElementById('sc-arena-btn') as HTMLElement).click(); }
+      await new Promise((r) => setTimeout(r, 400));
+    }, o);
+    await page.addInitScript(() => { try { localStorage.setItem('hb_ascent_opening_seen_v1', '1'); } catch (_) {} });
+    await freshApp(page);
+
+    // mid-climb, floor 47: the hero, the Gilded Tier open, six of ten behind, 46 cells lit and one gold
+    await arena({});
+    const T = '#arena-body .tw';
+    await expect(page.locator(T + ' .tw-hl')).toHaveText(/FLOOR 47.*THE GILDED TIER/);
+    await expect(page.locator(T + ' .tw-fight')).toHaveText(/FIGHT/);
+    await expect(page.locator(T + ' .tw-rb .c')).toHaveCount(100);
+    await expect(page.locator(T + ' .tw-rb .c.on')).toHaveCount(46);
+    await expect(page.locator(T + ' .tw-rb .c.now')).toHaveCount(1);
+    await expect(page.locator('#tw-rail-num')).toHaveText('47');
+    await expect(page.locator(T + ' .tw-band')).toHaveCount(5);
+    await expect(page.locator(T + ' .tw-band.open')).toHaveCount(1);
+    await expect(page.locator(T + ' .tw-band.cur.open .bm')).toHaveText(/6 OF 10/);
+    await expect(page.locator(T + ' .tw-band.cur [data-ar="rematch"]')).toHaveCount(6);
+    // a band on the rail opens its tile; a tile's head folds it again
+    await page.evaluate(() => (document.querySelector('#arena-body .tw-rb[data-b="1"]') as HTMLElement).click());
+    await expect(page.locator(T + ' .tw-band[data-b="1"]')).toHaveClass(/open/);
+    await page.evaluate(() => (document.querySelector('#arena-body .tw-band[data-b="1"] .tw-bhead') as HTMLElement).click());
+    await expect(page.locator(T + ' .tw-band[data-b="1"]')).not.toHaveClass(/open/);
+    // the tower's odds are the matchup's odds: both count the marching army (W1058)
+    const towerPct = (await page.locator(T + ' .tw-read .pct').textContent() || '').replace(/[^0-9]/g, '');
+    await page.evaluate(() => (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click());
+    await expect(page.locator('#arena-body .mx-odds')).toContainText('≈ ' + towerPct + '% WIN');
+
+    // floor 60 (TACTICIAN): the style line unfolds the known moves
+    await arena({ currentFloor: 60, highestCleared: 59 });
+    await expect(page.locator(T + ' .tw-hero')).toHaveClass(/boss/);
+    await page.evaluate(() => (document.querySelector('#arena-body [data-ar="twmoves"]') as HTMLElement).click());
+    await expect(page.locator(T + ' .tw-hero')).toHaveClass(/unfold/);
+    await expect(page.locator(T + ' .tw-moves .fav')).toHaveCount(1);
+
+    // a free hunter with no lives left: FIGHT locks, the floors behind stay open
+    const d = new Date(), day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    await arena({ dailyLosses: 2, dailyDate: day });
+    await expect(page.locator(T + ' .tw-fight')).toHaveText(/THE CLIMB RESUMES TOMORROW/);
+    await expect(page.locator(T + ' .tw-fight')).toBeDisabled();
+    await expect(page.locator(T + ' [data-ar="rematch"]')).toHaveCount(46);
+
+    // the first visit: nothing behind; the climbed tower: the Hall, every cell lit
+    await arena({ currentFloor: 1, highestCleared: 0 });
+    await expect(page.locator(T + ' .tw-band')).toHaveCount(0);
+    await expect(page.locator(T + ' .tw-rb .c.on')).toHaveCount(0);
+    await arena({ currentFloor: 100, highestCleared: 100 });
+    await expect(page.locator(T)).toHaveClass(/climbed/);
+    await expect(page.locator(T + ' [data-ar="hall"]')).toHaveText(/ENTER THE HALL/);
+    await expect(page.locator(T + ' .tw-rb .c.on')).toHaveCount(100);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });

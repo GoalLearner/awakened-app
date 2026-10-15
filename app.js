@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1058'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1059'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14658,47 +14658,6 @@
   function _ascStar() {
     return '<svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5l2.4 5 5.4.6-4 3.7 1.1 5.3L10 18.4 5.1 16l1.1-5.3-4-3.7 5.4-.6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   }
-  function _ascArchHtml(arch) { return '<span class="asc-arch">' + esc((arch || '').toUpperCase()) + '</span>'; }
-  function _ascHeartHtml(on) {
-    return '<span class="asc-heart' + (on ? ' on' : '') + '"><svg width="14" height="13" viewBox="0 0 14 13" aria-hidden="true"><path fill="currentColor" d="M7 12.2S0.8 8.1 0.8 4.2A3.2 3.2 0 017 2.5 3.2 3.2 0 0113.2 4.2C13.2 8.1 7 12.2 7 12.2z"/></svg></span>';
-  }
-
-  // ── tower header ──────────────────────────────────────────────────
-  // W265 — Ledger header (ClaudeDesign "Ascent Ladder Remodel", direction A,
-  // Richie's pick). One row of identity (wordmark + tappable equipped-title
-  // chip), one row of numbers (rating · tier | lives). Replaces the W259
-  // header strip; the title chip keeps the W259 data-ar="titles" entry point.
-  function _ascHeaderHtml(st) {
-    // W620 — members show a gold ∞ tag instead of the depleting 2-heart row
-    // (W651: Founder lifetime OR active Premium — both tiers of the membership).
-    const _founder = _ascentIsMember();
-    const left = _founder ? Infinity : Math.max(0, ASCENT_DAILY_LIVES - st.dailyLosses);
-    let hearts = '';
-    for (let i = 0; i < ASCENT_DAILY_LIVES; i++) hearts += _ascHeartHtml(_founder || i < left);
-    let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
-    // W272 — the left corner shows POWER (the climb's real progression metric)
-    // instead of arena RATING. Rating still runs under the hood (it drives the
-    // milestone titles in the chip above + the post-fight delta), it's just no
-    // longer the headline number — one less competing ranking on screen.
-    let pwr = 0; try { pwr = _arD(_ascPlayerPower()); } catch (_) {}
-    return '<div class="al-head">' +
-      '<div class="al-head-row"><span class="al-wordmark">THE ASCENT</span>' +
-        '<button class="al-title-chip" data-ar="titles" type="button">' +
-          (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') +
-          '<svg width="7" height="9" viewBox="0 0 8 12" aria-hidden="true"><path d="M1.5 1l5 5-5 5" stroke="#9090a8" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-        '</button></div>' +
-      '<div class="al-head-nums">' +
-        '<div class="al-power" data-ar="powerinfo" role="button" tabindex="0" aria-label="What makes up your power — tap for the breakdown">' +
-          '<span class="al-lbl">POWER <span class="al-power-i" aria-hidden="true">&#9432;</span></span>' +
-          '<span class="al-rating-row"><span class="num">' + pwr.toLocaleString('en-US') + '</span></span></div>' +
-        '<div class="al-lives' + (_founder ? ' al-lives--founder' : '') + '"><span class="al-lbl">LIVES' +
-          // W652 — tier-aware tag: a Premium subscriber is not a FOUNDER.
-          (_founder ? ' <span class="al-founder-tag">✦ PREMIUM</span>' : '') + '</span>' +
-          '<span class="al-lives-row">' + hearts + '<span class="n">' +
-            (_founder ? '∞' : left + '/' + ASCENT_DAILY_LIVES) + '</span>' +
-            '<button class="al-tips" data-ar="tips" type="button" aria-label="Combat styles">?</button></span></div>' +
-      '</div></div>';
-  }
 
   // ── W518: habit→power thread (legibility keystone) ────────────────────
   // The Ascent header's POWER number is the END of the chain
@@ -14730,19 +14689,6 @@
     try { showNoticeCard({ title: 'YOUR POWER · ' + n(totalDisp), bodyHtml: bodyHtml, cta: 'Onward' }); } catch (_) {}
   }
 
-  // ── floor cards ──  // ── the ledger (W265) ────────────────────────────────────────────
-  // W260 — post-50 telegraph: the foe's full kit, now one tap deep behind the
-  // hero card's class line (ClaudeDesign: "the known-moves chips live one tap
-  // deep rather than always-on"). Same truth source as the fight itself.
-  function _ascScoutHtml(info) {
-    const tier = aiTierFor(info.floor);
-    if (tier <= 2) return '';
-    let names = [];
-    try { names = _arenaFoeKit(info.opponent.archKey, info.floor).map((mv) => mv.name || mv.id); } catch (_) {}
-    if (!names.length) return '';
-    return '<div class="asc-scout"><span class="k">⚠ ' + AI_TIER_NAMES[tier] + '-CLASS FOE · KNOWN MOVES</span>' +
-      '<div class="mv">' + names.map((n) => '<span>' + esc(n) + '</span>').join('') + '</div></div>';
-  }
   // The foe's signature move — its highest-power option, the one the AI leans
   // on. Deterministic and human-knowable (fair-play charter: nothing the fight
   // wouldn't show you).
@@ -14755,10 +14701,67 @@
     } catch (_) {}
     return best ? (best.name || best.id) : null;
   }
+  // ── W1059 · THE TOWER (ClaudeDesign handoff 30, "The Ascent - Tower") ────────────
+  // Owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
+  // they go into the tower ... less is more and just interactive". Replaces the W265 ledger
+  // (one card, then a grey row for every beaten floor). The next fight is the moment: a large
+  // painting, the read line, FIGHT. A rail of 100 cells on the right is the whole climb
+  // (beaten floors lit in their band's rank colour, yours gold; tap a band to go to it). The
+  // climb behind you folds into one tile per band, the current one open. iOS 15 floor: no
+  // color-mix(), so the tints are rgba strings built here.
+  const TW_TIER = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9' };
+  function _twTint(hex, a) {
+    const n = parseInt(String(hex).slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function _twVars(hex) {
+    return '--tw-c:' + hex + ';--tw-c16:' + _twTint(hex, 0.16) + ';--tw-c20:' + _twTint(hex, 0.2) +
+      ';--tw-c40:' + _twTint(hex, 0.4) + ';--tw-c45:' + _twTint(hex, 0.45) + ';--tw-c50:' + _twTint(hex, 0.5);
+  }
+  const TW_I = {
+    chev: '<svg class="tw-chev" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    chevR: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    heart: function (on) { return '<svg class="tw-heart" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17S1.5 11.6 1.5 6A4.5 4.5 0 0110 3.6 4.5 4.5 0 0118.5 6C18.5 11.6 10 17 10 17z" fill="' + (on ? '#f5b842' : 'none') + '" stroke="' + (on ? '#f5b842' : '#6b6b86') + '" stroke-width="1.5"/></svg>'; },
+    play: '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 1l7 4-7 4z" fill="currentColor"/></svg>',
+    lock: '<svg width="12" height="13" viewBox="0 0 12 13" fill="none" aria-hidden="true"><rect x="1.5" y="5.5" width="9" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 5.5V4a2.5 2.5 0 015 0v1.5" stroke="currentColor" stroke-width="1.3"/></svg>',
+    re: '<svg class="tw-re" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M12.5 7.5a5 5 0 11-1.6-3.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12.8 1.8v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    banner: '<svg class="tw-mark" width="12" height="14" viewBox="0 0 12 14" fill="none" aria-hidden="true"><path d="M2.5 1v12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 1.5h6l-1.8 2.75L9.5 7h-6z" fill="currentColor"/></svg>',
+    echo: '<svg class="tw-mark echo" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1" opacity=".5"/></svg>',
+    info: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><circle cx="5" cy="5" r="4.2" stroke="currentColor" stroke-width="1"/><path d="M5 4.3v2.6M5 3v.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>',
+    spire: '<svg width="40" height="56" viewBox="0 0 40 56" fill="none" aria-hidden="true"><path d="M20 2l8 18H12z" fill="#f5b842" opacity=".9"/><path d="M12 20h16v34H12z" stroke="#f5b842" stroke-width="1.4"/><path d="M16 28h8M16 36h8M16 44h8" stroke="#f5b842" stroke-width="1.2" opacity=".6"/></svg>',
+  };
+  function _twHeaderHtml() {
+    const member = _ascentIsMember();
+    const left = ascentLivesLeft();
+    let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
+    // W272 — POWER, the climb's own number (vows → stats + relics → power); tap for the breakdown
+    let pwr = 0; try { pwr = _arD(_ascPlayerPower()); } catch (_) {}
+    let hearts = '';
+    if (!member) { const n = Math.max(ASCENT_DAILY_LIVES, left); for (let i = 0; i < n; i++) hearts += TW_I.heart(i < left); }
+    return '<header class="tw-hdr">' +
+      '<div class="tw-r1"><span class="tw-brand">THE ASCENT</span>' +
+        '<button class="tw-chip" data-ar="titles" type="button">' + (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') + TW_I.chevR + '</button></div>' +
+      '<div class="tw-r2">' +
+        '<button class="tw-power" data-ar="powerinfo" type="button" aria-label="What makes up your power"><span class="tw-lbl">POWER ' + TW_I.info + '</span>' +
+          '<span class="num">' + pwr.toLocaleString('en-US') + '</span></button>' +
+        '<div class="tw-lives"><span class="tw-lbl">LIVES' + (member ? ' <span class="prem">✦ PREMIUM</span>' : '') + '</span>' +
+          '<div class="row">' + (member ? '<span class="inf">∞</span>' : hearts) +
+          '<button class="tw-q" data-ar="tips" type="button" aria-label="Combat styles">?</button></div></div>' +
+      '</div></header>';
+  }
+  // The boosts the fight will apply on floor f: arenaMatchup's own rules (regular floors only),
+  // read without its sync and Health probes, so the tower's odds match the matchup's (W1058).
+  function _twBoostMult(f) {
+    if (f % 10 === 0) return 1;
+    let m = 1;
+    try { if (_bloodHotNow()) m *= 1.10; } catch (_) {}
+    try { m *= 1 + _shadowPowerPct() / 100; } catch (_) {}
+    try { if (_towerBannerFor(f)) m *= 1.01; } catch (_) {}
+    return m;
+  }
   // One italic read line: difficulty phrase + the foe's favored move + ≈odds.
-  // Replaces the diff pill + odds row + faceoff power columns of the old card.
-  function _ascReadLine(info) {
-    const you = _ascPlayerPower(), foe = info.opponent.power;
+  function _twReadHtml(info) {
+    const you = _ascPlayerPower() * _twBoostMult(info.floor), foe = info.opponent.power;
     const o = _ascOdds(you, foe);
     const r = you / Math.max(1, foe);
     const phrase = _arWireBand(o) ? 'Dead even'
@@ -14769,77 +14772,96 @@
     const last = /^The\s/.test(name) ? 'the ' + name.split(' ').pop() : 'they';
     const verb = last === 'they' ? 'favor' : 'favors';
     const mv = _ascFavoredMove(info);
-    return '<div class="al-hero-intel"><span class="read">' + esc(phrase) + ' — ' + esc(last) + ' ' + verb +
-      (mv ? ' <b>' + esc(mv) + '</b>.' : ' a direct assault.') + '</span>' +
-      '<span class="odds">≈' + o + '%</span></div>';
+    return '<div class="tw-read"><p>' + esc(phrase) + ' — ' + esc(last) + ' ' + verb +
+      (mv ? ' <b>' + esc(mv) + '</b>.' : ' a direct assault.') + '</p><span class="pct">≈' + o + '%</span></div>';
   }
-  // The hero — the next fight, the only card on screen.
-  function _ascHeroHtml(info, left) {
-    const isBoss = !!info.isBoss, apex = info.floor === 100;
-    const kick = isBoss ? (apex ? 'THE SUMMIT · FINAL BOSS' : 'FLOOR ' + info.floor + ' · MILESTONE BOSS')
-                        : 'FLOOR ' + info.floor + ' · NEXT FIGHT';
-    const tier = aiTierFor(info.floor);
-    const archL = ((ASCENT_ARCHETYPES[info.opponent.archKey] || {}).label || info.opponent.archetype || '').toUpperCase();
-    const scout = _ascScoutHtml(info);
-    const tg = archL + (tier > 2 ? ' · ' + AI_TIER_NAMES[tier] + '-CLASS' : '');
-    const img = apex ? '<img src="assets/coach/first-awakened-idle.png" alt="" class="asc-fa-img">'
-      : isBoss ? '<img src="assets/arena/boss_' + info.floor + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">'
-      : (info.opponent.archKey
-          ? '<img src="assets/arena/foe_' + info.opponent.archKey + '.webp" alt="" class="asc-fa-img" onerror="window.__arFoeArtFail(this)">'
-          : _arFoeSil());
-    const reward = '';   // W266 — boss titles retired; the rating ladder is the only title source
-    // W620 — membership benefit line under the CTA (members never reach the locked
-    // branch: left = Infinity via ascentLivesLeft). W651: label follows the tier.
-    const founderNote = _ascentIsMember()
-      ? '<div class="al-founder-note">✦ ' +
-        'PREMIUM' +
-        ' BENEFIT · UNLIMITED ASCENT ATTEMPTS</div>'
+  function _twFoeImg(info) {
+    if (info.floor === ASCENT_FLOORS) return '<img src="assets/coach/first-awakened-idle.png" alt="" class="ar-foe-art big">';
+    const art = info.isBoss ? 'boss_' + info.floor : (info.opponent.archKey ? 'foe_' + info.opponent.archKey : null);
+    return art ? '<img src="assets/arena/' + art + '.webp" alt="" class="ar-foe-art big" onerror="window.__arFoeArtFail(this)">'
+      : '<div class="ar-foe-sil-wrap big">' + _arFoeSil() + '</div>';
+  }
+  // The next fight: the only card on screen.
+  function _twHeroHtml(info, left) {
+    const f = info.floor, apex = f === ASCENT_FLOORS, boss = !!info.isBoss, band = info.band;
+    const label = apex ? '<span class="hf">THE SUMMIT</span> · FLOOR 100 · FINAL BOSS'
+      : boss ? '<span class="hf">MILESTONE</span> · FLOOR ' + f + ' · ' + esc(band.name.toUpperCase())
+      : '<span class="hf">FLOOR ' + f + '</span> · ' + esc(band.name.toUpperCase());
+    const tier = aiTierFor(f);
+    const styleL = ((ASCENT_ARCHETYPES[info.opponent.archKey] || {}).label || info.opponent.archetype || '').toUpperCase() +
+      (tier > 2 ? ' · ' + AI_TIER_NAMES[tier] + '-CLASS' : '');
+    // W260 — from floor 51 the foe's kit is one tap deep, on its style line
+    let kit = [];
+    if (tier > 2) { try { kit = _arenaFoeKit(info.opponent.archKey, f).map(function (mv) { return mv.name || mv.id; }); } catch (_) {} }
+    const fav = _ascFavoredMove(info);
+    const moves = kit.length
+      ? '<div class="tw-moves"><div>' + kit.map(function (n) { return '<span' + (n === fav ? ' class="fav"' : '') + '>' + esc(String(n).toUpperCase()) + '</span>'; }).join('') + '</div></div>'
       : '';
-    const cta = (left > 0
-      ? '<button class="al-fight" data-ar="fight" data-floor="' + info.floor + '" type="button">FIGHT ▸</button>'
-      : '<div class="al-fight al-fight--locked">OUT OF LIVES<span>rated climb resumes tomorrow · fallen foes stay open</span></div>') + founderNote;
-    return '<div class="al-hero' + (isBoss ? ' al-hero--boss' : '') + '" id="asc-current-card">' +
-      '<div class="al-hero-top"><div class="al-hero-id">' +
-        '<span class="kick">' + kick + '</span>' +
-        '<span class="nm">' + esc(info.opponent.name) + '</span>' +
-        (scout
-          ? '<button class="al-hero-tg tap" data-ar="alscout" type="button">' + esc(tg) + ' ▾</button>'
-          : '<span class="al-hero-tg">' + esc(tg) + '</span>') +
-      '</div><div class="al-hero-med">' + img + '</div></div>' +
-      (scout ? '<div id="al-scout-slot" style="display:none">' + scout + '</div>' : '') +
-      reward +
-      '<div class="al-hero-rule"></div>' + _ascReadLine(info) + cta +
-    '</div>';
+    const fight = left > 0
+      ? '<button class="tw-fight" data-ar="fight" data-floor="' + f + '" type="button">FIGHT ' + TW_I.play + '</button>'
+      : '<button class="tw-fight locked" type="button" disabled>' + TW_I.lock + ' THE CLIMB RESUMES TOMORROW</button>';
+    return '<section class="tw-hero' + (boss ? ' boss' : '') + (apex ? ' summit' : '') + '" id="tw-hero">' +
+      '<div class="tw-hl">' + label + '</div>' +
+      '<div class="tw-art">' + _twFoeImg(info) + '</div>' +
+      '<h2 class="tw-fname">' + esc(info.opponent.name) + '</h2>' +
+      (kit.length ? '<button class="tw-style" data-ar="twmoves" type="button">' + esc(styleL) + TW_I.chev + '</button>'
+        : '<span class="tw-style">' + esc(styleL) + '</span>') +
+      moves + _twReadHtml(info) + fight +
+    '</section>';
   }
-  function _ascLedgerRule(band, right) {
-    return '<div class="al-rule"><span class="lbl">' + esc(band.name).toUpperCase() + '</span><span class="line"></span>' +
-      '<span class="right">' + right + '</span></div>';
+  // The climb behind you: one tile per band, newest first; a tile opens to its beaten floors,
+  // each one a free rematch (W240) with today's Reclaim bounty where it still pays (W439) and a
+  // friend's banner or echo where there is one (W870).
+  function _twBandsHtml(st, curBandIdx) {
+    const beaten = st.highestCleared;
+    if (beaten <= 0) return '';
+    const banner = {}, echo = {};
+    try {
+      const c = _towerCache() || {};
+      (c.banners || []).forEach(function (b) { banner[b.floor | 0] = 1; });
+      (c.echoes || []).forEach(function (e) { echo[e.floor | 0] = 1; });
+    } catch (_) {}
+    const capLeft = st.reclaimSouls < ASCENT_RECLAIM_DAILY_CAP;
+    let h = '', first = true;
+    for (let bi = curBandIdx; bi >= 0; bi--) {
+      const b = ASCENT_BANDS[bi], top = Math.min(beaten, b.to), n = top - b.from + 1;
+      if (n <= 0) continue;
+      let rows = '';
+      for (let f = top; f >= b.from; f--) {
+        const pays = capLeft && st.reclaimFloors.indexOf(f) === -1;
+        const mark = banner[f] ? TW_I.banner : echo[f] ? TW_I.echo : '';
+        rows += '<button class="tw-floor" data-ar="rematch" data-floor="' + f + '" type="button">' +
+          '<span class="fn' + (_ascentIsBoss(f) ? ' ms' : '') + '">' + f + '</span>' +
+          '<span class="name">' + esc(_ascentOpponent(f).name) + '</span>' +
+          (pays ? '<span class="bounty">+' + _ascentReclaimBounty(f) + '</span>' : '') + mark + TW_I.re + '</button>';
+      }
+      const art = bi === ASCENT_BANDS.length - 1 ? 'assets/coach/first-awakened-idle.png' : 'assets/arena/boss_' + b.to + '.webp';
+      // the tile you stand in opens on entry (or, at a band's first floor, the one just finished)
+      h += '<div class="tw-band' + (bi === curBandIdx ? ' cur' : '') + (first ? ' open' : '') + '" data-b="' + bi + '" style="' + _twVars(TW_TIER[b.tier] || TW_TIER.E) + '">' +
+        '<button class="tw-bhead" data-ar="twband" type="button">' +
+          '<span class="tw-bossart' + (beaten >= b.to ? '' : ' dim') + '"><img src="' + art + '" alt="" onerror="this.remove()"></span>' +
+          '<span class="bt"><span class="bn">' + esc(b.name) + '</span><span class="bm"><b class="tier">' + b.tier + '</b>' + n + ' OF 10</span></span>' +
+          TW_I.chev + '</button>' +
+        '<div class="tw-wrap"><div><div class="tw-floors">' + rows + '</div></div></div></div>';
+      first = false;
+    }
+    return h;
   }
-  // One fallen foe, one line. The whole row is the rematch target — the ↻
-  // glyph is a hint, not a button (W240 exhibitions: free, unrated).
-  function _ascLedgerRowHtml(info) {
-    const boss = !!info.isBoss;
-    const mark = boss
-      ? '<span class="al-dia"></span>'
-      : '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 7.3l2.6 2.6L11 4.4" stroke="#6b6b86" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const title = '';   // W266 — boss titles retired (the gold diamond row remains)
-    // W439 — a tiny gold "+N" on floors that still pay a Reclaim bounty today (nothing once
-    // claimed or the daily cap is hit, so the list stays uncluttered).
-    const st = getAscentState();
-    const payable = st.reclaimFloors.indexOf(info.floor) === -1 && st.reclaimSouls < ASCENT_RECLAIM_DAILY_CAP;
-    const bounty = payable ? '<span class="al-bounty">+' + _ascentReclaimBounty(info.floor) + '</span>' : '';
-    return '<div class="al-row' + (boss ? ' al-row--milestone' : '') + '" data-ar="rematch" data-floor="' + info.floor + '">' +
-      mark + '<span class="fl">' + info.floor + '</span>' +
-      '<span class="nm">' + esc(info.opponent.name) + '</span>' + title + bounty +
-      '<svg class="al-redo" width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M11.5 7a4.5 4.5 0 1 1-1.4-3.2M11.5 1.8v2.4H9.1" stroke="#6b6b86" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+  // The rail: a hundred cells, the summit at the top.
+  function _twRailHtml(st, cur, done) {
+    let h = '<div class="tw-spire"></div>';
+    for (let bi = ASCENT_BANDS.length - 1; bi >= 0; bi--) {
+      const b = ASCENT_BANDS[bi];
+      h += '<div class="tw-rb" data-ar="twrail" data-b="' + bi + '" style="--tw-c:' + (TW_TIER[b.tier] || TW_TIER.E) + '">';
+      for (let f = b.to; f >= b.from; f--) {
+        const on = f <= st.highestCleared, now = !done && f === cur;
+        h += '<i class="c' + (on ? ' on' : '') + (now ? ' now' : '') + (f % 10 === 0 ? ' ms' : '') + '"' +
+          (on ? ' style="--d:' + ((f - 1) / Math.max(1, cur - 2) * 0.5).toFixed(2) + 's"' : '') + '></i>';
+      }
+      h += '</div>';
+    }
+    return h + (done ? '<span class="num top">100</span>' : '<span class="num" id="tw-rail-num">' + cur + '</span>');
   }
-
-  // ── tower view ────────────────────────────────────────────────────  // ── tower view ────────────────────────────────────────────────────
-  // W265 — the Ledger (ClaudeDesign direction A): the next fight is the only
-  // card on screen; history collapses to one-line entries grouped by band,
-  // newest first. Locked floors and power columns are gone — the hero card's
-  // read line carries the difficulty story. All flows reuse the existing
-  // data-ar handlers (fight / rematch / titles).
   function _arRenderTower() {
     _arView = 'tower';
     _arClearTimers();
@@ -14848,36 +14870,47 @@
     try { _audWantMusic('arena_menu'); } catch (_) {}   // W248 — lofi menu loop (no-op if already playing)
     _arBodyMode(true);
     const st = getAscentState();
-    const left = ascentLivesLeft();   // W620 — founder-aware (Infinity → the hero CTA never locks)
-    const summitDone = st.highestCleared >= ASCENT_FLOORS;
+    const left = ascentLivesLeft();   // W620 — Infinity for members, so FIGHT never locks
+    const done = st.highestCleared >= ASCENT_FLOORS;
     const cur = Math.min(st.currentFloor, ASCENT_FLOORS);
-    const hero = summitDone
-      ? '<div class="al-hero al-hero--done"><span class="kick">THE SUMMIT</span>' +
-        '<span class="nm">The tower is climbed.</span>' +
-        '<div class="al-hero-rule"></div>' +
-        '<div class="al-hero-intel"><span class="read">Every floor has fallen. The ledger below is yours.</span></div>' +
-        '<button type="button" class="al-fight" data-ar="hall" style="margin-top:14px">ENTER THE HALL ▸</button></div>'   // W269 — revisit the Hall of the Awakened
-      : _ascHeroHtml(ascentFloorInfo(cur), left);
-    let ledger = '';
-    const curBandIdx = ASCENT_BANDS.indexOf(_ascentBandFor(cur));
-    for (let bi = curBandIdx; bi >= 0; bi--) {
-      const b = ASCENT_BANDS[bi];
-      const hiF = Math.min(b.to, st.highestCleared);
-      const total = b.to - b.from + 1;
-      const done = Math.max(0, hiF - b.from + 1);
-      const right = done >= total ? 'COMPLETE' : done + ' OF ' + total;
-      ledger += _ascLedgerRule(b, right);
-      for (let f = hiF; f >= b.from; f--) ledger += _ascLedgerRowHtml(ascentFloorInfo(f));
-    }
-    const hint = st.highestCleared >= 1
-      ? '<div class="al-hint">TAP A FALLEN FOE TO REMATCH</div>'
-      : '';
-    // W513 — the in-tower "Enter the Arena" PvP banner was removed (owner: redundant with the
-    // Status card's RANKED PVP / DUEL tile, the single PvP entry point now). _pvpTowerEntryHtml is
-    // left defined but no longer rendered here.
-    _arSet(_ascHeaderHtml(st) + '<div class="asc-scroll al-scroll">' + hero + ledger + hint + '</div>');
+    const curBandIdx = done ? ASCENT_BANDS.length - 1 : ASCENT_BANDS.indexOf(_ascentBandFor(cur));
+    const hero = done
+      ? '<section class="tw-hero done" id="tw-hero"><div class="tw-hl"><span class="hf">THE ASCENT</span> · 100 OF 100</div>' +
+        '<div class="tw-spireart">' + TW_I.spire + '</div><h2 class="tw-fname">Nothing stands above you.</h2>' +
+        '<button class="tw-fight" data-ar="hall" type="button">ENTER THE HALL ' + TW_I.play + '</button></section>'   // W269 — the Hall of the Awakened
+      : _twHeroHtml(ascentFloorInfo(cur), left);
+    // W513 — no PvP banner in the tower (the Status card's DUEL tile is the one way in).
+    _arSet('<div class="tw' + (done ? ' climbed' : '') + '" style="' + _twVars(TW_TIER[ASCENT_BANDS[curBandIdx].tier] || TW_TIER.E) + '">' +
+      '<div class="tw-bgfx"></div>' + _twHeaderHtml() +
+      '<div class="tw-scroll" id="tw-scroll">' + hero + '<div class="tw-bands">' + _twBandsHtml(st, curBandIdx) + '</div></div>' +
+      '<div class="tw-rail">' + _twRailHtml(st, cur, done) + '</div></div>');
+    // Settle: the floor number goes beside its cell, then the rail lights and the card rises.
+    const root = document.querySelector('#arena-body .tw');
+    const settle = function () {
+      if (!root || !root.isConnected || root.classList.contains('ready')) return;
+      const now = root.querySelector('.tw-rail .c.now'), num = document.getElementById('tw-rail-num');
+      if (now && num) num.style.top = (now.offsetTop + now.offsetHeight / 2) + 'px';
+      void root.offsetHeight;
+      root.classList.add('ready');
+    };
+    requestAnimationFrame(settle);
+    setTimeout(settle, 60);
     // W424 — populate the Arena Entry banner's standing on first tower view (cached after).
     try { if (PVP_ENABLED && !_pvpRating && window.PvP && PvP.rating) _pvpFetchRating(); } catch (_) {}
+  }
+  // A band on the rail: open its tile and bring it up; a band above you goes back to the fight.
+  function _twGoBand(bi) {
+    const sc = document.getElementById('tw-scroll');
+    if (!sc) return;
+    const tile = sc.querySelector('.tw-band[data-b="' + bi + '"]');
+    const behavior = _arReduceMotion() ? 'auto' : 'smooth';
+    if (!tile) { try { sc.scrollTo({ top: 0, behavior: behavior }); } catch (_) { sc.scrollTop = 0; } return; }
+    const go = function () { try { sc.scrollTo({ top: tile.offsetTop - 8, behavior: behavior }); } catch (_) { sc.scrollTop = tile.offsetTop - 8; } };
+    // opened at once (no unfold), so a tile near the bottom has its full height to scroll to
+    tile.classList.add('tw-now', 'open');
+    void tile.offsetHeight;
+    tile.classList.remove('tw-now');
+    go();
   }
 
   // ── fight reveal ──────────────────────────────────────────────────  // ── fight reveal ──────────────────────────────────────────────────
@@ -17422,7 +17455,10 @@
       else if (a === 'armory')  { try { closeArena(); } catch (_) {} try { if (typeof openEquipmentPanel === 'function') openEquipmentPanel(); } catch (_) {} }
       else if (a === 'tower')   { if (typeof _arView === 'string' && _arView.indexOf('pvp') === 0) { try { _pvpTeardown(); } catch (_) {} } _arRenderTower(); }   // W414 — leaving a PvP sub-view to the tower tears down its socket/timers
       else if (a === 'hall')    _arRenderHall();
-      else if (a === 'alscout') { try { const sl = document.getElementById('al-scout-slot'); if (sl) sl.style.display = sl.style.display === 'none' ? '' : 'none'; } catch (_) {} }
+      // W1059 — the Tower: the foe's known moves, a band tile, a band on the rail
+      else if (a === 'twmoves') { const h = document.getElementById('tw-hero'); if (h) h.classList.toggle('unfold'); }
+      else if (a === 'twband')  { const t = act.closest('.tw-band'); if (t) t.classList.toggle('open'); }
+      else if (a === 'twrail')  { _twGoBand(parseInt(act.getAttribute('data-b'), 10)); }
       else if (a === 'titles')  _arRenderTitles();
       else if (a === 'tips')    { try { _arOpenCombatTriangle(); } catch (_) {} }   // W294 combat-styles primer
       else if (a === 'powerinfo') { try { _arOpenPowerBreakdown(); } catch (_) {} }   // W518 — habit→power thread keystone
