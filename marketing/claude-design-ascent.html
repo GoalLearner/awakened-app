@@ -246,9 +246,11 @@ interactions.</pre></section>
 </main><script>
 document.querySelectorAll('[data-copy]').forEach(function(btn){
   btn.addEventListener('click',function(){
-    var id=btn.getAttribute('data-copy'),t=document.getElementById('b-'+id).textContent,ok=document.getElementById('ok-'+id);
+    var id=btn.getAttribute('data-copy'),pre=document.getElementById('b-'+id),t=pre.textContent,ok=document.getElementById('ok-'+id);
     function done(){ok.textContent='Copied';setTimeout(function(){ok.textContent=ok.getAttribute('data-w');},2500);}
-    function fallback(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');done();}catch(e){ok.textContent='Select the text and copy it';}a.remove();}
+    // execCommand returns false (no throw) where copying is blocked: never claim "Copied" then; select the brief instead
+    function selectAll(){var r=document.createRange();r.selectNodeContents(pre);var s=window.getSelection();s.removeAllRanges();s.addRange(r);ok.textContent='Selected. Press Ctrl+C';}
+    function fallback(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();var c=false;try{c=document.execCommand('copy');}catch(e){}a.remove();if(c)done();else selectAll();}
     if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fallback);}else{fallback();}
   });
 });
