@@ -10207,7 +10207,8 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator(T + ' .tw-moves .fav')).toHaveCount(1);
 
     // a free hunter with no lives left: FIGHT locks, the floors behind stay open
-    const d = new Date(), day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    // today as the PAGE sees it (the app's day is the device's local date, not the test runner's UTC)
+    const day = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
     await arena({ dailyLosses: 2, dailyDate: day });
     await expect(page.locator(T + ' .tw-fight')).toHaveText(/THE CLIMB RESUMES TOMORROW/);
     await expect(page.locator(T + ' .tw-fight')).toBeDisabled();
@@ -10327,6 +10328,92 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await tap(page, '.mx-sh[data-id="the_steel_wolf"]');
     await expect(page.locator('#arena-body .mx-sh[data-id="the_steel_wolf"] .st')).toHaveText('AT REST');
     expect(await marchingIds(page)).toEqual(['the_carouser']);
+  });
+
+  // W1064 — owner 2026-10-15: "making every boss kill a special one ... the 100th floor boss should
+  // have the best celebration" (ClaudeDesign handoff 32).
+  const fightToResult = (page: Page) => page.evaluate(async () => {
+    (document.querySelector('#arena-body [data-ar="introgo"]') as HTMLElement).click();
+    for (let i = 0; i < 160; i++) {
+      await new Promise((r) => setTimeout(r, 350));
+      const nx = document.querySelector('#arena-body [data-ar="next"], #arena-body [data-ar="koresult"]') as HTMLElement | null;
+      if (nx) { nx.click(); return true; }
+      const mv = Array.from(document.querySelectorAll('#arena-body [data-ar="move"]')).find((b) => !(b as HTMLButtonElement).disabled) as HTMLElement | undefined;
+      if (mv) mv.click(); else { const tx = document.querySelector('#arena-body .pkb-text') as HTMLElement | null; if (tx) tx.click(); }
+    }
+    return false;
+  });
+  test('W1064 — the first clear of a milestone boss plays its celebration, once; a rematch keeps the result card', async ({ page }) => {
+    test.setTimeout(120_000);   // two real fights
+    await page.addInitScript(() => {
+      try {
+        if (sessionStorage.getItem('__w1064')) return; sessionStorage.setItem('__w1064', '1');
+        localStorage.setItem('hb_ascent_opening_seen_v1', '1');
+        localStorage.setItem('hb_stats', JSON.stringify({ STR: { pts: 6650 }, VIT: { pts: 6650 }, INT: { pts: 6650 }, FOCUS: { pts: 6650 }, WILL: { pts: 6650 }, WLT: { pts: 6650 } }));
+        localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 10, highestCleared: 9, wins: 0, losses: 0, streak: 0, bestStreak: 0,
+          dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+      } catch (_) {}
+    });
+    await freshApp(page);
+    await page.evaluate(async () => {
+      (document.querySelector('[data-tab="profile"]') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      (document.getElementById('sc-arena-btn') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      (document.querySelector('#arena-body [data-ar="fight"][data-floor="10"]') as HTMLElement).click();
+    });
+    expect(await fightToResult(page)).toBe(true);
+    // the Hollow Footman crumbles; its line; the Threshold is conquered
+    const cel = page.locator('#arena-body .bc-cel');
+    await expect(cel).toBeVisible({ timeout: 8000 });
+    await expect(cel).toHaveAttribute('data-fall', 'crumble');
+    await expect(cel).toContainText('Ten floors. Keep counting.');
+    await expect(cel).toContainText('The Threshold');
+    await expect(cel).toContainText('Conquered', { ignoreCase: true });
+    expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('hb_ascent_boss_days_v1') || '{}')))).toEqual(['10']);
+    // a tap jumps to the end, the next continues to the result card
+    await cel.click();
+    await cel.click();
+    await expect(page.locator('#arena-body .ar-result-word')).toHaveText('VICTORY');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_arena_v2') || '{}').highestCleared)).toBe(10);
+    // a rematch: straight to the card
+    await page.evaluate(async () => {
+      (document.querySelector('#arena-body [data-ar="tower"]') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 300));
+      (document.querySelector('#arena-body [data-ar="rematch"][data-floor="10"]') as HTMLElement).click();
+    });
+    expect(await fightToResult(page)).toBe(true);
+    await expect(page.locator('#arena-body .ar-result-word')).toHaveText('VICTORY', { timeout: 8000 });
+    await expect(page.locator('#arena-body .bc-cel')).toHaveCount(0);
+  });
+
+  test('W1064 — every boss has its own fall and line, and floor 100 ends in five beats on ENTER THE HALL', async ({ page }) => {
+    await page.addInitScript(() => { try { localStorage.setItem('hb_ascent_opening_seen_v1', '1'); } catch (_) {} });
+    await freshApp(page);
+    const falls: Record<number, [string, string]> = {
+      10: ['crumble', 'Ten floors. Keep counting.'], 20: ['lightout', 'Then pass.'], 30: ['rust', 'There. That is how.'],
+      40: ['unravel', 'Nor did I.'], 50: ['burnout', 'You did not turn.'], 60: ['giveback', 'Take them back. Keep them this time.'],
+      70: ['gilt', 'Keep your title. Mine was gilt.'], 80: ['silent', 'It said nothing.'], 90: ['omen', 'I will tell it you are coming.'],
+    };
+    for (const f of [10, 20, 30, 40, 50, 60, 70, 80, 90]) {
+      expect(await page.evaluate((f) => (window as any).__bcPreview(f), f)).toBe('ok');
+      const cel = page.locator('#arena-body .bc-cel');
+      await expect(cel).toHaveAttribute('data-fall', falls[f][0]);
+      await expect(cel).toContainText(falls[f][1]);
+      await expect(cel).toContainText('Floor ' + f + ' · Milestone', { ignoreCase: true });
+    }
+    // floor 100: the killing blow, the passing, the tower, the title, the summit
+    await page.evaluate(() => (window as any).__bcPreview(100));
+    const S = '#arena-body .bc-screen';
+    const want = ['remembers itself', 'Climb past me.', 'The Dread Harbinger', 'Awakened', 'ENTER THE HALL'];
+    for (let b = 0; b < want.length; b++) {
+      await expect(page.locator(S)).toHaveAttribute('data-beat', String(b + 1));
+      await expect(page.locator(S)).toContainText(want[b], { ignoreCase: true });
+      if (b < want.length - 1) { await page.locator(S).click(); await page.locator(S).click(); }
+    }
+    await expect(page.locator(S + ' [data-ar="hall"]')).toBeVisible();
+    await expect(page.locator(S + ' [data-bkshare]')).toHaveCount(0);       // a preview shares nothing
+    expect(await page.evaluate(() => localStorage.getItem('hb_summit_finished_at') || localStorage.getItem('hb_hall_finish'))).toBeNull();
   });
 
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1063'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1064'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13996,7 +13996,7 @@
         st.highestCleared = m.floor;
         st.currentFloor   = Math.min(ASCENT_FLOORS, m.floor + 1);
         advanced = true; floorCleared = m.floor;
-        if (_ascentIsBoss(m.floor)) bossCleared = ASCENT_BOSSES[m.floor];
+        if (_ascentIsBoss(m.floor)) { bossCleared = ASCENT_BOSSES[m.floor]; try { _bcRecordDay(m.floor); } catch (_) {} }   // W1064 — the credits' Day N
       }
       // W893 (3.0.1 C12) — submit on ANY rated win, not only a new personal
       // best. This sat inside the advancement branch, so a clear was reported
@@ -14917,10 +14917,16 @@
         '<div class="tw-spireart">' + TW_I.spire + '</div><h2 class="tw-fname">Nothing stands above you.</h2>' +
         '<button class="tw-fight" data-ar="hall" type="button">ENTER THE HALL ' + TW_I.play + '</button></section>'   // W269 — the Hall of the Awakened
       : _twHeroHtml(ascentFloorInfo(cur), left);
+    // W1064 — the test build can fight any of the ten bosses, to see each one's celebration.
+    let testBosses = '';
+    if (_ascTestBuild) {
+      for (let f = 10; f <= ASCENT_FLOORS; f += 10) testBosses += '<button class="tw-tb" data-ar="fight" data-floor="' + f + '" type="button">' + f + '</button>';
+      testBosses = '<div class="tw-testbosses"><div class="tw-lbl">FIGHT ANY BOSS</div><div class="row">' + testBosses + '</div></div>';
+    }
     // W513 — no PvP banner in the tower (the Status card's DUEL tile is the one way in).
     _arSet('<div class="tw' + (done ? ' climbed' : '') + '" style="' + _twVars(TW_TIER[ASCENT_BANDS[curBandIdx].tier] || TW_TIER.E) + '">' +
       '<div class="tw-bgfx"></div>' + _twHeaderHtml() +
-      '<div class="tw-scroll" id="tw-scroll">' + hero + '<div class="tw-bands">' + _twBandsHtml(st, curBandIdx) + '</div></div>' +
+      '<div class="tw-scroll" id="tw-scroll">' + hero + testBosses + '<div class="tw-bands">' + _twBandsHtml(st, curBandIdx) + '</div></div>' +
       '<div class="tw-rail">' + _twRailHtml(st, cur, done) + '</div></div>');
     // Settle: the floor number goes beside its cell, then the rail lights and the card rises.
     const root = document.querySelector('#arena-body .tw');
@@ -17082,48 +17088,330 @@
     // keep the bespoke finale theme already playing (started by _arRenderSummit).
   }
 
+  // W1064 — the first clear of floor 100 is the ending (ClaudeDesign handoff 32): five beats from
+  // the killing blow to ENTER THE HALL. It replaces W269's static summit and W548's Ascension
+  // overlay (_arPlayAscension stays for the dev panel).
   function _arRenderSummit() {
-    _arView = 'summit';
-    _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.5); } catch (_) {}
-    try { _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); } catch (_) {}   // W544 — the bespoke First Awakened finale (Suno) carries the summit; victory_sting fallback if absent
+    try { _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); } catch (_) {}   // W544 — the bespoke First Awakened finale (Suno); victory_sting if absent
     try { _hallRecordFinish(); } catch (_) {}   // W270 — claim the eternal ordinal in the Hall of the Awakened
-    const portrait = 'assets/coach/first-awakened-idle.png';
+    _bcPlayEnding({ test: false });
+  }
+
+  // ── W1064 · BOSS CELEBRATIONS (ClaudeDesign handoff 32, "The Ascent - Boss Celebrations") ───
+  // Owner 2026-10-15: "a better congratulations screen and celebration screen for all the bosses
+  // but especially this floor 100 boss ... making every boss kill a special one for the users".
+  // The first clear of a milestone boss (10–90) plays one shared celebration, each boss with its
+  // own fall over its painting and its own last line; the band it closes is stamped CONQUERED and
+  // the rail lights its floors. Floor 100 ends in five beats: the killing blow, the passing, the
+  // tower lighting 1 → 100 with the bosses rolling as credits, the title, the summit (ENTER THE
+  // HALL). A rematch keeps the plain result card. In the owner's test build every boss win plays
+  // its celebration and nothing is saved. Every animated element is a function of the screen's
+  // --t: a tap mid-sequence jumps to the end, a tap at the end continues. Nothing auto-dismisses.
+  const BC_BOSS = {
+    10: { fall: 'crumble',  last: 'Ten floors. Keep counting.' },
+    20: { fall: 'lightout', last: 'Then pass.' },
+    30: { fall: 'rust',     last: 'There. That is how.' },
+    40: { fall: 'unravel',  last: 'Nor did I.' },
+    50: { fall: 'burnout',  last: 'You did not turn.' },
+    60: { fall: 'giveback', last: 'Take them back. Keep them this time.' },
+    70: { fall: 'gilt',     last: 'Keep your title. Mine was gilt.' },
+    80: { fall: 'silent',   last: '' },
+    90: { fall: 'omen',     last: 'I will tell it you are coming.' },
+  };
+  const BC_DAYS_KEY = 'hb_ascent_boss_days_v1';   // { floor: ISO } — the first clear of each milestone boss (for the credits)
+  // painting behaviour per fall: the motion keyframe, its delay and length, and the reduced-motion fade
+  const BC_PAINT = {
+    crumble: ['vanish', 0, 0.01, 'vanish'], lightout: ['toStone', 0, 1.4, 'toStone'], rust: ['vanish', 1.35, 0.6, 'vanish'],
+    unravel: ['vanish', 0, 0.01, 'vanish'], burnout: ['toAsh', 0, 1.6, 'toAsh'], giveback: ['sag', 0, 1.6, 'dim'],
+    gilt: ['toIron', 0.9, 0.8, 'toIron'], silent: ['silentOut', 0, 2.4, 'vanish'], omen: ['vanish', 0.9, 0.5, 'vanish'],
+  };
+  // reduced motion: every move becomes a fade on the same timeline
+  const BC_RM = { rise: 'fadeIn', stamp: 'fadeIn', seal: 'fadeIn', strike: 'fadeIn', shake: 'none', slam: 'fadeIn', ruleGrow: 'fadeIn', glint: 'none',
+    kneel: 'none', kneelSlow: 'dim', shardFly: 'none', holdPulse: 'none', sparkUp: 'none', drain: 'vanish', barFill: 'fadeIn', silentOut: 'vanish',
+    sag: 'dim', tileDrop: 'none', dust: 'none', glowOut: 'none', rustSpread: 'none', ashDrift: 'none', stripOut: 'none', flare: 'none', emberUp: 'none',
+    moteUp: 'none', crackDraw: 'none', flakeFall: 'none', irisClose: 'none', omenUp: 'none' };
+  const BC_SPARK = 'M5.5 0L6.5 4.4L11 5.5L6.5 6.6L5.5 11L4.5 6.6L0 5.5L4.5 4.4z';
+  const BC_CROWN = '<svg width="44" height="26" viewBox="0 0 44 26" fill="none" aria-hidden="true"><path d="M4 22L8 6l8 9 6-13 6 13 8-9 4 16z" stroke="#f5b842" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 24h32" stroke="#f5b842" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  function _bcK(n) { return n === 'none' ? 'none' : 'bc_' + n; }   // keyframes live under bc_
+  function _bcS(x) { return x.toFixed(2) + 's'; }
+  function _bcRng(seed) { let s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  function _bcVars(c, nc) {
+    return '--c:' + c + ';--nc:' + (nc || c) + ';--bc-c18:' + _twTint(c, 0.18) + ';--bc-c60:' + _twTint(c, 0.6) + ';--bc-c40:' + _twTint(c, 0.4) +
+      ';--bc-c55:' + _twTint(c, 0.55) + ';--bc-c50:' + _twTint(c, 0.5) + ';--bc-c35:' + _twTint(c, 0.35) + ';--bc-c10:' + _twTint(c, 0.1) +
+      ';--bc-nc60:' + _twTint(nc || c, 0.6);
+  }
+  function _bcArt(f) { return 'assets/arena/boss_' + f + '.webp'; }
+  function _bcPaint(src, style) { return '<div class="bc-paint" style="background-image:url(\'' + src + '\');' + (style || '') + '"></div>'; }
+  function _bcRecordDay(floor) {
+    try {
+      const o = JSON.parse(localStorage.getItem(BC_DAYS_KEY) || '{}') || {};
+      if (!o[floor]) { o[floor] = new Date().toISOString(); localStorage.setItem(BC_DAYS_KEY, JSON.stringify(o)); }
+    } catch (_) {}
+  }
+  // "Day N" of the journey a boss first went down, only when the app recorded it (W1064 on)
+  function _bcBossDay(floor) {
+    try {
+      const o = JSON.parse(localStorage.getItem(BC_DAYS_KEY) || '{}') || {};
+      const t = o[floor] ? Date.parse(o[floor]) : NaN;
+      if (!isFinite(t)) return null;
+      return Math.max(1, Math.floor((t - _journeyStartMs()) / 86400000) + 1);
+    } catch (_) { return null; }
+  }
+
+  // ── the nine falls, drawn over the painting ──
+  function _bcFx(type, f, src) {
+    const S = 272, r = _bcRng(f * 97), out = [];
+    const a = (n) => 'bc-anim" style="--a:' + _bcK(n) + ';';
+    const clone = (x, y, w, h, st) => '<div class="bc-anim" style="left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;overflow:hidden;' + st + '">' +
+      _bcPaint(src, 'left:' + (-x) + 'px;top:' + (-y) + 'px;width:' + S + 'px;height:' + S + 'px;right:auto;bottom:auto') + '</div>';
+    if (type === 'crumble') {
+      for (let row = 0; row < 6; row++) for (let col = 0; col < 6; col++) {
+        const d = (5 - row) * 0.11 + r() * 0.1;
+        out.push(clone(col * 45.33, row * 45.33, 46, 46, '--a:bc_tileDrop;--d:' + _bcS(d) + ';--dur:.9s;--e:cubic-bezier(.5,0,1,1);--dx:' + ((col - 2.5) * 9).toFixed(0) + 'px;--r:' + (r() * 40 - 20).toFixed(0) + 'deg'));
+      }
+      out.push('<div class="' + a('dust') + '--d:.6s;--dur:1.6s;left:0;right:0;bottom:0;height:90px;transform-origin:50% 100%;background:radial-gradient(60% 100% at 50% 100%,rgba(144,144,168,.35),transparent 70%)"></div>');
+    }
+    if (type === 'lightout') out.push('<div class="' + a('glowOut') + '--d:.1s;--dur:1.3s;--e:cubic-bezier(.6,0,.9,.3);left:36px;top:36px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(236,228,255,.95),rgba(183,156,255,.45) 40%,transparent 70%);mix-blend-mode:screen"></div>');
+    if (type === 'rust') {
+      out.push('<div class="' + a('vanish') + '--d:1.35s;--dur:.6s;inset:0"><div class="' + a('rustSpread') + '--d:.05s;--dur:1.1s;--e:cubic-bezier(.3,0,.7,1);position:absolute;inset:0;background:radial-gradient(60% 60% at 55% 45%,#7a3b1a,#3b1d0e 70%,#24130a);opacity:.9"></div></div>');
+      for (let i = 0; i < 16; i++) {
+        const y = r() * 260, h = 2 + r() * 4;
+        out.push('<div class="' + a('ashDrift') + '--d:' + _bcS(1.05 + r() * 0.55) + ';--dur:' + _bcS(0.7 + r() * 0.4) + ';--e:cubic-bezier(.3,0,.8,.6);left:' + (r() * 60).toFixed(0) + 'px;top:' + y.toFixed(0) + 'px;width:' + (60 + r() * 140).toFixed(0) + 'px;height:' + h.toFixed(1) + 'px;border-radius:3px;background:linear-gradient(90deg,transparent,#8a6a5a,#4a3a32);opacity:.85"></div>');
+      }
+      out.push('<div class="' + a('fadeIn') + '--d:1.7s;--dur:.6s;right:0;bottom:0;width:170px;height:120px;background:radial-gradient(70% 70% at 80% 90%,rgba(122,59,26,.35),transparent 70%)"></div>');
+    }
+    if (type === 'unravel') {
+      for (let i = 0; i < 16; i++) {
+        const dx = (i % 2 ? 1 : -1) * (300 + r() * 60);
+        out.push(clone(0, i * 17, S, 18, '--a:bc_stripOut;--d:' + _bcS(0.1 + i * 0.05) + ';--dur:.7s;--e:cubic-bezier(.4,0,1,1);--dx:' + dx.toFixed(0) + 'px'));
+      }
+    }
+    if (type === 'burnout') {
+      out.push('<div class="' + a('flare') + '--d:0s;--dur:.9s;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,150,40,.85),rgba(255,90,30,.4) 45%,transparent 72%);mix-blend-mode:screen"></div>');
+      for (let i = 0; i < 20; i++) {
+        out.push('<div class="' + a('emberUp') + '--d:' + _bcS(0.3 + r() * 1) + ';--dur:' + _bcS(1 + r() * 0.6) + ';--e:cubic-bezier(.2,.6,.6,1);--dy:-' + (80 + r() * 100).toFixed(0) + 'px;left:' + (10 + r() * 80).toFixed(0) + '%;top:' + (45 + r() * 48).toFixed(0) + '%;width:3px;height:3px;border-radius:50%;background:' + (r() > 0.5 ? '#ffd574' : '#ff8a3c') + ';box-shadow:0 0 6px #ff9a3c"></div>');
+      }
+    }
+    if (type === 'giveback') {
+      for (let i = 0; i < 36; i++) {
+        const c = r() > 0.45 ? '#f5b842' : '#b79cff', s = 6 + r() * 4;
+        out.push('<svg class="' + a('moteUp') + '--d:' + _bcS(0.1 + r() * 1.3) + ';--dur:' + _bcS(1.1 + r() * 0.5) + ';--e:cubic-bezier(.2,.5,.7,1);--dx:' + (r() * 140 - 70).toFixed(0) + 'px;--dy:-' + (150 + r() * 140).toFixed(0) + 'px;left:' + (126 + r() * 20).toFixed(0) + 'px;top:' + (146 + r() * 16).toFixed(0) + 'px;width:' + s.toFixed(0) + 'px;height:' + s.toFixed(0) + 'px;filter:drop-shadow(0 0 4px ' + c + ')" viewBox="0 0 11 11"><path d="' + BC_SPARK + '" fill="' + c + '"/></svg>');
+      }
+    }
+    if (type === 'gilt') {
+      out.push('<div class="' + a('vanish') + '--d:.9s;--dur:.6s;inset:0;background:linear-gradient(160deg,rgba(255,213,116,.6),rgba(192,132,24,.55));mix-blend-mode:overlay"></div>');
+      const cr = ['136 120 98 86 70 70 40 30', '136 120 176 92 210 60 238 24', '136 120 100 150 60 176 18 190', '136 120 170 160 206 206 236 246', '136 120 128 180 118 236 132 272', '136 120 150 70 146 10'];
+      out.push('<svg viewBox="0 0 272 272" style="inset:0;width:100%;height:100%">' + cr.map((p, i) => '<polyline class="bc-anim" points="' + p + '" fill="none" stroke="#ffe9b0" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="420" stroke-dashoffset="420" style="--a:bc_crackDraw;--d:' + _bcS(0.1 + i * 0.07) + ';--dur:.6s;--e:cubic-bezier(.2,.7,.3,1);filter:drop-shadow(0 0 2px #f5b842)"/>').join('') + '</svg>');
+      for (let i = 0; i < 26; i++) {
+        out.push('<div class="' + a('flakeFall') + '--d:' + _bcS(0.9 + r() * 0.5) + ';--dur:' + _bcS(0.9 + r() * 0.5) + ';--e:cubic-bezier(.4,0,.9,.6);--dy:' + (120 + r() * 170).toFixed(0) + 'px;--r:' + (r() * 180 - 90).toFixed(0) + 'deg;left:' + (r() * 96).toFixed(0) + '%;top:' + (r() * 60).toFixed(0) + '%;width:3px;height:5px;background:linear-gradient(180deg,#ffe9b0,#c08418)"></div>');
+      }
+      out.push('<div class="' + a('fadeIn') + '--d:1.9s;--dur:.6s;left:0;right:0;bottom:0;height:14px;background:linear-gradient(180deg,transparent,rgba(245,184,66,.45))"></div>');
+    }
+    if (type === 'omen') {
+      out.push('<div class="' + a('irisClose') + '--d:.1s;--dur:1.1s;--e:cubic-bezier(.6,0,.9,.4);left:50%;top:50%;translate:-50% -50%;width:360px;height:360px;border-radius:50%;border:2px solid rgba(239,68,68,.85);box-shadow:0 0 0 400px #07070f,inset 0 0 24px rgba(239,68,68,.55)"></div>');
+      out.push('<div class="' + a('omenUp') + '--d:1.2s;--dur:.9s;--e:cubic-bezier(.3,0,.5,1);left:134px;top:134px;width:4px;height:4px;border-radius:50%;background:#ff8a8e;box-shadow:0 0 10px 3px rgba(239,68,68,.9),0 14px 18px 2px rgba(239,68,68,.35)"></div>');
+      out.push('<div class="' + a('fadeIn') + '--d:1.2s;--dur:.8s;inset:0;background:radial-gradient(circle at 50% 50%,transparent 40%,rgba(239,68,68,.12))"></div>');
+    }
+    return out.join('');
+  }
+
+  // ── playback: the screen's --t scrubs everything; a tap mid-way jumps to the end ──
+  function _bcPlay(el, end, onDone) {
+    if (!el) return;
+    if (_arReduceMotion()) {
+      el.classList.add('bc-rm');
+      el.querySelectorAll('.bc-anim').forEach((n) => {
+        if (n.style.getPropertyValue('--ra')) return;
+        const k = n.style.getPropertyValue('--a').trim().replace(/^bc_/, '');
+        n.style.setProperty('--ra', _bcK(BC_RM[k] || k || 'fadeIn'));
+      });
+    }
+    el.style.setProperty('--t', '0s');
+    const t0 = Date.now();
+    let skipped = false;
+    el.classList.add('bc-play');
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('button, [data-ar]')) return;
+      const done = skipped || (Date.now() - t0) / 1000 >= end;
+      if (!done) { skipped = true; el.style.setProperty('--t', '20s'); return; }
+      if (onDone) onDone();
+    });
+  }
+
+  // ── 1 · the boss-kill celebration (floors 10–90) ──
+  function _bcPlayKill(f, onDone) {
+    _arView = 'bosscel';
+    _arBodyMode(true);
+    const B = ASCENT_BOSSES[f] || {}, X = BC_BOSS[f] || { fall: 'crumble', last: '' };
+    const band = ASCENT_BANDS[f / 10 - 1] || ASCENT_BANDS[0], next = ASCENT_BANDS[f / 10] || null;
+    const c = TW_TIER[band.tier] || TW_TIER.E, nc = next ? (TW_TIER[next.tier] || c) : c;
+    const R = (_arFight && _arFight.result) || {}, P = (_arMatchup && _arMatchup.player) || {}, Fo = (_arMatchup && _arMatchup.bot) || {};
+    const hp = Math.max(0, Math.round(R.pHP || 0)), max = Math.round(R.pMax || 0);
+    const flawless = !!R.untouched || (max > 0 && hp >= max);
+    const sh = X.fall === 'silent' ? 1 : 0, d = (x) => _bcS(x + sh);
+    const pa = BC_PAINT[X.fall] || BC_PAINT.crumble;
+    const art = _bcArt(f);
+    let rail = '';
+    for (let i = 0; i < 20; i++) {
+      const fl = f + 10 - i, on = fl <= f;
+      rail += '<i class="bc-anim' + (fl % 10 === 0 ? ' bc-ms' : '') + '" style="--a:' + (on ? 'bc_cellOn' : 'bc_outline') + ';--ra:' + (on ? 'bc_cellOn' : 'bc_outline') +
+        ';--dur:' + (on ? '.25s' : '.4s') + ';--d:' + (on ? d(3.4 + (19 - i) * 0.07) : d(4.2)) + '"></i>';
+    }
+    const pre = B.taunt || '';
     _arSet(
-      '<div class="fn-summit">' +
-        '<div class="fn-portrait" aria-hidden="true">' +
-          '<span class="fn-halo"></span>' +
-          '<img src="' + portrait + '" alt="" onerror="this.style.display=0===0?\'none\':\'\'">' +
-          '<span class="fn-ember" style="top:34%;left:38%"></span>' +
-          '<span class="fn-ember" style="top:40%;right:34%;animation-delay:1.6s"></span>' +
-          '<span class="fn-portrait-scrim"></span>' +
+      '<div class="bc-screen bc-cel" style="' + _bcVars(c, nc) + '" data-fall="' + X.fall + '">' +
+        '<div class="bc-bgfx"></div>' +
+        '<div class="bc-kick bc-anim" style="--a:bc_fadeIn;--d:.15s">Floor ' + f + ' · Milestone</div>' +
+        '<div class="bc-artwrap"><div class="bc-art bc-anim" style="--a:bc_shake;--dur:.4s;--ra:none">' +
+          '<div class="bc-paint bc-anim" style="background-image:url(\'' + art + '\');--a:' + _bcK(pa[0]) + ';--d:' + _bcS(pa[1]) + ';--dur:' + _bcS(pa[2]) + ';--ra:' + _bcK(pa[3]) + ';--e:linear"></div>' +
+          '<div class="bc-fx">' + _bcFx(X.fall, f, art) + '</div>' +
+          '<div class="bc-flash bc-anim" style="--a:bc_flash;--dur:.7s;--ra:bc_flash"></div></div>' +
+          '<div class="bc-slainwrap"><span class="bc-slain bc-anim" style="--a:bc_rise;--d:' + d(1.4) + '">Boss slain</span></div>' +
+          '<div class="bc-rail">' + rail + '<span class="bc-num bc-anim" style="--a:bc_fadeIn;--d:' + d(4.3) + '">' + (f + 1) + '</span></div></div>' +
+        '<div class="bc-sp"></div>' +
+        '<div class="bc-lines">' +
+          '<div class="bc-pre bc-anim" style="--a:bc_fadeIn;--d:' + d(1.9) + '">“' + esc(pre) + '”<i class="bc-strike bc-anim" style="--a:bc_strike;--d:' + d(2.2) + ';--dur:.35s"></i></div>' +
+          (X.last ? '<div class="bc-last bc-anim" style="--a:bc_rise;--d:' + d(2.6) + '">“' + esc(X.last) + '”</div>' : '<div class="bc-last"></div>') +
+          '<div class="bc-who bc-anim" style="--a:bc_fadeIn;--d:' + d(3) + '">— ' + esc(B.name || '') + '</div>' +
+          (X.last ? '' : '<div class="bc-sys bc-anim" style="--a:bc_fadeIn;--d:' + d(3.4) + '">It said nothing.</div>') +
         '</div>' +
-        '<div class="fn-summit-body">' +
-          '<div class="fn-summit-kick">THE SUMMIT · FLOOR ' + ASCENT_FLOORS + '</div>' +
-          '<div class="fn-summit-spacer"></div>' +
-          '<div class="fn-rise fn-struck-line">“No one has reached me since.”</div>' +
-          '<div class="fn-rise-2 fn-summit-answer">“Then it is done.<br>Climb past me.”' +
-            '<div class="by">— THE FIRST AWAKENED</div></div>' +
-          '<div class="fn-rise-3 fn-trophy">' +
-            '<div class="eyebrow">A TITLE NONE BUT THE FIRST HAS WORN</div>' +
-            '<div class="fn-trophy-plate"><span class="fn-trophy-name">The Second Awakened</span></div></div>' +
-          '<div class="fn-obj-complete">' +
-            '<span class="cell"><b>' + ASCENT_FLOORS + '</b><i>FLOORS</i></span><span class="div"></span>' +
-            '<span class="cell"><b>1</b><i>SUMMIT</i></span><span class="div"></span>' +
-            '<span class="cell"><b>1</b><i>BESTED</i></span></div>' +
-          '<div class="fn-summit-time"><span class="lbl">TIME TO SUMMIT</span><span class="val">' + esc(_summitTimeStr()) + '</span></div>' +   // W553 — any% speedrun clock
-          '<div class="fn-obj-stamp"><span class="d"></span>THE ASCENT · COMPLETE<span class="d"></span></div>' +
-          '<button type="button" class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + ASCENT_FLOORS + '" data-boss-name="The First Awakened">' + _bksShareIconSvg() + 'Share the summit</button>' +
-          '<button type="button" class="fn-cta" data-ar="hall">ENTER THE HALL ▸</button>' +
-        '</div>' +
-      '</div>'
-    );
-    // W548 — overlay the cinematic finale on top of the static summit. The static
-    // summit stays as the reduced-motion / fallback resting screen behind it; the
-    // cinematic's "Enter the Hall" tears down the overlay and opens the Hall.
-    let _ascReduce = false;
-    try { _ascReduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
-    if (!_ascReduce) { try { _arPlayAscension({ onHall: function () { try { _arRenderHall(); } catch (_) {} } }); } catch (_) {} }
+        '<div class="bc-sp"></div>' +
+        '<div class="bc-bandrow bc-anim" style="--a:bc_rise;--d:' + d(3.2) + '"><span class="bc-rt">' + band.tier + '</span>' +
+          '<span class="bc-bt"><b class="bc-bn">' + esc(band.name) + '</b><span class="bc-bm">Floors ' + band.from + '–' + band.to + (next ? ' · next: ' + esc(next.name) : '') + '</span></span>' +
+          '<span class="bc-stamp bc-anim" style="--a:bc_stamp;--d:' + d(3.5) + ';--dur:.4s;--e:cubic-bezier(.2,.8,.3,1)">Conquered</span></div>' +
+        '<div class="bc-sp"></div>' +
+        '<div class="bc-nums bc-anim" style="--a:bc_rise;--d:' + d(3.9) + '">' +
+          (flawless ? '<div class="bc-flawwrap"><span class="bc-flaw bc-anim" style="--a:bc_seal;--d:' + d(4.3) + ';--dur:.4s;--e:cubic-bezier(.2,.8,.3,1)">Flawless</span></div>' : '') +
+          '<div class="bc-n"><b class="bc-you">' + _arD(P.power).toLocaleString('en-US') + '</b><i>Your power</i></div>' +
+          '<div class="bc-n"><b>' + _arD(Fo.power).toLocaleString('en-US') + '</b><i>Its power</i></div>' +
+          '<div class="bc-n"><b>' + hp + '<small>/' + max + '</small></b><i>HP left</i></div></div>' +
+        '<div class="bc-sp bc-grow"></div>' +
+        '<div class="bc-tap bc-anim bc-pulse" style="--a:bc_fadeIn;--d:' + d(4.6) + '"><span>Tap to continue <i>▸</i></span></div>' +
+      '</div>');
+    try { _hapticTick('HEAVY'); } catch (_) {}
+    _bcPlay(document.querySelector('#arena-body .bc-screen'), 5.2 + sh, onDone || (() => { try { _arRenderResult(); } catch (_) {} }));
+  }
+
+  // ── 2 · floor 100: the killing blow, the passing, the tower, the title, the summit ──
+  function _bcEndingData(test) {
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const R = (_arFight && _arFight.result) || {};
+    const start = _journeyStartMs();
+    // a real clear stamps the summit time (as W553 always did); a test build only measures to now
+    const finish = test ? Date.now() : _summitFinishMs();
+    const ms = Math.max(0, finish - start);
+    let ordN = null; try { ordN = test ? null : _arAscensionOrdinal(); } catch (_) {}
+    let weapon = 'Bare Fists'; try { weapon = _arenaWeaponName(); } catch (_) {}
+    return {
+      test: test, avatar: avatar, name: (typeof playerName === 'string' && playerName) ? playerName : 'Hunter', weapon: weapon,
+      hp: Math.max(0, Math.round(R.pHP || 0)), max: Math.round(R.pMax || 0), foeMax: Math.round(R.bMax || 0),
+      time: _fmtSpeedrun(ms), days: Math.max(1, Math.ceil(ms / 86400000)), ord: ordN ? _hallOrdinal(ordN) : null,
+      date: (function () { try { return _hallDate(Date.now()); } catch (_) { return ''; } })(),
+    };
+  }
+  function _bcAvatarImg(D) { return D.avatar ? '<img src="' + esc(D.avatar) + '" alt="">' : ''; }
+  function _bcBeatBlow(D) {
+    const pct = D.max ? Math.round(D.hp / D.max * 100) : 0;
+    return '<div class="bc-bgfx"></div>' +
+      '<div class="bc-fl">Floor 100 — The First Awakened<span class="bc-unb">, Unbound</span></div>' +
+      '<div class="bc-arena"><div class="bc-abg"></div>' +
+        '<div class="bc-slot"><div class="bc-ring bc-anim" style="--a:bc_fadeOut;--d:.4s;--dur:1.2s"></div>' +
+          '<div class="bc-pose bc-unb bc-anim" style="--a:bc_kneelSlow;--d:.1s;--dur:1.4s;--ra:none">' + _bcPaint('assets/coach/first-awakened-unbound.png') +
+            '<div class="bc-crim bc-anim" style="--a:bc_drain;--d:.3s;--dur:1.5s;--e:cubic-bezier(.4,0,.6,1);--ra:bc_vanish"></div>' +
+            '<div class="bc-anim" style="--a:bc_rimGold;--d:.8s;--dur:1.2s;--ra:bc_rimGold;position:absolute;inset:-1px;border-radius:12px;border:1px solid transparent;pointer-events:none"></div></div>' +
+          '<svg class="bc-sparkup bc-anim" viewBox="0 0 11 11" style="--a:bc_sparkUp;--d:2.6s;--dur:1.1s;--e:cubic-bezier(.2,.5,.6,1);filter:drop-shadow(0 0 6px #f5b842)"><path d="' + BC_SPARK + '" fill="#f5b842"/></svg></div>' +
+        '<div class="bc-hpcard bc-foe"><div class="bc-hn">The First Awakened<span style="color:var(--crimson2);position:relative">, Unbound<i class="bc-strike bc-anim" style="--a:bc_strike;--d:2.2s;--dur:.35s;position:absolute;left:0;right:0;top:52%;height:1.5px;background:var(--gold);transform-origin:left center"></i></span></div>' +
+          '<div class="bc-hv"><span>0<small>/' + D.foeMax + '</small></span></div><div class="bc-bar"><i style="--w:0%"></i></div></div>' +
+        '<div class="bc-scrim bc-deep bc-anim" style="--a:bc_scrimIn;--d:.2s;--dur:1s"></div><div class="bc-aflash bc-anim" style="--a:bc_flash;--ra:bc_flash;--d:0s;--dur:.7s"></div>' +
+        '<div class="bc-hunter"><div class="bc-hring"></div><div class="bc-sprite">' + _bcAvatarImg(D) + '</div></div>' +
+        '<div class="bc-hpcard bc-you"><div class="bc-hn"><b>YOU</b> · ' + esc(D.weapon) + '</div><div class="bc-bar bc-teal"><i style="--w:' + pct + '%"></i></div>' +
+          '<div class="bc-hv"><span>' + D.hp + '<small>/' + D.max + '</small></span></div></div></div>' +
+      '<div class="bc-msg"><p class="bc-anim" style="--a:bc_fadeIn;--d:.4s;--dur:.5s">The Unbound shudders…</p>' +
+        '<p class="bc-anim" style="--a:bc_fadeIn;--d:1.7s;--dur:.6s;margin-top:4px"><span class="bc-g">…and</span> remembers itself.</p></div>' +
+      '<div class="bc-tap bc-abs bc-anim bc-pulse" style="--a:bc_fadeIn;--d:3.6s"><span>Tap to continue <i>▸</i></span></div>';
+  }
+  function _bcBeatPassing() {
+    return '<div class="bc-ek bc-anim" style="--a:bc_fadeIn;--d:.1s">The Summit · Floor 100</div>' +
+      '<div class="bc-art bc-anim" style="--a:bc_rise;--d:.2s;--dur:.7s">' + _bcPaint('assets/coach/first-awakened-speaking.png') + '</div>' +
+      '<div class="bc-old bc-anim" style="--a:bc_fadeIn;--d:.9s">“No one has reached me since.”<i class="bc-strike bc-anim" style="--a:bc_strike;--d:1.3s;--dur:.4s"></i></div>' +
+      '<div class="bc-bless bc-anim" style="--a:bc_rise;--d:1.7s;--dur:.6s">“Then it is done.<br>Climb past me.”</div>' +
+      '<div class="bc-attr bc-anim" style="--a:bc_fadeIn;--d:2.2s">— The First Awakened</div>' +
+      '<div class="bc-tap bc-abs bc-anim bc-pulse" style="--a:bc_fadeIn;--d:2.7s"><span>Tap to continue <i>▸</i></span></div>';
+  }
+  function _bcBeatTower(D) {
+    let cells = '', cred = '';
+    for (let b = ASCENT_BANDS.length - 1; b >= 0; b--) {
+      const c = TW_TIER[ASCENT_BANDS[b].tier] || TW_TIER.E;
+      for (let k = 1; k <= 10; k++) {
+        const fl = b * 10 + k;
+        cells += '<i class="bc-anim" style="--c:' + c + ';--bc-c60:' + _twTint(c, 0.6) + ';--a:bc_cellOn;--ra:bc_cellOn;--dur:.2s;--d:' + _bcS(0.3 + fl * 0.028) + '"></i>';
+      }
+    }
+    for (let b = 0; b < ASCENT_BANDS.length; b++) {
+      const f = (b + 1) * 10, c = TW_TIER[ASCENT_BANDS[b].tier] || TW_TIER.E, day = _bcBossDay(f);
+      cred += '<div class="bc-cr bc-anim" style="--c:' + c + ';--a:bc_fadeIn;--dur:.3s;--d:' + _bcS(0.3 + f * 0.028) + '"><span class="bc-fl">' + f + '</span>' +
+        '<b>' + esc((ASCENT_BOSSES[f] || {}).name || '') + '</b><span class="bc-day">' + (day ? 'Day ' + day : '') + '</span></div>';
+    }
+    return '<div class="bc-ek bc-anim" style="--a:bc_fadeIn;--d:.1s">The Ascent · 100 of 100</div>' +
+      '<div class="bc-spire bc-anim" style="--a:bc_fadeIn;--d:3.2s"></div>' +
+      '<div class="bc-tower">' + cells + '</div>' +
+      '<div class="bc-count">Floor <b class="bc-cnt bc-anim" style="--a:bc_cnt100;--ra:bc_cnt100;--d:.3s;--dur:2.8s;--e:linear"></b></div>' +
+      '<div class="bc-credits">' + cred + '</div>' +
+      '<div class="bc-tts bc-anim" style="--a:bc_rise;--d:3.6s">Time to summit · ' + esc(D.time) + '</div>' +
+      '<div class="bc-tap bc-abs bc-anim bc-pulse" style="--a:bc_fadeIn;--d:4.1s"><span>Tap to continue <i>▸</i></span></div>';
+  }
+  function _bcBeatTitle(D) {
+    return '<div class="bc-crown bc-anim" style="--a:bc_rise;--d:.2s;--dur:.7s">' + _bcAvatarImg(D) + '<i class="bc-cm bc-anim" style="--a:bc_fadeIn;--d:.9s">' + BC_CROWN + '</i></div>' +
+      '<div class="bc-tk bc-anim" style="--a:bc_fadeIn;--d:1s">◆&nbsp;&nbsp;A title none but the first has worn&nbsp;&nbsp;◆</div>' +
+      '<div class="bc-t1 bc-anim" style="--a:bc_rise;--d:1.2s">The Second</div>' +
+      '<div class="bc-t2 bc-anim" style="--a:bc_slam;--d:1.45s;--dur:.55s;--e:cubic-bezier(.2,.8,.2,1)">Awakened</div>' +
+      '<div class="bc-rule bc-anim" style="--a:bc_ruleGrow;--d:1.95s;--dur:.5s;--ra:bc_fadeIn"></div>' +
+      '<div class="bc-ord bc-anim" style="--a:bc_rise;--d:2.2s">' + (D.ord ? 'The ' + D.ord + ' to awaken' : 'Newly awakened') + '</div>' +
+      '<div class="bc-trow bc-anim" style="--a:bc_fadeIn;--d:2.6s"><div><b>' + D.days + '</b><i>' + (D.days === 1 ? 'Day' : 'Days') + ' to summit</i></div><div><b>100</b><i>Floors</i></div><div><b>10</b><i>Bosses</i></div></div>' +
+      '<div class="bc-tap bc-abs bc-anim bc-pulse" style="--a:bc_fadeIn;--d:3.1s"><span>Tap to continue <i>▸</i></span></div>';
+  }
+  function _bcBeatSummit(D) {
+    return '<div class="bc-ek bc-anim" style="--a:bc_fadeIn;--d:.1s">The Summit · Yours</div>' +
+      '<div class="bc-card bc-anim" style="--a:bc_rise;--d:.2s;--dur:.7s"><div><div class="bc-ck"><i></i>The Ascent · Complete<i></i></div>' +
+        '<div class="bc-med"><div>' + _bcAvatarImg(D) + '</div>' + BC_CROWN + '</div>' +
+        '<div class="bc-ct">The Second Awakened</div><div class="bc-cs">' + esc(D.name) + (D.ord ? ' · the ' + D.ord + ' to awaken' : '') + '</div>' +
+        '<div class="bc-crule"></div><div class="bc-cstats"><div><b>100</b><i>Floors</i></div><div><b>10</b><i>Bosses</i></div><div><b>' + D.days + '</b><i>' + (D.days === 1 ? 'Day' : 'Days') + '</i></div></div>' +
+        '<div class="bc-cfoot"><span>The Hall of the Awakened</span><span>' + esc(D.date) + '</span></div></div>' +
+        '<div class="bc-sheen bc-anim" style="--a:bc_glint;--d:1s;--dur:.9s;--ra:none"></div></div>' +
+      (D.test ? '' : '<button type="button" class="bc-sharebtn bc-anim bks-share-cta" style="--a:bc_fadeIn;--d:1.1s" data-bkshare data-bk-source="ascent" data-floor="' + ASCENT_FLOORS + '" data-boss-name="The First Awakened">↗ Share the summit</button>') +
+      '<button type="button" class="bc-hall bc-anim" style="--a:bc_rise;--d:1.3s;--dur:.6s" data-ar="hall">ENTER THE HALL</button>';
+  }
+  const BC_END_BEATS = [_bcBeatBlow, _bcBeatPassing, _bcBeatTower, _bcBeatTitle, _bcBeatSummit];
+  // QA — a boss's celebration (or the floor 100 ending) without the fight; writes nothing.
+  try {
+    window.__bcPreview = function (f) {
+      try {
+        f = Math.max(10, Math.min(ASCENT_FLOORS, Math.round((f | 0) / 10) * 10));
+        openArena(true);
+        _arMatchup = arenaMatchup(f);
+        _arFight = { won: true, result: { pHP: 180, pMax: 260, bMax: 396, untouched: false }, _celebrated: true };
+        if (f >= ASCENT_FLOORS) _bcPlayEnding({ test: true }); else _bcPlayKill(f, () => { try { _arRenderTower(); } catch (_) {} });
+        return 'ok';
+      } catch (e) { return String(e); }
+    };
+  } catch (_) {}
+  const BC_END_LEN = [4.0, 3.0, 4.4, 3.4, 2.0];
+  function _bcPlayEnding(opts) {
+    opts = opts || {};
+    _arView = 'summit';
+    _arBodyMode(true);
+    const D = _bcEndingData(!!opts.test);
+    const beat = (b) => {
+      const fight = b === 0;
+      if (!D.test) { try { const o = _arAscensionOrdinal(); if (o) D.ord = _hallOrdinal(o); } catch (_) {} }
+      _arSet('<div class="bc-screen ' + (fight ? 'bc-fight' : 'bc-end') + '" data-beat="' + (b + 1) + '">' +
+        (fight ? BC_END_BEATS[0](D) : '<div class="bc-bgfx"></div><section class="bc-scene bc-s' + (b + 1) + '">' + BC_END_BEATS[b](D) + '</section>') + '</div>');
+      if (b === 0) { try { _hapticTick('HEAVY'); } catch (_) {} }
+      if (b === 2) { try { _hapticTick('MEDIUM'); } catch (_) {} }
+      _bcPlay(document.querySelector('#arena-body .bc-screen'), BC_END_LEN[b], b < BC_END_BEATS.length - 1 ? () => beat(b + 1) : null);
+    };
+    beat(0);
   }
 
   // ── W270 · THE HALL OF THE AWAKENED (live roll) ─────────────────────
@@ -17258,7 +17546,19 @@
     _arClearTimers();
     _arRevealing = false;
     // W269 — the Summit: the first clear of Floor 100 is the ending, not a result card.
-    if (_arFight && _arFight.won && _arFight.advanced && _arFight.floorCleared === ASCENT_FLOORS) { _arRenderSummit(); return; }
+    // W1064 — and the first clear of every milestone boss plays its celebration first; in the
+    // owner's test build every boss win does (nothing is saved). A rematch keeps the card.
+    if (_arFight && _arFight.won && !_arFight._celebrated && _arMatchup && _ascentIsBoss(_arMatchup.floor) && (_arFight.advanced || _arMatchup.test)) {
+      _arFight._celebrated = true;
+      if (_arMatchup.floor >= ASCENT_FLOORS) {
+        if (!_arMatchup.test) { _arRenderSummit(); return; }
+        try { if (_AUD.musicLoop) _audStopMusic(0.5); _audPlayMusic(_AUD.buffers['first_awakened_win'] ? 'first_awakened_win' : 'victory_sting', false); } catch (_) {}
+        _bcPlayEnding({ test: true });
+        return;
+      }
+      _bcPlayKill(_arMatchup.floor);
+      return;
+    }
     _arView = 'result';
     _arBodyMode(false);
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}   // forfeit path: loop never outlives the fight
