@@ -34838,7 +34838,7 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 
 /* ── W1064 · BOSS CELEBRATIONS (ClaudeDesign handoff 32, "The Ascent - Boss Celebrations") ──
    Converted from the handoff: classes under bc-, keyframes under bc_, tokens scoped to
-   .bc-screen, color-mix() replaced by rgba vars the JS sets (iOS 15 floor). Every animated
+   .bc-screen, every colour mix replaced by rgba vars the JS sets (iOS 15 floor). Every animated
    element is a function of the screen's --t (tap mid-sequence = jump to the end). */
 .bc-screen{--bg:#0a0a18;--bg1:#0e0e24;--card:#15132f;--gold:#f5b842;--goldHot:#ffd574;--goldLo:#c08418;--violet:#8b5cf6;--violet2:#b79cff;--crimson:#e2253d;--crimson2:#ff5a5a;--teal:#5eead4;--ink:#f5f3fb;--ink2:#9090a8;--ink3:#6b6b86;--line:rgba(255,255,255,.07);--E:#8b5cf6;--D:#22d3ee;--C:#34d399;--B:#fbbf24;--A:#ef4444;--S:#e879f9;--serif:"Cinzel",Georgia,serif;--flavor:"Cormorant Garamond",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
 @property --bc-n{syntax:'<integer>';inherits:true;initial-value:0}
