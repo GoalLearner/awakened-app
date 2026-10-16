@@ -50,6 +50,12 @@
   .chip { position: absolute; z-index: 6; font: 900 64px/1 'Cinzel', serif; color: #fff; padding: 28px 46px; border-radius: 999px;
     background: linear-gradient(180deg, #ffcf5a, #f29a1a); text-shadow: 0 3px 0 rgba(0,0,0,.2);
     box-shadow: 0 0 0 6px rgba(255,255,255,.35), 0 30px 60px rgba(0,0,0,.35); }
+  /* 2026-10-15 owner: "on the first three, completely free to advertise that this is a free app";
+     he chose FREE TO PLAY (true with Premium and skins on sale; Apple 2.3.7 frowns on prices). */
+  .free { position: absolute; top: 52px; z-index: 7; transform: translateX(-50%);
+    font: 900 60px/1 'Cinzel', serif; letter-spacing: .08em; color: #2a1600; white-space: nowrap;
+    padding: 24px 52px 22px; border-radius: 999px; background: linear-gradient(180deg, #ffe48a, #f5b842 55%, #e0951f);
+    box-shadow: 0 0 0 6px rgba(255,255,255,.45), 0 24px 50px rgba(0,0,0,.35); }
 </style>
 </head>
 <body>
@@ -89,6 +95,9 @@
     strip.appendChild(card);
     strip.appendChild(copy);
   });
+
+  // FREE TO PLAY on the first three cards
+  [0, 1, 2].forEach((i) => strip.appendChild(el('div', 'free', `left:${i * W + W / 2}px`, 'Free to play')));
 
   // ── phones (strip coordinates; may cross a seam) ──
   const ready = [];
