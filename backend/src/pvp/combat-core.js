@@ -27,7 +27,13 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 // ── Tunable constants (verbatim from app.js ~6770) ──
-const _HP_BASE = 40, _HP_PER_DEF = 2.2, _DEF_SCALE = 60, _DMG_VAR = 0.15, _BATTLE_TURN_CAP = 40;
+const _HP_BASE = 40, _HP_PER_DEF = 2.2, _DMG_VAR = 0.15, _BATTLE_TURN_CAP = 40;
+// W1067 — the battle rebuild, mirrored from app.js: a hit takes a SHARE of the defender's health set
+// by the gap between attack and defense (share = _DMG_SHARE x power x exe x type x (atk/def)^_DMG_GAMMA),
+// and against a fighter outclassed _OUTCLASS times over (total power) the per-hit cap is off.
+const _DMG_SHARE = 0.09, _DMG_GAMMA = 1.5, _OUTCLASS = 3;
+function _arPow(c) { return (c && ((c.attack || 0) + (c.defense || 0) + (c.edge || 0))) || 0; }
+function _arGapDmg(atk, defEff) { return Math.pow(Math.max(0, atk) / Math.max(0.05, defEff), _DMG_GAMMA); }
 const _CRIT_MULT = 1.5, _CRIT_PIERCE = 0.5, _ATTUNED_MULT = 1.15;
 const _MAX_HIT_FRAC = 0.55, _MAX_HIT_FRAC_CRIT = 0.75;
 const _ATK_CLAMP = [0.25, 2.0], _TAKEN_CLAMP = [0.40, 2.0], _DODGE_CAP = 0.50, _ARMOR_SHRED_MIN = 0.40;
@@ -340,7 +346,7 @@ function _arExecMove(sess, side, move, events) {
       if (dodge > 0 && sess.rng() < dodge) { dodged++; continue; }
       const crit = sess.rng() < critCh;
       const defEff = defBase * shred * (crit ? (1 - _CRIT_PIERCE) : 1);
-      let hit = baseAtk * power * exeM * typeEff / (1 + defEff / _DEF_SCALE);
+      let hit = maxHPd * _DMG_SHARE * power * exeM * typeEff * _arGapDmg(baseAtk, defEff);   // W1067
       if (crit) { hit *= _CRIT_MULT; anyCrit = true; }
       else { hit *= takenM; }
       hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
@@ -348,10 +354,12 @@ function _arExecMove(sess, side, move, events) {
       total += Math.max(0, hit); anyLanded = true;
     }
     if (guardUsed) defS.guard = 0;
-    if (anyLanded) total = Math.min(total, (anyCrit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * maxHPd);
+    const outclass = side === 'p' ? _arPow(sess.m.player) >= _OUTCLASS * _arPow(sess.m.bot)
+                                  : _arPow(sess.m.bot) >= _OUTCLASS * _arPow(sess.m.player);   // W1067
+    if (anyLanded && !outclass) total = Math.min(total, (anyCrit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * maxHPd);
     if (anyLanded) {
-      const shown = Math.max(1, Math.round(total));
       const effective = Math.min(total, remBefore);
+      const shown = Math.max(1, Math.round(effective));   // W1067 — never more than the HP it took
       if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
       else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
       sess.dmgDealt[side] += effective;

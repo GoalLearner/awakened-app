@@ -7,6 +7,10 @@
 // same inputs through the server combat-core and assert byte-identical outcomes.
 // Both engines use the same seeded mulberry32 RNG + the same tier-2 AI, so the
 // AI picks the same foe moves and the whole battle must match.
+//
+// W1067 (2026-10-15) — the battle rebuild changed the damage model on both engines, so every
+// result below was recaptured from app.js (Arena._battle.start/turn, the same kits and seeds) and
+// then matched by this core.
 import * as CC from './combat-core.js';
 
 const CAPS = [
@@ -18,19 +22,19 @@ const CAPS = [
     // W529 — recaptured: the trickster bot now gains passive evasion (_arRangerEvade),
     // so it slips more jabs → fight resolves a turn sooner. Re-verified byte-identical
     // on BOTH engines (app.js Arena._battle + this combat-core) at the new values.
-    result: { won: true, turns: 22, pHP: 22.949108, bHP: 0, dp: 42, db: 22 } },
+    result: { won: true, turns: 6, pHP: 39.984653, bHP: 0, dp: 42, db: 5 } },
   { floor: 12, seed: 4242,
     player: { attack: 2.3, defense: 2.3, edge: 2.3, stats: { STR: 1, VIT: 1, INT: 1, FOCUS: 1, WILL: 1, WLT: 1 }, arch: 'balanced', attuned: 1 },
     bot: { attack: 19.70190908092534, defense: 10.870018803269154, edge: 10.19064262806483, arch: 'aggressor' },
     pMoves: ['jab', 'hook', 'guard', 'focus'], bMoves: ['cleave', 'sunder', 'slash', 'focus'],
     moveSeq: ['jab', 'jab', 'jab'],
-    result: { won: false, turns: 4, pHP: 0, bHP: 60.571324, dp: 3, db: 45 } },
+    result: { won: false, turns: 3, pHP: 0, bHP: 63.52244, dp: 0, db: 45 } },
   { floor: 33, seed: 31337,
     player: { attack: 2.3, defense: 2.3, edge: 2.3, stats: { STR: 1, VIT: 1, INT: 1, FOCUS: 1, WILL: 1, WLT: 1 }, arch: 'balanced', attuned: 1 },
     bot: { attack: 56.991178686514196, defense: 31.44340893049059, edge: 29.47819587233493, arch: 'aggressor' },
     pMoves: ['jab', 'hook', 'guard', 'focus'], bMoves: ['cleave', 'sunder', 'slash', 'focus'],
     moveSeq: ['jab', 'jab'],
-    result: { won: false, turns: 3, pHP: 0, bHP: 106.496673, dp: 3, db: 45 } },
+    result: { won: false, turns: 2, pHP: 0, bHP: 109, dp: 0, db: 45 } },
   // W530 — Bulwark (the melee combined Guard+Focus+cleanse stance) parity guard.
   // Player casts bulwark turn 1 then attacks; db=6 confirms the -40% taken applies
   // identically on both engines. Captured from app.js Arena._battle + this core.
@@ -39,7 +43,7 @@ const CAPS = [
     bot: { attack: 7.0, defense: 4.0, edge: 4.0, arch: 'aggressor' },
     pMoves: ['cleave', 'sunder', 'bulwark', 'oathstrike'], bMoves: ['cleave', 'sunder', 'slash', 'focus'],
     moveSeq: ['bulwark', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike', 'sunder', 'cleave', 'oathstrike'],
-    result: { won: true, turns: 6, pHP: 53.793526, bHP: 0, dp: 49, db: 6 } },
+    result: { won: true, turns: 5, pHP: 55.531252, bHP: 0, dp: 49, db: 4 } },
 ];
 
 function near(a, b) { return Math.abs(a - b) < 1e-4; }

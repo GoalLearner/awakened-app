@@ -10416,6 +10416,47 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_summit_finished_at') || localStorage.getItem('hb_hall_finish'))).toBeNull();
   });
 
+  // W1067 — owner 2026-10-15, a floor-1 Drifter surviving a 5,202-power hunter: "There should no
+  // reason why this NPC doesn't get one hit killed by me". The rebuilt engine: the power gap decides.
+  const floorOneHits = (page: Page) => page.evaluate(() => {
+    const A = (window as any).Arena;
+    const m = A.matchup(1);
+    const pow = (c: any) => (c.attack || 0) + (c.defense || 0) + (c.edge || 0);
+    const hitsToKill: number[] = [];
+    let maxShown = 0, foeMax = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const s = A._battle.start(m, seed);
+      foeMax = s.bMax;
+      let landed = 0;
+      for (let t = 0; t < 12 && !s.done; t++) {
+        const mv = s.pMoves.find((x: any) => (x.power || 0) > 0 && !(s.cd[x.id] > 0)) || s.pMoves[0];
+        const ev = A._battle.turn(s, mv.id) || [];
+        const hit = ev.find((e: any) => e.side === 'p' && e.t === 'hit');
+        if (hit) { landed++; maxShown = Math.max(maxShown, hit.dmg); if (s.bHP <= 0) break; }
+      }
+      hitsToKill.push(s.bHP <= 0 ? landed : 99);
+    }
+    return { gap: pow(m.player) / pow(m.bot), worst: Math.max(...hitsToKill), maxShown, foeMax };
+  });
+
+  test('W1067 — floor 1: a strong hunter ends it with one hit, a brand-new hunter in one or two, and no hit shows more than the HP it took', async ({ page }) => {
+    await page.addInitScript(() => {
+      try { localStorage.setItem('hb_stats', JSON.stringify({ STR: { pts: 6650 }, VIT: { pts: 6650 }, INT: { pts: 6650 }, FOCUS: { pts: 6650 }, WILL: { pts: 6650 }, WLT: { pts: 6650 } })); } catch (_) {}
+    });
+    await freshApp(page);
+    const strong = await floorOneHits(page);
+    expect(strong.gap).toBeGreaterThan(3);
+    expect(strong.worst).toBe(1);
+    expect(strong.maxShown).toBeLessThanOrEqual(Math.ceil(strong.foeMax));
+  });
+
+  test('W1067 — floor 1 for a hunter who just downloaded the app: one or two landed hits, never the old slog', async ({ page }) => {
+    await freshApp(page);
+    const fresh = await floorOneHits(page);
+    expect(fresh.worst).toBeLessThanOrEqual(2);
+    expect(fresh.maxShown).toBeLessThanOrEqual(Math.ceil(fresh.foeMax));
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
