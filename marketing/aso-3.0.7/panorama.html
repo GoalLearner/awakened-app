@@ -52,10 +52,11 @@
     box-shadow: 0 0 0 6px rgba(255,255,255,.35), 0 30px 60px rgba(0,0,0,.35); }
   /* 2026-10-15 owner: "on the first three, completely free to advertise that this is a free app";
      he chose FREE TO PLAY (true with Premium and skins on sale; Apple 2.3.7 frowns on prices). */
-  .free { position: absolute; top: 52px; z-index: 7; transform: translateX(-50%);
-    font: 900 60px/1 'Cinzel', serif; letter-spacing: .08em; color: #2a1600; white-space: nowrap;
-    padding: 24px 52px 22px; border-radius: 999px; background: linear-gradient(180deg, #ffe48a, #f5b842 55%, #e0951f);
-    box-shadow: 0 0 0 6px rgba(255,255,255,.45), 0 24px 50px rgba(0,0,0,.35); }
+  /* "Too small, I want the potential people to see it clearly": nearly twice the first try. */
+  .free { position: absolute; top: 60px; z-index: 7; transform: translateX(-50%);
+    font: 900 112px/1 'Cinzel', serif; letter-spacing: .05em; color: #2a1600; white-space: nowrap;
+    padding: 38px 90px 32px; border-radius: 999px; background: linear-gradient(180deg, #ffe48a, #f5b842 55%, #e0951f);
+    box-shadow: 0 0 0 9px rgba(255,255,255,.55), 0 30px 70px rgba(0,0,0,.4); }
 </style>
 </head>
 <body>
@@ -67,9 +68,9 @@
 
   // ── the six cards: colour + doodles + copy ──
   const CARDS = [
-    { bg: 'linear-gradient(165deg, #8b5cf6 0%, #6d28d9 45%, #3b0f8c 100%)', kicker: 'A habit RPG', h: 'Turn your habits<br>into an <em>RPG</em>.', top: 170 },
+    { bg: 'linear-gradient(165deg, #8b5cf6 0%, #6d28d9 45%, #3b0f8c 100%)', kicker: 'A habit RPG', h: 'Turn your habits<br>into an <em>RPG</em>.', top: 296 },
     { bg: 'linear-gradient(165deg, #38bdf8 0%, #2563eb 50%, #1e3a8a 100%)', kicker: 'The daily loop', h: 'Seal vows.<br>Earn <em>XP</em>.', bottom: 250, pad: 'padding-left:470px;padding-right:40px;text-align:left' },
-    { bg: 'linear-gradient(165deg, #fb923c 0%, #ea580c 45%, #9a1c1c 100%)', kicker: 'Real steps · real bosses', h: 'Your steps<br>slay the <em>boss</em>.', top: 170 },
+    { bg: 'linear-gradient(165deg, #fb923c 0%, #ea580c 45%, #9a1c1c 100%)', kicker: 'Real steps · real bosses', h: 'Your steps<br>slay the <em>boss</em>.', top: 296 },
     { bg: 'linear-gradient(165deg, #2dd4bf 0%, #0d9488 50%, #134e4a 100%)', kicker: 'Co-op hunts', h: 'Hunt with<br>your <em>friends</em>.', top: 170 },
     { bg: 'linear-gradient(165deg, #f472b6 0%, #c026d3 45%, #581c87 100%)', kicker: 'The Worldgate', h: 'One monster.<br><em>Everyone.</em>', bottom: 250 },
     { bg: 'linear-gradient(165deg, #fcd34d 0%, #f59e0b 45%, #9a3412 100%)', kicker: 'Loot', h: 'Win legendary<br><em>relics</em>.', top: 170 },
@@ -137,13 +138,13 @@
 
   // ── the set ──
   // 1 → 2: the vow list, tilted across the seam; its vows pop out on card 2
-  phone('habits', 700, 820, 1060, -9);
+  phone('habits', 700, 960, 1060, -9);
   pop('habits', [40, 725, 1280, 960], 60, 2230, 1140, -4, 40);                  // the live hunt, card 1
   pop('habits', [48, 1398, 1274, 1616], 1700, 560, 1050, 3, 40);               // card 2: vows popping out
   pop('habits', [48, 1640, 1274, 1860], 1760, 900, 1050, -2, 40);
   pop('habits', [48, 1894, 1274, 2114], 1720, 1240, 1050, 2, 40);
   // 3: the kill, with its spoils flying out
-  phone('victory', 2640 + 170, 860, 980, 6);
+  phone('victory', 2640 + 170, 940, 980, 6);
   pop('victory', [80, 1385, 655, 1628], 2640 + 40, 2140, 640, -7, 40);         // +120 souls
   pop('victory', [665, 1385, 1240, 1628], 2640 + 660, 2330, 640, 5, 40);       // the relic
   // 4 → 5: the co-op win across the seam; the Worldgate podium pops on card 5
