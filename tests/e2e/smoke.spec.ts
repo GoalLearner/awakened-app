@@ -48,7 +48,7 @@ test.beforeEach(async ({ page }) => {
   // A spec that wants an answer routes the lookup itself (the later route wins).
   await page.route('**/itunes.apple.com/lookup**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"resultCount":0,"results":[]}' }));
   await page.addInitScript(() => {
-    // W1047 — every solo kill now rolls 1 in 20 for a shadow, and a hit plays a full-screen
+    // W1047 — every solo kill now rolls for a shadow (1 in 10 since W1065), and a hit plays a full-screen
     // ceremony. Many specs kill bosses; the suite pins the dice to "never" so none of them can
     // meet one by chance. Suite CC rolls its own.
     (window as any).__shadowDice = () => 1;
@@ -9969,9 +9969,9 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
 });
 
 // W1035 · W1047 — the Shadow Army. A shadow used to be earned in a 48-hour window after the kill;
-// since W1047 it DROPS: every solo kill rolls 1 in 20 for that boss's shadow, pure luck.
+// since W1047 it DROPS: every solo kill rolls for that boss's shadow, pure luck (1 in 10 since W1065).
 test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
-  const HIT = 0.049, MISS = 0.05;   // the roll is `random < 1/20`
+  const HIT = 0.099, MISS = 0.1;   // the roll is `random < 1/10` (W1065; it was 1/20)
   const luck = (page: Page, v: number) => page.evaluate((v) => { const w = window as any; w.__rolls = 0; w.__shadowLuck(() => { w.__rolls++; return v; }); }, v);
   const kill = (page: Page, id: string) => page.evaluate((id) => { const s = (window as any).__shadowKill(id); return { pending: Object.keys(s.pending), owned: Object.keys(s.extracted), windows: Object.keys(s.windows), rolls: (window as any).__rolls }; }, id);
   const seal = async (page: Page) => { await expect(page.locator('.arise-does.show')).toBeVisible({ timeout: 8000 }); await page.waitForTimeout(400); await page.locator('.arise-overlay').click(); };
@@ -9991,7 +9991,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await page.locator('.arise-overlay').click();
     // the roster
     await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
-    await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Every boss you beat has a 1 in 20 chance to leave its shadow.');
+    await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Every boss you beat has a 1 in 10 chance to leave its shadow.');
     await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
     const words = await page.evaluate(() => (document.getElementById('shadow-roster') as HTMLElement).textContent || '');
     expect(words).not.toMatch(/48 hours|extraction|half|!|\bfell(ed)?\b/i);
@@ -10000,7 +10000,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // shadow is not owned says the odds.
     await page.evaluate(() => (window as any).__readyHunt.open('the_glass_strider'));
     await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 8000 });
-    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 20, worth +1% in the Ascent.');   // a D-rank boss (W1057)
+    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 10, worth +1% in the Ascent.');   // a D-rank boss (W1057, W1065)
   });
 
   test('a miss says nothing and opens no window; a hit raises the shadow, once, and the boss never rolls again', async ({ page }) => {
@@ -10023,19 +10023,19 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect((await kill(page, 'the_carouser')).rolls).toBe(0);
   });
 
-  test('1 in 20: the edge of the roll, and twenty thousand real ones', async ({ page }) => {
+  test('1 in 10: the edge of the roll, and twenty thousand real ones', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => {
       const w = window as any;
       const at = (v: number) => { w.__shadowLuck(() => v); return w.__shadowRoll(); };
-      const edge = [at(0), at(0.0499), at(0.05), at(0.999)];
+      const edge = [at(0), at(0.0999), at(0.1), at(0.999)];
       w.__shadowLuck(null);                                   // the real dice
       let hits = 0; for (let i = 0; i < 20000; i++) if (w.__shadowRoll()) hits++;
       return { edge, hits };
     });
     expect(r.edge).toEqual([true, true, false, false]);
-    expect(r.hits).toBeGreaterThan(800);                      // 1,000 expected; far outside chance either way
-    expect(r.hits).toBeLessThan(1200);
+    expect(r.hits).toBeGreaterThan(1700);                     // 2,000 expected; far outside chance either way
+    expect(r.hits).toBeLessThan(2300);
   });
 
   test('no roll for a co-op boss or on a hunter\'s first day', async ({ page }) => {
