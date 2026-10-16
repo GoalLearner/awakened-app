@@ -54,6 +54,17 @@ const hi = Arena.simAscent(100, NF, { n: 3000, invest: 'max' }).playerPower;
 console.log(`\nF100 wall = ${foe} raw. Live build-power SPREAD = ${lo} (Duskforge, BiS only) … ${hi} (Nightfall, fully min-maxed).`);
 console.log(`A single fixed wall cannot challenge ${hi} without bricking ${lo} — read the columns above before any bump.`);
 
+// ── W1069: the owner's floor-100 curve — the max relic set at 50% alone, easier with every shadow,
+// all nineteen near certain. Shadows join strongest first (as they march at each rank's slots).
+console.log('\n=== F100 by shadows marching (max relic set: sets + maxed upgrades) ===');
+console.log('shadows  army      Nightfall   Duskforge   Vigil');
+for (const k of [0, 1, 3, 5, 8, 12, 19]) {
+  const rn = Arena.simAscent(100, NF, { n: 3000, invest: 'max', shadows: k });
+  const rd = Arena.simAscent(100, DF, { n: 3000, invest: 'max', shadows: k });
+  const rv = Arena.simAscent(100, VB, { n: 3000, invest: 'max', shadows: k });
+  console.log(`${String(k).padStart(7)}  +${String(rn.armyPct).padEnd(7)}  ${pct(rn.winRate).padStart(9)}   ${pct(rd.winRate).padStart(9)}   ${pct(rv.winRate).padStart(6)}`);
+}
+
 // ── Legacy doability table (BiS-only "gear" tier — comparable to all prior runs) ──
 console.log('\n=== legacy BiS-only doability, summit approach (F90-100) ===');
 console.log('floor  foePow   Nightfall(med turns)   Duskforge(med turns)');

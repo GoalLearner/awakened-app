@@ -10457,6 +10457,20 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(fresh.maxShown).toBeLessThanOrEqual(Math.ceil(fresh.foeMax));
   });
 
+  // W1069 — owner 2026-10-16: "if you have max gear and all the shadows it should 100% win rate. If you
+  // have max gear alone and no shadows it should be 50% win rate and gets easier with the more shadows".
+  test('W1069 — floor 100: the max relic set wins about half alone, more with every few shadows, nearly always with all nineteen', async ({ page }) => {
+    await freshApp(page);
+    const r = await page.evaluate(() => [0, 5, 12, 19].map((k) =>
+      (window as any).Arena.simAscent(100, 'nightfall_blade', { n: 600, invest: 'max', shadows: k }).winRate));
+    expect(r[0]).toBeGreaterThanOrEqual(0.4);
+    expect(r[0]).toBeLessThanOrEqual(0.6);
+    expect(r[1]).toBeGreaterThan(r[0]);
+    expect(r[2]).toBeGreaterThan(r[1]);
+    expect(r[3]).toBeGreaterThan(r[2]);
+    expect(r[3]).toBeGreaterThanOrEqual(0.92);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
