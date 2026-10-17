@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.13';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.13-w1069'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.13-w1070'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1338,6 +1338,125 @@
       pool:             { ultra_rare: ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne'] },
       statDomain:       'STR',
     },
+
+    // ── W1070 (owner 2026-10-17) — THE WEEKLY BOSSES. "From Sunday to end of Saturday if a person
+    // walks over 70K that would complete an S-Tier boss. Then scale down all the way down to
+    // E-Tier." One per gate, beaten by the WEEK's verified steps (the walking board's own total):
+    // E 35,000 · D 42,000 · C 49,000 · B 56,000 · A 63,000 · S 70,000 (5,000 to 10,000 a day on
+    // average). Never engaged: _weekBossTick kills each by itself, once a week, rank lock kept.
+    // Drops: "use the relevant items within their tier bracket ... more ultra rares and rares
+    // for them because these are 7-day long tasks" — `poolOfRank` draws from the gate's own
+    // relics (no mythic), each dropTable is about twice its rank's daily ultra and rare odds and
+    // never empty below S, and the mercy counts weeks (lib/drops.js DROP_PITY_WEEK_BOSS).
+    // `artPending` shows the gate's art until each portrait lands. Names are placeholders.
+    the_footsore_herald: {
+      id:               'the_footsore_herald',
+      name:             'The Footsore Herald',
+      rank:             'E',
+      archetype:        'sustainer',
+      flavorShort:      'It carries one message across the whole week and never stops to rest.',
+      flavorLong:       'A messenger in worn boots with a letter no one has read. It does not race. It keeps walking, day after day, until Saturday runs out. Match its road by then and the letter is yours.',
+      killCondShort:    '35,000 steps this week',
+      killCondLong:     'Walk 35,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        35000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.25, rare: 0.40, common: 0.35 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'FOCUS',
+    },
+    the_milestone_hound: {
+      id:               'the_milestone_hound',
+      name:             'The Milestone Hound',
+      rank:             'D',
+      archetype:        'aggressor',
+      flavorShort:      'It counts every marker you pass, all week long.',
+      flavorLong:       'A lean hound that runs the roadside stones from Sunday to Saturday. No single day outruns it. Keep passing the markers all week and it lies down at your feet.',
+      killCondShort:    '42,000 steps this week',
+      killCondLong:     'Walk 42,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        42000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.20, rare: 0.40, common: 0.40 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'STR',
+    },
+    the_wayfarer_knight: {
+      id:               'the_wayfarer_knight',
+      name:             'The Wayfarer Knight',
+      rank:             'C',
+      archetype:        'sustainer',
+      flavorShort:      'A knight with no horse, sworn to cross the realm on foot every week.',
+      flavorLong:       'Its armour is road dust and its oath is distance. It walks beside you from Sunday on and asks only that you keep pace. Hold the pace to Saturday and it yields its sword.',
+      killCondShort:    '49,000 steps this week',
+      killCondLong:     'Walk 49,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        49000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.18, rare: 0.37, common: 0.45 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'VIT',
+    },
+    the_seven_league_stalker: {
+      id:               'the_seven_league_stalker',
+      name:             'The Seven-League Stalker',
+      rank:             'B',
+      archetype:        'aggressor',
+      flavorShort:      'Every stride it takes covers a league. You have seven days to keep up.',
+      flavorLong:       'It wears the boots of the old tale and never seems to hurry, yet it is always ahead. No burst closes the gap. Only a week of honest walking does.',
+      killCondShort:    '56,000 steps this week',
+      killCondLong:     'Walk 56,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        56000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.15, rare: 0.35, common: 0.50 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'STR',
+    },
+    the_unending_road: {
+      id:               'the_unending_road',
+      name:             'The Unending Road',
+      rank:             'A',
+      archetype:        'caster',
+      flavorShort:      'Not a creature but the road itself, rising to test whoever walks it.',
+      flavorLong:       'It begins at your door on Sunday and does not end until Saturday night. Walk it far enough and the road finally stops moving.',
+      killCondShort:    '63,000 steps this week',
+      killCondLong:     'Walk 63,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        63000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.25, rare: 0.75 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'WILL',
+    },
+    the_sevenfold_colossus: {
+      id:               'the_sevenfold_colossus',
+      name:             'The Sevenfold Colossus',
+      rank:             'S',
+      archetype:        'aggressor',
+      flavorShort:      'A giant built from seven days of distance. It wakes every Sunday.',
+      flavorLong:       'Seven suns rise and set across its shoulders. It cannot be beaten in a day or by luck, only by ten thousand steps a day held for a whole week. Bring the week and it kneels.',
+      killCondShort:    '70,000 steps this week',
+      killCondLong:     'Walk 70,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      failedCopy:       'The week ended first.',
+      weekSteps:        70000,
+      streakTarget:     1,
+      cadence:          'weekly',
+      dropTable:        { ultra_rare: 0.30 },
+      poolOfRank:       true,
+      artPending:       true,
+      statDomain:       'STR',
+    },
   };
 
   // v3 Phase 1z.42 -- boss progress noun helper. Bosses whose kill
@@ -1423,6 +1542,8 @@
     // 2026-10-05). Resolved HERE so no caller has to remember artId. (try: COOP_BOSSES is
     // declared further down the file.)
     try { const c = COOP_BOSSES[bossId]; if (c && c.artId) bossId = c.artId; } catch (_) {}
+    // W1070 — a boss whose portrait has not landed yet wears its gate's art.
+    try { const b = BOSSES[bossId]; if (b && b.artPending) return 'assets/gates/gate-' + String(b.rank || 'E').toLowerCase() + '-rank.png'; } catch (_) {}
     return 'assets/bosses/' + String(bossId || '').replace(/_/g, '-') + '.png';
   }
   try { window.__bossArt = { path: getBossArtPath, coopIds: function () { return Object.keys(COOP_BOSSES); } }; } catch (_) {}   // QA
@@ -1499,6 +1620,14 @@
   // W261: the Carouser Friday-only branch (1z.58) is retired — the boss
   //   is a daily flights climb now and uses the generic daily lock.
   function canEngageBossNow(bossId, cfg, now) {
+    // W1070 — a weekly boss is never engaged: it falls by itself to the week's total. ok:false
+    // also keeps it out of the Ready Hunt and lets its gate dim, as a cleared boss would.
+    if (_isWeekBoss(cfg || BOSSES[bossId])) {
+      const wcfg = cfg || BOSSES[bossId], n = wcfg.weekSteps.toLocaleString('en-US');
+      return _weekBossBeaten(bossId, _weekBossKey())
+        ? { ok: false, reason: 'Beaten this week. It stands again Sunday.', ctaText: 'BEATEN THIS WEEK', blurb: 'It stands again Sunday.' }
+        : { ok: false, reason: 'No hunt to start. It falls when your week reaches ' + n + ' steps.', ctaText: 'NO HUNT NEEDED', blurb: 'It falls on its own when your week reaches ' + n + ' steps.' };
+    }
     if (cfg && cfg.cadence === 'daily') {
       const state = (typeof getBossState === 'function') ? getBossState(bossId) : null;
       if (wasDailyBossDefeatedToday(state, now)) {
@@ -2145,6 +2274,103 @@
     window.__wolfTrailTick = _wolfTrailTick;
   } catch (_) {}
 
+  // ── W1070 — THE WEEKLY BOSSES (owner 2026-10-17) ─────────────────────────────
+  // "if users do a certain total for a certain conditions/exercise then it will be automated to
+  // defeat that certain boss." The week is the walking board's (lbGetCurrentWeekStartPT: Sunday
+  // 12:00 AM Pacific for everyone) and so is the number (lbSumCurrentWeekSteps: verified steps
+  // only), so the boss and the board never disagree. No engage, no fee; the rank lock stays (his
+  // pick). Each kill goes through _awardSingleShotKill with the week's Sunday as its date, which
+  // pays the rank's full reward, rolls the shadow and the relic and queues the result screen, and
+  // makes the reward claim once a week; `wk_kills` (synced in hb_bosses) is the record a second
+  // device or a reinstall reads. A week that ended between two opens is settled once on the next
+  // one, after the board backfill has re-read its days: a Saturday-night walk with the app shut
+  // still counts. Day one stays quiet. Flights, workouts and sleep come later on this same tick.
+  function _isWeekBoss(cfg) { return !!cfg && typeof cfg.weekSteps === 'number'; }
+  function _weekBossIds() { return Object.keys(BOSSES).filter(function (id) { return _isWeekBoss(BOSSES[id]); }); }
+  function _weekBossKey(nowMs) { try { return lbGetCurrentWeekStartPT(nowMs); } catch (_) { return null; } }
+  function _wkShift(key, days) {
+    try { const d = new Date(key + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); } catch (_) { return null; }
+  }
+  // This week: the board's own number. An earlier week: its stored days.
+  function _weekBossSteps(wk) {
+    try {
+      const daily = (loadLeaderboardState() || {}).steps_daily || {};
+      if (!wk || wk === _weekBossKey()) return lbSumCurrentWeekSteps(daily);
+      const end = _wkShift(wk, 7);
+      let sum = 0;
+      Object.keys(daily).forEach(function (k) { if (k >= wk && k < end) sum += (daily[k] || 0); });
+      return sum;
+    } catch (_) { return 0; }
+  }
+  function _weekBossBeaten(id, wk) {
+    try { const st = getBossState(id) || {}; return !!wk && Array.isArray(st.wk_kills) && st.wk_kills.indexOf(wk) !== -1; } catch (_) { return false; }
+  }
+  function _weekBossStatus(id) {
+    const cfg = BOSSES[id] || {}, wk = _weekBossKey(), steps = _weekBossSteps(wk), target = cfg.weekSteps || 1;
+    return { steps: steps, target: target, beaten: _weekBossBeaten(id, wk), pct: Math.max(0, Math.min(100, steps / target * 100)) };
+  }
+  const WEEK_BOSS_SETTLED_KEY = 'hb_week_boss_settled_v1';   // the last ended week already settled
+  // The week before this one, when it still needs settling; null otherwise.
+  function _weekBossNeedsSettle() {
+    try {
+      const prev = _wkShift(_weekBossKey(), -7);
+      if (!prev || localStorage.getItem(WEEK_BOSS_SETTLED_KEY) === prev) return null;
+      // a week that ended before the hunter arrived is not theirs to settle
+      const first = localStorage.getItem('hb_onboarding_first_xp_date');
+      if (first && first >= _wkShift(prev, 7)) { localStorage.setItem(WEEK_BOSS_SETTLED_KEY, prev); return null; }
+      return prev;
+    } catch (_) { return null; }
+  }
+  // Settle once today's board backfill has re-read the ended week, or when there is no Health to ask.
+  function _weekBossSettleReady() {
+    try {
+      if (localStorage.getItem('hb_lb_step_backfill_date') === getDeviceLocalDate()) return true;
+      return !(typeof Health !== 'undefined' && Health.isAvailable && Health.isAvailable() &&
+        typeof Health.permissionStatus === 'function' && Health.permissionStatus() === 'granted');
+    } catch (_) { return true; }
+  }
+  function _weekBossDue(wk) {
+    const steps = _weekBossSteps(wk);
+    return _weekBossIds().filter(function (id) {
+      const c = BOSSES[id];
+      return steps >= c.weekSteps && isGateUnlocked(c.rank) && !_weekBossBeaten(id, wk);
+    });
+  }
+  function _weekBossKill(ids, wk) {
+    const R = 'EDCBAS';
+    ids.sort(function (a, b) { return R.indexOf(BOSSES[a].rank) - R.indexOf(BOSSES[b].rank); });   // the screens climb
+    ids.forEach(function (id) {
+      const st = getBossState(id);
+      st.wk_kills = (Array.isArray(st.wk_kills) ? st.wk_kills : []).concat([wk]).slice(-4);
+      _awardSingleShotKill(id, BOSSES[id], wk, st);
+    });
+  }
+  let _weekBossBusy = false;
+  function _weekBossTick() {
+    if (_weekBossBusy) return 0;
+    _weekBossBusy = true;
+    let n = 0;
+    try {
+      if (_newHunterQuiet()) return 0;
+      const wk = _weekBossKey();
+      if (!wk) return 0;
+      const prev = _weekBossNeedsSettle();
+      if (prev && _weekBossSettleReady()) {
+        const duePrev = _weekBossDue(prev);
+        try { localStorage.setItem(WEEK_BOSS_SETTLED_KEY, prev); } catch (_) {}
+        if (duePrev.length) { _weekBossKill(duePrev, prev); n += duePrev.length; }
+      }
+      const due = _weekBossDue(wk);
+      if (due.length) { _weekBossKill(due, wk); n += due.length; }
+      if (n) { try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {} }
+    } catch (_) {
+    } finally { _weekBossBusy = false; }
+    return n;
+  }
+  try {
+    window.__weekBoss = { tick: _weekBossTick, ids: _weekBossIds, key: _weekBossKey, steps: _weekBossSteps, beaten: _weekBossBeaten, status: _weekBossStatus, needsSettle: _weekBossNeedsSettle };
+  } catch (_) {}
+
   // Mark an active hunt as expired. Leaves kill_count alone (this
   // is a failed hunt, not a defeat). Sets last_hunt_outcome so the
   // detail screen can show a friendlier "Re-engage to try again"
@@ -2719,6 +2945,7 @@
     // nothing engaged is exactly the moment it needs to open today's hunt
     // (an app left open across midnight would otherwise wait for a tab tap).
     try { _wolfTrailTick(); } catch (_) {}
+    try { _weekBossTick(); } catch (_) {}   // W1070 — a rank-up or a fresh step count, while the app is open
     let engaged = false;
     try {
       const m = loadBosses();
@@ -5059,11 +5286,11 @@
   }
   function dropRatesFor(bossId) {   // W992 — rank first (weekly cadence wins), see lib/drops.js
     const cfg = BOSSES[bossId] || {};
-    return AwakenedDrops.ratesFor({ rank: cfg.rank, cadence: getBossCadence(bossId) });
+    return AwakenedDrops.ratesFor({ rank: cfg.rank, cadence: getBossCadence(bossId), weekBoss: _isWeekBoss(cfg) });
   }
   function dropPityCfgFor(bossId) {
     const cfg = BOSSES[bossId] || {};
-    return AwakenedDrops.pityFor({ rank: cfg.rank, cadence: getBossCadence(bossId) });
+    return AwakenedDrops.pityFor({ rank: cfg.rank, cadence: getBossCadence(bossId), weekBoss: _isWeekBoss(cfg) });   // W1070
   }
 
   // Per-rarity stack caps. Drops continue to roll at standard rates
@@ -5895,6 +6122,7 @@
       if (!id || !cfg || seen[id]) return;
       const dt = cfg.dropTable || {};
       if (dt.mythic || (cfg.pool && cfg.pool.mythic)) return;   // mythic sources stay pristine
+      if (_isWeekBoss(cfg)) return;   // W1070 — never engaged, and the week's pick stays the same on every build
       seen[id] = true; out.push(id);
     };
     try {
@@ -13361,6 +13589,7 @@
   // 2 carries the rest of the tuning (below). Sim (n=3000, max relic set, Nightfall / Duskforge):
   // 0 shadows 50% / 52%, 1: 56 / 57, 3: 64 / 69, 5: 71 / 75, 8: 82 / 83, 12: 89 / 86, all 19: 97 / 93.
   // Re-check with Arena.simAscent(100, id, { invest: 'max', shadows: k }) or node tools/sim-ascent.js.
+  // W1070 — the six weekly bosses make it 25 shadows (+34.25%): with all of them 98.7% / 96.6%.
   const _FIRST_AWAKENED_POWER = 1.2;     // W1069 — 5,348 disp (was 1.2547 = 5,592, W672). [hist W306 0.96; W661 0.987 = 4400]
   // ── W535 — THE FIRST AWAKENED IS A TWO-PHASE BOSS ──────────────────────────
   // Phase 1 is the balanced summit (above). On its defeat it does NOT die — it
@@ -20958,7 +21187,20 @@
   // Gray Pilgrim, the Sentinel, the Worldspine, the Cloven Titan, the Grinning God).
   function _bossDropPools(bossId) {
     const cfg = BOSSES[bossId] || {};
-    const bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
+    let bossCards = Object.values(CARDS).filter(c => c.source_boss === bossId);
+    // W1070 — `poolOfRank` (the weekly bosses): the relics of every other solo boss of the same
+    // rank, their own and their `pool`s. Never a mythic: Nightfall stays Erebus's alone.
+    if (cfg.poolOfRank) {
+      const seen = {};
+      bossCards = [];
+      const add = function (c) { if (c && !seen[c.id] && c.rarity !== 'mythic') { seen[c.id] = 1; bossCards.push(c); } };
+      Object.keys(BOSSES).forEach(function (k) {
+        const b = BOSSES[k];
+        if (!b || b.coopOnly || b.poolOfRank || b.rank !== cfg.rank) return;
+        Object.values(CARDS).forEach(function (c) { if (c.source_boss === k) add(c); });
+        if (b.pool) Object.keys(b.pool).forEach(function (rk) { (b.pool[rk] || []).forEach(function (cid) { add(CARDS[cid]); }); });
+      });
+    }
     const pools = {
       mythic:     bossCards.filter(c => c.rarity === 'mythic'),
       ultra_rare: bossCards.filter(c => c.rarity === 'ultra_rare'),
@@ -25821,15 +26063,26 @@
       _lbBackfillBusy = true;
       const weekStart = lbGetCurrentWeekStartPT();
       const state = loadLeaderboardState();
-      // Missing/zero day keys strictly before today, inside the board week.
+      // W1070 — EVERY day key strictly before today inside the board week, not only the missing or
+      // zero ones: a day kept whatever was recorded at its last open, so a walk after that open never
+      // counted (on the board, and now for the weekly bosses). Re-read once a day, only ever raised.
+      // A week that ended between opens is re-read too, once, so the weekly bosses can settle it.
       const missing = [];
       let d = lbPrevDate(today);
       for (let i = 0; i < 7 && d >= weekStart; i++) {
-        if (!((state.steps_daily[d] || 0) > 0)) missing.push(d);
+        missing.push(d);
         const p = lbPrevDate(d);
         if (p === d) break;
         d = p;
       }
+      try {
+        const settle = _weekBossNeedsSettle();
+        if (settle) {
+          for (let k = 0, dk = settle; k < 7 && dk < weekStart; k++, dk = _wkShift(dk, 1)) {
+            if (missing.indexOf(dk) === -1 && dk < today) missing.push(dk);
+          }
+        }
+      } catch (_) {}
       let wrote = 0, unresolved = 0;
       const outcomes = [];   // W833 — per-day results for the diagnostic breadcrumb
       for (const key of missing) {
@@ -25842,12 +26095,12 @@
         } catch (_) { steps = null; }
         if (typeof steps === 'number' && Number.isFinite(steps)) {
           outcomes.push(key + ':' + Math.round(steps));
-          if (steps > 0) {
-            const rounded = Math.round(steps);
+          const rounded = Math.round(steps), prev = state.steps_daily[key] || 0;
+          if (rounded > prev) {   // W1070 — only ever raised
             state.steps_daily[key] = rounded;
-            // Mirror lbRecordStepsToday's lifetime accrual (prev is 0 here).
+            // Mirror lbRecordStepsToday's lifetime accrual (the delta over what was stored).
             if (state.lifetime_steps_start_date) {
-              state.lifetime_steps_total = (state.lifetime_steps_total || 0) + rounded;
+              state.lifetime_steps_total = (state.lifetime_steps_total || 0) + (rounded - prev);
               if (key < state.lifetime_steps_start_date) state.lifetime_steps_start_date = key;
             }
             wrote++;
@@ -25881,6 +26134,7 @@
       if (unresolved === 0) {
         try { localStorage.setItem('hb_lb_step_backfill_date', today); } catch (_) {}
       }
+      try { _weekBossTick(); } catch (_) {}   // W1070 — the re-read days may carry a week past a weekly boss
       // W833 — temporary diagnostics: surface what the backfill saw through
       // the capped client_errors pipeline. Remove once the fleet looks clean.
       try {
@@ -35943,6 +36197,7 @@
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
       try { _wolfTrailTick(); } catch (_) {}   // W952
+      try { _weekBossTick(); } catch (_) {}   // W1070
       try { _readyHuntScan(); } catch (_) {}   // W1034 — after the trail, which may have engaged the Wolf
     }, 1500);
   }
@@ -53080,7 +53335,7 @@
       if (typeof loadBosses !== 'function' || typeof BOSSES === 'undefined') return false;
       const solo = loadBosses() || {};
       const ids = Object.keys(BOSSES).filter(function (id) {
-        return !BOSSES[id].coopOnly && BOSSES[id].rank === rank;
+        return !BOSSES[id].coopOnly && BOSSES[id].rank === rank && !_isWeekBoss(BOSSES[id]);   // W1070 — nobody loses a background they earned
       });
       return ids.length > 0 && ids.every(function (id) { return ((solo[id] || {}).kill_count | 0) > 0; });
     } catch (_) { return false; }
@@ -56605,7 +56860,10 @@
     const _isStepBoss = (typeof cfg.stepThreshold === 'number') && !_isConsecBoss;
     const _stepSatisfied = _isStepBoss && state.kill_count > 0 &&
       typeof state.last_eval_date === 'string';
-    const dots = _isDualBoss
+    const _wk = _isWeekBoss(cfg) ? _weekBossStatus(id) : null;   // W1070 — the week's steps
+    const dots = _wk
+      ? '<span class="bcard-dot' + (_wk.beaten ? ' bcard-dot--filled' : '') + '"></span>'
+      : _isDualBoss
       ? '<span class="bcard-dot' + (_dualSatisfied ? ' bcard-dot--filled' : '') + '"></span>'
       : _isConsecBoss
       ? Array.from({ length: _consecTarget }, (_, i) =>
@@ -56657,9 +56915,9 @@
     // pill one level up. Wrapped defensively — a bad gate never breaks the card.
     let _clearedNow = false;
     try {
-      _clearedNow = !isPreview && state.engaged !== true &&
+      _clearedNow = _wk ? (!isPreview && _wk.beaten) : (!isPreview && state.engaged !== true &&
         typeof canEngageBossNow === 'function' &&
-        canEngageBossNow(id, cfg).ok === false;
+        canEngageBossNow(id, cfg).ok === false);
     } catch (_) {}
     if (_clearedNow) stateClasses.push('bcard--cleared');
     // W261 — the .bcard--burned variant (Carouser weekend forfeit) is
@@ -56723,13 +56981,15 @@
         // the image even after the asset loaded fine.
         '<div class="bcard-art">' +
           '<img alt="" draggable="false" data-boss-art-id="' + esc(id) + '" style="display:none">' +
+          (_wk && !_wk.beaten ? '<div class="bcard-wk"><i style="width:' + _wk.pct.toFixed(1) + '%"></i></div>' : '') +   // W1070 — the week, along the art's foot
         '</div>' +
         // Region c → W776: MODE strip (owner: "the most important thing is to see
         // whether it is co-op or solo" — STAT and CADENCE were noise, and the
         // flavor line is gone so the kill condition reads big and clear).
-        '<div class="bcard-stats"><span class="bcard-mode bcard-mode--solo">SOLO</span></div>' +
+        '<div class="bcard-stats">' + (_wk ? '<span class="bcard-mode bcard-mode--weekly">WEEKLY</span>' : '<span class="bcard-mode bcard-mode--solo">SOLO</span>') + '</div>' +
         // Region e: Kill condition — now the card's loud line (.bcard-cond enlarged).
-        '<div class="bcard-cond">' + esc(cfg.killCondShort) + '</div>' +
+        // W1070 — a weekly boss's loud line is the week itself (the grid card clips everything below it).
+        '<div class="bcard-cond">' + esc(_wk ? (_wk.beaten ? 'Beaten this week' : _wk.steps.toLocaleString('en-US') + ' / ' + _wk.target.toLocaleString('en-US') + ' steps this week') : cfg.killCondShort) + '</div>' +
         // Region f: Progress — dots + streak label + kill count.
         // v3 Phase 1z.63 — flight-threshold bosses display cumulative
         // "N / threshold flights" instead of streak progress.
@@ -56740,7 +57000,9 @@
         '<div class="bcard-progress">' +
           '<div class="bcard-dots">' + dots + '</div>' +
           '<div class="bcard-progress-label">' +
-            (_isDualBoss
+            (_wk
+              ? (_wk.beaten ? 'Beaten this week' : (_wk.steps.toLocaleString('en-US') + ' / ' + _wk.target.toLocaleString('en-US')))
+              : _isDualBoss
               ? ((state.strength_done === true ? '✓' : '○') + ' strength · ' +
                   Math.max(0, Math.min(cfg.activeEnergyKcal, (typeof state.energy_progress === 'number') ? state.energy_progress : 0)) +
                   ' / ' + cfg.activeEnergyKcal + ' kcal')
@@ -57049,7 +57311,14 @@
     const progressEl = document.getElementById('bfs-progress');
     if (progressEl) {
       const isDualBoss = (typeof cfg.workoutMinutes === 'number' && typeof cfg.activeEnergyKcal === 'number');
-      if (isDualBoss) {
+      if (_isWeekBoss(cfg)) {
+        // W1070 — the week's steps toward the weekly boss
+        const w = _weekBossStatus(id);
+        progressEl.innerHTML =
+          '<div class="bfs-dots"><span class="bfs-dot' + (w.beaten ? ' bfs-dot--filled' : '') + '"></span></div>' +
+          '<div class="bfs-progress-label">' + (w.beaten ? 'Beaten this week' : (w.steps.toLocaleString('en-US') + ' / ' + w.target.toLocaleString('en-US') + ' steps this week')) + '</div>' +
+          (w.beaten ? '' : '<div class="bfs-wk"><i style="width:' + w.pct.toFixed(1) + '%"></i></div>');
+      } else if (isDualBoss) {
         const kcalCur = Math.max(0, Math.min(cfg.activeEnergyKcal,
           (typeof state.energy_progress === 'number') ? state.energy_progress : 0));
         const strengthOk = state.strength_done === true;
@@ -57132,7 +57401,7 @@
         // refuses preview-state bosses defensively (see helper).
         engagePreview.classList.remove('hidden');
         if (engagePreviewLabel) {
-          engagePreviewLabel.textContent = 'Reach ' + cfg.rank + ' rank to engage';
+          engagePreviewLabel.textContent = _isWeekBoss(cfg) ? 'Reach ' + cfg.rank + ' rank to face it' : 'Reach ' + cfg.rank + ' rank to engage';   // W1070
         }
       } else if (state.engaged === true) {
         engageState.classList.remove('hidden');
@@ -57192,6 +57461,7 @@
         //   sufficient   — "Souls available · {balance}" in gold
         //   insufficient — "{balance} / {cost} needed" in red
         const balanceEl    = document.getElementById('bfs-souls-balance');
+        if (balanceEl) balanceEl.classList.toggle('hidden', _isWeekBoss(cfg));   // W1070 — nothing to pay
         const balanceNumEl = document.getElementById('bfs-souls-balance-num');
         const balanceLabelEl = balanceEl ? balanceEl.querySelector('.bfs-souls-balance__label') : null;
         if (balanceEl && balanceNumEl) {
@@ -57445,6 +57715,7 @@
     const ctaBtn     = document.getElementById('bfs-defeated-hunt-again');
     const ctaFoot    = document.getElementById('bfs-defeated-cta-foot');
     if (ctaSection) ctaSection.classList.remove('hidden');
+    if (ctaBtn) ctaBtn.classList.toggle('hidden', _isWeekBoss(cfg));   // W1070 — a weekly boss is never hunted again by hand
     if (ctaBtn) {
       ctaBtn.setAttribute('data-boss-id', id);
       const cost = (typeof engageCostSouls === 'function') ? engageCostSouls(cfg.rank) : 0;
@@ -57475,6 +57746,10 @@
       const cond = (cfg.killCondShort || cfg.killCondLong || '').toLowerCase();
       if (cond.indexOf('sleep') >= 0 || cond.indexOf('night') >= 0 || cond.indexOf('bedtime') >= 0) {
         unit = 'night';
+      }
+      if (_isWeekBoss(cfg)) {   // W1070
+        ctaFoot.textContent = canEngageBossNow(id, cfg).reason || '';
+        return;
       }
       const cadenceNote = cadence === 'weekly' ? "next weekend's hunt"
                         : cadence === 'triweekly' ? 'the next qualifying ' + unit
@@ -71763,6 +72038,7 @@
     // habit auto-verify path below.
     try { lbRecordStepsToday(steps); }
     catch (e) { console.warn('[Leaderboard] step record failed', e); }
+    try { _weekBossTick(); } catch (_) {}   // W1070 — today's steps may have carried the week past a weekly boss
 
     // v3 Phase 1z.165 — Guild Hall feat row for 10K-step days.
     // Per-day idempotent on device-local date so visibility-change
@@ -74031,6 +74307,7 @@
       try { resolveBossHuntsAcrossWindow(); } catch (_) {}
       try { _sweepExpiredBossHuntsNoHealth(); } catch (_) {}
       try { _wolfTrailTick(); } catch (_) {}   // W952 — a new day usually arrives with a foreground
+      try { _weekBossTick(); } catch (_) {}   // W1070 — and a new week
       try { _readyHuntScan(true); } catch (_) {}   // W1034 — the Health caches were just cleared
       // v2.1.0 Phase C — push fresh metric snapshot to backend on
       // resume. Debounced to 5 min so rapid foreground/background

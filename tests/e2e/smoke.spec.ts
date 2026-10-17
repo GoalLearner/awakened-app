@@ -10100,7 +10100,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".
   // The matchup's YOUR POWER is the number the fight uses; the boosts open what each one added.
   test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, on a milestone too (W1060)', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 19 });
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
     await page.addInitScript(() => {
       try {
         localStorage.setItem('hb_ascent_opening_seen_v1', '1');
@@ -10163,7 +10163,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1059 — owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
   // they go into the tower". The next fight, a rail of the whole climb, the climb behind folded by band.
   test('W1059 — the tower: the next fight, a 100-cell rail, bands folded with the current one open; the odds match the matchup', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 19 });
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
     const arena = (o: Record<string, unknown>) => page.evaluate(async (o) => {
       const a = Object.assign({ rating: 1000, bestRating: 1000, currentFloor: 47, highestCleared: 46, wins: 0, losses: 0, streak: 0, bestStreak: 0,
         dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }, o);
@@ -10248,8 +10248,8 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     const power = parseInt(((await page.locator(T + ' .tw-power .num').textContent()) || '').replace(/[^0-9]/g, ''), 10);
     expect(power).toBeGreaterThan(5500);                                   // every stat 20, the best relic in every slot
     await page.evaluate(() => (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click());
-    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+26%/);    // all nineteen shadows
-    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(19);
+    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+34\.25%/);    // every shadow: 25 since the weekly six (W1070)
+    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(25);
     await expect(page.locator('#arena-body .mx-stakes')).toHaveText('Test build. Nothing counts.');
     await expect(page.locator('#arena-body .mx-ldt-h')).toContainText('8 RELICS');
     expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(false);
@@ -10292,14 +10292,14 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   const marchingIds = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_shadows_v1') || '{}').active || []).slice().sort());
 
   test('W1062 — the matchup\'s panel marches or rests each shadow; the power follows at once and a resting army still has its mark', async ({ page }) => {
-    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 19 });
+    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
     await intoMatchup(page, 99);
     const M = '#arena-body';
     await expect(page.locator(M + ' .mx-marks')).toHaveText('+0.75%');
     await tap(page, '.mx-marks');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
     await expect(page.locator(M + ' .mx-sh .st')).toHaveText(['AT REST', 'AT REST', 'MARCHING']);   // strongest first
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 19 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 25 MARCHING/);
     // the Worldspine marches: saved, the panel stays open, the number on the screen is the panel's
     await tap(page, '.mx-sh[data-id="the_worldspine"]');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
@@ -10313,7 +10313,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await tap(page, '.mx-sh[data-id="the_carouser"]');
     expect(await marchingIds(page)).toEqual([]);
     await expect(page.locator(M + ' .mx-marks')).toHaveText('AT REST');
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 19 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 25 MARCHING/);
     await expect(page.locator(M + ' .mx-sh')).toHaveCount(3);
     // and the roster agrees
     await tap(page, '.mx-sh[data-id="the_unbroken_anvil"]');
@@ -10474,17 +10474,17 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
-    expect(r).toEqual([1, 2, 4, 7, 12, 19, 19, 1]);
+    expect(r).toEqual([1, 2, 4, 7, 12, 25, 25, 1]);   // W1070 — S counts the weekly six too
   });
 
   test('W1048 — an S-rank hunter held to the old five: every shadow marches, by itself, and each is worth 1%', async ({ page }) => {
     await army(page, 14000, SOLO.slice(0, 8), SOLO.slice(0, 5));
     await freshApp(page);
     const m = await marchingNow(page);
-    expect([m.n, m.slots]).toEqual([8, 19]);
+    expect([m.n, m.slots]).toEqual([8, 25]);
     expect(m.active.slice().sort()).toEqual(SOLO.slice(0, 8).sort());
     await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
-    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 19 SLOTS AT YOUR RANK/);
+    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 25 SLOTS AT YOUR RANK/);
     await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
   });
 
@@ -10624,3 +10624,178 @@ test.describe('CE · A launch nobody can see does not start the app (W1046)', ()
   });
 });
 
+
+// W1070 — owner 2026-10-17: "From Sunday to end of Saturday if a person walks over 70K that would complete
+// an S-Tier boss. Then scale down all the way down to E-Tier ... it will be automated to defeat that certain
+// boss." The clock is a Wednesday in Pacific time, so this week is Sun 10/18 to Sat 10/24 on every run.
+test.describe('CF · Weekly step bosses (W1070)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+  const NOW = new Date('2026-10-21T19:00:00Z');   // Wed 21 Oct 2026, 12:00 PM PDT
+  const WEEK = '2026-10-18', PREV = '2026-10-11';
+  const WK = ['the_footsore_herald', 'the_milestone_hound', 'the_wayfarer_knight', 'the_seven_league_stalker', 'the_unending_road', 'the_sevenfold_colossus'];
+  type Seed = { points?: number; daily?: Record<string, number>; bosses?: Record<string, unknown>; firstDay?: string };
+  async function week(page: Page, o: Seed) {
+    await page.clock.setFixedTime(NOW);
+    await freshApp(page);
+    await page.addInitScript((o: Seed) => {
+      try {
+        if (sessionStorage.getItem('__w1070')) return;
+        sessionStorage.setItem('__w1070', '1');
+        localStorage.setItem('hb_points', String(o.points || 0));
+        localStorage.setItem('hb_habits', JSON.stringify([{ id: 'w1070-a', name: 'First vow', emoji: '•', difficulty: 'easy', type: 'build', custom: true, primaryStat: 'WILL' }]));
+        localStorage.setItem('hb_bosses', JSON.stringify(o.bosses || {}));
+        localStorage.setItem('hb_bosses_engagement_migrated', '1');
+        localStorage.setItem('hb_souls', JSON.stringify({ balance: 500, totalEarned: 500, totalSpent: 0, lastDailyBonusDate: '2999-01-01' }));
+        localStorage.setItem('hb_onboarding_first_xp_date', o.firstDay || '2026-09-01');
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: o.daily || {} }));
+        ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
+         'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
+        localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
+      } catch (_) {}
+    }, o);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.locator('#tab-habits').click();
+    await page.waitForTimeout(2200);   // the Habits tick has run
+  }
+  const beaten = (page: Page) => page.evaluate((ids) => {
+    const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+    const out: Record<string, string[]> = {};
+    ids.forEach((id: string) => { out[id] = (all[id] && all[id].wk_kills) || []; });
+    return out;
+  }, WK);
+  const kills = (page: Page) => page.evaluate((ids) => {
+    const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+    return ids.map((id: string) => (all[id] && all[id].kill_count) || 0);
+  }, WK);
+  const tick = (page: Page) => page.evaluate(() => (window as any).__weekBoss.tick() as number);
+  const balance = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls') || '{}').balance as number);
+
+  test('W1070 — a C-rank week of 50,000 brings down E, D and C by itself, once, the lowest first; B, A and S stand', async ({ page }) => {
+    await week(page, { points: 600, daily: { '2026-10-18': 9000, '2026-10-19': 12000, '2026-10-20': 15000, '2026-10-21': 14000 } });
+    expect(await page.evaluate(() => (window as any).__weekBoss.steps())).toBe(50000);
+    expect(await kills(page)).toEqual([1, 1, 1, 0, 0, 0]);
+    const b = await beaten(page);
+    expect([b.the_footsore_herald, b.the_milestone_hound, b.the_wayfarer_knight]).toEqual([[WEEK], [WEEK], [WEEK]]);
+    expect(b.the_seven_league_stalker).toEqual([]);
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Footsore Herald', { timeout: 6000 });   // the screens climb
+    expect(await balance(page)).toBeGreaterThanOrEqual(500 + 50 + 100 + 200);   // each paid its rank, no fee
+    // once a week: another tick changes nothing
+    expect(await tick(page)).toBe(0);
+    expect(await kills(page)).toEqual([1, 1, 1, 0, 0, 0]);
+  });
+
+  test('W1070 — the rank lock: an E-rank week of 70,000 brings down the Herald alone; open the D gate and the Hound falls at once', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-21': 70000 } });
+    expect(await kills(page)).toEqual([1, 0, 0, 0, 0, 0]);
+    await page.evaluate(() => {
+      const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      all.the_iron_warden = { kill_count: 1, streak: 0, engaged: false, last_defeated_at: '2026-10-10T17:00:00.000Z' };   // the D gate opens
+      localStorage.setItem('hb_bosses', JSON.stringify(all));
+    });
+    expect(await tick(page)).toBe(1);
+    expect(await kills(page)).toEqual([1, 1, 0, 0, 0, 0]);
+  });
+
+  test('W1070 — mid-week: 34,900 stands, and the steps that carry the week past 35,000 bring the Herald down; a weekly boss is never engaged', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-20': 20000, '2026-10-21': 14900 } });
+    expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(await page.evaluate(() => (window as any).engageBoss ? (window as any).engageBoss('the_footsore_herald') : false)).toBeFalsy();
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+      s.steps_daily['2026-10-21'] = 15100;
+      localStorage.setItem('hb_leaderboard', JSON.stringify(s));
+    });
+    expect(await tick(page)).toBe(1);
+    expect(await kills(page)).toEqual([1, 0, 0, 0, 0, 0]);
+    expect((await beaten(page)).the_footsore_herald).toEqual([WEEK]);
+  });
+
+  test('W1070 — day one stays quiet: 40,000 on a hunter\'s first day brings nothing down', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-21': 40000 }, firstDay: '2026-10-21' });
+    expect(await tick(page)).toBe(0);
+    expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  test('W1070 — the week is the walking board\'s: same number, same Sunday', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-17': 25000, '2026-10-18': 6000, '2026-10-21': 7000 } });   // Saturday 10/17 is last week
+    const r = await page.evaluate(() => ({ boss: (window as any).__weekBoss.steps(), board: (window as any).Leaderboard.getSnapshot().steps_last_7_days, key: (window as any).__weekBoss.key() }));
+    expect(r).toEqual({ boss: 13000, board: 13000, key: WEEK });
+  });
+
+  test('W1070 — a week that ended between opens is settled once on the next: last week\'s 70,000 brings all six down for last week', async ({ page }) => {
+    await week(page, { points: 12000, daily: { '2026-10-21': 3000 } });
+    expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(await page.evaluate(() => localStorage.getItem('hb_week_boss_settled_v1'))).toBe(PREV);   // nothing to settle: stamped
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+      Object.assign(s.steps_daily, { '2026-10-12': 20000, '2026-10-14': 20000, '2026-10-17': 30000 });
+      localStorage.setItem('hb_leaderboard', JSON.stringify(s));
+      localStorage.removeItem('hb_week_boss_settled_v1');
+    });
+    expect(await tick(page)).toBe(6);
+    const b = await beaten(page);
+    expect(WK.map((id) => b[id])).toEqual(WK.map(() => [PREV]));   // last week's, not this week's
+    expect(await tick(page)).toBe(0);
+  });
+
+  test('W1070 — a late walk counts: the daily re-read raises a past day of the week, the board with it, and the Herald falls', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-19': 4000, '2026-10-21': 30000 } });
+    expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
+    await page.evaluate(async () => {
+      const w = window as any, H = w.Health;
+      const ymd = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const truth: Record<string, number> = { '2026-10-19': 9000 };
+      H.isAvailable = () => true;
+      H.permissionStatus = () => 'granted';
+      H.getStepsBetween = async (s: string) => truth[ymd(new Date(s))] || 0;
+      localStorage.removeItem('hb_lb_step_backfill_date');
+      await w.__lbBackfillSteps();
+    });
+    const r = await page.evaluate(() => ({
+      day: JSON.parse(localStorage.getItem('hb_leaderboard') || '{}').steps_daily['2026-10-19'],
+      board: (window as any).Leaderboard.getSnapshot().steps_last_7_days,
+    }));
+    expect(r).toEqual({ day: 9000, board: 39000 });
+    expect(await kills(page)).toEqual([1, 0, 0, 0, 0, 0]);
+  });
+
+  test('W1070 — kept apart: the Ready Hunt never offers a weekly boss, and their relics come from their own gate', async ({ page }) => {
+    await week(page, { points: 600, daily: { '2026-10-21': 1000 } });
+    const r = await page.evaluate(async (ids) => {
+      const w = window as any, H = w.Health;
+      H.isAvailable = () => true;
+      H.permissionStatus = () => 'granted';
+      H.getStepsToday = async () => 70000;
+      H.getStepsBetween = async () => 70000;
+      await w.__readyHunt.scan(true);
+      const offered = (w.__readyHunt.offers() as string[]).filter((id) => ids.indexOf(id) !== -1);
+      // the Wayfarer Knight's relics: the C gate's, every roll something
+      const C = Object.keys(w.Drops.CARDS).filter((k) => ['the_marathon_wraith', 'the_furnace_knight', 'the_ascendant_colossus', 'the_gray_pilgrim'].indexOf(w.Drops.CARDS[k].source_boss) !== -1);
+      const rolls: (string | null)[] = [];
+      for (let i = 0; i < 30; i++) { const c = w.Drops.rollBossDrop('the_wayfarer_knight'); rolls.push(c && c.card ? c.card.id : null); }
+      return { offered, empty: rolls.filter((x) => !x).length, outside: rolls.filter((x) => x && C.indexOf(x) === -1) };
+    }, WK);
+    expect(r).toEqual({ offered: [], empty: 0, outside: [] });
+  });
+
+  test('W1070 — the card: the week\'s steps instead of a hunt, then Beaten this week', async ({ page }) => {
+    await week(page, { points: 600, daily: { '2026-10-19': 16240, '2026-10-21': 15000 } });
+    const card = async () => page.evaluate(() => {
+      const w = window as any;
+      w.__test_setDungeonRank('C');
+      w.__test_renderBossesPanel('C');
+      const c = document.querySelector('#bosses-list .bcard[data-boss="the_wayfarer_knight"]');
+      return c ? { mode: (c.querySelector('.bcard-mode') || {} as any).textContent, cond: (c.querySelector('.bcard-cond') || {} as any).textContent,
+        label: (c.querySelector('.bcard-progress-label') || {} as any).textContent, bar: !!c.querySelector('.bcard-wk'), cleared: c.classList.contains('bcard--cleared') } : null;
+    });
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '31,240 / 49,000 steps this week', label: '31,240 / 49,000', bar: true, cleared: false });
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+      s.steps_daily['2026-10-21'] = 33000;
+      localStorage.setItem('hb_leaderboard', JSON.stringify(s));
+    });
+    await tick(page);
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: 'Beaten this week', label: 'Beaten this week', bar: false, cleared: true });
+  });
+});

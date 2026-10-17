@@ -35063,3 +35063,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .tw-testbosses .tw-lbl{margin-bottom:9px;color:#c4b5fd}
 .tw-testbosses .row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .tw-tb{height:38px;border-radius:10px;border:1px solid rgba(167,139,250,0.5);background:rgba(139,92,246,0.12);color:#c4b5fd;font:800 12px/1 var(--tw-mono);letter-spacing:0.06em}
+/* W1070 — the weekly bosses: the mode strip and the week's steps */
+.bcard-mode--weekly{color:#7dd3fc;background:rgba(56,189,248,0.10);border:1px solid rgba(56,189,248,0.35)}
+.bcard-wk,.bfs-wk{width:72%;height:4px;border-radius:999px;background:rgba(255,255,255,0.10);overflow:hidden}
+.bcard-wk i,.bfs-wk i{display:block;height:100%;border-radius:inherit;background:var(--gold)}
+.bfs-wk{width:100%;max-width:260px;height:6px;margin:8px auto 0}
+.bcard-art .bcard-wk{position:absolute;left:0;right:0;bottom:0;width:auto;height:4px;border-radius:0;background:rgba(0,0,0,0.55);z-index:2}
+.bcard-art .bcard-wk i{border-radius:0}

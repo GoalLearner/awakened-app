@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Boss Portraits</title>
+<style>
+  :root { --bg: #0d0b1a; --card: #17142b; --ink: #ece9ff; --ink2: #a9a3c9; --gold: #f5b842; --line: rgba(245,184,66,0.25); }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f6f3ea; --card: #ffffff; --ink: #1d1a2e; --ink2: #5d587a; --gold: #a86f0c; --line: rgba(168,111,12,0.3); } }
+  :root[data-theme="dark"] { --bg: #0d0b1a; --card: #17142b; --ink: #ece9ff; --ink2: #a9a3c9; --gold: #f5b842; --line: rgba(245,184,66,0.25); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .sub { color: var(--ink2); margin: 0 0 24px; }
+  .boss { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 0 0 14px; }
+  .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .rank { color: var(--gold); font-weight: 800; letter-spacing: 0.08em; }
+  .name { font-weight: 700; font-size: 18px; }
+  .file { color: var(--ink2); font: 13px/1.4 ui-monospace, Consolas, monospace; margin: 4px 0 10px; word-break: break-all; }
+  .prompt { font: 14px/1.55 ui-monospace, Consolas, monospace; white-space: pre-wrap; user-select: all; background: rgba(127,127,127,0.08); border-radius: 10px; padding: 12px; margin: 0; }
+  .note { color: var(--ink2); font-size: 14px; margin-top: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Weekly boss portraits</h1>
+  <p class="sub">Six Midjourney prompts in the house style. The names are left out on purpose: Midjourney writes them into the picture.</p>
+
+  <div class="boss"><div class="top"><span class="rank">E · 35,000</span><span class="name">The Footsore Herald</span></div>
+    <div class="file">assets/bosses/the-footsore-herald.png</div>
+    <p class="prompt">a hooded spectral messenger in worn cracked leather boots, clutching a sealed letter with a glowing wax seal, walking an endless night road, a trail of glowing blue footprints behind him, a small lantern on his belt, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <div class="boss"><div class="top"><span class="rank">D · 42,000</span><span class="name">The Milestone Hound</span></div>
+    <div class="file">assets/bosses/the-milestone-hound.png</div>
+    <p class="prompt">a lean spectral hound mid-run along a dark roadside, ancient milestone stones with glowing carved numerals lining the road, ribs of blue light under its smoky hide, eyes burning cyan, dust trailing from its paws, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <div class="boss"><div class="top"><span class="rank">C · 49,000</span><span class="name">The Wayfarer Knight</span></div>
+    <div class="file">assets/bosses/the-wayfarer-knight.png</div>
+    <p class="prompt">a tall armored knight travelling on foot with no horse, armor caked in road dust, tattered cloak, a greatsword strapped to his back and a tall walking staff in hand, a road winding over moonlit hills behind him, glowing visor slit, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <div class="boss"><div class="top"><span class="rank">B · 56,000</span><span class="name">The Seven-League Stalker</span></div>
+    <div class="file">assets/bosses/the-seven-league-stalker.png</div>
+    <p class="prompt">a gaunt towering stalker in enormous ancient iron boots, caught mid-stride, each footprint behind it a glowing crater far apart from the last across a misty valley, long coat whipping in the wind, hollow glowing eyes, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <div class="boss"><div class="top"><span class="rank">A · 63,000</span><span class="name">The Unending Road</span></div>
+    <div class="file">assets/bosses/the-unending-road.png</div>
+    <p class="prompt">a colossal living road rising out of the earth like a serpent of cobblestones and milestones, glowing seams of blue light between the stones, a crown of broken signposts, a tiny lone traveller at its base for scale, night sky, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <div class="boss"><div class="top"><span class="rank">S · 70,000</span><span class="name">The Sevenfold Colossus</span></div>
+    <div class="file">assets/bosses/the-sevenfold-colossus.png</div>
+    <p class="prompt">a towering colossus built from seven layered bands of stone, road and mountain, seven small burning suns orbiting its shoulders, one giant glowing footprint pressed into the ground before it, ancient gold runes along its arms, overwhelming scale, dark fantasy painting, deep violet and midnight blue palette, gold filigree trim, glowing cyan-blue accents, dramatic rim light, full-bleed, near-black background, painterly, highly detailed --ar 3:4</p></div>
+
+  <p class="note">Send me the pictures when they're made and I'll put them in. Until then each boss shows its gate's art.</p>
+</main>
+</body>
+</html>
