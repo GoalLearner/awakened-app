@@ -3580,9 +3580,14 @@ test.describe('AD · Replay the awakening (W937)', () => {
       w.Health.isAvailable        = () => true;
       w.Health.permissionStatus   = () => 'granted';
       w.Health.requestPermissions = async () => { w.__askedPermission = true; return 'granted'; };
-      // the week for a span of days, today for a single one (see obWorld)
-      w.Health.getStepsBetween    = async (s: string, e: string) =>
-        ((new Date(e).getTime() - new Date(s).getTime()) / 86400000 > 1.5 ? 34112 : 9040);
+      // the week for a span of days, today for a single one (see obWorld). W1070 — an EARLIER single
+      // day reads 0: the board backfill now re-reads every day of the week, and 9,040 on each of them
+      // would carry the week past a weekly boss behind the overlay (a real kill, not the replay's).
+      w.Health.getStepsBetween    = async (s: string, e: string) => {
+        if ((new Date(e).getTime() - new Date(s).getTime()) / 86400000 > 1.5) return 34112;
+        const t = new Date(); t.setHours(0, 0, 0, 0);
+        return new Date(e).getTime() <= t.getTime() ? 0 : 9040;
+      };
       w.Health.getStepsToday      = async () => 9040;   // well past the Wolf's 6,000
       w.Auth.fetchLeaderboardTop  = async () => ({
         ok: true, me: { rank: 2, current_value: 34112 },
