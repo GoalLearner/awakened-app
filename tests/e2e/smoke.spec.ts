@@ -10885,4 +10885,27 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     await tick(page);
     expect((await card())!.cond).toBe('Beaten this week');
   });
+  // W1072 — owner 2026-10-17: the sleep bosses' drops "different [from] just the step streak boss drop table".
+  test('W1072 — from C up, each tier splits its relics between its step boss and its sleep boss: nothing shared, nothing left out', async ({ page }) => {
+    await week(page, { points: 600 });
+    const r = await page.evaluate(() => {
+      const w = window as any, C = w.Drops.CARDS;
+      const tier: Record<string, string[]> = {
+        C: ['the_marathon_wraith', 'the_ascendant_colossus', 'the_furnace_knight'],
+        B: ['the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame'],
+        A: ['the_tideless_marcher', 'the_sleepless_ascent', 'the_unbroken_anvil'],
+        S: ['erebus_the_shadow_sovereign'],
+      };
+      const pairs: Record<string, [string, string]> = { C: ['the_wayfarer_knight', 'the_lullaby_wraith'], B: ['the_seven_league_stalker', 'the_moonwell_keeper'], A: ['the_unending_road', 'the_oracle_of_deep_hours'], S: ['the_sevenfold_colossus', 'the_seventh_night'] };
+      const out: Record<string, unknown> = {};
+      Object.keys(pairs).forEach((rk) => {
+        const step = w.__weekBoss.pool(pairs[rk][0]) as string[], sleep = w.__weekBoss.pool(pairs[rk][1]) as string[];
+        const all = Object.keys(C).filter((id) => tier[rk].indexOf(C[id].source_boss) !== -1 && C[id].rarity !== 'mythic').sort();
+        out[rk] = { shared: step.filter((id) => sleep.indexOf(id) !== -1), covered: step.concat(sleep).sort().join() === all.join(), empty: !step.length || !sleep.length };
+      });
+      return out;
+    });
+    const want = { shared: [], covered: true, empty: false };
+    expect(r).toEqual({ C: want, B: want, A: want, S: want });
+  });
 });
