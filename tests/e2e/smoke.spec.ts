@@ -52,6 +52,8 @@ test.beforeEach(async ({ page }) => {
     // ceremony. Many specs kill bosses; the suite pins the dice to "never" so none of them can
     // meet one by chance. Suite CC rolls its own.
     (window as any).__shadowDice = () => 1;
+    // W1073 — and the weekly bosses' S jackpot: never, unless a spec rolls its own.
+    (window as any).__weekJackpotDice = () => 1;
     // W679 — the Monday update-reminder banner (#upd-banner) is a fixed top strip;
     // on a UTC-Monday CI run it would fire and could intercept top-of-screen taps
     // (same failure class as the Friday overlay). Hide it in the suite like the rest.
@@ -10885,27 +10887,27 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     await tick(page);
     expect((await card())!.cond).toBe('Beaten this week');
   });
-  // W1072 — owner 2026-10-17: the sleep bosses' drops "different [from] just the step streak boss drop table".
-  test('W1072 — from C up, each tier splits its relics between its step boss and its sleep boss: nothing shared, nothing left out', async ({ page }) => {
+  // W1073 — owner 2026-10-17: "make these drop tables solid more drops the better ... include the most covetted s-drops".
+  test('W1073 — every weekly boss drops its whole rank, and its S jackpot pays a regalia piece or, one time in ten, a mythic', async ({ page }) => {
     await week(page, { points: 600 });
     const r = await page.evaluate(() => {
-      const w = window as any, C = w.Drops.CARDS;
-      const tier: Record<string, string[]> = {
-        C: ['the_marathon_wraith', 'the_ascendant_colossus', 'the_furnace_knight'],
-        B: ['the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame'],
-        A: ['the_tideless_marcher', 'the_sleepless_ascent', 'the_unbroken_anvil'],
-        S: ['erebus_the_shadow_sovereign'],
+      const w = window as any;
+      const same = w.__weekBoss.pool('the_wayfarer_knight').slice().sort().join() === w.__weekBoss.pool('the_lullaby_wraith').slice().sort().join();
+      const roll = (id: string, dice: number[]) => { let i = 0; w.__weekJackpotDice = () => (i < dice.length ? dice[i++] : 1); const c = w.Drops.rollBossDrop(id); return c && c.card ? c.card.id : null; };
+      return {
+        same,                                                             // overlap is fine: C's step and sleep bosses share the C gate
+        sizes: ['the_footsore_herald', 'the_wayfarer_knight', 'the_unending_road', 'the_seventh_night'].map((id) => w.__weekBoss.pool(id).length),
+        mythic: roll('the_footsore_herald', [0.005, 0.05, 0]),           // under E's 1%, then under the 1-in-10: Nightfall
+        regalia: roll('the_footsore_herald', [0.005, 0.5, 0.7]),         // under 1%, not a mythic: the third regalia piece
+        missE: roll('the_footsore_herald', [0.011]),                     // just over E's 1%: no jackpot
+        hitS: roll('the_seventh_night', [0.09, 0.5, 0]),                 // under S's 10%: the crown
       };
-      const pairs: Record<string, [string, string]> = { C: ['the_wayfarer_knight', 'the_lullaby_wraith'], B: ['the_seven_league_stalker', 'the_moonwell_keeper'], A: ['the_unending_road', 'the_oracle_of_deep_hours'], S: ['the_sevenfold_colossus', 'the_seventh_night'] };
-      const out: Record<string, unknown> = {};
-      Object.keys(pairs).forEach((rk) => {
-        const step = w.__weekBoss.pool(pairs[rk][0]) as string[], sleep = w.__weekBoss.pool(pairs[rk][1]) as string[];
-        const all = Object.keys(C).filter((id) => tier[rk].indexOf(C[id].source_boss) !== -1 && C[id].rarity !== 'mythic').sort();
-        out[rk] = { shared: step.filter((id) => sleep.indexOf(id) !== -1), covered: step.concat(sleep).sort().join() === all.join(), empty: !step.length || !sleep.length };
-      });
-      return out;
     });
-    const want = { shared: [], covered: true, empty: false };
-    expect(r).toEqual({ C: want, B: want, A: want, S: want });
+    expect(r.same).toBe(true);
+    expect(r.sizes).toEqual([15, 15, 14, 3]);
+    expect(r.mythic).toBe('nightfall_blade');
+    expect(r.regalia).toBe('greaves_of_the_umbral_throne');
+    expect(['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne', 'nightfall_blade', 'reverie_staff', 'vigil_bow']).not.toContain(r.missE);
+    expect(r.hitS).toBe('crown_of_eternal_night');
   });
 });
