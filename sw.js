@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.362';
+const CACHE_VERSION = 'v6.363';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -329,6 +329,10 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-seven-league-stalker.png',
   '/assets/bosses/the-unending-road.png',
   '/assets/bosses/the-sevenfold-colossus.png',
+  '/assets/bosses/the-lullaby-wraith.png',
+  '/assets/bosses/the-moonwell-keeper.png',
+  '/assets/bosses/the-oracle-of-deep-hours.png',
+  '/assets/bosses/the-seventh-night.png',
   // Item-card illustrations. Only paths that EXIST on disk are listed
   // here. (Historical note: this list used to be kept strictly in-sync
   // with disk because the old cache.addAll() rejected the entire install

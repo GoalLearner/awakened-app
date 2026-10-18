@@ -10105,7 +10105,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".
   // The matchup's YOUR POWER is the number the fight uses; the boosts open what each one added.
   test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, on a milestone too (W1060)', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
     await page.addInitScript(() => {
       try {
         localStorage.setItem('hb_ascent_opening_seen_v1', '1');
@@ -10168,7 +10168,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1059 — owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
   // they go into the tower". The next fight, a rail of the whole climb, the climb behind folded by band.
   test('W1059 — the tower: the next fight, a 100-cell rail, bands folded with the current one open; the odds match the matchup', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
     const arena = (o: Record<string, unknown>) => page.evaluate(async (o) => {
       const a = Object.assign({ rating: 1000, bestRating: 1000, currentFloor: 47, highestCleared: 46, wins: 0, losses: 0, streak: 0, bestStreak: 0,
         dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }, o);
@@ -10253,8 +10253,8 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     const power = parseInt(((await page.locator(T + ' .tw-power .num').textContent()) || '').replace(/[^0-9]/g, ''), 10);
     expect(power).toBeGreaterThan(5500);                                   // every stat 20, the best relic in every slot
     await page.evaluate(() => (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click());
-    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+34\.25%/);    // every shadow: 25 since the weekly six (W1070)
-    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(25);
+    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+40\.75%/);    // every shadow: 29 since the weekly ten (W1070, W1071)
+    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(29);
     await expect(page.locator('#arena-body .mx-stakes')).toHaveText('Test build. Nothing counts.');
     await expect(page.locator('#arena-body .mx-ldt-h')).toContainText('8 RELICS');
     expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(false);
@@ -10297,14 +10297,14 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   const marchingIds = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_shadows_v1') || '{}').active || []).slice().sort());
 
   test('W1062 — the matchup\'s panel marches or rests each shadow; the power follows at once and a resting army still has its mark', async ({ page }) => {
-    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 25 });   // W1070 — 25 solo bosses since the weekly six
+    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
     await intoMatchup(page, 99);
     const M = '#arena-body';
     await expect(page.locator(M + ' .mx-marks')).toHaveText('+0.75%');
     await tap(page, '.mx-marks');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
     await expect(page.locator(M + ' .mx-sh .st')).toHaveText(['AT REST', 'AT REST', 'MARCHING']);   // strongest first
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 25 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 29 MARCHING/);
     // the Worldspine marches: saved, the panel stays open, the number on the screen is the panel's
     await tap(page, '.mx-sh[data-id="the_worldspine"]');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
@@ -10318,7 +10318,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await tap(page, '.mx-sh[data-id="the_carouser"]');
     expect(await marchingIds(page)).toEqual([]);
     await expect(page.locator(M + ' .mx-marks')).toHaveText('AT REST');
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 25 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 29 MARCHING/);
     await expect(page.locator(M + ' .mx-sh')).toHaveCount(3);
     // and the roster agrees
     await tap(page, '.mx-sh[data-id="the_unbroken_anvil"]');
@@ -10479,17 +10479,17 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
-    expect(r).toEqual([1, 2, 4, 7, 12, 25, 25, 1]);   // W1070 — S counts the weekly six too
+    expect(r).toEqual([1, 2, 4, 7, 12, 29, 29, 1]);   // W1070, W1071 — S counts the weekly ten too
   });
 
   test('W1048 — an S-rank hunter held to the old five: every shadow marches, by itself, and each is worth 1%', async ({ page }) => {
     await army(page, 14000, SOLO.slice(0, 8), SOLO.slice(0, 5));
     await freshApp(page);
     const m = await marchingNow(page);
-    expect([m.n, m.slots]).toEqual([8, 25]);
+    expect([m.n, m.slots]).toEqual([8, 29]);
     expect(m.active.slice().sort()).toEqual(SOLO.slice(0, 8).sort());
     await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
-    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 25 SLOTS AT YOUR RANK/);
+    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 29 SLOTS AT YOUR RANK/);
     await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
   });
 
@@ -10638,7 +10638,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
   const NOW = new Date('2026-10-21T19:00:00Z');   // Wed 21 Oct 2026, 12:00 PM PDT
   const WEEK = '2026-10-18', PREV = '2026-10-11';
   const WK = ['the_footsore_herald', 'the_milestone_hound', 'the_wayfarer_knight', 'the_seven_league_stalker', 'the_unending_road', 'the_sevenfold_colossus'];
-  type Seed = { points?: number; daily?: Record<string, number>; bosses?: Record<string, unknown>; firstDay?: string };
+  type Seed = { points?: number; daily?: Record<string, number>; sleep?: Record<string, number>; bosses?: Record<string, unknown>; firstDay?: string };
   async function week(page: Page, o: Seed) {
     await page.clock.setFixedTime(NOW);
     await freshApp(page);
@@ -10652,7 +10652,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
         localStorage.setItem('hb_bosses_engagement_migrated', '1');
         localStorage.setItem('hb_souls', JSON.stringify({ balance: 500, totalEarned: 500, totalSpent: 0, lastDailyBonusDate: '2999-01-01' }));
         localStorage.setItem('hb_onboarding_first_xp_date', o.firstDay || '2026-09-01');
-        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: o.daily || {} }));
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: o.daily || {}, sleep_hours_daily: o.sleep || {} }));
         ['hb_first_completion_bonus_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_tour_day3_v1', 'hb_tour_day7_v1',
          'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
@@ -10802,5 +10802,87 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     });
     await tick(page);
     expect(await card()).toEqual({ mode: 'WEEKLY', cond: 'Beaten this week', label: 'Beaten this week', bar: false, cleared: true });
+  });
+  // W1071 — owner 2026-10-17: the weekly SLEEP bosses, 8h nights on any nights of the week (C 4, B 5, A 6, S 7).
+  const SL = ['the_lullaby_wraith', 'the_moonwell_keeper', 'the_oracle_of_deep_hours', 'the_seventh_night'];
+  const sleepKills = (page: Page) => page.evaluate((ids) => {
+    const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+    return ids.map((id: string) => (all[id] && all[id].kill_count) || 0);
+  }, SL);
+  const setSleep = (page: Page, nights: Record<string, number>) => page.evaluate((nights) => {
+    const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+    s.sleep_hours_daily = Object.assign(s.sleep_hours_daily || {}, nights);
+    localStorage.setItem('hb_leaderboard', JSON.stringify(s));
+  }, nights);
+
+  test('W1071 — a C-rank week of four 8h nights brings the Lullaby Wraith down by itself; a 7.9h night does not count; B, A and S stand', async ({ page }) => {
+    await week(page, { points: 600, sleep: { '2026-10-18': 8, '2026-10-19': 8.2, '2026-10-20': 9, '2026-10-21': 7.9 } });
+    expect(await page.evaluate(() => (window as any).__weekBoss.nights(null, 8))).toBe(3);
+    expect(await sleepKills(page)).toEqual([0, 0, 0, 0]);
+    await setSleep(page, { '2026-10-21': 8 });
+    expect(await tick(page)).toBe(1);
+    expect(await sleepKills(page)).toEqual([1, 0, 0, 0]);
+    expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);   // no steps: the step bosses stand
+  });
+
+  test('W1071 — any nights: last week\'s six 8h nights (with a gap) bring down C, B and A for last week; Saturday night\'s sleep opens the new week', async ({ page }) => {
+    await week(page, { points: 12000 });
+    expect(await page.evaluate(() => localStorage.getItem('hb_week_boss_settled_v1'))).toBe(PREV);
+    await setSleep(page, { '2026-10-11': 8, '2026-10-12': 8.5, '2026-10-13': 8, '2026-10-15': 8.1, '2026-10-16': 8, '2026-10-17': 9, '2026-10-18': 8.3 });   // the 14th missed; the 18th is this week
+    await page.evaluate(() => localStorage.removeItem('hb_week_boss_settled_v1'));
+    expect(await tick(page)).toBe(3);
+    const r = await page.evaluate((ids) => { const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}'); return ids.map((id: string) => (all[id] && all[id].wk_kills) || []); }, SL);
+    expect(r).toEqual([[PREV], [PREV], [PREV], []]);   // seven would have needed Saturday night, which belongs to this week
+  });
+
+  test('W1071 — the rank lock: an E-rank hunter with four good nights beats none until the C gate opens', async ({ page }) => {
+    await week(page, { points: 0, sleep: { '2026-10-18': 8, '2026-10-19': 8, '2026-10-20': 8, '2026-10-21': 8 } });
+    expect(await sleepKills(page)).toEqual([0, 0, 0, 0]);
+    await page.evaluate(() => {
+      const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      all.the_furnace_knight = { kill_count: 1, streak: 0, engaged: false, last_defeated_at: '2026-10-10T17:00:00.000Z' };   // the C gate opens
+      localStorage.setItem('hb_bosses', JSON.stringify(all));
+    });
+    expect(await tick(page)).toBe(1);
+    expect(await sleepKills(page)).toEqual([1, 0, 0, 0]);
+  });
+
+  test('W1071 — a morning without the app: the sleep re-read finds Monday\'s night in Apple Health and the Wraith falls', async ({ page }) => {
+    await week(page, { points: 600, sleep: { '2026-10-18': 8.5, '2026-10-20': 8.1, '2026-10-21': 8.3 } });
+    expect(await sleepKills(page)).toEqual([0, 0, 0, 0]);
+    await page.evaluate(async () => {
+      const w = window as any, H = w.Health;
+      H.isAvailable = () => true;
+      H.permissionStatus = () => 'granted';
+      H.getSleepBetween = async () => ({ samples: [], byDate: { '2026-10-19': { totalAsleepHours: 8.4 }, '2026-10-20': { totalAsleepHours: 6 } } });
+      localStorage.removeItem('hb_lb_sleep_backfill_date');
+      await w.__lbBackfillSleep();
+    });
+    const night = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_leaderboard') || '{}').sleep_hours_daily);
+    expect([night['2026-10-19'], night['2026-10-20']]).toEqual([8.4, 8.1]);   // raised, never lowered
+    expect(await sleepKills(page)).toEqual([1, 0, 0, 0]);
+  });
+
+  test('W1071 — the card counts nights, then Beaten this week; the sheet asks for a wearable', async ({ page }) => {
+    await week(page, { points: 600, sleep: { '2026-10-18': 8, '2026-10-19': 8, '2026-10-20': 8 } });
+    const card = async () => page.evaluate(() => {
+      const w = window as any;
+      w.__test_setDungeonRank('C');
+      w.__test_renderBossesPanel('C');
+      const c = document.querySelector('#bosses-list .bcard[data-boss="the_lullaby_wraith"]');
+      return c ? { mode: (c.querySelector('.bcard-mode') || {} as any).textContent, cond: (c.querySelector('.bcard-cond') || {} as any).textContent,
+        label: (c.querySelector('.bcard-progress-label') || {} as any).textContent, bar: !!c.querySelector('.bcard-wk') } : null;
+    });
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '3 / 4 nights of 8h this week', label: '3 / 4 nights', bar: true });
+    const note = await page.evaluate(async () => {
+      (document.querySelector('#bosses-list .bcard[data-boss="the_lullaby_wraith"]') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      const n = document.getElementById('bfs-verify-note');
+      return n && !n.classList.contains('hidden') ? n.textContent : '';
+    });
+    expect(note).toContain('Apple Watch');
+    await setSleep(page, { '2026-10-21': 8.6 });
+    await tick(page);
+    expect((await card())!.cond).toBe('Beaten this week');
   });
 });

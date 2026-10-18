@@ -58,7 +58,7 @@ console.log(`A single fixed wall cannot challenge ${hi} without bricking ${lo} â
 // all nineteen near certain. Shadows join strongest first (as they march at each rank's slots).
 console.log('\n=== F100 by shadows marching (max relic set: sets + maxed upgrades) ===');
 console.log('shadows  army      Nightfall   Duskforge   Vigil');
-for (const k of [0, 1, 3, 5, 8, 12, 19, 99]) {   // 99 = every solo boss (25 since the W1070 weekly six)
+for (const k of [0, 1, 3, 5, 8, 12, 19, 99]) {   // 99 = every solo boss (29 since the W1071 weekly sleep four)
   const rn = Arena.simAscent(100, NF, { n: 3000, invest: 'max', shadows: k });
   const rd = Arena.simAscent(100, DF, { n: 3000, invest: 'max', shadows: k });
   const rv = Arena.simAscent(100, VB, { n: 3000, invest: 'max', shadows: k });
