@@ -25,11 +25,22 @@
   .word { font: 900 236px/1 'Cinzel', serif; letter-spacing: .03em; color: #f5b842; text-shadow: 0 10px 0 rgba(0,0,0,.35), 0 0 120px rgba(245,184,66,.35), 0 30px 80px rgba(0,0,0,.7); white-space: nowrap; }
   .tag { font: 800 74px/1 'JetBrains Mono', monospace; letter-spacing: .5em; padding-left: .5em; text-transform: uppercase; color: #f4f4fb; text-shadow: 0 6px 30px rgba(0,0,0,.9); white-space: nowrap; }
 
-  /* ── header ── */
-  .header .wolf { left: 700px; top: 60px; width: 1500px; height: 1500px; opacity: .95; }
-  .header .king { left: 1700px; top: 40px; width: 1540px; height: 1540px; opacity: .95; }
+  /* ── header ── 2026-10-19: App Review 2.3.3 ("The Product Page Header screenshot does not show the
+     actual app in use") flagged the logo-over-bosses header. Now the title sits on top and three real
+     screens (raw/habits, raw/victory, raw/tower) fill the middle a phone shows; the bosses only
+     colour the wings, which wider screens reveal. */
+  .header .wolf { left: -120px; top: 80px; width: 1400px; height: 1400px; opacity: .7; }
+  .header .king { left: 2560px; top: 60px; width: 1420px; height: 1420px; opacity: .7; }
+  .header .lock { top: 64px !important; gap: 26px !important; }
+  .header .word { font-size: 150px; }
+  .header .tag { font-size: 50px; }
+  .header .rule { width: 420px !important; height: 4px !important; }
+  .header .hp { position: absolute; padding: 14px; border-radius: 86px;
+    background: linear-gradient(145deg, #4a4658, #1b1a24 40%, #2f2c3c 65%, #16151d);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.16), 0 50px 110px rgba(0,0,0,.6), 0 18px 36px rgba(0,0,0,.4); }
+  .header .hp i { display: block; width: 100%; border-radius: 74px; background: #0a0a18 center top / 100% auto no-repeat; }
   .header .veil { inset: 0; background:
-    radial-gradient(900px 520px at 50% 56%, rgba(7,7,15,.82), rgba(7,7,15,0) 100%),
+    radial-gradient(1100px 700px at 50% 60%, rgba(7,7,15,.55), rgba(7,7,15,0) 100%),
     linear-gradient(180deg, rgba(7,7,15,.7) 0%, rgba(7,7,15,.15) 30%, rgba(7,7,15,.25) 62%, #0a0a18 100%),
     linear-gradient(90deg, rgba(7,7,15,.75) 0%, rgba(7,7,15,0) 22%, rgba(7,7,15,0) 78%, rgba(7,7,15,.75) 100%); }
   .header .lock { left: 0; right: 0; top: 690px; display: flex; flex-direction: column; align-items: center; gap: 56px; }
@@ -67,6 +78,9 @@
     <div class="rule"></div>
     <div class="tag">Habit RPG</div>
   </div>
+  <div class="hp only-header" style="left:1050px;top:420px;width:600px;transform:rotate(-6deg)"><i style="height:1215px;background-image:url(raw/habits.png)"></i></div>
+  <div class="hp only-header" style="left:2190px;top:420px;width:600px;transform:rotate(6deg)"><i style="height:1215px;background-image:url(raw/tower.png)"></i></div>
+  <div class="hp only-header" style="left:1590px;top:350px;width:660px;z-index:2"><i style="height:1340px;background-image:url(raw/victory.png)"></i></div>
 
   <div class="abs brand only-search">Awakened: Habit RPG</div>
   <h1 class="abs only-search">Real habits.<br><em>Real bosses.</em></h1>

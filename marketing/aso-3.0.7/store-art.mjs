@@ -23,7 +23,9 @@ async function main() {
     try { browser = await chromium.launch({ channel, headless: true }); break; } catch (_) { /* next */ }
   }
   try {
+    const only = process.argv.slice(2);   // e.g. `node store-art.mjs header` renders just the header
     for (const [shape, [w, h]] of Object.entries(SHAPES)) {
+      if (only.length && only.indexOf(shape) === -1) continue;
       const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
       await page.goto(`http://localhost:${PORT}/marketing/aso-3.0.7/store-art.html?shape=${shape}`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
