@@ -123,6 +123,42 @@ const SCENES = {
     await page.evaluate(() => window.__previewRankCelebrations());
     await page.waitForTimeout(7500);
   },
+  // 2026-10-19 (3.0.14 set, App Review 2.3.3): every frame a real screen. The Tower and the Items tab.
+  async tower(page) {
+    await page.click('#tab-profile');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => document.getElementById('sc-arena-btn').click());
+    await page.waitForTimeout(3000);
+  },
+  async relics(page) {
+    await page.click('#tab-items');
+    await page.waitForTimeout(1500);
+    // fold the mega-rare row (all locked), open the ultra-rare relics (owned ones show their art)
+    await page.evaluate(() => {
+      const t = (k) => document.querySelector('[data-section-toggle="' + k + '"]');
+      const m = t('mythic'); if (m && m.getAttribute('aria-expanded') === 'true') m.click();
+      const u = t('ultra_rare'); if (u && u.getAttribute('aria-expanded') !== 'true') u.click();
+    });
+    await page.waitForTimeout(900);
+    await page.evaluate(() => { const sec = document.querySelector('.pokedex-section--mythic'); if (sec) sec.scrollIntoView({ block: 'start' }); });
+    await page.waitForTimeout(1200);
+  },
+};
+// Extra seeds per scene (on top of the demo hunter).
+const OWNED = ['trail_worn_boots', 'pendant_of_the_wakeful', 'sleepwalkers_cloak', 'alphas_mantle', 'titan_oathblade', 'crown_of_deep_rest',
+  'glass_path_boots', 'wardens_plate', 'crown_of_the_ascendant', 'greaves_of_the_endless_road', 'ashen_monarchs_cape', 'keystone_pendant',
+  'ten_thousand_step_blade', 'amulet_of_the_kept_word', 'gauntlets_of_ten_thousand_days', 'boots_of_the_long_road'];
+const SEEDS = {
+  tower: {
+    hb_ascent_opening_seen_v1: '1',
+    hb_arena_v2: JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 38, highestCleared: 37, wins: 41, losses: 6, streak: 5, bestStreak: 9,
+      dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }),
+    hb_stats: JSON.stringify({ STR: { pts: 2400 }, VIT: { pts: 2200 }, INT: { pts: 1900 }, FOCUS: { pts: 2100 }, WILL: { pts: 2000 }, WLT: { pts: 1500 } }),
+  },
+  relics: {
+    hb_tour_items_v1: '1', hb_tour_quests_v1: '1',
+    hb_inventory: JSON.stringify({ cards: Object.fromEntries(OWNED.map((id, i) => [id, { discovered: true, count: 1, first_acquired_date: '2026-09-' + String(10 + (i % 18)).padStart(2, '0') }])) }),
+  },
 };
 
 async function main() {
@@ -136,7 +172,7 @@ async function main() {
   try {
     const names = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SCENES);
     for (const name of names) {
-      const { ctx, page } = await boot(browser);
+      const { ctx, page } = await boot(browser, SEEDS[name]);
       await SCENES[name](page);
       await page.screenshot({ path: join(RAW, name + '.png') });
       console.log('saved raw/' + name + '.png');
