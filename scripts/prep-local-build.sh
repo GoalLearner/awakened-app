@@ -249,6 +249,31 @@ if [ -f ios/App/Podfile ]; then
   sed -i.bak "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
   rm -f ios/App/Podfile.bak
   echo "  Podfile: $(grep "platform :ios" ios/App/Podfile)"
+  # W1079 — the POD targets too. `platform :ios` only sets the Pods project's default; every
+  # pod keeps the deployment target its podspec declares (13.0 for Capacitor and RevenueCat,
+  # 14.0 for Apple Sign In), and Capacitor's own post_install hook lifts them only to 13.0.
+  # Xcode with the iOS 27 SDK refuses anything below 15.0 ("the range of supported
+  # deployment target versions is 15.0 to 27.1.x", build 592, 2026-10-22: 15 errors, one per
+  # pod). Inserted once (marker W1079) inside the Podfile's existing post_install block, so
+  # `pod install` in step 5 writes 15.0 into every pod target.
+  if ! grep -q "W1079" ios/App/Podfile; then
+    PODS_15_SNIPPET="ios/App/.w1079-pods-15.rb"
+    cat > "$PODS_15_SNIPPET" <<'RUBY'
+  # W1079 — every pod target at the app's floor (the iOS 27 SDK refuses lower).
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |c|
+      c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0' if c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+    end
+  end
+RUBY
+    if grep -q "post_install do |installer|" ios/App/Podfile; then
+      sed -i '' "/post_install do |installer|/r $PODS_15_SNIPPET" ios/App/Podfile
+    else
+      { echo ""; echo "post_install do |installer|"; cat "$PODS_15_SNIPPET"; echo "end"; } >> ios/App/Podfile
+    fi
+    rm -f "$PODS_15_SNIPPET"
+  fi
+  echo "  Podfile: pod targets lifted to 15.0 ($(grep -c "W1079" ios/App/Podfile) marker)"
 fi
 if [ -f ios/App/App.xcodeproj/project.pbxproj ]; then
   # sed in-place differs between BSD (macOS) and GNU. BSD requires ''
