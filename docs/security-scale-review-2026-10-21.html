@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awakened Security Review</title>
+<style>
+  :root { --bg:#ffffff; --ink:#15151a; --muted:#5b5b66; --line:#dcdce3; --card:#f6f6f9; --good:#1b7f4b; --warn:#a85d00; --bad:#b3261e; --accent:#3b3f8f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121216; --ink:#ececf1; --muted:#a4a4b2; --line:#33333d; --card:#1b1b22; --good:#5fd39a; --warn:#f0b35b; --bad:#ff7b72; --accent:#a9adff; } }
+  :root[data-theme="dark"] { --bg:#121216; --ink:#ececf1; --muted:#a4a4b2; --line:#33333d; --card:#1b1b22; --good:#5fd39a; --warn:#f0b35b; --bad:#ff7b72; --accent:#a9adff; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:28px 16px 64px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 24px; }
+  h2 { font-size:19px; margin:34px 0 10px; padding-top:14px; border-top:1px solid var(--line); }
+  h3 { font-size:16px; margin:18px 0 6px; }
+  p, li { max-width:72ch; }
+  ul { padding-left:20px; } li { margin:5px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:12px 0; }
+  .ok { color:var(--good); font-weight:600; } .warn { color:var(--warn); font-weight:600; } .bad { color:var(--bad); font-weight:600; }
+  table { border-collapse:collapse; width:100%; font-size:14px; margin:10px 0 4px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  code { font-size:13px; background:var(--card); padding:1px 5px; border-radius:4px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; overflow-x:auto; font-size:13px; }
+  .k { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Awakened security and scale review</h1>
+  <p class="sub">21 October 2026 · six parallel audits of the backend and the app, then fixes · backend commits a2c1015 + 56d1873, app commits c1fe7e1 + 56d1873 (build 592)</p>
+
+  <div class="card">
+    <p><span class="ok">Nobody can get into other people's accounts or data.</span> For the fourth review in a row: no SQL injection, no way to read or write another hunter's data, no way to forge a session, no stored script in any screen, no secret in the code. All of that was checked again today, line by line, against the live database.</p>
+    <p>What the reviews did find were softer holes that matter once thousands of people and creators arrive: ways to impersonate a creator's name, to ring someone's phone with requests, to bury the moderators, to climb the PvP ladder with a modified app, and two tables that would have filled the database within months. All of it is fixed in code. Three production steps still need your go (next section).</p>
+  </div>
+
+  <h2>What needs your go</h2>
+  <p>The new backend is tested (784 tests) and built, but it is not live yet. Run these from PowerShell in this order, or say "go" and I run them:</p>
+  <pre>cd C:\Users\richm\Documents\repos\awakened-app\backend
+npx wrangler d1 migrations apply awakened-db --remote
+npx wrangler deploy
+printf 'true' | npx wrangler secret put SIWA_NONCE_ENFORCE</pre>
+  <ul>
+    <li><b>Step 1</b> adds one column (<code>users.token_version</code>) and seven indexes. It changes no data. It was checked against the live database: no two names collide.</li>
+    <li><b>Step 2</b> puts the new backend live. It also fixes a bug that is live right now: the rally horn fails, and the Worldgate sheet fails for the rest of the week after every kill (a line of SQL the database rejects).</li>
+    <li><b>Step 3</b> turns on a sign-in check that has been running in "log only" mode since July. Every app since then sends what it needs; a mismatch just returns the hunter to the Apple button.</li>
+  </ul>
+  <p>Then build 592 on the MacBook. It carries the app side (sign-out that really signs out, smaller cloud saves, the socket token out of the URL).</p>
+
+  <h2>What was fixed</h2>
+
+  <h3>Signing in and sessions</h3>
+  <ul>
+    <li><b>Sign-out now ends the session everywhere.</b> Before, a session token lived 90 days and could be renewed for ever, even after signing out; a token copied from a backup kept working. Now sign-out bumps a counter on the account and every older token is refused.</li>
+    <li><b>Apple key rotation no longer breaks sign-in for a day.</b> When Apple rotates its signing key, the backend now fetches the new one at once instead of waiting for a 24-hour cache to expire.</li>
+    <li><b>The session token no longer travels in the PvP socket address</b> (addresses are written to edge and proxy logs). It rides in the handshake instead.</li>
+    <li>A sign-in that hits the per-address limit (a campus or carrier network during a sign-up wave) waits three seconds and tries once more; the limit itself went from 10 to 30 a minute per address.</li>
+  </ul>
+
+  <h3>Names, friends and the board</h3>
+  <ul>
+    <li><b>Nobody can take a creator's name with a space in it.</b> "Ren Diesel" used to register beside "RenDiesel" and showed as the same name on every screen. Names are now unique after removing spaces and case, and the words admin, moderator, support, staff, system, official, developer, owner and "awakened" are reserved.</li>
+    <li><b>A block covers guild requests.</b> A blocked hunter could still ring your phone with "wants to join your guild". And a declined request stays quiet for a week; asking again used to send a new push every time.</li>
+    <li><b>Reports can't bury the moderators.</b> Ten reports a day per hunter; three accounts made this week can no longer hide a post on their own; the moderators get one push per post per hour instead of one per report.</li>
+    <li>Edits respect a locked topic; profile cards are hidden between blocked hunters; co-op summons are capped at ten unanswered and one push per friend per hour.</li>
+  </ul>
+
+  <h3>Game integrity</h3>
+  <ul>
+    <li><b>The ranked PvP ladder was forgeable.</b> A modified app could claim six stats of 200 (the strongest bot has 76) and win every fight in two hits. Builds are now capped per stat and in total, above every real hunter on record.</li>
+    <li><b>A co-op hunt can no longer be finished in one request.</b> A submitted total now has to fit the hours elapsed since the hunt began.</li>
+    <li>The Founder sequence survives a Founder deleting their account (it used to jam for everyone after that). One avenge per fallen friend per day. A transferred subscription ends the old account's membership. An invite link asks before it redeems (any web page could redeem one for a new hunter without a tap).</li>
+  </ul>
+
+  <h3>Thousands of users</h3>
+  <ul>
+    <li><b>The largest table stopped growing.</b> Every co-op step sync added a new row (about 50 a day per hunter with a live hunt, 18,000 rows already). Each hunter's stream is now one row, updated in place, and old rows are pruned.</li>
+    <li><b>The friends list broke at 100 friends</b> (the database allows 100 values per query; the code sent up to 400). Fixed. Creators will be the first to have that many.</li>
+    <li><b>The Monday update push reached 2,100 people at most, the same 2,100 every week.</b> Now 6,300 a Monday, and an unfinished sweep continues where it stopped the next week.</li>
+    <li>Cloud saves: an unchanged save no longer rewrites the whole blob, saves travel compressed (five to eight times smaller), the ceiling went from 512 KB to 1 MB, and a save that is refused for size finally tells you ("Backup failed") instead of failing silently launch after launch.</li>
+    <li>A crashing build can no longer take the database down through the error reporter (it sheds past 300 reports a minute). Every backend call from the app has a 20-second ceiling. The co-op background loop makes a fifth of the requests it did.</li>
+    <li>Indexes for every scan the review found, Worker logs retained for a week, and a CI step that fails the build if the dev panel or the simulated hunters are ever switched on, or a key is committed.</li>
+  </ul>
+
+  <h2>Will it hold thousands of users?</h2>
+  <table>
+    <tr><th>Users</th><th>Before today</th><th>After today</th></tr>
+    <tr><td>1,000</td><td>Fine.</td><td>Fine. Under two requests a second on average.</td></tr>
+    <tr><td>5,000</td><td>Six endpoints' database reads start costing real money (about $25 a month) and the co-op table reaches the database limit in about a year.</td><td>Fine. The table growth is gone; what remains is the Worldgate read (see open items) at a few dollars a month.</td></tr>
+    <tr><td>20,000</td><td>Three things break: the friends list for popular hunters, the Monday push (90% never get it), and the nightly pact-streak job. The database fills in three to four months.</td><td>Nothing breaks. The Worldgate sheet and the Hall of Fame get slower (half a second to a second) and the read bill grows; both have a known fix that is not urgent.</td></tr>
+  </table>
+  <p class="k">Measured today: 93 accounts, 21.5 MB of data. The biggest cloud save is 247 KB (RenDIESEL after five months). The platform's limits are 10 GB per database, 2 MB per row, and the Worker handles the request counts above trivially; the database being single-writer is not the bottleneck at any of these sizes (about 35 writes a second at the 20,000 peak).</p>
+
+  <h2>Still open</h2>
+  <ul>
+    <li><b>Forged step counts within human limits still count</b> (leaderboards, Worldgate, 100K Club). The app trusts the phone; closing this needs device attestation, a larger project. Known since July.</li>
+    <li><b>Worldgate bounty below rank 1,000.</b> Once more than 1,000 hunters strike in a week, those ranked below 1,000 cannot collect the bounty. Needs a small table at kill time; worth doing before 2,000 users.</li>
+    <li><b>Worldgate sheet and Hall of Fame reads</b> scale with the number of walkers; cache them once a minute when past 5,000 users.</li>
+    <li>Any raid member can still cancel a raid for everyone (your call pending). Delete-and-re-signup still clears mutes and blocks. The Founder mark still triggers from a client-reported kill count behind its 7-day gate.</li>
+    <li>A custom vow name goes to DeepSeek for the Monday note; worth a line in the privacy policy.</li>
+    <li>Cloudflare dashboard items only you can do: a billing alert, and when traffic grows, a custom domain with rate rules in front of the Worker.</li>
+  </ul>
+
+  <h2>Not changed on purpose</h2>
+  <ul>
+    <li>Gameplay stays client-authoritative (souls, XP, relics live on the phone). A hunter editing their own device only affects themselves; everything shared was re-checked server-side today.</li>
+    <li>Sessions stay 90 days with silent renewal. Per-renewal rotation would sign other devices out.</li>
+  </ul>
+</main>
+</body>
+</html>
