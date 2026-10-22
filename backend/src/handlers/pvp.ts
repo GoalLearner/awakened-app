@@ -278,7 +278,12 @@ export async function handlePvpHistory(request: Request, env: Env, session: Sess
 export async function handlePvpWs(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const code = String(url.searchParams.get('code') || '').toUpperCase();
-  const token = url.searchParams.get('token') || '';
+  // W1078 — the token comes in the subprotocol list ("awakened, jwt.<token>"); the query form
+  // stays for clients before 3.0.14 build 592 (a query string is written to edge logs — the
+  // reason it moved). The MatchRoom answers the 'awakened' subprotocol.
+  const offered = (request.headers.get('Sec-WebSocket-Protocol') || '').split(',').map((s) => s.trim());
+  const fromProtocol = offered.find((s) => s.startsWith('jwt.'));
+  const token = fromProtocol ? fromProtocol.slice(4) : (url.searchParams.get('token') || '');
   // W1040 SECURITY — a code is six characters from genCode's alphabet; anything else used to
   // wake a brand-new Durable Object per request.
   if (!/^[A-Z0-9]{4,12}$/.test(code)) return jsonError(400, 'NO_CODE', 'code required');

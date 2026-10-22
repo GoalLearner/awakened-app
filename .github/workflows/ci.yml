@@ -41,6 +41,19 @@ jobs:
           if [ "$MISSING" != "0" ]; then exit 1; fi
           echo "OK: all referenced scripts present."
 
+      # W1078 — production flags + secret scan. The hidden dev panel and the simulated hunters
+      # must be off in every build that reaches the store, and no tracked file may carry a
+      # key-shaped string (docs are excluded: the README shows the shape of a dev key).
+      - name: Production flags + secret scan
+        run: |
+          set -e
+          grep -q "const DEV_BUILD = false;" app.js || { echo "FAIL: DEV_BUILD is not false in app.js"; exit 1; }
+          grep -q "const SIMULATE_USERS = false;" simulated-leaderboard.js || { echo "FAIL: SIMULATE_USERS is not false"; exit 1; }
+          if git grep -nE "sk_live_[A-Za-z0-9]|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|(DEEPSEEK_API_KEY|APNS_AUTH_KEY|JWT_SIGNING_KEY|REVENUECAT_WEBHOOK_AUTH|ADMIN_METRICS_SECRET)=[A-Za-z0-9]" -- . ':!*.md' ':!node_modules'; then
+            echo "FAIL: a key-shaped string is tracked in the repo"; exit 1
+          fi
+          echo "OK: production flags off, no tracked secrets."
+
       # W507 — E2E spec-count floor. The Playwright smoke suite (W500) is the behavioral safety
       # net for the monolith; this guards against it silently SHRINKING — a spec deleted or
       # renamed away would drop coverage with no red flag, since a smaller-but-passing suite

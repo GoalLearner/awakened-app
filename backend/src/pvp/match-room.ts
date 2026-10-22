@@ -492,7 +492,11 @@ export class MatchRoom {
     // send the current snapshot immediately + notify the opponent
     try { server.send(JSON.stringify({ type: 'state', ...this.view(m, userId) })); } catch { /* */ }
     this.sendToSlot(m, slot === 'p' ? 'b' : 'p', { type: 'opp_status', connected: true });
-    return new Response(null, { status: 101, webSocket: client });
+    // W1078 — a client that offered subprotocols must hear one back or it drops the socket;
+    // only the name is echoed, never the jwt.<token> entry.
+    const offered = (request.headers.get('Sec-WebSocket-Protocol') || '').split(',').map((s) => s.trim());
+    const headers: Record<string, string> = offered.includes('awakened') ? { 'Sec-WebSocket-Protocol': 'awakened' } : {};
+    return new Response(null, { status: 101, webSocket: client, headers });
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
