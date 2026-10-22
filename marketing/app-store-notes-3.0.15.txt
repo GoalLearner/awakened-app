@@ -1,0 +1,6 @@
+Locks, checked.
+
+• Sign out means sign out: signing out now ends your session on every device, not only this one.
+• Lighter backups: your cloud save travels compressed and only uploads when something changed.
+• Invite links ask before they act.
+• Under the hood: a security and scale pass across the whole app, ahead of the crowd.
