@@ -9063,6 +9063,71 @@ test.describe('BH · Hunt results (W980)', () => {
     await page.waitForTimeout(2_200);
     expect((await view(page)).shown).toBe(false);
   });
+
+  // ── W1082 · THE TALLY — several wins on one screen ───────────────────────
+  const win = (bossId: string, bossName: string, rank: string, kill: number, souls: number, drop: any = null, coop: any = null) =>
+    ({ bossId, bossName, rank, kill_count: kill, conditionLabel: 'x', souls, drop, mercy: null, coop });
+  const party = { party: [{ n: 'Anthony', s: 14210, f: 0 }, { n: 'Richie', s: 11840, f: 0, you: true }], goal: 20000, fgoal: 0, unit: 'steps', mvp: null, pact: null, fed: false, time: '9h 05m' };
+  const tally = (page: Page) => page.evaluate(() => {
+    const f = document.querySelector('#boss-result-overlay .hr-frame');
+    const t = (s: string) => ((f && f.querySelector(s)?.textContent) || '').replace(/\s+/g, ' ').trim();
+    return { on: !!(f && f.classList.contains('hr-tally')), eyebrow: t('.hr-eyebrow'), title: t('.hr-boss'), stamp: t('.hr-stamp'),
+      rows: f ? [].map.call(f.querySelectorAll('.hr-tr'), (r: any) => r.textContent.replace(/\s+/g, ' ').trim()) : [], souls: t('.hr-souls'), relics: t('.hr-rc:not(.hr-souls)') };
+  });
+
+  test('W1082 — three wins waiting together land on one tally; tap skips, tap leaves, nothing follows', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(([w1, w2, w3]) => { const q = (window as any).__queueBossResult; q(w1); q(w2); q(w3); },
+      [win('the_steel_wolf', 'The Steel Wolf', 'E', 701, 120), win('the_insomniac', 'The Insomniac', 'E', 702, 150, { cardId: 'x', name: 'Fang of the Pack', rarity: 'rare', wasFirst: true }),
+       win('the_carouser', 'The Carouser', 'D', 703, 200, { cardId: 'y', name: 'Trail-Worn Boots', rarity: 'common', wasFirst: false, count: 3 })]);
+    await expect.poll(() => tally(page).then((v) => v.on), { timeout: 5_000 }).toBe(true);
+    await tap(page);   // skip to the end
+    const v = await tally(page);
+    expect(v.eyebrow.toUpperCase()).toBe('SOLO HUNTS · 3 DOWN');
+    expect(v.title).toBe('Three bosses down');
+    expect(v.rows.length).toBe(3);
+    expect(v.rows[0]).toMatch(/The Steel Wolf ?E ?701ST KILL · SOULS ONLY ?\+120/i);
+    expect(v.rows[1]).toMatch(/A SEALED RELIC · RARE · REVEALED NEXT/i);
+    expect(v.rows[1]).not.toContain('Fang of the Pack');
+    expect(v.rows[2]).toMatch(/TRAIL-WORN BOOTS · COMMON · DUPLICATE/i);
+    expect(v.souls).toMatch(/\+470/);
+    expect(v.relics).toMatch(/2 relics/);
+    expect(v.relics).toMatch(/1 sealed · revealed next/);
+    await tap(page);   // leave
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+    await page.waitForTimeout(1_500);
+    expect((await view(page)).shown).toBe(false);   // no screen per boss afterwards
+    expect(await page.evaluate(() => ['the_steel_wolf_701', 'the_insomniac_702', 'the_carouser_703'].every((k) => localStorage.getItem('hb_boss_result_seen_' + k) === '1'))).toBe(true);   // every win is seen, as its own screen would have marked it
+  });
+
+  test('W1082 — solo and co-op wins tally apart, and a defeat waits its turn behind them', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(([a, b, c, d, e]) => { const q = (window as any).__queueBossResult; q(a); q(b); q(c); q(d); q(e); },
+      [win('the_steel_wolf', 'The Steel Wolf', 'E', 711, 120), { outcome: 'failed', bossId: 'the_insomniac', bossName: 'The Insomniac', rank: 'D', conditionLabel: 'Sleep 7+ hours', hunt_started_at: Date.now() - 86400000 },
+       win('the_carouser', 'The Carouser', 'D', 713, 200), win('the_twin_maw', 'The Twin Maw', 'E', 714, 360, null, { ...party, id: 'c1' }), win('the_twin_maw', 'The Twin Maw', 'E', 715, 360, null, { ...party, id: 'c2' })]);
+    await expect.poll(() => tally(page).then((v) => v.on), { timeout: 5_000 }).toBe(true);
+    await tap(page);
+    let v = await tally(page);
+    expect(v.eyebrow.toUpperCase()).toBe('SOLO HUNTS · 2 DOWN');
+    expect(v.rows.length).toBe(2);
+    await tap(page);
+    await expect.poll(() => tally(page).then((x) => x.on && /CO-OP/i.test(x.eyebrow)), { timeout: 5_000 }).toBe(true);
+    await tap(page);
+    v = await tally(page);
+    expect(v.eyebrow.toUpperCase()).toBe('CO-OP HUNTS · 2 DOWN');
+    expect(v.stamp.toUpperCase()).toBe('BEATEN TOGETHER');
+    expect(v.rows[0]).toMatch(/WITH ANTHONY/i);
+    await tap(page);
+    await expect.poll(() => view(page).then((x) => x.kind), { timeout: 5_000 }).toBe('defeat');   // the defeat keeps its own screen
+    expect((await tally(page)).on).toBe(false);
+  });
+
+  test('W1082 — one win alone keeps its own screen', async ({ page }) => {
+    await seed(page);
+    await page.evaluate((w) => (window as any).__queueBossResult(w), win('the_steel_wolf', 'The Steel Wolf', 'E', 721, 120));
+    await expect.poll(() => view(page).then((x) => x.kind), { timeout: 5_000 }).toBe('victory');
+    expect((await tally(page)).on).toBe(false);
+  });
 });
 
 // W995 — MORNING · DAY · EVENING sections on the Habits tab; the TO-DO pill (one-off tasks,

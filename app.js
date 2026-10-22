@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.15';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.15-w1080'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.15-w1082'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -22786,7 +22786,9 @@
   function _drainBossResultQueue() {
     if (_bossResultBusy) return;
     if (_rhHold) return;   // W1034 — a ready strike is playing; it hands the result over itself
-    const next = _bossResultQueue.shift();
+    // W1082 — wins first, then the defeats: the tally celebrates before a loss asks anything.
+    const winAt = _bossResultQueue.findIndex(function (e) { return e && e.outcome !== 'failed'; });
+    const next = winAt >= 0 ? _bossResultQueue.splice(winAt, 1)[0] : _bossResultQueue.shift();
     if (!next) {
       // v3 Phase 1z.73 — queue is empty. Chain to the cinematic
       // reveal queue (rare/ultra first-acquisition) so those modals
@@ -22803,7 +22805,29 @@
     if (_stageDefer('boss', 10, _drainBossResultQueue, ['boss'])) { _bossResultQueue.unshift(next); return; }
     _bossResultBusy = true;
     _stageBigMoment = true;
-    setTimeout(() => { try { _showBossResult(next); } catch (_) { _bossResultBusy = false; } }, 600);
+    // W1082 — several wins waiting together (STRIKE ALL, a day's evaluation, a batch of co-op
+    // settlements) make ONE tally screen, solo and co-op apart. A defeat keeps its own screen.
+    // The batch is taken when the screen opens, not now: an evaluation pass queues its kills
+    // one after another inside this 600 ms, and every one of them belongs on the tally.
+    setTimeout(() => {
+      try {
+        const batch = _hrTakeBatch(next);
+        if (batch) _showBossTally(batch); else _showBossResult(next);
+      } catch (_) { _bossResultBusy = false; }
+    }, 600);
+  }
+
+  // W1082 — pull every other waiting WIN of the same kind (solo or co-op) out of the queue
+  // to ride one tally with `next`. null when `next` is a defeat or stands alone.
+  function _hrTakeBatch(next) {
+    if (!next || next.outcome === 'failed') return null;
+    const coop = !!next.coop;
+    const peers = [];
+    for (let i = 0; i < _bossResultQueue.length; i++) {
+      const e = _bossResultQueue[i];
+      if (e && e.outcome !== 'failed' && !!e.coop === coop) { peers.push(e); _bossResultQueue.splice(i, 1); i--; }
+    }
+    return peers.length ? [next].concat(peers) : null;
   }
 
   // ── W980 · HUNT RESULTS (Claude Design handoffs 31 + 32) ────────────────
@@ -23181,6 +23205,134 @@
     _hrLive = { el: el, stop: stop, skip: skip, data: d };
     return true;
   }
+
+  // ── W1082 · THE TALLY — several wins on one screen ─────────────────────
+  // Owner: "I just don't want a user to have to go through multiple boss completion
+  // screens." A batch of wins (solo on one tally, co-op on another) shows every boss
+  // as a row — name, rank, kill, souls, relic — with the lead boss's portrait struck at
+  // the top and the souls and relics summed below. Tap skips the timeline, tap leaves;
+  // each win's seen-key is written exactly as its own screen would have, and a sealed
+  // first rare or ultra still gets its own reveal after the close (the drain chains it).
+  function _hrNumWord(n) {
+    const w = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+    return (n >= 1 && n <= 10) ? w[n] : String(n);
+  }
+  function _hrTallyRowHtml(d, i) {
+    const relic = d.relic ? (d.relic.n + ' · ' + d.relic.r) : (d.relic === false ? '' : 'Souls only');
+    const sealed = !!(d.relic && /sealed/i.test(d.relic.n));
+    const allies = (d.party || []).filter(function (p) { return !p.you; }).map(function (p) { return p.n; }).join(', ');
+    const detail = d.solo
+      ? (d.kill === 1 ? 'First kill' : _hrOrd(d.kill) + ' kill') + (relic ? ' · ' + relic : '')
+      : (allies ? 'With ' + allies : 'Together') + (relic ? ' · ' + relic : '');
+    return '<div class="hr-row hr-tr hr-rv" style="--c:#f5b842;--i:' + i + '"><img class="hr-th" src="' + esc(d.art) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<span class="hr-tc"><span class="hr-nm">' + esc(d.boss) + '<em class="hr-rk">' + esc(d.rank) + '</em></span><span class="hr-td' + (sealed ? ' hr-sealed' : '') + '">' + esc(detail) + '</span></span>' +
+      '<span class="hr-tv">' + ((d.souls | 0) > 0 ? '+<b class="hr-cnt" data-to="' + (d.souls | 0) + '">0</b>' : '') + '</span></div>';
+  }
+  function _hrTallyHtml(rows) {
+    const lead = rows[0], n = rows.length, solo = !!lead.solo;
+    const souls = rows.reduce(function (a, d) { return a + ((d.souls | 0) > 0 ? (d.souls | 0) : 0); }, 0);
+    const relics = rows.filter(function (d) { return !!d.relic; }).length;
+    const sealed = rows.filter(function (d) { return d.relic && /sealed/i.test(d.relic.n); }).length;
+    const relicLine = relics === 0 ? 'Souls only this time' : relics === 1 ? '1 relic' : relics + ' relics';
+    const relicSub = sealed ? (sealed === 1 ? '1 sealed · revealed next' : sealed + ' sealed · revealed next') : '';
+    return '<div class="hr-eyebrow hr-rv">' + (solo ? 'Solo hunts' : 'Co-op hunts') + ' · ' + n + ' down</div>' +
+      '<div class="hr-hero">' + _hrPortHtml(lead) + _hrBurstHtml() + '</div>' +
+      '<h1 class="hr-boss hr-rv">' + esc(_hrNumWord(n)) + ' bosses down</h1>' +
+      '<div class="hr-stamp">' + (solo ? 'Beaten' : 'Beaten together') + '</div>' +
+      '<div class="hr-tl">' + rows.map(_hrTallyRowHtml).join('') + '</div>' +
+      '<div class="hr-reward">' +
+        '<div class="hr-rc hr-souls hr-rv"><span class="hr-lab">Souls</span><b class="hr-big">+<span class="hr-cnt" data-to="' + souls + '">0</span></b></div>' +
+        '<div class="hr-rc hr-rv' + (relics ? '' : ' hr-none') + '"><span class="hr-lab">Relics</span><span class="hr-rn">' + esc(relicLine) + '</span>' + (relicSub ? '<span class="hr-rr">' + esc(relicSub) + '</span>' : '') + '</div>' +
+      '</div><div class="hr-hint">Tap to continue</div>';
+  }
+  function _hrTallyShow(host, rows, opts) {
+    opts = opts || {};
+    try { if (_hrLive) _hrLive.stop(); } catch (_) {}
+    let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    host.className = 'hr-screen';
+    host.innerHTML = '<div class="hr-frame hr-victory hr-tally' + (RM ? ' hr-rm' : '') + '">' + _hrTallyHtml(rows) + '</div>';
+    const el = host.querySelector('.hr-frame');
+    const q = function (s) { return el.querySelector(s); }, qa = function (s) { return [].slice.call(el.querySelectorAll(s)); };
+    const on = function (s) { qa(s).forEach(function (x) { x.classList.add('hr-on'); }); };
+    const S = { timers: [], raf: [], done: false, skipping: false, dead: false, i: 0, steps: [] };
+    const fx = function () { return !S.skipping && !RM; };
+    const count = function (c, dur) {
+      if (!c) return; const to = +c.getAttribute('data-to');
+      if (S.skipping || RM) { c.textContent = _hrN(to); return; }
+      const t0 = performance.now();
+      (function g(t) { if (S.dead || S.skipping) { c.textContent = _hrN(to); return; } const k = Math.min(1, (t - t0) / dur); c.textContent = _hrN(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) S.raf.push(requestAnimationFrame(g)); })(t0);
+    };
+    const hap = function (k) { if (!S.skipping) _hrHap(k); };
+    const snd = function (fn) { if (!S.skipping) fn(); };
+    const port = q('.hr-port'), T = [];
+    T.push([0, function () { el.classList.add('hr-in'); on('.hr-eyebrow'); }], [200, function () { port.classList.add('hr-on'); }]);
+    T.push([1700, function () {
+      port.classList.add('hr-dead'); el.classList.add('hr-struck');
+      if (fx()) { port.classList.add('hr-hit'); const b = q('.hr-burst'); if (b) b.classList.add('hr-go'); }
+      hap('heavy'); snd(function () { _hrChord([_HR_N.G4, _HR_N.C5, _HR_N.E5, _HR_N.G5]); _hrTone(_HR_N.A1, 0, 0.5, 0.14); });
+    }]);
+    T.push([2100, function () { on('.hr-boss'); }], [2280, function () { on('.hr-stamp'); hap('medium'); snd(function () { _hrTone(_HR_N.C6, 0, 0.9, 0.06); }); }]);
+    const rowsEl = qa('.hr-tr');
+    rowsEl.forEach(function (r, i) { T.push([2500 + i * 140, function () { r.classList.add('hr-on'); r.querySelectorAll('.hr-cnt').forEach(function (c) { count(c, 500); }); hap('light'); snd(function () { _hrTone([_HR_N.C5, _HR_N.E5, _HR_N.G5][i % 3], 0, 0.45, 0.045); }); }]); });
+    const R = 2500 + rowsEl.length * 140 + 300;
+    T.push([R, function () { on('.hr-rc'); count(q('.hr-rc .hr-cnt'), 700); hap('success'); snd(function () { _hrChord([_HR_N.E5, _HR_N.G5, _HR_N.C6], 0.07, 1.6, 0.065); }); }]);
+    T.push([R + 900, function () { const h = q('.hr-hint'); if (h) h.classList.add('hr-on'); S.done = true; }]);
+    S.steps = T.sort(function (a, b) { return a[0] - b[0]; });
+    // W1034 — struck from the ready-hunt sheet: the portrait opens already cracked and the
+    // timeline picks up at the title, a beat after the sheet's portrait arrives.
+    let i0 = 0, shift = 0;
+    if (opts.struck) {
+      S.skipping = true; el.classList.add('hr-skip');
+      while (i0 < S.steps.length && S.steps[i0][0] < 2100) { try { S.steps[i0][1](); } catch (_) {} i0++; }
+      S.i = i0; shift = 2100 - 460;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('hr-skip'); S.skipping = false; }); });
+    }
+    S.steps.forEach(function (st, i) { if (i < i0) return; S.timers.push(setTimeout(function () { if (S.dead) return; S.i = i + 1; try { st[1](); } catch (_) {} }, st[0] - shift)); });
+    const stop = function () { S.dead = true; S.timers.forEach(clearTimeout); S.raf.forEach(cancelAnimationFrame); if (_hrLive && _hrLive.el === el) _hrLive = null; };
+    const skip = function () {
+      if (S.done) return;
+      S.timers.forEach(clearTimeout); S.timers = [];
+      S.skipping = true; el.classList.add('hr-skip');
+      for (; S.i < S.steps.length; S.i++) { try { S.steps[S.i][1](); } catch (_) {} }
+      qa('.hr-cnt').forEach(function (c) { c.textContent = _hrN(+c.getAttribute('data-to')); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('hr-skip'); S.skipping = false; }); });
+      _hrHap('light');
+    };
+    let leaving = false;
+    const leave = function (then) {
+      if (leaving) return; leaving = true;
+      _hrHap('light');
+      el.classList.add('hr-out');
+      setTimeout(function () { stop(); try { then && then(); } catch (_) {} }, RM ? 120 : 300);
+    };
+    el.addEventListener('click', function () {
+      if (leaving || S.dead) return;
+      if (!S.done) { skip(); return; }
+      leave(opts.onClose);
+    });
+    _hrLive = { el: el, stop: stop, skip: skip, data: rows };
+    return true;
+  }
+  function _showBossTally(evts, showOpts) {
+    const overlay = document.getElementById('boss-result-overlay');
+    if (!overlay) { _bossResultBusy = false; return; }
+    evts.forEach(function (evt) {
+      try { localStorage.setItem(_bossResultSeenKey(evt.bossId, evt.kill_count), '1'); } catch (_) {}
+      if (evt.coop && evt.coop.id) { try { _hrCoopMark(evt.coop.id); } catch (_) {} }
+    });
+    _bossResultCurrent = evts[0];
+    const rows = evts.map(function (evt) {
+      let d = null;
+      try { d = _hrData(evt); } catch (_) {}
+      if (!d) d = { kind: 'victory', solo: !evt.coop, boss: evt.bossName || 'The boss', rank: String(evt.rank || 'E').toUpperCase(), art: getBossArtPath(evt.bossId), kill: Math.max(1, evt.kill_count | 0), souls: evt.souls, relic: _hrRelic(evt.drop) };
+      return d;
+    });
+    _hrTallyShow(overlay, rows, { struck: !!(showOpts && showOpts.struck), onClose: function () { closeBossResult(); } });
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('bro-locked');
+  }
+  try { window.__showBossTally = _showBossTally; } catch (_) {}   // QA
 
   function _showBossResult(evt, showOpts) {
     const overlay = document.getElementById('boss-result-overlay');
@@ -36047,7 +36199,9 @@
     if (!evt) { finish(); return; }
     _bossResultBusy = true;
     _stageBigMoment = true;
-    try { _showBossResult(evt, { struck: true }); } catch (_) { _bossResultBusy = false; }
+    // W1082 — two or more kills from one strike land on one tally; the portrait still travels.
+    const batch = _hrTakeBatch(evt);
+    try { if (batch) _showBossTally(batch, { struck: true }); else _showBossResult(evt, { struck: true }); } catch (_) { _bossResultBusy = false; }
     _rhFly(port, from, canFly, finish);
   }
   // The sheet's portrait travels to the result screen's portrait (already open underneath),
