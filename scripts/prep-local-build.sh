@@ -300,6 +300,24 @@ if [ -d ios/App/Pods ]; then
   LOW_LEFT=$(grep -rEc 'IPHONEOS_DEPLOYMENT_TARGET = (1[0-4]|[0-9])(\.[0-9]+)?;' ios/App/Pods/Pods.xcodeproj/project.pbxproj 2>/dev/null || echo 0)
   echo "  Pods project: $(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0;' ios/App/Pods/Pods.xcodeproj/project.pbxproj 2>/dev/null || echo 0) settings at 15.0, $LOW_LEFT below it"
 fi
+# W1079c — RevenueCat 4.43.2 (the SDK every RevenueCat plugin that still supports Capacitor 6
+# pins) does not compile under Xcode 27's Swift: the compiler now synthesizes a memberwise
+# init(stringRepresentation:) for PaywallColor that collides with the one the SDK declares
+# in an extension ("Invalid redeclaration of synthesized memberwise init", build 592).
+# Upstream fixed it in 5.78 (purchases-ios PR 6949) by moving the private designated
+# initializer into the struct body; the same move is made here after pod install. Marker
+# W1079c keeps it idempotent; it is a no-op once the SDK is upgraded past the fix.
+PWC="ios/App/Pods/RevenueCat/Sources/Paywalls/PaywallColor.swift"
+if [ -f "$PWC" ] && ! grep -q "W1079c" "$PWC"; then
+  perl -0pi -e '
+    my $init = qq{    /// "Designated" initializer\n    private init(stringRepresentation: String, underlyingColor: (any Sendable)?) {\n        self.stringRepresentation = stringRepresentation\n        self._underlyingColor = underlyingColor\n    }\n};
+    if (index($_, $init) >= 0) {
+      s/\Q$init\E\n//;
+      s/(    fileprivate var _underlyingColor: \(any Sendable\)\?\n\n)\}/$1    \/\/ W1079c — moved out of the private extension (upstream PR 6949): Swift 6.4 then synthesizes no memberwise init\n$init\n}/;
+    }
+  ' "$PWC"
+  echo "  RevenueCat PaywallColor.swift: $(grep -c W1079c "$PWC") (1 = patched for Xcode 27)"
+fi
 echo ""
 
 # ── 6. ITSAppUsesNonExemptEncryption = false ────────────────────────
