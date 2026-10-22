@@ -1,5 +1,6 @@
-Locks, checked.
+Several bosses, one screen.
 
+• Wins that land together go on one tally: every boss, its souls and its relic, summed at the bottom. Solo and co-op each get their own screen. A single win keeps its full screen.
 • Sign out means sign out: signing out now ends your session on every device, not only this one.
 • Lighter backups: your cloud save travels compressed and only uploads when something changed.
 • Invite links ask before they act.
