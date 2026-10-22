@@ -28,6 +28,23 @@
   // To rotate (e.g., custom domain in v2.2+), edit here only.
   const BACKEND_URL = 'https://awakened-backend.richmondcampano93.workers.dev';
 
+  // W1077 — every backend call in this file has a ceiling now. None had one: a request the
+  // server never answered held its subsystem's single-flight guard until the WebView gave
+  // up on it (about a minute), and nothing could retry meanwhile. Shadows the global for
+  // every call site below; an init that brings its own signal keeps it.
+  const FETCH_TIMEOUT_MS = 20 * 1000;
+  const _nativeFetch = window.fetch.bind(window);
+  function fetch(url, init) {
+    const opts = Object.assign({}, init || {});
+    let timer = null;
+    if (typeof AbortController === 'function' && !opts.signal) {
+      const ctl = new AbortController();
+      opts.signal = ctl.signal;
+      timer = setTimeout(function () { try { ctl.abort(); } catch (_) {} }, FETCH_TIMEOUT_MS);
+    }
+    return _nativeFetch(url, opts).finally(function () { if (timer) clearTimeout(timer); });
+  }
+
   // Backend session JWT lifetime — matches BACKEND.md §4. 90 days total.
   // (A hard 90-day expiry; there is no silent pre-expiry re-auth — the sign-in
   // gate re-appears and a same-account Apple sign-in restores state. W721 removed
@@ -251,6 +268,8 @@
     // (and re-publish it on B's heartbeat). Server re-validates membership anyway.
     try { localStorage.removeItem('hb_card_bg'); } catch (_) {}
     try { localStorage.removeItem('hb_founder_celebrated'); } catch (_) {}   // W698 — Founder celebration is per-account too
+    try { localStorage.removeItem('hb_push_token_sent_v1'); } catch (_) {}   // W1077 — the next account on this phone registers its own token
+    try { localStorage.removeItem('hb_cloud_last_push_hash'); } catch (_) {}   // W1077 — and pushes its own first save
   }
 
   // W817 — 401-driven sign-out, RACE-PROOF. Every API helper that clears the
@@ -513,17 +532,23 @@
 
     let res;
     try {
-      res = await fetch(BACKEND_URL + '/v1/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identityToken: _pendingIdentityToken,
-          alias:         alias.trim(),
-          // W740 — raw nonce; backend checks SHA256(it) === token's nonce claim.
-          // Omitted when null so a no-nonce sign-in stays backward-compatible.
-          ...(_pendingRawNonce ? { nonce: _pendingRawNonce } : {}),
-        }),
-      });
+      for (let attempt = 0; ; attempt++) {
+        res = await fetch(BACKEND_URL + '/v1/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identityToken: _pendingIdentityToken,
+            alias:         alias.trim(),
+            // W740 — raw nonce; backend checks SHA256(it) === token's nonce claim.
+            // Omitted when null so a no-nonce sign-in stays backward-compatible.
+            ...(_pendingRawNonce ? { nonce: _pendingRawNonce } : {}),
+          }),
+        });
+        // W1077 — the sign-in limit is per address: a wave of sign-ups behind one shared
+        // network (a campus, a carrier) can trip it for a stranger. Wait, then once more.
+        if (res.status !== 429 || attempt >= 1) break;
+        await new Promise(function (r) { setTimeout(r, 3000); });
+      }
     } catch (e) {
       return {
         ok: false,
@@ -1559,16 +1584,26 @@
     if (!payload || typeof payload !== 'object') {
       return { ok: false, code: 'INVALID_PAYLOAD', detail: 'payload must be an object.' };
     }
+    // W1077 — the save travels gzip-encoded where the WebView can compress (iOS 16.4+):
+    // the completion history is text that shrinks five to eight times, which keeps a
+    // long-lived hunter under the server's ceiling and the upload short. Older systems
+    // send the JSON as before; the server reads both.
+    const json = JSON.stringify(payload);
+    const headers = { 'Authorization': 'Bearer ' + u.jwt, 'Content-Type': 'application/json' };
+    let body = json;
+    if (typeof CompressionStream === 'function' && json.length > 16 * 1024) {
+      try {
+        const gz = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+        if (gz && gz.byteLength > 0 && gz.byteLength < json.length) {
+          body = gz;
+          headers['Content-Type'] = 'application/octet-stream';
+          headers['X-State-Encoding'] = 'gzip';
+        }
+      } catch (_) { body = json; }
+    }
     let res;
     try {
-      res = await fetch(BACKEND_URL + '/v1/users/me/state', {
-        method:  'POST',
-        headers: {
-          'Authorization': 'Bearer ' + u.jwt,
-          'Content-Type':  'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      res = await fetch(BACKEND_URL + '/v1/users/me/state', { method: 'POST', headers: headers, body: body });
     } catch (e) {
       return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' };
     }
@@ -1581,6 +1616,7 @@
         client_updated_at: (data && data.client_updated_at) || null,
         server_updated_at: (data && data.server_updated_at) || null,
         bytes:             (data && data.bytes) || null,
+        unchanged:         !!(data && data.unchanged),   // W1077 — the server already held this exact save
       };
     }
     if (res.status === 401) {
@@ -1618,6 +1654,13 @@
   // decline / cancel / progress / resolve / score routes were
   // removed because zero call sites remain in app.js.
   // ─────────────────────────────────────────────────────────
+  // W1077 — sign out on the server too: every token this account holds (this phone's, an
+  // old backup's, a stolen one) is refused from the next request on. Best effort: the
+  // caller bounds the wait and clears the phone regardless.
+  function revokeSession() {
+    return _authedFetch('POST', '/v1/auth/sign-out');
+  }
+
   async function _authedFetch(method, path, jsonBody) {
     const u = readUser();
     const gate = _stubGate(u);
@@ -2414,6 +2457,7 @@
     rallyWorldgate,   // W916
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
+    revokeSession,    // W1077 — server-side sign-out (bumps the account's token version)
     clearUser,
     validateAlias,
     signInWithApple,
