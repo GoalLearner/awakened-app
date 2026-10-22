@@ -25,10 +25,10 @@ const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days
 
 // W1075 SECURITY — an HMAC key shorter than this is forgeable offline from one captured token
 // (jose enforces no minimum for HS256). The documented key is 32 random bytes as hex (64 chars).
-// Below 16 bytes the key is unusable and every request fails closed; between 16 and 32 it is
-// logged once per isolate and allowed, so a merely short key never becomes an outage.
+// A short key is LOGGED once per isolate, never refused: the deployed value cannot be read
+// from here, and refusing it would sign every hunter out at once (W1081 — the throw that
+// was here for keys under 16 bytes is gone for exactly that reason).
 const KEY_MIN_BYTES = 32;
-const KEY_HARD_MIN_BYTES = 16;
 let _shortKeyWarned = false;
 
 /** Encodes the HMAC signing key from env as bytes for jose. */
@@ -37,7 +37,6 @@ function getKey(env: Env): Uint8Array {
     throw new Error('JWT_SIGNING_KEY_MISSING_OR_EMPTY');
   }
   const bytes = new TextEncoder().encode(env.JWT_SIGNING_KEY);
-  if (bytes.byteLength < KEY_HARD_MIN_BYTES) throw new Error('JWT_SIGNING_KEY_TOO_SHORT');
   if (bytes.byteLength < KEY_MIN_BYTES && !_shortKeyWarned) {
     _shortKeyWarned = true;
     console.error(`JWT_SIGNING_KEY is ${bytes.byteLength} bytes; HS256 wants at least ${KEY_MIN_BYTES}. Rotate it.`);

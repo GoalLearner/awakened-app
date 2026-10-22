@@ -49,6 +49,13 @@ printf 'true' | npx wrangler secret put SIWA_NONCE_ENFORCE</pre>
   </ul>
   <p>Then build 592 on the MacBook. It carries the app side (sign-out that really signs out, smaller cloud saves, the socket token out of the URL).</p>
 
+  <h2>Incident, 22 October</h2>
+  <div class="card">
+    <p><span class="bad">The 1:23 AM deploy signed everyone out for about twelve hours.</span> The new code refused a session-signing key shorter than 16 bytes, on the assumption that a key that short could only be a misconfiguration. It was one: the key Cloudflare has held since launch is <b>one byte long</b>, the same corruption that hit the Apple team id in July. Every session check threw, every app cleared its session, and sign-in could not mint a new one. Found in the live logs at 1:14 PM, fixed at 1:15 PM (the refusal is gone), and the key was replaced with a proper 32-byte random one at 1:17 PM.</p>
+    <p>What it means for you: every hunter signs in with Apple once; nothing on their phones was lost. And the one-byte key was itself the most serious weakness in this review, found by accident: a token signed with it could have been forged for any account. That is closed now.</p>
+    <p>The nonce enforcement from step 3 was also put back to log-only until a real sign-in has been watched in the logs; it is not the cause, but it was not proven safe either.</p>
+  </div>
+
   <h2>What was fixed</h2>
 
   <h3>Signing in and sessions</h3>
