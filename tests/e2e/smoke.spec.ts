@@ -8922,19 +8922,25 @@ test.describe('BH · Hunt results (W980)', () => {
     expect([both.goal, both.fgoal, both.time]).toEqual([20000, 15, '6h 30m']);
   });
 
-  test('none of the four screens ever says fell / felled', async ({ page }) => {
+  test('W1083 — the preview row plays the solo tally, then the co-op tally, and never says fell / felled', async ({ page }) => {
     await seed(page);
     const texts: string[] = [];
+    const tallyOn = () => page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame'); return !!(f && f.classList.contains('hr-tally') && !document.getElementById('boss-result-overlay')!.classList.contains('hidden')); });
+    const eyebrow = () => page.evaluate(() => (document.querySelector('#boss-result-overlay .hr-eyebrow')?.textContent || '').replace(/\s+/g, ' ').trim());
     await page.evaluate(() => (window as any).__previewHuntResults());
-    for (let i = 0; i < 4; i++) {
-      await expect.poll(() => view(page).then((v) => v.shown && v.kind), { timeout: 5_000 }).toBeTruthy();
-      await tap(page);
-      const v = await view(page);
-      texts.push(v.text);
-      if (v.kind === 'defeat') await page.locator('#boss-result-overlay [data-hr-later]').click(); else await tap(page);
-      await page.waitForTimeout(700);
-    }
-    expect(texts.length).toBe(4);
+    await expect.poll(tallyOn, { timeout: 5_000 }).toBe(true);
+    expect(await eyebrow()).toBe('Solo hunts · 3 down');
+    await tap(page);
+    texts.push(await view(page).then((v) => v.text));
+    await tap(page);
+    await page.waitForTimeout(700);
+    await expect.poll(tallyOn, { timeout: 5_000 }).toBe(true);
+    expect(await eyebrow()).toBe('Co-op hunts · 2 down');
+    await tap(page);
+    texts.push(await view(page).then((v) => v.text));
+    await tap(page);
+    await page.waitForTimeout(700);
+    expect(texts.length).toBe(2);
     texts.forEach((t) => expect(t).not.toMatch(/\bfell(ed)?\b/i));
     await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
   });
