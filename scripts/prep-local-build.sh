@@ -290,6 +290,16 @@ if ! command -v pod >/dev/null 2>&1; then
   exit 1
 fi
 (cd ios/App && pod install)
+# W1079b — belt over the Podfile hook above: whatever route a pod's deployment target took
+# (a podspec xcconfig, a resource-bundle target, the project default), rewrite every value
+# below 15.0 in the generated Pods project and its xcconfigs. Build 592's second attempt
+# still named Capacitor and RevenueCat at 13.0 after the hook had lifted the other pods.
+if [ -d ios/App/Pods ]; then
+  find ios/App/Pods -name project.pbxproj -print0 | xargs -0 sed -E -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = (1[0-4]|[0-9])(\.[0-9]+)?;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g'
+  find ios/App/Pods -name '*.xcconfig' -print0 | xargs -0 sed -E -i '' 's/^IPHONEOS_DEPLOYMENT_TARGET = (1[0-4]|[0-9])(\.[0-9]+)?[[:space:]]*$/IPHONEOS_DEPLOYMENT_TARGET = 15.0/'
+  LOW_LEFT=$(grep -rEc 'IPHONEOS_DEPLOYMENT_TARGET = (1[0-4]|[0-9])(\.[0-9]+)?;' ios/App/Pods/Pods.xcodeproj/project.pbxproj 2>/dev/null || echo 0)
+  echo "  Pods project: $(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0;' ios/App/Pods/Pods.xcodeproj/project.pbxproj 2>/dev/null || echo 0) settings at 15.0, $LOW_LEFT below it"
+fi
 echo ""
 
 # ── 6. ITSAppUsesNonExemptEncryption = false ────────────────────────
