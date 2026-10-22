@@ -44,6 +44,7 @@ async function sha256Hex(input: string): Promise<string> {
 interface UserRow {
   id: string;
   alias: string;
+  token_version?: number | null;
 }
 
 function validateAliasShape(
@@ -52,7 +53,9 @@ function validateAliasShape(
   if (typeof alias !== 'string') {
     return { ok: false, reason: 'Alias is required and must be a string.' };
   }
-  const trimmed = alias.trim();
+  // W1075 — runs of spaces collapse to one: the app shows every alias without its spaces,
+  // so "Ren  Diesel" and "Ren Diesel" are the same name to every hunter.
+  const trimmed = alias.trim().replace(/\s+/g, ' ');
   if (trimmed.length < 3 || trimmed.length > 20) {
     return { ok: false, reason: 'Alias must be 3–20 characters.' };
   }
@@ -112,7 +115,9 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
   } catch (err) {
     // W739 SECURITY — static detail on this unauthenticated endpoint; log the real
     // verifier error (JWKS/iss/aud/exp specifics) server-side only.
-    console.error('Apple identity token verification failed:', err);
+    // W1075 — name + message only: jose attaches the decoded token payload (sub, email) to
+    // a claim error, and an expired token is the commonest failure here.
+    console.error('Apple identity token verification failed:', err instanceof Error ? `${err.name}: ${err.message}` : String(err));
     return jsonError(401, 'APPLE_TOKEN_INVALID', 'Token verification failed.');
   }
 
@@ -142,13 +147,15 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
 
   // Returning user lookup — match by apple_sub (stable across alias changes).
   const existing = await env.DB.prepare(
-    'SELECT id, alias FROM users WHERE apple_sub = ?',
+    'SELECT id, alias, token_version FROM users WHERE apple_sub = ?',
   )
     .bind(appleSub)
     .first<UserRow>();
 
   if (existing) {
-    const jwt = await issueSessionJwt(existing.id, existing.alias, env);
+    // W1075 — minted against the current token_version, so this token outlives the
+    // hunter's earlier sign-outs and dies with the next one.
+    const jwt = await issueSessionJwt(existing.id, existing.alias, env, Number(existing.token_version ?? 0) || 0);
     return jsonOk({ jwt, alias: existing.alias, isNewUser: false });
   }
 
@@ -167,9 +174,13 @@ export async function handleAuthVerify(request: Request, env: Env): Promise<Resp
     );
   }
 
-  // New user — check alias collision (case-insensitive).
+  // New user — check alias collision. W1075 SECURITY — on the NORMALISED form (lower-case,
+  // spaces removed): the app renders every alias that way, so "Ren Diesel" would have been
+  // "rendiesel" on every screen beside the real one, and the friend lookup (which already
+  // matched this form) picked whichever row came first. The UNIQUE index of migration 0068
+  // is the belt for the race below.
   const collision = await env.DB.prepare(
-    'SELECT 1 FROM users WHERE LOWER(alias) = LOWER(?) LIMIT 1',
+    "SELECT 1 FROM users WHERE LOWER(REPLACE(alias, ' ', '')) = LOWER(REPLACE(?, ' ', '')) LIMIT 1",
   )
     .bind(alias)
     .first();

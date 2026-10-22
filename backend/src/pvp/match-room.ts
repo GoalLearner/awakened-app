@@ -27,7 +27,13 @@ import { currentSeason, softResetElo } from './seasons';
 
 const TURN_DEADLINE_MS = 45_000;      // a player has 45s to submit each turn
 const DISCONNECT_GRACE_MS = 120_000;  // sustained disconnect past this -> forfeit
-const MAX_STAT = 200;                 // anti-cheat sanity bound per stat
+// W1075 SECURITY — the build is client-reported and ranked play is only ever vs a server bot,
+// so a modded client could claim six stats of 200 (the strongest bot has 76) and climb the
+// ladder two hits a fight. The ceilings sit above every real hunter on record (2026-10-21:
+// the top build is 88 on one stat, 380 in total, at rank S with 5,186 power) and a build
+// over the total is scaled down to it, so an honest hunter is never touched.
+const MAX_STAT = 120;                 // per stat
+const MAX_STAT_TOTAL = 480;           // across the six
 const REMATCH_OFFER_MS = 25_000;      // a rematch offer expires if unanswered in 25s
 
 type Slot = 'p' | 'b';
@@ -66,7 +72,7 @@ function genMatchId(): string {
   return s;
 }
 
-function sanitizeCombatant(raw: any): RawCombatant {
+export function sanitizeCombatant(raw: any): RawCombatant {
   const stats: Record<string, number> = {};
   const KEYS = ['STR', 'VIT', 'INT', 'FOCUS', 'WILL', 'WLT'];
   const src = (raw && raw.stats) || {};
@@ -75,8 +81,14 @@ function sanitizeCombatant(raw: any): RawCombatant {
     if (!Number.isFinite(v) || v < 0) v = 0;
     stats[k] = Math.min(MAX_STAT, Math.round(v));
   }
+  const total = KEYS.reduce((a, k) => a + stats[k], 0);
+  if (total > MAX_STAT_TOTAL) {
+    const f = MAX_STAT_TOTAL / total;
+    for (const k of KEYS) stats[k] = Math.floor(stats[k] * f);
+  }
   let weaponId = String((raw && raw.weaponId) || 'unarmed');
-  if (!(weaponId in WEAPON_MOVES)) weaponId = 'unarmed';
+  // W1075 — own keys only: "constructor" passed the `in` test and crashed the kit lookup.
+  if (!Object.prototype.hasOwnProperty.call(WEAPON_MOVES, weaponId)) weaponId = 'unarmed';
   // avatar is a bare preset filename (avatar-*.png) that the OTHER client renders as an
   // <img src>; allowlist the exact shape so a peer can't inject a url / path / markup.
   let avatar = String((raw && raw.avatar) || '');
@@ -95,6 +107,7 @@ export class MatchRoom {
   env: Env;
   /** W1040 — when a heartbeat last wrote the match to storage (see webSocketMessage). */
   pingSavedAt = 0;
+  resyncAt = 0;   // W1075 — last resync served (2 s floor)
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
@@ -256,6 +269,8 @@ export class MatchRoom {
   async doState(userId: string): Promise<any> {
     const m = await this.load();
     if (!m) return { ok: false, code: 'NO_MATCH' };
+    // W1075 — a match code in the wrong hands showed both builds, both HP bars and the seed.
+    if (!this.slotFor(m, userId)) return { ok: false, code: 'NOT_PARTICIPANT' };
     if (m.phase === 'active' && this.touchPresence(m, userId)) await this.save(m);   // poll = present
     return { ok: true, state: this.view(m, userId) };
   }
@@ -485,8 +500,11 @@ export class MatchRoom {
     const slot = (tags[0] as Slot) || null;
     const userId = tags[1] || '';
     if (!slot) return;
+    // W1075 — a frame is a few dozen bytes; anything bigger is not a client of ours.
+    if (typeof message !== 'string' || message.length > 4096) return;
     let msg: any = {};
-    try { msg = JSON.parse(typeof message === 'string' ? message : ''); } catch { return; }
+    try { msg = JSON.parse(message); } catch { return; }
+    if (!msg || typeof msg !== 'object') return;
     const m = await this.load();
     if (!m) return;
     m.lastSeen[slot] = Date.now(); m.connected[slot] = true;
@@ -499,14 +517,22 @@ export class MatchRoom {
       if (t - this.pingSavedAt >= 15000) { this.pingSavedAt = t; await this.save(m); }
       return;
     }
-    if (msg.type === 'resync') { await this.save(m); try { ws.send(JSON.stringify({ type: 'state', ...this.view(m, userId) })); } catch { /* */ } return; }
+    if (msg.type === 'resync') {
+      // W1075 — a resync is a full replay plus a storage write; one every two seconds is plenty.
+      const t = Date.now();
+      if (t - this.resyncAt < 2000) return;
+      this.resyncAt = t;
+      await this.save(m);
+      try { ws.send(JSON.stringify({ type: 'state', ...this.view(m, userId) })); } catch { /* */ }
+      return;
+    }
     if (msg.type === 'forfeit') { await this.doForfeit(userId); return; }
     if (msg.type === 'submit_move') {
       const r = await this.doSubmit(userId, { turn: msg.turn, moveId: msg.moveId });
       if (!r.ok) { try { ws.send(JSON.stringify({ type: 'error', code: r.code, detail: 'submit rejected' })); } catch { /* */ } }
       return;
     }
-    await this.save(m);
+    // W1075 — an unknown frame type used to write the whole match to storage; now it is ignored.
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {

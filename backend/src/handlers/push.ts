@@ -13,7 +13,7 @@
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-import { jsonOk, jsonError } from '../lib/responses';
+import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 
 // APNs device tokens are hex strings (32 bytes = 64 chars historically; allow a
 // generous band for future formats). Reject anything else outright.
@@ -27,12 +27,8 @@ export async function handleDeviceTokenRegister(
   const rl = await env.RL_PUSH_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { token?: unknown; platform?: unknown; environment?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
-  }
+  const body = (await readJsonObject(request)) as { token?: unknown; platform?: unknown; environment?: unknown } | null;
+  if (!body) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
 
   const token = typeof body.token === 'string' ? body.token.trim() : '';
   if (!TOKEN_RE.test(token)) {
@@ -90,12 +86,8 @@ export async function handleDeviceTokenUnregister(
   const rl = await env.RL_PUSH_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { token?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
-  }
+  const body = (await readJsonObject(request)) as { token?: unknown } | null;
+  if (!body) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
   const token = typeof body.token === 'string' ? body.token.trim() : '';
   if (!TOKEN_RE.test(token)) {
     return jsonError(400, 'BAD_TOKEN', 'A valid APNs device token is required.');

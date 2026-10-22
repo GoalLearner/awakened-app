@@ -121,7 +121,8 @@ describe('GET /v1/coop-boss/pacts', () => {
     // W692 — membership is challenger OR a participant row (raid seats 4/5 have no
     // legacy partner column), so the filter probes the participant table.
     expect(sql).toMatch(/i\.challenger_user_id = \?1/);
-    expect(sql).toMatch(/EXISTS \(SELECT 1 FROM coop_boss_participants p WHERE p\.instance_id = i\.id AND p\.user_id = \?1\)/);
+    // W1076 — membership is an indexable IN (the correlated EXISTS forced a full scan per call).
+    expect(sql).toMatch(/i\.id IN \(SELECT p\.instance_id FROM coop_boss_participants p WHERE p\.user_id = \?1\)/);
     expect(sql).toMatch(/SELECT i\.id, i\.challenger_user_id, i\.partner_user_id, i\.partner2_user_id/);
   });
 

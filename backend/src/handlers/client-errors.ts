@@ -23,6 +23,11 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// W1076 — see the handler: reports past this many in the last minute are acknowledged and
+// dropped, and the retention prune runs on one report in PRUNE_ONE_IN.
+export const SHED_PER_MINUTE = 300;
+const PRUNE_ONE_IN = 25;
+export const _sample = { roll: (): number => Math.random() };
 
 /** Clamp a possibly-absent string field to a max length; null when unusable. */
 function clamp(v: unknown, max: number): string | null {
@@ -61,6 +66,16 @@ export async function handleClientErrorsPost(
   const path = clamp(body.path, 120);
 
   const now = Date.now();
+  // W1076 — load shedding. A build that crashes on launch, on a viral day, is thousands of
+  // phones each reporting six times a minute: every report was two write statements on the
+  // one D1 writer, and the error reporter itself would have taken the sync paths down. Past
+  // SHED_PER_MINUTE reports in the last minute the report is acknowledged and dropped — the
+  // first few hundred say everything a crash loop has to say.
+  const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM client_errors WHERE created_at > ?')
+    .bind(now - 60_000)
+    .first<{ n: number }>();
+  if ((Number(recent?.n) || 0) >= SHED_PER_MINUTE) return jsonOk({ ok: true, shed: true });
+
   await env.DB.prepare(
     'INSERT INTO client_errors (user_id, created_at, build, path, message, stack) VALUES (?, ?, ?, ?, ?, ?)',
   )
@@ -70,9 +85,12 @@ export async function handleClientErrorsPost(
   // Self-bounding retention: drop anything past the 30-day window. Indexed on
   // created_at so this is a cheap range delete; running it inline (rather than
   // on a cron) means the table can never outgrow the window even if crons stall.
-  await env.DB.prepare('DELETE FROM client_errors WHERE created_at < ?')
-    .bind(now - RETENTION_MS)
-    .run();
+  // W1076 — on a sample of reports (it was every report: a write-lock DELETE each time).
+  if (_sample.roll() * PRUNE_ONE_IN < 1) {
+    await env.DB.prepare('DELETE FROM client_errors WHERE created_at < ?')
+      .bind(now - RETENTION_MS)
+      .run();
+  }
 
   return jsonOk({ ok: true });
 }

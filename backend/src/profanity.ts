@@ -239,7 +239,23 @@ const RESERVED_ALIASES: ReadonlySet<string> = new Set([
  */
 export function isReservedAlias(alias: string): boolean {
   const folded = deLeet(alias);
-  return folded.length > 0 && RESERVED_ALIASES.has(folded);
+  if (folded.length > 0 && RESERVED_ALIASES.has(folded)) return true;
+  return isStaffAlias(alias);
+}
+
+// W1075 SECURITY — staff and system words. "Awakened Support wants to join your guild" or a
+// board reply from "Moderator" reads as the developers; nothing marked them as a hunter.
+// Whole-word match on the alias split at its separators (space, underscore, hyphen), plus the
+// app's own name anywhere in it. Short real names stay available: "Dev" (a given name) and
+// "Team" are deliberately absent.
+const STAFF_WORDS: ReadonlySet<string> = new Set([
+  'admin', 'admins', 'administrator', 'mod', 'mods', 'moderator', 'moderators',
+  'system', 'support', 'official', 'staff', 'developer', 'developers', 'owner',
+]);
+export function isStaffAlias(alias: string): boolean {
+  const lower = String(alias || '').toLowerCase();
+  if (lower.replace(/[^a-z0-9]/g, '').includes('awakened')) return true;
+  return lower.split(/[\s_-]+/).some((w) => STAFF_WORDS.has(w));
 }
 
 // ── W914 — PROSE mode for the Community board. isProfane() is an ALIAS filter:

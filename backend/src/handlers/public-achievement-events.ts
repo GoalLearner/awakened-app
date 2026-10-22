@@ -277,6 +277,18 @@ const MIN_BATCH_SIZE       = 1;
 const MAX_EVENT_KEY_LEN    = 64;
 const MAX_CLIENT_EVENT_ID  = 128;
 const MAX_LABEL_LEN        = 200;
+// W1075 — "defeated " plus a boss name: the longest in the roster is under 40 characters;
+// 200 let any sentence into every friend's feed.
+const BOSS_KILL_LABEL_MAX  = 72;
+// W1076 — per hunter per day (a full day of kills, ranks and milestones is a few dozen);
+// past it events are acknowledged and dropped. Rows older than the retention are pruned on
+// a sample of submits (idx_pae_time, 0068), and the feed reads only the last FEED_LOOKBACK_MS
+// so its sort is bounded however long a friendship lasts.
+export const EVENTS_PER_USER_PER_DAY = 100;
+const EVENTS_RETENTION_MS  = 180 * 24 * 60 * 60 * 1000;
+const EVENTS_PRUNE_ONE_IN  = 50;
+const FEED_LOOKBACK_MS     = 90 * 24 * 60 * 60 * 1000;
+export const _sample = { roll: (): number => Math.random() };
 
 // Time bounds for clientCreatedAt. 7 days back is enough for the
 // client to retry / backfill after a deploy; 5 minutes ahead
@@ -416,7 +428,7 @@ function validateEvent(
   let rarity: string | null = null;
 
   if (eventType === 'boss_kill') {
-    if (!RE_BOSS_KILL_LABEL.test(eventLabel)) {
+    if (!RE_BOSS_KILL_LABEL.test(eventLabel) || eventLabel.length > BOSS_KILL_LABEL_MAX) {
       return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'boss_kill label must match "defeated <bossName>".' };
     }
     if (!isInt(raw.eventValue, 1, BOSS_KILL_COUNT_MAX)) {
@@ -876,6 +888,13 @@ export async function handlePublicAchievementEventsPost(
     valid.push(check.value);
   }
 
+  // W1076 — the daily allowance (idx_pae_user_time). Events past it are acknowledged as
+  // duplicates so the client clears its queue instead of re-sending them.
+  const todayRow = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM public_achievement_events WHERE user_id = ? AND server_created_at > ?',
+  ).bind(session.userId, now - 86_400_000).first<{ n: number }>();
+  let room = Math.max(0, EVENTS_PER_USER_PER_DAY - (Number(todayRow?.n) || 0));
+
   // Insert one row per valid event with ON CONFLICT DO NOTHING.
   // Duplicates (same user_id + client_event_id) collapse silently
   // and count toward duplicateCount; new rows count toward
@@ -883,6 +902,8 @@ export async function handlePublicAchievementEventsPost(
   let insertedCount = 0;
   let duplicateCount = 0;
   for (const ev of valid) {
+    if (room <= 0) { duplicateCount++; continue; }
+    room -= 1;
     const id = crypto.randomUUID();
     const result = await env.DB.prepare(
       `INSERT INTO public_achievement_events (
@@ -909,6 +930,16 @@ export async function handlePublicAchievementEventsPost(
     const changes = (result.meta && typeof result.meta.changes === 'number') ? result.meta.changes : 0;
     if (changes > 0) insertedCount++;
     else duplicateCount++;
+  }
+
+  // W1076 — the age prune, on a sample of submits.
+  if (insertedCount > 0 && _sample.roll() * EVENTS_PRUNE_ONE_IN < 1) {
+    try {
+      await env.DB.prepare('DELETE FROM public_achievement_events WHERE server_created_at < ?')
+        .bind(now - EVENTS_RETENTION_MS).run();
+    } catch (err) {
+      console.error('public-achievement-events prune failed:', err);
+    }
   }
 
   return jsonOk({
@@ -981,7 +1012,7 @@ export async function handleFriendsActivityGet(
        FROM public_achievement_events e
        JOIN users u ON u.id = e.user_id
        LEFT JOIN public_profile_summary p ON p.user_id = e.user_id
-      WHERE e.user_id = ?
+      WHERE (e.user_id = ?
          OR e.user_id IN (
              SELECT CASE WHEN f.requester_user_id = ?
                          THEN f.recipient_user_id
@@ -989,7 +1020,8 @@ export async function handleFriendsActivityGet(
                FROM friends f
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
-           )
+           ))
+        AND e.server_created_at > ?
       ORDER BY e.server_created_at DESC
       LIMIT ?`,
   )
@@ -998,6 +1030,7 @@ export async function handleFriendsActivityGet(
       session.userId,
       session.userId,
       session.userId,
+      Date.now() - FEED_LOOKBACK_MS,
       limit,
     )
     .all<FeedRow>();

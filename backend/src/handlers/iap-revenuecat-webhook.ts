@@ -159,6 +159,29 @@ export async function handleRevenueCatWebhook(request: Request, env: Env): Promi
     return jsonOk({ ok: true, premium: true, expires_at_ms: premiumHorizon });
   }
 
+  // W1075 SECURITY — a TRANSFER: RevenueCat moved the Apple subscription to another app user
+  // (a restore on a second account). The old account's membership used to run on here until
+  // its paid-through date, so one subscription could cover several accounts. End it now; the
+  // new account's reconcile/webhook grants its own row.
+  if (type === 'TRANSFER' && Array.isArray(ev.transferred_from)) {
+    let ended = 0;
+    for (const from of ev.transferred_from.slice(0, 20)) {
+      const uid = typeof from === 'string' ? from : '';
+      if (!uid) continue;
+      try {
+        const r = await env.DB.prepare(
+          `UPDATE premium_subscriptions SET expires_at_ms = ?, last_event_ms = ?, updated_at = datetime('now')
+            WHERE user_id = ? AND expires_at_ms > ? AND last_event_ms < ?`,
+        ).bind(eventMs, eventMs, uid, eventMs, eventMs).run();
+        ended += Number(r.meta?.changes ?? 0);
+      } catch (e) {
+        console.error('[iap-webhook] transfer revoke failed', JSON.stringify({ error: e instanceof Error ? e.message : String(e) }));
+        throw e;
+      }
+    }
+    return jsonOk({ ok: true, transferred: true, ended });
+  }
+
   // Only purchase events grant; everything else is acknowledged and ignored so
   // RevenueCat stops retrying (responses are byte-identical to pre-W636).
   if (!isGrantEvent) return jsonOk({ ok: true, granted: null, reason: 'ignored' });

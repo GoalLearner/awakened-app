@@ -80,6 +80,24 @@ const EVENT_VALUE_CAPS: Record<string, number> = { sleep_minutes_total: 10080 };
 // can still lie inside human limits) but a single request can no longer finish any hunt
 // with one absurd number. Largest real values on record at the time: 44,375 steps, 181 flights.
 const COOP_VALUE_PER_DAY: Record<string, number> = { steps_total: 50_000, flights_total: 300 };
+// W1075 SECURITY — and a ceiling that follows the clock: whatever the window allows, a hunter
+// cannot have walked more than `base + perHour × hours since the hunt began` (the per-day line
+// above let one request finish any hunt the minute it started — every goal sits under one
+// day's allowance). Generous per hour (10,000 steps, 60 flights) so a first-hour power walk
+// passes; minutes asleep can never exceed the minutes elapsed.
+const COOP_BURST: Record<string, { base: number; perHour: number }> = {
+  steps_total: { base: 5_000, perHour: 10_000 },
+  flights_total: { base: 30, perHour: 60 },
+  sleep_minutes_total: { base: 60, perHour: 60 },
+};
+// W1076 — the same stream never needs more than one row: the scorer reads MAX(value) per
+// (hunt, hunter, metric), and every background sync used to add a fresh row (a new client id
+// each minute), which made this the largest table in the database with nothing reading the
+// extras. A higher value updates the stream's row in place; an equal or lower one is a
+// duplicate. Rows older than this many days are pruned on a sample of submits.
+const EVENTS_RETENTION_DAYS = 45;
+const EVENTS_PRUNE_ONE_IN = 50;
+export const _eventsSample = { roll: (): number => Math.random() };
 // W1040 SECURITY — every stored string has a ceiling. The real client sends ids of about 64
 // characters and ISO timestamps; nothing legitimate comes near these.
 const EVENT_FIELD_MAX = { id: 128, short: 40, stamp: 48, metadata: 1024 };
@@ -773,7 +791,7 @@ export async function handleVerifiedEventsSubmit(
   const errors: Array<{ index: number; reason: string }> = [];
   // W371 — cache co-op instance validations within the batch so a batch of
   // N step events for the same instance costs one lookup, not N.
-  const bossCache = new Map<string, { ok: boolean; reason?: string; days?: number }>();
+  const bossCache = new Map<string, { ok: boolean; reason?: string; days?: number; hoursElapsed?: number }>();
 
   for (let i = 0; i < events.length; i++) {
     const e = events[i] || {};
@@ -849,6 +867,31 @@ export async function handleVerifiedEventsSubmit(
       if (perDay !== undefined && value > perDay * (v.days || 1)) {
         errors.push({ index: i, reason: 'INVALID_VALUE' }); continue;
       }
+      const burst = COOP_BURST[eventType];
+      if (burst && typeof v.hoursElapsed === 'number' && value > burst.base + burst.perHour * v.hoursElapsed) {
+        errors.push({ index: i, reason: 'INVALID_VALUE' }); continue;
+      }
+      // W1076 — one row per stream (see EVENTS_RETENTION_DAYS above).
+      try {
+        const best = await env.DB.prepare(
+          `SELECT id, value FROM verified_events
+            WHERE boss_instance_id = ? AND user_id = ? AND event_type = ?
+            ORDER BY value DESC LIMIT 1`,
+        ).bind(bossInstanceId, session.userId, eventType).first<{ id: string; value: number }>();
+        if (best) {
+          if (value <= Number(best.value)) { duplicates += 1; continue; }
+          const upd = await env.DB.prepare(
+            `UPDATE verified_events SET value = ?, occurred_at = ?, metric_date = ?, window_start = ?, window_end = ?,
+                    client_created_at = ?, server_created_at = CURRENT_TIMESTAMP
+              WHERE id = ? AND value < ?`,
+          ).bind(value, occurredAt, metricDate, windowStart, windowEnd, clientCreated, best.id, value).run();
+          if (Number(upd?.meta?.changes ?? 0) > 0) inserted += 1; else duplicates += 1;
+          continue;
+        }
+      } catch (err) {
+        console.error('verified-events upsert failed:', err);
+        errors.push({ index: i, reason: 'INSERT_FAILED' }); continue;
+      }
     } else {
       // W1040 SECURITY — an event tied to no co-op hunt is read by nothing: duels are retired
       // (none active or pending), the client stopped writing them on 2026-06-12, and the last
@@ -895,6 +938,15 @@ export async function handleVerifiedEventsSubmit(
       // W739 SECURITY — don't echo raw D1 error text (table/column names) to the client.
       console.error('verified-events insert failed:', err);
       errors.push({ index: i, reason: 'INSERT_FAILED' });
+    }
+  }
+
+  // W1076 — the age prune, on a sample of submits (idx_verified_events_occurred, 0068).
+  if (inserted > 0 && _eventsSample.roll() * EVENTS_PRUNE_ONE_IN < 1) {
+    try {
+      await env.DB.prepare(`DELETE FROM verified_events WHERE occurred_at < datetime('now', '-${EVENTS_RETENTION_DAYS} days')`).run();
+    } catch (err) {
+      console.error('verified-events prune failed:', err);
     }
   }
 

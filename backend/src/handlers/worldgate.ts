@@ -332,7 +332,11 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
 }
 
 /** Accepted friends of the caller — the caller's "guild" for the Worldgate. */
-const FRIENDS_OF = `SELECT CASE WHEN f.requester_user_id = ?2 THEN f.recipient_user_id ELSE f.requester_user_id END
+// W1076 — the CASE carries the alias `id` because the two SELECT-FROM-(subquery) readers
+// below name the column: SQLite has no `AS f(id)` column list, so both of them were a
+// syntax error in production (the rally horn 500'd after burning its once-a-day row, and
+// the sheet 500'd for the rest of the week after every kill).
+const FRIENDS_OF = `SELECT CASE WHEN f.requester_user_id = ?2 THEN f.recipient_user_id ELSE f.requester_user_id END AS id
                       FROM friends f
                      WHERE f.status = 'accepted' AND (f.requester_user_id = ?2 OR f.recipient_user_id = ?2)`;
 
@@ -388,7 +392,7 @@ export async function handleWorldgateGet(
   let recent: Strike[];
   if (fz) {
     const st = fz.standings as Standing[];
-    const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f(id)`)
+    const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f`)
       .bind(session.userId).all<{ id: string }>();
     const ids = new Set((friends.results ?? []).map((r) => r.id));
     const g = st.filter((s) => ids.has(s.user_id));
@@ -514,7 +518,8 @@ export async function handleWorldgateRally(
   const gate = await ensureGate(env, week);
   const pool = await weeklyPool(env, week);
   const pct = Math.max(0, Math.min(100, Math.round((pool / Math.max(1, gate.hp)) * 100)));
-  const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f(id)`)
+  // W1076 — at most 200 friends per horn: each push is a few subrequests.
+  const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f LIMIT 200`)
     .bind(session.userId).all<{ id: string }>();
   const ids = (friends.results ?? []).map((r) => r.id);
   await env.DB.prepare('UPDATE world_gate_rallies SET sent = ? WHERE user_id = ? AND day = ?').bind(ids.length, session.userId, day).run();

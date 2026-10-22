@@ -38,7 +38,12 @@ import { notifyUser, pushConfigured } from './apns';
 // comfortably under 1000 with the log I/O. Weekly capacity: 12 dedicated cron
 // runs × 50 = 600 users/Monday (was 144) — and since W904 the 2-minute sweep
 // carries the job too, so the practical ceiling is ~42 runs × 50.
-const PAGE_USERS = 50;
+// W1076 — was 50: with 42 eligible runs a Monday that reached 2,100 users, the same 2,100
+// every week (the cursor restarted at the top). 150 × 42 = 6,300 a Monday, and a Monday
+// that does not finish hands its cursor to the next one (see runUpdatePushPage), so the
+// sweep goes round the whole base over consecutive weeks. A page of 150 is ~1,500
+// subrequests and well under a minute of wall time.
+const PAGE_USERS = 150;
 
 export const UPDATE_PUSH_NOTIF = {
   title: 'System Update',
@@ -103,7 +108,23 @@ export async function runUpdatePushPage(
   try {
     if (!pushConfigured(env)) return { ok: false, sent: 0, completed: false, reason: 'PUSH_NOT_CONFIGURED' };
 
-    await env.DB.prepare('INSERT OR IGNORE INTO push_broadcast_log (day_key) VALUES (?)').bind(dayKey).run();
+    const created = await env.DB.prepare('INSERT OR IGNORE INTO push_broadcast_log (day_key) VALUES (?)').bind(dayKey).run();
+    if (created.meta && Number(created.meta.changes) >= 1) {
+      // W1076 — a fresh day: if the previous sweep never finished, continue from its cursor
+      // instead of the top, so the hunters past last week's reach come first this week.
+      try {
+        const prev = await env.DB.prepare(
+          'SELECT cursor, completed FROM push_broadcast_log WHERE day_key < ? ORDER BY day_key DESC LIMIT 1',
+        ).bind(dayKey).first<{ cursor: string; completed: number }>();
+        if (prev && !prev.completed && typeof prev.cursor === 'string' && prev.cursor) {
+          await env.DB.prepare(
+            "UPDATE push_broadcast_log SET cursor = ? WHERE day_key = ? AND cursor = '' AND sent_users = 0",
+          ).bind(prev.cursor, dayKey).run();
+        }
+      } catch (e) {
+        console.error('[update-push] cursor carry-over skipped', e instanceof Error ? e.message : String(e));
+      }
+    }
     const row = await env.DB.prepare(
       'SELECT cursor, completed, sent_users FROM push_broadcast_log WHERE day_key = ?',
     )

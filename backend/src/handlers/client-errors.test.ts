@@ -3,7 +3,7 @@
  * substring-routed D1 mock (same pattern as the other handler tests).
  */
 import { describe, expect, it } from 'vitest';
-import { handleClientErrorsPost } from './client-errors';
+import { handleClientErrorsPost, _sample } from './client-errors';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -42,6 +42,7 @@ function makeReq(body: unknown): Request {
 
 describe('POST /v1/users/me/client-errors', () => {
   it('inserts a report and runs the retention prune', async () => {
+    _sample.roll = () => 0;   // W1076 — the prune is sampled; force it here
     const { env, calls } = makeEnv();
     const res = await handleClientErrorsPost(
       makeReq({ message: 'TypeError: x is undefined', stack: 'at foo()', build: '2.4.5-w746', path: '#armory' }),

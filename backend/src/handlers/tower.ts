@@ -11,7 +11,7 @@
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-import { jsonOk, jsonError } from '../lib/responses';
+import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 
 const ECHO_TTL_MS = 7 * 24 * 3600 * 1000;
@@ -30,10 +30,20 @@ function ptWeekStartNow(): string {
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 }
 
+/** W1075 — unix ms of 12:00 AM today, Pacific. */
+function ptDayStartMs(): number {
+  const now = new Date();
+  const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(now);
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }).formatToParts(now);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const sinceMidnight = ((get('hour') * 60 + get('minute')) * 60 + get('second')) * 1000 + (now.getTime() % 1000);
+  return dayKey ? now.getTime() - sinceMidnight : now.getTime() - 86400000;
+}
+
 async function friendIdsOf(env: Env, userId: string): Promise<string[]> {
   const rows = await env.DB.prepare(
     `SELECT requester_user_id AS a, recipient_user_id AS b FROM friends
-      WHERE status = 'accepted' AND (requester_user_id = ? OR recipient_user_id = ?) LIMIT 100`,
+      WHERE status = 'accepted' AND (requester_user_id = ? OR recipient_user_id = ?) LIMIT 90`,   // W1076 — 90 ids + the week key stay under D1's 100 bound parameters
   ).bind(userId, userId).all<{ a: string; b: string }>();
   const out: string[] = [];
   (rows.results ?? []).forEach((r) => { out.push(r.a === userId ? r.b : r.a); });
@@ -47,8 +57,8 @@ export async function handleTowerEventPost(
 ): Promise<Response> {
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: { kind?: unknown; floor?: unknown };
-  try { body = await request.json(); } catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON body.'); }
+  const body = (await readJsonObject(request)) as { kind?: unknown; floor?: unknown } | null;
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const kind = body.kind === 'clear' || body.kind === 'defeat' ? body.kind : null;
   const floor = Number(body.floor);
   if (!kind || !Number.isInteger(floor) || floor < 1 || floor > 100) {
@@ -119,8 +129,8 @@ export async function handleTowerAvengePost(
 ): Promise<Response> {
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: { event_id?: unknown };
-  try { body = await request.json(); } catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON body.'); }
+  const body = (await readJsonObject(request)) as { event_id?: unknown } | null;
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const eventId = typeof body.event_id === 'string' ? body.event_id : '';
   if (!eventId) return jsonError(400, 'MISSING_EVENT', 'event_id required.');
   const ev = await env.DB.prepare(
@@ -136,6 +146,13 @@ export async function handleTowerAvengePost(
     "SELECT 1 FROM tower_events WHERE user_id = ? AND kind = 'clear' AND floor = ? AND week_start = ? LIMIT 1",
   ).bind(session.userId, ev.floor, ptWeekStartNow()).first();
   if (!myClear) return jsonError(409, 'FLOOR_UNCLEARED', 'Clear the floor first — then avenge.');
+  // W1075 — one avenge per fallen friend per Pacific day. Two friends could otherwise trade
+  // floor-1 defeats and avenges all evening at 40 souls a time (members have unlimited lives).
+  const dayStart = ptDayStartMs();
+  const already = await env.DB.prepare(
+    "SELECT 1 FROM tower_events WHERE user_id = ? AND kind = 'defeat' AND avenged_by = ? AND avenged_at >= ? LIMIT 1",
+  ).bind(ev.user_id, session.userId, dayStart).first();
+  if (already) return jsonError(409, 'AVENGED_TODAY', 'You have already avenged them today.');
   const upd = await env.DB.prepare(
     'UPDATE tower_events SET avenged_by = ?, avenged_at = ? WHERE id = ? AND avenged_by IS NULL',
   ).bind(session.userId, Date.now(), eventId).run();

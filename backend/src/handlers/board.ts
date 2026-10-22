@@ -47,6 +47,17 @@ const ONE_UPDATE_SQL = `(COALESCE(x.kind, '') != 'update' OR x.id = (SELECT n.id
 export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
 export const AUTO_HIDE_REPORTS = 3;
+// W1075 SECURITY — reports. One account may file this many a day (a real reader reports a
+// post or two; a flood of reports was a flood of pushes to every moderator's phone, 6/min
+// for as long as it liked). Only accounts older than REPORTER_MIN_AGE_MS count toward the
+// automatic hide: three Apple IDs made this morning could hide any creator's post and, on
+// the second, mute them for a week. The moderators still see every report. And the
+// moderators hear about a post once per hour, not once per reporter.
+export const REPORTS_PER_DAY = 10;
+export const REPORTER_MIN_AGE_MS = 7 * 86400 * 1000;
+export const REPORT_PUSH_WINDOW_MS = 60 * 60 * 1000;
+// W1076 — how many followers one reply pushes (the newest first).
+export const FOLLOWER_PUSH_MAX = 200;
 
 // ── W914 — THE SPAM GUARD (owner: "prevent people from spamming the board").
 // Every number is a knob. Moderators are exempt from all of it.
@@ -243,7 +254,7 @@ function meOut(me: Me) {
 }
 
 /** W1040 — is there a block between these two hunters, in either direction? */
-async function blockedBetween(env: Env, a: string, b: string): Promise<boolean> {
+export async function blockedBetween(env: Env, a: string, b: string): Promise<boolean> {
   if (!a || !b || a === b) return false;
   const row = await env.DB.prepare(
     'SELECT 1 FROM board_blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?) LIMIT 1',
@@ -621,8 +632,11 @@ export async function handleBoardConsentPost(request: Request, env: Env, session
   const rl = await env.RL_BOARD_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
   const body = await readJson<{ version?: unknown }>(request);
-  const version = body && Number.isInteger(body.version) ? Number(body.version) : BOARD_RULES_VERSION;
-  if (version < BOARD_RULES_VERSION) return jsonError(400, 'STALE_RULES', 'The rules changed; read the current version.');
+  const offered = body && Number.isInteger(body.version) ? Number(body.version) : BOARD_RULES_VERSION;
+  if (offered < BOARD_RULES_VERSION) return jsonError(400, 'STALE_RULES', 'The rules changed; read the current version.');
+  // W1075 — what is stored is the version the SERVER is on, never the client's number: a
+  // client sending 9999 used to be excused from every future rules change.
+  const version = BOARD_RULES_VERSION;
   const now = Date.now();
   await env.DB.prepare(
     `INSERT INTO board_consents (user_id, accepted_at, version) VALUES (?, ?, ?)
@@ -800,11 +814,16 @@ export async function handleBoardReplyPost(request: Request, env: Env, session: 
 
 /** W929 — push everyone following a topic (except the replier and anyone in a block with them). */
 async function pushFollowers(env: Env, topicId: string, replierId: string, replierAlias: string, text: string, ctx?: ExecutionContext): Promise<void> {
+  // W1076 — the newest 200 followers: every push is a few subrequests, and a developers'
+  // update that half the board has replied to (replying follows) would otherwise push past
+  // the request's subrequest budget and drop the tail silently.
   const followers = await env.DB.prepare(
     `SELECT user_id FROM board_follows
       WHERE topic_id = ? AND user_id != ?
         AND user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
-        AND user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)`,
+        AND user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+      ORDER BY created_at DESC
+      LIMIT ${FOLLOWER_PUSH_MAX}`,
   ).bind(topicId, replierId, replierId, replierId).all<{ user_id: string }>();
   const list = followers.results ?? [];
   if (!list.length) return;
@@ -853,12 +872,18 @@ export async function handleBoardReplyEdit(request: Request, env: Env, session: 
   const text = clampText(body.body, BODY_MAX);
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
   if (!textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
-  const row = await env.DB.prepare('SELECT author_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
-    .bind(replyId).first<{ author_id: string; deleted_at: number | null }>();
+  const row = await env.DB.prepare('SELECT author_id, topic_id, deleted_at FROM board_replies WHERE id = ? LIMIT 1')
+    .bind(replyId).first<{ author_id: string; topic_id: string; deleted_at: number | null }>();
   if (!row || row.deleted_at != null) return jsonError(404, 'NOT_FOUND', 'No such reply.');
   if (row.author_id !== session.userId) return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own reply.');
   const denied = editDeny(await meState(env, session.userId), null, text);   // W1040
   if (denied) return denied;
+  // W1075 — an edit is a write to the topic: a locked or hidden topic takes none, exactly
+  // as it takes no new reply.
+  const tp = await env.DB.prepare('SELECT locked_at, hidden_at, deleted_at FROM board_topics WHERE id = ? LIMIT 1')
+    .bind(row.topic_id).first<{ locked_at: number | null; hidden_at: number | null; deleted_at: number | null }>();
+  if (tp && (tp.deleted_at != null || tp.hidden_at != null)) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  if (tp && tp.locked_at != null) return jsonError(403, 'LOCKED', 'This topic is locked.');
   const now = Date.now();
   await env.DB.prepare('UPDATE board_replies SET body = ?, edited_at = ? WHERE id = ?').bind(text, now, replyId).run();
   return jsonOk({ ok: true, edited_at: now });
@@ -930,6 +955,10 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
   if (!target) return jsonError(404, 'NOT_FOUND', 'Nothing to report here.');
   if (target.author_id === session.userId) return jsonError(400, 'SELF_REPORT', 'You cannot report your own post.');
   const now = Date.now();
+  // W1075 — the daily ceiling (idx_board_reports_reporter_time).
+  const today = await env.DB.prepare('SELECT COUNT(*) AS n FROM board_reports WHERE reporter_id = ? AND created_at > ?')
+    .bind(session.userId, now - 86400 * 1000).first<{ n: number }>();
+  if ((Number(today?.n) || 0) >= REPORTS_PER_DAY) return jsonError(429, 'TOO_MANY_REPORTS', 'That is enough reports for one day.');
   const ins = await env.DB.prepare(
     'INSERT OR IGNORE INTO board_reports (target_kind, target_id, reporter_id, reason, created_at) VALUES (?, ?, ?, ?, ?)',
   ).bind(kind, id, session.userId, reason, now).run();
@@ -938,12 +967,18 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
     'SELECT COUNT(*) AS n FROM board_reports WHERE target_kind = ? AND target_id = ? AND resolved_at IS NULL',
   ).bind(kind, id).first<{ n: number }>();
   const n = countRow ? Number(countRow.n) : 0;
+  // W1075 — only reporters whose account is at least a week old count toward the automatic hide.
+  const weighedRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM board_reports r JOIN users u ON u.id = r.reporter_id
+      WHERE r.target_kind = ? AND r.target_id = ? AND r.resolved_at IS NULL AND u.created_at <= ?`,
+  ).bind(kind, id, now - REPORTER_MIN_AGE_MS).first<{ n: number }>();
+  const weighed = weighedRow ? Number(weighedRow.n) : 0;
   let autoHidden = false;
   // W1040 SECURITY — three accounts could hide ANY post, the developers' pinned update included.
   // A moderator's post is reviewed by a person, never hidden by a count.
   const authorIsMod = !!(await env.DB.prepare('SELECT 1 FROM board_moderators WHERE user_id = ? LIMIT 1')
     .bind(target.author_id).first());
-  if (!authorIsMod && n >= AUTO_HIDE_REPORTS && target.hidden_at == null) {
+  if (!authorIsMod && weighed >= AUTO_HIDE_REPORTS && target.hidden_at == null) {
     const upd = await env.DB.prepare(`UPDATE ${table} SET hidden_at = ?, hidden_by = 'auto' WHERE id = ? AND hidden_at IS NULL`)
       .bind(now, id).run();
     autoHidden = !!(upd.meta && Number(upd.meta.changes) >= 1);
@@ -965,7 +1000,16 @@ export async function handleBoardReportPost(request: Request, env: Env, session:
       }
     }
   }
-  if (fresh) {
+  // W1075 — one push per post per hour: a second report inside the hour rides the first one's
+  // push, unless it changed something (the hide or the mute) worth hearing about.
+  let recentlyPushed = false;
+  if (fresh && !autoHidden && !autoMuted) {
+    const earlier = await env.DB.prepare(
+      'SELECT 1 FROM board_reports WHERE target_kind = ? AND target_id = ? AND reporter_id <> ? AND created_at > ? LIMIT 1',
+    ).bind(kind, id, session.userId, now - REPORT_PUSH_WINDOW_MS).first();
+    recentlyPushed = !!earlier;
+  }
+  if (fresh && !recentlyPushed) {
     // Every moderator hears about every report — that is the 1.2 "timely
     // response" mechanism. notifyUser never throws.
     const mods = await env.DB.prepare('SELECT user_id FROM board_moderators').bind().all<{ user_id: string }>();

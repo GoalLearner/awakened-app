@@ -14,9 +14,11 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { blockedBetween } from './board';
 
 interface ProfileRow {
   board_role?: string | null;   // W912
+  user_id?: string;             // W1075 — for the block check
   alias: string;
   rank_label: string | null;
   rank_tier: string | null;
@@ -59,7 +61,7 @@ export async function handlePublicProfileGet(
   }
 
   const row = await env.DB.prepare(
-    `SELECT u.alias AS alias,
+    `SELECT u.alias AS alias, u.id AS user_id,
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
             pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.arena_title AS arena_title,
@@ -94,6 +96,10 @@ export async function handlePublicProfileGet(
     .first<ProfileRow>();
 
   if (!row) {
+    return jsonError(404, 'NOT_FOUND', 'No hunter with that alias.');
+  }
+  // W1075 — a block hides the card both ways, worded exactly like a missing hunter.
+  if (row.user_id && row.user_id !== session.userId && (await blockedBetween(env, session.userId, row.user_id))) {
     return jsonError(404, 'NOT_FOUND', 'No hunter with that alias.');
   }
 

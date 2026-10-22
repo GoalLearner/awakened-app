@@ -132,11 +132,16 @@ export async function sweepPactFlameRisk(
     if (!pushConfigured(env)) return { ok: false, pairs: 0, sent: 0, reason: 'PUSH_NOT_CONFIGURED' };
 
     // Every started instance in the streak-relevant window + its full roster.
+    // W1076 — bounded: idx_coop_boss_starts_at (0068) serves the range, and the newest
+    // 20,000 hunts cover any pair active this week; past ~90,000 started hunts the
+    // participant lookups alone would exceed the request's subrequest budget.
     const rows = await env.DB.prepare(
       `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.starts_at
          FROM coop_boss_instances i
         WHERE i.starts_at IS NOT NULL
-          AND i.starts_at >= datetime('now', '-${HISTORY_DAYS} days')`,
+          AND i.starts_at >= datetime('now', '-${HISTORY_DAYS} days')
+        ORDER BY i.starts_at DESC
+        LIMIT 20000`,
     ).all<StartedRow>();
     const list = rows.results ?? [];
     const ids = list.map((r) => r.id).filter((x): x is string => !!x);

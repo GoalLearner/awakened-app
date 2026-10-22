@@ -316,18 +316,18 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     expect(json.ok).toBe(true);
     expect(json.insertedCount).toBe(1);
     const calls = db._calls();
-    expect(calls[0]?.sql).toMatch(/INSERT INTO public_achievement_events/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/INSERT INTO public_achievement_events/);
     // Bind position 4 = eventLabel; must be the exact canonical
     // privacy-safe string. No card/item name leaked.
-    expect(calls[0]?.binds[4]).toBe('looted an ultra-rare item');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('looted an ultra-rare item');
     // Bind position 3 = eventKey; must be the fixed allowlist
     // value, not a card_id or item slug.
-    expect(calls[0]?.binds[3]).toBe('ultra_rare');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('ultra_rare');
     // Bind position 5 = eventValue; null for this event type.
-    expect(calls[0]?.binds[5]).toBeNull();
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBeNull();
     // Bind position 6 = rarity; null for this event type so the
     // existing boss-rank semantic on `rarity` stays clean.
-    expect(calls[0]?.binds[6]).toBeNull();
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
   });
 
   it('rejects ultra_rare_drop with an exact card/item name in the label', async () => {
@@ -415,7 +415,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       session,
     );
     const calls = db._calls();
-    const insert = calls[0]!;
+    const insert = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!;
     // 10 fixed binds — no slot ever holds card_id / card_name /
     // arbitrary client metadata.
     expect(insert.binds.length).toBe(10);
@@ -598,7 +598,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     // SQL hardcodes metadata_json = NULL in the INSERT; no client
     // metadata is ever bound. The bind list has 10 positions; the
     // INSERT uses 10 ? placeholders for non-metadata fields.
-    expect(calls[0]?.binds.length).toBe(10);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds.length).toBe(10);
   });
 
   it('inserts a valid boss_kill and returns insertedCount=1', async () => {
@@ -614,19 +614,19 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     expect(json.insertedCount).toBe(1);
     expect(json.duplicateCount).toBe(0);
     const calls = db._calls();
-    expect(calls[0]?.sql).toMatch(/INSERT INTO public_achievement_events/);
-    expect(calls[0]?.sql).toMatch(/ON CONFLICT\(user_id, client_event_id\) DO NOTHING/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/INSERT INTO public_achievement_events/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/ON CONFLICT\(user_id, client_event_id\) DO NOTHING/);
     // Binds: id, user_id, type, key, label, value, rarity, cliId,
     // cliAt, serverAt.
-    expect(calls[0]?.binds[1]).toBe('user-abc');
-    expect(calls[0]?.binds[2]).toBe('boss_kill');
-    expect(calls[0]?.binds[3]).toBe('glass_strider');
-    expect(calls[0]?.binds[4]).toBe('defeated The Glass Strider');
-    expect(calls[0]?.binds[5]).toBe(4);
-    expect(calls[0]?.binds[6]).toBe('D');
-    expect(calls[0]?.binds[7]).toBe('boss_kill:glass_strider:4');
-    expect(calls[0]?.binds[8]).toBe(NOW_ISO);
-    expect(calls[0]?.binds[9]).toBe(NOW_UTC);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[1]).toBe('user-abc');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('boss_kill');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('glass_strider');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('defeated The Glass Strider');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(4);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBe('D');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[7]).toBe('boss_kill:glass_strider:4');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[8]).toBe(NOW_ISO);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[9]).toBe(NOW_UTC);
   });
 
   it('inserts a valid rank_up', async () => {
@@ -699,10 +699,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[3]).toBe('rare');
-    expect(calls[0]?.binds[4]).toBe('found a rare item');
-    expect(calls[0]?.binds[5]).toBeNull();
-    expect(calls[0]?.binds[6]).toBeNull();
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('rare');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('found a rare item');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBeNull();
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
   });
 
   it('rejects rare_item_drop with an exact item name in the label', async () => {
@@ -774,10 +774,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[3]).toBe('step_100k_club');
-    expect(calls[0]?.binds[4]).toBe('joined the 100K Step Club');
-    expect(calls[0]?.binds[5]).toBe(100000);
-    expect(calls[0]?.binds[6]).toBeNull();
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('step_100k_club');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('joined the 100K Step Club');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(100000);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
   });
 
   it('rejects step_100k_club_unlocked with a 50K Step Club label', async () => {
@@ -848,10 +848,10 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       );
       expect(res.status).toBe(200);
       const calls = db._calls();
-      expect(calls[0]?.binds[3]).toBe('verified_streak:' + band);
-      expect(calls[0]?.binds[4]).toBe(`reached a ${band}-day verified streak`);
-      expect(calls[0]?.binds[5]).toBe(band);
-      expect(calls[0]?.binds[6]).toBeNull();
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('verified_streak:' + band);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe(`reached a ${band}-day verified streak`);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(band);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
     });
   }
 
@@ -951,7 +951,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       makeEnv(db), session,
     );
     const calls = db._calls();
-    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    const joined = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!.binds.map(b => String(b)).join('|');
     expect(joined).not.toContain('dream_woven_hood');
     expect(joined).not.toContain('Dream-Woven Hood');
     expect(joined).not.toContain('leak');
@@ -970,7 +970,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       makeEnv(db), session,
     );
     const calls = db._calls();
-    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    const joined = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!.binds.map(b => String(b)).join('|');
     expect(joined).not.toContain('Quit smoking');
     expect(joined).not.toContain('meditation');
     expect(joined).not.toContain('leak');
@@ -995,11 +995,11 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       );
       expect(res.status).toBe(200);
       const calls = db._calls();
-      expect(calls[0]?.binds[2]).toBe('perfect_day');
-      expect(calls[0]?.binds[3]).toBe('perfect_day:' + band);
-      expect(calls[0]?.binds[4]).toBe(`sealed a ${band}-day Perfect streak`);
-      expect(calls[0]?.binds[5]).toBe(band);
-      expect(calls[0]?.binds[6]).toBeNull();
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('perfect_day');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('perfect_day:' + band);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe(`sealed a ${band}-day Perfect streak`);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(band);
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
     });
   }
 
@@ -1119,7 +1119,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       makeEnv(db), session,
     );
     const calls = db._calls();
-    const joined = calls[0]!.binds.map(b => String(b)).join('|');
+    const joined = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!.binds.map(b => String(b)).join('|');
     expect(joined).not.toContain('Quit smoking');
     expect(joined).not.toContain('meditation');
     expect(joined).not.toContain('leak');
@@ -1150,11 +1150,11 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       );
       expect(res.status).toBe(200);
       const calls = db._calls();
-      expect(calls[0]?.binds[2]).toBe('verified_workout');
-      expect(calls[0]?.binds[3]).toBe('verified_workout:2026-05-31');
-      expect(calls[0]?.binds[4]).toBe('completed a verified workout');
-      expect(calls[0]?.binds[5]).toBeNull();   // eventValue
-      expect(calls[0]?.binds[6]).toBeNull();   // rarity
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('verified_workout');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('verified_workout:2026-05-31');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('completed a verified workout');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBeNull();   // eventValue
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();   // rarity
     });
 
     it('rejects verified_workout with wrong label', async () => {
@@ -1227,7 +1227,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       expect(res.status).toBe(200);  // request itself succeeds
       const calls = db._calls();
       // Only the named fields are bound; smuggled values never touch the DB.
-      const binds = calls[0]?.binds ?? [];
+      const binds = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds ?? [];
       expect(binds.length).toBe(10);          // 10 named bind positions
       expect(binds[4]).toBe('completed a verified workout');
       expect(binds[5]).toBeNull();             // eventValue stays null
@@ -1256,11 +1256,11 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       );
       expect(res.status).toBe(200);
       const calls = db._calls();
-      expect(calls[0]?.binds[2]).toBe('verified_sleep_7h');
-      expect(calls[0]?.binds[3]).toBe('verified_sleep_7h:2026-05-31');
-      expect(calls[0]?.binds[4]).toBe('slept over 7 hours last night');
-      expect(calls[0]?.binds[5]).toBeNull();
-      expect(calls[0]?.binds[6]).toBeNull();
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('verified_sleep_7h');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('verified_sleep_7h:2026-05-31');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('slept over 7 hours last night');
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBeNull();
+      expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
     });
 
     it('rejects verified_sleep_7h with wrong label', async () => {
@@ -1333,7 +1333,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
         makeReq({ events: [smuggled] }), makeEnv(db), session,
       );
       expect(res.status).toBe(200);
-      const binds = db._calls()[0]?.binds ?? [];
+      const binds = db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds ?? [];
       expect(binds.length).toBe(10);
       expect(binds[4]).toBe('slept over 7 hours last night');
       expect(binds[5]).toBeNull();
@@ -1362,11 +1362,11 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
         );
         expect(res.status).toBe(200);
         const calls = db._calls();
-        expect(calls[0]?.binds[2]).toBe('flights_milestone_bucket');
-        expect(calls[0]?.binds[3]).toBe(`flights_milestone_bucket:2026-05-31:${bucket}`);
-        expect(calls[0]?.binds[4]).toBe(`climbed ${bucket} flights today`);
-        expect(calls[0]?.binds[5]).toBe(bucket);
-        expect(calls[0]?.binds[6]).toBeNull();
+        expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('flights_milestone_bucket');
+        expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe(`flights_milestone_bucket:2026-05-31:${bucket}`);
+        expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe(`climbed ${bucket} flights today`);
+        expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(bucket);
+        expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
       });
     }
 
@@ -1471,7 +1471,7 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
         makeReq({ events: [smuggled] }), makeEnv(db), session,
       );
       expect(res.status).toBe(200);
-      const binds = db._calls()[0]?.binds ?? [];
+      const binds = db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds ?? [];
       expect(binds.length).toBe(10);
       expect(binds[4]).toBe('climbed 10 flights today');
       expect(binds[5]).toBe(10);                  // bucket, NOT 47
@@ -1501,11 +1501,11 @@ describe('arena_title_earned (W258)', () => {
     );
     expect(res.status).toBe(200);
     const calls = db._calls();
-    expect(calls[0]?.binds[2]).toBe('arena_title_earned');
-    expect(calls[0]?.binds[3]).toBe('asc_duelist');
-    expect(calls[0]?.binds[4]).toBe('earned the title "Reaver"');
-    expect(calls[0]?.binds[5]).toBeNull();   // eventValue
-    expect(calls[0]?.binds[6]).toBeNull();   // rarity
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[2]).toBe('arena_title_earned');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('asc_duelist');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "Reaver"');
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBeNull();   // eventValue
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();   // rarity
   });
 
   it('accepts the apex title (real-player prestige path)', async () => {
@@ -1532,7 +1532,7 @@ describe('arena_title_earned (W258)', () => {
       }] }), makeEnv(db), session,
     );
     expect(res.status).toBe(200);
-    expect(db._calls()[0]?.binds[4]).toBe('earned the title "Warbringer"');
+    expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "Warbringer"');
   });
 
   it('rejects a legacy label on a W266 id (cross-era tamper)', async () => {
@@ -1665,13 +1665,13 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     const req = new Request('https://example.com/v1/friends/activity?limit=30');
     await handleFriendsActivityGet(req, makeEnv(db), session);
     const calls = db._calls();
-    expect(calls[0]?.sql).toMatch(/FROM friends/);
-    expect(calls[0]?.sql).toMatch(/status = 'accepted'/);
-    expect(calls[0]?.sql).toMatch(/ORDER BY e\.server_created_at DESC/);
-    expect(calls[0]?.sql).toMatch(/LIMIT \?/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/FROM friends/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/status = 'accepted'/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/ORDER BY e\.server_created_at DESC/);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/LIMIT \?/);
     // limit + 4 user-id binds = 5 positional binds total.
-    expect(calls[0]?.binds.length).toBe(5);
-    expect(calls[0]?.binds[4]).toBe(30);
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds.length).toBe(6);   // W1076 — the 90-day feed bound
+    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(30);   // W1076 — binds: 4 ids, the lookback, the limit
   });
 
   it('exposes rankLabel as null when LEFT JOIN miss', async () => {

@@ -99,6 +99,34 @@ async function fetchJwks(): Promise<JWK[]> {
   return data.keys;
 }
 
+// W1075 — the forced refetch is allowed once per this many ms per isolate; inside the window an
+// unknown kid just reuses whatever the last forced fetch returned.
+const UNKNOWN_KID_REFETCH_MS = 5 * 60 * 1000;
+let _lastForcedFetchAt = 0;
+
+async function refetchJwksForUnknownKid(): Promise<JWK[]> {
+  const nowMs = Date.now();
+  if (nowMs - _lastForcedFetchAt < UNKNOWN_KID_REFETCH_MS && _memCache) return _memCache.keys;
+  _lastForcedFetchAt = nowMs;
+  // cacheTtl 0 asks the edge for a fresh copy instead of its day-old cached response.
+  const res = await fetch(APPLE_JWKS_URL, { cf: { cacheTtl: 0, cacheEverything: false } });
+  if (!res.ok) {
+    throw new Error(`APPLE_JWKS_FETCH_FAILED: status ${res.status}`);
+  }
+  const data = (await res.json()) as AppleJwksResponse;
+  if (!data || !Array.isArray(data.keys)) {
+    throw new Error('APPLE_JWKS_MALFORMED');
+  }
+  _memCache = { keys: data.keys, expiresAt: nowMs + JWKS_TTL_SECONDS * 1000 };
+  return data.keys;
+}
+
+/** Test seam: forget the cached key set and the refetch throttle. */
+export function _resetJwksCacheForTests(): void {
+  _memCache = null;
+  _lastForcedFetchAt = 0;
+}
+
 export interface AppleIdentityPayload {
   /** Stable per-(app, user) identifier issued by Apple. Used as the
    * apple_sub column in the users table. */
@@ -136,8 +164,16 @@ export async function verifyAppleIdentityToken(
     throw new Error(`UNSUPPORTED_TOKEN_ALG: ${alg}`);
   }
 
-  const keys = await fetchJwks();
-  const jwk = keys.find((k) => (k as { kid?: string }).kid === kid);
+  let keys = await fetchJwks();
+  let jwk = keys.find((k) => (k as { kid?: string }).kid === kid);
+  if (!jwk) {
+    // W1075 — Apple rotates its signing keys. A token signed with a key the 24-hour caches
+    // have not seen is the first sign of a rotation, not an attack: refetch once, bypassing
+    // both caches, and look again. Throttled per isolate so a stream of tokens with made-up
+    // kids cannot turn this into a JWKS-fetch amplifier.
+    keys = await refetchJwksForUnknownKid();
+    jwk = keys.find((k) => (k as { kid?: string }).kid === kid);
+  }
   if (!jwk) {
     throw new Error(`NO_MATCHING_JWK_FOR_KID: ${kid}`);
   }

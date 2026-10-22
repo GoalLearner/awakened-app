@@ -22,7 +22,8 @@
  * for `wrangler tail` observability.
  */
 import type { Env } from './env';
-import { verifySessionJwt } from './session-jwt';
+import { verifySessionJwt, sessionLiveness } from './session-jwt';
+import { handleAuthSignOut } from './handlers/auth-sign-out';
 import { handleAuthVerify } from './handlers/auth-verify';
 import { handleAuthRefresh } from './handlers/auth-refresh';
 import { handleLeaderboardSubmit } from './handlers/leaderboard-submit';
@@ -227,6 +228,20 @@ export default {
     let response: Response;
 
     try {
+      // W1075 SECURITY — the admin routes share one secret and had no limiter at all, so a
+      // leaked secret could be driven at full speed (one of them sends real pushes). Per-IP
+      // budget borrowed from the sign-in limiter (10/min); the owner's scripts call these a
+      // few times a week.
+      if (path.startsWith('/v1/admin/')) {
+        const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const rl = await env.RL_AUTH_VERIFY.limit({ key: 'admin:' + ip });
+        if (!rl.success) {
+          response = jsonError(429, 'RATE_LIMITED', 'Slow down.');
+          logRequest(method, path, response.status, Date.now() - startMs);
+          return withCors(response);
+        }
+      }
+
       // ── Public routes ──
       if (path === '/v1/auth/verify' && method === 'POST') {
         response = await handleAuthVerify(request, env);
@@ -356,21 +371,19 @@ export default {
           // guaranteed to succeed — no extra write on the delete path. Fails OPEN on a transient
           // D1 error (degrades to the prior stateless behaviour) so a DB blip can never lock the
           // entire userbase out.
-          try {
-            const alive = await env.DB.prepare('SELECT 1 FROM users WHERE id = ? LIMIT 1')
-              .bind(session.userId)
-              .first();
-            if (!alive) {
-              response = jsonError(
-                401,
-                'SESSION_REVOKED',
-                'This account no longer exists. Please sign in again.',
-              );
-              logRequest(method, path, response.status, Date.now() - startMs);
-              return withCors(response);
-            }
-          } catch (err) {
-            console.error('session existence check failed (allowing as stateless fallback):', err);
+          // W1075 — the same lookup now also carries users.token_version: a token minted before
+          // the hunter's last sign-out is refused here (sessionLiveness), at no extra read.
+          const liveness = await sessionLiveness(env, session);
+          if (liveness === 'gone' || liveness === 'revoked') {
+            response = jsonError(
+              401,
+              'SESSION_REVOKED',
+              liveness === 'gone'
+                ? 'This account no longer exists. Please sign in again.'
+                : 'You signed out of this account. Please sign in again.',
+            );
+            logRequest(method, path, response.status, Date.now() - startMs);
+            return withCors(response);
           }
 
           if (path === '/v1/leaderboard/submit' && method === 'POST') {
@@ -406,6 +419,10 @@ export default {
             response = await handleRankBandGet(request, env, session);
           } else if (path === '/v1/account/delete' && method === 'POST') {
             response = await handleAccountDelete(request, env, session);
+          // W1075 — sign out everywhere: bumps users.token_version so every outstanding token
+          // (this phone's, a stolen one, an old backup's) is refused from the next request on.
+          } else if (path === '/v1/auth/sign-out' && method === 'POST') {
+            response = await handleAuthSignOut(env, session);
           } else if (path === '/v1/users/me/state' && method === 'GET') {
             // Cloud Sync v1 (v3 Phase 1w) — backup fetch.
             response = await handleUserStateGet(request, env, session);

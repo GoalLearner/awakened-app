@@ -40,6 +40,10 @@ export async function handleCoopPacts(
   // (starts_at stamped when the last seat accepted) counts toward the flame,
   // win or lose. is_win rides along so computePacts can keep `total` (the Bond,
   // "bosses defeated together") a wins-only stat.
+  // W1076 — the OR of a column test and a correlated EXISTS defeated both indexes (a full
+  // scan of every hunt ever started, per call). An OR of two indexable terms — the column
+  // (idx_coop_boss_challenger) and an IN over the participant index — lets SQLite take its
+  // multi-index OR path, as the list endpoint's query already does.
   const rows = await env.DB.prepare(
     `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id,
             i.starts_at, i.resolved_at,
@@ -47,7 +51,7 @@ export async function handleCoopPacts(
        FROM coop_boss_instances i
       WHERE i.starts_at IS NOT NULL
         AND ( i.challenger_user_id = ?1
-              OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?1) )
+              OR i.id IN (SELECT p.instance_id FROM coop_boss_participants p WHERE p.user_id = ?1) )
       ORDER BY i.starts_at DESC
       LIMIT ?2`,
   )

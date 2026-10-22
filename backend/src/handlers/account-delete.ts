@@ -74,6 +74,7 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM coop_boss_participants WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM coop_boss_participants WHERE instance_id NOT IN (SELECT id FROM coop_boss_instances)');
   await bestEffortDelete(env, 'DELETE FROM duels WHERE challenger_user_id = ? OR opponent_user_id = ?', uid, uid);
+  await bestEffortDelete(env, 'DELETE FROM duel_progress_snapshots WHERE user_id = ?', uid);   // W1075 — the one user-keyed table without a cascade
   await bestEffortDelete(env, 'DELETE FROM app_opens WHERE user_id = ?', uid); // 0027 retention rows
   await bestEffortDelete(env, 'DELETE FROM recap_texts WHERE user_id = ?', uid); // 0066 — W1015 Monday recap text
   // W721 — user-id-keyed tables added after W383 that have no cascade and were

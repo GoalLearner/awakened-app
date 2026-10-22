@@ -165,7 +165,7 @@ function wgEnv(st: WgState): Env {
               return { results, success: true, meta: {} };
             }
             if (/AND updated_at > \?/.test(sql)) return { results: st.merged.filter((r) => (r.updated_at || 0) > (binds[1] as number)).map((r) => ({ user_id: r.user_id })), success: true, meta: {} };
-            if (/AS f\(id\)/.test(sql)) return { results: st.friends.map((id) => ({ id })), success: true, meta: {} };
+            if (/^SELECT id FROM \(SELECT CASE/.test(sql)) return { results: st.friends.map((id) => ({ id })), success: true, meta: {} };
             if (/FROM world_gates WHERE week_start </.test(sql)) return { results: [], success: true, meta: {} };
             if (/FROM weekly_step_records/.test(sql)) return { results: [], success: true, meta: {} };
             return { results: [], success: true, meta: {} };

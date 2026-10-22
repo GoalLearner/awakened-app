@@ -5,8 +5,8 @@
 // headers on a WS handshake); HTTP uses the standard Bearer gate in index.ts.
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-import { verifySessionJwt } from '../session-jwt';
-import { jsonError, jsonOk } from '../lib/responses';
+import { verifySessionJwt, sessionLiveness } from '../session-jwt';
+import { jsonError, jsonOk, readJsonObject } from '../lib/responses';
 import { eloTier } from '../pvp/elo';
 import { currentSeason, softResetElo, daysLeft, PVP_PLACEMENT_GAMES, type Season } from '../pvp/seasons';
 import { pickBot, botMeta } from '../pvp/bots';
@@ -38,8 +38,7 @@ function forwardToDo(env: Env, code: string, action: string, userId: string, ali
 export async function handlePvpCreate(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = genCode();
   return forwardToDo(env, code, 'create', session.userId, session.alias, { code, combatant: body.combatant, ranked: false });
 }
@@ -48,8 +47,7 @@ export async function handlePvpCreate(request: Request, env: Env, session: Sessi
 export async function handlePvpJoin(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'join', session.userId, session.alias, { combatant: body.combatant });
@@ -62,8 +60,7 @@ export async function handlePvpJoin(request: Request, env: Env, session: Session
 export async function handlePvpFind(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   // Match the Echo to the player's CURRENT season standing: a prior-season row is projected
   // through the same soft-reset the DO will commit on this match (and that handlePvpRating shows),
   // so the bot isn't picked off a stale pre-reset ELO. Degrades to raw elo / 1500 pre-seasons.
@@ -112,8 +109,7 @@ export async function handlePvpEchoFriend(request: Request, env: Env, session: S
   // Echo tap isn't 429'd ("slow down a moment") when a co-op hunt is running.
   const rl = await env.RL_PVP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const friendAlias = String(body.friendAlias || '').slice(0, 40);
   if (!friendAlias) return jsonError(400, 'INVALID_ALIAS', 'friendAlias is required.');
   // resolve the friend by alias + verify an ACCEPTED friendship (you can only echo a real friend)
@@ -154,8 +150,7 @@ export async function handlePvpEchoFriend(request: Request, env: Env, session: S
 export async function handlePvpSubmit(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585 — 60/min, above live-turn cadence
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'submit', session.userId, session.alias, { turn: body.turn, moveId: body.moveId });
@@ -165,8 +160,7 @@ export async function handlePvpSubmit(request: Request, env: Env, session: Sessi
 export async function handlePvpForfeit(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'forfeit', session.userId, session.alias, {});
@@ -176,8 +170,7 @@ export async function handlePvpForfeit(request: Request, env: Env, session: Sess
 export async function handlePvpRematch(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_DUELS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'rematch', session.userId, session.alias, {});
@@ -187,8 +180,7 @@ export async function handlePvpRematch(request: Request, env: Env, session: Sess
 export async function handlePvpRematchDecline(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_PVP_ACTION.limit({ key: session.userId });   // W585
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: any = {};
-  try { body = await request.json(); } catch { /* */ }
+  const body: any = (await readJsonObject(request)) ?? {};   // W1075 — a `null` body is an empty one, not a 500
   const code = String(body.code || '').toUpperCase();
   if (!code) return jsonError(400, 'NO_CODE', 'code required');
   return forwardToDo(env, code, 'rematchNo', session.userId, session.alias, {});
@@ -296,10 +288,10 @@ export async function handlePvpWs(request: Request, env: Env): Promise<Response>
   // the W740 "account deleted" check that every other PvP route has.
   const rl = await env.RL_PVP_ACTION.limit({ key: 'ws:' + session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  try {
-    const alive = await env.DB.prepare('SELECT 1 FROM users WHERE id = ? LIMIT 1').bind(session.userId).first();
-    if (!alive) return jsonError(401, 'SESSION_REVOKED', 'This account no longer exists.');
-  } catch { /* a D1 blip degrades to the stateless check, as on the Bearer gate */ }
+  // W1075 — the same liveness check as the Bearer gate (deleted OR signed out); a D1 blip
+  // degrades to the stateless check, as there.
+  const liveness = await sessionLiveness(env, session);
+  if (liveness === 'gone' || liveness === 'revoked') return jsonError(401, 'SESSION_REVOKED', 'Sign in again.');
   const stub = env.MATCH.get(env.MATCH.idFromName(code));
   const headers = new Headers(request.headers);
   headers.set('X-PvP-User', session.userId);

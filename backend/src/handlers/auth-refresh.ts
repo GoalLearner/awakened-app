@@ -38,19 +38,26 @@ export async function handleAuthRefresh(request: Request, env: Env): Promise<Res
     return jsonError(401, 'NOT_REFRESHABLE', 'Session is not refreshable. Sign in again.');
   }
 
-  // Same per-user read bucket the co-op list uses — refresh fires at most
-  // ~daily per client, so any pressure here is abuse, not usage.
-  const rl = await env.RL_FRIENDS_READ.limit({ key: session.userId });
+  // W1075 — its own bucket (was the 30/min friends-read bucket, which a chatty boot could
+  // drain first and 429 the one call that keeps a hunter signed in). Refresh fires about
+  // once a day per device; the client keeps its session on a 429 and tries again later.
+  const rl = await (env.RL_AUTH_REFRESH ?? env.RL_FRIENDS_READ).limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  const row = await env.DB.prepare('SELECT id, alias FROM users WHERE id = ?')
+  const row = await env.DB.prepare('SELECT id, alias, token_version FROM users WHERE id = ?')
     .bind(session.userId)
-    .first<{ id: string; alias: string }>();
+    .first<{ id: string; alias: string; token_version: number | null }>();
   if (!row || typeof row.alias !== 'string' || row.alias.length === 0) {
     // W740 — account deleted (or never existed): refresh must not resurrect it.
     return jsonError(401, 'ACCOUNT_GONE', 'Account no longer exists. Sign in again.');
   }
+  // W1075 — a token from before the hunter's last sign-out can never be exchanged for a
+  // fresh one: that was the hole a stolen token lived in (90 days, renewed for ever).
+  const current = Number(row.token_version ?? 0) || 0;
+  if (current !== (session.tokenVersion ?? 0)) {
+    return jsonError(401, 'SESSION_REVOKED', 'You signed out of this account. Sign in again.');
+  }
 
-  const jwt = await issueSessionJwt(row.id, row.alias, env);
+  const jwt = await issueSessionJwt(row.id, row.alias, env, current);
   return jsonOk({ ok: true, jwt, alias: row.alias });
 }

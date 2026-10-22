@@ -49,7 +49,8 @@ export function skinNeedsEntitlement(file: string): boolean {
 
 /** Resolve a store product id to its skin catalog id, or null if unknown. */
 export function skinForProduct(productId: string): string | null {
-  return PRODUCT_TO_SKIN[productId] ?? null;
+  // W1075 — own keys only ("constructor" is an inherited key of every plain object).
+  return Object.prototype.hasOwnProperty.call(PRODUCT_TO_SKIN, productId) ? PRODUCT_TO_SKIN[productId] : null;
 }
 
 // ── W650 — "Awakened Premium" auto-renewable membership ─────────────────────

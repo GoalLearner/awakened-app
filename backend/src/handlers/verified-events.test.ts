@@ -25,8 +25,8 @@ function makeEnv(windowHours = 24, opts: { status?: string; member?: boolean } =
     partner_user_id: 'u2',
     partner2_user_id: null,
     status: opts.status || 'active',
-    starts_at: new Date(now - HOUR).toISOString(),
-    ends_at: new Date(now - HOUR + windowHours * HOUR).toISOString(),
+    starts_at: new Date(now - (windowHours - 1) * HOUR).toISOString(),   // W1075 — an hour from the end: the time-based ceiling has room
+    ends_at: new Date(now + HOUR).toISOString(),
   };
   const db = {
     prepare: (sql: string) => ({

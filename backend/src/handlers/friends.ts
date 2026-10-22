@@ -19,6 +19,18 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
+import { blockedBetween } from './board';
+
+// W1075 SECURITY — a declined request stays declined for this long: within it, asking again
+// is answered "pending" and sends nothing. Before this, decline → ask again → decline was a
+// push to the other hunter's phone every six seconds for as long as they kept declining.
+const DECLINE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** D1 writes CURRENT_TIMESTAMP as 'YYYY-MM-DD HH:MM:SS' (UTC). NaN when unparseable. */
+function sqlStampMs(s: string | null | undefined): number {
+  if (!s) return NaN;
+  return Date.parse(String(s).replace(' ', 'T') + (String(s).endsWith('Z') ? '' : 'Z'));
+}
 
 interface FriendRow {
   id: string;
@@ -272,7 +284,9 @@ export async function handleFriendsList(
     r.requester_user_id === session.userId ? r.recipient_user_id : r.requester_user_id;
   const otherIds = [...new Set(rowList.map(otherIdOf))];
   const joinedMap = new Map<string, JoinedFriendProfile>();
-  const CHUNK = 400;
+  // W1076 — D1 refuses more than 100 bound parameters per statement (not SQLite's 999, as the
+  // W673 comment above assumed): a hunter with over 100 friends and requests got a 500 here.
+  const CHUNK = 90;
   for (let i = 0; i < otherIds.length; i += CHUNK) {
     const slice = otherIds.slice(i, i + CHUNK);
     const ph = slice.map(() => '?').join(',');
@@ -361,6 +375,12 @@ export async function handleFriendsRequest(
   }
   if (target.id === session.userId) {
     return jsonError(400, 'SELF_FRIEND', 'You cannot friend yourself.');
+  }
+  // W1075 SECURITY — a block covers guild requests too. Board blocks hid posts and replies,
+  // but a blocked hunter could still ring the other's phone with "wants to join your guild".
+  // Answered exactly like an unknown alias, so a block is never confirmed to the blocked.
+  if (await blockedBetween(env, session.userId, target.id)) {
+    return jsonError(404, 'USER_NOT_FOUND', `No hunter found with alias "${check.trimmed}".`);
   }
 
   // Already-accepted check (either direction).
@@ -494,6 +514,12 @@ export async function handleFriendsRequest(
         .bind(session.userId, target.id)
         .first<FriendRow>();
       if (stale && stale.status === 'declined') {
+        // W1075 SECURITY — declined recently: say "pending", change nothing, push nothing.
+        const declinedAt = sqlStampMs(stale.updated_at);
+        if (Number.isFinite(declinedAt) && Date.now() - declinedAt < DECLINE_COOLDOWN_MS) {
+          const friend = await serializeFriendRow(env, { ...stale, status: 'pending' }, session.userId);
+          return jsonOk({ ok: true, friend, alreadyPending: true });
+        }
         await env.DB.prepare(
           "UPDATE friends SET status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         )

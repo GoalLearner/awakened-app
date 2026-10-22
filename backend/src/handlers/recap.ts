@@ -56,7 +56,11 @@ const int = (v: unknown, lo: number, hi: number): number | null =>
   typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi ? v : null;
 const cleanName = (v: unknown): string | null => {
   if (typeof v !== 'string') return null;
-  const s = v.replace(/[\u0000-\u001f<>{}]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  // W1075 — "!" and pictographs leave the name too: the note must name the vow, and the
+  // same note may carry no hype, so a vow called "Gym!" or "Run 🏃" failed every attempt
+  // (six paid calls a week for nothing, then the rules sentence).
+  const s = v.replace(/[\u0000-\u001f<>{}!]/g, '').replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/\s+/g, ' ').trim().slice(0, 40);
   return s.length ? s : null;
 };
 

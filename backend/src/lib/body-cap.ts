@@ -13,8 +13,10 @@
 
 /** Everything but the cloud save is a few kilobytes at most. */
 export const DEFAULT_BODY_CAP_BYTES = 128 * 1024;
-/** The cloud save's own limit is 512 KB of state; the envelope around it needs headroom. */
-export const USER_STATE_BODY_CAP_BYTES = 640 * 1024;
+/** The cloud save's own limit is 1 MB of state (W1076; was 512 KB); the envelope around it
+ *  needs headroom. A gzip-encoded save (X-State-Encoding: gzip) is counted compressed here
+ *  and against the 1 MB after decoding. */
+export const USER_STATE_BODY_CAP_BYTES = 1280 * 1024;
 
 /**
  * How much of an over-ceiling body is read and discarded before the stream is let go: more

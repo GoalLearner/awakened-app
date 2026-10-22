@@ -95,6 +95,9 @@ export interface Env {
    * is approximated as 2/minute (≈ 120/hour). Client-side debounce at
    * 5-min intervals keeps legit usage well under both caps. */
   RL_AUTH_VERIFY: RateLimit;
+  /** W1075 — POST /v1/auth/refresh on its own bucket (5/min per user). Optional for the
+   *  test envs; the handler falls back to RL_FRIENDS_READ when absent. */
+  RL_AUTH_REFRESH?: RateLimit;
   RL_LEADERBOARD_SUBMIT: RateLimit;
   RL_LEADERBOARD_TOP: RateLimit;
   RL_ACCOUNT_DELETE: RateLimit;

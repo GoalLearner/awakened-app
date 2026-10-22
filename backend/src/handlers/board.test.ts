@@ -63,6 +63,8 @@ interface State {
   replyVotes: Set<string>;   // W929 — `${reply}|${user}`
   follows: Set<string>;
   views?: Set<string>;   // W994 `${topic}|${user}`      // W929 — `${topic}|${user}`
+  userAge?: Record<string, number>;   // W1075 — users.created_at (ms); absent = an old account
+  reportAt?: Record<string, number>;  // W1075 — report key → created_at (ms)
   calls: { sql: string; binds: unknown[] }[];
 }
 
@@ -118,8 +120,11 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/SELECT id, topic_id, hidden_at, deleted_at FROM board_replies/.test(sql)) {
               const r = st.replies[binds[0] as string]; return r ? { id: binds[0], topic_id: r.topic_id, hidden_at: null, deleted_at: r.deleted_at } : null;
             }
-            if (/SELECT author_id, deleted_at FROM board_replies/.test(sql)) {
-              const r = st.replies[binds[0] as string]; return r ? { author_id: r.author_id, deleted_at: r.deleted_at } : null;
+            if (/SELECT author_id, topic_id, deleted_at FROM board_replies/.test(sql)) {   // W1075 — the edit also reads the topic
+              const r = st.replies[binds[0] as string]; return r ? { author_id: r.author_id, topic_id: r.topic_id, deleted_at: r.deleted_at } : null;
+            }
+            if (/SELECT locked_at, hidden_at, deleted_at FROM board_topics/.test(sql)) {
+              const t = st.topics[binds[0] as string]; return t ? { locked_at: t.locked_at ?? null, hidden_at: t.hidden_at, deleted_at: t.deleted_at } : null;
             }
             if (/SELECT topic_id, author_id FROM board_replies/.test(sql)) {
               const r = st.replies[binds[0] as string]; return r && r.deleted_at == null ? { topic_id: r.topic_id, author_id: r.author_id } : null;
@@ -209,6 +214,19 @@ function makeEnv(st: State, rlWriteOk = true): Env {
               const r = st.replies[binds[0] as string];
               return r && r.deleted_at == null ? { id: binds[0], author_id: 'u-x', hidden_at: null } : null;
             }
+            // W1075 — the per-reporter daily count, the week-old-accounts count, the push window
+            if (/SELECT COUNT\(\*\) AS n FROM board_reports WHERE reporter_id = \?/.test(sql)) {
+              return { n: [...st.reports].filter((k) => k.endsWith('|' + binds[0])).length };
+            }
+            if (/FROM board_reports r JOIN users u/.test(sql)) {
+              const prefix = `${binds[0]}|${binds[1]}|`;
+              return { n: [...st.reports].filter((k) => k.startsWith(prefix) && ((st.userAge || {})[k.slice(prefix.length)] ?? 0) <= (binds[2] as number)).length };
+            }
+            if (/SELECT 1 FROM board_reports WHERE target_kind = \? AND target_id = \? AND reporter_id <> \?/.test(sql)) {
+              const prefix = `${binds[0]}|${binds[1]}|`;
+              const hit = [...st.reports].find((k) => k.startsWith(prefix) && k.slice(prefix.length) !== binds[2] && ((st.reportAt || {})[k] ?? 0) > (binds[3] as number));
+              return hit ? { 1: 1 } : null;
+            }
             if (/SELECT COUNT\(\*\) AS n FROM board_reports/.test(sql)) {
               const prefix = `${binds[0]}|${binds[1]}|`;
               return { n: [...st.reports].filter((k) => k.startsWith(prefix)).length };
@@ -285,7 +303,9 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             }
             if (/UPDATE board_topics SET reply_count = reply_count \+ 1/.test(sql)) { const t = st.topics[binds[1] as string]; if (t) { t.reply_count++; t.last_activity_at = binds[0] as number; } return ok(1); }
             if (/INSERT OR IGNORE INTO board_reports/.test(sql)) {
-              const k = `${binds[0]}|${binds[1]}|${binds[2]}`; if (st.reports.has(k)) return ok(0); st.reports.add(k); return ok(1);
+              const k = `${binds[0]}|${binds[1]}|${binds[2]}`; if (st.reports.has(k)) return ok(0); st.reports.add(k);
+              (st.reportAt ||= {})[k] = binds[4] as number;   // W1075 — when, for the push window
+              return ok(1);
             }
             if (/SET hidden_at = \?, hidden_by = 'auto'/.test(sql)) {
               const t = st.topics[binds[1] as string]; if (t && t.hidden_at == null) { t.hidden_at = binds[0] as number; t.hidden_by = 'auto'; return ok(1); } return ok(0);
@@ -1279,5 +1299,44 @@ describe('W973 · Updates — the developers\' weekly voice', () => {
     st.topics[a.body.id as string].hidden_at = Date.now();
     const hidden = await json(await handleCommunityUnseenGet(get('/v1/community/unseen'), makeEnv(st), x));
     expect(hidden.update).toBeNull();
+  });
+});
+
+// ── W1075 — reports: a daily ceiling, week-old accounts only for the automatic hide, one push an hour ──
+describe('W1075 · reports', () => {
+  it('the 11th report in a day is refused', async () => {
+    const st = fresh();
+    for (let i = 0; i < 10; i++) st.reports.add(`topic|t${i}|u-x`);
+    const t = await postTopic(st, me); const id = t.body.id as string;
+    const res = await handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), x, ctx);
+    expect(res.status).toBe(429);
+    expect(((await res.json()) as { error: string }).error).toBe('TOO_MANY_REPORTS');
+  });
+
+  it('three reports from accounts made this week do not hide a post; the moderators still hear of it', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    st.userAge = { 'u-x': Date.now(), 'u-y': Date.now(), 'u-ren': Date.now() };
+    const t = await postTopic(st, me); const id = t.body.id as string;
+    const report = (who: SessionPayload) => handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), who, ctx);
+    await report(x); await report(y);
+    const b = await json(await report(ren));
+    expect(b.reports).toBe(3);
+    expect(b.auto_hidden).toBe(false);
+    expect(st.topics[id].hidden_at).toBeNull();
+    expect(mockNotify).toHaveBeenCalled();   // the first report rang the owner
+  });
+
+  it('a second report on the same post inside the hour rings nobody; the one that hides it does', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner'; st.mods['u-ren'] = 'mod';   // the hide's push goes to the mod who is not the reporter
+    const t = await postTopic(st, x); const id = t.body.id as string;
+    const report = (who: SessionPayload) => handleBoardReportPost(post('/v1/board/report', { kind: 'topic', id, reason: 'spam' }), makeEnv(st), who, ctx);
+    await report(y);
+    const afterFirst = mockNotify.mock.calls.length;
+    expect(afterFirst).toBeGreaterThan(0);
+    await report(ren);
+    expect(mockNotify.mock.calls.length).toBe(afterFirst);   // coalesced
+    const b = await json(await report(me));
+    expect(b.auto_hidden).toBe(true);
+    expect(mockNotify.mock.calls.length).toBeGreaterThan(afterFirst);   // the hide is news
   });
 });

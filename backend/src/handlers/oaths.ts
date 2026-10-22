@@ -14,7 +14,7 @@
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-import { jsonOk, jsonError } from '../lib/responses';
+import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 
 const OATH_WINDOW_MS = 14 * 24 * 3600 * 1000;
@@ -51,8 +51,8 @@ export async function handleOathSwear(
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { rookie_user_id?: unknown };
-  try { body = await request.json(); } catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON body.'); }
+  const body = (await readJsonObject(request)) as { rookie_user_id?: unknown } | null;
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const rookieId = typeof body.rookie_user_id === 'string' ? body.rookie_user_id.trim() : '';
   if (!rookieId) return jsonError(400, 'MISSING_ROOKIE', 'rookie_user_id required.');
   if (rookieId === session.userId) return jsonError(400, 'SELF_OATH', 'You cannot swear over yourself.');
@@ -139,8 +139,8 @@ export async function handleOathClaim(
 ): Promise<Response> {
   const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
-  let body: { oath_id?: unknown };
-  try { body = await request.json(); } catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON body.'); }
+  const body = (await readJsonObject(request)) as { oath_id?: unknown } | null;
+  if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const oathId = typeof body.oath_id === 'string' ? body.oath_id : '';
   if (!oathId) return jsonError(400, 'MISSING_OATH', 'oath_id required.');
   const row = await env.DB.prepare('SELECT * FROM oaths WHERE id = ?').bind(oathId).first<OathRow>();

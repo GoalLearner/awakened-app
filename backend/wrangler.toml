@@ -40,6 +40,14 @@ keep_vars = true
 # "*/2 * * * *" — W702 raid-finder background matchmaking sweep (runRaidMatchmakeSweep):
 #   every 2 minutes, pairs queued members into raid parties so nobody has to babysit the
 #   finder screen. Tiny D1 sweep scoped to matchmaking bosses; well within the plan.
+# W1076 — Workers Logs: console output retained (7 days on the paid plan) instead of visible
+# only in a live `wrangler tail`. Sampled at 1 in 20 invocations: at 20,000 users that is
+# ~3.6M events a month, inside the plan's 20M included events, so it costs nothing.
+# console.error lines (cron failures, APNs refusals, D1 errors) are what this exists for.
+[observability]
+enabled = true
+head_sampling_rate = 0.05
+
 [triggers]
 # W904 — weekday is NAMED on purpose. Cloudflare numbers the day-of-week field
 # 1 = Sunday … 7 = Saturday (NOT POSIX 0-6): the original "*/5 16-17 * * 1" fired
@@ -109,7 +117,18 @@ new_sqlite_classes = ["MatchRoom"]
 name = "RL_AUTH_VERIFY"
 type = "ratelimit"
 namespace_id = "1001"
-simple = { limit = 10, period = 60 }  # 10/min per IP
+# W1076 — was 10/min. A sign-up wave behind one carrier NAT or campus Wi-Fi shares one
+# address, and the client treats a 429 here as a sign-in failure. 30/min still bounds
+# brute force (each call verifies an Apple-signed token). Also keys the /v1/admin/* routes.
+simple = { limit = 30, period = 60 }  # 30/min per IP
+
+# W1075 — POST /v1/auth/refresh on its own bucket (it shared the friends-read bucket, which
+# a chatty boot could drain first). About once a day per device; 5/min covers a retry.
+[[unsafe.bindings]]
+name = "RL_AUTH_REFRESH"
+type = "ratelimit"
+namespace_id = "1030"
+simple = { limit = 5, period = 60 }  # 5/min per user
 
 # W935 — was 2/min. Every client submit is a 3-POST batch (step_total +
 # floor_best + relics_collected) and an empty-tower launch adds a floor probe,

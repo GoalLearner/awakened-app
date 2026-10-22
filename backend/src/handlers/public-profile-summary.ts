@@ -58,6 +58,7 @@ import { jsonOk, jsonError } from '../lib/responses';
 import { maybeGrantFounderMark } from '../lib/founder-mark';
 import { readEntitlements } from './iap-entitlements';
 import { skinNeedsEntitlement } from '../lib/skin-products';
+import { WEAPON_MOVES } from '../pvp/combat-core.js';   // W1075 — the weapon allowlist
 import { resolveOathsOnFirstKill } from './oaths';   // W867 — Oathbound fulfillment
 
 // W706 — the member card-background catalog (ids only; art + achievement mapping
@@ -476,9 +477,12 @@ function validate(body: PutBody):
         stats[k] = Math.min(COMBATANT_STAT_MAX, Math.round(v));
       }
       const av = typeof c.avatar === 'string' && /^avatar[a-z0-9_-]{0,40}\.png$/i.test(c.avatar) ? c.avatar : '';
+      // W1075 — a weapon the kit table does not own ("constructor" included) is published as
+      // unarmed; a friend's Spar-Echo used to crash on it.
+      const weaponRaw = String(c.weaponId || 'unarmed').slice(0, 40);
       const clean = {
         name: String(c.name || 'Hunter').slice(0, 40),
-        weaponId: String(c.weaponId || 'unarmed').slice(0, 40),
+        weaponId: Object.prototype.hasOwnProperty.call(WEAPON_MOVES, weaponRaw) ? weaponRaw : 'unarmed',
         weaponName: String(c.weaponName || '').slice(0, 60),
         avatar: av,
         stats,

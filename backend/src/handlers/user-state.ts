@@ -16,12 +16,35 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
 // Hard cap on payload size so a misbehaving (or malicious) client
-// can't fill D1 with multi-megabyte states. ~500 KB is roughly 10×
-// the largest realistic Awakened snapshot (habit history + boss
-// state + inventory rarely exceeds 50 KB). Keep it loose enough
-// that v1.x growth doesn't trip it but tight enough that abuse
-// trips immediately.
-const MAX_PAYLOAD_BYTES = 512 * 1024;
+// can't fill D1 with multi-megabyte states.
+// W1076 — 1 MB (was 512 KB). The snapshot carries the whole completion history by design
+// (never pruned), and the heaviest hunter on record was at 247 KB after five months: 512 KB
+// was about a year and a half away for a 40-vow hunter, after which every backup failed
+// silently. D1 allows 2 MB per row. The client may also send the save gzip-encoded
+// (X-State-Encoding: gzip), which is decoded here and measured after decoding.
+const MAX_PAYLOAD_BYTES = 1024 * 1024;
+
+/** W1076 — gunzip a buffer, refusing anything that inflates past `max` bytes. */
+async function gunzipCapped(raw: ArrayBuffer, max: number): Promise<string> {
+  const stream = new Response(raw).body!.pipeThrough(new DecompressionStream('gzip'));
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let out = '';
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > max) {
+      try { await reader.cancel(); } catch { /* done with it */ }
+      throw new Error('INFLATED_TOO_LARGE');
+    }
+    out += decoder.decode(value, { stream: true });
+  }
+  out += decoder.decode();
+  return out;
+}
 
 interface PostBody {
   state_version?: unknown;
@@ -127,11 +150,19 @@ export async function handleUserStatePost(
 
   let body: PostBody;
   try {
-    body = (await request.json()) as PostBody;
-  } catch {
+    if ((request.headers.get('X-State-Encoding') || '').toLowerCase() === 'gzip') {
+      const text = await gunzipCapped(await request.arrayBuffer(), MAX_PAYLOAD_BYTES + 256 * 1024);
+      body = JSON.parse(text) as PostBody;
+    } else {
+      body = (await request.json()) as PostBody;
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'INFLATED_TOO_LARGE') {
+      return jsonError(413, 'PAYLOAD_TOO_LARGE', `Snapshot exceeds ${MAX_PAYLOAD_BYTES} bytes.`);
+    }
     return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
   }
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
   }
 
@@ -180,6 +211,28 @@ export async function handleUserStatePost(
   }
 
   const now = Date.now();
+
+  // W1076 — an unchanged save (same checksum as the stored row) only stamps the time: the
+  // client pushes the whole snapshot on every cold launch, and most of those carried nothing
+  // new. One small UPDATE instead of rewriting a blob of up to a megabyte.
+  if (checksum) {
+    try {
+      const same = await env.DB.prepare(
+        'UPDATE user_state_snapshots SET server_updated_at = ? WHERE user_id = ? AND checksum = ?',
+      ).bind(now, session.userId, checksum).run();
+      if (same.meta && Number(same.meta.changes) >= 1) {
+        return jsonOk({
+          state_version: stateVersion,
+          client_updated_at: clientUpdatedAt,
+          server_updated_at: new Date(now).toISOString(),
+          bytes: stateJson.length,
+          unchanged: true,
+        });
+      }
+    } catch (err) {
+      console.error('user-state checksum short-circuit failed (saving in full):', err instanceof Error ? err.message : err);
+    }
+  }
 
   await env.DB.prepare(
     `INSERT INTO user_state_snapshots

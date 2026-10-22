@@ -32,7 +32,7 @@ describe('W1040 — the router', () => {
   it('the cloud save keeps its own larger ceiling: 400 KB is not refused for size', async () => {
     const res = await call('/v1/users/me/state', { method: 'POST', headers: { Authorization: 'Bearer nope' }, body: 'z'.repeat(400_000) });
     expect(res.status).toBe(401);                       // it got as far as the session gate
-    const big = await call('/v1/users/me/state', { method: 'POST', headers: { Authorization: 'Bearer nope' }, body: 'z'.repeat(700_000) });
+    const big = await call('/v1/users/me/state', { method: 'POST', headers: { Authorization: 'Bearer nope' }, body: 'z'.repeat(1_400_000) });   // W1076 — the ceiling is 1,280 KB now
     expect(big.status).toBe(413);
   });
 

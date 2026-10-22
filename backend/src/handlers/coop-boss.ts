@@ -28,7 +28,7 @@
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
-import { jsonOk, jsonError } from '../lib/responses';
+import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 import { readEntitlements } from './iap-entitlements';
 
@@ -507,7 +507,7 @@ export async function validateBossInstanceForUser(
   userId: string,
   instanceId: string,
   eventType?: string,
-): Promise<{ ok: boolean; reason?: string; days?: number }> {
+): Promise<{ ok: boolean; reason?: string; days?: number; hoursElapsed?: number }> {
   const row = await env.DB.prepare(
     `SELECT boss_id, challenger_user_id, partner_user_id, partner2_user_id, status, starts_at, ends_at
        FROM coop_boss_instances WHERE id = ?`,
@@ -557,7 +557,10 @@ export async function validateBossInstanceForUser(
   // W1040 — the window in whole days, for the caller's per-day plausibility ceiling.
   const days = (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs)
     ? Math.max(1, Math.ceil((endMs - startMs) / 86_400_000)) : 4;
-  return { ok: true, days };
+  // W1075 — hours since the hunt began, for the caller's time-based ceiling (a total that
+  // could not have been walked in the time elapsed is refused whatever the window allows).
+  const hoursElapsed = Number.isFinite(startMs) ? Math.max(0, (now - startMs) / 3_600_000) : undefined;
+  return { ok: true, days, hoursElapsed };
 }
 
 // ── POST /v1/coop-boss — create (invite a friend) ───────────────────
@@ -566,6 +569,8 @@ export async function validateBossInstanceForUser(
 // accepted invite is its own hunt. Free hunters still meet the concurrent cap
 // per created hunt; members are unlimited.
 export const DUO_FANOUT_MAX = 5;
+// W1075 — summons a hunter may have waiting for an answer at once.
+export const PENDING_SUMMONS_MAX = 10;
 
 export async function handleCoopBossCreate(
   request: Request,
@@ -576,21 +581,18 @@ export async function handleCoopBossCreate(
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: {
+  const body = (await readJsonObject(request)) as {
     partner_user_id?: unknown;
     partner2_user_id?: unknown;
     ally_user_ids?: unknown;
     boss_id?: unknown;
     fill_from_finder?: unknown;   // W695 — open the remaining seats to the raid finder
-  };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
-  }
+  } | null;
+  if (!body) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
 
   const bossId = typeof body.boss_id === 'string' ? body.boss_id : '';
-  const cfg = COOP_BOSS_CFG[bossId];
+  // W1075 — own keys only: "constructor" / "__proto__" are inherited keys of a plain object.
+  const cfg = Object.prototype.hasOwnProperty.call(COOP_BOSS_CFG, bossId) ? COOP_BOSS_CFG[bossId] : undefined;
   if (!cfg) return jsonError(400, 'UNKNOWN_BOSS', 'Unknown co-op boss id.');
 
   // W692 — N-hunter party bounds. A boss can specify a RANGE (minParty..maxParty,
@@ -741,6 +743,16 @@ async function createCoopHunt(
     }
   }
 
+  // W1075 SECURITY — a ceiling on summons waiting for an answer, like the one on friend
+  // requests (W1040): a summon-cancel loop fanned out five "Co-op Summons" pushes a cycle,
+  // forty cycles a minute, to the same friends.
+  const waiting = await env.DB.prepare(
+    "SELECT COUNT(*) AS waiting FROM coop_boss_instances WHERE challenger_user_id = ? AND status = 'pending'",
+  ).bind(session.userId).first<{ waiting: number }>();
+  if ((Number(waiting?.waiting) || 0) >= PENDING_SUMMONS_MAX) {
+    return { deny: jsonError(429, 'TOO_MANY_SUMMONS', 'You have too many summons waiting for an answer. Let some be answered first.') };
+  }
+
   // W693 — members-only raid (The Grinning God). The summoner AND every invited ally
   // must hold an active membership; a non-member ally is refused here (they can't be
   // matched or invited into the mythic raid). The gate is re-checked at JOIN too, so a
@@ -860,8 +872,23 @@ async function createCoopHunt(
   // their next app-open; this makes the summons a live event). bossId rides in
   // the payload so a tapped push can deep-link straight to the hunt.
   // W677 — every invited seat gets the summons.
+  // W1075 — one summons push per (summoner, ally) per hour: a second summons inside the
+  // hour still creates the hunt (the badge shows it) but rings no phone.
   if (ctx)
-    for (const ally of allies)
+    for (const ally of allies) {
+      let pushedRecently = false;
+      try {
+        const recent = await env.DB.prepare(
+          `SELECT 1 FROM coop_boss_instances i
+            WHERE i.challenger_user_id = ? AND i.id <> ?
+              AND i.created_at > datetime('now', '-1 hour')
+              AND (i.partner_user_id = ? OR i.partner2_user_id = ?
+                   OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?))
+            LIMIT 1`,
+        ).bind(session.userId, id, ally, ally, ally).first();
+        pushedRecently = !!recent;
+      } catch { /* a failed check means the push goes out, as before */ }
+      if (pushedRecently) continue;
       ctx.waitUntil(
         notifyUser(env, ally, {
           title: 'Co-op Summons',
@@ -870,6 +897,7 @@ async function createCoopHunt(
           data: { bossId },
         }),
       );
+    }
   return { instance: serializeCoop(row, aliasMap, session.userId, emptyProgress()) };
 }
 
@@ -2035,10 +2063,8 @@ export async function handleCoopBossEmote(
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { instanceId?: unknown; emote?: unknown };
-  try {
-    body = (await request.json()) as { instanceId?: unknown; emote?: unknown };
-  } catch {
+  const body = (await readJsonObject(request)) as { instanceId?: unknown; emote?: unknown } | null;
+  if (!body) {
     return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
   }
   const instanceId = typeof body.instanceId === 'string' ? body.instanceId : '';
@@ -2146,14 +2172,10 @@ export async function handleRaidQueueJoin(
   const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
 
-  let body: { boss_id?: unknown };
-  try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    return jsonError(400, 'INVALID_BODY', 'Request body must be valid JSON.');
-  }
+  const body = (await readJsonObject(request)) as { boss_id?: unknown } | null;
+  if (!body) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
   const bossId = typeof body.boss_id === 'string' ? body.boss_id : '';
-  const cfg = COOP_BOSS_CFG[bossId];
+  const cfg = Object.prototype.hasOwnProperty.call(COOP_BOSS_CFG, bossId) ? COOP_BOSS_CFG[bossId] : undefined;   // W1075 — own keys only
   if (!cfg) return jsonError(400, 'UNKNOWN_BOSS', 'Unknown co-op boss id.');
   if (!cfg.matchmaking) return jsonError(400, 'NO_MATCHMAKING', 'This hunt has no raid finder.');
 

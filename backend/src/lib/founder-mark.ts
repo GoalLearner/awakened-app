@@ -83,10 +83,13 @@ export async function maybeGrantFounderMark(env: Env, userId: string): Promise<n
       seq = Number(existing.seq);
     } else if (await isFounderMarkEligible(env, userId)) {
       // Atomic guarded insert: ONE statement so the count-check and the insert
-      // cannot interleave. seq = current count + 1. UNIQUE(seq) is the belt.
+      // cannot interleave. UNIQUE(seq) is the belt.
+      // W1075 — seq = MAX(seq) + 1, not COUNT + 1: a Founder who deleted their account
+      // (W721 frees the slot) left a hole, and COUNT + 1 then landed on a number already
+      // taken — the UNIQUE index threw on every grant after that, for everyone, for ever.
       await env.DB.prepare(
         `INSERT INTO founder_marks (user_id, seq)
-         SELECT ?1, (SELECT COUNT(*) FROM founder_marks) + 1
+         SELECT ?1, COALESCE((SELECT MAX(seq) FROM founder_marks), 0) + 1
           WHERE (SELECT COUNT(*) FROM founder_marks) < ${FOUNDER_MARK_CAP}
             AND NOT EXISTS (SELECT 1 FROM founder_marks WHERE user_id = ?1)`,
       )

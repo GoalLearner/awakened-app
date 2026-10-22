@@ -147,8 +147,8 @@ describe('runUpdatePushPage', () => {
     expect(st.completed).toBe(1);
   });
 
-  it('full page (50, W835 ceiling) → advances cursor, NOT completed; second call takes the rest', async () => {
-    const users = Array.from({ length: 55 }, (_, i) => 'u' + String(i + 10).padStart(3, '0')); // sorted
+  it('full page (150, W1076 ceiling) → advances cursor, NOT completed; second call takes the rest', async () => {
+    const users = Array.from({ length: 155 }, (_, i) => 'u' + String(i + 10).padStart(3, '0')); // sorted
     const st: MockState = {
       cursor: '', completed: 0, sent: 0, users,
       tokensByUser: Object.fromEntries(users.map((u) => [u, []])), // no tokens → notifyUser no-ops
@@ -156,13 +156,13 @@ describe('runUpdatePushPage', () => {
     };
     const env = makeEnv(st);
     const r1 = await runUpdatePushPage(env, 'd1');
-    expect(r1.sent).toBe(50);
+    expect(r1.sent).toBe(150);
     expect(r1.completed).toBe(false);
-    expect(st.cursor).toBe(users[49]);
+    expect(st.cursor).toBe(users[149]);
     const r2 = await runUpdatePushPage(env, 'd1');
     expect(r2.sent).toBe(5);
     expect(r2.completed).toBe(true);
-    expect(st.sent).toBe(55);
+    expect(st.sent).toBe(155);
   });
 
   // ── W835 (R1b) — per-user version gate ─────────────────────────────
