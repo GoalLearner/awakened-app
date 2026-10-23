@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.16';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.16-w1086'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.16-w1087'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -7211,7 +7211,7 @@
               localStorage.setItem(seenKey, '1');
               localStorage.setItem('hb_tower_avenge_life', getDeviceLocalDate());
               try { _hapticTick('SUCCESS'); } catch (_) {}
-              try { showNoticeCard({ eyebrow: 'AVENGED', title: d.avenger_alias + ' brought down Floor ' + d.floor, body: 'In your name. The Tower grants you another attempt today.' }); } catch (_) {}
+              try { showNoticeCard({ eyebrow: 'AVENGED', title: d.avenger_alias + ' brought down Floor ' + d.floor, body: 'In your name.' }); } catch (_) {}
             }
           }
         } catch (_) {}
@@ -12745,22 +12745,15 @@
   const ARENA_RECORD_KEY = 'hb_arena_record';     // legacy (pre-Ascent) — discarded on migrate
 
   const ASCENT_FLOORS      = 100;
-  const ASCENT_DAILY_LIVES = 2;   // losses allowed per day — wins are free; lose twice and the tower closes until tomorrow
-  // W620 — Founder benefit (owner decision, Path B): Founders climb with UNLIMITED
-  // rated attempts; free hunters keep ASCENT_DAILY_LIVES/day. Set to a number
-  // (e.g. ASCENT_DAILY_LIVES + 5) to switch from unlimited to a boosted daily cap —
-  // every consumer routes through _ascentDailyLivesCap(). LIVE since the W628 IAP
-  // go-live (existing users were grandfathered); the cap below is real for members
-  // today. Owner reversed the pay-to-win read on this — unlimited stays, do not
-  // re-litigate.
-  const FOUNDER_ASCENT_LIVES = Infinity;
-  // W651 — the perk now belongs to the MEMBERSHIP (Founder = lifetime tier,
-  // Awakened Premium = subscription tier); Auth.isMember() covers both.
-  function _ascentIsMember() {
-    try { return !!(window.Auth && typeof Auth.isMember === 'function' && Auth.isMember()); }
-    catch (_) { return false; }
-  }
-  function _ascentDailyLivesCap() { return _ascentIsMember() ? FOUNDER_ASCENT_LIVES : ASCENT_DAILY_LIVES; }
+  // W1087 — owner 2026-10-23: "remove the limit and allow unlimited ascent use". Every hunter climbs
+  // with unlimited attempts now; it was 2 losses a day for free hunters (members unlimited since
+  // W620). Set a number here to bring a daily cap back: every consumer routes through
+  // _ascentDailyLivesCap(), the hearts and the lock come back by themselves.
+  const ASCENT_DAILY_LIVES = Infinity;
+  // [history] W620 made unlimited attempts a Founder benefit, W651 a membership benefit
+  // (Founder + Awakened Premium). W1087 gave it to everyone, so the membership no longer
+  // sells it anywhere (peak CTA, wardrobe teaser, Settings row, the Premium sheet).
+  function _ascentDailyLivesCap() { return ASCENT_DAILY_LIVES; }   // W1087 — the same for members and free hunters
   const ASCENT_RATING_START = 1000;
   const ASCENT_RATING_FLOOR = 100;
   const ASCENT_RATING_K     = 24;
@@ -15188,13 +15181,13 @@
     spire: '<svg width="40" height="56" viewBox="0 0 40 56" fill="none" aria-hidden="true"><path d="M20 2l8 18H12z" fill="#f5b842" opacity=".9"/><path d="M12 20h16v34H12z" stroke="#f5b842" stroke-width="1.4"/><path d="M16 28h8M16 36h8M16 44h8" stroke="#f5b842" stroke-width="1.2" opacity=".6"/></svg>',
   };
   function _twHeaderHtml() {
-    const member = _ascentIsMember();
     const left = ascentLivesLeft();
     let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
     // W272 — POWER, the climb's own number (vows → stats + relics → power); tap for the breakdown
     let pwr = 0; try { pwr = _arD(_ascFightPower()); } catch (_) {}
     let hearts = '';
-    if (!member) { const n = Math.max(ASCENT_DAILY_LIVES, left); for (let i = 0; i < n; i++) hearts += TW_I.heart(i < left); }
+    const capped = Number.isFinite(_ascentDailyLivesCap());   // W1087 — false today: the tower never closes
+    if (capped) { const n = Math.max(_ascentDailyLivesCap(), left); for (let i = 0; i < n; i++) hearts += TW_I.heart(i < left); }
     return '<header class="tw-hdr">' +
       '<div class="tw-r1"><span class="tw-brand">THE ASCENT</span>' +
         (_ascTestBuild
@@ -15203,8 +15196,8 @@
       '<div class="tw-r2">' +
         '<button class="tw-power" data-ar="powerinfo" type="button" aria-label="What makes up your power"><span class="tw-lbl">POWER ' + TW_I.info + '</span>' +
           '<span class="num">' + pwr.toLocaleString('en-US') + '</span></button>' +
-        '<div class="tw-lives"><span class="tw-lbl">LIVES' + (member ? ' <span class="prem">✦ PREMIUM</span>' : '') + '</span>' +
-          '<div class="row">' + (member ? '<span class="inf">∞</span>' : hearts) +
+        '<div class="tw-lives"><span class="tw-lbl">LIVES</span>' +
+          '<div class="row">' + (capped ? hearts : '<span class="inf">∞</span>') +
           '<button class="tw-q" data-ar="tips" type="button" aria-label="Combat styles">?</button></div></div>' +
       '</div></header>';
   }
@@ -18002,7 +17995,7 @@
     // W620 — members have no daily cap; the strip states the benefit instead of a count.
     // W652 — tier-aware label (Premium subscribers are members, not Founders).
     const _livesTxt = (f.livesLeft === Infinity)
-      ? '✦ PREMIUM · UNLIMITED ATTEMPTS'
+      ? 'UNLIMITED ATTEMPTS'
       : f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY';
     const ratingStrip = f.advanced
       ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">FLOOR ' + f.floorCleared + ' CLEARED</span></div>' +
@@ -18155,7 +18148,7 @@
     // Bailing on a live RATED fight forfeits it as a loss — otherwise you could
     // abandon any fight you're losing for free and dodge the daily-lives gate.
     if (_arSess && !_arSess.done && _arMatchup && _arMatchup.advances) {
-      let ok = true; try { ok = window.confirm('Forfeit this fight? It counts as a loss — a life spent.'); } catch (_) {}
+      let ok = true; try { ok = window.confirm('Forfeit this fight? It counts as a loss.'); } catch (_) {}
       if (!ok) return;
       _arSess.won = false; _arSess.done = true;   // forfeit = loss
       try { _arFight = arenaFinalizeBattle(_arSess); } catch (_) {}
@@ -27677,6 +27670,13 @@
     // W822 failure again). Written for someone UPDATING, so the new onboarding is left out (they
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
+    // W1087 — 3.0.16: one line, the one every climber feels.
+    '3.0.16': {
+      subtitle: 'The tower never closes.',
+      items: [
+        { emoji: '', title: 'Unlimited Ascent attempts', description: "The two-lives-a-day cap is gone for every hunter. Lose, and climb again right away." },
+      ],
+    },
     // W1080 — 3.0.15 (W1075–W1079): the security pass. Two lines an updater can feel; the rest
     // is invisible by design. W1084 — the tally (W1082) leads: it is the one change every hunter sees.
     '3.0.15': {
@@ -33662,7 +33662,7 @@
       if (isCPlus) { try { _ruLive = _canShowFounderPrompt(); } catch (_) {} }
       if (_ruLive) {
         _ruFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="rankup-founder-cta">\u2726 Go Premium \u2014 back the climb' +
-          '<span class="fv-founder-sub">UNLIMITED ASCENT \u00b7 UNLIMITED HUNTS</span></button>';   // W621 \u2014 headline benefit at the peak
+          '<span class="fv-founder-sub">FREE CO-OP HUNTS \u00b7 MEMBER STATUS</span></button>';   // W621 \u2014 headline benefit at the peak (W1087: the Ascent is unlimited for everyone)
         _ruFounder.classList.remove('hidden');
         try { _recordFounderPrompt(); } catch (_) {}
         const _ruCta = document.getElementById('rankup-founder-cta');
@@ -35499,7 +35499,7 @@
       try { _pdLive = (ms.day === 7) && _canShowFounderPrompt(); } catch (_) {}
       if (_pdLive) {
         _pdFounder.innerHTML = '<button type="button" class="fv-founder-cta" id="pd-founder-cta">\u2726 Go Premium \u2014 stay the course' +
-          '<span class="fv-founder-sub">UNLIMITED ASCENT \u00b7 UNLIMITED HUNTS</span></button>';   // W621 \u2014 headline benefit at the peak
+          '<span class="fv-founder-sub">FREE CO-OP HUNTS \u00b7 MEMBER STATUS</span></button>';   // W621 \u2014 headline benefit at the peak (W1087: the Ascent is unlimited for everyone)
         const _pdCta = document.getElementById('pd-founder-cta');
         if (_pdCta) _pdCta.onclick = function (e) { try { e.stopPropagation(); } catch (_) {} dismiss(); try { openFounder(); } catch (_) {} };
         setTimeout(function () { if (live) { _pdFounder.classList.remove('hidden'); try { _recordFounderPrompt(); } catch (_) {} } }, 1400);
@@ -43621,7 +43621,7 @@
     },
     {
       id: 'ascent', glyph: 'rank', title: 'THE ASCENT',
-      body: 'One hundred floors stand between you and the summit, and your power on every one is drawn from your vows — stats and relics, nothing else. Two lives return each day. Fall, and the tower keeps what you cleared; the climb resumes where courage failed.',
+      body: 'One hundred floors stand between you and the summit, and your power on every one is drawn from your vows — stats and relics, nothing else. Lose, and climb again at once: the tower keeps what you cleared, and the climb resumes where courage failed.',
       tip:  'The tower does not test luck. It tests what your days have built.',
     },
     {
@@ -56624,7 +56624,7 @@
             '<span class="ft-glyph" aria-hidden="true">✦</span>' +
             '<span class="ft-text">' +
               '<span class="ft-title">Awakened Premium · <b>' + esc(_premiumPriceStr('monthly')) + '</b>/mo</span>' +
-              '<span class="ft-benefit">UNLIMITED ASCENT ATTEMPTS · NO ENTRANCE FEES</span>' +   // 2 items — 3 ellipsized at 393px
+              '<span class="ft-benefit">NO ENTRANCE FEES · MEMBER STATUS</span>' +   // 2 items — 3 ellipsized at 393px (W1087: the Ascent is unlimited for everyone)
             '</span>' +
             '<span class="ft-chev" aria-hidden="true">›</span>' +
           '</button>'
@@ -56785,7 +56785,6 @@
       '</div>' +
       '<div class="founder-benefits">' +
         benefit('⚔', 'Free co-op hunts', 'Summon and answer without paying the entrance fee.') +   // W955 — the 3-hunt limit is gone for EVERYONE; never sell it again
-        benefit('∞', 'Unlimited Ascent attempts', 'The daily 2-life cap is lifted — the tower never closes on you.') +
         benefit('✦', 'Member status', 'Every future membership perk, the moment it ships.') +
       '</div>' +
       '<div class="founder-cta-wrap">' +

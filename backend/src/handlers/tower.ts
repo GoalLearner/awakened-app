@@ -160,7 +160,7 @@ export async function handleTowerAvengePost(
   const me = await env.DB.prepare('SELECT alias FROM users WHERE id = ?').bind(session.userId).first<{ alias: string }>();
   await notifyUser(env, ev.user_id, {
     title: 'You were avenged',
-    body: (me?.alias ?? 'A hunter') + ' brought down Floor ' + ev.floor + ' in your name. The Tower grants you another attempt today.',
+    body: (me?.alias ?? 'A hunter') + ' brought down Floor ' + ev.floor + ' in your name.',   // W1087 — no life to grant: the Ascent is unlimited
     type: 'tower_avenged',
     data: {},
   });

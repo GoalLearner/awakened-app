@@ -10239,7 +10239,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator('#arena-body .mx-sh .pc')).toHaveText(['+2%', '+1.75%', '+0.75%']);
     await page.locator('#arena-body .mx-x').click();
     await expect(page.locator('#arena-body .mx')).not.toHaveClass(/mx-panel-open/);
-    await expect(page.locator('#arena-body .mx-stakes')).toContainText('Defeat spends a life');
+    await expect(page.locator('#arena-body .mx-stakes')).toContainText('Unlimited attempts.');   // W1087
 
     // floor 90, a milestone: the boosts count there too (W1060, owner 2026-10-15: "I want boosts to
     // be allowed"); no banner was planted on 90, so Blood and the army only
@@ -10300,12 +10300,14 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator(T + ' .tw-hero')).toHaveClass(/unfold/);
     await expect(page.locator(T + ' .tw-moves .fav')).toHaveCount(1);
 
-    // a free hunter with no lives left: FIGHT locks, the floors behind stay open
+    // W1087 — two losses today no longer close the tower: FIGHT stays open, the header shows ∞, the floors behind stay open
     // today as the PAGE sees it (the app's day is the device's local date, not the test runner's UTC)
     const day = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
     await arena({ dailyLosses: 2, dailyDate: day });
-    await expect(page.locator(T + ' .tw-fight')).toHaveText(/THE CLIMB RESUMES TOMORROW/);
-    await expect(page.locator(T + ' .tw-fight')).toBeDisabled();
+    await expect(page.locator(T + ' .tw-fight')).toBeEnabled();
+    await expect(page.locator(T + ' .tw-fight')).not.toHaveText(/RESUMES TOMORROW/);
+    await expect(page.locator(T + ' .tw-lives .inf')).toHaveText('∞');
+    await expect(page.locator(T + ' .tw-lives .prem')).toHaveCount(0);
     await expect(page.locator(T + ' [data-ar="rematch"]')).toHaveCount(46);
 
     // the first visit: nothing behind; the climbed tower: the Hall, every cell lit
