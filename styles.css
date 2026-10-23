@@ -17014,7 +17014,7 @@ body.reveal-locked { overflow: hidden; }
   min-width: 0;
 }
 .account-identity-alias {
-  font-family: 'Cinzel', serif;
+  font-family: inherit;   /* W1089 — your name, as typed */
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--gold);
@@ -22511,9 +22511,9 @@ button.guildhall-summary-tile:active {
   gap: 1px;
 }
 .guild-roster-alias {
-  font-family: 'Cinzel', serif;
-  font-weight: 600;
-  font-size: 0.88rem;
+  font-family: inherit;   /* W1089 — a hunter's name, as typed (was Cinzel, which has no lowercase) */
+  font-weight: 700;
+  font-size: 0.92rem;
   color: var(--text-primary, #f3f4f6);
   white-space: nowrap;
   overflow: hidden;
@@ -28081,7 +28081,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 
 /* identity */
 .pc-identity { padding: 6px 22px 0; display: flex; flex-direction: column; align-items: center; }
-.pc-alias { font-family: "Cinzel", Georgia, serif; font-size: 27px; font-weight: 700; color: #f5f3fb; letter-spacing: 0.4px; }
+.pc-alias { font-family: inherit; font-size: 26px; font-weight: 800; color: #f5f3fb; letter-spacing: 0.2px; }   /* W1089 — a hunter's name, as typed */
 .pc-shard { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; padding: 4px 11px 4px 9px; border-radius: 3px;
   background: color-mix(in srgb, var(--pc-tier) 8%, transparent); border: 1px solid color-mix(in srgb, var(--pc-tier) 34%, transparent); }
 .pc-shard i { width: 8px; height: 8px; transform: rotate(45deg); background: var(--pc-tier); box-shadow: 0 0 8px var(--pc-tier); }
@@ -29024,9 +29024,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
 }
 .lb-rank-leader-name {
   display: flex; align-items: center; gap: 7px;
-  font-family: "Cinzel", Georgia, serif;
-  font-size: 1.4rem; font-weight: 700; color: var(--text-primary);
-  letter-spacing: 0.4px; margin-top: 5px;
+  /* W1089 — no Cinzel on a hunter's name: the face has no lowercase, so every leader read as
+     GIORGIO. Only the owner's alias carries a capital (the display override); the rest stay as typed. */
+  font-family: inherit;
+  font-size: 1.35rem; font-weight: 800; color: var(--text-primary);
+  letter-spacing: 0.2px; margin-top: 5px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lb-rank-leader .lb-rank-class { margin-top: 6px; }
@@ -30314,7 +30316,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .pvp-echo-row .av { width: 38px; height: 38px; flex: none; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 35%, rgba(90,214,200,0.18), rgba(8,8,26,0.5) 72%); box-shadow: inset 0 0 0 1px rgba(90,214,200,0.25); }
 .pvp-echo-row .av img { width: 100%; height: 100%; object-fit: cover; }
 .pvp-echo-row .av .mono { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 17px; color: #5ad6c8; }
-.pvp-echo-row .nm { flex: 1; min-width: 0; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 16px; color: #f5f3fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvp-echo-row .nm { flex: 1; min-width: 0; font-family: inherit; font-weight: 800; font-size: 16px; color: #f5f3fb;   /* W1089 — a hunter's name, as typed */ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pvp-echo-row .go { flex: none; color: #5ad6c8; opacity: 0.8; display: flex; align-items: center; }
 .pvp-echo-empty { text-align: center; padding: 34px 18px; }
 .pvp-echo-empty-t { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 18px; color: #f5f3fb; }
