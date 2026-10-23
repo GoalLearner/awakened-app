@@ -29,25 +29,19 @@
 <body>
 <main>
   <h1>Awakened security and scale review</h1>
-  <p class="sub">21 October 2026 · six parallel audits of the backend and the app, then fixes · backend commits a2c1015 + 56d1873, app commits c1fe7e1 + 56d1873 (build 592)</p>
+  <p class="sub">21 October 2026 · six parallel audits of the backend and the app, then fixes · backend commits a2c1015 + 56d1873, app commits c1fe7e1 + 56d1873 (builds 593 and 595)</p>
 
   <div class="card">
     <p><span class="ok">Nobody can get into other people's accounts or data.</span> For the fourth review in a row: no SQL injection, no way to read or write another hunter's data, no way to forge a session, no stored script in any screen, no secret in the code. All of that was checked again today, line by line, against the live database.</p>
-    <p>What the reviews did find were softer holes that matter once thousands of people and creators arrive: ways to impersonate a creator's name, to ring someone's phone with requests, to bury the moderators, to climb the PvP ladder with a modified app, and two tables that would have filled the database within months. All of it is fixed in code. Three production steps still need your go (next section).</p>
+    <p>What the reviews did find were softer holes that matter once thousands of people and creators arrive: ways to impersonate a creator's name, to ring someone's phone with requests, to bury the moderators, to climb the PvP ladder with a modified app, and two tables that would have filled the database within months. All of it is fixed and live (next section).</p>
   </div>
 
-  <h2>What needs your go</h2>
-  <p>The new backend is tested (784 tests) and built, but it is not live yet. Run these from PowerShell in this order, or say "go" and I run them:</p>
-  <pre>cd C:\Users\richm\Documents\repos\awakened-app\backend
-npx wrangler d1 migrations apply awakened-db --remote
-npx wrangler deploy
-printf 'true' | npx wrangler secret put SIWA_NONCE_ENFORCE</pre>
+  <h2>Where it stands, 22 October</h2>
   <ul>
-    <li><b>Step 1</b> adds one column (<code>users.token_version</code>) and seven indexes. It changes no data. It was checked against the live database: no two names collide.</li>
-    <li><b>Step 2</b> puts the new backend live. It also fixes a bug that is live right now: the rally horn fails, and the Worldgate sheet fails for the rest of the week after every kill (a line of SQL the database rejects).</li>
-    <li><b>Step 3</b> turns on a sign-in check that has been running in "log only" mode since July. Every app since then sends what it needs; a mismatch just returns the hunter to the Apple button.</li>
+    <li><b>Backend:</b> live since 1:15 PM PST (version 79b60c6d). The migration is applied, the one-byte signing key is replaced, and the sign-in nonce check stays in log-only mode until a real sign-in has been watched in the logs.</li>
+    <li><b>App:</b> build 593 is on TestFlight with the app side (sign-out that really signs out, smaller cloud saves, the socket token out of the URL). Build 595 adds the tally and the Settings preview; 3.0.15 is the open version in App Store Connect.</li>
+    <li><b>Nothing else needs your go</b> except the Cloudflare dashboard items under "Still open".</li>
   </ul>
-  <p>Then build 592 on the MacBook. It carries the app side (sign-out that really signs out, smaller cloud saves, the socket token out of the URL).</p>
 
   <h2>Incident, 22 October</h2>
   <div class="card">
