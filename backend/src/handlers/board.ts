@@ -46,6 +46,8 @@ const WIRE_TAG_SQL = `CASE WHEN x.kind = 'update' THEN 'update' ELSE x.tag END`;
 const ONE_UPDATE_SQL = `(COALESCE(x.kind, '') != 'update' OR x.id = (SELECT n.id FROM board_topics n WHERE n.kind = 'update' AND n.deleted_at IS NULL AND n.hidden_at IS NULL ORDER BY n.created_at DESC, n.id DESC LIMIT 1))`;
 export const TITLE_MAX = 80;
 export const BODY_MAX = 1000;
+// W1086 — an update (the developers' post) is a changelog, not a comment: ten times the room.
+export const UPDATE_BODY_MAX = 10000;
 export const AUTO_HIDE_REPORTS = 3;
 // W1075 SECURITY — reports. One account may file this many a day (a real reader reports a
 // post or two; a flood of reports was a flood of pushes to every moderator's phone, 6/min
@@ -738,11 +740,11 @@ export async function handleBoardTopicPost(request: Request, env: Env, session: 
   const body = await readJson<{ tag?: unknown; title?: unknown; body?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   if (!isTag(body.tag)) return jsonError(400, 'INVALID_TAG', 'tag must be improvement, bug, talk or update.');
+  const isUpdate = body.tag === UPDATE_TAG;   // W973
   const title = clampText(body.title, TITLE_MAX);
-  const text = clampText(body.body, BODY_MAX);
+  const text = clampText(body.body, isUpdate ? UPDATE_BODY_MAX : BODY_MAX);   // W1086
   if (!title) return jsonError(400, 'MISSING_TITLE', 'Give the topic a title.');
   if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
-  const isUpdate = body.tag === UPDATE_TAG;   // W973
   if (isUpdate && !isModRole(gate.me.role)) return jsonError(403, 'UPDATES_MODS_ONLY', 'Only the developers post updates.');
   if (!textIsClean(title) || !textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
   const spam = await spamGate(env, session, gate.me, 'topic', '', title, text, ctx);   // W914
@@ -899,13 +901,14 @@ export async function handleBoardTopicEdit(request: Request, env: Env, session: 
   const body = await readJson<{ title?: unknown; body?: unknown }>(request);
   if (!body) return jsonError(400, 'BAD_JSON', 'Invalid JSON body.');
   const title = clampText(body.title, TITLE_MAX);
-  const text = clampText(body.body, BODY_MAX);
+  const textWide = clampText(body.body, UPDATE_BODY_MAX);   // W1086 — clamped again below once the topic's kind is known
   if (!title) return jsonError(400, 'MISSING_TITLE', 'Give the topic a title.');
-  if (!text) return jsonError(400, 'MISSING_BODY', 'Say something.');
-  if (!textIsClean(title) || !textIsClean(text)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
-  const row = await env.DB.prepare('SELECT author_id FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
-    .bind(topicId).first<{ author_id: string }>();
+  if (!textWide) return jsonError(400, 'MISSING_BODY', 'Say something.');
+  if (!textIsClean(title) || !textIsClean(textWide)) return jsonError(400, 'OBJECTIONABLE', 'That contains language the board does not allow.');
+  const row = await env.DB.prepare('SELECT author_id, kind FROM board_topics WHERE id = ? AND deleted_at IS NULL LIMIT 1')
+    .bind(topicId).first<{ author_id: string; kind: string | null }>();
   if (!row) return jsonError(404, 'NOT_FOUND', 'No such topic.');
+  const text = row.kind === UPDATE_TAG ? textWide : textWide.slice(0, BODY_MAX);
   const meS = await meState(env, session.userId);
   if (row.author_id !== session.userId && !isModRole(meS.role)) {
     return jsonError(403, 'NOT_ALLOWED', 'You can only edit your own topic.');

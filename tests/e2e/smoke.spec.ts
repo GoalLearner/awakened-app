@@ -6671,6 +6671,22 @@ test.describe('BD · Updates on the board (W973)', () => {
     await expect(page.locator('.board-compose input[name="title"]')).toHaveValue('');
   });
 
+  test('W1086 — UPDATE gives the body 10,000 characters; TALK takes it back to 1,000', async ({ page }) => {
+    await boardWith(page, 'mod');
+    await page.evaluate(() => (window as any).__board.compose('topic'));
+    const ta = page.locator('.board-compose textarea[name="body"]');
+    await expect(ta).toHaveAttribute('maxlength', '1000');
+    await expect(page.locator('.board-compose [data-board-count]')).toHaveText('0 / 1000');
+    await page.locator('[data-board-pick="update"]').click();
+    await expect(ta).toHaveAttribute('maxlength', '10000');
+    await expect(page.locator('.board-compose [data-board-count]')).toHaveText('0 / 10000');
+    await ta.fill('Weekly step bosses. '.repeat(100));
+    await expect(page.locator('.board-compose [data-board-count]')).toHaveText('2000 / 10000');
+    await page.locator('[data-board-pick="talk"]').click();
+    await expect(ta).toHaveAttribute('maxlength', '1000');
+    await expect(page.locator('.board-compose [data-board-count]')).toHaveText('1000 / 1000');
+  });
+
   test('a new update keeps a dot on the Community tab until that update is opened', async ({ page }) => {
     await boardWith(page, null);
     await page.click('#tab-habits');

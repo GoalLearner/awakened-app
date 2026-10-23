@@ -41,6 +41,7 @@ import {
   REPLY_MIN_TIER,
   AUTO_HIDE_REPORTS,
   BODY_MAX,
+  UPDATE_BODY_MAX,
 } from './board';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -129,8 +130,8 @@ function makeEnv(st: State, rlWriteOk = true): Env {
             if (/SELECT topic_id, author_id FROM board_replies/.test(sql)) {
               const r = st.replies[binds[0] as string]; return r && r.deleted_at == null ? { topic_id: r.topic_id, author_id: r.author_id } : null;
             }
-            if (/SELECT author_id FROM board_topics WHERE id = \? AND deleted_at IS NULL/.test(sql)) {
-              const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { author_id: t.author_id } : null;
+            if (/SELECT author_id(, kind)? FROM board_topics WHERE id = \? AND deleted_at IS NULL/.test(sql)) {
+              const t = st.topics[binds[0] as string]; return t && t.deleted_at == null ? { author_id: t.author_id, kind: t.kind ?? null } : null;
             }
             if (/SELECT up_count FROM board_replies/.test(sql)) {
               return { up_count: [...st.replyVotes].filter((k) => k.startsWith(`${binds[0]}|`)).length };
@@ -1241,6 +1242,28 @@ describe('W973 · Updates — the developers\' weekly voice', () => {
     expect(ids(upd)).toEqual([ia, ib, ic].sort());
     expect(upd.counts).toMatchObject({ all: 2, update: 3 });
     expect((upd.topics as Array<{ tag: string }>).every((r) => r.tag === 'update')).toBe(true);
+  });
+
+  // W1086 — an update holds a whole changelog; a talk topic keeps the 1,000 cap, and an edit follows the topic's kind.
+  it('W1086 — an update keeps up to 10,000 characters; a talk topic is clamped at 1,000; edits follow the kind', async () => {
+    const st = fresh(); st.mods['u-me'] = 'owner';
+    const long = ('Weekly step bosses. '.repeat(300)).trim();   // 5,999 characters (clampText trims)
+    const upd = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 23', body: long });
+    expect(upd.status).toBe(200);
+    expect((st.topics[upd.body.id as string]!.body as string).length).toBe(long.length);
+    const talk = await postTopic(st, me, { tag: 'talk', title: 'A long talk', body: long });
+    expect(talk.status).toBe(200);
+    expect((st.topics[talk.body.id as string]!.body as string).length).toBe(BODY_MAX);
+    const over = await postTopic(st, me, { tag: 'update', title: 'Week of Oct 30', body: 'x'.repeat(UPDATE_BODY_MAX + 5) });
+    expect((st.topics[over.body.id as string]!.body as string).length).toBe(UPDATE_BODY_MAX);
+    const editUpd = await handleBoardTopicEdit(post('/v1/board/topics/x/edit', { title: 'Week of Oct 23', body: long + ' More.' }), makeEnv(st), me, upd.body.id as string);
+    expect(editUpd.status).toBe(200);
+    const updWrite = st.calls.filter((c) => /UPDATE board_topics SET title = \?, body = \?/.test(c.sql)).pop()!;
+    expect((updWrite.binds[1] as string).length).toBe(long.length + 6);
+    const editTalk = await handleBoardTopicEdit(post('/v1/board/topics/x/edit', { title: 'A long talk', body: long }), makeEnv(st), me, talk.body.id as string);
+    expect(editTalk.status).toBe(200);
+    const talkWrite = st.calls.filter((c) => /UPDATE board_topics SET title = \?, body = \?/.test(c.sql)).pop()!;
+    expect((talkWrite.binds[1] as string).length).toBe(BODY_MAX);
   });
 
   it('an older update that someone pins by hand still stays off ALL', async () => {
