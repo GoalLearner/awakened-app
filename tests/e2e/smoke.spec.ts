@@ -1987,7 +1987,7 @@ test.describe('Q · Community board (W907)', () => {
     });
     const rows = page.locator('#board-body .board-topic');
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).locator('.board-last b')).toHaveText('Grubbadub');
+    await expect(rows.nth(0).locator('.board-last b')).toHaveText('grubbadub');
     await expect(rows.nth(0).locator('.board-last-arrow')).toHaveText('replied · 5h ago');
     await expect(rows.nth(1).locator('.board-last--none')).toHaveText(/No replies yet/);
   });
@@ -3042,7 +3042,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect(me!.rank).toBe('4');
     expect(me!.val).toBe('31,204');
     expect(r.board.rows.map((x) => x.rank)).toEqual(['1', '2', '3', '4', '5']);
-    expect(r.board.gap).toBe('7,003 steps to pass Grubbadub.');
+    expect(r.board.gap).toBe('7,003 steps to pass grubbadub.');   // W1092 — lowercase
 
     // The hunt reads its goal and its drop pool out of the game's own tables.
     expect(r.hunt.kicker).toBe('The hunt · E-rank · Duo');
@@ -3170,7 +3170,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await me.click();
     await expect(page.locator('#cn-gap')).toHaveClass(/is-on/, { timeout: 8_000 });
     expect(await rows()).toEqual(['6 H06 50,000', '7 H07 48,000', '8 H08 46,000', '9 Richie 43,210 *', '10 H10 42,000', '11 H11 40,000']);
-    await expect(page.locator('#cn-gap')).toHaveText('2,790 steps to pass H08.');
+    await expect(page.locator('#cn-gap')).toHaveText('2,790 steps to pass h08.');   // W1092 — lowercase
     await expect(me.locator('small')).toHaveText('E-rank');
     await expect(me).not.toHaveClass(/is-wait/);
     expect(await page.evaluate(() => (window as any).__ob.fxLog.filter((x: string) => x === 'snd:pass').length)).toBeGreaterThanOrEqual(1);
@@ -4807,7 +4807,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     // Left alone, the row takes its place by itself after three seconds: a tap is never a wall.
     await expect(me).toHaveClass(/is-wait/);
     await expect(page.locator('#cn-gap')).toHaveClass(/is-on/, { timeout: 10_000 });
-    await expect(page.locator('#cn-gap')).toHaveText('32,284 steps to pass Galilea.');
+    await expect(page.locator('#cn-gap')).toHaveText('32,284 steps to pass galilea.');   // W1092 — lowercase
     await expect(me.locator('.ob4-r')).toHaveText('2');
     await expect(me.locator('.ob4-v')).toHaveText('18,860');
   });
@@ -6360,8 +6360,8 @@ test.describe('BA · The crown is part of the name (W969)', () => {
     await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
     const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-pane .wg2-nmbtn'),
       (n: any) => ({ name: n.textContent.trim(), crown: !!n.querySelector('.name-crown') })));
-    expect(rows).toContainEqual({ name: 'RenDIESEL', crown: true });
-    expect(rows).toContainEqual({ name: 'Zynfandel', crown: false });
+    expect(rows).toContainEqual({ name: 'rendiesel', crown: true });   // W1092 — names display lowercase
+    expect(rows).toContainEqual({ name: 'zynfandel', crown: false });
   });
 
   test('it sits on the letters: bottom on the baseline, top at cap height', async ({ page }) => {
@@ -6416,7 +6416,7 @@ test.describe('BA · The crown is part of the name (W969)', () => {
                      who({ alias: 'Grubbadub', rank_label: 'C' }, { created_at: Date.now() }, { sub: true });
       return [].map.call(el.querySelectorAll('.board-name'), (b: any) => ({ name: b.textContent.trim(), crown: !!b.querySelector('.name-crown') }));
     });
-    expect(r).toEqual([{ name: 'RenDIESEL', crown: true }, { name: 'Grubbadub', crown: false }]);
+    expect(r).toEqual([{ name: 'rendiesel', crown: true }, { name: 'grubbadub', crown: false }]);   // W1092
   });
 
   test('the cache holds names and roles only — never an account id', async ({ page }) => {
@@ -6927,7 +6927,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     expect(c.coll.toUpperCase()).toBe('41 HUNTERS · 1,284,000 STEPS');
     expect(c.fell.toUpperCase()).toMatch(/^BROKEN (SUN|MON|TUE|WED|THU|FRI|SAT) \d{1,2} SEP$/);
     expect([c.eyebrow, c.boss, c.coll, c.fell].concat(c.mine).join(' ')).not.toMatch(/\bfell(ed)?\b/i);   // banned copy word (standing rule)
-    expect(c.cols.map((x) => x.nm)).toEqual(['Ryan', 'Anthony', 'Zynfandel']);   // 2nd · 1st · 3rd
+    expect(c.cols.map((x) => x.nm)).toEqual(['ryan', 'anthony', 'zynfandel']);   // 2nd · 1st · 3rd (W1092 — lowercase)
     expect(c.cols.every((x) => x.landed && !x.you)).toBe(true);
     expect(c.mine).toEqual(['Your strikes · 4,472 · #7']);
     expect(await page.evaluate(() => localStorage.getItem('hb_wgmvp_seen_v1'))).toBe('2026-09-20');
@@ -6946,7 +6946,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
     await page.locator('#wgmvp-screen').click();
     const c = (await card(page))!;
-    const ryan = c.cols.find((x) => x.nm === 'Ryan')!;
+    const ryan = c.cols.find((x) => x.nm === 'ryan')!;   // W1092 — lowercase
     expect(ryan.you).toBe(true);
     expect(ryan.bonus).toBe('+100 souls');
     expect(c.cols.filter((x) => x.you).length).toBe(1);
@@ -6958,7 +6958,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     await page.evaluate(() => (window as any).__wgm.maybe());
     await expect.poll(() => card(page), { timeout: 6_000 }).not.toBeNull();
     await page.locator('#wgmvp-screen').click();
-    const a = (await card(page))!.cols.find((x) => x.nm === 'Anthony')!;
+    const a = (await card(page))!.cols.find((x) => x.nm === 'anthony')!;
     expect(a.you).toBe(true);
     expect(a.bonus).toBe('');
   });
@@ -6988,7 +6988,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
       text: (r.querySelector('.wg-mvpb text')?.textContent || '') })));
     // Live order, not the frozen podium: Zynfandel leads the list now.
     expect(rows.slice(0, 5).map((r: any) => [r.name, r.badge, r.text])).toEqual([
-      ['Zynfandel', '1', 'MVP'], ['Mara', '2', '2ND'], ['Anthony', '3', '3RD'], ['Ryan', null, ''], ['Galilea', null, '']]);
+      ['zynfandel', '1', 'MVP'], ['mara', '2', '2ND'], ['anthony', '3', '3RD'], ['ryan', null, ''], ['galilea', null, '']]);
   });
 
   test('W977: a running MVP — the badges show all week, even while the gate still stands', async ({ page }) => {
@@ -8882,7 +8882,7 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(v.sub.toUpperCase()).toBe('DONE IN 19H 05M');
     expect(v.rows.length).toBe(3);
     expect(v.rows[1]).toMatch(/Richie ?You ?11,840 steps/i);
-    expect(v.mvp).toMatch(/Anthony carried the hunt/);
+    expect(v.mvp).toMatch(/anthony carried the hunt/);   // W1092 — lowercase
     expect(v.chips).toMatch(/The hunger is fed · 2× souls/);
     expect(v.souls).toMatch(/\+360/);
   });

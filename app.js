@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.16';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.16-w1091'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.16-w1092'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5658,7 +5658,7 @@
       return {
         type:   isWin ? 'duel_win' : 'duel_loss',
         label:  alias
-          ? (isWin ? 'Duel victory vs ' + alias : 'Duel loss vs ' + alias)
+          ? (isWin ? 'Duel victory vs ' + _dn(alias) : 'Duel loss vs ' + _dn(alias))
           : (isWin ? 'Duel victory' : 'Duel loss'),
         detail: isWin ? 'Verified duel reward' : 'Verified duel stake',
         ref_id: id || null,
@@ -6528,7 +6528,7 @@
       ov.innerHTML =
         '<div class="sw-window" role="dialog" aria-modal="true" aria-label="Status Window">' +
           '<div class="sw-titlebar"><span class="sw-glyph" aria-hidden="true">⟐</span>STATUS WINDOW</div>' +
-          '<div class="sw-alias">' + esc((typeof playerName === 'string' && playerName) || 'Hunter') + '</div>' +
+          '<div class="sw-alias">' + esc(_dn(typeof playerName === 'string' ? playerName : '') || 'Hunter') + '</div>' +
           '<div class="sw-ranks">' +
             '<div class="sw-rank"><span class="sw-rank-lbl">GATE RANK</span><span class="sw-rank-val" data-rank="' + esc(gate) + '">' + esc(gate) + '</span></div>' +
             '<div class="sw-rank"><span class="sw-rank-lbl">LATENT</span><span class="sw-rank-val" data-rank="' + esc(latent) + '">' + esc(latent) + '</span></div>' +
@@ -7211,7 +7211,7 @@
               localStorage.setItem(seenKey, '1');
               localStorage.setItem('hb_tower_avenge_life', getDeviceLocalDate());
               try { _hapticTick('SUCCESS'); } catch (_) {}
-              try { showNoticeCard({ eyebrow: 'AVENGED', title: d.avenger_alias + ' brought down Floor ' + d.floor, body: 'In your name.' }); } catch (_) {}
+              try { showNoticeCard({ eyebrow: 'AVENGED', title: _dn(d.avenger_alias) + ' brought down Floor ' + d.floor, body: 'In your name.' }); } catch (_) {}
             }
           }
         } catch (_) {}
@@ -7274,7 +7274,7 @@
           try { earnSouls(r.souls || 40, 'tower_avenge_' + floor); } catch (_) {}
           try { const n = (parseInt(localStorage.getItem('hb_avenger_count'), 10) || 0) + 1; localStorage.setItem('hb_avenger_count', String(n)); } catch (_) {}
           try { _hapticTick('SUCCESS'); } catch (_) {}
-          try { showHabitToast('⚔ You avenged ' + echo.alias + ' on Floor ' + floor + ' — +' + (r.souls || 40) + ' souls.'); } catch (_) {}
+          try { showHabitToast('⚔ You avenged ' + _dn(echo.alias) + ' on Floor ' + floor + ' — +' + (r.souls || 40) + ' souls.'); } catch (_) {}
           _towerSync(true);
         }).catch(function () {});
       }
@@ -7451,7 +7451,7 @@
       const m = d.mvps[i]; if (!m) return '<div class="wgm-col wgm-p' + (i + 1) + ' wgm-empty"></div>';
       const p = i + 1, you = d.you === p;
       return '<div class="wgm-col wgm-p' + p + (you ? ' wgm-you' : '') + '"><div class="wgm-lbl">' + (you ? '<span class="wgm-youtag">You</span>' : '') +
-        '<p class="wgm-nm">' + esc(m.alias) + _crownFor(m.alias) + '</p>' +
+        '<p class="wgm-nm">' + esc(_dn(m.alias)) + _crownFor(m.alias) + '</p>' +
         '<p class="wgm-metaln">' + (m.rank ? '<span class="wgm-rk">' + esc(String(m.rank)) + '</span>' : '') + '<b class="wgm-st" data-to="' + m.steps + '">0</b></p>' +
         (you && d.bonusPaid > 0 ? '<p class="wgm-bonus">' + _WGM_GEM + '<span>+<b data-to="' + d.bonusPaid + '">0</b> souls</span></p>' : '') +
         '</div><div class="wgm-plinth"><span class="wgm-pl">' + p + '</span><span class="wgm-ord">' + _WGM_ORD[i] + '</span></div></div>';
@@ -7695,13 +7695,13 @@
     return '<div class="wg2-feed">' + list.map(function (r, i) {
       const me = _wgIsMe(r.alias);
       return '<div class="wg2-fi' + (me ? ' wg2-fi--you' : '') + '"><span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(r.alias)) + '</span>' +
-        '<div class="wg2-who"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(r.alias) + '">' + esc(r.alias) + _crownFor(r.alias) + '</button> struck the gate</div>' +   // W1091 — no clock on the row: when a hunter opened the app is theirs
+        '<div class="wg2-who"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(r.alias) + '">' + esc(_dn(r.alias)) + _crownFor(r.alias) + '</button> struck the gate</div>' +   // W1091 — no clock on the row: when a hunter opened the app is theirs
         '<span class="wg2-amt">' + _wgFmt(r.steps) + '</span></div>';
     }).join('') + '</div>';
   }
   function _wgRankRow(pos, h, max, mvp) {   // W975 — mvp: 1|2|3 wears the badge
     return '<div class="wg2-ri' + (h.me ? ' wg2-ri--me' : '') + '"><span class="wg2-pos">' + esc(String(pos)) + '</span><span class="wg2-av wg2-av--' + (h.me ? 'me' : String(Math.abs(String(h.alias || '').length) % 4)) + '">' + esc(_wgInitial(h.alias)) + '</span>' +
-      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(h.alias) + _crownFor(h.alias) + '</button>' + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '<small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
+      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(_dn(h.alias)) + _crownFor(h.alias) + '</button>' + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '<small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
       '<span class="wg2-amt">' + _wgFmt(h.steps) + '</span><div class="wg2-bar"><i style="width:' + Math.max(2, Math.min(100, (Number(h.steps) || 0) / max * 100)).toFixed(1) + '%"></i></div></div>';
   }
   function _wgRankHtml(c) {
@@ -7722,7 +7722,7 @@
       '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--g">★</span><div class="wg2-t">Named on the Kill Wall<small>Strike ' + _wgFmt(floor) + '+ steps before Sunday. Your name stands beside every hunter who did.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (ok ? 'IN' : _wgFmt(floor - my) + ' TO GO') + '</span></div>' +
       '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--v">◆</span><div class="wg2-t">The bounty · ' + _wgFmt(c.souls || 200) + ' souls each<small>When the gate falls, every hunter on the Kill Wall collects it once. It lands on its own the next time you open the app.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (c.claimed ? 'PAID' : (ok ? 'IN' : 'NOT YET')) + '</span></div>' +
       '<div class="wg2-wall"><div class="wg2-wall-k">THE KILL WALL · ' + _wgFmt(wc) + (wc === 1 ? ' HUNTER' : ' HUNTERS') + '</div>' +
-        (wall.length ? '<div class="wg2-wall-names">' + wall.map(function (w) { return '<button type="button" class="wg2-chip' + (_wgIsMe(w.alias) ? ' wg2-chip--me' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(w.alias) + _crownFor(w.alias) + '</button>'; }).join('') + '</div>'
+        (wall.length ? '<div class="wg2-wall-names">' + wall.map(function (w) { return '<button type="button" class="wg2-chip' + (_wgIsMe(w.alias) ? ' wg2-chip--me' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(_dn(w.alias)) + _crownFor(w.alias) + '</button>'; }).join('') + '</div>'
                      : '<div class="wg2-empty">No names yet. The first hunter past ' + _wgFmt(floor) + ' carves it.</div>') +
       '</div></div>';
   }
@@ -9921,7 +9921,7 @@
   function _coopShowPactCard(userId, fallbackAlias) {
     try {
       var p = _coopPactFor(userId);
-      var alias = (p && p.alias) || fallbackAlias || 'this hunter';
+      var alias = _dn((p && p.alias) || fallbackAlias) || 'this hunter';
       if (!p) {
         showNoticeCard({ icon: '🤝', title: 'Pact with ' + alias, body: 'Enter a co-op hunt with ' + alias + ' to start a daily Pact streak — team up every day, win or lose, to keep the flame alive.', tone: 'info' });
         return;
@@ -10250,7 +10250,7 @@
     if (d.state === 'none') {
       return '<div class="pf-row pf-row--nobond' + extraCls + '" role="button" tabindex="0"' + idAttrs + ' style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', no bond yet">' +
         '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
-        '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + _crownFor(d.alias) + '</div>' +
+        '<div class="pf-who"><div class="pf-name">' + esc(_dn(d.alias)) + _crownFor(d.alias) + '</div>' +
           '<div class="pf-meta"><b>' + esc(d.rank) + '-RANK</b> · <span class="pf-nobond">no bond yet</span></div></div>' +
         '<div class="pf-streak pf-streak--empty"><span class="pf-nobond-dash" aria-hidden="true">—</span></div>' +
         actions +
@@ -10266,7 +10266,7 @@
       : '<span class="pf-tag pf-warn" style="color:var(--pf-faint)">Broken</span>';
     return '<div class="pf-row ' + (d.state === 'risk' ? 'pf-risk' : '') + extraCls + '" role="button" tabindex="0"' + idAttrs + ' style="--pf-rc:' + d.rc + '" aria-label="' + esc(d.alias) + ', ' + num + ' day flame">' +
       '<div class="pf-av">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div>' +
-      '<div class="pf-who"><div class="pf-name">' + esc(d.alias) + _crownFor(d.alias) + '</div>' +
+      '<div class="pf-who"><div class="pf-name">' + esc(_dn(d.alias)) + _crownFor(d.alias) + '</div>' +
         // W823 (L11) — label the Bond explicitly: the row's big number counts
         // hunts ENTERED (the W813 commitment streak) while this counts WINS;
         // two denominators in one row need names.
@@ -10292,7 +10292,7 @@
     var bossName = (d.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[d.lastBossId] && COOP_BOSSES[d.lastBossId].name) || 'a co-op boss';
     var since = d.firstWonAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d.firstWonAt)) : '—';
     var banner = risk
-      ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Enter one hunt with ' + esc(d.alias) + ' before midnight — win or lose, showing up keeps it lit.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
+      ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Enter one hunt with ' + esc(_dn(d.alias)) + ' before midnight — win or lose, showing up keeps it lit.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
       : d.state === 'safe'
         ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">Secured for today</div><div class="p">You answered the call together — ' + esc(bossName) + ' awaits, and the flame burns on.</div></div></div>'
         : '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">The flame went cold</div><div class="p">Start one hunt together to light a new streak.</div></div></div>';
@@ -10303,7 +10303,7 @@
     return '<div class="pf-handle"></div>' +
       '<button class="pf-sclose" data-pf-sclose aria-label="Close"><svg viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
       '<div class="pf-sbody">' +
-        '<div class="pf-ally"><div class="pf-av" style="--pf-rc:' + d.rc + '">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div><div class="pf-who"><div class="pf-name">' + esc(d.alias) + _crownFor(d.alias) + '</div><div class="pf-pact" style="--pf-rc:' + d.rc + '">Pact forged ' + esc(since) + ' · <b>' + esc(d.rank) + '-Rank</b></div></div></div>' +
+        '<div class="pf-ally"><div class="pf-av" style="--pf-rc:' + d.rc + '">' + esc(String(d.alias).charAt(0).toUpperCase()) + '<span class="pf-badge">' + esc(d.tier) + '</span></div><div class="pf-who"><div class="pf-name">' + esc(_dn(d.alias)) + _crownFor(d.alias) + '</div><div class="pf-pact" style="--pf-rc:' + d.rc + '">Pact forged ' + esc(since) + ' · <b>' + esc(d.rank) + '-Rank</b></div></div></div>' +
         '<div class="pf-hero ' + (risk ? 'pf-risk' : '') + '"><div class="pf-halo"></div>' + _pfFlame(132, d.state !== 'safe').replace('pf-flame', 'pf-flame pf-bigflame') + '<div class="pf-hcount"><div class="n">' + big + '</div><div class="d">Day Flame</div></div></div>' +
         '<div class="pf-tier">' + tier.name + '</div>' +
         (peak ? '<div class="pf-peakwrap"><span class="pf-peak"><span class="dia">◆</span>All-time peak</span></div>' : '') +
@@ -11490,7 +11490,7 @@
       '<div class="guildhall-activity-row">' +
         iconHtml +
         '<div class="guildhall-activity-text">' +
-          '<strong>' + esc(alias) + _crownFor(alias) + '</strong> ' + labelHtml +
+          '<strong>' + esc(_dn(alias)) + _crownFor(alias) + '</strong> ' + labelHtml +
         '</div>' +
         '<span class="guildhall-activity-time">' + esc(time) + '</span>' +
       '</div>'
@@ -11558,7 +11558,7 @@
       '<div class="guildhall-activity-row guildhall-boss-group" data-boss-group="' + id + '" role="button" tabindex="0" aria-expanded="false">' +
         iconHtml +
         '<div class="guildhall-activity-text">' +
-          '<strong>' + esc(alias) + _crownFor(alias) + '</strong> defeated ' +
+          '<strong>' + esc(_dn(alias)) + _crownFor(alias) + '</strong> defeated ' +
           '<span class="guildhall-activity-target guildhall-activity-target--combat">' + n + ' bosses</span>' +
         '</div>' +
         '<span class="guildhall-boss-group-chev" aria-hidden="true">▸</span>' +
@@ -11670,7 +11670,7 @@
           return '<div class="fa-hunter' + (hopen ? ' fa-hunter--open' : '') + '">' +
             '<div class="fa-hh" role="button" tabindex="0" data-fa-hunter="' + esc(hkey) + '" aria-expanded="' + (hopen ? 'true' : 'false') + '">' +
               '<span class="board-av" style="--bc:' + col + '">' + esc(_faInitial(h.alias)) + '</span>' +
-              '<div class="fa-hmain"><button type="button" class="fa-hn" data-board-profile="' + esc(h.alias) + '" style="--bc:' + col + '">' + esc(h.alias) + '</button><div class="fa-hs">' + _faHunterChips(sorted) + '</div></div>' +
+              '<div class="fa-hmain"><button type="button" class="fa-hn" data-board-profile="' + esc(h.alias) + '" style="--bc:' + col + '">' + esc(_dn(h.alias)) + '</button><div class="fa-hs">' + _faHunterChips(sorted) + '</div></div>' +
               '<div class="fa-hr2"><span class="fa-ago">' + esc(_guildhallFormatRelativeTs(h.latest)) + '</span><span class="fa-num">' + sorted.length + ' ' + _FA_CAR + '</span></div>' +
             '</div>' +
             '<div class="fa-acts"' + (hopen ? '' : ' hidden') + '>' + sorted.map(_faActHtml).join('') + '</div>' +
@@ -15589,7 +15589,7 @@
           '<span class="v">+' + x.add + '</span></div>';
       }
       if (x.id === 'army') return armyLine(x.add, x.pct);
-      return '<div class="mx-pl banner"><span class="k">' + MX_BANNER_SVG + '<span>' + esc(m.player.bannerAlias) + '’s banner<small>1% · BEAT THIS FLOOR THIS WEEK</small></span></span>' +
+      return '<div class="mx-pl banner"><span class="k">' + MX_BANNER_SVG + '<span>' + esc(_dn(m.player.bannerAlias)) + '’s banner<small>1% · BEAT THIS FLOOR THIS WEEK</small></span></span>' +
         '<span class="v">+' + x.add + '</span></div>';
     }).join('');
     if (owned.length && !c.steps.some(function (x) { return x.id === 'army'; })) body += armyLine(0, 0);
@@ -15626,7 +15626,7 @@
     let gear = {}; try { gear = (_aggregateBuildBonuses() || {}).totals || {}; } catch (_) {}
     let lvl = function (id) { try { return statLevel((stats[id] && stats[id].pts) || 0); } catch (_) { return 1; } };
     if (_ascTestBuild) { gear = _ascTestBuild.gear; lvl = function () { return 20; }; }   // W1061
-    const boostName = function (id) { return id === 'army' ? 'Shadows' : id === 'blood' ? 'Blood Still Hot' : esc(m.player.bannerAlias) + '’s banner'; };
+    const boostName = function (id) { return id === 'army' ? 'Shadows' : id === 'blood' ? 'Blood Still Hot' : esc(_dn(m.player.bannerAlias)) + '’s banner'; };
     const bl = function (cls, k, v) { return '<div class="mx-bl' + (cls ? ' ' + cls : '') + '"><span>' + k + '</span><span class="v">' + v + '</span></div>'; };
     const rows = MX_ROLES.map(function (r, i) {
       const yv = c.you[i], fv = c.foe[i], max = Math.max(yv, fv, 1), lead = yv >= fv;
@@ -15726,7 +15726,7 @@
     const o = _ascOdds(P.power, F.power), d = _ascDiff(P.power, F.power);
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     let echo = '';
-    try { const ec = _towerEchoFor(m.floor); if (ec) echo = '<div class="mx-echo">' + esc(ec.alias) + ' knelt here this week. Win — and avenge them.</div>'; } catch (_) {}
+    try { const ec = _towerEchoFor(m.floor); if (ec) echo = '<div class="mx-echo">' + esc(_dn(ec.alias)) + ' knelt here this week. Win — and avenge them.</div>'; } catch (_) {}
     const taunt = boss ? ((ASCENT_BOSSES[m.floor] || {}).taunt || 'You should not have climbed this high.') : '';
     const marks = _mxMarksHtml(c, marching, owned);
     const top = boss
@@ -17427,7 +17427,7 @@
     let rows = '';
     roll.forEach((r) => {
       rows += '<div class="row' + (r.first ? ' first' : '') + '"><span class="o">' + String(r.ord).padStart(2, '0') + '</span>' +
-        '<span class="a">' + esc(r.alias) + '</span>' + (r.note ? '<span class="n">· ' + esc(r.note) + '</span>' : '') + '</div>';
+        '<span class="a">' + esc(_dn(r.alias)) + '</span>' + (r.note ? '<span class="n">· ' + esc(r.note) + '</span>' : '') + '</div>';
     });
     const b4 = '<div class="asc-scrim"></div>' +
       '<div class="asc-beat asc-b4 asc-hall"><div class="rec">LET IT BE RECORDED</div>' + ordBlock +
@@ -17896,7 +17896,7 @@
     const first = r.ordinal === 1, you = !!r.you;
     return '<div class="fn-roll-row' + (you ? ' you' : '') + (first ? ' first' : '') + '">' +
       '<span class="ord"><b>' + r.ordinal + '</b>' + (first ? '<i>FIRST</i>' : '') + '</span>' +
-      '<span class="who"><span class="nm">' + (you ? 'You' : esc(r.alias || '—')) + _crownFor(r.alias) + '</span>' +
+      '<span class="who"><span class="nm">' + (you ? 'You' : esc(_dn(r.alias) || '—')) + _crownFor(r.alias) + '</span>' +
         '<span class="sub">THE ' + _hallOrdinal(r.ordinal) + ' TO AWAKEN</span></span>' +
       '<span class="date">' + _hallDate(r.finishedAtMs) + '</span></div>';
   }
@@ -18933,7 +18933,7 @@
     return '<div class="pvp-ld-seat' + (place === 1 ? ' first' : '') + (e.you ? ' you' : '') + '">' + crown +
       '<span class="pvp-ld-medal m' + place + '">' + place + '</span>' +
       _pvpTierEmblem(t.name, place === 1 ? 60 : 46) +
-      '<div class="pa">' + esc(e.alias || 'Hunter') + _crownFor(e.alias) + '</div>' +
+      '<div class="pa">' + esc(_dn(e.alias) || 'Hunter') + _crownFor(e.alias) + '</div>' +
       '<div class="pt" style="color:' + col + '">' + esc(t.name) + '</div>' +
       '<div class="pe">' + _pvpNum(e.elo).toLocaleString() + '<small>ELO</small></div></div>';
   }
@@ -18945,7 +18945,7 @@
     const t = _pvpTier(e.elo), col = (_PVP_TIER_PAL[t.name.toLowerCase()] || _PVP_TIER_PAL.silver).c;
     return '<div class="pvp-ld-row' + (e.you ? ' you' : '') + '">' +
       '<span class="lr">' + _pvpNum(e.rank) + '</span>' + _pvpTierEmblem(t.name, 30) +
-      '<span class="li"><span class="ln">' + (e.you ? 'You' : esc(e.alias || 'Hunter')) + _crownFor(e.alias) + '</span>' +
+      '<span class="li"><span class="ln">' + (e.you ? 'You' : esc(_dn(e.alias) || 'Hunter')) + _crownFor(e.alias) + '</span>' +
         '<span class="lt" style="color:' + col + '">' + esc(t.name) + '</span></span>' +
       '<span class="lstat"><span class="le">' + _pvpNum(e.elo).toLocaleString() + '</span><span class="lw">' + _pvpLadderRec(e) + '</span></span></div>';
   }
@@ -19277,7 +19277,7 @@
     return '<div class="pvp-vs2-hunter pvp-vs2-hunter--' + side + (o.friend && side === 'foe' ? ' friend' : '') + '">' +
       '<div class="pvp-vs2-crestwrap">' + o.sprite + '<span class="pvp-vs2-badge">' + _pvpTierEmblem(o.tier.name, 30) + '</span></div>' +
       '<div class="pvp-vs2-side">' + sideLbl + '</div>' +
-      '<div class="pvp-vs2-alias">' + esc(o.alias) + _crownFor(o.alias) + '</div>' +
+      '<div class="pvp-vs2-alias">' + esc(_dn(o.alias)) + _crownFor(o.alias) + '</div>' +
       eloLine +
       (o.weapon ? '<div class="pvp-vs2-wpn">' + esc(o.weapon) + '</div>' : '') +
       '</div>';
@@ -19644,7 +19644,7 @@
       return '<div class="pvp-rz-side' + (victor ? ' victor' : '') + (dim ? ' dim' : '') + '">' +
         (victor ? '<span class="pvp-rz-badge' + (cls === 'foe' ? ' foe' : '') + '">&#9733;</span>' : '') +
         '<span class="pvp-rz-crest">' + _pvpTierEmblem(tier.name, 44) + '</span>' +
-        '<span class="pvp-rz-alias">' + esc(alias) + _crownFor(alias) + '</span>' +
+        '<span class="pvp-rz-alias">' + esc(_dn(alias)) + _crownFor(alias) + '</span>' +
         '<span class="pvp-rz-tier" style="color:' + tier.color + '">' + esc(tier.name) + '</span></div>';
     };
     return '<div class="pvp-rz-recap">' +
@@ -23018,7 +23018,7 @@
   function _hrRowsHtml(d, cols) {
     const fl = d.fgoal > 0, unit = d.unit === 'flights' ? ' fl' : ' steps';
     return '<div class="hr-party">' + d.party.map(function (p, i) {
-      return '<div class="hr-row hr-rv' + (fl ? ' hr-fl' : '') + '" style="--c:' + cols[i] + '"><i class="hr-dot"></i><span class="hr-nm">' + esc(p.n) + (p.you ? '<em class="hr-you">You</em>' : '') + '</span>' +
+      return '<div class="hr-row hr-rv' + (fl ? ' hr-fl' : '') + '" style="--c:' + cols[i] + '"><i class="hr-dot"></i><span class="hr-nm">' + esc(_dn(p.n)) + (p.you ? '<em class="hr-you">You</em>' : '') + '</span>' +
         '<span class="hr-v">' + _hrCnt(p.s) + unit + '</span>' + (fl ? '<span class="hr-v hr-f">' + _hrCnt(p.f) + ' fl</span>' : '') + '</div>';
     }).join('') + '</div>';
   }
@@ -23049,9 +23049,9 @@
       const total = d.party.reduce(function (a, p) { return a + p.s; }, 0);
       body = '<div class="hr-stamp">Beaten together</div>' + (d.time ? '<div class="hr-sub hr-rv">Done in <b>' + esc(d.time) + '</b></div>' : '') +
         _hrRowsHtml(d, cols) + _hrCoopGoalHtml(d, cols, total) + (d.fgoal > 0 ? _hrFlightsHtml(d, cols) : '') +
-        (d.mvp ? '<div class="hr-mvp"><svg class="hr-sig" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 1l3.4 10.6L29 15l-10.6 3.4L15 29l-3.4-10.6L1 15l10.6-3.4z"></path></svg><div><div class="hr-me">Hunt MVP</div><div class="hr-mn">' + esc(d.mvp) + ' carried the hunt</div><div class="hr-mb">+' + Math.max(1, d.party.length - 1) + '% souls and relic luck</div></div></div>' : '') +
+        (d.mvp ? '<div class="hr-mvp"><svg class="hr-sig" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 1l3.4 10.6L29 15l-10.6 3.4L15 29l-3.4-10.6L1 15l10.6-3.4z"></path></svg><div><div class="hr-me">Hunt MVP</div><div class="hr-mn">' + esc(_dn(d.mvp)) + ' carried the hunt</div><div class="hr-mb">+' + Math.max(1, d.party.length - 1) + '% souls and relic luck</div></div></div>' : '') +
         _hrRewardHtml(d) +
-        '<div class="hr-chips">' + (d.fed ? '<span class="hr-chip hr-g hr-rv">The hunger is fed · 2× souls</span>' : '') + (d.pact ? '<span class="hr-chip hr-vio hr-rv">Pact with ' + esc(d.pact.n) + ' · ' + d.pact.d + ' days</span>' : '') + '</div>';
+        '<div class="hr-chips">' + (d.fed ? '<span class="hr-chip hr-g hr-rv">The hunger is fed · 2× souls</span>' : '') + (d.pact ? '<span class="hr-chip hr-vio hr-rv">Pact with ' + esc(_dn(d.pact.n)) + ' · ' + d.pact.d + ' days</span>' : '') + '</div>';
     }
     return '<div class="hr-eyebrow hr-rv">' + (d.solo ? 'Solo' : 'Co-op') + ' hunt · Rank ' + esc(d.rank) + '</div>' +
       '<div class="hr-hero">' + _hrPortHtml(d) + _hrBurstHtml() + _hrMarksHtml(d, cols) + '</div><h1 class="hr-boss hr-rv">' + esc(d.boss) + '</h1>' + body + '<div class="hr-hint">Tap to continue</div>';
@@ -23215,7 +23215,7 @@
   function _hrTallyRowHtml(d, i) {
     const relic = d.relic ? (d.relic.n + ' · ' + d.relic.r) : (d.relic === false ? '' : 'Souls only');
     const sealed = !!(d.relic && /sealed/i.test(d.relic.n));
-    const allies = (d.party || []).filter(function (p) { return !p.you; }).map(function (p) { return p.n; }).join(', ');
+    const allies = (d.party || []).filter(function (p) { return !p.you; }).map(function (p) { return _dn(p.n); }).join(', ');
     const detail = d.solo
       ? (d.kill === 1 ? 'First kill' : _hrOrd(d.kill) + ' kill') + (relic ? ' · ' + relic : '')
       : (allies ? 'With ' + allies : 'Together') + (relic ? ' · ' + relic : '');
@@ -37434,7 +37434,7 @@
           })() +
           '<div class="sc-hero-info">' +
             '<div class="sc-hero-nameline">' +
-              '<span class="sc-hero-name" id="sc-name-val">' + esc(playerName) + _crownForMe() + '</span>' +   // W972
+              '<span class="sc-hero-name" id="sc-name-val">' + esc(_dn(playerName) || 'Hunter') + _crownForMe() + '</span>' +   // W972 · W1092 lowercase
               // v3 Phase 1j — hunter name is claim-once. Render the
               // edit pencil only for users who haven't claimed yet.
               (localStorage.getItem('hb_hunter_name_claimed') === '1'
@@ -45861,7 +45861,7 @@
     _hrDrawGoldRule(ctx, W / 2, H - 240, 440, true);
     ctx.font = '500 italic 48px "Cormorant Garamond", Georgia, serif';
     ctx.fillStyle = '#cfcfe0';
-    ctx.fillText('— ' + d.alias, W / 2, H - 174);
+    ctx.fillText('— ' + _dn(d.alias), W / 2, H - 174);
     ctx.font = '700 20px "JetBrains Mono", monospace';
     ctx.fillStyle = '#7a7a96';
     _hrDrawSpacedText(ctx, 'AWAKENED · TURN YOUR HABITS INTO AN RPG', W / 2, H - 116, 3);
@@ -51024,6 +51024,16 @@
   // scoped re-entry point so future changes to Social/Guild
   // casing rules can diverge from the leaderboard's helper
   // without cross-impact.
+  // W1092 — owner 2026-10-23: "There's capitalized usernames all through the app, I want this changed."
+  // Every hunter name shown to anyone goes through here: strict lowercase, no spaces, the owner's
+  // override kept (richie → Richie). Empty in, empty out, so callers keep their own fallbacks.
+  function _dn(a) {
+    if (a === undefined || a === null) return '';
+    if (String(a).trim() === '') return '';
+    const v = _displayAliasLower(a);
+    return v === '—' ? '' : v;
+  }
+  try { window.__dn = _dn; } catch (_) {}   // QA
   function _displayAliasLower(raw) {
     if (raw === undefined || raw === null) return '—';
     try {
@@ -51483,7 +51493,7 @@
     const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
     return '<span class="board-av" style="--bc:' + col + '">' + esc(initial) + '</span>' +
       '<span class="board-who">' +
-        '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + '</button>' +
+        '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(_dn(alias)) + '</button>' +
         '<span class="board-tierchip" style="--bc:' + col + '">' + esc(tier) + '</span>' + role + founder +
       '</span>';
   }
@@ -51523,7 +51533,7 @@
     const lr = t.last_reply;
     if (!lr || !lr.alias) return '<div class="board-last board-last--none"><span class="board-last-arrow">No replies yet — be the first</span></div>';
     const n = _boardNewCount(t);
-    return '<div class="board-last">' + _boardAvHtml(lr, 'board-av--xs') + '<b>' + esc(lr.alias) + _crownFor(lr.alias) + '</b>' +
+    return '<div class="board-last">' + _boardAvHtml(lr, 'board-av--xs') + '<b>' + esc(_dn(lr.alias)) + _crownFor(lr.alias) + '</b>' +
       '<span class="board-last-arrow">replied · ' + esc(_boardRel(lr.at)) + '</span>' +
       (n ? '<span class="board-last-new">' + (n > 0 ? n + ' NEW' : 'NEW') + '</span>' : '') +
     '</div>';
@@ -51564,7 +51574,7 @@
         '</div>' +
         '<div class="board-tl">' + esc(t.title || '') + '</div>' +
         (t.preview ? '<div class="board-ts">' + esc(t.preview) + '</div>' : '') +
-        '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(a.alias || 'hunter') + _crownFor(a.alias) + '</button>' +
+        '<div class="board-tm"><button type="button" class="board-who" data-board-profile="' + esc(a.alias || '') + '" style="--bc:' + col + '">' + esc(_dn(a.alias) || 'hunter') + _crownFor(a.alias) + '</button>' +
           '<span class="board-rk">' + esc(tier) + '</span><span class="board-dt">' + esc(_boardRel(t.last_activity_at)) + '</span></div>' +
         _boardLastHtml(t) +   // W929
       '</div>' +
@@ -52084,7 +52094,7 @@
     const alias = String(a.alias || 'Hunter');
     const founder = (a.founder_seq | 0) > 0 ? '<span class="board-founder" title="Founder">✦</span>' : '';
     return '<div class="board-pwho">' + _boardAvHtml(a, opts.sub ? 'board-av--sm' : 'board-av--md') +
-      '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(alias) + _crownFor(alias) + '</button>' +
+      '<button type="button" class="board-name" data-board-profile="' + esc(alias) + '" style="--bc:' + col + '">' + esc(_dn(alias)) + _crownFor(alias) + '</button>' +
       '<span class="board-prank">' + esc(tier) + '</span>' + founder + _boardPillsHtml(a, opts.opId) +
       '<span class="board-ptime">' + esc(_boardRel(p.created_at)) + (p.edited_at ? '<span class="board-edited">· EDITED</span>' : '') + '</span>' +
       '<button type="button" class="board-dots" data-board-menu aria-label="Post options">···</button>' +
@@ -52100,7 +52110,7 @@
     }
     rows += '<button type="button" class="board-menu-item" data-board-copy>⧉ Copy text</button>';
     if (!mine) {
-      rows += '<button type="button" class="board-menu-item" data-board-block>◌ Block ' + esc(alias) + '</button>' +
+      rows += '<button type="button" class="board-menu-item" data-board-block>◌ Block ' + esc(_dn(alias)) + '</button>' +
         '<button type="button" class="board-menu-item board-menu-item--d" data-board-report-open>⚑ Report</button>' +
         '<div class="board-menu-row hidden" data-board-report-row>' + BOARD_REASONS.map(function (r) { return '<button type="button" class="board-chip" data-board-report="' + r[0] + '">' + r[1] + '</button>'; }).join('') + '</div>';
     }
@@ -52425,7 +52435,7 @@
     }
     if (action === 'block') {
       _boardHiddenAuthors.add(authorId);
-      _boardToast('Blocked ' + alias + '. You will not see each other on the board.');
+      _boardToast('Blocked ' + _dn(alias) + '. You will not see each other on the board.');
       if (kind === 'topic') { _boardSheetClose(); _boardLists = {}; renderBoardSection(); }
       else { _boardRepliesRender(); }   // W929 — every reply by them folds away
       return;
@@ -52455,7 +52465,7 @@
       return;
     }
     if (action === 'purge') {
-      _boardToast('Removed ' + (res.topics | 0) + ' topics and ' + (res.replies | 0) + ' replies from ' + alias + '.');
+      _boardToast('Removed ' + (res.topics | 0) + ' topics and ' + (res.replies | 0) + ' replies from ' + _dn(alias) + '.');
       _boardLists = {};
       if (kind === 'topic') { _boardSheetClose(); renderBoardSection(); }
       else { postEl.remove(); renderBoardSection(); }
@@ -52482,7 +52492,7 @@
     const list = res.blocks || [];
     host.innerHTML = list.length
       ? list.map(function (b) {
-          return '<div class="settings-v2-frow"><div class="settings-v2-fcol"><div class="settings-v2-fname">' + esc(b.alias || '') + '</div><div class="settings-v2-fsub">Blocked on the Community board</div></div>' +
+          return '<div class="settings-v2-frow"><div class="settings-v2-fcol"><div class="settings-v2-fname">' + esc(_dn(b.alias)) + '</div><div class="settings-v2-fsub">Blocked on the Community board</div></div>' +
             '<span class="settings-v2-fright"><button type="button" class="social-btn social-btn--ghost" data-board-unblock="' + esc(b.user_id) + '">Unblock</button></span></div>';
         }).join('')
       : '<div class="settings-v2-fsub">No blocked hunters.</div>';
@@ -52832,7 +52842,7 @@
           '<div class="social-row friend-row friend-row--incoming" data-friendship-id="' + esc(f.id) + '" data-alias="' + esc(f.alias) + '">' +
             _friendAvatarHtml(alias, 'gold') +
             '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(alias) + _crownFor(alias) + '</div>' +
+              '<div class="social-row-alias">' + esc(_dn(alias)) + _crownFor(alias) + '</div>' +
               '<div class="social-row-meta friend-row-meta--gold">wants to be friends</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
@@ -52852,7 +52862,7 @@
           '<div class="social-row friend-row friend-row--outgoing" data-friendship-id="' + esc(f.id) + '">' +
             _friendAvatarHtml(alias, 'muted') +
             '<div class="social-row-main">' +
-              '<div class="social-row-alias">' + esc(alias) + _crownFor(alias) + '</div>' +
+              '<div class="social-row-alias">' + esc(_dn(alias)) + _crownFor(alias) + '</div>' +
               '<div class="social-row-meta">awaiting response</div>' +
             '</div>' +
             '<div class="social-row-actions">' +
@@ -55494,7 +55504,7 @@
     const champ = d.champion;
     const me = d.me;
     const fmt = function (n) { return (Number(n) || 0).toLocaleString('en-US'); };
-    const champAlias = esc(champ.alias || 'A hunter');
+    const champAlias = esc(_dn(champ.alias) || 'A hunter');
     let line;
     if (me && me.rank === 1) {
       var crowns = (d.myTitle && d.myTitle.count) ? d.myTitle.count : 1;
@@ -55739,9 +55749,9 @@
       const above = rows[meRow.rank - 2];   // the row directly ahead of me
       const gap = above ? Math.max(1, above.steps - meRow.steps) : 0;
       if (above && gap <= _WR_NEAR_MISS_MAX_GAP) {
-        model.hookLine = 'You finished ' + fmt(gap) + ' steps behind #' + above.rank + ' (' + above.alias + ').';
+        model.hookLine = 'You finished ' + fmt(gap) + ' steps behind #' + above.rank + ' (' + _dn(above.alias) + ').';
       } else if (model._pass) {
-        model.hookLine = 'You passed ' + model._pass.alias +
+        model.hookLine = 'You passed ' + _dn(model._pass.alias) +
           (model._pass.gap > 0 ? ' — they had you by ' + fmt(model._pass.gap) + ' last week.' : ' this week.');
       } else {
         model.hookLine = '#' + meRow.rank + ' of ' + total + ' hunters.';
@@ -55756,7 +55766,7 @@
       if (!row) return '';
       return '<div class="wr-pod wr-pod-' + place + '">' +
         '<div class="wr-pod-rank">' + place + '</div>' +
-        '<div class="wr-pod-alias">' + esc(row.alias) + _crownFor(row.alias) + '</div>' +
+        '<div class="wr-pod-alias">' + esc(_dn(row.alias)) + _crownFor(row.alias) + '</div>' +
         '<div class="wr-pod-steps">' + fmt(row.steps) + '</div>' +
       '</div>';
     };
@@ -56461,7 +56471,7 @@
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"><i></i><span>DEFAULT SKIN</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias">' + esc(data.alias || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div></div>' +
+      '<div class="pc-identity"><div class="pc-alias">' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div></div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
@@ -60382,7 +60392,7 @@
   function _coopBattleAfterPoll(inst) {
     if (_coopBattle.instId !== inst.id) {
       _coopBattleReset(inst.id);
-      const names = _coopBattleRoster(inst).filter(function (h) { return !h.me; }).map(function (h) { return esc(h.alias) + _crownFor(h.alias); });
+      const names = _coopBattleRoster(inst).filter(function (h) { return !h.me; }).map(function (h) { return esc(_dn(h.alias)) + _crownFor(h.alias); });
       // W792 — stamp the announce with the hunt's REAL start moment (owner: the
       // chat box showed the current clock, which read as "the raid began just
       // now" no matter when it actually started).
@@ -60403,7 +60413,7 @@
       _coopBattle.prev[key] = now;
       if (delta > 0) {
         const cls = h.me ? 'chd-gold' : 'chd-vio';
-        _coopBattleLog('<b class="' + cls + '">' + esc(h.alias) + '</b> struck for <b class="' + cls + '">' + _N(delta) + '</b>');
+        _coopBattleLog('<b class="' + cls + '">' + esc(_dn(h.alias)) + '</b> struck for <b class="' + cls + '">' + _N(delta) + '</b>');
         _coopBattleDmg(delta, h.me ? 'you' : 'ally', delta >= 800);
         if (!h.me) _coopBattleHitFx();
       }
@@ -60507,7 +60517,7 @@
       used += w;
     });
     const legend = roster.map(function (h, i) {
-      return '<span class="chd-c' + Math.min(i, 4) + '"><i></i>' + esc(h.alias) + '</span>';
+      return '<span class="chd-c' + Math.min(i, 4) + '"><i></i>' + esc(_dn(h.alias)) + '</span>';
     }).join('');
 
     // Secondary stream (both/sleep) — slim bar under the duel, binding-aware.
@@ -60588,7 +60598,7 @@
       return '<div class="chd-row">' +
         '<div class="chd-av chd-c' + c + '" data-chd-av="' + i + '"><div class="chd-av-in">' + initial + '</div></div>' +
         // W793 — the crown is now MVP (tap → incentive explainer via the global [data-mvp-info] handler).
-        '<div class="chd-info"><div class="chd-name">' + esc(h.alias) + _crownFor(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + pactChip + '</div>' +
+        '<div class="chd-info"><div class="chd-name">' + esc(_dn(h.alias)) + _crownFor(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + pactChip + '</div>' +
         '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
         '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div>' +
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
@@ -61144,7 +61154,7 @@
         '<div class="csb-ally" aria-hidden="true">' + esc(mono) + '</div>' +
         '<div class="csb-txt">' +
           '<div class="csb-eyebrow"><span class="csb-spark"></span>Co-op Summons</div>' +
-          '<div class="csb-msg"><span class="csb-who">' + esc(ally) + _crownFor(ally) + '</span> calls you to the hunt</div>' +
+          '<div class="csb-msg"><span class="csb-who">' + esc(_dn(ally)) + _crownFor(ally) + '</span> calls you to the hunt</div>' +
           '<div class="csb-sub">' + esc(bossName) + '<span class="csb-rank">' + esc(rank) + '-RANK</span></div>' +
         '</div>' +
         '<button type="button" class="csb-answer">' + (multi ? ('Accept all ' + _pend.length) : 'Answer') + '</button>' +
@@ -61259,7 +61269,7 @@
         '<div class="csb-ally" aria-hidden="true">' + esc(mono) + '</div>' +
         '<div class="csb-txt">' +
           '<div class="csb-eyebrow"><span class="csb-spark"></span>Guild Request</div>' +
-          '<div class="csb-msg"><span class="csb-who">' + esc(alias) + _crownFor(alias) + '</span>' + (multi ? ' <span style="color:#c9c9dd">+ ' + (pend.length - 1) + ' more</span> want to join' : ' wants to join your guild') + '</div>' +
+          '<div class="csb-msg"><span class="csb-who">' + esc(_dn(alias)) + _crownFor(alias) + '</span>' + (multi ? ' <span style="color:#c9c9dd">+ ' + (pend.length - 1) + ' more</span> want to join' : ' wants to join your guild') + '</div>' +
           '<div class="csb-sub">Accept to hunt together</div>' +
         '</div>' +
         '<button type="button" class="csb-answer">' + (multi ? 'Accept all ' + pend.length : 'Accept') + '</button>' +
@@ -61335,7 +61345,7 @@
   function _coopTopRowHtml(inst, ally, bossName, rank) {
     const mono = (String(ally).trim().charAt(0) || 'A').toUpperCase();
     return '<div class="cph-top"><div class="cph-ally" aria-hidden="true">' + esc(mono) + '</div>' +
-      '<div class="cph-who"><div class="cph-name">' + esc(ally) + _crownFor(ally) + '</div>' +
+      '<div class="cph-who"><div class="cph-name">' + esc(_dn(ally)) + _crownFor(ally) + '</div>' +
       '<div class="cph-boss"><span class="cph-bname">' + esc(bossName) + '</span><span class="cph-rank cph-rank--' + esc(String(rank).toLowerCase()) + '">' + esc(rank) + '-RANK</span></div></div>' +
       '<span class="cph-chev" aria-hidden="true"><svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></div>';
   }
@@ -61610,7 +61620,7 @@
         const flPart = (typeof c.fl === 'number') ? ' + ' + _N(c.fl) + ' flights'
           : (typeof c.sl === 'number') ? ' + ' + _coopFmtSleep(c.sl) + ' slept' : '';   // W808 (review F3) — sleep leg now visible
         return '<div class="chh-bk-row' + (c.me ? ' chh-bk-me' : '') + '">' +
-          '<span class="chh-bk-name">' + esc(c.alias) + _crownFor(c.alias) + (isMvp ? '<span class="chh-mvp-chip" data-mvp-info>MVP</span>' : '') + '</span>' +
+          '<span class="chh-bk-name">' + esc(_dn(c.alias)) + _crownFor(c.alias) + (isMvp ? '<span class="chh-mvp-chip" data-mvp-info>MVP</span>' : '') + '</span>' +
           '<span class="chh-bk-num"><b>' + _N(Number(c.val) || 0) + '</b> ' + unitWord + flPart + ' · ' + share + '%</span>' +
         '</div>';
       }).join('') + '</div>';
@@ -65717,8 +65727,8 @@
 
     const user = (typeof window.Auth !== 'undefined') ? window.Auth.getCurrentUser() : null;
     if (user && user.alias) {
-      if (summary)  summary.textContent  = '@' + user.alias;
-      if (aliasEl)  aliasEl.textContent  = user.alias;
+      if (summary)  summary.textContent  = '@' + _dn(user.alias);
+      if (aliasEl)  aliasEl.textContent  = _dn(user.alias);
       if (avatarEl) avatarEl.textContent = user.alias.charAt(0).toUpperCase();
       if (sinceEl) {
         const memberSince = formatMemberSince(user.signed_in_date);
@@ -67712,7 +67722,7 @@
         me.querySelector('.ob4-r').textContent = mine.rank == null ? '—' : mine.rank;
         const above = shown.filter((r) => r.current_value >= target).sort((x, y) => x.current_value - y.current_value)[0];
         gap.textContent = !above ? 'No one above you this week.'
-          : (above.current_value === target ? 'Level with ' + above.alias + '.' : fmt(above.current_value - target) + ' steps to pass ' + above.alias + '.');
+          : (above.current_value === target ? 'Level with ' + _dn(above.alias) + '.' : fmt(above.current_value - target) + ' steps to pass ' + _dn(above.alias) + '.');
         gap.classList.add('is-on');
         ctx.fx.hap('medium'); ctx.fx.snd('seal');
       }
