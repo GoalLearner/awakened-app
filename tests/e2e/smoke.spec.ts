@@ -9572,7 +9572,9 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     const before = await souls(page);
     const ledgerBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]').length);
     await sheet(page).locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Marathon Wraith', { timeout: 6000 });   // the lead's result first
+    // W1082 — the three wins land on ONE tally, the lead first
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('Three bosses down', { timeout: 6000 });
+    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm').first()).toContainText('The Marathon Wraith');
     const r = await page.evaluate(() => {
       const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
       const ledger = JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]');
@@ -9591,14 +9593,15 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     const after = await souls(page);
     expect(after.totalSpent).toBe(25 + 50 + 100);            // every entrance fee paid
     expect(after.balance - before.balance).toBeGreaterThanOrEqual((200 + 100 + 50) - 175);
-    // the other two results follow, one after another
-    const seen = new Set<string>();
-    for (let i = 0; i < 40 && seen.size < 3; i++) {
-      const name = await page.evaluate(() => { const o = document.getElementById('boss-result-overlay'); const n = o && !o.classList.contains('hidden') && o.querySelector('.hr-boss'); return n ? n.textContent : ''; });
-      if (name) { seen.add(name); await page.evaluate(() => { const f = document.querySelector('#boss-result-overlay .hr-frame') as HTMLElement; if (f) { f.click(); f.click(); } }); }
-      await page.waitForTimeout(450);
-    }
-    expect([...seen].sort()).toEqual(['The Glass Strider', 'The Marathon Wraith', 'The Steel Wolf']);
+    // W1082 — all three on the tally; tap skips, tap leaves, and no second screen follows
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('#boss-result-overlay .hr-tr .hr-nm'), (n: any) => n.childNodes[0].textContent));
+    expect([...rows].sort()).toEqual(['The Glass Strider', 'The Marathon Wraith', 'The Steel Wolf']);
+    await page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
+    await page.waitForTimeout(400);
+    await page.locator('#boss-result-overlay .hr-frame').click({ position: { x: 20, y: 20 } });
+    await expect.poll(() => page.evaluate(() => document.getElementById('boss-result-overlay')!.classList.contains('hidden')), { timeout: 4000 }).toBe(true);
+    await page.waitForTimeout(900);
+    expect(await page.evaluate(() => document.getElementById('boss-result-overlay')!.classList.contains('hidden'))).toBe(true);
   });
 
   test('W1039 — the rank lock stays: an E-rank hunter with 10,400 steps is offered the Wolf alone', async ({ page }) => {
@@ -9618,7 +9621,8 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(await offers(page)).toEqual(['the_furnace_knight', 'the_iron_warden']);
     await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });   // rises again: the Knight is new today
     await sheet(page).locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Furnace Knight', { timeout: 6000 });
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('Two bosses down', { timeout: 6000 });   // W1082 — one tally, the Knight leading
+    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm').first()).toContainText('The Furnace Knight');
     expect([(await boss(page, 'the_furnace_knight')).kill_count, (await boss(page, 'the_iron_warden')).kill_count]).toEqual([1, 1]);
   });
 
@@ -9649,7 +9653,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await page.evaluate(() => (window as any).__readyHunt.openSheet());
     await expect(sheet(page).locator('.rh-row-name').first()).toHaveText('The Patient Flame', { timeout: 8000 });
     await sheet(page).locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Patient Flame', { timeout: 6000 });
+    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm').first()).toContainText('The Patient Flame', { timeout: 6000 });   // W1082 — leads the tally
     const b = await boss(page, 'the_patient_flame');
     expect([b.kill_count, b.engaged]).toEqual([1, false]);
     expect((await souls(page)).totalSpent || 0).toBeGreaterThanOrEqual(200);   // the B-rank fee, with the others on the sheet
@@ -9811,7 +9815,8 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await expect(sheet(page).locator('.rh-row--short')).toHaveCount(0);
     await expect(sheet(page).locator('.rh-quiet')).toHaveText('Fees 50 souls · you have 30. Each win pays for the next.');
     await sheet(page).locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Unbroken Anvil', { timeout: 6000 });
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('Three bosses down', { timeout: 6000 });   // W1082 — one tally, the Anvil leading
+    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm').first()).toContainText('The Unbroken Anvil');
     const k = async (id: string) => (await boss(page, id)).kill_count;
     expect([await k('the_unbroken_anvil'), await k('the_steel_wolf'), await k('the_carouser')]).toEqual([2, 1, 1]);
     const s = await souls(page);
@@ -10774,7 +10779,8 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     const b = await beaten(page);
     expect([b.the_footsore_herald, b.the_milestone_hound, b.the_wayfarer_knight]).toEqual([[WEEK], [WEEK], [WEEK]]);
     expect(b.the_seven_league_stalker).toEqual([]);
-    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Footsore Herald', { timeout: 6000 });   // the screens climb
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('Three bosses down', { timeout: 6000 });   // W1082 — one tally, the rows climb
+    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm')).toContainText(['The Footsore Herald', 'The Milestone Hound', 'The Wayfarer Knight']);
     expect(await balance(page)).toBeGreaterThanOrEqual(500 + 50 + 100 + 200);   // each paid its rank, no fee
     // once a week: another tick changes nothing
     expect(await tick(page)).toBe(0);
