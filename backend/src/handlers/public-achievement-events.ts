@@ -109,6 +109,11 @@ const ALLOWED_EVENT_TYPES = [
   // constraint makes each band a once-ever announcement per user (a streak that
   // breaks and is rebuilt to the same band stays silent the second time).
   'perfect_day',
+  // W1093 — a boss's shadow joining a hunter's army. The label is "claimed the
+  // Shadow of <Boss>" under the boss-name character class; the key is the boss
+  // id; the clientEventId is pinned to "shadow:<bossId>" so a hunter announces
+  // each shadow once, ever (UNIQUE(user_id, client_event_id)).
+  'shadow_drop',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -118,6 +123,9 @@ const ALLOWED_BOSS_RANKS  = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 // client-preformatted under the same rules we expect at submit
 // time, so a leak vector via free-text labels is impossible.
 const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 '\-]+$/;
+const RE_SHADOW_DROP_LABEL  = /^claimed the Shadow of [A-Za-z0-9 '\-]+$/;   // W1093
+const RE_SHADOW_DROP_KEY    = /^[a-z0-9_]{1,48}$/;                          // W1093 — a boss id
+const SHADOW_DROP_LABEL_MAX = 84;
 const RE_RANK_UP_LABEL      = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
 const RE_STEP_BUCKET_LABEL  = /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/;
 
@@ -439,6 +447,26 @@ function validateEvent(
       return { ok: false, code: 'INVALID_RARITY', detail: 'boss_kill rarity must be one of E, D, C, B, A, S, S+.' };
     }
     rarity = raw.rarity;
+  } else if (eventType === 'shadow_drop') {
+    // W1093 — every field pinned: the label is the boss name under the boss-kill character
+    // class, the key is the boss id, the clientEventId is "shadow:<bossId>", nothing else rides.
+    if (!RE_SHADOW_DROP_LABEL.test(eventLabel) || eventLabel.length > SHADOW_DROP_LABEL_MAX) {
+      return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'shadow_drop label must match "claimed the Shadow of <bossName>".' };
+    }
+    if (!RE_SHADOW_DROP_KEY.test(eventKey)) {
+      return { ok: false, code: 'INVALID_EVENT_KEY', detail: 'shadow_drop eventKey must be a boss id.' };
+    }
+    if (clientEventId !== 'shadow:' + eventKey) {
+      return { ok: false, code: 'INVALID_CLIENT_EVENT_ID', detail: 'shadow_drop clientEventId must be "shadow:<bossId>".' };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return { ok: false, code: 'INVALID_EVENT_VALUE', detail: 'shadow_drop eventValue must be null.' };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return { ok: false, code: 'INVALID_RARITY', detail: 'shadow_drop rarity must be null.' };
+    }
+    rarity = null;
   } else if (eventType === 'rank_up') {
     if (!RE_RANK_UP_LABEL.test(eventLabel)) {
       return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'rank_up label must match "reached <tier>[ <division>]".' };

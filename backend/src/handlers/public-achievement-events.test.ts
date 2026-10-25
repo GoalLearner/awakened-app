@@ -144,6 +144,17 @@ const VALID_ULTRA_RARE_DROP = {
 };
 
 // v3 Phase 1z.226A — fixed canonical rare-tier drop payload.
+// W1093 — a shadow joining the army: boss id key, named label, pinned clientEventId.
+const VALID_SHADOW_DROP = {
+  eventType:       'shadow_drop',
+  eventKey:        'the_footsore_herald',
+  eventLabel:      'claimed the Shadow of The Footsore Herald',
+  eventValue:      null,
+  rarity:          null,
+  clientEventId:   'shadow:the_footsore_herald',
+  clientCreatedAt: NOW_ISO,
+};
+
 const VALID_RARE_ITEM_DROP = {
   eventType:       'rare_item_drop',
   eventKey:        'rare',
@@ -691,6 +702,31 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
   // private types stay rejected.
 
   // — rare_item_drop —
+  // W1093
+  it('accepts a shadow_drop with the boss id as key and the pinned clientEventId', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(makeReq({ events: [VALID_SHADOW_DROP] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const ins = db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!;
+    expect(ins.binds[3]).toBe('the_footsore_herald');
+    expect(ins.binds[4]).toBe('claimed the Shadow of The Footsore Herald');
+    expect(ins.binds[5]).toBeNull();
+    expect(ins.binds[6]).toBeNull();
+  });
+  it('rejects a shadow_drop whose label is not "claimed the Shadow of <boss>", whose key is not a boss id, or whose clientEventId is not pinned', async () => {
+    const bad = [
+      { ...VALID_SHADOW_DROP, eventLabel: 'claimed Crown of Deep Rest' },
+      { ...VALID_SHADOW_DROP, eventKey: 'The Footsore Herald' },
+      { ...VALID_SHADOW_DROP, clientEventId: 'shadow:2026-10-25:n1' },
+      { ...VALID_SHADOW_DROP, eventValue: 3 },
+      { ...VALID_SHADOW_DROP, rarity: 'E' },
+    ];
+    for (const ev of bad) {
+      const res = await handlePublicAchievementEventsPost(makeReq({ events: [ev] }), makeEnv(makeDb()), session);
+      expect(res.status).toBe(400);
+    }
+  });
+
   it('accepts a valid canonical rare_item_drop', async () => {
     const db = makeDb({ perInsertChanges: [1] });
     const res = await handlePublicAchievementEventsPost(
