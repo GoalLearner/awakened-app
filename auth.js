@@ -2128,6 +2128,29 @@
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
     return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
   }
+  // W1098 — POST /v1/users/me/skins/earn. `claims` = top-tier skin ids this phone's own numbers
+  // say are met; the server grants them (plus the two it counts itself: days opened, pact flames)
+  // and answers with every owned skin, the ones newly granted, and its progress numbers.
+  async function earnSkins(claims) {
+    const u = readUser();
+    const gate = _stubGate(u);
+    if (gate) return gate;
+    let res;
+    try {
+      res = await fetch(BACKEND_URL + '/v1/users/me/skins/earn', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + u.jwt, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claims: Array.isArray(claims) ? claims.slice(0, 7) : [] }),
+      });
+    } catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
+    let data; try { data = await res.json(); } catch (_) { data = null; }
+    if (res.status === 200 && data) {
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], granted: Array.isArray(data.granted) ? data.granted : [], progress: data.progress || {} };
+    }
+    if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }
+    if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
+    return { ok: false, code: 'ERROR', detail: (data && data.detail) || ('HTTP ' + res.status) };
+  }
 
   // ── W651/W655 — "Awakened Premium" auto-renewable membership ─────────────
   // The membership, and since W655 the ONLY paid tier (the one-time Founder
@@ -2500,6 +2523,7 @@
     restorePurchases,
     fetchEntitlements,
     reconcileEntitlements,   // W637 — self-healing grant (recovers lost webhook / restored purchase)
+    earnSkins,               // W1098 — earned top-tier skins
     // W651/W655 — Awakened Premium (auto-renewable membership; the only paid tier)
     purchasePremium,
     getPremiumPrices,

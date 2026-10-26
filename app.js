@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.17';   // W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.17-w1097'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.17-w1098'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27808,10 +27808,13 @@
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
     // W1097 — 3.0.17: the automatic friend hunts (W1094). Every hunter with a friend meets them.
+    // W1098 — then the Wardrobe: the seven top-tier looks are earned, every background is free.
     '3.0.17': {
       subtitle: 'Hunts with friends start by themselves.',
       items: [
         { emoji: '', title: 'Hunts with friends start by themselves', description: "Every day, you and each friend who walks get a shared hunt, already running, sized to what the two of you usually walk. Win it together and you both get paid. Nothing to send or accept. Any friend can be switched off from their flame." },
+        { emoji: '', title: 'The seven are earned', description: "The seven top-tier looks are no longer sold. Each one is earned by a milestone, and a locked one shows what it takes." },
+        { emoji: '', title: 'Every background is free', description: "Earn a card background and it is yours to wear, member or not." },
       ],
     },
     // W1087 — 3.0.16: one line, the one every climber feels.
@@ -37024,6 +37027,7 @@
   function _equipUnwornPurchase(ownedIds) {
     try {
       if (_iapPurchaseBusy) return null;                       // a purchase in flight equips its own skin
+      if (_earnInFlight || _earnPlaying) return null;          // W1098 — an earned skin goes on from its celebration
       const wd = document.getElementById('wd-sheet');
       if (wd && !wd.classList.contains('hidden')) return null;   // the wardrobe is open: the hunter is choosing
       const owned = (ownedIds || []).filter(function (id) { return PREMIUM_SKINS.some(function (s) { return s.id === id; }); });
@@ -37167,7 +37171,7 @@
       setEquippedSkin('');
       try { console.warn('[Wardrobe] equipped skin ' + prem.id + ' is no longer owned — reverted to class default'); } catch (_) {}
       try { const home = document.getElementById('sc-avatar-img'); if (home) { home.src = getAvatarSrc(); _lastAvatarSrc = home.src; } } catch (_) {}
-      try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+      try { _renderWardrobe(); } catch (_) {}
     } catch (_) {}
   }
   async function refreshSkinEntitlements() {
@@ -37181,7 +37185,8 @@
         _skinsCacheWrite(r.skins);
         _enforceSkinOwnership();   // W821 — refunds/transfers unequip once the server has spoken
         _equipUnwornPurchase(r.skins);   // W1032 — a bought skin never worn goes on now
-        try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+        try { _renderWardrobe(); } catch (_) {}
+        try { _earnTick(false); } catch (_) {}   // W1098 — anything earned since the last look
       } else if (r && !r.ok) {
         // W821 (C2 finding "silent catch") — a failed fetch is no longer
         // invisible: log it (surfaced under hb_debug) so ownership staleness
@@ -37214,7 +37219,7 @@
       if (r && r.ok && Array.isArray(r.skins)) {
         _ownedSkins = new Set(r.skins);
         _skinsCacheWrite(r.skins);
-        try { if (document.getElementById('wd-body')) _renderWardrobe(); } catch (_) {}
+        try { _renderWardrobe(); } catch (_) {}
       } else {
         try { localStorage.setItem(RECONCILE_THROTTLE_KEY, String(now - (DAY - HOUR))); } catch (_) {}
       }
@@ -44533,7 +44538,7 @@
   // the small news behind it (pri 80+), never a real moment.
   // A flag holds back only what matters less than it: a rank-up (20) never
   // waits on a Perfect Day (30) that is itself queued behind the rank-up.
-  var _STAGE_FLAG_PRI = { boss: 10, reveal: 15, levelup: 20, pday: 30, bonus: 40 };
+  var _STAGE_FLAG_PRI = { boss: 10, reveal: 15, levelup: 20, earn: 25, pday: 30, bonus: 40 };
   var _STAGE_SURFACES = [
     ['levelup',  'flag', function () { return typeof levelUpActive !== 'undefined' && !!levelUpActive; }],
     ['levelup',  'dom',  function () {
@@ -44544,6 +44549,8 @@
     ['boss',     'flag', function () { return typeof _bossResultBusy !== 'undefined' && !!_bossResultBusy; }],
     ['boss',     'dom',  function () { return _stageVis('boss-result-overlay'); }],
     ['wgmvp',    'dom',  function () { return !!document.getElementById('wgmvp-screen'); }],   // W975 (replaced W964's wgkill)
+    ['earn',     'flag', function () { return !!_earnPlaying; }],                 // W1098 — a skin or background earned
+    ['earn',     'dom',  function () { return !!document.getElementById('earn-ce'); }],
     ['reveal',   'flag', function () { return typeof _revealActive !== 'undefined' && !!_revealActive; }],
     ['reveal',   'dom',  function () { return _stageVis('reveal-overlay'); }],
     ['pday',     'flag', function () { return typeof _pdayPending !== 'undefined' && !!_pdayPending; }],
@@ -44958,14 +44965,13 @@
       } catch (_) { avatarLoaded = false; }
     }
 
-    // W716 — a MEMBER's equipped card background paints behind the Hunter Report, so the
+    // W716 — the equipped card background paints behind the Hunter Report, so the
     // status symbol travels onto the shareable card (matches the board rows + profile
-    // card). Gated on membership + an equipped catalog bg; non-members / "Basic" keep the
-    // plain navy. Awaited like the avatar so the draw below has the bitmap ready.
+    // card). "Basic" keeps the plain navy (W1098: no member gate any more).
+    // Awaited like the avatar so the draw below has the bitmap ready.
     let hrBgImg = null;
     try {
-      const _cbMember = (typeof _founderOwned === 'function') && _founderOwned();
-      const _cbId = (_cbMember && typeof _cardBgEquipped === 'function') ? _cardBgEquipped() : '';
+      const _cbId = (typeof _cardBgEquipped === 'function') ? _cardBgEquipped() : '';   // W1098 — free for everyone
       const _cbArt = (_cbId && typeof _cardBgArt === 'function') ? _cardBgArt(_cbId) : '';
       if (_cbArt) {
         const _bi = new Image();
@@ -53747,12 +53753,11 @@
   try { window.showLoading = showLoading; window.hideLoading = hideLoading; } catch (_) {}
 
   // W704 — leaderboard avatar crest. Resolves a board row to a small portrait <img>:
-  // ── W706 — MEMBER CARD BACKGROUNDS ─────────────────────────────────────────
-  // The catalog of member-exclusive card backgrounds (Higgsfield-painted webp in
+  // ── W706 — CARD BACKGROUNDS ────────────────────────────────────────────────
+  // The catalog of card backgrounds (Higgsfield-painted webp in
   // assets/backgrounds/lb-bg-*.webp). Each design is UNLOCKED by an earned
-  // achievement (client-checked, same trust model as rank) and EQUIPPABLE only by
-  // a member (server-enforced at the profile-summary write — a non-member's equip
-  // is coerced to null server-side, so the picker gate here is UX, not security).
+  // achievement (client-checked, same trust model as rank). W1098: equippable by
+  // everyone (owner 2026-10-26), member or not; the server stopped coercing it too.
   // Keep ids in sync with the backend CARD_BG_IDS whitelist.
   const CARD_BG_CATALOG = [
     { id: 'bg-100k',      name: 'The Hundred-K City', need: '100K Step Club' },
@@ -53791,14 +53796,11 @@
   //   { set:true, id:null }    — EXPLICIT "Basic" (stored as '') → sole truth for
   //                              own display + an explicit null clear on the PUT
   //   { set:true, id:'bg-x' }  — an equipped catalog design
-  // A non-member reads as { set:false } (display + payload fall back to the
-  // published value, which the server nulls on their next PUT) — but the stored
-  // key is kept so a re-subscribe restores the equip automatically.
+  // W1098 — every background is free to wear (owner 2026-10-26): no member gate any more.
   function _cardBgLocal() {
     try {
       const raw = localStorage.getItem('hb_card_bg');
       if (raw === null) return { set: false, id: null };
-      if (!_founderOwned()) return { set: false, id: null };
       if (raw === '') return { set: true, id: null };
       return _cardBgById(raw) ? { set: true, id: raw } : { set: false, id: null };
     } catch (_) { return { set: false, id: null }; }
@@ -53892,7 +53894,7 @@
     } catch (_) { return false; }
   }
   // Equip/clear from the picker: persists locally (instant paint on own rows) and
-  // nudges the profile heartbeat so the server adopts it (member-validated there).
+  // nudges the profile heartbeat so the server adopts it.
   function _cardBgEquip(id) {
     // '' = the EXPLICIT-basic sentinel (never removeItem — an absent key means
     // "this device never chose", which the heartbeat must not turn into a clear).
@@ -56725,134 +56727,955 @@
   }
   try { window.__openProfileCard = _openProfileCard; } catch (_) {}
 
-  // ── W279 — The Wardrobe (avatar skins, Layer 1: free looks + equip) ──
+  // ── W1098 — THE WARDROBE (Claude Design handoff "The Wardrobe") + EARNING A LOOK ("Earning a Look") ──
+  // Owner 2026-10-26: the seven top-tier skins are earned, not sold ("make them all free to the
+  // public ... earned avatar skins via reward"), every background is free, and the Wardrobe is two
+  // tabs (LOOKS · BACKGROUNDS) with the seven up front ("make sure those avatars are up"); a locked
+  // skin opens its condition. Ported from wardrobe-app.js / earn.js. Departures from the prototype:
+  // no CSS colour mixing (iOS 15 WebKit lacks it; the AM test guards it) — tints ride rgb triplets in CSS vars;
+  // real art (busts + lb-bg banners); the hunter's real numbers; the celebration plays through
+  // the W950 stage on a 390 × 844 box scaled to the screen.
+  const WX_RK = { E: '#8b5cf6', D: '#22d3ee', C: '#34d399', B: '#fbbf24', A: '#ef4444', S: '#e879f9', 'S+': '#f5b842' };
+  const WX_RANKS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'];
+  const WX_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'master', 'awakened'];
+  const WX_RAR = { L: { n: 'Legendary', c: '#a78bfa' }, M: { n: 'Mythic', c: '#f5b842' } };
+  // The seven, display order: legendary row (3) over mythic row (4). Names + flavour from PREMIUM_SKINS.
+  const EARN_SKINS = [
+    { key: 'emberforged',   id: 'avatar-skin-emberforged.png',    r: 'L', cond: 'Keep a pact flame with one friend for 30 days', k: 'pips', stat: 'flame',   goal: 30,  lab: 'Best flame',    unit: 'days', line: 'Thirty days · one pact flame' },
+    { key: 'voidtouched',   id: 'avatar-skin-voidtouched.png',    r: 'L', cond: 'Raise 10 shadows',                              k: 'pips', stat: 'shadows', goal: 10,  lab: 'Shadows',                     line: 'Ten shadows raised' },
+    { key: 'verdant',       id: 'avatar-skin-verdant.png',        r: 'L', cond: 'Open the app 30 days in a row',                 k: 'pips', stat: 'opened',  goal: 30,  lab: 'In a row',      unit: 'days', line: 'Thirty days in a row' },
+    { key: 'nullprotocol',  id: 'avatar-skin-nullprotocol.png',   r: 'M', cond: 'Clear Floor 90 of the Ascent',                  k: 'num',  stat: 'floor',   goal: 90,  lab: 'Highest floor',               line: 'Floor 90 cleared' },
+    { key: 'nullprotocol2', id: 'avatar-skin-nullprotocol-2.png', r: 'M', cond: 'Slay 200 bosses',                               k: 'num',  stat: 'kills',   goal: 200, lab: 'Bosses slain',                line: 'Two hundred bosses slain' },
+    { key: 'dawnbringer',   id: 'avatar-skin-dawnbringer.png',    r: 'M', cond: 'Reach S rank',                                  k: 'rank', goal: 'S',                                              line: 'S rank reached' },
+    { key: 'stardust',      id: 'avatar-skin-stardust.png',       r: 'M', cond: 'Walk 1,000,000 steps',                          k: 'num',  stat: 'steps',   goal: 1e6, lab: 'Lifetime steps',              line: '1,000,000 steps walked' },
+  ];
+  // Backgrounds, grouped by where they are earned. id = CARD_BG_CATALOG id.
+  const WX_GROUPS = [['climb', 'The Climb'], ['hunt', 'The Hunt'], ['gates', 'The Gates'], ['road', 'The Road'], ['hoard', 'The Hoard'], ['founders', 'Founders']];
+  const WX_BGS = [
+    { id: 'bg-floor100',  g: 'climb', w: 1, req: 'Clear Floor 100',            cond: 'Clear Floor 100 of the Ascent',          k: 'num',  stat: 'floor',  goal: 100,  lab: 'Highest floor', pos: '50% 45%', line: 'Floor 100 cleared' },
+    { id: 'bg-srank',     g: 'climb',       req: 'Reach S rank',               cond: 'Reach S rank',                           k: 'rank', goal: 'S',                                    pos: '50% 50%', line: 'S rank reached' },
+    { id: 'bg-splus',     g: 'climb',       req: 'S+ prestige',                cond: 'Reach S+ prestige',                      k: 'rank', goal: 'S+',                                   pos: '50% 50%', line: 'S+ prestige' },
+    { id: 'bg-arena',     g: 'climb', w: 1, req: 'Awakened Arena tier',        cond: 'Reach the Awakened tier of the Arena',   k: 'tier',                                               pos: '50% 72%', line: 'Awakened arena tier' },
+    { id: 'bg-boss500',   g: 'hunt',        req: '500 boss kills',             cond: 'Slay 500 bosses',                        k: 'num',  stat: 'kills',  goal: 500,  lab: 'Bosses slain',  pos: '50% 50%', line: 'Five hundred bosses slain' },
+    { id: 'bg-god',       g: 'hunt',        req: 'Defeat the Grinning God',    cond: 'Defeat The Grinning God',                k: 'bin',  stat: 'grinning',                             pos: '50% 50%', line: 'The Grinning God, defeated' },
+    { id: 'bg-egate', g: 'gates', rk: 'E', k: 'gate', pos: '78% 50%' },
+    { id: 'bg-dgate', g: 'gates', rk: 'D', k: 'gate', pos: '62% 55%' },
+    { id: 'bg-cgate', g: 'gates', rk: 'C', k: 'gate', pos: '56% 50%' },
+    { id: 'bg-bgate', g: 'gates', rk: 'B', k: 'gate', pos: '58% 50%' },
+    { id: 'bg-agate', g: 'gates', rk: 'A', k: 'gate', pos: '60% 45%' },
+    { id: 'bg-sgate', g: 'gates', rk: 'S', k: 'gate', pos: '60% 50%' },
+    { id: 'bg-100k',      g: 'road',  w: 1, req: '100K Step Club',             cond: 'Walk 100,000 steps in one week',         k: 'num',  stat: 'week',   goal: 1e5,  lab: 'Best week',     pos: '50% 60%', line: '100,000 steps in one week' },
+    { id: 'bg-streak30',  g: 'road',        req: '30-day walk or sleep streak', cond: 'Keep a walk or sleep streak for 30 days', k: 'pips', stat: 'sworn', goal: 30,   lab: 'Best streak', unit: 'days', pos: '35% 55%', line: 'Thirty days, sworn and kept' },
+    { id: 'bg-streak365', g: 'road',        req: '365-day streak',             cond: 'Keep a streak for 365 days',             k: 'num',  stat: 'streak', goal: 365,  lab: 'Best streak', unit: 'days', pos: '60% 50%', line: 'A 365-day streak' },
+    { id: 'bg-collog',    g: 'hoard', w: 1, req: 'Complete the Collection Log', cond: 'Complete the Collection Log',           k: 'num',  stat: 'log',    goal: 'logTotal', lab: 'Relics logged', pos: '50% 50%', line: 'The Collection Log, complete' },
+    { id: 'bg-mega',      g: 'hoard',       req: 'Own a mega-rare',            cond: 'Own a mega-rare',                        k: 'pips', stat: 'mega',   goal: 1,    lab: 'Mega-rares',    pos: '50% 50%', line: 'A mega-rare, owned' },
+    { id: 'bg-allmega',   g: 'hoard',       req: 'Own all 3 mega-rares',       cond: 'Own all 3 mega-rares',                   k: 'pips', stat: 'mega',   goal: 3,    lab: 'Mega-rares',    pos: '50% 50%', line: 'All three mega-rares' },
+    { id: 'bg-founder',   g: 'founders', w: 1, req: 'Founders only · 20 exist', cond: 'Founders only',                         k: 'founder',                                            pos: '62% 50%', line: 'One of the first twenty' },
+  ];
+  WX_BGS.forEach(function (b) {
+    const cat = _cardBgById(b.id); b.n = cat ? cat.name : b.id;
+    if (b.k === 'gate') { b.req = 'Clear every ' + b.rk + '-rank boss'; b.cond = b.req; b.line = 'Every ' + b.rk + '-rank boss cleared'; }
+  });
+  const WX_SKIN = {}; EARN_SKINS.forEach(function (s) {
+    const p = PREMIUM_SKINS.find(function (x) { return x.id === s.id; }) || {};
+    s.n = p.name || s.key; s.fl = p.blurb || ''; s.file = p.file || s.id; WX_SKIN[s.key] = s;
+  });
+  const WX_BG = {}; WX_BGS.forEach(function (b) { WX_BG[b.id] = b; });
+  function _wxSkinById(id) { return EARN_SKINS.find(function (s) { return s.id === id || s.file === id; }) || null; }
+
+  // ── colours: every tint is an rgb triplet so CSS can use rgba(var(--x-rgb), a) instead of mixing colours in CSS
+  function _wxRgb(hex) { const h = String(hex || '#a78bfa').replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/(.)/g, '$1$1') : h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function _wxMix(hex, other, t) { const a = _wxRgb(hex), b = _wxRgb(other); return 'rgb(' + a.map(function (v, i) { return Math.round(v * t + b[i] * (1 - t)); }).join(',') + ')'; }
+  function _wxTint(el, name, hex) {
+    if (!el) return;
+    el.style.setProperty('--' + name, hex);
+    el.style.setProperty('--' + name + '-rgb', _wxRgb(hex).join(','));
+    el.style.setProperty('--' + name + '-dk', _wxMix(hex, '#000000', 0.45));
+    el.style.setProperty('--' + name + '-lt', _wxMix(hex, '#ffffff', 0.6));
+    el.style.setProperty('--' + name + '-bg', _wxMix(hex, '#141230', 0.22));
+  }
+  function _wxTintStyle(name, hex) {
+    return '--' + name + ':' + hex + ';--' + name + '-rgb:' + _wxRgb(hex).join(',') + ';--' + name + '-dk:' + _wxMix(hex, '#000000', 0.45) +
+      ';--' + name + '-lt:' + _wxMix(hex, '#ffffff', 0.6) + ';--' + name + '-bg:' + _wxMix(hex, '#141230', 0.22) + ';';
+  }
+
+  // ── the hunter's numbers (each guarded: a Wardrobe open must never throw mid-render)
+  const EARN_PROG_KEY = 'hb_earn_progress_v1';   // server progress: { opened, openedNow, flame, at }
+  function _earnProg() { try { return JSON.parse(localStorage.getItem(EARN_PROG_KEY) || '{}') || {}; } catch (_) { return {}; } }
+  function _wxStats() {
+    const st = { floor: 0, kills: 0, rank: 'E', steps: 0, week: 0, sworn: 0, streak: 0, shadows: 0, flame: 0, opened: 0,
+      tier: 'bronze', mega: 0, log: 0, logTotal: 1, grinning: 0, founder: 0, gates: {} };
+    try { st.floor = getAscentState().highestCleared | 0; } catch (_) {}
+    try { st.kills = _publicAchievementsSummary().bossesSlainTotal | 0; } catch (_) {}
+    try { const r = getRank(totalPoints).id; st.rank = (getPrestigeLevel(totalPoints) >= 1) ? 'S+' : r; } catch (_) {}
+    try { const lb = loadLeaderboardState(); st.steps = lb.lifetime_steps_total | 0; st.week = lb.best_7day_step_total | 0; st.sworn = Math.max(lb.best_walk_streak | 0, lb.best_sleep_streak | 0); } catch (_) {}
+    try { st.streak = buildAchievementContext().maxStreak | 0; } catch (_) {}
+    try { st.shadows = Object.keys((_shLoad().extracted) || {}).length; } catch (_) {}
+    const sp = _earnProg();
+    try { const m = _loadCoopPacts(); Object.keys(m).forEach(function (k) { st.flame = Math.max(st.flame, (m[k] && m[k].best) | 0); }); } catch (_) {}
+    st.flame = Math.max(st.flame, sp.flame | 0);
+    st.opened = sp.opened | 0;
+    try { if (_pvpRating) st.tier = String(_pvpTier(_pvpRating.peakElo || _pvpRating.elo).name || 'Bronze').toLowerCase(); } catch (_) {}
+    try { const inv = getInventory().cards || {}; st.mega = Object.keys(CARDS).filter(function (cid) { return CARDS[cid].rarity === 'mythic' && ((inv[cid] || {}).count || 0) > 0; }).length; } catch (_) {}
+    try {
+      let have = 0, total = 0;
+      _buildCollectionTree().forEach(function (d) { (d.bosses || []).forEach(function (b) { if (b.shared) return; have += (b.have | 0); total += (b.total | 0); }); });
+      st.log = have; st.logTotal = Math.max(1, total);
+    } catch (_) {}
+    try { st.grinning = ((_loadCoopKills()['the_grinning_god'] || {}).count | 0) > 0 ? 1 : 0; } catch (_) {}
+    try { st.founder = (window.Auth && typeof Auth.founderSeq === 'function' && Auth.founderSeq() > 0) ? 1 : 0; } catch (_) {}
+    try {
+      const solo = loadBosses() || {};
+      ['E', 'D', 'C', 'B', 'A', 'S'].forEach(function (rk) {
+        st.gates[rk] = Object.keys(BOSSES).filter(function (id) { return !BOSSES[id].coopOnly && BOSSES[id].rank === rk && !_isWeekBoss(BOSSES[id]); })
+          .map(function (id) { return { n: BOSSES[id].name, done: ((solo[id] || {}).kill_count | 0) > 0 }; });
+      });
+    } catch (_) {}
+    return st;
+  }
+  function _wxProg(it, st) {
+    switch (it.k) {
+      case 'num': case 'pips': {
+        const goal = it.goal === 'logTotal' ? st.logTotal : it.goal, v = st[it.stat] | 0;
+        return { p: goal ? Math.min(1, v / goal) : 0, have: v, goal: goal, done: v >= goal };
+      }
+      case 'rank': { const c = Math.max(0, WX_RANKS.indexOf(st.rank)), g = WX_RANKS.indexOf(it.goal); return { p: Math.min(1, c / g), done: c >= g }; }
+      case 'tier': { const c = Math.max(0, WX_TIERS.indexOf(st.tier)); return { p: c / 6, done: c >= 6 }; }
+      case 'bin': return { p: st[it.stat] ? 1 : 0, done: !!st[it.stat] };
+      case 'gate': { const a = st.gates[it.rk] || [], v = a.filter(function (x) { return x.done; }).length; return { p: a.length ? v / a.length : 0, have: v, goal: a.length, done: a.length > 0 && v === a.length }; }
+      case 'founder': return { p: 0, done: !!st.founder };
+      default: return { p: 1, done: true };
+    }
+  }
+  // The hunter's own row (the leaderboard card) — name, rank, class, today's steps.
+  function _wxMe() {
+    const me = { name: 'you', rank: 'E', cls: 'Hunter', steps: 0 };
+    try { const u = window.Auth && Auth.getCurrentUser && Auth.getCurrentUser(); if (u && u.alias) me.name = _dn(u.alias) || me.name; } catch (_) {}
+    try { me.rank = getRank(totalPoints).id; } catch (_) {}
+    try { me.cls = (CLASSES[currentClass] && currentClass !== 'CIVILIAN') ? CLASSES[currentClass].name : 'Hunter'; } catch (_) {}
+    try { me.steps = (loadLeaderboardState().steps_daily || {})[getDeviceLocalDate()] | 0; } catch (_) {}
+    return me;
+  }
+  function _wxFmt(n) { return Math.round(n).toLocaleString('en-US'); }
+  function _wxCmp(n) { return n >= 1e6 ? (+(n / 1e6).toFixed(1)) + 'M' : n >= 1e4 ? Math.floor(n / 1e3) + 'K' : _wxFmt(n); }
+  function _wxArtUrl(file) { return _bustSrc(file) || file || 'avatar-base.png'; }
+  function _wxLookArt(file) { return "background-image:url('" + esc(_wxArtUrl(file || _classDefaultAvatar())) + "')"; }
+  function _wxBgArt(id) { const b = WX_BG[id]; return "background-image:url('" + esc(_cardBgArt(id)) + "');background-position:" + ((b && b.pos) || '50% 50%'); }
+  const WX_RM = (function () { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } })();
+  const WX_IC = {
+    lock: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.4" y="5.4" width="7.2" height="5.2" rx="1.3" fill="currentColor" stroke="none"/><path d="M4 5.4V4a2 2 0 014 0v1.4"/></svg>',
+    check: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.3l2.3 2.3L9.5 3.6"/></svg>',
+    x: '<svg width="12" height="12" viewBox="0 0 14 14"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    l: '<svg width="9" height="14" viewBox="0 0 9 14"><path d="M7.5 1.5L2 7l5.5 5.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    r: '<svg width="9" height="14" viewBox="0 0 9 14"><path d="M1.5 1.5L7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    looks: '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="4.8" r="2.6"/><path d="M1.8 13c.6-2.9 2.7-4.4 5.2-4.4s4.6 1.5 5.2 4.4"/></svg>',
+    bgs: '<svg width="15" height="13" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1" y="1.5" width="14" height="11" rx="2"/><path d="M1.6 10.6l4-4 3 3 2-2 3.8 3.4"/></svg>',
+  };
+  function _wxRing(p, sw, r, vb) {
+    const c = vb / 2;
+    return '<svg class="wx-ring" viewBox="0 0 ' + vb + ' ' + vb + '"><circle class="wx-trk" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="' + sw + '" pathLength="100"/>' +
+      '<circle class="wx-arc" cx="' + c + '" cy="' + c + '" r="' + r + '" stroke-width="' + sw + '" pathLength="100" stroke-dasharray="' + p + ' 100"' + (p <= 0 ? ' opacity="0"' : '') + '/></svg>';
+  }
+  const WX_RUNES = '<svg class="wx-runes" viewBox="0 0 240 240" fill="none" stroke="currentColor"><circle cx="120" cy="120" r="118" stroke-opacity=".34" stroke-dasharray="1 6"/><circle cx="120" cy="120" r="110" stroke-opacity=".15" stroke-width="7" stroke-dasharray="1.5 8 5 8"/><circle cx="120" cy="120" r="101" stroke-opacity=".1"/></svg>';
+  const WX_MOTES = Array.from({ length: 12 }, function (_, i) { return '<i style="left:' + (18 + (i * 37) % 64) + '%;--du:' + (4.2 + ((i * 13) % 30) / 10).toFixed(1) + 's;--de:-' + (((i * 7) % 60) / 10) + 's;--dx:' + ((i * 29) % 40 - 20) + 'px"></i>'; }).join('');
+  const WX_GEMS = '<span class="wx-mini-gems"><i></i><i></i><i></i><i></i></span>';
+  const WX_NEW_KEY = 'hb_wx_new_v1';   // the skin last earned, until the Wardrobe has shown it
+
+  let _wx = null;   // the live Wardrobe instance while the sheet is open
+  function _wxMount(sheet) {
+    const el = sheet;
+    el.classList.add('wx'); el.classList.toggle('wx-rm', WX_RM);
+    el.innerHTML =
+      '<div class="wx-grab"></div><div class="wx-head"><span class="wx-k">THE WARDROBE</span><span class="wx-peek"><span class="wx-art"></span></span>' +
+        '<button class="wx-xb" id="wd-close" type="button" aria-label="Close"><span>' + WX_IC.x + '</span></button></div>' +
+      '<div class="wx-tabs" role="tablist"><i class="wx-tab-ind"></i><button class="wx-tab" data-tab="looks" role="tab" type="button">' + WX_IC.looks + 'Looks</button>' +
+        '<button class="wx-tab" data-tab="bgs" role="tab" type="button">' + WX_IC.bgs + 'Backgrounds</button></div>' +
+      '<div class="wx-vp"><div class="wx-track"><section class="wx-pane" data-pane="looks"></section><section class="wx-pane" data-pane="bgs"></section></div></div>' +
+      '<div class="wx-dt"><div class="wx-dt-back"></div><div class="wx-dt-panel"><div class="wx-dt-top"><span class="wx-grab"></span><button class="wx-xb wx-dt-x" type="button" aria-label="Close"><span>' + WX_IC.x + '</span></button></div>' +
+        '<div class="wx-pager"><div class="wx-pgt"></div></div><div class="wx-dots"></div></div></div>';
+    const $ = function (r, s) { return r.querySelector(s); }, $$ = function (r, s) { return Array.prototype.slice.call(r.querySelectorAll(s)); };
+    const vp = $(el, '.wx-vp'), track = $(el, '.wx-track'), ind = $(el, '.wx-tab-ind'), pL = $(el, '[data-pane=looks]'), pB = $(el, '[data-pane=bgs]'),
+      dt = $(el, '.wx-dt'), panel = $(el, '.wx-dt-panel'), pager = $(el, '.wx-pager'), pgt = $(el, '.wx-pgt'), dots = $(el, '.wx-dots'), peek = $(el, '.wx-peek');
+    let newId = null; try { newId = localStorage.getItem(WX_NEW_KEY) || null; } catch (_) {}
+    const S = { look: getEquippedSkin() || '', bg: _cardBgEquipped() || 'basic', tab: 'looks', newId: newId };
+    if (S.look && !_skinFileAllowed(S.look)) S.look = '';
+    let st = _wxStats(), me = _wxMe();
+    let tabAnims = [], dragPct = null, suppress = false, ringA = 0, pages = [], cur = -1, raf = 0, kindNow = 'sk';
+    _wxTint(el, 'rk', WX_RK[me.rank] || WX_RK.E);
+
+    const skState = function (s) { const owned = isSkinOwned(s.id); if (!owned) return 'locked'; return S.look === s.file ? 'worn' : 'earned'; };
+    const bgState = function (id) { if (id === 'basic') return S.bg === 'basic' ? 'worn' : 'earned'; return S.bg === id ? 'worn' : (_cardBgUnlocked(id) ? 'earned' : 'locked'); };
+    const lookR = function (file) { const s = _wxSkinById(file); return s ? s.r : 'F'; };
+    const lookName = function (file) {
+      const s = _wxSkinById(file); if (s) return s.n;
+      if (!file) return me.cls;
+      const f = AVATAR_SKINS.find(function (x) { return x.file === file; }); return f ? f.name : 'Your Class';
+    };
+    const subHTML = function (file) {
+      const s = _wxSkinById(file);
+      if (s) return '<span class="wx-rar" style="' + _wxTintStyle('c', WX_RAR[s.r].c) + '">' + WX_RAR[s.r].n + '</span>';
+      return !file ? '<span class="wx-tagc">CLASS</span>' : '';
+    };
+    const medTint = function (file) { const r = lookR(file); return r === 'L' ? '#a78bfa' : r === 'M' ? '#f5b842' : '#8fa0ff'; };
+    const lastArt = function (f) { const a = Array.prototype.slice.call(f.children).filter(function (c) { return c.classList.contains('wx-art'); }); return a[a.length - 1]; };
+
+    /* ---------- LOOKS ---------- */
+    const skTile = function (s, i) {
+      const pr = _wxProg(s, st), state = skState(s);
+      const tx = state === 'worn' ? 'WORN' : state === 'earned' ? 'EARNED' : s.k === 'rank' ? 'RANK ' + st.rank : s.k === 'num' ? _wxCmp(pr.have) + ' / ' + _wxCmp(s.goal) : pr.have + ' / ' + s.goal;
+      return '<button type="button" class="wx-sk is-' + state + '" data-r="' + s.r + '" data-sk="' + s.key + '" style="--sd:' + (i * 1.1).toFixed(1) + 's;' + _wxTintStyle('rc', WX_RAR[s.r].c) + '">' +
+        '<span class="wx-sk-port">' + _wxRing(state === 'locked' ? +(pr.p * 100).toFixed(2) : 100, 3, 37, 80) + '<span class="wx-art" style="' + _wxLookArt(s.file) + '"></span>' +
+        (state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : '') + WX_GEMS + (S.newId === s.id && state !== 'locked' ? '<span class="wx-chip-new">NEW</span>' : '') + '</span>' +
+        '<span class="wx-sk-nm">' + esc(s.n) + '</span><span class="wx-sk-st">' + tx + '</span></button>';
+    };
+    const lkTile = function (l) {
+      const w = (S.look || '') === (l.file || '');
+      return '<button type="button" class="wx-lk' + (w ? ' is-worn' : '') + '" data-lk="' + esc(l.file || '') + '"><span class="wx-lk-port"><span class="wx-art" style="' + _wxLookArt(l.klass ? '' : l.file) + '"></span>' +
+        (l.klass ? '<span class="wx-tagc">CLASS</span>' : '') + WX_GEMS + '</span><span class="wx-lk-nm">' + esc(l.name) + '</span><span class="wx-lk-st">' + (w ? 'WORN' : '') + '</span></button>';
+    };
+    function renderLooks() {
+      pL.innerHTML = '<div class="wx-hl" data-r="' + lookR(S.look) + '" style="' + _wxTintStyle('mc', medTint(S.look)) + '"><div class="wx-med"><div class="wx-med-glow"></div>' + WX_RUNES +
+        '<div class="wx-med-ring"><i class="wx-gem n"></i><i class="wx-gem e"></i><i class="wx-gem s"></i><i class="wx-gem w"></i></div>' +
+        '<div class="wx-med-frame"><div class="wx-art" style="' + _wxLookArt(S.look) + '"></div></div><div class="wx-med-sheen"></div><div class="wx-med-flash"></div><div class="wx-motes">' + WX_MOTES + '</div></div>' +
+        '<div class="wx-hl-nm">' + esc(lookName(S.look)) + '</div><div class="wx-hl-sub">' + subHTML(S.look) + '</div></div><div class="wx-lk-list"></div>';
+      renderLookTiles(); tilt($(pL, '.wx-med'), 16);
+    }
+    function renderLookTiles() {
+      const n = EARN_SKINS.filter(function (s) { return isSkinOwned(s.id); }).length;
+      $(pL, '.wx-lk-list').innerHTML = '<div class="wx-sec-h"><span>The Seven</span><i></i><b><em>' + n + '</em> / 7</b></div><div class="wx-seven">' + EARN_SKINS.map(skTile).join('') + '</div>' +
+        '<div class="wx-sec-h"><span>Your Looks</span><i></i></div><div class="wx-looks">' + AVATAR_SKINS.map(lkTile).join('') + '</div>';
+    }
+
+    /* ---------- BACKGROUNDS ---------- */
+    const cardIn = function () {
+      return '<div class="wx-card-in"><span class="wx-crest"><span class="wx-art" style="' + _wxLookArt(S.look) + '"></span></span><div class="wx-card-id"><div class="wx-card-nm">' + esc(me.name) + '</div>' +
+        '<div class="wx-card-cl"><i></i>Rank ' + esc(me.rank) + ' · ' + esc(me.cls) + '</div></div><div class="wx-card-sc"><b>' + _wxFmt(me.steps) + '</b><small>STEPS</small></div></div>';
+    };
+    const bgArt = function (id) { return id === 'basic' ? '<div class="wx-art wx-basic"></div>' : '<div class="wx-art" style="' + _wxBgArt(id) + '"></div>'; };
+    const btTile = function (b) {
+      const state = bgState(b.id), basic = b.id === 'basic', pr = basic ? { p: 1 } : _wxProg(b, st);
+      const tx = state === 'worn' ? 'WORN' : state === 'earned' ? (basic ? 'DEFAULT' : 'EARNED') : b.req;
+      const seal = state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : state === 'worn' ? '<span class="wx-seal ok">' + WX_IC.check + '</span>' : '';
+      const bar = state === 'locked' && pr.p > 0 ? '<span class="wx-bt-prog"><i style="width:' + (pr.p * 100).toFixed(1) + '%"></i></span>' : '';
+      return '<button type="button" class="wx-bt' + (b.w ? ' full' : '') + (basic ? ' basic' : '') + (b.id === 'bg-founder' ? ' founders' : '') + ' is-' + state + '" data-bg="' + b.id + '">' +
+        (basic ? '' : '<span class="wx-art" style="' + _wxBgArt(b.id) + '"></span><span class="wx-bt-scrim"></span>') +
+        '<span class="wx-bt-tx"><span class="wx-bt-nm">' + esc(basic ? 'Basic' : b.n) + '</span><span class="wx-bt-st">' + esc(tx) + '</span></span>' + seal + bar + '</button>';
+    };
+    const gtTile = function (b) {
+      const state = bgState(b.id), pr = _wxProg(b, st);
+      return '<button type="button" class="wx-gt is-' + state + '" data-bg="' + b.id + '" style="' + _wxTintStyle('rk', WX_RK[b.rk]) + '" aria-label="' + esc(b.n) + '"><span class="wx-art" style="' + _wxBgArt(b.id) + '"></span><span class="wx-gt-sc"></span>' +
+        (state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : state === 'worn' ? '<span class="wx-seal ok">' + WX_IC.check + '</span>' : '') +
+        '<span class="wx-gt-l">' + b.rk + '</span><span class="wx-gt-st">' + (state === 'worn' ? 'WORN' : state === 'earned' ? 'EARNED' : pr.have + ' / ' + pr.goal) + '</span></button>';
+    };
+    function renderBgs() {
+      pB.innerHTML = '<div class="wx-hb"><div class="wx-card">' + bgArt(S.bg) + '<div class="wx-card-scrim"></div>' + cardIn() + '<div class="wx-card-sheen"></div><div class="wx-card-sweep"></div></div>' +
+        '<div class="wx-hb-nm">' + esc(S.bg === 'basic' ? 'Basic' : (WX_BG[S.bg] || {}).n || 'Basic') + '</div></div><div class="wx-bg-list"></div>';
+      renderBgTiles(); tilt($(pB, '.wx-card'), 12);
+    }
+    function renderBgTiles() {
+      let x = '<div class="wx-bgrid" style="margin-top:20px">' + btTile({ id: 'basic' }) + '</div>';
+      WX_GROUPS.forEach(function (gr) {
+        const items = WX_BGS.filter(function (b) { return b.g === gr[0]; });
+        const n = items.filter(function (b) { return _cardBgUnlocked(b.id); }).length;
+        x += '<div class="wx-sec-h"><span>' + gr[1] + '</span><i></i><b><em>' + n + '</em> / ' + items.length + '</b></div>' +
+          (gr[0] === 'gates' ? '<div class="wx-gates">' + items.map(gtTile).join('') + '</div>' : '<div class="wx-bgrid">' + items.map(btTile).join('') + '</div>');
+      });
+      $(pB, '.wx-bg-list').innerHTML = x;
+    }
+
+    /* ---------- feedback ---------- */
+    function swapText(n, t, mid) {
+      if (!n) return;
+      n.getAnimations().forEach(function (a) { a.cancel(); });
+      if (WX_RM) { n.textContent = t; if (mid) mid(); return; }
+      n.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(5px)' }], { duration: 150, fill: 'forwards' }).onfinish = function () {
+        n.textContent = t; if (mid) mid(); n.getAnimations().forEach(function (a) { a.cancel(); });
+        n.animate([{ opacity: 0, transform: 'translateY(-5px)', letterSpacing: '.14em' }, { opacity: 1, transform: 'none', letterSpacing: '.01em' }], { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      };
+    }
+    function burst(host, c) {
+      if (WX_RM) return; const m = host.offsetWidth / 2;
+      for (let i = 0; i < 16; i++) {
+        const a = i / 16 * Math.PI * 2 + (i % 2) * 0.2, d = 92 + (i * 23) % 34, p = document.createElement('i');
+        p.className = 'wx-spark'; p.style.cssText = 'left:' + m + 'px;top:' + m + 'px;background:' + c + ';box-shadow:0 0 8px ' + c; host.appendChild(p);
+        p.animate([{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }, { transform: 'translate(calc(-50% + ' + (Math.cos(a) * d).toFixed(1) + 'px),calc(-50% + ' + (Math.sin(a) * d).toFixed(1) + 'px)) scale(.3)', opacity: 0 }],
+          { duration: 700 + (i * 37) % 320, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = function () { p.remove(); };
+      }
+    }
+    function ripple(port) {
+      if (!port || WX_RM) return; const r = document.createElement('i'); r.className = 'wx-ripple'; port.appendChild(r);
+      r.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.7,.2,1)' }).onfinish = function () { r.remove(); };
+    }
+    function flashTile(t) { if (!t) return; t.classList.remove('wx-flash-tile'); void t.offsetWidth; t.classList.add('wx-flash-tile'); }
+    const bump = function (m) { if (!WX_RM && m) m.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.045)' }, { transform: 'scale(1)' }], { duration: 280, easing: 'ease-out' }); };
+    function swapMed() {
+      const hl = $(pL, '.wx-hl'), med = $(pL, '.wx-med'), fr = $(med, '.wx-med-frame'), arts = Array.prototype.slice.call(fr.children), old = arts[arts.length - 1];
+      hl.dataset.r = lookR(S.look); _wxTint(hl, 'mc', medTint(S.look));
+      const nu = document.createElement('div'); nu.className = 'wx-art'; nu.setAttribute('style', _wxLookArt(S.look)); fr.appendChild(nu);
+      const done = function () { arts.forEach(function (a) { a.remove(); }); };
+      if (WX_RM) { nu.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320 }).onfinish = done; }
+      else {
+        nu.animate([{ opacity: 0, transform: 'scale(1.25)', filter: 'brightness(2.6) saturate(.2)' }, { opacity: 1, transform: 'scale(1)', filter: 'brightness(1) saturate(1)' }], { duration: 680, easing: 'cubic-bezier(.2,.8,.2,1)' }).onfinish = done;
+        if (old) old.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.8)' }], { duration: 340, easing: 'ease-in', fill: 'forwards' });
+        const rg = $(med, '.wx-med-ring'), a0 = ringA; ringA += 90; rg.style.transform = 'rotate(' + ringA + 'deg)';
+        rg.animate([{ transform: 'rotate(' + a0 + 'deg)' }, { transform: 'rotate(' + ringA + 'deg)' }], { duration: 950, easing: 'cubic-bezier(.3,1.4,.4,1)' });
+        $(med, '.wx-med-flash').animate([{ opacity: 1, transform: 'scale(.92)' }, { opacity: 0, transform: 'scale(1.6)' }], { duration: 800, easing: 'cubic-bezier(.2,.7,.2,1)' });
+        burst(med, lookR(S.look) === 'L' ? '#c4b5fd' : '#ffd574');
+      }
+      swapText($(hl, '.wx-hl-nm'), lookName(S.look), function () { $(hl, '.wx-hl-sub').innerHTML = subHTML(S.look); });
+    }
+    function swapCard() {
+      const card = $(pB, '.wx-hb .wx-card'); if (!card) return;
+      const arts = Array.prototype.slice.call(card.children).filter(function (c) { return c.classList.contains('wx-art'); }), old = arts[arts.length - 1];
+      const t = document.createElement('div'); t.innerHTML = bgArt(S.bg); const nu = t.firstChild; old.after(nu);
+      const done = function () { arts.forEach(function (a) { a.remove(); }); };
+      if (WX_RM) { nu.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320 }).onfinish = done; }
+      else {
+        const W = card.offsetWidth, ez = 'cubic-bezier(.65,0,.25,1)';
+        nu.animate([{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 700, easing: ez }).onfinish = done;
+        $(card, '.wx-card-sweep').animate([{ transform: 'translateX(-70px)', opacity: 1 }, { transform: 'translateX(' + W + 'px)', opacity: 1 }], { duration: 700, easing: ez });
+      }
+      swapText($(pB, '.wx-hb-nm'), S.bg === 'basic' ? 'Basic' : WX_BG[S.bg].n);
+    }
+
+    /* ---------- wear ---------- */
+    function wearLook(file) {
+      file = file || '';
+      if ((S.look || '') === file) { bump($(pL, '.wx-med')); return; }
+      if (!_skinFileAllowed(file)) return;
+      if (S.newId && S.newId !== file) S.newId = null;
+      _equipSkin(file, true);
+      S.look = file; renderLookTiles(); swapMed();
+      const cr = $(pB, '.wx-hb .wx-crest .wx-art'); if (cr) cr.setAttribute('style', _wxLookArt(file));
+      updatePeek(true);
+      const sk = _wxSkinById(file);
+      ripple(sk ? $(pL, '[data-sk="' + sk.key + '"] .wx-sk-port') : $(pL, '[data-lk="' + file + '"] .wx-lk-port'));
+      try { _hapticTick('MEDIUM'); } catch (_) {}
+    }
+    function wearBg(id) {
+      if (S.bg === id) { bump($(pB, '.wx-card')); return; }
+      _cardBgEquip(id === 'basic' ? '' : id);
+      S.bg = id; renderBgTiles(); swapCard(); updatePeek(true); flashTile($(pB, '.wx-bg-list [data-bg="' + id + '"]'));
+      try { _hapticTick('MEDIUM'); } catch (_) {}
+    }
+    const onSkin = function (key) { const s = WX_SKIN[key]; if (!s) return; if (skState(s) === 'locked') openDetail('sk', key); else wearLook(s.file); };
+    const onBg = function (id) { if (bgState(id) === 'locked') openDetail('bg', id); else wearBg(id); };
+
+    /* ---------- peek ---------- */
+    function updatePeek(b) {
+      const a = $(peek, '.wx-art');
+      if (S.tab === 'looks') { peek.classList.remove('bg'); a.className = 'wx-art'; a.setAttribute('style', _wxLookArt(S.look)); }
+      else { peek.classList.add('bg'); if (S.bg === 'basic') { a.className = 'wx-art wx-basic'; a.removeAttribute('style'); } else { a.className = 'wx-art'; a.setAttribute('style', _wxBgArt(S.bg)); } }
+      const show = (S.tab === 'looks' ? pL : pB).scrollTop > (S.tab === 'looks' ? 250 : 150); peek.classList.toggle('show', show);
+      if (b && show && !WX_RM) peek.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.5,.5,1)' });
+    }
+    [pL, pB].forEach(function (p) { p.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; updatePeek(); }); }, { passive: true }); });
+
+    /* ---------- tabs ---------- */
+    function prepFly(from, to) {
+      const sp = from === 'looks' ? pL : pB, dp = to === 'looks' ? pL : pB; if (sp.scrollTop > 120 || dp.scrollTop > 120) return null;
+      const src = from === 'looks' ? lastArt($(pL, '.wx-med-frame')) : $(pB, '.wx-hb .wx-crest .wx-art'), dst = to === 'looks' ? lastArt($(pL, '.wx-med-frame')) : $(pB, '.wx-hb .wx-crest .wx-art');
+      if (!src || !dst) return null;
+      const r0 = el.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect(), sh = (to === 'bgs' ? -1 : 1) * vp.getBoundingClientRect().width;
+      return { src: src, dst: dst, A: { x: a.left - r0.left, y: a.top - r0.top, w: a.width }, B: { x: b.left + sh - r0.left, y: b.top - r0.top, w: b.width } };
+    }
+    function fly(f, du) {
+      const d = document.createElement('div'); d.className = 'wx-flyer wx-art';
+      d.setAttribute('style', _wxLookArt(S.look) + ';left:' + f.A.x + 'px;top:' + f.A.y + 'px;width:' + f.A.w + 'px;height:' + f.A.w + 'px'); el.appendChild(d);
+      f.src.style.visibility = 'hidden'; f.dst.style.visibility = 'hidden';
+      const an = d.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: 'translate(' + (f.B.x - f.A.x).toFixed(1) + 'px,' + (f.B.y - f.A.y).toFixed(1) + 'px) scale(' + (f.B.w / f.A.w).toFixed(3) + ')' }], { duration: du * 1.1, easing: 'cubic-bezier(.25,.75,.25,1)', fill: 'forwards' });
+      const clean = function () { d.remove(); f.src.style.visibility = ''; f.dst.style.visibility = ''; };
+      an.onfinish = function () { clean(); f.dst.animate([{ filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }], { duration: 440 }); }; an.oncancel = clean; return an;
+    }
+    const doneR = {}; const ensure = function (t) { if (doneR[t]) return; doneR[t] = 1; if (t === 'looks') renderLooks(); else renderBgs(); };
+    function setTab(t, o) {
+      o = o || {};
+      if (t === S.tab && !o.force && !o.instant) return;
+      ensure(t);
+      const from = S.tab, fl = (!o.instant && !WX_RM && dragPct == null && t !== from) ? prepFly(from, t) : null;
+      S.tab = t;
+      $$(el, '.wx-tab').forEach(function (b) { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      tabAnims.forEach(function (a) { a.cancel(); }); tabAnims = [];
+      const x1 = t === 'bgs' ? -50 : 0, i1 = t === 'bgs' ? 100 : 0,
+        x0 = dragPct != null ? dragPct : (from === 'bgs' ? -50 : 0), i0 = dragPct != null ? Math.max(0, Math.min(100, -dragPct * 2)) : (from === 'bgs' ? 100 : 0);
+      dragPct = null; track.style.transform = 'translateX(' + x1 + '%)'; ind.style.transform = 'translateX(' + i1 + '%)'; updatePeek();
+      if (o.instant) return;
+      if (t !== from) { try { _hapticTick('LIGHT'); } catch (_) {} }
+      const du = WX_RM ? 240 : 480, ez = 'cubic-bezier(.22,.8,.24,1)', pt = t === 'bgs' ? pB : pL, pf = t === 'bgs' ? pL : pB;
+      if (WX_RM) { tabAnims.push(pt.animate([{ opacity: 0 }, { opacity: 1 }], { duration: du })); return; }
+      tabAnims.push(track.animate([{ transform: 'translateX(' + x0 + '%)' }, { transform: 'translateX(' + x1 + '%)' }], { duration: du, easing: ez }));
+      tabAnims.push(ind.animate([{ transform: 'translateX(' + i0 + '%)' }, { transform: 'translateX(' + i1 + '%)' }], { duration: du, easing: ez }));
+      if (t !== from) { tabAnims.push(pf.animate([{ opacity: 1 }, { opacity: 0.3 }], { duration: du, easing: ez })); tabAnims.push(pt.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: du, easing: ez })); }
+      if (fl) tabAnims.push(fly(fl, du));
+    }
+    let sw = null;
+    vp.addEventListener('pointerdown', function (e) { if (e.button || e.target.closest('.wx-med,.wx-card')) return; sw = { x: e.clientX, y: e.clientY, id: e.pointerId, mode: null }; });
+    vp.addEventListener('pointermove', function (e) {
+      if (!sw || e.pointerId !== sw.id) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+      if (!sw.mode) {
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { sw.mode = 'h'; ensure(S.tab === 'looks' ? 'bgs' : 'looks'); try { vp.setPointerCapture(e.pointerId); } catch (_) {} tabAnims.forEach(function (a) { a.cancel(); }); tabAnims = []; }
+        else if (Math.abs(dy) > 10) { sw.mode = 'v'; return; } else return;
+      }
+      if (sw.mode !== 'h') return;
+      const W = vp.offsetWidth; let x = (S.tab === 'bgs' ? -W : 0) + dx; if (x > 0) x *= 0.25; if (x < -W) x = -W + (x + W) * 0.25;
+      dragPct = x / (2 * W) * 100; track.style.transform = 'translateX(' + dragPct + '%)'; ind.style.transform = 'translateX(' + Math.max(0, Math.min(100, -x / W * 100)) + '%)';
+    });
+    const swEnd = function (e) {
+      if (!sw || e.pointerId !== sw.id) return;
+      if (sw.mode === 'h') { suppress = true; setTimeout(function () { suppress = false; }, 80); const dx = e.clientX - sw.x; setTab(dx < -50 ? 'bgs' : dx > 50 ? 'looks' : S.tab, { force: true }); }
+      sw = null;
+    };
+    vp.addEventListener('pointerup', swEnd); vp.addEventListener('pointercancel', swEnd);
+
+    /* ---------- tilt ---------- */
+    function tilt(m, amt) {
+      if (WX_RM || !m) return; let on = false;
+      const mv = function (e) {
+        const r = m.getBoundingClientRect(), px = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), py = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+        m.style.transform = 'perspective(800px) rotateX(' + ((0.5 - py) * amt).toFixed(2) + 'deg) rotateY(' + ((px - 0.5) * amt * 1.2).toFixed(2) + 'deg) scale(1.02)';
+        m.style.setProperty('--sx', (px * 100).toFixed(1) + '%'); m.style.setProperty('--sy', (py * 100).toFixed(1) + '%');
+      };
+      m.addEventListener('pointerdown', function (e) { on = true; try { m.setPointerCapture(e.pointerId); } catch (_) {} m.classList.add('tilting'); mv(e); });
+      m.addEventListener('pointermove', function (e) { if (on) mv(e); });
+      const up = function () { if (!on) return; on = false; m.classList.remove('tilting'); m.style.transform = ''; };
+      m.addEventListener('pointerup', up); m.addEventListener('pointercancel', up);
+    }
+
+    /* ---------- locked detail (pager over every locked item of the tab) ---------- */
+    function msHTML(it, pr) {
+      let m = '', n = ''; const u = it.unit ? ' ' + it.unit : '';
+      switch (it.k) {
+        case 'num': m = '<div class="wx-bar"><i></i></div>'; n = '<span>' + it.lab + '</span><b><span data-count="' + pr.have + '">0</span> <small>/ ' + _wxFmt(pr.goal) + u + '</small></b>'; break;
+        case 'pips': m = '<div class="wx-pips' + (pr.goal <= 10 ? ' few' : '') + '">' + Array.from({ length: pr.goal }, function (_, i) { return '<i' + (i < pr.have ? ' data-on' : '') + '></i>'; }).join('') + '</div>';
+          n = '<span>' + it.lab + '</span><b><span data-count="' + pr.have + '">0</span> <small>/ ' + pr.goal + u + '</small></b>'; break;
+        case 'rank': {
+          const L = it.goal === 'S+' ? WX_RANKS : WX_RANKS.slice(0, 6), c = WX_RANKS.indexOf(st.rank);
+          m = '<div class="wx-rkl">' + L.map(function (r, i) { return '<span class="' + (i <= c ? 'on' : '') + (i === c ? ' cur' : '') + (r === it.goal ? ' goal' : '') + '" style="' + _wxTintStyle('c', WX_RK[r]) + '">' + r + '</span>'; }).join('') + '</div>';
+          n = '<span>Your rank</span><b>' + esc(st.rank) + ' <small>/ ' + it.goal + '</small></b>'; break;
+        }
+        case 'tier': {
+          const c = WX_TIERS.indexOf(st.tier);
+          m = '<div class="wx-tl">' + WX_TIERS.map(function (t, i) { return '<img src="assets/pvp-tiers/pvp-tier-' + t + '.svg" alt="' + t + '" class="' + (i <= c ? 'on' : '') + (i === c ? ' cur' : '') + (i === 6 ? ' goal' : '') + '">'; }).join('') + '</div>';
+          n = '<span>Your tier</span><b>' + esc(st.tier.charAt(0).toUpperCase() + st.tier.slice(1)) + ' <small>/ Awakened</small></b>'; break;
+        }
+        case 'gate': {
+          const a = st.gates[it.rk] || [];
+          m = '<div class="wx-bl">' + a.map(function (b) { return '<div class="' + (b.done ? 'on' : '') + '"><i>' + (b.done ? WX_IC.check : '') + '</i>' + esc(b.n) + '</div>'; }).join('') + '</div>';
+          n = '<span>Bosses cleared</span><b>' + pr.have + ' <small>/ ' + pr.goal + '</small></b>'; break;
+        }
+        case 'founder': n = '<span>Founders</span><b>20 <small>exist</small></b>'; break;
+        case 'bin': break;
+      }
+      return '<div class="wx-ms"><div class="wx-ms-c">' + esc(it.cond) + '</div>' + (m ? '<div class="wx-ms-m">' + m + '</div>' : '') + (n ? '<div class="wx-ms-n">' + n + '</div>' : '') + '</div>';
+    }
+    const skPage = function (s) {
+      const pr = _wxProg(s, st), R = WX_RAR[s.r];
+      return '<article class="wx-pg" data-r="' + s.r + '" data-p="' + (pr.p * 100).toFixed(2) + '" style="' + _wxTintStyle('rc', R.c) + '"><div class="wx-pa"><div class="wx-pa-glow"></div>' + WX_RUNES + _wxRing(0, 4, 104, 224) +
+        '<div class="wx-art" style="' + _wxLookArt(s.file) + '"></div><span class="wx-seal">' + WX_IC.lock + '</span></div>' +
+        '<div class="wx-pg-rar"><span class="wx-rar" style="' + _wxTintStyle('c', R.c) + '">' + R.n + '</span></div><h3 class="wx-pg-nm">' + esc(s.n) + '</h3>' +
+        (s.fl ? '<p class="wx-pg-fl">' + esc(s.fl) + '</p>' : '') + msHTML(s, pr) + '</article>';
+    };
+    const bgPage = function (b) {
+      const pr = _wxProg(b, st);
+      return '<article class="wx-pg wx-pg-bg" data-p="' + (pr.p * 100).toFixed(2) + '" style="' + _wxTintStyle('rc', b.rk ? WX_RK[b.rk] : '#f5b842') + '"><div class="wx-pb">' + bgArt(b.id) + '<div class="wx-card-scrim"></div>' + cardIn() +
+        '<span class="wx-seal">' + WX_IC.lock + '</span></div><h3 class="wx-pg-nm">' + esc(b.n) + '</h3>' + msHTML(b, pr) + '</article>';
+    };
+    function meters(pg, instant) {
+      if (pg.dataset.done) return; pg.dataset.done = 1; const p = +pg.dataset.p;
+      const arc = $(pg, '.wx-pa .wx-arc'); if (arc) { if (p > 0) arc.removeAttribute('opacity'); arc.style.strokeDasharray = p + ' 100'; }
+      const bar = $(pg, '.wx-bar i'); if (bar) bar.style.width = p + '%';
+      $$(pg, '.wx-pips i[data-on]').forEach(function (i, k) { i.style.transitionDelay = instant ? '0s' : (k * 0.03).toFixed(2) + 's'; i.classList.add('on'); });
+      $$(pg, '[data-count]').forEach(function (n) {
+        const v = +n.dataset.count; if (instant || WX_RM) { n.textContent = _wxFmt(v); return; }
+        const t0 = performance.now(); const step = function (t) { const k = Math.min(1, (t - t0) / 1000); n.textContent = _wxFmt(v * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step);
+      });
+    }
+    function renderDots() {
+      const n = pages.length; if (n < 2) { dots.innerHTML = ''; return; }
+      const mid = n <= 8 ? pages.map(function (_, k) { return '<button type="button" data-i="' + k + '" class="' + (k === cur ? 'on' : '') + '" aria-label="' + (k + 1) + ' of ' + n + '"><i></i></button>'; }).join('') : '<span class="count">' + (cur + 1) + ' / ' + n + '</span>';
+      dots.innerHTML = '<button type="button" class="nav" data-i="' + Math.max(0, cur - 1) + '" aria-label="Previous"' + (cur === 0 ? ' disabled' : '') + '>' + WX_IC.l + '</button>' + mid +
+        '<button type="button" class="nav" data-i="' + Math.min(n - 1, cur + 1) + '" aria-label="Next"' + (cur === n - 1 ? ' disabled' : '') + '>' + WX_IC.r + '</button>';
+    }
+    function setPage(i, instant) {
+      if (i === cur || !pgt.children[i]) return; cur = i; const pg = pgt.children[i];
+      const rc = pg.style.getPropertyValue('--rc'); if (rc) _wxTint(panel, 'rc', rc.trim());
+      renderDots();
+      if (instant) meters(pg, true); else requestAnimationFrame(function () { requestAnimationFrame(function () { meters(pg, false); }); });
+    }
+    const goPage = function (i) { pgt.style.transform = 'translateX(' + (-i * 100) + '%)'; setPage(i); };
+    function openDetail(kind, id, o) {
+      o = o || {}; kindNow = kind;
+      pages = kind === 'sk' ? EARN_SKINS.filter(function (s) { return skState(s) === 'locked'; }) : WX_BGS.filter(function (b) { return bgState(b.id) === 'locked'; });
+      const idx = Math.max(0, pages.findIndex(function (x) { return (kind === 'sk' ? x.key : x.id) === id; }));
+      pgt.innerHTML = pages.map(kind === 'sk' ? skPage : bgPage).join(''); cur = -1;
+      if (o.instant) dt.classList.add('noanim');
+      pager.classList.add('dragging'); pgt.style.transform = 'translateX(' + (-idx * 100) + '%)'; void pgt.offsetWidth; pager.classList.remove('dragging');
+      dt.classList.add('open'); panel.style.transform = ''; setPage(idx, o.instant);
+      try { _hapticTick('LIGHT'); } catch (_) {}
+      if (o.instant) requestAnimationFrame(function () { requestAnimationFrame(function () { dt.classList.remove('noanim'); }); });
+    }
+    function closeDetail() { dt.classList.remove('open'); panel.style.transform = ''; cur = -1; }
+    let pd = null;
+    panel.addEventListener('pointerdown', function (e) { if (e.button || e.target.closest('button')) return; pd = { x: e.clientX, y: e.clientY, id: e.pointerId, mode: null, i: cur }; });
+    panel.addEventListener('pointermove', function (e) {
+      if (!pd || pd.id !== e.pointerId) return; const dx = e.clientX - pd.x, dy = e.clientY - pd.y;
+      if (!pd.mode) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { pd.mode = 'h'; pager.classList.add('dragging'); }
+        else if (dy > 8 && dy > Math.abs(dx)) { pd.mode = 'v'; panel.classList.add('drag'); } else return;
+        try { panel.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      if (pd.mode === 'h') { const ed = (pd.i === 0 && dx > 0) || (pd.i === pages.length - 1 && dx < 0) ? 0.3 : 1; pgt.style.transform = 'translateX(calc(' + (-pd.i * 100) + '% + ' + (dx * ed).toFixed(1) + 'px))'; }
+      else panel.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    });
+    const pdEnd = function (e) {
+      if (!pd || pd.id !== e.pointerId) return; const dx = e.clientX - pd.x, dy = e.clientY - pd.y;
+      if (pd.mode === 'h') { pager.classList.remove('dragging'); let i = pd.i; if (dx < -40) i++; else if (dx > 40) i--; goPage(Math.max(0, Math.min(pages.length - 1, i))); }
+      else if (pd.mode === 'v') { panel.classList.remove('drag'); if (dy > 110) closeDetail(); else panel.style.transform = ''; }
+      pd = null;
+    };
+    panel.addEventListener('pointerup', pdEnd); panel.addEventListener('pointercancel', pdEnd);
+
+    el.addEventListener('click', function (e) {
+      if (suppress) { e.stopPropagation(); e.preventDefault(); return; }
+      const t = e.target;
+      if (t.closest('.wx-dt')) {
+        if (t.closest('.wx-dt-x') || t.classList.contains('wx-dt-back')) closeDetail();
+        const nb = t.closest('.wx-dots [data-i]'); if (nb && !nb.disabled) goPage(+nb.dataset.i);
+        return;
+      }
+      if (t.closest('#wd-close')) { closeWardrobe(); return; }
+      const tb = t.closest('.wx-tab'); if (tb) { setTab(tb.dataset.tab); return; }
+      const k = t.closest('[data-sk]'); if (k) { onSkin(k.dataset.sk); return; }
+      const l = t.closest('[data-lk]'); if (l) { wearLook(l.dataset.lk); return; }
+      const b = t.closest('[data-bg]'); if (b) onBg(b.dataset.bg);
+    });
+
+    setTab('looks', { instant: true });
+    return {
+      el: el, setTab: setTab, openDetail: openDetail, closeDetail: closeDetail, wearLook: wearLook, wearBg: wearBg,
+      refresh: function () {
+        st = _wxStats(); me = _wxMe();
+        const lk = getEquippedSkin() || ''; if (lk !== S.look && _skinFileAllowed(lk)) { S.look = lk; if (doneR.looks) renderLooks(); }
+        else if (doneR.looks) renderLookTiles();
+        const bg = _cardBgEquipped() || 'basic'; if (bg !== S.bg) { S.bg = bg; if (doneR.bgs) renderBgs(); } else if (doneR.bgs) renderBgTiles();
+      },
+      state: function () { return { tab: S.tab, look: S.look, bg: S.bg, detail: dt.classList.contains('open') ? kindNow : null, pages: pages.length }; },
+    };
+  }
+  // Re-paint the open Wardrobe after ownership / equips change elsewhere (no-op when closed).
   function _renderWardrobe() {
-    const body = document.getElementById('wd-body');
-    if (!body) return;
-    const equipped = getEquippedSkin();           // '' = class default
-    const classDef = _classDefaultAvatar();
-    const eq = AVATAR_SKINS.find((x) => (x.file || '') === equipped);
-    const tiles = AVATAR_SKINS.map((sk) => {
-      const img = sk.klass ? classDef : sk.file;
-      const isEq = (sk.file || '') === equipped;
-      return '<div class="wd-tile' + (isEq ? ' is-equipped' : '') + '" data-skin="' + esc(sk.file) + '">' +
-        (isEq ? '<span class="wd-tile-tick">\u2713</span>' : '') +
-        (sk.klass ? '<span class="wd-tile-badge">CLASS</span>' : '') +
-        '<div class="wd-tile-av"><img src="' + esc(img) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
-        '<span class="wd-tile-name">' + esc(sk.name) + '</span></div>';
-    }).join('');
-    // W297 — IAP-aware shop tiles. When IAP is off (default) every tile shows
-    // SOON and owned is always empty, so this renders identically to before.
-    const iapOn = !!(window.Auth && Auth.iapAvailable && Auth.iapAvailable());
-    const shop = PREMIUM_SKINS.map((sk) => {
-      const owned = isSkinOwned(sk.id);
-      const isEqP = owned && (sk.file || '') === equipped;
-      let badge;
-      if (isEqP)        badge = '<span class="wd-tile-tick">✓</span>';
-      else if (owned)   badge = '<span class="wd-tile-badge">OWNED</span>';
-      // W625 — buyable tiles show the LIVE localized price ('$4.99'); 'BUY' is the
-      // brief fallback until _refreshSkinPrices() lands. SOON stays for the dormant
-      // (IAP-off) state — a price would imply a purchasability the app can't honor.
-      else if (iapOn) { const _sp = _iapPrices[_skinProductId(sk.id)];
-                        badge = '<span class="wd-tile-lockbadge wd-tile-buy">' + (_sp ? esc(_sp) : 'BUY') + '</span>'; }
-      else              badge = '<span class="wd-tile-lockbadge">SOON</span>';
-      return '<div class="wd-tile wd-tile--premium wd-tile--' + sk.rarity + (isEqP ? ' is-equipped' : '') +
-        '" data-premium="' + esc(sk.id) + '"' + (owned ? ' data-owned="1"' : '') + '>' +
-        badge +
-        '<div class="wd-tile-av"><img src="' + esc(sk.file) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>' +
-        '<span class="wd-tile-name">' + esc(sk.name) + '</span>' +
-        '<span class="wd-tile-rarity">' + (sk.rarity || '').toUpperCase() + '</span></div>';
-    }).join('');
-    body.innerHTML =
-      '<div class="wd-hero"><div class="pc-med"><span class="pc-med-ring"></span>' +
-        '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
-        '<div class="pc-med-portrait"><img src="' + esc(_bustSrc(getAvatarSrc()) || getAvatarSrc()) + '" alt="" onerror="this.style.display=\'none\'"></div></div></div>' +   // W711 — bust portrait (fallback full-body)
-      '<div class="wd-hero-name">' + esc(eq ? eq.name : 'Your Class') + '</div><div class="wd-hero-sub">Equipped Look</div>' +
-      '<div class="wd-section-label"><span>YOUR LOOKS</span><span class="rule"></span></div>' +
-      '<div class="wd-grid">' + tiles + '</div>' +
-      _cardBgSectionHtml() +   // W706 — member card-background picker
-      '<div class="wd-section-label"><span>SHOP</span><span class="rule"></span></div>' +
-      '<div class="wd-grid wd-shop">' + shop + '</div>' +
-      // W621 — pre-purchase Founder teaser in the shop. Gated exactly like the other
-      // prompts (live IAP + non-owner) so it stays dormant until go-live and never
-      // shows to an owned Founder. Tap → the Founder sheet (data-wd-founder branch
-      // in the wd-body delegation).
-      ((_founderIapReady() && !_founderOwned())
-        ? '<button type="button" class="wd-founder-teaser" data-wd-founder="1">' +
-            '<span class="ft-glyph" aria-hidden="true">✦</span>' +
-            '<span class="ft-text">' +
-              '<span class="ft-title">Awakened Premium · <b>' + esc(_premiumPriceStr('monthly')) + '</b>/mo</span>' +
-              '<span class="ft-benefit">NO ENTRANCE FEES · MEMBER STATUS</span>' +   // 2 items — 3 ellipsized at 393px (W1087: the Ascent is unlimited for everyone)
-            '</span>' +
-            '<span class="ft-chev" aria-hidden="true">›</span>' +
-          '</button>'
-        : '') +
-      '<div class="wd-shop-note">' + (iapOn ? 'Tap to preview, buy, or equip. Restore purchases from Settings.' : 'Premium skins — purchasable in a future update.') + '</div>';
+    try { const sh = document.getElementById('wd-sheet'); if (_wx && sh && !sh.classList.contains('hidden')) _wx.refresh(); } catch (_) {}
   }
-  // W706 — the CARD BACKGROUND picker section (handoff-21 section 05). Tiles show
-  // the real art; states = equipped / unlocked (tap to equip) / locked-by-
-  // achievement (shows the requirement) / locked-for-non-members (MEMBERS chip →
-  // the Premium paywall). "Basic" clears back to the plain card. The server
-  // re-validates membership at write time — this gate is UX, not security.
-  function _cardBgSectionHtml() {
-    const isMember = _founderOwned();
-    const eq = _cardBgEquipped();
-    const tiles = CARD_BG_CATALOG.map(function (bg) {
-      const unlocked = _cardBgUnlocked(bg.id);
-      const isEq = eq === bg.id;
-      const usable = isMember && unlocked;
-      let badge = '';
-      if (isEq) badge = '<span class="wd-tile-tick">✓</span>';
-      else if (!isMember) badge = '<span class="cbg-chip cbg-chip--members">✦ MEMBERS</span>';
-      else if (!unlocked) badge = '<span class="cbg-chip cbg-chip--locked">🔒</span>';
-      return '<div class="cbg-tile' + (isEq ? ' is-equipped' : '') + (usable ? '' : ' is-locked') + '"' +
-        ' data-cbg="' + esc(bg.id) + '" data-cbg-usable="' + (usable ? '1' : '0') + '">' +
-        '<div class="cbg-art" style="background-image:url(\'' + _cardBgArt(bg.id) + '\')"></div>' +
-        badge +
-        '<span class="cbg-name">' + esc(bg.name) + '</span>' +
-        '<span class="cbg-need">' + (unlocked ? 'EARNED' : esc(bg.need.toUpperCase())) + '</span>' +
-      '</div>';
-    }).join('');
-    const basic = '<div class="cbg-tile cbg-tile--basic' + (eq === null ? ' is-equipped' : '') + '" data-cbg="" data-cbg-usable="1">' +
-      (eq === null ? '<span class="wd-tile-tick">✓</span>' : '') +
-      '<div class="cbg-art cbg-art--basic"></div>' +
-      '<span class="cbg-name">Basic</span><span class="cbg-need">DEFAULT</span></div>';
-    return '<div class="wd-section-label"><span>CARD BACKGROUND</span><span class="rule"></span></div>' +
-      (isMember ? '' :
-        '<div class="cbg-member-note">Card backgrounds are a <b>member</b> perk — earn them with achievements, wear them on every leaderboard.</div>') +
-      '<div class="cbg-grid">' + basic + tiles + '</div>';
-  }
-
-  // W283 — premium skin preview lightbox (try-before-you-buy on a locked skin).
-  function _wdPreviewSkin(id) {
-    const sk = PREMIUM_SKINS.find((x) => x.id === id);
-    const ov = document.getElementById('wd-preview-overlay');
-    if (!sk || !ov) return;
-    const img = document.getElementById('wd-preview-img'); if (img) img.src = sk.file;
-    const nm = document.getElementById('wd-preview-name'); if (nm) nm.textContent = sk.name;
-    const rar = document.getElementById('wd-preview-rarity');
-    if (rar) { rar.textContent = (sk.rarity || '').toUpperCase(); rar.className = 'wd-preview-rarity wd-preview-rarity--' + (sk.rarity || ''); }
-    const bl = document.getElementById('wd-preview-blurb'); if (bl) bl.textContent = sk.blurb || '';
-    ov.classList.remove('hidden');
-  }
-  function _wdClosePreview() { const ov = document.getElementById('wd-preview-overlay'); if (ov) ov.classList.add('hidden'); }
-
   function openWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
     if (!ov || !sh) return;
     _hydrateOwnedSkinsFromCache();        // W297 — instant display from cache
-    _renderWardrobe();
+    _wx = _wxMount(sh);
     ov.classList.remove('hidden'); sh.classList.remove('hidden');
-    try { refreshSkinEntitlements(); } catch (_) {}   // W297 — revalidate ownership from backend
-    try { _maybeReconcileEntitlements(); } catch (_) {}  // W637 — self-heal a lost-webhook grant (throttled 1/day)
-    try { _refreshIapPrices(); } catch (_) {}          // W625 — live localized skin + Founder prices (no-op while dormant)
+    try { refreshSkinEntitlements(); } catch (_) {}   // revalidate ownership (earned + bought) from the backend
+    try { _earnTick(true); } catch (_) {}             // W1098 — fresh progress + any skin earned since the last check
   }
   function closeWardrobe() {
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
     if (ov) ov.classList.add('hidden');
     if (sh) sh.classList.add('hidden');
+    try { if (_wx && localStorage.getItem(WX_NEW_KEY)) localStorage.removeItem(WX_NEW_KEY); } catch (_) {}   // the NEW chip has been seen
+    _wx = null;
+    try { _earnPlayPending(); } catch (_) {}   // anything earned while it was open plays now
   }
-  function _equipSkin(file) {
+  try { window.__wx = { state: function () { return _wx ? _wx.state() : null; }, api: function () { return _wx; }, stats: _wxStats }; } catch (_) {}   // QA
+
+  // ── EARNING A LOOK — the celebration (earn.js). One overlay, a 390 × 844 box scaled to the screen.
+  const EX_HEX = '100,4 194,58 194,162 100,216 6,162 6,58', EX_HEXI = '100,24 177,68 177,152 100,196 23,152 23,68',
+    EX_HP = [[50, 1.8], [97, 26.4], [97, 73.6], [50, 98.2], [3, 73.6], [3, 26.4]];
+  const EX_SEAL = '<svg class="ex-sl-sv" viewBox="0 0 200 220"><polygon class="ex-hx-o" points="' + EX_HEX + '"/><polygon class="ex-hx-i" points="' + EX_HEXI + '"/><circle class="ex-hx-r" cx="100" cy="110" r="56"/><circle class="ex-hx-r2" cx="100" cy="110" r="42"/>' +
+    '<path class="ex-hx-s" d="M100 78L107 103 132 110 107 117 100 142 93 117 68 110 93 103Z"/><path class="ex-ck" pathLength="1" d="M100 110L117 93 124 62 150 44"/><path class="ex-ck" pathLength="1" d="M100 110L82 124 60 131 38 158"/>' +
+    '<path class="ex-ck" pathLength="1" d="M100 110L104 140 95 170 108 206M100 110L131 119 178 127"/></svg>';
+  const EX_BAR = '<svg class="ex-br-sv" viewBox="0 0 320 80"><polygon class="ex-hx-o" points="22,4 298,4 316,40 298,76 22,76 4,40"/><polygon class="ex-hx-i" points="34,14 286,14 300,40 286,66 34,66 20,40"/>' +
+    '<path class="ex-hx-r" d="M44 40H134M186 40H276"/><path class="ex-hx-s" d="M160 24L167 40 160 56 153 40Z"/><path class="ex-ck" pathLength="1" d="M160 4L152 22 166 40 154 58 162 76"/></svg>';
+  const EX_RUNES = '<svg class="ex-runes" viewBox="0 0 240 240" fill="none" stroke="currentColor"><circle cx="120" cy="120" r="118" stroke-opacity=".34" stroke-dasharray="1 6"/><circle cx="120" cy="120" r="111" stroke-opacity=".15" stroke-width="7" stroke-dasharray="1.5 8 5 8"/></svg>';
+  const EX_MOTES = Array.from({ length: 14 }, function (_, i) { return '<i style="left:' + (14 + (i * 37) % 72) + '%;--du:' + (3.8 + ((i * 13) % 30) / 10).toFixed(1) + 's;--de:-' + (((i * 7) % 60) / 10) + 's;--dx:' + ((i * 29) % 44 - 22) + 'px"></i>'; }).join('');
+  const EX_COL = { L: '#a78bfa', M: '#f5b842', B: '#f0cf86' };
+  function _exUrl(u) { return "url('" + esc(u) + "')"; }
+  function _exSkinUrl(key) { return _exUrl(_wxArtUrl(WX_SKIN[key].file)); }
+  function _exBgStyle(id) { return 'background-image:' + _exUrl(_cardBgArt(id)) + ';background-position:' + ((WX_BG[id] && WX_BG[id].pos) || '50% 50%'); }
+
+  // Play one round of rewards: items = [{ t:'sk'|'bg', id }]. Resolves when the hunter is done.
+  function _earnPlay(items) {
+    return new Promise(function (resolve) {
+      const old = document.getElementById('earn-ce'); if (old) old.remove();
+      const root = document.createElement('div'); root.id = 'earn-ce'; root.className = 'ex-ce' + (WX_RM ? ' ex-rm' : '');
+      root.innerHTML = '<div class="ex-bgx"></div><div class="ex-vig"></div><div class="ex-flash"></div><div class="ex-box"><div class="ex-stage"></div><div class="ex-tapl">TAP TO CONTINUE</div></div>';
+      document.body.appendChild(root);
+      const box = root.querySelector('.ex-box');
+      const fit = function () { const k = Math.min(window.innerWidth / 390, window.innerHeight / 844); box.style.transform = 'translate(-50%,-50%) scale(' + k.toFixed(4) + ')'; };
+      fit(); window.addEventListener('resize', fit);
+      try { _stageBigMoment = true; } catch (_) {}
+      const me = _wxMe(), rm = WX_RM;
+      _wxTint(root, 'rk', WX_RK[me.rank] || WX_RK.E);
+      const H = { look: getEquippedSkin() || '', bg: _cardBgEquipped() || null };
+      const $ = function (r, s) { return r.querySelector(s); }, $$ = function (r, s) { return Array.prototype.slice.call(r.querySelectorAll(s)); };
+      const stage = $(box, '.ex-stage'), tapl = $(box, '.ex-tapl'), el = box;
+      let T = [], P = [], busy = false, onTap = null, ended = false;
+      const sc = function () { return (el.getBoundingClientRect().width / el.offsetWidth) || 1; };
+      const theme = function (c) { _wxTint(root, 'rc', c); };
+      const tap = function (on) { tapl.classList.toggle('on', on); };
+      const haptic = function (k) { try { if (k) _hapticTick(k); } catch (_) {} };
+      const sound = function (n) { try { if (n === 'tap') _audCue('ui_tap'); else if (n) playSfx(n); } catch (_) {} };
+      const rowIn = function (lookFile) {
+        return '<div class="ex-r-scrim"></div><div class="ex-r-in"><span class="ex-r-crest"><span class="ex-r-p" style="background-image:' + _exUrl(_wxArtUrl(lookFile || _classDefaultAvatar())) + '"></span></span>' +
+          '<div class="ex-r-id"><b>' + esc(me.name) + '</b><span><i></i>RANK ' + esc(me.rank) + ' · ' + esc(String(me.cls).toUpperCase()) + '</span></div><div class="ex-r-sc"><b>' + _wxFmt(me.steps) + '</b><small>STEPS</small></div></div>';
+      };
+      const rowBgStyle = function (id) { return id ? _exBgStyle(id) : 'background:linear-gradient(180deg,#1d1b40,#131230)'; };
+      function seq(steps) {
+        T.forEach(clearTimeout); P = steps.map(function (s) { return { t: s[0], f: s[1], d: 0 }; });
+        busy = true; T = P.map(function (p) { return setTimeout(function () { if (!p.d) { p.d = 1; p.f(false); } }, p.t); });
+        T.push(setTimeout(function () { busy = false; }, Math.max.apply(null, steps.map(function (s) { return s[0]; })) + 40));
+      }
+      function skip() {
+        T.forEach(clearTimeout); root.classList.add('ex-skip'); P.forEach(function (p) { if (!p.d) { p.d = 1; p.f(true); } }); void root.offsetWidth;
+        requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.remove('ex-skip'); }); }); busy = false;
+      }
+      root.addEventListener('click', function (e) { if (e.target.closest('button')) return; if (busy) { skip(); return; } if (onTap) onTap(e); });
+      const A = function (n, k, op) { return !rm && n && n.animate(k, op); };
+      function sparks(x, y, c, n, d) {
+        if (rm) return; n = n || 18; d = d || 110;
+        for (let i = 0; i < n; i++) {
+          const a = i / n * Math.PI * 2 + (i % 3) * 0.15, r = d * (0.6 + ((i * 37) % 40) / 100), p = document.createElement('i');
+          p.className = 'ex-spark'; p.style.cssText = 'left:' + x + 'px;top:' + y + 'px;background:' + c + ';box-shadow:0 0 8px ' + c; el.appendChild(p);
+          p.animate([{ transform: 'translate(-50%,-50%)', opacity: 1 }, { transform: 'translate(calc(-50% + ' + (Math.cos(a) * r).toFixed(1) + 'px),calc(-50% + ' + (Math.sin(a) * r).toFixed(1) + 'px)) scale(.3)', opacity: 0 }],
+            { duration: 650 + (i * 41) % 350, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = function () { p.remove(); };
+        }
+      }
+      function wave(x, y, s) {
+        if (rm) return; const w = document.createElement('i'); w.className = 'ex-wave'; w.style.cssText = 'left:' + (x - 40) + 'px;top:' + (y - 40) + 'px;width:80px;height:80px'; el.appendChild(w);
+        w.animate([{ transform: 'scale(.4)', opacity: 1 }, { transform: 'scale(' + s + ')', opacity: 0 }], { duration: 800, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = function () { w.remove(); };
+      }
+      function flash(k) { A($(root, '.ex-flash'), [{ opacity: k || 0.9 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' }); }
+      function shake() { A(stage, [{ transform: 'translate(0,0)' }, { transform: 'translate(-6px,3px)' }, { transform: 'translate(5px,-4px)' }, { transform: 'translate(-4px,2px)' }, { transform: 'translate(3px,-1px)' }, { transform: 'translate(0,0)' }], { duration: 360 }); }
+      function shatter(host, x, y, w, h) {
+        if (rm) return;
+        for (let i = 0; i < 6; i++) {
+          const a = EX_HP[i], b = EX_HP[(i + 1) % 6], s = document.createElement('div'); s.className = 'ex-shard';
+          s.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;clip-path:polygon(50% 50%,' + a[0] + '% ' + a[1] + '%,' + b[0] + '% ' + b[1] + '%)'; host.appendChild(s);
+          const ang = ((i + 0.5) / 6) * Math.PI * 2 - Math.PI / 2, d = 150 + (i * 31) % 70;
+          s.animate([{ transform: 'none', opacity: 1 }, { transform: 'translate(' + (Math.cos(ang) * d).toFixed(1) + 'px,' + (Math.sin(ang) * d).toFixed(1) + 'px) rotate(' + ((i % 2 ? 1 : -1) * (40 + i * 12)) + 'deg) scale(.7)', opacity: 0 }],
+            { duration: 760, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = function () { s.remove(); };
+        }
+      }
+      function tilt(m) {
+        if (rm) return; let on = false;
+        const mv = function (e) {
+          const r = m.getBoundingClientRect(), px = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), py = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+          m.style.transform = 'perspective(800px) rotateX(' + ((0.5 - py) * 18).toFixed(1) + 'deg) rotateY(' + ((px - 0.5) * 22).toFixed(1) + 'deg) scale(1.03)';
+          m.style.setProperty('--sx', (px * 100).toFixed(0) + '%'); m.style.setProperty('--sy', (py * 100).toFixed(0) + '%');
+        };
+        m.addEventListener('pointerdown', function (e) { if (!m.closest('.ex-r0')) return; on = true; e.stopPropagation(); try { m.setPointerCapture(e.pointerId); } catch (_) {} m.classList.add('tilting'); mv(e); });
+        m.addEventListener('pointermove', function (e) { if (on) mv(e); });
+        const up = function () { if (!on) return; on = false; m.classList.remove('tilting'); m.style.transform = ''; };
+        m.addEventListener('pointerup', up); m.addEventListener('pointercancel', up);
+      }
+      // ---------- units ----------
+      function skinUnit(host, key, kick) {
+        if (kick === undefined) kick = true;
+        const s = WX_SKIN[key], M = s.r === 'M', u = document.createElement('div'); u.className = 'ex-unit' + (M ? ' ex-mythic' : ''); _wxTint(u, 'rc', EX_COL[s.r]);
+        u.innerHTML = (kick ? '<div class="ex-kick">EARNED</div>' : '') +
+          '<div class="ex-seal"><div class="ex-sl-glow"></div><div class="ex-sl-ghost" style="background-image:' + _exSkinUrl(key) + '"></div>' + EX_SEAL + '</div>' +
+          '<div class="ex-medal"><div class="ex-m-glow"></div>' + (M ? '<div class="ex-m-rays"></div>' : '') + EX_RUNES +
+          '<svg class="ex-m-ring" viewBox="0 0 228 228"><circle class="ex-trk" cx="114" cy="114" r="108"/><circle class="ex-arc" cx="114" cy="114" r="108" pathLength="100"/></svg>' +
+          '<i class="ex-gem n"></i><i class="ex-gem e"></i><i class="ex-gem s"></i><i class="ex-gem w"></i><div class="ex-m-art" style="background-image:' + _exSkinUrl(key) + '"></div><div class="ex-m-sheen"></div><div class="ex-motes">' + EX_MOTES + '</div></div>' +
+          '<div class="ex-tx"><div class="ex-t-r"><span class="ex-rar">' + (M ? 'Mythic' : 'Legendary') + '</span></div><h2 class="ex-t-n">' + esc(s.n) + '</h2><div class="ex-t-l">' + esc(s.line) + '</div></div>';
+        host.appendChild(u); tilt($(u, '.ex-medal')); let n = 0;
+        return {
+          u: u, M: M, key: key, c: EX_COL[s.r],
+          crack: function () {
+            n++; const sl = $(u, '.ex-seal'); sl.className = 'ex-seal c' + n;
+            A(sl, [{ transform: 'scale(1)' }, { transform: 'scale(' + (1 - 0.03 * n) + ') rotate(' + (n % 2 ? -2 : 2) + 'deg)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-out' });
+            sparks(195 + (n - 2) * 22, 380 - (n % 2) * 24, EX_COL[s.r], 6 + n * 2, 60); return n;
+          },
+          reveal: function (then, fast) {
+            const k = fast ? 0.65 : 1;
+            seq([
+              [0, function (sk) { u.classList.add('ex-r0'); if (!sk) { shatter(u, 95, 272, 200, 220); flash(M ? 1 : 0.8); wave(195, 382, M ? 5 : 3.6); sparks(195, 382, EX_COL[s.r], M ? 28 : 18, M ? 170 : 120); if (M) shake(); } }],
+              [180 * k, function () { u.classList.add('ex-r1'); }],
+              [1050 * k, function (sk) { u.classList.add('ex-r2'); if (!sk) haptic('LIGHT'); }],
+              [1200 * k, function (sk) { u.classList.add('ex-r3'); if (!sk) haptic(M ? 'MEDIUM' : 'LIGHT'); }],
+              [1650 * k, function () { u.classList.add('ex-r4'); }],
+              [2050 * k, function (sk) { then(sk); }],
+            ]);
+          },
+        };
+      }
+      function bgUnit(host, id, low, lookFile, kick) {
+        if (kick === undefined) kick = true;
+        const b = WX_BG[id], u = document.createElement('div'); u.className = 'ex-unit' + (low ? ' ex-low' : ''); _wxTint(u, 'rc', EX_COL.B);
+        u.innerHTML = (kick ? '<div class="ex-kick">EARNED</div>' : '') +
+          '<div class="ex-bar"><div class="ex-sl-glow"></div><div class="ex-br-ghost" style="' + _exBgStyle(id) + '"></div>' + EX_BAR + '</div>' +
+          '<div class="ex-banner"><div class="ex-bn-art" style="' + _exBgStyle(id) + '"></div>' + rowIn(lookFile) + '<div class="ex-bn-sweep"></div><div class="ex-bn-frame"></div></div>' +
+          '<div class="ex-tx ex-tx-b"><h2 class="ex-t-n">' + esc(b.n) + '</h2><div class="ex-t-l">' + esc(b.line) + '</div></div>';
+        host.appendChild(u);
+        return {
+          u: u, id: id,
+          unfurl: function (then, fast) {
+            const k = fast ? 0.7 : 1, bar = $(u, '.ex-bar');
+            seq([
+              [0, function () { bar.classList.add('c1'); }],
+              [140, function (sk) {
+                u.classList.add('ex-r0');
+                if (!sk && !rm) {
+                  const y = bar.offsetTop;
+                  [0, 1].forEach(function (i) {
+                    const c = bar.cloneNode(true); c.classList.add('half'); c.style.cssText = 'opacity:1;transform:none;transition:none;clip-path:inset(0 ' + (i ? 0 : 50) + '% 0 ' + (i ? 50 : 0) + '%)'; u.appendChild(c);
+                    c.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (i ? 150 : -150) + 'px) rotate(' + (i ? 8 : -8) + 'deg)', opacity: 0 }], { duration: 700, easing: 'cubic-bezier(.3,.6,.3,1)' }).onfinish = function () { c.remove(); };
+                  });
+                  flash(0.55); sparks(195, y + 40, EX_COL.B, 14, 110);
+                  A($(u, '.ex-bn-sweep'), [{ transform: 'translateX(-90px)', opacity: 1 }, { transform: 'translateX(358px)', opacity: 1 }], { duration: 900, delay: 300, easing: 'cubic-bezier(.6,0,.3,1)' });
+                }
+              }],
+              [760 * k, function (sk) { u.classList.add('ex-r3'); if (!sk) haptic('LIGHT'); }],
+              [1150 * k, function () { u.classList.add('ex-r4'); }],
+              [1500 * k, function (sk) { then(sk); }],
+            ]);
+          },
+        };
+      }
+      function acts(label, violet, onEq, cls) {
+        const a = document.createElement('div'); a.className = 'ex-acts ' + (cls || '');
+        a.innerHTML = '<button type="button" class="ex-b-eq' + (violet ? ' v' : '') + '">' + label + '</button><button type="button" class="ex-b-lt">LATER</button>';
+        stage.appendChild(a);
+        $(a, '.ex-b-eq').onclick = function () { a.classList.remove('on'); onEq(); };
+        $(a, '.ex-b-lt').onclick = function () { a.classList.remove('on'); finish(false); };
+        requestAnimationFrame(function () { requestAnimationFrame(function () { a.classList.add('on'); }); });
+        return a;
+      }
+      function finish(keepRow) {
+        if (ended) return; ended = true; tap(false); onTap = null; stage.classList.add(keepRow ? 'ex-fin' : 'ex-gone');
+        setTimeout(function () {
+          root.style.transition = 'opacity .45s'; root.style.opacity = '0';
+          setTimeout(function () { window.removeEventListener('resize', fit); try { root.remove(); } catch (_) {} try { _renderWardrobe(); } catch (_) {} resolve(!!keepRow); }, 460);
+        }, keepRow ? 700 : 350);
+      }
+      const waitTap = function (f) { tap(true); onTap = function () { tap(false); f(); }; };
+      const equipLook = function (key) { try { _equipSkin(WX_SKIN[key].file, true); } catch (_) {} H.look = WX_SKIN[key].file; };
+      const equipBg = function (id) { try { _cardBgEquip(id); } catch (_) {} H.bg = id; };
+      function wearOnRow(U) {
+        haptic('MEDIUM'); sound('stat_chime');
+        const prevLook = H.look; equipLook(U.key);
+        const r = document.createElement('div'); r.className = 'ex-row'; r.innerHTML = '<div class="ex-r-art" style="' + rowBgStyle(H.bg) + '"></div>' + rowIn(prevLook); stage.appendChild(r);
+        seq([
+          [0, function () { r.classList.add('on'); }],
+          [700, function (sk) {
+            const m = $(U.u, '.ex-m-art'), c = $(r, '.ex-r-crest'), p = $(r, '.ex-r-p');
+            if (sk || rm) { p.style.backgroundImage = _exSkinUrl(U.key); $(U.u, '.ex-medal').style.opacity = 0; return; }
+            const e = el.getBoundingClientRect(), s = sc(), a = m.getBoundingClientRect(), b = c.getBoundingClientRect(), f = document.createElement('div');
+            f.style.cssText = 'position:absolute;z-index:7;border-radius:50%;background:' + _exSkinUrl(U.key) + ' center/cover;left:' + ((a.left - e.left) / s) + 'px;top:' + ((a.top - e.top) / s) + 'px;width:' + (a.width / s) + 'px;height:' + (a.width / s) + 'px;box-shadow:0 0 0 3px ' + U.c + ',0 0 30px ' + U.c + ';transform-origin:0 0';
+            el.appendChild(f); $(U.u, '.ex-medal').style.opacity = 0;
+            const dx = (b.left - a.left) / s, dy = (b.top - a.top) / s, kk = b.width / a.width;
+            f.animate([{ transform: 'none' }, { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + kk + ')' }], { duration: 620, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).onfinish = function () {
+              p.style.backgroundImage = _exSkinUrl(U.key); f.remove(); A(c, [{ transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.6,.5,1)' }); sparks(58, 646, U.c, 12, 50);
+            };
+          }],
+          [1400, function () { r.classList.add('lit'); waitTap(function () { finish(true); }); }],
+        ]);
+      }
+      // ---------- flows ----------
+      function skinFlow(key, then) {
+        const U = skinUnit(stage, key); theme(U.c);
+        seq([[0, function () { U.u.classList.add('ex-s-in'); }], [700, function () { tap(true); }]]);
+        onTap = function () {
+          const n = U.crack();
+          haptic(n < 3 ? (n === 2 && U.M ? 'MEDIUM' : 'LIGHT') : 'HEAVY'); sound(n < 3 ? 'tap' : (U.M ? 'ultra_drop' : 'rare_drop'));
+          if (n === 3) { tap(false); onTap = null; U.reveal(function (sk) { then(U, sk); }); }
+        };
+        return U;
+      }
+      function bgFlow(id, then, low, lookFile) {
+        const U = bgUnit(stage, id, low, lookFile); theme(EX_COL.B);
+        seq([[0, function () { U.u.classList.add('ex-s-in'); }], [650, function () { tap(true); }]]);
+        onTap = function () { tap(false); onTap = null; haptic('MEDIUM'); sound('rare_drop'); U.unfurl(function (sk) { then(U, sk); }); };
+        return U;
+      }
+      const sks = items.filter(function (x) { return x.t === 'sk'; }), bgs = items.filter(function (x) { return x.t === 'bg'; });
+      if (items.length === 1 && sks.length === 1) {
+        skinFlow(sks[0].id, function (U) { acts('EQUIP', !U.M, function () { wearOnRow(U); }); });
+      } else if (items.length === 1) {
+        bgFlow(bgs[0].id, function (U) {
+          acts('SET AS CARD', false, function () {
+            haptic('MEDIUM'); sound('stat_chime'); equipBg(U.id);
+            seq([[0, function () { $(U.u, '.ex-banner').classList.add('asrow'); }], [700, function () { $(U.u, '.ex-banner').classList.add('lit'); waitTap(function () { finish(true); }); }]]);
+          });
+        }, false, H.look);
+      } else if (items.length === 2 && sks.length === 1) {
+        skinFlow(sks[0].id, function (S) {
+          const go = function () {
+            S.u.classList.add('up'); theme(EX_COL.B);
+            bgFlow(bgs[0].id, function (B) {
+              seq([
+                [0, function () { const bn = $(B.u, '.ex-banner'); $(bn, '.ex-r-p').style.backgroundImage = _exSkinUrl(S.key); bn.classList.add('asrow'); }],
+                [700, function () { acts('EQUIP BOTH', false, function () { haptic('MEDIUM'); sound('stat_chime'); equipLook(S.key); equipBg(B.id); $(B.u, '.ex-banner').classList.add('lit'); waitTap(function () { finish(true); }); }); }],
+              ]);
+            }, true, WX_SKIN[S.key].file);
+            const last = stage.lastElementChild, kk = last && $(last, '.ex-kick'); if (kk) kk.remove();
+          };
+          waitTap(go);
+        });
+      } else {
+        backlog();
+      }
+      // ---------- backlog: every owed reward sealed on one screen; open each, then choose ----------
+      function backlog() {
+        theme(EX_COL.M);
+        stage.innerHTML = '<div class="ex-bl-h"><div class="ex-bl-n">' + items.length + '</div><div class="ex-bl-k">EARNED</div></div><div class="ex-bl-sk"></div><div class="ex-bl-bg"></div><div class="ex-focus"></div>';
+        const fx = $(stage, '.ex-focus'); let open = 0, selS = null, selB = null;
+        items.forEach(function (t, i) {
+          const b = document.createElement('button'); b.type = 'button'; b.dataset.i = i;
+          if (t.t === 'sk') {
+            const s = WX_SKIN[t.id]; b.className = 'ex-it ex-it-sk'; _wxTint(b, 'rc', EX_COL[s.r]);
+            b.innerHTML = '<span class="ex-ip"><svg viewBox="0 0 200 220"><polygon class="ex-hx-o" points="' + EX_HEX + '"/><polygon class="ex-hx-i" points="' + EX_HEXI + '"/><path class="ex-hx-s" d="M100 78L107 103 132 110 107 117 100 142 93 117 68 110 93 103Z"/></svg>' +
+              '<span class="ex-pp" style="background-image:' + _exSkinUrl(t.id) + '"></span></span><span class="ex-nm">' + esc(s.n) + '</span>';
+            $(stage, '.ex-bl-sk').appendChild(b);
+          } else {
+            b.className = 'ex-it ex-it-bg'; _wxTint(b, 'rc', EX_COL.B);
+            b.innerHTML = '<span class="ex-ip"><svg viewBox="0 0 320 80" preserveAspectRatio="none"><polygon class="ex-hx-o" points="22,4 298,4 316,40 298,76 22,76 4,40"/><path class="ex-hx-s" d="M160 24L167 40 160 56 153 40Z"/></svg>' +
+              '<span class="ex-pp" style="' + _exBgStyle(t.id) + '"></span></span><span class="ex-nm">' + esc(WX_BG[t.id].n) + '</span>';
+            $(stage, '.ex-bl-bg').appendChild(b);
+          }
+          b.onclick = function () {
+            if (busy) return skip(); if (fx.classList.contains('on')) return; if (!b.classList.contains('open')) return focus(t, b); if (open < items.length) return;
+            if (t.t === 'sk') { selS = t.id; $$(stage, '.ex-it-sk').forEach(function (x) { x.classList.toggle('sel', x === b); }); }
+            else { selB = t.id; $$(stage, '.ex-it-bg').forEach(function (x) { x.classList.toggle('sel', x === b); }); }
+            haptic('LIGHT'); paint();
+          };
+        });
+        seq([[0, function () { $$(stage, '.ex-it').forEach(function (b, i) { A(b, [{ opacity: 0, transform: 'translateY(16px) scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: i * 70, easing: 'cubic-bezier(.2,.9,.3,1.2)', fill: 'backwards' }); }); }], [700, function () { tap(true); }]]);
+        const gridTap = function () { const nx = $$(stage, '.ex-it').find(function (x) { return !x.classList.contains('open'); }); if (nx) nx.click(); };
+        onTap = gridTap;
+        function focus(t, b) {
+          tap(false); haptic('LIGHT'); fx.innerHTML = ''; fx.classList.add('on');
+          const U = t.t === 'sk' ? skinUnit(fx, t.id, false) : bgUnit(fx, t.id, false, H.look, false);
+          requestAnimationFrame(function () { U.u.classList.add('ex-s-in'); }); setTimeout(function () { tap(true); }, 400);
+          onTap = function () {
+            tap(false); onTap = null; haptic('MEDIUM');
+            if (t.t === 'sk') { U.crack(); U.crack(); U.crack(); sound(WX_SKIN[t.id].r === 'M' ? 'ultra_drop' : 'rare_drop'); U.reveal(back, true); }
+            else { sound('rare_drop'); U.unfurl(back, true); }
+          };
+          function back() {
+            waitTap(function () {
+              fx.classList.remove('on'); b.classList.add('open'); open++; onTap = gridTap;
+              A(b, [{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.6,.5,1)' });
+              if (open === items.length) { onTap = null; setTimeout(collect, 450); } else tap(true);
+            });
+          }
+        }
+        function paint() {
+          const r = $(stage, '.ex-row'); if (!r) return;
+          $(r, '.ex-r-art').setAttribute('style', rowBgStyle(selB || H.bg));
+          $(r, '.ex-r-p').style.backgroundImage = _exUrl(_wxArtUrl(selS ? WX_SKIN[selS].file : (H.look || _classDefaultAvatar())));
+        }
+        function collect() {
+          haptic('MEDIUM'); sound('achievement');
+          const top = items.find(function (t) { return t.t === 'sk' && WX_SKIN[t.id].r === 'M'; }) || items.find(function (t) { return t.t === 'sk'; }), tb = items.find(function (t) { return t.t === 'bg'; });
+          selS = top ? top.id : null; selB = tb ? tb.id : null;
+          $$(stage, '.ex-it').forEach(function (x) { const t = items[+x.dataset.i]; x.classList.toggle('sel', t.id === selS || t.id === selB); });
+          const r = document.createElement('div'); r.className = 'ex-row ex-bl-row'; r.innerHTML = '<div class="ex-r-art"></div>' + rowIn(H.look); stage.appendChild(r); paint();
+          requestAnimationFrame(function () { requestAnimationFrame(function () { r.classList.add('on'); }); });
+          acts('EQUIP', false, function () { haptic('MEDIUM'); sound('stat_chime'); if (selS) equipLook(selS); if (selB) equipBg(selB); r.classList.add('lit'); waitTap(function () { finish(true); }); }, 'ex-bl-acts');
+        }
+      }
+    });
+  }
+  try { window.__earnPlay = function (items) { return _earnPlay(items); }; } catch (_) {}   // QA
+
+  // ── EARNING — noticing a milestone, asking the server, and queueing the moment.
+  const EARN_PENDING_KEY = 'hb_earn_pending_v1';   // [{ t, id }] owed celebrations (survive an app close)
+  const EARN_BG_SEEN_KEY = 'hb_earn_bg_seen_v1';   // background ids already announced
+  const EARN_BG_PRIDE = ['bg-founder', 'bg-floor100', 'bg-splus', 'bg-srank', 'bg-arena', 'bg-god', 'bg-collog', 'bg-allmega', 'bg-boss500', 'bg-streak365',
+    'bg-sgate', 'bg-mega', 'bg-agate', 'bg-bgate', 'bg-cgate', 'bg-100k', 'bg-streak30', 'bg-dgate', 'bg-egate'];
+  let _earnAt = 0, _earnLocalAt = 0, _earnInFlight = false, _earnPlaying = false, _earnSnoozeUntil = 0;
+  function _earnPendingRead() { try { const a = JSON.parse(localStorage.getItem(EARN_PENDING_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function _earnPendingWrite(a) { try { localStorage.setItem(EARN_PENDING_KEY, JSON.stringify(a)); } catch (_) {} }
+  function _earnPendingAdd(list) {
+    if (!list.length) return; const a = _earnPendingRead();
+    list.forEach(function (it) { if (!a.some(function (x) { return x.t === it.t && x.id === it.id; })) a.push(it); });
+    _earnPendingWrite(a);
+  }
+  // A skin the phone's own numbers say is met, and not owned yet (Verdant is the server's to count).
+  function _earnLocalClaims(st) {
+    return EARN_SKINS.filter(function (s) { return s.key !== 'verdant' && !isSkinOwned(s.id) && _wxProg(s, st).done; }).map(function (s) { return s.id; });
+  }
+  function _earnBackgrounds() {
+    let seen = null; try { seen = JSON.parse(localStorage.getItem(EARN_BG_SEEN_KEY) || 'null'); } catch (_) { seen = null; }
+    const unlocked = CARD_BG_CATALOG.filter(function (b) { return _cardBgUnlocked(b.id); }).map(function (b) { return b.id; });
+    let fresh;
+    if (!Array.isArray(seen)) {
+      // First run of W1098: a MEMBER already wore these (backgrounds were a member perk), so
+      // nothing is news to them; everyone else is handed their four proudest, the rest wait
+      // quietly in the Wardrobe (one screen, not a chain of them).
+      seen = [];
+      fresh = _founderOwned() ? [] : EARN_BG_PRIDE.filter(function (id) { return unlocked.indexOf(id) >= 0; }).slice(0, 4);
+    } else {
+      fresh = unlocked.filter(function (id) { return seen.indexOf(id) < 0; });
+    }
+    try { localStorage.setItem(EARN_BG_SEEN_KEY, JSON.stringify(seen.concat(unlocked.filter(function (id) { return seen.indexOf(id) < 0; })))); } catch (_) {}
+    _earnPendingAdd(fresh.map(function (id) { return { t: 'bg', id: id }; }));
+  }
+  // force = the Wardrobe opened / a launch or resume; the minute tick re-reads the numbers every 3 min.
+  async function _earnTick(force) {
+    const t0 = Date.now();
+    if (!force && t0 - _earnLocalAt < 3 * 60 * 1000) { _earnPlayPending(); return; }
+    _earnLocalAt = t0;
+    try { _earnBackgrounds(); } catch (_) {}
+    try {
+      if (!_earnInFlight && window.Auth && typeof Auth.earnSkins === 'function') {
+        const st = _wxStats(), claims = _earnLocalClaims(st), now = Date.now();
+        if (force || claims.length || now - _earnAt > 10 * 60 * 1000) {
+          _earnInFlight = true; _earnAt = now;
+          let r = null; try { r = await Auth.earnSkins(claims); } catch (_) { r = null; }
+          _earnInFlight = false;
+          if (r && r.ok && Array.isArray(r.skins)) {
+            _ownedSkins = new Set(r.skins); _skinsCacheWrite(r.skins);
+            const p = r.progress || {};
+            try { localStorage.setItem(EARN_PROG_KEY, JSON.stringify({ opened: (p.opened && p.opened.best) | 0, openedNow: (p.opened && p.opened.current) | 0, flame: (p.flame && p.flame.best) | 0, at: now })); } catch (_) {}
+            const granted = (r.granted || []).filter(function (id) { return !!_wxSkinById(id); });
+            if (granted.length) {
+              _skinsWornAdd(granted);   // an earned skin is never put on by the launch-time auto-equip (W1032)
+              try { localStorage.setItem(WX_NEW_KEY, granted[granted.length - 1]); } catch (_) {}
+              _earnPendingAdd(granted.map(function (id) { return { t: 'sk', id: _wxSkinById(id).key }; }));
+            }
+            _renderWardrobe();
+          }
+        }
+      }
+    } catch (_) { _earnInFlight = false; }
+    _earnPlayPending();
+  }
+  // Rounds of at most 3 skins + 4 backgrounds, so even a big first-launch backlog fits the screen.
+  function _earnRound(a) {
+    const sk = a.filter(function (x) { return x.t === 'sk'; }).slice(0, 3), bg = a.filter(function (x) { return x.t === 'bg'; }).slice(0, 4);
+    return sk.concat(bg);
+  }
+  function _earnPlayPending() {
+    if (_earnPlaying || Date.now() < _earnSnoozeUntil) return;   // LATER = the rest waits half an hour
+    const a = _earnPendingRead().filter(function (x) { return x.t === 'sk' ? !!WX_SKIN[x.id] : !!WX_BG[x.id]; });
+    if (!a.length) return;
+    try { if (_newHunterQuiet()) return; } catch (_) {}
+    const sh = document.getElementById('wd-sheet'); if (sh && !sh.classList.contains('hidden')) return;   // waits for the Wardrobe to close
+    const run = function () {
+      if (_earnPlaying) return;
+      const left = _earnPendingRead(); const round = _earnRound(left); if (!round.length) return;
+      _earnPlaying = true;
+      _earnPendingWrite(left.filter(function (x) { return !round.some(function (y) { return y.t === x.t && y.id === x.id; }); }));
+      _earnPlay(round).then(function (equipped) {
+        _earnPlaying = false;
+        if (!equipped) _earnSnoozeUntil = Date.now() + 30 * 60 * 1000;
+        setTimeout(_earnPlayPending, 600);
+      }, function () { _earnPlaying = false; });
+    };
+    if (_stageDefer('earn', 25, run, ['earn'])) return;
+    run();
+  }
+  try { window.__earn = { tick: _earnTick, pending: _earnPendingRead, play: _earnPlayPending, claims: function () { return _earnLocalClaims(_wxStats()); } }; } catch (_) {}   // QA
+  function _equipSkin(file, quiet) {
     // W821 (C2 finding "no ownership check on equip") — the wardrobe click
     // handler passed any data-skin attribute straight through, so a crafted
     // DOM node (or any markup slip that put data-skin on a premium tile)
@@ -56863,7 +57686,7 @@
       return;
     }
     setEquippedSkin(file || '');
-    _renderWardrobe();
+    if (!quiet) _renderWardrobe();
     const src = getAvatarSrc();
     try { const home = document.getElementById('sc-avatar-img'); if (home) { home.src = src; _lastAvatarSrc = src; } } catch (_) {}
     try { const sh = document.getElementById('pc-sheet'); if (sh && !sh.classList.contains('hidden')) { const im = sh.querySelector('.pc-med-portrait img'); if (im) im.src = (_bustSrc(src) || src); } } catch (_) {}   // W711 — bust portrait (fallback full-body)
@@ -57269,54 +58092,9 @@
         dismissThreshold: 0.28,
       });
     }
-    // W279 — Wardrobe close / overlay / equip-tile delegation
-    const wdClose = document.getElementById('wd-close');
-    if (wdClose && wdClose.getAttribute('data-wired') !== '1') { wdClose.setAttribute('data-wired', '1'); wdClose.addEventListener('click', closeWardrobe); }
+    // W279 — Wardrobe backdrop (W1098: the sheet wires its own close, tabs and tiles)
     const wdOverlay = document.getElementById('wd-overlay');
     if (wdOverlay && wdOverlay.getAttribute('data-wired') !== '1') { wdOverlay.setAttribute('data-wired', '1'); wdOverlay.addEventListener('click', closeWardrobe); }
-    const wdPrev = document.getElementById('wd-preview-overlay');
-    if (wdPrev && wdPrev.getAttribute('data-wired') !== '1') { wdPrev.setAttribute('data-wired', '1'); wdPrev.addEventListener('click', _wdClosePreview); }
-    const wdBody = document.getElementById('wd-body');
-    if (wdBody && wdBody.getAttribute('data-wired') !== '1') {
-      wdBody.setAttribute('data-wired', '1');
-      wdBody.addEventListener('click', (e) => {
-        // W621 — Founder teaser strip → the offer sheet (close the wardrobe first,
-        // same pattern as the Settings row: one sheet at a time).
-        if (e.target && e.target.closest && e.target.closest('[data-wd-founder]')) {
-          try { closeWardrobe(); } catch (_) {}
-          try { openFounder(); } catch (_) {}
-          return;
-        }
-        const tile = e.target && e.target.closest && e.target.closest('.wd-tile[data-skin]');
-        if (tile) { _equipSkin(tile.getAttribute('data-skin')); return; }
-        // W706 — card-background tiles: usable → equip/clear + repaint; a
-        // non-member tap is the Premium funnel; locked-achievement tap explains.
-        const cbg = e.target && e.target.closest && e.target.closest('.cbg-tile[data-cbg]');
-        if (cbg) {
-          const id = cbg.getAttribute('data-cbg') || null;
-          if (cbg.getAttribute('data-cbg-usable') === '1') {
-            _cardBgEquip(id);
-            _renderWardrobe();
-            try { showHabitToast(id ? 'Card background equipped — it now flies on every board.' : 'Back to the basic card.'); } catch (_) {}
-          } else if (!_founderOwned()) {
-            try { closeWardrobe(); } catch (_) {}
-            try { openFounder(); } catch (_) {}
-          } else {
-            const def = _cardBgById(id);
-            try { if (def) showHabitToast('Locked — ' + def.need + '.'); } catch (_) {}
-          }
-          return;
-        }
-        const prem = e.target && e.target.closest && e.target.closest('.wd-tile--premium[data-premium]');
-        if (prem) {
-          const pid = prem.getAttribute('data-premium');
-          const psk = PREMIUM_SKINS.find((x) => x.id === pid);
-          if (psk && isSkinOwned(pid)) { _equipSkin(psk.file); return; }                                  // W297 owned → equip
-          if (psk && window.Auth && Auth.iapAvailable && Auth.iapAvailable()) { _buySkin(psk); return; }   // buyable → purchase
-          _wdPreviewSkin(pid);                                                                              // else (SOON) → preview
-        }
-      });
-    }
     const pcBodyEl = document.getElementById('pc-body');
     if (pcBodyEl && pcBodyEl.getAttribute('data-wd-wired') !== '1') {
       pcBodyEl.setAttribute('data-wd-wired', '1');
@@ -75066,8 +75844,8 @@
       // seen-key + What's-New suppression), so this is a no-op every other resume.
       setTimeout(function () { try { _maybeShowUpdateBanner(); } catch (_) {} }, 900);
     });
-    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} try { _cmUnseenSync(false); } catch (_) {} }, 60_000);
-    try { setTimeout(function () { try { _crownRosterSync(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgatePulse(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
+    setInterval(() => { checkDayChange(); checkStreakDanger(); checkMorningRoutineNudge(); try { _coopBackgroundSync(); } catch (_) {} try { _bossResolveTick(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { _stirsTick(); } catch (_) {} try { _cmUnseenSync(false); } catch (_) {} try { _earnTick(false); } catch (_) {} }, 60_000);
+    try { setTimeout(function () { try { _crownRosterSync(); } catch (_) {} try { _sysCrunchTick(); } catch (_) {} try { _bloodHotProbe(); } catch (_) {} try { _shadowTick(); } catch (_) {} try { _shadowLoyaltyTick(); } catch (_) {} try { renderShadowStrip(); } catch (_) {} try { _stoneTick(); } catch (_) {} try { _pilgrimTick(); } catch (_) {} try { _ddTick(); } catch (_) {} try { renderDoubleDungeonCard(); } catch (_) {} try { _w909CleanupBreak(); } catch (_) {} try { _towerSync(); } catch (_) {} try { _w915CleanupWrit(); } catch (_) {} try { _w918CleanupShields(); } catch (_) {} try { renderWorldgatePulse(); } catch (_) {} try { _worldgateSync(); } catch (_) {} try { _stirsTick(); } catch (_) {} try { _earnTick(false); } catch (_) {} }, 8000); } catch (_) {}   // W856 crunch + W857 blood-hot + W862 shadows + W864 stone + W865 letters + W866 double dungeon, first check shortly after boot
     registerSW();
 
     // Reschedule habit reminders on app open. Picks up pause-expirations,

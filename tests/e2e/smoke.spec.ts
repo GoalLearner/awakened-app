@@ -3410,7 +3410,7 @@ test.describe('AD · Replay the awakening (W937)', () => {
   // hidden-quest tick notes the dawn (_stirsTick, `dawns`). Local runs never saw it;
   // CI did, the first time this suite ran just after midnight UTC (2026-10-14).
   // A quest actually firing would still show: it pays souls, and hb_souls is WATCHED.
-  const BACKGROUND = (k: string) => /^hb_(cloud_|lb_cache_)/.test(k) ||
+  const BACKGROUND = (k: string) => /^hb_(cloud_|lb_cache_|earn_)/.test(k) ||   // W1098 — the earn check runs 8 s after boot
     ['hb_shadows_v1', 'hb_pilgrim_arc_v1', 'hb_health_verify_debug_v1', 'hb_hall_greet_date', 'hb_stirs_v1'].indexOf(k) >= 0;
 
   async function establishedAccount(page: Page) {
