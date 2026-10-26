@@ -53,8 +53,11 @@ import {
 
 /** The first client build whose co-op loop carries the W1094 guards (silent auto losses, the
  *  fee from the win, the flame stamped only once committed). Pairs where either hunter last
- *  opened an older build get no automatic hunt until they update. */
-export const AUTO_HUNT_MIN_W = 1094;
+ *  opened an older build get no automatic hunt until they update.
+ *  W1096 — raised from 1094: the iOS 27 hotfix (build 599, tag 3.0.16-w1096) ships WITHOUT the
+ *  W1094 client, so the client half lands at w1097 or later. Never let a build number below the
+ *  real client half through. */
+export const AUTO_HUNT_MIN_W = 1097;
 /** Steps-only 24h duo bosses, strongest first. Flights and sleep duos wait for a pattern the
  *  phones do not send yet. */
 export const AUTO_BOSSES: readonly string[] = ['the_coursing_dread', 'the_twin_maw'];

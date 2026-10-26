@@ -71,7 +71,7 @@ describe('dailyPattern / elapsedDaysPt / buildW', () => {
     expect(buildW('3.0.15-w1083')).toBe(1083);
     expect(buildW(null)).toBe(0);
     expect(buildW('garbage')).toBe(0);
-    expect(AUTO_HUNT_MIN_W).toBe(1094);
+    expect(AUTO_HUNT_MIN_W).toBe(1097);
   });
   it('pairKey sorts the two ids', () => {
     expect(pairKey('b', 'a')).toBe('a|b');
@@ -137,12 +137,12 @@ function makeEnv(db: D1Database): Env {
 }
 const ctx = { waitUntil: (_p: Promise<unknown>) => undefined } as unknown as ExecutionContext;
 const today = ptDayKey(Date.now());
-const NEW = '3.0.16-w1094';
+const NEW = '3.0.17-w1097';
 
 describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day', () => {
   const base: SweepFixture = {
     friends: [{ a: 'u1', b: 'u2' }, { a: 'u3', b: 'u1' }, { a: 'u2', b: 'u4' }],
-    builds: { u1: NEW, u2: '3.0.16-w1095', u3: NEW, u4: NEW },
+    builds: { u1: NEW, u2: '3.0.17-w1098', u3: NEW, u4: NEW },
     ranks: { u1: 'C', u2: 'E', u3: 'C', u4: 'C' },
     stepsThisWeek: { u1: 30000, u2: 15000, u3: 40000, u4: 20000 },
     stepsLastWeek: { u1: 70000, u2: 35000, u3: 80000, u4: 50000 },
@@ -183,7 +183,7 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
       done: ['u1|u2'],
       optouts: [{ user_id: 'u3', friend_user_id: 'u1' }],
       blocks: [{ blocker_id: 'u4', blocked_id: 'u2' }],
-      builds: { ...base.builds, u3: NEW, u4: '3.0.15-w1083' },
+      builds: { ...base.builds, u3: NEW, u4: '3.0.16-w1096' },   // the iOS 27 hotfix build: no W1094 client yet
     };
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
     expect(res.pairs).toBe(5);
