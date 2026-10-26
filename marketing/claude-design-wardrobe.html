@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wardrobe Design Brief</title><style>
+:root{--bg:#0b0d1a;--card:#141833;--ink:#e8e6f3;--dim:#a9a3c2;--gold:#f5b842;--violet:#a78bfa;--rule:#2a2f55}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;line-height:1.25;margin:0 0 20px;color:var(--gold)}
+h2{font-size:20px;margin:36px 0 10px;padding-top:16px;border-top:1px solid var(--rule);color:var(--violet)}
+p,li{color:var(--ink)}
+strong{color:#fff}
+code{background:#1e2346;padding:1px 6px;border-radius:5px;font:14px ui-monospace,Consolas,monospace}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--card);color:var(--gold)}
+blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid var(--gold);color:var(--dim)}
+.note{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;color:var(--dim);font-size:14px;margin-bottom:24px}
+</style></head><body><main><div class="note">Attach every file in the claude-design-wardrobe folder on your Desktop. The text below is the brief to paste into Claude Design.</div><h1>ClaudeDesign brief — The Wardrobe, rebuilt for earned looks</h1>
+<h2>What you're designing</h2>
+<p><strong>The Wardrobe</strong> in <strong>Awakened</strong>: the sheet that opens when a hunter taps their own avatar. It is where
+they choose the look they wear and the background behind their card on every leaderboard. Redesign
+it as <strong>two tabs</strong>:</p>
+<ol>
+<li><strong>LOOKS</strong> — the avatar a hunter wears.</li>
+<li><strong>BACKGROUNDS</strong> — the painted scene behind their leaderboard row and profile card.</li>
+</ol>
+<p>Three screenshots of today's Wardrobe are attached (<code>current-1-looks</code>, <code>current-2-backgrounds</code>,
+<code>current-3-shop</code>). Today it is one long scroll: the equipped portrait, a grid of free looks, the
+background grid, then a SHOP of seven paid skins at the very bottom.</p>
+<h2>Why it's changing</h2>
+<ul>
+<li><strong>The seven top-tier skins are no longer sold.</strong> Each one is now earned by a real milestone. They
+  are the best art in the app and today they sit at the bottom behind a price tag. The owner wants
+  them <strong>up front</strong>, where a hunter sees what there is to earn.</li>
+<li><strong>Backgrounds are no longer a member perk.</strong> Every hunter can wear any background they have earned.</li>
+<li>One scroll is too long. Two tabs keep each screen simple.</li>
+</ul>
+<h2>The app in one breath</h2>
+<p>Dark-fantasy "level up your real life" habit RPG with Solo-Leveling energy, driven by Apple Health.
+Deep near-black navy, <strong>Cinzel</strong> serif for heroic headings, <strong>JetBrains Mono</strong> for labels and numbers,
+<strong>gold (#f5b842 / #fbbf24)</strong> for the biggest achievements, violet (#a78bfa / #8b5cf6) for the rare
+tier. Hex, sigil and rune motifs, premium glow. <strong>Earned and powerful, never cute.</strong> The current
+screenshots show the existing language (the gold medallion with four gems, the tile grid, the mono
+labels); keep that family, improve it.</p>
+<h2>LOOKS tab</h2>
+<p><strong>The equipped look</strong>, large at the top: the gold medallion portrait with the look's name.</p>
+<p><strong>The top-tier skins (7)</strong>, first, above everything else. Round portrait, ring colour = rarity:</p>
+<table>
+<thead>
+<tr>
+<th>Skin</th>
+<th>Rarity</th>
+<th>Ring</th>
+<th>Earned by</th>
+<th>Progress a hunter sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Emberforged</td>
+<td>Legendary</td>
+<td>violet</td>
+<td>Keep a pact flame with one friend for 30 days</td>
+<td>best flame, e.g. 12 / 30 days</td>
+</tr>
+<tr>
+<td>The Void-Touched</td>
+<td>Legendary</td>
+<td>violet</td>
+<td>Raise 10 shadows</td>
+<td>6 / 10 shadows</td>
+</tr>
+<tr>
+<td>The Verdant Oracle</td>
+<td>Legendary</td>
+<td>violet</td>
+<td>Open the app 30 days in a row</td>
+<td>18 / 30 days</td>
+</tr>
+<tr>
+<td>Null Protocol</td>
+<td>Mythic</td>
+<td>gold</td>
+<td>Clear Floor 90 of the Ascent</td>
+<td>73 / 90</td>
+</tr>
+<tr>
+<td>Null Protocol II</td>
+<td>Mythic</td>
+<td>gold</td>
+<td>Slay 200 bosses</td>
+<td>87 / 200</td>
+</tr>
+<tr>
+<td>Dawnbringer</td>
+<td>Mythic</td>
+<td>gold</td>
+<td>Reach S rank</td>
+<td>rank B</td>
+</tr>
+<tr>
+<td>Stardust Sovereign</td>
+<td>Mythic</td>
+<td>gold</td>
+<td>Walk 1,000,000 steps</td>
+<td>747,366 / 1,000,000</td>
+</tr>
+</tbody>
+</table>
+<p>Each skin has three states, all visible at a glance:
+- <strong>Locked</strong>: the art is still visible but clearly not yet theirs. Tapping it opens the skin's detail
+  (below).
+- <strong>Earned</strong>: tap to wear it.
+- <strong>Worn</strong>: marked as the equipped look.</p>
+<p><strong>The free looks (12)</strong>, after the top-tier skins: Your Class (the hunter's class default, tagged
+CLASS), Warrior, Ranger, Mage, Assassin, Paladin, Merchant, Sage, Wanderer, Bloodmoon, Tempest,
+Frostweaver. All always available; tap to wear.</p>
+<p><strong>A locked skin's detail</strong> (opened by tapping a locked skin): the art large, its name, its rarity, one
+short line of flavour that already exists for each skin (e.g. "The first light, given a body."), and
+the milestone with the hunter's progress toward it. This is the one place the condition is spelled
+out, so it has to read instantly.</p>
+<h2>BACKGROUNDS tab</h2>
+<p>A grid of wide banner tiles (about 3:1), each showing the real art, its name and either EARNED or the
+requirement. <strong>Basic</strong> (the plain card, the default) first, then:</p>
+<p>The Hundred-K City (100K step club) · The Summit (clear Floor 100) · Stormbreaker (reach S rank) ·
+Beyond the Peak (S+ prestige) · The Boneyard (500 boss kills) · Champion's Ring (Arena tier) ·
+The Vault (own a mega-rare) · The Eternal Flame (365-day streak) · The Grinning Dark (defeat The
+Grinning God) · The E-Gate through The S-Gate (clear every boss of that rank, six tiles) · The Full
+Vault (own all 3 mega-rares) · The Complete Log (complete the Collection Log) · Thirty Days Sworn
+(30-day walk or sleep streak) · Founder's Dawn (founders only, 20 exist).</p>
+<p>States: worn, earned (tap to wear), locked (requirement shown; tapping explains it the same way a
+locked skin does, in the background's wide format). Show how a chosen background looks behind the
+hunter's card, at the top of this tab, the way LOOKS shows the equipped portrait.</p>
+<h2>Rules the owner has set (keep all of them)</h2>
+<ul>
+<li><strong>Minimal words.</strong> No explanations of what is self-evident, no instructions, no "tap to…" hints.
+  If a line can go, it goes.</li>
+<li>No exclamation marks, no emoji, never the words "fell" or "felled".</li>
+<li>Hunter names are lowercase and never set in Cinzel.</li>
+<li>Nothing is for sale on these two tabs.</li>
+</ul>
+<h2>Screens (iPhone, 390 × 844, a bottom sheet over the app)</h2>
+<ol>
+<li>LOOKS, a newer hunter: most top-tier skins locked, wearing their class look.</li>
+<li>LOOKS, a veteran: four top-tier skins earned, one worn.</li>
+<li>A locked skin's detail, legendary and mythic.</li>
+<li>BACKGROUNDS: a mix of earned and locked, one worn, the preview at the top.</li>
+<li>A locked background's detail.</li>
+<li>The tab switch itself.</li>
+</ol>
+<h2>How it connects</h2>
+<p>A separate brief covers the celebration when a skin or background is earned. Its EQUIP button lands
+the hunter here with the new look worn. The two should feel like one system.</p>
+<h2>Attached</h2>
+<p>Today's three Wardrobe screenshots, every portrait (the 7 top-tier skins and the 12 free looks, as
+round busts) and every background banner.</p>
+<h2>What to hand back</h2>
+<p>An HTML prototype with both tabs, every tile state, the two detail views, and the tab switch.</p></main></body></html>
