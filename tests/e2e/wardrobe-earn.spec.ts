@@ -25,6 +25,7 @@ interface Fx {
   progress?: { opened?: { best: number; current: number }; flame?: { best: number } };
   firstDay?: boolean;
   bgSeen?: string[] | null;
+  owner?: boolean;
 }
 
 async function boot(page: Page, fx: Fx) {
@@ -46,6 +47,7 @@ async function boot(page: Page, fx: Fx) {
       if (!f.firstDay) localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
       localStorage.setItem('hb_skins_owned_cache', JSON.stringify({ skins: f.owned || [], at: Date.now() }));
       if (f.bgSeen !== null) localStorage.setItem('hb_earn_bg_seen_v1', JSON.stringify(f.bgSeen || []));
+      if (f.owner) localStorage.setItem('hb_board_cache_v1', JSON.stringify({ me: { role: 'owner' } }));
     } catch (_) { /* noop */ }
     const calls = { earn: [] as string[][] };
     (window as any).__earnCalls = calls;
@@ -192,6 +194,42 @@ test.describe('Earned skins (W1098)', () => {
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => (window as any).__earn.pending())).toEqual([]);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_earn_bg_seen_v1') || '[]'))).toContain('bg-founder');
+  });
+
+  // W1099 — the owner's Settings row plays every flow and saves nothing.
+  test('the owner preview: a row in Settings, every flow, nothing saved', async ({ page }) => {
+    await boot(page, { owned: [], owner: true });
+    await page.evaluate(() => {
+      localStorage.setItem('hb_avatar_skin', 'avatar-ranger.png');
+      localStorage.setItem('hb_card_bg', '');
+    });
+    await page.locator('#settings-btn').click();
+    await page.locator('.settings-collapsible-lbl', { hasText: 'HELP & ABOUT' }).click();   // the owner rows live in Help & About
+    await expect(page.locator('#settings-preview-earn')).toBeVisible({ timeout: 6000 });
+    await page.locator('#settings-preview-earn').click();
+    // round 1: one skin
+    await expect(page.locator('#earn-ce .ex-t-n')).toHaveText('Stardust Sovereign', { timeout: 5000 });
+    await page.waitForTimeout(900);
+    await tapStage(page, 3);
+    await page.locator('#earn-ce .ex-acts.on .ex-b-eq').click({ timeout: 6000 });
+    await page.waitForTimeout(1700);
+    await tapStage(page, 1);
+    // round 2: one background
+    await expect(page.locator('#earn-ce .ex-t-n')).toHaveText('Stormbreaker', { timeout: 5000 });
+    await page.waitForTimeout(800);
+    await tapStage(page, 1);
+    await page.locator('#earn-ce .ex-acts.on .ex-b-eq').click({ timeout: 6000 });
+    await page.waitForTimeout(900);
+    await tapStage(page, 1);
+    // round 3: both together — LATER moves on
+    await expect(page.locator('#earn-ce .ex-t-n').first()).toHaveText('The Verdant Oracle', { timeout: 5000 });
+    for (let i = 0; i < 20 && !(await page.locator('#earn-ce .ex-acts.on').count()); i++) { await page.waitForTimeout(450); await tapStage(page, 1); }
+    await page.locator('#earn-ce .ex-acts.on .ex-b-lt').click();
+    // round 4: the backlog
+    await expect(page.locator('#earn-ce .ex-bl-n')).toHaveText('7', { timeout: 5000 });
+    await page.locator('#earn-ce .ex-it').first().waitFor();
+    expect(await page.evaluate(() => [localStorage.getItem('hb_avatar_skin'), localStorage.getItem('hb_card_bg')])).toEqual(['avatar-ranger.png', '']);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_skins_worn_v1') || '[]'))).toEqual([]);
   });
 
   test('first run, not a member: the earned background is handed over', async ({ page }) => {

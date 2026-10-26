@@ -8971,7 +8971,7 @@ test.describe('BH · Hunt results (W980)', () => {
   test('a mod sees the preview rows, never Test as a new hunter', async ({ page }) => {
     await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: 'mod' } }) });
     await page.locator('#settings-btn').click();
-    const ids = ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt'];
+    const ids = ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt', 'settings-preview-earn'];
     await expect.poll(() => page.evaluate((xs) => xs.every((x) => !document.getElementById(x)!.classList.contains('hidden')), ids), { timeout: 6_000 }).toBe(true);
     expect(await page.evaluate(() => document.getElementById('settings-test-hunter')!.classList.contains('hidden'))).toBe(true);
   });
@@ -8980,7 +8980,7 @@ test.describe('BH · Hunt results (W980)', () => {
     await seed(page, { hb_board_cache_v1: JSON.stringify({ me: { role: null } }) });
     await page.locator('#settings-btn').click();
     await page.waitForTimeout(800);
-    const shown = await page.evaluate(() => ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt', 'settings-test-hunter']
+    const shown = await page.evaluate(() => ['settings-preview-celebrations', 'settings-preview-rating', 'settings-preview-wgmvp', 'settings-preview-briefing', 'settings-preview-hunts', 'settings-preview-readyhunt', 'settings-preview-earn', 'settings-test-hunter']
       .filter((x) => !document.getElementById(x)!.classList.contains('hidden')));
     expect(shown).toEqual([]);
   });
