@@ -1895,7 +1895,10 @@
   function coopBossEmote(id, emote) { return _authedFetch('POST', '/v1/coop-boss/emote', { instanceId: id, emote: emote }); }
   function coopBossResolve(id) { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/resolve'); }
   function coopBossClaim(id)   { return _authedFetch('POST', '/v1/coop-boss/' + encodeURIComponent(id) + '/claim'); }   // W463.1 — atomic durable drop credit
-  function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
+  function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }
+  // W1094 — automatic friend hunts: switch one friend (a user id) or everything ('*') off / back on.
+  function coopAutoOptOut(friendUserId) { return _authedFetch('POST',   '/v1/coop-boss/auto/optout', { friend_user_id: friendUserId }); }
+  function coopAutoOptIn(friendUserId)  { return _authedFetch('DELETE', '/v1/coop-boss/auto/optout', { friend_user_id: friendUserId }); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
   // W694 — raid-finder matchmaking (the members raid). join is idempotent + doubles as
   // the poll tick: it returns {matched, instance} once a party forms, else {queued, waiting}.
   function raidQueueJoin(bossId)   { return _authedFetch('POST',   '/v1/raid-queue', { boss_id: bossId }); }
@@ -2554,6 +2557,8 @@
     coopBossStart,
     coopBossFillTick,
     coopPacts,
+    coopAutoOptOut,   // W1094
+    coopAutoOptIn,    // W1094
     raidQueueJoin,
     raidQueueLeave,
     raidQueueStatus,

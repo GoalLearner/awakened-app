@@ -157,10 +157,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '3.0.16';   // Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '3.0.17';   // W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.16-w1096'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.17-w1097'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5755,6 +5755,20 @@
     if (h === 'first_install' || h === 'starter_grant') {
       return { type: 'system', label: 'Starter souls', detail: 'First install grant', ref_id: null };
     }
+    // W1094 — co-op entry fees ('coop_fee_<kind>_<bossId>', 'coop_fee_auto_<bossId>') and their
+    // refund ('coop_fee_refund') start with 'coop_' too, so the branch below filed them as
+    // co-op CLEARS: a fee read "Cleared …" in the souls history and a refund showed up as a
+    // victory in the Hunter feed. They get their own plain label.
+    if (h.indexOf('coop_fee_') === 0) {
+      const bid = h.replace(/^coop_fee_(summon|join|auto|refund)_?/, '');
+      const cfg = (bid && typeof COOP_BOSSES === 'object' && COOP_BOSSES) ? COOP_BOSSES[bid] : null;
+      return {
+        type: 'system',
+        label: isGain ? 'Co-op fee returned' : 'Co-op entry fee',
+        detail: cfg && cfg.name ? cfg.name : 'Co-op hunt',
+        ref_id: null,
+      };
+    }
     // W557 — co-op dungeon clears (earnSouls hint 'coop_<bossId>'). Without
     // this branch they fell through to the generic "Souls earned" line; now
     // they read as "Cleared <dungeon>" and render as a co-op feed row.
@@ -9820,7 +9834,7 @@
         // W762 — feed fields for the unified History tab. Souls = this hunter's
         // OWN share (inst.reward_souls is already per-hunter, W648); losses pay 0.
         mode: 'coop',
-        souls: result === 'win' ? (Number(inst.reward_souls) || (cfg && cfg.rewardSouls) || 0) : 0,
+        souls: result === 'win' ? (Number(inst.reward_souls) || (cfg && cfg.coopRewardSouls) || 0) : 0,   // W1094 — was cfg.rewardSouls (no such field)
         drop: null,   // annotated in by _annotateCoopHistoryDrop when the claim grants
         ts: Date.now(),
       };
@@ -10002,6 +10016,10 @@
       if (!inst || !inst.id || !inst.starts_at) return;
       var st = inst.status;
       if (st !== 'active' && st !== 'completed' && st !== 'expired') return;   // never actually ran (declined / pre-start cancel)
+      // W1094 — an automatic hunt lights the day only once BOTH hunters' apps posted to it (the
+      // server stamps `committed` at settle and reports it live before). Not yet → come back later;
+      // the per-instance guard below is left unset so a later sync still stamps the day.
+      if (Number(inst.auto) === 1 && !inst.committed) return;
       var g = _loadPactStarted();
       if (g[inst.id]) return;
       var others = _coopOthers(inst);
@@ -10342,7 +10360,9 @@
     var pct = tier.cap ? Math.round((d.streak - tier.floor) / (tier.cap - tier.floor) * 100) : 100;
     var bossName = (d.lastBossId && typeof COOP_BOSSES === 'object' && COOP_BOSSES[d.lastBossId] && COOP_BOSSES[d.lastBossId].name) || 'a co-op boss';
     var since = d.firstWonAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(d.firstWonAt)) : '—';
-    var banner = risk
+    var banner = d.state === 'none'
+      ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">No flame yet</div><div class="p">Your first hunt together lights it.</div></div></div>'   // W1094
+      : risk
       ? '<div class="pf-banner pf-warn"><div class="bi">' + _PF_GLASS + '</div><div class="bt"><div class="h">Your flame is dying out</div><div class="p">Enter one hunt with ' + esc(_dn(d.alias)) + ' before midnight — win or lose, showing up keeps it lit.</div></div><div class="pf-clock"><div class="cv" data-pf-cds>—</div><div class="cl">Left</div></div></div>'
       : d.state === 'safe'
         ? '<div class="pf-banner pf-safe"><div class="bi">' + _PF_CHECK + '</div><div class="bt"><div class="h">Secured for today</div><div class="p">You answered the call together — ' + esc(bossName) + ' awaits, and the flame burns on.</div></div></div>'
@@ -10363,15 +10383,42 @@
         '<div class="pf-blockh"><span class="t">The Chain</span><span class="n">Last 14 days</span></div><div class="pf-chain">' + _pfChain(d) + '</div>' +
         '<div class="pf-legend"><span class="l1"><i></i>Hunted together</span>' + (risk ? '<span class="l2"><i></i>Today — not yet</span>' : '') + '</div>' +
         '<div class="pf-mile">' + mile + '</div>' +
-        '<button class="pf-cta ' + (risk || d.state === 'broken' ? 'pf-warn' : 'pf-safe') + '" data-pf-hunt>' + _PF_SWORD + (risk ? 'Enter Dungeon Together' : d.state === 'broken' ? 'Relight the Flame' : 'Hunt Again') + '</button>' +
+        _pfAutoRowHtml(d) +   // W1094 — hunting together every day: the switch
+        '<button class="pf-cta ' + (risk || d.state === 'broken' ? 'pf-warn' : 'pf-safe') + '" data-pf-hunt>' + _PF_SWORD + (risk ? 'Enter Dungeon Together' : d.state === 'broken' ? 'Relight the Flame' : d.state === 'none' ? 'Hunt Together' : 'Hunt Again') + '</button>' +   // W1094 — 'none': never hunted together
       '</div>';
   }
 
+  // W1094 — the per-friend switch for automatic hunts. Off when this hunter switched this friend
+  // off or everything off ('*'); RESUME on a global off clears the global switch.
+  function _pfAutoRowHtml(d) {
+    var off = _coopAutoOffFor(d.userId);
+    var name = _dn(d.alias) || 'this hunter';
+    return '<div class="pf-auto" data-pf-auto="' + esc(d.userId) + '" data-off="' + (off ? '1' : '0') + '" role="button" tabindex="0">' +
+      '<span class="pf-auto-l">' + (off ? 'Daily hunts with ' + esc(name) + ' are off' : 'Hunting with ' + esc(name) + ' every day') + '</span>' +
+      '<span class="pf-auto-b">' + (off ? 'RESUME' : 'STOP') + '</span>' +
+    '</div>';
+  }
+  async function _pfAutoClick(el, d, rerender) {
+    try {
+      var fid = el.getAttribute('data-pf-auto');
+      var off = _coopAutoOffFor(fid);
+      var target = (_coopAutoOff.indexOf('*') !== -1) ? '*' : fid;
+      el.classList.add('busy');
+      var ok = await _coopAutoToggle(target, !off);
+      if (!ok) { el.classList.remove('busy'); try { showHabitToast('Could not reach the server. Try again.'); } catch (_) {} return; }
+      try { if (typeof Haptics !== 'undefined' && Haptics.tap) Haptics.tap(); } catch (_) {}
+      rerender();
+    } catch (_) { try { el.classList.remove('busy'); } catch (__) {} }
+  }
   var _pfData = [], _pfTimer = null, _pfEl = null;
   function _pfSubInner() {
     var hottest = _pfData.reduce(function (m, d) { return Math.max(m, d.state === 'broken' ? 0 : d.streak); }, 0);
     var burning = _pfData.filter(function (d) { return d.state !== 'broken'; }).length;
     return '<b>' + burning + '</b> bond' + (burning === 1 ? '' : 's') + ' burning<span class="pf-dot"></span>' + _pfFlame(11, false).replace('pf-flame', 'pf-flame pf-fl') + ' hottest <b>' + hottest + 'd</b>';
+  }
+  // W1094 — the one switch for every friend at once.
+  function _pfAutoAllInner() {
+    return _coopAutoOff.indexOf('*') !== -1 ? 'Daily friend hunts are off · <b>TURN ON</b>' : 'Daily friend hunts are on · <b>TURN OFF</b>';
   }
   function _pfRowsInner() {
     return _pfData.length
@@ -10394,7 +10441,8 @@
   function _pfListHtml() {
     return '' +   // flame gradient defs are injected globally by _pfEnsureDefs()
       '<div class="pf-topbar"><button class="pf-back" data-pf-close><svg viewBox="0 0 9 14" fill="none"><path d="M7.5 1.5l-6 5.5 6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Back</button></div>' +
-      '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + _pfSubInner() + '</div></div>' +
+      '<div class="pf-head"><div class="pf-eyebrow">Co-op · Dungeon Streaks</div><h1 class="pf-title">Pact Flames</h1><div class="pf-sub">' + _pfSubInner() + '</div>' +
+        '<button type="button" class="pf-autoall" data-pf-autoall>' + _pfAutoAllInner() + '</button></div>' +   // W1094
       '<div class="pf-list">' + _pfRowsInner() + '</div>' +
       // W665 — pinned footer (ClaudeDesign handoff-19): hint + find-a-hunter/Add Friend + Invite.
       '<div class="pf-foot"><p class="pf-hint">Tap a flame to see your all-time bond</p>' +
@@ -10462,8 +10510,10 @@
   function _pfOpenBondDetail(userId) {
     try {
       var friends = (_friendsCache && _friendsCache.ok && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : [];
-      var d = _pfBuildData(friends).filter(function (x) { return String(x.userId) === String(userId); })[0];   // bonded only
-      if (!d) { try { _coopShowPactCard(userId); } catch (_) {} return; }   // no bond → text card
+      // W1094 — every friend opens the sheet now (the daily-hunt switch lives there); a friend with
+      // no bond yet gets the 'none' banner instead of the old text card.
+      var d = _pfBuildData(friends, true).filter(function (x) { return String(x.userId) === String(userId); })[0];
+      if (!d) { try { _coopShowPactCard(userId); } catch (_) {} return; }
       _pfCloseBondDetail();
       _pfEnsureDefs();
       _pfDetailEl = document.createElement('div');
@@ -10477,6 +10527,8 @@
         var t = e.target;
         if (t.closest('[data-pf-sclose]')) { _pfCloseBondDetail(); return; }
         if (t.closest('[data-pf-hunt]')) { _pfCloseBondDetail(); _pfHuntAgain(); return; }
+        var au = t.closest('[data-pf-auto]');   // W1094
+        if (au) { _pfAutoClick(au, d, function () { try { if (sh) sh.innerHTML = _pfSheetHtml(d); } catch (_) {} }); return; }
       });
       var _tick = function () { var sec = _pfSecToMidnightPT(); if (_pfDetailEl) { var cs = _pfDetailEl.querySelector('[data-pf-cds]'); if (cs) cs.textContent = _pfFmtClock(sec); } };
       _pfDetailTimer = setInterval(_tick, 1000); _tick();
@@ -10533,6 +10585,25 @@
       if (t.closest('[data-pf-close]')) { closePactFlames(); return; }
       if (t.closest('[data-pf-sclose]')) { _pfCloseDetail(); return; }
       if (t.closest('[data-pf-hunt]')) { closePactFlames(); _pfHuntAgain(); return; }
+      var au = t.closest('[data-pf-auto]');   // W1094 — the switch inside the page's detail sheet
+      if (au) {
+        var sheetEl = _pfEl && _pfEl.querySelector('[data-pf-sheet]');
+        var fid = au.getAttribute('data-pf-auto');
+        var dd = _pfData.filter(function (x) { return String(x.userId) === String(fid); })[0];
+        if (dd) _pfAutoClick(au, dd, function () { try { if (sheetEl) sheetEl.innerHTML = _pfSheetHtml(dd); } catch (_) {} });
+        return;
+      }
+      if (t.closest('[data-pf-autoall]')) {   // W1094 — everything off / on
+        var allOff = _coopAutoOff.indexOf('*') !== -1;
+        var btn = t.closest('[data-pf-autoall]');
+        btn.disabled = true;
+        _coopAutoToggle('*', !allOff).then(function (ok) {
+          btn.disabled = false;
+          if (ok) btn.innerHTML = _pfAutoAllInner();
+          else { try { showHabitToast('Could not reach the server. Try again.'); } catch (_) {} }
+        });
+        return;
+      }
       if (t.closest('[data-guild-invite]')) { try { _guildInviteShare && _guildInviteShare(); } catch (_) {} return; }
       if (t.closest('[data-pf-addfriend]')) { _pfSubmitAddFriend(); return; }
       var row = t.closest('[data-pf-open]'); if (row) { _pfOpenDetail(row.getAttribute('data-pf-open')); }
@@ -27736,6 +27807,13 @@
     // W822 failure again). Written for someone UPDATING, so the new onboarding is left out (they
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
+    // W1097 — 3.0.17: the automatic friend hunts (W1094). Every hunter with a friend meets them.
+    '3.0.17': {
+      subtitle: 'Hunts with friends start by themselves.',
+      items: [
+        { emoji: '', title: 'Hunts with friends start by themselves', description: "Every day, you and each friend who walks get a shared hunt, already running, sized to what the two of you usually walk. Win it together and you both get paid. Nothing to send or accept. Any friend can be switched off from their flame." },
+      ],
+    },
     // W1087 — 3.0.16: one line, the one every climber feels.
     // W1096 — the launch fix leads: 3.0.15 closed at launch on iOS 27 (W1095), and the hunters it
     // locked out read this sheet first when they get back in. Then the shadow feats (W1093).
@@ -59360,6 +59438,25 @@
     } catch (_) {}
     const _hungerMult = _hungered ? 2 : 1;
     const reward = Math.round((cfg.coopRewardSouls || 0) * _mvpMult * _hungerMult);
+    // W1094 — an automatic hunt charges its entrance fee FROM the win (members and founders pay
+    // 0, so the perk stands). A free hunter who cannot cover it still helped the pair and the
+    // flame, but earns nothing for this hunt: no souls, no relic, no screen. The kill itself still
+    // counts (kill log + bond).
+    if (Number(inst.auto) === 1) {
+      const _autoFee = _coopEntranceFee(cfg);
+      if (_autoFee > 0) {
+        let _feePaid = false;
+        try { _feePaid = !!spendSouls(_autoFee, 'coop_fee_auto_' + cfg.id); } catch (e) { _logSwallow('coopAutoFee:spend', e); }
+        if (!_feePaid) {
+          awarded[inst.id] = true; _saveCoopAwarded(awarded);
+          try { _annotateCoopHistorySouls(inst.id, 0); } catch (_) {}
+          try { _coopBumpKill(inst.boss_id); } catch (_) {}
+          try { _coopBumpPact(inst); } catch (_) {}
+          try { delete _coopBadgeByBoss[inst.boss_id]; _coopApplyBadge(); } catch (_) {}
+          return;
+        }
+      }
+    }
     try { earnSouls(reward, 'coop_' + cfg.id); } catch (e) { _logSwallow('coopAward:earnSouls', e); }
     try { _annotateCoopHistorySouls(inst.id, reward); } catch (_) {}   // W809 — history shows what was ACTUALLY earned (MVP + hunger mults included)
     let dropInfo = null;
@@ -59424,7 +59521,8 @@
       // W686 review #1 — 'a relic claimed' only when a relic was actually claimed (the
       // Crown's table pays souls-only on ~2/3 of wins; older pools no-drop 10-23% too).
       const _gotRelic = !!(dropInfo && dropInfo.card && !dropInfo.wasCapped);
-      if (!_uDrop) _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls' + (_gotRelic ? ' and a relic claimed.' : '.') : '.'));
+      // W1094 — automatic wins already push once a day from the server; ten friends must not mean ten pings.
+      if (!_uDrop && Number(inst.auto) !== 1) _coopLocalNotify(cfg.name + ' has fallen!', 'Your co-op hunt is won' + (reward > 0 ? ' — +' + reward + ' souls' + (_gotRelic ? ' and a relic claimed.' : '.') : '.'));
     } catch (_) {}
    } catch (_) {}
   }
@@ -59441,6 +59539,9 @@
     const awarded = _loadCoopAwarded();
     if (awarded[inst.id]) return;            // this instance's outcome already handled here
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // a hunt resolves to ONE outcome — win XOR loss
+    // W1094 — an automatic hunt's loss is a quiet day: history only, no screen, no notification.
+    // Tomorrow's hunt comes by itself; the Pact Flames chain shows the gap.
+    if (Number(inst.auto) === 1) return;
     // W481 — centered tap-to-continue card (was a bottom toast that clipped the long
     // line + flashed by in 2.2s). The co-op WIN already gets a rich result modal; this
     // gives the DEFEAT a matching readable beat.
@@ -60717,7 +60818,7 @@
           '<span class="chd-lab" id="chd-strike-lab">' + (_coopSheet.busy ? 'Striking…' : 'Strike') + '</span>' +
           '<span class="chd-sub" id="chd-strike-sub"><span id="chd-banked">' + _N(_coopBattle.banked) + '</span> ' + esc(unitWord) + ' banked</span>' +
         '</button>' +
-        '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>' +
+        (Number(inst.auto) === 1 ? '' : '<button class="coop-cta coop-cta--ghost" data-coop-action="cancel"' + dis + '>LEAVE HUNT</button>') +   // W1094
         '<p class="chd-fineprint">Your ' + esc(unitWord) + ' sync on their own while this is open. Tap STRIKE to drive the ' + esc(unitWord) + ' you’ve banked into the beast yourself.</p>' +
       '</div>'
     );
@@ -60913,6 +61014,20 @@
   // cached — a failure is never reused as "no instances". The per-instance
   // resolve/award calls are untouched; this dedupes ONLY the enumeration read.
   let _coopListAt = 0, _coopListRes = null, _coopListInflight = null;
+  // W1094 — automatic friend hunts. Which friends (user ids) or everything ('*') this hunter
+  // switched off; the list response carries it, the switch routes return it.
+  let _coopAutoOff = [];
+  function _coopAutoOffFor(uid) {
+    return _coopAutoOff.indexOf('*') !== -1 || _coopAutoOff.indexOf(String(uid)) !== -1;
+  }
+  async function _coopAutoToggle(target, off) {
+    try {
+      if (!window.Auth || typeof Auth.coopAutoOptOut !== 'function') return false;
+      const r = off ? await Auth.coopAutoOptOut(target) : await Auth.coopAutoOptIn(target);
+      if (r && r.ok && Array.isArray(r.auto_off)) { _coopAutoOff = r.auto_off; return true; }
+    } catch (_) {}
+    return false;
+  }
   // Dedupes GET /v1/coop-boss two ways: (1) a <=5s resolved-value cache, AND
   // (2) an IN-FLIGHT-PROMISE join — the boot/resume pair calls the two consumers
   // back-to-back WITHOUT awaiting, so a resolved-value cache alone wouldn't catch
@@ -60931,7 +61046,7 @@
     const p = Promise.resolve()
       .then(function () { return Auth.coopBossList(); })
       .then(
-        function (res) { if (res && res.ok) { _coopListRes = res; _coopListAt = Date.now(); } return res; },
+        function (res) { if (res && res.ok) { _coopListRes = res; _coopListAt = Date.now(); if (Array.isArray(res.auto_off)) _coopAutoOff = res.auto_off; } return res; },
         function () { return null; },
       );
     _coopListInflight = p;
@@ -60972,7 +61087,9 @@
           const endsMs = inst.ends_at ? Date.parse(inst.ends_at) : NaN;
           const nearEnd = Number.isFinite(endsMs) && endsMs - now < 10 * 60 * 1000;
           const lastResolve = _coopBgResolveAt[inst.id] || 0;
-          if (nearEnd || now - lastResolve >= 5 * 60 * 1000) {
+          // W1094 — the server settles automatic hunts itself (sweepCoopResolve); the list refresh
+          // brings the verdict within a couple of minutes, so a device never resolves one.
+          if (Number(inst.auto) !== 1 && (nearEnd || now - lastResolve >= 5 * 60 * 1000)) {
             _coopBgResolveAt[inst.id] = now;
             try { r = await Auth.coopBossResolve(inst.id); } catch (_) { r = null; }
           }
@@ -61414,7 +61531,7 @@
     const mono = (String(ally).trim().charAt(0) || 'A').toUpperCase();
     return '<div class="cph-top"><div class="cph-ally" aria-hidden="true">' + esc(mono) + '</div>' +
       '<div class="cph-who"><div class="cph-name">' + esc(_dn(ally)) + _crownFor(ally) + '</div>' +
-      '<div class="cph-boss"><span class="cph-bname">' + esc(bossName) + '</span><span class="cph-rank cph-rank--' + esc(String(rank).toLowerCase()) + '">' + esc(rank) + '-RANK</span></div></div>' +
+      '<div class="cph-boss"><span class="cph-bname">' + esc(bossName) + '</span><span class="cph-rank cph-rank--' + esc(String(rank).toLowerCase()) + '">' + esc(rank) + '-RANK</span>' + (inst && Number(inst.auto) === 1 ? '<span class="cph-daily">DAILY</span>' : '') + '</div></div>' +   // W1094 — automatic friend hunt
       '<span class="cph-chev" aria-hidden="true"><svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></div>';
   }
 
