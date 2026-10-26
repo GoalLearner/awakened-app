@@ -28,6 +28,13 @@ describe('CORS preflight (1z.192)', () => {
     expect(headers).toContain('Content-Type');
   });
 
+  // W1100 — every custom header the app sends must be listed, or the WebView refuses the
+  // request before it reaches the Worker (3.0.15-3.0.16 never backed up because of this one).
+  it('allows X-State-Encoding, the gzip cloud save header', () => {
+    const headers = handlePreflight().headers.get('Access-Control-Allow-Headers') || '';
+    expect(headers).toContain('X-State-Encoding');
+  });
+
   it('includes PUT so the 1z.190 public-profile-summary endpoint is reachable', () => {
     const res = handlePreflight();
     const methods = res.headers.get('Access-Control-Allow-Methods') || '';

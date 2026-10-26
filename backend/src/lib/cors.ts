@@ -27,7 +27,10 @@ const CORS_HEADERS: Record<string, string> = {
   // token) were being refused at preflight inside the app's WebView, exactly as PUT once was:
   // "leave the finder" did not leave, and a signed-out phone kept its push registration.
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  // W1100 — X-State-Encoding added. W1077 (3.0.15) sends the cloud save gzip-encoded with this
+  // header; without it here the WebView refused the upload at preflight, so from 3.0.15 on no
+  // phone backed up at all (fetch rejected → NETWORK → a console warning only).
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-State-Encoding',
   'Access-Control-Max-Age': '86400',
 };
 
