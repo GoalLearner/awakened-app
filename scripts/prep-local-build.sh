@@ -553,6 +553,83 @@ else
 fi
 echo ""
 
+# ── 8e. UIScene life cycle (W1095) ─────────────────────────────────
+# Apple: from iOS 27, an app built with the iOS 27 SDK (Xcode 27) must use the scene-based
+# life cycle or it FAILS TO LAUNCH. Capacitor 6's shell has no scene, so build 595 (3.0.15,
+# the first App Store build made with Xcode 27) closed at launch on every iOS 27 phone (Kat,
+# Galilea, 2026-10-24/25). Each run, idempotently:
+#   1. native/scene/SceneDelegate.swift into the App target (the 8d xcodeproj pattern),
+#   2. Info.plist UIApplicationSceneManifest: one scene, Main.storyboard, SceneDelegate,
+#   3. AppDelegate.configurationForConnecting (an extension, the 8c pattern) naming both,
+# then CHECKS all three and stops the build if any is missing: a build without them must
+# never reach the App Store again. Scene support exists since iOS 13, so iOS 15–26 run the
+# same path; test on an iOS 27 simulator before uploading (the closing notes say how).
+echo "── [8e] UIScene life cycle (W1095) ──"
+SD_SRC="native/scene/SceneDelegate.swift"
+SD_DST="ios/App/App/SceneDelegate.swift"
+SCENE_ROOT=":UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication:0"
+if [ ! -f "$SD_SRC" ] || [ ! -f "$APPDELEGATE" ]; then
+  echo "  ✖ $SD_SRC or $APPDELEGATE not found — cannot set up scenes. STOPPING: an Xcode 27 build"
+  echo "    without them closes at launch on iOS 27."
+  exit 1
+fi
+cp -f "$SD_SRC" "$SD_DST"
+(cd ios/App && ruby -e "
+  require 'xcodeproj'
+  project = Xcodeproj::Project.open('App.xcodeproj')
+  target = project.targets.find { |t| t.name == 'App' }
+  raise 'App target not found' unless target
+  group = project.main_group['App']
+  raise 'App group not found' unless group
+  ref = group.files.find { |f| f.path == 'SceneDelegate.swift' }
+  ref ||= group.new_file('SceneDelegate.swift')
+  target.add_file_references([ref]) unless target.source_build_phase.files_references.include?(ref)
+  project.save
+  puts '  SceneDelegate.swift: in the App target'
+")
+/usr/libexec/PlistBuddy -c "Delete :UIApplicationSceneManifest" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy \
+  -c "Add :UIApplicationSceneManifest dict" \
+  -c "Add :UIApplicationSceneManifest:UIApplicationSupportsMultipleScenes bool false" \
+  -c "Add :UIApplicationSceneManifest:UISceneConfigurations dict" \
+  -c "Add :UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication array" \
+  -c "Add $SCENE_ROOT dict" \
+  -c "Add $SCENE_ROOT:UISceneConfigurationName string 'Default Configuration'" \
+  -c "Add $SCENE_ROOT:UISceneDelegateClassName string '\$(PRODUCT_MODULE_NAME).SceneDelegate'" \
+  -c "Add $SCENE_ROOT:UISceneStoryboardFile string 'Main'" \
+  "$PLIST"
+if ! grep -q "configurationForConnecting" "$APPDELEGATE"; then
+  cat >> "$APPDELEGATE" <<'SWIFT'
+
+// W1095 — the UIScene life cycle (see native/scene/SceneDelegate.swift). From iOS 27 an app
+// built with Xcode 27 must use scenes or it fails to launch. The configuration names the
+// scene delegate and Capacitor's Main.storyboard explicitly, as well as through Info.plist.
+extension AppDelegate {
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config: UISceneConfiguration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        config.storyboard = UIStoryboard(name: "Main", bundle: nil)
+        return config
+    }
+}
+SWIFT
+  echo "  AppDelegate configurationForConnecting: injected"
+fi
+SCENE_OK=1
+[ "$(/usr/libexec/PlistBuddy -c "Print $SCENE_ROOT:UISceneStoryboardFile" "$PLIST" 2>/dev/null)" = "Main" ] || SCENE_OK=0
+[ "$(/usr/libexec/PlistBuddy -c "Print $SCENE_ROOT:UISceneConfigurationName" "$PLIST" 2>/dev/null)" = "Default Configuration" ] || SCENE_OK=0
+grep -q "configurationForConnecting" "$APPDELEGATE" || SCENE_OK=0
+grep -q "SceneDelegate.swift" ios/App/App.xcodeproj/project.pbxproj || SCENE_OK=0
+[ -f "$SD_DST" ] || SCENE_OK=0
+if [ "$SCENE_OK" != "1" ]; then
+  echo "  ✖ Scene setup is incomplete (manifest / app delegate / SceneDelegate.swift). STOPPING:"
+  echo "    this build would close at launch on every iOS 27 phone."
+  exit 1
+fi
+echo "  UIScene life cycle: manifest + SceneDelegate + configurationForConnecting ✓"
+echo "  Xcode: $(xcodebuild -version 2>/dev/null | head -1)"
+echo ""
+
 # ── 9. Wire CODE_SIGN_ENTITLEMENTS into Xcode project ───────────────
 echo "── [9/9] Wire CODE_SIGN_ENTITLEMENTS into project.pbxproj ──"
 (cd ios/App && ruby -e "
@@ -658,4 +735,8 @@ echo "  2. App target → Signing & Capabilities — verify Team + Bundle ID"
 echo "  3. App target → General → Identity → Build = next available number"
 echo "  4. Product → Archive  (takes 5–15 min)"
 echo "  5. Organizer opens → Distribute App → App Store Connect → Upload"
+echo ""
+echo "W1095 — before step 1, prove it opens on iOS 27:"
+echo "  device dropdown → any iPhone simulator on iOS 27 → Run (Cmd+R)."
+echo "  It must reach the Awakened splash. If it closes at once, do NOT upload."
 echo ""

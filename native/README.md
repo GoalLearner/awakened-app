@@ -97,3 +97,14 @@ in both. The watcher only announces; the app checks again before it offers a str
   never full-bleed art; widget memory budget).
 - Co-op hunt countdown (medium family) — add `coopEndsAt` + boss name to the
   contract and a `.systemMedium` view.
+
+## scene/ — W1095 the UIScene life cycle (iOS 27)
+- `SceneDelegate.swift` — Apple: from iOS 27, an app built with Xcode 27 (the iOS 27 SDK) must use
+  scenes or it fails to launch. Capacitor 6's shell has none, so 3.0.15 (build 595, the first App
+  Store build made with Xcode 27) closed at launch on every iOS 27 phone. → **App** target.
+
+Installs itself: `scripts/prep-local-build.sh` step 8e copies the file into `ios/App/App/`, adds it
+to the App target, writes `UIApplicationSceneManifest` into Info.plist, and adds
+`application(_:configurationForConnecting:options:)` to AppDelegate. The step then checks all
+three and **stops the build** if any is missing. Before uploading, run the app on an iOS 27
+simulator from Xcode: it must reach the splash.
