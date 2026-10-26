@@ -42,6 +42,7 @@ import { handleAdminRetention } from './handlers/admin-retention';
 import { handleUserAccoladesGet } from './handlers/accolades';
 import { handleRevenueCatWebhook } from './handlers/iap-revenuecat-webhook';
 import { handleEntitlementsGet } from './handlers/iap-entitlements';
+import { handleSkinsEarn } from './handlers/skins-earn';   // W1098 — earned top-tier skins
 import { capRequestBody, bodyCapFor } from './lib/body-cap';
 import { handleEntitlementsReconcile } from './handlers/iap-reconcile';
 import { handlePublicProfileSummaryPut } from './handlers/public-profile-summary';
@@ -543,6 +544,9 @@ export default {
             response = _rl.success
               ? await handleEntitlementsGet(request, env, session)
               : jsonError(429, 'RATE_LIMITED', 'Slow down.');
+          } else if (path === '/v1/users/me/skins/earn' && method === 'POST') {
+            // W1098 — the seven top-tier skins are earned, not sold: grants an earned skin row.
+            response = await handleSkinsEarn(request, env, session);
           } else if (path === '/v1/users/me/entitlements/reconcile' && method === 'POST') {
             // W637 — self-healing grant. Reads the caller's authoritative
             // purchases from RevenueCat's REST API and grants any missing

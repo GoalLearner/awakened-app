@@ -782,8 +782,8 @@ describe('PUT /v1/users/me/public-profile-summary — card background (W706)', (
       makeReq({ ...validPayload, cardBg: 'bg-founder' }), makeEnv(db), session);
     expect(res.status).toBe(200);
     const calls = db._calls();
-    // The membership check ran (readEntitlements' premium probe fired).
-    expect(calls.some((c) => /premium_subscriptions/.test(c.sql))).toBe(true);
+    // W1098 — no membership check for a background any more.
+    expect(calls.some((c) => /premium_subscriptions/.test(c.sql))).toBe(false);
     const upsert = upsertOf(calls);
     expect(upsert).toBeDefined();
     expect(upsert?.binds.length).toBe(39);        // 19 INSERT + 10 CASE pairs
@@ -792,16 +792,19 @@ describe('PUT /v1/users/me/public-profile-summary — card background (W706)', (
     expect(upsert?.binds[38]).toBe('bg-founder'); // CASE WHEN value
   });
 
-  it('non-member equipping bg-100k is coerced to a clear — 200, never a 4xx', async () => {
+  it('W1098 — a non-member equipping bg-100k is stored: backgrounds are free for everyone', async () => {
     const db = makeDb();   // no founder_marks row, no premium row → member = false
     const res = await handlePublicProfileSummaryPut(
       makeReq({ ...validPayload, cardBg: 'bg-100k' }), makeEnv(db), session);
-    expect(res.status).toBe(200);           // heartbeat survives a lapsed membership
-    const upsert = upsertOf(db._calls());
+    expect(res.status).toBe(200);
+    const calls = db._calls();
+    const upsert = upsertOf(calls);
     expect(upsert).toBeDefined();
-    expect(upsert?.binds[18]).toBeNull();   // INSERT value coerced to the clear
-    expect(upsert?.binds[37]).toBe(1);      // still set → clears the column
-    expect(upsert?.binds[38]).toBeNull();   // CASE WHEN value coerced
+    expect(upsert?.binds[18]).toBe('bg-100k');   // INSERT value kept
+    expect(upsert?.binds[37]).toBe(1);
+    expect(upsert?.binds[38]).toBe('bg-100k');   // CASE WHEN value kept
+    // and no membership read happens for a background any more
+    expect(calls.some((c) => /premium_subscriptions/.test(c.sql))).toBe(false);
   });
 
   it('null cardBg clears without an entitlements check', async () => {

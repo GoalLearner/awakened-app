@@ -597,9 +597,10 @@ export async function handlePublicProfileSummaryPut(
     v.avatarId.set && typeof v.avatarId.value === 'string' && skinNeedsEntitlement(v.avatarId.value);
   const _combatantNeedsCheck =
     v.combatant.set && typeof v.combatant.value === 'string' && /"avatar":"avatar-skin-/i.test(v.combatant.value);
-  if ((v.cardBg.set && v.cardBg.value !== null) || _avatarNeedsCheck || _combatantNeedsCheck) {
+  if (_avatarNeedsCheck || _combatantNeedsCheck) {
     const ent = await readEntitlements(env, session.userId);
-    if (v.cardBg.set && v.cardBg.value !== null && !ent.member) v.cardBg = { set: true, value: null };
+    // W1098 — backgrounds are free for every hunter now (owner 2026-10-26: "make them all free
+    // to the public"); the membership coercion is gone. CARD_BG_IDS validation above stays.
     if (_avatarNeedsCheck && !ent.skins.includes(v.avatarId.value as string)) {
       v.avatarId = { set: true, value: null };   // unowned paid skin → class default
     }

@@ -44,6 +44,14 @@ export async function handleCoopPacts(
   // scan of every hunt ever started, per call). An OR of two indexable terms — the column
   // (idx_coop_boss_challenger) and an IN over the participant index — lets SQLite take its
   // multi-index OR path, as the list endpoint's query already does.
+  const list = await loadStartedPactRows(env, session.userId);
+  const pacts = computePacts(list, session.userId);
+  return jsonOk({ ok: true, day: ptDayKey(Date.now()), pacts });
+}
+
+/** Every co-op hunt the user STARTED, with its full roster attached: the rows computePacts reads.
+ *  W1098 — shared with the skins-earn endpoint (Emberforged = a 30-day pact flame). */
+export async function loadStartedPactRows(env: Env, userId: string): Promise<WinRow[]> {
   const rows = await env.DB.prepare(
     `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id,
             i.starts_at, i.resolved_at,
@@ -61,7 +69,7 @@ export async function handleCoopPacts(
       ORDER BY i.starts_at DESC
       LIMIT ?2`,
   )
-    .bind(session.userId, MAX_WIN_ROWS)
+    .bind(userId, MAX_WIN_ROWS)
     .all<WinRow>();
 
   const list = rows.results ?? [];
@@ -87,6 +95,5 @@ export async function handleCoopPacts(
     r.participant_ids = [r.challenger_user_id, ...(r.id ? rosterByInstance.get(r.id) ?? [] : [])];
   }
 
-  const pacts = computePacts(list, session.userId);
-  return jsonOk({ ok: true, day: ptDayKey(Date.now()), pacts });
+  return list;
 }
