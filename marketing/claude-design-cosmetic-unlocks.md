@@ -14,7 +14,7 @@ Design the **whole sensory moment: visuals, motion, sound and haptics**, not onl
 ## Why this matters
 
 Until now the seven skins were sold for money. The owner is making every one of them **earned only**:
-no price, no shop. Each skin now stands for a real milestone (a 30-day streak, two million steps,
+no price, no shop. Each skin now stands for a real milestone (a 30-day streak, a million steps,
 S rank), so the moment it arrives has to feel like the payoff of weeks or months of real effort.
 Today nothing happens at all: a background quietly flips from locked to EARNED inside the Wardrobe,
 and most hunters never notice.
@@ -39,7 +39,7 @@ and particle work. It must feel **earned and powerful, never cute, never childis
 | Null Protocol | Mythic | gold | Clear Floor 90 of the Ascent |
 | Null Protocol II | Mythic | gold | Slay 200 bosses |
 | Dawnbringer | Mythic | gold | Reach S rank |
-| Stardust Sovereign | Mythic | gold | Walk 2,000,000 steps |
+| Stardust Sovereign | Mythic | gold | Walk 1,000,000 steps |
 
 **Backgrounds** (wide banner art, about 3:1): The Hundred-K City (100K step club), The Summit (clear
 Floor 100), Stormbreaker (reach S rank), Beyond the Peak (S+ prestige), The Boneyard (500 boss kills),
