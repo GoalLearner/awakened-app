@@ -35,7 +35,7 @@ and particle work. It must feel **earned and powerful, never cute, never childis
 |---|---|---|---|
 | Emberforged | Legendary | violet | Keep a pact flame burning with one friend for 30 days |
 | The Void-Touched | Legendary | violet | Raise 10 shadows into your army |
-| The Verdant Oracle | Legendary | violet | A 30-day walk or sleep streak |
+| The Verdant Oracle | Legendary | violet | Open the app 30 days in a row |
 | Null Protocol | Mythic | gold | Clear Floor 90 of the Ascent |
 | Null Protocol II | Mythic | gold | Slay 200 bosses |
 | Dawnbringer | Mythic | gold | Reach S rank |
@@ -50,9 +50,9 @@ The Full Vault, The Complete Log, Thirty Days Sworn (30-day walk or sleep streak
 ## When it fires — the cases you must cover
 
 1. **One reward**, landing right after the thing that earned it (a boss kill, an Ascent floor, the
-   morning step sync).
+   morning step sync, or simply opening the app on the 30th day in a row).
 2. **A pair**: some milestones award a skin AND a background at the same instant. Reaching S rank gives
-   Dawnbringer + Stormbreaker; a 30-day streak gives The Verdant Oracle + Thirty Days Sworn.
+   Dawnbringer + Stormbreaker.
 3. **A backlog**: on the first launch after this update, a veteran can be owed several at once (the
    top hunter is owed three skins and a handful of backgrounds). It must not become ten screens of the
    same animation.
