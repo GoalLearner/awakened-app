@@ -27,6 +27,11 @@ vi.mock('./lib/win-back', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/win-back')>()),
   sweepWinBackPushes: vi.fn(async () => 0),
 }));
+vi.mock('./handlers/coop-auto', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./handlers/coop-auto')>()),
+  sweepCoopAutoHunts: vi.fn(async () => ({ created: 0, pairs: 0, skipped: 0 })),
+  sweepCoopResolve: vi.fn(async () => ({ won: 0, expired: 0 })),
+}));
 vi.mock('./lib/pact-flame-risk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/pact-flame-risk')>()),
   sweepPactFlameRisk: vi.fn(async () => 0),
@@ -37,8 +42,9 @@ import { runUpdatePushCron, UPDATE_PUSH_CRON } from './lib/update-push';
 import { runRaidMatchmakeSweep, sweepCrunchTimeReminders, sweepPendingSummonsReminders } from './handlers/coop-boss';
 import { sweepWinBackPushes } from './lib/win-back';
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
+import { sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 
-const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk];
+const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk, sweepCoopResolve, sweepCoopAutoHunts];   // W1094 — settle + automatic hunts
 
 async function fire(cron: string): Promise<{ env: Env; waited: number }> {
   const env = { DB: {} } as unknown as Env;
@@ -68,7 +74,7 @@ describe('scheduled() dispatch (W904)', () => {
     expect(waited).toBe(1);
   });
 
-  it('the 2-minute sweep trigger runs the update job TOO (self-gated) and all five sweeps exactly once', async () => {
+  it('the 2-minute sweep trigger runs the update job TOO (self-gated) and all seven sweeps exactly once', async () => {
     const { env, waited } = await fire('*/2 * * * *');
     expect(runUpdatePushCron).toHaveBeenCalledTimes(1);
     expect(runUpdatePushCron).toHaveBeenCalledWith(env, '*/2 * * * *');

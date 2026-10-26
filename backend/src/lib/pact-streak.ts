@@ -66,6 +66,38 @@ export function sqliteUtcToMs(ts: string | null | undefined): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
+/** W1094 — the calendar day AFTER a 'YYYY-MM-DD' key (same pure UTC date-math as prevDay). */
+export function nextDay(dayKey: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey || '');
+  if (!m) return '';
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) + 86_400_000);
+  return (
+    d.getUTCFullYear() +
+    '-' +
+    String(d.getUTCMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(d.getUTCDate()).padStart(2, '0')
+  );
+}
+
+/**
+ * W1094 — the UTC instant of 00:00 Pacific on `dayKey`, as an ISO string (the form
+ * coop_boss_instances.starts_at/ends_at carry). Pacific midnight is 07:00Z under PDT and
+ * 08:00Z under PST; the candidate whose instant renders as `dayKey` while the millisecond
+ * before renders as the previous day is the midnight — correct on both DST switch days
+ * without a zone table. '' for a malformed key.
+ */
+export function ptMidnightIso(dayKey: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey || '');
+  if (!m) return '';
+  const base = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  for (const h of [7, 8]) {
+    const ms = base + h * 3_600_000;
+    if (ptDayKey(ms) === dayKey && ptDayKey(ms - 1) === prevDay(dayKey)) return new Date(ms).toISOString();
+  }
+  return new Date(base + 8 * 3_600_000).toISOString();
+}
+
 export interface WinRow {
   id?: string;
   challenger_user_id: string;
@@ -83,6 +115,10 @@ export interface WinRow {
   // W813 — SQLite 0/1 (or boolean). undefined = legacy wins-only caller, treated
   // as a win so pre-W813 call sites keep their `total` semantics.
   is_win?: number | boolean;
+  // W1094 — automatic friend hunts: the day counts only once `committed` (both hunters
+  // posted progress). Manual hunts carry committed = 1 (or leave both undefined).
+  auto?: number | boolean | null;
+  committed?: number | boolean | null;
 }
 
 export interface PactAgg {
@@ -124,6 +160,8 @@ export function computePacts(rows: WinRow[], viewerUserId: string): Record<strin
     // legacy wins-only callers.
     const ms = sqliteUtcToMs(r.starts_at ?? r.resolved_at);
     if (!ms) continue; // never started / unparseable timestamp — can't place it on a day
+    // W1094 — an automatic hunt lights the flame only once both hunters' apps posted to it.
+    if (Number(r.auto) === 1 && Number(r.committed ?? 0) !== 1) continue;
     const win = r.is_win === undefined ? true : !!r.is_win;
     for (const other of others) {
       let g = groups.get(other);

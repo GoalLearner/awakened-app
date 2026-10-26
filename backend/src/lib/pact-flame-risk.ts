@@ -30,6 +30,9 @@ const MAX_PAIRS_PER_RUN = 20;
 const HISTORY_DAYS = 180; // streak window: runs longer than this are still >= MIN_STREAK, so eligibility is unaffected
 
 export interface StartedRow {
+  // W1094 — automatic hunts count toward the flame only once committed (both posted).
+  auto?: number | boolean | null;
+  committed?: number | boolean | null;
   id?: string;
   challenger_user_id: string;
   partner_user_id: string;
@@ -66,6 +69,7 @@ export function findAtRiskPairs(
   for (const r of rows || []) {
     const ms = sqliteUtcToMs(r && r.starts_at);
     if (!ms) continue;
+    if (Number(r.auto) === 1 && Number(r.committed ?? 0) !== 1) continue;   // W1094
     const dk = ptDayKey(ms);
     if (!dk) continue;
     for (const [a, b] of rosterPairs(r)) {
@@ -136,7 +140,13 @@ export async function sweepPactFlameRisk(
     // 20,000 hunts cover any pair active this week; past ~90,000 started hunts the
     // participant lookups alone would exceed the request's subrequest budget.
     const rows = await env.DB.prepare(
-      `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.starts_at
+      `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.starts_at,
+            i.auto,
+            CASE WHEN i.auto = 1 THEN COALESCE(i.committed,
+              CASE WHEN (SELECT COUNT(DISTINCT v.user_id) FROM verified_events v WHERE v.boss_instance_id = i.id)
+                        >= 1 + (SELECT COUNT(*) FROM coop_boss_participants p2 WHERE p2.instance_id = i.id)
+                   THEN 1 ELSE 0 END)
+            ELSE 1 END AS committed
          FROM coop_boss_instances i
         WHERE i.starts_at IS NOT NULL
           AND i.starts_at >= datetime('now', '-${HISTORY_DAYS} days')

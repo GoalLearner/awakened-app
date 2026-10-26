@@ -30,6 +30,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
+import { ptDayKey } from '../lib/pact-streak';   // W1094 — the once-a-day automatic win push
 import { readEntitlements } from './iap-entitlements';
 
 // ── W955 — THE CO-OP HUNT CAP IS GONE (owner call 2026-09-16) ───────
@@ -62,7 +63,7 @@ import { readEntitlements } from './iap-entitlements';
 // (goalSteps) AND a combined SLEEP goal must both be met. The sleep goal rides
 // the metric-generic goalFlights column as MINUTES asleep (2520 = 42h) — the
 // header already blesses column reuse; no migration.
-const COOP_BOSS_CFG: Record<
+export const COOP_BOSS_CFG: Record<
   string,
   { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean; matchmaking?: boolean }
 > = {
@@ -103,7 +104,7 @@ const COOP_BOSS_CFG: Record<
 // W761 — display names for push copy ("2/5 have answered The Grinning God…").
 // The client owns full boss presentation; this is JUST the name string, so a
 // summons nudge can say which beast the party is waiting on. Fallback: 'the hunt'.
-const COOP_BOSS_NAMES: Record<string, string> = {
+export const COOP_BOSS_NAMES: Record<string, string> = {
   the_twin_maw: 'The Twin Maw',
   the_unresting_march: 'The Unresting March',
   the_coursing_dread: 'The Coursing Dread',
@@ -115,7 +116,7 @@ const COOP_BOSS_NAMES: Record<string, string> = {
   the_sleepless_crown: 'The Sleepless Crown',
   the_grinning_god: 'The Grinning God',
 };
-function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
+export function bossMetric(bossId: string): 'steps' | 'flights' | 'both' | 'steps_sleep' {
   return COOP_BOSS_CFG[bossId]?.metric ?? 'steps';
 }
 
@@ -129,7 +130,7 @@ const SLEEP_EVENT_TYPE = 'sleep_minutes_total';
 // and defers its expiry verdict: the final night ends at the deadline and only
 // reaches HealthKit after the hunter wakes + syncs. 8h covers a post-deadline
 // wake with margin; the submitted value is window-clamped client-side.
-const SLEEP_SUBMIT_GRACE_MS = 8 * 3600 * 1000;
+export const SLEEP_SUBMIT_GRACE_MS = 8 * 3600 * 1000;
 // Each co-op instance is HOMOGENEOUS: only its boss's metric is ever tagged to
 // it (enforced at submit by validateBossInstanceForUser), so a per-instance
 // MAX(value) over the matching event_type is that hunter's true window total.
@@ -152,7 +153,7 @@ function metricAllowedForBoss(bossId: string, eventType: string): boolean {
 }
 const MAX_LIST = 20;
 
-interface CoopBossRow {
+export interface CoopBossRow {
   id: string;
   boss_id: string;
   boss_rank: string;
@@ -184,6 +185,13 @@ interface CoopBossRow {
   // coop_boss_participants. Attached by loadInstance / the list query. The legacy
   // partner* columns above are retained for one release (old-client serialize).
   participants?: CoopParticipant[];
+  // W1094 — automatic friend hunts: auto=1 rows are made by the cron for a friend pair
+  // (pair_key = sorted "a|b", hunt_day = the Pacific start day). committed is stamped at
+  // settle: 1 = every hunter posted progress, the flame rule for automatic days.
+  auto?: number | null;
+  hunt_day?: string | null;
+  pair_key?: string | null;
+  committed?: number | null;
 }
 
 interface CoopParticipant {
@@ -195,7 +203,7 @@ interface CoopParticipant {
  *  The single seam the progress/serialize/notify/pact paths fan out over. Reads
  *  the N-participant array when present; falls back to the legacy partner columns
  *  for a row loaded without it (defensive — loadInstance/list always attach it). */
-function participantIds(
+export function participantIds(
   row: Pick<CoopBossRow, 'challenger_user_id' | 'partner_user_id' | 'partner2_user_id' | 'participants'>,
 ): string[] {
   if (Array.isArray(row.participants)) {
@@ -208,7 +216,7 @@ function participantIds(
 
 /** W692 — load the participant rows for a set of instance ids, grouped by
  *  instance. One query; used to attach `participants` on loadInstance + list. */
-async function loadParticipants(env: Env, instanceIds: string[]): Promise<Map<string, CoopParticipant[]>> {
+export async function loadParticipants(env: Env, instanceIds: string[]): Promise<Map<string, CoopParticipant[]>> {
   const out = new Map<string, CoopParticipant[]>();
   if (!instanceIds.length) return out;
   const ph = instanceIds.map(() => '?').join(', ');
@@ -229,7 +237,7 @@ async function loadParticipants(env: Env, instanceIds: string[]): Promise<Map<st
 // ── Small shared helpers ────────────────────────────────────────────
 
 /** True iff the two users have an accepted friendship (either direction). */
-async function areAcceptedFriends(env: Env, a: string, b: string): Promise<boolean> {
+export async function areAcceptedFriends(env: Env, a: string, b: string): Promise<boolean> {
   const row = await env.DB.prepare(
     `SELECT 1 AS ok FROM friends
       WHERE status = 'accepted'
@@ -243,7 +251,7 @@ async function areAcceptedFriends(env: Env, a: string, b: string): Promise<boole
 }
 
 /** Alias lookup for a small id set. Missing ids simply don't appear. */
-async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, string>> {
+export async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const ids = userIds.filter(Boolean);
   if (ids.length === 0) return map;
@@ -261,8 +269,8 @@ async function getAliasMap(env: Env, userIds: string[]): Promise<Map<string, str
 // flights_total. A single-metric boss simply has an empty map for the other stream;
 // a 'both' boss uses both. The "primary" stream (what the metric-generic combined_steps/
 // goal_steps fields carry) is flights for a flights boss, steps otherwise.
-interface CoopProgress { steps: Map<string, number>; flights: Map<string, number>; sleep: Map<string, number>; }
-function emptyProgress(): CoopProgress { return { steps: new Map(), flights: new Map(), sleep: new Map() }; }
+export interface CoopProgress { steps: Map<string, number>; flights: Map<string, number>; sleep: Map<string, number>; }
+export function emptyProgress(): CoopProgress { return { steps: new Map(), flights: new Map(), sleep: new Map() }; }
 function progressStream(p: CoopProgress, eventType: string): Map<string, number> {
   if (eventType === FLIGHTS_EVENT_TYPE) return p.flights;
   if (eventType === SLEEP_EVENT_TYPE) return p.sleep;   // W686 — minutes asleep
@@ -287,7 +295,7 @@ async function getCoopProgress(env: Env, instanceId: string): Promise<CoopProgre
 }
 
 /** Batched variant for the list endpoint: instanceId → CoopProgress. */
-async function getCoopProgressForInstances(env: Env, ids: string[]): Promise<Map<string, CoopProgress>> {
+export async function getCoopProgressForInstances(env: Env, ids: string[]): Promise<Map<string, CoopProgress>> {
   const out = new Map<string, CoopProgress>();
   if (ids.length === 0) return out;
   const placeholders = ids.map(() => '?').join(',');
@@ -320,7 +328,7 @@ function combinedSleep(row: CoopBossRow, p: CoopProgress): number {
  *  a flights boss compares its (metric-generic) goal_steps against the flight total.
  *  W686 — a 'steps_sleep' boss requires steps >= goal_steps AND sleep minutes >=
  *  goal_flights (the metric-generic second-goal column). */
-function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
+export function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
   const metric = bossMetric(row.boss_id);
   return (p: CoopProgress) => {
     if (metric === 'both') return combinedSteps(row, p) >= row.goal_steps && combinedFlights(row, p) >= (row.goal_flights || 0);
@@ -414,6 +422,13 @@ function serializeCoop(
     ...(award ? { award } : {}),
     goal_steps: row.goal_steps,
     reward_souls: row.reward_souls,
+    // W1094 — automatic friend hunts: the client hides LEAVE, plays no defeat screen, charges
+    // the fee from the win, and lights the local flame only once `committed` (both posted —
+    // live from progress while active, from the settle stamp afterwards).
+    auto: Number(row.auto) === 1,
+    ...(Number(row.auto) === 1
+      ? { hunt_day: row.hunt_day ?? null, committed: row.committed != null ? Number(row.committed) === 1 : allPosted(row, p) }
+      : {}),
     // W695 — open ("Summon & Fill") hunts carry their intended size so the client can
     // render filled seats vs open seats + the leader's START NOW affordance.
     ...(row.fill_target ? { fill_target: row.fill_target } : {}),
@@ -479,7 +494,7 @@ function serializeCoop(
   };
 }
 
-async function loadInstance(env: Env, id: string): Promise<CoopBossRow | null> {
+export async function loadInstance(env: Env, id: string): Promise<CoopBossRow | null> {
   const row = await env.DB.prepare('SELECT * FROM coop_boss_instances WHERE id = ?')
     .bind(id)
     .first<CoopBossRow>();
@@ -920,14 +935,26 @@ export async function handleCoopBossList(
     // rows against 9 live ones on that account, this was going to keep happening.
     // Sorting by liveness first means a live hunt can never be evicted by a finished
     // one; recency still orders within each group.
+    // W1094 — and every hunt whose win this viewer has not claimed yet rides along outside the
+    // LIMIT: with one automatic hunt per friend per day, a hunter away for a week would otherwise
+    // see settled wins pushed off the end of the list before _awardCoopKill ever saw them.
     `SELECT * FROM coop_boss_instances
-      WHERE challenger_user_id = ?1
-         OR partner_user_id = ?1
-         OR partner2_user_id = ?1
-         OR id IN (SELECT instance_id FROM coop_boss_participants WHERE user_id = ?1)
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id FROM coop_boss_instances
+           WHERE challenger_user_id = ?1
+              OR partner_user_id = ?1
+              OR partner2_user_id = ?1
+              OR id IN (SELECT instance_id FROM coop_boss_participants WHERE user_id = ?1)
+           ORDER BY CASE WHEN status IN ('pending', 'active') THEN 0 ELSE 1 END,
+                    updated_at DESC
+           LIMIT ?2)
+        UNION
+        SELECT instance_id FROM (
+          SELECT instance_id FROM coop_boss_awards WHERE user_id = ?1 AND claimed = 0 LIMIT 40)
+      )
       ORDER BY CASE WHEN status IN ('pending', 'active') THEN 0 ELSE 1 END,
-               updated_at DESC
-      LIMIT ?2`,
+               updated_at DESC`,
   )
     .bind(session.userId, MAX_LIST)
     .all<CoopBossRow>();
@@ -949,7 +976,17 @@ export async function handleCoopBossList(
   const instances = list.map((r) =>
     serializeCoop(r, aliasMap, session.userId, progByInstance.get(r.id) ?? emptyProgress(), awardByInstance.get(r.id) ?? null),
   );
-  return jsonOk({ ok: true, instances });
+  // W1094 — which friends (or '*' = everything) this viewer switched automatic hunts off for.
+  let autoOff: string[] = [];
+  try {
+    const off = await env.DB.prepare('SELECT friend_user_id FROM coop_auto_optouts WHERE user_id = ? ORDER BY created_at')
+      .bind(session.userId)
+      .all<{ friend_user_id: string }>();
+    autoOff = (off.results ?? []).map((r) => r.friend_user_id);
+  } catch {
+    autoOff = [];   // pre-0069 database
+  }
+  return jsonOk({ ok: true, instances, auto_off: autoOff });
 }
 
 // ── GET /v1/coop-boss/:id — detail ──────────────────────────────────
@@ -1209,15 +1246,21 @@ export async function sweepPendingSummonsReminders(env: Env, ctx?: ExecutionCont
 // A hunt under 80% when it enters the window is re-checked every tick until
 // ends_at (the stamp only lands with the send), so a late surge still alerts.
 export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext): Promise<void> {
+  // W1094 — ends_at is an ISO string ('…T…Z'); datetime('now') renders '… …', and as strings a
+  // 'T' sorts above a space, so the old comparison matched only in the last half hour before
+  // UTC midnight. Bind the same ISO form the rows carry.
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const soonIso = new Date(nowMs + 30 * 60 * 1000).toISOString();
   const due = await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
       WHERE status = 'active'
         AND crunch_reminded_at IS NULL
-        AND ends_at > datetime('now')
-        AND ends_at <= datetime('now', '+30 minutes')
+        AND ends_at > ?1
+        AND ends_at <= ?2
       ORDER BY ends_at ASC
       LIMIT 25`,
-  ).all<CoopBossRow>();
+  ).bind(nowIso, soonIso).all<CoopBossRow>();
   const rows = due.results ?? [];
   if (!rows.length) return;
   const partsByInstance = await loadParticipants(env, rows.map((r) => r.id));
@@ -1467,6 +1510,55 @@ export async function handleCoopBossResolve(
     return jsonError(400, 'BAD_STATE', `Cannot resolve from status "${row.status}".`);
   }
 
+  const outcome = await resolveCoopInstance(env, row, prog, aliasMap, ctx);   // W1094 — shared with the cron sweep
+  if (outcome === 'open') {
+    // Still in progress — not an error, just not resolved yet.
+    return jsonOk({
+      ok: true,
+      resolved: false,
+      instance: serializeCoop(row, aliasMap, session.userId, prog),
+    });
+  }
+
+  const refreshed = (await loadInstance(env, id)) ?? row;
+  // W463.1 — on a WIN the viewer now has a fresh unclaimed award row; on a loss
+  // there is no credit.
+  const award = outcome === 'won' ? { owed: true, claimed: false } : null;
+  return jsonOk({
+    ok: true,
+    resolved: true,
+    instance: serializeCoop(refreshed, aliasMap, session.userId, prog, award),
+  });
+}
+
+export type CoopResolveOutcome = 'won' | 'expired' | 'open';
+/** W1094 — a settle this long after the window closed sends no push (the backlog rule). */
+export const STALE_SETTLE_MS = 24 * 3600 * 1000;
+
+/** W1094 — did every hunter on the row post at least one progress value (any stream)? This is
+ *  the flame rule for automatic hunts: the day counts only when both apps ran. */
+export function allPosted(row: CoopBossRow, p: CoopProgress): boolean {
+  return participantIds(row).every((uid) => p.steps.has(uid) || p.flights.has(uid) || p.sleep.has(uid));
+}
+
+/** W1094 — THE settle decision, shared by POST /:id/resolve and the cron sweep
+ *  (coop-auto.ts sweepCoopResolve), so a phone and the server can never disagree. A win lands
+ *  the moment the goal is met; a defeat lands once the window has closed (+8h sleep grace).
+ *  Exactly-once mechanics are unchanged from the handler this came out of: every UPDATE is
+ *  guarded on status='active', awards back-fill on a lost race (W1040), and only the caller
+ *  whose UPDATE flipped the row sends pushes (W662/W838). Automatic hunts (auto=1): `committed`
+ *  is stamped at the flip, a defeat is silent, and a win pushes a hunter at most once a day. */
+export async function resolveCoopInstance(
+  env: Env,
+  row: CoopBossRow,
+  prog: CoopProgress,
+  aliasMap: Map<string, string>,
+  ctx?: ExecutionContext,
+): Promise<CoopResolveOutcome> {
+  if (row.status !== 'active') return 'open';
+  const id = row.id;
+  const isAuto = Number(row.auto) === 1;
+  const committed = allPosted(row, prog) ? 1 : 0;
   const goalMet = isGoalMet(row)(prog);   // W447 — 'both' bosses require BOTH steps AND flights
   const endsMs = row.ends_at ? Date.parse(row.ends_at) : NaN;
   // W686 — a steps_sleep raid defers its DEFEAT verdict by the sleep grace: the
@@ -1474,16 +1566,20 @@ export async function handleCoopBossResolve(
   // sync. A WIN still lands the moment the goal is met; only expiry waits.
   const expiryGraceMs = bossMetric(row.boss_id) === 'steps_sleep' ? SLEEP_SUBMIT_GRACE_MS : 0;
   const expired = Number.isFinite(endsMs) && Date.now() >= endsMs + expiryGraceMs;
+  // W1094 — the sweep now reaches hunts nobody's phone ever resolved, some weeks old. Their
+  // verdicts still land (awards included), but a push about a hunt that closed more than a day
+  // ago would read as noise, so a stale settle is quiet.
+  const stale = Number.isFinite(endsMs) && Date.now() - endsMs > STALE_SETTLE_MS;
 
   // Win can land mid-window the instant the combined goal is reached.
   if (goalMet) {
     const upd = await env.DB.prepare(
       `UPDATE coop_boss_instances
-          SET status = 'completed', result = 'success',
+          SET status = 'completed', result = 'success', committed = ?,
               resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND status = 'active'`,
     )
-      .bind(id)
+      .bind(committed, id)
       .run();
     // W463.1 — durable per-participant drop credit (idempotent). EVERY hunter
     // (W677: 2 or 3) is now OWED a drop; each claims atomically before granting
@@ -1510,26 +1606,32 @@ export async function handleCoopBossResolve(
     // only the request that actually flipped the row gets changes>0 — every later
     // post-win poll is a no-op here, so the push can't re-send. notifyUser never
     // throws and no-ops if push is unconfigured or a hunter has no device token.
-    if (ctx && Number(upd?.meta?.changes ?? 0) > 0) {
-      const data = { bossId: row.boss_id, instanceId: id };
-      for (const uid of winners) {
-        const others = winners
-          .filter((w) => w !== uid)
-          .map((w) => aliasMap.get(w) ?? 'your ally')
-          .join(' and ');
-        ctx.waitUntil(notifyUser(env, uid, {
-          title: 'Hunt Complete', body: `You and ${others} brought down your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
-        }));
+    if (ctx && !stale && Number(upd?.meta?.changes ?? 0) > 0) {
+      if (isAuto) {
+        await pushAutoWin(env, row, winners, aliasMap, ctx);
+      } else {
+        const data = { bossId: row.boss_id, instanceId: id };
+        for (const uid of winners) {
+          const others = winners
+            .filter((w) => w !== uid)
+            .map((w) => aliasMap.get(w) ?? 'your ally')
+            .join(' and ');
+          ctx.waitUntil(notifyUser(env, uid, {
+            title: 'Hunt Complete', body: `You and ${others} brought down your ${row.boss_rank}-rank quarry.`, type: 'coop_complete', data,
+          }));
+        }
       }
     }
-  } else if (expired) {
+    return 'won';
+  }
+  if (expired) {
     const upd = await env.DB.prepare(
       `UPDATE coop_boss_instances
-          SET status = 'expired', result = 'defeat',
+          SET status = 'expired', result = 'defeat', committed = ?,
               resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND status = 'active'`,
     )
-      .bind(id)
+      .bind(committed, id)
       .run();
     // W838 (Train 3, R4) — the loss used to be SILENT: the win path pushes
     // every hunter (W662 above), but an expired hunt just flipped the row and
@@ -1539,7 +1641,8 @@ export async function handleCoopBossResolve(
     // flipped the row (changes>0 under the status='active' guard) sends.
     // The pact survives a loss (W813 commitment rule), so the copy says so —
     // the emotional exit ramp is "strike again", not "you failed".
-    if (ctx && Number(upd?.meta?.changes ?? 0) > 0) {
+    // W1094 — an automatic hunt's loss stays quiet: tomorrow's hunt comes by itself.
+    if (!isAuto && !stale && ctx && Number(upd?.meta?.changes ?? 0) > 0) {
       const data = { bossId: row.boss_id, instanceId: id };
       for (const uid of participantIds(row)) {
         ctx.waitUntil(notifyUser(env, uid, {
@@ -1550,24 +1653,47 @@ export async function handleCoopBossResolve(
         }));
       }
     }
-  } else {
-    // Still in progress — not an error, just not resolved yet.
-    return jsonOk({
-      ok: true,
-      resolved: false,
-      instance: serializeCoop(row, aliasMap, session.userId, prog),
-    });
+    return 'expired';
   }
+  return 'open';
+}
 
-  const refreshed = (await loadInstance(env, id)) ?? row;
-  // W463.1 — on a WIN the viewer now has a fresh unclaimed award row; on a loss
-  // there is no credit.
-  const award = goalMet ? { owed: true, claimed: false } : null;
-  return jsonOk({
-    ok: true,
-    resolved: true,
-    instance: serializeCoop(refreshed, aliasMap, session.userId, prog, award),
-  });
+/** W1094 — one automatic-win push per hunter per Pacific day: users.coop_auto_push_day is
+ *  the claim (guarded UPDATE before the send), so a hunter with ten friends hears about the
+ *  first win and the rest of the day's wins wait for the tally on the next launch. */
+async function pushAutoWin(
+  env: Env,
+  row: CoopBossRow,
+  winners: string[],
+  aliasMap: Map<string, string>,
+  ctx: ExecutionContext,
+): Promise<void> {
+  const day = ptDayKey(Date.now());
+  const bossName = COOP_BOSS_NAMES[row.boss_id] ?? 'the boss';
+  for (const uid of winners) {
+    let claimed = false;
+    try {
+      const stamp = await env.DB.prepare(
+        'UPDATE users SET coop_auto_push_day = ?1 WHERE id = ?2 AND (coop_auto_push_day IS NULL OR coop_auto_push_day < ?1)',
+      )
+        .bind(day, uid)
+        .run();
+      claimed = Number(stamp?.meta?.changes ?? 0) > 0;
+    } catch {
+      claimed = false;   // pre-0069 database: no push rather than a push a day per hunt
+    }
+    if (!claimed) continue;
+    const others = winners
+      .filter((w) => w !== uid)
+      .map((w) => aliasMap.get(w) ?? 'your friend')
+      .join(' and ');
+    ctx.waitUntil(notifyUser(env, uid, {
+      title: 'Hunt Complete',
+      body: `You and ${others} brought down ${bossName}.`,
+      type: 'coop_complete',
+      data: { bossId: row.boss_id, instanceId: row.id },
+    }));
+  }
 }
 
 // ── POST /v1/coop-boss/:id/claim — claim the durable drop credit (W463.1) ──

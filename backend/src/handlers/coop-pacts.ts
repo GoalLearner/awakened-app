@@ -47,6 +47,12 @@ export async function handleCoopPacts(
   const rows = await env.DB.prepare(
     `SELECT i.id, i.challenger_user_id, i.partner_user_id, i.partner2_user_id, i.boss_id,
             i.starts_at, i.resolved_at,
+            i.auto,
+            CASE WHEN i.auto = 1 THEN COALESCE(i.committed,
+              CASE WHEN (SELECT COUNT(DISTINCT v.user_id) FROM verified_events v WHERE v.boss_instance_id = i.id)
+                        >= 1 + (SELECT COUNT(*) FROM coop_boss_participants p2 WHERE p2.instance_id = i.id)
+                   THEN 1 ELSE 0 END)
+            ELSE 1 END AS committed,
             CASE WHEN i.status = 'completed' AND i.result = 'success' THEN 1 ELSE 0 END AS is_win
        FROM coop_boss_instances i
       WHERE i.starts_at IS NOT NULL

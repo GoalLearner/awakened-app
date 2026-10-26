@@ -800,7 +800,7 @@ describe('W838 — expired hunt pushes the defeat to every hunter', () => {
     status: 'active',
     partner_joined_at: '2026-07-12 01:00:00',
     starts_at: '2026-07-12 01:00:00',
-    ends_at: '2026-07-15 00:00:00', // long past — the resolve must land on the expiry branch
+    ends_at: new Date(Date.now() - 3_600_000).toISOString(), // an hour past — the expiry branch (W1094: a settle more than a day late is quiet, so keep it fresh)
   };
 
   function resolveReq(): Request {

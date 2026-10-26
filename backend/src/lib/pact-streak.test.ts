@@ -6,7 +6,7 @@
  * thing that diverged when each client parsed timestamps in its own timezone).
  */
 import { describe, expect, it } from 'vitest';
-import { computePacts, ptDayKey, prevDay, sqliteUtcToMs, type WinRow } from './pact-streak';
+import { computePacts, ptDayKey, prevDay, nextDay, ptMidnightIso, sqliteUtcToMs, type WinRow } from './pact-streak';
 
 const U = 'viewer';
 function win(other: string, resolved_at: string, boss_id = 'the_twin_maw', viewerIsChallenger = true): WinRow {
@@ -180,5 +180,61 @@ describe('computePacts', () => {
     const out = computePacts(rows, U);
     expect(out['friendA'].total).toBe(1);
     expect(out['friendB']).toBeUndefined();
+  });
+});
+
+// W1094 — automatic friend hunts: day helpers + the committed rule.
+describe('W1094 — nextDay / ptMidnightIso', () => {
+  it('nextDay steps one calendar day, across months and years', () => {
+    expect(nextDay('2026-10-31')).toBe('2026-11-01');
+    expect(nextDay('2026-12-31')).toBe('2027-01-01');
+    expect(nextDay('2026-02-28')).toBe('2026-03-01');
+    expect(nextDay('garbage')).toBe('');
+  });
+  it('Pacific midnight is 07:00Z under PDT and 08:00Z under PST', () => {
+    expect(ptMidnightIso('2026-07-14')).toBe('2026-07-14T07:00:00.000Z');
+    expect(ptMidnightIso('2026-01-14')).toBe('2026-01-14T08:00:00.000Z');
+  });
+  it('the DST switch days: spring forward (2026-03-08) is still PST at midnight, fall back (2026-11-01) is still PDT', () => {
+    expect(ptMidnightIso('2026-03-08')).toBe('2026-03-08T08:00:00.000Z');
+    expect(ptMidnightIso('2026-11-01')).toBe('2026-11-01T07:00:00.000Z');
+    // a 23h day and a 25h day, measured midnight to midnight
+    const h = (a: string, b: string) => (Date.parse(ptMidnightIso(b)) - Date.parse(ptMidnightIso(a))) / 3_600_000;
+    expect(h('2026-03-08', '2026-03-09')).toBe(23);
+    expect(h('2026-11-01', '2026-11-02')).toBe(25);
+    expect(h('2026-07-14', '2026-07-15')).toBe(24);
+  });
+  it('round-trips through ptDayKey, and the millisecond before belongs to the previous day', () => {
+    for (const d of ['2026-03-08', '2026-11-01', '2026-10-25', '2027-01-01']) {
+      const ms = Date.parse(ptMidnightIso(d));
+      expect(ptDayKey(ms)).toBe(d);
+      expect(ptDayKey(ms - 1)).toBe(prevDay(d));
+    }
+    expect(ptMidnightIso('nope')).toBe('');
+  });
+});
+
+describe('W1094 — an automatic hunt counts toward the flame only once committed', () => {
+  const started = (other: string, day: string, extra: Partial<WinRow>): WinRow => ({
+    challenger_user_id: U, partner_user_id: other, boss_id: 'the_twin_maw',
+    resolved_at: null, starts_at: ptMidnightIso(day), is_win: 0, ...extra,
+  });
+  it('uncommitted automatic days are skipped; committed ones and manual ones count', () => {
+    const rows = [
+      started('f', '2026-10-20', { auto: 1, committed: 1 }),
+      started('f', '2026-10-21', { auto: 1, committed: 0 }),     // one hunter never opened the app
+      started('f', '2026-10-22', { auto: 1, committed: null }),  // active, nothing posted yet
+      started('f', '2026-10-23', { auto: 0, committed: null }),  // a manual hunt: counts as before
+      started('f', '2026-10-24', { auto: 1, committed: true }),
+    ];
+    const p = computePacts(rows, U).f;
+    expect(p.daysBonded).toBe(3);
+    expect(p.lastDay).toBe('2026-10-24');
+    expect(p.streak).toBe(2);   // 23 + 24
+    expect(p.best).toBe(2);
+  });
+  it('rows without the W1094 fields keep their W813 meaning', () => {
+    const p = computePacts([started('g', '2026-10-24', {})], U).g;
+    expect(p.daysBonded).toBe(1);
   });
 });

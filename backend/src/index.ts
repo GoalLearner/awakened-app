@@ -95,6 +95,8 @@ import {
   handleCoopBossEmote,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
+// W1094 — automatic friend hunts: the opt-out switch + the two cron sweeps (settle, create).
+import { handleCoopAutoOptOut, sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 // W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
 import { sweepWinBackPushes } from './lib/win-back';
 // W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
@@ -643,6 +645,9 @@ export default {
             // computed from the durable instance history (so both friends agree).
             // Matched before the /:id detail route; 'pacts' can't be an :id (8+ hex).
             response = await handleCoopPacts(request, env, session);
+          } else if (path === '/v1/coop-boss/auto/optout' && (method === 'POST' || method === 'DELETE')) {
+            // W1094 — switch automatic hunts with one friend (or everything, '*') off / back on.
+            response = await handleCoopAutoOptOut(request, env, session, method === 'DELETE');
           } else if (COOP_BOSS_ACTION_RE.test(path) && method === 'POST') {
             const match = path.match(COOP_BOSS_ACTION_RE)!;
             const instanceId = match[1];
@@ -752,6 +757,11 @@ export default {
       // claim. Both partners get the evening warning while entering a hunt
       // can still save the flame.
       ctx.waitUntil(sweepPactFlameRisk(env).then(() => undefined));
+      // W1094 — settle every active co-op hunt server-side (win the moment the goal is met,
+      // defeat once the window closes), then make today's automatic hunt for every walking
+      // friend pair that has none yet. Both idempotent (status guard; (pair_key, hunt_day)).
+      ctx.waitUntil(sweepCoopResolve(env, ctx).then(() => undefined));
+      ctx.waitUntil(sweepCoopAutoHunts(env, ctx).then(() => undefined));
     }
   },
 } satisfies ExportedHandler<Env>;
