@@ -50,6 +50,14 @@ const JOBS = [
   { src: 'circlet_of_lucid_sleep.png',       dst: 'assets/items/circlet_of_lucid_sleep.png',        kind: 'item' },
   { src: 'shroud_of_the_dreaming_court.png', dst: 'assets/items/shroud_of_the_dreaming_court.png',  kind: 'item' },
   { src: 'pendant_of_the_seventh_hour.png',  dst: 'assets/items/pendant_of_the_seventh_hour.png',   kind: 'item' },
+  // W1104 — the D, B and A steps trios (Nano Banana Pro via C:\dev\videoforge\awk-trio-bosses.mjs;
+  // their drops pool existing relics, so no item art).
+  { src: 'the-crossroads-hound.png',          dst: 'assets/bosses/the-crossroads-hound.png',          kind: 'boss' },
+  { src: 'the-crossroads-hound-summons.png',  dst: 'assets/bosses/the-crossroads-hound-summons.png',  kind: 'boss' },
+  { src: 'the-triune-sentinel.png',           dst: 'assets/bosses/the-triune-sentinel.png',           kind: 'boss' },
+  { src: 'the-triune-sentinel-summons.png',   dst: 'assets/bosses/the-triune-sentinel-summons.png',   kind: 'boss' },
+  { src: 'the-trinity-colossus.png',          dst: 'assets/bosses/the-trinity-colossus.png',          kind: 'boss' },
+  { src: 'the-trinity-colossus-summons.png',  dst: 'assets/bosses/the-trinity-colossus-summons.png',  kind: 'boss' },
 ];
 
 fs.mkdirSync('art-originals', { recursive: true });

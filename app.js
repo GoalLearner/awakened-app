@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.18';   // W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.18-w1103'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.18-w1104'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -900,6 +900,48 @@
       archetype:  'caster',
       statDomain: 'INT',
       dropTable:  { ultra_rare: 0.25, rare: 0.55 },
+    },
+    // W1104 — the D, B and A steps trios' drop sources (owner 2026-10-27). No relics of their
+    // own yet: each pools its rank gate's spoils through the W693 override, as the Cloven
+    // Titan does, at its rank's co-op rates. Portraits + summons plates: assets/bosses/.
+    the_crossroads_hound: {
+      id:         'the_crossroads_hound',
+      name:       'The Crossroads Hound',
+      rank:       'D',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'VIT',
+      dropTable:  { ultra_rare: 0.24, rare: 0.55 },
+      pool: {
+        ultra_rare: ['roadwardens_harness', 'titan_oathblade', 'horizon_step_ring', 'crown_of_deep_rest'],
+        rare:       ['milestone_cowl', 'longroad_grips', 'wardens_plate', 'glass_path_boots', 'tyrants_sleep_mask'],
+      },
+    },
+    the_triune_sentinel: {
+      id:         'the_triune_sentinel',
+      name:       'The Triune Sentinel',
+      rank:       'B',
+      coopOnly:   true,
+      archetype:  'sustainer',
+      statDomain: 'WILL',
+      dropTable:  { ultra_rare: 0.30, rare: 0.55 },
+      pool: {
+        ultra_rare: ['the_hollow_crown', 'the_choirmasters_vestment', 'gauntlets_of_ten_thousand_days', 'amulet_of_the_kept_word', 'ember_ledger_of_the_patient_flame'],
+        rare:       ['the_monarchs_writ', 'crownpiercer', 'the_discordant_crown', 'the_sundered_grips', 'the_antiphon_striders', 'hammerfall_warmaul', 'ring_of_the_unbroken_vow', 'boots_of_the_long_road'],
+      },
+    },
+    the_trinity_colossus: {
+      id:         'the_trinity_colossus',
+      name:       'The Trinity Colossus',
+      rank:       'A',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'STR',
+      dropTable:  { ultra_rare: 0.32, rare: 0.58 },
+      pool: {
+        ultra_rare: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring', 'duskforge_greatblade', 'aetherspire_staff', 'wraithwind_bow', 'forgewarden_gauntlets'],
+        rare:       ['band_of_the_roadkeeper', 'restplate_of_the_wanderer', 'nightcrown_of_the_climb', 'ascent_worn_cloak', 'anvilrest_cuirass', 'charm_of_the_emberkeeper'],
+      },
     },
     // W686/W703 — the S-rank endgame raid drop source. mythic 0.01 = a FLAT 1%
     // chance of ANY mega-rare per kill (owner W703: 1/100 dungeons, no mercy),
@@ -27807,6 +27849,13 @@
     // W822 failure again). Written for someone UPDATING, so the new onboarding is left out (they
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
+    // W1104 — 3.0.18: a steps trio at every rank D to A (the Court eased to 21,000).
+    '3.0.18': {
+      subtitle: 'A trio hunt at every rank.',
+      items: [
+        { emoji: '', title: 'Trio hunts at every rank', description: "D, C, B and A each have a hunt for three: 16,000, 21,000, 24,000 and 27,000 steps in a day, walked between you and two friends." },
+      ],
+    },
     // W1097 — 3.0.17: the automatic friend hunts (W1094). Every hunter with a friend meets them.
     // W1098 — then the Wardrobe: the seven top-tier looks are earned, every background is free.
     '3.0.17': {
@@ -59379,6 +59428,29 @@
       coopVictoryTitle:'THE MARCH HALTS',
       coopDefeatTitle: 'THE COLUMN MARCHES ON',
     },
+    // W1104 — the D-rank steps trio (owner 2026-10-27: 16,000 in 24h). Reward = floor(solo D
+    // 100 / 3) = 33 per hunter; MUST mirror the server COOP_BOSS_CFG. Name/art placeholders;
+    // drops pool the D gate (BOSSES stub).
+    the_crossroads_hound: {
+      id:              'the_crossroads_hound',
+      name:            'The Crossroads Hound',
+      rank:            'D',
+      partySize:       3,
+      artId:           'the_crossroads_hound',
+      dropSourceBoss:  'the_crossroads_hound',
+      coopGoalSteps:   16000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 33,
+      coopWindowHours: 24,
+      statDomain:      'VIT',
+      flavorShort:     'Three roads meet where it waits. Take one each.',
+      flavorLong:      'It sleeps where three roads meet and wakes the moment anyone sets foot on one. Whichever road you take, it runs the other two. Come with two allies, take a road apiece, and leave it nowhere to run.',
+      killCondShort:   'Three hunters: 16,000 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 16,000 verified steps between the three of you. All three hunters are credited the kill.',
+      coopVictoryTitle:'THE CROSSROADS ARE CLEAR',
+      coopDefeatTitle: 'THE HOUND STILL HUNTS',
+    },
     // W397 — C-rank duo hunt. Steps, but a far longer road than the E-rank.
     the_coursing_dread: {
       id:              'the_coursing_dread',
@@ -59466,6 +59538,29 @@
       coopVictoryTitle:'THE CHOIR IS SILENCED',
       coopDefeatTitle: 'THE CHOIR HOLDS',
     },
+    // W1104 — the B-rank steps trio (owner 2026-10-27: 24,000 in 24h). Reward = floor(solo B
+    // 400 / 3) = 133 per hunter; MUST mirror the server. Name/art placeholders; drops pool the
+    // B gate.
+    the_triune_sentinel: {
+      id:              'the_triune_sentinel',
+      name:            'The Triune Sentinel',
+      rank:            'B',
+      partySize:       3,
+      artId:           'the_triune_sentinel',
+      dropSourceBoss:  'the_triune_sentinel',
+      coopGoalSteps:   24000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 133,
+      coopWindowHours: 24,
+      statDomain:      'WILL',
+      flavorShort:     'Three gates, one watcher. It cannot hold them all at once.',
+      flavorLong:      'It stands where three gates open onto the same dark, and no one has ever passed it, because it has only ever had to watch one gate at a time. Three hunters, three gates, all at once, and the Sentinel has to choose.',
+      killCondShort:   'Three hunters: 24,000 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 24,000 verified steps between the three of you. All three hunters are credited the kill.',
+      coopVictoryTitle:'THE SENTINEL IS BLINDED',
+      coopDefeatTitle: 'THE SENTINEL KEEPS ITS WATCH',
+    },
     // W853 (v3 V3b) — the A-rank co-op duo: the catalog jumped B→S, so the
     // rank most A-hunters spend months in had no pact hunt at all. First
     // 48h dual-metric duo; goals MUST mirror the server COOP_BOSS_CFG entry.
@@ -59490,6 +59585,29 @@
       coopVictoryTitle:'THE WOUND IS CLOSED',
       coopDefeatTitle: 'THE HALVES STILL WALK',
     },
+    // W1104 — the A-rank steps trio (owner 2026-10-27: 27,000 in 24h). Reward = floor(solo A
+    // 800 / 3) = 266 per hunter; MUST mirror the server. Name/art placeholders; drops pool the
+    // A gate (the Cloven Titan's pool).
+    the_trinity_colossus: {
+      id:              'the_trinity_colossus',
+      name:            'The Trinity Colossus',
+      rank:            'A',
+      partySize:       3,
+      artId:           'the_trinity_colossus',
+      dropSourceBoss:  'the_trinity_colossus',
+      coopGoalSteps:   27000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 266,
+      coopWindowHours: 24,
+      statDomain:      'STR',
+      flavorShort:     'Three giants, one body. Keep pace with all three.',
+      flavorLong:      'Three giants were bound into one body to hold the last gate shut. Each still walks its own way inside it, and no lone hunter can keep pace with all three. Bring two allies, match it stride for stride, and it comes apart.',
+      killCondShort:   'Three hunters: 27,000 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 27,000 verified steps between the three of you. All three hunters are credited the kill.',
+      coopVictoryTitle:'THE COLOSSUS COMES APART',
+      coopDefeatTitle: 'THE COLOSSUS STILL STANDS',
+    },
     // W677 — first TRIO hunt (partySize 3: you + 2 hand-picked friends). Owner spec:
     // C-rank, 27,000 combined steps. Reward = floor(solo C 200 / 3) = 66/hunter
     // (thirds split; MUST mirror server COOP_BOSS_CFG). W678 — the Court now has
@@ -59503,7 +59621,7 @@
       partySize:       3,
       artId:           'the_threefold_court',
       dropSourceBoss:  'the_threefold_court',
-      coopGoalSteps:   27000,
+      coopGoalSteps:   21000,   // W1104 — owner 2026-10-27: 27,000 → 21,000 (mirrors the server)
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 66,
@@ -59511,8 +59629,8 @@
       statDomain:      'INT',
       flavorShort:     'Three thrones, one hunger. It takes three hunters to starve it.',
       flavorLong:      'Three crowned shades hold court in the deep, and their hunger is triune: whatever road one hunter takes, two thrones still watch the others. No pair has ever unseated them. Bring a third — split the court’s gaze three ways — and walk the kingdom out from under it.',
-      killCondShort:   'Three hunters: 27,000 combined steps in 24h',
-      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 27,000 verified steps between the three of you. All three hunters are credited the kill.',
+      killCondShort:   'Three hunters: 21,000 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 21,000 verified steps between the three of you. All three hunters are credited the kill.',
       coopVictoryTitle:'THE COURT IS CAST DOWN',
       coopDefeatTitle: 'THE COURT STILL REIGNS',
     },

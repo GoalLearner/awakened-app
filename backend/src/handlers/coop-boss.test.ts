@@ -23,6 +23,8 @@ import {
   handleRaidStart,
   handleCoopBossEmote,
   sweepPendingSummonsReminders,
+  COOP_BOSS_CFG,
+  COOP_BOSS_NAMES,
 } from './coop-boss';
 
 const mockNotify = vi.mocked(notifyUser);
@@ -296,6 +298,37 @@ describe('W677 — trio create validation', () => {
     expect(insert).toMatch(/partner2_user_id/);
     expect(body.instance?.party_size).toBe(3);
     expect(body.instance?.partner2?.user_id).toBe('u3');
+  });
+});
+
+// ── W1104 — a steps trio at every rank D to A (owner 2026-10-27) ─────────────
+describe('W1104 — the steps trios', () => {
+  it('D 16,000 · C 21,000 · B 24,000 · A 27,000 in 24h, three hunters, a third of the solo kill each', () => {
+    const trios = Object.entries(COOP_BOSS_CFG)
+      .filter(([, c]) => c.partySize === 3)
+      .map(([id, c]) => [id, c.rank, c.goalSteps, c.rewardSouls, c.windowHours, c.metric]);
+    expect(trios).toEqual([
+      ['the_crossroads_hound', 'D', 16000, 33, 24, 'steps'],
+      ['the_threefold_court', 'C', 21000, 66, 24, 'steps'],
+      ['the_triune_sentinel', 'B', 24000, 133, 24, 'steps'],
+      ['the_trinity_colossus', 'A', 27000, 266, 24, 'steps'],
+    ]);
+    for (const [id] of trios) expect(COOP_BOSS_NAMES[id as string]).toBeTruthy();
+  });
+
+  it.each(['the_crossroads_hound', 'the_triune_sentinel', 'the_trinity_colossus'])('%s takes two allies', async (bossId) => {
+    const one = await handleCoopBossCreate(
+      new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify({ partner_user_id: 'u2', boss_id: bossId }) }),
+      makeEnv(makeDb({})), session('u1'));
+    expect(one.status).toBe(400);
+    expect(((await one.json()) as { error: string }).error).toBe('MISSING_PARTNER');
+
+    const log: string[] = [];
+    const two = await handleCoopBossCreate(
+      new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify({ partner_user_id: 'u2', partner2_user_id: 'u3', boss_id: bossId }) }),
+      makeEnv(makeDb({ instance: { ...TRIO_PENDING_ROW, boss_id: bossId } }, log)), session('u1'));
+    expect(two.status).toBe(200);
+    expect(log.find((s) => s.includes('INSERT INTO coop_boss_instances'))).toMatch(/partner2_user_id/);
   });
 });
 

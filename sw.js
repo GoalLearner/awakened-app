@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.388';
+const CACHE_VERSION = 'v6.389';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -316,6 +316,12 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-sundered-choir-summons.png',
   '/assets/bosses/the-threefold-court.png',
   '/assets/bosses/the-threefold-court-summons.png',
+  '/assets/bosses/the-crossroads-hound.png',          // W1104 — the D, B and A steps trios
+  '/assets/bosses/the-crossroads-hound-summons.png',
+  '/assets/bosses/the-triune-sentinel.png',
+  '/assets/bosses/the-triune-sentinel-summons.png',
+  '/assets/bosses/the-trinity-colossus.png',
+  '/assets/bosses/the-trinity-colossus-summons.png',
   '/assets/bosses/the-tideless-marcher.png',
   '/assets/bosses/the-twin-maw.png',
   '/assets/bosses/the-twin-maw-summons.png',

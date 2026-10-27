@@ -85,7 +85,13 @@ export const COOP_BOSS_CFG: Record<
   // Owner spec: C-rank, 27,000 COMBINED steps. rewardSouls = floor(solo C 200 / 3)
   // = 66 per hunter (thirds split — the trio analog of the W648 duo half-split).
   // NAME/ART ARE PLACEHOLDERS pending the owner's boss design; id is stable.
-  the_threefold_court:  { rank: 'C', goalSteps: 27000, rewardSouls: 66, windowHours: 24, metric: 'steps', partySize: 3 },
+  // W1104 — owner 2026-10-27: a steps trio at every rank D to A — D 16,000, C 21,000 (the
+  // Court, was 27,000), B 24,000, A 27,000, each in 24h, each paying a third of the solo kill
+  // for its rank (D 100 → 33, B 400 → 133, A 800 → 266). New names/art are placeholders too.
+  the_crossroads_hound: { rank: 'D', goalSteps: 16000, rewardSouls: 33,  windowHours: 24, metric: 'steps', partySize: 3 },
+  the_threefold_court:  { rank: 'C', goalSteps: 21000, rewardSouls: 66,  windowHours: 24, metric: 'steps', partySize: 3 },
+  the_triune_sentinel:  { rank: 'B', goalSteps: 24000, rewardSouls: 133, windowHours: 24, metric: 'steps', partySize: 3 },
+  the_trinity_colossus: { rank: 'A', goalSteps: 27000, rewardSouls: 266, windowHours: 24, metric: 'steps', partySize: 3 },
   // W686 — the S-rank endgame raid: first 72-HOUR window + first steps+SLEEP dual.
   // Owner spec: duo, 60,000 combined steps AND 42h combined sleep across 3 days
   // (exactly 7h/night/hunter — the discipline the Crown refused). goalFlights
@@ -112,7 +118,10 @@ export const COOP_BOSS_NAMES: Record<string, string> = {
   the_gaunt_wardens: 'The Gaunt Wardens',
   the_sundered_choir: 'The Sundered Choir',
   the_cloven_titan: 'The Cloven Titan',
+  the_crossroads_hound: 'The Crossroads Hound',
   the_threefold_court: 'The Threefold Court',
+  the_triune_sentinel: 'The Triune Sentinel',
+  the_trinity_colossus: 'The Trinity Colossus',
   the_sleepless_crown: 'The Sleepless Crown',
   the_grinning_god: 'The Grinning God',
 };
