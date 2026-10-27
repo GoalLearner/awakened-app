@@ -1626,6 +1626,10 @@
     if (res.status === 413) {
       return { ok: false, code: 'PAYLOAD_TOO_LARGE', detail: (data && data.detail) || 'Snapshot too large.' };
     }
+    if (res.status === 409) {
+      // W1102 — CLOUD_RICHER (W1101): the server kept a backup with far more history than this save.
+      return { ok: false, code: (data && data.error) || 'CONFLICT', detail: (data && data.detail) || 'The backup has more progress.' };
+    }
     if (res.status === 429) {
       return { ok: false, code: 'RATE_LIMITED', detail: (data && data.detail) || 'Slow down.' };
     }

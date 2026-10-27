@@ -452,6 +452,13 @@ describe('W1101 · a thin save from another device does not replace a richer bac
     expect(res.status).toBe(200);
     expect(wrote(calls)).toBe(true);
   });
+  it('a save marked fresh_start (Reset all progress, W1102) replaces the backup', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb(stored('dev_old', 34, 3 * DAY), calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', { ...post(1, 'dev_new'), fresh_start: true }), env, session('u1'));
+    expect(res.status).toBe(200);
+    expect(wrote(calls)).toBe(true);
+  });
   it('a failing check saves as before', async () => {
     const calls: Call[] = [];
     const env = makeEnv(makeDb([

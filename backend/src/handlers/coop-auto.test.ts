@@ -136,6 +136,11 @@ function makeEnv(db: D1Database): Env {
   return { DB: db, RL_COOP_WRITE: { limit: async () => ({ success: true }) } } as unknown as Env;
 }
 const ctx = { waitUntil: (_p: Promise<unknown>) => undefined } as unknown as ExecutionContext;
+// A pair is sized on this week's steps so far over the days elapsed (1 on Sunday), so the
+// fixture's numbers hold on one weekday only: the clock sits at Monday 2026-10-26, noon PST
+// (it broke on the Tuesday after it was written).
+vi.useFakeTimers({ toFake: ['Date'] });
+vi.setSystemTime(new Date('2026-10-26T19:00:00Z'));
 const today = ptDayKey(Date.now());
 const NEW = '3.0.17-w1097';
 

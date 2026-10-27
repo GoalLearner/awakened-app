@@ -31,8 +31,8 @@ const MAX_PAYLOAD_BYTES = 1024 * 1024;
 // week less history, is refused while that backup is under two weeks old. The hunter can
 // still restore it from Settings, and a restore brings back the backup's device id, so the
 // next upload passes. Uploads from the backup's own device are never refused. Reset all
-// progress makes a new device id, so a hunter who starts over on purpose goes without a
-// backup until the old one is two weeks old.
+// progress makes a new device id; from W1102 its first save says fresh_start and is taken
+// (older apps go without a backup until the old one is two weeks old).
 const RICHER_MARGIN_DAYS = 7;
 const RICHER_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -80,6 +80,7 @@ interface PostBody {
   device_id?: unknown;
   checksum?: unknown;
   state?: unknown;
+  fresh_start?: unknown;   // W1102 — Reset all progress: replace the backup on purpose
 }
 
 interface SnapshotRow {
@@ -263,7 +264,7 @@ export async function handleUserStatePost(
 
   // W1101 — keep a richer backup made on another device (see RICHER_MARGIN_DAYS). Any error
   // here saves as before: the guard must never be what stops a backup.
-  if (deviceId) {
+  if (deviceId && body.fresh_start !== true) {
     try {
       const prev = await env.DB.prepare(
         'SELECT device_id, server_updated_at FROM user_state_snapshots WHERE user_id = ?',
