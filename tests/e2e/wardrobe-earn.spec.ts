@@ -91,13 +91,14 @@ test.describe('The Wardrobe, two tabs (W1098)', () => {
     await page.evaluate(() => (window as any).__openWardrobe());
     const sh = page.locator('#wd-sheet');
     await expect(sh.locator('.wx-tab')).toHaveCount(2);
-    await expect(sh.locator('.wx-sk')).toHaveCount(7);
+    await expect(sh.locator('.wx-seven:not(.wx-rising) .wx-sk')).toHaveCount(7);   // W1105 — the Rising's nine sit below
+    await expect(sh.locator('.wx-rising .wx-sk')).toHaveCount(9);
     await expect(sh.locator('.wx-sec-h em').first()).toHaveText('1');
     await expect(sh.locator('[data-sk="voidtouched"] .wx-sk-st')).toHaveText('EARNED');
     // locked → the condition, not a shop
     await sh.locator('[data-sk="stardust"]').click();
     await expect(sh.locator('.wx-dt.open .wx-ms-c').nth(5)).toHaveText('Walk 1,000,000 steps');
-    expect(await page.evaluate(() => (window as any).__wx.state())).toMatchObject({ detail: 'sk', pages: 6 });
+    expect(await page.evaluate(() => (window as any).__wx.state())).toMatchObject({ detail: 'sk', pages: 15 });   // 6 of the seven + the Rising's 9 (W1105)
     await sh.locator('.wx-dt-x').click();
     await expect(sh.locator('.wx-dt.open')).toHaveCount(0);
     // owned → worn

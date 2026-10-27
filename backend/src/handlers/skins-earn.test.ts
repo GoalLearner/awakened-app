@@ -10,7 +10,12 @@ import {
   EARNABLE_SKINS,
   EARN_EMBER,
   EARN_VERDANT,
+  EARN_OATHBOUND,
+  EARN_THIRDBLADE,
+  EARN_TRIARCH,
+  EARN_GATEBREAKER,
   buildVersion,
+  coopFromWins,
   crashGraceDays,
   handleSkinsEarn,
   openRuns,
@@ -76,11 +81,15 @@ describe('crashGraceDays — the iOS 27 lockout (owner 2026-10-26)', () => {
 });
 
 // ── the endpoint, on a routed D1 mock ─────────────────────────────────────────
-interface Fx { owned?: string[]; opens?: { date_utc: string; build: string | null }[]; pactRows?: Record<string, unknown>[] }
+interface Fx {
+  owned?: string[]; opens?: { date_utc: string; build: string | null }[]; pactRows?: Record<string, unknown>[];
+  wins?: { boss_id: string; n: number }[]; podium?: number;   // W1105
+}
 function makeEnv(fx: Fx, writes: string[][]) {
   const all = (sql: string): unknown[] => {
     if (sql.includes('FROM skin_entitlements')) return (fx.owned ?? []).map((skin_id) => ({ skin_id }));
     if (sql.includes('FROM app_opens')) return fx.opens ?? [];
+    if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return fx.wins ?? [];
     if (sql.includes('FROM coop_boss_instances')) return fx.pactRows ?? [];
     if (sql.includes('SELECT instance_id, user_id FROM coop_boss_participants')) {
       return (fx.pactRows ?? []).map((r) => ({ instance_id: r.id, user_id: r.partner_user_id }));
@@ -91,7 +100,7 @@ function makeEnv(fx: Fx, writes: string[][]) {
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
         all: async () => ({ results: all(sql), success: true, meta: {} }),
-        first: async () => null,
+        first: async () => (sql.includes('FROM world_gates') ? { n: fx.podium ?? 0 } : null),
         run: async () => ({ success: true, meta: { changes: 1 } }),
         _sql: sql, _args: args,
       }),
@@ -165,7 +174,56 @@ describe('POST /v1/users/me/skins/earn', () => {
   });
 
   it('every earnable id is a real skin file name', () => {
-    expect(EARNABLE_SKINS.length).toBe(7);
+    expect(EARNABLE_SKINS.length).toBe(16);   // the seven + the Rising's nine (W1105)
     for (const id of EARNABLE_SKINS) expect(id).toMatch(/^avatar-skin-[a-z0-9-]+\.png$/);
+    expect(new Set(EARNABLE_SKINS).size).toBe(EARNABLE_SKINS.length);
+  });
+});
+
+// ── W1105 — the Rising ────────────────────────────────────────────────────────
+describe('coopFromWins — the co-op numbers behind the Rising', () => {
+  it('counts every win, the trio wins, and which trio ranks were won (in D-C-B-A order)', () => {
+    expect(coopFromWins([
+      { boss_id: 'the_twin_maw', n: 7 },
+      { boss_id: 'the_trinity_colossus', n: 2 },
+      { boss_id: 'the_crossroads_hound', n: 1 },
+      { boss_id: 'the_threefold_court', n: 0 },
+    ], 2)).toEqual({ wins: 10, trioWins: 3, trioRanks: ['D', 'A'], podium: 2 });
+    expect(coopFromWins([], 0)).toEqual({ wins: 0, trioWins: 0, trioRanks: [], podium: 0 });
+  });
+});
+
+describe('POST /v1/users/me/skins/earn — the Rising (W1105)', () => {
+  const trio = (n: number) => [
+    { boss_id: 'the_crossroads_hound', n }, { boss_id: 'the_threefold_court', n },
+    { boss_id: 'the_triune_sentinel', n }, { boss_id: 'the_trinity_colossus', n: 25 - 3 * n },
+  ];
+  it('the five solo ones are claimed by the phone', async () => {
+    const w: string[][] = [];
+    const solo = ['avatar-skin-huntmaster.png', 'avatar-skin-vanguard.png', 'avatar-skin-ascendant.png', 'avatar-skin-stridewalker.png', 'avatar-skin-unbroken.png'];
+    const r = await (await handleSkinsEarn(req({ claims: solo }), makeEnv({}, w), session)).json() as { granted: string[] };
+    expect(r.granted.sort()).toEqual(solo.slice().sort());
+  });
+  it('the four co-op ones cannot be claimed', async () => {
+    const w: string[][] = [];
+    const r = await (await handleSkinsEarn(req({ claims: [EARN_OATHBOUND, EARN_THIRDBLADE, EARN_TRIARCH, EARN_GATEBREAKER] }), makeEnv({}, w), session)).json() as { granted: string[] };
+    expect(r.granted).toEqual([]);
+    expect(w).toEqual([]);
+  });
+  it('the server grants them from its own wins and podiums, and reports the numbers', async () => {
+    const w: string[][] = [];
+    const r = await (await handleSkinsEarn(req({}), makeEnv({ wins: trio(1), podium: 1 }, w), session)).json() as {
+      granted: string[]; progress: { coop: { wins: number; trioWins: number; trioRanks: string[]; podium: number } };
+    };
+    expect(r.progress.coop).toEqual({ wins: 25, trioWins: 25, trioRanks: ['D', 'C', 'B', 'A'], podium: 1 });
+    expect(r.granted.sort()).toEqual([EARN_GATEBREAKER, EARN_OATHBOUND, EARN_THIRDBLADE, EARN_TRIARCH].sort());
+  });
+  it('just short of each: 9 wins, 24 trio wins, three ranks, no podium → nothing', async () => {
+    const w: string[][] = [];
+    const r = await (await handleSkinsEarn(req({}), makeEnv({ wins: [{ boss_id: 'the_twin_maw', n: 1 }, { boss_id: 'the_threefold_court', n: 8 }] }, w), session)).json() as { granted: string[] };
+    expect(r.granted).toEqual([]);
+    const w2: string[][] = [];
+    const r2 = await (await handleSkinsEarn(req({}), makeEnv({ wins: [{ boss_id: 'the_crossroads_hound', n: 8 }, { boss_id: 'the_threefold_court', n: 8 }, { boss_id: 'the_triune_sentinel', n: 8 }] }, w2), session)).json() as { granted: string[] };
+    expect(r2.granted).toEqual([EARN_OATHBOUND]);
   });
 });

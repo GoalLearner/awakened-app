@@ -20,9 +20,22 @@
  * it from app_opens, including the iOS 27 crash grace (owner 2026-10-26): a hunter locked out by
  * 3.0.15 has every day from 2026-10-23 until their first open of 3.0.16 or later counted as opened.
  *
+ * W1105 (owner 2026-10-27) — nine more, the Rising, for milestones on the way up:
+ *   Huntmaster          slay 50 bosses                                    claim
+ *   The Vanguard        reach A rank                                      claim
+ *   The Ascendant       clear Floor 50 of the Ascent                      claim
+ *   Stridewalker        walk 15,000 steps in one day                      claim
+ *   The Unbroken        a perfect month (every vow, 30 days in a row)     claim
+ *   The Oathbound       win 10 hunts with friends                         SERVER ONLY (coop_boss_instances)
+ *   The Third Blade     win 25 trio hunts                                 SERVER ONLY
+ *   The Triarch         win a trio at every rank, D to A                  SERVER ONLY
+ *   Gatebreaker         finish top 3 on a Worldgate                       SERVER ONLY (world_gates.kill_json)
+ * Co-op wins and Worldgate podiums are the server's own records, so it counts them itself.
+ *
  * Body: { claims?: string[] } (skin ids such as 'avatar-skin-stardust.png').
  * Returns { ok, skins: owned ids, granted: ids newly written by THIS call,
- *           progress: { opened: { best, current }, flame: { best } } }.
+ *           progress: { opened: { best, current }, flame: { best },
+ *                       coop: { wins, trioWins, trioRanks: rank letters won, podium } } }.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -30,9 +43,14 @@ import { jsonOk, jsonError, readJsonObject } from '../lib/responses';
 import { readEntitlements } from './iap-entitlements';
 import { computePacts } from '../lib/pact-streak';
 import { loadStartedPactRows } from './coop-pacts';
+import { COOP_BOSS_CFG } from './coop-boss';
 
 export const EARN_VERDANT = 'avatar-skin-verdant.png';
 export const EARN_EMBER = 'avatar-skin-emberforged.png';
+export const EARN_OATHBOUND = 'avatar-skin-oathbound.png';
+export const EARN_THIRDBLADE = 'avatar-skin-thirdblade.png';
+export const EARN_TRIARCH = 'avatar-skin-triarch.png';
+export const EARN_GATEBREAKER = 'avatar-skin-gatebreaker.png';
 /** Every earnable skin id. Ids are the catalog file names skin_entitlements already uses. */
 export const EARNABLE_SKINS: readonly string[] = [
   EARN_EMBER,
@@ -42,11 +60,26 @@ export const EARNABLE_SKINS: readonly string[] = [
   'avatar-skin-nullprotocol-2.png',
   'avatar-skin-dawnbringer.png',
   'avatar-skin-stardust.png',
+  // W1105 — the Rising
+  'avatar-skin-huntmaster.png',
+  'avatar-skin-vanguard.png',
+  'avatar-skin-ascendant.png',
+  'avatar-skin-stridewalker.png',
+  'avatar-skin-unbroken.png',
+  EARN_OATHBOUND,
+  EARN_THIRDBLADE,
+  EARN_TRIARCH,
+  EARN_GATEBREAKER,
 ];
-/** The one the phone may not claim: only the server knows the days the app was opened. */
-const SERVER_ONLY = new Set([EARN_VERDANT]);
+/** The ones the phone may not claim: the server alone keeps app opens, co-op wins and podiums. */
+const SERVER_ONLY = new Set([EARN_VERDANT, EARN_OATHBOUND, EARN_THIRDBLADE, EARN_TRIARCH, EARN_GATEBREAKER]);
 export const OPEN_RUN_GOAL = 30;
 export const FLAME_GOAL = 30;
+export const COOP_WIN_GOAL = 10;
+export const TRIO_WIN_GOAL = 25;
+export const PODIUM_GOAL = 1;
+/** The trio ranks the Triarch asks for, one won trio each. */
+export const TRIARCH_RANKS: readonly string[] = ['D', 'C', 'B', 'A'];
 
 /** The iOS 27 crash (3.0.15, released 2026-10-23): the first day a locked-out hunter lost. */
 export const CRASH_FIRST_DAY = '2026-10-23';
@@ -127,6 +160,48 @@ async function flameProgress(env: Env, userId: string): Promise<{ best: number }
   }
 }
 
+export interface CoopProgress { wins: number; trioWins: number; trioRanks: string[]; podium: number }
+
+/** Won co-op hunts by boss (rows of { boss_id, n }) → the Rising's co-op numbers. Pure. */
+export function coopFromWins(rows: { boss_id: string; n: number }[], podium: number): CoopProgress {
+  let wins = 0;
+  let trioWins = 0;
+  const ranks = new Set<string>();
+  for (const r of rows) {
+    const n = Number(r.n) | 0;
+    wins += n;
+    const cfg = COOP_BOSS_CFG[r.boss_id];
+    if (cfg && cfg.partySize === 3 && n > 0) {
+      trioWins += n;
+      ranks.add(cfg.rank);
+    }
+  }
+  return { wins, trioWins, trioRanks: TRIARCH_RANKS.filter((k) => ranks.has(k)), podium: Number(podium) | 0 };
+}
+
+/** A hunt counts for the challenger and for every ally who joined it, once it was won. */
+async function coopProgress(env: Env, userId: string): Promise<CoopProgress> {
+  try {
+    const [wins, gates] = await Promise.all([
+      env.DB.prepare(
+        `SELECT i.boss_id AS boss_id, COUNT(*) AS n FROM coop_boss_instances i
+          WHERE i.status = 'completed' AND i.result = 'success'
+            AND (i.challenger_user_id = ?1 OR i.partner_user_id = ?1 OR i.partner2_user_id = ?1
+                 OR EXISTS (SELECT 1 FROM coop_boss_participants p
+                             WHERE p.instance_id = i.id AND p.user_id = ?1 AND p.joined_at IS NOT NULL))
+          GROUP BY i.boss_id`,
+      ).bind(userId).all<{ boss_id: string; n: number }>(),
+      env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM world_gates g, json_each(g.kill_json, '$.mvps') m
+          WHERE g.kill_json IS NOT NULL AND json_extract(m.value, '$.user_id') = ?`,
+      ).bind(userId).first<{ n: number }>(),
+    ]);
+    return coopFromWins(wins.results ?? [], gates ? gates.n : 0);
+  } catch {
+    return { wins: 0, trioWins: 0, trioRanks: [], podium: 0 };
+  }
+}
+
 export async function handleSkinsEarn(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_USER_ACCOLADES_READ.limit({ key: 'earn:' + session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
@@ -136,13 +211,18 @@ export async function handleSkinsEarn(request: Request, env: Env, session: Sessi
     raw.filter((c): c is string => typeof c === 'string' && EARNABLE_SKINS.includes(c) && !SERVER_ONLY.has(c)),
   );
 
-  const [ent, opened, flame] = await Promise.all([
+  const [ent, opened, flame, coop] = await Promise.all([
     readEntitlements(env, session.userId),
     openProgress(env, session.userId),
     flameProgress(env, session.userId),
+    coopProgress(env, session.userId),
   ]);
   if (opened.best >= OPEN_RUN_GOAL) claims.add(EARN_VERDANT);
   if (flame.best >= FLAME_GOAL) claims.add(EARN_EMBER);
+  if (coop.wins >= COOP_WIN_GOAL) claims.add(EARN_OATHBOUND);
+  if (coop.trioWins >= TRIO_WIN_GOAL) claims.add(EARN_THIRDBLADE);
+  if (coop.trioRanks.length === TRIARCH_RANKS.length) claims.add(EARN_TRIARCH);
+  if (coop.podium >= PODIUM_GOAL) claims.add(EARN_GATEBREAKER);
 
   const owned = new Set(ent.skins);
   const want = Array.from(claims).filter((id) => !owned.has(id));
@@ -163,5 +243,5 @@ export async function handleSkinsEarn(request: Request, env: Env, session: Sessi
       }
     });
   }
-  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame } });
+  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame, coop } });
 }

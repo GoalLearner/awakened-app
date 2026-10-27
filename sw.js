@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.389';
+const CACHE_VERSION = 'v6.390';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -46,6 +46,15 @@ const PRECACHE_ASSETS = [
   '/assets/busts/avatar-skin-frostweaver-bust.webp',
   '/assets/busts/avatar-skin-tempest-bust.webp',
   '/assets/busts/avatar-skin-verdant-bust.webp',
+  '/assets/busts/avatar-skin-huntmaster-bust.webp',     // W1105 — the Rising
+  '/assets/busts/avatar-skin-vanguard-bust.webp',
+  '/assets/busts/avatar-skin-ascendant-bust.webp',
+  '/assets/busts/avatar-skin-stridewalker-bust.webp',
+  '/assets/busts/avatar-skin-unbroken-bust.webp',
+  '/assets/busts/avatar-skin-oathbound-bust.webp',
+  '/assets/busts/avatar-skin-thirdblade-bust.webp',
+  '/assets/busts/avatar-skin-triarch-bust.webp',
+  '/assets/busts/avatar-skin-gatebreaker-bust.webp',
   '/assets/busts/avatar-skin-bloodmoon-bust.webp',
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',

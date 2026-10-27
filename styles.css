@@ -35276,6 +35276,9 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-seven { display: grid; grid-template-columns: repeat(8, minmax(0,1fr)); row-gap: 12px; }
 #wd-sheet.wx .wx-sk { grid-column: span 2; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 2px 0 4px; border-radius: 14px; transition: transform .15s; }
 #wd-sheet.wx .wx-sk:first-child { grid-column: 2 / span 2; }
+/* W1105 — the Rising: three rows of three under the seven */
+#wd-sheet.wx .wx-rising { grid-template-columns: repeat(6, minmax(0,1fr)); }
+#wd-sheet.wx .wx-rising .wx-sk:first-child { grid-column: span 2; }
 .wx-sk:active, .wx-lk:active { transform: scale(.94); }
 .wx-sk-port { position: relative; width: 80px; height: 80px; }
 .wx-ring { position: absolute; inset: 0; transform: rotate(-90deg); overflow: visible; }
