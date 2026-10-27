@@ -102,6 +102,7 @@ import { handleCoopAutoOptOut, sweepCoopAutoHunts, sweepCoopResolve } from './ha
 import { sweepWinBackPushes } from './lib/win-back';
 // W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
+import { sweepPushOutbox } from './lib/push-outbox';
 // W845 (Train 5, E2) — weekly-hunger owner override read.
 import { handleWeeklyHungerGet } from './handlers/weekly-hunger';
 // W867 (Wave 2 Train B) — THE OATHBOUND mentor system.
@@ -766,6 +767,8 @@ export default {
       // friend pair that has none yet. Both idempotent (status guard; (pair_key, hunt_day)).
       ctx.waitUntil(sweepCoopResolve(env, ctx).then(() => undefined));
       ctx.waitUntil(sweepCoopAutoHunts(env, ctx).then(() => undefined));
+      // W1101 — the owner's one-off pushes (push_outbox, 0070); each row claimed before it sends.
+      ctx.waitUntil(sweepPushOutbox(env).then(() => undefined));
     }
   },
 } satisfies ExportedHandler<Env>;

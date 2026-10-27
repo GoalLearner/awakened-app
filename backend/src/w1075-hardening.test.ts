@@ -392,6 +392,96 @@ describe('W1076 · the cloud save skips unchanged blobs and accepts gzip', () =>
   });
 });
 
+// ── W1101 — a phone that started over keeps its hands off a richer backup ────────────────
+describe('W1101 · a thin save from another device does not replace a richer backup', () => {
+  const days = (n: number, from = '2026-09-01') => {
+    const o: Record<string, Record<string, boolean>> = {};
+    const d = new Date(from + 'T12:00:00Z');
+    for (let i = 0; i < n; i++) { o[d.toISOString().slice(0, 10)] = { h1: true }; d.setUTCDate(d.getUTCDate() + 1); }
+    return o;
+  };
+  const save = (n: number) => ({ keys: { hb_completions: JSON.stringify(days(n)) } });
+  const post = (n: number, deviceId: string) => ({
+    state_version: 1, client_updated_at: new Date().toISOString(), checksum: 'c-' + deviceId + n, device_id: deviceId, state: save(n),
+  });
+  const stored = (deviceId: string, n: number, ageMs: number) => [
+    { re: /UPDATE user_state_snapshots SET server_updated_at/, run: () => 0 },
+    { re: /SELECT device_id, server_updated_at FROM user_state_snapshots/, first: () => ({ device_id: deviceId, server_updated_at: Date.now() - ageMs }) },
+    { re: /SELECT state_json FROM user_state_snapshots/, first: () => ({ state_json: JSON.stringify(save(n)) }) },
+  ];
+  const DAY = 24 * 60 * 60 * 1000;
+  const wrote = (calls: Call[]) => calls.some((c) => /INSERT INTO user_state_snapshots/.test(c.sql));
+
+  it('history days count the hot blob and the archived months once each, never the auto twin', async () => {
+    const { historyDays } = await import('./handlers/user-state');
+    expect(historyDays({ keys: {
+      hb_completions: JSON.stringify(days(10, '2026-10-01')),
+      hb_completions_arch_2026_09: JSON.stringify(days(30, '2026-09-01')),
+      hb_completions_auto_arch_2026_08: JSON.stringify(days(31, '2026-08-01')),
+      hb_completions_arch_2026_10: JSON.stringify(days(3, '2026-10-01')),   // overlaps the hot blob
+    } })).toBe(40);
+    expect(historyDays({ keys: { hb_completions: 'not json' } })).toBe(0);
+    expect(historyDays(null)).toBe(0);
+  });
+  it('another device with a week less history is refused and nothing is written', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb(stored('dev_old', 34, 3 * DAY), calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', post(1, 'dev_new')), env, session('u1'));
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error?: string }).error).toBe('CLOUD_RICHER');
+    expect(wrote(calls)).toBe(false);
+  });
+  it('the backup\'s own device always saves, however thin', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb(stored('dev_old', 34, 3 * DAY), calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', post(1, 'dev_old')), env, session('u1'));
+    expect(res.status).toBe(200);
+    expect(wrote(calls)).toBe(true);
+  });
+  it('another device within a week of the backup\'s history saves', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb(stored('dev_old', 34, 3 * DAY), calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', post(27, 'dev_new')), env, session('u1'));
+    expect(res.status).toBe(200);
+    expect(wrote(calls)).toBe(true);
+  });
+  it('a backup two weeks old no longer holds back the new device', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb(stored('dev_old', 34, 15 * DAY), calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', post(1, 'dev_new')), env, session('u1'));
+    expect(res.status).toBe(200);
+    expect(wrote(calls)).toBe(true);
+  });
+  it('a failing check saves as before', async () => {
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb([
+      { re: /UPDATE user_state_snapshots SET server_updated_at/, run: () => 0 },
+      { re: /SELECT device_id, server_updated_at FROM user_state_snapshots/, first: () => { throw new Error('D1 down'); } },
+    ], calls));
+    const res = await handleUserStatePost(jsonReq('/v1/users/me/state', post(1, 'dev_new')), env, session('u1'));
+    expect(res.status).toBe(200);
+    expect(wrote(calls)).toBe(true);
+  });
+});
+
+// ── W1101 — the owner's push outbox ──────────────────────────────────────────────────────
+describe('W1101 · the push outbox sends each row once', () => {
+  it('claims a row before sending it and skips a row another tick already claimed', async () => {
+    const { sweepPushOutbox } = await import('./lib/push-outbox');
+    const calls: Call[] = [];
+    const env = makeEnv(makeDb([
+      { re: /SELECT id, user_id, title, body, type FROM push_outbox/, all: () => [
+        { id: 1, user_id: 'u1', title: 'T', body: 'B', type: null },
+        { id: 2, user_id: 'u2', title: 'T2', body: 'B2', type: 'notice' },
+      ] },
+      { re: /UPDATE push_outbox SET sent_at/, run: (b) => (b[1] === 2 ? 0 : 1) },
+    ], calls));
+    expect(await sweepPushOutbox(env)).toBe(1);
+    expect(mockNotify).toHaveBeenCalledTimes(1);
+    expect(mockNotify).toHaveBeenCalledWith(env, 'u1', { title: 'T', body: 'B', type: 'notice' });
+  });
+});
+
 // ── W1075 — RevenueCat TRANSFER ──────────────────────────────────────────────────────────
 describe('W1075 · a transferred subscription ends the old account\'s membership', () => {
   it('TRANSFER → the transferred_from accounts expire now', async () => {

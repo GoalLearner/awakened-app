@@ -24,6 +24,33 @@ import { jsonOk, jsonError } from '../lib/responses';
 // (X-State-Encoding: gzip), which is decoded here and measured after decoding.
 const MAX_PAYLOAD_BYTES = 1024 * 1024;
 
+// W1101 — a phone that started over must not replace a backup holding far more history. A
+// reinstall that tapped Cancel on the restore prompt uploaded its fresh state on its next
+// change, and the backup it replaced was the only copy (Zynfandel, 3.0.16, 2026-10-26).
+// An upload from a DIFFERENT device than the one that made the backup, carrying more than a
+// week less history, is refused while that backup is under two weeks old. The hunter can
+// still restore it from Settings, and a restore brings back the backup's device id, so the
+// next upload passes. Uploads from the backup's own device are never refused. Reset all
+// progress makes a new device id, so a hunter who starts over on purpose goes without a
+// backup until the old one is two weeks old.
+const RICHER_MARGIN_DAYS = 7;
+const RICHER_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** Distinct days in a save's completion history: the hot blob plus its archived month chunks. */
+export function historyDays(state: unknown): number {
+  const keys = state && typeof state === 'object' ? (state as { keys?: unknown }).keys : null;
+  if (!keys || typeof keys !== 'object') return 0;
+  const days = new Set<string>();
+  for (const [k, v] of Object.entries(keys as Record<string, unknown>)) {
+    if ((k !== 'hb_completions' && !k.startsWith('hb_completions_arch_')) || typeof v !== 'string') continue;
+    try {
+      const o = JSON.parse(v);
+      if (o && typeof o === 'object' && !Array.isArray(o)) for (const d of Object.keys(o)) days.add(d);
+    } catch { /* an unreadable chunk counts nothing */ }
+  }
+  return days.size;
+}
+
 /** W1076 — gunzip a buffer, refusing anything that inflates past `max` bytes. */
 async function gunzipCapped(raw: ArrayBuffer, max: number): Promise<string> {
   const stream = new Response(raw).body!.pipeThrough(new DecompressionStream('gzip'));
@@ -231,6 +258,27 @@ export async function handleUserStatePost(
       }
     } catch (err) {
       console.error('user-state checksum short-circuit failed (saving in full):', err instanceof Error ? err.message : err);
+    }
+  }
+
+  // W1101 — keep a richer backup made on another device (see RICHER_MARGIN_DAYS). Any error
+  // here saves as before: the guard must never be what stops a backup.
+  if (deviceId) {
+    try {
+      const prev = await env.DB.prepare(
+        'SELECT device_id, server_updated_at FROM user_state_snapshots WHERE user_id = ?',
+      ).bind(session.userId).first<{ device_id: string | null; server_updated_at: number }>();
+      if (prev && prev.device_id && prev.device_id !== deviceId && now - Number(prev.server_updated_at) < RICHER_HOLD_MS) {
+        const blob = await env.DB.prepare(
+          'SELECT state_json FROM user_state_snapshots WHERE user_id = ?',
+        ).bind(session.userId).first<{ state_json: string }>();
+        const stored = blob ? historyDays(JSON.parse(blob.state_json)) : 0;
+        if (stored > historyDays(body.state) + RICHER_MARGIN_DAYS) {
+          return jsonError(409, 'CLOUD_RICHER', 'The backup holds more history than this device. Restore it from Settings.');
+        }
+      }
+    } catch (err) {
+      console.error('user-state richer-backup check failed (saving):', err instanceof Error ? err.message : err);
     }
   }
 

@@ -36,6 +36,10 @@ vi.mock('./lib/pact-flame-risk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/pact-flame-risk')>()),
   sweepPactFlameRisk: vi.fn(async () => 0),
 }));
+vi.mock('./lib/push-outbox', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/push-outbox')>()),
+  sweepPushOutbox: vi.fn(async () => 0),
+}));
 
 import worker from './index';
 import { runUpdatePushCron, UPDATE_PUSH_CRON } from './lib/update-push';
@@ -43,8 +47,9 @@ import { runRaidMatchmakeSweep, sweepCrunchTimeReminders, sweepPendingSummonsRem
 import { sweepWinBackPushes } from './lib/win-back';
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 import { sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
+import { sweepPushOutbox } from './lib/push-outbox';
 
-const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk, sweepCoopResolve, sweepCoopAutoHunts];   // W1094 — settle + automatic hunts
+const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk, sweepCoopResolve, sweepCoopAutoHunts, sweepPushOutbox];   // W1094 — settle + automatic hunts; W1101 — the owner's outbox
 
 async function fire(cron: string): Promise<{ env: Env; waited: number }> {
   const env = { DB: {} } as unknown as Env;
