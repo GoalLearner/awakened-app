@@ -35,7 +35,8 @@
  * Body: { claims?: string[] } (skin ids such as 'avatar-skin-stardust.png').
  * Returns { ok, skins: owned ids, granted: ids newly written by THIS call,
  *           progress: { opened: { best, current }, flame: { best },
- *                       coop: { wins, trioWins, trioRanks: rank letters won, podium } } }.
+ *                       coop: { wins, trioWins, trioRanks: rank letters won, podium } },
+ *           acquired: { [skin id]: { at: 'YYYY-MM-DD', how: 'earned' | 'bought' } } } (W1106).
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -202,6 +203,25 @@ async function coopProgress(env: Env, userId: string): Promise<CoopProgress> {
   }
 }
 
+/**
+ * W1106 — how and when each owned skin arrived, for the Wardrobe's "Earned · Floor 90 cleared ·
+ * Oct 26" line (owner 2026-10-27: "see how they earned these skins"). An earned row has store
+ * 'earned'; anything else came from a purchase made before the skins were earned. Read after
+ * this call's own grants, so a skin granted now carries today. Never fails the response.
+ */
+async function acquiredMap(env: Env, userId: string): Promise<Record<string, { at: string; how: 'earned' | 'bought' }>> {
+  const out: Record<string, { at: string; how: 'earned' | 'bought' }> = {};
+  try {
+    const rows = await env.DB.prepare('SELECT skin_id, acquired_at, store FROM skin_entitlements WHERE user_id = ?')
+      .bind(userId)
+      .all<{ skin_id: string; acquired_at: string | null; store: string | null }>();
+    for (const r of rows.results ?? []) {
+      out[r.skin_id] = { at: String(r.acquired_at || '').slice(0, 10), how: r.store === 'earned' ? 'earned' : 'bought' };
+    }
+  } catch { /* the line under the portrait is a nicety */ }
+  return out;
+}
+
 export async function handleSkinsEarn(request: Request, env: Env, session: SessionPayload): Promise<Response> {
   const rl = await env.RL_USER_ACCOLADES_READ.limit({ key: 'earn:' + session.userId });
   if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
@@ -243,5 +263,5 @@ export async function handleSkinsEarn(request: Request, env: Env, session: Sessi
       }
     });
   }
-  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame, coop } });
+  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame, coop }, acquired: await acquiredMap(env, session.userId) });
 }

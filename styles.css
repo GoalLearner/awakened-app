@@ -35269,6 +35269,8 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 @keyframes wx-mote { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: .85; } 100% { opacity: 0; transform: translate(var(--dx), -180px); } }
 .wx-hl-nm { margin-top: 14px; font: 700 24px/1.1 var(--wx-serif); text-align: center; letter-spacing: .01em; color: var(--wx-ink); }
 .wx-hl-sub { height: 20px; margin-top: 8px; display: flex; align-items: center; justify-content: center; }
+/* W1106 — how the worn skin was earned; holds its height so the list never jumps */
+.wx-hl-how { min-height: 16px; margin-top: 6px; padding: 0 16px; font: 600 12px/1.35 var(--wx-mono); letter-spacing: .02em; text-align: center; color: var(--wx-ink2); }
 .wx-rar { display: inline-flex; align-items: center; gap: 7px; font: 800 10px/1 var(--wx-mono); letter-spacing: .3em; text-transform: uppercase; color: var(--c); }
 .wx-rar::before { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--c); box-shadow: 0 0 8px var(--c); }
 .wx-tagc { font: 800 8px/1 var(--wx-mono); letter-spacing: .16em; color: #062a25; background: var(--wx-teal); border-radius: 999px; padding: 4px 8px 3px; }

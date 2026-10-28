@@ -13,7 +13,7 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-interface Fx { owned?: string[]; granted?: string[]; seed?: Record<string, string> }
+interface Fx { owned?: string[]; granted?: string[]; seed?: Record<string, string>; acquired?: Record<string, { at: string; how: string }> }
 
 async function boot(page: Page, fx: Fx) {
   await page.addInitScript((f: Fx) => {
@@ -47,7 +47,7 @@ async function boot(page: Page, fx: Fx) {
         const granted = (f.granted || []).filter((id) => !(f.owned || []).includes(id));
         f.owned = Array.from(new Set([...(f.owned || []), ...granted]));
         f.granted = [];
-        return { ok: true, skins: f.owned, granted, progress: { opened: { best: 3, current: 3 }, flame: { best: 0 }, coop: { wins: 12, trioWins: 3, trioRanks: ['D', 'C'], podium: 0 } } };
+        return { ok: true, skins: f.owned, granted, progress: { opened: { best: 3, current: 3 }, flame: { best: 0 }, coop: { wins: 12, trioWins: 3, trioRanks: ['D', 'C'], podium: 0 } }, acquired: f.acquired || null };
       };
     };
     let real: any;
@@ -108,6 +108,24 @@ test.describe('The Rising (W1105)', () => {
     });
     expect(claims).toContain(STRIDE);
     expect(await page.evaluate(() => localStorage.getItem('hb_best_day_steps_v1'))).toBe('16000');
+  });
+
+  // W1106 — owner 2026-10-27: "see how they earned these skins", under the big portrait.
+  test('the showcase says how the worn skin was earned, or that it was bought', async ({ page }) => {
+    const STAR = 'avatar-skin-stardust.png';
+    await boot(page, {
+      owned: [HUNT, STAR],
+      acquired: { [HUNT]: { at: '2026-10-27', how: 'earned' }, [STAR]: { at: '2026-10-03', how: 'bought' } },
+      seed: { hb_earn_rising_seen_v1: JSON.stringify([HUNT]), hb_avatar_skin: HUNT },
+    });
+    await page.evaluate(() => (window as any).__earn.tick(true));
+    await page.evaluate(() => (window as any).__openWardrobe());
+    const how = page.locator('#wd-sheet .wx-hl-how');
+    await expect(how).toHaveText('Earned · Fifty bosses slain · Oct 27');
+    await page.locator('#wd-sheet [data-sk="stardust"]').click();
+    await expect(how).toHaveText('Bought · Oct 3');
+    await page.locator('#wd-sheet [data-lk="avatar-warrior.png"]').click();
+    await expect(how).toHaveText('');
   });
 
   test('a Rising skin granted while an older build ran is celebrated once', async ({ page }) => {

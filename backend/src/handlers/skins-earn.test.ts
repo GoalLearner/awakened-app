@@ -84,9 +84,14 @@ describe('crashGraceDays — the iOS 27 lockout (owner 2026-10-26)', () => {
 interface Fx {
   owned?: string[]; opens?: { date_utc: string; build: string | null }[]; pactRows?: Record<string, unknown>[];
   wins?: { boss_id: string; n: number }[]; podium?: number;   // W1105
+  bought?: string[];   // W1106 — owned skins that came from a purchase
 }
 function makeEnv(fx: Fx, writes: string[][]) {
   const all = (sql: string): unknown[] => {
+    if (sql.includes('acquired_at, store FROM skin_entitlements')) {   // W1106 — owned rows as they stand after this call's grants
+      const ids = Array.from(new Set([...(fx.owned ?? []), ...writes.map((w) => w[1])]));
+      return ids.map((skin_id) => ({ skin_id, acquired_at: (fx.bought ?? []).includes(skin_id) ? '2026-10-03 18:00:00' : '2026-10-26 20:00:00', store: (fx.bought ?? []).includes(skin_id) ? 'app_store' : 'earned' }));
+    }
     if (sql.includes('FROM skin_entitlements')) return (fx.owned ?? []).map((skin_id) => ({ skin_id }));
     if (sql.includes('FROM app_opens')) return fx.opens ?? [];
     if (sql.includes('COUNT(*) AS n FROM coop_boss_instances')) return fx.wins ?? [];
@@ -177,6 +182,23 @@ describe('POST /v1/users/me/skins/earn', () => {
     expect(EARNABLE_SKINS.length).toBe(16);   // the seven + the Rising's nine (W1105)
     for (const id of EARNABLE_SKINS) expect(id).toMatch(/^avatar-skin-[a-z0-9-]+\.png$/);
     expect(new Set(EARNABLE_SKINS).size).toBe(EARNABLE_SKINS.length);
+  });
+});
+
+// ── W1106 — how each owned skin arrived ───────────────────────────────────────
+describe('POST /v1/users/me/skins/earn — acquired (W1106)', () => {
+  it('names every owned skin\'s day and whether it was earned or bought, a grant of this call included', async () => {
+    const w: string[][] = [];
+    const r = await (await handleSkinsEarn(
+      req({ claims: ['avatar-skin-nullprotocol.png'] }),
+      makeEnv({ owned: ['avatar-skin-stardust.png', 'avatar-skin-dawnbringer.png'], bought: ['avatar-skin-stardust.png'] }, w), session)).json() as {
+      acquired: Record<string, { at: string; how: string }>;
+    };
+    expect(r.acquired).toEqual({
+      'avatar-skin-stardust.png': { at: '2026-10-03', how: 'bought' },
+      'avatar-skin-dawnbringer.png': { at: '2026-10-26', how: 'earned' },
+      'avatar-skin-nullprotocol.png': { at: '2026-10-26', how: 'earned' },
+    });
   });
 });
 

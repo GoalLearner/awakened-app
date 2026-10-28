@@ -2149,7 +2149,8 @@
     } catch (e) { return { ok: false, code: 'NETWORK', detail: 'Could not reach server.' }; }
     let data; try { data = await res.json(); } catch (_) { data = null; }
     if (res.status === 200 && data) {
-      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], granted: Array.isArray(data.granted) ? data.granted : [], progress: data.progress || {} };
+      return { ok: true, skins: Array.isArray(data.skins) ? data.skins : [], granted: Array.isArray(data.granted) ? data.granted : [], progress: data.progress || {},
+        acquired: (data.acquired && typeof data.acquired === 'object') ? data.acquired : null };   // W1106 — when and how each owned skin arrived
     }
     if (res.status === 401) { _clearUserOn401(u.jwt); return { ok: false, code: 'EXPIRED' }; }
     if (res.status === 429) return { ok: false, code: 'RATE_LIMITED' };
