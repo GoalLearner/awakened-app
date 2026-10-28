@@ -8509,6 +8509,23 @@ test.describe('BQ · Update banner (W791 · W1007 · W1036 · W1045)', () => {
     await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
     expect(await marks(page)).toEqual(['99.0.0', '2026-10-19']);
   });
+  // W1108 — owner 2026-10-28 ("has Justin gotten the update banner?"): the banner now tells the
+  // server it was shown, tapped or dismissed, naming this build's version and the store's.
+  test('W1108 — shown, tapped and dismissed each queue an event naming both versions', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-14T10:00:00-07:00'));
+    await store(page, '99.0.0');
+    await freshApp(page);
+    await expect(page.locator('#upd-banner')).toHaveCount(1, { timeout: 8_000 });
+    const q = () => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]') as Array<{ e: string; d?: string }>).filter((x) => /^upd_/.test(x.e)));
+    const v = await page.evaluate(() => (window as any).__APP_VERSION as string);
+    expect(await q()).toEqual([{ e: 'upd_banner_shown', d: v + '>99.0.0' }]);
+    await page.evaluate(() => { (window as any).open = () => null; (document.querySelector('#upd-banner') as HTMLElement).click(); });
+    expect((await q()).map((x) => x.e)).toEqual(['upd_banner_shown', 'upd_banner_tap']);
+    await page.evaluate(() => (document.querySelector('#upd-banner [data-upd-action="dismiss"]') as HTMLElement).click());
+    expect(await q()).toEqual([
+      { e: 'upd_banner_shown', d: v + '>99.0.0' }, { e: 'upd_banner_tap', d: v + '>99.0.0' }, { e: 'upd_banner_dismiss', d: v + '>99.0.0' },
+    ]);
+  });
   test('W1045 — a version newer than the one announced shows again, whatever the day', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-15T10:00:00-07:00'));   // Thu 15 Oct
     await store(page, '99.0.1');
