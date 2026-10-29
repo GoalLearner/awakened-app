@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.19';   // W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.19-w1109'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.19-w1110'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13526,7 +13526,7 @@
   let _ascTestBuild = null;
   // Gear from a set of relics: their bonuses; with invest 'sets' or 'max' the active set bonuses
   // (single highest tier per set, as _activeSetBonuses); with 'max' every upgradeable relic at
-  // RELIC_UPGRADE_MAX on its dominant stat. Shared by the balance sim and the test build.
+  // RELIC_UPGRADE_MAX (relicUpgradeGain, W1110). Shared by the balance sim and the test build.
   function _ascBuildGear(ids, invest) {
     const gear = { str: 0, vit: 0, int: 0, focus: 0, will: 0, wlt: 0 };
     ids.forEach((id) => {
@@ -13548,8 +13548,8 @@
       ids.forEach((id) => {
         const c = CARDS[id];
         if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null) return;   // commons / unpriced tiers are not upgradeable
-        const dom = _relicDominantStatKey(c);
-        if (dom && Object.prototype.hasOwnProperty.call(gear, dom)) gear[dom] += RELIC_UPGRADE_MAX;
+        const g = relicUpgradeGain(c, RELIC_UPGRADE_MAX);   // W1110 — armor +10% a level on every stat
+        Object.keys(g).forEach((k) => { if (Object.prototype.hasOwnProperty.call(gear, k)) gear[k] += g[k]; });
       });
     }
     return gear;
@@ -13913,7 +13913,11 @@
   // Re-check with Arena.simAscent(100, id, { invest: 'max', shadows: k }) or node tools/sim-ascent.js.
   // W1070 — the six weekly bosses make it 25 shadows (+34.25%): with all of them 98.7% / 96.6%.
   // W1071 — the four weekly sleep bosses make it 29 (+40.75%).
-  const _FIRST_AWAKENED_POWER = 1.2;     // W1069 — 5,348 disp (was 1.2547 = 5,592, W672). [hist W306 0.96; W661 0.987 = 4400]
+  // W1110 — armor upgrades now add 10% a level on every stat, so the max relic set rose 593 → 664
+  // power; both phases rose 10% (1.2 → 1.32, 0.8 → 0.88) to hold the owner's curve: Nightfall 50% alone,
+  // 74% with five, 96% with twelve, 99% with every shadow; Duskforge 53/98, Vigil 28/97. A set that
+  // was never upgraded now wins 14% alone (was 29%), 80% with every shadow (was 97%).
+  const _FIRST_AWAKENED_POWER = 1.32;    // W1110 — 5,883 disp (was 1.2 = 5,348, W1069; 1.2547 = 5,592, W672). [hist W306 0.96; W661 0.987 = 4400]
   // ── W535 — THE FIRST AWAKENED IS A TWO-PHASE BOSS ──────────────────────────
   // Phase 1 is the balanced summit (above). On its defeat it does NOT die — it
   // UNBINDS into a harder AGGRESSOR form (the Kalphite-Queen "you only met the
@@ -13925,7 +13929,7 @@
   // between the phases, a phase 2 stronger than phase 1 was a wall even for the max build (it won
   // 7% alone, 47% with all nineteen shadows), so phase 2 now has LESS power than phase 1: its threat
   // is a full bar and the aggressor blitz against whatever health phase 1 left you.
-  const _FA_P2_POWER = 0.8;      // phase-2 power × _ascentFloorPower(100) = 3,566 disp. W1069 (was 1.3622 = 6,071, W672). [hist W661 4600]
+  const _FA_P2_POWER = 0.88;     // phase-2 power × _ascentFloorPower(100) = 3,923 disp. W1110 (was 0.8 = 3,566, W1069; 1.3622 = 6,071, W672). [hist W661 4600]
   const _FA_P2_ARCH  = 'aggressor';
   const _FA_P2_NAME  = 'The First Awakened, Unbound';
   const _FA_P2_TAUNT = 'You met only the mask. Now climb against what the system made of me.';
@@ -20524,8 +20528,7 @@
   function _relicEffectiveBonuses(cardId, card) {
     const eff = Object.assign({}, (card && card.bonuses) || {});
     const lvl = (typeof getRelicLevel === 'function' && cardId) ? (getRelicLevel(cardId) | 0) : 0;
-    const dom = lvl ? _relicDominantStatKey(card) : null;
-    if (dom) eff[dom] = (eff[dom] | 0) + lvl;
+    if (lvl) { const g = relicUpgradeGain(card, lvl); Object.keys(g).forEach(function (k) { if (g[k]) eff[k] = (eff[k] | 0) + g[k]; }); }   // W1110
     return eff;
   }
   function _equippedRelicPower(cardId, card) {
@@ -21008,6 +21011,32 @@
   const RELIC_UPGRADE_MAX = 3;
   const RELIC_UPGRADE_COST_MULT = 2;
   const RELIC_UPGRADE_BASE_COST = { E: 300, D: 400, C: 900, B: 1600, A: 2400, S: 3200 };
+  // W1110 — armor upgrades worth the souls (owner 2026-10-29: "it costs so much to get +3 in one
+  // stat. It is only worth it for weapons ... make it worth upgrading"). A non-weapon relic's level
+  // now adds 10% of EVERY stat it carries, rounded per stat and never less than the old +1 a level
+  // on its main stat: a maxed S mantle gains +12 stats where it used to gain +3. Weapons keep +1 a
+  // level on their main stat; their max level is the special attack (W757). Floor 100 rose 10% with
+  // it, so the max relic set alone still wins about half (W1069).
+  const RELIC_ARMOR_UPGRADE_PCT = 0.10;
+  function relicUpgradeGain(card, level) {
+    const g = { str: 0, vit: 0, int: 0, focus: 0, will: 0 };
+    const lvl = Math.max(0, Math.min(RELIC_UPGRADE_MAX, level | 0));
+    if (!card || !lvl) return g;
+    if (card.slot !== 'weapon') {
+      const b = card.bonuses || {};
+      Object.keys(g).forEach(function (k) { g[k] = Math.round((+b[k] || 0) * RELIC_ARMOR_UPGRADE_PCT * lvl); });
+    }
+    const dom = _relicDominantStatKey(card);
+    if (dom && g[dom] < lvl) g[dom] = lvl;
+    return g;
+  }
+  // "+1 STR +2 VIT" — what going from level `from` to level `to` adds.
+  function relicUpgradeGainText(card, from, to) {
+    const a = relicUpgradeGain(card, from), b = relicUpgradeGain(card, to);
+    const L = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL' };
+    return Object.keys(L).filter(function (k) { return b[k] - a[k] > 0; }).map(function (k) { return '+' + (b[k] - a[k]) + ' ' + L[k]; }).join(' ');
+  }
+  try { window.__relicUpgradeGain = function (id, lvl) { return relicUpgradeGain(CARDS[id], lvl); }; } catch (_) {}
   // Souls to go from `fromLevel` → `fromLevel+1`. null when already at max or
   // the relic has no priced tier (commons are never upgradeable).
   function relicUpgradeCost(cardId, fromLevel) {
@@ -25506,10 +25535,9 @@
     const dom = _relicDominantStatKey(card);
     const upgradeable = owned && dom && _relicIsTradeable(card.id) && RELIC_UPGRADE_BASE_COST[card.tier] != null;
     if (!upgradeable) { box.classList.add('hidden'); box.innerHTML = ''; return; }
-    const STAT_LABELS = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL' };
-    const domLabel = STAT_LABELS[dom] || String(dom).toUpperCase();
     const level = getRelicLevel(card.id);
     const atMax = level >= RELIC_UPGRADE_MAX;
+    const nowTxt = relicUpgradeGainText(card, 0, level);   // W1110 — every stat the levels add
     let pips = '';
     for (let i = 0; i < RELIC_UPGRADE_MAX; i++) {
       pips += '<span class="cdu-pip' + (i < level ? ' cdu-pip--on' : '') + '"></span>';
@@ -25525,13 +25553,13 @@
           '<span class="cdu-btn-main">UPGRADE</span>' +
           '<span class="cdu-btn-cost">−' + cost + _marketSoulsSvg('cdu-souls') + '</span>' +
         '</button>' +
-        '<div class="cdu-gain">Next: +1 ' + domLabel + (afford ? '' : ' · need ' + (cost - bal) + ' more') + '</div>';
+        '<div class="cdu-gain">Next: ' + relicUpgradeGainText(card, level, level + 1) + (afford ? '' : ' · need ' + (cost - bal) + ' more') + '</div>';
     }
     box.innerHTML =
       '<div class="cdu-head"><span class="cdu-title">RELIC LEVEL</span>' +
         '<span class="cdu-level">' + level + ' / ' + RELIC_UPGRADE_MAX + '</span></div>' +
       '<div class="cdu-pips">' + pips + '</div>' +
-      (level > 0 ? '<div class="cdu-current">+' + level + ' ' + domLabel + ' from upgrades</div>' : '') +
+      (level > 0 && nowTxt ? '<div class="cdu-current">' + nowTxt + ' from upgrades</div>' : '') +
       (function () {
         // W757 -- tell the hunter WHY max matters: ultra+ weapons earn their
         // archetype's special attack at max level.
@@ -25698,9 +25726,7 @@
         if (!card) return;
         const res = (typeof upgradeRelic === 'function') ? upgradeRelic(cardId) : null;
         if (res && res.ok) {
-          const STAT_LABELS = { str: 'STR', vit: 'VIT', int: 'INT', focus: 'FOCUS', will: 'WILL' };
-          const sl = STAT_LABELS[res.stat] || String(res.stat || '').toUpperCase();
-          try { showHabitToast(card.name + ' upgraded — LV ' + res.newLevel + ', +1 ' + sl); } catch (_) {}
+          try { showHabitToast(card.name + ' upgraded — LV ' + res.newLevel + ', ' + relicUpgradeGainText(card, res.newLevel - 1, res.newLevel)); } catch (_) {}   // W1110
           try { refreshSoulsDisplay(); } catch (_) {}
           const inv = getInventory();
           openCardDetailModal(card, inv.cards[cardId] || { discovered: true, count: 1, first_acquired_date: null, upgrade_level: res.newLevel });
@@ -27903,6 +27929,14 @@
     // W822 failure again). Written for someone UPDATING, so the new onboarding is left out (they
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
+    // W1110 — 3.0.19: armor upgrades worth the souls (W1110); every boss that drops a relic, on the relic (W1109).
+    '3.0.19': {
+      subtitle: 'Armor upgrades are worth it.',
+      items: [
+        { emoji: '', title: 'Armor upgrades are worth it', description: "Each level now adds 10% to every stat on the relic, not +1 to one stat. Armor you already upgraded gets the new bonus. Floor 100 rose to match." },
+        { emoji: '', title: 'Every boss that drops a relic', description: "A relic now lists every boss that can drop it, the weekly bosses and the raids included." },
+      ],
+    },
     // W1104 — 3.0.18: a steps trio at every rank D to A (the Court eased to 21,000).
     '3.0.18': {
       subtitle: 'A trio hunt at every rank.',
@@ -41478,13 +41512,13 @@
           if (!Number.isFinite(v) || v === 0) continue;
           totals[s.key] += Math.trunc(v);
         }
-        // W494 — relic upgrade: +1 to this relic's dominant stat per level.
-        // Single combat hook → Ascent (_ascPlayerPower) + PvP both inherit it
-        // with no per-system edit. Bounded (max +3/relic, dominant stat only).
+        // W494 — relic upgrade. Single combat hook → Ascent (_ascPlayerPower) + PvP both
+        // inherit it with no per-system edit. W1110 — a weapon: +1 a level on its main stat;
+        // armor: +10% a level on every stat it carries (relicUpgradeGain).
         const _lvl = (typeof getRelicLevel === 'function') ? getRelicLevel(cid) : 0;
         if (_lvl > 0) {
-          const _dom = _relicDominantStatKey(card);
-          if (_dom && Object.prototype.hasOwnProperty.call(totals, _dom)) totals[_dom] += _lvl;
+          const _g = relicUpgradeGain(card, _lvl);
+          for (const _k in _g) if (_g[_k] && Object.prototype.hasOwnProperty.call(totals, _k)) totals[_k] += _g[_k];
         }
       }
       // W495 — fold in active equipment SET bonuses (Sovereign's Regalia /
