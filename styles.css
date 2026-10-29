@@ -15990,6 +15990,21 @@ body.bfs-locked { overflow: hidden; }
   color: var(--text-primary);
   letter-spacing: 0.04em;
   margin: 0;
+  text-align: right;
+}
+/* W1109 — one line per boss that drops the relic */
+.mystery-card-row:has(.mcs-src) { align-items: flex-start; }
+.mystery-card-row .mcs-src { display: block; line-height: 1.35; }
+.mystery-card-row .mcs-src + .mcs-src { margin-top: 4px; }
+.mystery-card-row .mcs-coop {
+  margin-left: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  vertical-align: 1px;
 }
 .mystery-card-howto {
   font-size: 0.78rem;
