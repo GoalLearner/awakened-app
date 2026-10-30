@@ -11,10 +11,13 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 // Optional args: [sourceAppJsPath] [outJsonPath] [--assert]. Defaults to ./app.js -> items.json.
 // (Lets us extract a git-stashed "before" copy for before/after comparison.)
-// W993 — `--assert` exits 1 when the relic ladder inverts: for rare / ultra_rare /
-// mythic, the max DISPLAYED PWR of a tier must stay below the min of every higher
-// tier; and a dropped item's tier must equal its source boss's rank. Common
-// overlaps are printed as warnings only. Wired into CI + `npm run balance:check`.
+// W993 — `--assert` exits 1 when the relic ladder inverts; and a dropped item's tier
+// must equal its source boss's rank. Wired into CI + `npm run balance:check`.
+// W1112 (owner 2026-10-29: "a rare drop from an A tier should outpower E and D tier
+// drops") — the ladder is RANK FIRST, then rarity: every rare / ultra / mythic beats
+// every one from a lower rank, and within a rank mythic > ultra > rare. Commons sit
+// under every rare (fill-in drops), lowest rank lowest. Upgrades may lift a relic past
+// the next rank but never past its own rarity two ranks up.
 const ASSERT = process.argv.includes('--assert');
 const posArgs = process.argv.slice(2).filter(a => a !== '--assert');
 const srcPath = posArgs[0] ? path.resolve(posArgs[0]) : path.join(ROOT, 'app.js');
@@ -122,22 +125,49 @@ const byRar = {};
 items.forEach(i => { byRar[i.rarity] = (byRar[i.rarity]||0)+1; });
 console.log('by rarity:', JSON.stringify(byRar));
 
-// ── W993 — the ladder check ──
+// ── W993 / W1112 — the ladder check ──
 const TIER_ORD = { E: 0, D: 1, C: 2, B: 3, A: 4, S: 5 };
+const RAR_ORD = { rare: 0, ultra_rare: 1, mythic: 2 };
 const failures = [], warns = [];
-for (const rar of ['rare', 'ultra_rare', 'mythic', 'common']) {
-  const byTier = {};
-  items.filter(i => i.rarity === rar && TIER_ORD[i.tier] != null).forEach(i => { (byTier[i.tier] = byTier[i.tier] || []).push(i); });
-  const tiers = Object.keys(byTier).sort((a, b) => TIER_ORD[a] - TIER_ORD[b]);
-  for (let x = 0; x < tiers.length; x++) for (let y = x + 1; y < tiers.length; y++) {
-    const lo = byTier[tiers[x]].reduce((m, i) => i.displayed_power > m.displayed_power ? i : m);
-    const hi = byTier[tiers[y]].reduce((m, i) => i.displayed_power < m.displayed_power ? i : m);
-    if (lo.displayed_power >= hi.displayed_power) {
-      const msg = rar + ': ' + tiers[x] + ' "' + lo.name + '" PWR ' + lo.displayed_power + ' >= ' + tiers[y] + ' "' + hi.name + '" PWR ' + hi.displayed_power;
-      (rar === 'common' ? warns : failures).push(msg);
-    }
-  }
+const ranked = items.filter(i => TIER_ORD[i.tier] != null);
+const label = i => i.tier + ' ' + i.rarity + ' "' + i.name + '" PWR ' + i.displayed_power;
+// Every rare / ultra / mythic beats every one below it on (rank, rarity).
+const step = i => TIER_ORD[i.tier] * 3 + RAR_ORD[i.rarity];
+const drops = ranked.filter(i => RAR_ORD[i.rarity] != null);
+drops.forEach(a => drops.forEach(b => {
+  if (step(a) < step(b) && a.displayed_power >= b.displayed_power) failures.push('ladder: ' + label(a) + ' >= ' + label(b));
+}));
+// Commons: under every rare, and in rank order among themselves.
+const commons = ranked.filter(i => i.rarity === 'common');
+const floorRare = Math.min(...drops.map(i => i.displayed_power));
+commons.forEach(a => {
+  if (a.displayed_power >= floorRare) failures.push('common: ' + label(a) + ' reaches the weakest rare (' + floorRare + ')');
+  commons.forEach(b => {
+    if (TIER_ORD[a.tier] < TIER_ORD[b.tier] && a.displayed_power >= b.displayed_power) failures.push('common: ' + label(a) + ' >= ' + label(b));
+  });
+});
+// Upgrades: a maxed relic stays under every fresh one of its rarity two ranks up. Mirrors
+// relicUpgradeGain in app.js (weapon +1 a level on its main stat; armor +PCT of every stat
+// a level, never less than +1 a level on its main stat).
+const ARMOR_PCT = +(/const RELIC_ARMOR_UPGRADE_PCT\s*=\s*([\d.]+)/.exec(src) || [])[1];
+const UP_MAX = +(/const RELIC_UPGRADE_MAX\s*=\s*(\d+)/.exec(src) || [])[1];
+if (!(ARMOR_PCT > 0) || !(UP_MAX > 0)) failures.push('upgrade constants not found in app.js');
+function maxedPower(i) {
+  const b = i.bonuses, K = ['str', 'vit', 'int', 'focus', 'will'];
+  const g = {}; K.forEach(k => { g[k] = i.slot === 'weapon' ? 0 : Math.round(b[k] * ARMOR_PCT * UP_MAX); });
+  let dom = null, dv = 0; K.forEach(k => { if (b[k] > dv) { dv = b[k]; dom = k; } });
+  if (dom && g[dom] < UP_MAX) g[dom] = UP_MAX;
+  const e = {}; K.forEach(k => { e[k] = b[k] + g[k]; });
+  return displayedPower(e);
 }
+drops.forEach(a => {
+  const m = maxedPower(a);
+  drops.forEach(b => {
+    if (b.rarity === a.rarity && TIER_ORD[b.tier] - TIER_ORD[a.tier] >= 2 && m >= b.displayed_power) {
+      failures.push('upgrade: ' + label(a) + ' maxed is ' + m + ' >= ' + label(b));
+    }
+  });
+});
 items.forEach(i => {
   const bo = BOSSES[i.source_boss];
   if (bo && bo.rank && i.tier !== bo.rank) failures.push('tier: "' + i.name + '" is ' + i.tier + ' but ' + bo.name + ' is ' + bo.rank + '-rank');
@@ -148,5 +178,5 @@ if (failures.length) {
   console.error(failures.length + ' ladder failure(s).');
   if (ASSERT) process.exit(1);
 } else {
-  console.log('ladder ok: no cross-tier inversion for rare / ultra / mythic; every drop tier matches its boss.');
+  console.log('ladder ok: rank first then rarity, commons under every rare, upgrades never pass two ranks; every drop tier matches its boss.');
 }

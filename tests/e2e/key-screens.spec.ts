@@ -132,7 +132,7 @@ test.describe('X · Reveal compare + equip (W927)', () => {
     try {
       localStorage.setItem('hb_inventory', JSON.stringify({
         cards: {
-          pups_hood: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
+          ember_anvil_circlet: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
           the_famished_circlet: { discovered: true, count: 1, first_acquired_date: '2026-09-01', upgrade_level: 0 },
           milestone_cowl: { discovered: true, count: 1, first_acquired_date: '2026-09-08', upgrade_level: 0 },
         },
@@ -152,10 +152,11 @@ test.describe('X · Reveal compare + equip (W927)', () => {
   }
 
   test('a stronger drop reads EQUIP · +7 with the stat deltas, and EQUIP wears it', async ({ page }) => {
-    await openReveal(page, 'pups_hood');
+    // W1112 — a B common helm (9) under the D rare cowl (16): STR down, VIT FOCUS WILL up.
+    await openReveal(page, 'ember_anvil_circlet');
     await expect(page.locator('#reveal-equip')).toHaveText('EQUIP · +7');
     await expect(page.locator('#reveal-keep')).toBeHidden();
-    await expect(page.locator('#reveal-compare .rcmp-stat--up')).toHaveCount(2);
+    await expect(page.locator('#reveal-compare .rcmp-stat--up')).toHaveCount(3);
     await expect(page.locator('#reveal-compare .rcmp-stat--down')).toHaveCount(1);
     await page.evaluate(() => document.getElementById('reveal-equip')!.click());
     await expect(page.locator('#reveal-overlay')).toBeHidden({ timeout: 5_000 });
@@ -197,7 +198,7 @@ test.describe('Y · Armory swap picker (W928)', () => {
     await page.evaluate(() => { const s = document.getElementById('awakened-splash'); if (s) s.remove(); document.getElementById('tab-items')!.click(); });
     await expect(page.locator('#tab-items.active')).toBeVisible();
     await page.evaluate(() => document.getElementById('armory-open-btn')!.click());
-    await expect(page.locator('#armory-gear-power')).toHaveText('6', { timeout: 10_000 });
+    await expect(page.locator('#armory-gear-power')).toHaveText('3', { timeout: 10_000 });   // W1112 — an E common
     await expect(page.locator('.gear-card--locked')).toHaveCount(0);
     // the filled HELM slot opens the picker in SWAP mode
     await page.evaluate(() => (document.querySelector('.gear-card[data-slot-index="0"]') as HTMLElement).click());
@@ -205,12 +206,12 @@ test.describe('Y · Armory swap picker (W928)', () => {
     const first = page.locator('#build-picker-grid .build-picker-tile').first();
     await expect(first).toHaveAttribute('data-card-id', 'pups_hood');
     await expect(first.locator('.build-picker-tile-badge')).toHaveText('EQUIPPED');
-    await expect(page.locator('.build-picker-tile[data-card-id="milestone_cowl"] .pdx-delta--up')).toHaveText('▲ +7 vs Equipped');
+    await expect(page.locator('.build-picker-tile[data-card-id="milestone_cowl"] .pdx-delta--up')).toHaveText('▲ +13 vs Equipped');
     // one tap swaps
     await page.evaluate(() => (document.querySelector('.build-picker-tile[data-card-id="milestone_cowl"]') as HTMLElement).click());
     await expect(page.locator('#build-picker-sheet')).toBeHidden();
-    await expect(page.locator('#armory-gear-power')).toHaveText('13');
-    await expect(page.locator('#archive-armory-cta-sub')).toContainText('Gear Power 13');
+    await expect(page.locator('#armory-gear-power')).toHaveText('16');
+    await expect(page.locator('#archive-armory-cta-sub')).toContainText('Gear Power 16');
     // the worn tile → detail sheet with SWAP + UNEQUIP; SWAP returns to the picker
     await page.evaluate(() => (document.querySelector('.gear-card[data-slot-index="0"]') as HTMLElement).click());
     await page.evaluate(() => (document.querySelector('.build-picker-tile[data-card-id="milestone_cowl"]') as HTMLElement).click());

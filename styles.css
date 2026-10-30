@@ -15605,6 +15605,9 @@ body.bfs-locked { overflow: hidden; }
 /* W991 — the tier chip: the relic's rank letter in the canonical [data-rank] colours */
 .relic-tier { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 900; letter-spacing: .06em; line-height: 1; text-transform: uppercase; color: var(--rank-color, #fff); background: var(--rank-color-bg, rgba(255,255,255,.12)); border: 1px solid var(--rank-color, #fff); box-shadow: 0 0 8px var(--rank-color-shadow, transparent); flex: none; }
 .relic-tier--lg { height: 20px; padding: 0 8px; font-size: 10px; letter-spacing: .12em; border-radius: 6px; }
+/* W1112 — an upgraded relic's level, above its PWR (Items grid) or the PWR pill (slot picker) */
+.relic-lv { display: inline-flex; align-items: center; height: 14px; padding: 0 5px; margin-bottom: 3px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7.5px; font-weight: 900; letter-spacing: .08em; line-height: 1; white-space: nowrap; color: #ffd574; background: rgba(9,9,20,0.72); border: 1px solid rgba(245,158,11,0.45); }
+.build-picker-tile-lv { position: absolute; right: 6px; bottom: 34px; z-index: 3; margin: 0; }
 .pdx-artfoot-l { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 .pdx-pwr { flex: none; }   /* W993 — the number never gets squeezed by the chips */
 @media (max-width: 399px) {   /* W993 — narrow phones: the class chip is icon-only so PWR always fits */
