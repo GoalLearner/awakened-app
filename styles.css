@@ -15143,11 +15143,7 @@ body.bfs-locked { overflow: hidden; }
 /* v3 Phase 1z.7 — Per-card NEW chip (top-right). Supersedes EQUIPPED
    on first acquisition. Sparkle glyph + gold gradient + shimmer
    keyframes. Card outer glow tinted by rarity for extra emphasis. */
-.archive-card--new {
-  box-shadow: 0 0 14px rgba(245, 184, 66, 0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-}
-.archive-card--new-rare       { box-shadow: 0 0 14px rgba(167, 139, 250, 0.45), inset 0 1px 0 rgba(255,255,255,0.04); }   /* W991 — one rarity palette */
-.archive-card--new-ultra_rare { box-shadow: 0 0 16px rgba(245, 184,  66, 0.50), inset 0 1px 0 rgba(255,255,255,0.04); }
+/* W1113 — the glow for a NEW relic is on its cell (.pokedex-cell--new*), which draws the card. */
 .archive-card-new-chip {
   position: absolute;
   top: 7px;
@@ -15156,18 +15152,17 @@ body.bfs-locked { overflow: hidden; }
      radius, font-size, padding, z-index) so the top-right status pill never
      shifts shape, size, or position between the NEW and EQUIPPED states. */
   z-index: 5;
-  height: 16px;
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  box-sizing: border-box;
   gap: 3px;
-  padding: 0 7px;
-  border-radius: 999px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  border: 1px solid transparent;
   background: linear-gradient(180deg, #f5b842, #c08418);
   color: #1a1232;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.46rem;
+  font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -15176,7 +15171,7 @@ body.bfs-locked { overflow: hidden; }
 }
 .archive-card-new-spark {
   display: inline-block;
-  font-size: 9px;
+  font-size: 8px;
   line-height: 1;
 }
 @keyframes archive-card-new-shimmer {
@@ -15313,7 +15308,7 @@ body.bfs-locked { overflow: hidden; }
 .pokedex-section-body {
   overflow: hidden;
   transition: max-height 0.22s ease;
-  padding: 0 11px 14px;
+  padding: 2px 8px 12px;   /* W1113 — 3px a side handed to the cards */
 }
 .pokedex-section--collapsed .pokedex-section-body { display: none; }
 .pokedex-section-empty {
@@ -15338,7 +15333,7 @@ body.bfs-locked { overflow: hidden; }
      forcing overflow. Verified: a wide probe took a 1fr column 96px→149px; minmax(0,1fr)
      held it at 96px. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 7px;   /* W1113 — cards 4px wider, taken from the gaps + section padding */
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -15346,7 +15341,18 @@ body.bfs-locked { overflow: hidden; }
    (ports ClaudeDesign "Relic Marketplace" to scoped CSS classes)
    ═══════════════════════════════════════════════════════════════════ */
 /* Each grid cell stacks the (unchanged) card button + its trade control. */
-.pokedex-cell { display: flex; flex-direction: column; gap: 7px; min-width: 0; }   /* W525 — allow the cell to shrink below content min-width (see .pokedex-grid) */
+/* W1113 — ClaudeDesign "Relic Cards · Three Across": the cell IS the card. The card button
+   (art, stats row, name, source, status) sits on top and the trade control is its footer,
+   so one relic is one object and a row of three lines up on the footer. */
+.pokedex-cell { display: flex; flex-direction: column; min-width: 0;   /* W525 — allow the cell to shrink below content min-width (see .pokedex-grid) */
+  border-radius: 13px; background: #15142c; border: 1px solid rgba(124,108,200,0.18); overflow: hidden; transition: transform 0.15s ease; }
+.pokedex-cell--eq { border-color: rgba(245,184,66,0.55); box-shadow: 0 0 16px rgba(245,184,66,0.10); }
+.pokedex-cell--new            { box-shadow: 0 0 14px rgba(245,184,66,0.30); }
+.pokedex-cell--new-rare       { box-shadow: 0 0 14px rgba(167,139,250,0.45); }
+.pokedex-cell--new-ultra_rare { box-shadow: 0 0 16px rgba(245,184,66,0.50); }
+.pokedex-cell--new-mythic     { box-shadow: 0 0 20px rgba(94,231,245,0.55); }
+.pokedex-cell--mystery { background: rgba(255,255,255,0.02); border-style: dashed; border-color: rgba(139,92,246,0.28); }
+.pokedex-cell:has(> .pokedex-card:active) { transform: scale(0.98); }
 .pokedex-cell > .pokedex-card { flex: 1 1 auto; min-width: 0; }
 
 /* ── Card-level trade button (compact for the 3-col grid) ───────────── */
@@ -15394,6 +15400,16 @@ body.bfs-locked { overflow: hidden; }
   font-size: 8.5px; font-weight: 600; letter-spacing: 0.03em;
   color: #f5b842; opacity: 0.62; text-align: center; margin-top: 3px;
 }
+/* W1113 — in the Items grid the trade control is the card's own footer, not a second box */
+.pokedex-cell .market-trade { height: auto; margin-top: auto; padding: 8px; gap: 6px; border: 0; border-top: 1px solid rgba(255,255,255,0.06); border-radius: 0;
+  background: rgba(0,0,0,0.18); box-shadow: none; font-size: 8px; font-weight: 800; letter-spacing: 0.1em; color: #8d8ba8; }
+.pokedex-cell .market-trade:active { transform: none; background: rgba(255,255,255,0.05); }
+.pokedex-cell .market-trade-amt { gap: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0; color: #f5b842; }
+.pokedex-cell .market-souls { width: 12px; height: 12px; }
+.pokedex-cell .market-trade--buy { color: #f5b842; background: rgba(245,184,66,0.08); }
+.pokedex-cell .market-trade.is-disabled { color: #6b6b86; background: rgba(0,0,0,0.18); }
+.pokedex-cell .market-trade.is-disabled .market-trade-amt { color: #6b6b86; }
+.pokedex-cell .market-trade-need { margin: 0; padding: 0 8px 7px; background: rgba(0,0,0,0.18); text-align: left; }
 
 /* ── Overlay + bottom sheet ─────────────────────────────────────────── */
 .market-overlay {
@@ -15526,31 +15542,30 @@ body.bfs-locked { overflow: hidden; }
 }
 /* END Relic Marketplace block */
 
+/* W1113 — the button is the top of the card: no frame of its own (the cell draws it),
+   art full-bleed, text left-aligned. */
 .pokedex-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 10px 6px 8px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-family: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.pokedex-card:hover  { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
-.pokedex-card:active { transform: scale(0.97); }
 .pokedex-card-art {
   width: 100%;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(0, 0, 0, 0.40));
-  margin-bottom: 6px;
 }
 .pokedex-card-art {
   position: relative;
@@ -15570,7 +15585,6 @@ body.bfs-locked { overflow: hidden; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
   display: block;
 }
 /* ── W450 — Armory class + power (ClaudeDesign "Armory · Class & Power") ── */
@@ -15598,32 +15612,34 @@ body.bfs-locked { overflow: hidden; }
 .pdx-rewardsbtn:active { transform: scale(0.97); }
 .pdx-hint { padding: 0 2px 12px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8.5px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.5; color: #5a5a76; }
 .pdx-hint b { color: #8a8aa8; font-weight: 700; }
-/* art footer on each card: class chip + PWR */
-.pdx-artfoot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: flex-end; justify-content: space-between; padding: 16px 6px 6px; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,16,0), rgba(8,8,16,0.82) 62%); }
-.pdx-class { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 3px 6px 3px 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; background: rgba(8,8,16,0.55); border: 1px solid color-mix(in srgb, var(--cc, #fff) 55%, transparent); color: var(--cc, #fff); }
+/* W1113 — the foot of the art: one dark strip, the class (icon + word, class colour) at its
+   right and the slot badge at its left. */
+.pdx-class { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 16px 7px 6px 0; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(6,6,14,0.9) 60%); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 800; line-height: 1; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cc, #fff); }
 .pdx-class svg { width: 10px; height: 10px; display: block; flex: none; }
 /* W991 — the tier chip: the relic's rank letter in the canonical [data-rank] colours */
 .relic-tier { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 900; letter-spacing: .06em; line-height: 1; text-transform: uppercase; color: var(--rank-color, #fff); background: var(--rank-color-bg, rgba(255,255,255,.12)); border: 1px solid var(--rank-color, #fff); box-shadow: 0 0 8px var(--rank-color-shadow, transparent); flex: none; }
 .relic-tier--lg { height: 20px; padding: 0 8px; font-size: 10px; letter-spacing: .12em; border-radius: 6px; }
-/* W1112 — an upgraded relic's level, above its PWR (Items grid) or the PWR pill (slot picker) */
+/* W1112 — an upgraded relic's level: top-left of the art (Items grid), above the PWR pill (slot picker) */
 .relic-lv { display: inline-flex; align-items: center; height: 14px; padding: 0 5px; margin-bottom: 3px; border-radius: 5px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 7.5px; font-weight: 900; letter-spacing: .08em; line-height: 1; white-space: nowrap; color: #ffd574; background: rgba(9,9,20,0.72); border: 1px solid rgba(245,158,11,0.45); }
 .build-picker-tile-lv { position: absolute; right: 6px; bottom: 34px; z-index: 3; margin: 0; }
-.pdx-artfoot-l { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
-.pdx-pwr { flex: none; }   /* W993 — the number never gets squeezed by the chips */
-@media (max-width: 399px) {   /* W993 — narrow phones: the class chip is icon-only so PWR always fits */
-  .pdx-class { font-size: 0; gap: 0; padding: 3px 5px; letter-spacing: 0; }
-}
+/* W1113 — the top of the art: EQUIPPED / NEW at the right, the level at the left; on a narrow
+   card the level wraps under (row-reverse keeps the status pill in the top-right corner). */
+.pdx-art-top { position: absolute; top: 7px; left: 7px; right: 7px; z-index: 5; display: flex; flex-direction: row-reverse; flex-wrap: wrap; align-items: flex-start; gap: 4px; pointer-events: none; }
+.pdx-art-top > .pokedex-card-equipped-badge.archive-equipped-badge, .pdx-art-top > .archive-card-new-chip { position: static; }
+.pdx-art-top > .relic-lv { margin: 0 auto 0 0; height: auto; padding: 4px 6px; border-radius: 7px; font-size: 8px; font-weight: 800; letter-spacing: 0.1em; background: rgba(6,6,14,0.78); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+/* W1113 — tier, count and power on a solid row under the art */
+.pdx-stats { display: flex; align-items: center; gap: 4px; padding: 8px 8px 0; }
+.pdx-stats .relic-tier { width: 20px; min-width: 20px; height: 20px; padding: 0; border-radius: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: 0; border-color: color-mix(in srgb, var(--rank-color, #fff) 70%, transparent); }
 .gear-card__tier { position: absolute; bottom: 6px; left: 6px; z-index: 3; }
 .build-picker-tile-tags { position: absolute; top: 6px; left: 6px; z-index: 3; display: flex; align-items: center; gap: 4px; }
 .build-picker-tile-tags .build-picker-tile-rarity { position: static; }
 .carddetail-rarity, .reveal-card-rarity { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .carddetail-rarity-sep { opacity: .5; }
-.pdx-pwr { text-align: right; line-height: 1; }
-.pdx-pwr .pn { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 17px; font-weight: 800; line-height: 0.9; color: #f3f1fb; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
-.pdx-pwr .pl { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 6.5px; font-weight: 700; letter-spacing: 1.6px; color: rgba(255,255,255,0.6); }
-/* power meter + "vs equipped" delta in the card body */
-.pdx-pmeter { margin-top: 7px; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
-.pdx-pmeter i { display: block; height: 100%; border-radius: 3px; box-shadow: 0 0 6px rgba(255,255,255,0.12); }
+.pdx-pwr { flex: none; margin-left: auto; text-align: right; line-height: 1; }
+.pdx-pwr .pn { display: block; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 20px; font-weight: 800; line-height: 1; color: #f3f1fb; }
+.pdx-pwr .pl { display: block; margin-top: 3px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 800; line-height: 1; letter-spacing: 0.14em; color: #8d8ba8; }
+/* "vs equipped" delta — a pill on the slot picker; in the Items grid a plain full-width line */
+.pokedex-cell .pdx-delta { display: block; margin: 9px 8px 10px; padding: 0; border: 0; border-radius: 0; background: none; font-size: 8px; line-height: 1.2; letter-spacing: 0.04em; }
 .pdx-delta { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8px; font-weight: 800; letter-spacing: 0.4px; border-radius: 6px; padding: 3px 6px; text-transform: uppercase; }
 .pdx-delta--best { color: #f5b842; background: rgba(245,184,66,0.12); border: 1px solid rgba(245,184,66,0.32); }
 .pdx-delta--up, .pdx-delta--gain { color: #46d39a; background: rgba(70,211,154,0.12); border: 1px solid rgba(70,211,154,0.3); }
@@ -15655,46 +15671,28 @@ body.bfs-locked { overflow: hidden; }
 .reveal-compare .rcmp { margin-top: 0; background: rgba(10,10,31,0.72); }
 .reveal-actions { display: flex; flex-direction: column; gap: 8px; }
 .reveal-actions.hidden { display: none; }
+/* W1113 — the name is spelled out: 12px, wraps to as many lines as it needs, never "…".
+   The trade footer (not a fixed name height) keeps a row of three level. */
 .pokedex-card-name {
-  font-size: 0.7rem;
+  padding: 8px 8px 0;
+  font-size: 12px;
   font-weight: 700;
-  text-align: center;
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
   line-height: 1.2;
-  /* W455 — reserve exactly two lines so 1-line and 2-line names occupy the
-     SAME height. This keeps the source line, power meter, the EQUIPPED /
-     vs-equipped delta chip, and the SELL/BUY bar on a fixed baseline across
-     every card in the grid (was drifting whenever a name wrapped). */
-  min-height: 2.4em;
-  /* Truncate long names cleanly. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: #f3f1fb;
+  text-wrap: pretty;
+  overflow-wrap: break-word;
 }
-/* Rarity tints — applied to the discovered card's art background and
-   the section pip colors. Subtle so the card art (when it lands)
-   can carry the visual weight. */
-/* W991 — ONE rarity palette everywhere (the Armory gear-card set): common grey #9aa0bd,
-   rare purple #a78bfa, ultra gold #f5b842, mythic cyan #5ee7f5. */
-.pokedex-card--common     { border-color: rgba(154, 160, 189, 0.30); }
+/* Rarity tints — the discovered card's art background (shows if the art fails to load).
+   W991 — ONE rarity palette everywhere (the Armory gear-card set): common grey #9aa0bd,
+   rare purple #a78bfa, ultra gold #f5b842, mythic cyan #5ee7f5. W1113 — the frame is
+   neutral (the section says the rarity); only EQUIPPED turns it gold. */
 .pokedex-card--common     .pokedex-card-art { background: linear-gradient(135deg, rgba(154, 160, 189, 0.12), rgba(0, 0, 0, 0.40)); }
-.pokedex-card--rare       { border-color: rgba(167, 139, 250, 0.45); box-shadow: 0 0 10px rgba(167, 139, 250, 0.20); }
 .pokedex-card--rare       .pokedex-card-art { background: linear-gradient(135deg, rgba(167, 139, 250, 0.16), rgba(0, 0, 0, 0.40)); }
-.pokedex-card--ultra_rare { border-color: rgba(245, 184, 66, 0.55); box-shadow: 0 0 14px rgba(245, 184, 66, 0.28); }
 .pokedex-card--ultra_rare .pokedex-card-art {
   background: linear-gradient(135deg, rgba(245, 184, 66, 0.20), rgba(0, 0, 0, 0.40));
 }
 
-/* Undiscovered placeholder cards. Still tap-able (toast). */
-.pokedex-card--undiscovered {
-  background: rgba(255, 255, 255, 0.02);
-  border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: none;
-}
-.pokedex-card--undiscovered:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.40); }
+/* Undiscovered placeholder cards. Still tap-able (toast). The dashed frame is on the cell. */
 .pokedex-card-art--undiscovered {
   background: rgba(0, 0, 0, 0.35) !important;
 }
@@ -15751,53 +15749,49 @@ body.bfs-locked { overflow: hidden; }
   text-transform: uppercase;
 }
 
-/* Slot badge — top-left pill on every card (discovered + mystery) */
+/* Slot badge — W1113: bottom-left of the art, in the same dark strip as the class
+   (discovered + mystery cards). */
 .archive-slot-badge {
   position: absolute;
-  top: 7px;
-  left: 7px;
-  z-index: 5;
-  /* W455 — fixed-height pill so it mirrors the status badge on the right. */
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  box-sizing: border-box;
-  padding: 0 7px;
-  border-radius: 999px;
+  left: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 6px 7px;
+  border-radius: 0 8px 0 0;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.46rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #f8e7b0;
-  background: rgba(10, 10, 24, 0.76);
-  border: 1px solid rgba(245, 158, 11, 0.30);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.35);
+  color: #dcdcf0;
+  background: rgba(6, 6, 14, 0.78);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   pointer-events: none;
 }
 
-/* W466 — duplicate count chip on the relic card name line (Rendell's request:
-   see how many you own from the grid without opening each item). Only shown
-   when count > 1. */
+/* W466 — duplicate count chip (Rendell's request: see how many you own from the
+   grid without opening each item). Only shown when count > 1. W1113 — it sits in
+   the stats row beside the tier. */
 .pdx-count {
-  display: inline-block;
-  margin-left: 5px;
-  padding: 0 6px;
-  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 7px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.62rem;
+  font-size: 8.5px;
   font-weight: 800;
-  line-height: 1.5;
-  vertical-align: middle;
-  color: #f8e7b0;
-  background: rgba(245, 158, 11, 0.16);
-  border: 1px solid rgba(245, 158, 11, 0.34);
+  line-height: 1;
+  color: #c9c6dc;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-/* Equipped badge — top-right pill. Replaces the old crossed-swords
-   prefix with a clean gold pill that mirrors the slot-badge shape
-   on the opposite corner. */
+/* Equipped badge — top-right pill, the one status that stays up top. W1113 — the
+   NEW chip and the level chip share its box (top 7px, 8px type, 4px 6px padding). */
 .pokedex-card-equipped-badge.archive-equipped-badge {
   position: absolute;
   top: 7px;
@@ -15805,60 +15799,39 @@ body.bfs-locked { overflow: hidden; }
   left: auto;
   bottom: auto;
   z-index: 5;
-  /* W455 — same fixed box as the slot badge + NEW chip so the top-right
-     status pill sits in one fixed position regardless of EQUIPPED vs NEW. */
-  height: 16px;
   display: inline-flex;
   align-items: center;
   line-height: 1;
-  box-sizing: border-box;
-  padding: 0 7px;
-  border-radius: 999px;
+  padding: 4px 6px;
+  border-radius: 7px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.46rem;
-  font-weight: 900;
+  font-size: 8px;
+  font-weight: 800;
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: #fff7e6;
-  background: rgba(245, 158, 11, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 0 12px rgba(245, 158, 11, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.35);
+  color: #1a1206;
+  background: linear-gradient(180deg, #ffd574, #f5b842);
+  border: 1px solid transparent;
   pointer-events: none;
 }
 
-/* Drop source line under each card's name */
+/* Drop source line under each card's name — W1113: wraps, never cut. */
 .archive-item-source {
+  padding: 5px 8px 0;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.52rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(242, 242, 247, 0.52);
-  text-align: center;
-  margin-top: 2px;
-  line-height: 1.2;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: #5e5c78;
   text-transform: uppercase;
-  /* W455 — keep the drop-source to ONE line (ellipsis the rare long boss
-     name) so it can't wrap and shove the power meter + delta chip out of
-     alignment with the neighbouring cards. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* W736 — in the centered flex card the line grew to its intrinsic nowrap
-     width and spilled OUT of the card (e.g. "THE FORGE OF TEN THOUSAND DAYS").
-     Cap it to the card so the ellipsis actually engages. */
-  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* Mystery (undiscovered) card — richer than the old "?" placeholder.
-   Adds a rarity teaser line + source hint beneath. Subtle dashed
-   purple border + center glow. Slot badge stays in top-left so the
-   user can still see which body part the relic fills. */
-.archive-mystery-card {
-  border-style: dashed !important;
-  border-color: rgba(139, 92, 246, 0.28) !important;
-}
+   Adds a rarity teaser line + source hint beneath, a dashed purple frame
+   (on the cell) and a center glow. The slot badge still names the body
+   part the relic fills. */
 .archive-mystery-card .pokedex-card-art--undiscovered {
   background:
     radial-gradient(circle at center, rgba(139, 92, 246, 0.16), rgba(12, 12, 28, 0.92)) !important;
@@ -15868,25 +15841,22 @@ body.bfs-locked { overflow: hidden; }
   text-shadow: 0 0 14px rgba(139, 92, 246, 0.22);
 }
 .archive-mystery-rarity {
+  padding: 8px 8px 0;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.54rem;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.14em;
   color: rgba(248, 231, 176, 0.62);
   text-transform: uppercase;
-  text-align: center;
-  margin-top: 4px;
 }
 .archive-mystery-hint {
+  padding: 5px 8px 10px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.50rem;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: rgba(242, 242, 247, 0.45);
-  text-align: center;
-  padding: 0 4px 4px;
-  margin-top: 2px;
-  line-height: 1.25;
+  line-height: 1.35;
 }
 
 /* Rarity header polish — ULTRA-RARE RELICS gets a faint glow */
@@ -28341,10 +28311,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .bfs-last-drop[data-rarity="mythic"] { border-color: rgba(255,210,74,0.85); box-shadow: 0 0 16px rgba(255,210,74,0.55), 0 0 26px rgba(255,93,177,0.35), inset 0 1px 0 rgba(255,255,255,0.06); }
 .bfs-last-drop[data-rarity="mythic"] .bfs-last-drop-meta { color: #ffd24a; }
 .bfs-hunt-history-row-rarity[data-rarity="mythic"] { color: #ffd24a; background: rgba(255,210,74,0.12); border: 0.5px solid rgba(255,210,74,0.6); }
-.archive-card--new-mythic { box-shadow: 0 0 20px rgba(94,231,245,0.55), inset 0 1px 0 rgba(255,255,255,0.05); }   /* W991 — mythic = cyan */
 .market-sheet-art--mythic { border-color: rgba(255,210,74,0.6); background: radial-gradient(120% 120% at 50% 36%, rgba(255,210,74,0.22), rgba(255,93,177,0.12) 45%, #04040d 78%); box-shadow: 0 0 26px -5px rgba(255,210,74,0.55); }
 .market-sheet-rarity--mythic { color: #ffd24a; text-shadow: 0 0 12px rgba(255,210,74,0.4), 0 0 18px rgba(255,93,177,0.3); }
-.pokedex-card--mythic { border-color: rgba(94,231,245,0.7); box-shadow: 0 0 18px rgba(94,231,245,0.40); }   /* W991 — mythic = cyan */
 .pokedex-card--mythic .pokedex-card-art { background: linear-gradient(135deg, rgba(94,231,245,0.22), rgba(0,0,0,0.40)); }
 .reveal-overlay--mythic .reveal-particles { display: block; }
 .reveal-overlay--mythic .reveal-card { border-image: linear-gradient(135deg, #5eeaff 0%, #ff5db1 35%, #ffd24a 70%, #5eeaff 100%) 1; box-shadow: 0 0 34px rgba(255,210,74,0.55), 0 0 34px rgba(255,93,177,0.5), 0 0 34px rgba(94,234,255,0.4); }
