@@ -32994,6 +32994,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .fa-act { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 12.5px; color: var(--b-ink2); border-top: 1px dashed rgba(255,255,255,0.06); flex-wrap: wrap; }
 .fa-act:first-child { border-top: none; }
 .fa-act-txt { flex: 1; min-width: 0; }
+/* W1114 — the boss's rank beside its name, in the folded chip and the opened row */
+.fa-act-txt .guildhall-boss-sub-rank { margin-right: 5px; }
+.fa-chip .guildhall-boss-sub-rank { margin-right: 1px; height: 14px; min-width: 14px; padding: 0 3px; }
 .fa-act b { font-weight: 600; }
 .fa-ico { width: 20px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex: none; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); font-size: 11px; }
 .fa-ico--combat { color: #fca5a5; } .fa-ico--step, .fa-ico--flight, .fa-ico--club { color: #4ade80; } .fa-ico--verify { color: #34d399; } .fa-ico--rare, .fa-ico--ultra { color: #60a5fa; } .fa-ico--rank, .fa-ico--arenatitle, .fa-ico--perfect { color: var(--b-vio-lt); }
