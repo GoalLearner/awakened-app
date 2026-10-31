@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=773">
+  <link rel="stylesheet" href="styles.css?v=774">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -516,12 +516,6 @@
            markup but hidden by default; revealed only when the parent
            carries .gate-cell--locked. -->
       <div id="quests-gate-view" class="bosses-section">
-        <!-- W823 (Train 2, L9a) — the tab is named "Co-op" but its default
-             view is the SOLO gate grid; the label now says so, and points at
-             The Pacts for the actual co-op surface. Renames are a separate
-             owner call — this is copy only. -->
-        <div class="bosses-section-label">DUNGEON BOSSES · SOLO HUNTS</div>
-        <div class="bosses-section-sublabel">Hunt alone through the rank gates — or scroll down to The Pacts to hunt together.</div>
         <!-- W932 — THE HUNGER on the hub: the week's mark AND its gate, painted by
              _hungerHubPaint; a tap walks to the boss card. -->
         <button type="button" id="hunger-hub" class="hunger-banner hunger-banner--go hunger-banner--hub hidden" data-hunger-go="" data-hunger-rank=""></button>
@@ -654,11 +648,6 @@
           <button type="button" class="seg-btn" data-mode="collection" data-on="0"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2.5h10a1 1 0 011 1v10.5l-3-2-3 2-3-2-3 2V3.5a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6 6h4M6 8.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>COLLECTION</button>
         </div>
       </div>
-      <!-- W827 (Train 2, L12) — the Marketplace had NO labelled entry anywhere
-           on the tab (the W779 banner removal took the only label with it, and
-           the BUY/SELL chips are unlabelled). One quiet line, not a banner —
-           W779's "simplest possible first impression" stands. -->
-      <p class="archive-market-sublabel">The Archive is also the Marketplace — buy and sell relics with souls, right on their cards.</p>
       <div class="pokedex" id="items-archive">
         <div class="pokedex-header">
           <!-- W773 — the RELIC ARCHIVE title + DISCOVERED counter + progress bar +
@@ -2899,7 +2888,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1509"></script>
+  <script src="app.js?v=1510"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
