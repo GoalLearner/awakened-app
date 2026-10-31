@@ -713,6 +713,15 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     expect(ins.binds[5]).toBeNull();
     expect(ins.binds[6]).toBeNull();
   });
+  // W1117 — the one solo boss with a comma in his name
+  it('accepts the kill and the shadow of Erebus, the Shadow Sovereign in one batch', async () => {
+    const db = makeDb({ perInsertChanges: [1, 1] });
+    const res = await handlePublicAchievementEventsPost(makeReq({ events: [
+      { ...VALID_BOSS_KILL, eventKey: 'erebus_the_shadow_sovereign', eventLabel: 'defeated Erebus, the Shadow Sovereign', rarity: 'S' },
+      { ...VALID_SHADOW_DROP, eventKey: 'erebus_the_shadow_sovereign', eventLabel: 'claimed the Shadow of Erebus, the Shadow Sovereign', clientEventId: 'shadow:erebus_the_shadow_sovereign' },
+    ] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+  });
   it('rejects a shadow_drop whose label is not "claimed the Shadow of <boss>", whose key is not a boss id, or whose clientEventId is not pinned', async () => {
     const bad = [
       { ...VALID_SHADOW_DROP, eventLabel: 'claimed Crown of Deep Rest' },

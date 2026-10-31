@@ -122,8 +122,10 @@ const ALLOWED_BOSS_RANKS  = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 // Label regex allowlists. Tight on purpose — every label is
 // client-preformatted under the same rules we expect at submit
 // time, so a leak vector via free-text labels is impossible.
-const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 '\-]+$/;
-const RE_SHADOW_DROP_LABEL  = /^claimed the Shadow of [A-Za-z0-9 '\-]+$/;   // W1093
+// W1117 — the comma is for "Erebus, the Shadow Sovereign". Without it his kill failed the whole
+// batch (validation is all-or-nothing), taking any event queued beside it down too.
+const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 ,'\-]+$/;
+const RE_SHADOW_DROP_LABEL  = /^claimed the Shadow of [A-Za-z0-9 ,'\-]+$/;   // W1093
 const RE_SHADOW_DROP_KEY    = /^[a-z0-9_]{1,48}$/;                          // W1093 — a boss id
 const SHADOW_DROP_LABEL_MAX = 84;
 const RE_RANK_UP_LABEL      = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
