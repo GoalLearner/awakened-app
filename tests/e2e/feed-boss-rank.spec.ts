@@ -51,6 +51,7 @@ test.describe('Friend Activity shows the rank of each boss (W1114)', () => {
     await expect(chip(1)).toHaveText('C');            // from the catalog, the event had none
     await expect(chip(2)).toHaveText('A');            // the event's own rank for an unlisted boss
     await expect(rows.nth(0).locator('.fa-c')).toHaveText('The Glass Strider');
+    await expect(rows.nth(0).locator('.fa-act-txt')).not.toContainText('defeated');   // W1115 — chip + name only
   });
 
   test('a folded hunter shows the rank on one boss, none on "N bosses"', async ({ page }) => {
