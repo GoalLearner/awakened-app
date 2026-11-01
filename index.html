@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=774">
+  <link rel="stylesheet" href="styles.css?v=775">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -407,8 +407,8 @@
       <div id="first-steps-strip" class="fs-strip hidden"></div>
       <div id="status-content" class="status-content"></div>
       <!-- W909 — the W905 System line and its panel are gone (owner: "not a fan of the
-           system break"). The Shadow Army strip lives on Co-op; the Oathbound went
-           altogether in W910 and the Writ in W915. Status is the hunter profile, full stop. -->
+           system break"). The Oathbound went altogether in W910 and the Writ in W915.
+           Status is the hunter profile; W1119 brought the Shadow Army strip into its card. -->
     </div>
 
     <!-- Stats panel -->
@@ -503,8 +503,6 @@
          Cards open the full-screen detail modal (#boss-fs-overlay)
          on tap. See CARDS.md for the card visual spec. -->
     <div id="quests-panel" class="tab-panel hidden" data-panel="quests">
-      <!-- W909 — SHADOW ARMY strip (shadows rise from slain bosses and march in the Ascent). -->
-      <button type="button" id="shadow-strip" class="shadow-strip shadow-strip--tab hidden" data-open-shadows aria-label="Open your Shadow Army"></button>
       <!-- Default state — gate grid visible, dungeon-view hidden.
            Grid is 3 cols × 2 rows = 6 cells, exactly matching the 6
            rank tiers (E/D/C/B/A/S). Reads left-to-right top-to-bottom:
@@ -2888,7 +2886,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1512"></script>
+  <script src="app.js?v=1513"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

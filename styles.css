@@ -32795,9 +32795,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .board-grant[data-armed="1"] { background: rgba(139,92,246,0.3); color: #f4f4fb; }
 .settings-board-blocks { padding: 4px 0; }
 
-/* W909 — the Shadow Army strip lives on the Co-op tab now;
-   the strip was sized for the inside of the Status card, so give it the tab gutter. */
-.shadow-strip--tab { width: calc(100% - 28px); margin: 10px 14px 4px; }
+/* W1119 — the Shadow Army strip, in the Status card above The Arena. The line scales with the
+   phone so "12 RAISED · 12 MARCHING (+19.5%)" holds on one row inside the card's gutters. */
+.sc-card--profile .shadow-strip { margin: 0 0 10px; font-size: clamp(7.5px, 2.4vw, 10.5px); letter-spacing: 0.05em; }
 
 /* W911 — full-board sheet: rails at the top, then the same rows as the tab. */
 .board-sheet--list .board-body { margin-bottom: 10px; }
@@ -33322,7 +33322,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* ═══ W932 — THE HUNGER points at its mark: gate + hunt type, tappable ═══ */
 .hunger-banner--go { appearance: none; -webkit-appearance: none; width: 100%; text-align: left; font: inherit; font-size: 0.72rem; line-height: 1.4; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .2s; }
 .hunger-banner--go:active { background: rgba(245, 184, 66, 0.14); }
-.hunger-banner--hub { margin: 0 0 12px; }
+.hunger-banner--hub { margin: 0; }
 .hunger-banner--hub.hidden { display: none !important; }
 .hunger-where { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.14em; color: var(--text-secondary, #b8b8d4); }
 .hunger-rank { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--rank-color, #a78bfa); color: var(--rank-color, #a78bfa); background: var(--rank-color-bg, rgba(139, 92, 246, 0.12)); }

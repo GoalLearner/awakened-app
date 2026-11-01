@@ -10106,7 +10106,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await page.waitForTimeout(400);
     await page.locator('.arise-overlay').click();
     // the roster
-    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
     await expect(page.locator('#shadow-roster .shr-how')).toHaveText('Every boss you beat has a 1 in 5 chance to leave its shadow.');
     await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
     const words = await page.evaluate(() => (document.getElementById('shadow-roster') as HTMLElement).textContent || '');
@@ -10207,7 +10207,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     });
     expect(r.each).toEqual([0.75, 1, 1.25, 1.5, 1.75, 2]);
     expect(r.army).toBe(4.5);                                  // 0.75 + 1.75 + 2
-    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
     await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'S-RANK' })).toContainText('+2%');
     await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'E-RANK' })).toContainText('+0.75%');
     await expect(page.locator('#shadow-roster .sw-foot')).toContainText('E 0.75% TO S 2%');
@@ -10601,7 +10601,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     const m = await marchingNow(page);
     expect([m.n, m.slots]).toEqual([8, 29]);
     expect(m.active.slice().sort()).toEqual(SOLO.slice(0, 8).sort());
-    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
     await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 29 SLOTS AT YOUR RANK/);
     await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
   });
@@ -10615,7 +10615,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(m.active).toEqual(SOLO.slice(0, 5).concat(['the_unbroken_anvil', 'the_forge_of_ten_thousand_days', 'the_vow_keeper', 'the_patient_flame',
       'the_marathon_wraith', 'the_furnace_knight', 'the_ascendant_colossus']));
     // rest one by hand: the slot stays free until the hunter fills it (growth is what fills, not a free slot)
-    await page.evaluate(() => (document.querySelector('[data-open-shadows]') as HTMLElement).click());
+    await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
     await page.locator('#shadow-roster [data-shadow-toggle="the_insomniac"]').click();
     await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^11 MARCHING · 12 SLOTS AT YOUR RANK/);
     await page.reload();
