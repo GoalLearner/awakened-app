@@ -2188,8 +2188,12 @@
   // founderSeq itself) it is NOT gated by the store flag: the first-20 founders are
   // members the moment they earn it, even before the paid subscription store is live.
   // A PREMIUM-subscription member still requires IAP to be live.
+  // W1122 — no memberships for now (owner 2026-11-01): every hunter holds every perk and
+  // nothing offers the subscription. Set MEMBERSHIP_OPEN false to bring the old rule back.
+  const MEMBERSHIP_OPEN = true;
   function isMember() {
     try {
+      if (MEMBERSHIP_OPEN) return true;
       if (founderSeq() > 0) return true;
       if (!IAP_ENABLED) return false;
       if (_memberCache === null) _memberCache = (localStorage.getItem('hb_member_owned') === '1');
@@ -2536,6 +2540,7 @@
     purchasePremium,
     getPremiumPrices,
     isMember,
+    MEMBERSHIP_OPEN,
     founderSeq,   // W698 — own earned Founder # (0 = none); the earned-Founder claim reads this
     PREMIUM_PRODUCTS,
     // Cloud Sync v1 (v3 Phase 1w)

@@ -4,8 +4,11 @@
  * first-N grandfather promo) was removed; the subscription is the only paid
  * tier, so `member` == `premium`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readEntitlements } from './iap-entitlements';
+
+// W1122 — these guard the old rule for the day memberships return; membership-open.test.ts guards today's.
+vi.mock('../lib/membership', () => ({ MEMBERSHIP_OPEN: false }));
 import type { Env } from '../env';
 
 /** D1 mock: routes each prepared SQL to a canned response by substring. */

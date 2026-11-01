@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // W761 — capture pushes (the real notifyUser silently no-ops without APNs keys;
 // the spy lets the reminder tests assert exactly who got nudged).
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
+// W1122 — guards the old raid gates for the day memberships return.
+vi.mock('../lib/membership', () => ({ MEMBERSHIP_OPEN: false }));
 import { notifyUser } from '../lib/apns';
 import {
   handleCoopBossCreate,

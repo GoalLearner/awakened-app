@@ -13,11 +13,13 @@
  * EARNED lifetime membership (the first 20 hunters to reach 50 boss kills), so it is
  * the non-subscription membership source W655 anticipated. member is the one flag
  * every perk (co-op fees/cap, Ascent lives, the members raid) gates on.
+ * W1122 — while MEMBERSHIP_OPEN is true, every hunter reads as a member.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk } from '../lib/responses';
 import { getFounderSeq } from '../lib/founder-mark';
+import { MEMBERSHIP_OPEN } from '../lib/membership';
 
 /**
  * Read a user's owned entitlements from D1. Shared by GET /entitlements and the
@@ -59,7 +61,7 @@ export async function readEntitlements(
   // now an EARNED lifetime membership, so it counts toward `member`.
   const founder_seq = await getFounderSeq(env, userId);
 
-  return { skins, premium, member: premium || founder_seq != null, founder_seq };
+  return { skins, premium, member: MEMBERSHIP_OPEN || premium || founder_seq != null, founder_seq };
 }
 
 export async function handleEntitlementsGet(

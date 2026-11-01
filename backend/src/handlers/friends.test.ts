@@ -9,7 +9,11 @@
  * exactly ONCE regardless of roster size (the N+1 is gone). Same substring-routed
  * D1 mock shape as the other handler tests.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// W1122 — guards the old rule for the day memberships return.
+vi.mock('../lib/membership', () => ({ MEMBERSHIP_OPEN: false }));
+
 import { handleFriendsList, handleFriendsRequest, handleFriendsRemove } from './friends';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';

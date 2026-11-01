@@ -5,7 +5,11 @@
  * math without real D1. Real distribution behavior is covered end-to-end once
  * it lands in remote D1.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// W1122 — guards the old rule for the day memberships return.
+vi.mock('../lib/membership', () => ({ MEMBERSHIP_OPEN: false }));
+
 import { handleInsightsWeekly } from './insights-weekly';
 import type { Env } from '../env';
 

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.20';   // W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.20-w1121'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.20-w1122'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -27949,9 +27949,11 @@
     // never see it) and the shadow change leads: the 3.0.11 notes still promised the 48-hour task.
     // The Ready Hunt's phone notifications are left out until they are proven on a real phone.
     // W1121 — 3.0.20: final standings Sunday morning (W1120); shadows in the public feed (W1117/W1118); Shadow Army on Status (W1119) + cleaner tabs (W1116); boss rank in the feed (W1114/W1115).
+    // W1122 — memberships gone for now; it leads because every hunter feels it.
     '3.0.20': {
-      subtitle: 'Final standings get their Sunday morning.',
+      subtitle: 'No more memberships.',
       items: [
+        { emoji: '', title: 'No more memberships', description: "The Grinning God raid and co-op hunts with no entrance fee are now open to every hunter." },
         { emoji: '', title: 'Final standings on Sunday', description: "The Steps board holds last week's results until 12 PM Pacific on Sunday. Your new steps keep counting, and the new board opens at noon." },
         { emoji: '', title: 'Every shadow, for every hunter', description: "When a boss leaves its shadow, every hunter sees it in Hunter Activity." },
         { emoji: '', title: 'Shadow Army on Status', description: "It moved from Co-op to your Status tab, and Co-op and Items lost their extra words." },
@@ -32123,11 +32125,11 @@
         showNoticeCard({
           icon: '✦',
           title: 'You are Founder #' + seq,
-          body: 'Fifty bosses down — you are one of the first 20 Founders. Awakened membership is now yours, for life. The members-only raid is open.',
+          body: 'Fifty bosses down — you are one of the first 20 Founders.',
           tone: 'success',
         });
       } else if (typeof showHabitToast === 'function') {
-        showHabitToast('✦ Founder #' + seq + ' — lifetime membership unlocked!');
+        showHabitToast('✦ You are Founder #' + seq);
       }
     } catch (_) {}
     // Repaint member-gated surfaces so the newly-unlocked perks light up now
@@ -58018,6 +58020,9 @@
   function _founderOwned() {
     try { return !!(window.Auth && typeof Auth.isMember === 'function' && Auth.isMember()); } catch (_) { return false; }
   }
+  function _membershipOpen() {
+    try { return !!(window.Auth && Auth.MEMBERSHIP_OPEN); } catch (_) { return false; }
+  }
   // W342 — shared Founder-prompt throttle. One mechanism for every value-peak
   // surface (rank-up, perfect-day) so a user never sees two upsells stacked.
   // Dormant while IAP is off: _founderIapReady() is false until the owner flips
@@ -58154,10 +58159,11 @@
   function _syncFounderEntry() {
     try {
       const row = document.getElementById('settings-founder-row');
-      if (row) row.style.display = (_founderIapReady() || _founderOwned()) ? '' : 'none';
+      if (row) row.style.display = (!_membershipOpen() && (_founderIapReady() || _founderOwned())) ? '' : 'none';
     } catch (_) {}
   }
   function openFounder() {
+    if (_membershipOpen()) return;   // W1122 — no memberships for now, so no paywall and no receipt
     // App Store 2.1 — never present the priced paywall unless IAP is live; a
     // member may still open it to see their receipt. Re-checked on every open.
     if (!_founderIapReady() && !_founderOwned()) return;
@@ -59933,7 +59939,7 @@
       flavorShort:     'A god that grins because it has already counted you.',
       flavorLong:      'Behind the last seal waits a thing that was worshipped long before it was feared — a monarch of the deepest floors wearing a wide, patient smile, certain no party of hunters has ever been enough. It does not rage. It does not hurry. It simply outlasts. Five hunters, three days, and a mountain of ground covered together is the one thing its grin has never accounted for. Bring everyone; leave nothing in reserve.',
       killCondShort:   'Up to 5 hunters: 150,000 steps + 75 flights in 80h',
-      killCondLong:    'Assemble a party of up to five members. Within 80 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
+      killCondLong:    'Assemble a party of up to five hunters. Within 80 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
       coopVictoryTitle:'THE GRIN FALLS',
       coopDefeatTitle: 'IT WAS ALWAYS SMILING',
     },
@@ -60225,10 +60231,10 @@
     const need = (typeof _coopSheet.finderNeed === 'number') ? _coopSheet.finderNeed : ((cfg.minParty | 0) || 2);
     const enough = waiting >= need;
     const sub = enough
-      ? 'Enough members are queued — your party forms any moment.'
+      ? 'Enough hunters are queued — your party forms any moment.'
       : (waiting <= 1
-          ? 'You are first in the queue. The instant another member queues, you are paired.'
-          : (waiting + ' members queued · ' + need + ' needed to form.'));
+          ? 'You are first in the queue. The instant another hunter queues, you are paired.'
+          : (waiting + ' hunters queued · ' + need + ' needed to form.'));
     const errHtml = _coopSheet.finderError
       ? '<div class="coop-note coop-note--loss">' + esc(_coopErrText(_coopSheet.finderError)) + '</div>'
       : '';
@@ -61325,7 +61331,7 @@
     if (cfg.brutalBelowFull) note += '<div class="coop-note coop-note--warn">Below a full party of ' + _maxParty + ', The Grinning God is merciless — recruit all ' + (_maxParty - 1) + ' allies if you can. The goal never shrinks.</div>';
     const _feeFoot = _fee > 0
       ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.'
-      : '✦ Members summon free · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.';
+      : 'Every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.';
     const cta = _rankLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">REACH ' + esc(cfg.rank) + ' RANK TO SUMMON</button>' +
         '<p class="coop-foot">This hunt requires ' + esc(cfg.rank) + ' rank to summon. Keep climbing.</p>'
@@ -61528,7 +61534,7 @@
         const footer = broke
           ? 'You need ' + (fee - bal) + ' more souls to answer — the entrance fee is ' + fee + '.'
           : (_coopIsMultiAlly(inst) ? 'The ' + hrs + '-hour hunt begins once the full party has answered.' : 'The ' + hrs + '-hour hunt begins the instant you accept.') +   // W692
-            (fee > 0 ? ' Entrance fee: ' + fee + ' souls.' : ' Members join free.');
+            (fee > 0 ? ' Entrance fee: ' + fee + ' souls.' : '');
         return '<div class="coopsm-ctas' + r4 + '">' +
           '<button class="coopsm-join" data-coop-action="join"' + joinDis + (broke ? ' style="opacity:.5;cursor:not-allowed"' : '') + '>' +
             '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l9 9 1.6-1.1L4.4 1.4zM15 3l-5.5 5.5 1.2 1.2L16 4.2zM9 11l-1 5h2z" fill="#1a1206"/></svg>' +
@@ -61760,7 +61766,7 @@
       ov.classList.toggle('chd-phase-2', phase === 2);
       ov.classList.toggle('chd-phase-3', phase === 3);
       const kick = document.getElementById('chd-kicker');
-      if (kick) kick.textContent = cfg.membersOnly ? 'MEMBERS-ONLY RAID · ' + String(cfg.rank || 'S') + '-RANK'
+      if (kick) kick.textContent = cfg.membersOnly ? 'RAID · ' + String(cfg.rank || 'S') + '-RANK'
                                                    : 'CO-OP HUNT · ' + String(cfg.rank || 'E') + '-RANK GATE';
       const vit = Math.max(0, 1 - prog.binding);
       const fill = document.getElementById('chd-vit-fill');
@@ -62057,9 +62063,11 @@
         // ALLY_NOT_MEMBER, but the client can't know membership without this flag \u2014 so the
         // grey-out here means the summoner never taps a doomed pick.)
         const _isMemberBoss = !!_pcfg.membersOnly;
-        const _memberBadge = (_isMemberBoss && f.member === true)
+        // W1122 \u2014 no memberships for now: any friend may join, and no badge sets one apart.
+        const _memberOk = _membershipOpen() || f.member === true;
+        const _memberBadge = (_isMemberBoss && !_membershipOpen() && f.member === true)
           ? '<span class="coop-friend-member" title="Member" aria-hidden="true">\u2726</span>' : '';
-        const _invitable = _isMemberBoss ? (f.member === true) : _coopRankMeets(tier, bossRank);
+        const _invitable = _isMemberBoss ? _memberOk : _coopRankMeets(tier, bossRank);
         if (_invitable) {
           // W677\u2192W692 \u2014 multi-ally boss: tap toggles selection (checkmark), Summon confirms below.
           if (maxAllies > 1 || fanOut) {
@@ -62112,7 +62120,7 @@
     // W732 — members-only raid: tell the (member) summoner WHY some allies are
     // dimmed and that they need Awakened membership. The recruit entry is already
     // members-gated, so only a member ever reaches this picker.
-    const membersNote = _pcfg.membersOnly
+    const membersNote = (_pcfg.membersOnly && !_membershipOpen())
       ? '<div class="coop-note coop-note--members"><span class="coop-note-star">✦</span> Members-only raid — only Awakened members can answer this summon. Dimmed hunters aren’t members yet and must subscribe to join.</div>'
       : '';
     return (
@@ -63404,7 +63412,7 @@
         members.classList.toggle('gate-cell--open', open);
         const lbl = members.querySelector('.gate-cell-lock-label');
         if (open) {
-          members.setAttribute('aria-label', 'Enter the members raid — The Grinning God');
+          members.setAttribute('aria-label', 'Enter the raid — The Grinning God');
         } else {
           if (lbl) lbl.textContent = isMember ? 'Coming soon' : 'Members only';
           members.setAttribute('aria-label', isMember ? 'The Grinning God raid — coming soon' : 'Members-only raid — tap to go Premium');

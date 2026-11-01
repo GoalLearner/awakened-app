@@ -20,6 +20,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 import { blockedBetween } from './board';
+import { MEMBERSHIP_OPEN } from '../lib/membership';
 
 // W1075 SECURITY — a declined request stays declined for this long: within it, asking again
 // is answered "pending" and sends nothing. Before this, decline → ask again → decline was a
@@ -331,7 +332,7 @@ export async function handleFriendsList(
     const serialized = mapFriendRow(row, session.userId, joined);
     if (!serialized) continue;
     // W1040 — whether someone pays is theirs to show once they accept (or when THEY asked).
-    serialized.member = serialized.direction === 'outgoing' ? false : ((joined?.founder_seq != null) || premiumSet.has(oid));   // W700
+    serialized.member = serialized.direction === 'outgoing' ? false : (MEMBERSHIP_OPEN || (joined?.founder_seq != null) || premiumSet.has(oid));   // W700, W1122
     if (serialized.status === 'accepted') friends.push(serialized);
     else if (serialized.direction === 'incoming') incoming.push(serialized);
     else outgoing.push(serialized);
