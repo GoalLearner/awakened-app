@@ -21,7 +21,8 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { getAccoladeWeekStart } from '../lib/accolade-week';
+import { getAccoladeWeekStart, isFinalStandingsHold, priorWeekStart } from '../lib/accolade-week';
+import { MERGED_FOR_WEEK } from '../lib/week-board';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -62,34 +63,60 @@ export async function handleFriendsLeaderboardGet(
     if (Number.isFinite(parsed) && parsed > 0) limit = Math.min(parsed, MAX_LIMIT);
   }
 
-  const weekStart = getAccoladeWeekStart();
+  // W1120 — the same Sunday-morning rest as the global Steps board.
+  const final = metric === 'step_total' && isFinalStandingsHold();
+  const weekStart = final ? priorWeekStart(getAccoladeWeekStart()) : getAccoladeWeekStart();
 
   // accepted-friends-UNION-self, LEFT JOINed to this week's snapshot so
   // every member appears (0 if they have no steps this week). ?3 = caller's
   // user_id, reused in the self clause + the friend-edge subquery.
-  const result = await env.DB.prepare(
-    `SELECT u.id AS user_id, u.alias AS alias,
-            COALESCE(ls.current_value, 0) AS current_value,
-            p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg,
-            p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
-       FROM users u
-       LEFT JOIN leaderboard_snapshots ls
-         ON ls.user_id = u.id AND ls.metric = ?1 AND ls.week_start = ?2
-       LEFT JOIN public_profile_summary p ON p.user_id = u.id
-      WHERE u.id = ?3
-         OR u.id IN (
-             SELECT CASE WHEN f.requester_user_id = ?3
-                         THEN f.recipient_user_id
-                         ELSE f.requester_user_id END
-               FROM friends f
-              WHERE f.status = 'accepted'
-                AND (f.requester_user_id = ?3 OR f.recipient_user_id = ?3)
-           )
-      ORDER BY current_value DESC, u.alias ASC
-      LIMIT ?4`,
-  )
-    .bind(metric, weekStart, session.userId, limit)
-    .all<FriendRow>();
+  const result = final
+    ? await env.DB.prepare(
+        `${MERGED_FOR_WEEK}
+         SELECT u.id AS user_id, u.alias AS alias,
+                COALESCE(m.steps, 0) AS current_value,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg,
+                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
+           FROM users u
+           LEFT JOIN merged m ON m.user_id = u.id
+           LEFT JOIN public_profile_summary p ON p.user_id = u.id
+          WHERE u.id = ?2
+             OR u.id IN (
+                 SELECT CASE WHEN f.requester_user_id = ?2
+                             THEN f.recipient_user_id
+                             ELSE f.requester_user_id END
+                   FROM friends f
+                  WHERE f.status = 'accepted'
+                    AND (f.requester_user_id = ?2 OR f.recipient_user_id = ?2)
+               )
+          ORDER BY current_value DESC, u.alias ASC
+          LIMIT ?3`,
+      )
+        .bind(weekStart, session.userId, limit)
+        .all<FriendRow>()
+    : await env.DB.prepare(
+        `SELECT u.id AS user_id, u.alias AS alias,
+                COALESCE(ls.current_value, 0) AS current_value,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg,
+                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
+           FROM users u
+           LEFT JOIN leaderboard_snapshots ls
+             ON ls.user_id = u.id AND ls.metric = ?1 AND ls.week_start = ?2
+           LEFT JOIN public_profile_summary p ON p.user_id = u.id
+          WHERE u.id = ?3
+             OR u.id IN (
+                 SELECT CASE WHEN f.requester_user_id = ?3
+                             THEN f.recipient_user_id
+                             ELSE f.requester_user_id END
+                   FROM friends f
+                  WHERE f.status = 'accepted'
+                    AND (f.requester_user_id = ?3 OR f.recipient_user_id = ?3)
+               )
+          ORDER BY current_value DESC, u.alias ASC
+          LIMIT ?4`,
+      )
+        .bind(metric, weekStart, session.userId, limit)
+        .all<FriendRow>();
 
   const rowsRaw = result.results ?? [];
   let meRank = 0;
@@ -118,6 +145,7 @@ export async function handleFriendsLeaderboardGet(
   return jsonOk({
     metric,
     weekStart,
+    final,
     total: rows.length,
     me: meRank > 0 ? { rank: meRank, current_value: meValue } : null,
     rows,

@@ -911,6 +911,7 @@
         ok: true,
         metric:    data.metric,
         weekStart: data.weekStart,
+        final:     !!data.final,   // W1120
         total:     data.total || 0,
         rows:      Array.isArray(data.rows) ? data.rows : [],
         me:        data.me || null,
@@ -984,6 +985,8 @@
         metric: data.metric,
         top:    Array.isArray(data.top) ? data.top : [],
         me:     data.me || null,
+        final:  !!data.final,   // W1120 — Sunday morning: the finished week's standings
+        week:   data.week || null,
       };
     }
     if (res.status === 401) {

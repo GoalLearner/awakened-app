@@ -22,7 +22,8 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { isValidMetric, isWeeklyMetric, type Metric } from '../lib/metrics';
-import { getAccoladeWeekStart } from '../lib/accolade-week';
+import { getAccoladeWeekStart, isFinalStandingsHold, priorWeekStart } from '../lib/accolade-week';
+import { MERGED_FOR_WEEK } from '../lib/week-board';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -60,6 +61,57 @@ interface RankRow {
   rank: number;
 }
 
+// W1120 — a finished week in the live board's row shape, off the durable merge
+// (the snapshots are being overwritten by the new week's submits).
+async function readFinalStandings(env: Env, week: string, userId: string, limit: number) {
+  const topResult = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT u.alias AS alias, m.steps AS current_value,
+            pps.arena_title AS arena_title,
+            pps.bosses_slain_total AS bosses_slain,
+            pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
+            pps.founder_seq AS founder_seq,
+            pps.avatar_id AS avatar_id,
+            pps.card_bg AS card_bg,
+            hoa.ordinal AS hall_ordinal
+       FROM merged m
+       JOIN users u ON u.id = m.user_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
+       LEFT JOIN hall_of_awakened hoa ON hoa.user_id = m.user_id
+      ORDER BY m.steps DESC, u.alias ASC
+      LIMIT ?2`,
+  )
+    .bind(week, limit)
+    .all<TopRow>();
+
+  const meRow = await env.DB.prepare(
+    `${MERGED_FOR_WEEK}
+     SELECT (SELECT steps FROM merged WHERE user_id = ?2)                                          AS steps,
+            (SELECT COUNT(*) FROM merged WHERE steps > (SELECT steps FROM merged WHERE user_id = ?2)) AS above`,
+  )
+    .bind(week, userId)
+    .first<{ steps: number | null; above: number | null }>();
+
+  return {
+    final: true,
+    week,
+    top: (topResult.results ?? []).map((row, i) => ({
+      rank: i + 1,
+      alias: row.alias,
+      current_value: row.current_value,
+      arena_title: row.arena_title ?? null,
+      bosses_slain: row.bosses_slain ?? null,
+      prestige: row.prestige ?? 0,
+      rankTier: row.rank_tier ?? null,
+      founderSeq: row.founder_seq ?? null,
+      avatar_id: row.avatar_id ?? null,
+      card_bg: row.card_bg ?? null,
+      hall_ordinal: row.hall_ordinal ?? null,
+    })),
+    me: meRow && meRow.steps ? { rank: (meRow.above ?? 0) + 1, current_value: meRow.steps } : null,
+  };
+}
+
 export async function handleLeaderboardTop(
   request: Request,
   env: Env,
@@ -89,6 +141,14 @@ export async function handleLeaderboardTop(
     if (Number.isFinite(parsed) && parsed > 0) {
       limit = Math.min(parsed, MAX_LIMIT);
     }
+  }
+
+  // W1120 — Sunday morning the Steps board rests on last week's final standings
+  // (owner 2026-10-31). Every client gets this, old builds included. An empty
+  // finished week falls through to the live board.
+  if (metric === 'step_total' && isFinalStandingsHold()) {
+    const finished = await readFinalStandings(env, priorWeekStart(getAccoladeWeekStart()), session.userId, limit);
+    if (finished.top.length > 0) return jsonOk({ metric, ...finished });
   }
 
   // v3 Phase 1z.33 -- weekly scoping. For weekly metrics, all reads

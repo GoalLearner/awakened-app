@@ -9,6 +9,7 @@
  */
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { handleLeaderboardTop } from './leaderboard-top';
+import { isFinalStandingsHold } from '../lib/accolade-week';
 import type { Env } from '../env';
 
 const okRl = { limit: async () => ({ success: true }) };
@@ -69,11 +70,87 @@ function makeEnv(db: D1Database): Env {
 
 const session = { userId: 'user-abc', alias: 'TestHunter' };
 
+describe('GET /v1/leaderboard/top -- the Sunday-morning final standings (W1120)', () => {
+  function holdDb(rows: Array<{ alias: string; current_value: number }>, me: { steps: number | null; above: number | null }) {
+    const calls: CapturedCall[] = [];
+    return {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          calls.push({ sql, binds: args });
+          return {
+            all:   async () => ({ results: sql.includes('FROM merged m') ? rows : [], success: true, meta: {} }),
+            first: async () => (sql.includes('FROM merged') ? me : null),
+          };
+        },
+      }),
+      _calls: () => calls,
+    } as unknown as D1Database & { _calls: () => CapturedCall[] };
+  }
+  const top = (metric = 'step_total') => new Request('https://example.com/v1/leaderboard/top?metric=' + metric);
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('rests on last week off the durable merge, with the caller placed on it', async () => {
+    vi.setSystemTime(new Date('2026-11-01T07:01:00Z'));   // Sunday 12:01 AM PDT
+    const db = holdDb([{ alias: 'Alpha', current_value: 70000 }, { alias: 'Beta', current_value: 31684 }], { steps: 31684, above: 1 });
+    const res = await handleLeaderboardTop(top(), makeEnv(db), session as never);
+    const body = await res.json() as { final: boolean; week: string; top: Array<{ rank: number; alias: string; current_value: number }>; me: unknown };
+    expect(body.final).toBe(true);
+    expect(body.week).toBe('2026-10-25');
+    expect(body.top.map((r) => [r.rank, r.alias, r.current_value])).toEqual([[1, 'Alpha', 70000], [2, 'Beta', 31684]]);
+    expect(body.me).toEqual({ rank: 2, current_value: 31684 });
+    expect(db._calls()[0].binds[0]).toBe('2026-10-25');
+    expect(db._calls()[0].sql).toContain('weekly_step_records');
+  });
+
+  it('a hunter who was not on last week has no row, not a rank', async () => {
+    vi.setSystemTime(new Date('2026-11-01T15:00:00Z'));
+    const db = holdDb([{ alias: 'Alpha', current_value: 70000 }], { steps: null, above: 0 });
+    const res = await handleLeaderboardTop(top(), makeEnv(db), session as never);
+    expect((await res.json() as { me: unknown }).me).toBeNull();
+  });
+
+  it('an empty finished week falls through to the live board', async () => {
+    vi.setSystemTime(new Date('2026-11-01T15:00:00Z'));
+    const db = holdDb([], { steps: null, above: 0 });
+    const res = await handleLeaderboardTop(top(), makeEnv(db), session as never);
+    expect((await res.json() as { final?: boolean }).final).toBeUndefined();
+  });
+
+  it('at 12:00 PM Pacific the live week is back', async () => {
+    vi.setSystemTime(new Date('2026-11-01T20:00:00Z'));   // Sunday 12:00 PM PST
+    const db = makeDb({ topRows: [{ alias: 'Alpha', current_value: 900 }] });
+    const res = await handleLeaderboardTop(top(), makeEnv(db), session as never);
+    expect((await res.json() as { final?: boolean }).final).toBeUndefined();
+    expect((db as unknown as { _calls: () => CapturedCall[] })._calls()[0].binds).toContain('2026-11-01');
+  });
+
+  it('only the Steps board rests', async () => {
+    vi.setSystemTime(new Date('2026-11-01T15:00:00Z'));
+    const db = makeDb({ topRows: [{ alias: 'Alpha', current_value: 90 }] });
+    const res = await handleLeaderboardTop(top('floor_best'), makeEnv(db), session as never);
+    expect((await res.json() as { final?: boolean }).final).toBeUndefined();
+  });
+
+  it.each([
+    ['2026-11-01T06:59:59Z', false],   // Saturday 11:59 PM PDT
+    ['2026-11-01T07:00:00Z', true],    // Sunday 12:00 AM PDT
+    ['2026-11-01T19:59:59Z', true],    // Sunday 11:59 AM PST, the clocks fell back in between
+    ['2026-11-01T20:00:00Z', false],   // Sunday 12:00 PM PST
+    ['2026-05-17T18:59:59Z', true],    // Sunday 11:59 AM PDT
+    ['2026-05-17T19:00:00Z', false],   // Sunday 12:00 PM PDT
+    ['2026-11-02T15:00:00Z', false],   // Monday morning
+  ])('the hold at %s is %s', (at, want) => {
+    expect(isFinalStandingsHold(Date.parse(at))).toBe(want);
+  });
+});
+
 describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // 2026-05-17 (Sunday) UTC -- week key '2026-05-17'
-    vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));
+    // 2026-05-17 (Sunday) 1 PM PDT, past the W1120 hold -- week key '2026-05-17'
+    vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 20, 0, 0)));
   });
   afterEach(() => {
     vi.useRealTimers();

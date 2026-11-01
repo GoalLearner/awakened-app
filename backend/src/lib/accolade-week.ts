@@ -112,6 +112,28 @@ export function getAccoladeWeekStart(nowMs: number = Date.now()): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+const PACIFIC_WEEKDAY_HOUR = new Intl.DateTimeFormat('en-US', {
+  timeZone: PACIFIC_TIMEZONE,
+  weekday:  'short',
+  hour:     'numeric',
+  hourCycle: 'h23',
+});
+
+/**
+ * W1120 — the Steps board rests on the finished week's final standings from
+ * the Sunday-Pacific reset until 12:00 PM Pacific that day, so nobody opens an
+ * empty board at 12:01 AM. Reads only: submits keep landing in the new week.
+ */
+export function isFinalStandingsHold(nowMs: number = Date.now()): boolean {
+  let weekday = '';
+  let hour = NaN;
+  for (const p of PACIFIC_WEEKDAY_HOUR.formatToParts(new Date(nowMs))) {
+    if (p.type === 'weekday') weekday = p.value;
+    else if (p.type === 'hour') hour = Number(p.value);
+  }
+  return weekday === 'Sun' && hour < 12;
+}
+
 /**
  * W657 — the Sunday-Pacific week_start of the week BEFORE `weekStart`.
  * Pure date math: a fixed 7-day step in ms is exactly 7 calendar days off
