@@ -24,6 +24,8 @@ interface MakeDbOptions {
   perInsertChanges?: number[];
   /** Rows returned by the friend-feed SELECT. */
   feedRows?: Array<Record<string, unknown>>;
+  /** W1118 — rows returned by the every-hunter shadow SELECT; defaults to feedRows. */
+  publicShadowRows?: Array<Record<string, unknown>>;
 }
 
 function makeDb(opts: MakeDbOptions = {}) {
@@ -37,7 +39,7 @@ function makeDb(opts: MakeDbOptions = {}) {
         const isFeed   = /FROM public_achievement_events/.test(sql) && !isInsert;
         return {
           all:   async () => ({
-            results: isFeed ? (opts.feedRows ?? []) : [],
+            results: !isFeed ? [] : (/WHERE e\.event_type = 'shadow_drop'/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
             success: true,
             meta: {},
           }),
@@ -727,6 +729,11 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       { ...VALID_SHADOW_DROP, eventLabel: 'claimed Crown of Deep Rest' },
       { ...VALID_SHADOW_DROP, eventKey: 'The Footsore Herald' },
       { ...VALID_SHADOW_DROP, clientEventId: 'shadow:2026-10-25:n1' },
+      // W1118 — it reaches every hunter, so no words of the client's own ride on it
+      { ...VALID_SHADOW_DROP, eventLabel: 'claimed the Shadow of Anything A Client Likes' },
+      { ...VALID_SHADOW_DROP, eventLabel: 'claimed the Shadow of The Steel Wolf' },   // another boss's name
+      { ...VALID_SHADOW_DROP, eventKey: 'made_up_boss', clientEventId: 'shadow:made_up_boss' },
+      { ...VALID_SHADOW_DROP, eventKey: 'constructor', clientEventId: 'shadow:constructor' },
       { ...VALID_SHADOW_DROP, eventValue: 3 },
       { ...VALID_SHADOW_DROP, rarity: 'E' },
     ];
@@ -1792,6 +1799,38 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     const json = await res.json() as { events: unknown[] };
     expect(json.events.length).toBe(1);
   });
+
+  // W1118 — a risen shadow reaches every hunter
+  const feedRow = (id: string, type: string, at: number, alias = 'rendiesel') => ({
+    id, user_id: alias + '-uid', event_type: type, event_key: 'the_carouser', event_label: 'x',
+    event_value: null, rarity: null, server_created_at: at, alias, rank_label: null,
+  });
+  const feed = async (db: D1Database) =>
+    ((await (await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity?limit=2'), makeEnv(db), session)).json()) as { events: Array<{ id: string; alias: string }> }).events;
+
+  it('merges a stranger\'s shadow into the feed, newest first, on top of the friend limit', async () => {
+    const db = makeDb({
+      feedRows: [feedRow('f1', 'boss_kill', NOW_UTC - 1000), feedRow('f2', 'rank_up', NOW_UTC - 3000)],
+      publicShadowRows: [feedRow('s1', 'shadow_drop', NOW_UTC, 'stranger'), feedRow('s2', 'shadow_drop', NOW_UTC - 2000, 'stranger2')],
+    });
+    expect((await feed(db)).map((e) => e.id)).toEqual(['s1', 'f1', 's2', 'f2']);
+  });
+
+  it('a friend\'s shadow in both reads appears once', async () => {
+    const db = makeDb({ feedRows: [feedRow('s1', 'shadow_drop', NOW_UTC)], publicShadowRows: [feedRow('s1', 'shadow_drop', NOW_UTC)] });
+    expect((await feed(db)).map((e) => e.id)).toEqual(['s1']);
+  });
+
+  it('the every-hunter read takes shadows only, honours blocks both ways, skips sims and is capped', async () => {
+    const db = makeDb({ publicShadowRows: [] });
+    await feed(db);
+    const q = db._calls().find((c) => /WHERE e\.event_type = 'shadow_drop'/.test(c.sql))!;
+    expect(q.sql).not.toMatch(/FROM friends/);
+    expect(q.sql).toMatch(/u\.apple_sub NOT LIKE 'sim_test_%'/);
+    expect(q.sql).toMatch(/NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)/);
+    expect(q.sql).toMatch(/NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)/);
+    expect(q.binds.slice(1)).toEqual(['user-abc', 'user-abc', 20]);
+  });
 });
 
 // ── W913 — LIKES on friend feats ──────────────────────────────────────────
@@ -1861,12 +1900,13 @@ describe('W913 — feed likes', () => {
     expect((await like(likeDb(st), 'evt-1', { rlWrite: denyRl })).status).toBe(429);
   });
 
-  it('the scope query only admits accepted friends (the SQL carries the friends subquery)', async () => {
+  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118)', async () => {
     const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
     const db = likeDb(st);
     await like(db, 'evt-1');
     const scope = db._calls().find((c) => /FROM public_achievement_events e/.test(c.sql))!;
     expect(scope.sql).toMatch(/f\.status = 'accepted'/);
-    expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc']);
+    expect(scope.sql).toMatch(/OR \(e\.event_type = 'shadow_drop'\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
+    expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc', 'user-abc', 'user-abc']);
   });
 });

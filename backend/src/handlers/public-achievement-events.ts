@@ -13,8 +13,9 @@
  *       friends + the viewer themselves, joined to alias +
  *       rankLabel so the client can render in one roundtrip.
  *       Strangers, pending requests, and removed users are
- *       excluded. user_id, client_event_id, metadata_json, and
- *       rank_points are NEVER returned.
+ *       excluded, except that every hunter's shadow_drop reaches
+ *       everyone (W1118). user_id, client_event_id, metadata_json,
+ *       and rank_points are NEVER returned.
  *
  * Allowed event types in v1 (locked in 1z.199 audit):
  *
@@ -125,10 +126,42 @@ const ALLOWED_BOSS_RANKS  = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 // W1117 — the comma is for "Erebus, the Shadow Sovereign". Without it his kill failed the whole
 // batch (validation is all-or-nothing), taking any event queued beside it down too.
 const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 ,'\-]+$/;
-const RE_SHADOW_DROP_LABEL  = /^claimed the Shadow of [A-Za-z0-9 ,'\-]+$/;   // W1093
-const RE_SHADOW_DROP_KEY    = /^[a-z0-9_]{1,48}$/;                          // W1093 — a boss id
-const SHADOW_DROP_LABEL_MAX = 84;
-const RE_RANK_UP_LABEL      = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
+// W1118 — a shadow_drop reaches every hunter, so its label cannot be free text: a tampered client
+// could otherwise put any words matching a character class in front of all of them. Every solo boss
+// (app.js BOSSES without coopOnly), one per line; tests/e2e/shadow-drop-feed.spec.ts fails if the two
+// lists drift, so a new solo boss lands here and deploys before the client that can claim it.
+const SHADOW_BOSS_NAMES: Readonly<Record<string, string>> = {
+  the_insomniac: "The Insomniac",
+  the_steel_wolf: "The Steel Wolf",
+  the_carouser: "The Carouser",
+  the_iron_warden: "The Iron Warden",
+  the_glass_strider: "The Glass Strider",
+  the_dream_tyrant: "The Dream Tyrant",
+  the_marathon_wraith: "The Marathon Wraith",
+  the_furnace_knight: "The Furnace Knight",
+  the_ascendant_colossus: "The Ascendant Colossus",
+  the_gray_pilgrim: "The Gray Pilgrim",
+  the_forge_of_ten_thousand_days: "The Forge of Ten Thousand Days",
+  the_vow_keeper: "The Vow Keeper",
+  the_patient_flame: "The Patient Flame",
+  the_tideless_marcher: "The Tideless Marcher",
+  the_sleepless_ascent: "The Sleepless Ascent",
+  the_unbroken_anvil: "The Unbroken Anvil",
+  erebus_the_shadow_sovereign: "Erebus, the Shadow Sovereign",
+  the_starved_sentinel: "The Starved Sentinel",
+  the_worldspine: "The Worldspine",
+  the_footsore_herald: "The Footsore Herald",
+  the_milestone_hound: "The Milestone Hound",
+  the_wayfarer_knight: "The Wayfarer Knight",
+  the_seven_league_stalker: "The Seven-League Stalker",
+  the_unending_road: "The Unending Road",
+  the_sevenfold_colossus: "The Sevenfold Colossus",
+  the_lullaby_wraith: "The Lullaby Wraith",
+  the_moonwell_keeper: "The Moonwell Keeper",
+  the_oracle_of_deep_hours: "The Oracle of Deep Hours",
+  the_seventh_night: "The Seventh Night",
+};
+const RE_RANK_UP_LABEL     = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
 const RE_STEP_BUCKET_LABEL  = /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/;
 
 // v3 Phase 1z.223A — ultra-rare drop label is a single fixed
@@ -313,6 +346,23 @@ const BOSS_KILL_COUNT_MAX  = 999_999;
 const FEED_DEFAULT_LIMIT   = 30;
 const FEED_MIN_LIMIT       = 1;
 const FEED_MAX_LIMIT       = 50;
+// W1118 — shadows from every hunter, read on top of the limit so they never push a friend's feats out.
+const FEED_PUBLIC_SHADOWS_MAX = 20;
+const FEED_SELECT = `SELECT e.id                AS id,
+            e.user_id           AS user_id,
+            e.event_type        AS event_type,
+            e.event_key         AS event_key,
+            e.event_label       AS event_label,
+            e.event_value       AS event_value,
+            e.rarity            AS rarity,
+            e.server_created_at AS server_created_at,
+            u.alias             AS alias,
+            p.rank_label        AS rank_label,
+            (SELECT best_value FROM leaderboard_snapshots
+              WHERE user_id = e.user_id AND metric = 'floor_best' LIMIT 1) AS floor_best
+       FROM public_achievement_events e
+       JOIN users u ON u.id = e.user_id
+       LEFT JOIN public_profile_summary p ON p.user_id = e.user_id`;
 
 interface RawEvent {
   eventType?: unknown;
@@ -450,13 +500,13 @@ function validateEvent(
     }
     rarity = raw.rarity;
   } else if (eventType === 'shadow_drop') {
-    // W1093 — every field pinned: the label is the boss name under the boss-kill character
-    // class, the key is the boss id, the clientEventId is "shadow:<bossId>", nothing else rides.
-    if (!RE_SHADOW_DROP_LABEL.test(eventLabel) || eventLabel.length > SHADOW_DROP_LABEL_MAX) {
-      return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'shadow_drop label must match "claimed the Shadow of <bossName>".' };
+    // W1093 — every field pinned: the key is a solo boss id (W1118), the label is that boss's name,
+    // the clientEventId is "shadow:<bossId>", nothing else rides.
+    if (!Object.prototype.hasOwnProperty.call(SHADOW_BOSS_NAMES, eventKey)) {
+      return { ok: false, code: 'INVALID_EVENT_KEY', detail: 'shadow_drop eventKey must be a solo boss id.' };
     }
-    if (!RE_SHADOW_DROP_KEY.test(eventKey)) {
-      return { ok: false, code: 'INVALID_EVENT_KEY', detail: 'shadow_drop eventKey must be a boss id.' };
+    if (eventLabel !== 'claimed the Shadow of ' + SHADOW_BOSS_NAMES[eventKey]) {
+      return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'shadow_drop label must be "claimed the Shadow of <bossName>".' };
     }
     if (clientEventId !== 'shadow:' + eventKey) {
       return { ok: false, code: 'INVALID_CLIENT_EVENT_ID', detail: 'shadow_drop clientEventId must be "shadow:<bossId>".' };
@@ -1027,21 +1077,7 @@ export async function handleFriendsActivityGet(
   // client renders in one roundtrip. rank_points + metadata_json
   // are never selected.
   const results = await env.DB.prepare(
-    `SELECT e.id                AS id,
-            e.user_id           AS user_id,
-            e.event_type        AS event_type,
-            e.event_key         AS event_key,
-            e.event_label       AS event_label,
-            e.event_value       AS event_value,
-            e.rarity            AS rarity,
-            e.server_created_at AS server_created_at,
-            u.alias             AS alias,
-            p.rank_label        AS rank_label,
-            (SELECT best_value FROM leaderboard_snapshots
-              WHERE user_id = e.user_id AND metric = 'floor_best' LIMIT 1) AS floor_best
-       FROM public_achievement_events e
-       JOIN users u ON u.id = e.user_id
-       LEFT JOIN public_profile_summary p ON p.user_id = e.user_id
+    `${FEED_SELECT}
       WHERE (e.user_id = ?
          OR e.user_id IN (
              SELECT CASE WHEN f.requester_user_id = ?
@@ -1065,7 +1101,26 @@ export async function handleFriendsActivityGet(
     )
     .all<FeedRow>();
 
-  const rows = results.results ?? [];
+  // W1118 — owner 2026-10-31: a risen shadow is announced to every hunter, not only friends. A block
+  // hides it both ways, as on every other public read, and sims never appear.
+  const publicShadows = await env.DB.prepare(
+    `${FEED_SELECT}
+      WHERE e.event_type = 'shadow_drop'
+        AND e.server_created_at > ?
+        AND u.apple_sub NOT LIKE 'sim_test_%'
+        AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+        AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
+      ORDER BY e.server_created_at DESC
+      LIMIT ?`,
+  )
+    .bind(Date.now() - FEED_LOOKBACK_MS, session.userId, session.userId, FEED_PUBLIC_SHADOWS_MAX)
+    .all<FeedRow>();
+
+  const friendRows = results.results ?? [];
+  const friendIds = new Set(friendRows.map((r) => r.id));
+  const rows = friendRows
+    .concat((publicShadows.results ?? []).filter((r) => !friendIds.has(r.id)))
+    .sort((a, b) => b.server_created_at - a.server_created_at);
   const events = rows
     // W389 — drop floor-contradicting 'earned the title' orphans: a write-once
     // arena_title_earned event whose required Ascent floor exceeds the hunter's
@@ -1141,7 +1196,8 @@ async function feedLikes(env: Env, userId: string, ids: string[], ownIds?: Set<s
 /**
  * W913 — POST /v1/friends/activity/:id/like — toggle the caller's LIKE on a
  * friend's public achievement event. Only events inside the caller's feed
- * scope (an accepted friend's) can be liked; your own feats cannot.
+ * scope (an accepted friend's, or W1118 any unblocked hunter's shadow) can be
+ * liked; your own feats cannot.
  */
 export async function handleFeedLikePost(
   _request: Request,
@@ -1155,7 +1211,7 @@ export async function handleFeedLikePost(
     `SELECT e.id AS id, e.user_id AS user_id
        FROM public_achievement_events e
       WHERE e.id = ?
-        AND e.user_id IN (
+        AND (e.user_id IN (
              SELECT CASE WHEN f.requester_user_id = ?
                          THEN f.recipient_user_id
                          ELSE f.requester_user_id END
@@ -1163,8 +1219,11 @@ export async function handleFeedLikePost(
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            )
+         OR (e.event_type = 'shadow_drop'
+             AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+             AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)))
       LIMIT 1`,
-  ).bind(eventId, session.userId, session.userId, session.userId).first<{ id: string; user_id: string }>();
+  ).bind(eventId, session.userId, session.userId, session.userId, session.userId, session.userId).first<{ id: string; user_id: string }>();
   if (!ev) return jsonError(404, 'NOT_FOUND', 'No such feat in your feed.');
   if (ev.user_id === session.userId) return jsonError(400, 'SELF_LIKE', 'You cannot like your own feat.');
   const ins = await env.DB.prepare('INSERT OR IGNORE INTO feed_likes (event_id, user_id, created_at) VALUES (?, ?, ?)')

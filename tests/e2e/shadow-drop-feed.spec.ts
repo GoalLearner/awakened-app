@@ -12,19 +12,15 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const BACKEND = readFileSync(join(__dirname, '../../backend/src/handlers/public-achievement-events.ts'), 'utf8');
-function backendRegex(name: string): RegExp {
-  const m = new RegExp('const ' + name + '\\s*=\\s*/(.+)/;').exec(BACKEND);
-  if (!m) throw new Error(name + ' not found in the backend');
-  return new RegExp(m[1]);
+// W1118 — the server's list of bosses a shadow may name, one per line.
+function backendBossNames(): Record<string, string> {
+  const block = /const SHADOW_BOSS_NAMES[^=]*= \{([\s\S]*?)\n\};/.exec(BACKEND);
+  if (!block) throw new Error('SHADOW_BOSS_NAMES not found in the backend');
+  const out: Record<string, string> = {};
+  for (const m of block[1].matchAll(/^\s*([a-z0-9_]+): "(.+)",$/gm)) out[m[1]] = m[2];
+  return out;
 }
-function backendInt(name: string): number {
-  const m = new RegExp('const ' + name + '\\s*=\\s*(\\d+);').exec(BACKEND);
-  if (!m) throw new Error(name + ' not found in the backend');
-  return Number(m[1]);
-}
-const RE_LABEL = backendRegex('RE_SHADOW_DROP_LABEL');
-const RE_KEY = backendRegex('RE_SHADOW_DROP_KEY');
-const LABEL_MAX = backendInt('SHADOW_DROP_LABEL_MAX');
+const SERVER_BOSSES = backendBossNames();
 
 async function boot(page: Page, events: unknown[] = []) {
   await page.addInitScript((evs) => {
@@ -65,7 +61,7 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     await expect.poll(() => posted(page).then((p) => p.length), { timeout: 12_000 }).toBe(1);
     const ev = (await posted(page))[0];
     expect(ev).toMatchObject({ eventType: 'shadow_drop', eventKey: 'the_carouser', eventLabel: 'claimed the Shadow of The Carouser', eventValue: null, rarity: null, clientEventId: 'shadow:the_carouser' });
-    expect(ev.eventLabel).toMatch(RE_LABEL);
+    expect(ev.eventLabel).toBe('claimed the Shadow of ' + SERVER_BOSSES.the_carouser);
     // a second ceremony for an owned boss says nothing
     await page.evaluate(() => (window as any).__arise('the_carouser'));
     await page.waitForTimeout(5500);
@@ -102,8 +98,9 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     }
     await expect.poll(() => posted(page).then((p) => p.length), { timeout: 30_000 }).toBe(ids.length);
     const refused = (await posted(page)).filter((e) =>
-      !RE_LABEL.test(e.eventLabel) || e.eventLabel.length > LABEL_MAX || !RE_KEY.test(e.eventKey) || e.clientEventId !== 'shadow:' + e.eventKey);
+      e.eventLabel !== 'claimed the Shadow of ' + SERVER_BOSSES[e.eventKey] || e.clientEventId !== 'shadow:' + e.eventKey);
     expect(refused).toEqual([]);
+    expect(Object.keys(SERVER_BOSSES).sort()).toEqual(ids.slice().sort());   // W1118 — the two lists cannot drift
     expect((await posted(page)).find((e) => e.eventKey === 'erebus_the_shadow_sovereign').eventLabel).toBe('claimed the Shadow of Erebus, the Shadow Sovereign');
   });
 
@@ -119,6 +116,7 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     ]);
     await page.evaluate(() => document.getElementById('tab-social')!.click());
     await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    await expect(page.locator('#guildhall-activity-section .board-h2')).toHaveText('Hunter Activity');   // W1118 — not only friends now
     await page.locator('.fa-dh').first().click();
     const justin = page.locator('.fa-hunter').filter({ hasText: /justin/i });
     await expect(justin.locator('.fa-chip--sh')).toHaveText('Shadow of The Ascendant Colossus');
