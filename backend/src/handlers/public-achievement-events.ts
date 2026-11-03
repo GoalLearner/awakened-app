@@ -130,7 +130,8 @@ const RE_BOSS_KILL_LABEL    = /^defeated [A-Za-z0-9 ,'\-]+$/;
 // could otherwise put any words matching a character class in front of all of them. Every solo boss
 // (app.js BOSSES without coopOnly), one per line; tests/e2e/shadow-drop-feed.spec.ts fails if the two
 // lists drift, so a new solo boss lands here and deploys before the client that can claim it.
-const SHADOW_BOSS_NAMES: Readonly<Record<string, string>> = {
+// W1123 — app-open.ts reads it too: it announces the shadows that builds before 3.0.20 never sent.
+export const SHADOW_BOSS_NAMES: Readonly<Record<string, string>> = {
   the_insomniac: "The Insomniac",
   the_steel_wolf: "The Steel Wolf",
   the_carouser: "The Carouser",

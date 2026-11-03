@@ -130,6 +130,38 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     expect(batches[0].filter((c) => /INSERT INTO funnel_events/.test(c.sql)).length).toBe(10);
   });
 
+  // W1123 — 50 shadows had risen and none had reached Hunter Activity: every one came from a build
+  // whose queue dropped shadow_drop. The arise signal comes from every build, so it announces them.
+  it('W1123: a risen shadow from any build is announced in Hunter Activity, once', async () => {
+    const { env, batches } = makeEnv();
+    await handleAppOpenPost(makeReq({ build: '3.0.19-w1113', events: [{ e: 'arise_extracted', d: 'the_forge_of_ten_thousand_days' }] }), env, session);
+    const pae = batches[0].filter((c) => /INSERT INTO public_achievement_events/.test(c.sql));
+    expect(pae.length).toBe(1);
+    expect(pae[0].sql).toMatch(/'shadow_drop'/);
+    expect(pae[0].sql).toMatch(/ON CONFLICT\(user_id, client_event_id\) DO NOTHING/);
+    // the same pinned row the client's own POST writes, so the second one to land is a no-op
+    expect(pae[0].binds.slice(1)).toEqual([
+      'user-abc', 'the_forge_of_ten_thousand_days', 'claimed the Shadow of The Forge of Ten Thousand Days',
+      'shadow:the_forge_of_ten_thousand_days', expect.stringMatching(/^\d{4}-\d\d-\d\dT/), expect.any(Number),
+    ]);
+    expect(batches[0].filter((c) => /INSERT INTO funnel_events/.test(c.sql)).length).toBe(1);
+  });
+
+  it('W1123: only a listed solo boss is announced, and never past the daily allowance', async () => {
+    const { env, batches } = makeEnv();
+    await handleAppOpenPost(makeReq({ events: [
+      { e: 'arise_extracted', d: 'claimed the throne' },   // not a boss id
+      { e: 'arise_extracted', d: 'the_twin_maw' },         // a co-op boss has no shadow
+      { e: 'arise_extracted' },                            // no detail
+      { e: 'boss_kill', d: 'the_carouser' },               // another event naming a boss
+    ] }), env, session);
+    expect(batches[0].some((c) => /INSERT INTO public_achievement_events/.test(c.sql))).toBe(false);
+    expect(batches[0].filter((c) => /INSERT INTO funnel_events/.test(c.sql)).length).toBe(4);
+    const full = makeEnv({ todayCount: 300 });
+    await handleAppOpenPost(makeReq({ events: [{ e: 'arise_extracted', d: 'the_carouser' }] }), full.env, session);
+    expect(full.calls.some((c) => /INSERT INTO public_achievement_events/.test(c.sql))).toBe(false);
+  });
+
   it('rate-limited calls accept no events so the client retries them later', async () => {
     const { env, calls, batches } = makeEnv({ rateLimited: true });
     const res = await handleAppOpenPost(

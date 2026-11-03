@@ -16,6 +16,11 @@
  *     rate-limited call reports 0 and the client retries on the next ping.
  * A missing/malformed body stays a plain lifecycle ping (never an error).
  *
+ * W1123 — an `arise_extracted` event naming a solo boss also writes that hunter's shadow_drop to
+ * Hunter Activity. Builds before 3.0.20 dropped shadow_drop in the client queue (W1117), so no
+ * shadow had ever reached the feed; this signal comes from every build. Same pinned row as the
+ * client's own POST, so whichever lands second is a no-op on UNIQUE(user_id, client_event_id).
+ *
  * Auth: required. user_id is ALWAYS the verified session `sub`; clients cannot
  * specify or override it (date_utc is derived server-side from the Worker clock,
  * not from the request body, so the table can't be back/forward-dated by a client).
@@ -23,6 +28,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk } from '../lib/responses';
+import { SHADOW_BOSS_NAMES } from './public-achievement-events';
 
 const EVENTS_MAX_PER_CALL = 10;
 const EVENT_NAME_RE = /^[a-z0-9_.-]{1,40}$/i;
@@ -94,18 +100,37 @@ export async function handleAppOpenPost(
     } catch { /* the count is a guard, never a reason to fail a ping */ }
     const stmts = [];
     let offered = 0;
+    let stored = 0;
     for (const raw of rawEvents.slice(0, EVENTS_MAX_PER_CALL)) {
       const r = raw as Record<string, unknown> | null;
       const name = clamp(r?.e, 40);
       if (!name || !EVENT_NAME_RE.test(name)) continue; // skip junk, accept the rest
       const detail = clamp(r?.d, 200);
       offered += 1;
-      if (stmts.length >= room) continue;   // over the daily allowance: acknowledged, not stored
+      if (stored >= room) continue;   // over the daily allowance: acknowledged, not stored
+      stored += 1;
       stmts.push(
         env.DB.prepare(
           'INSERT INTO funnel_events (user_id, created_at, event, detail, build) VALUES (?, ?, ?, ?, ?)',
         ).bind(session.userId, nowMs, name, detail, build),
       );
+      // W1123 — the shadow's announcement; only a listed boss id, so no client text reaches the feed.
+      if (name === 'arise_extracted' && detail && Object.prototype.hasOwnProperty.call(SHADOW_BOSS_NAMES, detail)) {
+        stmts.push(
+          env.DB.prepare(
+            `INSERT INTO public_achievement_events (
+                id, user_id, event_type, event_key, event_label,
+                event_value, rarity,
+                client_event_id, client_created_at, server_created_at,
+                metadata_json
+              ) VALUES (?, ?, 'shadow_drop', ?, ?, NULL, NULL, ?, ?, ?, NULL)
+              ON CONFLICT(user_id, client_event_id) DO NOTHING`,
+          ).bind(
+            crypto.randomUUID(), session.userId, detail, 'claimed the Shadow of ' + SHADOW_BOSS_NAMES[detail],
+            'shadow:' + detail, new Date(nowMs).toISOString(), nowMs,
+          ),
+        );
+      }
     }
     // Self-bounding retention, same posture as client_errors: inline so the table can
     // never outgrow the window even if crons stall — now on a sample of pings.
