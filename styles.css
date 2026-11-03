@@ -35393,10 +35393,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-rkl span.cur { transform: scale(1.14); filter: drop-shadow(0 0 8px var(--c)); }
 .wx-rkl span.goal { color: var(--wx-gold-hi); background: var(--wx-gold); }
 .wx-tl { display: flex; justify-content: space-between; gap: 2px; }
-.wx-tl img { width: 38px; height: 38px; opacity: .22; filter: grayscale(1); transition: opacity .3s, filter .3s; }
-.wx-tl img.on { opacity: .75; filter: none; }
-.wx-tl img.cur { opacity: 1; filter: drop-shadow(0 0 8px rgba(245,184,66,.6)); }
-.wx-tl img.goal { opacity: .5; filter: none; }
+.wx-tl > i { display: block; width: 38px; height: 38px; opacity: .22; filter: grayscale(1); transition: opacity .3s, filter .3s; }
+.wx-tl > i.on { opacity: .75; filter: none; }
+.wx-tl > i.cur { opacity: 1; filter: drop-shadow(0 0 8px rgba(245,184,66,.6)); }
+.wx-tl > i.goal { opacity: .5; filter: none; }
 .wx-bl { display: flex; flex-direction: column; gap: 9px; }
 .wx-bl div { display: flex; align-items: center; gap: 10px; font: 600 14px/1.2 var(--wx-sans); color: var(--wx-soft); }
 .wx-bl div i { width: 18px; height: 18px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.22); display: grid; place-items: center; }
