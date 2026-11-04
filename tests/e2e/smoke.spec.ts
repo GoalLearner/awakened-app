@@ -3440,10 +3440,20 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await obFirstRun(page);
     await obGo(page, 'source');
     await obOn(page, 'source');
+    // W1126 — iOS slides the web view to centre a focused field; the fold lands at focus
+    // (not 180 ms later) and the page is pinned to the top while the keyboard is up.
+    await page.evaluate(() => {
+      const w = window as any, real = w.scrollTo.bind(w);
+      w.__pins = 0;
+      w.scrollTo = (...a: unknown[]) => { w.__pins++; return real(...a); };
+    });
     await page.locator('#cn-srcOther').click();
+    expect(await page.locator(SRC + ' .ob4-src-opt[hidden]').count()).toBe(3);
     await expect(page.locator(SRC)).toHaveClass(/is-kb/);
     await expect(page.locator(SRC + ' .ob4-src-other')).toHaveClass(/is-sel/);
-    await expect.poll(() => page.locator(SRC + ' .ob4-src-opt[hidden]').count()).toBe(3);
+    expect(await page.evaluate(() => (window as any).__pins)).toBeGreaterThan(0);
+    const top = await page.locator(SRC + ' .ob4-title').boundingBox();
+    expect(top && top.y).toBeGreaterThan(0);   // the title stays on screen
     await expect(page.locator(SRC + ' .ob4-src-skip')).toBeHidden();
     await page.keyboard.type('A Reddit thread');
     await page.locator('#cn-srcCont').click();
