@@ -34650,6 +34650,39 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .ob4-root .jd-chip:first-child b{font:700 .6875rem/1 var(--ob4-hud);letter-spacing:.06em;color:var(--ob4-gold)}
 .ob4-root .jd-chip--on{box-shadow:inset 0 0 0 1.5px var(--ob4-gold);background:rgba(245,184,66,.08);color:var(--ob4-gold)}
 .ob4-root .jd-note{min-height:1.2rem;margin-top:0;font:600 .75rem/1.4 var(--ob4-hud);letter-spacing:.04em;color:var(--ob4-ink2);text-align:left}
+/* W1125 — beat 10, the source: "How did you find the Gate?" (Claude Design handoff 4). Pick an
+   answer (it can change), Continue seals it, Skip sends nothing. With the keyboard up the other
+   three fold away so the Other box and Continue sit above it. */
+.ob4-src{display:flex;flex-direction:column;gap:8px;flex:none}
+.ob4-src-opt{position:relative;display:flex;flex-direction:column;border-radius:12px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px var(--ob4-line);transition:box-shadow .2s,background .2s,opacity .3s}
+.ob4-src-opt[hidden]{display:none}
+.ob4-src-opt.is-hid{animation:ob4-out .18s ease both;pointer-events:none}
+.ob4-src-lab{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 16px;border:0;border-radius:12px;background:none;text-align:left;cursor:pointer;font:600 1rem/1.25 var(--ob4-body);color:var(--ob4-ink)}
+.ob4-src-lab:active{background:rgba(255,255,255,.04)}
+.ob4-src-lab:focus-visible{outline:none;box-shadow:inset 0 0 0 1.5px var(--ob4-gold2)}
+.ob4-src-opt.is-sel{box-shadow:inset 0 0 0 1.5px var(--ob4-gold);background:rgba(245,184,66,.07)}
+.ob4-src-other .ob4-src-lab{min-height:48px;padding-top:4px}
+.ob4-src-box{display:flex;align-items:center;padding:0 16px 12px}
+.ob4-src-box .ob4-field{flex:1 1 0;min-width:0;padding:0}
+.ob4-src-box .ob4-field input{border-radius:0;-webkit-user-select:text;user-select:text}
+.ob4-s-source .ob4-foot{transition:opacity .3s}
+.ob4-s-source.is-kb .ob4-grow{display:none}
+.ob4-s-source.is-kb .ob4-foot{margin-top:0;padding-top:4px}
+.ob4-s-source.is-kb .ob4-src-skip,.ob4-s-source.has-sel .ob4-src-skip{display:none}
+/* the answer lights: gold frame, a flash of gold ink, the seal lands */
+.ob4-src-seal{position:absolute;right:13px;top:13px;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ob4-gold);box-shadow:inset 0 0 0 1.5px var(--ob4-night),inset 0 0 0 2.5px rgba(245,184,66,.5);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:rotate(-12deg)}
+.ob4-src-seal svg{width:14px;height:14px;display:block}
+.ob4-src-seal path{fill:var(--ob4-gold)}
+.ob4-src-opt.is-on{background:rgba(245,184,66,.07);box-shadow:inset 0 0 0 1.5px var(--ob4-gold);animation:ob4-ink .6s ease-out both}
+@keyframes ob4-ink{0%{background:rgba(245,184,66,.3);box-shadow:inset 0 0 0 1.5px var(--ob4-gold2),0 0 28px rgba(245,184,66,.45)}100%{background:rgba(245,184,66,.07);box-shadow:inset 0 0 0 1.5px var(--ob4-gold),0 0 0 rgba(245,184,66,0)}}
+.ob4-src-opt.is-on .ob4-src-seal{animation:ob4-stamp .4s var(--ob4-snap) both}
+.ob4-src.has-pick .ob4-src-opt:not(.is-on){opacity:.4;pointer-events:none}
+.ob4-s-source.is-done .ob4-foot{opacity:.3;pointer-events:none}
+/* reduced motion: state changes only */
+.ob4-rm .ob4-src-opt.is-on{animation:none}
+.ob4-rm .ob4-src-opt.is-on .ob4-src-seal{animation:ob4-fade .2s both}
+.ob4-rm .ob4-src-opt.is-hid{animation:none}
+.ob4-rm .ob4-src-opt{transition:none}
 @media (max-height:700px){
 .ob4-s{padding:calc(var(--ob4-st) + 32px) 20px calc(var(--ob4-sb) + 4px);gap:10px}
 .ob4-title{font-size:1.875rem}

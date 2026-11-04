@@ -2590,11 +2590,20 @@ function obWolfState(page: Page) {
  */
 async function obFinish(page: Page) {
   await expect.poll(() => page.evaluate(() => {
+    // W1125 — the last question before the Gate; Skip sends nothing.
+    const src = document.querySelector('#cin-onboarding .ob4-s-source.is-on .ob4-src-skip') as HTMLElement | null;
+    if (src && src.offsetParent) src.click();
     const nb = document.getElementById('notif-explain-enable') as HTMLElement | null;
     if (nb && nb.offsetParent) nb.click();
     return localStorage.getItem('hb_onboarding_first_xp_awarded_v1');
   }), { timeout: 15_000, message: 'onboarding finished' }).toBe('1');
   await expect(page.locator(OB)).toBeHidden({ timeout: 5_000 });
+}
+
+/** W1125 — every way into the Gate asks how they found it first; pass it the way a hunter in a hurry does. */
+async function obPassSource(page: Page) {
+  await obOn(page, 'source');
+  await page.locator(OB + ' .ob4-src-skip').click();
 }
 
 /**
@@ -3111,8 +3120,9 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await page.locator('#cn-enter').click();
     await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-sworn/);
     // No question is asked of this path (no start day, no training days), so once the
-    // stamp has landed it goes through the Gate by itself: no second tap (W1056).
+    // stamp has landed it goes on by itself: no second tap (W1056), to the source (W1125).
     await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
+    await obPassSource(page);
     // The license goes through the Gate with the name and the rank on it.
     await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/);
     expect((await page.locator(OB + ' .ob4-hand-card .ob4-ch').allTextContents()).join('')).toBe('Richie');
@@ -3235,6 +3245,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await page.locator('[data-cn-pack="custom"]').click({ force: true });
     await expect(morning).toHaveClass(/is-on/);
     await expect(page.locator(OB + ' .ob4-sub.is-on')).toHaveCount(0);
+    await obPassSource(page);
     await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
 
     await obFinish(page);
@@ -3289,9 +3300,11 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await page.exposeFunction('__tap', () => taps.push(1));
     await page.evaluate(() => document.getElementById('cn-enter')!.addEventListener('click', () => (window as any).__tap()));
     await swear.click();
-    // the stamp has its moment, then the Gate opens with no second tap
+    // the stamp has its moment, then the path goes on with no second tap on SWEAR IT
+    // (W1056): to the source question (W1125), then through the Gate
     await expect(page.locator('[data-cn-pack="morning"]')).toHaveClass(/is-sworn/);
     await expect(page.locator(OB + ' .ob4-hand')).not.toHaveClass(/is-on/);
+    await obPassSource(page);
     await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
     expect(taps.length).toBe(1);
     await obFinish(page);
@@ -3376,6 +3389,9 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await expect(skip).toHaveCSS('opacity', '1');
 
     await skip.click();
+    // W1125 — Skip still asks the last question; the top Skip is out of reach on it
+    await obOn(page, 'source');
+    await expect.poll(() => page.evaluate(SKIP_OFF)).toBe(true);   // visibility follows the fade
     await obFinish(page);
     const r = await page.evaluate(() => ({
       welcomed: localStorage.getItem('hb_welcomed'), path: localStorage.getItem('hb_path'), name: localStorage.getItem('hb_name'),
@@ -3384,6 +3400,74 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     }));
     expect(r).toEqual({ welcomed: '1', path: 'custom', name: 'Richie', habits: 0, hidden: true });
     await expect(page.locator('#tab-habits')).toBeVisible();
+  });
+
+  // ── The source (W1125, Claude Design handoff 4) ─────────────
+  const SRC = OB + ' .ob4-s-source';
+  const sources = async (page: Page) =>
+    (JSON.parse((await funnel(page)) || '[]') as { e: string; d?: string }[]).filter((x) => x.e === 'ob_source');
+
+  test('the last screen asks how they found the Gate: a pick can change, Continue sends it once', async ({ page }) => {
+    await obFirstRun(page);
+    await obGo(page, 'vow');
+    await obOn(page, 'vow');
+    await page.locator('[data-cn-pack="custom"]').click();
+    await page.locator('#cn-enter').click();
+    await obOn(page, 'source');
+    await expect(page.locator(SRC + ' .ob4-title')).toHaveText('How did you find the Gate?');
+    await expect(page.locator(SRC + ' .ob4-src-lab')).toHaveText(['App Store Search', 'App Store Recommendation', 'Friend Referral', 'Other']);
+    await expect(page.locator(OB + ' .ob4-seam-fill')).toHaveAttribute('style', /width: 100%/);
+    const cont = page.locator('#cn-srcCont'), skip = page.locator(SRC + ' .ob4-src-skip');
+    await expect(cont).toHaveClass(/is-off/);
+    await expect(skip).toBeVisible();
+
+    await page.locator(SRC + ' [data-v="search"] .ob4-src-lab').click();
+    await page.locator(SRC + ' [data-v="friend"] .ob4-src-lab').click();
+    await expect(page.locator(SRC + ' .ob4-src-opt.is-sel')).toHaveCount(1);
+    await expect(page.locator(SRC + ' [data-v="friend"]')).toHaveClass(/is-sel/);
+    await expect(cont).not.toHaveClass(/is-off/);
+    await expect(skip).toBeHidden();   // once picked, Continue stands alone
+    expect(await sources(page)).toEqual([]);   // nothing is sent until Continue
+
+    await cont.click();
+    await expect(page.locator(SRC + ' [data-v="friend"]')).toHaveClass(/is-on/);
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
+    expect(await sources(page)).toEqual([{ e: 'ob_source', d: 'friend' }]);
+    await obFinish(page);
+  });
+
+  test('Other: tapping into the box picks it and folds the rest away; the words ride along', async ({ page }) => {
+    await obFirstRun(page);
+    await obGo(page, 'source');
+    await obOn(page, 'source');
+    await page.locator('#cn-srcOther').click();
+    await expect(page.locator(SRC)).toHaveClass(/is-kb/);
+    await expect(page.locator(SRC + ' .ob4-src-other')).toHaveClass(/is-sel/);
+    await expect.poll(() => page.locator(SRC + ' .ob4-src-opt[hidden]').count()).toBe(3);
+    await expect(page.locator(SRC + ' .ob4-src-skip')).toBeHidden();
+    await page.keyboard.type('A Reddit thread');
+    await page.locator('#cn-srcCont').click();
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
+    expect(await sources(page)).toEqual([{ e: 'ob_source', d: 'other:A Reddit thread' }]);
+    await obFinish(page);
+  });
+
+  test('Skip on the source sends nothing, and the small phone shows it without scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await obFirstRun(page);
+    await obGo(page, 'source');
+    await obOn(page, 'source');
+    const fit = await page.evaluate(() => {
+      const s = document.querySelector('#cin-onboarding .ob4-s-source') as HTMLElement;
+      const skip = s.querySelector('.ob4-src-skip') as HTMLElement;
+      return { scrolls: s.scrollHeight > s.clientHeight, skipBottom: skip.getBoundingClientRect().bottom, h: window.innerHeight };
+    });
+    expect(fit.scrolls).toBe(false);
+    expect(fit.skipBottom).toBeLessThanOrEqual(fit.h);
+    await page.locator(SRC + ' .ob4-src-skip').click();
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
+    expect(await sources(page)).toEqual([]);
+    await obFinish(page);
   });
 });
 
@@ -3522,7 +3606,12 @@ test.describe('AD · Replay the awakening (W937)', () => {
     await obOn(page, 'vow');
     const path = await page.evaluate(() => Array.from(document.querySelectorAll('#cn-paths [data-cn-pack].is-on')).map((b) => (b as HTMLElement).dataset.cnPack));
     const enter = page.locator('#cn-enter');
-    await enter.click();                                   // SWEAR IT: the replay closes by itself (W1056)
+    await enter.click();                                   // SWEAR IT: on by itself (W1056) to the source
+    // W1125 — a replay asks the last question too, and an answer sends nothing (the
+    // funnel queue is one of the watched keys)
+    await obOn(page, 'source');
+    await page.locator(OB + ' .ob4-s-source [data-v="search"] .ob4-src-lab').click();
+    await page.locator('#cn-srcCont').click();
     await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
 
     const closed = await page.evaluate(() => {
@@ -3550,8 +3639,8 @@ test.describe('AD · Replay the awakening (W937)', () => {
     expect(r.opened.preview).toBe(true);
     expect(r.opened.ribbon).toBe(true);
     expect(r.opened.ribbonText).toBe('Preview · nothing is saved');
-    // All ten beats, the mark first.
-    expect(r.opened.order).toEqual(['gate', 'name', 'witness', 'reveal', 'wolf', 'board', 'hunt', 'ascent', 'vow']);
+    // All the beats, the mark first and the source (W1125) last.
+    expect(r.opened.order).toEqual(['gate', 'name', 'witness', 'reveal', 'wolf', 'board', 'hunt', 'ascent', 'vow', 'source']);
     expect(r.opened.apple).toBe(0);
     expect(r.name).toBe('Richie');   // the claimed name, prefilled, never re-claimed
     // No HealthKit in a browser, so the flow shows exactly what a first run
@@ -5097,7 +5186,8 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.locator('#cn-ascentNext').click();
     await obOn(page, 'vow');
     await expect(page.locator('[data-cn-pack="custom"]')).toHaveClass(/is-on/);
-    await page.locator('#cn-enter').click();   // SWEAR IT, and the Gate opens by itself (W1056)
+    await page.locator('#cn-enter').click();   // SWEAR IT, on by itself (W1056)
+    await obPassSource(page);                  // W1125 — the last question, then the Gate
     await expect(page.locator(OB)).toBeHidden({ timeout: 10_000 });
     expect(await read()).toEqual(before);
   });
@@ -7629,6 +7719,7 @@ test.describe('BU · Jump Program by the manual (W1021)', () => {
       await obOn(page, 'vow');
       await page.locator('[data-cn-pack="' + pack + '"]').click();
       await page.locator('#cn-enter').click();
+      await obPassSource(page);
       await expect(page.locator(OB + ' .ob4-hand'), pack).toHaveClass(/is-on/, { timeout: 4_000 });
       await expect(page.locator(OB + ' .ob4-sub-when'), pack).not.toHaveClass(/is-on/);
       await expect(page.locator(OB + ' .ob4-vow-t'), pack).toHaveText('Choose a path.');
