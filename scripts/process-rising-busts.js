@@ -1,11 +1,12 @@
 // W1105 — head-and-shoulders busts for the Rising, cropped from the raw 1696x2528 art.
 // Boxes are [left, top, side] in the 300x450 contact-sheet tile, scaled by 1696/300.
+// W1128 — boxes for the v2 art (C:\dev\videoforge\awk-rising-v2.mjs; v1 raws in art-originals/rising-v1/).
 const sharp = require('sharp');
 const K = 1696 / 300, OY = 1.5;
 const BOX = {
-  huntmaster: [83, 15, 130], vanguard: [87, 25, 130], ascendant: [90, 12, 120],
-  stridewalker: [85, 25, 130], unbroken: [92, 50, 125], oathbound: [90, 20, 130],
-  thirdblade: [65, 35, 125], triarch: [76, 82, 125], gatebreaker: [68, 45, 135],
+  huntmaster: [65, 12, 160], vanguard: [78, 25, 135], ascendant: [75, 75, 150],
+  stridewalker: [150, 35, 135], unbroken: [75, 25, 145], oathbound: [65, 22, 160],
+  thirdblade: [65, 28, 140], triarch: [62, 15, 190], gatebreaker: [65, 50, 160],
 };
 const only = process.argv.slice(2);
 (async () => {
