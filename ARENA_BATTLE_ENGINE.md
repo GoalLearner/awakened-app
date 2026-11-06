@@ -2,6 +2,19 @@
 
 > **Status:** CANONICAL for the Ascent tower. This documents the engine **as actually
 > implemented** in `app.js` (build W260), validated by simulation (§12, §12-W260).
+> **W1135 (2026-11-06, the battle redesign; Ascent-only, PvP's server core untouched):**
+> (1) FOE INTENT — the foe commits its next move one turn early (`_arPrimeIntent`, `sess._bNext`) at the
+> same state and RNG position the next turn would have used, so tiers 2-4 choose exactly as before; tier 5
+> (Apex) now picks before learning this turn's choice (its `_aiSeen` push moved after the pick), which
+> enforces §7.2's "no reading the player's queued move". `_arMoveWord` maps a move to the badge word
+> (HEAVY power×hits > 1.5 or a live execute · STRIKE · CURSE debuff/DoT/stun · GUARD 0-power · CHARGE atkUp).
+> (2) SURGE — `sess._surge` 0..1, +0.9 × (damage dealt / foe max HP) + 1.1 × (damage taken / your max HP) per
+> turn. (3) ULTIMATE — `ASCENT_ULTIMATES` per fighting style (melee / magic / ranged by the kit's basic glyph),
+> power 2.6, acc 0.99, moveId `'ultimate'`, only at full Surge and never in a duel; it spends the Surge and
+> runs through `_arExecMove` (the hit caps bind). (4) `sess._lastFoeHit` for the defeat sheet. The balance
+> sim's player now reads intent (guards when HEAVY is shown) and unleashes at full Surge (`opts.policy:
+> 'legacy'` = the old player). The summit rose 3% (`_FIRST_AWAKENED_POWER` 1.32 → 1.36, `_FA_P2_POWER`
+> 0.88 → 0.906) to hold the W1069/W1110 curve. selfTest → 44 (T39-T42).
 > **v2.7 changelog (W260 — the FIRST sanctioned engine change since the v2.6 freeze;
 > strictly ADDITIVE):** endgame AI tiers F51+ (§7.2: INSTINCT/TACTICIAN/STRATEGIST/APEX,
 > fair-play charter, sanitized no-RNG decision state, v2-fallback safety) + down-to-the-wire

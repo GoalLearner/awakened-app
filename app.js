@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1134'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1135'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -13934,7 +13934,10 @@
   // power; both phases rose 10% (1.2 → 1.32, 0.8 → 0.88) to hold the owner's curve: Nightfall 50% alone,
   // 74% with five, 96% with twelve, 99% with every shadow; Duskforge 53/98, Vigil 28/97. A set that
   // was never upgraded now wins 14% alone (was 29%), 80% with every shadow (was 97%).
-  const _FIRST_AWAKENED_POWER = 1.32;    // W1110 — 5,883 disp (was 1.2 = 5,348, W1069; 1.2547 = 5,592, W672). [hist W306 0.96; W661 0.987 = 4400]
+  // W1135 — the foe's intent and the Surge ultimate lifted a reading player (the sim now plays like one) ~4-6
+  // points at the summit, so both phases rose 3% (1.32 → 1.36, 0.88 → 0.906). Sim n=2000, max relic set:
+  // Nightfall 49% alone, 73% with five, 95% with twelve, 99% with every shadow; Duskforge 53/99, Vigil 27/95.
+  const _FIRST_AWAKENED_POWER = 1.36;    // W1135 (was 1.32, W1110 — 5,883 disp; 1.2 = 5,348, W1069; 1.2547 = 5,592, W672). [hist W306 0.96; W661 0.987 = 4400]
   // ── W535 — THE FIRST AWAKENED IS A TWO-PHASE BOSS ──────────────────────────
   // Phase 1 is the balanced summit (above). On its defeat it does NOT die — it
   // UNBINDS into a harder AGGRESSOR form (the Kalphite-Queen "you only met the
@@ -13946,7 +13949,7 @@
   // between the phases, a phase 2 stronger than phase 1 was a wall even for the max build (it won
   // 7% alone, 47% with all nineteen shadows), so phase 2 now has LESS power than phase 1: its threat
   // is a full bar and the aggressor blitz against whatever health phase 1 left you.
-  const _FA_P2_POWER = 0.88;     // phase-2 power × _ascentFloorPower(100) = 3,923 disp. W1110 (was 0.8 = 3,566, W1069; 1.3622 = 6,071, W672). [hist W661 4600]
+  const _FA_P2_POWER = 0.906;    // W1135 (was 0.88, W1110 = 3,923 disp; 0.8 = 3,566, W1069; 1.3622 = 6,071, W672). [hist W661 4600]
   const _FA_P2_ARCH  = 'aggressor';
   const _FA_P2_NAME  = 'The First Awakened, Unbound';
   const _FA_P2_TAUNT = 'You met only the mask. Now climb against what the system made of me.';
@@ -14540,12 +14543,58 @@
     if (sess.bHP <= 0) { if (!_arMaybeAdvancePhase(sess, events)) { sess.done = true; sess.won = true; } }   // W535 — DoT can fell phase 1 too
     else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
   }
+  // ── W1135 — THE ASCENT: FOE INTENT · SURGE · ULTIMATES (owner 2026-11-06, Claude Design "The Ascent -
+  // Battle Redesign": "Everything at once"). Ascent-only — every hook checks !sess._pvp, and PvP never runs
+  // this engine on the client anyway (the server's backend/src/pvp/combat-core.js is untouched).
+  //  • INTENT: the foe commits its next move one turn early (sess._bNext) so the screen can show it. The pick
+  //    runs where the next turn would have run it (same state, same RNG position), so tiers 2-4 choose exactly
+  //    as before; tier 5 (Apex) no longer sees the move being chosen (ARENA_BATTLE_ENGINE.md §7.2 forbade it).
+  //  • SURGE: 0..1, filled once per turn by the damage dealt and taken, each as a share of its max HP.
+  //  • ULTIMATE: one per fighting style (the kit's basic glyph, as _weaponExecuteId reads it), usable at full
+  //    Surge, which it spends. It runs through _arExecMove, so the hit caps still bind.
+  const SURGE_DEALT_K = 0.9, SURGE_TAKEN_K = 1.1;
+  const ASCENT_ULTIMATES = {
+    melee:  { name: 'Sundering Verdict', gl: 'sword',  power: 2.6, acc: 0.99, cd: 0, desc: 'Everything the climb taught you, in one blow.' },
+    magic:  { name: 'Starfall',          gl: 'magic',  power: 2.6, acc: 0.99, cd: 0, desc: 'The sky comes down on one foe.' },
+    ranged: { name: 'Heartpiercer Rain', gl: 'ranged', power: 2.6, acc: 0.99, cd: 0, desc: 'A hundred arrows, one heartbeat.' },
+  };
+  function _arUltStyle(sess) {
+    const gl = (sess && sess.pMoves && sess.pMoves[0] && sess.pMoves[0].gl) || 'sword';
+    return gl === 'magic' ? 'magic' : gl === 'ranged' ? 'ranged' : 'melee';
+  }
+  function _arUltimateFor(sess) { const st = _arUltStyle(sess); return Object.assign({ id: 'ultimate', ult: true, style: st }, ASCENT_ULTIMATES[st]); }
+  function _arPrimeIntent(sess) {
+    if (!sess || sess.done || sess._pvp) return null;
+    if (!sess._bNext) sess._bNext = _arenaFoePick(sess);
+    return sess._bNext;
+  }
+  // What a move reads as above the foe. pFrac = the target's HP share (an execute in its window is HEAVY).
+  function _arMoveWord(mv, pFrac) {
+    if (!mv) return null;
+    const pw = (mv.power || 0) * (mv.hits || 1), fx = mv.fx;
+    if (pw <= 0) return fx && fx.t === 'atkUp' ? 'CHARGE' : 'GUARD';
+    if ((mv.exe && pFrac <= mv.exe.thr) || pw > 1.5) return 'HEAVY';
+    if (fx && /^(atkDown|defDown|stun|burn|bleed)$/.test(fx.t)) return 'CURSE';
+    return 'STRIKE';
+  }
+  // The intent badge for the committed move (display only): STUNNED while the foe will skip its action.
+  function _arIntentWord(sess) {
+    if (!sess || sess.done || sess._pvp || !sess._bNext) return null;
+    if (sess.bS && sess.bS.stun > 0) return 'STUNNED';
+    return _arMoveWord(sess._bNext, sess.pHP / Math.max(1, sess.pMax));
+  }
   // Resolve a full turn given the player's chosen move id (no commit).
   function arenaTakeTurn(sess, moveId) {
     if (!sess || sess.done) return null;
     let pMove = sess.pMoves.find((x) => x.id === moveId);
     if (!pMove && moveId === 'struggle') pMove = _arStruggleMove();
+    const ultUsed = !pMove && moveId === 'ultimate' && !sess._pvp && (sess._surge || 0) >= 1;   // W1135
+    if (ultUsed) pMove = _arUltimateFor(sess);
     if (!pMove || sess.cd[pMove.id] > 0) return null;            // invalid or on cooldown
+    // W1135 — the foe's move was committed a turn early (its intent); the lazy pick covers turn one in
+    // the sim and the self-tests. Picked BEFORE the Apex tracker learns this turn's choice.
+    const bMove = _arPrimeIntent(sess) || _arenaFoePick(sess);
+    sess._bNext = null;
     // W260 — APEX pattern adaptation: track the player's last ~6 picks THIS
     // battle (tier 5 only; resets with the session — no cross-battle memory).
     if (sess.aiTier === 5) {
@@ -14553,7 +14602,8 @@
       sess._aiSeen.push(pMove.id);
       if (sess._aiSeen.length > 6) sess._aiSeen.shift();
     }
-    const bMove = _arenaFoePick(sess);
+    const stunnedAtStart = sess.pS.stun > 0;
+    const d0p = sess.dmgDealt.p, d0b = sess.dmgDealt.b;
     const events = [];
     const pPrio = pMove.prio || 0, bPrio = bMove.prio || 0;
     let pFirst;
@@ -14567,12 +14617,29 @@
     if (pMove.cd) sess.cd[pMove.id] = pMove.cd + 1;             // +1: ticked down at end of this turn
     if (bMove.cd) sess.bcd[bMove.id] = bMove.cd + 1;
     if (!sess.done) _arEndTurn(sess, events);
+    if (!sess._pvp) {
+      // W1135 — "what beat you": the foe's last landing blow (a hit, or the burn / bleed it left).
+      for (let i = events.length - 1; i >= 0; i--) {
+        const e = events[i];
+        if (e.side !== 'b' || (e.t !== 'hit' && e.t !== 'dot')) continue;
+        const dotKind = e.t === 'dot' ? ((/from (\w+)\./.exec(e.text || '') || [])[1] || 'burn') : '';
+        sess._lastFoeHit = e.t === 'dot'
+          ? { name: dotKind.charAt(0).toUpperCase() + dotKind.slice(1), word: 'CURSE', dmg: e.dmg || 0, turn: sess.turn }
+          : { name: bMove.name, word: _arMoveWord(bMove, 1), dmg: e.dmg || 0, turn: sess.turn };
+        break;
+      }
+      // W1135 — Surge: the share of the foe's bar you took plus the share of yours it took. The ultimate spends it
+      // (unless a stun swallowed the turn).
+      const gain = SURGE_DEALT_K * (sess.dmgDealt.p - d0p) / Math.max(1, sess.bMax) + SURGE_TAKEN_K * (sess.dmgDealt.b - d0b) / Math.max(1, sess.pMax);
+      sess._surge = (ultUsed && !stunnedAtStart) ? 0 : Math.max(0, Math.min(1, (sess._surge || 0) + gain));
+    }
     sess.turn += 1;
     if (!sess.done && sess.turn > _BATTLE_TURN_CAP) {           // timeout → most EFFECTIVE damage dealt wins
       const dp = sess.dmgDealt.p, db = sess.dmgDealt.b;
       sess.won = (dp !== db) ? (dp > db) : ((sess.pHP / sess.pMax !== sess.bHP / sess.bMax) ? (sess.pHP / sess.pMax > sess.bHP / sess.bMax) : (sess.rng() < 0.5));
       sess.done = true;
     }
+    if (!sess.done) _arPrimeIntent(sess);                       // W1135 — next turn's intent (after turn += 1 and any phase 2)
     sess.log = events;
     return events;
   }
@@ -14925,6 +14992,51 @@
           Math.abs(_aiExpectedDamage(attX, defEdge, exeMv) / dHi - exeMv.exe.mult) < 0.001 &&
           Math.abs(_aiExpectedDamage(attX, defAbove, exeMv) / dHi - 1) < 0.001);
       }
+      // T39-T42 — W1135 intent · Surge · ultimate.
+      {
+        // T39 the committed move is the move played: on every turn the foe's committed move (with a cooldown) sits on its cooldown after the turn.
+        let kept = true, checked = 0;
+        [55, 75, 95].forEach((fl, k) => {
+          const s = arenaStartBattle({ floor: fl, advances: false, player: mk(60, 50, 20, null, 'You'), bot: Object.assign(mk(48, 44, 18, 'aggressor', 'Foe'), { floor: fl }) }, 70 + k);
+          let g = 0;
+          while (!s.done && g++ < 60) {
+            const want = _arPrimeIntent(s), wasStunned = s.bS.stun > 0;
+            const mv = s.pMoves.find((x) => !(s.cd[x.id] > 0)) || { id: 'struggle' };
+            if (!arenaTakeTurn(s, mv.id)) break;
+            if (want && want.cd > 0 && !wasStunned && !s.done) { checked++; if (s.bcd[want.id] !== want.cd) kept = false; }
+          }
+        });
+        ok('T39 intent: the committed move is the one played', kept && checked > 3);
+        // T40 Surge stays in [0,1] and grows with damage
+        const sg = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 81);
+        let inRange = true, grew = false, g2 = 0;
+        while (!sg.done && g2++ < 60) {
+          const before = sg._surge || 0;
+          const mv = sg.pMoves.find((x) => !(sg.cd[x.id] > 0)) || { id: 'struggle' };
+          if (!arenaTakeTurn(sg, mv.id)) break;
+          const v = sg._surge || 0;
+          if (v < 0 || v > 1) inRange = false;
+          if (v > before) grew = true;
+        }
+        ok('T40 surge bounded and filling', inRange && grew);
+        // T41 the ultimate: refused below full and in a duel; at full it lands and spends the Surge
+        const su = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 82);
+        const refusedLow = arenaTakeTurn(su, 'ultimate') === null;
+        const sp = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 83);
+        sp._pvp = true; sp._surge = 1;
+        const refusedPvp = arenaTakeTurn(sp, 'ultimate') === null;
+        su._surge = 1;
+        const evU = arenaTakeTurn(su, 'ultimate') || [];
+        const ultEv = evU.find((e) => e.side === 'p' && (e.t === 'hit' || e.t === 'miss' || e.t === 'dodge' || e.t === 'stun'));
+        ok('T41 ultimate gated, lands, spends the Surge', refusedLow && refusedPvp && !!ultEv && (su._surge || 0) < 1);
+        // T42 intent words
+        const w = (id, frac) => _arMoveWord(lib(id), frac == null ? 1 : frac);
+        const stS = arenaStartBattle(M(mk(40, 36, 16, null, 'You'), mk(34, 30, 12, 'sentinel', 'Foe')), 84);
+        _arPrimeIntent(stS); stS.bS.stun = 1;
+        ok('T42 intent words', w('guard') === 'GUARD' && w('focus') === 'CHARGE' && w('bulwark') === 'GUARD' && w('cleave') === 'HEAVY' &&
+          w('slash') === 'STRIKE' && w('sunder') === 'CURSE' && w('arrowvolley') === 'STRIKE' && w('reckoning', 0.25) === 'HEAVY' && w('reckoning', 0.9) === 'STRIKE' &&
+          _arIntentWord(stS) === 'STUNNED');
+      }
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -14999,8 +15111,8 @@
     if (invest === 'max') { const ex = _weaponExecuteId(weaponId); if (ex && kitIds.indexOf(ex) === -1) kitIds.push(ex); }
     const kit = kitIds.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
     const attuned = (_WEAPON_ATTUNE[weaponId] || []).indexOf(playerArch) !== -1 ? _ATTUNED_MULT : 1;
-    let wins = 0, koWins = 0, toWins = 0, foePower = 0;
-    const turnsArr = [], marginArr = [];
+    let wins = 0, koWins = 0, toWins = 0, foePower = 0, ultFights = 0;
+    const turnsArr = [], marginArr = [], ultTurnArr = [];
     for (let i = 0; i < n; i++) {
       const opp = _ascentOpponent(floor);
       if (opts.foeAtkMul) opp.attack *= opts.foeAtkMul;     // experiment knob: lethality
@@ -15012,14 +15124,26 @@
       sess.pAttuned = attuned;    // load-bearing: real attunement, not the headless default 1
       let g = 0;
       while (!sess.done && g++ < 300) {
-        const mv = _arenaPickMove({
+        // W1135 — the sim plays like a hunter who reads the new screen (opts.policy 'legacy' = the old player):
+        // UNLEASH at full Surge; when the foe shows HEAVY and you have no ward up, raise a guard-type move.
+        let mv = null;
+        if (opts.policy !== 'legacy') {
+          _arPrimeIntent(sess);
+          if ((sess._surge || 0) >= 1 && !(sess.pS.stun > 0)) mv = { id: 'ultimate' };
+          else if (_arIntentWord(sess) === 'HEAVY' && !sess.pS.mods.some((x) => x.k === 'def' && x.mag < 0) && !(sess.pS.guard > 0)) {
+            mv = sess.pMoves.find((x) => !(sess.cd[x.id] > 0) && x.fx && /^(defUp|guard|bulwark|guardCleanse)$/.test(x.fx.t)) || null;
+          }
+        }
+        if (!mv) mv = _arenaPickMove({
           moves: sess.pMoves, cd: sess.cd,
           selfHP: sess.pHP, selfMax: sess.pMax, selfS: sess.pS,
           foeHP: sess.bHP, foeMax: sess.bMax, foeS: sess.bS,
           typeEff: sess.pEff, rng: sess.rng,
         });
+        if (mv.id === 'ultimate' && !sess._ultAt) sess._ultAt = sess.turn;
         if (!arenaTakeTurn(sess, mv.id)) break;
       }
+      if (sess._ultAt) { ultFights++; ultTurnArr.push(sess._ultAt); }
       if (sess.won) { wins++; if (sess.bHP <= 0) koWins++; else toWins++; }
       turnsArr.push(sess.turn);
       marginArr.push(sess.pHP / sess.pMax - sess.bHP / sess.bMax);
@@ -15033,6 +15157,7 @@
       medianTurns: med(turnsArr),
       medianHpMargin: +med(marginArr).toFixed(3),
       koWins: koWins, timeoutWins: toWins,
+      ultShare: +(ultFights / n).toFixed(3), ultTurnMedian: med(ultTurnArr),   // W1135 — fights that reached the ultimate, and when
       effStats: sline,
     };
   }
@@ -15052,7 +15177,8 @@
       _statline:       _arenaPlayerStatline,   // debug
       selfTest:        _arenaSelfTest,         // W232 dev hook
       simAscent:       _arenaSimAscent,        // W291 balance-verification sim (max build vs floor N)
-      _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle },
+      _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle,
+                         intent: _arPrimeIntent, intentWord: _arIntentWord, moveWord: _arMoveWord, ultimate: _arUltimateFor },   // W1135
     };
   } catch (_) {}
 
@@ -16012,6 +16138,7 @@
     // resume the context + decode the music slots here, before the first beat.
     try { _audUnlock(); _audLoadMusic(); } catch (_) {}
     _arSess = arenaStartBattle(_arMatchup);   // W231 — weapon-driven HP battle
+    try { _arPrimeIntent(_arSess); } catch (_) {}   // W1135 — the foe's first move shows before you choose
     // W618 — the life is now committed: from this point a force-close counts as a loss.
     // Stamp a pending marker (rated attempts only — exhibitions spend no life). Cleared
     // on any resolution in arenaFinalizeBattle; reconciled as a loss on next launch if it
