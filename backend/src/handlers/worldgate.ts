@@ -34,6 +34,24 @@ export const WORLDGATE_RECENT = 6;       // latest strikers (by last verified sy
 // moves afterwards even though the week's list keeps climbing until Sunday.
 // They are paid this bonus on top of the bounty, through the same claim.
 export const WORLDGATE_MVP_BONUS = [150, 100, 50];
+// W1134 — TWO DAYS IN THE APP OR NOTHING COUNTS (owner 2026-11-06). Giorgio opened the app on 3 days
+// ever; each time his whole week of Apple Health steps landed at once and took the #1 MVP spot
+// (weeks of 10-18 and 11-01; the 11-01 gate fell 4 minutes after he opened). Owner: "they need to use
+// the app at least 2/7 days" and, under that, "nothing counts". So a hunter's weekly steps strike the
+// gate only once they have opened the app on WORLDGATE_MIN_DAYS Pacific days of the gate's week
+// (app_open_counts, migration 0071, opens > 0). Below that: no damage, no place on the podium or the
+// live MVP badges, no bounty, no MVP bonus, no Gatebreaker. Weeks before WORLDGATE_DAYS_FROM keep the
+// old rule (the counter only began 2026-11-05). The weekly Steps board is a different surface and
+// still counts every step.
+export const WORLDGATE_MIN_DAYS = 2;
+export const WORLDGATE_DAYS_FROM = '2026-11-08';
+/** SQL: true when the hunter in `uidCol` has opened the app on enough days of the week in ?1. */
+const wgCounts = (uidCol: string) =>
+  `(?1 < '${WORLDGATE_DAYS_FROM}' OR (SELECT COUNT(*) FROM app_open_counts c
+      WHERE c.user_id = ${uidCol} AND c.day_pt >= ?1 AND c.day_pt <= date(?1, '+6 days') AND c.opens > 0) >= ${WORLDGATE_MIN_DAYS})`;
+/** The week's merged steps (week-board.ts), keeping only hunters whose steps count on the gate. */
+export const WG_MERGED = MERGED_FOR_WEEK.replace('WITH merged AS (', 'WITH merged_all AS (').trimEnd() + `,
+  merged AS (SELECT ma.user_id, ma.steps FROM merged_all ma WHERE ${wgCounts('ma.user_id')})`;
 // (W1031 — the 5% carry after a survived gate is gone: a lost gate now eases the next by 10%.)
 
 // W892 (3.0.1 C11) — HP FROM WHAT THE FLEET ACTUALLY WALKS.
@@ -163,7 +181,7 @@ interface KillSnap { pool: number; hunters: number; mvps: Standing[]; standings?
 const WG_STANDINGS_MAX = 1000;
 async function standingsOf(env: Env, week: string): Promise<Standing[]> {
   const rows = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${WG_MERGED}
      SELECT m.user_id AS user_id, u.alias AS alias, m.steps AS steps, pps.rank_tier AS rank_tier
        FROM merged m
        JOIN users u ON u.id = m.user_id
@@ -182,6 +200,7 @@ async function recentStrikes(env: Env, week: string, until: number | null): Prom
       WHERE ls.metric = 'step_total' AND ls.week_start = ?1 AND ls.current_value > 0
         AND u.apple_sub NOT LIKE 'sim_test_%'
         AND (?3 IS NULL OR ls.updated_at <= ?3)
+        AND ${wgCounts('ls.user_id')}
       ORDER BY ls.updated_at DESC
       LIMIT ?2`,
   ).bind(week, WORLDGATE_RECENT, until).all<{ alias: string; steps: number; at: number }>();
@@ -193,7 +212,7 @@ const byDamage = (a: Standing, b: Standing) => b.steps - a.steps || a.alias.loca
 async function snapshotKill(env: Env, week: string): Promise<KillSnap> {
   const [standings, recent] = await Promise.all([standingsOf(env, week), recentStrikes(env, week, null)]);
   const agg = await env.DB.prepare(
-    `${MERGED_FOR_WEEK} SELECT COUNT(*) AS kill_hunters, COALESCE(SUM(steps), 0) AS kill_pool FROM merged`,
+    `${WG_MERGED} SELECT COUNT(*) AS kill_hunters, COALESCE(SUM(steps), 0) AS kill_pool FROM merged`,
   ).bind(week).first<{ kill_hunters: number; kill_pool: number }>();
   const snap: KillSnap = {
     pool: Number(agg?.kill_pool) || 0,
@@ -267,7 +286,7 @@ function prevWeekOf(week: string): string {
 // with not-yet-superseded snapshots, sims excluded.
 async function weeklyPool(env: Env, week: string): Promise<number> {
   const row = await env.DB.prepare(
-    `${MERGED_FOR_WEEK} SELECT COALESCE(SUM(steps), 0) AS pool FROM merged`,
+    `${WG_MERGED} SELECT COALESCE(SUM(steps), 0) AS pool FROM merged`,
   ).bind(week).first<{ pool: number }>();
   return row?.pool ?? 0;
 }
@@ -374,13 +393,26 @@ export async function handleWorldgateGet(
   const claimed = await env.DB.prepare(
     'SELECT 1 FROM world_gate_claims WHERE week_start = ? AND user_id = ?',
   ).bind(week, session.userId).first();
+  // W1134 — the days this hunter has opened the app this week; under WORLDGATE_MIN_DAYS their steps
+  // wait (pending_steps) and strike nothing.
+  let myDays = 0;
+  try {
+    const d = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM app_open_counts WHERE user_id = ?1 AND day_pt >= ?2 AND day_pt <= date(?2, '+6 days') AND opens > 0",
+    ).bind(session.userId, week).first<{ n: number }>();
+    myDays = Number(d?.n) || 0;
+  } catch { myDays = 0; }
+  const iCount = week < WORLDGATE_DAYS_FROM || myDays >= WORLDGATE_MIN_DAYS;
   let myDamage: number;
+  let pendingSteps = 0;
   if (fz) myDamage = frozenDamage(fz, session.userId);
   else {
     const mine = await env.DB.prepare(
       "SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = 'step_total' AND week_start = ?",
     ).bind(session.userId, week).first<{ current_value: number }>();
-    myDamage = mine?.current_value ?? 0;
+    const walked = mine?.current_value ?? 0;
+    myDamage = iCount ? walked : 0;
+    pendingSteps = iCount ? 0 : walked;
   }
 
   // ── W916 — the v2 read side: who is striking, your guild's share, the top
@@ -405,7 +437,7 @@ export async function handleWorldgateGet(
     recent = fz.recent || [];
   } else {
   agg = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${WG_MERGED}
      SELECT (SELECT COUNT(*) FROM merged) AS hunters,
             (SELECT COALESCE(SUM(steps), 0) FROM merged WHERE user_id IN (${FRIENDS_OF})) AS guild_steps,
             (SELECT COUNT(*) FROM merged WHERE user_id IN (${FRIENDS_OF})) AS guild_hunters,
@@ -414,7 +446,7 @@ export async function handleWorldgateGet(
   ).bind(week, session.userId, myDamage, WORLDGATE_CLAIM_FLOOR)
     .first<{ hunters: number; guild_steps: number; guild_hunters: number; above: number; wall_count: number }>();
   const topRows = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${WG_MERGED}
      SELECT u.alias AS alias, m.steps AS steps, pps.rank_tier AS rank_tier, (m.user_id = ?2) AS me
        FROM merged m
        JOIN users u ON u.id = m.user_id
@@ -423,7 +455,7 @@ export async function handleWorldgateGet(
       LIMIT ?3`,
   ).bind(week, session.userId, WORLDGATE_TOP).all<{ alias: string; steps: number; rank_tier: string | null; me: number }>();
   const wallRows = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${WG_MERGED}
      SELECT u.alias AS alias, m.steps AS steps
        FROM merged m
        JOIN users u ON u.id = m.user_id
@@ -458,7 +490,7 @@ export async function handleWorldgateGet(
         kAbove = snap.standings.filter((s) => s.steps > kMine).length;
       } else {
         const kw = await env.DB.prepare(
-          `${MERGED_FOR_WEEK}
+          `${WG_MERGED}
            SELECT (SELECT steps FROM merged WHERE user_id = ?2) AS mine,
                   (SELECT COUNT(*) FROM merged WHERE steps > COALESCE((SELECT steps FROM merged WHERE user_id = ?2), 0)) AS above_kill`,
         ).bind(killGate.week_start, session.userId).first<{ mine: number | null; above_kill: number }>();
@@ -482,6 +514,8 @@ export async function handleWorldgateGet(
   return jsonOk({
     ok: true, week_start: week, hp: gate.hp, pool: fz ? fz.pool : pool, status: gate.status,
     my_damage: myDamage,
+    // W1134 — the two-day rule: days opened this week, days needed, steps waiting to count
+    my_days: myDays, days_needed: week < WORLDGATE_DAYS_FROM ? 0 : WORLDGATE_MIN_DAYS, pending_steps: pendingSteps,
     claim_floor: WORLDGATE_CLAIM_FLOOR, souls: WORLDGATE_SOULS,
     // W975 — an MVP may claim the bonus even below the bounty floor.
     claimable: gate.status === 'slain' && !claimed && (myDamage >= WORLDGATE_CLAIM_FLOOR || myPlace > 0),

@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
-import { computeGateHp, computeNextGateHp, gateKillDay, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS } from './worldgate';
+import { computeGateHp, computeNextGateHp, gateKillDay, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS, WG_MERGED, WORLDGATE_MIN_DAYS, WORLDGATE_DAYS_FROM } from './worldgate';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -210,6 +210,40 @@ function wgFresh(): WgState {
   };
 }
 beforeEach(() => { mockNotify.mockClear(); });
+
+// W1134 — two days in the app or nothing counts (owner 2026-11-06: "they need to use the app at
+// least 2/7 days"; under that, "nothing counts"). The SQL itself was dry-run against production D1.
+describe('W1134 — the two-day rule', () => {
+  it('the gate reads only hunters with 2+ app days of the week, from the week of 2026-11-08', () => {
+    expect(WORLDGATE_MIN_DAYS).toBe(2);
+    expect(WORLDGATE_DAYS_FROM).toBe('2026-11-08');
+    expect(WG_MERGED).toMatch(/WITH merged_all AS \(/);
+    expect(WG_MERGED).toMatch(/merged AS \(SELECT ma\.user_id, ma\.steps FROM merged_all ma WHERE/);
+    expect(WG_MERGED).toMatch(/\?1 < '2026-11-08' OR \(SELECT COUNT\(\*\) FROM app_open_counts c/);
+    expect(WG_MERGED).toMatch(/c\.day_pt >= \?1 AND c\.day_pt <= date\(\?1, '\+6 days'\) AND c\.opens > 0\) >= 2/);
+  });
+  it('under two days a hunter strikes nothing: their steps wait as pending_steps', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-10T20:00:00Z'));   // the week of 2026-11-08
+    try {
+      const st = wgFresh();
+      const j = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), meS)).json()) as Record<string, any>;
+      expect(j.days_needed).toBe(2);
+      expect(j.my_days).toBe(0);
+      expect(j.my_damage).toBe(0);
+      expect(j.pending_steps).toBe(4000);
+      expect(j.my_rank).toBeNull();
+    } finally { vi.useRealTimers(); }
+  });
+  it('weeks before the rule are untouched: no days needed, nothing pending', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-05T20:00:00Z'));   // the week of 2026-11-01
+    try {
+      const j = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(wgFresh()), meS)).json()) as Record<string, any>;
+      expect(j.days_needed).toBe(0);
+      expect(j.my_damage).toBe(4000);
+      expect(j.pending_steps).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+});
 
 // W1031 — the next gate answers to how the last one went (owner 2026-10-06: "auto adjust
 // according to past or failed weekly gates").
