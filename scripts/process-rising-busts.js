@@ -4,7 +4,7 @@
 const sharp = require('sharp');
 const K = 1696 / 300, OY = 1.5;
 const BOX = {
-  huntmaster: [65, 12, 160], vanguard: [78, 25, 135], ascendant: [75, 75, 150],
+  huntmaster: [65, 12, 160], vanguard: [92, 52, 116], ascendant: [75, 75, 150],   // W1130 — vanguard = the v5 art
   stridewalker: [150, 35, 135], unbroken: [75, 25, 145], oathbound: [65, 22, 160],
   thirdblade: [65, 28, 140], triarch: [62, 15, 190], gatebreaker: [65, 50, 160],
 };
