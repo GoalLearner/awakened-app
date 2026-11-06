@@ -152,9 +152,11 @@ export async function handleAppOpenPost(
     }
     // Self-bounding retention, same posture as client_errors: inline so the table can
     // never outgrow the window even if crons stall — now on a sample of pings.
+    // W1133 — except the onboarding's "How did you find the Gate?" answers (ob_source, one row per
+    // new hunter): the owner wants them kept as long-term data (2026-11-06: "keep track of this").
     if (stmts.length > 0 && _sample.roll() * FUNNEL_PRUNE_ONE_IN < 1) {
       stmts.push(
-        env.DB.prepare('DELETE FROM funnel_events WHERE created_at < ?').bind(
+        env.DB.prepare("DELETE FROM funnel_events WHERE created_at < ? AND event <> 'ob_source'").bind(
           nowMs - FUNNEL_RETENTION_MS,
         ),
       );

@@ -95,6 +95,8 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     expect(inserts[0].binds[3]).toBe('weekly_insights');
     // Inline retention prune rides the same batch.
     expect(batches[0].some((c) => /DELETE FROM funnel_events WHERE created_at </.test(c.sql))).toBe(true);
+    // W1133 — the "How did you find the Gate?" answers are kept for good
+    expect(batches[0].find((c) => /DELETE FROM funnel_events/.test(c.sql))!.sql).toMatch(/event <> 'ob_source'/);
   });
 
   // W1040 — the 2026-10-11 review: the prune was a full scan on every ping, and one account
