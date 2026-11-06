@@ -28111,10 +28111,11 @@ body.combat-active #app * { animation-play-state: paused !important; }
   background: radial-gradient(ellipse, rgba(245,184,66,0.40), transparent 70%); filter: blur(5px); }
 
 /* skin tag — signals the avatar is swappable / purchasable */
-.pc-skintag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px; margin-top: -2px;
-  border-radius: 20px; background: rgba(245,184,66,0.08); border: 1px solid rgba(245,184,66,0.27); }
-.pc-skintag i { width: 7px; height: 7px; transform: rotate(45deg); background: #f5b842; box-shadow: 0 0 7px #f5b842; }
-.pc-skintag span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #f5b842; }
+/* W1129 — --pc-skin (an rgb triplet, no color-mix on iOS 15) = the worn look's rarity colour; gold by default */
+.pc-skintag { --pc-skin: 245,184,66; display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px; margin-top: -2px;
+  border-radius: 20px; background: rgba(var(--pc-skin),0.08); border: 1px solid rgba(var(--pc-skin),0.27); }
+.pc-skintag i { width: 7px; height: 7px; transform: rotate(45deg); background: rgb(var(--pc-skin)); box-shadow: 0 0 7px rgb(var(--pc-skin)); }
+.pc-skintag span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: rgb(var(--pc-skin)); }
 /* ClaudeDesign "Hunter Profile - 100K Club" (W373) — the 100K STEP CLUB as a coveted gold seal */
 .pc-club100k { position: relative; display: inline-flex; align-items: center; gap: 11px; margin-top: 12px;
   padding: 9px 18px 9px 13px; border-radius: 999px; overflow: hidden;
