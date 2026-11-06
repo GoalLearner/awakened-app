@@ -35,7 +35,9 @@ for (let i = 0, j = 0; i < data.length; i += 3, j += 4) {
   const r = data[i], g = data[i + 1], b = data[i + 2];
   const d = Math.hypot(r - bg[0], g - bg[1], b - bg[2]);
   const a = Math.max(0, Math.min(1, (d - D0) / (D1 - D0)));
-  const ai = aiAlpha ? aiAlpha[j / 4] / 255 : 0;
+  // a pixel the colour of the background is background, whatever the AI thinks (W1132: it kept a
+  // navy patch between the Shadowborn's legs)
+  const ai = aiAlpha && d >= D0 ? aiAlpha[j / 4] / 255 : 0;
   if (ai >= a && ai > 0) {   // --merge-ai: the AI's alpha wins here, keep the true colour
     outBuf[j] = r; outBuf[j + 1] = g; outBuf[j + 2] = b; outBuf[j + 3] = Math.round(ai * 255);
     continue;

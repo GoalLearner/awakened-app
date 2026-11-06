@@ -179,9 +179,15 @@ describe('POST /v1/users/me/skins/earn', () => {
   });
 
   it('every earnable id is a real skin file name', () => {
-    expect(EARNABLE_SKINS.length).toBe(16);   // the seven + the Rising's nine (W1105)
+    expect(EARNABLE_SKINS.length).toBe(17);   // the Elite Eight (W1132) + the Rising's nine (W1105)
     for (const id of EARNABLE_SKINS) expect(id).toMatch(/^avatar-skin-[a-z0-9-]+\.png$/);
     expect(new Set(EARNABLE_SKINS).size).toBe(EARNABLE_SKINS.length);
+  });
+
+  it('W1132: the Shadowborn is the phone\'s to claim (S rank), and is granted on a claim', async () => {
+    const w: string[][] = [];
+    const res = await handleSkinsEarn(new Request('https://x', { method: 'POST', body: JSON.stringify({ claims: ['avatar-skin-shadowborn.png'] }) }), makeEnv({}, w), session);
+    expect(((await res.json()) as { granted: string[] }).granted).toContain('avatar-skin-shadowborn.png');
   });
 });
 

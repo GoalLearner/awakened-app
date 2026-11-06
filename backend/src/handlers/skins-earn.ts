@@ -32,6 +32,9 @@
  *   Gatebreaker         finish top 3 on a Worldgate                       SERVER ONLY (world_gates.kill_json)
  * Co-op wins and Worldgate podiums are the server's own records, so it counts them itself.
  *
+ * W1132 (owner 2026-11-06) — an eighth top look, the Elite Eight:
+ *   The Shadowborn      reach S rank (alongside Dawnbringer)              claim
+ *
  * Body: { claims?: string[] } (skin ids such as 'avatar-skin-stardust.png').
  * Returns { ok, skins: owned ids, granted: ids newly written by THIS call,
  *           progress: { opened: { best, current }, flame: { best },
@@ -61,6 +64,7 @@ export const EARNABLE_SKINS: readonly string[] = [
   'avatar-skin-nullprotocol-2.png',
   'avatar-skin-dawnbringer.png',
   'avatar-skin-stardust.png',
+  'avatar-skin-shadowborn.png',   // W1132 — S rank, with Dawnbringer
   // W1105 — the Rising
   'avatar-skin-huntmaster.png',
   'avatar-skin-vanguard.png',
