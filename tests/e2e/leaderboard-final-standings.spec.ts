@@ -21,6 +21,17 @@ const row = (rank: number, alias: string, steps: number) => ({ rank, alias, curr
 
 async function boot(page: Page) {
   await page.addInitScript(() => {
+    // The splash, the Friday challenge and the update strip sit over the board; on a Friday the challenge
+    // took the ‹ click and failed CI every Friday (2026-11-06). Same kill switch the other specs use.
+    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+    const inject = () => {
+      const root = document.head || document.documentElement;
+      if (root && !document.getElementById('e2e-splash-kill')) {
+        const s = document.createElement('style'); s.id = 'e2e-splash-kill'; s.textContent = css; root.appendChild(s);
+      }
+    };
+    inject();
+    document.addEventListener('DOMContentLoaded', inject);
     ['hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_cloud_restore_dismissed',
       'hb_tour_quests_v1', 'hb_tour_items_v1', 'hb_tour_stats_v1', 'hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1',
     ].forEach((k) => localStorage.setItem(k, '1'));
