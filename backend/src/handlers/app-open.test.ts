@@ -162,6 +162,55 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     expect(full.calls.some((c) => /INSERT INTO public_achievement_events/.test(c.sql))).toBe(false);
   });
 
+  // W1127 — the owner asked for every open to be counted, per hunter per Pacific day.
+  describe('W1127: opens per Pacific day', () => {
+    const counter = (calls: Captured[]) => calls.filter((c) => /INSERT INTO app_open_counts/.test(c.sql));
+
+    it('an open from 3.0.22+ adds one to today\'s Pacific row', async () => {
+      const { env, calls } = makeEnv();
+      await handleAppOpenPost(makeReq({ build: '3.0.22-w1127', open: true }), env, session);
+      const c = counter(calls);
+      expect(c.length).toBe(1);
+      expect(c[0].binds[0]).toBe('user-abc');                       // user from SESSION
+      expect(c[0].binds[1]).toMatch(/^\d{4}-\d\d-\d\d$/);           // day derived on the server
+      expect(c[0].binds[2]).toBe(1);
+      expect(c[0].sql).toMatch(/opens = app_open_counts\.opens \+ excluded\.opens/);
+    });
+
+    it('a 3.0.22+ ping that is not an open (a funnel flush) counts nothing', async () => {
+      const { env, calls } = makeEnv();
+      await handleAppOpenPost(makeReq({ build: '3.0.22-w1127', open: false, events: [{ e: 'health_first_read' }] }), env, session);
+      expect(counter(calls).length).toBe(0);
+      expect(calls.some((c) => /INSERT INTO app_opens/.test(c.sql))).toBe(true);   // the day row still lands
+    });
+
+    it('older builds (no open key, or no body at all) count each ping as one open', async () => {
+      const a = makeEnv();
+      await handleAppOpenPost(makeReq({ build: '3.0.21-w1126' }), a.env, session);
+      expect(counter(a.calls)[0].binds[2]).toBe(1);
+      const b = makeEnv();
+      await handleAppOpenPost(makeReq(), b.env, session);
+      expect(counter(b.calls)[0].binds[2]).toBe(1);
+    });
+
+    it('the Pacific day, not the UTC day: 11 PM PST on Nov 5 is Nov 5', async () => {
+      const real = Date.now;
+      Date.now = () => Date.UTC(2026, 10, 6, 7, 0, 0);   // 2026-11-06 07:00 UTC = Nov 5, 11 PM PST
+      try {
+        const { env, calls } = makeEnv();
+        await handleAppOpenPost(makeReq({ open: true }), env, session);
+        expect(counter(calls)[0].binds[1]).toBe('2026-11-05');
+        expect(calls.find((c) => /INSERT INTO app_opens/.test(c.sql))!.binds[2]).toBe('2026-11-06');   // app_opens stays UTC
+      } finally { Date.now = real; }
+    });
+
+    it('a rate-limited ping counts nothing', async () => {
+      const { env, calls } = makeEnv({ rateLimited: true });
+      await handleAppOpenPost(makeReq({ open: true }), env, session);
+      expect(counter(calls).length).toBe(0);
+    });
+  });
+
   it('rate-limited calls accept no events so the client retries them later', async () => {
     const { env, calls, batches } = makeEnv({ rateLimited: true });
     const res = await handleAppOpenPost(

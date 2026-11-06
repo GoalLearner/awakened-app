@@ -2276,6 +2276,7 @@
   // limits, so this is belt-and-suspenders). Skips guest / local-dev / not-signed-in
   // users via _stubGate (no real backend session to authenticate with).
   let _lastAppOpenReportMs = 0;
+  let _lastOpenCountedMs = 0;
   function reportAppOpen(opts) {
     try {
       const u = readUser();
@@ -2286,7 +2287,15 @@
       // hunter's first minutes, and most of them are gone by minute two. Safe to
       // repeat: app_opens is one row per user per UTC day, RL_APP_OPEN is 6/min.
       const force = !!(opts && opts.force);
-      if (!force && now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
+      // W1127 — opts.open marks a real open (a launch or a return to the app). The server counts
+      // every one (app_open_counts), so an open skips the 5-minute throttle; a 20 s guard folds a
+      // launch's duplicate signals into one. Only an open the person can see counts: an Apple
+      // Health background wake is not one.
+      let open = !!(opts && opts.open);
+      try { if (document.visibilityState === 'hidden') open = false; } catch (_) {}
+      if (open && now - _lastOpenCountedMs < 20 * 1000) open = false;
+      if (!force && !open && now - _lastAppOpenReportMs < 5 * 60 * 1000) return;
+      if (open) _lastOpenCountedMs = now;
       _lastAppOpenReportMs = now;
       // W839 (Train 3, G2 client) — the ping now CARRIES data: the running
       // build tag (powers the W835 Monday-push version gate — users who
@@ -2297,7 +2306,7 @@
       // or failed call keeps them for the next ping. The queue is
       // append-at-tail, so slicing the accepted count off the FRONT can
       // never drop an event that arrived mid-flight.
-      var payload = { build: (typeof window.__APP_BUILD_TAG === 'string' ? window.__APP_BUILD_TAG : null) };
+      var payload = { build: (typeof window.__APP_BUILD_TAG === 'string' ? window.__APP_BUILD_TAG : null), open: open };
       try {
         var q = JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]');
         if (Array.isArray(q) && q.length) payload.events = q.slice(0, 10);

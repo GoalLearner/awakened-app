@@ -21,6 +21,9 @@
  * shadow had ever reached the feed; this signal comes from every build. Same pinned row as the
  * client's own POST, so whichever lands second is a no-op on UNIQUE(user_id, client_event_id).
  *
+ * W1127 — `open` (boolean, 3.0.22+) feeds app_open_counts, one counter per hunter per Pacific
+ * day: true adds 1, false adds 0, absent (older builds) adds 1. See migration 0071.
+ *
  * Auth: required. user_id is ALWAYS the verified session `sub`; clients cannot
  * specify or override it (date_utc is derived server-side from the Worker clock,
  * not from the request body, so the table can't be back/forward-dated by a client).
@@ -29,6 +32,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk } from '../lib/responses';
 import { SHADOW_BOSS_NAMES } from './public-achievement-events';
+import { ptDayKey } from '../lib/pact-streak';
 
 const EVENTS_MAX_PER_CALL = 10;
 const EVENT_NAME_RE = /^[a-z0-9_.-]{1,40}$/i;
@@ -86,6 +90,20 @@ export async function handleAppOpenPost(
   )
     .bind(session.userId, nowSec, dateUtc, build)
     .run();
+
+  // ── W1127 — count every open (migration 0071) ──
+  // 3.0.22+ says whether this ping is an open (a launch or a return, screen visible). Older
+  // builds don't say, and each of their pings (≤1 per 5 min, on launch and return) is one.
+  const opened = body && typeof body.open === 'boolean' ? (body.open ? 1 : 0) : 1;
+  const dayPt = ptDayKey(nowMs);
+  if (opened > 0 && dayPt) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO app_open_counts (user_id, day_pt, opens) VALUES (?, ?, ?)
+         ON CONFLICT(user_id, day_pt) DO UPDATE SET opens = app_open_counts.opens + excluded.opens`,
+      ).bind(session.userId, dayPt, opened).run();
+    } catch { /* a counter must never fail the ping */ }
+  }
 
   // ── W834 — funnel events (optional, batched) ──
   let accepted = 0;
