@@ -35708,9 +35708,28 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* FOE INTENT — what the foe does next, above its head */
 .pkb2-intent { position: absolute; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 56px); left: 73%; transform: translateX(-50%); height: 28px; padding: 0 11px 0 8px;
   display: flex; align-items: center; gap: 6px; border-radius: 14px; background: rgba(10,8,18,0.8); border: 1px solid rgba(239,68,68,0.55); color: #ff9a9a;
-  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; line-height: 1; letter-spacing: 2px; white-space: nowrap; pointer-events: none;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 6px 18px -6px rgba(0,0,0,0.8), inset 0 0 12px rgba(239,68,68,0.12); }
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; line-height: 1; letter-spacing: 2px; white-space: nowrap; pointer-events: auto; cursor: pointer;   /* W1150 — tappable */
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 6px 18px -6px rgba(0,0,0,0.8), inset 0 0 12px rgba(239,68,68,0.12); -webkit-tap-highlight-color: transparent; }
 .pkb2-intent.hidden { display: none; }
+.pkb2-intent.open { transform: translateX(-50%) scale(1.06); border-color: rgba(255,255,255,0.55); }
+/* W1150 — the badge's read card: what the foe is about to do, and which of the hunter's cards answers it */
+.pkb2-read { position: absolute; z-index: 6; top: calc(env(safe-area-inset-top, 0px) + 94px); right: 12px; width: min(330px, calc(100vw - 24px)); padding: 9px 12px 10px; border-radius: 12px;
+  background: rgba(10,8,18,0.94); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 28px -8px rgba(0,0,0,0.9); color: #e4e1f0; text-align: left;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: pkb2ReadPop 0.22s cubic-bezier(0.2,0.9,0.3,1.2) both; }
+@keyframes pkb2ReadPop { 0% { opacity: 0; transform: translateY(6px) scale(0.96); } 100% { opacity: 1; transform: none; } }
+.pkb2-read.hidden { display: none; }
+.pkb2-read::before { content: ""; position: absolute; top: -5px; left: var(--ax, 73%); width: 9px; height: 9px; margin-left: -5px; background: rgba(10,8,18,0.94); border-left: 1px solid rgba(255,255,255,0.14); border-top: 1px solid rgba(255,255,255,0.14); transform: rotate(45deg); }
+.pkb2-read .rd-h { display: flex; align-items: center; gap: 6px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; letter-spacing: 2px; margin-bottom: 4px; }
+.pkb2-read .rd-h svg { width: 13px; height: 13px; display: block; }
+.pkb2-read p { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 15.5px; line-height: 1.22; }
+.pkb2-read .rd-what { color: #c8c6d8; font-style: italic; }
+.pkb2-read .rd-ans { color: #fff; margin-top: 3px; }
+.pkb2-read.heavy, .pkb2-read.heavy::before { border-color: rgba(239,68,68,0.5); } .pkb2-read.heavy .rd-h { color: #ff9a9a; } .pkb2-read.heavy .rd-h svg { color: #ff6b6b; }
+.pkb2-read.curse, .pkb2-read.curse::before { border-color: rgba(167,139,250,0.5); } .pkb2-read.curse .rd-h { color: #d4c6ff; } .pkb2-read.curse .rd-h svg { color: #a78bfa; }
+.pkb2-read.charge, .pkb2-read.charge::before { border-color: rgba(245,184,66,0.5); } .pkb2-read.charge .rd-h { color: #ffd574; } .pkb2-read.charge .rd-h svg { color: #f5b842; }
+.pkb2-read.guard, .pkb2-read.guard::before { border-color: rgba(94,234,212,0.45); } .pkb2-read.guard .rd-h { color: #5eead4; } .pkb2-read.guard .rd-h svg { color: #5eead4; }
+.pkb2-read.strike .rd-h { color: #ff9a9a; } .pkb2-read.strike .rd-h svg { color: #ef4444; }
+.pkb2-read.stunned .rd-h { color: #9090a8; } .pkb2-read.stunned .rd-h svg { color: #9090a8; }
 .pkb2-intent::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 8px; height: 8px; background: rgba(10,8,18,0.92); border-right: 1px solid rgba(239,68,68,0.55); border-bottom: 1px solid rgba(239,68,68,0.55); transform: translateX(-50%) rotate(45deg); }
 .pkb2-intent::before { content: ""; position: absolute; inset: -1px; border-radius: 14px; pointer-events: none; opacity: 0; box-shadow: 0 0 0 4px rgba(239,68,68,0.25), 0 0 22px rgba(239,68,68,0.6); }
 .pkb2-intent svg { width: 14px; height: 14px; display: block; color: #ef4444; flex: none; }
@@ -36031,7 +36050,7 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 
 /* ─── reduced motion: fades for the slams, no loops ─── */
 @media (prefers-reduced-motion: reduce) {
-  .pkb2-intent.pop, .pkb2-intent.heavy::before, .pkb2-intent.flare::before { animation: none; }
+  .pkb2-intent.pop, .pkb2-intent.heavy::before, .pkb2-intent.flare::before, .pkb2-read { animation: none; }
   .pkb2-intent.heavy::before { opacity: 0.6; }
   .pkb.pkb2 .pkb-toast { animation: pkbFade 0.45s ease both; }
   .pkb2-stamp { animation: none; }

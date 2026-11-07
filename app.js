@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1149'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1150'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17334,8 +17334,9 @@
   function _pkbIntentPaint() {
     const el = _pkbEl('pkb-intent'), s = _arSess; if (!el) return;
     const w = (s && !s._pvp && !s.done) ? _arIntentWord(s) : null;
-    if (!w) { el.className = 'pkb2-intent hidden'; _pkbIntentShown = null; return; }
+    if (!w) { el.className = 'pkb2-intent hidden'; _pkbIntentShown = null; _pkbReadClose(); return; }
     if (w === _pkbIntentShown && !el.classList.contains('hidden')) return;
+    _pkbReadClose();   // W1150 — a new read closes the open card
     _pkbIntentShown = w;
     el.className = 'pkb2-intent ' + w.toLowerCase();
     el.innerHTML = _pkb2Svg(w) + '<span>' + w + '</span>';
@@ -17346,6 +17347,74 @@
     const el = _pkbEl('pkb-intent'); if (!el || el.classList.contains('hidden')) return;
     el.classList.remove('flare'); void el.offsetWidth; el.classList.add('flare');
     _pkbAfter(320, () => { try { el.classList.remove('flare'); } catch (_) {} });
+  }
+  // W1150 — TAP THE BADGE (owner 2026-11-07: "tapping the curse, it will explain to you or at least tell you some
+  // information... not too much"). A small card under the badge: one line on what the foe is about to do, one on
+  // which of the hunter's own cards answers it, in the engine's words (_arReadCounter, the same rules as the card
+  // tags). Tap again, tap elsewhere, a new read or seven seconds closes it. Never in a duel (no badge there).
+  const _PKB_READ_WHAT = {
+    HEAVY:   'A heavy blow is coming, far harder than a plain strike.',
+    CURSE:   'The next blow carries a curse: a burn, a bleed, a stun or a weakening.',
+    CHARGE:  'The foe gathers power. Its next strikes hit harder.',
+    GUARD:   'The foe braces. A plain attack does less this turn.',
+    STRIKE:  'A plain strike.',
+    STUNNED: 'The foe is stunned and cannot act this turn.',
+  };
+  function _pkbReadAnswer(word, s) {
+    if (s.pS && s.pS.stun > 0) return 'You are stunned: nothing answers it this turn.';
+    const got = { parry: [], sidestep: [], reflect: [], ward: [], interrupt: [] };
+    (s.pMoves || []).forEach(function (mv) {
+      if (!mv || (s.cd && s.cd[mv.id] > 0)) return;
+      const fam = _arMoveFamily(mv);
+      if (word === 'HEAVY') { if (fam === 'guard' || fam === 'cleanse') got.parry.push(mv.name); else if (fam === 'dodge') got.sidestep.push(mv.name); }
+      else if (word === 'CURSE') { if (fam === 'cleanse') got.reflect.push(mv.name); else if (fam === 'dodge') got.sidestep.push(mv.name); else if (fam === 'guard') got.ward.push(mv.name); }
+      else if (word === 'CHARGE') { if ((mv.power || 0) > 0) got.interrupt.push(mv.name); }
+    });
+    const list = function (a) { return a.length === 1 ? a[0] : a.length === 2 ? a[0] + ' or ' + a[1] : a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1]; };
+    const parts = [];
+    if (word === 'HEAVY') {
+      if (got.parry.length) parts.push(list(got.parry) + ' parries it: no damage, and you strike back.');
+      if (got.sidestep.length) parts.push(list(got.sidestep) + ' sidesteps it.');
+      if ((s._surge || 0) >= SURGE_GUARD_COST) parts.push('Or spend two Surge segments to parry.');
+      if (!parts.length) parts.push('Nothing of yours parries it this turn. Bank Surge for the next one.');
+    } else if (word === 'CURSE') {
+      if (got.reflect.length) parts.push(list(got.reflect) + ' reflects the curse back onto the foe.');
+      if (got.sidestep.length) parts.push(list(got.sidestep) + ' sidesteps it.');
+      if (got.ward.length) parts.push(list(got.ward) + ' wards it off.');
+      if (!parts.length) parts.push('Nothing of yours answers it this turn: the curse will land.');
+    } else if (word === 'CHARGE') {
+      parts.push(got.interrupt.length ? 'Any hit interrupts it: ' + list(got.interrupt) + '.' : 'A hit would interrupt it, but none of yours is ready.');
+    } else if (word === 'GUARD') {
+      parts.push('A buff, a heal or a cleanse you can use is a free turn. An attack is wasted on it.');
+    } else if (word === 'STRIKE') {
+      parts.push('Nothing to read. Hit back.');
+    } else if (word === 'STUNNED') {
+      parts.push('A free hit. Make it your biggest.');
+    }
+    return parts.slice(0, 2).join(' ');
+  }
+  let _pkbReadTimer = null, _pkbReadDoc = null;
+  function _pkbReadClose() {
+    const el = _pkbEl('pkb-read'); if (el) el.classList.add('hidden');
+    const b = _pkbEl('pkb-intent'); if (b) b.classList.remove('open');
+    if (_pkbReadTimer) { clearTimeout(_pkbReadTimer); _pkbReadTimer = null; }
+    if (_pkbReadDoc) { document.removeEventListener('pointerdown', _pkbReadDoc, true); _pkbReadDoc = null; }
+  }
+  function _pkbReadToggle() {
+    const el = _pkbEl('pkb-read'), b = _pkbEl('pkb-intent'), s = _arSess;
+    if (!el || !b || !s || s._pvp || b.classList.contains('hidden')) return;
+    if (!el.classList.contains('hidden')) { _pkbReadClose(); return; }
+    const w = _arIntentWord(s); if (!w) return;
+    el.className = 'pkb2-read ' + w.toLowerCase();
+    el.innerHTML = '<div class="rd-h">' + _pkb2Svg(w, 13) + '<span>' + w + '</span></div>' +
+      '<p class="rd-what">' + esc(_PKB_READ_WHAT[w] || '') + '</p>' +
+      '<p class="rd-ans">' + esc(_pkbReadAnswer(w, s)) + '</p>';
+    try { const br = b.getBoundingClientRect(), er = el.getBoundingClientRect(); el.style.setProperty('--ax', Math.round(br.left + br.width / 2 - er.left) + 'px'); } catch (_) {}   // the arrow under the badge
+    b.classList.add('open');
+    try { _audCue('ui_tap'); } catch (_) {}
+    _pkbReadTimer = setTimeout(_pkbReadClose, 7000);
+    _pkbReadDoc = function (ev) { if (el.contains(ev.target) || b.contains(ev.target)) return; _pkbReadClose(); };
+    setTimeout(function () { if (_pkbReadDoc) document.addEventListener('pointerdown', _pkbReadDoc, true); }, 0);
   }
   function _pkbTurnPaint() { const el = _pkbEl('pkb-turn'), s = _arSess; if (el && s) el.textContent = String(Math.max(1, Math.min(_BATTLE_TURN_CAP, s.turn || 1))); }
   function _pkbSurgePaint() {
@@ -17544,7 +17613,8 @@
         '<div class="pkb-spot you" id="pkb-spot-p"><span class="plat"></span><span class="aura" aria-hidden="true"></span><div class="spr">' + (o.youArt || '') + '</div></div>' +
         '<div class="pkb2-scrim" aria-hidden="true"></div>' +
         '<div class="pkb-top">' + esc(o.top || '') + '</div>' +
-        '<div class="pkb2-intent hidden" id="pkb-intent"></div>' +
+        '<div class="pkb2-intent hidden" id="pkb-intent" data-ar="intent" role="button"></div>' +   // W1150 — tappable
+        '<div class="pkb2-read hidden" id="pkb-read"></div>' +
         '<div class="pkb-fx" id="pkb-fx"></div>' +
       '</div>' +
       '<div class="pkb2-chrome">' + (o.pvp ? '<div class="pvp-status" id="pvp-status"></div>'
@@ -19920,6 +19990,7 @@
         _pkbTapMove(act, false);
       }
       else if (a === 'movecd')  { try { _audCue('ui_denied'); } catch (_) {} }   // cooldown-locked move tapped
+      else if (a === 'intent')  { _pkbReadToggle(); }                            // W1150 — the badge's read card
       else if (a === 'ff')      {                                          // W1135 — the 1×/2× pill (Ascent only; remembered for the session)
         _pkbFFSticky = !_pkbFFSticky; _pkbFF = _pkbFFBase(); _pkbSpdSync();
         act.classList.toggle('on', _pkbFFSticky); act.textContent = _pkbFFSticky ? '2×' : '1×';
@@ -29433,6 +29504,7 @@
         { emoji: '', title: 'Read the foe', description: "Every move it shows has an answer. Parry a heavy with a guard move or your Surge, reflect a curse with a cleanse, interrupt a charge with any hit. Bosses fight to a rhythm you can learn." },
         { emoji: '', title: 'Every move, its own motion', description: "A cleave sweeps, a bolt flies, a hex forms and shatters, a parry throws sparks. Hold a heavy card to wind it up; tap the stage during your ultimate for more." },
         { emoji: '', title: 'Frames, inks and auras', description: "Three more Wardrobe slots, every one earned: a frame around your portrait, an ink for your name, an aura of motes, embers, stormlight or stardust." },
+        { emoji: '', title: 'Tap the foe’s badge', description: "What it is about to do, and which of your cards answers it." },   // W1150
         { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
         { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },

@@ -322,6 +322,42 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(await page.evaluate(() => { const s = (window as any).Arena._live.sess(); return s.bS.mods.some((x: any) => x.k === 'shred') && !s.pS.mods.some((x: any) => x.k === 'shred'); })).toBe(true);
     });
 
+    // W1150 — tap the badge: a small card says what is coming and which of the hunter's cards answers it; a tap, a tap
+    // elsewhere or the next read closes it.
+    test('tapping the intent badge opens its read card, naming the card that answers it; a new read closes it', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      await page.evaluate(() => { const A = (window as any).Arena, s = A._live.sess(); s.pMoves[2] = A._battle.lib('refuse'); s.cd = {}; s.pS.stun = 0; A._live.paint(); });
+      await force(page, 'sunder');
+      const badge = page.locator('#pkb-intent'), card = page.locator('#pkb-read');
+      await expect(badge).toHaveText('CURSE');
+      await expect(card).toBeHidden();
+      await badge.click();
+      await expect(card).toBeVisible();
+      await expect(card).toHaveClass(/curse/);
+      await expect(card.locator('.rd-h')).toHaveText('CURSE');
+      await expect(card.locator('.rd-what')).toContainText('carries a curse');
+      await expect(card.locator('.rd-ans')).toContainText('Refuse reflects the curse back onto the foe');
+      await shot(page, '19-read-card');
+      await badge.click();
+      await expect(card).toBeHidden();
+      // a heavy with two Surge segments banked: the parry card and the Surge parry are both named
+      await force(page, 'cleave', 0.4);
+      await expect(badge).toHaveText('HEAVY');
+      await badge.click();
+      await expect(card).toHaveClass(/heavy/);
+      await expect(card.locator('.rd-ans')).toContainText('parries it');
+      await expect(card.locator('.rd-ans')).toContainText('two Surge segments');
+      // the next read closes it
+      await force(page, 'focus');
+      await expect(badge).toHaveText('CHARGE');
+      await expect(card).toBeHidden();
+      await badge.click();
+      await expect(card.locator('.rd-ans')).toContainText('Any hit interrupts it');
+      await page.mouse.click(30, 300);   // elsewhere on the stage
+      await expect(card).toBeHidden();
+    });
+
     // W1141 — the motion library (Claude Design handoff 6): every move draws its own strike in the motion layers and
     // poses the attacker; everything clears by the time control returns. A HEAVY card held winds up; release swings.
     test('every move has its own motion: the strike draws in the motion layer, the attacker poses, then it all clears', async ({ page }) => {
