@@ -6814,7 +6814,10 @@ test.describe('BD · Updates on the board (W973)', () => {
 test.describe('BE · Rating moments (W974)', () => {
   // The app's `today` is PACIFIC (getPTDate). CI runs in UTC, so between 5 PM PST
   // and midnight a local-date seed sits a day ahead and the week never closes.
-  const ymd = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  // W1142b — step back by CALENDAR day from the PT date (noon-PT anchor, as app.js prevDay does): subtracting
+  // 24 h × i from now lands two offsets on the same date across the fall-back (a 25-hour day) whenever the
+  // clock sits in the hour PT is behind UTC's midnight — CI failed at 23:13 PST on Nov 6 with six seed days.
+  const ymd = (off: number) => { const la = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }); return la.format(new Date(Date.parse(la.format(new Date()) + 'T20:00:00Z') - off * 86400000)); };
   async function seed(page: Page, extra?: Record<string, string>) {
     await freshApp(page);
     await page.addInitScript(([ex]) => {
@@ -7128,7 +7131,7 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('BG · Today’s Briefing v2 (W978)', () => {
   // The app's `today` is Pacific (getPTDate) — seed in Pacific time (the 5 PM PST trap).
-  const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const pt = (off: number) => { const la = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }); return la.format(new Date(Date.parse(la.format(new Date()) + 'T20:00:00Z') - off * 86400000)); };   // W1142b — calendar-day steps (DST-safe)
   const VOWS = [
     { id: 'tb-phone', name: 'No phone or social media after waking', emoji: '•', difficulty: 'medium', type: 'quit' },
     { id: 'tb-med', name: 'Meditate & Breathwork', emoji: '•', difficulty: 'medium', type: 'build' },
@@ -8909,7 +8912,7 @@ test.describe('BL · Rank-keyed mercy (W992)', () => {
 
 test.describe('BH · Hunt results (W980)', () => {
   const pt = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA');
-  const ptLA = (off: number) => new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const ptLA = (off: number) => { const la = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }); return la.format(new Date(Date.parse(la.format(new Date()) + 'T20:00:00Z') - off * 86400000)); };   // W1142b — calendar-day steps (DST-safe)
   // A day's value under BOTH calendars: CI's browser runs UTC, the dev PC's runs Pacific (the 5 PM PST trap).
   const days = (m: Record<number, number>) => { const o: Record<string, number> = {}; Object.keys(m).forEach((k) => { const v = m[+k]; o[pt(+k)] = v; o[ptLA(+k)] = v; }); return o; };
   async function seed(page: Page, extra?: Record<string, string>) {
