@@ -36462,6 +36462,11 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-ink-prev { font: 800 22px/1.1 var(--wx-sans); color: #f5f3fb; padding: 0 6px; white-space: nowrap; text-shadow: 0 2px 14px rgba(0,0,0,.6); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 /* inks: a solid colour or a living gradient (the card's alias and the board card's name use the same classes) */
 .wx-ink-g { -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; background-size: 300% 100%; animation: wx-inksweep 3.6s linear infinite; }
+/* W1147 — the ink on a board row's name (.lb-ink wraps the name text only): a solid ink paints its own colour even
+   inside a gradient-filled name (text-fill-color is inherited), a gradient ink drops the row's text shadow */
+.wx-ink-s { -webkit-text-fill-color: currentColor; }
+.lb-ink { display: inline; }
+.lb-ink.wx-ink-g { text-shadow: none; }
 @keyframes wx-inksweep { 0% { background-position: 200% 50%; } 100% { background-position: -200% 50%; } }
 #pc-sheet .pc-alias.wx-ink-g, #pc-sheet.pc--painted .pc-alias.wx-ink-g { text-shadow: none; }
 /* frames — the hero medallion (.wx-med), the mini (.wx-mini) and the profile card (.pc-med) */
