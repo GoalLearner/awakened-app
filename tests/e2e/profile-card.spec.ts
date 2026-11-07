@@ -96,14 +96,48 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(await page.evaluate(() => { const a = document.querySelector('#pc-body .pc-hero > .wx-aura') as HTMLElement, w = document.querySelector('#pc-body .pc-med-wrap') as HTMLElement; return [getComputedStyle(a).zIndex, getComputedStyle(w).zIndex]; })).toEqual(['0', '1']);   // behind the medallion
     });
 
+    // W1154 — no Founder badge on any card; the title sits centred; on the own card it is a button that opens the
+    // Ascent's Titles view (CHOOSE A TITLE when none is worn); a visitor's title is a plain shard.
+    test('own card: no Founder badge, the title centred and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.removeItem('hb_arena_title'); });
+      await render(page, true);
+      const body = page.locator('#pc-body');
+      await expect(body.locator('.pc-founder')).toHaveCount(0);
+      const pick = body.locator('button.pc-shard--pick');
+      await expect(pick).toHaveCount(1);
+      await expect(pick).toHaveText(/Choose a title/i);
+      // a worn title shows by name, from this phone (not the published data), on the centre line
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_contender'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 51, highestCleared: 50, wins: 50, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.reload();   // the Ascent state is read at boot
+      await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
+      await render(page, true);
+      await expect(pick).toHaveText(/Contender/i);
+      const geo = await page.evaluate(async () => {
+        const sh = document.getElementById('pc-sheet')!;
+        let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
+        const s = sh.getBoundingClientRect(), p = document.querySelector('#pc-body .pc-shard--pick')!.getBoundingClientRect();
+        return Math.abs((p.left + p.width / 2) - (s.left + s.width / 2));
+      });
+      expect(geo).toBeLessThanOrEqual(2);
+      await pick.click();
+      await expect(page.locator('#pc-sheet')).toBeHidden();
+      await expect(page.locator('#arena-overlay')).toBeVisible();
+      await expect(page.locator('#arena-overlay .tm-name')).toHaveText('Titles');
+      await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Contender');
+    });
+
     test("a visitor's card: centred too, no Arena Rating, the worn look named", async ({ page }) => {
       await boot(page);
-      await render(page, false, { alias: 'RenDIESEL' });
+      await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });
       const sheet = page.locator('#pc-sheet'), med = page.locator('#pc-body .pc-med');
       await expect(med).toBeVisible();
       const s = (await sheet.boundingBox())!, m = (await med.boundingBox())!;
       expect(Math.abs((m.x + m.width / 2) - (s.x + s.width / 2))).toBeLessThanOrEqual(2);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
+      await expect(page.locator('#pc-body .pc-founder')).toHaveCount(0);                 // W1154 — no Founder badge
+      await expect(page.locator('#pc-body div.pc-shard')).toHaveText(/Blade/i);         // W1154 — a plain shard, from the published title
+      await expect(page.locator('#pc-body button.pc-shard--pick')).toHaveCount(0);
       await expect(page.locator('#pc-body .pc-skintag')).toContainText('THE SHADOWBORN');
       await expect(page.locator('#pc-body .pc-prov')).toContainText('global leaderboard');
     });
