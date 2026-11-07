@@ -29,6 +29,7 @@ interface ProfileRow {
   card_frame: string | null;   // W1146 — the Wardrobe's frame / ink / aura (null = default)
   card_ink: string | null;
   card_aura: string | null;
+  card_pins: string | null;    // W1155 — JSON array of {id, v}, at most two
   founder_seq: number | null;   // W656 — free Founder marker number (null = none)
   arena_title: string | null;
   bosses_slain_total: number | null;
@@ -46,6 +47,24 @@ interface ProfileRow {
 }
 
 const PVP_PLACEMENT_GAMES = 5;      // a hunter is "placed" (shows a rank) once placement_games hits this
+
+// W1155 — the card's pins column is a JSON array of {id, v}; anything else reads as no pins.
+function parseCardPins(raw: string | null | undefined): Array<{ id: string; v: number }> {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [];
+    const out: Array<{ id: string; v: number }> = [];
+    for (const item of arr.slice(0, 2)) {
+      const o = (item && typeof item === 'object') ? item as { id?: unknown; v?: unknown } : null;
+      if (!o || typeof o.id !== 'string') continue;
+      out.push({ id: o.id, v: typeof o.v === 'number' && Number.isFinite(o.v) ? o.v : 0 });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
 
 export async function handlePublicProfileGet(
   request: Request,
@@ -68,7 +87,7 @@ export async function handlePublicProfileGet(
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
             pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.arena_title AS arena_title,
-            pps.card_frame AS card_frame, pps.card_ink AS card_ink, pps.card_aura AS card_aura,
+            pps.card_frame AS card_frame, pps.card_ink AS card_ink, pps.card_aura AS card_aura, pps.card_pins AS card_pins,
             pps.founder_seq AS founder_seq,
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -134,6 +153,7 @@ export async function handlePublicProfileGet(
     cardFrame: row.card_frame ?? null,   // W1146 — the card look (the client keeps its defaults for an unknown id)
     cardInk: row.card_ink ?? null,
     cardAura: row.card_aura ?? null,
+    cardPins: parseCardPins(row.card_pins),   // W1155 — [] when none
     founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
     // W912 — the developer / moderator crown (board_moderators role), shown on the card.
     boardRole: row.board_role === 'owner' || row.board_role === 'mod' ? row.board_role : null,

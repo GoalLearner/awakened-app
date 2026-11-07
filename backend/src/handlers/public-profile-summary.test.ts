@@ -919,7 +919,7 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
     expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);   // the upsert's bind shape is untouched
     const upd = lookCalls(db);
     expect(upd.length).toBe(1);
-    expect(upd[0].binds).toEqual([1, 'runebound', 1, 'frost', 1, 'motes', session.userId]);
+    expect(upd[0].binds).toEqual([1, 'runebound', 1, 'frost', 1, 'motes', 0, null, session.userId]);   // W1155 — pins ride the same statement (not sent → preserved)
   });
 
   it('null clears one slot; the slots not sent keep their CASE sentinel at 0 (preserved)', async () => {
@@ -929,7 +929,7 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
     expect(res.status).toBe(200);
     const upd = lookCalls(db);
     expect(upd.length).toBe(1);
-    expect(upd[0].binds).toEqual([0, null, 1, null, 0, null, session.userId]);
+    expect(upd[0].binds).toEqual([0, null, 1, null, 0, null, 0, null, session.userId]);
   });
 
   it('no slot sent → no look statement at all', async () => {
@@ -947,5 +947,52 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
     const j = await res.json() as { error?: string };
     expect(j.error).toBe('INVALID_CARD_INK');
     expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(0);
+  });
+});
+
+// ── W1155 — the card's pins: up to two {id, v}, JSON in card_pins, riding the W1146 look statement ──
+describe('W1155 — card pins (cardPins)', () => {
+  const callsOf = (db: unknown) => (db as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+  const lookCalls = (db: unknown) => callsOf(db).filter((c) => /UPDATE public_profile_summary SET\s+card_frame/.test(c.sql));
+
+  it('two pins are stored as JSON with v clamped to an integer; the look slots stay preserved', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardPins: [{ id: 'steps1m', v: 1004112.7 }, { id: 'shadows', v: 11 }] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const upd = lookCalls(db);
+    expect(upd.length).toBe(1);
+    expect(upd[0].binds.slice(0, 6)).toEqual([0, null, 0, null, 0, null]);
+    expect(upd[0].binds[6]).toBe(1);
+    expect(JSON.parse(upd[0].binds[7] as string)).toEqual([{ id: 'steps1m', v: 1004112 }, { id: 'shadows', v: 11 }]);
+    expect(upd[0].binds[8]).toBe(session.userId);
+  });
+
+  it('an empty array or null clears the pins', async () => {
+    for (const val of [[], null]) {
+      const db = makeDb();
+      const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardPins: val }), makeEnv(db), session);
+      expect(res.status).toBe(200);
+      const upd = lookCalls(db);
+      expect(upd.length).toBe(1);
+      expect(upd[0].binds[6]).toBe(1);
+      expect(upd[0].binds[7]).toBe(null);
+    }
+  });
+
+  it('three pins, an unknown id, or a repeated id → 400 INVALID_CARD_PINS and nothing written', async () => {
+    for (const bad of [
+      [{ id: 'steps1m', v: 1 }, { id: 'shadows', v: 1 }, { id: 'summit', v: 100 }],
+      [{ id: 'pact', v: 7 }],
+      [{ id: 'bosses', v: 1 }, { id: 'bosses', v: 2 }],
+      'steps1m',
+    ]) {
+      const db = makeDb();
+      const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardPins: bad }), makeEnv(db), session);
+      expect(res.status).toBe(400);
+      const j = await res.json() as { error?: string };
+      expect(j.error).toBe('INVALID_CARD_PINS');
+      expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(0);
+    }
   });
 });

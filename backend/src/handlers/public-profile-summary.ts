@@ -82,6 +82,9 @@ const CARD_BG_IDS = [
 const CARD_FRAME_IDS = ['gilded', 'rankforged', 'obsidian', 'runebound', 'eclipse'] as const;
 const CARD_INK_IDS = ['ivory', 'gold', 'violet', 'teal', 'ember', 'rose', 'frost', 'dawn', 'void', 'stardust'] as const;
 const CARD_AURA_IDS = ['none', 'motes', 'embers', 'storm', 'void', 'stardust'] as const;
+// W1155 — the card's pins (up to two): the id names the badge, v the number it shows.
+const CARD_PIN_IDS = ['steps1m', 'shadows', 'summit', 'bosses', 'bestday'] as const;
+const CARD_PINS_MAX = 2;
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 const ALLOWED_DIVISIONS = ['I', 'II', 'III'] as const;
@@ -152,6 +155,7 @@ interface PutBody {
   cardFrame?: unknown;   // W1146 — card look ids (null = default; omitted = preserve)
   cardInk?: unknown;
   cardAura?: unknown;
+  cardPins?: unknown;    // W1155 — up to two {id, v} pins (null = none; omitted = preserve)
   power?: unknown;
   avgStepsPerDay?: unknown;
   combatant?: unknown;   // W440 — loadout snapshot for "Duel a Friend's Echo" (6 stats + weapon)
@@ -188,6 +192,7 @@ interface Validated {
   cardFrame: AchField<string>;   // W1146 — card look, same set/clear/preserve semantics
   cardInk: AchField<string>;
   cardAura: AchField<string>;
+  cardPins: AchField<string>;    // W1155 — JSON array of {id, v}, at most two
   // Profile card (W-next) — same set/clear/preserve semantics.
   avatarId: AchField<string>;
   power: AchField<number>;
@@ -469,6 +474,28 @@ function validate(body: PutBody):
     if (typeof raw === 'string' && lookIds[key].includes(raw)) { look[key] = { set: true, value: raw }; continue; }
     return { ok: false, code: lookCodes[key], detail: key + ' must be a known id or null.' };
   }
+  // W1155 — the card's pins: up to two {id, v}; the id must be a known pin, v is clamped to a sane count;
+  // stored as a JSON string. null clears; omitted preserves (like the look slots).
+  let cardPins: AchField<string> = { set: false, value: null };
+  if ('cardPins' in body && body.cardPins !== undefined) {
+    if (body.cardPins === null) {
+      cardPins = { set: true, value: null };
+    } else if (Array.isArray(body.cardPins) && body.cardPins.length <= CARD_PINS_MAX) {
+      const pins: Array<{ id: string; v: number }> = [];
+      for (const raw of body.cardPins as unknown[]) {
+        const o = (raw && typeof raw === 'object') ? raw as { id?: unknown; v?: unknown } : null;
+        if (!o || typeof o.id !== 'string' || !(CARD_PIN_IDS as readonly string[]).includes(o.id)) {
+          return { ok: false, code: 'INVALID_CARD_PINS', detail: 'cardPins: unknown pin id.' };
+        }
+        if (pins.some((p) => p.id === o.id)) return { ok: false, code: 'INVALID_CARD_PINS', detail: 'cardPins: a pin repeats.' };
+        const v = (typeof o.v === 'number' && Number.isFinite(o.v)) ? Math.max(0, Math.min(100_000_000, Math.floor(o.v))) : 0;
+        pins.push({ id: o.id, v });
+      }
+      cardPins = { set: true, value: pins.length ? JSON.stringify(pins) : null };
+    } else {
+      return { ok: false, code: 'INVALID_CARD_PINS', detail: 'cardPins must be an array of at most two pins, or null.' };
+    }
+  }
   let power: AchField<number> = { set: false, value: null };
   if ('power' in body && body.power !== undefined) {
     if (isSafeInt(body.power, 0, POWER_MAX)) {
@@ -538,6 +565,7 @@ function validate(body: PutBody):
       cardFrame: look.cardFrame,   // W1146
       cardInk: look.cardInk,
       cardAura: look.cardAura,
+      cardPins,                    // W1155
       power,
       avgStepsPerDay,
       combatant,
@@ -726,18 +754,20 @@ export async function handlePublicProfileSummaryPut(
   // W1146 — the card look (frame / ink / aura) rides its own statement so the main upsert's bind
   // shape stays put; it runs only when the client set at least one slot (set or clear), and a slot
   // the client omitted is preserved by its CASE sentinel.
-  if (v.cardFrame.set || v.cardInk.set || v.cardAura.set) {
+  if (v.cardFrame.set || v.cardInk.set || v.cardAura.set || v.cardPins.set) {
     await env.DB.prepare(
       `UPDATE public_profile_summary SET
           card_frame = CASE WHEN ? = 1 THEN ? ELSE card_frame END,
           card_ink   = CASE WHEN ? = 1 THEN ? ELSE card_ink END,
-          card_aura  = CASE WHEN ? = 1 THEN ? ELSE card_aura END
+          card_aura  = CASE WHEN ? = 1 THEN ? ELSE card_aura END,
+          card_pins  = CASE WHEN ? = 1 THEN ? ELSE card_pins END
         WHERE user_id = ?`,
     )
       .bind(
         v.cardFrame.set ? 1 : 0, v.cardFrame.value,
         v.cardInk.set ? 1 : 0, v.cardInk.value,
         v.cardAura.set ? 1 : 0, v.cardAura.value,
+        v.cardPins.set ? 1 : 0, v.cardPins.value,   // W1155
         session.userId,
       )
       .run();
