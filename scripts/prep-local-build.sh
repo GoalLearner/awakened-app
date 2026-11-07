@@ -318,6 +318,17 @@ if [ -f "$PWC" ] && ! grep -q "W1079c" "$PWC"; then
   ' "$PWC"
   echo "  RevenueCat PaywallColor.swift: $(grep -c W1079c "$PWC") (1 = patched for Xcode 27)"
 fi
+# W1152 — PurchasesHybridCommon 11.1.1 (pinned with RevenueCat 4.43.2) names `SubscriptionPeriod`
+# unqualified in StoreProduct+HybridAdditions.swift while importing both RevenueCat and StoreKit;
+# the iOS 26/27 SDKs make that name ambiguous ("'SubscriptionPeriod' is ambiguous for type lookup",
+# the first two GitHub builds of 626, Xcode 26.6 and 27.1 alike). Qualified as RevenueCat's.
+# Idempotent; a no-op once the pod is upgraded past the fix.
+SPH="ios/App/Pods/PurchasesHybridCommon/ios/PurchasesHybridCommon/PurchasesHybridCommon/StoreProduct+HybridAdditions.swift"
+if [ -f "$SPH" ] && ! grep -q "RevenueCat.SubscriptionPeriod" "$SPH"; then
+  sed -i '' -e 's/subscriptionPeriod: SubscriptionPeriod)/subscriptionPeriod: RevenueCat.SubscriptionPeriod)/' \
+             -e 's/subscriptionPeriodUnit: SubscriptionPeriod.Unit)/subscriptionPeriodUnit: RevenueCat.SubscriptionPeriod.Unit)/' "$SPH"
+  echo "  PurchasesHybridCommon StoreProduct+HybridAdditions.swift: $(grep -c 'RevenueCat.SubscriptionPeriod' "$SPH") (2 = patched, W1152)"
+fi
 echo ""
 
 # ── 6. ITSAppUsesNonExemptEncryption = false ────────────────────────
