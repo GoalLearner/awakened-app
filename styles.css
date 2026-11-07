@@ -35645,12 +35645,14 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
     linear-gradient(0deg, rgba(14,14,34,0.96) 0, rgba(14,14,34,0) 64px); }
 .pkb.pkb2 .pkb-stage.clutch::before { border-radius: 0; z-index: 4; }
 /* the fighters — absolutely placed, feet on the band line, heads below the chrome */
-.pkb.pkb2 .pkb-spot { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 86px); bottom: 2%; width: 54%; height: auto; margin: 0; flex: none;
+/* (the .pkb-stage step in these selectors outranks the old W760 '.pkb.has-exe .pkb-spot' height caps — a 5-move kit
+   was shrinking the fighters to ~145pt on the phone, owner build 618) */
+.pkb.pkb2 .pkb-stage .pkb-spot.you, .pkb.pkb2 .pkb-stage .pkb-spot.foe { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 80px); bottom: 1%; width: 56%; height: auto; margin: 0; flex: none;
   display: flex; align-items: flex-end; justify-content: center; }
-.pkb.pkb2 .pkb-spot.you { left: -3%; z-index: 3; }
-.pkb.pkb2 .pkb-spot.foe { right: -2%; z-index: 2; }
-.pkb.pkb2 .pkb-spot.foe.boss { width: 58%; top: calc(env(safe-area-inset-top, 0px) + 78px); }
-.pkb.pkb2 .pkb-spot.foe.fa { width: 70%; right: -10%; top: calc(env(safe-area-inset-top, 0px) + 70px); }
+.pkb.pkb2 .pkb-stage .pkb-spot.you { left: -4%; z-index: 3; }
+.pkb.pkb2 .pkb-stage .pkb-spot.foe { right: -3%; z-index: 2; }
+.pkb.pkb2 .pkb-stage .pkb-spot.foe.boss { width: 60%; top: calc(env(safe-area-inset-top, 0px) + 74px); }
+.pkb.pkb2 .pkb-stage .pkb-spot.foe.fa { width: 72%; right: -11%; top: calc(env(safe-area-inset-top, 0px) + 66px); }
 .pkb.pkb2 .pkb-spot .plat { display: none; }
 .pkb.pkb2 .pkb-spot::before { bottom: 0; width: 62%; height: 8%; }
 .pkb.pkb2 .pkb-spot .spr { width: 100%; height: 100%; filter: drop-shadow(0 10px 14px rgba(0,0,0,0.6)); }
@@ -35853,15 +35855,16 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* the finisher strip — dormant embers until the foe drops into the kill window */
 .pkb.pkb2 .ar-bmove.exe { grid-column: 1 / -1; height: 54px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 11px; padding: 0 12px 0 15px; border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, #141428, #0e0e20); filter: none; animation: none; }
-.pkb.pkb2 .ar-bmove.exe::before { top: 12px; bottom: 12px; background: #6b6b86; box-shadow: none; }
-.pkb.pkb2 .ar-bmove.exe .ic { width: 28px; height: 28px; border-radius: 8px; color: #9090a8; background: none; border: 1px solid rgba(255,255,255,0.12); }
+.pkb.pkb2 .ar-bmove.exe::before { top: 12px; bottom: 12px; background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+.pkb.pkb2 .ar-bmove.exe .ic { width: 28px; height: 28px; border-radius: 8px; color: #fda4af; background: radial-gradient(circle at 50% 35%, rgba(239,68,68,0.18), rgba(239,68,68,0.03) 75%); border: 1px solid rgba(239,68,68,0.45); }
 .pkb.pkb2 .ar-bmove.exe .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pkb.pkb2 .ar-bmove.exe .nm { font-size: 13.5px; letter-spacing: 1.4px; color: #9090a8; text-transform: uppercase; }
-.pkb.pkb2 .ar-bmove.exe .desc { -webkit-line-clamp: 1; margin: 0; color: #6b6b86; }
-.pkb.pkb2 .ar-bmove.exe .stat { padding: 0 8px; background: none; border: 1px solid rgba(255,255,255,0.12); }
-.pkb.pkb2 .ar-bmove.exe .stat .lab { color: #9090a8; }
-.pkb.pkb2 .ar-bmove.exe .stat .val { color: #c8c6d8; }
-.pkb2 .ar-bmove.exe .stat .c { margin-left: 3px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 800; line-height: 1; letter-spacing: 0.6px; color: #6b6b86; }
+.pkb.pkb2 .ar-bmove.exe .nm { font-size: 13.5px; letter-spacing: 1.4px; color: #f5f3fb; text-transform: uppercase; }
+.pkb.pkb2 .ar-bmove.exe .desc { -webkit-line-clamp: 1; margin: 0; color: #9090a8; }
+.pkb.pkb2 .ar-bmove.exe .stat { padding: 0 8px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.4); }
+.pkb.pkb2 .ar-bmove.exe .stat .lab { color: #fda4af; }
+.pkb.pkb2 .ar-bmove.exe .stat .val { color: #f5f3fb; }
+.pkb.pkb2 .ar-bmove.exe.cd { filter: grayscale(0.35) brightness(0.8); }
+.pkb2 .ar-bmove.exe .stat .c { margin-left: 3px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 800; line-height: 1; letter-spacing: 0.6px; color: #fda4af; }
 .pkb2 .ar-bmove.exe .embers { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .pkb2 .ar-bmove.exe .embers i { position: absolute; bottom: -4px; width: 3px; height: 3px; border-radius: 50%; background: #ffd574; box-shadow: 0 0 6px #f5b842; opacity: 0; }
 .pkb.pkb2 .ar-bmove.exe.exe-ready { border-color: rgba(239,68,68,0.6); background: linear-gradient(90deg, rgba(127,29,29,0.55), rgba(60,10,20,0.35) 55%, rgba(245,184,66,0.12)); }
@@ -36003,8 +36006,8 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 
 /* ─── small phones (iPhone SE 375×667): tighter band, shorter cards ─── */
 @media (max-height: 700px) {
-  .pkb.pkb2 .pkb-spot { top: calc(env(safe-area-inset-top, 0px) + 74px); }
-  .pkb.pkb2 .pkb-spot.foe.boss, .pkb.pkb2 .pkb-spot.foe.fa { top: calc(env(safe-area-inset-top, 0px) + 68px); }
+  .pkb.pkb2 .pkb-stage .pkb-spot.you, .pkb.pkb2 .pkb-stage .pkb-spot.foe { top: calc(env(safe-area-inset-top, 0px) + 72px); }
+  .pkb.pkb2 .pkb-stage .pkb-spot.foe.boss, .pkb.pkb2 .pkb-stage .pkb-spot.foe.fa { top: calc(env(safe-area-inset-top, 0px) + 66px); }
   .pkb2-intent { top: calc(env(safe-area-inset-top, 0px) + 52px); }
   .pkb2-band { padding-top: 7px; }
   .pkb2-surge { height: 38px; margin-top: 6px; }

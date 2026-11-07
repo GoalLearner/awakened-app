@@ -144,12 +144,22 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await page.evaluate(() => {
         const s = (window as any).Arena._live.sess();
         s.pMoves = s.pMoves.slice(0, 4).concat([{ id: 'reckoning', name: 'Reckoning', gl: 'sword', power: 1.05, acc: 0.9, cd: 2, exe: { thr: 0.30, mult: 2.0 }, desc: 'Ends what the fight began — brutal below 30%.' }]);
+        (document.querySelector('#arena-body .pkb2') as HTMLElement).classList.add('has-exe');   // what a real 5-move kit renders with
         (window as any).Arena._live.paint();
       });
       const fin = page.locator('#arena-body .ar-bmove.exe');
       await expect(fin).toHaveCount(1);
       await expect(fin).not.toHaveClass(/exe-ready/);
       await expect(fin.locator('.stat .c')).toHaveText('≤30%');
+      // owner build 618: dormant must still read as a usable attack (it is one), not a greyed-out card
+      expect(await fin.locator('.nm').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(245, 243, 251)');
+      // owner build 618: the old W760 5-move height caps shrank the fighters to ~145pt; they keep their size
+      const sizes = await page.evaluate(() => {
+        const st = (document.getElementById('pkb-stage') as HTMLElement).getBoundingClientRect().height;
+        return ['p', 'b'].map((x) => (document.getElementById('pkb-spot-' + x) as HTMLElement).getBoundingClientRect().height / st);
+      });
+      for (const f of sizes) expect(f).toBeGreaterThan(0.5);
+      await shot(page, '09a-finisher-dormant');
       expect(await page.evaluate(() => Array.from(document.querySelectorAll('#arena-body .ar-bmoves > *')).pop()!.classList.contains('exe'))).toBe(true);
       await page.evaluate(() => { const s = (window as any).Arena._live.sess(); s.bHP = Math.floor(s.bMax * 0.28); (window as any).Arena._live.paint(); });
       await expect(fin).toHaveClass(/exe-ready/);
