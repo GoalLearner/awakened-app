@@ -33,7 +33,7 @@ async function boot(page: Page, bosses?: Record<string, unknown>) {
       localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
       localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
       localStorage.setItem('hb_points', '40000');   // S+: every gate open
-      localStorage.setItem('hb_souls', '999999');
+      localStorage.setItem('hb_souls', JSON.stringify({ balance: 999999, totalEarned: 999999 }));   // the souls store is an object; a hunt's fee is a door on the phone list
       localStorage.setItem('hb_bosses', b);
     } catch (_) { /* noop */ }
   }, JSON.stringify(bosses || {}));
@@ -116,6 +116,40 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(await scan(page, three)).toContain('erebus_the_shadow_sovereign');
     // the Flame's two days are Nov 1 + Nov 2: Oct 31 + Nov 1 alone must not pass for them
     expect(await scan(page, two)).not.toContain('the_patient_flame');
+  });
+
+  // W1149 — what the phone watcher is handed for the multi-day bosses (window.__readyHunt.watch() after a scan)
+  const watchOf = (page: Page) => page.evaluate(() => (window as any).__readyHunt.watch().hunts.filter((h: any) => h.day).map((h: any) => ({ id: h.id, metric: h.metric, bar: h.bar, day: h.day, also: h.also })));
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+
+  test('the phone list: yesterday qualified → the Flame on steps today; the Marcher once per metric, each naming the other', async ({ page }) => {
+    await boot(page);
+    await scan(page, { steps: { [T1]: 12000, [T0]: 3000 }, flights: { [T1]: 6, [T0]: 1 } });
+    const w = await watchOf(page);
+    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 10000, day: T0, also: [] });
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 10000, day: T0, also: [{ metric: 'flights', bar: 5 }] });
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 5, day: T0, also: [{ metric: 'steps', bar: 10000 }] });
+    expect(w.filter((h: any) => h.id === 'erebus_the_shadow_sovereign')).toHaveLength(0);   // needs two earlier days
+    expect(w.filter((h: any) => h.day === tomorrow)).toHaveLength(0);                       // today is not done yet
+  });
+
+  test('the phone list: today already qualifies → an entry for tomorrow; a Flame beaten yesterday gets none for today', async ({ page }) => {
+    const y = new Date(); y.setDate(y.getDate() - 1); y.setHours(18, 0, 0, 0);
+    await boot(page, { the_patient_flame: { streak: 0, kill_count: 1, engaged: false, last_defeated_at: y.toISOString(), last_hunt_outcome: 'defeated' } });
+    await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 10, [T0]: 10 } });
+    const w = await watchOf(page);
+    const flame = w.filter((h: any) => h.id === 'the_patient_flame');
+    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 10000, day: tomorrow, also: [] }]);
+    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 10000, day: tomorrow, also: [{ metric: 'flights', bar: 10 }] });
+  });
+
+  test('the phone list: last night qualified → the Vow Keeper on sleep today; only tonight qualified → tomorrow', async ({ page }) => {
+    await boot(page);
+    await scan(page, { sleep: { [T1]: 7.47, [T0]: 5 } });
+    expect(await watchOf(page)).toContainEqual({ id: 'the_vow_keeper', metric: 'sleep', bar: 7, day: T0, also: [] });
+    await scan(page, { sleep: { [T1]: 5, [T0]: 7.47 } });
+    const w = await watchOf(page).then((l) => l.filter((h: any) => h.id === 'the_vow_keeper'));
+    expect(w).toEqual([{ id: 'the_vow_keeper', metric: 'sleep', bar: 7, day: tomorrow, also: [] }]);
   });
 
   test('two 7-hour nights → the Vow Keeper; one short night and it is not offered', async ({ page }) => {

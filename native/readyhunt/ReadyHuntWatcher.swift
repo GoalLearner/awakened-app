@@ -16,7 +16,14 @@ import UserNotifications
 ///   { "v":1, "on":true, "at":1791850000000, "pausedUntil":0,
 ///     "quiet":{"start":"22:00","end":"07:00"}, "hold":"", "seenDay":"2026-10-12", "seen":["the_carouser"],
 ///     "hunts":[ {"id":"the_steel_wolf","name":"The Steel Wolf","metric":"steps","bar":6000,
-///                "beaten":"2026-10-11","until":0} ] }
+///                "beaten":"2026-10-11","until":0},
+///               {"id":"the_tideless_marcher","name":"The Tideless Marcher","metric":"steps","bar":10000,
+///                "beaten":"","until":0,"day":"2026-11-08","also":[{"metric":"flights","bar":5}]} ] }
+///
+/// W1149 — a MULTI-DAY boss rides the list too: app.js has judged that the earlier days of its run already
+/// qualify, so it names the one `day` on which today's number completes the run (an entry for another day
+/// is ignored), and, for a boss that needs several numbers on the same day, the other bars today must
+/// reach (`also`). Such a boss is listed once per metric, so whichever number crosses last wakes this.
 ///
 /// MAIN APP target only. Installed by scripts/prep-local-build.sh (step 8d), which also adds
 /// the HealthKit background-delivery entitlement and the one call in AppDelegate. No plugin,
@@ -126,16 +133,19 @@ final class ReadyHuntWatcher {
         let fresh = ReadyHuntWatcher.candidates(metric, now, today, watch, memo, false)
         if fresh.isEmpty { finish(); return }
         let standing = ReadyHuntWatcher.candidates(metric, now, today, watch, memo, true)
-        readValue(metric, now) { value in
+        // W1149 — a hunt that needs several numbers today is judged on all of them: read every metric named.
+        let needed: [String] = ReadyHuntWatcher.metricsNeeded(metric, standing)
+        readValues(needed, now, [:]) { values in
             self.work.async {
+                let value: Double = values[metric] ?? 0
                 var news: Int = 0
                 for hunt in fresh {
-                    if value >= hunt.bar { news += 1 }
+                    if ReadyHuntWatcher.met(hunt, values) { news += 1 }
                 }
                 if news == 0 { finish(); return }
                 var ready: [ReadyHuntEntry] = []
                 for hunt in standing {
-                    if value >= hunt.bar { ready.append(hunt) }
+                    if ReadyHuntWatcher.met(hunt, values) { ready.append(hunt) }
                 }
                 if ready.isEmpty { finish(); return }
                 self.permitted { ok in
@@ -156,6 +166,7 @@ final class ReadyHuntWatcher {
         var out: [ReadyHuntEntry] = []
         for hunt in watch.hunts {
             if hunt.metric != metric { continue }
+            if !hunt.day.isEmpty && hunt.day != today { continue }       // W1149 — a multi-day boss is ready on one day only
             if hunt.beaten == today { continue }                         // a daily boss is beaten once a day
             if hunt.until > nowMs { continue }                           // a hunt already running resolves on its own
             if seenToday && watch.seen.contains(hunt.id) { continue }    // the app already showed it today
@@ -163,6 +174,39 @@ final class ReadyHuntWatcher {
             out.append(hunt)
         }
         return out
+    }
+
+    /// W1149 — the metrics a check on `metric` must read: itself, and every other number an all-of hunt on it names.
+    static func metricsNeeded(_ metric: String, _ hunts: [ReadyHuntEntry]) -> [String] {
+        var out: [String] = [metric]
+        for hunt in hunts {
+            for need in hunt.also {
+                if !out.contains(need.metric) { out.append(need.metric) }
+            }
+        }
+        return out
+    }
+
+    /// W1149 — today's numbers reach this hunt's bar, and every other bar it names.
+    static func met(_ hunt: ReadyHuntEntry, _ values: [String: Double]) -> Bool {
+        let own: Double = values[hunt.metric] ?? 0
+        if own < hunt.bar { return false }
+        for need in hunt.also {
+            let have: Double = values[need.metric] ?? 0
+            if have < need.bar { return false }
+        }
+        return true
+    }
+
+    /// W1149 — reads each metric in turn (one HealthKit query at a time), then hands all of them back.
+    private func readValues(_ metrics: [String], _ now: Date, _ sofar: [String: Double], _ done: @escaping ([String: Double]) -> Void) {
+        guard let first = metrics.first else { done(sofar); return }
+        let rest: [String] = Array(metrics.dropFirst())
+        readValue(first, now) { value in
+            var next: [String: Double] = sofar
+            next[first] = value
+            self.readValues(rest, now, next, done)
+        }
     }
 
     private func permitted(_ done: @escaping (Bool) -> Void) {
@@ -224,6 +268,12 @@ final class ReadyHuntWatcher {
 
 // MARK: - What app.js hands over
 
+/// W1149 — another number a hunt needs today, beside its own metric (an all-of boss).
+struct ReadyHuntNeed {
+    let metric: String
+    let bar: Double
+}
+
 struct ReadyHuntEntry {
     let id: String
     let name: String
@@ -231,6 +281,8 @@ struct ReadyHuntEntry {
     let bar: Double
     let beaten: String
     let until: Double
+    let day: String              // W1149 — the one local day this entry counts on; "" = any day
+    let also: [ReadyHuntNeed]    // W1149 — the other bars today must reach; empty for a one-number boss
 }
 
 struct ReadyHuntWatch {
@@ -288,13 +340,24 @@ struct ReadyHuntWatch {
                 let metric = ReadyHuntWatch.text(item["metric"])
                 let bar = ReadyHuntWatch.number(item["bar"])
                 if id.isEmpty || metric.isEmpty || !(bar > 0) { continue }
+                var also: [ReadyHuntNeed] = []
+                if let needs = item["also"] as? [[String: Any]] {
+                    for need in needs {
+                        let needMetric = ReadyHuntWatch.text(need["metric"])
+                        let needBar = ReadyHuntWatch.number(need["bar"])
+                        if needMetric.isEmpty || !(needBar > 0) { continue }
+                        also.append(ReadyHuntNeed(metric: needMetric, bar: needBar))
+                    }
+                }
                 let entry = ReadyHuntEntry(
                     id: id,
                     name: ReadyHuntWatch.text(item["name"]),
                     metric: metric,
                     bar: bar,
                     beaten: ReadyHuntWatch.text(item["beaten"]),
-                    until: ReadyHuntWatch.number(item["until"])
+                    until: ReadyHuntWatch.number(item["until"]),
+                    day: ReadyHuntWatch.text(item["day"]),
+                    also: also
                 )
                 watch.hunts.append(entry)
             }
