@@ -36145,3 +36145,276 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .pkb.pkb2 .pkb-spot.you.parried .spr, .pkb2-surge.canparry .parry, .pkb2-rail.swap, .pkb2-intro .rhythm { animation: none; }
   .pkb2-readfloat { animation: pkbFade 1.1s ease forwards; }
 }
+
+/* ═══ W1141 — THE MOTION LIBRARY (Claude Design handoff 6, "The Ascent - Motion Library") ═══
+   One motion per move, from three things two flat paintings allow: POSES (transitions on .spr; --dir mirrors,
+   --amp scales travel to the real sprite), effect LAYERS (.pkb-mvfx SVG + .pkb-mvfxd DOM, drawn in a design
+   space the viewBox / scale() maps onto the stage) and CAMERA (mc-* on the stage, the m-freeze hit-stop, a wash,
+   a dimmer, bars). Every duration scales with --spd (2× = .5). Transform / opacity / filter only; no canvas. */
+.pkb.pkb2 { --spd: 1; }
+.pkb.pkb2 .pkb-spot { --dir: 1; --amp: 1; --far: 235px; }
+.pkb.pkb2 .pkb-spot.foe { --dir: -1; }
+.pkb.pkb2 .pkb-spot .spr { position: relative; z-index: 1; transition: transform calc(.24s * var(--spd)) cubic-bezier(.2,.8,.2,1), opacity calc(.14s * var(--spd)) ease, filter calc(.2s * var(--spd)) ease; }
+/* poses */
+.pkb.pkb2 .pkb-spot.mp-back .spr { transform: translate(calc(-12px * var(--dir) * var(--amp)), 0) rotate(calc(-4deg * var(--dir))); transition-duration: calc(.15s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-crouch .spr { transform: translate(calc(-6px * var(--dir) * var(--amp)), 5px) scale(.97,.94); transition-duration: calc(.1s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-step .spr { transform: translate(calc(40px * var(--dir) * var(--amp)), -4px); transition-duration: calc(.16s * var(--spd)); transition-timing-function: cubic-bezier(.5,0,.9,.6); }
+.pkb.pkb2 .pkb-spot.mp-lunge .spr { transform: translate(calc(72px * var(--dir) * var(--amp)), -6px); transition-duration: calc(.18s * var(--spd)); transition-timing-function: cubic-bezier(.5,0,.9,.6); }
+.pkb.pkb2 .pkb-spot.mp-dash .spr { transform: translate(calc(104px * var(--dir) * var(--amp)), -4px) skewX(calc(-6deg * var(--dir))); transition-duration: calc(.14s * var(--spd)); transition-timing-function: cubic-bezier(.4,0,.8,.5); }
+.pkb.pkb2 .pkb-spot.mp-behind .spr { transform: translate(calc(var(--far) * var(--dir) * var(--amp)), -4px) scaleX(-1); transition-duration: 0s; }
+.pkb.pkb2 .pkb-spot.mp-wind .spr { transform: translate(calc(-16px * var(--dir) * var(--amp)), 0) rotate(calc(-9deg * var(--dir))) scale(1.04); transition-duration: calc(.3s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-sweep .spr { transform: translate(calc(56px * var(--dir) * var(--amp)), -2px) rotate(calc(6deg * var(--dir))); transition-duration: calc(.16s * var(--spd)); transition-timing-function: cubic-bezier(.5,0,.9,.6); }
+.pkb.pkb2 .pkb-spot.mp-leap .spr { transform: translate(calc(36px * var(--dir) * var(--amp)), calc(-80px * var(--amp))) scale(1.05) rotate(calc(5deg * var(--dir))); transition-duration: calc(.26s * var(--spd)); transition-timing-function: cubic-bezier(.2,.7,.3,1); }
+.pkb.pkb2 .pkb-spot.mp-drop .spr { transform: translate(calc(70px * var(--dir) * var(--amp)), 0) scale(1.02,.98); transition-duration: calc(.12s * var(--spd)); transition-timing-function: cubic-bezier(.6,0,1,.6); }
+.pkb.pkb2 .pkb-spot.mp-jab .spr { transform: translate(calc(34px * var(--dir) * var(--amp)), -2px) skewX(calc(-4deg * var(--dir))); transition-duration: calc(.09s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-hookw .spr { transform: translate(calc(-8px * var(--dir) * var(--amp)), 2px) rotate(calc(7deg * var(--dir))); transition-duration: calc(.18s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-hook .spr { transform: translate(calc(48px * var(--dir) * var(--amp)), -4px) rotate(calc(-6deg * var(--dir))); transition-duration: calc(.14s * var(--spd)); transition-timing-function: cubic-bezier(.5,0,.9,.6); }
+.pkb.pkb2 .pkb-spot.mp-lean .spr { transform: translate(calc(-6px * var(--dir) * var(--amp)), 0) rotate(calc(8deg * var(--dir))); transition-duration: calc(.2s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-bash .spr { transform: translate(calc(62px * var(--dir) * var(--amp)), 0) rotate(calc(10deg * var(--dir))); transition-duration: calc(.14s * var(--spd)); transition-timing-function: cubic-bezier(.5,0,.9,.6); }
+.pkb.pkb2 .pkb-spot.mp-hop .spr { transform: translate(0, calc(-14px * var(--amp))); transition-duration: calc(.14s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-stomp .spr { transform: translate(calc(10px * var(--dir) * var(--amp)), 6px) scale(1.04,.94); transition-duration: calc(.1s * var(--spd)); transition-timing-function: cubic-bezier(.6,0,1,.6); }
+.pkb.pkb2 .pkb-spot.mp-raise .spr { transform: translate(0, -8px); transition-duration: calc(.26s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-float .spr { transform: translate(0, -12px); transition-duration: calc(.4s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-sky .spr { transform: translate(calc(-4px * var(--dir) * var(--amp)), -16px) rotate(calc(-6deg * var(--dir))); transition-duration: calc(.34s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-castf .spr { transform: translate(calc(14px * var(--dir) * var(--amp)), -4px) rotate(calc(4deg * var(--dir))); transition-duration: calc(.12s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-tiltb .spr { transform: rotate(calc(-7deg * var(--dir))); transition-duration: calc(.2s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-tiltf .spr { transform: translate(calc(10px * var(--dir) * var(--amp)), 0) rotate(calc(7deg * var(--dir))); transition-duration: calc(.14s * var(--spd)); transition-timing-function: ease-in; }
+.pkb.pkb2 .pkb-spot.mp-draw .spr { transform: translate(calc(-8px * var(--dir) * var(--amp)), 0) rotate(calc(3deg * var(--dir))); transition-duration: calc(.22s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-drawlong .spr { transform: translate(calc(-14px * var(--dir) * var(--amp)), 0) rotate(calc(4deg * var(--dir))) scale(1.02); transition-duration: calc(.5s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-aim .spr { transform: translate(calc(-6px * var(--dir) * var(--amp)), -2px) rotate(calc(-9deg * var(--dir))); transition-duration: calc(.22s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-release .spr { transform: translate(calc(-18px * var(--dir) * var(--amp)), 0) rotate(calc(5deg * var(--dir))); transition-duration: calc(.08s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-side .spr { transform: translate(calc(-56px * var(--dir) * var(--amp)), -8px) rotate(calc(-4deg * var(--dir))); transition-duration: calc(.16s * var(--spd)); transition-timing-function: cubic-bezier(.2,.7,.3,1); }
+.pkb.pkb2 .pkb-spot.mp-compress .spr { transform: translate(0, 6px) scale(1.05,.94); transition-duration: calc(.18s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-plant .spr { transform: translate(calc(-4px * var(--dir) * var(--amp)), 3px) scale(1,.98); transition-duration: calc(.16s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-swell .spr { transform: translate(0, -3px) scale(1.07); transition-duration: calc(.6s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-sink .spr { transform: translate(0, 10px) scale(.98); transition-duration: calc(.3s * var(--spd)); transition-timing-function: ease-in; }
+.pkb.pkb2 .pkb-spot.mp-rise .spr { transform: translate(0, -14px); transition-duration: calc(.4s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-swipe .spr { transform: translate(calc(22px * var(--dir) * var(--amp)), 2px) rotate(calc(5deg * var(--dir))); transition-duration: calc(.4s * var(--spd)); transition-timing-function: ease-in-out; }
+.pkb.pkb2 .pkb-spot.mp-recoil .spr { transform: translate(calc(-16px * var(--dir) * var(--amp)), 0) rotate(calc(-3deg * var(--dir))); transition-duration: calc(.1s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-recoil2 .spr { transform: translate(calc(-34px * var(--dir) * var(--amp)), 2px) rotate(calc(-7deg * var(--dir))); transition-duration: calc(.12s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mp-roll .spr { animation: pkbMRoll calc(.5s * var(--spd)) cubic-bezier(.3,.1,.3,1) both; }
+@keyframes pkbMRoll { 0% { transform: translate(0,0) rotate(0) scale(1); } 50% { transform: translate(calc(-30px * var(--dir) * var(--amp)), 12px) rotate(calc(-180deg * var(--dir))) scale(.86,.8); } 100% { transform: translate(calc(-56px * var(--dir) * var(--amp)), 0) rotate(calc(-360deg * var(--dir))) scale(1); } }
+.pkb.pkb2 .pkb-spot.mp-jitter .spr { animation: pkbMJitter calc(.12s * var(--spd)) linear infinite; }
+@keyframes pkbMJitter { 0%,100% { transform: translate(0,0); } 25% { transform: translate(1.5px,-1px) skewX(1deg); } 50% { transform: translate(-1.5px,1px); } 75% { transform: translate(1px,1px) skewX(-1deg); } }
+.pkb.pkb2 .pkb-spot.mp-vanish .spr { opacity: 0; filter: blur(6px) brightness(1.5); }
+.pkb.pkb2 .pkb-spot.mp-behind.mp-vanish .spr { transition-duration: calc(.14s * var(--spd)); }
+/* the defender's special reactions (instead of the knockback) */
+.pkb.pkb2 .pkb-spot.mr-crush .spr { transform: translate(0, 6px) scale(1,.96); transition-duration: calc(.1s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mr-pushed .spr { transform: translate(calc(-28px * var(--dir) * var(--amp)), 0) skewX(calc(6deg * var(--dir))); transition-duration: calc(.4s * var(--spd)); }
+.pkb.pkb2 .pkb-spot.mr-sag .spr { transform: translate(0, 8px) scale(.98,.95); filter: saturate(.5) drop-shadow(0 10px 14px rgba(0,0,0,.6)); transition-duration: calc(.5s * var(--spd)); transition-timing-function: ease-in; }
+/* glows (the base shadow rides along) */
+.pkb.pkb2 .pkb-spot.mg-gold .spr, .pkb.pkb2 .pkb-spot.mg-gold2 .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(245,184,66,.85)); }
+.pkb.pkb2 .pkb-spot.mg-red .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(239,68,68,.85)); }
+.pkb.pkb2 .pkb-spot.mg-fire .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(240,144,74,.9)); }
+.pkb.pkb2 .pkb-spot.mg-arcane .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 16px rgba(192,132,252,.9)); }
+.pkb.pkb2 .pkb-spot.mg-violet .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 16px rgba(167,139,250,.9)); }
+.pkb.pkb2 .pkb-spot.mg-teal .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(94,234,212,.85)); }
+.pkb.pkb2 .pkb-spot.mg-green .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(34,197,94,.85)); }
+.pkb.pkb2 .pkb-spot.mg-blue .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(59,130,246,.9)); }
+.pkb.pkb2 .pkb-spot.mg-frost .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(125,211,252,.9)); }
+.pkb.pkb2 .pkb-spot.mg-white .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,.6)) drop-shadow(0 0 16px rgba(255,255,255,.9)); }
+.pkb.pkb2 .pkb-spot.mg-blur .spr { filter: blur(2px) brightness(1.25); }
+/* afterimages: copies of the sprite inside the spot, behind it */
+.pkb.pkb2 .pkb-spot .pkb-ghosts { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.pkb.pkb2 .pkb-spot .pkb-ghost { position: absolute; inset: 0; animation: pkbMGfade calc(.4s * var(--spd)) ease-out var(--d, 0s) both; filter: brightness(.8) sepia(1) hue-rotate(215deg) saturate(3) blur(1px); }
+.pkb.pkb2 .pkb-spot .pkb-ghost > * { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; transform: none; }
+@keyframes pkbMGfade { 0% { opacity: .5; } 100% { opacity: 0; } }
+/* ambient status loops on the figure (burn / evade / attack-up carry a body pulse; the img, so the knockback keeps .spr) */
+.pkb.pkb2 .pkb-spot.s-atkup .spr img { animation: pkbMLhum calc(1.2s * var(--spd)) ease-in-out infinite alternate; }
+@keyframes pkbMLhum { 0% { filter: drop-shadow(0 0 4px rgba(245,184,66,.2)); } 100% { filter: drop-shadow(0 0 14px rgba(245,184,66,.75)); } }
+.pkb.pkb2 .pkb-spot.s-burn .spr img { animation: pkbMLwarm calc(.9s * var(--spd)) ease-in-out infinite alternate; }
+@keyframes pkbMLwarm { 0% { filter: drop-shadow(0 0 6px rgba(240,144,74,.3)) brightness(1); } 100% { filter: drop-shadow(0 0 16px rgba(240,144,74,.8)) brightness(1.08); } }
+.pkb.pkb2 .pkb-spot.s-evade .spr img { animation: pkbMLevade calc(1.3s * var(--spd)) steps(1) infinite; }
+@keyframes pkbMLevade { 0%,100% { opacity: 1; } 8% { opacity: .45; } 12% { opacity: 1; } 58% { opacity: .55; } 62% { opacity: 1; } }
+/* the tinted hit flash (on the img; after the loops so it wins while it plays) */
+.pkb.pkb2 .pkb-spot.mf-white .spr img { --mfl: brightness(3) saturate(0); }
+.pkb.pkb2 .pkb-spot.mf-red .spr img { --mfl: brightness(1.6) sepia(1) saturate(6) hue-rotate(-20deg); }
+.pkb.pkb2 .pkb-spot.mf-fire .spr img { --mfl: brightness(1.8) sepia(1) saturate(5) hue-rotate(-12deg); }
+.pkb.pkb2 .pkb-spot.mf-gold .spr img, .pkb.pkb2 .pkb-spot.mf-gold2 .spr img { --mfl: brightness(2) sepia(1) saturate(4) hue-rotate(5deg); }
+.pkb.pkb2 .pkb-spot.mf-frost .spr img, .pkb.pkb2 .pkb-spot.mf-blue .spr img { --mfl: brightness(2) sepia(1) saturate(3) hue-rotate(170deg); }
+.pkb.pkb2 .pkb-spot.mf-violet .spr img, .pkb.pkb2 .pkb-spot.mf-arcane .spr img { --mfl: brightness(1.5) sepia(1) saturate(5) hue-rotate(220deg); }
+.pkb.pkb2 .pkb-spot.mf-teal .spr img, .pkb.pkb2 .pkb-spot.mf-green .spr img { --mfl: brightness(1.8) sepia(1) saturate(4) hue-rotate(110deg); }
+.pkb.pkb2 .pkb-spot.mf-shock .spr img { --mfl: brightness(3) sepia(1) saturate(4) hue-rotate(10deg); }
+.pkb.pkb2 .pkb-spot.mf-black .spr img, .pkb.pkb2 .pkb-spot.mf-grey .spr img { --mfl: brightness(.4) saturate(0); }
+.pkb.pkb2 .pkb-spot.mf-white .spr img, .pkb.pkb2 .pkb-spot.mf-red .spr img, .pkb.pkb2 .pkb-spot.mf-fire .spr img, .pkb.pkb2 .pkb-spot.mf-gold .spr img, .pkb.pkb2 .pkb-spot.mf-gold2 .spr img,
+.pkb.pkb2 .pkb-spot.mf-frost .spr img, .pkb.pkb2 .pkb-spot.mf-blue .spr img, .pkb.pkb2 .pkb-spot.mf-violet .spr img, .pkb.pkb2 .pkb-spot.mf-arcane .spr img, .pkb.pkb2 .pkb-spot.mf-teal .spr img,
+.pkb.pkb2 .pkb-spot.mf-green .spr img, .pkb.pkb2 .pkb-spot.mf-shock .spr img, .pkb.pkb2 .pkb-spot.mf-black .spr img, .pkb.pkb2 .pkb-spot.mf-grey .spr img { animation: pkbMFlash calc(.16s * var(--spd)) linear both; }
+@keyframes pkbMFlash { 0% { filter: none; } 12% { filter: var(--mfl, brightness(3)); } 100% { filter: none; } }
+/* camera (the stage itself; the hit-stop pauses the bodies, never the sparks) */
+.pkb.pkb2 .pkb-stage.mc-small { animation: pkbMshk4 calc(.2s * var(--spd)) linear both; }
+.pkb.pkb2 .pkb-stage.mc-shake { animation: pkbMshk7 calc(.26s * var(--spd)) linear both; }
+.pkb.pkb2 .pkb-stage.mc-shake2 { animation: pkbMshk14 calc(.36s * var(--spd)) linear both; }
+.pkb.pkb2 .pkb-stage.mc-punch { animation: pkbMpunch calc(.32s * var(--spd)) cubic-bezier(.2,.8,.2,1) both; }
+.pkb.pkb2 .pkb-stage.mc-drop { animation: pkbMdrop calc(.34s * var(--spd)) cubic-bezier(.3,0,.2,1) both; }
+.pkb.pkb2 .pkb-stage.mc-rumble { animation: pkbMrumble calc(.12s * var(--spd)) linear infinite; }
+@keyframes pkbMshk4 { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-4px,2px); } 40% { transform: translate(3px,-2px); } 60% { transform: translate(-2px,1px); } 80% { transform: translate(2px,-1px); } }
+@keyframes pkbMshk7 { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-7px,3px); } 40% { transform: translate(6px,-3px); } 60% { transform: translate(-4px,2px); } 80% { transform: translate(3px,-1px); } }
+@keyframes pkbMshk14 { 0%,100% { transform: translate(0,0); } 15% { transform: translate(-14px,6px); } 30% { transform: translate(12px,-6px); } 45% { transform: translate(-9px,4px); } 60% { transform: translate(6px,-3px); } 80% { transform: translate(-3px,1px); } }
+@keyframes pkbMpunch { 0% { transform: scale(1); } 30% { transform: scale(1.045); } 100% { transform: scale(1); } }
+@keyframes pkbMdrop { 0% { transform: translateY(0); } 25% { transform: translateY(7px); } 100% { transform: translateY(0); } }
+@keyframes pkbMrumble { 0%,100% { transform: translate(0,0); } 25% { transform: translate(2px,-1px); } 50% { transform: translate(-2px,1px); } 75% { transform: translate(1px,2px); } }
+.pkb.pkb2 .pkb-stage.m-freeze .pkb-spot .spr, .pkb.pkb2 .pkb-stage.m-freeze .pkb-spot .spr img, .pkb.pkb2 .pkb-stage.m-freeze .pkb-ghost, .pkb.pkb2 .pkb-stage.m-freeze .pkb-loops * { animation-play-state: paused !important; }
+/* stage-level nodes */
+.pkb-mdim { position: absolute; inset: 0; z-index: 5; background: #05040e; opacity: 0; pointer-events: none; transition: opacity calc(.2s * var(--spd)) ease; }
+.pkb-mdim.dim { opacity: .45; } .pkb-mdim.dark { opacity: .7; }
+.pkb-mdim.exe { opacity: .64; background: linear-gradient(180deg, #30070e, #05040e 70%); }
+.pkb-stage.m-charging .pkb-mdim { opacity: .55; transition-duration: calc(1.4s * var(--spd)); }
+.pkb-mwash { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+.pkb-mwash.go { animation: pkbMwash calc(.3s * var(--spd)) ease-out both; }
+@keyframes pkbMwash { 0% { opacity: 1; } 100% { opacity: 0; } }
+.pkb-mbars { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
+.pkb-mbars::before, .pkb-mbars::after { content: ""; position: absolute; left: 0; right: 0; height: 38px; background: #030309; transform: scaleY(0); transition: transform calc(.22s * var(--spd)) cubic-bezier(.2,.8,.2,1); }
+.pkb-mbars::before { top: 0; transform-origin: top; } .pkb-mbars::after { bottom: 0; transform-origin: bottom; }
+.pkb-mbars.on::before, .pkb-mbars.on::after { transform: scaleY(1); }
+.pkb-mredvig { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0; background: radial-gradient(90% 90% at 50% 50%, transparent 45%, rgba(220,38,38,.55) 100%); }
+.pkb-mredvig.on { animation: pkbMredvig calc(.5s * var(--spd)) ease-out both; }
+@keyframes pkbMredvig { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+/* the effect layers (design space → stage: the SVG by its viewBox, the DOM layer by scale()) */
+.pkb-mvfx { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; overflow: visible; }
+.pkb-mvfxd { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; transform-origin: 0 0; }
+.pkb-mvfxd > * { position: absolute; pointer-events: none; }
+/* SVG kinds */
+.pkb-mvfx .stk { fill: none; stroke: var(--c, #fff); stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px var(--c, #fff)); }
+.pkb-mvfx .edge { stroke: #fff; filter: none; }
+.pkb-mvfx .draw { stroke-dasharray: 440; stroke-dashoffset: 440; animation: pkbMdraw calc(.22s * var(--spd)) cubic-bezier(.3,0,.4,1) var(--d, 0s) both, pkbMfade calc(.25s * var(--spd)) ease calc(var(--d, 0s) + .26s * var(--spd)) both; }
+.pkb-mvfx .drawkeep { stroke-dasharray: 440; stroke-dashoffset: 440; animation: pkbMdraw calc(.22s * var(--spd)) cubic-bezier(.3,0,.4,1) var(--d, 0s) both, pkbMglowp calc(.5s * var(--spd)) ease-in-out calc(var(--d, 0s) + .22s * var(--spd)) infinite alternate; }
+.pkb-mvfx .drawslow { stroke-dasharray: 440; stroke-dashoffset: 440; animation: pkbMdraw calc(.5s * var(--spd)) ease-out var(--d, 0s) both, pkbMglowp calc(.5s * var(--spd)) ease-in-out calc(var(--d, 0s) + .5s * var(--spd)) infinite alternate; }
+@keyframes pkbMdraw { to { stroke-dashoffset: 0; } }
+@keyframes pkbMfade { to { opacity: 0; } }
+@keyframes pkbMglowp { 0% { filter: drop-shadow(0 0 4px var(--c, #fff)); } 100% { filter: drop-shadow(0 0 14px var(--c, #fff)) brightness(1.3); } }
+.pkb-mvfx .star { fill: var(--c, #fff); filter: drop-shadow(0 0 8px var(--c, #fff)); transform-box: fill-box; transform-origin: center; animation: pkbMstarin calc(.12s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.22s * var(--spd)) ease calc(var(--d, 0s) + .14s * var(--spd)) both; }
+@keyframes pkbMstarin { 0% { transform: scale(0) rotate(0); } 100% { transform: scale(1) rotate(25deg); } }
+.pkb-mvfx .ring { fill: none; stroke: var(--c, #fff); stroke-width: 3; filter: drop-shadow(0 0 6px var(--c, #fff)); transform-box: fill-box; transform-origin: center; animation: pkbMringout calc(.42s * var(--spd)) cubic-bezier(.2,.7,.3,1) var(--d, 0s) both; }
+@keyframes pkbMringout { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.pkb-mvfx .ring.in { animation-name: pkbMringin; }
+@keyframes pkbMringin { 0% { transform: scale(1.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(.12); opacity: 1; } }
+.pkb-mvfx .crack { fill: none; stroke: var(--c, #fff); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px var(--c, #fff)); stroke-dasharray: 220; stroke-dashoffset: 220; animation: pkbMdraw calc(.16s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.5s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .3s)) both; }
+.pkb-mvfx .boltp { fill: none; stroke: #fff; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 8px var(--c, #ffe08a)); animation: pkbMflick calc(.36s * var(--spd)) steps(1) var(--d, 0s) both; }
+@keyframes pkbMflick { 0% { opacity: 1; } 25% { opacity: .2; } 40% { opacity: 1; } 60% { opacity: 0; } 75% { opacity: .8; } 100% { opacity: 0; } }
+.pkb-mvfx .rune { transform-box: fill-box; transform-origin: center; animation: pkbMrunein calc(.3s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.3s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .7s)) both; }
+.pkb-mvfx .rune * { fill: none; stroke: var(--c, #a78bfa); stroke-width: 1.6; filter: drop-shadow(0 0 5px var(--c, #a78bfa)); }
+.pkb-mvfx .spin { transform-box: fill-box; transform-origin: center; animation: pkbMspin calc(2.2s * var(--spd)) linear infinite; }
+@keyframes pkbMrunein { 0% { opacity: 0; transform: scale(.4); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pkbMspin { to { transform: rotate(360deg); } }
+.pkb-mvfx .fly { fill: var(--c, #fff); stroke: none; filter: drop-shadow(0 0 4px var(--c, #fff)); transform-box: fill-box; transform-origin: center; animation: pkbMflyout calc(.55s * var(--spd)) cubic-bezier(.2,.6,.4,1) var(--d, 0s) both; }
+@keyframes pkbMflyout { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(var(--rz, 180deg)); } }
+.pkb-mvfx .fan { fill: none; stroke: var(--c, #fff); stroke-width: 2.5; stroke-linecap: round; filter: drop-shadow(0 0 6px var(--c, #fff)); stroke-dasharray: 90; stroke-dashoffset: 90; animation: pkbMdraw calc(.14s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.3s * var(--spd)) ease calc(var(--d, 0s) + .16s * var(--spd)) both; }
+.pkb-mvfx .orbit { transform-box: fill-box; transform-origin: center; animation: pkbMfade calc(.3s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .9s)) both; }
+.pkb-mvfx .orbit .spin { animation-duration: calc(1.1s * var(--spd)); }
+.pkb-mvfx .orbit path { fill: var(--c, #ffd574); filter: drop-shadow(0 0 4px var(--c, #ffd574)); }
+.pkb-mvfx .sagc { fill: none; stroke: var(--c, #a78bfa); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px var(--c, #a78bfa)); animation: pkbMsag calc(.7s * var(--spd)) ease-in var(--d, 0s) both; }
+@keyframes pkbMsag { 0% { opacity: 0; transform: translateY(-10px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(34px); } }
+.pkb-mvfx .thread { fill: none; stroke: var(--c, #5eead4); stroke-width: 1.6; stroke-dasharray: 180; stroke-dashoffset: 180; filter: drop-shadow(0 0 4px var(--c, #5eead4)); animation: pkbMdraw calc(.36s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .5s * var(--spd)) both; }
+.pkb-mvfx .dome { fill: var(--cf, rgba(94,234,212,.08)); stroke: var(--c, #5eead4); stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 8px var(--c, #5eead4)); stroke-dasharray: 440; stroke-dashoffset: 440; animation: pkbMdraw calc(.3s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.5s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .6s)) both; }
+.pkb-mvfx .dome.fast { animation: pkbMdraw calc(.1s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.3s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .26s)) both; }
+.pkb-mvfx .pin { stroke: #fff; stroke-width: 2.5; fill: none; stroke-linecap: round; filter: drop-shadow(0 0 4px #fff); transform-box: view-box; animation: pkbMpinwob calc(.5s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .9s)) both; }
+@keyframes pkbMpinwob { 0% { transform: rotate(-6deg); } 30% { transform: rotate(5deg); } 60% { transform: rotate(-2deg); } 100% { transform: rotate(0); } }
+.pkb-mvfx .glyph { fill: var(--c, #3b82f6); stroke: none; filter: drop-shadow(0 0 4px var(--c, #3b82f6)); animation: pkbMglyphin calc(.3s * var(--spd)) ease-out var(--d, 0s) both, pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .7s)) both; }
+@keyframes pkbMglyphin { 0% { opacity: 0; } 100% { opacity: 1; } }
+/* DOM kinds */
+.pkb-mvfxd .burst { width: 160px; height: 160px; border-radius: 50%; transform: translate(-50%,-50%) scale(.3); opacity: 0; background: radial-gradient(circle, rgba(255,255,255,.95) 0, var(--c, #a78bfa) 22%, transparent 68%); mix-blend-mode: screen; animation: pkbMburst calc(.36s * var(--spd)) cubic-bezier(.2,.8,.3,1) var(--d, 0s) both; }
+@keyframes pkbMburst { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.35); } }
+.pkb-mvfxd .proj { width: 0; height: 0; animation: pkbMfly var(--dur) linear var(--d, 0s) both; }
+@keyframes pkbMfly { 0% { transform: translate(0,0) rotate(var(--rot, 0deg)); opacity: 1; } 92% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot, 0deg)); opacity: 0; } }
+.pkb-mvfxd .proj i { position: absolute; display: block; }
+.pkb-mvfxd .proj.arrow i { left: -44px; top: -1px; width: 44px; height: 2px; background: linear-gradient(90deg, transparent, var(--c, #fff)); box-shadow: 0 0 6px var(--c, #fff); }
+.pkb-mvfxd .proj.arrow i::after { content: ""; position: absolute; right: -3px; top: -3px; border: 4px solid transparent; border-right: 0; border-left: 9px solid var(--c, #fff); }
+.pkb-mvfxd .proj.arrow.fire i { background: linear-gradient(90deg, transparent, #f0904a 55%, #fff); box-shadow: 0 0 10px #f0904a; }
+.pkb-mvfxd .proj.arrow.fire i::before { content: ""; position: absolute; left: 0; top: -5px; width: 44px; height: 12px; border-radius: 6px; background: linear-gradient(90deg, transparent, rgba(240,144,74,.6)); filter: blur(2px); }
+.pkb-mvfxd .proj.orb i { left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--c, #c084fc) 45%, transparent 72%); box-shadow: 0 0 18px var(--c, #c084fc); }
+.pkb-mvfxd .proj.orb i::before { content: ""; position: absolute; right: 9px; top: 4px; width: 64px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, transparent, var(--c, #c084fc)); opacity: .8; filter: blur(1px); }
+.pkb-mvfxd .proj.star i { left: -9px; top: -9px; width: 18px; height: 18px; animation: pkbMspin2 calc(.3s * var(--spd)) linear infinite; }
+.pkb-mvfxd .proj.star i::before, .pkb-mvfxd .proj.star i::after { content: ""; position: absolute; left: 0; top: 8px; width: 18px; height: 2px; background: #fff; box-shadow: 0 0 8px var(--c, #7dd3fc); }
+.pkb-mvfxd .proj.star i::after { transform: rotate(90deg); }
+.pkb-mvfxd .proj.star i em { position: absolute; right: 9px; top: 7px; width: 90px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--c, #7dd3fc)); opacity: .9; }
+@keyframes pkbMspin2 { to { transform: rotate(360deg); } }
+.pkb-mvfxd .proj.meteor i { left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle, #fff, #ffd574 35%, var(--c, #f0904a) 60%, transparent 75%); box-shadow: 0 0 30px var(--c, #f0904a); }
+.pkb-mvfxd .proj.meteor i::before { content: ""; position: absolute; right: 16px; top: 8px; width: 150px; height: 16px; border-radius: 8px; background: linear-gradient(90deg, transparent, var(--c, #f0904a) 70%, #fff); filter: blur(2px); opacity: .9; }
+.pkb-mvfxd .proj.wave i { left: -20px; top: -90px; width: 40px; height: 180px; border-radius: 50%; border: 5px solid transparent; border-right-color: var(--c, #c084fc); box-shadow: inset -6px 0 14px -6px var(--c, #c084fc); filter: drop-shadow(0 0 12px var(--c, #c084fc)); }
+.pkb-mvfxd .proj.sigil i { left: -10px; top: -10px; width: 20px; height: 20px; border: 2px solid var(--c, #a78bfa); transform: rotate(45deg); box-shadow: 0 0 10px var(--c, #a78bfa), inset 0 0 6px var(--c, #a78bfa); animation: pkbMspin2 calc(.6s * var(--spd)) linear infinite; }
+.pkb-mvfxd .beam { height: var(--h, 24px); transform-origin: 0 50%; transform: rotate(var(--rot)) scaleY(.1); opacity: 0; background: linear-gradient(180deg, transparent, var(--c2, var(--c, #a78bfa)) 22%, #fff 50%, var(--c2, var(--c, #a78bfa)) 78%, transparent); filter: blur(.4px) drop-shadow(0 0 14px var(--c, #a78bfa)); animation: pkbMbeam var(--dur) ease-out var(--d, 0s) both; mix-blend-mode: screen; }
+.pkb-mvfxd .beam.shift::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent, var(--c) 22%, #fff 50%, var(--c) 78%, transparent); animation: pkbMfade var(--dur) linear var(--d, 0s) both; }
+@keyframes pkbMbeam { 0% { opacity: 0; transform: rotate(var(--rot)) scaleY(.08); } 12% { opacity: 1; transform: rotate(var(--rot)) scaleY(1); } 80% { opacity: 1; transform: rotate(var(--rot)) scaleY(1); } 100% { opacity: 0; transform: rotate(var(--rot)) scaleY(.2); } }
+.pkb-mvfxd .pillar { transform: translate(-50%,-100%) scaleY(0); transform-origin: 50% 100%; background: linear-gradient(0deg, var(--c, #f0904a) 0, rgba(255,200,90,.7) 30%, rgba(240,144,74,.25) 65%, transparent); border-radius: 50% 50% 40% 40% / 60% 60% 30% 30%; filter: blur(2px); mix-blend-mode: screen; animation: pkbMpillar calc(.7s * var(--spd)) ease-out var(--d, 0s) both; }
+@keyframes pkbMpillar { 0% { opacity: 0; transform: translate(-50%,-100%) scaleY(0); } 20% { opacity: 1; transform: translate(-50%,-100%) scaleY(1); } 60% { transform: translate(-50%,-100%) scaleY(.92) scaleX(1.05); } 100% { opacity: 0; transform: translate(-50%,-100%) scaleY(1.2); } }
+.pkb-mvfxd .dots { width: 0; height: 0; }
+.pkb-mvfxd .dots i { position: absolute; display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--c, #f0904a); box-shadow: 0 0 6px var(--c, #f0904a); opacity: 0; left: var(--x); top: 0; animation: pkbMdotup var(--du, 1s) ease-in var(--d, 0s) both; }
+@keyframes pkbMdotup { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(calc(-60px * var(--k, 1))) scale(1.1); } }
+.pkb-mvfxd .dots.drip i { width: 3px; height: 9px; border-radius: 2px; animation-name: pkbMdotdown; animation-timing-function: ease-in; }
+@keyframes pkbMdotdown { 0% { opacity: 0; transform: translateY(0) scaleY(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(calc(48px * var(--k, 1))) scaleY(1.2); } }
+.pkb-mvfxd .dots.in i { animation-name: pkbMdotin; animation-timing-function: ease-out; }
+@keyframes pkbMdotin { 0% { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(1); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(0,0) scale(.4); } }
+.pkb-mvfxd .charge { width: 64px; height: 64px; border-radius: 50%; transform: translate(-50%,-50%) scale(.2); background: radial-gradient(circle, #fff, var(--c, #a78bfa) 30%, transparent 70%); opacity: 0; mix-blend-mode: screen; animation: pkbMchargein var(--dur) ease-in var(--d, 0s) both, pkbMfade calc(.12s * var(--spd)) ease calc(var(--d, 0s) + var(--dur)) both; }
+@keyframes pkbMchargein { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.2); } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+.pkb-mvfxd .speed { width: 0; height: 0; }
+.pkb-mvfxd .speed i { position: absolute; display: block; height: 2px; width: 70px; left: 0; top: var(--y); background: linear-gradient(90deg, transparent, rgba(255,255,255,.85)); opacity: 0; animation: pkbMspeed calc(.3s * var(--spd)) ease-out var(--d, 0s) both; }
+@keyframes pkbMspeed { 0% { opacity: 0; transform: translateX(calc(40px * var(--dir, 1))); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(calc(-70px * var(--dir, 1))); } }
+.pkb-mvfxd .puff { width: 0; height: 0; }
+.pkb-mvfxd .puff i { position: absolute; display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--c, #a78bfa); filter: blur(5px); opacity: 0; left: -11px; top: -11px; animation: pkbMpuff calc(.4s * var(--spd)) ease-out var(--d, 0s) both; }
+@keyframes pkbMpuff { 0% { opacity: .9; transform: translate(0,0) scale(.4); } 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(1.4); } }
+.pkb-mvfxd .blade { width: 36px; height: 440px; transform: translate(-50%,-440px); background: linear-gradient(180deg, transparent, rgba(255,232,180,.85) 30%, #fff 62%, #ffd574); -webkit-clip-path: polygon(38% 0, 62% 0, 100% 86%, 50% 100%, 0 86%); clip-path: polygon(38% 0, 62% 0, 100% 86%, 50% 100%, 0 86%); filter: drop-shadow(0 0 24px rgba(255,213,116,.9)); animation: pkbMdescend calc(.22s * var(--spd)) cubic-bezier(.7,0,1,1) var(--d, 0s) both, pkbMfade calc(.25s * var(--spd)) ease calc(var(--d, 0s) + .32s * var(--spd)) both; }
+@keyframes pkbMdescend { 0% { transform: translate(-50%,-840px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-50%,-440px); } }
+.pkb-mvfxd .wipe { left: -40%; top: -20%; width: 180%; height: 140%; opacity: 0; background: linear-gradient(100deg, transparent 42%, rgba(224,212,255,.95) 49%, rgba(245,184,66,.9) 51%, transparent 58%); animation: pkbMwipe calc(.3s * var(--spd)) cubic-bezier(.6,0,.4,1) var(--d, 0s) both; }
+@keyframes pkbMwipe { 0% { opacity: 1; transform: translateX(-60%); } 100% { opacity: 1; transform: translateX(60%); } }
+.pkb-mvfxd .shim { width: 120px; height: 160px; transform: translate(-50%,-100%); background: repeating-linear-gradient(180deg, rgba(255,255,255,0) 0 6px, rgba(255,120,60,.14) 6px 9px); filter: blur(3px); mix-blend-mode: screen; -webkit-mask: radial-gradient(ellipse at 50% 60%, #000 30%, transparent 72%); mask: radial-gradient(ellipse at 50% 60%, #000 30%, transparent 72%); animation: pkbMshim calc(.9s * var(--spd)) ease-in-out var(--d, 0s) both; }
+@keyframes pkbMshim { 0% { opacity: 0; transform: translate(-50%,-100%) skewX(0); } 25% { opacity: 1; transform: translate(-50%,-104%) skewX(3deg); } 50% { transform: translate(-50%,-108%) skewX(-3deg); } 75% { opacity: 1; transform: translate(-50%,-112%) skewX(2deg); } 100% { opacity: 0; transform: translate(-50%,-118%) skewX(0); } }
+.pkb-mvfxd .glint { width: 14px; height: 14px; transform: translate(-50%,-50%) rotate(45deg) scale(0); background: #fff; box-shadow: 0 0 12px #fff; animation: pkbMglint calc(.3s * var(--spd)) ease-out var(--d, 0s) both; }
+@keyframes pkbMglint { 0% { transform: translate(-50%,-50%) rotate(0) scale(0); opacity: 0; } 40% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1); } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(90deg) scale(.3); } }
+.pkb-mvfxd .dust { width: 0; height: 0; }
+.pkb-mvfxd .dust i { position: absolute; display: block; width: 26px; height: 14px; border-radius: 50%; background: rgba(200,190,170,.55); filter: blur(4px); left: -13px; top: -7px; opacity: 0; animation: pkbMdust calc(.6s * var(--spd)) ease-out var(--d, 0s) both; }
+@keyframes pkbMdust { 0% { opacity: .9; transform: translate(0,0) scale(.5); } 100% { opacity: 0; transform: translate(var(--ox), -14px) scale(1.6); } }
+.pkb-mvfxd .tens { left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.95) 30%, rgba(255,255,255,.95) 70%, transparent); box-shadow: 0 0 8px rgba(255,255,255,.7); animation: pkbMhum calc(.18s * var(--spd)) ease-in-out var(--d, 0s) infinite alternate, pkbMfade calc(.15s * var(--spd)) ease calc(var(--d, 0s) + var(--life, .3s)) both; }
+.pkb-mvfxd .tens.hum { animation: pkbMhum calc(.18s * var(--spd)) ease-in-out infinite alternate; }
+@keyframes pkbMhum { 0% { transform: translateY(0) scaleY(1); opacity: .5; } 100% { transform: translateY(1px) scaleY(2); opacity: 1; } }
+/* the hold: an aura swells at the weapon hand while the thumb stays down */
+.pkb-mvfxd .mcharge { width: 120px; height: 120px; border-radius: 50%; transform: translate(-50%,-50%) scale(.2); background: radial-gradient(circle, rgba(255,255,255,.9), var(--c) 30%, transparent 70%); opacity: 0; animation: pkbMchargegrow calc(1.4s * var(--spd)) ease-out both, pkbMchargepulse calc(.5s * var(--spd)) ease-in-out calc(1.4s * var(--spd)) infinite alternate; filter: blur(2px); mix-blend-mode: screen; }
+@keyframes pkbMchargegrow { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.2); } 100% { opacity: .9; transform: translate(-50%,-50%) scale(1); } }
+@keyframes pkbMchargepulse { 0% { transform: translate(-50%,-50%) scale(1); } 100% { transform: translate(-50%,-50%) scale(1.12); } }
+.pkb.pkb2 .ar-bmove { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.pkb.pkb2 .ar-bmove.hold { transform: scale(.965); box-shadow: 0 0 0 1px var(--acc), 0 0 30px rgba(var(--rgb), .45); animation: pkbMholdpulse calc(.45s * var(--spd)) ease-in-out infinite alternate; }
+@keyframes pkbMholdpulse { 0% { box-shadow: 0 0 0 1px var(--acc), 0 0 20px rgba(var(--rgb), .4); } 100% { box-shadow: 0 0 0 2px var(--acc), 0 0 40px rgba(var(--rgb), .6); } }
+/* ambient status loops (the body answers the chip) */
+.pkb.pkb2 .pkb-spot .pkb-loops { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 2; pointer-events: none; }
+.pkb-loops > * { position: absolute; }
+.pkb-loops .lp-burn i { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #f0904a; box-shadow: 0 0 6px #f0904a; left: var(--x); top: var(--y); opacity: 0; animation: pkbMlburn calc(1.6s * var(--spd)) ease-in var(--d, 0s) infinite; }
+@keyframes pkbMlburn { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-58px); } }
+.pkb-loops .lp-bleed i { position: absolute; width: 3px; height: 9px; border-radius: 2px; background: #ef4444; left: var(--x); top: var(--y); opacity: 0; animation: pkbMlbleed calc(1.5s * var(--spd)) ease-in var(--d, 0s) infinite; }
+@keyframes pkbMlbleed { 0% { opacity: 0; transform: translateY(0) scaleY(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(46px) scaleY(1.2); } }
+.pkb-loops .lp-stun { width: 60px; height: 60px; left: -30px; top: calc(var(--hd, -90px) - 30px); transform: scaleY(.42); }
+.pkb-loops .lp-stun .sp { position: absolute; left: 0; top: 0; width: 60px; height: 60px; animation: pkbMspin calc(1.4s * var(--spd)) linear infinite; }
+.pkb-loops .lp-stun i { position: absolute; width: 10px; height: 10px; left: 25px; top: -5px; background: #ffd574; box-shadow: 0 0 6px #ffd574; -webkit-clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); transform-origin: 5px 35px; transform: rotate(var(--r)); }
+.pkb-loops .lp-shred i { position: absolute; height: 2px; width: 18px; background: #fff; box-shadow: 0 0 4px #fff; left: var(--x); top: var(--y); transform: rotate(var(--r)); animation: pkbMlflick calc(1.2s * var(--spd)) steps(2) var(--d, 0s) infinite; }
+@keyframes pkbMlflick { 0%,100% { opacity: .2; } 50% { opacity: .9; } }
+.pkb-loops .lp-atkup i { position: absolute; width: 10px; height: 10px; left: var(--x); top: var(--y); border-right: 2px solid #f5b842; border-top: 2px solid #f5b842; transform: rotate(-45deg); opacity: 0; animation: pkbMlrise calc(1.3s * var(--spd)) ease-out var(--d, 0s) infinite; filter: drop-shadow(0 0 4px #f5b842); }
+@keyframes pkbMlrise { 0% { opacity: 0; transform: translateY(8px) rotate(-45deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px) rotate(-45deg); } }
+.pkb-loops .lp-atkdown i { border-color: transparent; border-left: 2px solid #a78bfa; border-bottom: 2px solid #a78bfa; animation-name: pkbMlsink; filter: drop-shadow(0 0 4px #a78bfa); }
+@keyframes pkbMlsink { 0% { opacity: 0; transform: translateY(-8px) rotate(-45deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(30px) rotate(-45deg); } }
+/* the heal number */
+.pkb.pkb2 .pkb-float.heal { color: #86efac; text-shadow: 0 0 14px rgba(34,197,94,.6); }
+/* the KO fall keeps its weight over any pose; the W759 evasion sway gives way to the flicker loop (a sway on .spr would pin the poses) */
+.pkb.pkb2 .pkb-spot.ko .spr { transform: translateY(26px); transition: transform .6s ease, opacity .6s ease, filter .35s ease; }
+.pkb.pkb2 .pkb-spot.hold-eva .spr { animation: none; }
+/* small phones: the letterbox bars thin out */
+@media (max-height: 700px) { .pkb-mbars::before, .pkb-mbars::after { height: 26px; } }
+/* reduced motion: the flash, the number and the drain stay; travel, particles and shakes go */
+@media (prefers-reduced-motion: reduce) {
+  .pkb.pkb2 .pkb-spot .spr { transition: none !important; }
+  .pkb.pkb2 .pkb-spot[class*="mp-"] .spr, .pkb.pkb2 .pkb-spot[class*="mr-"] .spr { transform: none !important; animation: none !important; }
+  .pkb.pkb2 .pkb-spot.mp-vanish .spr { opacity: 0; }
+  .pkb.pkb2 .pkb-spot .pkb-ghosts { display: none; }
+  .pkb.pkb2 .pkb-stage[class*="mc-"] { animation: none !important; }
+  .pkb-mvfx .draw, .pkb-mvfx .drawkeep, .pkb-mvfx .drawslow, .pkb-mvfx .crack, .pkb-mvfx .thread, .pkb-mvfx .dome, .pkb-mvfx .fan { animation: pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .3s) both; stroke-dashoffset: 0; }
+  .pkb-mvfx .star, .pkb-mvfx .ring, .pkb-mvfx .rune, .pkb-mvfx .fly, .pkb-mvfx .orbit, .pkb-mvfx .sagc, .pkb-mvfx .pin, .pkb-mvfx .glyph, .pkb-mvfx .boltp { animation: pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .3s) both; transform: none; opacity: .9; }
+  .pkb-mvfx .spin { animation: none; }
+  .pkb-mvfxd .proj, .pkb-mvfxd .speed, .pkb-mvfxd .wipe, .pkb-mvfxd .blade, .pkb-mvfxd .shim, .pkb-mvfxd .tens, .pkb-mvfxd .mcharge { display: none; }
+  .pkb-mvfxd .burst, .pkb-mvfxd .charge, .pkb-mvfxd .glint { animation: pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .25s) both; opacity: .8; transform: translate(-50%,-50%) scale(1); }
+  .pkb-mvfxd .pillar { animation: pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .25s) both; opacity: .8; transform: translate(-50%,-100%) scaleY(1); }
+  .pkb-mvfxd .beam { animation: pkbMfade calc(.4s * var(--spd)) ease calc(var(--d, 0s) + .3s) both; opacity: .85; transform: rotate(var(--rot)) scaleY(1); }
+  .pkb-mvfxd .dots i, .pkb-mvfxd .puff i, .pkb-mvfxd .dust i { animation: none; opacity: 0; }
+  .pkb-mwash.go { animation-duration: calc(.5s * var(--spd)); }
+  .pkb-mbars::before, .pkb-mbars::after, .pkb-mdim { transition: none; }
+  .pkb-mredvig.on { animation: none; opacity: .8; transition: opacity .4s; }
+  .pkb.pkb2 .pkb-spot .pkb-loops { display: none; }
+  .pkb.pkb2 .pkb-spot.s-evade .spr img, .pkb.pkb2 .pkb-spot.s-atkup .spr img, .pkb.pkb2 .pkb-spot.s-burn .spr img { animation: none; }
+  .pkb.pkb2 .ar-bmove.hold { animation: none; }
+}

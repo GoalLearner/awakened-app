@@ -322,6 +322,49 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(await page.evaluate(() => { const s = (window as any).Arena._live.sess(); return s.bS.mods.some((x: any) => x.k === 'shred') && !s.pS.mods.some((x: any) => x.k === 'shred'); })).toBe(true);
     });
 
+    // W1141 — the motion library (Claude Design handoff 6): every move draws its own strike in the motion layers and
+    // poses the attacker; everything clears by the time control returns. A HEAVY card held winds up; release swings.
+    test('every move has its own motion: the strike draws in the motion layer, the attacker poses, then it all clears', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      const jab = page.locator('#arena-body .ar-bmove[data-move="jab"]');
+      await jab.click();
+      await page.waitForFunction(() => {
+        const svg = document.querySelector('#pkb-stage .pkb-mvfx'), dom = document.querySelector('#pkb-stage .pkb-mvfxd');
+        return !!((svg && svg.children.length) || (dom && dom.children.length));
+      }, null, { timeout: 6000 });
+      await page.waitForFunction(() => /\bmp-/.test((document.getElementById('pkb-spot-p') as HTMLElement).className) || /\bmp-/.test((document.getElementById('pkb-spot-b') as HTMLElement).className), null, { timeout: 6000 });
+      await shot(page, '18-motion');
+      await ready(page);
+      await expect(page.locator('#pkb-stage')).not.toHaveClass(/m-freeze|m-charging/);
+      await page.waitForFunction(() => {
+        const svg = document.querySelector('#pkb-stage .pkb-mvfx'), dom = document.querySelector('#pkb-stage .pkb-mvfxd');
+        const p = document.getElementById('pkb-spot-p') as HTMLElement, b = document.getElementById('pkb-spot-b') as HTMLElement;
+        return !!svg && !svg.children.length && !!dom && !dom.children.length && !/\bmp-/.test(p.className) && !/\bmp-/.test(b.className);
+      }, null, { timeout: 6000 });
+    });
+
+    test('a HEAVY card held winds up (the stage darkens, the card charges); release swings it and the turn resolves', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      await page.evaluate(() => { const A = (window as any).Arena, s = A._live.sess(); s.pMoves[0] = A._battle.lib('cleave'); s.cd = {}; A._live.paint(); });
+      const cleave = page.locator('#arena-body .ar-bmove[data-move="cleave"]');
+      await expect(cleave).toBeVisible();
+      const turn0 = await sess(page, 'Arena._live.sess().turn');
+      const box = await cleave.boundingBox();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await page.mouse.down();
+      await expect(page.locator('#pkb-stage')).toHaveClass(/m-charging/, { timeout: 3000 });
+      await expect(cleave).toHaveClass(/hold/);
+      await expect(page.locator('#pkb-spot-p')).toHaveClass(/mp-wind/);
+      expect(await sess(page, 'Arena._live.sess().turn')).toBe(turn0);   // nothing is decided while the thumb is down
+      await shot(page, '19-hold');
+      await page.mouse.up();
+      await expect(page.locator('#pkb-stage')).not.toHaveClass(/m-charging/, { timeout: 3000 });
+      await page.waitForFunction((t) => { const s = (window as any).Arena._live.sess(); return !s || s.done || s.turn > (t as number); }, turn0, { timeout: 20_000 });
+      await ready(page);
+    });
+
     test('floor 100: the First Awakened (screenshots only)', async ({ page }) => {
       test.skip(!SHOTS, 'screenshots only');
       await boot(page, 100, 6650);

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1140'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1141'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17115,6 +17115,7 @@
     if (!el) return;
     const S = side === 'p' ? s.pS : s.bS;
     el.innerHTML = _arBattleStatus(S);
+    try { _pkbLoopsPaint(side, S); } catch (_) {}   // W1141 — the body carries the state the chip names
     if (pulse) { el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
     // W759 — held STANCES while a defensive state is live (chips re-render on
     // every state change, so this tracks apply AND expiry for free): the guard
@@ -17350,6 +17351,7 @@
   // UNLEASH: the cut-in, then the turn (the engine refuses it below full Surge or in a duel).
   function _pkbUnleash() {
     const s = _arSess; if (!s || s.done || s._pvp || _pkbBusy || (s._surge || 0) < 1) return;
+    _pkbTurnMv = { p: 'ultimate', b: (s._bNext && s._bNext.id) || null };   // W1141
     _pkbLock(true);
     try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}
     _pkbCutin(_arUltimateFor(s), () => {
@@ -17428,6 +17430,7 @@
     const root = _pkb2Root(), m = _arMatchup, stage = _pkbEl('pkb-stage');
     if (!root || !m) { cb(); return; }
     if (stage) stage.classList.add('p2');
+    try { _pkbMvLayers(null); _pkbMvApply({ cam: 'c-shake2', wash: 'rgba(255,59,59,.85)' }, null, null); } catch (_) {}   // W1141 — a red pop, a 14 px shake
     try { _pkbRailPaint(true); } catch (_) {}   // W1140 — the phase-2 rhythm
     const el = document.createElement('div');
     el.className = 'pkb2-ovl pkb2-phase';
@@ -17517,12 +17520,12 @@
     el.textContent = '';
     tick();
   }
-  function _pkbFloat(attackerSide, txt, crit) {
+  function _pkbFloat(attackerSide, txt, crit, cls) {
     const fx = _pkbEl('pkb-fx'), st = _pkbEl('pkb-stage');
     const spot = _pkbEl('pkb-spot-' + (attackerSide === 'p' ? 'b' : 'p'));
     if (!fx || !st || !spot) return;
     const d = document.createElement('div');
-    d.className = 'pkb-float ' + (attackerSide === 'p' ? 'you' : 'foe') + (crit ? ' crit' : '');
+    d.className = 'pkb-float ' + (attackerSide === 'p' ? 'you' : 'foe') + (crit ? ' crit' : '') + (cls ? ' ' + cls : '');   // W1141 — cls 'heal' for the green +N
     d.textContent = txt;
     const r = spot.getBoundingClientRect(), rs = st.getBoundingClientRect();
     d.style.left = (r.left - rs.left + r.width * 0.5) + 'px';
@@ -17741,7 +17744,640 @@
     spot.classList.add('p-' + kind);
     _pkbAfter(1300, function () { try { spot.classList.remove('p-' + kind); rfx.className = 'pkb-rfx'; rfx.innerHTML = ''; rfx.style.removeProperty('--pc'); rfx.style.removeProperty('--pcg'); } catch (_) {} });
   }
-  function _pkbImpactFx(e, defSide, dmgShown) {
+  // ══ W1141 · THE MOTION LIBRARY (Claude Design handoff 6, "The Ascent - Motion Library") ══════════
+  // Owner: "so it just doesn't look like a lunge... interactive animations would be amazing."
+  // Every move gets its own motion, built from the three things two flat paintings allow:
+  //   POSES   — whole-figure transforms on .spr (CSS transitions; --dir mirrors, --amp scales travel),
+  //   LAYERS  — one SVG + one DOM effect layer over the stage, drawn in a DESIGN SPACE where a fighter
+  //             stands ~290 tall (the K factor maps it onto the real sprite size: viewBox + scale()),
+  //   CAMERA  — shake / punch / drop / rumble, the hit-stop FREEZE, a wash, a dimmer, letterbox bars.
+  // _PKB_MV is the MAP: one row per move id. The engine decides hit / crit / kill / status first and
+  // this only shows it; nothing here touches a number. Unknown moves (duels, old texts) fall back to
+  // the glyph's basic row, and when the stage can't be measured the W758 family lunge still plays.
+  const _PKB_MT = { gold: '#f5b842', gold2: '#ffd574', red: '#ef4444', blue: '#3b82f6', green: '#22c55e', teal: '#5eead4', violet: '#a78bfa', fire: '#f0904a', arcane: '#c084fc', frost: '#7dd3fc', white: '#ffffff', black: '#0a0a1f', grey: '#9090a8', shock: '#ffe08a' };
+  const _pkbMCol = (c) => _PKB_MT[c] || c || '#fff';
+  // t = [wind-up, travel, impact, recover] ms · hap → camera weight · sub = sub-hit offsets from the first impact ·
+  // react = the defender's pose instead of the knockback · heavy = hold-able card · stance = self-directed (aura shape)
+  const _PKB_MV = {
+    slash:       { body: 'step-arc', shape: 'arc-slash', tint: 'white', t: [180, 140, 180, 220], hap: 'light' },
+    lunge:       { body: 'thrust', shape: 'thrust', tint: 'white', t: [160, 200, 180, 240], hap: 'medium' },
+    cleave:      { body: 'wide-wind', shape: 'sweep', tint: 'gold', t: [400, 160, 260, 280], hap: 'heavy', heavy: true },
+    crush:       { body: 'overhead', shape: 'overhead', tint: 'white', t: [360, 200, 260, 300], hap: 'heavy', cam: 'c-drop', heavy: true },
+    hook:        { body: 'hook', shape: 'fist', tint: 'red', t: [240, 140, 220, 240], hap: 'medium', cam: 'c-punch' },
+    jab:         { body: 'jab', shape: 'fist', tint: 'white', t: [150, 90, 140, 160], hap: 'light' },
+    oathstrike:  { body: 'raise-drop', shape: 'overhead', tint: 'gold', t: [400, 180, 300, 300], hap: 'heavy', heavy: true },
+    eclipse:     { body: 'step-arc', shape: 'cross', tint: 'gold', tint2: 'black', t: [200, 140, 220, 240], hap: 'medium', sub: [0, 130] },
+    rend:        { body: 'step-arc', shape: 'arc-slash', tint: 'red', t: [180, 140, 200, 240], hap: 'medium' },
+    reckoning:   { body: 'execute-dash', shape: 'cross', tint: 'red', t: [300, 200, 300, 360], hap: 'heavy', exe: true },
+    flurry:      { body: 'blur-dash', shape: 'arc-slash', tint: 'white', t: [150, 120, 240, 220], hap: 'light', sub: [0, 80, 160] },
+    quickstep:   { body: 'blink', shape: 'thrust', tint: 'teal', t: [150, 60, 160, 220], hap: 'light' },
+    thousand:    { body: 'blur-dash', shape: 'cross', tint: 'white', t: [150, 160, 320, 260], hap: 'medium', sub: [0, 70, 140, 210] },
+    evade:       { body: 'ghost-split', shape: 'aura', tint: 'teal', t: [200, 0, 200, 300], hap: 'light', stance: true },
+    ember:       { body: 'step-arc', shape: 'arc-slash', tint: 'fire', t: [160, 140, 200, 220], hap: 'light' },
+    searing:     { body: 'step-arc', shape: 'arc-slash', tint: 'fire', t: [200, 140, 220, 240], hap: 'medium' },
+    immolate:    { body: 'cast-raise', shape: 'bolt', tint: 'fire', t: [360, 170, 300, 320], hap: 'heavy', heavy: true },
+    sunder:      { body: 'bash', shape: 'fist', tint: 'blue', t: [220, 150, 240, 240], hap: 'medium' },
+    stagger:     { body: 'bash', shape: 'fist', tint: 'white', t: [220, 150, 240, 260], hap: 'medium' },
+    quake:       { body: 'stomp', shape: 'ground-crack', tint: 'gold', t: [260, 0, 280, 280], hap: 'heavy', react: 'p-crush' },
+    willbreak:   { body: 'bash', shape: 'fist', tint: 'violet', t: [220, 150, 220, 260], hap: 'medium', react: 'p-sag' },
+    wardstrike:  { body: 'step-arc', shape: 'arc-slash', tint: 'green', t: [180, 140, 220, 300], hap: 'light' },
+    arcanebolt:  { body: 'cast-raise', shape: 'bolt', tint: 'arcane', t: [240, 180, 200, 220], hap: 'light' },
+    forcewave:   { body: 'cast-sweep', shape: 'wave', tint: 'arcane', t: [400, 260, 260, 300], hap: 'heavy', react: 'p-pushed', heavy: true },
+    shatterhex:  { body: 'cast-raise', shape: 'sigil-shatter', tint: 'violet', t: [300, 200, 260, 260], hap: 'medium' },
+    siphon:      { body: 'cast-raise', shape: 'drain-tether', tint: 'red', tint2: 'green', t: [260, 0, 320, 300], hap: 'light' },
+    cataclysm:   { body: 'cast-sky', shape: 'rain', tint: 'fire', t: [400, 300, 300, 320], hap: 'heavy', heavy: true },
+    ruin:        { body: 'cast-clench', shape: 'sigil-shatter', tint: 'red', t: [300, 200, 300, 360], hap: 'heavy', exe: true },
+    dispel:      { body: 'cast-raise', shape: 'aura', tint: 'teal', t: [200, 0, 300, 300], hap: 'light', stance: true },
+    manaward:    { body: 'cast-raise', shape: 'aura', tint: 'blue', t: [220, 0, 300, 300], hap: 'light', stance: true },
+    quickshot:   { body: 'draw', shape: 'bolt', tint: 'white', t: [220, 120, 160, 200], hap: 'light' },
+    arrowvolley: { body: 'aim', shape: 'volley', tint: 'white', t: [240, 280, 240, 220], hap: 'light', sub: [0, 60, 120] },
+    snapshot:    { body: 'draw', shape: 'bolt', tint: 'teal', t: [150, 80, 140, 180], hap: 'light' },
+    flamearrow:  { body: 'draw', shape: 'bolt', tint: 'fire', t: [240, 130, 220, 220], hap: 'medium' },
+    heartseeker: { body: 'draw-long', shape: 'thrust', tint: 'gold', t: [400, 90, 300, 300], hap: 'heavy', heavy: true },
+    piercingshot:{ body: 'draw', shape: 'thrust', tint: 'red', t: [300, 120, 300, 320], hap: 'heavy', exe: true },
+    pinshot:     { body: 'draw', shape: 'bolt', tint: 'white', t: [220, 120, 200, 260], hap: 'medium', react: 'p-crush' },
+    tumble:      { body: 'roll', shape: 'aura', tint: 'teal', t: [150, 0, 300, 280], hap: 'light', stance: true },
+    guard:       { body: 'plant', shape: 'aura', tint: 'teal', t: [160, 0, 240, 260], hap: 'light', stance: true },
+    brace:       { body: 'compress', shape: 'ground-crack', tint: 'white', t: [200, 0, 200, 260], hap: 'medium', stance: true },
+    refuse:      { body: 'plant', shape: 'aura', tint: 'white', t: [200, 0, 300, 300], hap: 'medium', stance: true },
+    bulwark:     { body: 'three-beat', shape: 'aura', tint: 'teal', t: [240, 0, 420, 300], hap: 'heavy', stance: true },
+    focus:       { body: 'inhale', shape: 'aura', tint: 'gold', t: [300, 0, 300, 240], hap: 'light', stance: true },
+    temper:      { body: 'shimmer', shape: 'aura', tint: 'red', t: [240, 0, 300, 260], hap: 'medium', stance: true },
+    lastvow:     { body: 'kneel-rise', shape: 'aura', tint: 'gold', t: [300, 0, 400, 300], hap: 'medium', stance: true },
+    struggle:    { body: 'swipe', shape: 'arc-slash', tint: 'grey', t: [300, 200, 140, 300], hap: 'light' },
+  };
+  Object.keys(_PKB_MV).forEach((id) => { const m = _PKB_MV[id]; m.id = id; m.sub = m.sub || [0]; m.hits = m.sub.length; });
+  const _PKB_GL_MV = { sword: 'slash', dagger: 'flurry', shield: 'sunder', burst: 'searing', magic: 'arcanebolt', ranged: 'quickshot' };
+  // the pose a hold-able HEAVY keeps while the thumb stays down
+  const _PKB_HOLD_POSE = { 'wide-wind': 'p-wind', 'overhead': 'p-crouch', 'raise-drop': 'p-raise', 'cast-raise': 'p-raise', 'cast-sweep': 'p-tiltb', 'cast-sky': 'p-sky', 'draw-long': 'p-drawlong' };
+  let _PKB_NAME2ID = null;
+  // the move behind an event: the engine's own line names it ("You — Oathstrike for 212."); the ultimate flags itself
+  function _pkbMvId(e) {
+    if (!e) return null;
+    if (e.ult) return 'ultimate';
+    const nm = _pkbMoveName(e);
+    if (!nm) return null;
+    if (!_PKB_NAME2ID) {
+      _PKB_NAME2ID = { struggle: 'struggle', riposte: 'riposte' };
+      try { Object.keys(ARENA_MOVE_LIB).forEach((id) => { _PKB_NAME2ID[String(ARENA_MOVE_LIB[id].name).toLowerCase()] = id; }); } catch (_) {}
+    }
+    return _PKB_NAME2ID[nm.toLowerCase()] || null;
+  }
+  function _pkbMvRow(e) {
+    const id = _pkbMvId(e);
+    if (id === 'ultimate') return null;
+    if (id === 'riposte') return Object.assign({}, _PKB_MV[_PKB_GL_MV[e.gl] || 'slash'], { id: 'riposte', tint: 'gold', hap: 'medium', sub: [0], hits: 1 });
+    if (id) return _PKB_MV[id] || null;
+    return _PKB_MV[_PKB_GL_MV[e && e.gl] || 'slash'] || null;   // a duel / an unknown line: the glyph's basic motion
+  }
+  // the two moves of the turn, for the stance lines (they name no move: "braces.", "— attack up.")
+  let _pkbTurnMv = { p: null, b: null };
+  let _pkbHeldMv = null;        // a HEAVY released from a hold: its hit beat starts from the held wind-up
+  let _pkbUltLive = null;       // the ultimate in flight: a stage tap adds one more echo (capped)
+  // ── geometry: the drawn figure inside each spot (object-fit: contain, bottom-anchored), in stage px ──
+  function _pkbFigBox(side) {
+    const stage = _pkbEl('pkb-stage'), spot = _pkbEl('pkb-spot-' + side); if (!stage || !spot) return null;
+    const sr = stage.getBoundingClientRect(), r = spot.getBoundingClientRect();
+    if (!sr.width || !r.width || !r.height) return null;
+    let bl = r.left, bt = r.top, bw = r.width, bh = r.height;
+    try {
+      const img = spot.querySelector('.spr img');
+      if (img && img.naturalWidth && img.naturalHeight) {
+        const box = img.getBoundingClientRect(), ar = img.naturalWidth / img.naturalHeight;
+        let w = box.width, h = w / ar; if (h > box.height) { h = box.height; w = h * ar; }
+        bl = box.left + (box.width - w) / 2; bt = box.top + box.height - h; bw = w; bh = h;
+      }
+    } catch (_) {}
+    return { x: bl - sr.left + bw / 2, top: bt - sr.top, w: bw, h: bh, sw: sr.width, sh: sr.height };
+  }
+  // the design-space context: atk / def fighters, d = the attacker's facing, K = design→screen scale
+  function _pkbMvCtx(atkSide) {
+    const bp = _pkbFigBox('p'), bb = _pkbFigBox('b'); if (!bp || !bb) return null;
+    const K = Math.max(0.55, Math.min(1.3, ((bp.h + bb.h) / 2) / 290));
+    const fig = (side, b) => {
+      const d = side === 'p' ? 1 : -1, x = b.x / K, top = b.top / K, w = b.w / K, h = b.h / K, y = top + h * 0.46;
+      return { side, d, x, y, w, h, hand: { x: x + d * w * 0.13, y: y - 14 }, feet: { x: x + 6 * d, y: top + h * 0.88 }, head: { x, y: top + h * 0.16 } };
+    };
+    const you = fig('p', bp), foe = fig('b', bb);
+    const c = atkSide === 'p' ? { atk: you, def: foe, d: 1 } : { atk: foe, def: you, d: -1 };
+    c.you = you; c.foe = foe; c.K = K; c.W = bp.sw / K; c.H = bp.sh / K; c.far = Math.abs(foe.x - you.x) + 40;
+    return c;
+  }
+  // ── the effect layers (one SVG, one DOM) and the stage-level nodes ──
+  function _pkbMvLayers(c) {
+    const stage = _pkbEl('pkb-stage'); if (!stage) return null;
+    let svg = stage.querySelector('.pkb-mvfx'), dom = stage.querySelector('.pkb-mvfxd');
+    if (!svg) {
+      ['pkb-mdim', 'pkb-mwash', 'pkb-mredvig', 'pkb-mbars'].forEach((cls) => { const n = document.createElement('div'); n.className = cls; n.setAttribute('aria-hidden', 'true'); stage.appendChild(n); });
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'pkb-mvfx'); svg.setAttribute('aria-hidden', 'true'); stage.appendChild(svg);
+      dom = document.createElement('div'); dom.className = 'pkb-mvfxd'; dom.setAttribute('aria-hidden', 'true'); stage.appendChild(dom);
+    }
+    if (c) {
+      svg.setAttribute('viewBox', '0 0 ' + c.W.toFixed(1) + ' ' + c.H.toFixed(1));
+      dom.style.width = c.W.toFixed(1) + 'px'; dom.style.height = c.H.toFixed(1) + 'px'; dom.style.transform = 'scale(' + c.K.toFixed(4) + ')';
+      ['p', 'b'].forEach((sd) => { const sp = _pkbEl('pkb-spot-' + sd); if (sp) { sp.style.setProperty('--amp', c.K.toFixed(3)); sp.style.setProperty('--far', Math.round(c.far) + 'px'); } });
+    }
+    return { stage, svg, dom };
+  }
+  function _pkbSpdSync() { try { const root = _pkb2Root(); if (root) root.style.setProperty('--spd', _pkbFF ? '0.5' : '1'); } catch (_) {} }
+  const _PKB_MSVG = { slash: 1, line: 1, star: 1, ring: 1, crack: 1, scar: 1, bolt: 1, rune: 1, fly: 1, fan: 1, orbit: 1, sag: 1, threads: 1, dome: 1, kite: 1, pin: 1, glyphs: 1 };
+  const _mms = (v) => Math.round(v || 0) + 'ms';
+  const _mQ = (x1, y1, x2, y2, b) => { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1; return 'M' + x1 + ' ' + y1 + ' Q ' + (mx - dy / L * b) + ' ' + (my + dx / L * b) + ' ' + x2 + ' ' + y2; };
+  const _mRag = (x1, y1, x2, y2) => { const n = 7, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, j = [0, 7, -6, 9, -8, 5, 0], out = []; for (let i = 0; i < n; i++) { const f = i / (n - 1); out.push((x1 + dx * f + nx * j[i]).toFixed(1) + ',' + (y1 + dy * f + ny * j[i]).toFixed(1)); } return out.join(' '); };
+  const _mStar = (x, y, s) => 'M' + x + ' ' + (y - s) + ' L' + (x + s * 0.22) + ' ' + (y - s * 0.22) + ' L' + (x + s) + ' ' + y + ' L' + (x + s * 0.22) + ' ' + (y + s * 0.22) + ' L' + x + ' ' + (y + s) + ' L' + (x - s * 0.22) + ' ' + (y + s * 0.22) + ' L' + (x - s) + ' ' + y + ' L' + (x - s * 0.22) + ' ' + (y - s * 0.22) + ' Z';
+  const _mBoltPts = (x0, y0, x1, y1) => { const n = 7, pts = [[x0, y0]]; for (let i = 1; i < n; i++) { const f = i / n; pts.push([x0 + (x1 - x0) * f + (i % 2 ? 14 : -12) * (1 - f * 0.4), y0 + (y1 - y0) * f]); } pts.push([x1, y1]); return pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '); };
+  const _mSt = (v, sp, extra) => { let s = '--d:' + _mms((v.d || 0) * sp) + ';--c:' + v.col + ';'; if (v.life != null) s += '--life:' + _mms(v.life * sp) + ';'; return s + (extra || ''); };
+  function _pkbMSvg(v, sp) {
+    const st = _mSt(v, sp);
+    switch (v.k) {
+      case 'slash': case 'line': {
+        const cls = 'stk ' + (v.slow ? 'drawslow' : v.keep ? 'drawkeep' : 'draw'), el = v.rag ? 'polyline' : 'path';
+        const geo = v.rag ? 'points="' + _mRag(v.x1, v.y1, v.x2, v.y2) + '"' : 'd="' + (v.k === 'line' ? 'M' + v.x1 + ' ' + v.y1 + ' L' + v.x2 + ' ' + v.y2 : _mQ(v.x1, v.y1, v.x2, v.y2, v.b || 0)) + '"';
+        if (v.edge) return '<g style="' + st + '"><' + el + ' class="' + cls + ' edge" style="stroke-width:' + (v.w + 3) + '" ' + geo + '/><' + el + ' class="' + cls + '" style="stroke-width:' + v.w + '" ' + geo + '/></g>';
+        return '<' + el + ' class="' + cls + '" style="' + st + 'stroke-width:' + v.w + '" ' + geo + '/>';
+      }
+      case 'star': return '<path class="star" style="' + st + '" d="' + _mStar(v.x, v.y, v.s) + '"/>';
+      case 'ring': return '<ellipse class="ring' + (v.inward ? ' in' : '') + '" style="' + st + 'stroke-width:' + (v.w || 3) + '" cx="' + v.x + '" cy="' + v.y + '" rx="' + v.rx + '" ry="' + v.ry + '"/>';
+      case 'crack': { const s = v.s || 1, dirs = [[-1, 0.18], [-0.55, 0.42], [0.1, 0.5], [0.6, 0.4], [1, 0.16]]; let h = '<g style="' + st + '">';
+        dirs.forEach(([dx, dy], i) => { const pts = [[0, 0]]; let x = 0, y = 0; for (let j = 1; j <= 4; j++) { x += dx * 18 * s + ((j % 2) ? 6 : -6) * s * (dx < 0 ? -1 : 1); y += dy * 14 * s + ((j % 2) ? -4 : 3) * s; pts.push([x, y]); }
+          h += '<polyline class="crack" style="--d:' + _mms(((v.d || 0) + i * 20) * sp) + '" points="' + pts.map((p) => (v.x + p[0]).toFixed(1) + ',' + (v.y + p[1]).toFixed(1)).join(' ') + '"/>'; });
+        return h + '</g>'; }
+      case 'scar': { const pts = [], n = 8; for (let i = 0; i <= n; i++) { const f = i / n; pts.push((v.x1 + (v.x2 - v.x1) * f).toFixed(1) + ',' + (v.y1 + (i % 2 ? 3 : -3))); } return '<polyline class="crack" style="' + st + 'stroke-width:3;--life:' + _mms((v.life || 900) * sp) + '" points="' + pts.join(' ') + '"/>'; }
+      case 'bolt': return '<g style="' + st + '"><polyline class="boltp" points="' + _mBoltPts(v.x0, -10, v.x, v.y) + '"/><polyline class="boltp" style="stroke-width:1.5;--d:' + _mms(((v.d || 0) + 40) * sp) + '" points="' + _mBoltPts(v.x0 - 30, -10, v.x + 26, v.y - 60) + '"/></g>';
+      case 'rune': { const r = v.r; let hex = ''; for (let i = 0; i < 6; i++) hex += (r * 0.82 * Math.cos(i * Math.PI / 3)).toFixed(1) + ',' + (r * 0.82 * Math.sin(i * Math.PI / 3)).toFixed(1) + ' ';
+        let lines = ''; for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.5; lines += '<line x1="' + (r * 0.66 * Math.cos(a)).toFixed(1) + '" y1="' + (r * 0.66 * Math.sin(a)).toFixed(1) + '" x2="' + (r * Math.cos(a)).toFixed(1) + '" y2="' + (r * Math.sin(a)).toFixed(1) + '"/>'; }
+        return '<g transform="translate(' + v.x + ' ' + v.y + ') scale(1 ' + (v.flat ? 0.38 : 1) + ')"><g class="rune" style="' + st + '"><g class="spin"><circle r="' + r + '"/><circle r="' + (r * 0.66).toFixed(1) + '"/><polygon points="' + hex.trim() + '"/>' + lines + '</g></g></g>'; }
+      case 'fly': { const n = v.n || 6; let h = '<g style="' + st + '">'; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 - Math.PI / 2 + 0.3, R = 70 + (i % 3) * 22, up = v.up ? -40 : 0;
+          h += '<polygon class="fly" style="--tx:' + (Math.cos(a) * R).toFixed(1) + 'px;--ty:' + (Math.sin(a) * R * 0.7 + up).toFixed(1) + 'px;--rz:' + (i % 2 ? 220 : -160) + 'deg;--d:' + _mms(((v.d || 0) + i * 15) * sp) + '" points="' + v.x + ',' + (v.y - 9) + ' ' + (v.x + 7) + ',' + (v.y + 5) + ' ' + (v.x - 6) + ',' + (v.y + 6) + '"/>'; }
+        return h + '</g>'; }
+      case 'fan': { const n = v.n || 8, len = v.len || 50; let h = '<g style="' + st + '">'; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + 0.2;
+          h += '<line class="fan" style="--d:' + _mms(((v.d || 0) + (i % 3) * 20) * sp) + '" x1="' + (v.x + Math.cos(a) * 8).toFixed(1) + '" y1="' + (v.y + Math.sin(a) * 8).toFixed(1) + '" x2="' + (v.x + Math.cos(a) * len).toFixed(1) + '" y2="' + (v.y + Math.sin(a) * len).toFixed(1) + '"/>'; }
+        return h + '</g>'; }
+      case 'orbit': { let h = ''; for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3; h += '<path d="' + _mStar(Math.cos(a) * 26, Math.sin(a) * 26, 7) + '"/>'; }
+        return '<g transform="translate(' + v.x + ' ' + v.y + ') scale(1 .42)"><g class="orbit" style="' + st + '"><g class="spin">' + h + '</g></g></g>'; }
+      case 'sag': return '<g style="' + st + '">' + [-26, 0, 26].map((o, i) => '<polyline class="sagc" style="--d:' + _mms(((v.d || 0) + i * 70) * sp) + '" points="' + (v.x + o - 8) + ',' + (v.y - 6) + ' ' + (v.x + o) + ',' + (v.y + 4) + ' ' + (v.x + o + 8) + ',' + (v.y - 6) + '"/>').join('') + '</g>';
+      case 'threads': return '<g style="' + st + '">' + [[-1, -40], [1, -20], [-1, 10], [1, 34]].map(([s, oy], i) => '<path class="thread" style="--d:' + _mms(((v.d || 0) + i * 50) * sp) + '" d="M' + v.x + ' ' + (v.y + oy) + ' C ' + (v.x + 30 * s) + ' ' + (v.y + oy - 20) + ', ' + (v.x + 40 * s) + ' ' + (v.y + oy + 20) + ', ' + (v.x + 80 * s) + ' ' + (v.y + oy - 30) + '"/>').join('') + '</g>';
+      case 'dome': { const f = v.f || 1, sw = f > 0 ? 1 : 0; return '<g style="' + st + '--cf:' + v.col + '14;"><path class="dome' + (v.fast ? ' fast' : '') + '" d="M' + v.x + ' ' + (v.y - 86) + ' A 46 86 0 0 ' + sw + ' ' + v.x + ' ' + (v.y + 86) + '"/><path class="dome' + (v.fast ? ' fast' : '') + '" style="stroke-width:1.2;fill:none;--d:' + _mms(((v.d || 0) + 40) * sp) + '" d="M' + (v.x - 4 * f) + ' ' + (v.y - 66) + ' A 34 66 0 0 ' + sw + ' ' + (v.x - 4 * f) + ' ' + (v.y + 66) + '"/></g>'; }
+      case 'kite': { const f = v.f || 1, x = v.x, y = v.y, p = (x - 22 * f) + ',' + (y - 70) + ' ' + (x + 22 * f) + ',' + (y - 70) + ' ' + (x + 26 * f) + ',' + (y - 10) + ' ' + x + ',' + (y + 46) + ' ' + (x - 26 * f) + ',' + (y - 10);
+        const d2 = '--d:' + _mms(((v.d || 0) + 60) * sp);
+        return '<g style="' + st + '--cf:' + v.col + '1a;"><polygon class="dome" points="' + p + '"/><line class="dome" style="stroke-width:1.5;' + d2 + '" x1="' + x + '" y1="' + (y - 60) + '" x2="' + x + '" y2="' + (y + 30) + '"/><line class="dome" style="stroke-width:1.5;' + d2 + '" x1="' + (x - 16 * f) + '" y1="' + (y - 30) + '" x2="' + (x + 16 * f) + '" y2="' + (y - 30) + '"/></g>'; }
+      case 'pin': { const f = v.f || 1; return '<path class="pin" style="' + st + 'transform-origin:' + v.x + 'px ' + v.y + 'px" d="M' + v.x + ' ' + v.y + ' l' + (-40 * f) + ' -12 m' + (-2 * f) + ' -1 l' + (-8 * f) + ' -6 m' + (8 * f) + ' 6 l' + (-8 * f) + ' 6"/>'; }
+      case 'glyphs': { const f = v.f || 1, sw = f > 0 ? 1 : 0; let h = '<g style="' + st + '--cf:' + v.col + '14;"><path class="dome" d="M' + v.x + ' ' + (v.y - 90) + ' A 52 90 0 0 ' + sw + ' ' + v.x + ' ' + (v.y + 90) + '"/>';
+        [-70, -42, -14, 14, 42, 70].forEach((oy, i) => { const t = oy / 90, gx = v.x + Math.sqrt(Math.max(0, 1 - t * t)) * 52 * f; h += '<rect class="glyph" style="--d:' + _mms(((v.d || 0) + 80 + i * 40) * sp) + '" x="' + (gx - 3).toFixed(1) + '" y="' + (v.y + oy - 3) + '" width="6" height="6" transform="rotate(45 ' + gx.toFixed(1) + ' ' + (v.y + oy) + ')"/>'; });
+        return h + '</g>'; }
+    }
+    return '';
+  }
+  function _pkbMDom(v, sp) {
+    const st = _mSt(v, sp), pos = 'left:' + v.x + 'px;top:' + v.y + 'px;';
+    switch (v.k) {
+      case 'burst': return '<div class="burst" style="' + st + pos + 'width:' + (v.s || 160) + 'px;height:' + (v.s || 160) + 'px"></div>';
+      case 'proj': { const dx = v.x2 - v.x1, dy = v.y2 - v.y1, rot = v.rot != null ? v.rot : Math.atan2(dy, dx) * 180 / Math.PI;
+        return '<div class="proj ' + (v.kind || 'arrow') + (v.fire ? ' fire' : '') + '" style="' + st + 'left:' + v.x1 + 'px;top:' + v.y1 + 'px;--dx:' + dx.toFixed(1) + 'px;--dy:' + dy.toFixed(1) + 'px;--rot:' + rot.toFixed(1) + 'deg;--dur:' + _mms((v.dur || 140) * sp) + '"><i>' + (v.kind === 'star' ? '<em></em>' : '') + '</i></div>'; }
+      case 'beam': { const dx = v.x2 - v.x1, dy = v.y2 - v.y1, len = Math.hypot(dx, dy), rot = Math.atan2(dy, dx) * 180 / Math.PI, h = v.h || 24;
+        return '<div class="beam' + (v.col2 ? ' shift' : '') + '" style="' + st + 'left:' + v.x1 + 'px;top:' + (v.y1 - h / 2) + 'px;width:' + len.toFixed(1) + 'px;--h:' + h + 'px;--rot:' + rot.toFixed(1) + 'deg;--dur:' + _mms((v.dur || 500) * sp) + ';--c2:' + (v.col2 || v.col) + '"></div>'; }
+      case 'pillar': return '<div class="pillar" style="' + st + pos + 'width:' + (v.w || 84) + 'px;height:' + (v.h || 150) + 'px"></div>';
+      case 'dots': { const n = v.n || 6, sp2 = v.spread || 50; let h = '<div class="dots' + (v.kind ? ' ' + v.kind : '') + '" style="' + st + pos + '">';
+        for (let i = 0; i < n; i++) { const f = (i / Math.max(1, n - 1)) - 0.5, ox = (f * sp2 + ((i % 2) ? 6 : -6)).toFixed(0), oy = ((i % 3) * 14 - 14);
+          h += '<i style="--x:' + ox + 'px;--ox:' + ox + 'px;--oy:' + (oy - 30) + 'px;--d:' + _mms(((v.d || 0) + i * (v.gap || 55)) * sp) + ';--du:' + _mms((v.du || 1000) * sp) + ';--k:' + (v.k2 || 1) + '"></i>'; }
+        return h + '</div>'; }
+      case 'charge': return '<div class="charge" style="' + st + pos + 'width:' + (v.s || 64) + 'px;height:' + (v.s || 64) + 'px;--dur:' + _mms((v.dur || 400) * sp) + '"></div>';
+      case 'speed': { let h = '<div class="speed" style="' + st + pos + '--dir:' + (v.dir || 1) + '">'; for (let i = 0; i < 6; i++) h += '<i style="--y:' + (i * 16 - 40) + 'px;--d:' + _mms(((v.d || 0) + (i % 3) * 30) * sp) + ';width:' + (50 + (i % 2) * 30) + 'px"></i>'; return h + '</div>'; }
+      case 'puff': return '<div class="puff" style="' + st + pos + '">' + [[-22, -16], [20, -20], [-14, 18], [18, 14]].map(([ox, oy], i) => '<i style="--ox:' + ox + 'px;--oy:' + oy + 'px;--d:' + _mms(((v.d || 0) + i * 30) * sp) + '"></i>').join('') + '</div>';
+      case 'blade': return '<div class="blade" style="' + st + pos + '"></div>';
+      case 'wipe': return '<div class="wipe" style="' + st + '"></div>';
+      case 'shim': return '<div class="shim" style="' + st + pos + '"></div>';
+      case 'glint': return '<div class="glint" style="' + st + pos + '"></div>';
+      case 'dust': { const n = v.n || 5; let h = '<div class="dust" style="' + st + pos + '">'; for (let i = 0; i < n; i++) h += '<i style="--ox:' + ((i - (n - 1) / 2) * 26).toFixed(0) + 'px;--d:' + _mms(((v.d || 0) + (i % 2) * 40) * sp) + '"></i>'; return h + '</div>'; }
+      case 'tens': return '<div class="tens" style="' + st + 'top:' + v.y + 'px"></div>';
+    }
+    return '';
+  }
+  // how long a mounted item lives (design ms; the scheduler scales it under 2×) — generous, the next sequence sweeps anyway
+  function _pkbMLife(v) {
+    const d = v.d || 0, life = v.life != null ? v.life : 0;
+    switch (v.k) {
+      case 'slash': case 'line': return d + (v.slow ? 1100 : v.keep ? 1500 : 560);
+      case 'star': return d + 420; case 'ring': return d + 480; case 'crack': return d + 760 + (life || 300); case 'scar': return d + (v.life || 900) + 560;
+      case 'bolt': return d + 420; case 'rune': return d + life + 380; case 'fly': return d + 720; case 'fan': return d + 520; case 'orbit': return d + life + 340;
+      case 'sag': return d + 1000; case 'threads': return d + 1100; case 'dome': case 'kite': return d + life + 600; case 'pin': return d + life + 480; case 'glyphs': return d + life + 700;
+      case 'burst': return d + 420; case 'proj': return d + (v.dur || 140) + 60; case 'beam': return d + (v.dur || 500) + 60; case 'pillar': return d + 780;
+      case 'dots': return d + (v.n || 6) * (v.gap || 55) + (v.du || 1000) + 60; case 'charge': return d + (v.dur || 400) + 180; case 'speed': return d + 420; case 'puff': return d + 560;
+      case 'blade': return d + 640; case 'wipe': return d + 380; case 'shim': return d + 980; case 'glint': return d + 380; case 'dust': return d + 740; case 'tens': return d + (v.life || 300) + 220;
+    }
+    return d + 1200;
+  }
+  function _pkbMvMount(v, L) {
+    if (!L) return;
+    const sp = _pkbFF ? 0.5 : 1, svgK = !!_PKB_MSVG[v.k];
+    const host = svgK ? L.svg : L.dom, html = svgK ? _pkbMSvg(v, sp) : _pkbMDom(v, sp);
+    if (!html) return;
+    try { host.insertAdjacentHTML('beforeend', html); } catch (_) { return; }
+    const node = host.lastElementChild; if (!node) return;
+    _pkbAfter(_pkbMLife(v), () => { try { if (node.parentNode === host) host.removeChild(node); } catch (_) {} });
+  }
+  function _pkbMvClearFx(L) { if (!L) return; try { L.svg.innerHTML = ''; L.dom.innerHTML = ''; } catch (_) {} }
+  const _mCol = (c) => _pkbMCol(c);
+  // item constructors — tint tokens resolve to hex here
+  const _MV = {
+    slash: (x1, y1, x2, y2, o = {}) => ({ k: 'slash', x1, y1, x2, y2, b: o.b || 0, w: o.w || 6, col: _mCol(o.c), d: o.d || 0, rag: o.rag, keep: o.keep, slow: o.slow, edge: o.edge }),
+    line: (x1, y1, x2, y2, o = {}) => ({ k: 'line', x1, y1, x2, y2, w: o.w || 6, col: _mCol(o.c), d: o.d || 0, keep: o.keep, slow: o.slow, edge: o.edge }),
+    star: (x, y, o = {}) => ({ k: 'star', x, y, s: o.s || 26, col: _mCol(o.c), d: o.d || 0 }),
+    ring: (x, y, o = {}) => ({ k: 'ring', x, y, rx: o.rx || 60, ry: o.ry || 16, w: o.w || 3, col: _mCol(o.c), d: o.d || 0, inward: o.inward }),
+    crack: (x, y, o = {}) => ({ k: 'crack', x, y, s: o.s || 1, col: _mCol(o.c), d: o.d || 0, life: o.life }),
+    scar: (x1, y1, x2, y2, o = {}) => ({ k: 'scar', x1, y1, x2, y2, col: _mCol(o.c || 'gold'), d: o.d || 0, life: o.life || 900 }),
+    bolt: (x, y, o = {}) => ({ k: 'bolt', x, y, x0: o.x0 != null ? o.x0 : x + 40, col: _mCol(o.c || 'shock'), d: o.d || 0 }),
+    rune: (x, y, o = {}) => ({ k: 'rune', x, y, r: o.r || 50, col: _mCol(o.c || 'violet'), d: o.d || 0, life: o.life != null ? o.life : 700, flat: o.flat }),
+    fly: (x, y, o = {}) => ({ k: 'fly', x, y, n: o.n || 6, col: _mCol(o.c), d: o.d || 0, up: o.up }),
+    fan: (x, y, o = {}) => ({ k: 'fan', x, y, n: o.n || 8, len: o.len || 50, col: _mCol(o.c), d: o.d || 0 }),
+    orbit: (x, y, o = {}) => ({ k: 'orbit', x, y, col: _mCol(o.c || 'gold2'), d: o.d || 0, life: o.life || 900 }),
+    sag: (x, y, o = {}) => ({ k: 'sag', x, y, col: _mCol(o.c || 'violet'), d: o.d || 0 }),
+    threads: (x, y, o = {}) => ({ k: 'threads', x, y, col: _mCol(o.c || 'teal'), d: o.d || 0 }),
+    dome: (x, y, o = {}) => ({ k: 'dome', x, y, f: o.f || 1, col: _mCol(o.c || 'teal'), d: o.d || 0, life: o.life != null ? o.life : 600, fast: o.fast }),
+    kite: (x, y, o = {}) => ({ k: 'kite', x, y, f: o.f || 1, col: _mCol(o.c || 'teal'), d: o.d || 0, life: o.life != null ? o.life : 700 }),
+    pin: (x, y, o = {}) => ({ k: 'pin', x, y, f: o.f || 1, col: '#fff', d: o.d || 0, life: o.life || 900 }),
+    glyphs: (x, y, o = {}) => ({ k: 'glyphs', x, y, f: o.f || 1, col: _mCol(o.c || 'blue'), d: o.d || 0, life: o.life != null ? o.life : 800 }),
+    burst: (x, y, o = {}) => ({ k: 'burst', x, y, s: o.s || 160, col: _mCol(o.c || 'violet'), d: o.d || 0 }),
+    proj: (x1, y1, x2, y2, o = {}) => ({ k: 'proj', x1, y1, x2, y2, dur: o.dur || 140, kind: o.kind || 'arrow', col: _mCol(o.c), d: o.d || 0, fire: o.fire, rot: o.rot }),
+    beam: (x1, y1, x2, y2, o = {}) => ({ k: 'beam', x1, y1, x2, y2, h: o.h || 24, dur: o.dur || 500, col: _mCol(o.c), col2: o.c2 ? _mCol(o.c2) : null, d: o.d || 0 }),
+    pillar: (x, y, o = {}) => ({ k: 'pillar', x, y, w: o.w, h: o.h, col: _mCol(o.c || 'fire'), d: o.d || 0 }),
+    dots: (x, y, o = {}) => ({ k: 'dots', x, y, n: o.n || 6, kind: o.kind, spread: o.spread, du: o.du, gap: o.gap, k2: o.k, col: _mCol(o.c), d: o.d || 0 }),
+    charge: (x, y, o = {}) => ({ k: 'charge', x, y, s: o.s || 64, dur: o.dur || 400, col: _mCol(o.c), d: o.d || 0 }),
+    speed: (x, y, o = {}) => ({ k: 'speed', x, y, dir: o.dir || 1, col: '#fff', d: o.d || 0 }),
+    puff: (x, y, o = {}) => ({ k: 'puff', x, y, col: _mCol(o.c || 'violet'), d: o.d || 0 }),
+    blade: (x, y, o = {}) => ({ k: 'blade', x, y, col: '#ffd574', d: o.d || 0 }),
+    wipe: (o = {}) => ({ k: 'wipe', col: '#fff', d: o.d || 0 }),
+    shim: (x, y, o = {}) => ({ k: 'shim', x, y, col: '#f0904a', d: o.d || 0 }),
+    glint: (x, y, o = {}) => ({ k: 'glint', x, y, col: '#fff', d: o.d || 0 }),
+    dust: (x, y, o = {}) => ({ k: 'dust', x, y, n: o.n || 5, col: '#c8beaa', d: o.d || 0 }),
+    tens: (y, o = {}) => ({ k: 'tens', y, col: '#fff', d: o.d || 0, life: o.life || 300 }),
+  };
+  // ── patches: a step is [t, patch]; keys poseYou/poseFoe · ghostsYou/ghostsFoe · glowYou/glowFoe · flashYou/flashFoe ·
+  //    reactYou/reactFoe · vfxAdd · vfxClear · cam · wash · light · bars · freeze · redvig ──
+  const _mPO = (f, cls) => ({ [f.side === 'p' ? 'poseYou' : 'poseFoe']: cls });
+  const _mGH = (f, arr) => ({ [f.side === 'p' ? 'ghostsYou' : 'ghostsFoe']: arr });
+  const _mGL = (f, c) => ({ [f.side === 'p' ? 'glowYou' : 'glowFoe']: c });
+  const _mFL = (f, c) => ({ [f.side === 'p' ? 'flashYou' : 'flashFoe']: c || 'white' });
+  function _pkbMvStrip(el, prefix) { if (!el) return; const rm = []; el.classList.forEach((k) => { if (k.indexOf(prefix) === 0) rm.push(k); }); rm.forEach((k) => el.classList.remove(k)); }
+  function _pkbMvPose(spot, poses) {
+    _pkbMvStrip(spot, 'mp-');
+    String(poses || '').split(/\s+/).forEach((tok) => { if (tok) spot.classList.add('mp-' + tok.replace(/^p-/, '')); });
+  }
+  function _pkbMvGhosts(spot, arr, c) {
+    let box = spot.querySelector('.pkb-ghosts');
+    if (!arr || !arr.length) { if (box) box.innerHTML = ''; return; }
+    if (!box) { box = document.createElement('div'); box.className = 'pkb-ghosts'; box.setAttribute('aria-hidden', 'true'); spot.insertBefore(box, spot.firstChild); }
+    const src = spot.querySelector('.spr > *'); if (!src) return;
+    const K = (c && c.K) || 1, you = spot.classList.contains('you'), sp = _pkbFF ? 0.5 : 1;
+    let h = '';
+    arr.forEach((g, i) => {
+      const flip = (you ? -1 : 1) * (g.f ? -1 : 1);
+      h += '<div class="pkb-ghost" style="--d:' + Math.round(i * 40 * sp) + 'ms;transform:translate(' + (g.x * K).toFixed(1) + 'px,' + ((g.y || 0) * K).toFixed(1) + 'px) scaleX(' + flip + ')">' + src.outerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonerror="[^"]*"/g, '') + '</div>';
+    });
+    box.innerHTML = h;
+  }
+  function _pkbMvFlash(spot, tint) {
+    _pkbMvStrip(spot, 'mf-'); void spot.offsetWidth; spot.classList.add('mf-' + (tint || 'white'));
+    _pkbAfter(220, () => { try { spot.classList.remove('mf-' + (tint || 'white')); } catch (_) {} });
+  }
+  function _pkbMvCam(stage, cam) {
+    _pkbMvStrip(stage, 'mc-');
+    if (cam) { void stage.offsetWidth; stage.classList.add('mc-' + String(cam).replace(/^c-/, '')); }
+  }
+  function _pkbMvApply(p, c, L) {
+    const stage = _pkbEl('pkb-stage'); if (!stage || !_arSess) return;
+    [['You', 'p'], ['Foe', 'b']].forEach(([who, side]) => {
+      const spot = _pkbEl('pkb-spot-' + side); if (!spot) return;
+      if (p['pose' + who] != null) _pkbMvPose(spot, p['pose' + who]);
+      if (p['ghosts' + who] !== undefined) _pkbMvGhosts(spot, p['ghosts' + who], c);
+      if (p['glow' + who] !== undefined) { _pkbMvStrip(spot, 'mg-'); if (p['glow' + who]) spot.classList.add('mg-' + p['glow' + who]); }
+      if (p['flash' + who]) _pkbMvFlash(spot, p['flash' + who]);
+      if (p['react' + who] !== undefined) { _pkbMvStrip(spot, 'mr-'); if (p['react' + who]) spot.classList.add('mr-' + String(p['react' + who]).replace(/^p-/, '')); }
+    });
+    if (p.vfxClear) _pkbMvClearFx(L);
+    if (p.vfxAdd) p.vfxAdd.forEach((v) => _pkbMvMount(v, L));
+    if (p.cam !== undefined) _pkbMvCam(stage, p.cam);
+    if (p.wash) { const w = stage.querySelector('.pkb-mwash'); if (w) { w.classList.remove('go'); w.style.background = p.wash; void w.offsetWidth; w.classList.add('go'); } }
+    if (p.light !== undefined) { const dm = stage.querySelector('.pkb-mdim'); if (dm) dm.className = 'pkb-mdim' + (p.light ? ' ' + p.light : ''); }
+    if (p.bars !== undefined) { const b = stage.querySelector('.pkb-mbars'); if (b) b.classList.toggle('on', !!p.bars); }
+    if (p.freeze !== undefined) stage.classList.toggle('m-freeze', !!p.freeze);
+    if (p.redvig !== undefined) { const r = stage.querySelector('.pkb-mredvig'); if (r) { r.className = 'pkb-mredvig'; if (p.redvig) { void r.offsetWidth; r.classList.add(p.redvig); } } }
+  }
+  // wipe the previous sequence; keepPose keeps the hunter's held wind-up (a HEAVY released from a hold)
+  function _pkbMvReset(opts) {
+    const stage = _pkbEl('pkb-stage'); if (!stage) return;
+    const keep = opts && opts.keepPose;
+    ['p', 'b'].forEach((side) => {
+      const spot = _pkbEl('pkb-spot-' + side); if (!spot) return;
+      if (!(keep && side === 'p')) { _pkbMvStrip(spot, 'mp-'); _pkbMvStrip(spot, 'mg-'); }
+      _pkbMvStrip(spot, 'mf-'); _pkbMvStrip(spot, 'mr-');
+      const gh = spot.querySelector('.pkb-ghosts'); if (gh) gh.innerHTML = '';
+    });
+    _pkbMvStrip(stage, 'mc-'); stage.classList.remove('m-freeze', 'm-charging');
+    const dm = stage.querySelector('.pkb-mdim'); if (dm) dm.className = 'pkb-mdim';
+    const b = stage.querySelector('.pkb-mbars'); if (b) b.classList.remove('on');
+    const r = stage.querySelector('.pkb-mredvig'); if (r) r.className = 'pkb-mredvig';
+    _pkbMvClearFx({ svg: stage.querySelector('.pkb-mvfx') || { innerHTML: '' }, dom: stage.querySelector('.pkb-mvfxd') || { innerHTML: '' } });
+  }
+  // schedule a composed sequence (every timer rides _pkbAfter: 2× under fast-forward, cleared on exit)
+  function _pkbMvPlay(seq, c, opts) {
+    opts = opts || {};
+    _pkbSpdSync();
+    _pkbMvReset(opts);
+    const L = _pkbMvLayers(c);
+    if (!L) return;
+    const sorted = seq.steps.slice().sort((p, q) => p[0] - q[0]);
+    sorted.forEach(([t, p]) => _pkbAfter(t, () => { if (!_arSess || _arView !== 'battle') return; _pkbMvApply(p, c, L); }));
+    if (opts.ult && seq.extra) { _pkbUltLive = { extra: seq.extra, n: 0, L, c }; _pkbAfter(seq.dur, () => { if (_pkbUltLive && _pkbUltLive.L === L) _pkbUltLive = null; }); }
+  }
+  // a tap on the stage during an ultimate adds one more echo (capped so the finish still reads) — cosmetic only
+  function _pkbUltTap() {
+    const u = _pkbUltLive; if (!u || !u.extra || u.n >= 12) return false;
+    u.n += 1;
+    try { u.extra().forEach((v) => _pkbMvMount(v, u.L)); } catch (_) {}
+    return true;
+  }
+  // ── body motions: attacker poses over W (wind-up) · T (impact) · rec (recover) ──
+  const _mFar = () => 'p-behind';
+  const _mTail = (c, t, extra) => { const a = c.atk, d = c.d, f = c.def, pc = (extra && extra.pc) || 'violet'; return [[t.rec, Object.assign(_mPO(a, 'p-behind p-vanish'), _mGH(a, null), _mGL(a, null), { vfxAdd: [_MV.puff(f.x + 60 * d, f.y + 14, { c: pc })] })], [t.rec + 140, _mPO(a, 'p-vanish')], [t.rec + 200, Object.assign(_mPO(a, ''), { vfxAdd: [_MV.puff(a.x + 10 * d, a.y + 10, { c: pc })] })]]; };
+  const _PKB_BODY = {
+    'step-arc': (c, t) => [[0, _mPO(c.atk, 'p-back')], [t.W, _mPO(c.atk, 'p-lunge')], [t.rec, _mPO(c.atk, '')]],
+    'thrust': (c, t) => { const a = c.atk, d = c.d; return [[0, _mPO(a, 'p-crouch')], [t.W, Object.assign(_mPO(a, 'p-dash'), _mGH(a, [{ x: 28 * d, y: -2 }, { x: 58 * d, y: -3 }, { x: 84 * d, y: -4 }]), { vfxAdd: [_MV.speed(a.x - 30 * d, a.y - 40, { dir: d })] })], [t.rec, Object.assign(_mPO(a, ''), _mGH(a, null))]]; },
+    'wide-wind': (c, t) => [[0, _mPO(c.atk, 'p-wind')], [t.W, _mPO(c.atk, 'p-sweep')], [t.rec, _mPO(c.atk, '')]],
+    'overhead': (c, t) => [[0, _mPO(c.atk, 'p-crouch')], [t.W * 0.3, _mPO(c.atk, 'p-leap')], [t.W, _mPO(c.atk, 'p-drop')], [t.rec, _mPO(c.atk, '')]],
+    'raise-drop': (c, t) => [[0, Object.assign(_mPO(c.atk, 'p-raise'), _mGL(c.atk, 'gold'))], [t.W, _mPO(c.atk, 'p-drop')], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'jab': (c, t) => [[0, _mPO(c.atk, 'p-crouch')], [t.W, _mPO(c.atk, 'p-jab')], [t.rec, _mPO(c.atk, '')]],
+    'hook': (c, t) => [[0, _mPO(c.atk, 'p-hookw')], [t.W, _mPO(c.atk, 'p-hook')], [t.rec, _mPO(c.atk, '')]],
+    'blur-dash': (c, t, m) => { const a = c.atk, d = c.d, sub = m.sub || [0], S = [[0, Object.assign(_mPO(a, 'p-crouch'), _mGL(a, 'blur'))]];
+      sub.forEach((s, i) => { const tt = (i ? t.T + s : t.T) - 60; S.push([tt, Object.assign(_mPO(a, i % 2 ? 'p-dash' : _mFar(a)), _mGH(a, i % 2 ? [{ x: 120 * d, y: -4, f: 1 }, { x: 60 * d, y: -3 }] : [{ x: 40 * d, y: -2 }, { x: 90 * d, y: -3 }, { x: 150 * d, y: -4 }]))]); });
+      return S.concat(_mTail(c, t)); },
+    'blink': (c, t) => { const a = c.atk, f = c.def, d = c.d, S = [[0, _mPO(a, 'p-crouch')], [t.W * 0.5, Object.assign(_mPO(a, 'p-vanish'), { vfxAdd: [_MV.puff(a.x + 10 * d, a.y + 10, { c: 'teal' })] })], [t.W, Object.assign(_mPO(a, _mFar(a)), { vfxAdd: [_MV.puff(f.x + 60 * d, f.y + 14, { c: 'teal' })] })]]; return S.concat(_mTail(c, t, { pc: 'teal' })); },
+    'ghost-split': (c, t) => { const a = c.atk, d = c.d; return [[0, _mPO(a, 'p-crouch')], [t.W, Object.assign(_mPO(a, ''), _mGH(a, [{ x: -28 * d, y: -4 }, { x: -54 * d, y: -8 }]), _mGL(a, 'teal'))], [t.rec + 100, Object.assign(_mGH(a, null), _mGL(a, null))]]; },
+    'bash': (c, t) => [[0, _mPO(c.atk, 'p-lean')], [t.W, _mPO(c.atk, 'p-bash')], [t.rec, _mPO(c.atk, '')]],
+    'stomp': (c, t) => [[0, _mPO(c.atk, 'p-hop')], [t.W, _mPO(c.atk, 'p-stomp')], [t.rec, _mPO(c.atk, '')]],
+    'cast-raise': (c, t, m) => [[0, Object.assign(_mPO(c.atk, 'p-raise'), _mGL(c.atk, m.tint))], [t.W, _mPO(c.atk, t.TR ? 'p-castf' : 'p-raise')], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'cast-sweep': (c, t) => [[0, Object.assign(_mPO(c.atk, 'p-tiltb'), _mGL(c.atk, 'arcane'))], [t.W, _mPO(c.atk, 'p-tiltf')], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'cast-sky': (c, t, m) => [[0, Object.assign(_mPO(c.atk, 'p-sky'), _mGL(c.atk, m.tint))], [t.W, _mPO(c.atk, 'p-castf')], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'cast-clench': (c, t) => [[0, Object.assign(_mPO(c.atk, 'p-raise'), _mGL(c.atk, 'red'))], [t.W, _mPO(c.atk, 'p-crouch')], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'draw': (c, t) => [[0, _mPO(c.atk, 'p-draw')], [t.W, _mPO(c.atk, 'p-release')], [t.rec, _mPO(c.atk, '')]],
+    'draw-long': (c, t) => [[0, _mPO(c.atk, 'p-drawlong')], [Math.max(0, t.W - 120), { vfxAdd: [_MV.tens(c.atk.hand.y - 12, { life: 120 })] }], [t.W, _mPO(c.atk, 'p-release')], [t.rec, _mPO(c.atk, '')]],
+    'aim': (c, t) => [[0, _mPO(c.atk, 'p-aim')], [t.W, _mPO(c.atk, 'p-release')], [t.rec, _mPO(c.atk, '')]],
+    'roll': (c, t) => [[0, _mPO(c.atk, 'p-roll')], [t.rec, _mPO(c.atk, '')]],
+    'plant': (c, t) => [[0, _mPO(c.atk, 'p-plant')], [t.rec, _mPO(c.atk, '')]],
+    'compress': (c, t) => [[0, _mPO(c.atk, 'p-compress')], [t.rec, _mPO(c.atk, '')]],
+    'three-beat': (c, t) => [[0, _mPO(c.atk, 'p-compress')], [t.W, _mPO(c.atk, 'p-plant')], [t.W + 200, Object.assign(_mPO(c.atk, 'p-swell'), _mGL(c.atk, 'gold'))], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'inhale': (c, t) => [[0, Object.assign(_mPO(c.atk, 'p-swell'), _mGL(c.atk, 'gold'))], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'shimmer': (c, t) => [[0, Object.assign(_mPO(c.atk, 'p-jitter'), _mGL(c.atk, 'red'))], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'kneel-rise': (c, t) => [[0, _mPO(c.atk, 'p-sink')], [t.W, Object.assign(_mPO(c.atk, 'p-rise'), _mGL(c.atk, 'gold'))], [t.rec, Object.assign(_mPO(c.atk, ''), _mGL(c.atk, null))]],
+    'swipe': (c, t) => [[0, _mPO(c.atk, 'p-back')], [t.W, _mPO(c.atk, 'p-swipe')], [t.rec, _mPO(c.atk, '')]],
+    'execute-dash': (c, t) => { const a = c.atk, d = c.d, S = [[0, _mPO(a, 'p-crouch')], [t.W * 0.5, Object.assign(_mPO(a, 'p-dash'), _mGH(a, [{ x: 30 * d, y: -2 }, { x: 60 * d, y: -3 }]))], [t.W, Object.assign(_mPO(a, _mFar(a)), _mGH(a, [{ x: 120 * d, y: -4 }, { x: 170 * d, y: -4 }, { x: 210 * d, y: -4, f: 1 }]))]]; return S.concat(_mTail(c, t, { pc: 'red' })); },
+  };
+  // ── strike shapes: effect items over the timeline; o = { land, dodge, crit, kill } · sub-hits sit at t.T + sub[i] ──
+  const _PKB_SHAPE = {
+    'arc-slash': (c, m, t, o) => { const f = c.def, d = c.d, S = [], sub = m.sub || [0], last = t.T + t.S;
+      const geo = (i) => i % 3 === 0 ? [f.x - 80 * d, f.y - 72, f.x + 50 * d, f.y + 76, 46 * d] : i % 3 === 1 ? [f.x + 70 * d, f.y - 70, f.x - 60 * d, f.y + 76, 30 * d] : [f.x - 86 * d, f.y + 6, f.x + 86 * d, f.y - 4, 14 * d];
+      if (m.id === 'struggle') { S.push([t.T, { vfxAdd: [_MV.slash(f.x - 56 * d, f.y - 30, f.x + 14 * d, f.y + 30, { b: 20 * d, w: 3, c: 'grey' })] }]); return S; }
+      for (let i = 0; i < m.hits; i++) { const tt = t.T + (sub[i] || 0), g = geo(i), items = [_MV.slash(g[0], g[1], g[2], g[3], { b: g[4], w: m.hap === 'light' ? 5 : 7, c: m.tint, rag: m.id === 'rend' })]; if (o.land) items.push(_MV.star(f.x - 6 * d, f.y + 4 + i * 10, { s: 26, c: m.tint, d: 40 })); S.push([tt, { vfxAdd: items }]); }
+      if (!o.land) return S;
+      if (m.id === 'rend' || m.id === 'ember') S.push([last + t.F + 60, { vfxAdd: [_MV.dots(f.x - 4 * d, f.y + 16, { c: 'red', n: 4, kind: 'drip', du: 700, spread: 30 })] }]);
+      if (m.id === 'searing') S.push([last + t.F + 40, { vfxAdd: [_MV.dots(f.x - 10 * d, f.y + 40, { c: 'fire', n: 6, du: 900, spread: 70 }), _MV.slash(f.x - 80 * d, f.y - 72, f.x + 50 * d, f.y + 76, { b: 46 * d, w: 2, c: 'fire', keep: true })] }]);
+      if (m.id === 'wardstrike') S.push([last + t.F + 160, { vfxAdd: [_MV.beam(f.x, f.y - 10, c.atk.hand.x, c.atk.hand.y - 10, { c: 'green', h: 10, dur: 380 }), _MV.dots(c.atk.x, c.atk.y + 30, { c: 'green', n: 6, du: 700, d: 300, spread: 50 })] }]);
+      return S; },
+    'thrust': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, S = [];
+      if (m.id === 'heartseeker' || m.id === 'piercingshot') { const far = m.id === 'piercingshot' ? 170 : 60;
+        S.push([t.W, { vfxAdd: [_MV.proj(a.hand.x, a.hand.y - 12, o.land ? f.x + far * d : f.x + 200 * d, o.land ? f.y - 30 : f.y - 90, { kind: 'arrow', dur: t.TR, c: m.tint })] }]);
+        if (o.land) S.push([t.T, { vfxAdd: [_MV.line(a.hand.x + 20 * d, a.hand.y - 12, f.x + far * d, f.y - 30, { w: 3, c: m.tint, keep: m.id === 'heartseeker' }), _MV.star(f.x - 8 * d, f.y - 26, { s: m.id === 'heartseeker' ? 44 : 30, c: m.tint })].concat(m.id === 'piercingshot' ? [_MV.star(f.x + 150 * d, f.y - 30, { s: 20, c: m.tint, d: 60 })] : []) }]);
+        if (m.id === 'piercingshot') S.push([0, { light: 'exe' }], [t.rec, { light: null }]);
+        return S; }
+      const items = m.id === 'quickstep' ? [_MV.line(f.x + 70 * d, f.y - 20, f.x - 50 * d, f.y + 14, { w: 4, c: 'teal' })] : [_MV.line(f.x - 124 * d, f.y + 36, f.x + 60 * d, f.y - 28, { w: 6, c: m.tint })];
+      if (o.land) items.push(_MV.star(f.x + 12 * d, f.y - 12, { s: 28, c: m.tint }));
+      S.push([t.T, { vfxAdd: items }]); return S; },
+    'overhead': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, S = [], oath = m.id === 'oathstrike';
+      if (oath) S.push([t.W * 0.25, { vfxAdd: [_MV.line(a.hand.x - 4 * d, a.hand.y + 36, a.hand.x + 14 * d, a.hand.y - 64, { w: 4, c: 'gold', slow: true })] }], [Math.max(10, t.W - 60), { vfxAdd: [_MV.glint(a.hand.x + 14 * d, a.hand.y - 64)] }]);
+      const items = [_MV.line(f.x - 6 * d, f.y - 160, f.x + 8 * d, f.y + 96, { w: oath ? 10 : 9, c: m.tint })];
+      if (o.land) items.push(_MV.crack(f.feet.x - 8 * d, f.feet.y, { s: oath ? 1 : 1.3, c: m.tint }), _MV.dust(f.feet.x, f.feet.y), _MV.star(f.x, f.y + 20, { s: oath ? 48 : 40, c: m.tint, d: 30 }));
+      if (o.land && oath) items.push(_MV.ring(f.feet.x, f.feet.y, { rx: 90, ry: 22, c: 'gold' }));
+      S.push([t.T, { vfxAdd: items }]); return S; },
+    'sweep': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, S = [[t.W * 0.6, { vfxAdd: [_MV.dust(a.feet.x, a.feet.y, { n: 3 })] }]];
+      const items = [_MV.slash(f.x - 130 * d, f.y + 34, f.x + 96 * d, f.y - 6, { b: -34 * d, w: 8, c: 'gold' })];
+      if (o.land) items.push(_MV.scar(f.feet.x - 96 * d, f.feet.y, f.feet.x + 70 * d, f.feet.y), _MV.dust(f.feet.x, f.feet.y, { n: 6 }), _MV.star(f.x - 10 * d, f.y + 10, { s: 34, c: 'gold', d: 30 }));
+      S.push([t.T, { vfxAdd: items }]); return S; },
+    'cross': (c, m, t, o) => { const f = c.def, d = c.d, S = [], L1 = [f.x - 110 * d, f.y - 40, f.x + 64 * d, f.y + 32], L2 = [f.x - 124 * d, f.y + 36, f.x + 60 * d, f.y - 28];
+      if (m.id === 'eclipse') { S.push([t.T, { vfxAdd: [_MV.line(L1[0], L1[1], L1[2], L1[3], { w: 6, c: 'gold' })].concat(o.land ? [_MV.star(f.x - 20 * d, f.y - 4, { s: 28, c: 'gold' })] : []) }], [t.T + m.sub[1], { vfxAdd: [_MV.line(L2[0], L2[1], L2[2], L2[3], { w: 7, c: 'black', edge: true })].concat(o.land ? [_MV.star(f.x - 30 * d, f.y + 2, { s: 30, c: 'white' })] : []) }]); return S; }
+      if (m.id === 'reckoning') { S.push([0, { light: 'exe', bars: true }], [t.W, { vfxAdd: [_MV.line(L2[0], L2[1], L2[2], L2[3], { w: 6, c: 'red', slow: true }), _MV.line(L1[0], L1[1], L1[2], L1[3], { w: 5, c: 'red', slow: true, d: 100 })] }]); if (o.land) S.push([t.T, { vfxAdd: [_MV.star(f.x - 28 * d, f.y + 2, { s: 46, c: 'gold' }), _MV.ring(f.feet.x, f.feet.y, { rx: 96, ry: 24, c: 'gold' })] }]); S.push([t.rec, { light: null, bars: false }]); return S; }
+      const geo = [[f.x - 90 * d, f.y - 60, f.x + 70 * d, f.y + 60, 20 * d], [f.x + 80 * d, f.y - 50, f.x - 60 * d, f.y + 70, -20 * d], [f.x - 96 * d, f.y + 10, f.x + 90 * d, f.y - 10, 10 * d], [f.x - 20 * d, f.y - 100, f.x + 20 * d, f.y + 100, 20 * d]];
+      m.sub.forEach((s, i) => { const g = geo[i % 4]; S.push([t.T + s, { vfxAdd: [_MV.slash(g[0], g[1], g[2], g[3], { b: g[4], w: 4, c: 'white' })].concat(o.land ? [_MV.star(f.x + (i % 2 ? 10 : -10) * d, f.y + i * 14 - 20, { s: 20, c: 'white' })] : []) }]); });
+      if (o.land) S.push([t.T + t.S + 80, { vfxAdd: [_MV.line(L1[0], L1[1], L1[2], L1[3], { w: 5, c: 'white' }), _MV.line(L2[0], L2[1], L2[2], L2[3], { w: 5, c: 'white', d: 60 }), _MV.star(f.x, f.y, { s: 36, c: 'white', d: 80 })], cam: 'c-shake' }]);
+      return S; },
+    'fist': (c, m, t, o) => { const f = c.def, d = c.d, S = [], px = f.x - 22 * d, py = f.y - 8, big = m.id === 'hook' || m.id === 'sunder';
+      S.push([Math.max(0, t.T - 90), { vfxAdd: [_MV.ring(px, py, { rx: big ? 46 : 28, ry: big ? 46 : 28, c: m.tint, w: 3, inward: true })].concat(o.land ? [_MV.star(px, py, { s: big ? 40 : 24, c: m.tint, d: 90 }), _MV.burst(px, py, { s: big ? 150 : 90, c: m.tint, d: 90 })] : []) }]);
+      if (!o.land) return S;
+      if (m.id === 'sunder') S.push([t.T + t.F, { vfxAdd: [_MV.fly(f.x, f.y - 10, { c: 'blue', n: 6 }), _MV.crack(f.x, f.y - 20, { s: 0.6, c: 'blue' })] }]);
+      if (m.id === 'stagger') S.push([t.T + t.F + 40, { vfxAdd: [_MV.orbit(f.head.x, f.head.y - 10, { c: 'gold2', life: 900 })] }]);
+      if (m.id === 'willbreak') S.push([t.T + t.F + 40, { vfxAdd: [_MV.sag(f.x, f.y - 50, { c: 'violet' })] }]);
+      return S; },
+    'bolt': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, S = [], orb = m.id === 'arcanebolt' || m.id === 'immolate', hx = a.hand.x, hy = a.hand.y - 12, tx = f.x - 16 * d, ty = f.y - (orb ? 8 : 26);
+      if (m.body === 'cast-raise') S.push([0, { vfxAdd: [_MV.charge(hx, hy, { s: m.id === 'immolate' ? 60 : 46, dur: t.W, c: m.tint })] }]);
+      S.push([t.W, { vfxAdd: [_MV.proj(hx, hy, o.land ? tx : f.x + 90 * d, o.land ? ty : ty - 50, { kind: orb ? 'orb' : 'arrow', dur: t.TR, c: m.tint, fire: m.tint === 'fire' && !orb })] }]);
+      if (!o.land) return S;
+      const items = [_MV.star(tx + 6 * d, ty, { s: m.hap === 'heavy' ? 40 : 24, c: m.tint })];
+      if (orb) items.push(_MV.burst(f.x, f.y - 10, { s: m.id === 'immolate' ? 190 : 120, c: m.tint }));
+      if (m.id === 'immolate') items.push(_MV.pillar(f.feet.x, f.feet.y, { c: 'fire' }), _MV.dots(f.feet.x, f.feet.y - 40, { c: 'fire', n: 8, du: 1000, spread: 70 }));
+      if (m.id === 'flamearrow') items.push(_MV.pillar(f.feet.x, f.feet.y, { c: 'fire', h: 90, w: 50 }), _MV.dots(f.x, f.y, { c: 'fire', n: 5, du: 800, spread: 40 }));
+      if (m.id === 'pinshot') items.push(_MV.pin(tx, ty, { f: d, life: 900 }));
+      S.push([t.T, { vfxAdd: items }]); return S; },
+    'volley': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, xs = [-30, 6, 36], land = (i) => [f.x + xs[i] * d, f.y - 10 + (i % 2) * 48];
+      const S = [[t.W, { vfxAdd: [_MV.proj(a.hand.x, a.hand.y - 20, a.hand.x + 60 * d, -60, { kind: 'arrow', dur: 170 }), _MV.proj(a.hand.x, a.hand.y - 20, a.hand.x + 100 * d, -60, { kind: 'arrow', dur: 170, d: 50 })] }]];
+      S.push([Math.max(t.W, t.T - 150), { vfxAdd: xs.map((_, i) => { const lx = land(i)[0], ly = land(i)[1]; return _MV.proj(lx + 30 * d, -50, o.land ? lx : lx - 60 * d, o.land ? ly : f.feet.y, { kind: 'arrow', dur: 150, d: i * 60 }); }) }]);
+      if (o.land) m.sub.forEach((s, i) => { const l = land(i % 3); S.push([t.T + s, { vfxAdd: [_MV.star(l[0], l[1], { s: 18, c: 'white' })] }]); });
+      return S; },
+    'rain': (c, m, t, o) => { const f = c.def, d = c.d, S = [[t.W * 0.3, { vfxAdd: [_MV.rune(f.feet.x, f.feet.y - 2, { r: 70, c: 'gold', life: t.W * 0.7 + t.TR, flat: true }), _MV.charge(f.x + 60 * d, -10, { s: 120, dur: t.W * 0.7 + t.TR, c: 'fire' })] }]];
+      S.push([t.W, { vfxAdd: [_MV.proj(f.x + 90 * d, -90, o.land ? f.x : f.x - 110 * d, o.land ? f.y : f.feet.y, { kind: 'meteor', dur: t.TR, c: 'fire' })] }]);
+      if (o.land) S.push([t.T, { vfxAdd: [_MV.burst(f.x, f.y - 10, { s: 280, c: 'fire' }), _MV.crack(f.feet.x, f.feet.y, { s: 1.5, c: 'gold' }), _MV.dust(f.feet.x, f.feet.y, { n: 7 }), _MV.star(f.x, f.y - 20, { s: 54, c: 'gold' }), _MV.ring(f.feet.x, f.feet.y, { rx: 120, ry: 30, c: 'fire', w: 4 })] }]);
+      else S.push([t.T, { vfxAdd: [_MV.burst(f.x - 110 * d, f.feet.y, { s: 160, c: 'fire' }), _MV.dust(f.x - 110 * d, f.feet.y)] }]);
+      return S; },
+    'wave': (c, m, t, o) => { const f = c.def, a = c.atk, d = c.d, S = [[t.W, { vfxAdd: [_MV.proj(a.x + 30 * d, a.y, f.x + 140 * d, f.y, { kind: 'wave', dur: t.TR, c: 'arcane', rot: d > 0 ? 0 : 180 }), _MV.dust((a.x + f.x) / 2, f.feet.y, { n: 4, d: t.TR * 0.4 })], cam: 'c-rumble' }], [t.T - 30, { cam: null }]];
+      if (o.land) S.push([t.T, { vfxAdd: [_MV.burst(f.x, f.y - 10, { s: 220, c: 'arcane' }), _MV.ring(f.x, f.y, { rx: 60, ry: 110, c: 'arcane', w: 3 }), _MV.dust(f.feet.x, f.feet.y, { n: 6 })] }]);
+      return S; },
+    'drain-tether': (c, m, t, o) => { const f = c.def, a = c.atk; if (!o.land) return [];
+      return [[t.W, { vfxAdd: [_MV.beam(f.x, f.y - 10, a.hand.x, a.hand.y - 12, { c: 'red', c2: 'green', h: 12, dur: 620 }), _MV.rune(f.x, f.y - 10, { r: 34, c: 'red', life: 500 })] }], [t.T + t.F + 100, { vfxAdd: [_MV.dots(a.hand.x, a.hand.y - 12, { c: 'green', n: 7, kind: 'in', du: 600, spread: 60 })] }]]; },
+    'sigil-shatter': (c, m, t, o) => { const f = c.def, S = [], ruin = m.id === 'ruin';
+      if (ruin) S.push([0, { light: 'exe', bars: true }], [t.rec, { light: null, bars: false }], [Math.max(0, t.T - 420), { vfxAdd: [_MV.ring(f.x, f.y - 10, { rx: 90, ry: 90, c: 'gold', w: 2, inward: true })] }]);
+      S.push([t.W, { vfxAdd: [_MV.rune(f.x, f.y - 10, { r: ruin ? 62 : 44, c: m.tint, life: t.TR + (ruin ? 0 : 40) })] }]);
+      if (o.land) S.push([t.T, { vfxAdd: ruin ? [_MV.burst(f.x, f.y - 10, { s: 240, c: 'gold' }), _MV.star(f.x, f.y - 10, { s: 50, c: 'gold' }), _MV.crack(f.feet.x, f.feet.y, { s: 1.2, c: 'red' }), _MV.fly(f.x, f.y - 10, { c: 'red', n: 8 })] : [_MV.fly(f.x, f.y - 10, { c: 'violet', n: 7 }), _MV.star(f.x, f.y - 10, { s: 34, c: 'violet' }), _MV.crack(f.x, f.y - 24, { s: 0.6, c: 'violet' })] }]);
+      else S.push([t.T, { vfxAdd: [_MV.puff(f.x, f.y - 10, { c: m.tint })] }]);
+      return S; },
+    'ground-crack': (c, m, t, o) => { const f = c.def, a = c.atk, S = [];
+      if (m.id === 'brace') { S.push([t.W, { vfxAdd: [_MV.crack(a.feet.x, a.feet.y, { s: 0.8, c: 'white' }), _MV.dust(a.feet.x, a.feet.y, { n: 4 }), _MV.ring(a.feet.x, a.feet.y, { rx: 60, ry: 14, c: 'white', w: 2 })], cam: 'c-small' }]); return S; }
+      S.push([t.W, { vfxAdd: [_MV.crack(a.feet.x, a.feet.y, { s: 0.7, c: 'gold' }), _MV.dust(a.feet.x, a.feet.y, { n: 3 })] }]);
+      if (o.land) S.push([t.T, { vfxAdd: [_MV.crack(f.feet.x, f.feet.y, { s: 1.4, c: 'gold' }), _MV.dust(f.feet.x, f.feet.y, { n: 7 }), _MV.fly(f.feet.x, f.feet.y - 10, { c: 'grey', n: 6, up: true }), _MV.ring(f.feet.x, f.feet.y, { rx: 100, ry: 24, c: 'gold', w: 3 })] }]);
+      else S.push([t.T, { vfxAdd: [_MV.crack(f.feet.x - 80 * c.d, f.feet.y, { s: 0.9, c: 'gold' }), _MV.dust(f.feet.x - 80 * c.d, f.feet.y)] }]);
+      return S; },
+    'aura': (c, m, t) => { const a = c.atk, d = c.d, W = t.W, S = [];
+      switch (m.id) {
+        case 'guard': S.push([W, { vfxAdd: [_MV.kite(a.x + 54 * d, a.y - 10, { f: d, c: 'teal', life: 700 }), _MV.ring(a.feet.x, a.feet.y, { rx: 66, ry: 16, c: 'teal', w: 2 })] }], [W + 220, { vfxAdd: [_MV.glint(a.x + 60 * d, a.y - 40)] }]); break;
+        case 'refuse': S.push([0, { vfxAdd: [_MV.dots(a.x, a.y + 20, { c: 'fire', n: 9, du: 700, spread: 70 })] }], [W + 60, Object.assign({ vfxAdd: [_MV.ring(a.x + 6 * d, a.y - 10, { rx: 64, ry: 64, c: 'white', w: 3 }), _MV.ring(a.feet.x, a.feet.y, { rx: 70, ry: 16, c: 'white', w: 2, d: 80 })] }, _mFL(a, 'white'))]); break;
+        case 'bulwark': S.push([0, { vfxAdd: [_MV.crack(a.feet.x, a.feet.y, { s: 0.7, c: 'teal' }), _MV.dust(a.feet.x, a.feet.y, { n: 3 })], cam: 'c-small' }], [W, { vfxAdd: [_MV.kite(a.x + 54 * d, a.y - 10, { f: d, c: 'teal', life: 800 })] }], [W + 200, Object.assign({ vfxAdd: [_MV.burst(a.x + 10 * d, a.y - 20, { s: 220, c: 'gold' }), _MV.dots(a.x, a.y + 30, { c: 'gold', n: 10, du: 800, spread: 80 }), _MV.ring(a.feet.x, a.feet.y, { rx: 80, ry: 18, c: 'gold', w: 3 })] }, _mFL(a, 'gold'))]); break;
+        case 'focus': S.push([0, { vfxAdd: [_MV.dots(a.x + 6 * d, a.y - 10, { c: 'gold', n: 12, kind: 'in', du: W + 100, spread: 90, gap: 20 })] }], [W + 120, { vfxAdd: [_MV.glint(a.head.x + 8 * d, a.head.y + 8)] }]); break;
+        case 'temper': S.push([0, { vfxAdd: [_MV.shim(a.x, a.y + 60), _MV.dots(a.feet.x, a.feet.y - 20, { c: 'red', n: 9, du: 900, spread: 70 })] }], [W + 100, Object.assign({ vfxAdd: [_MV.burst(a.x + 6 * d, a.y - 10, { s: 130, c: 'red' })] }, _mFL(a, 'red'))]); break;
+        case 'lastvow': S.push([W, { vfxAdd: [_MV.dots(a.feet.x, a.feet.y - 10, { c: 'gold2', n: 16, du: 700, spread: 90, k: 2.4, gap: 30 }), _MV.ring(a.feet.x, a.feet.y, { rx: 70, ry: 16, c: 'gold', w: 2 })] }], [W + 240, _mFL(a, 'gold')]); break;
+        case 'evade': S.push([W, { vfxAdd: [_MV.puff(a.x - 40 * d, a.y + 10, { c: 'teal' })] }]); break;
+        case 'dispel': S.push([W, { vfxAdd: [_MV.threads(a.x + 4 * d, a.y, { c: 'teal' }), _MV.glint(a.hand.x, a.hand.y - 12, { d: 200 })] }]); break;
+        case 'manaward': S.push([W, { vfxAdd: [_MV.glyphs(a.x, a.y - 6, { f: d, c: 'blue', life: 800 }), _MV.ring(a.feet.x, a.feet.y, { rx: 70, ry: 16, c: 'blue', w: 2 })] }]); break;
+        case 'tumble': S.push([0, { vfxAdd: [_MV.dust(a.feet.x, a.feet.y, { n: 4 })] }], [W + 200, { vfxAdd: [_MV.dust(a.feet.x - 56 * d, a.feet.y, { n: 4 })] }]); break;
+      }
+      return S; },
+  };
+  // ── compose one move: body + shape + the impact's camera / flash / freeze. Numbers, drain, haptics, sfx and the
+  //    defender's knockback stay with _pkbImpactFx (called by the beat at t.T and at every sub-hit). ──
+  function _pkbCompose(m, c, o) {
+    o = o || {};
+    const f = c.def;
+    const W = o.held ? 120 : m.t[0], TR = m.t[1], I = m.t[2], R = m.t[3], T = W + TR;
+    const sub = m.sub || [0], S = sub[sub.length - 1] || 0;
+    const F = (!m.stance && o.land) ? (o.kill ? 240 : o.crit ? 140 : 80) : 0, rec = T + S + F + I, E = rec + R;
+    const t = { W, TR, T, F, I, R, S, rec, E };
+    const steps = (_PKB_BODY[m.body] || _PKB_BODY['step-arc'])(c, t, m).concat((_PKB_SHAPE[m.shape] || (() => []))(c, m, t, o));
+    if (!m.stance) {
+      if (o.land) {
+        const hit = Object.assign({ cam: m.cam || (m.hap === 'heavy' ? 'c-shake2' : m.hap === 'medium' ? 'c-shake' : 'c-small') }, _mFL(f, m.tint));
+        if (m.react) hit[f.side === 'p' ? 'reactYou' : 'reactFoe'] = m.react;
+        if (f.side === 'p') hit.redvig = 'on';
+        if (o.kill) hit.wash = 'rgba(255,255,255,.9)'; else if (o.crit) hit.wash = 'rgba(255,255,255,.5)'; else if (m.hap === 'heavy') hit.wash = _pkbMCol(m.tint) + '55';
+        steps.push([T, hit]);
+        for (let i = 1; i < sub.length; i++) steps.push([T + sub[i], Object.assign({ cam: 'c-small' }, _mFL(f, m.tint))]);
+        steps.push([T + S, { freeze: true }], [T + S + F, { freeze: false }]);
+        if (m.react && !o.kill) steps.push([rec, { [f.side === 'p' ? 'reactYou' : 'reactFoe']: '' }]);
+      } else if (o.dodge) {
+        steps.push([Math.max(0, T - 150), Object.assign(_mPO(f, 'p-side'), _mGH(f, [{ x: 0, y: 0 }]))], [T + 260, Object.assign(_mPO(f, ''), _mGH(f, null))]);
+      }
+    }
+    return { steps, t, T, dur: E };
+  }
+  // ── the reads (c: atk = foe, def = you). T = the clash; the beat's toast follows it. ──
+  function _pkbReadSeq(id, c, surge) {
+    const a = c.atk, f = c.def, d = c.d, e = -d, S = [], mid = { x: (a.x + f.x) / 2, y: f.y - 24 }, cx = f.x - 44 * d;
+    const curse = () => S.push([0, Object.assign(_mPO(a, 'p-raise'), _mGL(a, 'violet'), { vfxAdd: [_MV.charge(a.hand.x, a.hand.y - 12, { s: 50, dur: 300, c: 'violet' })] })], [300, Object.assign(_mPO(a, 'p-castf'), { vfxAdd: [_MV.proj(a.hand.x, a.hand.y - 12, cx, f.y - 14, { kind: 'sigil', dur: 260, c: 'violet' })] })]);
+    if (id === 'parry') {
+      const W = 400, T = W + 160;
+      S.push([0, _mPO(a, 'p-wind')], [W - 260, { vfxAdd: [_MV.ring(a.hand.x, a.hand.y - 10, { rx: 50, ry: 50, c: 'red', w: 2, inward: true })] }], [W, _mPO(a, 'p-sweep')], [W + 40, _mPO(f, 'p-plant')]);
+      S.push([T, Object.assign({ vfxAdd: [_MV.fan(mid.x, mid.y, { c: 'white', n: surge ? 12 : 8, len: surge ? 64 : 50 }), _MV.star(mid.x, mid.y, { s: surge ? 52 : 40, c: 'white' }), _MV.burst(mid.x, mid.y, { s: surge ? 190 : 130, c: 'white' })].concat(surge ? [_MV.bolt(mid.x, mid.y, { x0: mid.x + 50 }), _MV.star(mid.x, mid.y, { s: 62, c: 'gold2', d: 40 })] : []), cam: 'c-shake2', freeze: true, wash: surge ? 'rgba(255,240,180,.6)' : 'rgba(255,255,255,.45)' }, _mPO(f, 'p-recoil'), _mPO(a, 'p-recoil2'))]);
+      S.push([T + 140, { freeze: false }], [T + 620, Object.assign(_mPO(f, ''), _mPO(a, ''))]);
+      return { steps: S, T, dur: T + 900 };
+    }
+    if (id === 'sidestep') { const W = 400, T = W + 160;
+      S.push([0, _mPO(a, 'p-wind')], [W, _mPO(a, 'p-sweep')], [T - 160, Object.assign(_mPO(f, 'p-side'), _mGH(f, [{ x: 0, y: 0 }]))], [T, { vfxAdd: [_MV.slash(f.x - 130 * d, f.y + 34, f.x + 96 * d, f.y - 6, { b: -34 * d, w: 8, c: 'gold' }), _MV.dust(f.feet.x, f.feet.y, { n: 4 })], cam: 'c-small' }], [T + 300, Object.assign(_mPO(f, ''), _mGH(f, null))], [T + 420, _mPO(a, '')]);
+      return { steps: S, T, dur: T + 900 }; }
+    if (id === 'ward') { curse(); const T = 560;
+      S.push([T, Object.assign({ vfxAdd: [_MV.dome(f.x + 46 * e, f.y - 10, { f: e, c: 'teal', life: 500 }), _MV.ring(cx, f.y - 14, { rx: 12, ry: 44, c: 'violet', w: 3 }), _MV.dots(cx, f.y + 10, { c: 'violet', n: 5, kind: 'drip', du: 600, spread: 30 })], cam: 'c-small' }, _mFL(f, 'teal'), _mPO(f, 'p-plant'))], [T + 420, Object.assign(_mPO(f, ''), _mPO(a, ''), _mGL(a, null))]);
+      return { steps: S, T, dur: T + 900 }; }
+    if (id === 'reflect') { curse(); const T = 560;
+      S.push([T, Object.assign({ vfxAdd: [_MV.rune(cx, f.y - 14, { r: 30, c: 'violet', life: 240 }), _MV.glint(cx, f.y - 14, { d: 120 })] }, _mPO(f, 'p-raise'), _mGL(f, 'gold'))], [T + 240, { vfxAdd: [_MV.proj(cx, f.y - 14, a.x + 30 * d, a.y - 10, { kind: 'sigil', dur: 240, c: 'gold' })] }], [T + 480, { vfxAdd: [_MV.rune(a.x + 30 * d, a.y - 10, { r: 40, c: 'gold', life: 160 }), _MV.fly(a.x + 20 * d, a.y - 10, { c: 'gold', n: 7, d: 160 }), _MV.star(a.x + 20 * d, a.y - 10, { s: 36, c: 'gold', d: 160 })] }], [T + 640, Object.assign({ cam: 'c-shake', freeze: true }, _mFL(a, 'gold'), _mPO(a, 'p-recoil2'))], [T + 720, { freeze: false }], [T + 1000, Object.assign(_mPO(a, ''), _mPO(f, ''), _mGL(f, null), _mGL(a, null))]);
+      return { steps: S, T: T + 700, dur: T + 1300 }; }
+    // interrupt — the swelling aura breaks mid-swell (the hit that broke it already played)
+    S.push([0, Object.assign(_mPO(a, 'p-swell'), _mGL(a, 'red'), { vfxAdd: [_MV.charge(a.x, a.y - 10, { s: 120, dur: 520, c: 'red' }), _MV.dots(a.x, a.y - 10, { c: 'red', n: 8, kind: 'in', du: 520, spread: 90, gap: 30 })] })], [520, Object.assign({ vfxClear: true, vfxAdd: [_MV.fly(a.x, a.y - 10, { c: 'red', n: 8 }), _MV.burst(a.x, a.y - 10, { s: 170, c: 'white' }), _MV.star(a.x - 10 * e, a.y - 24, { s: 36, c: 'white' })], cam: 'c-shake2', freeze: true }, _mFL(a, 'white'), _mPO(a, 'p-recoil2'), _mGL(a, null))], [660, { freeze: false }], [980, _mPO(a, '')]);
+    return { steps: S, T: 540, dur: 1300 };
+  }
+  // ── the ultimates (c: atk = hunter). T = the blow; the beat lands the number there. extra() = one tap-along echo. ──
+  function _pkbUltSeq(style, c) {
+    const a = c.atk, f = c.def, d = c.d, S = [];
+    const big = (tt, items, pose, tint) => S.push([tt, Object.assign({ wash: '#fff', light: null, vfxClear: true, vfxAdd: items, cam: 'c-shake2', freeze: true }, _mFL(f, tint || 'white'), _mPO(f, pose || 'p-crush'))], [tt + 240, { freeze: false }]);
+    const rnd = (n) => Math.random() * n;
+    if (style === 'melee') {
+      const far = _mFar(a), hop = (t0, slash, tint) => { S.push([t0, Object.assign(_mPO(a, 'p-dash'), _mGH(a, [{ x: 30 * d, y: -2 }, { x: 60 * d, y: -3 }, { x: 90 * d, y: -4 }]))], [t0 + 120, Object.assign(_mPO(a, far), { vfxAdd: [slash], cam: 'c-shake' }, _mFL(f, tint))]); };
+      S.push([0, { bars: true, light: 'dark', wash: 'rgba(167,139,250,.35)', vfxAdd: [_MV.rune(f.feet.x, f.feet.y - 2, { r: 96, c: 'gold', life: 1500, flat: true })] }]);
+      hop(200, _MV.slash(f.x - 80 * d, f.y - 84, f.x + 60 * d, f.y + 70, { b: 30 * d, w: 5, c: 'gold', keep: true }), 'white');
+      S.push([420, _mPO(a, 'p-behind p-vanish')], [470, _mPO(a, 'p-vanish')]);
+      hop(500, _MV.slash(f.x + 70 * d, f.y - 80, f.x - 70 * d, f.y + 74, { b: 30 * d, w: 5, c: 'violet', keep: true }), 'violet');
+      S.push([690, Object.assign({ vfxAdd: [_MV.slash(f.x - 90 * d, f.y + 10, f.x + 86 * d, f.y - 14, { b: 16 * d, w: 5, c: 'white', keep: true })], cam: 'c-shake' }, _mFL(f, 'white'))]);
+      S.push([760, _mPO(a, 'p-behind p-vanish')], [810, _mPO(a, 'p-vanish')]);
+      hop(840, _MV.slash(f.x - 60 * d, f.y - 96, f.x + 40 * d, f.y + 86, { b: -30 * d, w: 5, c: 'gold', keep: true }), 'white');
+      S.push([1030, Object.assign({ vfxAdd: [_MV.slash(f.x + 56 * d, f.y - 94, f.x - 54 * d, f.y + 84, { b: -30 * d, w: 5, c: 'violet', keep: true })], cam: 'c-shake' }, _mFL(f, 'violet'))]);
+      S.push([1100, _mPO(a, 'p-behind p-vanish')], [1160, _mPO(a, 'p-vanish')], [1240, Object.assign(_mPO(a, ''), _mGH(a, null))], [1400, { vfxAdd: [_MV.blade(f.x, f.feet.y)] }]);
+      big(1620, [_MV.burst(f.x, f.y - 10, { s: 300, c: 'gold' }), _MV.wipe(), _MV.ring(f.feet.x, f.feet.y, { rx: 120, ry: 30, c: 'gold', w: 4 }), _MV.crack(f.feet.x, f.feet.y, { s: 1.5, c: 'gold' }), _MV.star(f.x, f.y - 20, { s: 70, c: 'gold' })]);
+      S.push([2100, _mPO(f, '')], [2200, { bars: false }]);
+      return { steps: S, T: 1620, dur: 2800, extra: () => { const g = [[f.x - 80 * d, f.y - 84, f.x + 60 * d, f.y + 70, 30 * d], [f.x + 70 * d, f.y - 80, f.x - 70 * d, f.y + 74, 30 * d], [f.x - 90 * d, f.y + 10, f.x + 86 * d, f.y - 14, 16 * d]][Math.floor(rnd(3))]; return [_MV.slash(g[0] + (rnd(30) - 15), g[1] + (rnd(30) - 15), g[2], g[3], { b: g[4], w: 3, c: 'gold2' })]; } };
+    }
+    if (style === 'magic') {
+      const stars = [[-90, 14], [-40, 44], [10, 6], [60, 38], [100, 18]];
+      S.push([0, Object.assign({ bars: true, light: 'dark', wash: 'rgba(125,211,252,.3)' }, _mPO(a, 'p-sky'), _mGL(a, 'arcane'))]);
+      S.push([200, { vfxAdd: stars.map(([ox, oy], i) => _MV.glint(f.x + ox, oy, { d: i * 100 })) }], [800, _mPO(a, 'p-castf')]);
+      S.push([800, { vfxAdd: stars.map(([ox, oy], i) => _MV.proj(f.x + ox, oy, f.x + ox * 0.3, f.y - 30 + (i % 2) * 40, { kind: 'star', dur: 200, c: 'frost', d: i * 110 })) }]);
+      stars.forEach(([ox], i) => { S.push([1000 + i * 110, Object.assign({ vfxAdd: [_MV.star(f.x + ox * 0.3, f.y - 30 + (i % 2) * 40, { s: 22, c: 'frost' })], cam: 'c-small' }, _mFL(f, 'frost'))]); });
+      S.push([1500, { vfxAdd: [_MV.charge(f.x, -20, { s: 160, dur: 300, c: 'frost' })] }], [1800, { vfxAdd: [_MV.proj(f.x + 40, -120, f.x, f.y - 10, { kind: 'meteor', dur: 180, c: 'frost' })] }]);
+      big(1980, [_MV.burst(f.x, f.y - 10, { s: 300, c: 'frost' }), _MV.burst(f.x, f.y - 10, { s: 200, c: 'arcane', d: 60 }), _MV.crack(f.feet.x, f.feet.y, { s: 1.5, c: 'frost' }), _MV.ring(f.feet.x, f.feet.y, { rx: 120, ry: 30, c: 'frost', w: 4 }), _MV.star(f.x, f.y - 20, { s: 70, c: 'white' })], 'p-crush', 'frost');
+      S.push([2400, Object.assign(_mPO(f, ''), _mPO(a, ''), _mGL(a, null))], [2500, { bars: false }]);
+      return { steps: S, T: 1980, dur: 3000, extra: () => { const ox = rnd(200) - 100; return [_MV.proj(f.x + ox, 10, f.x + ox * 0.3, f.y - 10 + rnd(40), { kind: 'star', dur: 220, c: 'frost' }), _MV.star(f.x + ox * 0.3, f.y - 10, { s: 18, c: 'frost', d: 220 })]; } };
+    }
+    const e = d, xs = []; for (let i = 0; i < 14; i++) xs.push(f.x - 70 + i * 10.8);
+    S.push([0, Object.assign({ bars: true, light: 'dim' }, _mPO(a, 'p-drawlong'))], [300, { vfxAdd: [_MV.tens(a.hand.y - 12, { life: 300 })] }], [600, Object.assign(_mPO(a, 'p-release'), { vfxAdd: [_MV.proj(a.hand.x, a.hand.y - 20, a.hand.x + 80 * e, -80, { kind: 'arrow', dur: 160 })] })], [760, _mPO(a, 'p-draw')]);
+    S.push([900, { vfxAdd: xs.map((x, i) => _MV.proj(x + 30, -60, x, f.y - 60 + (i % 3) * 45, { kind: 'arrow', dur: 140, d: i * 40 })).concat(xs.map((x, i) => _MV.star(x, f.y - 60 + (i % 3) * 45, { s: 12, c: 'white', d: 140 + i * 40 }))) }]);
+    [1040, 1200, 1360].forEach((tt) => { S.push([tt, Object.assign({ cam: 'c-small' }, _mFL(f, 'white'))]); });
+    S.push([1700, Object.assign(_mPO(a, 'p-drawlong'), { light: 'dark', vfxAdd: [_MV.tens(a.hand.y - 12, { life: 200 })] })], [1900, Object.assign(_mPO(a, 'p-release'), { vfxAdd: [_MV.proj(a.hand.x, a.hand.y - 12, f.x - 10 * e, f.y - 30, { kind: 'arrow', dur: 90, c: 'gold' })] })]);
+    big(1990, [_MV.line(a.hand.x + 20 * e, a.hand.y - 12, f.x - 10 * e, f.y - 30, { w: 4, c: 'gold', keep: true }), _MV.star(f.x - 8 * e, f.y - 26, { s: 60, c: 'gold' }), _MV.ring(f.x - 8 * e, f.y - 26, { rx: 50, ry: 50, c: 'gold', w: 3 })], 'p-recoil2', 'gold');
+    S.push([2450, Object.assign(_mPO(f, ''), _mPO(a, ''))], [2500, { bars: false }]);
+    return { steps: S, T: 1990, dur: 3000, extra: () => { const x = f.x - 80 + rnd(160), y = f.y - 70 + rnd(100); return [_MV.proj(x + 30, -60, x, y, { kind: 'arrow', dur: 140 }), _MV.star(x, y, { s: 12, c: 'white', d: 140 })]; } };
+  }
+  // ── press-and-hold on a HEAVY card: after 180 ms the stage darkens, an aura swells at the weapon hand, a tension
+  //    line hums and the hunter holds the wind-up. Release swings (the wind-up is spent, the strike comes 120 ms
+  //    later). Nothing but the picture changes — the number was decided before the card was touched. ──
+  let _pkbHoldSt = null;
+  function _pkbHoldDown(moveId) {
+    _pkbHoldEnd(false);
+    const row = _PKB_MV[moveId];
+    if (!row || !row.heavy || !_arSess || _arSess.done || _pkbBusy || _arView !== 'battle' || (_arSess._pvp)) return;
+    const st = { id: moveId, charging: false, timer: null };
+    st.timer = setTimeout(() => {
+      if (_pkbHoldSt !== st || !_arSess || _pkbBusy) return;
+      const c = _pkbMvCtx('p'); if (!c) return;
+      st.charging = true;
+      _pkbSpdSync();
+      const L = _pkbMvLayers(c), stage = L && L.stage, you = _pkbEl('pkb-spot-p');
+      if (stage) stage.classList.add('m-charging');
+      if (L) { try { L.dom.insertAdjacentHTML('beforeend', '<div class="mcharge" style="left:' + c.atk.hand.x + 'px;top:' + (c.atk.hand.y - 12) + 'px;--c:' + _pkbMCol(row.tint) + '"></div><div class="tens hum" style="top:' + (c.atk.hand.y - 12) + 'px"></div>'); } catch (_) {} }
+      if (you) { _pkbMvPose(you, _PKB_HOLD_POSE[row.body] || 'p-wind'); _pkbMvStrip(you, 'mg-'); you.classList.add('mg-' + row.tint); }
+      try { const card = document.querySelector('#pkb-moves [data-move="' + moveId + '"]'); if (card) card.classList.add('hold'); } catch (_) {}
+      try { _hapticTick('LIGHT'); } catch (_) {}
+    }, 180);
+    _pkbHoldSt = st;
+  }
+  // returns true when the release should PLAY the move as held (the card was charging)
+  function _pkbHoldEnd(fire) {
+    const st = _pkbHoldSt; _pkbHoldSt = null;
+    if (!st) return false;
+    if (st.timer) clearTimeout(st.timer);
+    try { document.querySelectorAll('#pkb-moves .ar-bmove.hold').forEach((el) => el.classList.remove('hold')); } catch (_) {}
+    if (!st.charging) return false;
+    if (!fire) { _pkbMvReset(); return false; }
+    _pkbHeldMv = st.id;   // the hit beat keeps the pose and starts from the held wind-up; _pkbMvReset clears the aura
+    return true;
+  }
+  // ── ambient status loops: the body carries the state the chip names (3–5 nodes each, transform/opacity only) ──
+  function _pkbLoopsPaint(side, S) {
+    const spot = _pkbEl('pkb-spot-' + side); if (!spot || !S) return;
+    const st = [];
+    (S.mods || []).forEach((x) => { if (x.k === 'dot') st.push(x.kind === 'bleed' ? 'bleed' : 'burn'); else if (x.k === 'atk') st.push(x.mag > 0 ? 'atkup' : 'atkdown'); else if (x.k === 'shred') st.push('shred'); else if (x.k === 'dodge') st.push('evade'); });
+    if (S.stun > 0) st.push('stun');
+    const key = st.slice().sort().join(',');
+    let box = spot.querySelector('.pkb-loops');
+    if (box && box.getAttribute('data-k') === key) return;
+    if (!box) { box = document.createElement('div'); box.className = 'pkb-loops'; box.setAttribute('aria-hidden', 'true'); spot.appendChild(box); }
+    box.setAttribute('data-k', key);
+    box.style.setProperty('--dir', side === 'p' ? '1' : '-1');
+    try { const b = _pkbFigBox(side), r = spot.getBoundingClientRect(), sr = _pkbEl('pkb-stage').getBoundingClientRect(); if (b) { box.style.left = (b.x - (r.left - sr.left)).toFixed(1) + 'px'; box.style.top = (b.top - (r.top - sr.top) + b.h * 0.46).toFixed(1) + 'px'; box.style.setProperty('--hd', (-b.h * 0.3).toFixed(0) + 'px'); } } catch (_) {}
+    const has = (k) => st.indexOf(k) !== -1;
+    let h = '';
+    if (has('burn')) h += '<div class="lp-burn">' + [[-22, 20], [-10, 0], [2, 30], [14, 10], [26, 24]].map(([ox, oy], i) => '<i style="--x:' + ox + 'px;--y:' + oy + 'px;--d:' + (i * 320) + 'ms"></i>').join('') + '</div>';
+    if (has('bleed')) h += '<div class="lp-bleed">' + [-12, 2, 14].map((ox, i) => '<i style="--x:' + ox + 'px;--y:' + (8 + i * 6) + 'px;--d:' + (i * 480) + 'ms"></i>').join('') + '</div>';
+    if (has('stun')) h += '<div class="lp-stun"><div class="sp">' + [0, 120, 240].map((r) => '<i style="--r:' + r + 'deg"></i>').join('') + '</div></div>';
+    if (has('shred')) h += '<div class="lp-shred">' + [[-18, -30, -35], [10, -12, 40], [-6, 14, -20], [16, 28, 30]].map(([ox, oy, r], i) => '<i style="--x:' + ox + 'px;--y:' + oy + 'px;--r:' + r + 'deg;--d:' + (i * 300) + 'ms"></i>').join('') + '</div>';
+    if (has('atkup')) h += '<div class="lp-atkup">' + [-16, -2, 12, 26].map((ox, i) => '<i style="--x:' + ox + 'px;--y:' + (-40 + (i % 2) * 20) + 'px;--d:' + (i * 320) + 'ms"></i>').join('') + '</div>';
+    if (has('atkdown')) h += '<div class="lp-atkup lp-atkdown">' + [-14, 2, 18].map((ox, i) => '<i style="--x:' + ox + 'px;--y:' + (-30 + (i % 2) * 20) + 'px;--d:' + (i * 400) + 'ms"></i>').join('') + '</div>';
+    box.innerHTML = h;
+    spot.classList.toggle('s-burn', has('burn')); spot.classList.toggle('s-evade', has('evade')); spot.classList.toggle('s-atkup', has('atkup'));
+  }
+  function _pkbImpactFx(e, defSide, dmgShown, row, stop) {
+    // W1141 — row = the move's motion row (its layers drew the strike; the knockback waits out the hit-stop)
     // crit also gives the whole stage a quick nudge for weight
     if (e.crit) { const stage = _pkbEl('pkb-stage'); if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); } }
     // W752 — crit zoom: the stage leans in for a beat on a crit (transform-only).
@@ -17760,13 +18396,13 @@
       const defMax = s2 ? (defSide === 'p' ? s2.pMax : s2.bMax) : 0;
       const kb = 4 + Math.min(12, defMax > 0 ? (dmgShown / defMax) * 60 : 0);
       const spot = _pkbEl('pkb-spot-' + defSide);
-      if (spot) {
+      if (spot && !(row && row.react)) {   // W1141 — a move with its own reaction pose (Quake's crush, Force Wave's push) skips the knockback
         spot.style.setProperty('--kb', kb.toFixed(1) + 'px');
         spot.classList.remove('kb-hit'); void spot.offsetWidth; spot.classList.add('kb-hit');
-        _pkbAfter(460, () => { try { spot.classList.remove('kb-hit'); } catch (_) {} });
+        _pkbAfter(460 + (stop || 0), () => { try { spot.classList.remove('kb-hit'); } catch (_) {} });
       }
     } catch (_) {}
-    try { _pkbStrikeFx(defSide, e.gl, !!(e.crit || e.ult), !!(e.exe || e.ult)); } catch (_) {}   // W428 strike · W757 execute signature · W1135 ultimate
+    if (!row && !e.ult) { try { _pkbStrikeFx(defSide, e.gl, !!(e.crit || e.ult), !!(e.exe || e.ult)); } catch (_) {} }   // W428 strike · W757 execute signature — W1141: the motion library draws the strike when it has a row
     // W429 — defender's recoil + red flash + sparks. W759 — a defender with an
     // ACTIVE guard (guard charge or def-up brace) reads the hit as an ABSORB:
     // the braced flinch + ward dome (the 'resist' react) instead of the raw
@@ -17905,21 +18541,36 @@
       // W752 — hit-stop: a hard freeze between impact and drain (crits hold
       // longer, finishers longest). The oldest trick in fighting games; all
       // three durations scale under FF via _pkbAfter.
-      const hitstop = willKO ? 240 : e.crit ? 140 : 80;
+      const hitstop = (willKO || e.ult) ? 240 : e.crit ? 140 : 80;   // W1141 — the ultimate's blow freezes longest
       _pkbSay(used, _PKB_T.announceHold, () => {
         const atk = _pkbEl('pkb-spot-' + e.side);
         try { _audCue('lunge'); } catch (_) {}
-        // W758 -- the character performs the MOVE, not just a step: family class
-        // on the spot (keyframes ride .spr), simple lunge slide kept beneath as
-        // the reduced-motion fallback. Impact waits for the wind-up's hit frame.
-        const fam = _pkbAtkFam(e);
-        const windup = Math.max(_PKB_T.lunge, _PKB_ATK_MS[fam] || _PKB_T.lunge);
-        if (atk) {
-          atk.classList.remove('atk-heavy', 'atk-fast', 'atk-blunt', 'atk-ranged', 'atk-magic', 'atk-exe');
-          void atk.offsetWidth;
-          atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe', 'atk-' + fam);
-          _pkbAfter(windup + 220, () => atk.classList.remove('lunge-you', 'lunge-foe', 'telegraph', 'atk-' + fam));
+        // W1141 — the move's own motion (the motion library): body + strike shape + camera, keyed by move id; the
+        // impact waits for its hit frame. The W758 family lunge stays as the fallback when the stage can't be measured.
+        const row = _pkbMvRow(e), ctx = (row || e.ult) ? _pkbMvCtx(e.side) : null;
+        let windup, seq = null;
+        if (ctx) {
+          const held = e.side === 'p' && _pkbHeldMv && _pkbHeldMv === _pkbMvId(e);
+          if (e.side === 'p') _pkbHeldMv = null;
+          seq = e.ult ? _pkbUltSeq(_arUltStyle(s), ctx) : _pkbCompose(row, ctx, { land: true, crit: !!e.crit, kill: willKO, held: !!held });
+          _pkbMvPlay(seq, ctx, { keepPose: !!held, ult: !!e.ult });
+          windup = seq.T;
+          if (atk) atk.classList.remove('telegraph');
+        } else {
+          // W758 -- the character performs the MOVE, not just a step: family class
+          // on the spot (keyframes ride .spr), simple lunge slide kept beneath as
+          // the reduced-motion fallback. Impact waits for the wind-up's hit frame.
+          const fam = _pkbAtkFam(e);
+          windup = Math.max(_PKB_T.lunge, _PKB_ATK_MS[fam] || _PKB_T.lunge);
+          if (atk) {
+            atk.classList.remove('atk-heavy', 'atk-fast', 'atk-blunt', 'atk-ranged', 'atk-magic', 'atk-exe');
+            void atk.offsetWidth;
+            atk.classList.add(e.side === 'p' ? 'lunge-you' : 'lunge-foe', 'atk-' + fam);
+            _pkbAfter(windup + 220, () => atk.classList.remove('lunge-you', 'lunge-foe', 'telegraph', 'atk-' + fam));
+          }
         }
+        const mrow = (ctx && !e.ult) ? row : null;
+        const subGap = (h) => (mrow && mrow.sub && mrow.sub[h] != null && mrow.sub[h - 1] != null) ? (mrow.sub[h] - mrow.sub[h - 1]) : _PKB_T.multiHit;   // W1141 — the row's own sub-hit rhythm
         _pkbAfter(windup, () => {
           if (hits > 1) {
             // MULTI-HIT: rapid sub-impacts (the weapon's identity), numbers
@@ -17928,9 +18579,9 @@
             let h = 0;
             const sub = () => {
               if (!_arSess) return;
-              _pkbImpactFx(e, defSide, h === hits - 1 ? (e.dmg || 0) - per * (hits - 1) : per);
+              _pkbImpactFx(e, defSide, h === hits - 1 ? (e.dmg || 0) - per * (hits - 1) : per, mrow, h === hits - 1 ? hitstop : 0);
               h += 1;
-              if (h < hits) { _pkbAfter(_PKB_T.multiHit, sub); return; }
+              if (h < hits) { _pkbAfter(subGap(h), sub); return; }
               if (willKO) _pkbFinisherFx();
               _pkbAfter(hitstop, () => {
                 if (!_arSess) return;
@@ -17941,7 +18592,7 @@
             };
             sub();
           } else {
-            _pkbImpactFx(e, defSide, e.dmg || 0);
+            _pkbImpactFx(e, defSide, e.dmg || 0, mrow, hitstop);
             if (willKO) _pkbFinisherFx();
             _pkbAfter(hitstop, () => {
               if (!_arSess) return;
@@ -17964,38 +18615,58 @@
         try { _pkbIntentFlare(); } catch (_) {}
         _pkbSay(foeName + ' used ' + mvN.toUpperCase() + '!', _PKB_T.announceHold, () => {
           try { _audCue('lunge'); } catch (_) {}
-          if (foeSpot) { foeSpot.classList.add('lunge-foe'); _pkbAfter(_PKB_T.lunge + 220, () => { try { foeSpot.classList.remove('lunge-foe', 'telegraph'); } catch (_) {} }); }
-          _pkbAfter(_PKB_T.lunge, () => {
+          // W1141 — the read as a clash (the motion library): the foe winds up and swings, the hunter answers — a fan
+          // of white sparks at the meeting point (lightning catches the blade on a Surge parry), an afterimage where
+          // the hunter stood, or the curse flattening against a teal dome. The W1140 lunge is the fallback.
+          const ctx = _pkbMvCtx('b'), seq = ctx ? _pkbReadSeq(k, ctx, !!e.surge) : null;
+          if (seq) { if (foeSpot) foeSpot.classList.remove('telegraph'); _pkbMvPlay(seq, ctx, {}); }
+          else if (foeSpot) { foeSpot.classList.add('lunge-foe'); _pkbAfter(_PKB_T.lunge + 220, () => { try { foeSpot.classList.remove('lunge-foe', 'telegraph'); } catch (_) {} }); }
+          _pkbAfter(seq ? seq.T : _PKB_T.lunge, () => {
             const you = _pkbEl('pkb-spot-p');
-            if (k === 'sidestep') { try { _audCue('miss_dodge'); } catch (_) {} try { _pkbReactFx('p', 'dodge'); } catch (_) {} }
+            if (k === 'sidestep') { try { _audCue('miss_dodge'); } catch (_) {} if (!seq) { try { _pkbReactFx('p', 'dodge'); } catch (_) {} } }
             else {
               try { _audCue(k === 'parry' ? 'hit_heavy' : 'status_buff'); } catch (_) {}
-              try { _pkbReactFx('p', 'resist'); } catch (_) {}
-              if (you && k === 'parry') { you.classList.remove('parried'); void you.offsetWidth; you.classList.add('parried'); _pkbAfter(520, () => { try { you.classList.remove('parried'); } catch (_) {} }); }
-              const st = _pkbEl('pkb-stage'); if (st && k === 'parry') { st.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => st.classList.remove('nudge')); }
+              if (!seq) {
+                try { _pkbReactFx('p', 'resist'); } catch (_) {}
+                if (you && k === 'parry') { you.classList.remove('parried'); void you.offsetWidth; you.classList.add('parried'); _pkbAfter(520, () => { try { you.classList.remove('parried'); } catch (_) {} }); }
+                const st = _pkbEl('pkb-stage'); if (st && k === 'parry') { st.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => st.classList.remove('nudge')); }
+              }
             }
             try { _hapticTick(k === 'parry' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
             try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
-            _pkbToast(k === 'parry' ? 'PARRY!' : k === 'sidestep' ? 'SIDESTEP!' : 'WARDED!', 'read', 'crit', () => readDone(next));
+            _pkbAfter(seq ? 120 : 0, () => _pkbToast(k === 'parry' ? 'PARRY!' : k === 'sidestep' ? 'SIDESTEP!' : 'WARDED!', 'read', 'crit', () => readDone(next)));
           });
         });
       } else if (k === 'reflect') {
         try { _audCue('status_buff'); } catch (_) {}
         try { _hapticTick('LIGHT'); } catch (_) {}
-        try { _pkbFocusFx('p', 'charge', '#a78bfa', 'rgba(167,139,250,.5)'); } catch (_) {}
-        try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
-        _pkbToast('REFLECTED!', 'read violet', 'crit', () => readDone(next));
+        // W1141 — the sigil is caught, turns gold, is flung back and shatters on the foe
+        const ctx = _pkbMvCtx('b'), seq = ctx ? _pkbReadSeq('reflect', ctx) : null;
+        if (seq) _pkbMvPlay(seq, ctx, {}); else { try { _pkbFocusFx('p', 'charge', '#a78bfa', 'rgba(167,139,250,.5)'); } catch (_) {} }
+        _pkbAfter(seq ? seq.T : 0, () => { try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {} _pkbToast('REFLECTED!', 'read violet', 'crit', () => readDone(next)); });
       } else if (k === 'interrupt') {
         try { _audCue('hit_heavy'); } catch (_) {}
         try { _hapticTick('LIGHT'); } catch (_) {}
-        try { _pkbReactFx('b', 'shred'); } catch (_) {}
-        try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
-        _pkbToast('INTERRUPTED!', 'read', 'crit', () => readDone(next));
+        // W1141 — the swelling aura shatters mid-swell; shards fly, the foe staggers
+        const ctx = _pkbMvCtx('b'), seq = ctx ? _pkbReadSeq('interrupt', ctx) : null;
+        if (seq) _pkbMvPlay(seq, ctx, {}); else { try { _pkbReactFx('b', 'shred'); } catch (_) {} }
+        _pkbAfter(seq ? seq.T : 0, () => { try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {} _pkbToast('INTERRUPTED!', 'read', 'crit', () => readDone(next)); });
       } else { _pkbSay(e.text || '…', _PKB_T.statusHold, next); }
-    } else if (e.t === 'miss') {
-      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('MISS', 'miss', 'miss', next); });
-    } else if (e.t === 'dodge') {
-      _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} try { _pkbReactFx(e.side === 'p' ? 'b' : 'p', 'dodge'); } catch (_) {} _pkbToast('DODGED!', 'miss', 'miss', next); });
+    } else if (e.t === 'miss' || e.t === 'dodge') {
+      // W1141 — the swing still happens: the motion plays and finds air (a dodge steps the defender aside first,
+      // leaving an afterimage), then the toast. Without a measurable stage: the W429 dodge react + the toast.
+      const dodge = e.t === 'dodge';
+      _pkbSay(used, _PKB_T.announceHold, () => {
+        const row = _pkbMvRow(e), ctx = row ? _pkbMvCtx(e.side) : null;
+        if (e.side === 'p') _pkbHeldMv = null;
+        let at = 0;
+        if (ctx) { const seq = _pkbCompose(row, ctx, { land: false, dodge }); _pkbMvPlay(seq, ctx, {}); at = seq.T; }
+        _pkbAfter(at, () => {
+          try { _audCue('miss_dodge'); } catch (_) {}
+          if (dodge && !ctx) { try { _pkbReactFx(e.side === 'p' ? 'b' : 'p', 'dodge'); } catch (_) {} }
+          _pkbToast(dodge ? 'DODGED!' : 'MISS', 'miss', 'miss', next);
+        });
+      });
     } else if (e.t === 'dot') {
       // drain animates DURING the dwell — start it as the line lands, hold covers it
       const defSide = e.side === 'p' ? 'b' : 'p';
@@ -18018,9 +18689,14 @@
       const plate = _pkbEl('pkb-plate-' + e.side);
       if (plate) { plate.classList.add('healed'); _pkbAfter(420, () => plate.classList.remove('healed')); }
       try { _audCue('heal'); } catch (_) {}
+      // W1141 — Last Vow rains gold upward (its own row); a strike-heal (Siphon, Ward Strike) already drew its green
+      // return in the hit, so only the number and the mend ring follow. The W759 renewal aura is the fallback.
+      let hrow = null;
+      try { const hid = _pkbTurnMv[e.side], r = hid && _PKB_MV[hid]; if (r) { hrow = r; if (r.stance) { const ctx = _pkbMvCtx(e.side); if (ctx) _pkbMvPlay(_pkbCompose(r, ctx, {}), ctx, {}); } } } catch (_) {}
+      if (m2) { try { _pkbFloat(e.side === 'p' ? 'b' : 'p', '+' + parseInt(m2[1], 10), false, 'heal'); } catch (_) {} }
       // W759 — heals read as RENEWAL, not a generic gold channel: teal-green
       // charge aura + a body lift-breathe + floating crosses on the healed side.
-      try { _pkbFocusFx(e.side, 'charge', '#5eead4', 'rgba(94,234,212,.5)'); } catch (_) {}
+      if (!hrow) { try { _pkbFocusFx(e.side, 'charge', '#5eead4', 'rgba(94,234,212,.5)'); } catch (_) {} }
       try { _pkbReactFx(e.side, 'mend'); } catch (_) {}
       _pkbSay(e.text, _PKB_T.dotHold, next);
     } else if (e.t === 'fx') {
@@ -18030,7 +18706,17 @@
       // the caster's name + side; debuffs/DoTs name the defender, so they're excluded).
       // W758 -- caster BODY language on self-buffs: defensive lines plant into a
       // braced squat; empowering lines rise. Composes with the W431 aura FX.
+      // W1141 — the stance's own motion (the motion library): Guard plants a kite-shield of light, Brace cracks the
+      // ground, Refuse burns the afflictions off under a white ring, Bulwark lands in three beats, Focus inhales motes,
+      // Temper shimmers with embers, Evade splits a ghost aside, Tumble rolls, Dispel pulls threads off the body, Mana
+      // Ward raises a dome of runes. The turn's own move id picks the row (these lines name no move).
+      let mrow = null;
       try {
+        const selfLine = !cau && tx.indexOf('readied') === -1 && (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1 || tx.indexOf('refuses') !== -1 || tx.indexOf('attack up') !== -1 || tx.indexOf('evasive') !== -1 || tx.indexOf('bulwark') !== -1);
+        const mid = selfLine ? _pkbTurnMv[e.side] : null, r = mid && _PKB_MV[mid];
+        if (r && r.stance) { const ctx = _pkbMvCtx(e.side); if (ctx) { _pkbMvPlay(_pkbCompose(r, ctx, {}), ctx, {}); mrow = r; } }
+      } catch (_) {}
+      if (!mrow) try {
         const spot = _pkbEl('pkb-spot-' + e.side);
         if (spot && (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1 || tx.indexOf('refuses') !== -1)) {
           spot.classList.add('st-brace'); _pkbAfter(700, () => { try { spot.classList.remove('st-brace'); } catch (_) {} });
@@ -18038,7 +18724,7 @@
           spot.classList.add('st-rise'); _pkbAfter(700, () => { try { spot.classList.remove('st-rise'); } catch (_) {} });
         }
       } catch (_) {}
-      try {
+      if (!mrow) try {
         if (tx.indexOf('attack up') !== -1) _pkbFocusFx(e.side, 'buff', '#f0904a', 'rgba(240,144,74,.5)');           // Focus/Temper — fury
         else if (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1) _pkbFocusFx(e.side, 'buff', '#7dd3fc', 'rgba(125,211,252,.5)');   // Brace/Guard
         else if (tx.indexOf('evasive') !== -1) _pkbFocusFx(e.side, 'buff', '#c084fc', 'rgba(192,132,252,.5)');       // Evade
@@ -18187,6 +18873,7 @@
     _pkbClutch = false; _pkbLastStand = { p: false, b: false }; _pkbHeartStop();   // W260 — fresh wire state
     _pkbFightT0 = Date.now();   // W242 — duration instrumentation (logged at KO)
     _pkbIntentShown = null; _arLastFoeHit = null;
+    _pkbTurnMv = { p: null, b: null }; _pkbHeldMv = null; _pkbUltLive = null; _pkbHoldSt = null;   // W1141
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const isBoss = !!m.bot.isBoss;
     // W1135 — the boss intro card carries the taunt now, so every fight opens on the same line.
@@ -19107,17 +19794,40 @@
     if (closeBtn) closeBtn.addEventListener('click', _arExit);
     // W238 — hold ≥250ms anywhere during beat playback = 2× fast-forward
     // W1135 — the 1×/2× pill makes FF sticky for the Ascent; the hold still works on top of it.
+    // W1141 — the move tap, shared by the click and a hold's release
+    const _pkbTapMove = (act, held) => {
+      if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
+      try { act.classList.add('sel'); } catch (_) {}                       // W531 — Forged Plate: light the committed move (persists through the PvP wait-lock)
+      const mv = act.getAttribute('data-move');
+      if (_arSess._pvp) { _pvpOnMoveTap(mv); return; }                     // W404 — duel: submit intent to the server
+      _pkbTurnMv = { p: mv, b: (_arSess._bNext && _arSess._bNext.id) || null };   // W1141 — the stance lines name no move; the turn's ids do
+      if (!held) _pkbHeldMv = null;
+      if (mv === 'ultimate') { _pkbUnleash(); return; }                    // W1135 — full Surge: the cut-in, then the turn
+      const ev = arenaTakeTurn(_arSess, mv);
+      if (!ev) { _pkbHeldMv = null; if (held) _pkbMvReset(); return; }      // invalid / on cooldown (a refused hold drops its wind-up)
+      try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}                // W243 — gesture + tap click
+      _pkbPlay(ev);                                                        // beats handle sfx/haptics/HP/toasts; unlocks on drain
+    };
     let ffHeld = false;
-    ov.addEventListener('pointerdown', () => {
-      if (_arView !== 'battle' || !_pkbBusy) return;
+    ov.addEventListener('pointerdown', (e) => {
+      if (_arView !== 'battle') return;
+      // W1141 — press-and-hold on a HEAVY card winds it up (cosmetic; the number was decided before the touch)
+      if (!_pkbBusy) { const card = e.target && e.target.closest ? e.target.closest('#pkb-moves [data-ar="move"]') : null; if (card) _pkbHoldDown(card.getAttribute('data-move')); return; }
+      // W1141 — a tap on the stage during an ultimate adds one more echo
+      if (_pkbUltLive && e.target && e.target.closest && e.target.closest('#pkb-stage') && _pkbUltTap()) return;
       if (_pkbFFTimer) clearTimeout(_pkbFFTimer);
-      _pkbFFTimer = setTimeout(() => { ffHeld = true; _pkbFF = true; try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
+      _pkbFFTimer = setTimeout(() => { ffHeld = true; _pkbFF = true; _pkbSpdSync(); try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
     });
-    const _pkbFFEnd = () => {
+    const _pkbFFEnd = (ev) => {
+      // W1141 — releasing a charging HEAVY swings it (the finger may have left the card; the click is then skipped)
+      if (_pkbHoldSt) {
+        const id = _pkbHoldSt.id, fire = _pkbHoldEnd(!!(ev && ev.type === 'pointerup'));
+        if (fire) { const card = document.querySelector('#pkb-moves [data-move="' + id + '"]'); if (card) _pkbTapMove(card, true); }
+      }
       const wasHold = ffHeld;
       ffHeld = false;
       if (_pkbFFTimer) { clearTimeout(_pkbFFTimer); _pkbFFTimer = null; }
-      _pkbFF = _pkbFFBase();
+      _pkbFF = _pkbFFBase(); _pkbSpdSync();
       try { ov.classList.remove('pkb-ff'); } catch (_) {}
       // W249 — a quick tap (no FF hold engaged) skips the intro splash / boss card / cut-in
       if (!wasHold && _pkbSplashSkip && _arView === 'battle') { const f = _pkbSplashSkip; _pkbSplashSkip = null; f(); }
@@ -19137,18 +19847,13 @@
       else if (a === 'fight' || a === 'rematch') { if (_arSess || _arView === 'fight' || _arView === 'vs' || _arView === 'bossintro' || _arView === 'battle' || _arRevealing) return; _arStartFight(parseInt(act.getAttribute('data-floor'), 10)); }
       else if (a === 'introgo') { _arCommitFight(); }
       else if (a === 'move')    {                                          // W238 — pick a move; the director plays the turn
-        if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
-        try { act.classList.add('sel'); } catch (_) {}                     // W531 — Forged Plate: light the committed move (persists through the PvP wait-lock)
-        if (_arSess._pvp) { _pvpOnMoveTap(act.getAttribute('data-move')); return; }   // W404 — duel: submit intent to the server
-        if (act.getAttribute('data-move') === 'ultimate') { _pkbUnleash(); return; }   // W1135 — full Surge: the cut-in, then the turn
-        const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
-        if (!ev) return;                                                   // invalid / on cooldown
-        try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}              // W243 — gesture + tap click
-        _pkbPlay(ev);                                                      // beats handle sfx/haptics/HP/toasts; unlocks on drain
+        if (_pkbHoldSt && _pkbHoldSt.charging) return;                    // W1141 — a charging hold fires on its release, not on the click
+        _pkbHoldEnd(false);
+        _pkbTapMove(act, false);
       }
       else if (a === 'movecd')  { try { _audCue('ui_denied'); } catch (_) {} }   // cooldown-locked move tapped
       else if (a === 'ff')      {                                          // W1135 — the 1×/2× pill (Ascent only; remembered for the session)
-        _pkbFFSticky = !_pkbFFSticky; _pkbFF = _pkbFFBase();
+        _pkbFFSticky = !_pkbFFSticky; _pkbFF = _pkbFFBase(); _pkbSpdSync();
         act.classList.toggle('on', _pkbFFSticky); act.textContent = _pkbFFSticky ? '2×' : '1×';
         try { _audCue('ui_tap'); } catch (_) {}
       }
@@ -28658,6 +29363,7 @@
       items: [
         { emoji: '', title: 'A new battle screen', description: "You and your foe face off full-size. Above its head the foe shows what it will do next." },
         { emoji: '', title: 'Read the foe', description: "Every move it shows has an answer. Parry a heavy with a guard move or your Surge, reflect a curse with a cleanse, interrupt a charge with any hit. Bosses fight to a rhythm you can learn." },
+        { emoji: '', title: 'Every move, its own motion', description: "A cleave sweeps, a bolt flies, a hex forms and shatters, a parry throws sparks. Hold a heavy card to wind it up; tap the stage during your ultimate for more." },
         { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
         { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },
