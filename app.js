@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1142'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1143'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -29364,6 +29364,7 @@
         { emoji: '', title: 'A new battle screen', description: "You and your foe face off full-size. Above its head the foe shows what it will do next." },
         { emoji: '', title: 'Read the foe', description: "Every move it shows has an answer. Parry a heavy with a guard move or your Surge, reflect a curse with a cleanse, interrupt a charge with any hit. Bosses fight to a rhythm you can learn." },
         { emoji: '', title: 'Every move, its own motion', description: "A cleave sweeps, a bolt flies, a hex forms and shatters, a parry throws sparks. Hold a heavy card to wind it up; tap the stage during your ultimate for more." },
+        { emoji: '', title: 'Frames, inks and auras', description: "Three more Wardrobe slots, every one earned: a frame around your portrait, an ink for your name, an aura of motes, embers, stormlight or stardust." },
         { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
         { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },
@@ -58248,6 +58249,12 @@
     } catch (_) {}
     const avatar = data.avatarId || 'avatar-base.png';
     const look = _pcLookTag(data.avatarId || '');   // W1129
+    // W1143 — the frame, the ink and the aura: the own card reads the Wardrobe's equips; another hunter's card reads
+    // the published ids (nothing yet: the heartbeat does not carry them until the backend does) and keeps the defaults.
+    const wFrame = isOwn ? _wxSlotWorn('frame') : (_wxSlotItem('frame', data.cardFrame) ? data.cardFrame : 'gilded');
+    const wInk = isOwn ? _wxSlotWorn('ink') : (_wxSlotItem('ink', data.cardInk) ? data.cardInk : 'ivory');
+    const wAura = isOwn ? _wxSlotWorn('aura') : (_wxSlotItem('aura', data.cardAura) ? data.cardAura : 'none');
+    const ink = _wxInk(wInk);
     const num = (n) => (n != null ? Number(n).toLocaleString('en-US') : '0');
     const floor = Math.max(0, data.bestFloor | 0);
     const shard = titleName ? '<div class="pc-shard" style="--pc-tier:' + tierColor + '"><i></i><span>' + esc(titleName) + '</span></div>' : '';
@@ -58299,14 +58306,14 @@
       }
     } catch (_) {}
     body.innerHTML =
-      '<div class="pc-hero"><div class="pc-med-wrap">' +
-        '<div class="pc-med"><span class="pc-med-ring"></span>' +
+      '<div class="pc-hero"><div class="pc-med-wrap">' + _wxAuraHtml(wAura, 1) +
+        '<div class="pc-med pc-fr-' + wFrame + '"' + (wFrame === 'rankforged' ? ' style="--pc-ring:' + rankColor + '"' : '') + '><span class="pc-med-ring"></span>' +
           '<span class="pc-gem n"></span><span class="pc-gem e"></span><span class="pc-gem s"></span><span class="pc-gem w"></span>' +
           '<div class="pc-med-portrait"><img src="' + esc(_bustSrc(avatar) || avatar) + '" alt="" onerror="this.style.display=\'none\'"></div></div>' +   // W711 — bust portrait (fallback full-body)
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"' + (look.color ? ' style="--pc-skin:' + look.color + '"' : '') + '><i></i><span>' + esc(look.name.toUpperCase()) + '</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias">' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div></div>' +
+      '<div class="pc-identity"><div class="pc-alias' + ink.cls + '"' + (ink.style ? ' style="' + ink.style + '"' : '') + '>' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div></div>' +
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
@@ -58485,6 +58492,66 @@
   const WX_BG = {}; WX_BGS.forEach(function (b) { WX_BG[b.id] = b; });
   function _wxSkinById(id) { return EARN_SKINS.find(function (s) { return s.id === id || s.file === id; }) || null; }
 
+  // ── W1143 — FRAMES · INKS · AURAS (Claude Design handoff 8 "Player Card - Wardrobe", owner 2026-11-07: "build the
+  // wardrobe tabs"). Three more slots, every item earned through play and claimed by the phone from its own numbers,
+  // like the backgrounds. The worn ids live in hb_card_frame / hb_card_ink / hb_card_aura ('' or absent = the default).
+  // The own card and the Wardrobe heroes wear them now; other hunters see them once the heartbeat publishes the three
+  // ids (a later W: public_profile_summary columns + the board rows). r: F common · R rare · L legendary · M mythic.
+  const WX_RAR4 = { F: { n: 'Common', c: '#8e8ea6' }, R: { n: 'Rare', c: '#5eead4' }, L: { n: 'Legendary', c: '#a78bfa' }, M: { n: 'Mythic', c: '#f5b842' } };
+  const WX_FRAMES = [
+    { id: 'gilded',     n: 'Gilded',      r: 'F', def: 1, cond: 'Yours from the start' },
+    { id: 'rankforged', n: 'Rank-forged', r: 'F', cond: 'Reach C rank',                 k: 'rank', goal: 'C',                                       line: 'C rank reached' },
+    { id: 'obsidian',   n: 'Obsidian',    r: 'R', cond: 'Slay 100 bosses',              k: 'num',  stat: 'kills', goal: 100, lab: 'Bosses slain',  line: 'A hundred bosses slain' },
+    { id: 'runebound',  n: 'Runebound',   r: 'L', cond: 'Clear Floor 50 of the Ascent', k: 'num',  stat: 'floor', goal: 50,  lab: 'Highest floor', line: 'Floor 50 cleared' },
+    { id: 'eclipse',    n: 'Eclipse',     r: 'M', cond: 'Reach S rank',                 k: 'rank', goal: 'S',                                       line: 'S rank reached' },
+  ];
+  const WX_INKS = [
+    { id: 'ivory',    n: 'Ivory',    r: 'F', def: 1, css: '#f5f3fb', cond: 'Yours from the start' },
+    { id: 'gold',     n: 'Gold',     r: 'R', css: '#f5b842', cond: 'Join the 100K Step Club, or be a Founder', k: 'any', of: [{ k: 'num', stat: 'week', goal: 1e5, lab: 'Best week', unit: 'steps' }, { k: 'founder' }], line: 'The 100K Step Club, or a Founder' },
+    { id: 'violet',   n: 'Violet',   r: 'R', css: '#a78bfa', cond: 'Reach A rank',                  k: 'rank', goal: 'A',                                                    line: 'A rank reached' },
+    { id: 'teal',     n: 'Teal',     r: 'R', css: '#5eead4', cond: 'Keep a streak for 30 days',     k: 'pips', stat: 'streak',  goal: 30,  lab: 'Best streak', unit: 'days', line: 'A 30-day streak' },
+    { id: 'ember',    n: 'Ember',    r: 'R', css: '#fb923c', cond: 'Slay 100 bosses',               k: 'num',  stat: 'kills',   goal: 100, lab: 'Bosses slain',              line: 'A hundred bosses slain' },
+    { id: 'rose',     n: 'Rose',     r: 'R', css: '#fb7185', cond: 'Own a mega-rare',               k: 'pips', stat: 'mega',    goal: 1,   lab: 'Mega-rares',                line: 'A mega-rare, owned' },
+    { id: 'frost',    n: 'Frost',    r: 'R', css: '#7dd3fc', cond: 'Clear Floor 40 of the Ascent',  k: 'num',  stat: 'floor',   goal: 40,  lab: 'Highest floor',             line: 'Floor 40 cleared' },
+    { id: 'dawn',     n: 'Dawn',     r: 'L', grad: '#fff4d6,#f5b842,#fff8e6,#e0a030,#fff4d6', glow: '#f5b842', cond: 'Reach S rank', k: 'rank', goal: 'S',                   line: 'S rank reached' },
+    { id: 'void',     n: 'Void',     r: 'L', grad: '#a78bfa,#e879f9,#c4b5fd,#e879f9,#a78bfa', glow: '#c084fc', cond: 'Raise 10 shadows', k: 'pips', stat: 'shadows', goal: 10, lab: 'Shadows', line: 'Ten shadows raised' },
+    { id: 'stardust', n: 'Stardust', r: 'M', grad: '#ffffff,#c4b5fd,#ffffff,#fde68a,#ffffff,#c4b5fd,#ffffff', glow: '#e9d5ff', cond: 'Walk 1,000,000 steps', k: 'num', stat: 'steps', goal: 1e6, lab: 'Lifetime steps', line: '1,000,000 steps walked' },
+  ];
+  const WX_AURAS = [
+    { id: 'none',     n: 'Still',      r: 'F', def: 1, cond: 'Yours from the start' },
+    { id: 'motes',    n: 'Gold Motes', r: 'R', c: '#f5b842', cond: 'Clear Floor 25 of the Ascent', k: 'num',  stat: 'floor',   goal: 25,  lab: 'Highest floor',  line: 'Floor 25 cleared' },
+    { id: 'embers',   n: 'Embers',     r: 'R', c: '#fb923c', cond: 'Slay 100 bosses',              k: 'num',  stat: 'kills',   goal: 100, lab: 'Bosses slain',   line: 'A hundred bosses slain' },
+    { id: 'storm',    n: 'Stormlight', r: 'L', c: '#7dd3fc', cond: 'Clear Floor 75 of the Ascent', k: 'num',  stat: 'floor',   goal: 75,  lab: 'Highest floor',  line: 'Floor 75 cleared' },
+    { id: 'void',     n: 'Void Wisps', r: 'L', c: '#8b5cf6', cond: 'Raise 10 shadows',             k: 'pips', stat: 'shadows', goal: 10,  lab: 'Shadows',        line: 'Ten shadows raised' },
+    { id: 'stardust', n: 'Stardust',   r: 'M', c: '#e9d5ff', cond: 'Walk 1,000,000 steps',         k: 'num',  stat: 'steps',   goal: 1e6, lab: 'Lifetime steps', line: '1,000,000 steps walked' },
+  ];
+  const WX_SLOTS = { frame: { key: 'hb_card_frame', list: WX_FRAMES, def: 'gilded' }, ink: { key: 'hb_card_ink', list: WX_INKS, def: 'ivory' }, aura: { key: 'hb_card_aura', list: WX_AURAS, def: 'none' } };
+  function _wxSlotItem(slot, id) { const S = WX_SLOTS[slot]; if (!S) return null; return S.list.find(function (x) { return x.id === id; }) || null; }
+  function _wxSlotWorn(slot) { const S = WX_SLOTS[slot]; let id = ''; try { id = localStorage.getItem(S.key) || ''; } catch (_) {} return _wxSlotItem(slot, id) ? id : S.def; }
+  function _wxSlotWear(slot, id) { const S = WX_SLOTS[slot]; try { localStorage.setItem(S.key, id === S.def ? '' : id); } catch (_) {} }
+  function _wxSlotEarned(slot, it, st) { return !!(it && (it.def || _wxProg(it, st || _wxStats()).done)); }
+  // the name in its ink: a solid colour, or a living gradient (background-clip text; the class carries the sweep)
+  function _wxInk(id) {
+    const it = _wxSlotItem('ink', id);
+    if (!it || it.def) return { cls: '', style: '' };
+    if (it.grad) return { cls: ' wx-ink-g', style: 'background-image:linear-gradient(100deg,' + it.grad + ');filter:drop-shadow(0 0 10px ' + it.glow + '77)' };
+    return { cls: ' wx-ink-s', style: 'color:' + it.css + ';text-shadow:0 0 18px ' + it.css + '66,0 2px 10px rgba(0,0,0,.6)' };
+  }
+  // ambient particles around a medallion; deterministic layout (stable across renders), transform/opacity only
+  const WX_AURA_CFG = { motes: { n: 18, s: [2, 4], t: [4, 7] }, embers: { n: 16, s: [2, 3.5], t: [2.2, 3.8] }, void: { n: 7, s: [26, 48], t: [5, 8] }, storm: { n: 10, s: [2, 3], t: [2.6, 4.6] }, stardust: { n: 16, s: [6, 11], t: [2.4, 4.2] } };
+  function _wxAuraHtml(id, scale) {
+    const cfg = WX_AURA_CFG[id], it = _wxSlotItem('aura', id); if (!cfg || !it) return '';
+    scale = scale || 1; let s = id.length * 131; const r = function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    let h = '<div class="wx-aura ' + id + '" style="--c:' + it.c + '" aria-hidden="true"><i class="wx-aura-glow"></i>';
+    const n = Math.max(3, Math.round(cfg.n * scale));
+    for (let i = 0; i < n; i++) {
+      const t = cfg.t[0] + r() * (cfg.t[1] - cfg.t[0]);
+      h += '<i class="wx-ap" style="--x:' + (12 + r() * 76).toFixed(1) + '%;--y:' + (24 + r() * 56).toFixed(1) + '%;--s:' + (cfg.s[0] + r() * (cfg.s[1] - cfg.s[0])).toFixed(1) + 'px;--t:' + t.toFixed(2) + 's;--d:' + (-r() * t).toFixed(2) + 's;--dx:' + ((r() - 0.5) * 44).toFixed(0) + 'px"></i>';
+    }
+    return h + '</div>';
+  }
+  try { window.__wxSlot = { worn: _wxSlotWorn, wear: _wxSlotWear, items: function (s) { return WX_SLOTS[s] ? WX_SLOTS[s].list : []; }, earned: function (s, id) { return _wxSlotEarned(s, _wxSlotItem(s, id)); } }; } catch (_) {}   // QA
+
   // ── colours: every tint is an rgb triplet so CSS can use rgba(var(--x-rgb), a) instead of mixing colours in CSS
   function _wxRgb(hex) { const h = String(hex || '#a78bfa').replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/(.)/g, '$1$1') : h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
   function _wxMix(hex, other, t) { const a = _wxRgb(hex), b = _wxRgb(other); return 'rgb(' + a.map(function (v, i) { return Math.round(v * t + b[i] * (1 - t)); }).join(',') + ')'; }
@@ -58558,6 +58625,7 @@
       case 'bin': return { p: st[it.stat] ? 1 : 0, done: !!st[it.stat] };
       case 'gate': { const a = st.gates[it.rk] || [], v = a.filter(function (x) { return x.done; }).length; return { p: a.length ? v / a.length : 0, have: v, goal: a.length, done: a.length > 0 && v === a.length }; }
       case 'founder': return { p: 0, done: !!st.founder };
+      case 'any': { const rs = (it.of || []).map(function (o) { return _wxProg(o, st); }); return rs.find(function (r) { return r.done; }) || rs.reduce(function (a, b) { return (!a || b.p > a.p) ? b : a; }, null) || { p: 0, done: false }; }   // W1143 — the gold ink: the club, or a Founder
       default: return { p: 1, done: true };
     }
   }
@@ -58595,6 +58663,10 @@
     r: '<svg width="9" height="14" viewBox="0 0 9 14"><path d="M1.5 1.5L7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     looks: '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="4.8" r="2.6"/><path d="M1.8 13c.6-2.9 2.7-4.4 5.2-4.4s4.6 1.5 5.2 4.4"/></svg>',
     bgs: '<svg width="15" height="13" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1" y="1.5" width="14" height="11" rx="2"/><path d="M1.6 10.6l4-4 3 3 2-2 3.8 3.4"/></svg>',
+    // W1143 — frames · inks · auras
+    frames: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/></svg>',
+    inks: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3s6 7 6 11.5A6 6 0 0 1 6 14.5C6 10 12 3 12 3Z"/></svg>',
+    auras: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.3 6.3 2.2-6.3 2.2L12 19l-2.2-6.3-6.3-2.2 6.3-2.2z"/></svg>',
   };
   function _wxRing(p, sw, r, vb) {
     const c = vb / 2;
@@ -58613,16 +58685,23 @@
     el.innerHTML =
       '<div class="wx-grab"></div><div class="wx-head"><span class="wx-k">THE WARDROBE</span><span class="wx-peek"><span class="wx-art"></span></span>' +
         '<button class="wx-xb" id="wd-close" type="button" aria-label="Close"><span>' + WX_IC.x + '</span></button></div>' +
-      '<div class="wx-tabs" role="tablist"><i class="wx-tab-ind"></i><button class="wx-tab" data-tab="looks" role="tab" type="button">' + WX_IC.looks + 'Looks</button>' +
-        '<button class="wx-tab" data-tab="bgs" role="tab" type="button">' + WX_IC.bgs + 'Backgrounds</button></div>' +
-      '<div class="wx-vp"><div class="wx-track"><section class="wx-pane" data-pane="looks"></section><section class="wx-pane" data-pane="bgs"></section></div></div>' +
+      '<div class="wx-tabs wx-tabs5" role="tablist"><i class="wx-tab-ind"></i><button class="wx-tab" data-tab="looks" role="tab" type="button">' + WX_IC.looks + 'Looks</button>' +
+        '<button class="wx-tab" data-tab="bgs" role="tab" type="button">' + WX_IC.bgs + 'Backgrounds</button>' +
+        '<button class="wx-tab" data-tab="frames" role="tab" type="button">' + WX_IC.frames + 'Frames</button>' +   // W1143 — three more slots
+        '<button class="wx-tab" data-tab="inks" role="tab" type="button">' + WX_IC.inks + 'Inks</button>' +
+        '<button class="wx-tab" data-tab="auras" role="tab" type="button">' + WX_IC.auras + 'Auras</button></div>' +
+      '<div class="wx-vp"><div class="wx-track wx-track5"><section class="wx-pane" data-pane="looks"></section><section class="wx-pane" data-pane="bgs"></section>' +
+        '<section class="wx-pane" data-pane="frames"></section><section class="wx-pane" data-pane="inks"></section><section class="wx-pane" data-pane="auras"></section></div></div>' +
       '<div class="wx-dt"><div class="wx-dt-back"></div><div class="wx-dt-panel"><div class="wx-dt-top"><span class="wx-grab"></span><button class="wx-xb wx-dt-x" type="button" aria-label="Close"><span>' + WX_IC.x + '</span></button></div>' +
         '<div class="wx-pager"><div class="wx-pgt"></div></div><div class="wx-dots"></div></div></div>';
     const $ = function (r, s) { return r.querySelector(s); }, $$ = function (r, s) { return Array.prototype.slice.call(r.querySelectorAll(s)); };
     const vp = $(el, '.wx-vp'), track = $(el, '.wx-track'), ind = $(el, '.wx-tab-ind'), pL = $(el, '[data-pane=looks]'), pB = $(el, '[data-pane=bgs]'),
+      pF = $(el, '[data-pane=frames]'), pI = $(el, '[data-pane=inks]'), pA = $(el, '[data-pane=auras]'),   // W1143
       dt = $(el, '.wx-dt'), panel = $(el, '.wx-dt-panel'), pager = $(el, '.wx-pager'), pgt = $(el, '.wx-pgt'), dots = $(el, '.wx-dots'), peek = $(el, '.wx-peek');
+    const TABS = ['looks', 'bgs', 'frames', 'inks', 'auras'], NT = TABS.length, PANE = { looks: pL, bgs: pB, frames: pF, inks: pI, auras: pA }, ixOf = function (t) { return Math.max(0, TABS.indexOf(t)); };   // W1143 — the track is NT panes wide
+    const SLOT_TAB = { frame: 'frames', ink: 'inks', aura: 'auras' }, TAB_SLOT = { frames: 'frame', inks: 'ink', auras: 'aura' };
     let newId = null; try { newId = localStorage.getItem(WX_NEW_KEY) || null; } catch (_) {}
-    const S = { look: getEquippedSkin() || '', bg: _cardBgEquipped() || 'basic', tab: 'looks', newId: newId };
+    const S = { look: getEquippedSkin() || '', bg: _cardBgEquipped() || 'basic', tab: 'looks', newId: newId, frame: _wxSlotWorn('frame'), ink: _wxSlotWorn('ink'), aura: _wxSlotWorn('aura') };   // W1143
     if (S.look && !_skinFileAllowed(S.look)) S.look = '';
     let st = _wxStats(), me = _wxMe();
     let tabAnims = [], dragPct = null, suppress = false, ringA = 0, pages = [], cur = -1, raf = 0, kindNow = 'sk';
@@ -58667,10 +58746,14 @@
       return '<button type="button" class="wx-lk' + (w ? ' is-worn' : '') + '" data-lk="' + esc(l.file || '') + '"><span class="wx-lk-port"><span class="wx-art" style="' + _wxLookArt(l.klass ? '' : l.file) + '"></span>' +
         (l.klass ? '<span class="wx-tagc">CLASS</span>' : '') + WX_GEMS + '</span><span class="wx-lk-nm">' + esc(l.name) + '</span><span class="wx-lk-st">' + (w ? 'WORN' : '') + '</span></button>';
     };
-    function renderLooks() {
-      pL.innerHTML = '<div class="wx-hl" data-r="' + lookR(S.look) + '" style="' + _wxTintStyle('mc', medTint(S.look)) + '"><div class="wx-med"><div class="wx-med-glow"></div>' + WX_RUNES +
+    // W1143 — the hero medallion wears the frame and the aura too (the Looks, Frames and Auras heroes share it)
+    const medHTML = function () {
+      return '<div class="wx-med wx-fr-' + S.frame + '"><div class="wx-med-glow"></div>' + WX_RUNES + _wxAuraHtml(S.aura, 1) +
         '<div class="wx-med-ring"><i class="wx-gem n"></i><i class="wx-gem e"></i><i class="wx-gem s"></i><i class="wx-gem w"></i></div>' +
-        '<div class="wx-med-frame"><div class="wx-art" style="' + _wxLookArt(S.look) + '"></div></div><div class="wx-med-sheen"></div><div class="wx-med-flash"></div><div class="wx-motes">' + WX_MOTES + '</div></div>' +
+        '<div class="wx-med-frame"><div class="wx-art" style="' + _wxLookArt(S.look) + '"></div></div><div class="wx-med-sheen"></div><div class="wx-med-flash"></div><div class="wx-motes">' + WX_MOTES + '</div></div>';
+    };
+    function renderLooks() {
+      pL.innerHTML = '<div class="wx-hl" data-r="' + lookR(S.look) + '" style="' + _wxTintStyle('mc', medTint(S.look)) + '">' + medHTML() +
         '<div class="wx-hl-nm">' + esc(lookName(S.look)) + '</div><div class="wx-hl-sub">' + subHTML(S.look) + '</div><div class="wx-hl-how">' + esc(howText(S.look)) + '</div></div><div class="wx-lk-list"></div>';
       renderLookTiles(); tilt($(pL, '.wx-med'), 16);
     }
@@ -58686,7 +58769,8 @@
 
     /* ---------- BACKGROUNDS ---------- */
     const cardIn = function () {
-      return '<div class="wx-card-in"><span class="wx-crest"><span class="wx-art" style="' + _wxLookArt(S.look) + '"></span></span><div class="wx-card-id"><div class="wx-card-nm">' + esc(me.name) + '</div>' +
+      const ik = _wxInk(S.ink);   // W1143
+      return '<div class="wx-card-in"><span class="wx-crest"><span class="wx-art" style="' + _wxLookArt(S.look) + '"></span></span><div class="wx-card-id"><div class="wx-card-nm' + ik.cls + '"' + (ik.style ? ' style="' + ik.style + '"' : '') + '>' + esc(me.name) + '</div>' +
         '<div class="wx-card-cl"><i></i>Rank ' + esc(me.rank) + ' · ' + esc(me.cls) + '</div></div><div class="wx-card-sc"><b>' + _wxFmt(me.steps) + '</b><small>STEPS</small></div></div>';
     };
     const bgArt = function (id) { return id === 'basic' ? '<div class="wx-art wx-basic"></div>' : '<div class="wx-art" style="' + _wxBgArt(id) + '"></div>'; };
@@ -58720,6 +58804,63 @@
       });
       $(pB, '.wx-bg-list').innerHTML = x;
     }
+
+    /* ---------- W1143 · FRAMES · INKS · AURAS ---------- */
+    const slState = function (slot, it) { return S[slot] === it.id ? 'worn' : _wxSlotEarned(slot, it, st) ? 'earned' : 'locked'; };
+    const slStateText = function (slot, it, state, pr) {
+      if (state === 'worn') return 'WORN';
+      if (state === 'earned') return it.def ? 'DEFAULT' : 'EARNED';
+      if (it.k === 'num') return _wxCmp(pr.have) + ' / ' + _wxCmp(pr.goal);
+      if (it.k === 'pips') return pr.have + ' / ' + pr.goal;
+      if (it.k === 'rank') return 'RANK ' + st.rank + ' / ' + it.goal;
+      return it.req || it.cond;
+    };
+    const slPrev = function (slot, it, big) {
+      if (slot === 'ink') { const ik = _wxInk(it.id); return '<span class="wx-ink-prev' + ik.cls + '"' + (ik.style ? ' style="' + ik.style + '"' : '') + '>' + esc(me.name) + '</span>'; }
+      const fr = slot === 'frame' ? it.id : S.frame, au = slot === 'aura' ? it.id : 'none';
+      return '<span class="wx-mini wx-fr-' + fr + (big ? ' big' : '') + '">' + (au !== 'none' ? _wxAuraHtml(au, big ? 0.7 : 0.45) : '') + '<i class="wx-art" style="' + _wxLookArt(S.look) + '"></i></span>';
+    };
+    const slTile = function (slot, it) {
+      const state = slState(slot, it), pr = it.def ? { p: 1 } : _wxProg(it, st), R = WX_RAR4[it.r] || WX_RAR4.F;
+      const seal = state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : state === 'worn' ? '<span class="wx-seal ok">' + WX_IC.check + '</span>' : '';
+      const bar = state === 'locked' && pr.p > 0 && pr.p < 1 ? '<span class="wx-bt-prog"><i style="width:' + (pr.p * 100).toFixed(1) + '%"></i></span>' : '';
+      return '<button type="button" class="wx-bt wx-sl wx-sl-' + slot + ' is-' + state + '" data-sl="' + slot + '" data-id="' + it.id + '" style="' + _wxTintStyle('rc', R.c) + '">' +
+        '<span class="wx-sl-prev">' + slPrev(slot, it) + '</span><span class="wx-bt-tx"><span class="wx-bt-nm">' + esc(it.n) + '</span><span class="wx-bt-st">' + esc(slStateText(slot, it, state, pr)) + '</span></span>' + seal + bar + '</button>';
+    };
+    const slHero = function (slot) {
+      const it = _wxSlotItem(slot, S[slot]) || WX_SLOTS[slot].list[0], R = WX_RAR4[it.r] || WX_RAR4.F;
+      const how = it.def ? 'Default' : 'Earned · ' + (it.line || it.cond);
+      const sub = it.def ? '' : '<span class="wx-rar" style="' + _wxTintStyle('c', R.c) + '">' + R.n + '</span>';
+      if (slot === 'ink') {
+        return '<div class="wx-hb"><div class="wx-card">' + bgArt(S.bg) + '<div class="wx-card-scrim"></div>' + cardIn() + '<div class="wx-card-sheen"></div><div class="wx-card-sweep"></div></div>' +
+          '<div class="wx-hb-nm">' + esc(it.n) + '</div><div class="wx-hl-sub">' + sub + '</div><div class="wx-hl-how">' + esc(how) + '</div></div>';
+      }
+      return '<div class="wx-hl" style="' + _wxTintStyle('mc', R.c) + '">' + medHTML() + '<div class="wx-hl-nm">' + esc(it.n) + '</div><div class="wx-hl-sub">' + sub + '</div><div class="wx-hl-how">' + esc(how) + '</div></div>';
+    };
+    const slLabel = { frame: 'The Smithy', ink: 'The Inkwell', aura: 'The Elements' };
+    function renderSlot(slot) {
+      const pane = PANE[SLOT_TAB[slot]], list = WX_SLOTS[slot].list, n = list.filter(function (it) { return _wxSlotEarned(slot, it, st); }).length;
+      pane.innerHTML = slHero(slot) + '<div class="wx-sec-h"><span>' + slLabel[slot] + '</span><i></i><b><em>' + n + '</em> / ' + list.length + '</b></div><div class="wx-slgrid">' + list.map(function (it) { return slTile(slot, it); }).join('') + '</div>';
+      const m = $(pane, '.wx-med'); if (m) tilt(m, 16);
+      const c = $(pane, '.wx-card'); if (c) tilt(c, 12);
+    }
+    function wearSlot(slot, id) {
+      const pane = PANE[SLOT_TAB[slot]];
+      if (S[slot] === id) { bump($(pane, '.wx-med') || $(pane, '.wx-card')); return; }
+      const it = _wxSlotItem(slot, id); if (!it || !_wxSlotEarned(slot, it, st)) return;
+      _wxSlotWear(slot, id); S[slot] = id;
+      renderSlot(slot); flashTile($(pane, '[data-sl="' + slot + '"][data-id="' + id + '"]'));
+      TABS.forEach(function (t) { if (t !== SLOT_TAB[slot]) doneR[t] = 0; });   // the other heroes wear it on their next visit
+      try { _hapticTick('MEDIUM'); } catch (_) {}
+    }
+    const onSlot = function (slot, id) { const it = _wxSlotItem(slot, id); if (!it) return; if (slState(slot, it) === 'locked') openDetail('sl:' + slot, id); else wearSlot(slot, id); };
+    const slPage = function (slot) {
+      return function (it) {
+        const pr = _wxProg(it, st), R = WX_RAR4[it.r] || WX_RAR4.F;
+        return '<article class="wx-pg wx-pg-sl" data-p="' + (pr.p * 100).toFixed(2) + '" style="' + _wxTintStyle('rc', R.c) + '"><div class="wx-ps">' + slPrev(slot, it, true) + '<span class="wx-seal">' + WX_IC.lock + '</span></div>' +
+          '<div class="wx-pg-rar"><span class="wx-rar" style="' + _wxTintStyle('c', R.c) + '">' + R.n + '</span></div><h3 class="wx-pg-nm">' + esc(it.n) + '</h3>' + msHTML(it, pr) + '</article>';
+      };
+    };
 
     /* ---------- feedback ---------- */
     function swapText(n, t, mid) {
@@ -58783,7 +58924,7 @@
       if (!_skinFileAllowed(file)) return;
       if (S.newId && S.newId !== file) S.newId = null;
       _equipSkin(file, true);
-      S.look = file; renderLookTiles(); swapMed();
+      S.look = file; renderLookTiles(); swapMed(); doneR.frames = doneR.inks = doneR.auras = 0;   // W1143
       const cr = $(pB, '.wx-hb .wx-crest .wx-art'); if (cr) cr.setAttribute('style', _wxLookArt(file));
       updatePeek(true);
       const sk = _wxSkinById(file);
@@ -58793,7 +58934,7 @@
     function wearBg(id) {
       if (S.bg === id) { bump($(pB, '.wx-card')); return; }
       _cardBgEquip(id === 'basic' ? '' : id);
-      S.bg = id; renderBgTiles(); swapCard(); updatePeek(true); flashTile($(pB, '.wx-bg-list [data-bg="' + id + '"]'));
+      S.bg = id; renderBgTiles(); swapCard(); updatePeek(true); flashTile($(pB, '.wx-bg-list [data-bg="' + id + '"]')); doneR.inks = 0;   // W1143
       try { _hapticTick('MEDIUM'); } catch (_) {}
     }
     const onSkin = function (key) { const s = WX_SKIN[key]; if (!s) return; if (skState(s) === 'locked') openDetail('sk', key); else wearLook(s.file); };
@@ -58802,16 +58943,16 @@
     /* ---------- peek ---------- */
     function updatePeek(b) {
       const a = $(peek, '.wx-art');
-      if (S.tab === 'looks') { peek.classList.remove('bg'); a.className = 'wx-art'; a.setAttribute('style', _wxLookArt(S.look)); }
+      if (S.tab !== 'bgs') { peek.classList.remove('bg'); a.className = 'wx-art'; a.setAttribute('style', _wxLookArt(S.look)); }
       else { peek.classList.add('bg'); if (S.bg === 'basic') { a.className = 'wx-art wx-basic'; a.removeAttribute('style'); } else { a.className = 'wx-art'; a.setAttribute('style', _wxBgArt(S.bg)); } }
-      const show = (S.tab === 'looks' ? pL : pB).scrollTop > (S.tab === 'looks' ? 250 : 150); peek.classList.toggle('show', show);
+      const show = PANE[S.tab].scrollTop > (S.tab === 'looks' ? 250 : 150); peek.classList.toggle('show', show);
       if (b && show && !WX_RM) peek.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.3,1.5,.5,1)' });
     }
-    [pL, pB].forEach(function (p) { p.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; updatePeek(); }); }, { passive: true }); });
+    TABS.map(function (t) { return PANE[t]; }).forEach(function (p) { p.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; updatePeek(); }); }, { passive: true }); });
 
     /* ---------- tabs ---------- */
     function prepFly(from, to) {
-      const sp = from === 'looks' ? pL : pB, dp = to === 'looks' ? pL : pB; if (sp.scrollTop > 120 || dp.scrollTop > 120) return null;
+      const sp = PANE[from], dp = PANE[to]; if (sp.scrollTop > 120 || dp.scrollTop > 120) return null;
       const src = from === 'looks' ? lastArt($(pL, '.wx-med-frame')) : $(pB, '.wx-hb .wx-crest .wx-art'), dst = to === 'looks' ? lastArt($(pL, '.wx-med-frame')) : $(pB, '.wx-hb .wx-crest .wx-art');
       if (!src || !dst) return null;
       const r0 = el.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect(), sh = (to === 'bgs' ? -1 : 1) * vp.getBoundingClientRect().width;
@@ -58825,24 +58966,26 @@
       const clean = function () { d.remove(); f.src.style.visibility = ''; f.dst.style.visibility = ''; };
       an.onfinish = function () { clean(); f.dst.animate([{ filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }], { duration: 440 }); }; an.oncancel = clean; return an;
     }
-    const doneR = {}; const ensure = function (t) { if (doneR[t]) return; doneR[t] = 1; if (t === 'looks') renderLooks(); else renderBgs(); };
+    const doneR = {}; const ensure = function (t) { if (doneR[t]) return; doneR[t] = 1; if (t === 'looks') renderLooks(); else if (t === 'bgs') renderBgs(); else renderSlot(TAB_SLOT[t]); };
     function setTab(t, o) {
       o = o || {};
       if (t === S.tab && !o.force && !o.instant) return;
       ensure(t);
-      const from = S.tab, fl = (!o.instant && !WX_RM && dragPct == null && t !== from) ? prepFly(from, t) : null;
+      const from = S.tab, pair = (from === 'looks' && t === 'bgs') || (from === 'bgs' && t === 'looks');   // W1143 — five panes; the portrait flies only between Looks and Backgrounds
+      const fl = (!o.instant && !WX_RM && dragPct == null && pair) ? prepFly(from, t) : null;
       S.tab = t;
-      $$(el, '.wx-tab').forEach(function (b) { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      $$(el, '.wx-tab').forEach(function (b) {
+        const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on) { try { b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: (o.instant || WX_RM) ? 'auto' : 'smooth' }); } catch (_) {} }
+      });
       tabAnims.forEach(function (a) { a.cancel(); }); tabAnims = [];
-      const x1 = t === 'bgs' ? -50 : 0, i1 = t === 'bgs' ? 100 : 0,
-        x0 = dragPct != null ? dragPct : (from === 'bgs' ? -50 : 0), i0 = dragPct != null ? Math.max(0, Math.min(100, -dragPct * 2)) : (from === 'bgs' ? 100 : 0);
-      dragPct = null; track.style.transform = 'translateX(' + x1 + '%)'; ind.style.transform = 'translateX(' + i1 + '%)'; updatePeek();
+      const step = 100 / NT, x1 = -ixOf(t) * step, x0 = dragPct != null ? dragPct : -ixOf(from) * step;
+      dragPct = null; track.style.transform = 'translateX(' + x1 + '%)'; updatePeek();
       if (o.instant) return;
       if (t !== from) { try { _hapticTick('LIGHT'); } catch (_) {} }
-      const du = WX_RM ? 240 : 480, ez = 'cubic-bezier(.22,.8,.24,1)', pt = t === 'bgs' ? pB : pL, pf = t === 'bgs' ? pL : pB;
+      const du = WX_RM ? 240 : 480, ez = 'cubic-bezier(.22,.8,.24,1)', pt = PANE[t], pf = PANE[from];
       if (WX_RM) { tabAnims.push(pt.animate([{ opacity: 0 }, { opacity: 1 }], { duration: du })); return; }
       tabAnims.push(track.animate([{ transform: 'translateX(' + x0 + '%)' }, { transform: 'translateX(' + x1 + '%)' }], { duration: du, easing: ez }));
-      tabAnims.push(ind.animate([{ transform: 'translateX(' + i0 + '%)' }, { transform: 'translateX(' + i1 + '%)' }], { duration: du, easing: ez }));
       if (t !== from) { tabAnims.push(pf.animate([{ opacity: 1 }, { opacity: 0.3 }], { duration: du, easing: ez })); tabAnims.push(pt.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: du, easing: ez })); }
       if (fl) tabAnims.push(fly(fl, du));
     }
@@ -58851,16 +58994,16 @@
     vp.addEventListener('pointermove', function (e) {
       if (!sw || e.pointerId !== sw.id) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
       if (!sw.mode) {
-        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { sw.mode = 'h'; ensure(S.tab === 'looks' ? 'bgs' : 'looks'); try { vp.setPointerCapture(e.pointerId); } catch (_) {} tabAnims.forEach(function (a) { a.cancel(); }); tabAnims = []; }
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { sw.mode = 'h'; const ix0 = ixOf(S.tab); if (ix0 > 0) ensure(TABS[ix0 - 1]); if (ix0 < NT - 1) ensure(TABS[ix0 + 1]); try { vp.setPointerCapture(e.pointerId); } catch (_) {} tabAnims.forEach(function (a) { a.cancel(); }); tabAnims = []; }
         else if (Math.abs(dy) > 10) { sw.mode = 'v'; return; } else return;
       }
       if (sw.mode !== 'h') return;
-      const W = vp.offsetWidth; let x = (S.tab === 'bgs' ? -W : 0) + dx; if (x > 0) x *= 0.25; if (x < -W) x = -W + (x + W) * 0.25;
-      dragPct = x / (2 * W) * 100; track.style.transform = 'translateX(' + dragPct + '%)'; ind.style.transform = 'translateX(' + Math.max(0, Math.min(100, -x / W * 100)) + '%)';
+      const W = vp.offsetWidth, maxX = -(NT - 1) * W; let x = -ixOf(S.tab) * W + dx; if (x > 0) x *= 0.25; if (x < maxX) x = maxX + (x - maxX) * 0.25;
+      dragPct = x / (NT * W) * 100; track.style.transform = 'translateX(' + dragPct + '%)';
     });
     const swEnd = function (e) {
       if (!sw || e.pointerId !== sw.id) return;
-      if (sw.mode === 'h') { suppress = true; setTimeout(function () { suppress = false; }, 80); const dx = e.clientX - sw.x; setTab(dx < -50 ? 'bgs' : dx > 50 ? 'looks' : S.tab, { force: true }); }
+      if (sw.mode === 'h') { suppress = true; setTimeout(function () { suppress = false; }, 80); const dx = e.clientX - sw.x, ix0 = ixOf(S.tab); setTab(dx < -50 ? TABS[Math.min(NT - 1, ix0 + 1)] : dx > 50 ? TABS[Math.max(0, ix0 - 1)] : S.tab, { force: true }); }
       sw = null;
     };
     vp.addEventListener('pointerup', swEnd); vp.addEventListener('pointercancel', swEnd);
@@ -58905,6 +59048,7 @@
         }
         case 'founder': n = '<span>Founders</span><b>20 <small>exist</small></b>'; break;
         case 'bin': break;
+        case 'any': return msHTML(Object.assign({}, (it.of || [])[0] || { k: 'bin' }, { cond: it.cond }), _wxProg((it.of || [])[0] || { k: 'bin', stat: '' }, st));   // W1143 — the first of several meters
       }
       return '<div class="wx-ms"><div class="wx-ms-c">' + esc(it.cond) + '</div>' + (m ? '<div class="wx-ms-m">' + m + '</div>' : '') + (n ? '<div class="wx-ms-n">' + n + '</div>' : '') + '</div>';
     }
@@ -58945,9 +59089,10 @@
     const goPage = function (i) { pgt.style.transform = 'translateX(' + (-i * 100) + '%)'; setPage(i); };
     function openDetail(kind, id, o) {
       o = o || {}; kindNow = kind;
-      pages = kind === 'sk' ? EARN_SKINS.filter(function (s) { return skState(s) === 'locked'; }) : WX_BGS.filter(function (b) { return bgState(b.id) === 'locked'; });
+      const slot = kind.indexOf('sl:') === 0 ? kind.slice(3) : null;   // W1143
+      pages = kind === 'sk' ? EARN_SKINS.filter(function (s) { return skState(s) === 'locked'; }) : kind === 'bg' ? WX_BGS.filter(function (b) { return bgState(b.id) === 'locked'; }) : WX_SLOTS[slot].list.filter(function (it) { return slState(slot, it) === 'locked'; });
       const idx = Math.max(0, pages.findIndex(function (x) { return (kind === 'sk' ? x.key : x.id) === id; }));
-      pgt.innerHTML = pages.map(kind === 'sk' ? skPage : bgPage).join(''); cur = -1;
+      pgt.innerHTML = pages.map(kind === 'sk' ? skPage : kind === 'bg' ? bgPage : slPage(slot)).join(''); cur = -1;
       if (o.instant) dt.classList.add('noanim');
       pager.classList.add('dragging'); pgt.style.transform = 'translateX(' + (-idx * 100) + '%)'; void pgt.offsetWidth; pager.classList.remove('dragging');
       dt.classList.add('open'); panel.style.transform = ''; setPage(idx, o.instant);
@@ -58987,6 +59132,7 @@
       const tb = t.closest('.wx-tab'); if (tb) { setTab(tb.dataset.tab); return; }
       const k = t.closest('[data-sk]'); if (k) { onSkin(k.dataset.sk); return; }
       const l = t.closest('[data-lk]'); if (l) { wearLook(l.dataset.lk); return; }
+      const sl = t.closest('[data-sl]'); if (sl) { onSlot(sl.dataset.sl, sl.dataset.id); return; }   // W1143
       const b = t.closest('[data-bg]'); if (b) onBg(b.dataset.bg);
     });
 
@@ -58998,8 +59144,9 @@
         const lk = getEquippedSkin() || ''; if (lk !== S.look && _skinFileAllowed(lk)) { S.look = lk; if (doneR.looks) renderLooks(); }
         else if (doneR.looks) renderLookTiles();
         const bg = _cardBgEquipped() || 'basic'; if (bg !== S.bg) { S.bg = bg; if (doneR.bgs) renderBgs(); } else if (doneR.bgs) renderBgTiles();
+        ['frame', 'ink', 'aura'].forEach(function (s) { S[s] = _wxSlotWorn(s); if (doneR[SLOT_TAB[s]]) renderSlot(s); });   // W1143 — fresh numbers, fresh states
       },
-      state: function () { return { tab: S.tab, look: S.look, bg: S.bg, detail: dt.classList.contains('open') ? kindNow : null, pages: pages.length }; },
+      state: function () { return { tab: S.tab, look: S.look, bg: S.bg, frame: S.frame, ink: S.ink, aura: S.aura, detail: dt.classList.contains('open') ? kindNow : null, pages: pages.length }; },
     };
   }
   // Re-paint the open Wardrobe after ownership / equips change elsewhere (no-op when closed).

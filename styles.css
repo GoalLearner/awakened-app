@@ -36418,3 +36418,90 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .pkb.pkb2 .pkb-spot.s-evade .spr img, .pkb.pkb2 .pkb-spot.s-atkup .spr img, .pkb.pkb2 .pkb-spot.s-burn .spr img { animation: none; }
   .pkb.pkb2 .ar-bmove.hold { animation: none; }
 }
+
+/* ═══ W1143 — FRAMES · INKS · AURAS (Claude Design handoff 8, "Player Card - Wardrobe") ═══
+   Three more Wardrobe slots. The tab row scrolls (five tabs), the track is five panes wide, the hero medallion and
+   the own profile card wear the frame (wx-fr-* / pc-fr-*), the name wears its ink (wx-ink-s solid, wx-ink-g a living
+   gradient) and an aura of particles rides the medallion (.wx-aura). Transform/opacity only; no colour mixing. */
+.wx-tabs.wx-tabs5 { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.wx-tabs.wx-tabs5::-webkit-scrollbar { display: none; }
+.wx-tabs.wx-tabs5 .wx-tab-ind { display: none; }
+#wd-sheet.wx .wx-tabs5 .wx-tab { flex: none; height: 36px; padding: 0 15px; border-radius: 10px; border: 1px solid transparent; letter-spacing: .18em; transition: color .3s, background .3s, border-color .3s; }
+#wd-sheet.wx .wx-tabs5 .wx-tab.on { border-color: rgba(245,184,66,.45); background: linear-gradient(180deg, rgba(245,184,66,.18), rgba(245,184,66,.05)); text-shadow: 0 0 10px rgba(245,184,66,.4); }
+.wx-track.wx-track5 { width: 500%; }
+.wx-track5 .wx-pane { width: 20%; }
+/* the slot tiles */
+.wx-slgrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+#wd-sheet.wx .wx-sl { height: 138px; background: linear-gradient(180deg, #18163b, #0f0e24); }
+#wd-sheet.wx .wx-sl-ink { height: 104px; }
+.wx-sl-prev { position: absolute; left: 0; right: 0; top: 0; bottom: 42px; display: flex; align-items: center; justify-content: center; }
+.wx-sl-ink .wx-sl-prev { bottom: 40px; }
+.wx-sl.is-locked .wx-sl-prev { filter: saturate(.25) brightness(.55); }
+.wx-sl .wx-bt-tx { bottom: 10px; }
+.wx-sl.is-locked .wx-bt-nm { color: #e4e1f0; }
+/* the mini medallion (tiles + the locked pager) */
+.wx-mini { position: relative; display: block; width: 64px; height: 64px; border-radius: 50%; padding: 3px; background: linear-gradient(150deg, #ffe9b0, #f5b842 42%, #c08418); box-shadow: 0 0 20px rgba(245,184,66,.32), inset 0 1px 0 rgba(255,255,255,.28); }
+.wx-mini.big { width: 150px; height: 150px; padding: 5px; }
+.wx-mini .wx-art { position: absolute; inset: 3px; border-radius: 50%; }
+.wx-mini.big .wx-art { inset: 5px; }
+.wx-mini .wx-aura { inset: -22px; }
+.wx-mini.big .wx-aura { inset: -50px; }
+.wx-ps { position: relative; width: 150px; height: 150px; margin: 8px auto 0; display: flex; align-items: center; justify-content: center; }
+.wx-ps .wx-seal { left: 50%; bottom: -6px; width: 34px; height: 38px; margin-left: -17px; }
+.wx-ps .wx-seal::before { inset: 2px; }
+.wx-ps .wx-seal svg { width: 15px; height: 15px; }
+.wx-ps .wx-ink-prev { font-size: 34px; }
+.wx-ink-prev { font: 800 22px/1.1 var(--wx-sans); color: #f5f3fb; padding: 0 6px; white-space: nowrap; text-shadow: 0 2px 14px rgba(0,0,0,.6); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* inks: a solid colour or a living gradient (the card's alias and the board card's name use the same classes) */
+.wx-ink-g { -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; background-size: 300% 100%; animation: wx-inksweep 3.6s linear infinite; }
+@keyframes wx-inksweep { 0% { background-position: 200% 50%; } 100% { background-position: -200% 50%; } }
+#pc-sheet .pc-alias.wx-ink-g, #pc-sheet.pc--painted .pc-alias.wx-ink-g { text-shadow: none; }
+/* frames — the hero medallion (.wx-med), the mini (.wx-mini) and the profile card (.pc-med) */
+.wx-med.wx-fr-rankforged .wx-med-frame, .wx-mini.wx-fr-rankforged, .pc-med.pc-fr-rankforged { background: linear-gradient(150deg, #ffffff 0%, var(--rk, var(--pc-ring, #f5b842)) 36%, var(--rk, var(--pc-ring, #f5b842)) 68%, #15152a 135%); }
+.wx-med.wx-fr-rankforged .wx-med-ring { box-shadow: inset 0 0 0 1.5px rgba(var(--rk-rgb, 245,184,66),.8), 0 0 22px rgba(var(--rk-rgb, 245,184,66),.3); }
+.wx-med.wx-fr-rankforged .wx-gem, .pc-med.pc-fr-rankforged .pc-gem { background: linear-gradient(135deg, #fff, var(--rk, var(--pc-ring, #f5b842))); box-shadow: 0 0 10px var(--rk, var(--pc-ring, #f5b842)); }
+.pc-med.pc-fr-rankforged { box-shadow: 0 0 34px var(--pc-ring, #f5b842), inset 0 1px 0 rgba(255,255,255,.35); }
+.wx-med.wx-fr-obsidian .wx-med-frame, .wx-mini.wx-fr-obsidian, .pc-med.pc-fr-obsidian { background: linear-gradient(150deg, #3b3b4e, #14141e 52%, #2b2b3a); box-shadow: 0 0 0 1px rgba(245,184,66,.65), 0 0 26px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.12); }
+.wx-med.wx-fr-obsidian .wx-med-ring { box-shadow: inset 0 0 0 1px rgba(245,184,66,.35), 0 0 16px rgba(0,0,0,.5); }
+.wx-med.wx-fr-obsidian .wx-gem { transform: rotate(45deg) scale(.6); }
+.pc-med.pc-fr-obsidian .pc-gem { width: 9px; height: 9px; }
+.pc-med.pc-fr-obsidian .pc-med-ring { border-color: rgba(245,184,66,.35); box-shadow: none; }
+.wx-med.wx-fr-runebound .wx-med-ring::before, .wx-mini.wx-fr-runebound::before, .pc-med.pc-fr-runebound::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; pointer-events: none; background: repeating-conic-gradient(from 0deg, #f5b842 0 5deg, transparent 5deg 15deg); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); opacity: .9; filter: drop-shadow(0 0 5px rgba(245,184,66,.4)); animation: wx-spin 22s linear infinite; }
+.wx-med.wx-fr-runebound .wx-med-ring::after, .pc-med.pc-fr-runebound::after { content: ""; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; background: repeating-conic-gradient(from 7deg, #ffe9b0 0 1.5deg, transparent 1.5deg 22.5deg); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); opacity: .55; animation: wx-spin 34s linear infinite reverse; }
+.wx-mini.wx-fr-runebound::before { inset: -6px; }
+.pc-med.pc-fr-runebound::before { inset: -13px; }
+.pc-med.pc-fr-runebound::after { inset: -20px; }
+.pc-med.pc-fr-runebound .pc-med-ring { opacity: 0; animation: none; }
+.wx-med.wx-fr-eclipse .wx-med-frame, .wx-mini.wx-fr-eclipse, .pc-med.pc-fr-eclipse { background: linear-gradient(150deg, #1a1022, #04040a 55%, #130a1c); box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 0 50px 8px rgba(167,139,250,.5), 0 0 116px 23px rgba(245,184,66,.16); }
+.wx-med.wx-fr-eclipse .wx-gem, .pc-med.pc-fr-eclipse .pc-gem { display: none; }
+.wx-med.wx-fr-eclipse .wx-med-ring { box-shadow: inset 0 0 0 1px rgba(167,139,250,.35), 0 0 30px rgba(167,139,250,.25); }
+.wx-med.wx-fr-eclipse .wx-med-ring::before, .wx-mini.wx-fr-eclipse::before, .pc-med.pc-fr-eclipse::before { content: ""; position: absolute; inset: -22px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, transparent 56%, rgba(167,139,250,.28) 64%, rgba(245,184,66,.1) 70%, transparent 76%); animation: wx-breathe2 3s ease-in-out infinite; }
+.wx-mini.wx-fr-eclipse::before { inset: -12px; }
+.wx-med.wx-fr-eclipse .wx-med-frame .wx-art, .wx-mini.wx-fr-eclipse .wx-art { box-shadow: inset 0 0 28px rgba(0,0,0,.75); }
+.pc-med.pc-fr-eclipse .pc-med-portrait::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 28px rgba(0,0,0,.75); pointer-events: none; }
+.pc-med.pc-fr-eclipse .pc-med-ring { border-color: rgba(167,139,250,.5); box-shadow: 0 0 30px rgba(167,139,250,.25); }
+@keyframes wx-breathe2 { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+/* auras — particles around a medallion (the hero, the mini, the card) */
+.wx-aura { position: absolute; inset: -40px; pointer-events: none; overflow: visible; z-index: 0; }
+.wx-aura-glow { position: absolute; left: 50%; top: 44%; width: 110%; height: 90%; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(255,255,255,.08), transparent 64%); box-shadow: 0 0 60px 20px var(--c); opacity: .22; filter: blur(10px); }
+.wx-ap { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: var(--c); opacity: 0; animation-duration: var(--t); animation-delay: var(--d); animation-iteration-count: infinite; animation-timing-function: ease-in-out; will-change: transform, opacity; }
+.wx-aura.motes .wx-ap { animation-name: wx-aMote; box-shadow: 0 0 6px var(--c); }
+@keyframes wx-aMote { 0% { transform: translate(0,0) scale(.6); opacity: 0; } 20% { opacity: .95; } 50% { transform: translate(var(--dx), -30px) scale(1); } 80% { opacity: .7; } 100% { transform: translate(calc(var(--dx) * 1.6), -62px) scale(.5); opacity: 0; } }
+.wx-aura.embers .wx-ap { animation-name: wx-aEmber; box-shadow: 0 0 8px var(--c); animation-timing-function: ease-out; }
+@keyframes wx-aEmber { 0% { transform: translate(0,0) scale(1); opacity: 0; } 12% { opacity: 1; } 60% { opacity: .8; } 100% { transform: translate(var(--dx), -130px) scale(.2); opacity: 0; } }
+.wx-aura.void .wx-ap { animation-name: wx-aVoid; filter: blur(7px); }
+@keyframes wx-aVoid { 0% { transform: translate(0,0) scale(.7); opacity: 0; } 30% { opacity: .6; } 60% { transform: translate(var(--dx), -18px) scale(1.3); } 100% { transform: translate(calc(var(--dx) * 1.8), -36px) scale(.9); opacity: 0; } }
+.wx-aura.storm .wx-ap { animation-name: wx-aStorm; border-radius: 2px; height: calc(var(--s) * 7); width: 1.5px; box-shadow: 0 0 8px var(--c); animation-timing-function: steps(2, end); }
+@keyframes wx-aStorm { 0%, 100% { opacity: 0; transform: translateY(0); } 8% { opacity: 1; } 14% { opacity: 0; } 40% { opacity: 0; } 46% { opacity: .9; transform: translateY(-14px); } 52% { opacity: 0; } }
+.wx-aura.stardust .wx-ap { animation-name: wx-aStar; border-radius: 0; -webkit-clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); filter: drop-shadow(0 0 4px var(--c)); }
+@keyframes wx-aStar { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 40% { opacity: 1; transform: scale(1) rotate(25deg); } 70% { opacity: .6; transform: scale(.7) rotate(45deg); } }
+.wx-med .wx-aura { inset: -30px; }
+.pc-med-wrap .wx-aura { inset: -36px -36px -24px; }
+.pc-med-wrap { z-index: 1; }
+.pc-med { z-index: 1; }
+/* reduced motion */
+#wd-sheet.wx.wx-rm .wx-ap, #wd-sheet.wx.wx-rm .wx-ink-g, #wd-sheet.wx.wx-rm .wx-fr-runebound .wx-med-ring::before, #wd-sheet.wx.wx-rm .wx-fr-runebound .wx-med-ring::after, #wd-sheet.wx.wx-rm .wx-mini.wx-fr-runebound::before, #wd-sheet.wx.wx-rm .wx-fr-eclipse .wx-med-ring::before, #wd-sheet.wx.wx-rm .wx-mini.wx-fr-eclipse::before { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .wx-ap { display: none; }
+  .wx-ink-g, .wx-fr-runebound .wx-med-ring::before, .wx-fr-runebound .wx-med-ring::after, .wx-mini.wx-fr-runebound::before, .pc-med.pc-fr-runebound::before, .pc-med.pc-fr-runebound::after, .wx-fr-eclipse .wx-med-ring::before, .wx-mini.wx-fr-eclipse::before, .pc-med.pc-fr-eclipse::before { animation: none; }
+}

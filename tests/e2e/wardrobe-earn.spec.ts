@@ -90,7 +90,7 @@ test.describe('The Wardrobe, two tabs (W1098)', () => {
     await boot(page, { owned: [VOID] });
     await page.evaluate(() => (window as any).__openWardrobe());
     const sh = page.locator('#wd-sheet');
-    await expect(sh.locator('.wx-tab')).toHaveCount(2);
+    await expect(sh.locator('.wx-tab')).toHaveCount(5);   // W1143 — Looks · Backgrounds · Frames · Inks · Auras
     await expect(sh.locator('.wx-seven:not(.wx-rising) .wx-sk')).toHaveCount(8);   // W1132 — the Elite Eight; the Rising's nine sit below
     await expect(sh.locator('.wx-sec-h span').first()).toHaveText('The Elite Eight');
     await expect(sh.locator('.wx-eight .wx-sk').first()).toHaveAttribute('data-sk', 'shadowborn');
