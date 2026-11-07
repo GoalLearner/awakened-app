@@ -130,7 +130,7 @@ async function freshApp(page: Page) {
       const ymd = d.getFullYear() + '-' +
         String(d.getMonth() + 1).padStart(2, '0') + '-' +
         String(d.getDate()).padStart(2, '0');
-      localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       // Daily Insight (the morning briefing) — a full-screen bottom sheet that
       // fires once per device-local day for any welcomed user WITH ACTIVE VOWS.
       // freshApp itself seeds hb_habits='[]', so the gate has always refused it
@@ -684,7 +684,7 @@ test.describe('J · Legacy Strength training → Workout migration (1z.107)', ()
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
 
         // Ensure the migration flag is NOT set so we exercise the
         // rename path.
@@ -783,7 +783,7 @@ test.describe('J · Legacy Strength training → Workout migration (1z.107)', ()
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
         localStorage.removeItem('hb_strength_to_workout_rename_v1');
 
         const seeded = [
@@ -859,7 +859,7 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       } catch (_) {}
     });
     await page.goto('/');
@@ -979,7 +979,7 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       } catch (_) {}
     });
     await page.goto('/');
@@ -1038,7 +1038,7 @@ test.describe('K · Sleep session selection (1z.114)', () => {
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       } catch (_) {}
     });
     await page.goto('/');
@@ -1710,7 +1710,7 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
         const _ymd = _d.getFullYear() + '-' +
           String(_d.getMonth() + 1).padStart(2, '0') + '-' +
           String(_d.getDate()).padStart(2, '0');
-        localStorage.setItem('hb_fri_banner_' + _ymd, '1');
+        localStorage.setItem('hb_fri_banner_' + _ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
         // A 4-habit custom routine → a non-zero compound projection, so the
         // caption renders ("Complete your routine for +N XP").
         const seeded = [
@@ -2492,7 +2492,7 @@ async function obFirstRun(page: Page) {
       const d = new Date();
       const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
                   String(d.getDate()).padStart(2, '0');
-      localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       ['hb_habits', 'hb_onboarding_seen_v2', 'hb_welcomed', 'hb_hunter_name_claimed', 'hb_avatar_skin',
        'hb_healthkit_prompted', 'hb_hk_answered_v1', 'hb_hk_first_read_v1'].forEach((k) => localStorage.removeItem(k));
     } catch (_) {}

@@ -21,7 +21,7 @@ async function openFeed(page: Page, events: unknown[]) {
       localStorage.setItem('hb_whats_new_seen', '99.99.99');
       const d = new Date();
       const ymd = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
       localStorage.setItem('hb_daily_insight_last_shown', ymd);
       localStorage.setItem('hb_fa_seen_ts', String(Date.now()));
       localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ ts: Date.now(), events: evs }));

@@ -49,7 +49,7 @@ async function freshApp(page: Page) {
       const ymd = d.getFullYear() + '-' +
         String(d.getMonth() + 1).padStart(2, '0') + '-' +
         String(d.getDate()).padStart(2, '0');
-      localStorage.setItem('hb_fri_banner_' + ymd, '1');
+      localStorage.setItem('hb_fri_banner_' + ymd, '1'); localStorage.setItem('hb_fri_banner_' + new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()), '1');   // the app keys it by the PT date (CI runs in UTC)
     } catch (_) {}
   });
   await page.goto('/');
