@@ -91,6 +91,9 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(tile(page, 'aura', 'motes')).toHaveClass(/is-earned/);
     await expect(tile(page, 'aura', 'storm')).toHaveClass(/is-locked/);
     await expect(tile(page, 'aura', 'storm').locator('.wx-bt-st')).toHaveText('50 / 75');
+    // W1145 — a tile's aura is a sibling BEHIND the mini medallion (never inside it): the portrait stays on top
+    await expect(tile(page, 'aura', 'motes').locator('.wx-aurap > .wx-aura.motes + .wx-mini > .wx-art')).toHaveCount(1);
+    await expect(tile(page, 'aura', 'motes').locator('.wx-mini .wx-aura')).toHaveCount(0);
     await tile(page, 'aura', 'motes').click();
     expect(await page.evaluate(() => localStorage.getItem('hb_card_aura'))).toBe('motes');
     await expect(sheet(page).locator('.wx-pane[data-pane="auras"] .wx-med .wx-aura.motes')).toHaveCount(1);

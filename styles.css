@@ -36447,8 +36447,13 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-mini.big { width: 150px; height: 150px; padding: 5px; }
 .wx-mini .wx-art { position: absolute; inset: 3px; border-radius: 50%; }
 .wx-mini.big .wx-art { inset: 5px; }
-.wx-mini .wx-aura { inset: -22px; }
-.wx-mini.big .wx-aura { inset: -50px; }
+/* W1145 — a tile's aura wraps the mini as a sibling behind it (.wx-aurap > .wx-aura + .wx-mini), never inside it */
+.wx-aurap { position: relative; display: block; width: 64px; height: 64px; }
+.wx-aurap.big { width: 150px; height: 150px; }
+.wx-aurap > .wx-aura { inset: -22px; }
+.wx-aurap.big > .wx-aura { inset: -50px; }
+.wx-aurap > .wx-mini { position: relative; z-index: 1; }
+.wx-mini .wx-art { z-index: 1; }
 .wx-ps { position: relative; width: 150px; height: 150px; margin: 8px auto 0; display: flex; align-items: center; justify-content: center; }
 .wx-ps .wx-seal { left: 50%; bottom: -6px; width: 34px; height: 38px; margin-left: -17px; }
 .wx-ps .wx-seal::before { inset: 2px; }
@@ -36487,12 +36492,24 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 @keyframes wx-breathe2 { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 /* auras — particles around a medallion (the hero, the mini, the card) */
 .wx-aura { position: absolute; inset: -40px; pointer-events: none; overflow: visible; z-index: 0; }
-.wx-aura-glow { position: absolute; left: 50%; top: 44%; width: 110%; height: 90%; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(255,255,255,.08), transparent 64%); box-shadow: 0 0 60px 20px var(--c); opacity: .22; filter: blur(10px); }
-.wx-ap { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: var(--c); opacity: 0; animation-duration: var(--t); animation-delay: var(--d); animation-iteration-count: infinite; animation-timing-function: ease-in-out; will-change: transform, opacity; }
+/* W1145 — the glow is a plain radial gradient (was a blurred box-shadow at .22) and the particles carry no will-change:
+   both are WebKit compositing triggers, and the owner's iPhone lost the portrait under them on a tile. */
+.wx-aura-glow { position: absolute; left: 50%; top: 44%; width: 110%; height: 90%; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse at center, rgba(var(--cr, 245,184,66), .26) 0%, rgba(var(--cr, 245,184,66), .10) 38%, rgba(var(--cr, 245,184,66), 0) 68%); }
+.wx-ap { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: var(--c); opacity: 0; animation-duration: var(--t); animation-delay: var(--d); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
 .wx-aura.motes .wx-ap { animation-name: wx-aMote; box-shadow: 0 0 6px var(--c); }
 @keyframes wx-aMote { 0% { transform: translate(0,0) scale(.6); opacity: 0; } 20% { opacity: .95; } 50% { transform: translate(var(--dx), -30px) scale(1); } 80% { opacity: .7; } 100% { transform: translate(calc(var(--dx) * 1.6), -62px) scale(.5); opacity: 0; } }
-.wx-aura.embers .wx-ap { animation-name: wx-aEmber; box-shadow: 0 0 8px var(--c); animation-timing-function: ease-out; }
-@keyframes wx-aEmber { 0% { transform: translate(0,0) scale(1); opacity: 0; } 12% { opacity: 1; } 60% { opacity: .8; } 100% { transform: translate(var(--dx), -130px) scale(.2); opacity: 0; } }
+/* W1145 — Embers: a ring of sparks circling the medallion (was a second rising drift, "almost exactly identical" to the
+   motes). Each spark orbits from its own start angle at its own radius and speed, flickering as it goes; the orbit's
+   centre is the aura box's centre (the medallion), and on the profile card the medallion's centre in the hero block. */
+.wx-aura.embers .wx-ap { left: 50%; top: 50%; margin: calc(var(--s) * -.5) 0 0 calc(var(--s) * -.5); animation-name: wx-aEmber; animation-timing-function: linear; box-shadow: 0 0 7px var(--c), 0 0 2px rgba(255,255,255,.7); }
+.pc-hero > .wx-aura.embers .wx-ap { top: 113px; }
+@keyframes wx-aEmber {
+  0%   { transform: rotate(var(--a)) translateX(var(--r)) scale(.9); opacity: .9; }
+  25%  { transform: rotate(calc(var(--a) + 90deg)) translateX(calc(var(--r) * .94)) scale(.6); opacity: .45; }
+  50%  { transform: rotate(calc(var(--a) + 180deg)) translateX(var(--r)) scale(1); opacity: 1; }
+  75%  { transform: rotate(calc(var(--a) + 270deg)) translateX(calc(var(--r) * 1.06)) scale(.7); opacity: .55; }
+  100% { transform: rotate(calc(var(--a) + 360deg)) translateX(var(--r)) scale(.9); opacity: .9; }
+}
 .wx-aura.void .wx-ap { animation-name: wx-aVoid; filter: blur(7px); }
 @keyframes wx-aVoid { 0% { transform: translate(0,0) scale(.7); opacity: 0; } 30% { opacity: .6; } 60% { transform: translate(var(--dx), -18px) scale(1.3); } 100% { transform: translate(calc(var(--dx) * 1.8), -36px) scale(.9); opacity: 0; } }
 .wx-aura.storm .wx-ap { animation-name: wx-aStorm; border-radius: 2px; height: calc(var(--s) * 7); width: 1.5px; box-shadow: 0 0 8px var(--c); animation-timing-function: steps(2, end); }
