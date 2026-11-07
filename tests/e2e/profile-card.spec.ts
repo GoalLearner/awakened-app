@@ -143,3 +143,43 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     });
   });
 }
+
+// W1158 — the gold 100K STEP CLUB seal and the PRESTIGE chip left the id-row: both are pins now (owner, on rendiesel's card:
+// "keep in mind the 100K club and I just saw rendiesel has a prestige 1"). Until a hunter chooses, the card wears them by
+// default: a visitor's card from the published profile while cardPins is null (never chose), the own card from this phone's
+// numbers; [] means chose none; published pins win over the defaults.
+test.describe('W1158 — the Step Club seal and the Prestige chip are pins', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const REN = { alias: 'RenDIESEL', rankTier: 'S+', rankLabel: 'S+ RANK', prestige: 1, club100k: { repeatCount: 2, best: 112400 } };
+
+  test("a visitor's card: null → the two defaults as pins, [] → none, published → those; no seal, no chip", async ({ page }) => {
+    await boot(page);
+    const body = page.locator('#pc-body');
+    await render(page, false, { ...REN, cardPins: null });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB ×2', 'PRESTIGE 1']);
+    await expect(body.locator('.pc-club100k')).toHaveCount(0);
+    await expect(body.locator('.pc-prestige')).toHaveCount(0);
+    await expect(body.locator('.pc-pins--own')).toHaveCount(0);
+    await render(page, false, { ...REN, cardPins: [] });
+    await expect(body.locator('.pc-pins')).toHaveCount(0);
+    await render(page, false, { ...REN, cardPins: [{ id: 'bestday', v: 20140 }] });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['20,140 IN A DAY']);
+    // Prestige is the S+ endgame: an S hunter's stray prestige number is not a pin; a club member below S+ wears the club alone
+    await render(page, false, { alias: 'RenDIESEL', rankTier: 'S', prestige: 1, club100k: { repeatCount: 1, best: 101000 } });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB']);
+  });
+
+  test('the own card: the accolade cached on this phone wears the club pin by default; "[]" chosen → none', async ({ page }) => {
+    await boot(page);
+    const body = page.locator('#pc-body');
+    await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.removeItem('hb_accolades_cache'); });
+    await render(page, true);
+    await expect(body.locator('.pc-pins')).toHaveCount(0);   // nothing earned, nothing chosen
+    await page.evaluate(() => localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 3, best_value: 120000 }], fetched_at: Date.now() })));
+    await render(page, true);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['100K CLUB ×3']);
+    await page.evaluate(() => localStorage.setItem('hb_card_pins', '[]'));
+    await render(page, true);
+    await expect(body.locator('.pc-pins')).toHaveCount(0);
+  });
+});

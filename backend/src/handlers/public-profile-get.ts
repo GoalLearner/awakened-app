@@ -49,8 +49,8 @@ interface ProfileRow {
 const PVP_PLACEMENT_GAMES = 5;      // a hunter is "placed" (shows a rank) once placement_games hits this
 
 // W1155 — the card's pins column is a JSON array of {id, v}; anything else reads as no pins.
-function parseCardPins(raw: string | null | undefined): Array<{ id: string; v: number }> {
-  if (!raw) return [];
+function parseCardPins(raw: string | null | undefined): Array<{ id: string; v: number }> | null {
+  if (!raw) return null;   // W1158 — NULL = never chose: the client wears the Step Club + Prestige defaults; '[]' = chose none
   try {
     const arr = JSON.parse(raw) as unknown;
     if (!Array.isArray(arr)) return [];
@@ -153,7 +153,7 @@ export async function handlePublicProfileGet(
     cardFrame: row.card_frame ?? null,   // W1146 — the card look (the client keeps its defaults for an unknown id)
     cardInk: row.card_ink ?? null,
     cardAura: row.card_aura ?? null,
-    cardPins: parseCardPins(row.card_pins),   // W1155 — [] when none
+    cardPins: parseCardPins(row.card_pins),   // W1155 — the published pins; W1158 — null = never chose, [] = chose none
     founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
     // W912 — the developer / moderator crown (board_moderators role), shown on the card.
     boardRole: row.board_role === 'owner' || row.board_role === 'mod' ? row.board_role : null,

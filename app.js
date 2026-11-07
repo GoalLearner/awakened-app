@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1157'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1158'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -29520,7 +29520,7 @@
         { emoji: '', title: 'Tap the foe’s badge', description: "What it is about to do, and which of your cards answers it." },   // W1150
         { emoji: '', title: 'Average steps, last 21 days', description: "Your card’s average steps a day now covers the last three weeks, not all time." },   // W1153
         { emoji: '', title: 'Your title, from your card', description: "Tap the title under your name to wear any Ascent title you have earned." },   // W1154
-        { emoji: '', title: 'Pins', description: "A sixth Wardrobe slot: wear up to two badges under your name. Million Steps, Shadow Army, Worldgate MVP, Best Day." },   // W1156 / W1157
+        { emoji: '', title: 'Pins', description: "A sixth Wardrobe slot: wear up to two badges under your name. 100K Step Club, Prestige, Million Steps, Shadow Army, Worldgate MVP, Best Day." },   // W1156 / W1157 / W1158
         { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
         { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },
@@ -58447,26 +58447,8 @@
       ? '<button type="button" class="pc-shard pc-shard--pick' + (titleName ? '' : ' pc-shard--none') + '" data-pctitle="1" style="--pc-tier:' + (titleName ? tierColor : '#9090a8') + '"><i></i><span>' + (titleName ? esc(titleName) : 'Choose a title') + '</span><b>›</b></button>'
       : (titleName ? '<div class="pc-shard" style="--pc-tier:' + tierColor + '"><i></i><span>' + esc(titleName) + '</span></div>' : '');
     const flavor = data.verifiedStreakLabel ? '<div class="pc-flavor"><i></i><span>' + esc(data.verifiedStreakLabel) + '</span></div>' : '';
-    // W369 — 100K Club prestige badge (gold), shown for real members (sims never qualify).
-    // ClaudeDesign "Hunter Profile - 100K Club" (W373) — the 100K STEP CLUB
-    // reads as a coveted gold SEAL (hex sigil + STEP CLUB / ELITE MEMBER +
-    // shimmer), not a plain pill. Repeat qualifiers keep their \u00D7N acknowledgement.
-    const clubBadge = (data.club100k && typeof data.club100k === 'object')
-      ? '<div class="pc-club100k"><span class="pc-club100k-shine" aria-hidden="true"></span>' +
-        '<span class="pc-club100k-seal" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 30 30">' +
-        '<path d="M15 1.5 27 8.5 27 21.5 15 28.5 3 21.5 3 8.5Z" fill="#1a1206" stroke="rgba(255,236,180,0.55)" stroke-width="1"/>' +
-        '<path d="M15 5 23.2 9.8 23.2 19.2 15 24 6.8 19.2 6.8 9.8Z" fill="none" stroke="#f5b842" stroke-width="0.8" opacity="0.6"/>' +
-        '</svg><span class="pc-club100k-seal-n">100K</span></span>' +
-        '<span class="pc-club100k-txt"><span class="pc-club100k-t1">STEP\u00A0CLUB</span>' +
-        '<span class="pc-club100k-t2">ELITE\u00A0MEMBER' + (((data.club100k.repeatCount | 0) > 1) ? '\u2002\u00B7\u2002\u00D7' + (data.club100k.repeatCount | 0) : '') + '</span></span></div>'
-      : '';
-    // W453 \u2014 Prestige flex on the tapped-name card (the "stunting on noobs"
-    // payoff). Gold \u2726 stars + count, shown only for S+ hunters who have
-    // prestiged. data.prestige comes straight from the public-profile-get read.
-    const pcPrestige = (data.rankTier === 'S+' && (data.prestige | 0) > 0)
-      ? '<div class="pc-prestige"><span class="pc-prestige-stars" aria-hidden="true">' + prestigeStars(data.prestige | 0) +
-        '</span><span class="pc-prestige-lbl">PRESTIGE\u00A0' + (data.prestige | 0) + '</span></div>'
-      : '';
+    // W1158 — the gold 100K STEP CLUB seal (W369/W373) and the PRESTIGE chip (W453) left this row: both are pins now
+    // (WX_PINS club100k + prestige), worn by default until the hunter chooses — see _pinsDefaultIds / _pinsDefaultData.
     // W656 \u2014 free Founder marker on the hunter card (own + any viewed profile;
     // founderSeq is published into public_profile_summary and read cross-user).
     // W969b — the crown rides the USERNAME only. Owner: "no M crown on our
@@ -58501,8 +58483,8 @@
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"' + (look.color ? ' style="--pc-skin:' + look.color + '"' : '') + '><i></i><span>' + esc(look.name.toUpperCase()) + '</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias' + ink.cls + '"' + (ink.style ? ' style="' + ink.style + '"' : '') + '>' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + clubBadge + pcPrestige + founderBadge + '</div>' +
-        _pinsRowHtml(isOwn ? _pinsPayload() : data.cardPins, isOwn) + '</div>' +   // W1156 — up to two pins under the title; the own row opens the Wardrobe's Pins
+      '<div class="pc-identity"><div class="pc-alias' + ink.cls + '"' + (ink.style ? ' style="' + ink.style + '"' : '') + '>' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + founderBadge + '</div>' +
+        _pinsRowHtml(isOwn ? _pinsPayload() : data.cardPins, isOwn, data) + '</div>' +   // W1156 — up to two pins under the title; the own row opens the Wardrobe's Pins
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
         '<div class="pc-stat"><span class="k">BOSS KILLS</span><span class="v">' + num(data.bossesSlain) + '</span></div>' +
@@ -58720,6 +58702,10 @@
   // heartbeat as cardPins [{id, v}] (W1155) so other hunters see the same badge. Progress reuses _wxProg (k 'num').
   const WX_PINS = [
     { id: 'steps1m', n: 'Million Steps', r: 'M', c: '#f5b842', k: 'num', stat: 'steps',   goal: 1e6,   lab: 'Lifetime steps', cond: 'Walk 1,000,000 steps',           line: 'A million steps walked',  label: function () { return '1,000,000 STEPS'; } },
+    // W1158 — the card's gold Step Club seal and its Prestige pill became pins (owner: "keep in mind the 100K club... rendiesel
+    // has a prestige 1"); until a hunter chooses, these two wear themselves — see WX_PINS_DEFAULT
+    { id: 'club100k', n: '100K Step Club', r: 'L', c: '#f5b842', k: 'num', stat: 'club',    goal: 1,     lab: '100K weeks',     cond: 'Walk 100,000 steps in one week',  line: 'A 100,000-step week',     label: function (v) { return '100K CLUB' + (v > 1 ? ' ×' + v : ''); } },
+    { id: 'prestige', n: 'Prestige',      r: 'M', c: '#ffd76a', k: 'num', stat: 'prestige', goal: 1,     lab: 'Prestige',       cond: 'Climb past S+ rank',              line: 'Prestige beyond S+',      label: function (v) { return 'PRESTIGE ' + v; } },
     // W1157 — one shadow is enough (owner: "anyone that has one shadow can put that there... it just tracks how many");
     // the Summit pin went the way of Boss Slayer: BEST FLOOR already says it
     { id: 'shadows', n: 'Shadow Army',   r: 'L', c: '#a78bfa', k: 'num', stat: 'shadows', goal: 1,     lab: 'Shadows',        cond: 'Raise a shadow',                  line: 'A shadow raised',         label: function (v) { return v + ' SHADOW' + (v === 1 ? '' : 'S'); } },
@@ -58734,14 +58720,27 @@
   // this device's choice: { set:false } = never chose here (the heartbeat omits it); ids kept to pins still earned, two at most
   function _pinsLocal(st) {
     let raw = null; try { raw = localStorage.getItem(WX_PINS_KEY); } catch (_) {}
-    if (raw === null) return { set: false, ids: [] };
+    st = st || _wxStats();
+    if (raw === null) return { set: false, ids: _pinsDefaultIds(st) };   // W1158 — never chose here: the defaults wear themselves
     let ids = []; try { ids = JSON.parse(raw || '[]'); } catch (_) { ids = []; }
     if (!Array.isArray(ids)) ids = [];
-    st = st || _wxStats();
     ids = ids.filter(function (id, i) { const p = _pinById(id); return p && ids.indexOf(id) === i && _pinEarned(p, st); }).slice(0, WX_PINS_MAX);
     return { set: true, ids: ids };
   }
   function _pinsWorn(st) { return _pinsLocal(st).ids; }
+  // W1158 — the defaults: until a hunter chooses, the card wears the 100K Step Club seal and the Prestige pill it used to
+  // carry (owner: "keep in mind the 100K club... rendiesel has a prestige 1"). The own card from this device's numbers; a
+  // visitor's from the published profile while card_pins is NULL (never chose) — '[]' means chose none, so nothing shows.
+  const WX_PINS_DEFAULT = ['club100k', 'prestige'];
+  function _pinsDefaultIds(st) { return WX_PINS_DEFAULT.filter(function (id) { return _pinEarned(_pinById(id), st); }); }
+  function _pinsDefaultData(data) {
+    const out = [];
+    const club = (data && data.club100k && typeof data.club100k === 'object') ? Math.max(1, data.club100k.repeatCount | 0) : 0;
+    if (club > 0) out.push({ id: 'club100k', v: club });
+    const pr = (data && data.rankTier === 'S+') ? (data.prestige | 0) : 0;
+    if (pr > 0) out.push({ id: 'prestige', v: pr });
+    return out;
+  }
   function _pinsSave(ids) {
     try { localStorage.setItem(WX_PINS_KEY, JSON.stringify(ids.slice(0, WX_PINS_MAX))); } catch (_) {}
     try { _maybeSubmitPublicRankSummary('card-pins-change'); } catch (_) {}   // publish (other hunters' view of the card)
@@ -58751,7 +58750,8 @@
   function _pinsPayload(st) { st = st || _wxStats(); return _pinsWorn(st).map(function (id) { return { id: id, v: _pinValue(_pinById(id), st) }; }); }
   function _pinHtml(id, v) { const p = _pinById(id); if (!p) return ''; return '<span class="pc-pin" style="--pr:' + _wxRgb(p.c).join(',') + '"><i></i>' + esc(p.label(Number(v) || 0)) + '</span>'; }
   // a card's pins row: the own card from this device's numbers, a visitor's from the published [{id, v}]; '' when none
-  function _pinsRowHtml(list, own) {
+  function _pinsRowHtml(list, own, data) {
+    if (!own && !Array.isArray(list)) list = _pinsDefaultData(data);   // W1158 — never chose → the old seal and pill, as pins
     const html = (Array.isArray(list) ? list : []).slice(0, WX_PINS_MAX).map(function (x) { return x && _pinHtml(x.id, x.v); }).join('');
     if (!html) return '';
     return '<div class="pc-pins' + (own ? ' pc-pins--own' : '') + '"' + (own ? ' data-pcpins="1" role="button"' : '') + '>' + html + '</div>';
@@ -58816,7 +58816,8 @@
   function _wxStats() {
     const st = { floor: 0, kills: 0, rank: 'E', steps: 0, week: 0, sworn: 0, streak: 0, shadows: 0, flame: 0, opened: 0,
       tier: 'bronze', mega: 0, log: 0, logTotal: 1, grinning: 0, founder: 0, gates: {},
-      day: 0, perfect: 0, coopWins: 0, trioWins: 0, trioRanks: 0, podium: 0 };   // W1105 — the Rising
+      day: 0, perfect: 0, coopWins: 0, trioWins: 0, trioRanks: 0, podium: 0,   // W1105 — the Rising
+      club: 0, prestige: 0 };   // W1158 — 100K Step Club weeks + Prestige level (the card's default pins)
     try {
       const daily = loadLeaderboardState().steps_daily || {};
       let best = parseInt(localStorage.getItem(BEST_DAY_KEY) || '0', 10) || 0;
@@ -58832,6 +58833,8 @@
     try { const lb = loadLeaderboardState(); st.steps = lb.lifetime_steps_total | 0; st.week = lb.best_7day_step_total | 0; st.sworn = Math.max(lb.best_walk_streak | 0, lb.best_sleep_streak | 0); } catch (_) {}
     try { st.streak = buildAchievementContext().maxStreak | 0; } catch (_) {}
     try { st.shadows = Object.keys((_shLoad().extracted) || {}).length; } catch (_) {}
+    try { const a = accolades.get('step_100k_club'); st.club = a ? Math.max(1, a.repeat_count | 0) : 0; } catch (_) {}   // W1158 — the server's accolade, cached on the device
+    try { st.prestige = getPrestigeLevel(totalPoints) | 0; } catch (_) {}   // W1158 — 0 below S+
     const sp = _earnProg();
     try { const m = _loadCoopPacts(); Object.keys(m).forEach(function (k) { st.flame = Math.max(st.flame, (m[k] && m[k].best) | 0); }); } catch (_) {}
     st.flame = Math.max(st.flame, sp.flame | 0);

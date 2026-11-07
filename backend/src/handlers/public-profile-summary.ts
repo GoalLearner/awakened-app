@@ -83,7 +83,7 @@ const CARD_FRAME_IDS = ['gilded', 'rankforged', 'obsidian', 'runebound', 'eclips
 const CARD_INK_IDS = ['ivory', 'gold', 'violet', 'teal', 'ember', 'rose', 'frost', 'dawn', 'void', 'stardust'] as const;
 const CARD_AURA_IDS = ['none', 'motes', 'embers', 'storm', 'void', 'stardust'] as const;
 // W1155 — the card's pins (up to two): the id names the badge, v the number it shows.
-const CARD_PIN_IDS = ['steps1m', 'shadows', 'wgmvp', 'bestday'] as const;   // W1157 — bosses and summit dropped (the card's stats say them already), wgmvp added, before any client shipped
+const CARD_PIN_IDS = ['steps1m', 'club100k', 'prestige', 'shadows', 'wgmvp', 'bestday'] as const;   // W1157 — bosses and summit dropped (the card's stats say them already), wgmvp added, before any client shipped; W1158 — the 100K Step Club seal and the Prestige pill became pins
 const CARD_PINS_MAX = 2;
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
@@ -491,7 +491,7 @@ function validate(body: PutBody):
         const v = (typeof o.v === 'number' && Number.isFinite(o.v)) ? Math.max(0, Math.min(100_000_000, Math.floor(o.v))) : 0;
         pins.push({ id: o.id, v });
       }
-      cardPins = { set: true, value: pins.length ? JSON.stringify(pins) : null };
+      cardPins = { set: true, value: JSON.stringify(pins) };   // W1158 — '[]' = chose none; NULL (never sent) = the card wears its defaults (Step Club, Prestige)
     } else {
       return { ok: false, code: 'INVALID_CARD_PINS', detail: 'cardPins must be an array of at most two pins, or null.' };
     }

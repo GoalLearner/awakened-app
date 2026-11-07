@@ -968,16 +968,26 @@ describe('W1155 — card pins (cardPins)', () => {
     expect(upd[0].binds[8]).toBe(session.userId);
   });
 
-  it('an empty array or null clears the pins', async () => {
-    for (const val of [[], null]) {
+  // W1158 — NULL and '[]' mean different things to a visitor's card: NULL = this hunter never chose (the card wears
+  // the Step Club seal and the Prestige pill it used to carry, as pins); '[]' = chose none.
+  it('null clears the pins to NULL; an empty array is stored as "[]" (chose none)', async () => {
+    for (const [val, stored] of [[null, null], [[], '[]']] as Array<[unknown, string | null]>) {
       const db = makeDb();
       const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardPins: val }), makeEnv(db), session);
       expect(res.status).toBe(200);
       const upd = lookCalls(db);
       expect(upd.length).toBe(1);
       expect(upd[0].binds[6]).toBe(1);
-      expect(upd[0].binds[7]).toBe(null);
+      expect(upd[0].binds[7]).toBe(stored);
     }
+  });
+
+  it('W1158 — the 100K Step Club and Prestige are pins', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardPins: [{ id: 'club100k', v: 2 }, { id: 'prestige', v: 1 }] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual([{ id: 'club100k', v: 2 }, { id: 'prestige', v: 1 }]);
   });
 
   it('three pins, an unknown id, or a repeated id → 400 INVALID_CARD_PINS and nothing written', async () => {

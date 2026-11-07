@@ -28119,30 +28119,10 @@ body.combat-active #app * { animation-play-state: paused !important; }
   border-radius: 20px; background: rgba(var(--pc-skin),0.08); border: 1px solid rgba(var(--pc-skin),0.27); }
 .pc-skintag i { width: 7px; height: 7px; transform: rotate(45deg); background: rgb(var(--pc-skin)); box-shadow: 0 0 7px rgb(var(--pc-skin)); }
 .pc-skintag span { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: rgb(var(--pc-skin)); }
-/* ClaudeDesign "Hunter Profile - 100K Club" (W373) — the 100K STEP CLUB as a coveted gold seal */
-.pc-club100k { position: relative; display: inline-flex; align-items: center; gap: 11px; margin-top: 12px;
-  padding: 9px 18px 9px 13px; border-radius: 999px; overflow: hidden;
-  background: linear-gradient(180deg, #ffe9b0 0%, #f5b842 46%, #c08418 100%);
-  box-shadow: 0 0 22px rgba(245,184,66,0.40), 0 4px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 6px rgba(120,70,0,0.4);
-  border: 1px solid rgba(255,236,180,0.7); }
-.pc-club100k-shine { position: absolute; top: 0; bottom: 0; left: -40%; width: 28%;
-  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.85), transparent);
-  transform: skewX(-18deg); animation: pc-club-sweep 3.4s ease-in-out infinite; pointer-events: none; }
-@keyframes pc-club-sweep { 0% { left: -45%; } 55% { left: 125%; } 100% { left: 125%; } }
-.pc-club100k-seal { position: relative; width: 30px; height: 30px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; }
-.pc-club100k-seal-n { position: absolute; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 9.5px; color: #ffe9b0; letter-spacing: -0.3px; text-shadow: 0 0 6px #f5b842; }
-.pc-club100k-txt { position: relative; display: inline-flex; flex-direction: column; line-height: 1.1; }
-.pc-club100k-t1 { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 14px; letter-spacing: 1.2px; color: #241502; }
-.pc-club100k-t2 { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.4px; color: rgba(40,21,2,0.66); margin-top: 2px; }
-@media (prefers-reduced-motion: reduce) { .pc-club100k-shine { animation: none; opacity: 0; } }
+/* W1158 — the 100K Step Club seal (W373) and the Prestige chip (W453) left the card: both are pins now (.pc-pin) */
 
 /* W453 — Prestige (the S+ endgame): gold ✦ stars that the long-term player
    base wears to "stunt on noobs". Profile-card chip + inline leaderboard stars. */
-.pc-prestige { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; padding: 4px 13px;
-  border-radius: 999px; background: linear-gradient(180deg, rgba(245,184,66,0.22), rgba(192,132,24,0.10));
-  border: 1px solid rgba(245,184,66,0.55); box-shadow: 0 0 16px rgba(245,184,66,0.25), inset 0 1px 0 rgba(255,236,180,0.35); }
-.pc-prestige-stars { font-size: 14px; line-height: 1; color: #ffd76a; letter-spacing: 1px; text-shadow: 0 0 8px rgba(245,184,66,0.7); }
-.pc-prestige-lbl { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 800; letter-spacing: 2px; color: #f5d99a; }
 .lb-rank-prestige { margin-left: 5px; font-size: 11px; line-height: 1; color: #ffd76a; letter-spacing: 0.5px;
   text-shadow: 0 0 6px rgba(245,184,66,0.65); vertical-align: middle; white-space: nowrap; }
 /* W618 — Founder mark (one-time supporter). Gold, sits beside prestige/club flair.
@@ -28165,9 +28145,9 @@ body.combat-active #app * { animation-play-state: paused !important; }
 button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .pc-shard--pick b { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700; line-height: 1; color: var(--pc-tier); opacity: 0.8; margin-left: -1px; }
 .pc-shard--none span { letter-spacing: 1.2px; }
-/* W385 — title (shard) + 100K Club seal share one centered row under the name */
+/* W385 — the title shard sits in one centered row under the name (the 100K Club seal left for the pins row, W1158) */
 .pc-idrow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 9px; }
-.pc-idrow .pc-shard, .pc-idrow .pc-club100k { margin-top: 0; }
+.pc-idrow .pc-shard { margin-top: 0; }
 
 /* stat grid + floor bar */
 .pc-stats { padding: 18px 22px 0; }

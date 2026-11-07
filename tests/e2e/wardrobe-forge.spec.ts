@@ -140,12 +140,14 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await tab(page, 'pins').click();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
-    await expect(pane.locator('.wx-sl')).toHaveCount(4);
+    await expect(pane.locator('.wx-sl')).toHaveCount(6);   // W1158 — the Step Club and Prestige joined
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
     await expect(tile(page, 'pin', 'bestday')).toHaveClass(/is-earned/);
     await expect(tile(page, 'pin', 'shadows')).toHaveClass(/is-earned/);            // one shadow is enough
     await expect(tile(page, 'pin', 'wgmvp')).toHaveClass(/is-locked/);
     await expect(tile(page, 'pin', 'wgmvp').locator('.wx-bt-st')).toHaveText('0 / 1');
+    await expect(tile(page, 'pin', 'club100k')).toHaveClass(/is-locked/);   // W1158 — no accolade cached on this device, no Prestige
+    await expect(tile(page, 'pin', 'prestige')).toHaveClass(/is-locked/);
     await expect(pane.locator('.wx-hl .pc-pin')).toHaveText('NO PINS');
     // wear one, then a second
     await tile(page, 'pin', 'steps1m').click();
