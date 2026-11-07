@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1138'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1139'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14029,6 +14029,7 @@
       cd: {}, bcd: {}, turn: 1, log: [], done: false, won: false, untouched: true,
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
       aiTier: aiTierFor(m.bot && m.bot.floor),   // W260 — endgame AI ladder (≤50 → 2, unchanged)
+      _pattern: (!m._pvp && m.bot && m.bot.isBoss && ASCENT_BOSS_PATTERNS[m.bot.floor]) ? { idx: 0, step: -1 } : null,   // W1139 — a rhythm boss
     };
   }
   // W235 AI v2 — strict-priority tree with UTILITY branches (§7.1 of the doc).
@@ -14390,6 +14391,17 @@
     const atkName = side === 'p' ? 'You' : esc(sess.m.bot.name);
     const defName = side === 'p' ? esc(sess.m.bot.name) : 'You';
     if (atkS.stun > 0) { atkS.stun -= 1; events.push({ side, t: 'stun', text: atkName + ' — stunned, can\'t move.' }); return; }   // W233 flinch: decrement when the skipped action occurs
+    // W1139 — the read: a parried / sidestepped / warded foe move finds nothing (no damage, no fx). A parried HEAVY
+    // is answered with a riposte, which runs through this same pipeline (caps bind) and then the foe's move is over.
+    const ctr = sess._counter;
+    if (ctr && side === 'b' && !ctr.done && (ctr.kind === 'parry' || ctr.kind === 'sidestep' || ctr.kind === 'ward')) {
+      ctr.done = true; ctr.read = true; sess._counterDone = ctr.kind;
+      const label = ctr.kind === 'parry' ? 'Parried' : ctr.kind === 'sidestep' ? 'Sidestepped' : 'Warded';
+      events.push({ side: 'p', t: 'counter', kind: ctr.kind, read: true, surge: !!ctr.surge, gl: move.gl, text: label + ' — ' + move.name + ' finds nothing.' });
+      if (ctr.kind !== 'ward' && ctr.word === 'HEAVY') _arExecMove(sess, 'p', _arRiposteMove(sess), events);
+      return;
+    }
+    const noStance = !!(ctr && side === 'p' && (ctr.kind === 'parry' || ctr.kind === 'sidestep' || ctr.kind === 'ward'));
     const power = move.power || 0;
     if (power > 0) {
       const atkBase  = (side === 'p' ? sess.m.player.attack : sess.m.bot.attack) || 0;
@@ -14439,21 +14451,31 @@
         if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
         else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
         sess.dmgDealt[side] += effective;
-        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });   // W1135 — ult: the Surge ultimate (Ascent-only; the server core never sets it)
+        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, riposte: !!move.riposte, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });   // W1135 — ult: the Surge ultimate (Ascent-only; the server core never sets it)
       } else if (dodged && !missed) {
         events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' });
       } else {
         events.push({ side, t: 'miss', text: atkName + ' — ' + move.name + ' misses!' });
       }
     }
-    if (move.fx) _arApplyFx(sess, side, move.fx, events, atkName, defName);
+    if (move.fx) _arApplyFx(sess, side, move.fx, events, atkName, defName, noStance ? { noStance: true } : null);
     if (sess.bHP <= 0) { if (!_arMaybeAdvancePhase(sess, events)) { sess.done = true; sess.won = true; } }   // W535 — unbind before win
     else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
   }
-  function _arApplyFx(sess, side, fx, events, atkName, defName) {
+  function _arApplyFx(sess, side, fx, events, atkName, defName, opts) {
     const selfS = side === 'p' ? sess.pS : sess.bS, foeS = side === 'p' ? sess.bS : sess.pS;
     // W315 — subject-aware copula: "You are burning" but "Sentinel is burning".
     const isAre = defName === 'You' ? 'are' : 'is';
+    // W1139 — REFLECT: the foe's curse lands on the foe. Re-entered from the player's side so power scaling,
+    // cauterize, stun-on-stunned and the DoT's credit (src 'p') all come out as if you had cast it.
+    const rc = sess._counter;
+    if (rc && side === 'b' && rc.kind === 'reflect' && !rc.done && _CURSE_FX.test(fx.t)) {
+      rc.done = true; rc.read = true; sess._counterDone = 'reflect';
+      events.push({ side: 'p', t: 'counter', kind: 'reflect', read: true, text: 'Reflected — the ' + (fx.t === 'defDown' ? 'shred' : fx.t === 'atkDown' ? 'curse' : fx.t) + ' turns back.' });
+      _arApplyFx(sess, 'p', fx.mag != null ? Object.assign({}, fx, { mag: fx.mag * REFLECT_MAG }) : fx, events, defName, atkName);
+      return;
+    }
+    const noStance = !!(opts && opts.noStance);
     switch (fx.t) {
       case 'burn': case 'bleed': {
         // W236 Cauterize: a fresh cleanse grants 2 turns of DoT immunity — new
@@ -14481,14 +14503,18 @@
         if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' already reeling.' }); }
         else { foeS.stun = 1; events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' stunned.' }); }
         break;
-      case 'atkUp': _arPushMod(selfS, 'atk', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — attack up.' }); break;
+      case 'atkUp': _arPushMod(selfS, 'atk', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', atkUp: true, text: atkName + ' — attack up.' }); break;
       case 'atkDown': _arPushMod(foeS, 'atk', fx.kind || fx.t, -fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
-      case 'defUp': _arPushMod(selfS, 'def', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;   // Brace (mag negative → take less)
+      case 'defUp': if (noStance) { events.push({ side, t: 'fx', text: atkName + ' — readied.' }); break; }   // W1139 — the stance was spent on the read
+        _arPushMod(selfS, 'def', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;   // Brace (mag negative → take less)
       case 'defDown': _arPushMod(foeS, 'shred', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — armor shredded.' }); break;   // pierces the divisor
-      case 'dodge': _arPushMod(selfS, 'dodge', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
-      case 'guard': selfS.guard = 1; events.push({ side, t: 'fx', text: atkName + ' guards.' }); break;
+      case 'dodge': if (noStance) { events.push({ side, t: 'fx', text: atkName + ' — readied.' }); break; }   // W1139
+        _arPushMod(selfS, 'dodge', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' — evasive.' }); break;
+      case 'guard': if (noStance) { events.push({ side, t: 'fx', text: atkName + ' — readied.' }); break; }   // W1139
+        selfS.guard = 1; events.push({ side, t: 'fx', text: atkName + ' guards.' }); break;
       case 'guardCleanse':
-        selfS.guard = 1; selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
+        if (!noStance) selfS.guard = 1;   // W1139 — under a parry the block was the parry; the cleanse itself stays
+        selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
         // W236 Cauterize: every cleanse cast (even pre-emptive, with nothing to
         // cleanse) grants 2 turns of DoT immunity — Refuse no longer loses the
         // tempo war 1-for-2 against a CD-1 reapplier.
@@ -14498,9 +14524,10 @@
         // W529 — melee combined stance = Guard (-40% taken) + Focus (+40% atk) + cleanse,
         // 3 turns. CLEANSE FIRST (it strips mag<0 mods, which would otherwise eat the def
         // buff we add next), THEN apply the buffs. Mirrors Refuse's cleanse + Guard + Focus.
-        selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0; selfS.guard = 1;
+        selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
+        if (!noStance) selfS.guard = 1;   // W1139 — under a parry: cleanse + focus + cauterize stay, the ward was the parry
         const _bw = Math.abs(fx.mag || 0.40), _bd = fx.dur || 3;
-        _arPushMod(selfS, 'def', 'guard', -_bw, _bd);          // take 40% less for 3 turns
+        if (!noStance) _arPushMod(selfS, 'def', 'guard', -_bw, _bd);          // take 40% less for 3 turns
         _arPushMod(selfS, 'atk', 'focus', _bw, _bd);           // hits land 40% harder for 3 turns
         _arPushMod(selfS, 'dotImmune', 'cauterize', 1, 2);     // 2t DoT immunity (matches Refuse)
         events.push({ side, t: 'fx', text: atkName + ' raises a bulwark — warded, focused, afflictions cauterized.' }); break;
@@ -14538,6 +14565,8 @@
       S.mods = S.mods.filter((x) => x.dur > 0);
       // (stun no longer decrements here — W233 flinch model decrements on the skipped action)
     });
+    // W1139 — a rhythm boss (floors 10-90) breaks at half: its phase-2 cycle starts from the top next turn.
+    if (sess._pattern && !sess._bossPhase2 && sess.bHP > 0 && sess.bHP / Math.max(1, sess.bMax) <= 0.5) { sess._bossPhase2 = true; sess._pattern.idx = 0; }
     Object.keys(sess.cd).forEach((k) => { if (sess.cd[k] > 0) sess.cd[k] -= 1; });
     Object.keys(sess.bcd).forEach((k) => { if (sess.bcd[k] > 0) sess.bcd[k] -= 1; });
     if (sess.bHP <= 0) { if (!_arMaybeAdvancePhase(sess, events)) { sess.done = true; sess.won = true; } }   // W535 — DoT can fell phase 1 too
@@ -14565,7 +14594,7 @@
   function _arUltimateFor(sess) { const st = _arUltStyle(sess); return Object.assign({ id: 'ultimate', ult: true, style: st }, ASCENT_ULTIMATES[st]); }
   function _arPrimeIntent(sess) {
     if (!sess || sess.done || sess._pvp) return null;
-    if (!sess._bNext) sess._bNext = _arenaFoePick(sess);
+    if (!sess._bNext) sess._bNext = _arBossPatternPick(sess) || _arenaFoePick(sess);   // W1139 — a rhythm boss picks from its cycle
     return sess._bNext;
   }
   // What a move reads as above the foe. pFrac = the target's HP share (an execute in its window is HEAVY).
@@ -14583,6 +14612,86 @@
     if (sess.bS && sess.bS.stun > 0) return 'STUNNED';
     return _arMoveWord(sess._bNext, sess.pHP / Math.max(1, sess.pMax));
   }
+  // ── W1139 — READ THE FOE (owner 2026-11-06: "not attack attack attack ... IQ or predictions"). Ascent-only.
+  //  • COUNTERS: the badge's word has an answer, decided from the two committed moves before anyone acts (so the
+  //    turn order never matters) and never while either side is stunned. HEAVY ← a guard-family move (free) or the
+  //    Surge bar ('parry', SURGE_GUARD_COST) = PARRY: the heavy does nothing and you riposte; a dodge move SIDESTEPS.
+  //    CURSE ← a cleanse = REFLECT (it lands on the foe), a dodge = SIDESTEP, a guard card = WARD. CHARGE ← any
+  //    landed hit = INTERRUPT (the buff is cancelled). GUARD and STRIKE have no counter (a guard there is the plain
+  //    stance, as before). The Surge parry answers HEAVY only; it is paid whatever the foe did. Every read adds
+  //    READ_SURGE. The foe never reads you (§7.2 of ARENA_BATTLE_ENGINE.md). Sim-tuned 2026-11-06: a GUARD-turn
+  //    'free' read and a Surge ward of curses were both measured and dropped (the first was worth nothing to a
+  //    strong hunter, the second blocked a whole move for 40% and became the only play against tricksters).
+  //  • BOSS RHYTHMS (floors 10-90): a fixed, cooldown-legal cycle per phase replaces the AI, so the rail on screen is
+  //    always true. The boss breaks at half HP (its phase-2 cycle); a stunned boss skips its beat and the cycle moves on.
+  let READ_SURGE = 0.15, SURGE_GUARD_COST = 0.40, RIPOSTE_POWER = 0.8;   // let: the balance sim tunes them through Arena._battle.tune
+  let PARRY_RESETS_CD = false, REFLECT_MAG = 1.0;   // dials the sim can flip (both measured, both kept off / 1.0)
+  const _CURSE_FX = /^(atkDown|defDown|stun|burn|bleed)$/;
+  const ASCENT_BOSS_PATTERNS = {
+    10: { p1: ['slash', 'slash', 'cleave'],                          p2: ['focus', 'slash', 'cleave', 'sunder'],            line: 'Two strikes, then the big swing.' },
+    20: { p1: ['arcanebolt', 'dispel', 'arcanebolt', 'siphon'],      p2: ['manaward', 'arcanebolt', 'arcanebolt', 'siphon'], line: 'A bolt, a shrug, a bolt, then it feeds.' },
+    30: { p1: ['shatterhex', 'forcewave', 'dispel'],                 p2: ['dispel', 'shatterhex', 'forcewave'],             line: 'A hex, then the hammer, then a breath.' },
+    40: { p1: ['flamearrow', 'arrowvolley', 'tumble', 'snapshot'],   p2: ['flamearrow', 'snapshot', 'flamearrow', 'arrowvolley'], line: 'Fire first. Then it dances.' },
+    50: { p1: ['temper', 'slash', 'oathstrike', 'slash', 'cleave'],  p2: ['oathstrike', 'cleave', 'slash', 'slash'],        line: 'It winds up, then swings to kill.' },
+    60: { p1: ['sunder', 'cleave', 'slash', 'focus'],                p2: ['focus', 'cleave', 'slash'],                      line: 'It breaks your armor, then your bones.' },
+    70: { p1: ['focus', 'lunge', 'guard', 'slash'],                  p2: ['lunge', 'slash', 'focus'],                       line: 'Patient. It builds, strikes, and waits.' },
+    80: { p1: ['manaward', 'arcanebolt', 'dispel', 'siphon'],        p2: ['arcanebolt', 'arcanebolt', 'dispel', 'siphon'],  line: 'It wards, it bolts, it shrugs, it feeds.' },
+    90: { p1: ['snapshot', 'flamearrow', 'tumble', 'arrowvolley'],   p2: ['flamearrow', 'arrowvolley', 'flamearrow', 'snapshot'], line: 'Quick, burning, gone. Then the rain.' },
+  };
+  function _arBossPattern(sess) { const b = sess && sess.m && sess.m.bot; return (b && b.isBoss && ASCENT_BOSS_PATTERNS[b.floor]) || null; }
+  // The next beat of the boss's cycle: the first move from the cursor that is off cooldown (the walk keeps the
+  // phase-1 → phase-2 seam legal at every crossing); Struggle only if every move is cooling.
+  function _arBossPatternPick(sess) {
+    const pat = _arBossPattern(sess); if (!pat || !sess._pattern) return null;
+    const cyc = sess._bossPhase2 ? pat.p2 : pat.p1;
+    const byId = {}; (sess.bMoves || []).forEach((mv) => { byId[mv.id] = mv; });
+    for (let k = 0; k < cyc.length; k++) {
+      const i = (sess._pattern.idx + k) % cyc.length, mv = byId[cyc[i]];
+      if (mv && !(sess.bcd[mv.id] > 0)) { sess._pattern.idx = (i + 1) % cyc.length; sess._pattern.step = i; return mv; }
+    }
+    sess._pattern.step = -1;
+    return _arStruggleMove();
+  }
+  // What the rail shows: the cycle's words, the lit step (the committed beat) and the phase.
+  function _arBossRail(sess) {
+    const pat = _arBossPattern(sess); if (!pat || !sess._pattern) return null;
+    const cyc = sess._bossPhase2 ? pat.p2 : pat.p1;
+    return { steps: cyc.map((id) => _arMoveWord(ARENA_MOVE_LIB[id] || {}, 1)), on: sess._pattern.step, phase: sess._bossPhase2 ? 2 : 1, line: pat.line };
+  }
+  function _arMoveFamily(mv) {
+    if (!mv) return null;
+    const t = mv.fx && mv.fx.t;
+    if ((mv.power || 0) > 0) return (t && _CURSE_FX.test(t)) ? 'curse' : 'attack';
+    if (mv.surgeGuard || t === 'defUp' || t === 'guard') return 'guard';
+    if (t === 'guardCleanse' || t === 'bulwark') return 'cleanse';
+    if (t === 'dodge') return 'dodge';
+    if (t === 'atkUp') return 'setup';
+    if (t === 'heal') return 'heal';
+    return 'other';
+  }
+  function _arParryMove() { return { id: 'parry', name: 'Parry', gl: 'shield', power: 0, acc: 1, cd: 0, surgeGuard: true, desc: 'Spend Surge to stop the blow.' }; }
+  function _arRiposteMove(sess) { const gl = (sess.pMoves && sess.pMoves[0] && sess.pMoves[0].gl) || 'sword'; return { id: 'riposte', name: 'Riposte', gl, power: RIPOSTE_POWER, acc: 0.99, cd: 0, riposte: true }; }
+  // The counter this turn resolves to, from the two committed moves (null = a plain trade).
+  function _arReadCounter(sess, pMove, bMove) {
+    if (!sess || sess._pvp || !pMove || !bMove) return null;
+    if (sess.pS.stun > 0 || sess.bS.stun > 0) return null;
+    const word = _arMoveWord(bMove, sess.pHP / Math.max(1, sess.pMax));
+    const fam = _arMoveFamily(pMove), surge = !!pMove.surgeGuard;
+    if (surge) return word === 'HEAVY' ? { kind: 'parry', word, surge } : null;   // the Surge parry stops a heavy, nothing else
+    if (word === 'HEAVY') {
+      if (fam === 'guard' || fam === 'cleanse') return { kind: 'parry', word, surge };
+      if (fam === 'dodge') return { kind: 'sidestep', word, surge };
+      return null;
+    }
+    if (word === 'CURSE') {
+      if (fam === 'cleanse') return { kind: 'reflect', word, surge };
+      if (fam === 'dodge') return { kind: 'sidestep', word, surge };
+      if (fam === 'guard') return { kind: 'ward', word, surge };
+      return null;
+    }
+    if (word === 'CHARGE') return (pMove.power || 0) > 0 ? { kind: 'interrupt', word, surge } : null;
+    return null;
+  }
   // Resolve a full turn given the player's chosen move id (no commit).
   function arenaTakeTurn(sess, moveId) {
     if (!sess || sess.done) return null;
@@ -14590,11 +14699,21 @@
     if (!pMove && moveId === 'struggle') pMove = _arStruggleMove();
     const ultUsed = !pMove && moveId === 'ultimate' && !sess._pvp && (sess._surge || 0) >= 1;   // W1135
     if (ultUsed) pMove = _arUltimateFor(sess);
+    // W1139 — the Surge parry: accepted on any badge once affordable, and always paid (so it never leaks the truth).
+    const surgeGuard = !pMove && moveId === 'parry' && !sess._pvp && (sess._surge || 0) >= SURGE_GUARD_COST && !(sess.pS.stun > 0);
+    if (surgeGuard) pMove = _arParryMove();
     if (!pMove || sess.cd[pMove.id] > 0) return null;            // invalid or on cooldown
     // W1135 — the foe's move was committed a turn early (its intent); the lazy pick covers turn one in
     // the sim and the self-tests. Picked BEFORE the Apex tracker learns this turn's choice.
     const bMove = _arPrimeIntent(sess) || _arenaFoePick(sess);
-    sess._bNext = null;
+    sess._bNext = null; sess._counterDone = null;
+    // W1139 — the read, from the two committed moves, before anyone acts. A parry / ward spends any stance you
+    // already held (no double-dip); a sidestep spends an evasion. The interrupt is settled after both acts.
+    const counter = sess._counter = _arReadCounter(sess, pMove, bMove);
+    if (counter && (counter.kind === 'parry' || counter.kind === 'ward')) { sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'def'); sess.pS.guard = 0; }
+    if (counter && counter.kind === 'sidestep') sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'dodge');
+    const atkSnap = (counter && counter.kind === 'interrupt') ? (sess.bS.mods.find((x) => x.k === 'atk' && x.mag > 0) || null) : null;
+    const atkSnapCopy = atkSnap ? Object.assign({}, atkSnap) : null;
     // W260 — APEX pattern adaptation: track the player's last ~6 picks THIS
     // battle (tier 5 only; resets with the session — no cross-battle memory).
     if (sess.aiTier === 5) {
@@ -14614,8 +14733,21 @@
     }
     const order = pFirst ? ['p', 'b'] : ['b', 'p'];
     for (const s of order) { if (sess.done) break; _arExecMove(sess, s, s === 'p' ? pMove : bMove, events); }
+    // W1139 — INTERRUPT: a landed hit this turn cancels the charge the foe just made (its buff event is dropped).
+    if (counter && counter.kind === 'interrupt') {
+      const landed = events.some((e) => e.side === 'p' && e.t === 'hit' && !e.riposte);
+      const fxIdx = events.findIndex((e) => e.side === 'b' && e.t === 'fx' && e.atkUp);
+      if (landed && fxIdx !== -1) {
+        const kind = bMove.fx && (bMove.fx.kind || bMove.fx.t);
+        sess.bS.mods = sess.bS.mods.filter((x) => !(x.k === 'atk' && x.mag > 0 && x.kind === kind));
+        if (atkSnapCopy) sess.bS.mods.push(atkSnapCopy);
+        events.splice(fxIdx, 1);
+        counter.done = true; counter.read = true; sess._counterDone = 'interrupt';
+        events.push({ side: 'p', t: 'counter', kind: 'interrupt', read: true, text: 'Interrupted — the charge breaks.' });
+      }
+    }
     if (pMove.cd) sess.cd[pMove.id] = pMove.cd + 1;             // +1: ticked down at end of this turn
-    if (bMove.cd) sess.bcd[bMove.id] = bMove.cd + 1;
+    if (bMove.cd && !(PARRY_RESETS_CD && sess._counterDone && sess._counterDone !== 'interrupt')) sess.bcd[bMove.id] = bMove.cd + 1;
     if (!sess.done) _arEndTurn(sess, events);
     if (!sess._pvp) {
       // W1135 — "what beat you": the foe's last landing blow (a hit, or the burn / bleed it left).
@@ -14631,8 +14763,14 @@
       // W1135 — Surge: the share of the foe's bar you took plus the share of yours it took. The ultimate spends it
       // (unless a stun swallowed the turn).
       const gain = SURGE_DEALT_K * (sess.dmgDealt.p - d0p) / Math.max(1, sess.bMax) + SURGE_TAKEN_K * (sess.dmgDealt.b - d0b) / Math.max(1, sess.pMax);
-      sess._surge = (ultUsed && !stunnedAtStart) ? 0 : Math.max(0, Math.min(1, (sess._surge || 0) + gain));
+      let surge = sess._surge || 0;
+      if (ultUsed && !stunnedAtStart) surge = 0;
+      else { if (surgeGuard) surge -= SURGE_GUARD_COST; surge = Math.max(0, Math.min(1, surge + gain)); }   // W1139 — the Surge parry is paid whatever the foe did
+      if (counter && counter.read) surge = Math.min(1, surge + READ_SURGE);                                 // W1139 — a perfect read
+      sess._surge = surge;
+      sess._lastRead = (counter && counter.read) ? counter.kind : null;
     }
+    sess._counter = null;
     sess.turn += 1;
     if (!sess.done && sess.turn > _BATTLE_TURN_CAP) {           // timeout → most EFFECTIVE damage dealt wins
       const dp = sess.dmgDealt.p, db = sess.dmgDealt.b;
@@ -15037,6 +15175,143 @@
           w('slash') === 'STRIKE' && w('sunder') === 'CURSE' && w('arrowvolley') === 'STRIKE' && w('reckoning', 0.25) === 'HEAVY' && w('reckoning', 0.9) === 'STRIKE' &&
           _arIntentWord(stS) === 'STUNNED');
       }
+      // T43-T52 — W1139 read the foe: counters, the Surge parry, boss rhythms.
+      {
+        const YOU = () => mk(40, 36, 16, null, 'You'), FOE = (arch) => mk(34, 30, 12, arch || 'aggressor', 'Foe');
+        // a fight where the foe's next move is forced (the badge then reads it)
+        const forced = (pIds, bId, seed, tweak) => {
+          const t = arenaStartBattle(M(YOU(), FOE()), seed);
+          t.pMoves = pIds.map(lib); t.pAttuned = 1; t.bMoves = [lib(bId)]; t._bNext = t.bMoves[0];
+          if (tweak) tweak(t);
+          return t;
+        };
+        const counterOf = (ev, kind) => (ev || []).find((e) => e.t === 'counter' && (!kind || e.kind === kind));
+        const hitBy = (ev, side) => (ev || []).find((e) => e.side === side && e.t === 'hit' && !e.riposte);
+        // T43 PARRY: a Guard on a forced Cleave — the heavy does nothing, no stance is kept, an old stance is spent, the riposte lands.
+        let parryOK = false;
+        for (let sd = 90; sd < 96 && !parryOK; sd++) {
+          const t = forced(['guard', 'slash'], 'cleave', sd, (x) => { x.pS.mods.push({ k: 'def', kind: 'brace', mag: -0.35, dur: 2 }); });
+          const hp0 = t.pHP, bhp0 = t.bHP, ev = arenaTakeTurn(t, 'guard');
+          const rip = (ev || []).find((e) => e.side === 'p' && e.t === 'hit' && e.riposte);
+          parryOK = !!counterOf(ev, 'parry') && !hitBy(ev, 'b') && t.pHP === hp0 && !!rip && t.bHP < bhp0 &&
+            !t.pS.mods.some((x) => x.k === 'def') && t.pS.guard === 0 && t.bcd.cleave === 2 && (t._surge || 0) >= READ_SURGE - 1e-9;
+        }
+        ok('T43 parry: the heavy finds nothing, the stance is spent, the riposte lands', parryOK);
+        // T44 a stunned player cannot parry (the heavy lands, no read, no bonus); 'parry' is refused while stunned.
+        const ts = forced(['guard', 'slash'], 'cleave', 96, (x) => { x.pS.stun = 1; x._surge = 0.9; });
+        const refusedStunned = arenaTakeTurn(ts, 'parry') === null && Math.abs((ts._surge || 0) - 0.9) < 1e-9;
+        const evS = arenaTakeTurn(ts, 'guard');
+        ok('T44 stunned player: the heavy lands, no read; the Surge parry is refused', refusedStunned && !counterOf(evS) && (!!hitBy(evS, 'b') || (evS || []).some((e) => e.side === 'b' && (e.t === 'miss' || e.t === 'dodge'))));
+        // T45 a stunned foe: a Guard keeps its normal stance, no read, the stun is burned once.
+        const tf = forced(['guard', 'slash'], 'cleave', 97, (x) => { x.bS.stun = 1; });
+        const evF = arenaTakeTurn(tf, 'guard');
+        ok('T45 stunned foe: the guard keeps its stance, no read, the stun burns once', !counterOf(evF) && tf.pS.mods.some((x) => x.k === 'def' && x.mag < 0) && tf.bS.stun === 0);
+        // T46 Refuse / Bulwark on a HEAVY: the cleanse and the focus stay, only the ward is spent.
+        const tr = forced(['refuse'], 'cleave', 98, (x) => { x.pS.mods.push({ k: 'dot', kind: 'burn', mag: 0.1, dur: 3, src: 'b' }); });
+        const evR = arenaTakeTurn(tr, 'refuse');
+        const tb = forced(['bulwark'], 'cleave', 99);
+        const evB = arenaTakeTurn(tb, 'bulwark');
+        ok('T46 a cleanse parries: cleanse + cauterize + focus stay, the ward is spent',
+          !!counterOf(evR, 'parry') && !tr.pS.mods.some((x) => x.k === 'dot') && tr.pS.mods.some((x) => x.k === 'dotImmune') && !tr.pS.mods.some((x) => x.k === 'def') && tr.pS.guard === 0 &&
+          !!counterOf(evB, 'parry') && tb.pS.mods.some((x) => x.k === 'atk' && x.mag > 0) && !tb.pS.mods.some((x) => x.k === 'def') && tb.pS.guard === 0);
+        // T47 SIDESTEP (a dodge on a HEAVY: no stance kept) and WARD (a guard on a CURSE: blocked, no riposte).
+        const td = forced(['evade'], 'cleave', 100);
+        const evD = arenaTakeTurn(td, 'evade');
+        const tw = forced(['guard'], 'sunder', 101);
+        const hpW = tw.pHP, evW = arenaTakeTurn(tw, 'guard');
+        ok('T47 sidestep and ward', !!counterOf(evD, 'sidestep') && !hitBy(evD, 'b') && !td.pS.mods.some((x) => x.k === 'dodge') &&
+          !!counterOf(evW, 'ward') && !hitBy(evW, 'b') && tw.pHP === hpW && !tw.pS.mods.some((x) => x.k === 'shred') && !(evW || []).some((e) => e.side === 'p' && e.riposte));
+        // T48 INTERRUPT: both orders, a DoT attack counts, a miss leaves the buff, an older buff survives.
+        let intOK = true;
+        [['quickstep', 102], ['slash', 103], ['immolate', 104]].forEach(([id, sd0]) => {
+          let landedOnce = false;
+          for (let sd = sd0; sd < sd0 + 40 && !landedOnce; sd += 3) {   // acc caps at 0.99: take the first seed whose hit lands
+            const t = forced([id], 'focus', sd, (x) => { if (id === 'slash') x.m.bot.edge = 400; x.pMoves[0].acc = 1; });   // slash: the foe acts first
+            const ev = arenaTakeTurn(t, id);
+            if (!hitBy(ev, 'p')) continue;
+            landedOnce = true;
+            if (!counterOf(ev, 'interrupt') || t.bS.mods.some((x) => x.k === 'atk' && x.mag > 0) || (ev || []).some((e) => e.side === 'b' && e.atkUp)) intOK = false;
+          }
+          if (!landedOnce) intOK = false;
+        });
+        const tm = forced(['slash'], 'focus', 105, (x) => { x.pMoves[0].acc = 0; });
+        const evM = arenaTakeTurn(tm, 'slash');
+        const missKeeps = !counterOf(evM) && tm.bS.mods.some((x) => x.k === 'atk' && x.mag > 0);
+        const to = forced(['slash'], 'focus', 106, (x) => { x.pMoves[0].acc = 1; x.bS.mods.push({ k: 'atk', kind: 'temper', mag: 0.4, dur: 3 }); });
+        const evO = arenaTakeTurn(to, 'slash');
+        const olderSurvives = !!counterOf(evO, 'interrupt') && to.bS.mods.some((x) => x.k === 'atk' && x.kind === 'temper') && !to.bS.mods.some((x) => x.k === 'atk' && x.kind === 'focus');
+        ok('T48 interrupt: both orders, a DoT attack counts, a miss keeps the buff, an older buff survives', intOK && missKeeps && olderSurvives);
+        // T49 REFLECT: the burn lands on the foe, credited to you; a stun turns back; your cleanse still cauterizes.
+        const tx = forced(['refuse'], 'searing', 107);
+        const evX = arenaTakeTurn(tx, 'refuse');
+        const dotOnFoe = tx.bS.mods.find((x) => x.k === 'dot');
+        const tz = forced(['dispel'], 'stagger', 108);
+        const evZ = arenaTakeTurn(tz, 'dispel');
+        ok('T49 reflect: the burn is the foe\'s now (credited to you), the stun turns back, you still cauterize',
+          !!counterOf(evX, 'reflect') && !!dotOnFoe && dotOnFoe.src === 'p' && !tx.pS.mods.some((x) => x.k === 'dot') && tx.pS.mods.some((x) => x.k === 'dotImmune') && tx.dmgDealt.p > 0 &&
+          !!counterOf(evZ, 'reflect') && tz.bS.stun === 1 && tz.pS.stun === 0);
+        // T50 no read on a GUARD or STRIKE turn (a guard there is the plain stance); the Surge parry on a curse is paid and does nothing.
+        const tg1 = forced(['sunder'], 'dispel', 109);
+        const g1 = !counterOf(arenaTakeTurn(tg1, 'sunder'));
+        const tg2 = forced(['guard'], 'slash', 110);
+        const evG2 = arenaTakeTurn(tg2, 'guard');
+        const g2 = !counterOf(evG2) && tg2.pS.mods.some((x) => x.k === 'def' && x.mag < 0);
+        const tg3 = forced(['slash'], 'sunder', 111, (x) => { x._surge = 0.6; });
+        const evG3 = arenaTakeTurn(tg3, 'parry');
+        const g3 = !!evG3 && !counterOf(evG3) && (tg3._surge || 0) < 0.6 - SURGE_GUARD_COST + 0.35 && (tg3.pS.mods.some((x) => x.k === 'shred') || (evG3 || []).some((e) => e.side === 'b' && (e.t === 'miss' || e.t === 'dodge')));
+        ok('T50 no read on GUARD / STRIKE turns; a Surge parry on a curse is paid and stops nothing', g1 && g2 && g3);
+        // T51 the Surge parry: accepted at exactly the cost and paid even on a wrong guess; refused under it, in PvP, and on a cooldown-free kit it never sets a cooldown.
+        const tp = forced(['slash'], 'cleave', 114, (x) => { x._surge = SURGE_GUARD_COST; });
+        const evP = arenaTakeTurn(tp, 'parry');
+        const paidRead = !!counterOf(evP, 'parry') && !hitBy(evP, 'b') && !(tp.cd.parry > 0);
+        const tq = forced(['slash'], 'slash', 115, (x) => { x._surge = 0.5; });
+        const evQ = arenaTakeTurn(tq, 'parry');
+        const wrongPaid = !!evQ && !counterOf(evQ) && (tq._surge || 0) < 0.5 - SURGE_GUARD_COST + 0.35;   // paid 0.40, then at most this turn's gain
+        const tu = forced(['slash'], 'cleave', 116, (x) => { x._surge = SURGE_GUARD_COST - 0.01; });
+        const refusedLow2 = arenaTakeTurn(tu, 'parry') === null;
+        const tv = forced(['slash'], 'cleave', 117, (x) => { x._surge = 1; x._pvp = true; });
+        const refusedPvp2 = arenaTakeTurn(tv, 'parry') === null;
+        ok('T51 Surge parry: paid at the cost (right or wrong), refused below it and in a duel', paidRead && wrongPaid && refusedLow2 && refusedPvp2);
+        // T52 an ultimate into a CHARGE interrupts and ends at exactly the read bonus.
+        const tul = forced(['slash'], 'focus', 118, (x) => { x._surge = 1; });
+        const evUl = arenaTakeTurn(tul, 'ultimate');
+        ok('T52 ultimate on a charge: interrupts, Surge ends at the read bonus', !!counterOf(evUl, 'interrupt') && Math.abs((tul._surge || 0) - READ_SURGE) < 1e-9);
+        // T53 boss rhythms: every cycle legal from every crossing index, with stuns injected; three primes advance once; phase 2 flips at half.
+        let rhythmOK = true, seamChecked = 0;
+        Object.keys(ASCENT_BOSS_PATTERNS).forEach((fl) => {
+          const pat = ASCENT_BOSS_PATTERNS[fl], arch = ASCENT_BOSSES[fl].arch;
+          for (let c = 0; c < pat.p1.length; c++) {
+            [false, true].forEach((stuns) => {
+              const t = arenaStartBattle({ floor: +fl, advances: false, player: mk(60, 60, 20, null, 'You'), bot: Object.assign(mk(30, 30, 10, arch, 'Boss'), { floor: +fl, isBoss: true }) }, 120 + c);
+              t.pMoves = [lib('jab')];
+              if (!t._pattern) { rhythmOK = false; return; }
+              t._pattern.idx = c;
+              for (let k = 0; k < 20; k++) {
+                t.bHP = t.bMax; t.pHP = t.pMax;   // damage is a share of max HP: refill so the cycle, not the KO, ends the sweep
+                if (k === 6) { t._bossPhase2 = true; t._pattern.idx = 0; }
+                if (stuns && k % 3 === 2) t.bS.stun = 1;
+                const want = _arPrimeIntent(t);
+                if (!want || want.id === 'struggle' || t.bcd[want.id] > 0) rhythmOK = false;
+                if (!arenaTakeTurn(t, 'jab')) { rhythmOK = false; break; }
+                seamChecked++;
+              }
+            });
+          }
+        });
+        const t3 = arenaStartBattle({ floor: 10, advances: false, player: mk(40, 36, 16, null, 'You'), bot: Object.assign(mk(34, 30, 12, 'aggressor', 'Boss'), { floor: 10, isBoss: true }) }, 130);
+        _arPrimeIntent(t3); const idx1 = t3._pattern.idx; _arPrimeIntent(t3); _arPrimeIntent(t3);
+        const primeOnce = t3._pattern.idx === idx1 && _arBossRail(t3).steps.join(',') === 'STRIKE,STRIKE,HEAVY' && _arBossRail(t3).on === 0;
+        t3.bHP = Math.floor(t3.bMax * 0.5); arenaTakeTurn(t3, t3.pMoves[0].id);
+        const flipped = t3._bossPhase2 === true && _arBossRail(t3).phase === 2 && _arBossRail(t3).steps.length === 4;
+        ok('T53 boss rhythms: cooldown-legal from every seam (stuns too), prime once, phase 2 at half', rhythmOK && seamChecked > 300 && primeOnce && flipped);
+        // T54 a duel never reads: no counter, no pattern, 'parry' refused; a regular floor has no rail.
+        const tpv = arenaStartBattle(M(YOU(), FOE()), 131); tpv._pvp = true; tpv._surge = 1;
+        const refusedDuel = arenaTakeTurn(tpv, 'parry') === null;
+        tpv.pMoves = [lib('guard')]; tpv.bMoves = [lib('cleave')]; tpv._bNext = tpv.bMoves[0];
+        const evPv = arenaTakeTurn(tpv, 'guard');
+        const treg = arenaStartBattle({ floor: 37, advances: false, player: YOU(), bot: Object.assign(FOE(), { floor: 37 }) }, 132);
+        ok('T54 a duel never reads; no rail off the boss floors', refusedDuel && !counterOf(evPv) && !tpv._pattern && tpv._counter == null && !treg._pattern && _arBossRail(treg) === null);
+      }
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
     }
@@ -15111,7 +15386,7 @@
     if (invest === 'max') { const ex = _weaponExecuteId(weaponId); if (ex && kitIds.indexOf(ex) === -1) kitIds.push(ex); }
     const kit = kitIds.map((id) => Object.assign({ id }, ARENA_MOVE_LIB[id]));
     const attuned = (_WEAPON_ATTUNE[weaponId] || []).indexOf(playerArch) !== -1 ? _ATTUNED_MULT : 1;
-    let wins = 0, koWins = 0, toWins = 0, foePower = 0, ultFights = 0;
+    let wins = 0, koWins = 0, toWins = 0, foePower = 0, ultFights = 0, readTurns = 0, parryTurns = 0, sgTurns = 0;
     const turnsArr = [], marginArr = [], ultTurnArr = [];
     for (let i = 0; i < n; i++) {
       const opp = _ascentOpponent(floor);
@@ -15126,12 +15401,29 @@
       while (!sess.done && g++ < 300) {
         // W1135 — the sim plays like a hunter who reads the new screen (opts.policy 'legacy' = the old player):
         // UNLEASH at full Surge; when the foe shows HEAVY and you have no ward up, raise a guard-type move.
+        // W1139 — four players: 'legacy' (the W1067 tree, blind to the badge), 'parry-only' (W1135: guard on HEAVY +
+        // ult), 'reader' (the default: the counter table on the badge), 'turtle' (guards whenever it can).
         let mv = null;
-        if (opts.policy !== 'legacy') {
+        const policy = opts.policy || 'reader';
+        if (policy !== 'legacy') {
           _arPrimeIntent(sess);
-          if ((sess._surge || 0) >= 1 && !(sess.pS.stun > 0)) mv = { id: 'ultimate' };
-          else if (_arIntentWord(sess) === 'HEAVY' && !sess.pS.mods.some((x) => x.k === 'def' && x.mag < 0) && !(sess.pS.guard > 0)) {
-            mv = sess.pMoves.find((x) => !(sess.cd[x.id] > 0) && x.fx && /^(defUp|guard|bulwark|guardCleanse)$/.test(x.fx.t)) || null;
+          const word = _arIntentWord(sess), has = (w) => word === w, one = true;   // one: kept for a future fogged badge
+          const fam = _arMoveFamily, off = (fn) => sess.pMoves.find((x) => !(sess.cd[x.id] > 0) && fn(x)) || null;
+          const stunned = sess.pS.stun > 0, sg = sess._surge || 0;
+          const warded = sess.pS.mods.some((x) => x.k === 'def' && x.mag < 0) || sess.pS.guard > 0;
+          const canPay = sg >= SURGE_GUARD_COST;   // the Surge parry is for heavies only
+          if (sg >= 1 && !stunned) mv = { id: 'ultimate' };
+          else if (policy === 'parry-only') { if (has('HEAVY') && !warded) mv = off((x) => fam(x) === 'guard' || fam(x) === 'cleanse'); }
+          else if (policy === 'turtle') mv = off((x) => fam(x) === 'guard' || fam(x) === 'cleanse' || fam(x) === 'dodge');
+          else if (!stunned) {
+            if (has('HEAVY')) {
+              mv = off((x) => fam(x) === 'guard' || fam(x) === 'cleanse' || fam(x) === 'dodge');
+              if (!mv && canPay) mv = { id: 'parry' };
+            } else if (has('CURSE')) {
+              mv = off((x) => fam(x) === 'cleanse') || off((x) => fam(x) === 'dodge') || off((x) => fam(x) === 'guard');
+            } else if (one && has('CHARGE')) {
+              mv = sess.pMoves.filter((x) => !(sess.cd[x.id] > 0) && (x.power || 0) > 0).sort((a, b) => (b.power * (b.hits || 1) * b.acc) - (a.power * (a.hits || 1) * a.acc))[0] || null;
+            }
           }
         }
         if (!mv) mv = _arenaPickMove({
@@ -15141,8 +15433,11 @@
           typeEff: sess.pEff, rng: sess.rng,
         });
         if (mv.id === 'ultimate' && !sess._ultAt) sess._ultAt = sess.turn;
+        if (mv.id === 'parry') sess._sgN = (sess._sgN || 0) + 1;
         if (!arenaTakeTurn(sess, mv.id)) break;
+        if (sess._lastRead) { sess._readN = (sess._readN || 0) + 1; if (sess._lastRead === 'parry' || sess._lastRead === 'sidestep') sess._parryN = (sess._parryN || 0) + 1; }
       }
+      readTurns += sess._readN || 0; parryTurns += sess._parryN || 0; sgTurns += sess._sgN || 0;
       if (sess._ultAt) { ultFights++; ultTurnArr.push(sess._ultAt); }
       if (sess.won) { wins++; if (sess.bHP <= 0) koWins++; else toWins++; }
       turnsArr.push(sess.turn);
@@ -15158,6 +15453,8 @@
       medianHpMargin: +med(marginArr).toFixed(3),
       koWins: koWins, timeoutWins: toWins,
       ultShare: +(ultFights / n).toFixed(3), ultTurnMedian: med(ultTurnArr),   // W1135 — fights that reached the ultimate, and when
+      readsPerFight: +(readTurns / n).toFixed(2), parriesPerFight: +(parryTurns / n).toFixed(2), surgeGuardsPerFight: +(sgTurns / n).toFixed(2),   // W1139
+      policy: opts.policy || 'reader',
       effStats: sline,
     };
   }
@@ -15178,7 +15475,11 @@
       selfTest:        _arenaSelfTest,         // W232 dev hook
       simAscent:       _arenaSimAscent,        // W291 balance-verification sim (max build vs floor N)
       _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle,
-                         intent: _arPrimeIntent, intentWord: _arIntentWord, moveWord: _arMoveWord, ultimate: _arUltimateFor },   // W1135
+                         intent: _arPrimeIntent, intentWord: _arIntentWord, moveWord: _arMoveWord, ultimate: _arUltimateFor,   // W1135
+                         counter: _arReadCounter, rail: _arBossRail, family: _arMoveFamily, patterns: () => ASCENT_BOSS_PATTERNS,   // W1139
+                         consts: () => ({ READ_SURGE, SURGE_GUARD_COST, RIPOSTE_POWER, PARRY_RESETS_CD, REFLECT_MAG }),
+                         tune: (o) => { o = o || {}; if (o.READ_SURGE != null) READ_SURGE = o.READ_SURGE; if (o.SURGE_GUARD_COST != null) SURGE_GUARD_COST = o.SURGE_GUARD_COST; if (o.RIPOSTE_POWER != null) RIPOSTE_POWER = o.RIPOSTE_POWER; if (o.PARRY_RESETS_CD != null) PARRY_RESETS_CD = o.PARRY_RESETS_CD; if (o.REFLECT_MAG != null) REFLECT_MAG = o.REFLECT_MAG; },   // dev-only: the balance sim's dials
+                         lib: (id) => (ARENA_MOVE_LIB[id] ? Object.assign({ id }, ARENA_MOVE_LIB[id]) : null) },
       _live:           { sess: () => _arSess, paint: () => { try { const s = _arSess; if (s) { _pkbHPm = { p: s.pHP, b: s.bHP }; _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false); } _pkbHudPaint(); _pkbRefreshMoves(); } catch (_) {} } },   // W1135 debug: the open fight (paint = resync the screen to the session)
     };
   } catch (_) {}

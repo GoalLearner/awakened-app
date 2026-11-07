@@ -11,6 +11,11 @@
 // W1067 (2026-10-15) — the battle rebuild changed the damage model on both engines, so every
 // result below was recaptured from app.js (Arena._battle.start/turn, the same kits and seeds) and
 // then matched by this core.
+// W1139 (2026-11-06) — the client engine now resolves Ascent-only READS (parry / sidestep / ward /
+// reflect / interrupt, the Surge 'parry' move, boss rhythm cycles) on sessions that are not `_pvp`.
+// This core has none of them, on purpose. If these results are ever recaptured from app.js, start
+// the capture session with `sess._pvp = true` (or play only attacks) or a Guard into a HEAVY will
+// parry on the client and never match here.
 import * as CC from './combat-core.js';
 
 const CAPS = [

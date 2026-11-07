@@ -15,6 +15,32 @@
 > sim's player now reads intent (guards when HEAVY is shown) and unleashes at full Surge (`opts.policy:
 > 'legacy'` = the old player). The summit rose 3% (`_FIRST_AWAKENED_POWER` 1.32 → 1.36, `_FA_P2_POWER`
 > 0.88 → 0.906) to hold the W1069/W1110 curve. selfTest → 44 (T39-T42).
+> **W1139 (2026-11-06, READ THE FOE; Ascent-only, every rule behind `!sess._pvp`, the server core untouched):**
+> the badge's word has an answer, decided from the two committed moves at the top of `arenaTakeTurn`
+> (`_arReadCounter` → `sess._counter`; order-independent; never while either side is stunned; the foe never reads
+> you). **HEAVY** ← a guard-family card (defUp / guardCleanse / bulwark), free, or the Surge bar's `'parry'` move
+> (`SURGE_GUARD_COST` 0.40, paid whatever the foe did, HEAVY-only) = **PARRY**: the heavy deals nothing and applies
+> nothing, you **riposte** (`RIPOSTE_POWER` 0.8, acc 0.99, the kit's basic glyph, through the normal pipeline), and
+> the guard's stance is consumed (`_arApplyFx(..., {noStance})`: defUp/dodge skip; a cleanse keeps its cleanse +
+> cauterize, Bulwark keeps its focus; any stance you already held is stripped — no double-dip). A dodge card
+> **SIDESTEPS** (same, dodge stance spent). **CURSE** ← a cleanse = **REFLECT** (re-entered through `_arApplyFx` from
+> the player's side, so the DoT is credited to you and a stun turns back), a dodge = SIDESTEP, a guard card = **WARD**
+> (blocked, no riposte). **CHARGE** ← any landed non-riposte hit = **INTERRUPT** (post-check after both acts: the fresh
+> atkUp is stripped, an older one restored, its `fx` event dropped). GUARD / STRIKE / STUNNED: no counter. Every read
+> adds `READ_SURGE` 0.15 (after an ultimate's spend). Boss floors 10-90 play a fixed, cooldown-legal cycle per phase
+> (`ASCENT_BOSS_PATTERNS`, `_arBossPatternPick` walks to the first off-cooldown beat; phase 2 from the turn after the
+> boss first drops to ≤50% — a visible, telegraphed HP-conditional rule, allowed by name like W535; a stunned boss
+> skips its beat and the cycle moves on; the discipline prefix does not run for them). §7.2's "F1–50 bit-identical"
+> no longer holds on a read turn or on the rhythm bosses. **Measured and dropped:** a GUARD-turn "free" read (worth
+> nothing to a strong hunter, −8 pts on the shadow curve), a Surge ward of curses (blocks a whole move for 40% and
+> became the only play against tricksters: +20-25 pts), a parry-aware Apex (degenerate: the foe stops swinging),
+> `PARRY_RESETS_CD` (+8-12 for readers but bosses re-swing into the wall). **IQ table (on-curve, player power ==
+> floor power, A-tier kits, n=1500, reader − legacy):** Titan +9/+16/+6/+13/+11/+22 at F60/75/90/95/99/100 · Warmaul
+> +20/+19/+20/+17/+21/+15 · Step Blade +21/+25/+16/+14/+21/+11 · Wraithwind +12/+10/+2/+2/+15/+2 (no guard card; the
+> trickster floors have no heavy to parry). **The owner's F100 curve holds with NO summit change** (max set, reader):
+> Nightfall 50.2 alone / 74.2 (5) / 91.0 (12) / 99.4 (all); Duskforge 69.5 alone (Bulwark reflects + parries), Vigil
+> 46.0 (Tumble sidesteps), Reverie 43.6 (Surge parry only). selfTest → 56 (T43–T54). Sim policies: `legacy`,
+> `parry-only` (the W1135 player), `reader` (default), `turtle`. Dev dials: `Arena._battle.tune({...})`.
 > **v2.7 changelog (W260 — the FIRST sanctioned engine change since the v2.6 freeze;
 > strictly ADDITIVE):** endgame AI tiers F51+ (§7.2: INSTINCT/TACTICIAN/STRATEGIST/APEX,
 > fair-play charter, sanitized no-RNG decision state, v2-fallback safety) + down-to-the-wire
