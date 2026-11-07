@@ -36456,6 +36456,20 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 #wd-sheet.wx .wx-tabs5 .wx-tab.on { border-color: rgba(245,184,66,.45); background: linear-gradient(180deg, rgba(245,184,66,.18), rgba(245,184,66,.05)); text-shadow: 0 0 10px rgba(245,184,66,.4); }
 .wx-track.wx-track5 { width: 500%; }
 .wx-track5 .wx-pane { width: 20%; }
+/* W1156 — six panes (Pins joined); the tabs row already scrolls */
+.wx-track.wx-track6 { width: 600%; }
+.wx-track6 .wx-pane { width: 16.6667%; }
+/* W1156 — PINS: up to two badges under the title on the card, the same pill on the Wardrobe tiles and hero */
+.pc-pins { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.pc-pins--own { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pc-pin { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid rgba(var(--pr), .42); background: rgba(var(--pr), .08); color: rgb(var(--pr));
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
+.pc-pin i { width: 7px; height: 7px; flex: none; transform: rotate(45deg); background: rgb(var(--pr)); box-shadow: 0 0 7px rgb(var(--pr)); border-radius: 1px; }
+.wx-hl-pins .pc-pins { margin: 14px 0 0; }
+.wx-pin-prev { display: inline-flex; transform: scale(1.08); }
+.wx-pin-prev.big { transform: scale(1.35); }
+.wx-sl-pin .wx-sl-prev { bottom: 40px; }
 /* the slot tiles */
 .wx-slgrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
 #wd-sheet.wx .wx-sl { height: 138px; background: linear-gradient(180deg, #18163b, #0f0e24); }

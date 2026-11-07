@@ -12,8 +12,8 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-async function boot(page: Page, floor: number) {
-  await page.addInitScript((f: number) => {
+async function boot(page: Page, floor: number, extra?: Record<string, string>) {
+  await page.addInitScript(([f, extra]: [number, Record<string, string>]) => {
     const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner{display:none!important;visibility:hidden!important;pointer-events:none!important}';
     const inject = () => {
       const root = document.head || document.documentElement;
@@ -30,6 +30,7 @@ async function boot(page: Page, floor: number) {
       localStorage.setItem('hb_skins_owned_cache', JSON.stringify({ skins: [], at: Date.now() }));
       localStorage.setItem('hb_earn_bg_seen_v1', '[]');
       localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: f + 1, highestCleared: f, wins: f, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+      Object.keys(extra || {}).forEach((k) => localStorage.setItem(k, extra[k]));
     } catch (_) { /* noop */ }
     const patch = (a: any) => {
       if (!a || a.__w1143Patched) return;
@@ -42,7 +43,7 @@ async function boot(page: Page, floor: number) {
     };
     let real: any;
     Object.defineProperty(window, 'Auth', { configurable: true, get() { return real; }, set(v) { real = v; try { patch(v); } catch (_) { /* noop */ } } });
-  }, floor);
+  }, [floor, extra || {}] as [number, Record<string, string>]);
   await page.goto('/');
   await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
 }
@@ -58,7 +59,7 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
   test('five tabs; each slot opens on its default; floor 50 earns Runebound, Frost and Gold Motes, which wear in one tap', async ({ page }) => {
     await boot(page, 50);
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(5);
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);   // W1156 — Pins joined
     await expect(sheet(page).locator('.wx-tab').nth(2)).toHaveText(/Frames/);
     // FRAMES
     await tab(page, 'frames').click();
@@ -125,6 +126,53 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     expect(await page.evaluate(() => (window as any).__wx.state().detail)).toBe('sl:frame');
     await dt.locator('.wx-dt-x').click();
     await expect(dt).not.toHaveClass(/open/);
+  });
+
+  // W1156 — PINS: a sixth slot, several worn at once (two at most, a third replaces the oldest), every pin a verified number.
+  test('pins: earned from the numbers, two at most, the oldest gives way; the own card wears them, a visitor\'s shows the published ones', async ({ page }) => {
+    const day = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+    await boot(page, 50, {
+      hb_leaderboard: JSON.stringify({ steps_daily: { [day]: 16250 }, lifetime_steps_total: 1200000, lifetime_steps_start_date: '2026-05-15' }),
+      hb_bosses: JSON.stringify({ the_twin_maw: { streak: 0, kill_count: 150, engaged: false, last_eval_date: null } }),
+    });
+    await openWardrobe(page);
+    await tab(page, 'pins').click();
+    await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
+    const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
+    await expect(pane.locator('.wx-sl')).toHaveCount(5);
+    await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
+    await expect(tile(page, 'pin', 'bestday')).toHaveClass(/is-earned/);
+    await expect(tile(page, 'pin', 'bosses')).toHaveClass(/is-earned/);
+    await expect(tile(page, 'pin', 'shadows')).toHaveClass(/is-locked/);
+    await expect(tile(page, 'pin', 'shadows').locator('.wx-bt-st')).toHaveText('0 / 5');
+    await expect(tile(page, 'pin', 'summit').locator('.wx-bt-st')).toHaveText('50 / 100');
+    await expect(pane.locator('.wx-hl .pc-pin')).toHaveText('NO PINS');
+    // wear one, then a second
+    await tile(page, 'pin', 'steps1m').click();
+    await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-worn/);
+    await expect(pane.locator('.wx-hl .pc-pins .pc-pin')).toHaveText(['1,000,000 STEPS']);
+    await tile(page, 'pin', 'bestday').click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['steps1m', 'bestday']);
+    await expect(pane.locator('.wx-hl .pc-pins .pc-pin')).toHaveText(['1,000,000 STEPS', '16,250 IN A DAY']);
+    // a third replaces the oldest; tapping a worn pin takes it off
+    await tile(page, 'pin', 'bosses').click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['bestday', 'bosses']);
+    await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
+    await tile(page, 'pin', 'bestday').click();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_card_pins') || '[]'))).toEqual(['bosses']);
+    await shot(page, 'forge-06-pins');
+    // the own card wears what this phone chose; a visitor's card shows the published pins; the own row opens Pins
+    await page.evaluate(() => (window as any).__wxSlot && document.getElementById('wd-close')!.click());
+    await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
+    const body = page.locator('#pc-body');
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['150 BOSSES']);
+    await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: [{ id: 'summit', v: 100 }, { id: 'shadows', v: 11 }] }), false), CARD);
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['SUMMIT', '11 SHADOWS']);
+    await expect(body.locator('.pc-pins--own')).toHaveCount(0);
+    await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
+    await body.locator('.pc-pins--own').click();
+    await expect(sheet(page)).toBeVisible();
+    await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
   });
 
   test('the own profile card wears the frame, ink and aura; a visitor\'s card keeps the defaults', async ({ page }) => {
