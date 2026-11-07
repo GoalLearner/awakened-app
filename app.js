@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1137'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1138'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -16979,11 +16979,37 @@
     el.setAttribute('data-ar', ready ? 'move' : 'surge');   // the move handler only ever sees it full
     if (ready) el.setAttribute('data-move', 'ultimate'); else el.removeAttribute('data-move');
     el.setAttribute('aria-label', ready ? 'Unleash your ultimate' : 'Surge ' + Math.round(v * 100) + '%');
+    const you = _pkbEl('pkb-spot-p'); if (you) you.classList.toggle('surged', ready);   // W1138 — the hunter glows while the Surge is ready
     if (ready && !was) {
       segs.forEach((i) => { i.classList.remove('justfull'); void i.offsetWidth; i.classList.add('justfull'); });
-      try { _audCue('status_buff'); } catch (_) {}
-      try { _hapticTick('LIGHT'); } catch (_) {}
+      _pkbSurgeStrike(el);
     }
+  }
+  // W1138 — the Surge fills: lightning strikes the hunter, the sky flashes, the bar jolts.
+  function _pkbSurgeStrike(bar) {
+    try { _audCue('hit_magic'); } catch (_) {}
+    try { _audCue('status_buff'); } catch (_) {}
+    try { _hapticTick('MEDIUM'); } catch (_) {}
+    if (bar) { bar.classList.remove('zap'); void bar.offsetWidth; bar.classList.add('zap'); _arAfter(800, () => { try { bar.classList.remove('zap'); } catch (_) {} }); }
+    const stage = _pkbEl('pkb-stage'), spot = _pkbEl('pkb-spot-p');
+    if (!stage || !spot) return;
+    let x = 0, y = 0;
+    try {
+      const r = spot.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+      x = r.left - sr.left + r.width / 2; y = Math.max(60, r.top - sr.top + r.height * 0.3);
+    } catch (_) { return; }
+    const flash = document.createElement('div');
+    flash.className = 'pkb2-skyflash';
+    flash.style.setProperty('--x', Math.round(x) + 'px');
+    const bolt = document.createElement('div');
+    bolt.className = 'pkb2-strikebolt';
+    bolt.style.left = Math.round(x) + 'px'; bolt.style.height = Math.round(y) + 'px';
+    bolt.innerHTML = '<svg viewBox="0 0 90 300" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M52 0 L38 62 L58 72 L33 142 L57 152 L39 228 L61 238 L45 300"/>' +
+      '<path class="br" d="M38 62 L16 98 L22 104 L8 128"/><path class="br" d="M57 152 L80 184 L74 190 L86 214"/><path class="br" d="M39 228 L22 258"/></svg>' +
+      '<span class="hit"></span>';
+    stage.appendChild(flash); stage.appendChild(bolt);
+    _arAfter(900, () => { try { flash.remove(); bolt.remove(); } catch (_) {} });
   }
   function _pkbHudPaint() { _pkbTurnPaint(); _pkbSurgePaint(); _pkbIntentPaint(); }
   // UNLEASH: the cut-in, then the turn (the engine refuses it below full Surge or in a duel).
@@ -17092,7 +17118,12 @@
     const surge = o.pvp ? '' :
       '<button type="button" class="pkb2-surge" id="pkb-surge" data-ar="surge" aria-label="Surge 0%">' +
         '<span class="sl">SURGE</span><span class="segs">' + segs + '</span><span class="sv">0%</span>' +
-        '<span class="ult"><span class="ulx"><span class="k">SURGE READY</span><span class="n">' + esc(o.ultName || '') + '</span></span><span class="go">UNLEASH</span></span>' +
+        '<span class="bolts" aria-hidden="true"><svg viewBox="0 0 300 44" preserveAspectRatio="none">' +
+          '<path class="b1" d="M0 22 L26 13 L44 29 L68 9 L92 31 L116 15 L140 27 L164 7 L190 31 L214 13 L238 27 L262 11 L300 21"/>' +
+          '<path class="b2" d="M0 27 L22 33 L48 17 L74 35 L98 19 L124 37 L150 17 L178 33 L202 15 L228 35 L254 19 L300 29"/>' +
+          '<path class="b3" d="M0 16 L30 24 L52 8 L80 22 L104 6 L130 24 L156 10 L184 26 L208 8 L236 22 L260 6 L300 14"/></svg></span>' +
+        '<span class="ult"><span class="ulx"><span class="k">SURGE READY</span><span class="n">' + esc(o.ultName || '') + '</span></span>' +
+          '<span class="go"><svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M6.6 0.6 1.2 7.4h3.6L3.9 12.4l5.9-7.3H6.1Z" fill="currentColor"/></svg>UNLEASH</span></span>' +
         '<span class="shine" aria-hidden="true"></span></button>';
     return '<div class="pkb pkb2' + (o.pvp ? ' pkb--pvp pkb2--pvp' : '') + (o.hasExe ? ' has-exe' : '') + '">' +
       '<div class="pkb-stage settle" id="pkb-stage">' +
@@ -17100,7 +17131,7 @@
         '<div class="pkb2-tint" aria-hidden="true"></div>' +
         '<div class="pkb-motes' + (o.isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
         '<div class="pkb-spot foe' + (o.isBoss ? ' boss' : '') + (o.fa ? ' fa' : '') + '" id="pkb-spot-b"><span class="plat"></span><div class="spr">' + (o.foeArt || '') + '</div></div>' +
-        '<div class="pkb-spot you" id="pkb-spot-p"><span class="plat"></span><div class="spr">' + (o.youArt || '') + '</div></div>' +
+        '<div class="pkb-spot you" id="pkb-spot-p"><span class="plat"></span><span class="aura" aria-hidden="true"></span><div class="spr">' + (o.youArt || '') + '</div></div>' +
         '<div class="pkb2-scrim" aria-hidden="true"></div>' +
         '<div class="pkb-top">' + esc(o.top || '') + '</div>' +
         '<div class="pkb2-intent hidden" id="pkb-intent"></div>' +
@@ -17759,7 +17790,11 @@
     } else {
       // between full turns — a breath before the prompt hands control back
       // W1135 — the turn diamond, the Surge and the foe's NEXT intent update as control returns.
-      _pkbHold(_PKB_T.turnGap, () => { _pkbHudPaint(); _pkbSay('What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); _pkbSurgePaint(); }); });
+      _pkbHold(_PKB_T.turnGap, () => {
+        _pkbHudPaint();
+        const ready = (s._surge || 0) >= 1 && !(s.pS && s.pS.stun > 0);   // W1138 — a full Surge is called out
+        _pkbSay(ready ? 'Your Surge is full. Unleash it!' : 'What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); _pkbSurgePaint(); });
+      });
     }
   }
   // The battle screen — built ONCE per fight; the director patches it per turn.

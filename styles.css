@@ -36040,3 +36040,53 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .pkb-stage.p2 .pkb-bgwrap { animation: none; }
   .pkb.pkb2 .pkb-spot.lunge-you, .pkb.pkb2 .pkb-spot.lunge-foe { transform: none; }
 }
+
+/* ═══ W1138 — a full Surge crackles (owner build 619: "maybe a shock of lightning ... make it more clear that they can use it").
+   The fill moment: a bolt strikes the hunter + a sky flash + the bar jolts. While ready: arcs flicker across the bar, UNLEASH
+   pulses, the hunter glows violet. Opacity/transform only (W714); reduced motion keeps a static glow. ═══ */
+.pkb2-surge .ult { position: relative; z-index: 2; }
+.pkb2-surge .bolts { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; }
+.pkb2-surge .bolts svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 3px #c4b5fd) drop-shadow(0 0 7px rgba(139,92,246,0.9)); }
+.pkb2-surge .bolts path { fill: none; stroke: #f3efff; stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: 0; }
+.pkb2-surge.full .bolts { opacity: 1; }
+.pkb2-surge.full .bolts .b1 { animation: pkb2Crackle 1.6s steps(1) infinite; }
+.pkb2-surge.full .bolts .b2 { animation: pkb2Crackle 2.1s steps(1) 0.55s infinite; }
+.pkb2-surge.full .bolts .b3 { animation: pkb2Crackle 2.7s steps(1) 1.2s infinite; }
+@keyframes pkb2Crackle { 0% { opacity: 0.14; } 5% { opacity: 1; } 8% { opacity: 0.3; } 11% { opacity: 0.95; } 15% { opacity: 0.14; } 100% { opacity: 0.14; } }   /* a live line between the flickers */
+.pkb2-surge .ult .go { gap: 5px; height: 28px; padding: 0 12px; font-size: 9.5px; box-shadow: 0 0 14px rgba(167,139,250,0.7); }
+.pkb2-surge .ult .go svg { flex: none; }
+.pkb2-surge.full .ult .go { animation: pkb2GoPulse 0.9s ease-in-out infinite alternate; }
+@keyframes pkb2GoPulse { from { transform: scale(1); } to { transform: scale(1.07); } }
+.pkb2-surge.full.lock .bolts path, .pkb2-surge.full.lock .ult .go { animation: none; }
+/* the jolt + white flash the moment it fills */
+.pkb2-surge.zap { animation: pkb2Zap 0.7s ease-out both; }
+.pkb2-surge.zap::before { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: 12px; pointer-events: none; background: #fff; animation: pkb2ZapFlash 0.5s ease-out both; }
+.pkb2-surge.zap .bolts path { animation: pkb2ZapArc 0.6s steps(1) both; }
+@keyframes pkb2Zap { 0% { transform: none; } 12% { transform: scale(1.04) translateX(-3px); } 24% { transform: scale(1.02) translateX(3px); } 36% { transform: translateX(-2px); } 50% { transform: translateX(1px); } 100% { transform: none; } }
+@keyframes pkb2ZapFlash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+@keyframes pkb2ZapArc { 0% { opacity: 1; } 20% { opacity: 0.3; } 35% { opacity: 1; } 60% { opacity: 0.5; } 80% { opacity: 1; } 100% { opacity: 0; } }
+/* the strike on the stage */
+.pkb2-skyflash { position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  background: radial-gradient(55% 45% at var(--x, 25%) 28%, rgba(237,230,255,0.6), rgba(167,139,250,0.22) 45%, transparent 75%); animation: pkb2SkyFlash 0.65s ease-out both; }
+@keyframes pkb2SkyFlash { 0% { opacity: 0; } 8% { opacity: 1; } 20% { opacity: 0.25; } 30% { opacity: 0.95; } 100% { opacity: 0; } }
+.pkb2-strikebolt { position: absolute; top: 0; z-index: 7; width: 90px; transform: translateX(-50%); pointer-events: none; animation: pkb2Bolt 0.75s linear both; }
+.pkb2-strikebolt svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 5px #ddd6fe) drop-shadow(0 0 16px rgba(139,92,246,0.95)); }
+.pkb2-strikebolt path { fill: none; stroke: #fff; stroke-width: 3.4; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.pkb2-strikebolt path.br { stroke-width: 1.8; opacity: 0.85; }
+.pkb2-strikebolt .hit { position: absolute; left: 50%; bottom: -30px; width: 60px; height: 60px; margin-left: -30px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0, rgba(221,214,254,0.9) 22%, rgba(139,92,246,0.45) 48%, transparent 70%); animation: pkb2BoltHit 0.6s ease-out both; }
+@keyframes pkb2Bolt { 0% { opacity: 1; } 10% { opacity: 0.2; } 18% { opacity: 1; } 28% { opacity: 0.35; } 38% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pkb2BoltHit { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0; transform: scale(1.9); } }
+/* the hunter holds the charge */
+.pkb.pkb2 .pkb-spot .aura { position: absolute; left: 6%; right: 6%; top: 4%; bottom: 0; z-index: 0; pointer-events: none; opacity: 0; border-radius: 50% 50% 42% 42%;
+  background: radial-gradient(50% 55% at 50% 55%, rgba(167,139,250,0.42), rgba(109,40,217,0.18) 55%, transparent 76%); transition: opacity 0.4s ease; }
+.pkb.pkb2 .pkb-spot .spr { z-index: 1; }
+.pkb.pkb2 .pkb-spot.you.surged .aura { opacity: 1; animation: pkb2Breathe 1s ease-in-out infinite alternate; }
+.pkb.pkb2 .pkb-spot.you.surged .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(167,139,250,0.8)); }
+@media (prefers-reduced-motion: reduce) {
+  .pkb2-surge.full .bolts path, .pkb2-surge.zap .bolts path { animation: none; opacity: 0.7; }
+  .pkb2-surge.full .ult .go, .pkb2-surge.zap, .pkb2-surge.zap::before { animation: none; }
+  .pkb2-surge.zap::before { opacity: 0; }
+  .pkb2-strikebolt, .pkb2-strikebolt .hit, .pkb2-skyflash { animation: none; opacity: 0; }
+  .pkb.pkb2 .pkb-spot.you.surged .aura { animation: none; opacity: 0.8; }
+}

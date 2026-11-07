@@ -125,6 +125,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(surge).toHaveClass(/full/);
       await expect(surge).toHaveAttribute('data-move', 'ultimate');
       await expect(surge.locator('.ult .n')).toHaveText(String(await sess(page, 'Arena._battle.ultimate(Arena._live.sess()).name')));
+      // W1138 — the moment it fills: lightning strikes the hunter, who then holds the glow
+      await expect(page.locator('#pkb-stage .pkb2-strikebolt')).toHaveCount(1);
+      await expect(page.locator('#pkb-spot-p')).toHaveClass(/surged/);
+      await page.waitForTimeout(120);
+      await shot(page, '02a-surge-strike');
+      await expect(page.locator('#pkb-stage .pkb2-strikebolt')).toHaveCount(0, { timeout: 3000 });
+      await page.waitForTimeout(400);
       await shot(page, '02-surge-full');
       const turn0 = await sess(page, 'Arena._live.sess().turn');
       await surge.click();
@@ -135,6 +142,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await page.waitForFunction((t) => { const s = (window as any).Arena._live.sess(); return !s || s.done || s.turn > (t as number); }, turn0);
       expect(await sess(page, 'Arena._live.sess()._surge')).toBe(0);
       await expect(surge).not.toHaveClass(/full/, { timeout: 12_000 });
+      await expect(page.locator('#pkb-spot-p')).not.toHaveClass(/surged/);
     });
 
     test('the finisher strip sits under the cards, dormant above 30% and IGNITED at or below it', async ({ page }) => {
