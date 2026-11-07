@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ship Awakened from GitHub</title>
+<style>
+  :root { --bg: #0b0b16; --card: #15152a; --ink: #e8e6f3; --mute: #9a98b0; --gold: #f5b842; --teal: #5eead4; --line: rgba(255,255,255,.1); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; padding: 24px 16px 60px; }
+  main { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 6px; color: var(--gold); }
+  .sub { color: var(--mute); margin: 0 0 22px; }
+  h2 { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); margin: 30px 0 10px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin: 12px 0; }
+  .step b.n { display: inline-block; min-width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%; background: var(--gold); color: #1a1206; font-weight: 800; margin-right: 8px; }
+  .step h3 { margin: 0 0 8px; font-size: 17px; }
+  pre { background: #07070f; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 13px/1.45 "JetBrains Mono", ui-monospace, Menlo, monospace; color: #d7d4ea; white-space: pre-wrap; word-break: break-all; }
+  code { font: 13px "JetBrains Mono", ui-monospace, Menlo, monospace; background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; }
+  .secret { color: var(--gold); font-weight: 700; }
+  .note { color: var(--mute); font-size: 14px; margin: 6px 0 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--mute); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ship Awakened to TestFlight from GitHub</h1>
+  <p class="sub">A cloud Mac runs the same prep script the MacBook runs, then signs, archives and uploads. Free, because the repo is public. Your MacBook flow keeps working as it is.</p>
+
+  <h2>Every time</h2>
+  <div class="step">
+    <h3>Start a build</h3>
+    <p>GitHub → <b>Actions</b> → <b>Ship to TestFlight</b> → <b>Run workflow</b> → type the build number → Run. Or tell me the number and I run it. About 15–25 minutes, then TestFlight shows it after Apple's processing. The commit gets a <code>build-N</code> tag.</p>
+  </div>
+
+  <h2>One-time setup, on the MacBook</h2>
+
+  <div class="step">
+    <h3><b class="n">1</b>Commit the iOS project</h3>
+    <p>The Xcode project only existed on the MacBook. Pull first (the ignore rules changed), then add it:</p>
+    <pre>cd /Volumes/AwakenedDev/repos/awakened-app && git pull origin main && git add ios && git status --short | head -30 && git commit -m "ios: the Xcode project, for the GitHub build" && git push origin main</pre>
+    <p class="note">Pods, the copied web files, build output and user data stay out. If the status shows thousands of files, stop and send me the list.</p>
+  </div>
+
+  <div class="step">
+    <h3><b class="n">2</b>Export the distribution certificate</h3>
+    <p>Keychain Access → <b>login</b> → <b>My Certificates</b> → <i>Apple Distribution: … (LK8FVGBQPL)</i>, the one that expires <b>Jun 10 2027</b> (the only one whose private key is on this Mac) → right-click → <b>Export</b> → format <b>.p12</b> → choose a password → save to the Desktop as <code>awakened-dist.p12</code>. Then:</p>
+    <pre>base64 -i ~/Desktop/awakened-dist.p12 | pbcopy</pre>
+    <p>Paste into the secret <span class="secret">IOS_DIST_P12_B64</span>. The password you chose → <span class="secret">IOS_DIST_P12_PASSWORD</span>. Then delete the .p12 from the Desktop.</p>
+  </div>
+
+  <div class="step">
+    <h3><b class="n">3</b>The provisioning profile</h3>
+    <p>The one Xcode uses is <b>“Awakened App Store Manual”</b>. This lists the installed copies for Awakened with their expiry:</p>
+    <pre>for f in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision; do [ -f "$f" ] || continue; x="$(security cms -D -i "$f" 2>/dev/null)"; echo "$x" | grep -q com.goallearner.awakened && printf '%s\n  %s  expires %s\n' "$f" "$(echo "$x" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)" "$(echo "$x" | /usr/libexec/PlistBuddy -c 'Print :ExpirationDate' /dev/stdin)"; done</pre>
+    <p>Pick the “Awakened App Store Manual” line with the latest expiry (or download it fresh from developer.apple.com → Profiles), then:</p>
+    <pre>base64 -i "PASTE THE FILE PATH HERE" | pbcopy</pre>
+    <p>→ secret <span class="secret">IOS_PROFILE_B64</span>.</p>
+    <p class="note">If a capability is ever added to the App ID, the profile has to be regenerated and this secret replaced.</p>
+  </div>
+
+  <div class="step">
+    <h3><b class="n">4</b>An App Store Connect API key</h3>
+    <p>appstoreconnect.apple.com → <b>Users and Access</b> → <b>Integrations</b> → <b>App Store Connect API</b> → Team Keys → <b>+</b> → name <code>GitHub ship</code>, access <b>App Manager</b> → Generate.</p>
+    <table>
+      <tr><th>Copy</th><th>Into the secret</th></tr>
+      <tr><td>Issuer ID (top of the page)</td><td><span class="secret">ASC_API_ISSUER_ID</span></td></tr>
+      <tr><td>Key ID (on the key's row)</td><td><span class="secret">ASC_API_KEY_ID</span></td></tr>
+      <tr><td>Download API Key (offered once), then run the line below</td><td><span class="secret">ASC_API_KEY_B64</span></td></tr>
+    </table>
+    <pre>base64 -i ~/Downloads/AuthKey_*.p8 | pbcopy</pre>
+  </div>
+
+  <div class="step">
+    <h3><b class="n">5</b>Add the six secrets on GitHub</h3>
+    <p>github.com/GoalLearner/awakened-app → <b>Settings</b> → <b>Secrets and variables</b> → <b>Actions</b> → <b>New repository secret</b>, one at a time:</p>
+    <p><span class="secret">IOS_DIST_P12_B64</span> · <span class="secret">IOS_DIST_P12_PASSWORD</span> · <span class="secret">IOS_PROFILE_B64</span> · <span class="secret">ASC_API_KEY_ID</span> · <span class="secret">ASC_API_ISSUER_ID</span> · <span class="secret">ASC_API_KEY_B64</span></p>
+    <p class="note">Secrets never print in logs and are not available to pull requests from other people.</p>
+  </div>
+
+  <div class="step">
+    <h3><b class="n">6</b>First run, when you are not in a hurry</h3>
+    <p>Then tell me “run 627” (or whatever the next number is). The first run is the first time this project compiles on a cloud Mac, so expect a round or two of fixes from me; after that it is one tap.</p>
+  </div>
+</main>
+</body>
+</html>

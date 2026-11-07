@@ -8,6 +8,8 @@ Onboarding doc for any future Claude session working on this project. Reflects t
 
 **No Codemagic.** iOS builds do NOT go through Codemagic. `codemagic.yaml` is dormant/unused — ignore it for build guidance. (The historical per-change "Process note" boilerplate below that lists "…/Codemagic/archive/upload" is legacy log text, not current process.)
 
+**W1151 — Ship from GitHub (added 2026-11-07, the MacBook flow below still works).** `.github/workflows/ship.yml` runs on a free GitHub macOS runner (public repo): `npm ci` → `scripts/prep-local-build.sh <build>` (the same script as the MacBook) → `scripts/ship-ci.sh` (temporary keychain with the Jun-10-2027 distribution cert, the "Awakened App Store Manual" profile, the App target set to manual signing with it, `xcodebuild archive`, `-exportArchive` with `destination: upload` via an App Store Connect API key, tag `build-N`). Trigger: Actions → Ship to TestFlight → Run workflow, or `gh workflow run ship.yml -f build=N` then `gh run watch`. Needs the six secrets in docs/SHIP-FROM-GITHUB.md and `ios/App` COMMITTED (the `.gitignore` now ignores only Pods / App/public / build / user data). Never put signing settings on the xcodebuild command line (they hit the Pods targets).
+
 **Two-machine setup.**
 - **Windows desktop** — where Claude Code runs, the repo is edited, and commits are pushed to GitHub (`GoalLearner/awakened-app`). iOS CANNOT be built here.
 - **MacBook** — where the owner pulls, runs the Terminal prep command, and Archives → uploads to App Store Connect via Xcode. Repo path on the Mac: `/Volumes/AwakenedDev/repos/awakened-app`.

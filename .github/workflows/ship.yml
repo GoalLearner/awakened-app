@@ -1,0 +1,99 @@
+name: Ship to TestFlight
+
+# W1151 — a cloud Mac does what the MacBook does: prep-local-build.sh, then archive, sign and upload
+# (scripts/ship-ci.sh). Public repo → GitHub's macOS runners cost nothing. Run it from the Actions tab
+# ("Run workflow", type the build number) or: gh workflow run ship.yml -f build=627
+#
+# Secrets (Settings → Secrets and variables → Actions): IOS_DIST_P12_B64, IOS_DIST_P12_PASSWORD,
+# IOS_PROFILE_B64, ASC_API_KEY_ID, ASC_API_ISSUER_ID, ASC_API_KEY_B64. See docs/SHIP-FROM-GITHUB.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build number (one above the last TestFlight build for this version)'
+        required: true
+        type: string
+      runner:
+        description: 'macOS runner (macos-26 = Xcode 26.6; xcode-27 = the Xcode 27 preview image)'
+        required: false
+        default: 'macos-26'
+        type: choice
+        options: [macos-26, xcode-27, macos-15]
+      xcode:
+        description: 'Xcode app on the runner, blank for the image default (e.g. /Applications/Xcode_26.6.app)'
+        required: false
+        default: ''
+        type: string
+      ready_hunt_bg:
+        description: 'Ready Hunt background watcher (0 = leave it out, the prep script escape hatch)'
+        required: false
+        default: '1'
+        type: string
+
+permissions:
+  contents: write   # the build-N tag
+
+concurrency:
+  group: ship
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    name: Build ${{ inputs.build }} → TestFlight
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ruby xcodeproj (the prep script edits the Xcode project with it)
+        run: |
+          ruby -e 'require "xcodeproj"' 2>/dev/null && echo "xcodeproj present" || sudo gem install xcodeproj --no-document
+
+      - name: Tool versions
+        run: |
+          echo "node $(node -v) · npm $(npm -v) · ruby $(ruby -v | cut -d' ' -f2) · pod $(pod --version)"
+          xcodebuild -version
+          ls /Applications | grep -i xcode || true
+
+      - name: Prep, archive, sign and upload
+        env:
+          BUILD: ${{ inputs.build }}
+          XCODE_APP: ${{ inputs.xcode }}
+          READY_HUNT_BG: ${{ inputs.ready_hunt_bg }}
+          IOS_DIST_P12_B64: ${{ secrets.IOS_DIST_P12_B64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          IOS_PROFILE_B64: ${{ secrets.IOS_PROFILE_B64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_B64: ${{ secrets.ASC_API_KEY_B64 }}
+        run: bash scripts/ship-ci.sh
+
+      - name: Tag build-${{ inputs.build }}
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "build-${{ inputs.build }}"
+          git push -f origin "build-${{ inputs.build }}"
+
+      - name: Keep the xcodebuild logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ship-logs-${{ inputs.build }}
+          path: |
+            ${{ runner.temp }}/awakened-ship/logs/
+            ${{ runner.temp }}/awakened-ship/export/*.plist
+            ${{ runner.temp }}/awakened-ship/export/*.log
+          if-no-files-found: ignore
+          retention-days: 14
