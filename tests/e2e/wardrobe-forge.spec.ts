@@ -128,24 +128,24 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(dt).not.toHaveClass(/open/);
   });
 
-  // W1156 — PINS: a sixth slot, several worn at once (two at most, a third replaces the oldest), every pin a verified number.
+  // W1156/W1157 — PINS: a sixth slot, several worn at once (two at most, a third replaces the oldest), every pin a verified
+  // number. The catalog has no Boss Slayer and no Summit (BOSS KILLS and BEST FLOOR already say them); one shadow is enough.
   test('pins: earned from the numbers, two at most, the oldest gives way; the own card wears them, a visitor\'s shows the published ones', async ({ page }) => {
     const day = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
     await boot(page, 50, {
       hb_leaderboard: JSON.stringify({ steps_daily: { [day]: 16250 }, lifetime_steps_total: 1200000, lifetime_steps_start_date: '2026-05-15' }),
-      hb_bosses: JSON.stringify({ the_twin_maw: { streak: 0, kill_count: 150, engaged: false, last_eval_date: null } }),
+      hb_shadows_v1: JSON.stringify({ extracted: { the_twin_maw: { at: 1762000000000, name: 'The Twin Maw' } }, active: [], windows: {}, pending: {} }),
     });
     await openWardrobe(page);
     await tab(page, 'pins').click();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
-    await expect(pane.locator('.wx-sl')).toHaveCount(5);
+    await expect(pane.locator('.wx-sl')).toHaveCount(4);
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
     await expect(tile(page, 'pin', 'bestday')).toHaveClass(/is-earned/);
-    await expect(tile(page, 'pin', 'bosses')).toHaveClass(/is-earned/);
-    await expect(tile(page, 'pin', 'shadows')).toHaveClass(/is-locked/);
-    await expect(tile(page, 'pin', 'shadows').locator('.wx-bt-st')).toHaveText('0 / 5');
-    await expect(tile(page, 'pin', 'summit').locator('.wx-bt-st')).toHaveText('50 / 100');
+    await expect(tile(page, 'pin', 'shadows')).toHaveClass(/is-earned/);            // one shadow is enough
+    await expect(tile(page, 'pin', 'wgmvp')).toHaveClass(/is-locked/);
+    await expect(tile(page, 'pin', 'wgmvp').locator('.wx-bt-st')).toHaveText('0 / 1');
     await expect(pane.locator('.wx-hl .pc-pin')).toHaveText('NO PINS');
     // wear one, then a second
     await tile(page, 'pin', 'steps1m').click();
@@ -155,19 +155,20 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['steps1m', 'bestday']);
     await expect(pane.locator('.wx-hl .pc-pins .pc-pin')).toHaveText(['1,000,000 STEPS', '16,250 IN A DAY']);
     // a third replaces the oldest; tapping a worn pin takes it off
-    await tile(page, 'pin', 'bosses').click();
-    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['bestday', 'bosses']);
+    await tile(page, 'pin', 'shadows').click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['bestday', 'shadows']);
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
     await tile(page, 'pin', 'bestday').click();
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_card_pins') || '[]'))).toEqual(['bosses']);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_card_pins') || '[]'))).toEqual(['shadows']);
     await shot(page, 'forge-06-pins');
     // the own card wears what this phone chose; a visitor's card shows the published pins; the own row opens Pins
-    await page.evaluate(() => (window as any).__wxSlot && document.getElementById('wd-close')!.click());
+    await page.evaluate(() => document.getElementById('wd-overlay')!.click());   // the backdrop closes the Wardrobe
+    await expect(sheet(page)).toBeHidden();
     await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
     const body = page.locator('#pc-body');
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['150 BOSSES']);
-    await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: [{ id: 'summit', v: 100 }, { id: 'shadows', v: 11 }] }), false), CARD);
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['SUMMIT', '11 SHADOWS']);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['1 SHADOW']);
+    await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: [{ id: 'wgmvp', v: 2 }, { id: 'shadows', v: 11 }] }), false), CARD);
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['2× WORLDGATE MVP', '11 SHADOWS']);
     await expect(body.locator('.pc-pins--own')).toHaveCount(0);
     await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
     await body.locator('.pc-pins--own').click();

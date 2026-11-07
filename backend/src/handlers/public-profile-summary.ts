@@ -83,7 +83,7 @@ const CARD_FRAME_IDS = ['gilded', 'rankforged', 'obsidian', 'runebound', 'eclips
 const CARD_INK_IDS = ['ivory', 'gold', 'violet', 'teal', 'ember', 'rose', 'frost', 'dawn', 'void', 'stardust'] as const;
 const CARD_AURA_IDS = ['none', 'motes', 'embers', 'storm', 'void', 'stardust'] as const;
 // W1155 — the card's pins (up to two): the id names the badge, v the number it shows.
-const CARD_PIN_IDS = ['steps1m', 'shadows', 'summit', 'bosses', 'bestday'] as const;
+const CARD_PIN_IDS = ['steps1m', 'shadows', 'wgmvp', 'bestday'] as const;   // W1157 — bosses and summit dropped (the card's stats say them already), wgmvp added, before any client shipped
 const CARD_PINS_MAX = 2;
 
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;

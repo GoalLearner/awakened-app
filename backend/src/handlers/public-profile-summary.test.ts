@@ -982,9 +982,9 @@ describe('W1155 — card pins (cardPins)', () => {
 
   it('three pins, an unknown id, or a repeated id → 400 INVALID_CARD_PINS and nothing written', async () => {
     for (const bad of [
-      [{ id: 'steps1m', v: 1 }, { id: 'shadows', v: 1 }, { id: 'summit', v: 100 }],
+      [{ id: 'steps1m', v: 1 }, { id: 'shadows', v: 1 }, { id: 'bestday', v: 16000 }],
       [{ id: 'pact', v: 7 }],
-      [{ id: 'bosses', v: 1 }, { id: 'bosses', v: 2 }],
+      [{ id: 'wgmvp', v: 1 }, { id: 'wgmvp', v: 2 }],
       'steps1m',
     ]) {
       const db = makeDb();
