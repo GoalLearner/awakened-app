@@ -71,6 +71,7 @@ interface MemberRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  card_ink: string | null;   // W1146 — the name's ink
   // W713 — tier-colored crest ring + number, prestige ✦, Founder mark (main-board parity).
   rank_tier: string | null;
   prestige: number | null;
@@ -140,6 +141,7 @@ export async function handleStep100kClub(
             ua.unlocked_at                AS unlocked_at,
             pps.avatar_id                 AS avatar_id,
             pps.card_bg                   AS card_bg,
+            pps.card_ink                  AS card_ink,
             pps.rank_tier                 AS rank_tier,
             pps.prestige_level            AS prestige,
             pps.founder_seq               AS founder_seq
@@ -168,6 +170,7 @@ export async function handleStep100kClub(
     unlocked_at: row.unlocked_at,
     avatar_id: row.avatar_id ?? null,   // W704 — row crest
     card_bg: row.card_bg ?? null,   // W706 — member card background
+    card_ink: row.card_ink ?? null,   // W1146 — the name's ink
     rankTier: row.rank_tier ?? null,       // W713 — tier-colored crest ring + number
     prestige: row.prestige ?? 0,
     founderSeq: row.founder_seq ?? 0,

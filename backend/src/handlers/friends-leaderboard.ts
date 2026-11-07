@@ -37,6 +37,7 @@ interface FriendRow {
   arena_title: string | null;
   avatar_id: string | null;
   card_bg: string | null;
+  card_ink: string | null;   // W1146 — the name's ink
   rank_tier: string | null;
   prestige: number | null;
   founder_seq: number | null;
@@ -75,7 +76,7 @@ export async function handleFriendsLeaderboardGet(
         `${MERGED_FOR_WEEK}
          SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(m.steps, 0) AS current_value,
-                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
                 p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
            FROM users u
            LEFT JOIN merged m ON m.user_id = u.id
@@ -97,7 +98,7 @@ export async function handleFriendsLeaderboardGet(
     : await env.DB.prepare(
         `SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(ls.current_value, 0) AS current_value,
-                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
                 p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
            FROM users u
            LEFT JOIN leaderboard_snapshots ls
@@ -135,6 +136,7 @@ export async function handleFriendsLeaderboardGet(
       arena_title: r.arena_title || null,
       avatar_id: r.avatar_id || null,
       card_bg: r.card_bg || null,   // W706 — member card background
+      card_ink: r.card_ink || null,   // W1146 — the name's ink
       rankTier: r.rank_tier || undefined,
       prestige: r.prestige ?? 0,
       founderSeq: r.founder_seq ?? 0,

@@ -46,6 +46,7 @@ interface TopRow {
   avatar_id: string | null;
   // W706 — member card background
   card_bg: string | null;
+  card_ink: string | null;   // W1146 — the ink the name is written in (null = ivory)
   // W844 (Train 4, E3) — the W276 parked cross-link, built now that real
   // climbers hold the summit: the eternal Hall of the Awakened ordinal
   // (1 = first ever to clear floor 100). Null for everyone unsummited; the
@@ -73,6 +74,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
             pps.founder_seq AS founder_seq,
             pps.avatar_id AS avatar_id,
             pps.card_bg AS card_bg,
+            pps.card_ink AS card_ink,
             hoa.ordinal AS hall_ordinal
        FROM merged m
        JOIN users u ON u.id = m.user_id
@@ -106,6 +108,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
       founderSeq: row.founder_seq ?? null,
       avatar_id: row.avatar_id ?? null,
       card_bg: row.card_bg ?? null,
+      card_ink: row.card_ink ?? null,   // W1146
       hall_ordinal: row.hall_ordinal ?? null,
     })),
     me: meRow && meRow.steps ? { rank: (meRow.above ?? 0) + 1, current_value: meRow.steps } : null,
@@ -175,6 +178,7 @@ export async function handleLeaderboardTop(
                 pps.founder_seq AS founder_seq,
                 pps.avatar_id AS avatar_id,
                 pps.card_bg AS card_bg,
+                pps.card_ink AS card_ink,
                 hoa.ordinal AS hall_ordinal
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
@@ -194,6 +198,7 @@ export async function handleLeaderboardTop(
                 pps.founder_seq AS founder_seq,
                 pps.avatar_id AS avatar_id,
                 pps.card_bg AS card_bg,
+                pps.card_ink AS card_ink,
                 hoa.ordinal AS hall_ordinal
          FROM leaderboard_snapshots ls
          JOIN users u ON u.id = ls.user_id
@@ -222,6 +227,7 @@ export async function handleLeaderboardTop(
     // friends-leaderboard/rank-band). null → client renders its default portrait.
     avatar_id: row.avatar_id ?? null,
     card_bg: row.card_bg ?? null,   // W706 — member card background
+    card_ink: row.card_ink ?? null,   // W1146 — the name's ink
     // W844 (E3) — eternal Hall ordinal; null for unsummited hunters, and
     // old clients simply ignore the extra field (forward compatible).
     hall_ordinal: row.hall_ordinal ?? null,

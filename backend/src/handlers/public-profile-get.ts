@@ -26,6 +26,9 @@ interface ProfileRow {
   power: number | null;
   avatar_id: string | null;
   card_bg: string | null;   // W706 — member card background
+  card_frame: string | null;   // W1146 — the Wardrobe's frame / ink / aura (null = default)
+  card_ink: string | null;
+  card_aura: string | null;
   founder_seq: number | null;   // W656 — free Founder marker number (null = none)
   arena_title: string | null;
   bosses_slain_total: number | null;
@@ -65,6 +68,7 @@ export async function handlePublicProfileGet(
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
             pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.arena_title AS arena_title,
+            pps.card_frame AS card_frame, pps.card_ink AS card_ink, pps.card_aura AS card_aura,
             pps.founder_seq AS founder_seq,
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -127,6 +131,9 @@ export async function handlePublicProfileGet(
     power: row.power ?? 0,
     avatarId: row.avatar_id,                       // null → client falls back to class default
     cardBg: row.card_bg ?? null,   // W706 — member card background
+    cardFrame: row.card_frame ?? null,   // W1146 — the card look (the client keeps its defaults for an unknown id)
+    cardInk: row.card_ink ?? null,
+    cardAura: row.card_aura ?? null,
     founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
     // W912 — the developer / moderator crown (board_moderators role), shown on the card.
     boardRole: row.board_role === 'owner' || row.board_role === 'mod' ? row.board_role : null,

@@ -905,3 +905,47 @@ describe('PUT /v1/users/me/public-profile-summary — premium-skin ownership (W7
     expect(upsertOf(calls)?.binds.includes('avatar-mage.png')).toBe(true);
   });
 });
+
+// ── W1146 — the card look (frame / ink / aura) rides its own UPDATE after the upsert ──────
+describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
+  const callsOf = (db: unknown) => (db as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+  const lookCalls = (db: unknown) => callsOf(db).filter((c) => /UPDATE public_profile_summary SET\s+card_frame/.test(c.sql));
+
+  it('writes the three ids in a second statement: set sentinel + value per slot, then the user', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardFrame: 'runebound', cardInk: 'frost', cardAura: 'motes' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);   // the upsert's bind shape is untouched
+    const upd = lookCalls(db);
+    expect(upd.length).toBe(1);
+    expect(upd[0].binds).toEqual([1, 'runebound', 1, 'frost', 1, 'motes', session.userId]);
+  });
+
+  it('null clears one slot; the slots not sent keep their CASE sentinel at 0 (preserved)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardInk: null }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const upd = lookCalls(db);
+    expect(upd.length).toBe(1);
+    expect(upd[0].binds).toEqual([0, null, 1, null, 0, null, session.userId]);
+  });
+
+  it('no slot sent → no look statement at all', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(makeReq(validPayload), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(lookCalls(db).length).toBe(0);
+  });
+
+  it('rejects an id outside the catalog (400, INVALID_CARD_INK) and writes nothing', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardInk: 'neon' }), makeEnv(db), session);
+    expect(res.status).toBe(400);
+    const j = await res.json() as { error?: string };
+    expect(j.error).toBe('INVALID_CARD_INK');
+    expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(0);
+  });
+});

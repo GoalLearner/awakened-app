@@ -76,6 +76,13 @@ const CARD_BG_IDS = [
   'bg-allmega', 'bg-collog', 'bg-streak30',
 ] as const;
 
+// W1146 — the Wardrobe's card look (the W1143 client catalogs): the medallion frame, the ink the
+// name is written in, the aura around the medallion. Phone-claimed like the earned looks the phone
+// claims; the server allow-lists the ids so an unknown one never propagates. null = the default.
+const CARD_FRAME_IDS = ['gilded', 'rankforged', 'obsidian', 'runebound', 'eclipse'] as const;
+const CARD_INK_IDS = ['ivory', 'gold', 'violet', 'teal', 'ember', 'rose', 'frost', 'dawn', 'void', 'stardust'] as const;
+const CARD_AURA_IDS = ['none', 'motes', 'embers', 'storm', 'void', 'stardust'] as const;
+
 const ALLOWED_TIERS = ['E', 'D', 'C', 'B', 'A', 'S', 'S+'] as const;
 const ALLOWED_DIVISIONS = ['I', 'II', 'III'] as const;
 
@@ -142,6 +149,9 @@ interface PutBody {
   arenaTitle?: unknown;
   avatarId?: unknown;
   cardBg?: unknown;   // W706 — member card background id (null clears)
+  cardFrame?: unknown;   // W1146 — card look ids (null = default; omitted = preserve)
+  cardInk?: unknown;
+  cardAura?: unknown;
   power?: unknown;
   avgStepsPerDay?: unknown;
   combatant?: unknown;   // W440 — loadout snapshot for "Duel a Friend's Echo" (6 stats + weapon)
@@ -175,6 +185,9 @@ interface Validated {
   // deliberate "unequipped" clear; string → must be a whitelisted ID.
   arenaTitle: AchField<string>;
   cardBg: AchField<string>;   // W706 — member card background (write-gated on membership)
+  cardFrame: AchField<string>;   // W1146 — card look, same set/clear/preserve semantics
+  cardInk: AchField<string>;
+  cardAura: AchField<string>;
   // Profile card (W-next) — same set/clear/preserve semantics.
   avatarId: AchField<string>;
   power: AchField<number>;
@@ -441,6 +454,21 @@ function validate(body: PutBody):
       return { ok: false, code: 'INVALID_CARD_BG', detail: 'cardBg must be a known background id or null.' };
     }
   }
+  // W1146 — the card look: each slot is set/clear/preserve like cardBg; a string must be a catalog id.
+  const look = {
+    cardFrame: { set: false, value: null } as AchField<string>,
+    cardInk: { set: false, value: null } as AchField<string>,
+    cardAura: { set: false, value: null } as AchField<string>,
+  };
+  const lookIds: Record<keyof typeof look, readonly string[]> = { cardFrame: CARD_FRAME_IDS, cardInk: CARD_INK_IDS, cardAura: CARD_AURA_IDS };
+  const lookCodes: Record<keyof typeof look, string> = { cardFrame: 'INVALID_CARD_FRAME', cardInk: 'INVALID_CARD_INK', cardAura: 'INVALID_CARD_AURA' };
+  for (const key of ['cardFrame', 'cardInk', 'cardAura'] as const) {
+    const raw = body[key];
+    if (!(key in body) || raw === undefined) continue;
+    if (raw === null) { look[key] = { set: true, value: null }; continue; }
+    if (typeof raw === 'string' && lookIds[key].includes(raw)) { look[key] = { set: true, value: raw }; continue; }
+    return { ok: false, code: lookCodes[key], detail: key + ' must be a known id or null.' };
+  }
   let power: AchField<number> = { set: false, value: null };
   if ('power' in body && body.power !== undefined) {
     if (isSafeInt(body.power, 0, POWER_MAX)) {
@@ -507,6 +535,9 @@ function validate(body: PutBody):
       arenaTitle,
       avatarId,
       cardBg,
+      cardFrame: look.cardFrame,   // W1146
+      cardInk: look.cardInk,
+      cardAura: look.cardAura,
       power,
       avgStepsPerDay,
       combatant,
@@ -691,6 +722,26 @@ export async function handlePublicProfileSummaryPut(
       cardBgSet, v.cardBg.value,   // W706 — card_bg CASE sentinel + value
     )
     .run();
+
+  // W1146 — the card look (frame / ink / aura) rides its own statement so the main upsert's bind
+  // shape stays put; it runs only when the client set at least one slot (set or clear), and a slot
+  // the client omitted is preserved by its CASE sentinel.
+  if (v.cardFrame.set || v.cardInk.set || v.cardAura.set) {
+    await env.DB.prepare(
+      `UPDATE public_profile_summary SET
+          card_frame = CASE WHEN ? = 1 THEN ? ELSE card_frame END,
+          card_ink   = CASE WHEN ? = 1 THEN ? ELSE card_ink END,
+          card_aura  = CASE WHEN ? = 1 THEN ? ELSE card_aura END
+        WHERE user_id = ?`,
+    )
+      .bind(
+        v.cardFrame.set ? 1 : 0, v.cardFrame.value,
+        v.cardInk.set ? 1 : 0, v.cardInk.value,
+        v.cardAura.set ? 1 : 0, v.cardAura.value,
+        session.userId,
+      )
+      .run();
+  }
 
   // W656/W698 — grant/refresh the Founder marker for a now-eligible account (>= 50
   // boss kills, first 20 only) and stamp its number onto the row we just wrote
