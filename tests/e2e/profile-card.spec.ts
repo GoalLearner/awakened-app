@@ -61,6 +61,41 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pc-body .pc-stat .v.gold')).toHaveText('5,601');
     });
 
+    // W1144 — owner 2026-11-07 on build 623: "why it made the avatar so big and that it is covering the rank too...
+    // the aura isn't working correctly on the playercard". The medallion is the handoff's 166px, the rank crest paints
+    // on top of it, and a worn aura fills the hero block behind the medallion instead of hiding under it.
+    test('the medallion is 166px, the rank crest sits on top of it, and a worn aura fills the hero block', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.setItem('hb_card_aura', 'storm'); localStorage.removeItem('hb_card_frame'); });
+      await render(page, true);
+      const med = page.locator('#pc-body .pc-med'), crest = page.locator('#pc-body .pc-crest');
+      await expect(med).toBeVisible();
+      await expect(crest).toHaveText('S');
+      // the sheet slides up on open: measure the medallion and the crest in ONE frame once the sheet has settled
+      const geo = await page.evaluate(async () => {
+        const sh = document.getElementById('pc-sheet')!;
+        let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
+        const m = document.querySelector('#pc-body .pc-med')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
+        const top = document.elementFromPoint(c.x + c.width / 2, c.y + c.height / 2);
+        return { mw: m.width, mh: m.height, mcx: m.x + m.width / 2, mBottom: m.bottom, cw: c.width, ccx: c.x + c.width / 2, cBottom: c.bottom, top: top ? top.className : '' };
+      });
+      expect(Math.round(geo.mw)).toBe(166);
+      expect(Math.round(geo.mh)).toBe(166);
+      expect(Math.round(geo.cw)).toBe(48);
+      expect(Math.abs(geo.ccx - geo.mcx)).toBeLessThanOrEqual(1);   // on the medallion's centre line
+      expect(geo.cBottom).toBeGreaterThan(geo.mBottom);             // hanging off its base
+      expect(geo.top).toBe('pc-crest');                             // the element on top at its own centre (W1143 had lifted the medallion over it)
+      // the aura: one, a direct child of the hero block, spanning it; nothing left inside the medallion wrap
+      const aura = page.locator('#pc-body .pc-hero > .wx-aura.storm');
+      await expect(aura).toHaveCount(1);
+      await expect(page.locator('#pc-body .pc-med-wrap .wx-aura')).toHaveCount(0);
+      const h = (await page.locator('#pc-body .pc-hero').boundingBox())!, a = (await aura.boundingBox())!;
+      expect(Math.abs(a.width - h.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(a.height - h.height)).toBeLessThanOrEqual(1);
+      expect(await aura.locator('.wx-ap').count()).toBe(10);
+      expect(await page.evaluate(() => { const a = document.querySelector('#pc-body .pc-hero > .wx-aura') as HTMLElement, w = document.querySelector('#pc-body .pc-med-wrap') as HTMLElement; return [getComputedStyle(a).zIndex, getComputedStyle(w).zIndex]; })).toEqual(['0', '1']);   // behind the medallion
+    });
+
     test("a visitor's card: centred too, no Arena Rating, the worn look named", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL' });

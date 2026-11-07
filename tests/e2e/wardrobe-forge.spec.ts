@@ -132,11 +132,11 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(body.locator('.pc-med')).toHaveClass(/pc-fr-runebound/);
     await expect(body.locator('.pc-alias')).toHaveClass(/wx-ink-s/);
     expect(await body.locator('.pc-alias').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(125, 211, 252)');
-    await expect(body.locator('.pc-med-wrap .wx-aura.motes')).toHaveCount(1);
+    await expect(body.locator('.pc-hero > .wx-aura.motes')).toHaveCount(1);   // W1144 — the aura is the hero's weather, behind the medallion
     await shot(page, 'forge-05-card');
     await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL' }), false), CARD);
     await expect(body.locator('.pc-med')).toHaveClass(/pc-fr-gilded/);
     await expect(body.locator('.pc-alias')).not.toHaveClass(/wx-ink/);
-    await expect(body.locator('.pc-med-wrap .wx-aura')).toHaveCount(0);
+    await expect(body.locator('.pc-hero .wx-aura')).toHaveCount(0);
   });
 });

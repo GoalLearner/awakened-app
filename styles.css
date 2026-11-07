@@ -28083,11 +28083,13 @@ body.combat-active #app * { animation-play-state: paused !important; }
 
 /* the medallion — circular, gold gradient frame, glowing rarity ring, gem mounts.
    W710 — enlarged (176→212px) so the avatar art is the hero of the profile card
-   (owner: "make the cards larger to actually see the art… worth the value"). */
-.pc-med { position: relative; width: 232px; height: 232px; border-radius: 50%; flex: none;
+   (owner: "make the cards larger to actually see the art… worth the value").
+   W1144 — 166px, the handoff 8 card's size (Medallion size={166}: ring and gems 12px out, a 48px crest
+   12px below). Owner 2026-11-07 on build 623: "why it made the avatar so big". */
+.pc-med { position: relative; width: 166px; height: 166px; border-radius: 50%; flex: none;
   background: linear-gradient(150deg, #ffe9b0, var(--pc-ring, #f5b842) 42%, #c08418);
-  padding: 4px; box-shadow: 0 0 44px rgba(245,184,66,0.44), inset 0 1px 0 rgba(255,255,255,0.28); }
-.pc-med-ring { position: absolute; inset: -13px; border-radius: 50%; border: 1px solid var(--pc-ring, #f5b842); opacity: 0.55;
+  padding: 4px; box-shadow: 0 0 34px rgba(245,184,66,0.44), inset 0 1px 0 rgba(255,255,255,0.28); }
+.pc-med-ring { position: absolute; inset: -12px; border-radius: 50%; border: 1px solid var(--pc-ring, #f5b842); opacity: 0.55;
   box-shadow: 0 0 30px rgba(245,184,66,0.22), inset 0 0 20px rgba(245,184,66,0.12); }
 @media (prefers-reduced-motion: no-preference) { .pc-med-ring { animation: pcRing 3.4s ease-in-out infinite; } }
 @keyframes pcRing { 0%,100% { opacity: 0.4; } 50% { opacity: 0.85; } }
@@ -28095,19 +28097,20 @@ body.combat-active #app * { animation-play-state: paused !important; }
   background: repeating-linear-gradient(135deg, #15132f, #15132f 7px, #0e0e24 7px, #0e0e24 14px);
   display: flex; align-items: center; justify-content: center; }
 .pc-med-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; display: block; }
-.pc-gem { position: absolute; width: 16px; height: 16px; transform: translate(-50%,-50%) rotate(45deg);
+.pc-gem { position: absolute; width: 15px; height: 15px; transform: translate(-50%,-50%) rotate(45deg);
   background: linear-gradient(135deg, #ffe9b0, var(--pc-ring, #f5b842)); box-shadow: 0 0 10px rgba(245,184,66,0.7); border-radius: 2px; }
-.pc-gem.n { left: 50%; top: -13px; } .pc-gem.s { left: 50%; top: calc(100% + 13px); }
-.pc-gem.w { left: -13px; top: 50%; } .pc-gem.e { left: calc(100% + 13px); top: 50%; }
+.pc-gem.n { left: 50%; top: -12px; } .pc-gem.s { left: 50%; top: calc(100% + 12px); }
+.pc-gem.w { left: -12px; top: 50%; } .pc-gem.e { left: calc(100% + 12px); top: 50%; }
 
-/* rank crest — pinned to the base of the medallion, in the rank's own color */
-.pc-crest { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
-  width: 50px; height: 50px; border-radius: 13px; border: 3px solid #07070f;
+/* rank crest — pinned to the base of the medallion, in the rank's own color.
+   W1144 — z-index 3: above the medallion and its gems whatever the frame (W1143 lifted .pc-med and hid it). */
+.pc-crest { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); z-index: 3;
+  width: 48px; height: 48px; border-radius: 12px; border: 3px solid #07070f;
   background: radial-gradient(circle at 50% 30%, var(--pc-rank), color-mix(in srgb, var(--pc-rank) 80%, black));
   display: flex; align-items: center; justify-content: center;
   font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 25px; color: #07070f; line-height: 1;
   box-shadow: 0 0 20px var(--pc-rank), 0 4px 12px rgba(0,0,0,0.5); }
-.pc-med-floor { width: 256px; height: 26px; margin-top: 18px; border-radius: 50%;
+.pc-med-floor { width: 184px; height: 26px; margin-top: 18px; border-radius: 50%;
   background: radial-gradient(ellipse, rgba(245,184,66,0.40), transparent 70%); filter: blur(5px); }
 
 /* skin tag — signals the avatar is swappable / purchasable */
@@ -36464,13 +36467,13 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-med.wx-fr-obsidian .wx-med-frame, .wx-mini.wx-fr-obsidian, .pc-med.pc-fr-obsidian { background: linear-gradient(150deg, #3b3b4e, #14141e 52%, #2b2b3a); box-shadow: 0 0 0 1px rgba(245,184,66,.65), 0 0 26px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.12); }
 .wx-med.wx-fr-obsidian .wx-med-ring { box-shadow: inset 0 0 0 1px rgba(245,184,66,.35), 0 0 16px rgba(0,0,0,.5); }
 .wx-med.wx-fr-obsidian .wx-gem { transform: rotate(45deg) scale(.6); }
-.pc-med.pc-fr-obsidian .pc-gem { width: 9px; height: 9px; }
+.pc-med.pc-fr-obsidian .pc-gem { width: 8px; height: 8px; }
 .pc-med.pc-fr-obsidian .pc-med-ring { border-color: rgba(245,184,66,.35); box-shadow: none; }
 .wx-med.wx-fr-runebound .wx-med-ring::before, .wx-mini.wx-fr-runebound::before, .pc-med.pc-fr-runebound::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; pointer-events: none; background: repeating-conic-gradient(from 0deg, #f5b842 0 5deg, transparent 5deg 15deg); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); opacity: .9; filter: drop-shadow(0 0 5px rgba(245,184,66,.4)); animation: wx-spin 22s linear infinite; }
 .wx-med.wx-fr-runebound .wx-med-ring::after, .pc-med.pc-fr-runebound::after { content: ""; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; background: repeating-conic-gradient(from 7deg, #ffe9b0 0 1.5deg, transparent 1.5deg 22.5deg); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px)); opacity: .55; animation: wx-spin 34s linear infinite reverse; }
 .wx-mini.wx-fr-runebound::before { inset: -6px; }
-.pc-med.pc-fr-runebound::before { inset: -13px; }
-.pc-med.pc-fr-runebound::after { inset: -20px; }
+.pc-med.pc-fr-runebound::before { inset: -12px; }
+.pc-med.pc-fr-runebound::after { inset: -19px; }
 .pc-med.pc-fr-runebound .pc-med-ring { opacity: 0; animation: none; }
 .wx-med.wx-fr-eclipse .wx-med-frame, .wx-mini.wx-fr-eclipse, .pc-med.pc-fr-eclipse { background: linear-gradient(150deg, #1a1022, #04040a 55%, #130a1c); box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 0 50px 8px rgba(167,139,250,.5), 0 0 116px 23px rgba(245,184,66,.16); }
 .wx-med.wx-fr-eclipse .wx-gem, .pc-med.pc-fr-eclipse .pc-gem { display: none; }
@@ -36480,6 +36483,7 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-med.wx-fr-eclipse .wx-med-frame .wx-art, .wx-mini.wx-fr-eclipse .wx-art { box-shadow: inset 0 0 28px rgba(0,0,0,.75); }
 .pc-med.pc-fr-eclipse .pc-med-portrait::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 28px rgba(0,0,0,.75); pointer-events: none; }
 .pc-med.pc-fr-eclipse .pc-med-ring { border-color: rgba(167,139,250,.5); box-shadow: 0 0 30px rgba(167,139,250,.25); }
+.pc-med.pc-fr-eclipse::before { inset: -19px; }   /* W1144 — the 166px card medallion (handoff: -off × 1.6) */
 @keyframes wx-breathe2 { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 /* auras — particles around a medallion (the hero, the mini, the card) */
 .wx-aura { position: absolute; inset: -40px; pointer-events: none; overflow: visible; z-index: 0; }
@@ -36496,9 +36500,11 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .wx-aura.stardust .wx-ap { animation-name: wx-aStar; border-radius: 0; -webkit-clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); filter: drop-shadow(0 0 4px var(--c)); }
 @keyframes wx-aStar { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 40% { opacity: 1; transform: scale(1) rotate(25deg); } 70% { opacity: .6; transform: scale(.7) rotate(45deg); } }
 .wx-med .wx-aura { inset: -30px; }
-.pc-med-wrap .wx-aura { inset: -36px -36px -24px; }
+/* W1144 — on the profile card the aura is the hero's weather, not the medallion's: it fills the whole hero
+   block behind the medallion (the handoff's Aura rides the scene layer), so every particle shows. W1143 had
+   boxed it to the medallion wrap under a z-index-1 medallion, which hid nearly all of it (and the crest). */
+.pc-hero > .wx-aura { inset: 0; }
 .pc-med-wrap { z-index: 1; }
-.pc-med { z-index: 1; }
 /* reduced motion */
 #wd-sheet.wx.wx-rm .wx-ap, #wd-sheet.wx.wx-rm .wx-ink-g, #wd-sheet.wx.wx-rm .wx-fr-runebound .wx-med-ring::before, #wd-sheet.wx.wx-rm .wx-fr-runebound .wx-med-ring::after, #wd-sheet.wx.wx-rm .wx-mini.wx-fr-runebound::before, #wd-sheet.wx.wx-rm .wx-fr-eclipse .wx-med-ring::before, #wd-sheet.wx.wx-rm .wx-mini.wx-fr-eclipse::before { animation: none; }
 @media (prefers-reduced-motion: reduce) {
