@@ -1,0 +1,87 @@
+PODS:
+  - Capacitor (6.2.1):
+    - CapacitorCordova
+  - CapacitorCommunityAppleSignIn (7.1.0):
+    - Capacitor
+  - CapacitorCommunityInAppReview (6.0.0):
+    - Capacitor
+  - CapacitorCordova (6.2.1)
+  - CapacitorFilesystem (6.0.4):
+    - Capacitor
+  - CapacitorHaptics (6.0.3):
+    - Capacitor
+  - CapacitorLocalNotifications (6.1.3):
+    - Capacitor
+  - CapacitorPushNotifications (6.0.5):
+    - Capacitor
+  - CapacitorShare (6.0.4):
+    - Capacitor
+  - PerfoodCapacitorHealthkit (1.3.2):
+    - Capacitor
+  - PurchasesHybridCommon (11.1.1):
+    - RevenueCat (= 4.43.2)
+  - RevenueCat (4.43.2)
+  - RevenuecatPurchasesCapacitor (8.0.0):
+    - Capacitor
+    - PurchasesHybridCommon (= 11.1.1)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
+  - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
+  - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - "PerfoodCapacitorHealthkit (from `../../node_modules/@perfood/capacitor-healthkit`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
+
+SPEC REPOS:
+  trunk:
+    - PurchasesHybridCommon
+    - RevenueCat
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorCommunityAppleSignIn:
+    :path: "../../node_modules/@capacitor-community/apple-sign-in"
+  CapacitorCommunityInAppReview:
+    :path: "../../node_modules/@capacitor-community/in-app-review"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
+  CapacitorHaptics:
+    :path: "../../node_modules/@capacitor/haptics"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/@capacitor/local-notifications"
+  CapacitorPushNotifications:
+    :path: "../../node_modules/@capacitor/push-notifications"
+  CapacitorShare:
+    :path: "../../node_modules/@capacitor/share"
+  PerfoodCapacitorHealthkit:
+    :path: "../../node_modules/@perfood/capacitor-healthkit"
+  RevenuecatPurchasesCapacitor:
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
+
+SPEC CHECKSUMS:
+  Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
+  CapacitorCommunityAppleSignIn: 271cb2860576fd2961508bbfa7a82117d93eadca
+  CapacitorCommunityInAppReview: e5c93959637a956ce993134734d7df90390ea167
+  CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
+  CapacitorFilesystem: 5b9aec35c0212bd0064e26d278c93e925864f212
+  CapacitorHaptics: 40f83026feeee9cfe36e89e9c98a3baaaf20c450
+  CapacitorLocalNotifications: 801867e687c42dd2b33c1e22e08f48e6738d2f72
+  CapacitorPushNotifications: 35abece14371c57172e8321c9ccc8b6fa35fabfe
+  CapacitorShare: 77ff779e3b7c6ae9fb5461e52cf7ef805d429491
+  PerfoodCapacitorHealthkit: 0708728954308c0217daa6912deeb73df7cba050
+  PurchasesHybridCommon: 73f4f2c6e4ec3487b4219bf60e1661100fb85da3
+  RevenueCat: 3d934653b7e8b09af88fd47e9e84cfaf5d0a89ba
+  RevenuecatPurchasesCapacitor: 838148fb2aceed5dc3b1c24877b675964db24fc0
+
+PODFILE CHECKSUM: 51df39b881e4c4d47a60d1cfe256eb8787a287c1
+
+COCOAPODS: 1.16.2
