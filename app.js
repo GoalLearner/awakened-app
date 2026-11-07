@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1135'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1136'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14439,7 +14439,7 @@
         if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
         else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
         sess.dmgDealt[side] += effective;
-        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
+        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });   // W1135 — ult: the Surge ultimate (Ascent-only; the server core never sets it)
       } else if (dodged && !missed) {
         events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' });
       } else {
@@ -15179,6 +15179,7 @@
       simAscent:       _arenaSimAscent,        // W291 balance-verification sim (max build vs floor N)
       _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle,
                          intent: _arPrimeIntent, intentWord: _arIntentWord, moveWord: _arMoveWord, ultimate: _arUltimateFor },   // W1135
+      _live:           { sess: () => _arSess, paint: () => { try { const s = _arSess; if (s) { _pkbHPm = { p: s.pHP, b: s.bHP }; _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false); } _pkbHudPaint(); _pkbRefreshMoves(); } catch (_) {} } },   // W1135 debug: the open fight (paint = resync the screen to the session)
     };
   } catch (_) {}
 
@@ -15197,6 +15198,7 @@
   let _arTimers  = [];
   let _arReveal  = 0;
   let _arRevealing = false;   // W215 — true while the cinematic reveal driver is running (double-fire guard)
+  let _arLastFoeHit = null;    // W1135 — the blow that ended a lost fight, kept for the defeat sheet
   let _arFlawless  = false;   // W216 — true when this fight is a ≥2× clean-sweep stomp (one-hit KO reveal)
   let _arSess      = null;    // W229 — interactive fight session (pick-a-move per round)
 
@@ -15704,19 +15706,6 @@
   }
 
   // ── fight reveal ──────────────────────────────────────────────────  // ── fight reveal ──────────────────────────────────────────────────
-  function _arNarr(round) {
-    const hi = round.margin > 0.28;
-    if (round.playerWon) {
-      if (round.pCrit) return '<b>CRITICAL</b> — you shatter their guard.';
-      if (round.bMiss) return 'They swing wide — you punish the opening.';
-      return hi ? 'You break their guard — a decisive strike.'
-                : 'You edge the exchange, <b>' + round.pRoll + '</b> to ' + round.bRoll + '.';
-    }
-    if (round.bCrit) return '<b>CRITICAL</b> — they shatter your guard.';
-    if (round.pMiss) return 'Your strike whiffs — they capitalize.';
-    return hi ? 'They overwhelm you — <b>' + round.bRoll + '</b> lands hard.'
-              : 'They scrape the round, ' + round.bRoll + ' to ' + round.pRoll + '.';
-  }
   // ── cinematic helpers (W215) ──────────────────────────────────────
   // ── W222 fill modules (presentation only — real engine state) ─────
   // Loadout slot helpers (W1058's folded loadout reads them).
@@ -15732,32 +15721,6 @@
   function _ldtBonuses(card) {
     const b = (card && card.bonuses) || {};
     return Object.keys(b).filter((k) => (b[k] || 0) !== 0).map((k) => [k.toUpperCase(), b[k]]).sort((a, c) => c[1] - a[1]);
-  }
-  // Fight Recap — blow-by-blow + honest stats (dmg = winning-side rolls).
-  function _ascRecapHtml(f) {
-    if (!f || !f.result) return '';
-    const r = f.result;
-    const stat = (v, l, win) => '<div class="st"><div class="v' + (win ? ' win' : '') + '">' + v + '</div><div class="l">' + l + '</div></div>';
-    if (r.battle) {   // HP battle: remaining HP + damage dealt (timeout decider) + matchup
-      const mt = r.eff && r.eff.key === 'super' ? 'SUPER' : r.eff && r.eff.key === 'weak' ? 'WEAK' : 'EVEN';
-      const dmgRow = (typeof r.dpDealt === 'number')
-        ? '<div class="asc-recap-stats">' + stat(r.dpDealt, 'DMG DEALT', r.dpDealt >= r.dbDealt) + stat(r.dbDealt, 'DMG TAKEN') +
-          stat(r.reason === 'timeout' ? 'TIMEOUT' : 'K.O.', 'ENDED') + '</div>'
-        : '';
-      return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT ENDED</span></div>' +
-        '<div class="asc-recap"><div class="asc-recap-stats">' +
-          stat(Math.round(r.pHP) + '/' + r.pMax, 'YOUR HP', r.untouched) + stat(Math.round(r.bHP) + '/' + r.bMax, 'FOE HP') + stat(mt, 'MATCHUP') +
-        '</div>' + dmgRow + '</div></div>';
-    }
-    if (!Array.isArray(r.rounds) || !r.rounds.length) return '';
-    const rounds = r.rounds;
-    let dealt = 0, taken = 0;
-    rounds.forEach((rd) => { if (rd.playerWon) dealt += (rd.pRoll || 0); else taken += (rd.bRoll || 0); });
-    const lines = rounds.map((rd) =>
-      '<div class="ln ' + (rd.playerWon ? 'you' : 'foe') + '"><span class="dot"></span><span class="tx">' + _arNarr(rd) + '</span></div>').join('');
-    return '<div class="asc-fill"><div class="asc-fill-head"><span class="k">HOW IT ENDED</span></div>' +
-      '<div class="asc-recap">' + lines +
-      '<div class="asc-recap-stats">' + stat(dealt, 'DMG DEALT') + stat(taken, 'DMG TAKEN', taken === 0) + stat(rounds.length, 'ROUNDS') + '</div></div></div>';
   }
   // ── W1058 · THE MATCHUP (ClaudeDesign handoff 31, "The Matchup — Boosts") ─────────
   // Owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts",
@@ -16650,6 +16613,8 @@
   // W246 — "a tad faster": ~20% off the DWELLS (announce/settle/toasts/status/
   // gaps) per on-device feel; attack animations and the KO beat unchanged.
   let _pkbBusy = false, _pkbFF = false, _pkbFFTimer = null, _pkbTypeDone = null;
+  let _pkbFFSticky = false;   // W1135 — the 1×/2× pill: fast-forward that stays on
+  function _pkbFFBase() { return !!(_pkbFFSticky && !(_arSess && _arSess._pvp)); }   // duels never inherit it
   let _pkbHPm = { p: 0, b: 0 }, _pkbEffShown = { p: true, b: true }, _pkbFightT0 = 0;
   let _pkbClutch = false, _pkbLastStand = { p: false, b: false }, _pkbHeart = null;   // W260 — down-to-the-wire state
 
@@ -16719,21 +16684,6 @@
     d.style.transition = 'opacity ' + _pkbMs(_PKB_T.splashIn) + 'ms ease';
     requestAnimationFrame(() => { d.style.opacity = '1'; });
     _pkbAfter(_PKB_T.splashIn, () => _pkbHold(_PKB_T.splashHold, finish));
-  }
-  // W249 — victory float: rises from where the foe stood. READS the committed
-  // result object only (never computes rating itself).
-  function _pkbVicFloat(txt, cls) {
-    const fx = _pkbEl('pkb-fx'), st = _pkbEl('pkb-stage'), spot = _pkbEl('pkb-spot-b');
-    if (!fx || !st || !spot) return;
-    const d = document.createElement('div');
-    d.className = 'pkb-vicfloat ' + (cls || '');
-    d.textContent = txt;
-    const r = spot.getBoundingClientRect(), rs = st.getBoundingClientRect();
-    d.style.left = (r.left - rs.left + r.width * 0.5) + 'px';
-    d.style.top = (r.top - rs.top + r.height * 0.45) + 'px';
-    d.style.animationDuration = _pkbMs(_PKB_T.vicFloat) + 'ms';
-    fx.appendChild(d);
-    _pkbAfter(_PKB_T.vicFloat + 350, () => { try { d.remove(); } catch (_) {} });
   }
   // ── W539: The First Awakened, Unbound — phase-transition CINEMATIC ────────
   // Faithful port of the ClaudeDesign 2.5s, 5-beat sequence (cinematic-*.jsx),
@@ -16899,10 +16849,15 @@
     if (f === 'defDown' || f === 'atkDown' || f === 'burn' || f === 'bleed' || f === 'stun') return 'debuff';
     return 'attack';
   }
+  // W1135 — the redesigned cards (Claude Design "The Ascent - Battle Redesign"): accent bar, icon box, name +
+  // flavour, a stat pill, and tags that point at the smart play: a real cooldown ring, BRACE when the foe shows
+  // HEAVY or CHARGE and no ward is up, CLEANSE when you carry an affliction the move sheds. An execute is the
+  // full-width finisher strip, ignited at <=30%. data-ar / .cd / .exe / .exe-ready / .sel are unchanged.
   function _pkbRefreshMoves() {
     const s = _arSess; const box = _pkbEl('pkb-moves');
     if (!s || !box) return;
-    if (s.done) { box.innerHTML = '<button class="ar-contbtn" data-ar="next">SEE RESULT ▸</button>'; return; }
+    if (s.done) { box.innerHTML = '<button class="ar-contbtn" data-ar="next">CONTINUE ▸</button>'; return; }
+    if (box.closest && box.closest('.pkb2')) { _pkb2RefreshMoves(s, box); return; }
     const card = (mv) => {
       const onCd = s.cd[mv.id] > 0, cdn = s.cd[mv.id];
       const ty = _arMoveType(mv), A = _AR_MOVE_ACCENT[ty];
@@ -16927,11 +16882,239 @@
     const kit = allCd ? [{ id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, desc: 'A desperate blow.' }] : s.pMoves;
     box.innerHTML = '<div class="ar-bmoves' + (_pkbBusy ? ' lock' : '') + '">' + kit.map(card).join('') + '</div>';
   }
+  function _pkb2RefreshMoves(s, box) {
+    const word = s._pvp ? null : _arIntentWord(s);
+    const pS = s.pS || _arBlankStatus();
+    const warded = pS.guard > 0 || (pS.mods || []).some((x) => x.k === 'def' && x.mag < 0);
+    const afflicted = pS.stun > 0 || (pS.mods || []).some((x) => x.k === 'dot' || x.k === 'shred' || (x.mag < 0 && x.k !== 'def'));
+    const turns = (n) => n + (n === 1 ? ' TURN' : ' TURNS');
+    const card = (mv) => {
+      const onCd = s.cd[mv.id] > 0, cdn = s.cd[mv.id];
+      const ty = _arMoveType(mv), A = _AR_MOVE_ACCENT[ty];
+      const fxT = (mv.fx && mv.fx.t) || '';
+      const attrs = onCd ? ' data-ar="movecd"' : ' data-ar="move" data-move="' + mv.id + '"';
+      const style = ' style="--acc:' + A.acc + ';--rgb:' + A.rgb + '"';
+      if (mv.exe) {
+        const lit = !onCd && s.bMax > 0 && (s.bHP / s.bMax) <= mv.exe.thr;
+        let embers = '';
+        [8, 22, 40, 57, 73, 88].forEach((l, i) => { embers += '<i style="left:' + l + '%;--d:' + (2 + (i % 3) * 0.5) + 's;--dl:' + (i * 0.37).toFixed(2) + 's"></i>'; });
+        return '<button class="ar-bmove exe' + (lit ? ' exe-ready' : '') + (onCd ? ' cd' : '') + '"' + style + attrs + '>' +
+          '<span class="embers" aria-hidden="true">' + embers + '</span>' +
+          '<span class="ic">' + (onCd ? '<span class="cdn">' + cdn + '</span>' : _arGlyph(mv.gl || 'sword', lit ? '#ffd574' : '#9090a8', 15)) + '</span>' +
+          '<span class="tx"><span class="nm">' + esc(mv.name) + '</span><span class="desc">' + esc(mv.desc || '') + '</span></span>' +
+          '<span class="stat"><span class="lab">PWR</span><span class="val">' + Math.round((mv.power || 0) * 100) + ' ×' + mv.exe.mult + '</span>' +
+            '<span class="c">' + (onCd ? turns(cdn) : lit ? 'IGNITED' : '≤' + Math.round(mv.exe.thr * 100) + '%') + '</span></span>' +
+        '</button>';
+      }
+      const brace = !onCd && !warded && (word === 'HEAVY' || word === 'CHARGE') && /^(defUp|guard|bulwark|guardCleanse)$/.test(fxT);
+      const cleanse = !onCd && !brace && afflicted && /^(guardCleanse|bulwark)$/.test(fxT);
+      const kind = ty === 'attack' ? 'atk' : ty === 'debuff' ? 'deb' : 'def';
+      const total = Math.max(1, mv.cd || 1);
+      const icon = onCd
+        ? '<span class="ring" style="--p:' + Math.round(((total - Math.min(total, cdn)) / total) * 360) + 'deg"></span><span class="cdn">' + cdn + '</span>'
+        : _arGlyph(mv.gl || 'sword', A.acc, 16);
+      const extra = (mv.hits ? '<span class="val sup">×' + mv.hits + '</span>' : '') + (mv.prio ? '<span class="val sup">1ST</span>' : '');
+      const stat = ty === 'defense'
+        ? '<span class="stat"><span class="val s">SUPPORT</span></span>'
+        : '<span class="stat"><span class="lab">' + A.lab + '</span><span class="val">' + Math.round((mv.power || 0) * 100) + '</span>' + extra + '</span>';
+      const tag = onCd ? '<span class="tag cd">' + turns(cdn) + '</span>'
+        : brace ? '<span class="tag brace">BRACE</span>'
+        : cleanse ? '<span class="tag brace">CLEANSE</span>' : '';
+      return '<button class="ar-bmove ' + kind + (onCd ? ' cd' : '') + (brace || cleanse ? ' best brace' : '') + '"' + style + attrs + '>' +
+        '<span class="top"><span class="ic">' + icon + '</span><span class="tx"><span class="nm">' + esc(mv.name) + '</span><span class="desc">' + esc(mv.desc || '') + '</span></span></span>' +
+        '<span class="bot">' + stat + tag + '</span>' +
+      '</button>';
+    };
+    const allCd = s.pMoves.every((mv) => s.cd[mv.id] > 0);
+    const kit = allCd ? [{ id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, desc: 'A desperate blow.' }] : s.pMoves;
+    const ordered = kit.filter((mv) => !mv.exe).concat(kit.filter((mv) => mv.exe));   // the finisher strip sits last
+    box.innerHTML = '<div class="ar-bmoves' + (_pkbBusy ? ' lock' : '') + '">' + ordered.map(card).join('') + '</div>';
+  }
   function _pkbLock(on) {
     _pkbBusy = on;
     const box = _pkbEl('pkb-moves');
     const grid = box && box.firstChild;
     if (grid && grid.classList) grid.classList.toggle('lock', !!on);
+    const sg = _pkbEl('pkb-surge'); if (sg) sg.classList.toggle('lock', !!on);   // W1135
+  }
+  // ── W1135 — the redesign's live HUD: turn diamond, Surge meter, foe intent badge ──
+  const _PKB2_ICON = {
+    STRIKE: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.4 11.6 9.6 4.4"/><path d="M9 2.2h2.8V5"/><path d="M9.6 4.4l2.2-2.2"/><path d="M2.2 9v2.8H5"/></g>',
+    HEAVY: '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5 8.6 6.9"/><path d="M7.4 4.2 10.3 1.6l2.1 2.1-2.6 2.9-2.4-2.4Z"/><path d="M5.6 6 8 8.4"/></g>',
+    GUARD: '<g fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1.3 11.6 3.1v3.8c0 3-2 4.8-4.6 5.7-2.6-.9-4.6-2.7-4.6-5.7V3.1Z"/><path d="m4.7 6.7 1.7 1.8 3-3.6"/></g>',
+    CURSE: '<g fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M1.4 7c1.6-2.8 3.5-4.2 5.6-4.2S11 4.2 12.6 7c-1.6 2.8-3.5 4.2-5.6 4.2S3 9.8 1.4 7Z"/><circle cx="7" cy="7" r="1.8"/></g>',
+    CHARGE: '<g fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5h7M3.5 12.5h7"/><path d="M4.5 1.5c0 3 2.5 4 2.5 5.5S4.5 9.5 4.5 12.5M9.5 1.5c0 3-2.5 4-2.5 5.5s2.5 3 2.5 5.5"/></g>',
+    STUNNED: '<g fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7c1.2-1.4 2.6-1.4 3.8 0s2.6 1.4 3.8 0 2.4-1.4 3.6 0"/><path d="M7 1.5v2M3.4 3l1.3 1.4M10.6 3 9.3 4.4"/></g>',
+    skull: '<g fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1.6a4.6 4.6 0 0 0-4.6 4.6c0 1.8.9 2.9 2 3.6v1.8h5.2V9.8c1.1-.7 2-1.8 2-3.6A4.6 4.6 0 0 0 7 1.6Z"/><circle cx="5.2" cy="6.3" r=".9" fill="currentColor"/><circle cx="8.8" cy="6.3" r=".9" fill="currentColor"/></g>',
+    relic: '<path d="M7 1.4 9 5.2l4 .6-2.9 2.8.7 4L7 10.7l-3.8 1.9.7-4L1 5.8l4-.6Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>',
+  };
+  function _pkb2Svg(k, sz) { const z = sz || 14; return '<svg width="' + z + '" height="' + z + '" viewBox="0 0 14 14" aria-hidden="true">' + (_PKB2_ICON[k] || '') + '</svg>'; }
+  let _pkbIntentShown = null;
+  function _pkbIntentPaint() {
+    const el = _pkbEl('pkb-intent'), s = _arSess; if (!el) return;
+    const w = (s && !s._pvp && !s.done) ? _arIntentWord(s) : null;
+    if (!w) { el.className = 'pkb2-intent hidden'; _pkbIntentShown = null; return; }
+    if (w === _pkbIntentShown && !el.classList.contains('hidden')) return;
+    _pkbIntentShown = w;
+    el.className = 'pkb2-intent ' + w.toLowerCase();
+    el.innerHTML = _pkb2Svg(w) + '<span>' + w + '</span>';
+    el.setAttribute('aria-label', 'Next turn: ' + w);
+    void el.offsetWidth; el.classList.add('pop');
+  }
+  function _pkbIntentFlare() {
+    const el = _pkbEl('pkb-intent'); if (!el || el.classList.contains('hidden')) return;
+    el.classList.remove('flare'); void el.offsetWidth; el.classList.add('flare');
+    _pkbAfter(320, () => { try { el.classList.remove('flare'); } catch (_) {} });
+  }
+  function _pkbTurnPaint() { const el = _pkbEl('pkb-turn'), s = _arSess; if (el && s) el.textContent = String(Math.max(1, Math.min(_BATTLE_TURN_CAP, s.turn || 1))); }
+  function _pkbSurgePaint() {
+    const s = _arSess, el = _pkbEl('pkb-surge'); if (!s || !el || s._pvp) return;
+    const v = Math.max(0, Math.min(1, s._surge || 0));
+    const segs = el.querySelectorAll('.seg i');
+    segs.forEach((i, k) => { i.style.width = (Math.max(0, Math.min(1, v * 5 - k)) * 100).toFixed(1) + '%'; });
+    const sv = el.querySelector('.sv'); if (sv) sv.textContent = Math.round(v * 100) + '%';
+    const ready = v >= 1 && !s.done && !(s.pS && s.pS.stun > 0);
+    const was = el.classList.contains('full');
+    el.classList.toggle('full', ready);
+    el.setAttribute('data-ar', ready ? 'move' : 'surge');   // the move handler only ever sees it full
+    if (ready) el.setAttribute('data-move', 'ultimate'); else el.removeAttribute('data-move');
+    el.setAttribute('aria-label', ready ? 'Unleash your ultimate' : 'Surge ' + Math.round(v * 100) + '%');
+    if (ready && !was) {
+      segs.forEach((i) => { i.classList.remove('justfull'); void i.offsetWidth; i.classList.add('justfull'); });
+      try { _audCue('status_buff'); } catch (_) {}
+      try { _hapticTick('LIGHT'); } catch (_) {}
+    }
+  }
+  function _pkbHudPaint() { _pkbTurnPaint(); _pkbSurgePaint(); _pkbIntentPaint(); }
+  // UNLEASH: the cut-in, then the turn (the engine refuses it below full Surge or in a duel).
+  function _pkbUnleash() {
+    const s = _arSess; if (!s || s.done || s._pvp || _pkbBusy || (s._surge || 0) < 1) return;
+    _pkbLock(true);
+    try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}
+    _pkbCutin(_arUltimateFor(s), () => {
+      if (_arSess !== s || _arView !== 'battle') return;
+      const ev = arenaTakeTurn(s, 'ultimate');
+      _pkbSurgePaint();
+      if (!ev) { _pkbLock(false); _pkbRefreshMoves(); return; }
+      _pkbPlay(ev);
+    });
+  }
+  function _pkb2Root() { return document.querySelector('#arena-body .pkb2'); }
+  function _pkbCutin(ult, cb) {
+    const root = _pkb2Root(); if (!root) { cb(); return; }
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const nm = String(ult.name || ''), sp = nm.lastIndexOf(' ');
+    const nmHtml = sp > 0 ? esc(nm.slice(0, sp)) + ' <i>' + esc(nm.slice(sp + 1)) + '</i>' : '<i>' + esc(nm) + '</i>';
+    const style = { melee: 'MELEE', magic: 'MAGIC', ranged: 'RANGED' }[ult.style] || '';
+    const el = document.createElement('div');
+    el.className = 'pkb2-ovl pkb2-cutin';
+    el.innerHTML = '<div class="lines"></div><div class="slab"></div>' +
+      '<div class="por">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
+      '<div class="name"><div class="k">ULTIMATE' + (style ? ' · ' + style : '') + '</div><div class="n">' + nmHtml + '</div></div>' +
+      '<div class="sweep"></div><div class="vig"></div>';
+    root.appendChild(el);
+    try { _audCue('finisher_stop'); } catch (_) {}
+    try { _hapticTick('HEAVY'); } catch (_) {}
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true; _pkbSplashSkip = null;
+      el.classList.add('bye');
+      _pkbAfter(220, () => { try { el.remove(); } catch (_) {} cb(); });
+    };
+    _pkbSplashSkip = finish;   // a tap skips it (the overlay's pointerup handler)
+    _pkbAfter(1500, finish);
+  }
+  // The boss intro card (floors 10-100): it replaces the small name splash on boss floors.
+  function _pkbBossIntro(cb) {
+    const root = _pkb2Root(), m = _arMatchup;
+    if (!root || !m || !m.bot) { cb(); return; }
+    const band = (_ascentBandFor(m.floor) || {}).name || '';
+    const bz = ASCENT_BOSSES[m.floor] || {};
+    const el = document.createElement('div');
+    el.className = 'pkb2-ovl pkb2-intro';
+    el.innerHTML = '<div class="bgart"><img class="bg" src="assets/backgrounds/bg_' + _arBgTier(m.floor) + '.webp" alt="" onerror="this.remove()">' +
+        '<div class="boss">' + _arFoeArt(m.bot, true) + '</div></div>' +
+      '<div class="dark"></div>' +
+      '<div class="body"><div class="kick">FLOOR ' + m.floor + ' · BOSS</div><div class="ttl">' + esc(m.bot.name) + '</div>' +
+        (band ? '<div class="sub">' + esc(band) + '</div>' : '') + '<div class="rule"><i></i></div>' +
+        (bz.taunt && bz.taunt !== '…' ? '<div class="quote">“' + esc(bz.taunt) + '”</div>' : '<div class="quote">…</div>') + '</div>' +
+      '<div class="tap">TAP</div>';
+    root.appendChild(el);
+    let done = false;
+    const finish = () => {
+      if (done) return; done = true; _pkbSplashSkip = null;
+      el.classList.add('bye');
+      _pkbAfter(300, () => { try { el.remove(); } catch (_) {} cb(); });
+    };
+    _pkbSplashSkip = finish;
+    _pkbAfter(3600, finish);
+  }
+  // Floors 10-90: the boss breaks at half — a line of dialogue, a crimson tint. No stat change (owner-approved).
+  const ASCENT_BOSS_PHASE_LINES = {
+    10: 'Ten floors of you. Let me take one back.',
+    20: 'I said none pass. I meant it.',
+    30: 'Break me again. I have had practice.',
+    40: 'Now you see me. That was the mercy.',
+    50: 'Halfway, and still standing? Then burn.',
+    60: 'Your next promise is mine as well.',
+    70: 'No more kneeling. Now you crawl.',
+    80: '…Enough.',
+    90: 'The summit is watching. Disappoint it.',
+  };
+  function _pkbBossPhase(cb) {
+    const root = _pkb2Root(), m = _arMatchup, stage = _pkbEl('pkb-stage');
+    if (!root || !m) { cb(); return; }
+    if (stage) stage.classList.add('p2');
+    const el = document.createElement('div');
+    el.className = 'pkb2-ovl pkb2-phase';
+    el.innerHTML = '<div class="flash"></div><div class="line"><span class="k">PHASE II</span><span class="q">“' + esc(ASCENT_BOSS_PHASE_LINES[m.floor] || 'Enough.') + '”</span></div>';
+    root.appendChild(el);
+    try { _audCue('boss_intro'); } catch (_) {}
+    try { _hapticTick('MEDIUM'); } catch (_) {}
+    _pkbHold(1700, () => { el.classList.add('bye'); _pkbAfter(250, () => { try { el.remove(); } catch (_) {} cb(); }); });
+  }
+  function _pkbStamp(txt, cls) {
+    const fx = _pkbEl('pkb-fx'); if (!fx) return;
+    const d = document.createElement('div'); d.className = 'pkb2-stamp ' + (cls || ''); d.textContent = txt;
+    fx.appendChild(d);
+  }
+  // The battle screen markup, shared by the Ascent and duels (every director id kept).
+  function _pkb2Html(o) {
+    let motes = ''; for (let i = 0; i < 6; i++) motes += '<i></i>';
+    const plate = (side) => '<div class="pkb-plate ' + (side === 'p' ? 'you' : 'foe') + '" id="pkb-plate-' + side + '">' +
+      '<div class="pkb2-bname">' + (side === 'p' ? '<span class="who">YOU</span><span class="nm">' + esc(o.youName || '') + '</span>' : '<span class="nm">' + esc(o.foeName || '') + '</span>') + '</div>' +
+      '<div class="hp"><i class="ghost" id="pkb-ghost-' + side + '"></i><i id="pkb-bar-' + side + '" class="ok"></i><span class="ticks"></span></div>' +
+      '<div class="pkb2-bmeta">' + (side === 'p'
+        ? '<span class="num" id="pkb-num-p"></span><span class="chips" id="pkb-chips-p"></span>'
+        : '<span class="chips" id="pkb-chips-b"></span>' + (o.effChip || '') + (o.foeTag ? '<span class="pkb2-tag">' + esc(o.foeTag) + '</span>' : '') + '<span class="num" id="pkb-num-b"></span>') +
+      '</div></div>';
+    let segs = ''; for (let i = 0; i < 5; i++) segs += '<span class="seg"><i></i></span>';
+    const surge = o.pvp ? '' :
+      '<button type="button" class="pkb2-surge" id="pkb-surge" data-ar="surge" aria-label="Surge 0%">' +
+        '<span class="sl">SURGE</span><span class="segs">' + segs + '</span><span class="sv">0%</span>' +
+        '<span class="ult"><span class="ulx"><span class="k">SURGE READY</span><span class="n">' + esc(o.ultName || '') + '</span></span><span class="go">UNLEASH</span></span>' +
+        '<span class="shine" aria-hidden="true"></span></button>';
+    return '<div class="pkb pkb2' + (o.pvp ? ' pkb--pvp pkb2--pvp' : '') + (o.hasExe ? ' has-exe' : '') + '">' +
+      '<div class="pkb-stage settle" id="pkb-stage">' +
+        '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
+        '<div class="pkb2-tint" aria-hidden="true"></div>' +
+        '<div class="pkb-motes' + (o.isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
+        '<div class="pkb-spot foe' + (o.isBoss ? ' boss' : '') + (o.fa ? ' fa' : '') + '" id="pkb-spot-b"><span class="plat"></span><div class="spr">' + (o.foeArt || '') + '</div></div>' +
+        '<div class="pkb-spot you" id="pkb-spot-p"><span class="plat"></span><div class="spr">' + (o.youArt || '') + '</div></div>' +
+        '<div class="pkb2-scrim" aria-hidden="true"></div>' +
+        '<div class="pkb-top">' + esc(o.top || '') + '</div>' +
+        '<div class="pkb2-intent hidden" id="pkb-intent"></div>' +
+        '<div class="pkb-fx" id="pkb-fx"></div>' +
+      '</div>' +
+      '<div class="pkb2-chrome">' + (o.pvp ? '<div class="pvp-status" id="pvp-status"></div>'
+        : '<button type="button" class="pkb2-ff' + (_pkbFFSticky ? ' on' : '') + '" data-ar="ff" aria-label="Fast-forward">' + (_pkbFFSticky ? '2×' : '1×') + '</button>') + '</div>' +
+      '<div class="pkb2-band">' +
+        '<div class="pkb2-brow">' + plate('p') + '<div class="pkb2-bmid"><span class="dia"><span id="pkb-turn">1</span></span><span class="tl">TURN</span></div>' + plate('b') + '</div>' +
+        surge +
+      '</div>' +
+      '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line"></span></div>' +
+      '<div class="pkb-moves" id="pkb-moves"></div>' +
+    '</div>';
   }
   // typewriter — tap the text box to complete the line instantly. `hold` is the
   // post-reveal dwell (hold-scaled): comprehension time, not animation time.
@@ -17028,7 +17211,7 @@
   // Wind-ups extend the pre-impact wait per family (FF-scaled via _pkbAfter).
   const _PKB_ATK_FAM = { sword: 'heavy', dagger: 'fast', shield: 'blunt', ranged: 'ranged', burst: 'heavy', magic: 'magic' };
   const _PKB_ATK_MS  = { heavy: 300, fast: 150, blunt: 240, ranged: 240, magic: 260, exe: 380 };
-  function _pkbAtkFam(e) { return e && e.exe ? 'exe' : (_PKB_ATK_FAM[e && e.gl] || 'heavy'); }
+  function _pkbAtkFam(e) { return e && (e.exe || e.ult) ? 'exe' : (_PKB_ATK_FAM[e && e.gl] || 'heavy'); }   // W1135 — the ultimate gets the execute's beat
 
   function _arHitCueFor(gl) {
     switch (gl) {
@@ -17192,11 +17375,11 @@
     // crit also gives the whole stage a quick nudge for weight
     if (e.crit) { const stage = _pkbEl('pkb-stage'); if (stage) { stage.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => stage.classList.remove('nudge')); } }
     // W752 — crit zoom: the stage leans in for a beat on a crit (transform-only).
-    if (e.crit) {
+    if (e.crit || e.ult) {
       const stage = _pkbEl('pkb-stage');
       if (stage) { stage.classList.add('critzoom'); _pkbAfter(420, () => stage.classList.remove('critzoom')); }
     }
-    try { _audCue(e.exe ? 'hit_execute' : e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}   // W753 — the execute owns its impact
+    try { _audCue((e.exe || e.ult) ? 'hit_execute' : e.crit ? 'hit_crit' : _arHitCueFor(e.gl)); } catch (_) {}   // W753 — the execute owns its impact · W1135 the ultimate too
     // W752 — real Capacitor haptics (navigator.vibrate is a no-op in WKWebView):
     // LIGHT per hit, MEDIUM on a crit; the finisher beat adds HEAVY separately.
     try { _hapticTick(e.crit ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
@@ -17213,7 +17396,7 @@
         _pkbAfter(460, () => { try { spot.classList.remove('kb-hit'); } catch (_) {} });
       }
     } catch (_) {}
-    try { _pkbStrikeFx(defSide, e.gl, !!e.crit, !!e.exe); } catch (_) {}   // W428 strike · W757 execute signature
+    try { _pkbStrikeFx(defSide, e.gl, !!(e.crit || e.ult), !!(e.exe || e.ult)); } catch (_) {}   // W428 strike · W757 execute signature · W1135 ultimate
     // W429 — defender's recoil + red flash + sparks. W759 — a defender with an
     // ACTIVE guard (guard charge or def-up brace) reads the hit as an ABSORB:
     // the braced flinch + ward dome (the 'resist' react) instead of the raw
@@ -17270,6 +17453,13 @@
     const pPrev = s.pMax ? prev.p / s.pMax : 0, bPrev = s.bMax ? prev.b / s.bMax : 0;
     if (_pkbClutchAt(pF, bF)) _pkbClutchEngage();
     const chain = [];
+    // W1135 — floors 10-90: the boss breaks at half (a line + a crimson tint; no stat change).
+    const fl = _arMatchup && _arMatchup.floor;
+    if (!s._pvp && !s._phaseLineShown && fl >= 10 && fl <= 90 && fl % 10 === 0 && _arMatchup.bot && _arMatchup.bot.isBoss &&
+        bPrev > 0.5 && bF <= 0.5 && bF > 0 && pF > 0 && _pkb2Root()) {
+      s._phaseLineShown = true;
+      chain.push((cb) => { try { _audDuck(_pkbHoldMs(1700)); } catch (_) {} _pkbBossPhase(cb); });
+    }
     if (!_pkbLastStand.b && _pkbLastStandCross(bPrev, bF)) {
       _pkbLastStand.b = true;
       chain.push((cb) => { try { _audDuck(_pkbHoldMs(_PKB_T.statusHold)); } catch (_) {} _pkbSay(esc(_arMatchup.bot.name) + ' staggers — one clean hit ends this!', _PKB_T.statusHold, cb); });
@@ -17337,6 +17527,7 @@
       if (e.side === 'b') {
         const foeSpot = _pkbEl('pkb-spot-b');
         if (foeSpot) { foeSpot.classList.add('telegraph'); _pkbAfter(_PKB_T.announceHold, () => { try { foeSpot.classList.remove('telegraph'); } catch (_) {} }); }
+        try { _pkbIntentFlare(); } catch (_) {}   // W1135 — the badge flares as the foe makes good on it
       }
       // W752 — the hit that ENDS a fighter is a finisher: longer hit-stop +
       // speedline flash + HEAVY haptic before the engine's own KO cinematic.
@@ -17540,6 +17731,8 @@
         return;
       }
       if (_pkbFightT0) { try { console.log('[pkb] fight real-time: ' + ((Date.now() - _pkbFightT0) / 1000).toFixed(1) + 's, turns: ' + (s.turn - 1)); } catch (_) {} }
+      _arLastFoeHit = s.won ? null : (s._lastFoeHit || null);   // W1135 — for the defeat sheet
+      try { _pkbIntentPaint(); _pkbSurgePaint(); } catch (_) {}   // the badge leaves with the fight
       // W249 Patch 4 — the ONE arenaFinalizeBattle call, moved from the SEE
       // RESULT tap to the KO so the victory floats can READ the committed
       // result (display never computes). _finalized → result tap renders only.
@@ -17548,82 +17741,50 @@
       try { _arAnnounceNewTitles(fin); } catch (_) {}   // W258 — guild-feed title broadcast (KO-commit path)
       _pkbSay(s.won ? esc(_arMatchup.bot.name) + ' is down!' : 'You fall…', _PKB_T.koHold, () => {
         _pkbAfter(_PKB_T.ko, () => {
-          if (s.won && fin) {
-            if (fin.advanced) _pkbVicFloat(fin.bossCleared ? 'BOSS SLAIN' : 'FLOOR ' + fin.floorCleared + ' CLEARED', 'rating');
-            else _pkbVicFloat('VICTORY', 'unrated');
-            if (fin.newTitles && fin.newTitles.length) _pkbAfter(_PKB_T.vicGap, () => _pkbVicFloat('“' + fin.newTitles[0].name + '”', 'title'));
-            _pkbHold(_PKB_T.vicFloat + _PKB_T.vicGap, () => { _pkbLock(false); _pkbRefreshMoves(); });
-          } else { _pkbLock(false); _pkbRefreshMoves(); }
+          // W1135 — the KO stamp, then the result sheet rises on its own (CONTINUE still taps through).
+          const stamp = !s.won ? 'DEFEAT' : (fin && fin.advanced ? (fin.bossCleared ? 'BOSS SLAIN' : 'FLOOR CLEARED') : 'VICTORY');
+          _pkbStamp(stamp, s.won ? 'ko' : 'lose');
+          _pkbHold(900, () => {
+            _pkbLock(false); _pkbRefreshMoves();
+            _arAfter(1300, () => { if (_arSess === s && _arView === 'battle' && s.done && !_pkbBusy) _arFinishSession(); });
+          });
         });
       });
     } else if (s._pvp) {
       // W404 — duel: the Ascent "What will you do?" prompt reads _arMatchup and never
       // re-arms the PvP turn timer/status. Re-enable moves + restore the duel turn UI
       // (the next turn_result already carries the fresh deadlineMs).
-      _pkbLock(false); _pkbRefreshMoves();
+      _pkbLock(false); _pkbRefreshMoves(); _pkbTurnPaint();
       try { _pvpSyncTurnUI(_pvpView); } catch (_) {}
     } else {
       // between full turns — a breath before the prompt hands control back
-      _pkbHold(_PKB_T.turnGap, () => _pkbSay('What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); }));
+      // W1135 — the turn diamond, the Surge and the foe's NEXT intent update as control returns.
+      _pkbHold(_PKB_T.turnGap, () => { _pkbHudPaint(); _pkbSay('What will you do?', 0, () => { _pkbLock(false); _pkbRefreshMoves(); _pkbSurgePaint(); }); });
     }
   }
   // The battle screen — built ONCE per fight; the director patches it per turn.
   function _arRenderBattle() {
     _arView = 'battle';
-    _arBodyMode(false);
-    _pkbBusy = false; _pkbFF = false;
+    _arBodyMode(true);   // W1135 — full-bleed: the stage runs under the status bar, the chrome floats on it
+    _pkbBusy = false; _pkbFF = _pkbFFSticky;
     const s = _arSess, m = _arMatchup;
     _pkbHPm = { p: s.pHP, b: s.bHP };
     _pkbEffShown = { p: false, b: false };
     _pkbClutch = false; _pkbLastStand = { p: false, b: false }; _pkbHeartStop();   // W260 — fresh wire state
     _pkbFightT0 = Date.now();   // W242 — duration instrumentation (logged at KO)
+    _pkbIntentShown = null; _arLastFoeHit = null;
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
-    const tint = _pkbArchTint(s.foeArch);
-    // W241 — proportion pass: boss-scaled foe, shared ground plane, drifting
-    // motes (embers on boss floors), camera settle, flavor-only text box.
     const isBoss = !!m.bot.isBoss;
-    let flavor = 'Choose your opening move.';
-    try { const bz = ASCENT_BOSSES[m.floor]; if (isBoss && bz && bz.taunt) flavor = '“' + bz.taunt + '”'; } catch (_) {}
-    let motes = '';
-    for (let i = 0; i < 6; i++) motes += '<i></i>';
-    _arSet(
-      // W760 — a 5-move kit (the earned EXECUTE slot) makes the moves panel a row
-      // taller, which flex-shrinks the stage; flag the root so CSS can reclaim the
-      // height (tighter gap + slightly shorter sprites) instead of letting the foe
-      // ride off the top of the screen (owner report, build 446).
-      '<div class="pkb' + ((s.pMoves || []).some((mv) => mv && mv.exe) ? ' has-exe' : '') + '">' +
-        '<div class="pkb-top">FLOOR ' + m.floor + ' — ' + esc(m.bot.name).toUpperCase() + '</div>' +
-        '<div class="pkb-stage settle" id="pkb-stage">' +
-          '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
-          '<div class="pkb-bg-scrim" aria-hidden="true"></div>' +
-          '<div class="pkb-ground" style="background:linear-gradient(196deg,transparent 26%,' + tint + '12 44%,rgba(245,184,66,0.05) 66%,transparent 86%)"></div>' +
-          '<div class="pkb-motes' + (isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
-          '<div class="pkb-row foe">' +
-            '<div class="pkb-plate" id="pkb-plate-b">' +
-              '<div class="nm">' + esc(m.bot.name) + '</div>' +
-              '<div class="hp"><i class="ghost" id="pkb-ghost-b"></i><i id="pkb-bar-b" class="ok"></i></div>' +
-              '<div class="num" id="pkb-num-b"></div>' +
-              '<div class="chips" id="pkb-chips-b"></div></div>' +
-            '<div class="pkb-spot foe' + (isBoss ? ' boss' : '') + '" id="pkb-spot-b">' +
-              '<span class="plat" style="background:radial-gradient(closest-side,' + tint + '30,transparent 78%);border-color:' + tint + '3d"></span>' +
-              '<div class="spr">' + _arFoeArt(m.bot, isBoss) + '</div></div>' +
-          '</div>' +
-          '<div class="pkb-row you">' +
-            '<div class="pkb-spot you" id="pkb-spot-p">' +
-              '<span class="plat" style="background:radial-gradient(closest-side,#f5b84230,transparent 78%);border-color:#f5b8423d"></span>' +
-              '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div></div>' +
-            '<div class="pkb-plate you" id="pkb-plate-p">' +
-              '<div class="nm">YOU <span class="wpn">· ' + esc(s.weaponName) + '</span></div>' +
-              '<div class="hp"><i class="ghost" id="pkb-ghost-p"></i><i id="pkb-bar-p" class="ok"></i></div>' +
-              '<div class="num" id="pkb-num-p"></div>' +
-              '<div class="chips" id="pkb-chips-p"></div></div>' +
-          '</div>' +
-          '<div class="pkb-fx" id="pkb-fx"></div>' +
-        '</div>' +
-        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line"></span></div>' +
-        '<div class="pkb-moves" id="pkb-moves"></div>' +
-      '</div>'
-    );
+    // W1135 — the boss intro card carries the taunt now, so every fight opens on the same line.
+    const flavor = 'Choose your opening move.';
+    const effChip = s.pEff > 1.001 ? '<span class="pkb2-eff up">WEAK TO YOU</span>' : s.pEff < 0.999 ? '<span class="pkb2-eff dn">RESISTS YOU</span>' : '';
+    _arSet(_pkb2Html({
+      pvp: false, isBoss, hasExe: (s.pMoves || []).some((mv) => mv && mv.exe),
+      top: 'FLOOR ' + m.floor + ' — ' + String(m.bot.name || '').toUpperCase(),
+      foeName: m.bot.name, foeArt: _arFoeArt(m.bot, isBoss), foeTag: 'FLOOR ' + m.floor, effChip, fa: isBoss && m.floor === ASCENT_FLOORS,
+      youName: s.weaponName, youArt: avatar ? '<img src="' + esc(avatar) + '" alt="">' : '',
+      ultName: _arUltimateFor(s).name,
+    }));
     _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
     _pkbChips('p'); _pkbChips('b');
     _pkbBusy = true;                 // W249 — input locked through the splash beat
@@ -17636,8 +17797,10 @@
     // floors the boss_intro boom fires UNDER the splash (moved off the taunt
     // so the two beats never double-hit), then the taunt types in.
     if (isBoss) { try { _audCue('boss_intro'); } catch (_) {} }
-    _pkbSplash(() => {
-      _pkbSay(flavor, 0, () => { _pkbBusy = false; _pkbLock(false); _pkbRefreshMoves(); });
+    _pkbTurnPaint(); _pkbSurgePaint();   // W1135 — turn 1 and an empty Surge; the foe's first intent pops in after the intro
+    (isBoss ? _pkbBossIntro : _pkbSplash)(() => {   // W1135 — boss floors open on the intro card
+      _pkbIntentPaint();   // the badge pops in as the first line types
+      _pkbSay(flavor, 0, () => { _pkbBusy = false; _pkbLock(false); _pkbRefreshMoves(); _pkbHudPaint(); });
     });
     // W243 — music: boss floors get boss_loop; regular floors battle_loop.
     // Decode is async — retry ladder for the cold first fight. Absent = silent.
@@ -18308,65 +18471,72 @@
       return;
     }
     _arView = 'result';
-    _arBodyMode(false);
+    _arBodyMode(true);   // W1135 — the victory / defeat sheet is full-bleed (Claude Design handoff 5)
     try { if (_AUD.musicLoop) _audStopMusic(0.4); } catch (_) {}   // forfeit path: loop never outlives the fight
-    const f = _arFight, won = f.won;
-    const score = won ? (f.result.pWins + '–' + f.result.bWins) : (f.result.bWins + '–' + f.result.pWins);
-    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
-    const flair = f.advanced
-      ? '<div class="asc-cleared-flair"><span class="sig" style="color:#34d399;width:30px;height:30px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(52,211,153,0.14);border:1px solid rgba(52,211,153,0.5)">' + _ascStar() + '</span>' +
-        '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:8.5px;font-weight:800;letter-spacing:0.15em;color:#34d399">' +
-        (f.bossCleared ? 'BOSS SLAIN · FLOOR ' + f.floorCleared : 'FLOOR ' + f.floorCleared + ' CLEARED') + '</div>' +
-        '<div class="txt">' + (f.bossCleared ? esc(f.bossCleared.name) + ' falls' : 'Ascended to floor ' + (f.floorCleared + 1)) + '</div></div></div>'
+    const f = _arFight, won = f.won, m = _arMatchup, floor = m.floor;
+    const foe = m.bot || {}, foeName = esc(foe.name || 'The floor');
+    const flawless = !!(won && _arFlawless);
+    const word = !won ? 'DEFEAT' : flawless ? 'FLAWLESS' : f.advanced ? 'FLOOR CLEARED' : 'VICTORY';
+    const rated = !!(f.advanced || f.rated);
+    const lives = !rated ? '' : (f.livesLeft === Infinity) ? 'UNLIMITED ATTEMPTS'
+      : (typeof f.livesLeft === 'number' ? f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY' : '');
+    // Only what the Ascent really gives (owner-approved): the floor, a boss, a title, reclaimed souls.
+    const row = (ic, k, v, extra, attrs) => '<' + (attrs ? 'button type="button"' + attrs : 'div') + ' class="row">' +
+      '<span class="ri' + (ic.indexOf('coin') > 0 ? ' gold' : '') + '">' + ic + '</span><span class="rt"><span class="k">' + k + '</span><span class="v">' + v + '</span></span>' + (extra || '') +
+      '</' + (attrs ? 'button' : 'div') + '>';
+    const rows = [];
+    if (won && f.advanced) {
+      const top = f.floorCleared >= ASCENT_FLOORS;
+      rows.push(row(_ascStar(), f.bossCleared ? 'BOSS SLAIN' : 'ASCENDED',
+        f.bossCleared ? esc(f.bossCleared.name) + ' falls' : top ? 'The summit is yours' : 'Floor ' + (f.floorCleared + 1) + ' is open'));
+    }
+    if (won && f.newTitles && f.newTitles.length) {
+      rows.push(row(_pkb2Svg('relic', 16), 'NEW TITLE', esc(f.newTitles[0].name), '<span class="tag new">NEW</span>', ' data-ar="titles"'));
+    }
+    if (f.reclaimedSouls > 0) {   // W439 — Reclaim the Floor payout
+      const left = Math.max(0, ASCENT_RECLAIM_DAILY_CAP - ((f.state && f.state.reclaimSouls) || 0));
+      rows.push(row('<i class="coin"></i>', 'SOULS RECLAIMED', '<b>+' + f.reclaimedSouls + '</b>', '<span class="aside">' + left + ' LEFT TODAY</span>'));
+    } else if (m.test) {   // W1061 — a test-build fight
+      rows.push(row(_pkb2Svg('GUARD', 16), 'TEST BUILD', 'Nothing counts'));
+    } else if (!rated) {
+      rows.push(row(_pkb2Svg('GUARD', 16), 'EXHIBITION', 'Floor already cleared · no stakes'));
+    }
+    // Defeat: the blow that ended it, or the W235 gate hint at the F6 cliff with no weapon.
+    let cause = '';
+    if (!won) {
+      const hit = _arLastFoeHit;
+      if (_arGateHint()) {
+        cause = '<div class="cause"><span class="ic">' + _pkb2Svg('relic', 16) + '</span><span><span class="k">THE TOWER ANSWERS STRENGTH</span>' +
+          '<span class="v">The Iron Warden guards a blade.</span></span></div>';
+      } else if (hit && hit.dmg > 0) {
+        cause = '<div class="cause"><span class="ic">' + _pkb2Svg(hit.word === 'CURSE' ? 'CURSE' : hit.word === 'HEAVY' ? 'HEAVY' : 'skull', 16) + '</span>' +
+          '<span><span class="k">WHAT BEAT YOU</span><span class="v">' + esc(hit.name) + ' — <b>' + Math.round(hit.dmg) + '</b> damage, turn ' + hit.turn + '</span></span></div>';
+      }
+    }
+    const next = floor + 1;
+    const cta = won
+      ? ((f.advanced && next <= ASCENT_FLOORS)
+          ? '<button type="button" class="cta" data-ar="fight" data-floor="' + next + '">NEXT FLOOR · ' + next + '</button>' +
+            '<button type="button" class="ghostbtn" data-ar="tower">LEAVE THE ASCENT</button>'
+          : '<button type="button" class="cta" data-ar="tower">BACK TO THE TOWER</button>')
+      : '<button type="button" class="cta red" data-ar="rematch" data-floor="' + floor + '">TRY AGAIN</button>' +
+        '<button type="button" class="ghostbtn" data-ar="tower">LEAVE THE ASCENT</button>';
+    const share = (won && !m.test)
+      ? '<button class="ghostbtn bks-share-cta" data-bkshare data-bk-source="ascent" data-floor="' + (f.floorCleared || floor) + '" data-boss-name="' +
+          esc((f.bossCleared && f.bossCleared.name) || foe.name || ('Floor ' + (f.floorCleared || floor))) + '">' + _bksShareIconSvg() + 'Share this win</button>'
       : '';
-    const titleHtml = (won && f.newTitles && f.newTitles.length)
-      ? '<div class="ar-title-unlock"><div class="sig">' + _ascStar() + '</div>' +
-        '<div><div class="eyebrow">NEW TITLE UNLOCKED</div><div class="name">' + esc(f.newTitles[0].name) + '</div>' +
-        '<div class="hint">' + esc(f.newTitles[0].blurb) + ' · tap Titles to equip</div></div></div>'
-      : '';
-    // Rated fights show the rating change; a rematch (replay) shows nothing
-    // changed — rating only moves when you climb, never from re-beating a floor.
-    // W280 — rating wiped. The post-fight strip shows the CLIMB result + lives.
-    // W620 — members have no daily cap; the strip states the benefit instead of a count.
-    // W652 — tier-aware label (Premium subscribers are members, not Founders).
-    const _livesTxt = (f.livesLeft === Infinity)
-      ? 'UNLIMITED ATTEMPTS'
-      : f.livesLeft + (f.livesLeft === 1 ? ' LIFE' : ' LIVES') + ' LEFT TODAY';
-    const ratingStrip = f.advanced
-      ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">FLOOR ' + f.floorCleared + ' CLEARED</span></div>' +
-          '<div class="lbl">' + _livesTxt + '</div></div>'
-      : (f.rated
-          ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">HELD AT FLOOR ' + _arMatchup.floor + '</span></div>' +
-              '<div class="lbl">' + _livesTxt + '</div></div>'
-          : (f.reclaimedSouls > 0   // W439 — Reclaim the Floor payout
-              ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after" style="color:#f5b842">+' + f.reclaimedSouls + ' SOULS RECLAIMED</span></div>' +
-                  '<div class="lbl">' + Math.max(0, ASCENT_RECLAIM_DAILY_CAP - ((f.state && f.state.reclaimSouls) || 0)) + ' SOULS LEFT TO RECLAIM TODAY</div></div>'
-              : (_arMatchup.test   // W1061 — a test-build fight
-                  ? '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">TEST BUILD</span></div>' +
-                      '<div class="lbl">NOTHING COUNTS</div></div>'
-                  : '<div class="asc-rstrip"><div class="asc-rstrip-row"><span class="after">EXHIBITION</span></div>' +
-                      '<div class="lbl">NO STAKES · FLOOR ALREADY CLEARED</div></div>')));
-    _arSet(
-      '<div class="ar-result-hero">' +
-        '<div class="ar-medallion"' + (won ? '' : ' style="filter:grayscale(0.4) brightness(0.82)"') + '>' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
-        '<div class="ar-kicker" style="margin-top:14px">Floor ' + _arMatchup.floor + ' · Result</div>' +
-        '<div class="ar-result-word ' + (won ? 'win' : 'loss') + '">' + (won ? 'VICTORY' : 'DEFEAT') + '</div>' +
-        '<div class="ar-result-rule"></div>' +
-        (won
-          ? '<div class="ar-result-narr">' + (_arFlawless
-              ? 'You defeated ' + esc(_arMatchup.bot.name) + ' without taking a wound. <b style="color:#f5b842">FLAWLESS.</b>'
-              : 'You defeated ' + esc(_arMatchup.bot.name) + '. <b style="color:#f5b842">Earned, not given.</b>') + '</div>'
-          // W235 gate legibility: a rated loss at the F6 cliff with no weapon
-          // equipped tells the player WHERE the blade is, not just that they lost.
-          : '<div class="ar-result-narr loss">' + (_arGateHint()
-              ? '“The tower answers strength. <b style="color:#f5b842">The Iron Warden guards a blade.</b>”'
-              : '“The tower humbles every hunter. Return stronger.”') + '</div>') +
-      '</div>' + flair + titleHtml + ratingStrip + _ascRecapHtml(f) +
-      '<div class="ar-spacer"></div>' +
-      '<button class="ar-cta" data-ar="tower">BACK TO THE TOWER</button>' +
-      (won && !_arMatchup.test ? '<button class="ar-ghost bks-share-cta bks-share-cta--center" data-bkshare data-bk-source="ascent" data-floor="' + (f.floorCleared || _arMatchup.floor) + '" data-boss-name="' + esc((f.bossCleared && f.bossCleared.name) || (_arMatchup.bot && _arMatchup.bot.name) || ('Floor ' + (f.floorCleared || _arMatchup.floor))) + '">' + _bksShareIconSvg() + 'Share this win</button>' : '') +
-      '<button class="ar-ghost" data-ar="titles">View Titles</button>'
-    );
+    _arSet('<div class="pkb2-result ' + (won ? 'win' : 'loss') + '">' +
+      '<div class="bgart"><img class="bg" src="assets/backgrounds/bg_' + _arBgTier(floor) + '.webp" alt="" onerror="this.remove()">' +
+        '<div class="boss">' + _arFoeArt(foe, !!foe.isBoss) + '</div></div>' +
+      '<div class="dark"></div>' +
+      '<div class="body">' +
+        '<div class="kick">FLOOR ' + floor + (won ? ' · ' + (f.advanced ? 'CLEARED' : 'WON') : '') + '</div>' +
+        '<div class="ar-result-word ttl ' + (won ? 'win' : 'loss') + '">' + word + '</div>' +
+        '<div class="sub">' + foeName + (won ? ' yields the floor.' : ' holds the floor.') + '</div>' +
+        (rows.length ? '<div class="loot">' + rows.join('') + '</div>' : '') + cause +
+        (lives ? '<div class="lives">' + lives + '</div>' : '') +
+        cta + share +
+      '</div></div>');
     // sound + haptics (W280 — rating count-up + rating sfx removed with rating)
     try { playSfx(won ? (f.bossCleared ? 'boss_victory' : 'ar_win') : 'ar_lose'); } catch (_) {}
     try { if (won) _hapticTick(f.bossCleared ? 'MEDIUM' : 'LIGHT'); } catch (_) {}   // W848 — was raw vibrate (iOS no-op)
@@ -18521,18 +18691,21 @@
     const closeBtn = document.getElementById('arena-close');
     if (closeBtn) closeBtn.addEventListener('click', _arExit);
     // W238 — hold ≥250ms anywhere during beat playback = 2× fast-forward
+    // W1135 — the 1×/2× pill makes FF sticky for the Ascent; the hold still works on top of it.
+    let ffHeld = false;
     ov.addEventListener('pointerdown', () => {
       if (_arView !== 'battle' || !_pkbBusy) return;
       if (_pkbFFTimer) clearTimeout(_pkbFFTimer);
-      _pkbFFTimer = setTimeout(() => { _pkbFF = true; try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
+      _pkbFFTimer = setTimeout(() => { ffHeld = true; _pkbFF = true; try { ov.classList.add('pkb-ff'); } catch (_) {} }, 250);
     });
     const _pkbFFEnd = () => {
-      const wasFF = _pkbFF;
+      const wasHold = ffHeld;
+      ffHeld = false;
       if (_pkbFFTimer) { clearTimeout(_pkbFFTimer); _pkbFFTimer = null; }
-      _pkbFF = false;
+      _pkbFF = _pkbFFBase();
       try { ov.classList.remove('pkb-ff'); } catch (_) {}
-      // W249 — a quick tap (no FF engaged) skips the intro splash
-      if (!wasFF && _pkbSplashSkip && _arView === 'battle') { const f = _pkbSplashSkip; _pkbSplashSkip = null; f(); }
+      // W249 — a quick tap (no FF hold engaged) skips the intro splash / boss card / cut-in
+      if (!wasHold && _pkbSplashSkip && _arView === 'battle') { const f = _pkbSplashSkip; _pkbSplashSkip = null; f(); }
     };
     ov.addEventListener('pointerup', _pkbFFEnd);
     ov.addEventListener('pointercancel', _pkbFFEnd);
@@ -18552,12 +18725,18 @@
         if (!_arSess || _arSess.done || _arView !== 'battle' || _pkbBusy) return;
         try { act.classList.add('sel'); } catch (_) {}                     // W531 — Forged Plate: light the committed move (persists through the PvP wait-lock)
         if (_arSess._pvp) { _pvpOnMoveTap(act.getAttribute('data-move')); return; }   // W404 — duel: submit intent to the server
+        if (act.getAttribute('data-move') === 'ultimate') { _pkbUnleash(); return; }   // W1135 — full Surge: the cut-in, then the turn
         const ev = arenaTakeTurn(_arSess, act.getAttribute('data-move'));
         if (!ev) return;                                                   // invalid / on cooldown
         try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}              // W243 — gesture + tap click
         _pkbPlay(ev);                                                      // beats handle sfx/haptics/HP/toasts; unlocks on drain
       }
       else if (a === 'movecd')  { try { _audCue('ui_denied'); } catch (_) {} }   // cooldown-locked move tapped
+      else if (a === 'ff')      {                                          // W1135 — the 1×/2× pill (Ascent only; remembered for the session)
+        _pkbFFSticky = !_pkbFFSticky; _pkbFF = _pkbFFBase();
+        act.classList.toggle('on', _pkbFFSticky); act.textContent = _pkbFFSticky ? '2×' : '1×';
+        try { _audCue('ui_tap'); } catch (_) {}
+      }
       else if (a === 'pkbtext') { if (_pkbTypeDone) _pkbTypeDone(); }      // tap the text box → finish the typewriter line
       else if (a === 'next')    {                                          // SEE RESULT after the final blow
         if (!_arSess || !_arSess.done || _pkbBusy) return;
@@ -19718,7 +19897,7 @@
   }
   function _pvpRenderBattle(view) {
     _arView = 'battle';
-    _arBodyMode(false);
+    _arBodyMode(true);   // W1135 — full-bleed stage
     _pkbBusy = false; _pkbFF = false;
     const s = _arSess;
     _pkbHPm = { p: s.pHP, b: s.bHP };
@@ -19728,45 +19907,17 @@
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const oppName = (view && view.opp && (view.opp.alias || view.opp.name)) || 'Challenger';
     const mono = esc(((oppName[0] || '?')).toUpperCase());
-    let motes = ''; for (let i = 0; i < 6; i++) motes += '<i></i>';
-    _arSet(
-      '<div class="pkb pkb--pvp">' +
-        '<div class="pkb-top">' + (view && view.ranked ? 'RANKED DUEL' : 'DUEL') + (_pvpCode ? ' &middot; ' + esc(_pvpCode) : '') + '</div>' +
-        '<div class="pkb-stage settle" id="pkb-stage">' +
-          '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
-          '<div class="pkb-bg-scrim" aria-hidden="true"></div>' +
-          '<div class="pkb-ground" style="background:linear-gradient(196deg,transparent 26%,rgba(124,138,255,0.10) 44%,rgba(245,184,66,0.05) 66%,transparent 86%)"></div>' +
-          '<div class="pkb-motes" aria-hidden="true">' + motes + '</div>' +
-          '<div class="pkb-row foe">' +
-            '<div class="pkb-plate" id="pkb-plate-b">' +
-              '<div class="nm">' + esc(oppName) + '</div>' +
-              '<div class="hp"><i class="ghost" id="pkb-ghost-b"></i><i id="pkb-bar-b" class="ok"></i></div>' +
-              '<div class="num" id="pkb-num-b"></div>' +
-              '<div class="chips" id="pkb-chips-b"></div></div>' +
-            '<div class="pkb-spot foe" id="pkb-spot-b">' +
-              '<span class="plat" style="background:radial-gradient(closest-side,rgba(124,138,255,0.28),transparent 78%);border-color:rgba(124,138,255,0.36)"></span>' +
-              '<div class="spr">' + _pvpSprite((view && view.opp && view.opp.avatar) || (_pvpOpponentMeta && _pvpOpponentMeta.avatar), mono) + '</div></div>' +
-          '</div>' +
-          '<div class="pkb-row you">' +
-            '<div class="pkb-spot you" id="pkb-spot-p">' +
-              '<span class="plat" style="background:radial-gradient(closest-side,#f5b84230,transparent 78%);border-color:#f5b8423d"></span>' +
-              '<div class="spr">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>') + '</div></div>' +
-            '<div class="pkb-plate you" id="pkb-plate-p">' +
-              '<div class="nm">YOU <span class="wpn">&middot; ' + esc(s.weaponName || '') + '</span></div>' +
-              '<div class="hp"><i class="ghost" id="pkb-ghost-p"></i><i id="pkb-bar-p" class="ok"></i></div>' +
-              '<div class="num" id="pkb-num-p"></div>' +
-              '<div class="chips" id="pkb-chips-p"></div></div>' +
-          '</div>' +
-          '<div class="pkb-fx" id="pkb-fx"></div>' +
-        '</div>' +
-        '<div class="pkb-text" data-ar="pkbtext"><span id="pkb-text-line"></span></div>' +
-        '<div class="pvp-status" id="pvp-status"></div>' +
-        '<div class="pkb-moves" id="pkb-moves"></div>' +
-      '</div>'
-    );
+    const effChip = s.pEff > 1.001 ? '<span class="pkb2-eff up">WEAK TO YOU</span>' : s.pEff < 0.999 ? '<span class="pkb2-eff dn">RESISTS YOU</span>' : '';
+    _arSet(_pkb2Html({   // W1135 — the redesigned stage; duels show no intent and no Surge
+      pvp: true, isBoss: false, hasExe: (s.pMoves || []).some((mv) => mv && mv.exe),
+      top: (view && view.ranked ? 'RANKED DUEL' : 'DUEL') + (_pvpCode ? ' · ' + _pvpCode : ''),
+      foeName: oppName, foeArt: _pvpSprite((view && view.opp && view.opp.avatar) || (_pvpOpponentMeta && _pvpOpponentMeta.avatar), mono), foeTag: view && view.ranked ? 'RANKED' : '', effChip,
+      youName: s.weaponName || '', youArt: avatar ? '<img src="' + esc(avatar) + '" alt="">' : '<div class="pvp-mono">YOU</div>',
+    }));
     _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
     _pkbChips('p'); _pkbChips('b');
     _pkbRefreshMoves();
+    _pkbTurnPaint();
     try { _pkbMountBg(20); } catch (_) {}
     try { _AUD.want = null; _audPlayMusic('battle_loop', true); } catch (_) {}
     _pkbSay('The duel begins. Choose your move.', 0, function () {});
@@ -28086,9 +28237,13 @@
     // W1121 — 3.0.20: final standings Sunday morning (W1120); shadows in the public feed (W1117/W1118); Shadow Army on Status (W1119) + cleaner tabs (W1116); boss rank in the feed (W1114/W1115).
     // W1122 — memberships gone for now; it leads because every hunter feels it.
     // W1134 — 3.0.23: the Worldgate's two-day rule (owner 2026-11-06).
+    // W1136 — the Ascent battle redesign leads (owner 2026-11-06: "Everything at once").
     '3.0.23': {
-      subtitle: 'The Worldgate asks for two days.',
+      subtitle: 'Ascent battles, rebuilt.',
       items: [
+        { emoji: '', title: 'A new battle screen', description: "You and your foe face off full-size. Above its head the foe shows what it will do next, so you can brace for a heavy blow." },
+        { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
+        { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },
       ],
     },

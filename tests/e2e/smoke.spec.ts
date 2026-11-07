@@ -10593,7 +10593,8 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // a tap jumps to the end, the next continues to the result card
     await cel.click();
     await cel.click();
-    await expect(page.locator('#arena-body .ar-result-word')).toHaveText('VICTORY');
+    // W1135 — the redesigned sheet: a first clear reads FLOOR CLEARED (FLAWLESS when untouched)
+    await expect(page.locator('#arena-body .ar-result-word')).toHaveText(/^(FLOOR CLEARED|FLAWLESS)$/);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_arena_v2') || '{}').highestCleared)).toBe(10);
     // a rematch: straight to the card
     await page.evaluate(async () => {
@@ -10602,7 +10603,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
       (document.querySelector('#arena-body [data-ar="rematch"][data-floor="10"]') as HTMLElement).click();
     });
     expect(await fightToResult(page)).toBe(true);
-    await expect(page.locator('#arena-body .ar-result-word')).toHaveText('VICTORY', { timeout: 8000 });
+    await expect(page.locator('#arena-body .ar-result-word')).toHaveText(/^(VICTORY|FLAWLESS)$/, { timeout: 8000 });   // a rematch climbs nothing
     await expect(page.locator('#arena-body .bc-cel')).toHaveCount(0);
   });
 
