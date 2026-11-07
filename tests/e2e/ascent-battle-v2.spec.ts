@@ -183,12 +183,23 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       const intro = page.locator('#arena-body .pkb2-intro');
       await expect(intro).toBeVisible();
       await expect(intro).toContainText('FLOOR 10 · BOSS');
+      await expect(intro.locator('.rhythm')).toContainText('Two strikes, then the big swing.');   // W1140 — its rhythm
+      await expect(intro.locator('.rhythm .steps i')).toHaveCount(3);
       await page.waitForTimeout(1700);
       await shot(page, '04-boss-intro');
       await intro.click();
       await expect(intro).toHaveCount(0);
       await ready(page);
+      // W1140 — the rail: STRIKE · STRIKE · HEAVY, the committed beat lit; it moves with the turn
+      const rail = page.locator('#pkb-rail i');
+      await expect(rail).toHaveCount(3);
+      await expect(rail.nth(0)).toHaveClass(/on/);
+      await expect(page.locator('#pkb-intent')).toHaveText('STRIKE');
       await shot(page, '05-boss-battle');
+      await tapMove(page);
+      await ready(page);
+      await expect(rail.nth(1)).toHaveClass(/on/);
+      await expect(rail.nth(0)).not.toHaveClass(/on/);
       // a deep pool just above half, so one blow crosses the line without ending the fight
       await page.evaluate(() => { const s = (window as any).Arena._live.sess(); s.bMax *= 40; s.bHP = Math.ceil(s.bMax * 0.502); (window as any).Arena._live.paint(); });
       const before = await sess(page, 'JSON.stringify({ atk: Arena._live.sess().bot && Arena._live.sess().bot.atk, bMax: Arena._live.sess().bMax })');
@@ -200,6 +211,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
         await page.waitForFunction(() => document.querySelector('#arena-body .pkb2-phase') || document.querySelector('#arena-body .ar-bmoves:not(.lock)') || document.querySelector('#arena-body .pkb2-result'), null, { timeout: 15_000 });
       }
       expect(await page.evaluate(() => (window as any).Arena._live.sess()._phaseLineShown)).toBe(true);
+      await expect(page.locator('#pkb-rail')).toHaveAttribute('data-phase', '2', { timeout: 8000 });   // W1140 — the phase-2 rhythm
+      await expect(page.locator('#pkb-rail i')).toHaveCount(4);
       if (SHOTS) { await phase.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {}); await page.waitForTimeout(500); await shot(page, '10-phase'); }
       await expect(page.locator('#pkb-stage')).toHaveClass(/p2/);
       expect(await sess(page, 'JSON.stringify({ atk: Arena._live.sess().bot && Arena._live.sess().bot.atk, bMax: Arena._live.sess().bMax })')).toBe(before);
@@ -238,6 +251,77 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await shot(page, '07-defeat');
     });
 
+    // W1139/W1140 — read the foe. The debug hook forces the foe's committed move; the screen must answer it.
+    const force = (page: Page, bId: string, surge?: number) => page.evaluate(([bId, surge]) => {
+      const A = (window as any).Arena, s = A._live.sess();
+      s._bNext = A._battle.lib(bId); if (surge != null) s._surge = surge; A._live.paint();
+    }, [bId, surge] as [string, number | undefined]);
+    const toast = (page: Page, txt: string) => expect(page.locator('#pkb-fx .pkb-toast.read')).toHaveText(txt, { timeout: 8000 });
+
+    test('a Guard on a forced heavy parries: PARRY! toast, no damage taken, the riposte lands, no stance kept', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      await force(page, 'cleave');
+      await expect(page.locator('#pkb-intent')).toHaveText('HEAVY');
+      const guard = page.locator('#arena-body .ar-bmove[data-move="guard"]');
+      await expect(guard.locator('.tag')).toHaveText('PARRY');
+      await expect(guard).toHaveClass(/best/);
+      await shot(page, '13-parry-tag');
+      const hp0 = await page.evaluate(() => { const s = (window as any).Arena._live.sess(); return [s.pHP, s.bHP]; });
+      await guard.click();
+      await toast(page, 'PARRY!');
+      await shot(page, '14-parry');
+      await ready(page);
+      const after = await page.evaluate(() => { const s = (window as any).Arena._live.sess(); return { p: s.pHP, b: s.bHP, def: s.pS.mods.some((x: any) => x.k === 'def'), surge: s._surge }; });
+      expect(after.p).toBe(hp0[0]);
+      expect(after.b).toBeLessThan(hp0[1]);
+      expect(after.def).toBe(false);
+      expect(after.surge).toBeGreaterThanOrEqual(0.15);
+    });
+
+    test('the Surge bar parries a heavy for 40%: the pill shows at two segments, not below, and is paid', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      await force(page, 'cleave', 0.3);
+      await expect(page.locator('#pkb-surge')).not.toHaveClass(/canparry/);
+      await force(page, 'cleave', 0.5);
+      const surge = page.locator('#pkb-surge');
+      await expect(surge).toHaveClass(/canparry/);
+      await expect(surge).toHaveAttribute('data-move', 'parry');
+      await expect(surge.locator('.parry')).toBeVisible();
+      await shot(page, '15-surge-parry');
+      await surge.click();
+      await toast(page, 'PARRY!');
+      await ready(page);
+      expect(await sess(page, 'Arena._live.sess()._surge')).toBeLessThan(0.5);
+      await expect(surge).not.toHaveClass(/canparry/);
+    });
+
+    test('any hit on a forced charge interrupts it; a cleanse on a forced curse reflects it', async ({ page }) => {
+      await boot(page, 37);
+      await intoFight(page, 37);
+      await force(page, 'focus');
+      await expect(page.locator('#pkb-intent')).toHaveText('CHARGE');
+      const jab = page.locator('#arena-body .ar-bmove[data-move="jab"]');
+      await expect(jab.locator('.tag')).toHaveText('INTERRUPT');
+      await jab.click();
+      await toast(page, 'INTERRUPTED!');
+      await shot(page, '16-interrupt');
+      await ready(page);
+      expect(await page.evaluate(() => (window as any).Arena._live.sess().bS.mods.some((x: any) => x.k === 'atk' && x.mag > 0))).toBe(false);
+      // a cleanse in the kit, a curse coming: REFLECT
+      await page.evaluate(() => { const A = (window as any).Arena, s = A._live.sess(); s.pMoves[2] = A._battle.lib('refuse'); s.cd = {}; s.pS.stun = 0; A._live.paint(); });
+      await force(page, 'sunder');
+      await expect(page.locator('#pkb-intent')).toHaveText('CURSE');
+      const refuse = page.locator('#arena-body .ar-bmove[data-move="refuse"]');
+      await expect(refuse.locator('.tag')).toHaveText('REFLECT');
+      await refuse.click();
+      await toast(page, 'REFLECTED!');
+      await shot(page, '17-reflect');
+      await ready(page);
+      expect(await page.evaluate(() => { const s = (window as any).Arena._live.sess(); return s.bS.mods.some((x: any) => x.k === 'shred') && !s.pS.mods.some((x: any) => x.k === 'shred'); })).toBe(true);
+    });
+
     test('floor 100: the First Awakened (screenshots only)', async ({ page }) => {
       test.skip(!SHOTS, 'screenshots only');
       await boot(page, 100, 6650);
@@ -256,6 +340,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pvp-status')).toHaveCount(1);
       await expect(page.locator('#pkb-intent')).toHaveClass(/hidden/);
       await expect(page.locator('#pkb-surge')).toHaveCount(0);
+      await expect(page.locator('#pkb-rail')).toHaveCount(0);
       await page.waitForTimeout(1500);
       await shot(page, '08-duel');
     });

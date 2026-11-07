@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1139'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1140'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17199,7 +17199,8 @@
         const lit = !onCd && s.bMax > 0 && (s.bHP / s.bMax) <= mv.exe.thr;
         let embers = '';
         [8, 22, 40, 57, 73, 88].forEach((l, i) => { embers += '<i style="left:' + l + '%;--d:' + (2 + (i % 3) * 0.5) + 's;--dl:' + (i * 0.37).toFixed(2) + 's"></i>'; });
-        return '<button class="ar-bmove exe' + (lit ? ' exe-ready' : '') + (onCd ? ' cd' : '') + '"' + style + attrs + '>' +
+        const exeRead = !onCd && word === 'CHARGE' && !(pS.stun > 0);
+        return '<button class="ar-bmove exe' + (lit ? ' exe-ready' : '') + (onCd ? ' cd' : '') + (exeRead ? ' best read' : '') + '"' + style + attrs + '>' +
           '<span class="embers" aria-hidden="true">' + embers + '</span>' +
           '<span class="ic">' + (onCd ? '<span class="cdn">' + cdn + '</span>' : _arGlyph(mv.gl || 'sword', lit ? '#ffd574' : '#fda4af', 15)) + '</span>' +
           '<span class="tx"><span class="nm">' + esc(mv.name) + '</span><span class="desc">' + esc(mv.desc || '') + '</span></span>' +
@@ -17207,8 +17208,17 @@
             '<span class="c">' + (onCd ? turns(cdn) : lit ? 'IGNITED' : '≤' + Math.round(mv.exe.thr * 100) + '%') + '</span></span>' +
         '</button>';
       }
-      const brace = !onCd && !warded && (word === 'HEAVY' || word === 'CHARGE') && /^(defUp|guard|bulwark|guardCleanse)$/.test(fxT);
-      const cleanse = !onCd && !brace && afflicted && /^(guardCleanse|bulwark)$/.test(fxT);
+      // W1140 — the badge's answer, on the card that gives it (the engine's _arReadCounter rules; never while stunned):
+      // HEAVY ← guard family PARRY / dodge SIDESTEP · CURSE ← cleanse REFLECT / dodge SIDESTEP / guard WARD · CHARGE ← any hit INTERRUPT.
+      const fam = _arMoveFamily(mv);
+      let read = null;
+      if (!onCd && word && !(pS.stun > 0)) {
+        if (word === 'HEAVY') read = (fam === 'guard' || fam === 'cleanse') ? 'PARRY' : fam === 'dodge' ? 'SIDESTEP' : null;
+        else if (word === 'CURSE') read = fam === 'cleanse' ? 'REFLECT' : fam === 'dodge' ? 'SIDESTEP' : fam === 'guard' ? 'WARD' : null;
+        else if (word === 'CHARGE') read = (mv.power || 0) > 0 ? 'INTERRUPT' : null;
+      }
+      const brace = !!read && read !== 'INTERRUPT';
+      const cleanse = !onCd && !read && afflicted && /^(guardCleanse|bulwark)$/.test(fxT);
       const kind = ty === 'attack' ? 'atk' : ty === 'debuff' ? 'deb' : 'def';
       const total = Math.max(1, mv.cd || 1);
       const icon = onCd
@@ -17219,9 +17229,10 @@
         ? '<span class="stat"><span class="val s">SUPPORT</span></span>'
         : '<span class="stat"><span class="lab">' + A.lab + '</span><span class="val">' + Math.round((mv.power || 0) * 100) + '</span>' + extra + '</span>';
       const tag = onCd ? '<span class="tag cd">' + turns(cdn) + '</span>'
-        : brace ? '<span class="tag brace">BRACE</span>'
+        : read === 'INTERRUPT' ? '<span class="tag read">INTERRUPT</span>'
+        : read ? '<span class="tag brace">' + read + '</span>'
         : cleanse ? '<span class="tag brace">CLEANSE</span>' : '';
-      return '<button class="ar-bmove ' + kind + (onCd ? ' cd' : '') + (brace || cleanse ? ' best brace' : '') + '"' + style + attrs + '>' +
+      return '<button class="ar-bmove ' + kind + (onCd ? ' cd' : '') + (brace || cleanse ? ' best brace' : '') + (read === 'INTERRUPT' ? ' best read' : '') + '"' + style + attrs + '>' +
         '<span class="top"><span class="ic">' + icon + '</span><span class="tx"><span class="nm">' + esc(mv.name) + '</span><span class="desc">' + esc(mv.desc || '') + '</span></span></span>' +
         '<span class="bot">' + stat + tag + '</span>' +
       '</button>';
@@ -17274,12 +17285,17 @@
     const segs = el.querySelectorAll('.seg i');
     segs.forEach((i, k) => { i.style.width = (Math.max(0, Math.min(1, v * 5 - k)) * 100).toFixed(1) + '%'; });
     const sv = el.querySelector('.sv'); if (sv) sv.textContent = Math.round(v * 100) + '%';
-    const ready = v >= 1 && !s.done && !(s.pS && s.pS.stun > 0);
+    const stunned = !!(s.pS && s.pS.stun > 0);
+    const ready = v >= 1 && !s.done && !stunned;
+    // W1140 — the Surge parry: on a HEAVY turn, below full, once two segments are banked.
+    const canParry = !ready && !s.done && !stunned && v >= SURGE_GUARD_COST && _arIntentWord(s) === 'HEAVY';
     const was = el.classList.contains('full');
     el.classList.toggle('full', ready);
-    el.setAttribute('data-ar', ready ? 'move' : 'surge');   // the move handler only ever sees it full
-    if (ready) el.setAttribute('data-move', 'ultimate'); else el.removeAttribute('data-move');
-    el.setAttribute('aria-label', ready ? 'Unleash your ultimate' : 'Surge ' + Math.round(v * 100) + '%');
+    el.classList.toggle('canparry', canParry);
+    el.setAttribute('data-ar', (ready || canParry) ? 'move' : 'surge');   // the move handler only ever sees it full or parry-ready
+    if (ready) el.setAttribute('data-move', 'ultimate'); else if (canParry) el.setAttribute('data-move', 'parry'); else el.removeAttribute('data-move');
+    const pc = el.querySelector('.parry .c'); if (pc) pc.textContent = '−' + Math.round(SURGE_GUARD_COST * 100) + '%';
+    el.setAttribute('aria-label', ready ? 'Unleash your ultimate' : canParry ? 'Parry the heavy for ' + Math.round(SURGE_GUARD_COST * 100) + '% Surge' : 'Surge ' + Math.round(v * 100) + '%');
     const you = _pkbEl('pkb-spot-p'); if (you) you.classList.toggle('surged', ready);   // W1138 — the hunter glows while the Surge is ready
     if (ready && !was) {
       segs.forEach((i) => { i.classList.remove('justfull'); void i.offsetWidth; i.classList.add('justfull'); });
@@ -17312,7 +17328,25 @@
     stage.appendChild(flash); stage.appendChild(bolt);
     _arAfter(900, () => { try { flash.remove(); bolt.remove(); } catch (_) {} });
   }
-  function _pkbHudPaint() { _pkbTurnPaint(); _pkbSurgePaint(); _pkbIntentPaint(); }
+  function _pkbHudPaint() { _pkbTurnPaint(); _pkbSurgePaint(); _pkbIntentPaint(); _pkbRailPaint(); }
+  // W1140 — the boss rail: its cycle as intent icons, the committed beat lit; phase 2 swaps it with a flash.
+  function _pkbRailHtml(r) { return r.steps.map((w, i) => '<i class="' + String(w).toLowerCase() + (i === r.on ? ' on' : '') + '">' + _pkb2Svg(w, 11) + '</i>').join(''); }
+  function _pkbRailPaint(flash) {
+    const el = _pkbEl('pkb-rail'), s = _arSess; if (!el || !s) return;
+    const r = _arBossRail(s); if (!r || s.done) { el.innerHTML = ''; return; }
+    const key = r.phase + ':' + r.steps.join(',') + ':' + r.on;
+    if (el.getAttribute('data-key') === key && !flash) return;
+    el.setAttribute('data-key', key); el.setAttribute('data-phase', String(r.phase));
+    el.innerHTML = _pkbRailHtml(r);
+    if (flash) { el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap'); }
+  }
+  // W1140 — a perfect read: the Surge ticks up and says so.
+  function _pkbReadFloat() {
+    const el = _pkbEl('pkb-surge'); if (!el) return;
+    const d = document.createElement('span'); d.className = 'pkb2-readfloat'; d.textContent = 'PERFECT READ +' + Math.round(READ_SURGE * 100) + '%';
+    el.appendChild(d);
+    _pkbAfter(1100, () => { try { d.remove(); } catch (_) {} });
+  }
   // UNLEASH: the cut-in, then the turn (the engine refuses it below full Surge or in a duel).
   function _pkbUnleash() {
     const s = _arSess; if (!s || s.done || s._pvp || _pkbBusy || (s._surge || 0) < 1) return;
@@ -17357,6 +17391,7 @@
     if (!root || !m || !m.bot) { cb(); return; }
     const band = (_ascentBandFor(m.floor) || {}).name || '';
     const bz = ASCENT_BOSSES[m.floor] || {};
+    let rail = null; try { rail = _arBossRail(_arSess); } catch (_) {}   // W1140 — the rhythm line + icons
     const el = document.createElement('div');
     el.className = 'pkb2-ovl pkb2-intro';
     el.innerHTML = '<div class="bgart"><img class="bg" src="assets/backgrounds/bg_' + _arBgTier(m.floor) + '.webp" alt="" onerror="this.remove()">' +
@@ -17364,7 +17399,8 @@
       '<div class="dark"></div>' +
       '<div class="body"><div class="kick">FLOOR ' + m.floor + ' · BOSS</div><div class="ttl">' + esc(m.bot.name) + '</div>' +
         (band ? '<div class="sub">' + esc(band) + '</div>' : '') + '<div class="rule"><i></i></div>' +
-        (bz.taunt && bz.taunt !== '…' ? '<div class="quote">“' + esc(bz.taunt) + '”</div>' : '<div class="quote">…</div>') + '</div>' +
+        (bz.taunt && bz.taunt !== '…' ? '<div class="quote">“' + esc(bz.taunt) + '”</div>' : '<div class="quote">…</div>') +
+        (rail ? '<div class="rhythm"><span class="k">ITS RHYTHM</span><span class="steps">' + _pkbRailHtml(Object.assign({}, rail, { on: -1 })) + '</span><span class="t">' + esc(rail.line || '') + '</span></div>' : '') + '</div>' +
       '<div class="tap">TAP</div>';
     root.appendChild(el);
     let done = false;
@@ -17392,6 +17428,7 @@
     const root = _pkb2Root(), m = _arMatchup, stage = _pkbEl('pkb-stage');
     if (!root || !m) { cb(); return; }
     if (stage) stage.classList.add('p2');
+    try { _pkbRailPaint(true); } catch (_) {}   // W1140 — the phase-2 rhythm
     const el = document.createElement('div');
     el.className = 'pkb2-ovl pkb2-phase';
     el.innerHTML = '<div class="flash"></div><div class="line"><span class="k">PHASE II</span><span class="q">“' + esc(ASCENT_BOSS_PHASE_LINES[m.floor] || 'Enough.') + '”</span></div>';
@@ -17413,12 +17450,13 @@
       '<div class="hp"><i class="ghost" id="pkb-ghost-' + side + '"></i><i id="pkb-bar-' + side + '" class="ok"></i><span class="ticks"></span></div>' +
       '<div class="pkb2-bmeta">' + (side === 'p'
         ? '<span class="num" id="pkb-num-p"></span><span class="chips" id="pkb-chips-p"></span>'
-        : '<span class="chips" id="pkb-chips-b"></span>' + (o.effChip || '') + (o.foeTag ? '<span class="pkb2-tag">' + esc(o.foeTag) + '</span>' : '') + '<span class="num" id="pkb-num-b"></span>') +
+        : '<span class="chips" id="pkb-chips-b"></span>' + (o.effChip || '') + (o.rail ? '<span class="pkb2-rail" id="pkb-rail" aria-label="Its rhythm"></span>' : o.foeTag ? '<span class="pkb2-tag">' + esc(o.foeTag) + '</span>' : '') + '<span class="num" id="pkb-num-b"></span>') +
       '</div></div>';
     let segs = ''; for (let i = 0; i < 5; i++) segs += '<span class="seg"><i></i></span>';
     const surge = o.pvp ? '' :
       '<button type="button" class="pkb2-surge" id="pkb-surge" data-ar="surge" aria-label="Surge 0%">' +
         '<span class="sl">SURGE</span><span class="segs">' + segs + '</span><span class="sv">0%</span>' +
+        '<span class="parry"><svg width="12" height="13" viewBox="0 0 14 14" aria-hidden="true">' + _PKB2_ICON.GUARD + '</svg>PARRY<span class="c">−40%</span></span>' +
         '<span class="bolts" aria-hidden="true"><svg viewBox="0 0 300 44" preserveAspectRatio="none">' +
           '<path class="b1" d="M0 22 L26 13 L44 29 L68 9 L92 31 L116 15 L140 27 L164 7 L190 31 L214 13 L238 27 L262 11 L300 21"/>' +
           '<path class="b2" d="M0 27 L22 33 L48 17 L74 35 L98 19 L124 37 L150 17 L178 33 L202 15 L228 35 L254 19 L300 29"/>' +
@@ -17834,7 +17872,7 @@
     }
     const foeName = _arMatchup.bot.name;
     const mvName = _pkbMoveName(e);
-    const used = (e.side === 'p' ? 'You used ' : foeName + ' used ') + (mvName ? mvName.toUpperCase() : 'an attack') + '!';
+    const used = e.riposte ? 'You riposte!' : (e.side === 'p' ? 'You used ' : foeName + ' used ') + (mvName ? mvName.toUpperCase() : 'an attack') + '!';
     if (e.t === 'hit') {
       const defSide = e.side === 'p' ? 'b' : 'p';
       const prevHm = { p: _pkbHPm.p, b: _pkbHPm.b };   // W260 — drama check reads the crossing
@@ -17914,6 +17952,46 @@
           }
         });
       });
+    } else if (e.t === 'counter') {
+      // W1140 — the read. parry / sidestep / ward: the foe's move is announced, it lunges, and finds nothing;
+      // reflect: the curse turns back (the following fx beat lands it on the foe); interrupt: the charge breaks.
+      const k = e.kind;
+      const readDone = (cb) => { try { _pkbSurgePaint(); _pkbReadFloat(); } catch (_) {} cb(); };
+      if (k === 'parry' || k === 'sidestep' || k === 'ward') {
+        const mvN = ((e.text || '').match(/—\s(.+?)\sfinds nothing/) || [])[1] || 'an attack';
+        const foeSpot = _pkbEl('pkb-spot-b');
+        if (foeSpot) { foeSpot.classList.add('telegraph'); _pkbAfter(_PKB_T.announceHold, () => { try { foeSpot.classList.remove('telegraph'); } catch (_) {} }); }
+        try { _pkbIntentFlare(); } catch (_) {}
+        _pkbSay(foeName + ' used ' + mvN.toUpperCase() + '!', _PKB_T.announceHold, () => {
+          try { _audCue('lunge'); } catch (_) {}
+          if (foeSpot) { foeSpot.classList.add('lunge-foe'); _pkbAfter(_PKB_T.lunge + 220, () => { try { foeSpot.classList.remove('lunge-foe', 'telegraph'); } catch (_) {} }); }
+          _pkbAfter(_PKB_T.lunge, () => {
+            const you = _pkbEl('pkb-spot-p');
+            if (k === 'sidestep') { try { _audCue('miss_dodge'); } catch (_) {} try { _pkbReactFx('p', 'dodge'); } catch (_) {} }
+            else {
+              try { _audCue(k === 'parry' ? 'hit_heavy' : 'status_buff'); } catch (_) {}
+              try { _pkbReactFx('p', 'resist'); } catch (_) {}
+              if (you && k === 'parry') { you.classList.remove('parried'); void you.offsetWidth; you.classList.add('parried'); _pkbAfter(520, () => { try { you.classList.remove('parried'); } catch (_) {} }); }
+              const st = _pkbEl('pkb-stage'); if (st && k === 'parry') { st.classList.add('nudge'); _pkbAfter(_PKB_T.impact, () => st.classList.remove('nudge')); }
+            }
+            try { _hapticTick(k === 'parry' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
+            try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
+            _pkbToast(k === 'parry' ? 'PARRY!' : k === 'sidestep' ? 'SIDESTEP!' : 'WARDED!', 'read', 'crit', () => readDone(next));
+          });
+        });
+      } else if (k === 'reflect') {
+        try { _audCue('status_buff'); } catch (_) {}
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        try { _pkbFocusFx('p', 'charge', '#a78bfa', 'rgba(167,139,250,.5)'); } catch (_) {}
+        try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
+        _pkbToast('REFLECTED!', 'read violet', 'crit', () => readDone(next));
+      } else if (k === 'interrupt') {
+        try { _audCue('hit_heavy'); } catch (_) {}
+        try { _hapticTick('LIGHT'); } catch (_) {}
+        try { _pkbReactFx('b', 'shred'); } catch (_) {}
+        try { _audDuck(_pkbHoldMs(_PKB_T.critHold)); } catch (_) {}
+        _pkbToast('INTERRUPTED!', 'read', 'crit', () => readDone(next));
+      } else { _pkbSay(e.text || '…', _PKB_T.statusHold, next); }
     } else if (e.t === 'miss') {
       _pkbSay(used, _PKB_T.announceHold, () => { try { _audCue('miss_dodge'); } catch (_) {} _pkbToast('MISS', 'miss', 'miss', next); });
     } else if (e.t === 'dodge') {
@@ -18013,7 +18091,7 @@
       const e = q[0];
       // 450ms breath when the OTHER actor takes over (hit/miss/dodge/stun
       // start an action); small gap otherwise — the beats themselves hold.
-      const isAction = e.t === 'hit' || e.t === 'miss' || e.t === 'dodge' || e.t === 'stun';
+      const isAction = e.t === 'hit' || e.t === 'miss' || e.t === 'dodge' || e.t === 'stun' || e.t === 'counter';
       const gap = (isAction && lastActor && e.side !== lastActor) ? _PKB_T.actorGap : 120;
       if (isAction) lastActor = e.side;
       _pkbHold(gap, () => {
@@ -18023,7 +18101,7 @@
       });
     };
     // first beat starts immediately (no leading gap)
-    if (q.length) { const e0 = q.shift(); if (e0.t === 'hit' || e0.t === 'miss' || e0.t === 'dodge' || e0.t === 'stun') lastActor = e0.side; _pkbBeat(e0, step); }
+    if (q.length) { const e0 = q.shift(); if (e0.t === 'hit' || e0.t === 'miss' || e0.t === 'dodge' || e0.t === 'stun' || e0.t === 'counter') lastActor = e0.side; _pkbBeat(e0, step); }
     else _pkbDrained();
   }
   function _pkbDrained() {
@@ -18118,6 +18196,7 @@
       pvp: false, isBoss, hasExe: (s.pMoves || []).some((mv) => mv && mv.exe),
       top: 'FLOOR ' + m.floor + ' — ' + String(m.bot.name || '').toUpperCase(),
       foeName: m.bot.name, foeArt: _arFoeArt(m.bot, isBoss), foeTag: 'FLOOR ' + m.floor, effChip, fa: isBoss && m.floor === ASCENT_FLOORS,
+      rail: !!_arBossRail(s),   // W1140 — a rhythm boss shows its cycle in the band
       youName: s.weaponName, youArt: avatar ? '<img src="' + esc(avatar) + '" alt="">' : '',
       ultName: _arUltimateFor(s).name,
     }));
@@ -28577,7 +28656,8 @@
     '3.0.23': {
       subtitle: 'Ascent battles, rebuilt.',
       items: [
-        { emoji: '', title: 'A new battle screen', description: "You and your foe face off full-size. Above its head the foe shows what it will do next, so you can brace for a heavy blow." },
+        { emoji: '', title: 'A new battle screen', description: "You and your foe face off full-size. Above its head the foe shows what it will do next." },
+        { emoji: '', title: 'Read the foe', description: "Every move it shows has an answer. Parry a heavy with a guard move or your Surge, reflect a curse with a cleanse, interrupt a charge with any hit. Bosses fight to a rhythm you can learn." },
         { emoji: '', title: 'Surge and ultimates', description: "Trading blows fills your Surge. When it's full, unleash your fighting style's ultimate." },
         { emoji: '', title: 'Bosses that break', description: "Every boss gets an entrance, and at half health it changes. Wins and losses now end on a new results screen." },
         { emoji: '', title: 'Two days to strike', description: "Your steps strike the Worldgate once you've opened the app on 2 days that week. The MVP spots and the bounty follow the same rule." },

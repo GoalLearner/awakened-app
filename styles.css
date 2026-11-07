@@ -36090,3 +36090,58 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .pkb2-strikebolt, .pkb2-strikebolt .hit, .pkb2-skyflash { animation: none; opacity: 0; }
   .pkb.pkb2 .pkb-spot.you.surged .aura { animation: none; opacity: 0.8; }
 }
+
+/* ═══ W1140 — READ THE FOE on screen: the counter toasts, the PARRY pill, the card tags, the boss rail. ═══ */
+/* the read toast — the fight's gold slam in the ward's teal */
+.pkb.pkb2 .pkb-toast.read { color: #9af0dd; text-shadow: 0 2px 0 rgba(0,0,0,0.7), 0 0 22px rgba(94,234,212,0.55); }
+.pkb.pkb2 .pkb-toast.read.violet { color: #d4c6ff; text-shadow: 0 2px 0 rgba(0,0,0,0.7), 0 0 22px rgba(167,139,250,0.6); }
+/* the parry: the hunter plants, a white ring of the ward flashes */
+.pkb.pkb2 .pkb-spot.you.parried .spr { animation: pkb2Parried 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
+@keyframes pkb2Parried { 0% { transform: none; } 20% { transform: translateX(-8px) scale(1.04, 0.96); filter: drop-shadow(0 0 18px rgba(154,240,221,0.9)) brightness(1.3); } 55% { transform: translateX(3px); } 100% { transform: none; } }
+/* the PARRY pill on the Surge bar (below full, on a HEAVY turn) */
+.pkb2-surge .parry { display: none; flex: none; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 14px; margin-left: 6px;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9.5px; font-weight: 800; line-height: 1; letter-spacing: 1.6px; color: #07221d;
+  background: linear-gradient(180deg, #9af0dd, #5eead4); box-shadow: 0 0 14px rgba(94,234,212,0.6); }
+.pkb2-surge .parry svg { flex: none; color: #07221d; }
+.pkb2-surge .parry .c { font-size: 8px; letter-spacing: 0.4px; opacity: 0.75; }
+.pkb2-surge.canparry { cursor: pointer; border-color: rgba(94,234,212,0.6); background: linear-gradient(90deg, rgba(94,234,212,0.14), rgba(255,255,255,0.025) 60%); }
+.pkb2-surge.canparry .sv { display: none; }
+.pkb2-surge.canparry .parry { display: inline-flex; animation: pkb2GoPulse 0.9s ease-in-out infinite alternate; }
+.pkb2-surge.canparry .segs { flex: 1; }
+.pkb2-surge.canparry:active { transform: scale(0.985); }
+.pkb2-surge.lock .parry { animation: none; opacity: 0.55; }
+/* the perfect-read tick */
+.pkb2-readfloat { position: absolute; left: 50%; top: 50%; z-index: 4; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 2px; color: #ffd574; text-shadow: 0 1px 0 rgba(0,0,0,0.8), 0 0 12px rgba(245,184,66,0.6);
+  animation: pkb2ReadFloat 1.1s ease-out both; }
+@keyframes pkb2ReadFloat { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.8); } 18% { opacity: 1; transform: translate(-50%, -60%) scale(1.05); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -130%); } }
+/* INTERRUPT tag: gold, on every card that can land a hit */
+.pkb2 .ar-bmove .tag.read { color: #2a1b00; background: linear-gradient(180deg, #ffe6a8, #f5b842); }
+.pkb.pkb2 .ar-bmove.read::after { box-shadow: inset 0 0 0 1px rgba(245,184,66,0.6), inset 0 0 22px rgba(245,184,66,0.25); }
+.pkb.pkb2 .ar-bmove.exe.best.read { border-color: rgba(245,184,66,0.55); }
+/* the boss rail: its cycle, the committed beat lit */
+.pkb2-rail { flex: none; display: inline-flex; align-items: center; gap: 3px; height: 16px; }
+.pkb2-rail i { width: 16px; height: 16px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: #6b6b86; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease; }
+.pkb2-rail i svg { width: 10px; height: 10px; display: block; }
+.pkb2-rail i.on { color: #fff; border-color: rgba(239,68,68,0.8); background: rgba(60,6,12,0.9); box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+.pkb2-rail i.on.guard { border-color: rgba(94,234,212,0.7); background: rgba(6,40,36,0.9); box-shadow: 0 0 8px rgba(94,234,212,0.45); }
+.pkb2-rail i.on.curse { border-color: rgba(167,139,250,0.8); background: rgba(30,12,60,0.9); box-shadow: 0 0 8px rgba(167,139,250,0.5); }
+.pkb2-rail i.on.charge { border-color: rgba(245,184,66,0.8); background: rgba(60,38,6,0.9); box-shadow: 0 0 8px rgba(245,184,66,0.5); }
+.pkb2-rail.swap { animation: pkb2RailSwap 0.6s ease-out both; }
+@keyframes pkb2RailSwap { 0% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+/* the intro card: its rhythm */
+.pkb2-intro .rhythm { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 7px; animation: pkb2FadeUp 0.5s ease 1.2s both; }
+.pkb2-intro .rhythm .k { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 8.5px; font-weight: 800; line-height: 1; letter-spacing: 3px; color: #ff9a9a; }
+.pkb2-intro .rhythm .steps { display: inline-flex; gap: 5px; }
+.pkb2-intro .rhythm .steps i { width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #f5f3fb; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18); }
+.pkb2-intro .rhythm .steps i svg { width: 13px; height: 13px; display: block; }
+.pkb2-intro .rhythm .steps i.heavy { color: #ff8d8d; border-color: rgba(239,68,68,0.6); }
+.pkb2-intro .rhythm .steps i.curse { color: #d4c6ff; border-color: rgba(167,139,250,0.6); }
+.pkb2-intro .rhythm .steps i.guard { color: #9af0dd; border-color: rgba(94,234,212,0.5); }
+.pkb2-intro .rhythm .steps i.charge { color: #ffd574; border-color: rgba(245,184,66,0.6); }
+.pkb2-intro .rhythm .t { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-weight: 500; font-size: 14px; line-height: 1.3; color: #c8c6d8; }
+@media (max-height: 700px) { .pkb2-intro .rhythm { margin-top: 10px; gap: 5px; } .pkb2-intro .rhythm .steps i { width: 19px; height: 19px; } }
+@media (prefers-reduced-motion: reduce) {
+  .pkb.pkb2 .pkb-spot.you.parried .spr, .pkb2-surge.canparry .parry, .pkb2-rail.swap, .pkb2-intro .rhythm { animation: none; }
+  .pkb2-readfloat { animation: pkbFade 1.1s ease forwards; }
+}
