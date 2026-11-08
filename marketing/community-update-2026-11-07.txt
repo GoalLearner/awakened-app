@@ -1,0 +1,29 @@
+Week of Nov 7 - v3.0.23
+
+THE CLIMB
+1. Ascent battles, rebuilt. You and your foe stand full-size, and above its head the foe shows what it will do next. Every move it shows has an answer: a guard move or your Surge parries a heavy, a cleanse throws a curse back at it, any hit interrupts a charge. Bosses fight to a rhythm you can learn, and they change at half health. Tap the foe's badge to see what is coming and which of your cards answers it.
+
+2. Surge and ultimates. Trading blows fills your Surge. Spend some of it to parry, or fill it and unleash your fighting style's ultimate. Every move has its own motion now; hold a heavy card to wind it up.
+
+YOUR CARD
+3. Pins. A sixth Wardrobe slot. Wear up to two badges under your name: 100K Step Club, Prestige, Million Steps, Shadow Army, Worldgate MVP, Best Day. Each one shows your real number, and other hunters see them when they tap your name. Tap a worn pin to take it off.
+
+4. Frames, inks and auras. Three more Wardrobe slots, all earned: a frame around your portrait, an ink that colors your name on your card and on the high scores, and an aura of motes, embers, stormlight or stardust.
+
+5. The card itself. Your portrait sits centered, the founder badge is gone, and tapping the title under your name lets you wear any Ascent title you have earned. Average steps a day now covers the last 21 days instead of all time.
+
+LOOKS
+6. The Shadowborn. A new mythic look, earned at S rank alongside Dawnbringer. The Seven are now the Elite Eight.
+
+7. The Rising, redrawn. All nine Rising looks have new art, from a wolf huntmaster to a three-headed dragon king. Looks you already earned change with them, and a hunter's card now names the look they wear.
+
+THE WORLD
+8. No more memberships. The Grinning God raid and co-op hunts with no entrance fee are open to every hunter.
+
+9. The Worldgate's two-day rule. Your steps strike the Worldgate once you have opened the app on two days that week. The MVP spots and the bounty follow the same rule.
+
+10. Final standings on Sunday. The Steps board holds last week's results until 12 PM PST on Sunday. Your new steps keep counting, and the new board opens at noon.
+
+11. Shadows everywhere. When a boss leaves its shadow, every hunter sees it in Hunter Activity. Your Shadow Army now lives on your Status tab, and boss wins in the feed show the boss's rank.
+
+3.0.23 is on TestFlight now and heads to the App Store next. Everything under THE WORLD is already live for everyone.
