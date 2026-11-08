@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1165'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.23-w1167'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -1229,7 +1229,7 @@
       flavorShort:      'A quiet flame that waits for discipline measured in steps.',
       flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Walk the distance two days running, and it warms your hand. Break the chain, and the wick darkens.',
       killCondShort:    '10,000 steps, 2 days back-to-back',
-      killCondLong:     'Walk at least 10,000 verified steps on two consecutive days inside the 2-day hunt window. The day you engage counts from midnight. Steady ground beats sudden distance.',
+      killCondLong:     'Walk at least 10,000 verified steps on two days in a row. It falls on its own the moment the second day gets there. Steady ground beats sudden distance.',   // W1167
       failedCopy:       'The flame waited longer than you held.',
       stepThreshold:    10000,
       consecutiveDays:  2,
@@ -1237,6 +1237,7 @@
       cadence:          'daily',
       huntWindowDays:   2,   // W263 — a back-to-back pair needs two days
       statDomain:       'FOCUS',
+      autoKill:         true,   // W1167 — falls by itself for every hunter past the B gate (_rhAutoKill)
     },
 
     // ── v3 Phase W287 — A-rank dungeon (conditions finalized W288). Sleep was
@@ -1924,6 +1925,7 @@
     try { return await _rhScanning; }
     finally {
       _rhScanning = null;
+      try { _rhAutoKill(); } catch (_) {}   // W1167 — automated bosses fall without the tap
       try { _renderHuntRow(); } catch (_) {}
       try { _rhMaybePop(); } catch (_) {}
       try { _rhWatchSync(); _rhClearPhoneNote(); } catch (_) {}   // W1046
@@ -1936,8 +1938,49 @@
       return !_rhEngaged(o.bossId) && canEngageBossNow(o.bossId, BOSSES[o.bossId]).ok;
     } catch (_) { return false; }
   }
-  function _rhLiveOffers() { return _readyHunt.offers.filter(_rhLive); }
+  // W1167 — an automated boss (cfg.autoKill) is never offered for a tap: _rhAutoKill takes it.
+  function _rhIsAuto(id) { try { return !!(BOSSES[id] && BOSSES[id].autoKill); } catch (_) { return false; } }
+  function _rhLiveOffers() { return _readyHunt.offers.filter(function (o) { return _rhLive(o) && !_rhIsAuto(o.bossId); }); }
   function _rhLead() { return _rhLiveOffers()[0] || null; }
+  // W1167 — AUTOMATED BOSSES (owner 2026-11-08, The Patient Flame: "I want to make sure that this
+  // boss is automated for all B hunters"). The ready-hunt scan already judges whether a hunter's
+  // finished days beat a boss (the rank lock, beaten-today, a running hunt, and a day spent once per
+  // boss all included). For a boss marked autoKill the STRIKE happens without the tap: the same
+  // ready engage over the scan's window, the same resolver confirming it from Apple Health, the
+  // same result screen. The entrance fee stays (owner, W1039: never waived) and is taken only once
+  // the kill is confirmed, out of the win itself, so the hunter is never short and never pays for
+  // a miss. Free credits are left for the hunter's own engages.
+  let _rhAutoBusy = false;
+  async function _rhAutoKill() {
+    if (_rhAutoBusy || _rhBusy) return 0;
+    const due = _readyHunt.offers.filter(function (o) { return _rhIsAuto(o.bossId) && _rhLive(o); });
+    if (!due.length) return 0;
+    _rhAutoBusy = true;
+    const killed = [];
+    try {
+      for (const o of due) {
+        const id = o.bossId, cfg = BOSSES[id];
+        if (_rhEngaged(id) || !canEngageBossNow(id, cfg).ok) continue;
+        const was = getBossState(id).kill_count || 0;
+        if (!engageBoss(id, { ready: true, startMs: o.startMs || 0 })) continue;
+        await resolveBossHuntsAcrossWindow();
+        if ((getBossState(id).kill_count || 0) > was) {
+          killed.push(id);
+          try { const fee = engageCostSouls(cfg.rank); if (fee > 0 && getSoulsBalance() >= fee) spendSouls(fee, 'engage_' + id); } catch (_) {}
+        } else {
+          _rhUndoEngage(id);   // Apple Health has not confirmed it yet: the next scan looks again
+        }
+      }
+    } catch (_) {
+    } finally { _rhAutoBusy = false; }
+    if (killed.length) {
+      try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('ready_hunt_auto', killed.join(',')); } catch (_) {}
+      _readyHunt.offers = _readyHunt.offers.filter(function (o) { return killed.indexOf(o.bossId) === -1; });
+      try { _renderHuntRow(); } catch (_) {}
+      try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {}
+    }
+    return killed.length;
+  }
   try {
     window.__readyHunt.scan = function () { return _readyHuntScan(true); };
     window.__readyHunt.multi = function () { return _rhMulti; };   // W1149 — QA: what the phone list carries for the multi-day bosses
@@ -1946,6 +1989,7 @@
     window.__readyHunt.lead = _rhLead;
     window.__readyHunt.offers = function () { return _rhLiveOffers().map(function (o) { return o.bossId; }); };
     window.__readyHunt.openSheet = function () { const l = _rhLiveOffers(); if (l.length) openReadyHunt(l); return l.length; };
+    window.__readyHunt.auto = _rhAutoKill;   // W1167 — QA
   } catch (_) {}   // QA
 
   // W1046 — THE READY HUNT, ON THE PHONE (owner 2026-10-12: "add the phone notification for a
@@ -2616,6 +2660,9 @@
       const due = _weekBossDue(wk);
       if (due.length) { _weekBossKill(due, wk); n += due.length; }
       if (n) { try { if (currentTab === 'quests') renderBossesPanel(currentDungeonRank); } catch (_) {} }
+      // W1166 — a weekly boss falls on the phone's own week total; the board gets that same total
+      // now, not at the next open (galilea's Hound fell at 42,833 while the board kept 37,522).
+      if (n) { try { if (typeof lbSubmitAllMetricsDebounced === 'function') lbSubmitAllMetricsDebounced(true); } catch (_) {} }
     } catch (_) {
     } finally { _weekBossBusy = false; }
     return n;
@@ -29179,6 +29226,15 @@
     } catch (_) { return ''; }
   }
   const LB_SUBMIT_DEBOUNCE_MS = 5 * 60 * 1000;
+  // W1166 — galilea, 2026-11-07: Saturday's steps landed a second AFTER the boot upload finished,
+  // the 5-minute throttle dropped the re-upload, the weekly boss fell on the phone's 42,833 while
+  // the board kept 37,522, and she left before anything sent the rest (a catch-up after Sunday
+  // 12 AM PST lands in the NEW week, so the old week can never be fixed from the phone). Now a
+  // throttled call whose numbers moved past what the board holds becomes ONE trailing upload,
+  // LB_SUBMIT_TRAIL_MS after the last one: at most two uploads a minute (3 requests each) against
+  // the worker's 12 a minute. A weekly boss kill and leaving the app also send at once.
+  const LB_SUBMIT_TRAIL_MS = 30 * 1000;
+  let _lbTrailTimer = null;
   // v3 Phase 1z.254 — Concurrency guard so the new lbRecordStepsToday
   // trigger (which calls debounced when HK step data lands) can't
   // race with the existing cold-launch / visibilitychange triggers.
@@ -29192,8 +29248,17 @@
       const lastStr = localStorage.getItem('hb_lb_last_submit');
       const last    = lastStr ? parseInt(lastStr, 10) : 0;
       if (!force && Number.isFinite(last) && (Date.now() - last) < LB_SUBMIT_DEBOUNCE_MS) {
+        // W1166 — not dropped: unsent numbers go up LB_SUBMIT_TRAIL_MS after the last upload.
+        if (!_lbTrailTimer && _lbStepsAdvancedSinceSubmit()) {
+          const wait = Math.max(0, LB_SUBMIT_TRAIL_MS - (Date.now() - last));
+          _lbTrailTimer = setTimeout(function () {
+            _lbTrailTimer = null;
+            try { lbSubmitAllMetricsDebounced(_lbStepsAdvancedSinceSubmit()); } catch (_) {}
+          }, wait);
+        }
         return;
       }
+      if (_lbTrailTimer) { clearTimeout(_lbTrailTimer); _lbTrailTimer = null; }   // W1166 — this upload carries it
       // v3 Phase 1z.254 — Throttle stamp moved from BEFORE the call to
       // AFTER + only on a submit that ACTUALLY posted, so the 1w.1
       // allZero defensive guard inside lbSubmitAllMetrics doesn't
@@ -29231,9 +29296,18 @@
       _lbSubmitInFlight = false;
     }
   }
+  // W1166 — leaving the app sends what the board has not seen yet. Best effort: iOS gives the
+  // WebView a moment before it suspends, the same window the cloud save's hide flush uses.
+  try {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'hidden') return;
+      try { if (_lbStepsAdvancedSinceSubmit()) lbSubmitAllMetricsDebounced(true); } catch (_) {}
+    });
+  } catch (_) {}
   try {
     window.Leaderboard.submitAllMetrics          = lbSubmitAllMetrics;
     window.Leaderboard.submitAllMetricsDebounced = lbSubmitAllMetricsDebounced;
+    window.__lbTrailPending = function () { return !!_lbTrailTimer; };   // W1166 — QA
   } catch (_) {}
 
   function getSleepGoalHours(habit) {

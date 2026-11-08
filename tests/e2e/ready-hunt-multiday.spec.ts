@@ -16,8 +16,8 @@ import { test, expect, Page } from '@playwright/test';
 
 type Fix = { steps?: Record<string, number>; flights?: Record<string, number>; sleep?: Record<string, number> };
 
-async function boot(page: Page, bosses?: Record<string, unknown>) {
-  await page.addInitScript((b: string) => {
+async function boot(page: Page, bosses?: Record<string, unknown>, points = '40000') {
+  await page.addInitScript(([b, pts]: string[]) => {
     const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner{display:none!important;visibility:hidden!important;pointer-events:none!important}';
     const inject = () => {
       const root = document.head || document.documentElement;
@@ -32,18 +32,20 @@ async function boot(page: Page, bosses?: Record<string, unknown>) {
       localStorage.setItem('hb_whats_new_seen', '99.99.99');
       localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
       localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
-      localStorage.setItem('hb_points', '40000');   // S+: every gate open
+      localStorage.setItem('hb_points', pts);   // S+ (40000): every gate open
       localStorage.setItem('hb_souls', JSON.stringify({ balance: 999999, totalEarned: 999999 }));   // the souls store is an object; a hunt's fee is a door on the phone list
       localStorage.setItem('hb_bosses', b);
     } catch (_) { /* noop */ }
-  }, JSON.stringify(bosses || {}));
+  }, [JSON.stringify(bosses || {}), points]);
   await page.goto('/');
   await page.waitForFunction(() => !!(window as any).__readyHunt && !!(window as any).Health && !!document.querySelector('[data-tab="profile"]'));
 }
 
 // Replace Apple Health with the fixture (keys = local dates), then run the real scan and return the offered boss ids.
-async function scan(page: Page, fix: Fix): Promise<string[]> {
-  return page.evaluate(async (f: Fix) => {
+// W1167 — the Flame now falls by itself (autoKill); these judge tests switch that off unless `auto` is set.
+async function scan(page: Page, fix: Fix, auto = false): Promise<string[]> {
+  return page.evaluate(async ([f, au]: [Fix, boolean]) => {
+    (window as any).Bosses.BOSSES.the_patient_flame.autoKill = au;
     const H = (window as any).Health;
     const key = (iso: string) => { const d = new Date(iso); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     const today = key(new Date().toISOString());
@@ -59,7 +61,7 @@ async function scan(page: Page, fix: Fix): Promise<string[]> {
     H.getActiveEnergyBetween = async () => 0;
     const r = await (window as any).__readyHunt.scan();
     return (r.offers || []).map((o: any) => o.bossId);
-  }, fix);
+  }, [fix, auto] as [Fix, boolean]);
 }
 
 // local date keys for today and the days before it
@@ -159,5 +161,37 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(ids).not.toContain('the_dream_tyrant');   // 7.5 last night: 7.47 is short
     ids = await scan(page, { sleep: { [T1]: 7.47, [T0]: 6.5 } });
     expect(ids).not.toContain('the_vow_keeper');
+  });
+
+  // W1167 — owner 2026-11-08: "I want to make sure that this boss is automated for all B hunters."
+  // Two 10,000-step days in a row and the Patient Flame falls on its own: no sheet, no tap, its own
+  // result screen, and the 200-soul entrance fee taken out of the 400-soul win once it is confirmed.
+  const flame = (page: Page) => page.evaluate(() => (window as any).Bosses.getBossState('the_patient_flame'));
+  test('W1167: two 10k days in a row → the Patient Flame falls by itself, the fee comes out of the win', async ({ page }) => {
+    await boot(page);
+    await scan(page, { steps: { [T1]: 12000, [T0]: 10500 } }, true);
+    await expect.poll(() => flame(page).then((s: any) => s.kill_count || 0), { timeout: 8000 }).toBe(1);
+    const st = await flame(page);
+    expect(st.engaged).toBe(false);
+    expect(await page.evaluate(() => (window as any).__readyHunt.offers())).not.toContain('the_patient_flame');   // never offered for a tap
+    const fee = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]').filter((e: any) => e.delta === -200).length);
+    expect(fee).toBe(1);
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Patient Flame', { timeout: 8000 });
+    // the same two days never pay twice
+    await scan(page, { steps: { [T1]: 12000, [T0]: 10500 } }, true);
+    await page.waitForTimeout(800);
+    expect((await flame(page)).kill_count).toBe(1);
+  });
+
+  test('W1167: today still short, or a hunter below B → the Flame stands', async ({ page }) => {
+    await boot(page);
+    await scan(page, { steps: { [T1]: 12000, [T0]: 9900 } }, true);
+    await page.waitForTimeout(800);
+    expect((await flame(page)).kill_count || 0).toBe(0);
+    await page.evaluate(() => { localStorage.setItem('hb_points', '0'); });
+    await boot(page, {}, '0');   // E rank: the B gate is shut
+    await scan(page, { steps: { [T1]: 12000, [T0]: 10500 } }, true);
+    await page.waitForTimeout(800);
+    expect((await flame(page)).kill_count || 0).toBe(0);
   });
 });

@@ -2456,6 +2456,63 @@ test.describe('AB · Honest step uploads (W935)', () => {
     expect(r.afterLand.stamp).not.toBeNull();
     expect(r.afterLand.sent).toBe('4321');
   });
+
+  // W1166 — galilea, 2026-11-07: Saturday's steps landed a second after the boot upload and the
+  // 5-minute throttle dropped them; the board kept Sunday to Friday while a weekly boss fell on the
+  // full week. Steps that land inside the throttle now go up 30 s after the last upload, once.
+  async function stepsToday(page: Page, n: number) {
+    await freshApp(page);
+    await page.addInitScript((v) => {
+      try {
+        const d = new Date();
+        const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: { [k]: v } }));
+      } catch (_) {}
+    }, n);
+    await page.reload();
+    await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(600);   // the boot upload has settled
+    await page.evaluate(() => {
+      const w = window as any;
+      w.__sent = [];
+      w.Auth.submitLeaderboardSnapshot = async (m: string, v: number) => { if (m === 'step_total') w.__sent.push(v); return { ok: true, best_value: v }; };
+    });
+  }
+
+  test('W1166: steps that land inside the throttle go up once, 30 s after the last upload', async ({ page }) => {
+    await stepsToday(page, 5311);
+    const r = await page.evaluate(async () => {
+      const w = window as any;
+      const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      localStorage.setItem('hb_lb_last_submit', String(Date.now() - 29_000));   // the last upload was 29 s ago
+      localStorage.setItem('hb_lb_last_step_submitted', '0');                    // and it did not carry today
+      w.Leaderboard.submitAllMetricsDebounced();
+      w.Leaderboard.submitAllMetricsDebounced();   // a second landing joins the same trailing upload
+      const queued = { pending: w.__lbTrailPending(), sent: w.__sent.slice() };
+      await wait(1600);
+      const after = { pending: w.__lbTrailPending(), sent: w.__sent.slice(), last: localStorage.getItem('hb_lb_last_step_submitted') };
+      w.Leaderboard.submitAllMetricsDebounced();   // nothing new: no upload, no timer
+      await wait(300);
+      return { queued, after, idle: { pending: w.__lbTrailPending(), sent: w.__sent.slice() } };
+    });
+    expect(r.queued).toEqual({ pending: true, sent: [] });
+    expect(r.after).toEqual({ pending: false, sent: [5311], last: '5311' });
+    expect(r.idle).toEqual({ pending: false, sent: [5311] });
+  });
+
+  test('W1166: leaving the app sends steps the board has not seen; nothing when it has', async ({ page }) => {
+    await stepsToday(page, 4200);
+    const hide = () => page.evaluate(async () => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((res) => setTimeout(res, 400));
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      return (window as any).__sent.slice();
+    });
+    await page.evaluate(() => { localStorage.setItem('hb_lb_last_submit', String(Date.now())); localStorage.setItem('hb_lb_last_step_submitted', '0'); });
+    expect(await hide()).toEqual([4200]);
+    expect(await hide()).toEqual([4200]);   // already on the board: no second upload
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -9840,20 +9897,18 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await page.evaluate(() => (window as any).closeReadyHunt && (window as any).closeReadyHunt());
     await page.locator('#rh-sheet [data-rh-close]').click({ timeout: 4000 }).catch(() => {});
     await health(page, { days: { 0: { steps: 10400 }, 1: { steps: 11020 } } });
-    const o = await offers(page);
-    expect(o[0]).toBe('the_patient_flame');                                               // B rank leads
-    await page.evaluate(() => (window as any).__readyHunt.openSheet());
-    await expect(sheet(page).locator('.rh-row-name').first()).toHaveText('The Patient Flame', { timeout: 8000 });
-    await sheet(page).locator('[data-rh-strike]').click();
-    await expect(page.locator('#boss-result-overlay .hr-tr .hr-nm').first()).toContainText('The Patient Flame', { timeout: 6000 });   // W1082 — leads the tally
+    // W1167 — the Flame is automated now: it falls by itself, never offered for a tap, the fee out of the win
+    await expect.poll(() => boss(page, 'the_patient_flame').then((b: any) => b.kill_count || 0), { timeout: 8000 }).toBe(1);
+    expect(await offers(page)).not.toContain('the_patient_flame');
     const b = await boss(page, 'the_patient_flame');
     expect([b.kill_count, b.engaged]).toEqual([1, false]);
-    expect((await souls(page)).totalSpent || 0).toBeGreaterThanOrEqual(200);   // the B-rank fee, with the others on the sheet
+    expect((await souls(page)).totalSpent || 0).toBeGreaterThanOrEqual(200);   // the B-rank fee
   });
 
   test('W1039 — a day is spent once per boss: yesterday\'s kill cannot lend its day to today', async ({ page }) => {
     const twoDays = { days: { 0: { steps: 10400 }, 1: { steps: 11020 }, 2: { steps: 10100 } } };
     await hunter(page, { ...GATE.B, the_patient_flame: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: daysAgo(1) } });
+    await page.evaluate(() => { (window as any).Bosses.BOSSES.the_patient_flame.autoKill = false; });   // W1167 — the judge alone
     await health(page, twoDays);
     expect(await offers(page)).not.toContain('the_patient_flame');     // the window may only start today: one day of two
     await page.evaluate(() => { const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}'); b.the_patient_flame.last_defeated_at = new Date(Date.now() - 2 * 86400000).toISOString(); localStorage.setItem('hb_bosses', JSON.stringify(b)); });
@@ -9878,6 +9933,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — asking changes nothing: a scan with a dozen bosses ready leaves bosses and souls untouched', async ({ page }) => {
     const d = { steps: 15400, flights: 22, sleepH: 8, workoutMin: 45, kcal: 600 };
     await hunter(page, { ...GATE.D, ...GATE.C, ...GATE.B, ...GATE.A, ...GATE.S });
+    await page.evaluate(() => { (window as any).Bosses.BOSSES.the_patient_flame.autoKill = false; });   // W1167 — an automated boss is meant to fall; the rest only ask
     const snap = () => page.evaluate(() => [localStorage.getItem('hb_bosses'), localStorage.getItem('hb_souls'), localStorage.getItem('hb_souls_ledger'), localStorage.getItem('hb_hunt_history')]);
     const before = await snap();
     await health(page, { days: { 0: d, 1: d, 2: d, 3: d, 4: d, 5: d, 6: d } });
@@ -11004,6 +11060,22 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     expect(await tick(page)).toBe(1);
     expect(await kills(page)).toEqual([1, 0, 0, 0, 0, 0]);
     expect((await beaten(page)).the_footsore_herald).toEqual([WEEK]);
+  });
+
+  test('W1166 — the kill sends the board the same week total at once, inside the 5-minute throttle', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-20': 20000, '2026-10-21': 14900 } });
+    await page.evaluate(() => {
+      const w = window as any;
+      w.__sent = [];
+      w.Auth.submitLeaderboardSnapshot = async (m: string, v: number) => { if (m === 'step_total') w.__sent.push(v); return { ok: true, best_value: v }; };
+      localStorage.setItem('hb_lb_last_submit', String(Date.now()));   // an upload just went out
+      localStorage.setItem('hb_lb_last_step_submitted', '34900');
+      const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
+      s.steps_daily['2026-10-21'] = 15100;
+      localStorage.setItem('hb_leaderboard', JSON.stringify(s));
+    });
+    expect(await tick(page)).toBe(1);
+    await expect.poll(() => page.evaluate(() => (window as any).__sent.slice()), { timeout: 3000 }).toEqual([35100]);   // 20,000 + 15,100
   });
 
   test('W1070 — day one stays quiet: 40,000 on a hunter\'s first day brings nothing down', async ({ page }) => {
