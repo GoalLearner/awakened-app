@@ -36439,13 +36439,63 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1156 — six panes (Pins joined); the tabs row already scrolls */
 .wx-track.wx-track6 { width: 600%; }
 .wx-track6 .wx-pane { width: 16.6667%; }
-/* W1156 — PINS: up to two badges under the title on the card, the same pill on the Wardrobe tiles and hero */
+/* W1156 — PINS: up to two badges under the title on the card, the same pill on the Wardrobe tiles and hero.
+   W1160 — six metals (Claude Design "Awakened Pins Catalog", owner 2026-11-07 "Looks good lets build it"): one height, one
+   voice (the mono label is still the verified number), a bespoke emblem + material per pin. --c text, --rim ring, --bgp ground;
+   --pr (rgb triplet) keeps the outer glow. Motion is transform/opacity only; emblems are inline SVG with no ids and no text,
+   so a pin's textContent stays its label. */
 .pc-pins { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .pc-pins--own { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.pc-pin { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; white-space: nowrap;
-  border: 1px solid rgba(var(--pr), .42); background: rgba(var(--pr), .08); color: rgb(var(--pr));
+.pc-pin { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px 0 8px; border-radius: 999px; white-space: nowrap; box-sizing: border-box;
+  --c: rgb(var(--pr)); --rim: rgba(var(--pr), .42); --bgp: rgba(var(--pr), .08);
+  background: var(--bgp); color: var(--c); box-shadow: inset 0 0 0 1px var(--rim), 0 0 16px -6px rgb(var(--pr)); overflow: hidden; isolation: isolate;
   font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
-.pc-pin i { width: 7px; height: 7px; flex: none; transform: rotate(45deg); background: rgb(var(--pr)); box-shadow: 0 0 7px rgb(var(--pr)); border-radius: 1px; }
+.pc-pin i.dm { width: 7px; height: 7px; flex: none; transform: rotate(45deg); background: var(--c); box-shadow: 0 0 7px var(--c); border-radius: 1px; }
+.pc-pin .lbl { position: relative; z-index: 2; }
+.pc-pin .em { position: relative; flex: none; display: inline-flex; width: 18px; height: 18px; z-index: 2; }
+.pc-pin .em svg { display: block; overflow: visible; }
+@keyframes wxPinSpin { to { transform: rotate(360deg); } }
+@keyframes wxPinSweep { 0% { transform: translateX(-160%) skewX(-18deg); } 45%, 100% { transform: translateX(260%) skewX(-18deg); } }
+@keyframes wxPinTwinkle { 0%, 100% { opacity: .45; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes wxPinBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes wxPinMist { 0% { transform: translate(-6px, 2px); } 50% { transform: translate(6px, -2px); } 100% { transform: translate(-6px, 2px); } }
+@keyframes wxPinRise { 0% { transform: translateY(8px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+@keyframes wxPinPulse { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes wxPinCrack { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+/* Million Steps — a gold coin, a ring of steps marching round it, a slow specular sweep */
+.pc-pin--steps1m { --c: #ffd98a; --rim: rgba(245,184,66,.6); --bgp: linear-gradient(180deg, #2a1d07, #140e03); }
+.pc-pin--steps1m .rays { transform-origin: 9px 9px; animation: wxPinSpin 18s linear infinite; }
+.pc-pin--steps1m::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 34%; background: linear-gradient(105deg, transparent, rgba(255,236,180,.5), transparent); animation: wxPinSweep 4.2s ease-in-out infinite; z-index: 1; pointer-events: none; }
+/* 100K Step Club — the old gold seal (W373) shrunk to a pin; its shine still crosses. "100K" is CSS content, not text */
+.pc-pin--club100k { --c: #ffe3a3; --rim: rgba(245,184,66,.75); --bgp: linear-gradient(180deg, #3a2708, #1a1205); }
+.pc-pin--club100k::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; background: linear-gradient(105deg, transparent, rgba(255,255,255,.55), transparent); animation: wxPinSweep 3.4s ease-in-out infinite; z-index: 1; pointer-events: none; }
+.pc-pin--club100k .hexk { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.pc-pin--club100k .hexk::after { content: '100K'; font-family: "Cinzel", Georgia, serif; font-weight: 900; font-size: 5.6px; letter-spacing: -.2px; color: #ffe9b0; line-height: 1; padding-top: 1px; }
+/* Prestige — obsidian plaque, a rim light travelling round it, one twinkling star per level (three at most) */
+.pc-pin--prestige { --c: #ffd76a; --rim: rgba(255,215,106,.35); --bgp: linear-gradient(180deg, #1b1424, #0d0913); }
+.pc-pin--prestige::before { content: ''; position: absolute; inset: -60%; background: conic-gradient(from 0deg, transparent 0 68%, rgba(255,215,106,.95) 84%, transparent 100%); animation: wxPinSpin 5s linear infinite; z-index: -2; }
+.pc-pin--prestige::after { content: ''; position: absolute; inset: 1px; border-radius: inherit; background: var(--bgp); z-index: -1; }
+.pc-pin--prestige .st { transform-origin: center; transform-box: fill-box; animation: wxPinTwinkle 2.6s ease-in-out infinite; }
+.pc-pin--prestige .st2 { animation-delay: .9s; } .pc-pin--prestige .st3 { animation-delay: 1.7s; }
+/* Shadow Army — smoke-dark, violet mist drifting through, three silhouettes whose eyes blink */
+.pc-pin--shadows { --c: #c4b5fd; --rim: rgba(167,139,250,.5); --bgp: #120d1f; }
+.pc-pin--shadows::before { content: ''; position: absolute; left: -10%; top: -60%; width: 70%; height: 220%; background: radial-gradient(closest-side, rgba(139,92,246,.42), transparent 70%); animation: wxPinMist 6s ease-in-out infinite; z-index: 0; pointer-events: none; }
+.pc-pin--shadows::after { content: ''; position: absolute; right: -10%; top: -40%; width: 60%; height: 200%; background: radial-gradient(closest-side, rgba(167,139,250,.26), transparent 70%); animation: wxPinMist 7.5s ease-in-out infinite reverse; z-index: 0; pointer-events: none; }
+.pc-pin--shadows .em { width: 20px; }
+.pc-pin--shadows .eye { transform-origin: center; transform-box: fill-box; animation: wxPinBlink 4.4s linear infinite; }
+.pc-pin--shadows .e2 { animation-delay: 1.3s; } .pc-pin--shadows .e3 { animation-delay: 2.6s; }
+/* Worldgate MVP — charcoal and ember: a gate with a glowing crack, a crown above it, sparks rising */
+.pc-pin--wgmvp { --c: #fdba74; --rim: rgba(251,146,60,.6); --bgp: linear-gradient(180deg, #2a1408, #120904); }
+.pc-pin--wgmvp .crk { animation: wxPinCrack 1.8s ease-in-out infinite; }
+.pc-pin--wgmvp .sp { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fdba74; box-shadow: 0 0 4px #fb923c; bottom: 4px; animation: wxPinRise 2.6s ease-out infinite; z-index: 1; pointer-events: none; }
+.pc-pin--wgmvp .sp.a { left: 18%; } .pc-pin--wgmvp .sp.b { left: 30%; animation-delay: .8s; } .pc-pin--wgmvp .sp.c { left: 52%; animation-delay: 1.7s; }
+/* Best Day — a dawn: teal horizon, the sun up and breathing */
+.pc-pin--bestday { --c: #99f6e4; --rim: rgba(94,234,212,.55); --bgp: linear-gradient(180deg, #0b2d2c, #071418); }
+.pc-pin--bestday .sun { transform-origin: center; transform-box: fill-box; animation: wxPinPulse 3.2s ease-in-out infinite; }
+/* a locked tile shows the same art, dimmed and still; reduced motion stills every pin */
+.wx-sl.is-locked .pc-pin { filter: saturate(.3) brightness(.62); }
+.wx-sl.is-locked .pc-pin, .wx-sl.is-locked .pc-pin *, .wx-sl.is-locked .pc-pin::before, .wx-sl.is-locked .pc-pin::after { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .pc-pin, .pc-pin *, .pc-pin::before, .pc-pin::after { animation: none !important; } }
 .wx-hl-pins .pc-pins { margin: 14px 0 0; }
 .wx-pin-prev { display: inline-flex; transform: scale(1.08); }
 .wx-pin-prev.big { transform: scale(1.35); }

@@ -157,6 +157,9 @@ test.describe('W1158 — the Step Club seal and the Prestige chip are pins', () 
     const body = page.locator('#pc-body');
     await render(page, false, { ...REN, cardPins: null });
     await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB ×2', 'PRESTIGE 1']);
+    // W1160 — each pin wears its own metal (emblem + material class); the emblem adds no text of its own
+    await expect(body.locator('.pc-pin--club100k .em svg')).toHaveCount(1);
+    await expect(body.locator('.pc-pin--prestige .em .st')).toHaveCount(1);        // one star for Prestige 1
     await expect(body.locator('.pc-club100k')).toHaveCount(0);
     await expect(body.locator('.pc-prestige')).toHaveCount(0);
     await expect(body.locator('.pc-pins--own')).toHaveCount(0);
