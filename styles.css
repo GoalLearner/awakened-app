@@ -33789,6 +33789,16 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 .hr-chip{height:26px;padding:0 10px;border-radius:13px;border:1px solid;display:flex;align-items:center;font:800 8.5px/1 var(--hr-mono);letter-spacing:1.6px;text-transform:uppercase;white-space:nowrap;}
 .hr-chip.hr-g{color:var(--hr-gold);border-color:rgba(245,184,66,.4);background:rgba(245,184,66,.07);}
 .hr-chip.hr-vio{color:var(--hr-violet-lt);border-color:rgba(167,139,250,.4);background:rgba(139,92,246,.1);}
+/* W1165 — "Add as friend" after a matched win */
+.hr-friends{width:100%;margin-top:12px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.hr-friend{max-width:100%;height:42px;padding:0 18px;border-radius:21px;border:1px solid rgba(167,139,250,.5);background:rgba(139,92,246,.14);color:var(--hr-violet-lt);display:inline-flex;align-items:center;justify-content:center;gap:9px;font:800 9.5px/1 var(--hr-mono);letter-spacing:1.8px;text-transform:uppercase;cursor:pointer;-webkit-appearance:none;appearance:none;}
+.hr-friend svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.hr-friend .hr-afl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hr-frame .hr-friend.hr-on:active{transform:scale(.97);}
+.hr-friend.hr-busy{opacity:.55!important;}
+.hr-friend.hr-sent{color:var(--hr-steps);border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.09);cursor:default;}
+.hr-tally .hr-friends{margin-top:10px;}
+@media (max-height:720px){.hr-hasfr:not(.hr-tally) .hr-hint{display:none;}.hr-hasfr .hr-mvp{margin-top:10px;padding:8px 12px;}.hr-hasfr .hr-reward{margin-top:10px;}.hr-hasfr .hr-chips{margin-top:8px;}.hr-hasfr .hr-friends{margin-top:8px;}.hr-hasfr .hr-friend{height:38px;}}
 .hr-hint{position:absolute;left:0;right:0;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 24px);font:800 9.5px/1 var(--hr-mono);letter-spacing:3.6px;padding-left:3.6px;color:var(--hr-ink3);text-transform:uppercase;opacity:0;transition:opacity .6s;}
 /* W1082 — the tally: several wins on one screen (solo, or co-op) */
 .hr-tally .hr-hero{height:124px;margin-top:10px;}

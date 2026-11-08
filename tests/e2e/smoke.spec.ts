@@ -9008,6 +9008,77 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(v.souls).toMatch(/\+360/);
   });
 
+  // W1165 — a matched hunt (W1164: two active hunters with no friends) ends with "Add <alias> as a
+  // friend". One tap sends the Guild request by the partner's raw alias and the screen stays up.
+  const matchedWin = (id: string, souls = 360) => ({ bossId: 'the_twin_maw', bossName: 'The Twin Maw', rank: 'E', kill_count: 7, souls, drop: null, mercy: null,
+    coop: { id, party: [{ n: 'Orfhlaith', s: 5210, f: 0, you: true }, { n: 'sharr', s: 3640, f: 0 }], goal: 8400, fgoal: 0, unit: 'steps', mvp: null, pact: null, fed: false, time: '',
+      match: { n: 'sharr', a: 'Sharr', uid: 'u-sharr' } } });
+  const friendBtn = (page: Page) => page.evaluate(() => {
+    const b = document.querySelectorAll('#boss-result-overlay [data-hr-friend]');
+    return { n: b.length, text: b[0] ? (b[0].textContent || '').replace(/\s+/g, ' ').trim() : '', sent: !!(b[0] && b[0].classList.contains('hr-sent')), disabled: !!(b[0] && (b[0] as HTMLButtonElement).disabled) };
+  });
+
+  test('W1165: the matched hunt data names the partner; friend hunts and trios do not', async ({ page }) => {
+    await seed(page);
+    const base = { boss_id: 'the_twin_maw', goal_steps: 8400, auto: 1, starts_at: '2026-11-08T08:00:00.000Z', resolved_at: '2026-11-09 07:00:00',
+      challenger: { user_id: 'u-orf', alias: 'Orfhlaith', steps: 5210 }, partner: { user_id: 'u-sharr', alias: 'Sharr', steps: 3640 } };
+    const m = await page.evaluate((i) => (window as any).__hr.coop(i, {}).match, { ...base, matched: true });
+    expect(m).toMatchObject({ a: 'Sharr', uid: 'u-sharr' });
+    expect(await page.evaluate((i) => (window as any).__hr.coop(i, {}).match, base)).toBeNull();
+    expect(await page.evaluate((i) => (window as any).__hr.coop(i, {}).match, { ...base, matched: true, partner2: { user_id: 'u-k', alias: 'kai', steps: 10 } })).toBeNull();
+  });
+
+  test('W1165: a matched win offers Add as friend; the tap sends the request and the screen stays', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => { const w = window as any; w.__frq = []; w.Auth.sendFriendRequest = (a: string) => { w.__frq.push(a); return Promise.resolve({ ok: true, friend: {} }); }; });
+    await page.evaluate((e) => (window as any).__queueBossResult(e), matchedWin('m1'));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    // a tap on the still-hidden button only skips the timeline
+    await page.locator('#boss-result-overlay [data-hr-friend]').click({ force: true });
+    expect(await page.evaluate(() => (window as any).__frq.length)).toBe(0);
+    expect((await friendBtn(page)).text).toBe('Add sharr as a friend');
+    await page.locator('#boss-result-overlay [data-hr-friend]').click();
+    await expect.poll(() => friendBtn(page).then((b) => b.text)).toBe('Request sent');
+    expect(await page.evaluate(() => (window as any).__frq)).toEqual(['Sharr']);
+    expect((await friendBtn(page)).sent).toBe(true);
+    expect((await friendBtn(page)).disabled).toBe(true);   // a sent request cannot be sent twice
+    expect((await view(page)).shown).toBe(true);
+    await tap(page);   // anywhere else leaves
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+  });
+
+  test('W1165: an auto-accept reads Friends now; a failure can be tried again', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => { const w = window as any; w.__frn = 0; w.Auth.sendFriendRequest = () => { w.__frn++; return Promise.resolve(w.__frn === 1 ? { ok: false, code: 'NETWORK' } : { ok: true, autoAccepted: true }); }; });
+    await page.evaluate((e) => (window as any).__queueBossResult(e), matchedWin('m2'));
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    await tap(page);
+    await page.locator('#boss-result-overlay [data-hr-friend]').click();
+    await expect.poll(() => friendBtn(page).then((b) => b.text)).toBe('Could not send · tap to try again');
+    expect((await friendBtn(page)).disabled).toBe(false);
+    await page.locator('#boss-result-overlay [data-hr-friend]').click();
+    await expect.poll(() => friendBtn(page).then((b) => b.text)).toBe('Friends now');
+    expect((await view(page)).text).not.toMatch(/\bfell(ed)?\b/i);
+  });
+
+  test('W1165: no button for a partner already on the roster, and one per partner on the tally', async ({ page }) => {
+    await seed(page, { hb_friends_cache_v1: JSON.stringify({ friends: [{ user_id: 'u-old', alias: 'oldpal' }], ts: Date.now() }) });
+    const known = matchedWin('m3');
+    known.coop.match = { n: 'oldpal', a: 'oldpal', uid: 'u-old' };
+    await page.evaluate((e) => (window as any).__queueBossResult(e), known);
+    await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('victory');
+    await tap(page);
+    expect((await friendBtn(page)).n).toBe(0);
+    await tap(page);
+    await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
+    // two days with the same matched partner wait together → the co-op tally, one button
+    await page.evaluate(([a, b]) => { const w = window as any; w.__showBossTally([a, b]); }, [matchedWin('m4', 300), matchedWin('m5', 280)]);
+    await expect.poll(() => page.evaluate(() => !!document.querySelector('#boss-result-overlay .hr-tally')), { timeout: 5_000 }).toBe(true);
+    await tap(page);
+    const b = await friendBtn(page);
+    expect([b.n, b.text]).toEqual([1, 'Add sharr as a friend']);
+  });
+
   test('co-op defeat: SURVIVES, the % of the goal, the shortfall, Call again', async ({ page }) => {
     await seed(page);
     await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_twin_maw', bossName: 'The Twin Maw', rank: 'E', hunt_started_at: 'coop-t1',
