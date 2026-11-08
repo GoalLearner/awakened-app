@@ -17,8 +17,10 @@ import {
   dailyPattern,
   elapsedDaysPt,
   handleCoopAutoOptOut,
+  MATCH_MIN_KILL_DAYS,
   pairKey,
   pickAutoBoss,
+  pickMatchedPairs,
   sweepCoopAutoHunts,
   sweepCoopResolve,
 } from './coop-auto';
@@ -93,6 +95,10 @@ interface SweepFixture {
   progress?: { bid: string; user_id: string; event_type: string; s: number }[];
   participants?: { instance_id: string; user_id: string; joined_at: string | null }[];
   stampChanges?: number;
+  // W1164 — matching: each hunter's boss-kill days / kills in the last 7 days + join time, and
+  // this PT week's matched rows (newest first, as the sweep's query orders them)
+  kills?: { user_id: string; kill_days: number; kills: number; created_at: number }[];
+  matchedWeek?: { a: string; b: string; d: string }[];
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -102,6 +108,8 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const results = (sql: string, args: unknown[]): unknown[] => {
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('auto = 1 AND hunt_day')) return (f.done ?? []).map((pair_key) => ({ pair_key }));
+    if (sql.includes('FROM public_achievement_events')) return f.kills ?? [];      // W1164
+    if (sql.includes('WHERE matched = 1 AND hunt_day')) return f.matchedWeek ?? []; // W1164
     if (sql.includes('FROM coop_auto_optouts')) return f.optouts ?? [];
     if (sql.includes('FROM board_blocks')) return f.blocks ?? [];
     if (sql.includes('FROM app_opens')) return Object.entries(f.builds ?? {}).map(([user_id, build]) => ({ user_id, build }));
@@ -340,5 +348,100 @@ describe('POST/DELETE /v1/coop-boss/auto/optout', () => {
     expect((await handleCoopAutoOptOut(req({ friend_user_id: 'u1' }), env, session('u1'), false)).status).toBe(400);
     expect((await handleCoopAutoOptOut(req({ friend_user_id: 'no spaces allowed' }), env, session('u1'), false)).status).toBe(400);
     expect((await handleCoopAutoOptOut(req({}), env, session('u1'), false)).status).toBe(400);
+  });
+});
+
+// ── W1164 — matched partners: active hunters with no friends, paired with each other ──
+describe('pickMatchedPairs — who meets whom', () => {
+  const c = (id: string, killDays: number, kills: number, pattern = 3000) => ({ id, killDays, kills, pattern });
+  const never = () => false;
+
+  it('pairs by how often each shows up, so two regulars meet and the occasional ones meet each other', () => {
+    // owner, 2026-11-07: Orfhlaith (5 kill days) and Sharr (4) "would be a perfect pairing"
+    const pool = [c('rip', 2, 2, 3000), c('orf', 5, 10, 2600), c('gio', 2, 3, 9000), c('sha', 4, 8, 3100)];
+    expect(pickMatchedPairs(pool, [], new Set(), never)).toEqual([['orf', 'sha'], ['gio', 'rip']]);
+  });
+  it('a pair kept from earlier this week stays together ahead of the sort', () => {
+    const pool = [c('orf', 5, 10), c('sha', 4, 8), c('gio', 2, 3), c('rip', 2, 2)];
+    expect(pickMatchedPairs(pool, [['orf', 'gio']], new Set(), never)).toEqual([['gio', 'orf'], ['rip', 'sha']]);
+  });
+  it('a kept pair breaks when one side left the pool; nobody in a matched hunt today gets a second', () => {
+    const pool = [c('orf', 5, 10), c('sha', 4, 8), c('rip', 2, 2)];
+    // gio left the pool (made a friend); orf already hunted with gio today → orf waits for tomorrow
+    expect(pickMatchedPairs(pool, [['orf', 'gio']], new Set(['orf', 'gio']), never)).toEqual([['rip', 'sha']]);
+  });
+  it('a block or a switched-off partner is skipped for the next one; the odd hunter out waits', () => {
+    const pool = [c('orf', 5, 10), c('sha', 4, 8), c('gio', 2, 3)];
+    const blocked = (a: string, b: string) => [a, b].sort().join('|') === 'orf|sha';
+    expect(pickMatchedPairs(pool, [], new Set(), blocked)).toEqual([['gio', 'orf']]);
+  });
+});
+
+describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
+  const OLD_JOIN = Date.parse('2026-09-21T12:00:00Z');
+  const friendsBase: SweepFixture = {
+    friends: [{ a: 'u1', b: 'u2' }],
+    builds: { u1: NEW, u2: NEW, u5: '3.0.22-w1132', u6: '3.0.20-w1120', u7: NEW, u8: NEW },
+    ranks: { u1: 'C', u2: 'C', u5: 'D', u6: 'E', u7: 'E', u8: 'E' },
+    stepsThisWeek: { u1: 30000, u2: 30000, u5: 6000, u6: 7000, u7: 4000, u8: 3000 },
+    stepsLastWeek: { u1: 70000, u2: 70000, u5: 35000, u6: 40000, u7: 20000, u8: 15000 },
+  };
+  const kill = (user_id: string, kill_days: number, kills: number, created_at = OLD_JOIN) => ({ user_id, kill_days, kills, created_at });
+  const matchedInserts = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[12] === 1);
+
+  it('two active hunters with no friends get a sized daily hunt together; friends still get theirs', async () => {
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...friendsBase, kills: [kill('u5', 5, 10), kill('u6', 4, 8)] }, calls)), ctx);
+    expect(res.created).toBe(1);   // the friend pair
+    expect(res.matched).toBe(1);   // the matched pair
+    const m = matchedInserts(calls);
+    expect(m.length).toBe(1);
+    expect(m[0].args[11]).toBe('u5|u6');
+    expect(m[0].args[10]).toBe(today);
+    expect(m[0].args[1]).toBe('the_twin_maw');   // an E hunter caps it, sized to the pair's walking
+    const friend = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[11] === 'u1|u2')!;
+    expect(friend.args[12]).toBe(0);
+    expect(MATCH_MIN_KILL_DAYS).toBe(2);
+  });
+
+  it('never matches a hunter with a friend, one kill day, a first day, an old build, automatic hunts off, or no steps', async () => {
+    const calls: Call[] = [];
+    const f: SweepFixture = {
+      ...friendsBase,
+      builds: { ...friendsBase.builds, u9: '3.0.16-w1096' },
+      stepsThisWeek: { ...friendsBase.stepsThisWeek, u9: 5000, u10: 5000, u11: 5000 },
+      optouts: [{ user_id: 'u10', friend_user_id: '*' }],
+      kills: [
+        kill('u1', 6, 12),                 // has a friend (u2)
+        kill('u5', 5, 10),                 // the only eligible hunter
+        kill('u6', 1, 3),                  // one kill day
+        kill('u7', 3, 6, Date.now() - 60_000),   // joined today
+        kill('u9', 4, 8),                  // the iOS 27 hotfix build: no automatic client
+        kill('u10', 4, 8),                 // switched automatic hunts off
+        kill('u12', 4, 8),                 // no steps on the server
+      ],
+    };
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.matched).toBe(0);
+    expect(matchedInserts(calls).length).toBe(0);
+  });
+
+  it('keeps this week\'s partner, re-pairs the rest, and leaves today\'s standing row alone', async () => {
+    const calls: Call[] = [];
+    const yesterday = '2026-10-25';
+    const f: SweepFixture = {
+      ...friendsBase,
+      kills: [kill('u5', 5, 10), kill('u6', 4, 8), kill('u7', 3, 6), kill('u8', 2, 4)],
+      matchedWeek: [{ a: 'u5', b: 'u8', d: yesterday }],   // the sort alone would pair u5 with u6
+    };
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.matched).toBe(2);
+    expect(matchedInserts(calls).map((c) => c.args[11]).sort()).toEqual(['u5|u8', 'u6|u7']);
+
+    const calls2: Call[] = [];
+    const f2: SweepFixture = { ...f, matchedWeek: [{ a: 'u5', b: 'u8', d: today }, { a: 'u6', b: 'u7', d: today }] };
+    const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb(f2, calls2)), ctx);
+    expect(res2.matched).toBe(0);
+    expect(matchedInserts(calls2).length).toBe(0);
   });
 });

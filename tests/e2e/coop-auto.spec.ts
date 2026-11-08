@@ -27,7 +27,7 @@ interface Fx {
 const H = 3_600_000;
 
 function inst(o: {
-  id: string; status: string; result?: string | null; auto?: boolean; committed?: boolean;
+  id: string; status: string; result?: string | null; auto?: boolean; committed?: boolean; matched?: boolean;
   boss?: string; rank?: string; goal?: number; mine?: number; theirs?: number;
   award?: { owed: boolean; claimed: boolean };
 }): Record<string, unknown> {
@@ -44,7 +44,7 @@ function inst(o: {
     result: o.result ?? null,
     role: 'challenger',
     auto: !!o.auto,
-    ...(o.auto ? { hunt_day: '2026-10-25', committed: !!o.committed } : {}),
+    ...(o.auto ? { hunt_day: '2026-10-25', committed: !!o.committed, ...(o.matched ? { matched: true } : {}) } : {}),
     ...(o.award ? { award: o.award } : {}),
     goal_steps: o.goal ?? 14000,
     reward_souls: 25,
@@ -226,6 +226,21 @@ test.describe('Automatic friend hunts (W1094)', () => {
     await expect.poll(() => page.evaluate(() => (window as any).__coopCalls.resolve), { timeout: 15_000 }).toContain('m-live2');
     const started = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_coop_pact_started') || '{}'));
     expect(started['a-live2']).toBe(1);
+  });
+
+  // W1164 — two friendless hunters the server matched share the daily hunt but not a flame
+  test('a matched partner\'s hunt never lights the local flame, even once both posted', async ({ page }) => {
+    await boot(page, {
+      instances: [
+        inst({ id: 'a-match', status: 'active', auto: true, committed: true, matched: true }),
+        inst({ id: 'm-live3', status: 'active', auto: false, boss: 'the_coursing_dread', rank: 'C' }),
+      ],
+    });
+    await sync(page);
+    await expect.poll(() => page.evaluate(() => (window as any).__coopCalls.resolve), { timeout: 15_000 }).toContain('m-live3');
+    const started = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_coop_pact_started') || '{}'));
+    expect(started['a-match']).toBeFalsy();
+    expect(started['m-live3']).toBe(1);
   });
 
   test('the dashboard marks automatic hunts DAILY', async ({ page }) => {

@@ -149,6 +149,7 @@ export async function sweepPactFlameRisk(
             ELSE 1 END AS committed
          FROM coop_boss_instances i
         WHERE i.starts_at IS NOT NULL
+          AND COALESCE(i.matched, 0) = 0   -- W1164: matched stranger pairs have no flame to put at risk
           AND i.starts_at >= datetime('now', '-${HISTORY_DAYS} days')
         ORDER BY i.starts_at DESC
         LIMIT 20000`,

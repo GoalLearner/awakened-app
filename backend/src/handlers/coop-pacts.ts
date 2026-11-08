@@ -64,6 +64,7 @@ export async function loadStartedPactRows(env: Env, userId: string): Promise<Win
             CASE WHEN i.status = 'completed' AND i.result = 'success' THEN 1 ELSE 0 END AS is_win
        FROM coop_boss_instances i
       WHERE i.starts_at IS NOT NULL
+        AND COALESCE(i.matched, 0) = 0   -- W1164: a matched stranger pair never forms a Pact Flame
         AND ( i.challenger_user_id = ?1
               OR i.id IN (SELECT p.instance_id FROM coop_boss_participants p WHERE p.user_id = ?1) )
       ORDER BY i.starts_at DESC

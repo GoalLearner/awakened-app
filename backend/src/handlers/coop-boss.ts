@@ -201,6 +201,8 @@ export interface CoopBossRow {
   hunt_day?: string | null;
   pair_key?: string | null;
   committed?: number | null;
+  // W1164 — 1 = the cron matched two friendless hunters (no Pact Flame), 0 = friends or manual.
+  matched?: number | null;
 }
 
 interface CoopParticipant {
@@ -436,7 +438,8 @@ function serializeCoop(
     // live from progress while active, from the settle stamp afterwards).
     auto: Number(row.auto) === 1,
     ...(Number(row.auto) === 1
-      ? { hunt_day: row.hunt_day ?? null, committed: row.committed != null ? Number(row.committed) === 1 : allPosted(row, p) }
+      ? { hunt_day: row.hunt_day ?? null, committed: row.committed != null ? Number(row.committed) === 1 : allPosted(row, p),
+          ...(Number(row.matched) === 1 ? { matched: true } : {}) }   // W1164 — a matched partner, not a friend
       : {}),
     // W695 — open ("Summon & Fill") hunts carry their intended size so the client can
     // render filled seats vs open seats + the leader's START NOW affordance.
