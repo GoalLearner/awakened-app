@@ -176,6 +176,11 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await body.locator('.pc-pins--own').click();
     await expect(sheet(page)).toBeVisible();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
+    // W1161 — the worn pin under the medallion is a button: tap its × to take it off; zero pins is allowed and published as []
+    await sheet(page).locator('.wx-hl [data-pinrm="shadows"]').click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual([]);
+    await expect(pane.locator('.wx-hl .pc-pin')).toHaveText('NO PINS');
+    expect(await page.evaluate(() => localStorage.getItem('hb_card_pins'))).toBe('[]');
   });
 
   test('the own profile card wears the frame, ink and aura; a visitor\'s card keeps the defaults', async ({ page }) => {
