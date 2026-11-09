@@ -2179,6 +2179,28 @@ async function watchCharge(page: Page, sel: string) {
 function chargeSeen(page: Page) {
   return page.evaluate(() => (window as any).__chargeSeen as Array<[number, string]>);
 }
+/**
+ * W1175 — arm an early let-go: the moment the screen's charge reaches `at`, a
+ * pointerup goes to the hold button from inside the page, through the app's own
+ * release handler. A real mouse-up from out here can sit in a slow CI runner's
+ * input queue for most of a second while the page draws the ring (CI run
+ * 42704243942: both attempts held to full), so "a short hold" has to be measured
+ * by the page, not by the runner's clock. The real mouse-up still follows, and
+ * the app ignores it because the hold is already over. If the real mouse-up
+ * gets there first, it disarms the release, so a later hold is never cut short.
+ */
+async function releaseAt(page: Page, sel: string, btn: string, at: number) {
+  await page.evaluate(([s, b, a]) => {
+    const el = document.querySelector(s as string) as HTMLElement, button = document.querySelector(b as string) as HTMLElement;
+    const mo = new MutationObserver(() => {
+      if (parseFloat(el.style.getPropertyValue('--ob4-c') || '0') < (a as number)) return;
+      mo.disconnect();
+      button.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true }));
+    });
+    mo.observe(el, { attributes: true, attributeFilter: ['style'] });
+    button.addEventListener('pointerup', () => mo.disconnect(), { once: true, capture: true });   // a real let-go that gets there first disarms it
+  }, [sel, btn, at]);
+}
 
 test.describe('W · Sign-in gate (W930)', () => {
   test('no "Try it first" guest button or note; the existing-guest claim path remains', async ({ page }) => {
@@ -4099,6 +4121,7 @@ test.describe('AF · Sign in v2 (W939)', () => {
     // Let go early (a quarter of the hold it asks for): the charge rises, then
     // drains back to nothing, and the dark stays shut.
     await watchCharge(page, GATE);
+    await releaseAt(page, GATE, '#signin-gate .ob4-mark', 0.2);   // W1175 — let go at a fifth, measured by the page
     await page.mouse.down();
     await page.waitForTimeout(350);
     await page.mouse.up();
@@ -4981,6 +5004,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
     // A short hold (a quarter of a second of the nine tenths) charges the ring and nothing else.
     await watchCharge(page, WOLF);
+    await releaseAt(page, WOLF, '#cn-wolf', 0.2);   // W1175 — let go at a fifth, measured by the page
     await page.mouse.down();
     await page.waitForTimeout(250);
     await page.mouse.up();
