@@ -36640,3 +36640,18 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .wx-ap { display: none; }
   .wx-ink-g, .wx-fr-runebound .wx-med-ring::before, .wx-fr-runebound .wx-med-ring::after, .wx-mini.wx-fr-runebound::before, .pc-med.pc-fr-runebound::before, .pc-med.pc-fr-runebound::after, .wx-fr-eclipse .wx-med-ring::before, .wx-mini.wx-fr-eclipse::before, .pc-med.pc-fr-eclipse::before { animation: none; }
 }
+
+/* W1170 — ULTIMATE PREVIEW: the real battle stage, full screen over the Wardrobe; the cut-in and the sequence play, no fight */
+.ult-pv { position: fixed; inset: 0; z-index: 99500; display: flex; flex-direction: column; justify-content: center; background: #070614; }
+.ult-pv .pkb.pkb2 { flex: none; height: min(58vh, 500px); }   /* the battle stage's own proportion, so the foe stands upper-right as in a fight */
+.ult-pv .pkb2-band, .ult-pv .pkb-text, .ult-pv .pkb-moves, .ult-pv .pkb2-chrome, .ult-pv .pkb-top, .ult-pv .pkb2-intent, .ult-pv .pkb2-read { display: none !important; }
+.ult-pv-foot { flex: none; display: flex; align-items: center; gap: 12px; padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); background: linear-gradient(180deg, #0d0b22, #070614); border-top: 1px solid rgba(255,255,255,.06); }
+.ult-pv-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ult-pv-nm .k { font: 800 10px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .2em; color: var(--ult-c, #f5b842); }
+.ult-pv-nm .n { font: 700 20px/1.1 "Cinzel", Georgia, serif; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ult-pv-btns { flex: none; display: flex; gap: 8px; }
+.ult-pv-btn { -webkit-appearance: none; appearance: none; border: 0; border-radius: 12px; padding: 12px 14px; font: 800 11px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .14em; color: #1a1206; background: var(--ult-c, #f5b842); cursor: pointer; }
+.ult-pv-btn.ghost { background: rgba(255,255,255,.08); color: #e6e2f3; }
+.ult-pv-btn:active { transform: scale(.97); }
+#wd-sheet.wx .wx-ult-pvb { display: inline-flex; align-items: center; gap: 7px; margin: 14px auto 0; padding: 10px 16px; border-radius: 999px; border: 1px solid rgba(var(--rc-rgb), .45); font: 800 11px/1 var(--wx-mono); letter-spacing: .18em; color: var(--rc-lt, #f5f3fb); background: rgba(var(--rc-rgb), .1); }
+#wd-sheet.wx .wx-ult-pvb:active { transform: scale(.97); }

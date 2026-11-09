@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1169'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1170'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14717,7 +14717,7 @@
   //  • scale      — Arise: + per × marching shadows (capped).
   // The move id stays 'ultimate' (the turn API is unchanged); the move carries ultId. Battle start never reads the
   // user's choice: the real fight's call site fills m.ultId (only while ultsLive()), the sim fills it from opts.ult.
-  const ULTS_EARNED_LIVE = false;   // flips with the Claude Design sequences (W1170); hb_dev_ults = '1' previews it
+  const ULTS_EARNED_LIVE = false;   // flips with the Claude Design sequences (the handoff port); hb_dev_ults = '1' previews it
   const ASCENT_ULTIMATES = {
     verdict:  { name: 'Sundering Verdict', kind: 'MELEE', tint: '#f5b842',  style: 'melee',  gl: 'sword',  power: 2.6, acc: 0.99, cd: 0, desc: 'Everything the climb taught you, in one blow.' },
     starfall: { name: 'Starfall',          kind: 'MAGIC', tint: '#7dd3fc',  style: 'magic',  gl: 'magic',  power: 2.6, acc: 0.99, cd: 0, desc: 'The sky comes down on one foe.' },
@@ -14834,7 +14834,7 @@
     try { localStorage.setItem(ULT_SEEN_KEY, JSON.stringify(have.concat(add))); } catch (_) {}
     _w2Sync('ult-seen');
   }
-  // Placeholder emblems until the Claude Design set lands (W1170): one glyph per kind on the ult's tint.
+  // Placeholder emblems until the Claude Design set lands (the handoff port): one glyph per kind on the ult's tint.
   const _ULT_GLYPH = {
     MELEE: '<path d="M20 6l3 11 11 3-11 3-3 11-3-11-11-3 11-3z"/>',
     MAGIC: '<path d="M20 7l2.6 8 8.4.2-6.7 5 2.4 8.1L20 23.4l-6.7 4.9 2.4-8.1-6.7-5 8.4-.2z"/>',
@@ -17401,7 +17401,9 @@
   function _pkbAfter(ms, cb) { _arAfter(_pkbMs(ms), cb); }
   function _pkbHoldMs(ms) { const v = _pkbFF ? Math.max(150, Math.round(ms * 0.25)) : ms; return _pkbClutch ? Math.round(v * 1.2) : v; }     // holds: ×0.25 under FF, min 150; +20% in clutch (W260)
   function _pkbHold(ms, cb) { _arAfter(_pkbHoldMs(ms), cb); }
-  function _pkbEl(id) { return document.getElementById(id); }
+  // W1170 — while an ultimate PREVIEW plays (the Wardrobe), the director's ids resolve inside its own stage first.
+  let _ultPv = null;
+  function _pkbEl(id) { if (_ultPv) { const e = _ultPv.root.querySelector('#' + id); if (e) return e; } return document.getElementById(id); }
 
   // status chips with remaining-turn counts (truth = session state)
   function _arBattleStatus(S) {
@@ -17789,7 +17791,7 @@
       _pkbPlay(ev);
     });
   }
-  function _pkb2Root() { return document.querySelector('#arena-body .pkb2'); }
+  function _pkb2Root() { return (_ultPv && _ultPv.root) || document.querySelector('#arena-body .pkb2'); }   // W1170 — the preview's stage
   function _pkbCutin(ult, cb) {
     const root = _pkb2Root(); if (!root) { cb(); return; }
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
@@ -18474,7 +18476,7 @@
     if (cam) { void stage.offsetWidth; stage.classList.add('mc-' + String(cam).replace(/^c-/, '')); }
   }
   function _pkbMvApply(p, c, L) {
-    const stage = _pkbEl('pkb-stage'); if (!stage || !_arSess) return;
+    const stage = _pkbEl('pkb-stage'); if (!stage || (!_arSess && !_ultPv)) return;
     [['You', 'p'], ['Foe', 'b']].forEach(([who, side]) => {
       const spot = _pkbEl('pkb-spot-' + side); if (!spot) return;
       if (p['pose' + who] != null) _pkbMvPose(spot, p['pose' + who]);
@@ -18516,7 +18518,7 @@
     const L = _pkbMvLayers(c);
     if (!L) return;
     const sorted = seq.steps.slice().sort((p, q) => p[0] - q[0]);
-    sorted.forEach(([t, p]) => _pkbAfter(t, () => { if (!_arSess || _arView !== 'battle') return; _pkbMvApply(p, c, L); }));
+    sorted.forEach(([t, p]) => _pkbAfter(t, () => { if (!_ultPv && (!_arSess || _arView !== 'battle')) return; _pkbMvApply(p, c, L); }));   // W1170 — a preview plays without a fight
     if (opts.ult && seq.extra) { _pkbUltLive = { extra: seq.extra, n: 0, L, c }; _pkbAfter(seq.dur, () => { if (_pkbUltLive && _pkbUltLive.L === L) _pkbUltLive = null; }); }
   }
   // a tap on the stage during an ultimate adds one more echo (capped so the finish still reads) — cosmetic only
@@ -18709,7 +18711,7 @@
   }
   // ── the ultimates (c: atk = hunter). T = the blow; the beat lands the number there. extra() = one tap-along echo. ──
   // W1169 — the ultimate's sequence by id. The three Signatures keep theirs; the eight earned ones join _PKB_ULT_SEQ
-  // with the Claude Design handoff (W1170) and until then play the weapon's Signature (behind the dark flag anyway).
+  // with the Claude Design handoff port and until then play the weapon's Signature (behind the dark flag anyway).
   const _PKB_ULT_SEQ = {};
   const _PKB_ULT_STYLE = { verdict: 'melee', starfall: 'magic', rain: 'ranged' };
   const _PKB_ULT_BUFF = { dawnbreaker: 'bulwark', quicksilver: 'evade' };
@@ -18718,6 +18720,56 @@
     if (fn) return fn(c);
     return _pkbUltSeq(_PKB_ULT_STYLE[id] || _arUltStyle(s), c);
   }
+  // W1170 — PREVIEW (owner 2026-11-09: "can you put previews" → a button on each ultimate's Wardrobe page): the real
+  // battle stage in a full-screen layer — the hunter's own look against a training foe — playing the real cut-in and
+  // sequence. Cosmetic only: no fight, no numbers. REPLAY plays it again; CLOSE (or the × ) ends it.
+  const ULT_PV_FOE = { name: 'Training Shade', archKey: 'balanced', floor: 1 };
+  let _ultPvFF = null;
+  function ultPreview(id) {
+    ultPreviewClose();
+    const uid = id === 'signature' ? ultSignatureId() : id, u = ASCENT_ULTIMATES[uid]; if (!u) return;
+    let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
+    const ov = document.createElement('div');
+    ov.className = 'ult-pv'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Preview: ' + u.name);
+    ov.innerHTML = _pkb2Html({ pvp: false, isBoss: false, top: '', foeName: ULT_PV_FOE.name, foeArt: _arFoeArt(ULT_PV_FOE, false),
+      youName: '', youArt: avatar ? '<img src="' + esc(avatar) + '" alt="">' : '', ultName: u.name }) +
+      '<div class="ult-pv-foot" style="--ult-c:' + u.tint + '"><div class="ult-pv-nm"><span class="k">PREVIEW · ' + esc(u.kind) + '</span><span class="n">' + esc(u.name) + '</span></div>' +
+      '<div class="ult-pv-btns"><button type="button" class="ult-pv-btn" data-pv="again">REPLAY</button><button type="button" class="ult-pv-btn ghost" data-pv="x">CLOSE</button></div></div>';
+    document.body.appendChild(ov);
+    _ultPv = { root: ov.querySelector('.pkb2'), ov: ov, id: uid, gen: 0 };
+    _ultPvFF = _pkbFF; _pkbFF = false;   // a preview always plays at 1×
+    try { _pkbMountBg(1); } catch (_) {}
+    try { _audUnlock(); } catch (_) {}
+    ov.addEventListener('click', function (e) {
+      const b = e.target.closest && e.target.closest('[data-pv]');
+      if (b) { if (b.dataset.pv === 'x') ultPreviewClose(); else ultPreviewPlay(); return; }
+      if (_pkbSplashSkip) { _pkbSplashSkip(); return; }   // a tap skips the cut-in, as in a fight
+      if (_pkbUltLive && e.target.closest && e.target.closest('#pkb-stage')) _pkbUltTap();   // and taps along with the ultimate
+    });
+    requestAnimationFrame(function () { requestAnimationFrame(ultPreviewPlay); });
+  }
+  function ultPreviewPlay() {
+    const P = _ultPv; if (!P) return;
+    const g = ++P.gen;
+    try { _pkbMvReset(); } catch (_) {}
+    _pkbUltLive = null;
+    const mv = Object.assign({ id: 'ultimate', ult: true, ultId: P.id }, ASCENT_ULTIMATES[P.id]);
+    _pkbCutin(mv, function () {
+      if (!_ultPv || _ultPv !== P || P.gen !== g) return;
+      const ctx = _pkbMvCtx('p'); if (!ctx) return;
+      let seq = null; try { seq = _pkbUltSeqFor({ ultId: P.id }, { pMoves: _arenaPlayerKit() }, ctx); } catch (_) {}
+      if (seq) _pkbMvPlay(seq, ctx, { ult: true });
+    });
+  }
+  function ultPreviewClose() {
+    const P = _ultPv; if (!P) return;
+    try { _pkbMvReset(); } catch (_) {}
+    _pkbUltLive = null; _pkbSplashSkip = null;
+    _ultPv = null;
+    if (_ultPvFF !== null) { _pkbFF = _ultPvFF; _ultPvFF = null; }
+    try { P.ov.remove(); } catch (_) {}
+  }
+  try { window.__ultPreview = { open: ultPreview, close: ultPreviewClose, live: function () { return !!_ultPv; } }; } catch (_) {}   // QA
   function _pkbUltSeq(style, c) {
     const a = c.atk, f = c.def, d = c.d, S = [];
     const big = (tt, items, pose, tint) => S.push([tt, Object.assign({ wash: '#fff', light: null, vfxClear: true, vfxAdd: items, cam: 'c-shake2', freeze: true }, _mFL(f, tint || 'white'), _mPO(f, pose || 'p-crush'))], [tt + 240, { freeze: false }]);
@@ -59624,7 +59676,8 @@
       return '<article class="wx-pg wx-pg-sl wx-pg-ult is-' + state + '" data-p="' + (state === 'locked' ? 0 : 100) + '" style="' + _wxTintStyle('rc', I.tint) + '"><div class="wx-ps">' + ultEmblem(id, 120) +
         (state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : '') + '</div>' +
         '<div class="wx-pg-rar"><span class="wx-rar" style="' + _wxTintStyle('c', I.tint) + '">' + esc(I.kind) + '</span></div><h3 class="wx-pg-nm">' + esc(I.n) + '</h3>' +
-        '<div class="wx-ms"><div class="wx-ms-c">' + esc(I.eff) + '</div><div class="wx-ult-how">' + esc(I.how) + '</div>' + foot + '</div></article>';
+        '<div class="wx-ms"><div class="wx-ms-c">' + esc(I.eff) + '</div><div class="wx-ult-how">' + esc(I.how) + '</div>' + foot + '</div>' +
+        '<button type="button" class="wx-ult-pvb" data-ulpv="' + id + '"><svg width="10" height="11" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 1l8 4.5L1 10z" fill="currentColor"/></svg>PREVIEW</button></article>';   // W1170
     };
 
     /* ---------- feedback ---------- */
@@ -59896,6 +59949,7 @@
       if (t.closest('.wx-dt')) {
         if (t.closest('.wx-dt-x') || t.classList.contains('wx-dt-back')) closeDetail();
         const ue = t.closest('[data-ulequip]'); if (ue) { closeDetail(); wearUlt(ue.dataset.ulequip); return; }   // W1169 — EQUIP on an ultimate's page
+        const up = t.closest('[data-ulpv]'); if (up) { ultPreview(up.dataset.ulpv); return; }   // W1170 — PREVIEW plays it
         const nb = t.closest('.wx-dots [data-i]'); if (nb && !nb.disabled) goPage(+nb.dataset.i);
         return;
       }
@@ -59943,6 +59997,7 @@
     const ov = document.getElementById('wd-overlay'), sh = document.getElementById('wd-sheet');
     if (ov) ov.classList.add('hidden');
     if (sh) sh.classList.add('hidden');
+    try { ultPreviewClose(); } catch (_) {}   // W1170 — a preview never outlives the Wardrobe
     try { if (_wx && localStorage.getItem(WX_NEW_KEY)) localStorage.removeItem(WX_NEW_KEY); } catch (_) {}   // the NEW chip has been seen
     _wx = null;
     try { _earnPlayPending(); } catch (_) {}   // anything earned while it was open plays now

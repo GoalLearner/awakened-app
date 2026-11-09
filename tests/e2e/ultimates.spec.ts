@@ -162,6 +162,32 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await page.waitForFunction(() => { const s = (window as any).Arena._live.sess(); return !s || s.done || (s._surge || 0) < 1; });
   });
 
+  test('PREVIEW on any ultimate page plays it on the real stage (cut-in, then the sequence); REPLAY again; CLOSE ends it', async ({ page }) => {
+    await boot(page, 50, EARNED);
+    await openWardrobe(page);
+    await sheet(page).locator('.wx-tab[data-tab="ults"]').click();
+    await ult(page, 'quicksilver').click();   // locked: a hunter can still watch it
+    const pg = sheet(page).locator('.wx-pg-ult').filter({ hasText: 'Quicksilver' });
+    await pg.locator('[data-ulpv="quicksilver"]').click();
+    const pv = page.locator('.ult-pv');
+    await expect(pv).toBeVisible();
+    await expect(pv.locator('.ult-pv-nm .n')).toHaveText('Quicksilver');
+    await expect(pv.locator('.pkb2-cutin.has-tint .name .k')).toContainText('SWIFT');
+    await page.waitForTimeout(500);
+    await shot(page, 'ult-06-preview-cutin');
+    await expect(pv.locator('.pkb2-cutin')).toHaveCount(0, { timeout: 4000 });
+    // the sequence runs on the preview's own stage: the motion layer mounts and the hunter takes a pose
+    await expect(pv.locator('#pkb-stage .pkb-mvfx')).toHaveCount(1, { timeout: 3000 });
+    await page.waitForTimeout(900);
+    await shot(page, 'ult-07-preview-sequence');
+    await pv.locator('[data-pv="again"]').click();
+    await expect(pv.locator('.pkb2-cutin')).toBeVisible();
+    await pv.locator('[data-pv="x"]').click();
+    await expect(page.locator('.ult-pv')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).__ultPreview.live())).toBe(false);
+    await expect(sheet(page)).toBeVisible();   // back on the Wardrobe
+  });
+
   test('a locked choice falls back to the Signature', async ({ page }) => {
     await boot(page, 37, Object.assign({}, EARNED, { hb_ult_choice: 'reaper' }));   // no S-rank kill
     expect(await page.evaluate(() => (window as any).Arena._battle.ultEquipped())).toBe('signature');
