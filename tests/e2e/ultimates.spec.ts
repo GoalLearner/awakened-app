@@ -198,6 +198,33 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(sheet(page)).toBeVisible();   // back on the Wardrobe
   });
 
+  test('W1173 — the Ascent header wears the equipped ultimate beside POWER; a tap opens the Ultimates above the Ascent', async ({ page }) => {
+    await boot(page, 37, EARNED);
+    await page.evaluate(async () => {
+      (document.querySelector('[data-tab="profile"]') as HTMLElement).click();
+      await new Promise((r) => setTimeout(r, 400));
+      (document.getElementById('sc-arena-btn') as HTMLElement).click();
+    });
+    const chip = page.locator('#arena-body .tw-ult');
+    await expect(chip).toBeVisible();
+    await expect(chip.locator('.nm')).toHaveText(/Sundering Verdict|Starfall|Heartpiercer Rain/);   // the Signature to start
+    await shot(page, 'ult-08-ascent-chip');
+    await chip.click();
+    await expect(sheet(page)).toBeVisible();
+    await expect(sheet(page)).toHaveClass(/wx-over/);
+    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveClass(/\bon\b/);
+    // the Wardrobe sits above the Ascent: the tile is the top element where it is drawn
+    const onTop = await page.evaluate(() => { const t = document.querySelector('#wd-sheet .wx-sl-ult[data-ul="feast"]') as HTMLElement; const r = t.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(e && t.contains(e)); });
+    expect(onTop).toBe(true);
+    await ult(page, 'feast').click();
+    await sheet(page).locator('.wx-pg-ult [data-ulequip="feast"]').click();
+    await expect(ult(page, 'feast')).toHaveClass(/is-worn/);
+    await page.locator('#wd-close').click();
+    await expect(sheet(page)).toBeHidden();
+    await expect(chip.locator('.nm')).toHaveText('Crimson Feast');
+    await expect(page.locator('#wd-sheet')).not.toHaveClass(/wx-over/);
+  });
+
   test('a locked choice falls back to the Signature', async ({ page }) => {
     await boot(page, 37, Object.assign({}, EARNED, { hb_ult_choice: 'reaper' }));   // no S-rank kill
     expect(await page.evaluate(() => (window as any).Arena._battle.ultEquipped())).toBe('signature');
