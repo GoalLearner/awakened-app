@@ -41,6 +41,26 @@
 > Nightfall 50.2 alone / 74.2 (5) / 91.0 (12) / 99.4 (all); Duskforge 69.5 alone (Bulwark reflects + parries), Vigil
 > 46.0 (Tumble sidesteps), Reverie 43.6 (Surge parry only). selfTest → 56 (T43–T54). Sim policies: `legacy`,
 > `parry-only` (the W1135 player), `reader` (default), `turtle`. Dev dials: `Arena._battle.tune({...})`.
+> **W1168 (2026-11-09, EARNED ULTIMATES; Ascent-only, the server core untouched):** owner: "different types of
+> ultimates ... different damage / animation / name / use case", earned then chosen in the Wardrobe.
+> `ASCENT_ULTIMATES` is keyed by ult id: the three Signatures (`verdict` / `starfall` / `rain`, still picked by the
+> kit's basic glyph, power 2.6) + eight earned SIDEGRADES — Crimson Feast (E kill; 1.2 + heal 10% on a hit; holds for
+> ≤60% HP), Quicksilver (D; 1.6, `prio` 2, then evasive 25% 2t), Hellfire (C; 1.3 + its own DoT kind `hellfire` 11%
+> 4t, stacking with a burn under the 15% intake cap), Storm of Blades (B; 2.0 `pierce`: no def-up, no guard block, no
+> dodge), Worldbreaker (A; 1.4 + armor −20% 3t + attack −30% 2t, own kind `worldbreak`), Reaper's Due (S; 1.4, ×2.8
+> under 35%; holds for it), Arise (a shadow raised; 2.2 + 0.15 per marching shadow, cap 8), Dawnbreaker (floor 100; 1.6
+> + def −30% / atk +25% 2t, kind `dawn`). The move id stays `'ultimate'` and carries `ultId`; `fxs` (several effects)
+> apply in order and `onHit` ones only when the blow landed; a read's stance strip spares the `dawn` / `quicksilver`
+> kinds. Battle start is PURE (`sess._ultId = m.ultId || 'signature'`, `_ultShadows = m.player.shadows`): only the
+> real fight's call site fills `m.ultId` (while `ultsLive()`: `ULTS_EARNED_LIVE` or `hb_dev_ults`), the sim fills it
+> from `opts.ult`. Unlocks are derived (`_ultUnlockCtx`: a solo or co-op kill per rank, shadows raised, highest
+> floor), never stored; `hb_ult_choice` is the only state. **Measured and dropped:** a stun on Worldbreaker (+50% over
+> the Signature even at 0.4 power — a skipped foe turn decides 5-turn fights), a 35% / 15% Feast heal (ratios 3.3 / 1.8),
+> a Bulwark-shaped Dawnbreaker (its guard block + cleanse + cauterize measured ratio 3.3 even at 20%), holding
+> Quicksilver / Storm / Worldbreaker for their badge (firing at full beat waiting by 10-30 pts: fights end ~turn 5).
+> Sim: `opts.ult` (incl. `'none'`), `opts.ultFire` `'smart'` (use() + patience from the first full turn) or `'full'`;
+> the sim never Surge-parries at full (the screen offers UNLEASH there). ULT TABLE: `node tools/sim-ascent.js --ults`.
+> selfTest → 67 (T55–T65). Flag-off bit-identity gate: 34 seeded sim rows identical before and after.
 > **v2.7 changelog (W260 — the FIRST sanctioned engine change since the v2.6 freeze;
 > strictly ADDITIVE):** endgame AI tiers F51+ (§7.2: INSTINCT/TACTICIAN/STRATEGIST/APEX,
 > fair-play charter, sanitized no-RNG decision state, v2-fallback safety) + down-to-the-wire

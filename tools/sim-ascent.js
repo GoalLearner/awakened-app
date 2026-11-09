@@ -76,3 +76,49 @@ for (const f of [90, 95, 99, 100]) {
 
 console.log('\n=== mid-ladder (BiS-only, max build clears these) ===');
 console.log([10, 30, 50, 70].map((f) => `F${f} ${pct(Arena.simAscent(f, NF, { n: 1500 }).winRate)}`).join('   '));
+
+// ── W1168: the ULT TABLE (opt-in: `node tools/sim-ascent.js --ults [n]`). Every earned ultimate is a SIDEGRADE:
+// per weapon, its win-rate gain over never firing ('none') should sit within ±35% of that weapon's Signature gain
+// (or ±2 pts, whichever is wider). Rows are the ones where the Signature wins 40-85% (paired seeds); Arise is
+// judged on the shadow rows. 'smart' = its use() + patience (only Feast and Reaper hold); 'full' = fires the
+// moment the bar fills, reported so a hunter who never waits isn't badly punished.
+if (process.argv.indexOf('--ults') !== -1) {
+  const n = +(process.argv[process.argv.indexOf('--ults') + 1]) || 3000;
+  const W = { NF, DF, VB, RS, TI: 'titan_oathblade', HW: 'hammerfall_warmaul' };
+  const ROWS = [['F95 gear', 95, { invest: 'gear' }], ['F100 sets', 100, { invest: 'sets', shadows: 0 }],
+    ['F100 max 0sh', 100, { invest: 'max', shadows: 0 }], ['F100 max 1sh', 100, { invest: 'max', shadows: 1 }],
+    ['F100 max 3sh', 100, { invest: 'max', shadows: 3 }], ['F100 max 5sh', 100, { invest: 'max', shadows: 5 }],
+    ['F100 max 8sh', 100, { invest: 'max', shadows: 8 }]];
+  const ULTS = Arena._battle.ultOrder().filter((u) => u !== 'signature');
+  const per = {}; ULTS.forEach((u) => { per[u] = {}; });
+  console.log(`\n=== ULT TABLE (n=${n}, paired seeds): win% per row; [gain over none / Signature gain] ===`);
+  console.log('row            wpn   none    sig | ' + ULTS.map((u) => u.slice(0, 8).padStart(8)).join(''));
+  for (const [wk, w] of Object.entries(W)) for (const [rk, f, o] of ROWS) {
+    const run = (ult, fire) => Arena.simAscent(f, w, Object.assign({ n, seed0: 1, ult, ultFire: fire || 'smart' }, o));
+    const none = run('none'), sig = run('signature'), sg = sig.winRate - none.winRate;
+    const inBand = sig.winRate >= 0.40 && sig.winRate <= 0.85 && sg > 0.01;
+    let line = `${rk.padEnd(14)} ${wk.padEnd(3)} ${pct(none.winRate).padStart(6)} ${pct(sig.winRate).padStart(6)} | `;
+    ULTS.forEach((u) => {
+      const sm = run(u), fu = (Arena._battle.ults()[u].use ? run(u, 'full') : sm);
+      line += pct(sm.winRate).padStart(8);
+      const shadowRow = /sh$/.test(rk) && rk !== 'F100 max 0sh';
+      if (!inBand || (u === 'arise' && !shadowRow)) return;
+      (per[u][wk] = per[u][wk] || []).push({ g: sm.winRate - none.winRate, gf: fu.winRate - none.winRate, sg, dSig: (sm.winRate - sig.winRate) * 100, dFull: (fu.winRate - sig.winRate) * 100, dt: sm.medianTurns - sig.medianTurns });
+    });
+    console.log(line + (inBand ? '' : '   (out of band)'));
+  }
+  console.log('\nper weapon: mean gain / Signature gain (pass 0.65-1.35, or within ±2 pts) · fire-at-full Δ vs Signature (pass ≥ -4) · Δ median turns');
+  let fails = 0;
+  ULTS.forEach((u) => {
+    const cells = Object.keys(per[u]).map((wk) => {
+      const a = per[u][wk], mean = (k) => a.reduce((s, x) => s + x[k], 0) / a.length;
+      const ratio = mean('g') / mean('sg'), dS = mean('dSig'), dF = mean('dFull'), dt = mean('dt');
+      const ok = (ratio >= 0.65 && ratio <= 1.35) || Math.abs(dS) <= 2;
+      const okF = dF >= -4, okT = dt <= 1;
+      if (!ok || !okF || !okT) fails++;
+      return `${wk} ${ratio.toFixed(2)}${ok ? '' : '!'} ${dF >= 0 ? '+' : ''}${dF.toFixed(1)}${okF ? '' : '!'} ${dt >= 0 ? '+' : ''}${dt.toFixed(1)}${okT ? '' : '!'}`;
+    });
+    console.log(u.padEnd(13) + cells.join('  |  '));
+  });
+  console.log(fails ? `ULT TABLE: ${fails} weapon cell(s) outside the bar (marked !)` : 'ULT TABLE: every ultimate within the bar');
+}

@@ -35832,6 +35832,12 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pkb2-surge.full.lock { opacity: 0.6; }
 .pkb2-surge.full.lock .shine, .pkb2-surge.full.lock::after { animation: none; }
 @keyframes pkb2Shine { 0% { transform: translateX(-120%); } 100% { transform: translateX(220%); } }
+/* W1169 — BEST NOW: an ultimate that waits for its moment (Crimson Feast, Reaper's Due) has met it */
+.pkb2-surge.full.best { border-color: rgba(245,184,66,0.95); box-shadow: 0 0 0 1px rgba(245,184,66,0.45), 0 0 22px rgba(245,184,66,0.35); }
+.pkb2-surge.full.best .ult .k { color: #ffd574; }
+/* W1169 — an earned ultimate's cut-in wears its own colour (the Signatures keep theirs) */
+.pkb2-cutin.has-tint .name .k { color: var(--ult-c, #e6dcff); }
+.pkb2-cutin.has-tint .name .n i { color: var(--ult-c, #ffd574); }
 
 /* the caption — one line of narration under the band (tap completes it) */
 .pkb.pkb2 .pkb-text { position: relative; z-index: 1; flex: none; height: 42px; min-height: 0; margin: 0; padding: 2px 30px; display: flex; align-items: center; justify-content: center; text-align: center;
@@ -36449,6 +36455,23 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1156 — six panes (Pins joined); the tabs row already scrolls */
 .wx-track.wx-track6 { width: 600%; }
 .wx-track6 .wx-pane { width: 16.6667%; }
+/* W1169 — seven panes once the Ultimates are live (after the six-pane rules: the track carries wx-track6 too) */
+.wx-track.wx-track7 { width: 700%; }
+.wx-track7 .wx-pane { width: 14.2857%; }
+/* W1169 — THE ULTIMATES: an emblem per ultimate (placeholder glyphs until the Claude Design set), a page for every tile */
+.wx-sl-ult .wx-sl-prev .ult-em { filter: drop-shadow(0 0 10px rgba(var(--rc-rgb), .35)); }
+.wx-sl-ult.is-locked .wx-sl-prev .ult-em { filter: none; }
+.wx-sl-ult .wx-chip-new { top: 8px; left: auto; right: 8px; transform: none; }
+.wx-hl-ult .wx-ult-hero { position: relative; width: 150px; height: 150px; margin: 8px auto 4px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 26px rgba(var(--mc-rgb), .42)); }
+.wx-hl-ult .wx-hl-how { max-width: 300px; margin-left: auto; margin-right: auto; }
+.wx-pg-ult .wx-ps .ult-em { filter: drop-shadow(0 0 22px rgba(var(--rc-rgb), .4)); }
+.wx-pg-ult.is-locked .wx-ps .ult-em { filter: saturate(.25) brightness(.6); }
+.wx-ult-how { margin-top: 8px; font: italic 500 15px/1.35 "Cormorant Garamond", Georgia, serif; color: var(--rc-lt, #e4e1f0); }
+.wx-ult-cond, .wx-ult-on { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font: 800 11px/1 var(--wx-mono); letter-spacing: .14em; color: #b9b2cf; }
+.wx-ult-on { color: var(--rc, #f5b842); }
+.wx-ult-cond svg, .wx-ult-on svg { width: 12px; height: 12px; }
+#wd-sheet.wx .wx-ult-eq { display: block; margin: 16px auto 0; min-width: 160px; padding: 13px 22px; border: 0; border-radius: 12px; text-align: center; font: 800 13px/1 var(--wx-mono); letter-spacing: .16em; color: #1a1206; background: linear-gradient(180deg, var(--rc-lt, #ffe08a), var(--rc, #f5b842)); box-shadow: 0 0 18px rgba(var(--rc-rgb), .35); cursor: pointer; }
+#wd-sheet.wx .wx-ult-eq:active { transform: scale(.97); }
 /* W1156 — PINS: up to two badges under the title on the card, the same pill on the Wardrobe tiles and hero.
    W1160 — six metals (Claude Design "Awakened Pins Catalog", owner 2026-11-07 "Looks good lets build it"): one height, one
    voice (the mono label is still the verified number), a bespoke emblem + material per pin. --c text, --rim ring, --bgp ground;

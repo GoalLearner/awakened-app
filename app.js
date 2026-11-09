@@ -157,10 +157,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '3.0.23';   // W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.23-w1167'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1169'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14148,6 +14148,7 @@
       rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 },
       aiTier: aiTierFor(m.bot && m.bot.floor),   // W260 — endgame AI ladder (≤50 → 2, unchanged)
       _pattern: (!m._pvp && m.bot && m.bot.isBoss && ASCENT_BOSS_PATTERNS[m.bot.floor]) ? { idx: 0, step: -1 } : null,   // W1139 — a rhythm boss
+      _ultId: m.ultId || 'signature', _ultShadows: (m.player && m.player.shadows) | 0,   // W1168 — filled by the caller, never read here
     };
   }
   // W235 AI v2 — strict-priority tree with UTILITY branches (§7.1 of the doc).
@@ -14521,6 +14522,8 @@
     }
     const noStance = !!(ctr && side === 'p' && (ctr.kind === 'parry' || ctr.kind === 'sidestep' || ctr.kind === 'ward'));
     const power = move.power || 0;
+    const pierce = !!move.pierce;   // W1168 — Storm of Blades: no brace / ward, no guard block, no dodge
+    let landedHit = false;          // W1168 — onHit effects wait on this
     if (power > 0) {
       const atkBase  = (side === 'p' ? sess.m.player.attack : sess.m.bot.attack) || 0;
       const attuned  = side === 'p' ? sess.pAttuned : 1;
@@ -14529,8 +14532,8 @@
       const critCh   = side === 'p' ? sess.pCrit : sess.bCrit;
       const defBase  = (side === 'p' ? sess.m.bot.defense : sess.m.player.defense) || 0;
       const shred    = _arStatArmorShred(defS);
-      const takenM   = _arStatTakenMult(defS);
-      const dodge    = Math.min(_DODGE_CAP, _arStatDodge(defS) + _arRangerEvade(side === 'p' ? sess.m.bot : sess.m.player, side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax), move.power || 0));   // W529 — ranger passive evasion
+      const takenM   = pierce ? Math.max(1, _arStatTakenMult(defS)) : _arStatTakenMult(defS);
+      const dodge    = pierce ? 0 : Math.min(_DODGE_CAP, _arStatDodge(defS) + _arRangerEvade(side === 'p' ? sess.m.bot : sess.m.player, side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax), move.power || 0));   // W529 — ranger passive evasion
       const accBonus = side === 'p' ? sess.pAccB : sess.bAccB;   // W233 — normalized edgeShare, scale-invariant
       const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
       const remBefore = side === 'p' ? sess.bHP : sess.pHP;
@@ -14553,7 +14556,7 @@
         if (crit) { hit *= _CRIT_MULT; anyCrit = true; }   // crit skips takenMult (ignores Brace/DEF-up)
         else { hit *= takenM; }
         hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
-        if (defS.guard > 0 && !guardUsed && hit > 0) { hit *= 0.5; guardUsed = true; }
+        if (!pierce && defS.guard > 0 && !guardUsed && hit > 0) { hit *= 0.5; guardUsed = true; }
         total += Math.max(0, hit); anyLanded = true;
       }
       if (guardUsed) defS.guard = 0;
@@ -14569,14 +14572,17 @@
         if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
         else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
         sess.dmgDealt[side] += effective;
-        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, riposte: !!move.riposte, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });   // W1135 — ult: the Surge ultimate (Ascent-only; the server core never sets it)
+        events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, ultId: move.ult ? move.ultId : undefined, riposte: !!move.riposte, dmg: shown, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });   // W1135 — ult: the Surge ultimate (Ascent-only; the server core never sets it)
       } else if (dodged && !missed) {
-        events.push({ side, t: 'dodge', text: defName + ' dodges ' + move.name + '!' });
+        events.push({ side, t: 'dodge', ultId: move.ult ? move.ultId : undefined, text: defName + ' dodges ' + move.name + '!' });
       } else {
-        events.push({ side, t: 'miss', text: atkName + ' — ' + move.name + ' misses!' });
+        events.push({ side, t: 'miss', ultId: move.ult ? move.ultId : undefined, text: atkName + ' — ' + move.name + ' misses!' });
       }
+      landedHit = anyLanded;
     }
-    if (move.fx) _arApplyFx(sess, side, move.fx, events, atkName, defName, noStance ? { noStance: true } : null);
+    // W1168 — an ultimate may carry several effects (fxs); onHit ones need the blow to have landed. Kit moves keep fx.
+    const fxList = move.fxs || (move.fx ? [move.fx] : null);
+    if (fxList) fxList.forEach((fx) => { if (!fx.onHit || landedHit) _arApplyFx(sess, side, fx, events, atkName, defName, noStance ? { noStance: true } : null); });
     if (sess.bHP <= 0) { if (!_arMaybeAdvancePhase(sess, events)) { sess.done = true; sess.won = true; } }   // W535 — unbind before win
     else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
   }
@@ -14595,7 +14601,7 @@
     }
     const noStance = !!(opts && opts.noStance);
     switch (fx.t) {
-      case 'burn': case 'bleed': {
+      case 'burn': case 'bleed': case 'hellfire': {   // W1168 — Hellfire is its own DoT kind: it stacks with a burn (under the intake cap)
         // W236 Cauterize: a fresh cleanse grants 2 turns of DoT immunity — new
         // applications are wasted (the move's direct damage already landed).
         if (foeS.mods.some((x) => x.k === 'dotImmune')) {
@@ -14612,7 +14618,7 @@
         const ex = foeS.mods.find((x) => x.k === 'dot' && x.kind === fx.t);   // refresh-by-kind to highest, never additive
         if (ex) { ex.dur = Math.max(ex.dur, fx.dur); ex.mag = Math.max(ex.mag, magEff); ex.src = side; }
         else foeS.mods.push({ k: 'dot', kind: fx.t, mag: magEff, dur: fx.dur, src: side });
-        events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
+        events.push({ side, t: 'fx', text: fx.t === 'hellfire' ? defName + ' ' + isAre + ' wreathed in hellfire.' : defName + ' ' + isAre + ' ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
       }
       case 'stun':
         // W233 flinch model: 1 skipped ACTION (this turn if the target hasn't
@@ -14645,8 +14651,8 @@
         selfS.mods = selfS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); selfS.stun = 0;
         if (!noStance) selfS.guard = 1;   // W1139 — under a parry: cleanse + focus + cauterize stay, the ward was the parry
         const _bw = Math.abs(fx.mag || 0.40), _bd = fx.dur || 3;
-        if (!noStance) _arPushMod(selfS, 'def', 'guard', -_bw, _bd);          // take 40% less for 3 turns
-        _arPushMod(selfS, 'atk', 'focus', _bw, _bd);           // hits land 40% harder for 3 turns
+        if (!noStance) _arPushMod(selfS, 'def', fx.kind || 'guard', -_bw, _bd);          // take 40% less for 3 turns (W1168: Dawnbreaker's own kind 'dawn')
+        _arPushMod(selfS, 'atk', fx.kind || 'focus', _bw, _bd);           // hits land 40% harder for 3 turns
         _arPushMod(selfS, 'dotImmune', 'cauterize', 1, 2);     // 2t DoT immunity (matches Refuse)
         events.push({ side, t: 'fx', text: atkName + ' raises a bulwark — warded, focused, afflictions cauterized.' }); break;
       }
@@ -14700,16 +14706,155 @@
   //  • ULTIMATE: one per fighting style (the kit's basic glyph, as _weaponExecuteId reads it), usable at full
   //    Surge, which it spends. It runs through _arExecMove, so the hit caps still bind.
   const SURGE_DEALT_K = 0.9, SURGE_TAKEN_K = 1.1;
+  // W1168 — EARNED ULTIMATES (owner 2026-11-09: "different types of ultimates ... different damage / animation /
+  // name / use case"; earned, then chosen in the Wardrobe). SIDEGRADES, not upgrades: each one is tuned in the sim
+  // (tools/sim-ascent.js ULT TABLE) to be worth about what the Signature is worth, so the floor 100 curve holds
+  // whichever is chosen. The Signature (verdict / starfall / rain) still follows the weapon's style.
+  //  • use(sess)  — the moment it is worth firing: the sim's smart player and the screen's "best now" glow.
+  //  • patience   — turns at full Surge before the sim fires it anyway (frozen; the numbers tune, not this).
+  //  • fxs        — applied in order; onHit ones only when the blow landed (self-buffs always apply).
+  //  • pierce     — the blow ignores the defender's brace / ward (def-up), the guard block and every dodge.
+  //  • scale      — Arise: + per × marching shadows (capped).
+  // The move id stays 'ultimate' (the turn API is unchanged); the move carries ultId. Battle start never reads the
+  // user's choice: the real fight's call site fills m.ultId (only while ultsLive()), the sim fills it from opts.ult.
+  const ULTS_EARNED_LIVE = false;   // flips with the Claude Design sequences (W1170); hb_dev_ults = '1' previews it
   const ASCENT_ULTIMATES = {
-    melee:  { name: 'Sundering Verdict', gl: 'sword',  power: 2.6, acc: 0.99, cd: 0, desc: 'Everything the climb taught you, in one blow.' },
-    magic:  { name: 'Starfall',          gl: 'magic',  power: 2.6, acc: 0.99, cd: 0, desc: 'The sky comes down on one foe.' },
-    ranged: { name: 'Heartpiercer Rain', gl: 'ranged', power: 2.6, acc: 0.99, cd: 0, desc: 'A hundred arrows, one heartbeat.' },
+    verdict:  { name: 'Sundering Verdict', kind: 'MELEE', tint: '#f5b842',  style: 'melee',  gl: 'sword',  power: 2.6, acc: 0.99, cd: 0, desc: 'Everything the climb taught you, in one blow.' },
+    starfall: { name: 'Starfall',          kind: 'MAGIC', tint: '#7dd3fc',  style: 'magic',  gl: 'magic',  power: 2.6, acc: 0.99, cd: 0, desc: 'The sky comes down on one foe.' },
+    rain:     { name: 'Heartpiercer Rain', kind: 'RANGED', tint: '#4ade80', style: 'ranged', gl: 'ranged', power: 2.6, acc: 0.99, cd: 0, desc: 'A hundred arrows, one heartbeat.' },
+    // Tuned in the sim (W1168 ULT TABLE): heals, wards and skipped turns swing 5-turn fights hard, so Feast heals
+    // 10%, the Dawn ward is 2 turns, and Worldbreaker staggers instead of stunning (a stun measured +50% over the
+    // Signature even at 0.4 power). Only Feast and Reaper are worth holding; the rest fire the moment the bar fills.
+    feast:    { name: 'Crimson Feast', kind: 'DRAIN', tint: '#ef4444', gl: 'magic', power: 1.2, acc: 0.99, cd: 0,
+                fxs: [{ t: 'heal', mag: 0.10, onHit: true }],
+                use: (s) => s.pHP / Math.max(1, s.pMax) <= 0.6, patience: 3, unlock: { k: 'krank', r: 'E' },
+                eff: 'Strikes, and if it lands, heals 10% of your health.', how: 'Hold it for when you are losing.' },
+    quicksilver: { name: 'Quicksilver', kind: 'SWIFT', tint: '#e2e8f0', gl: 'dagger', power: 1.6, acc: 0.99, cd: 0, prio: 2,
+                fxs: [{ t: 'dodge', kind: 'quicksilver', mag: 0.25, dur: 2 }],
+                use: null, patience: 0, unlock: { k: 'krank', r: 'D' },
+                eff: 'Always strikes first, then you are evasive for 2 turns.', how: 'Nothing swings before it.' },
+    hellfire: { name: 'Hellfire', kind: 'FIRE', tint: '#f0904a', gl: 'burst', power: 1.3, acc: 0.99, cd: 0,
+                fxs: [{ t: 'hellfire', mag: 0.11, dur: 4, onHit: true }],
+                use: null, patience: 0, unlock: { k: 'krank', r: 'C' },
+                eff: 'Strikes and sets a fire of its own: 11% a turn for 4 turns.', how: 'Best early. A foe that cleanses puts it out.' },
+    storm:    { name: 'Storm of Blades', kind: 'BLADES', tint: '#93c5fd', gl: 'dagger', power: 2.0, acc: 0.99, cd: 0, pierce: true,
+                use: null, patience: 0, unlock: { k: 'krank', r: 'B' },
+                eff: 'A storm of cuts that ignores guards, braces, wards and dodges.', how: 'Nothing the foe raises stops it.' },
+    worldbreaker: { name: 'Worldbreaker', kind: 'QUAKE', tint: '#d6a25a', gl: 'shield', power: 1.4, acc: 0.99, cd: 0,
+                fxs: [{ t: 'defDown', kind: 'worldbreak', mag: 0.2, dur: 3, onHit: true }, { t: 'atkDown', kind: 'worldbreak', mag: 0.3, dur: 2, onHit: true }],
+                use: null, patience: 0, unlock: { k: 'krank', r: 'A' },
+                eff: "Strikes; the foe's armor breaks 20% for 3 turns and its blows land 30% softer for 2.", how: 'It takes the sting out of the turns that follow.' },
+    reaper:   { name: "Reaper's Due", kind: 'EXECUTE', tint: '#f1ecdf', gl: 'sword', power: 1.4, acc: 0.99, cd: 0, exe: { thr: 0.35, mult: 2.8 },
+                use: (s) => s.bHP / Math.max(1, s.bMax) <= 0.35, patience: 4, unlock: { k: 'krank', r: 'S' },
+                eff: 'A light strike that lands nearly three times as hard when the foe is under 35%.', how: 'Hold it for the finish.' },
+    arise:    { name: 'Arise', kind: 'SHADOWS', tint: '#a78bfa', gl: 'magic', power: 2.2, acc: 0.99, cd: 0, scale: { per: 0.15, cap: 8 },
+                use: null, patience: 0, unlock: { k: 'shadow' },
+                eff: 'Your shadows strike with you: harder for every marching shadow, up to 8.', how: 'The bigger your army, the harder it hits.' },
+    dawnbreaker: { name: 'Dawnbreaker', kind: 'WARD', tint: '#fde68a', gl: 'shield', power: 1.6, acc: 0.99, cd: 0,
+                fxs: [{ t: 'defUp', kind: 'dawn', mag: -0.3, dur: 2 }, { t: 'atkUp', kind: 'dawn', mag: 0.25, dur: 2 }],
+                use: null, patience: 0, unlock: { k: 'summit' },
+                eff: 'Strikes, then a dawn ward for 2 turns: 30% less damage taken, 25% harder hits.', how: 'Open a long fight with it.' },
   };
+  const _ULT_SIGNATURE = { melee: 'verdict', magic: 'starfall', ranged: 'rain' };
+  const ULT_ORDER = ['signature', 'feast', 'quicksilver', 'hellfire', 'storm', 'worldbreaker', 'reaper', 'arise', 'dawnbreaker'];
   function _arUltStyle(sess) {
     const gl = (sess && sess.pMoves && sess.pMoves[0] && sess.pMoves[0].gl) || 'sword';
     return gl === 'magic' ? 'magic' : gl === 'ranged' ? 'ranged' : 'melee';
   }
-  function _arUltimateFor(sess) { const st = _arUltStyle(sess); return Object.assign({ id: 'ultimate', ult: true, style: st }, ASCENT_ULTIMATES[st]); }
+  // The ult the session fires: its chosen earned one, else the weapon's Signature.
+  function _arUltId(sess) {
+    const id = sess && sess._ultId, u = id && ASCENT_ULTIMATES[id];
+    return (u && !u.style) ? id : _ULT_SIGNATURE[_arUltStyle(sess)];
+  }
+  function _arUltimateFor(sess) {
+    const uid = _arUltId(sess), u = ASCENT_ULTIMATES[uid];
+    const mv = Object.assign({ id: 'ultimate', ult: true, ultId: uid, style: u.style || _arUltStyle(sess) }, u);
+    if (u.scale) mv.power = u.power + u.scale.per * Math.min(u.scale.cap, Math.max(0, (sess && sess._ultShadows) | 0));
+    return mv;
+  }
+  // ── W1168 — what a hunter has earned (derived from state, never stored) and what they chose. ──
+  const ULT_CHOICE_KEY = 'hb_ult_choice';
+  function _ultDevOn() { try { return localStorage.getItem('hb_dev_ults') === '1'; } catch (_) { return false; } }
+  function ultsLive() { return ULTS_EARNED_LIVE || _ultDevOn(); }
+  function _ultUnlockCtx() {
+    const ranks = {};
+    try {
+      const solo = loadBosses() || {}, coop = _loadCoopKills() || {};
+      Object.keys(BOSSES).forEach((id) => {
+        const b = BOSSES[id]; if (!b || !b.rank || ranks[b.rank]) return;
+        const n = ((solo[id] && solo[id].kill_count) || 0) + ((coop[id] && coop[id].count) || 0);
+        if (n > 0) ranks[b.rank] = true;
+      });
+    } catch (_) {}
+    let shadows = 0; try { shadows = Object.keys((_shLoad() || {}).extracted || {}).length; } catch (_) {}
+    let floor = 0; try { floor = (getAscentState().highestCleared || 0) | 0; } catch (_) {}
+    return { ranks, shadows, floor };
+  }
+  function ultUnlocked(id, ctx) {
+    if (id === 'signature') return true;
+    const u = ASCENT_ULTIMATES[id]; if (!u) return false;
+    if (u.style) return true;
+    const c = ctx || _ultUnlockCtx(), k = u.unlock || {};
+    if (k.k === 'krank') return !!c.ranks[k.r];
+    if (k.k === 'shadow') return c.shadows >= 1;
+    if (k.k === 'summit') return c.floor >= ASCENT_FLOORS;
+    return false;
+  }
+  function getEquippedUltimate(ctx) {
+    let id = ''; try { id = localStorage.getItem(ULT_CHOICE_KEY) || ''; } catch (_) {}
+    if (!id || id === 'signature' || !ASCENT_ULTIMATES[id] || ASCENT_ULTIMATES[id].style) return 'signature';
+    return ultUnlocked(id, ctx) ? id : 'signature';
+  }
+  function setEquippedUltimate(id) {
+    if (id !== 'signature' && (!ASCENT_ULTIMATES[id] || !ultUnlocked(id))) return false;
+    try { if (id === 'signature') localStorage.removeItem(ULT_CHOICE_KEY); else localStorage.setItem(ULT_CHOICE_KEY, id); } catch (_) { return false; }
+    _w2Sync('ult-choice');
+    return true;
+  }
+  function _ultForFight() { try { return ultsLive() ? getEquippedUltimate() : 'signature'; } catch (_) { return 'signature'; } }
+  // W1169 — the Wardrobe's words for each one, and what the hunter has already seen there (the NEW chip).
+  const ULT_SEEN_KEY = 'hb_ult_seen';
+  function ultCondText(id) {
+    const u = ASCENT_ULTIMATES[id], k = (u && u.unlock) || {};
+    if (k.k === 'krank') return 'Defeat any ' + k.r + '-rank boss';
+    if (k.k === 'shadow') return 'Raise a shadow';
+    if (k.k === 'summit') return 'Clear Floor 100 of the Ascent';
+    return 'Yours from the start';
+  }
+  function ultCondShort(id) {
+    const u = ASCENT_ULTIMATES[id], k = (u && u.unlock) || {};
+    return k.k === 'krank' ? k.r + '-RANK KILL' : k.k === 'shadow' ? 'A SHADOW' : k.k === 'summit' ? 'FLOOR 100' : '';
+  }
+  // the Signature this hunter's weapon gives right now (its name changes with the weapon's style)
+  function ultSignatureId() { try { return _ULT_SIGNATURE[_arUltStyle({ pMoves: _arenaPlayerKit() })] || 'verdict'; } catch (_) { return 'verdict'; } }
+  function ultSeenList() { try { const a = JSON.parse(localStorage.getItem(ULT_SEEN_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function ultMarkSeen(ids) {
+    const have = ultSeenList(), add = ids.filter(function (id) { return have.indexOf(id) === -1; });
+    if (!add.length) return;
+    try { localStorage.setItem(ULT_SEEN_KEY, JSON.stringify(have.concat(add))); } catch (_) {}
+    _w2Sync('ult-seen');
+  }
+  // Placeholder emblems until the Claude Design set lands (W1170): one glyph per kind on the ult's tint.
+  const _ULT_GLYPH = {
+    MELEE: '<path d="M20 6l3 11 11 3-11 3-3 11-3-11-11-3 11-3z"/>',
+    MAGIC: '<path d="M20 7l2.6 8 8.4.2-6.7 5 2.4 8.1L20 23.4l-6.7 4.9 2.4-8.1-6.7-5 8.4-.2z"/>',
+    RANGED: '<path d="M9 31L29 11M29 11l-7 1M29 11l-1 7M9 31l4-1M9 31l1-4" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
+    DRAIN: '<path d="M24 8a12 12 0 1 0 8 19 10 10 0 1 1-8-19z"/><path d="M20 20c0 3 2 5 2 7a2 2 0 0 1-4 0c0-2 2-4 2-7z"/>',
+    SWIFT: '<path d="M8 12l9 8-9 8M18 12l9 8-9 8" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    FIRE: '<path d="M20 6c1 6 8 9 8 17a8 8 0 0 1-16 0c0-4 2-6 3-8 1 3 3 4 3 4 0-5 1-9 2-13z"/>',
+    BLADES: '<path d="M20 5l2 11-2 2-2-2zM35 20l-11 2-2-2 2-2zM20 35l-2-11 2-2 2 2zM5 20l11-2 2 2-2 2z"/>',
+    QUAKE: '<path d="M6 26h28M12 26l3-6 3 4 3-9 3 7 3-3 3 7" fill="none" stroke-width="2.4" stroke-linejoin="round"/>',
+    EXECUTE: '<path d="M10 33L24 11M24 11c4-3 9-3 11 1-5-1-8 0-11 3" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
+    SHADOWS: '<circle cx="13" cy="15" r="3.4"/><circle cx="27" cy="15" r="3.4"/><circle cx="20" cy="13" r="4"/><path d="M7 31c0-6 3-9 6-9s6 3 6 9zM21 31c0-6 3-9 6-9s6 3 6 9zM13 32c0-7 3-11 7-11s7 4 7 11z"/>',
+    WARD: '<path d="M6 27h28"/><path d="M11 27a9 9 0 0 1 18 0z"/><path d="M20 7v4M9 12l3 3M31 12l-3 3" fill="none" stroke-width="2.2" stroke-linecap="round"/>',
+  };
+  function ultEmblem(id, size) {
+    const u = ASCENT_ULTIMATES[id === 'signature' ? ultSignatureId() : id]; if (!u) return '';
+    const g = _ULT_GLYPH[u.kind] || _ULT_GLYPH.MELEE, z = size || 40;
+    return '<svg class="ult-em" width="' + z + '" height="' + z + '" viewBox="0 0 40 40" aria-hidden="true" style="--ult-c:' + u.tint + '">' +
+      '<circle cx="20" cy="20" r="18.5" fill="#0e0b1f" stroke="' + u.tint + '" stroke-opacity=".55" stroke-width="1.2"/>' +
+      '<g fill="' + u.tint + '" stroke="' + u.tint + '">' + g + '</g></svg>';
+  }
   function _arPrimeIntent(sess) {
     if (!sess || sess.done || sess._pvp) return null;
     if (!sess._bNext) sess._bNext = _arBossPatternPick(sess) || _arenaFoePick(sess);   // W1139 — a rhythm boss picks from its cycle
@@ -14828,8 +14973,9 @@
     // W1139 — the read, from the two committed moves, before anyone acts. A parry / ward spends any stance you
     // already held (no double-dip); a sidestep spends an evasion. The interrupt is settled after both acts.
     const counter = sess._counter = _arReadCounter(sess, pMove, bMove);
-    if (counter && (counter.kind === 'parry' || counter.kind === 'ward')) { sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'def'); sess.pS.guard = 0; }
-    if (counter && counter.kind === 'sidestep') sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'dodge');
+    // W1168 — an ultimate's lasting buff (Dawnbreaker's ward, Quicksilver's evasion) is not a stance: a read leaves it.
+    if (counter && (counter.kind === 'parry' || counter.kind === 'ward')) { sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'def' || x.kind === 'dawn'); sess.pS.guard = 0; }
+    if (counter && counter.kind === 'sidestep') sess.pS.mods = sess.pS.mods.filter((x) => x.k !== 'dodge' || x.kind === 'quicksilver');
     const atkSnap = (counter && counter.kind === 'interrupt') ? (sess.bS.mods.find((x) => x.k === 'atk' && x.mag > 0) || null) : null;
     const atkSnapCopy = atkSnap ? Object.assign({}, atkSnap) : null;
     // W260 — APEX pattern adaptation: track the player's last ~6 picks THIS
@@ -15429,6 +15575,84 @@
         const evPv = arenaTakeTurn(tpv, 'guard');
         const treg = arenaStartBattle({ floor: 37, advances: false, player: YOU(), bot: Object.assign(FOE(), { floor: 37 }) }, 132);
         ok('T54 a duel never reads; no rail off the boss floors', refusedDuel && !counterOf(evPv) && !tpv._pattern && tpv._counter == null && !treg._pattern && _arBossRail(treg) === null);
+        // ── T55-T65 — W1168 earned ultimates ──
+        const ultT = (id, bId, seed, tweak) => forced(['slash'], bId || 'slash', seed, (x) => { x._surge = 1; x._ultId = id; if (tweak) tweak(x); });
+        const pAct = (ev) => (ev || []).find((e) => e.side === 'p' && (e.t === 'hit' || e.t === 'miss' || e.t === 'dodge'));
+        // T55 every ultimate runs through the turn, is tagged with its id, and spends the Surge (no read on a STRIKE).
+        let allRun = true;
+        ULT_ORDER.filter((u) => u !== 'signature').forEach((u, i) => {
+          const t = ultT(u, 'slash', 140 + i, (x) => { x._ultShadows = 4; });
+          const ev = arenaTakeTurn(t, 'ultimate'), a = pAct(ev);
+          if (!ev || !a || a.ultId !== u || (t._surge || 0) !== 0) allRun = false;
+        });
+        ok('T55 every earned ultimate runs, carries its id, spends the Surge', allRun);
+        // T56 Crimson Feast heals only when it lands.
+        const uf = ultT('feast', 'guard', 150, (x) => { x.pHP = Math.round(x.pMax * 0.5); });
+        const hp56 = uf.pHP, ev56 = arenaTakeTurn(uf, 'ultimate');
+        const healed = !!hitBy(ev56, 'p') && (ev56 || []).some((e) => e.side === 'p' && e.t === 'heal') && uf.pHP === Math.min(uf.pMax, hp56 + Math.round(uf.pMax * 0.10));
+        let dodgedNoHeal = null;
+        for (let sd = 151; sd < 220 && dodgedNoHeal === null; sd++) {
+          const t = ultT('feast', 'guard', sd, (x) => { x.pHP = Math.round(x.pMax * 0.5); x.bS.mods.push({ k: 'dodge', kind: 'evade', mag: 0.5, dur: 3 }); });
+          const ev = arenaTakeTurn(t, 'ultimate');
+          if ((ev || []).some((e) => e.side === 'p' && (e.t === 'dodge' || e.t === 'miss'))) dodgedNoHeal = !(ev || []).some((e) => e.t === 'heal');
+        }
+        ok('T56 Crimson Feast heals 10% on a hit, nothing on a dodge', healed && dodgedNoHeal === true);
+        // T57 Storm of Blades: a brace, a guard block and an evade change nothing (same seed, same number; the guard is not spent).
+        const sA = ultT('storm', 'slash', 160, (x) => { x.bS.mods.push({ k: 'def', kind: 'brace', mag: -0.35, dur: 2 }, { k: 'dodge', kind: 'evade', mag: 0.5, dur: 2 }); x.bS.guard = 1; });
+        const sB = ultT('storm', 'slash', 160);
+        const hA = hitBy(arenaTakeTurn(sA, 'ultimate'), 'p'), hB = hitBy(arenaTakeTurn(sB, 'ultimate'), 'p');
+        ok('T57 Storm of Blades pierces brace, guard and evade', !!hA && !!hB && hA.dmg === hB.dmg && sA.bS.guard === 1);
+        // T58 Worldbreaker: its own armor break multiplies with a Sunder; the stagger lands; a dodge applies neither.
+        const uw = ultT('worldbreaker', 'slash', 170, (x) => { x.bS.mods.push({ k: 'shred', kind: 'sunder', mag: 0.25, dur: 3 }); });
+        arenaTakeTurn(uw, 'ultimate');
+        const wbOK = uw.bS.mods.some((m) => m.k === 'shred' && m.kind === 'sunder') && uw.bS.mods.some((m) => m.k === 'shred' && m.kind === 'worldbreak') &&
+          uw.bS.mods.some((m) => m.k === 'atk' && m.kind === 'worldbreak' && m.mag < 0) && uw.bS.stun === 0;
+        let wbDodge = null;
+        for (let sd = 171; sd < 240 && wbDodge === null; sd++) {
+          const t = ultT('worldbreaker', 'slash', sd, (x) => { x.bS.mods.push({ k: 'dodge', kind: 'evade', mag: 0.5, dur: 3 }); });
+          const ev = arenaTakeTurn(t, 'ultimate');
+          if ((ev || []).some((e) => e.side === 'p' && (e.t === 'dodge' || e.t === 'miss'))) wbDodge = !t.bS.mods.some((m) => m.kind === 'worldbreak');
+        }
+        ok('T58 Worldbreaker breaks armor (stacking) and staggers on a hit, not on a dodge; no stun', wbOK && wbDodge === true);
+        // T59 Reaper's Due: the execute only under 35%.
+        const rLow = ultT('reaper', 'slash', 180, (x) => { x.bHP = Math.round(x.bMax * 0.3); }), rHigh = ultT('reaper', 'slash', 180, (x) => { x.bHP = Math.round(x.bMax * 0.9); });
+        const eLow = hitBy(arenaTakeTurn(rLow, 'ultimate'), 'p'), eHigh = hitBy(arenaTakeTurn(rHigh, 'ultimate'), 'p');
+        ok("T59 Reaper's Due executes only under 35%", !!eLow && !!eHigh && eLow.exe === true && eHigh.exe === false);
+        // T60 Quicksilver acts before a faster foe's Snap Shot (prio 1), then holds its own evasion.
+        const uq = arenaStartBattle(M(YOU(), mk(34, 30, 60, 'trickster', 'Foe')), 190);
+        uq.pMoves = [lib('slash')]; uq.pAttuned = 1; uq.bMoves = [lib('snapshot')]; uq._bNext = uq.bMoves[0]; uq._surge = 1; uq._ultId = 'quicksilver';
+        const evq = arenaTakeTurn(uq, 'ultimate') || [];
+        const iP = evq.findIndex((e) => e.side === 'p' && (e.t === 'hit' || e.t === 'miss' || e.t === 'dodge')), iB = evq.findIndex((e) => e.side === 'b' && (e.t === 'hit' || e.t === 'miss' || e.t === 'dodge'));
+        ok('T60 Quicksilver strikes first and keeps its evasion', iP !== -1 && (iB === -1 || iP < iB) && uq.pS.mods.some((m) => m.k === 'dodge' && m.kind === 'quicksilver'));
+        // T61 Arise grows with the marching army and stops at 8.
+        const pw = (n) => _arUltimateFor({ _ultId: 'arise', _ultShadows: n, pMoves: [lib('slash')] }).power;
+        ok('T61 Arise scales with marching shadows, capped at 8', Math.abs(pw(0) - 2.2) < 1e-9 && Math.abs(pw(4) - 2.8) < 1e-9 && Math.abs(pw(8) - 3.4) < 1e-9 && pw(20) === pw(8));
+        // T62 Hellfire is its own fire: it sits beside a burn and the two tick under the intake cap.
+        const th = ultT('hellfire', 'guard', 200, (x) => { x.bS.mods.push({ k: 'dot', kind: 'burn', mag: 0.10, dur: 3, src: 'p' }); });
+        const hp62 = th.bHP, ev62 = arenaTakeTurn(th, 'ultimate'), hit62 = hitBy(ev62, 'p');
+        const ticks = (ev62 || []).filter((e) => e.t === 'dot').reduce((s2, e) => s2 + (e.dmg || 0), 0);
+        ok('T62 Hellfire stacks with a burn under the intake cap', !!hit62 && th.bS.mods.filter((m) => m.k === 'dot').length === 2 && ticks <= Math.round(th.bMax * _DOT_INTAKE_CAP) + 2 && th.bHP < hp62);
+        // T63 Dawnbreaker's ward outlives a parry on the next turn (a read spends stances, not the dawn).
+        const ud = forced(['guard', 'slash'], 'slash', 210, (x) => { x.bMoves = [lib('slash'), lib('cleave')]; x._bNext = x.bMoves[0]; x._surge = 1; x._ultId = 'dawnbreaker'; });
+        arenaTakeTurn(ud, 'ultimate');
+        const dawn1 = ud.pS.mods.some((m) => m.k === 'def' && m.kind === 'dawn') && ud.pS.mods.some((m) => m.k === 'atk' && m.kind === 'dawn');
+        ud._bNext = ud.bMoves[1]; ud.bcd = {};
+        ud.pS.mods.forEach((m) => { if (m.kind === 'dawn') m.dur = 2; });   // one turn left after this one, so only a strip could remove it
+        const ev63 = arenaTakeTurn(ud, 'guard');
+        ok("T63 Dawnbreaker's ward survives a parry", dawn1 && !!counterOf(ev63, 'parry') && ud.pS.mods.some((m) => m.k === 'def' && m.kind === 'dawn') && !ud.pS.mods.some((m) => m.k === 'def' && m.kind !== 'dawn'));
+        // T64 identity: an ult is an attack to the reads (never noStance); a Signature id or junk resolves to the weapon's
+        //     Signature; a duel refuses an earned one; battle start never reads the hunter's choice.
+        const fams = ULT_ORDER.filter((u) => u !== 'signature').every((u) => _arMoveFamily(_arUltimateFor({ _ultId: u, _ultShadows: 0, pMoves: [lib('slash')] })) === 'attack');
+        const ids = _arUltId({ _ultId: 'bogus', pMoves: [lib('slash')] }) === 'verdict' && _arUltId({ _ultId: 'starfall', pMoves: [lib('slash')] }) === 'verdict' &&
+          _arUltId({ _ultId: 'feast', pMoves: [lib('arcanebolt')] }) === 'feast' && _arUltId({ _ultId: 'signature', pMoves: [lib('arcanebolt')] }) === 'starfall';
+        const tpe = arenaStartBattle(M(YOU(), FOE()), 220); tpe._pvp = true; tpe._surge = 1; tpe._ultId = 'feast';
+        let pure = true, prevChoice = null;
+        try { prevChoice = localStorage.getItem(ULT_CHOICE_KEY); localStorage.setItem(ULT_CHOICE_KEY, 'storm'); pure = arenaStartBattle(M(YOU(), FOE()), 221)._ultId === 'signature'; } catch (_) {}
+        try { if (prevChoice == null) localStorage.removeItem(ULT_CHOICE_KEY); else localStorage.setItem(ULT_CHOICE_KEY, prevChoice); } catch (_) {}
+        ok('T64 ults read as attacks; ids resolve; a duel refuses; battle start is pure', fams && ids && arenaTakeTurn(tpe, 'ultimate') === null && pure);
+        // T65 the two hold ultimates know their moment.
+        const fu = ASCENT_ULTIMATES.feast.use, ru = ASCENT_ULTIMATES.reaper.use;
+        ok('T65 Feast waits for 60% health, Reaper for 35% foe health', fu({ pHP: 60, pMax: 100 }) && !fu({ pHP: 61, pMax: 100 }) && ru({ bHP: 35, bMax: 100 }) && !ru({ bHP: 36, bMax: 100 }));
       }
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
@@ -15496,7 +15720,11 @@
         .slice(0, opts.shadows | 0).forEach((id) => { armyPct += _shPct(id); });
     }
     const armyM = 1 + armyPct / 100;
-    const player = { name: 'Hunter', attack: prof.attack * armyM, defense: prof.defense * armyM, edge: prof.edge * armyM, stats: sline, isBot: false };
+    const player = { name: 'Hunter', attack: prof.attack * armyM, defense: prof.defense * armyM, edge: prof.edge * armyM, stats: sline, isBot: false,
+      shadows: opts.shadows | 0 };   // W1168 — Arise reads the marching count (combat reads only the stats above)
+    // W1168 — opts.ult: an ultimate id ('signature' default, 'none' = never fires); opts.ultFire 'smart' (its use())
+    // or 'full' (fires the moment the bar fills).
+    const ultMode = opts.ult || 'signature', ultFire = opts.ultFire || 'smart';
     const playerArch = _arenaArchOf(player);
     let kitIds = (WEAPON_MOVES[weaponId] || WEAPON_MOVES.unarmed).slice();
     // W757 -- the 'max' invest tier includes maxed relic upgrades, which now
@@ -15512,7 +15740,7 @@
       if (opts.foeDefMul) opp.defense *= opts.foeDefMul;    // experiment knob: HP / fight length
       opp.power = opp.attack + opp.defense + opp.edge;
       foePower = opp.power;
-      const sess = arenaStartBattle({ floor: floor, advances: false, player: player, bot: opp }, seed0 + i);
+      const sess = arenaStartBattle({ floor: floor, advances: false, player: player, bot: opp, ultId: (ultMode !== 'none' && ultMode !== 'signature') ? ultMode : undefined }, seed0 + i);
       sess.pMoves = kit;          // headless: override the closure-read (empty) kit
       sess.pAttuned = attuned;    // load-bearing: real attunement, not the headless default 1
       let g = 0;
@@ -15529,8 +15757,14 @@
           const fam = _arMoveFamily, off = (fn) => sess.pMoves.find((x) => !(sess.cd[x.id] > 0) && fn(x)) || null;
           const stunned = sess.pS.stun > 0, sg = sess._surge || 0;
           const warded = sess.pS.mods.some((x) => x.k === 'def' && x.mag < 0) || sess.pS.guard > 0;
-          const canPay = sg >= SURGE_GUARD_COST;   // the Surge parry is for heavies only
-          if (sg >= 1 && !stunned) mv = { id: 'ultimate' };
+          const canPay = sg >= SURGE_GUARD_COST && sg < 1;   // the Surge parry is for heavies only; W1168: the screen offers none at full
+          // W1168 — a held ultimate waits for its moment (use) until its patience runs out, counted from the first full turn.
+          if (sg < 1) sess._fullSince = null; else if (sess._fullSince == null) sess._fullSince = sess.turn;
+          if (sg >= 1 && !stunned && ultMode !== 'none') {
+            const U = ASCENT_ULTIMATES[_arUltId(sess)];
+            if (ultFire === 'full' || !U.use || U.use(sess) || (sess.turn - sess._fullSince) >= (U.patience || 0)) mv = { id: 'ultimate' };
+          }
+          if (mv) { /* the ultimate */ }
           else if (policy === 'parry-only') { if (has('HEAVY') && !warded) mv = off((x) => fam(x) === 'guard' || fam(x) === 'cleanse'); }
           else if (policy === 'turtle') mv = off((x) => fam(x) === 'guard' || fam(x) === 'cleanse' || fam(x) === 'dodge');
           else if (!stunned) {
@@ -15573,6 +15807,7 @@
       ultShare: +(ultFights / n).toFixed(3), ultTurnMedian: med(ultTurnArr),   // W1135 — fights that reached the ultimate, and when
       readsPerFight: +(readTurns / n).toFixed(2), parriesPerFight: +(parryTurns / n).toFixed(2), surgeGuardsPerFight: +(sgTurns / n).toFixed(2),   // W1139
       policy: opts.policy || 'reader',
+      ult: ultMode, ultFire: ultFire,   // W1168
       effStats: sline,
     };
   }
@@ -15594,6 +15829,7 @@
       simAscent:       _arenaSimAscent,        // W291 balance-verification sim (max build vs floor N)
       _battle:         { start: arenaStartBattle, turn: arenaTakeTurn, finalize: arenaFinalizeBattle,
                          intent: _arPrimeIntent, intentWord: _arIntentWord, moveWord: _arMoveWord, ultimate: _arUltimateFor,   // W1135
+                         ults: () => ASCENT_ULTIMATES, ultOrder: () => ULT_ORDER.slice(), ultUnlocked: ultUnlocked, ultEquipped: getEquippedUltimate, ultEquip: setEquippedUltimate, ultsLive: ultsLive,   // W1168
                          counter: _arReadCounter, rail: _arBossRail, family: _arMoveFamily, patterns: () => ASCENT_BOSS_PATTERNS,   // W1139
                          consts: () => ({ READ_SURGE, SURGE_GUARD_COST, RIPOSTE_POWER, PARRY_RESETS_CD, REFLECT_MAG }),
                          tune: (o) => { o = o || {}; if (o.READ_SURGE != null) READ_SURGE = o.READ_SURGE; if (o.SURGE_GUARD_COST != null) SURGE_GUARD_COST = o.SURGE_GUARD_COST; if (o.RIPOSTE_POWER != null) RIPOSTE_POWER = o.RIPOSTE_POWER; if (o.PARRY_RESETS_CD != null) PARRY_RESETS_CD = o.PARRY_RESETS_CD; if (o.REFLECT_MAG != null) REFLECT_MAG = o.REFLECT_MAG; },   // dev-only: the balance sim's dials
@@ -16519,6 +16755,7 @@
     // W243 — this tap is the user gesture that unlocks audio (never autoplay):
     // resume the context + decode the music slots here, before the first beat.
     try { _audUnlock(); _audLoadMusic(); } catch (_) {}
+    try { _arMatchup.ultId = _ultForFight(); } catch (_) {}   // W1168 — the chosen ultimate (Signature while the roster is dark)
     _arSess = arenaStartBattle(_arMatchup);   // W231 — weapon-driven HP battle
     try { _arPrimeIntent(_arSess); } catch (_) {}   // W1135 — the foe's first move shows before you choose
     // W618 — the life is now committed: from this point a force-close counts as a loss.
@@ -17171,7 +17408,7 @@
     let h = '';
     S.mods.forEach((x) => {
       const n = x.dur > 0 ? '·' + x.dur : '';
-      if (x.k === 'dot') h += '<span class="ar-st burn">' + (x.kind === 'bleed' ? 'BLEED' : 'BURN') + n + '</span>';
+      if (x.k === 'dot') h += '<span class="ar-st burn">' + (x.kind === 'bleed' ? 'BLEED' : x.kind === 'hellfire' ? 'HELLFIRE' : 'BURN') + n + '</span>';   // W1168 — Hellfire names itself
       else if (x.k === 'atk') h += '<span class="ar-st ' + (x.mag > 0 ? 'up' : 'down') + '">ATK' + (x.mag > 0 ? '+' : '−') + n + '</span>';
       else if (x.k === 'def') h += '<span class="ar-st ' + (x.mag < 0 ? 'up' : 'down') + '">DEF' + (x.mag < 0 ? '+' : '−') + n + '</span>';
       else if (x.k === 'shred') h += '<span class="ar-st down">ARMOR−' + n + '</span>';
@@ -17425,7 +17662,7 @@
     if (word === 'HEAVY') {
       if (got.parry.length) parts.push(list(got.parry) + ' parries it: no damage, and you strike back.');
       if (got.sidestep.length) parts.push(list(got.sidestep) + ' sidesteps it.');
-      if ((s._surge || 0) >= SURGE_GUARD_COST) parts.push('Or spend two Surge segments to parry.');
+      if ((s._surge || 0) >= SURGE_GUARD_COST && (s._surge || 0) < 1) parts.push('Or spend two Surge segments to parry.');   // W1168 — never at full: UNLEASH stands there
       if (!parts.length) parts.push('Nothing of yours parries it this turn. Bank Surge for the next one.');
     } else if (word === 'CURSE') {
       if (got.reflect.length) parts.push(list(got.reflect) + ' reflects the curse back onto the foe.');
@@ -17485,6 +17722,8 @@
     const pc = el.querySelector('.parry .c'); if (pc) pc.textContent = '−' + Math.round(SURGE_GUARD_COST * 100) + '%';
     el.setAttribute('aria-label', ready ? 'Unleash your ultimate' : canParry ? 'Parry the heavy for ' + Math.round(SURGE_GUARD_COST * 100) + '% Surge' : 'Surge ' + Math.round(v * 100) + '%');
     const you = _pkbEl('pkb-spot-p'); if (you) you.classList.toggle('surged', ready);   // W1138 — the hunter glows while the Surge is ready
+    // W1169 — the chosen ultimate's name, and BEST NOW when one that waits (Feast, Reaper) meets its moment
+    try { const U = _arUltimateFor(s), un = el.querySelector('.ult .n'); if (un && un.textContent !== U.name) un.textContent = U.name; el.classList.toggle('best', ready && !!(U.use && U.use(s))); } catch (_) {}
     if (ready && !was) {
       segs.forEach((i) => { i.classList.remove('justfull'); void i.offsetWidth; i.classList.add('justfull'); });
       _pkbSurgeStrike(el);
@@ -17538,7 +17777,8 @@
   // UNLEASH: the cut-in, then the turn (the engine refuses it below full Surge or in a duel).
   function _pkbUnleash() {
     const s = _arSess; if (!s || s.done || s._pvp || _pkbBusy || (s._surge || 0) < 1) return;
-    _pkbTurnMv = { p: 'ultimate', b: (s._bNext && s._bNext.id) || null };   // W1141
+    const _ub = _PKB_ULT_BUFF[_arUltimateFor(s).ultId];
+    _pkbTurnMv = { p: _ub || 'ultimate', b: (s._bNext && s._bNext.id) || null, once: !!_ub };   // W1141 · W1169 — a ward / evasion ult wears that buff's visual
     _pkbLock(true);
     try { _audUnlock(); _audCue('ui_tap'); } catch (_) {}
     _pkbCutin(_arUltimateFor(s), () => {
@@ -17555,9 +17795,10 @@
     let avatar = ''; try { avatar = getAvatarSrc(); } catch (_) {}
     const nm = String(ult.name || ''), sp = nm.lastIndexOf(' ');
     const nmHtml = sp > 0 ? esc(nm.slice(0, sp)) + ' <i>' + esc(nm.slice(sp + 1)) + '</i>' : '<i>' + esc(nm) + '</i>';
-    const style = { melee: 'MELEE', magic: 'MAGIC', ranged: 'RANGED' }[ult.style] || '';
+    const style = ult.kind || { melee: 'MELEE', magic: 'MAGIC', ranged: 'RANGED' }[ult.style] || '';   // W1169 — the kind word (DRAIN, SWIFT, ...)
     const el = document.createElement('div');
-    el.className = 'pkb2-ovl pkb2-cutin';
+    el.className = 'pkb2-ovl pkb2-cutin' + (ult.tint && ASCENT_ULTIMATES[ult.ultId] && !ASCENT_ULTIMATES[ult.ultId].style ? ' has-tint' : '');
+    if (ult.tint) el.style.setProperty('--ult-c', ult.tint);   // W1169
     el.innerHTML = '<div class="lines"></div><div class="slab"></div>' +
       '<div class="por">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
       '<div class="name"><div class="k">ULTIMATE' + (style ? ' · ' + style : '') + '</div><div class="n">' + nmHtml + '</div></div>' +
@@ -18467,6 +18708,16 @@
     return { steps: S, T: 540, dur: 1300 };
   }
   // ── the ultimates (c: atk = hunter). T = the blow; the beat lands the number there. extra() = one tap-along echo. ──
+  // W1169 — the ultimate's sequence by id. The three Signatures keep theirs; the eight earned ones join _PKB_ULT_SEQ
+  // with the Claude Design handoff (W1170) and until then play the weapon's Signature (behind the dark flag anyway).
+  const _PKB_ULT_SEQ = {};
+  const _PKB_ULT_STYLE = { verdict: 'melee', starfall: 'magic', rain: 'ranged' };
+  const _PKB_ULT_BUFF = { dawnbreaker: 'bulwark', quicksilver: 'evade' };
+  function _pkbUltSeqFor(e, s, c) {
+    const id = e && e.ultId, fn = id && _PKB_ULT_SEQ[id];
+    if (fn) return fn(c);
+    return _pkbUltSeq(_PKB_ULT_STYLE[id] || _arUltStyle(s), c);
+  }
   function _pkbUltSeq(style, c) {
     const a = c.atk, f = c.def, d = c.d, S = [];
     const big = (tt, items, pose, tint) => S.push([tt, Object.assign({ wash: '#fff', light: null, vfxClear: true, vfxAdd: items, cam: 'c-shake2', freeze: true }, _mFL(f, tint || 'white'), _mPO(f, pose || 'p-crush'))], [tt + 240, { freeze: false }]);
@@ -18740,7 +18991,7 @@
         if (ctx) {
           const held = e.side === 'p' && _pkbHeldMv && _pkbHeldMv === _pkbMvId(e);
           if (e.side === 'p') _pkbHeldMv = null;
-          seq = e.ult ? _pkbUltSeq(_arUltStyle(s), ctx) : _pkbCompose(row, ctx, { land: true, crit: !!e.crit, kill: willKO, held: !!held });
+          seq = e.ult ? _pkbUltSeqFor(e, s, ctx) : _pkbCompose(row, ctx, { land: true, crit: !!e.crit, kill: willKO, held: !!held });
           _pkbMvPlay(seq, ctx, { keepPose: !!held, ult: !!e.ult });
           windup = seq.T;
           if (atk) atk.classList.remove('telegraph');
@@ -18902,7 +19153,7 @@
       try {
         const selfLine = !cau && tx.indexOf('readied') === -1 && (tx.indexOf('braces') !== -1 || tx.indexOf('guards') !== -1 || tx.indexOf('refuses') !== -1 || tx.indexOf('attack up') !== -1 || tx.indexOf('evasive') !== -1 || tx.indexOf('bulwark') !== -1);
         const mid = selfLine ? _pkbTurnMv[e.side] : null, r = mid && _PKB_MV[mid];
-        if (r && r.stance) { const ctx = _pkbMvCtx(e.side); if (ctx) { _pkbMvPlay(_pkbCompose(r, ctx, {}), ctx, {}); mrow = r; } }
+        if (r && r.stance) { const ctx = _pkbMvCtx(e.side); if (ctx) { _pkbMvPlay(_pkbCompose(r, ctx, {}), ctx, {}); mrow = r; } if (e.side === 'p' && _pkbTurnMv.once) _pkbTurnMv.p = null; }   // W1169 — an ultimate's ward plays its stance once
       } catch (_) {}
       if (!mrow) try {
         const spot = _pkbEl('pkb-spot-' + e.side);
@@ -59097,6 +59348,7 @@
     inks: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3s6 7 6 11.5A6 6 0 0 1 6 14.5C6 10 12 3 12 3Z"/></svg>',
     pins: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8.6 14.3 7 21l5-3 5 3-1.6-6.7"/></svg>',   // W1156 — a medal
     auras: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.3 6.3 2.2-6.3 2.2L12 19l-2.2-6.3-6.3-2.2 6.3-2.2z"/></svg>',
+    ults: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.5h6L9.5 22 19 10h-6.2z"/></svg>',   // W1169 — a bolt (the Surge)
   };
   function _wxRing(p, sw, r, vb) {
     const c = vb / 2;
@@ -59111,6 +59363,7 @@
   let _wx = null;   // the live Wardrobe instance while the sheet is open
   function _wxMount(sheet) {
     const el = sheet;
+    const ULT_ON = (function () { try { return ultsLive(); } catch (_) { return false; } })();   // W1169 — the Ultimates tab, only once the roster is live
     el.classList.add('wx'); el.classList.toggle('wx-rm', WX_RM);
     el.innerHTML =
       '<div class="wx-grab"></div><div class="wx-head"><span class="wx-k">THE WARDROBE</span><span class="wx-peek"><span class="wx-art"></span></span>' +
@@ -59120,22 +59373,28 @@
         '<button class="wx-tab" data-tab="frames" role="tab" type="button">' + WX_IC.frames + 'Frames</button>' +   // W1143 — three more slots
         '<button class="wx-tab" data-tab="inks" role="tab" type="button">' + WX_IC.inks + 'Inks</button>' +
         '<button class="wx-tab" data-tab="auras" role="tab" type="button">' + WX_IC.auras + 'Auras</button>' +
-        '<button class="wx-tab" data-tab="pins" role="tab" type="button">' + WX_IC.pins + 'Pins</button></div>' +   // W1156
-      '<div class="wx-vp"><div class="wx-track wx-track5 wx-track6"><section class="wx-pane" data-pane="looks"></section><section class="wx-pane" data-pane="bgs"></section>' +
-        '<section class="wx-pane" data-pane="frames"></section><section class="wx-pane" data-pane="inks"></section><section class="wx-pane" data-pane="auras"></section><section class="wx-pane" data-pane="pins"></section></div></div>' +
+        '<button class="wx-tab" data-tab="pins" role="tab" type="button">' + WX_IC.pins + 'Pins</button>' +   // W1156
+        (ULT_ON ? '<button class="wx-tab" data-tab="ults" role="tab" type="button">' + WX_IC.ults + 'Ultimates</button>' : '') + '</div>' +   // W1169
+      '<div class="wx-vp"><div class="wx-track wx-track5 wx-track6' + (ULT_ON ? ' wx-track7' : '') + '"><section class="wx-pane" data-pane="looks"></section><section class="wx-pane" data-pane="bgs"></section>' +
+        '<section class="wx-pane" data-pane="frames"></section><section class="wx-pane" data-pane="inks"></section><section class="wx-pane" data-pane="auras"></section><section class="wx-pane" data-pane="pins"></section>' +
+        (ULT_ON ? '<section class="wx-pane" data-pane="ults"></section>' : '') + '</div></div>' +
       '<div class="wx-dt"><div class="wx-dt-back"></div><div class="wx-dt-panel"><div class="wx-dt-top"><span class="wx-grab"></span><button class="wx-xb wx-dt-x" type="button" aria-label="Close"><span>' + WX_IC.x + '</span></button></div>' +
         '<div class="wx-pager"><div class="wx-pgt"></div></div><div class="wx-dots"></div></div></div>';
     const $ = function (r, s) { return r.querySelector(s); }, $$ = function (r, s) { return Array.prototype.slice.call(r.querySelectorAll(s)); };
     const vp = $(el, '.wx-vp'), track = $(el, '.wx-track'), ind = $(el, '.wx-tab-ind'), pL = $(el, '[data-pane=looks]'), pB = $(el, '[data-pane=bgs]'),
       pF = $(el, '[data-pane=frames]'), pI = $(el, '[data-pane=inks]'), pA = $(el, '[data-pane=auras]'), pP = $(el, '[data-pane=pins]'),   // W1143 / W1156
       dt = $(el, '.wx-dt'), panel = $(el, '.wx-dt-panel'), pager = $(el, '.wx-pager'), pgt = $(el, '.wx-pgt'), dots = $(el, '.wx-dots'), peek = $(el, '.wx-peek');
-    const TABS = ['looks', 'bgs', 'frames', 'inks', 'auras', 'pins'], NT = TABS.length, PANE = { looks: pL, bgs: pB, frames: pF, inks: pI, auras: pA, pins: pP }, ixOf = function (t) { return Math.max(0, TABS.indexOf(t)); };   // W1143 — the track is NT panes wide (W1156: six)
+    const pU = $(el, '[data-pane=ults]');   // W1169 — null while the roster is dark
+    const TABS = ['looks', 'bgs', 'frames', 'inks', 'auras', 'pins'].concat(ULT_ON ? ['ults'] : []), NT = TABS.length, PANE = { looks: pL, bgs: pB, frames: pF, inks: pI, auras: pA, pins: pP, ults: pU }, ixOf = function (t) { return Math.max(0, TABS.indexOf(t)); };   // W1143 — the track is NT panes wide (W1156: six; W1169: seven with the Ultimates)
     const SLOT_TAB = { frame: 'frames', ink: 'inks', aura: 'auras', pin: 'pins' }, TAB_SLOT = { frames: 'frame', inks: 'ink', auras: 'aura', pins: 'pin' };
     let newId = null; try { newId = localStorage.getItem(WX_NEW_KEY) || null; } catch (_) {}
     const S = { look: getEquippedSkin() || '', bg: _cardBgEquipped() || 'basic', tab: 'looks', newId: newId, frame: _wxSlotWorn('frame'), ink: _wxSlotWorn('ink'), aura: _wxSlotWorn('aura') };   // W1143
     if (S.look && !_skinFileAllowed(S.look)) S.look = '';
     let st = _wxStats(), me = _wxMe();
     S.pin = _pinsWorn(st);   // W1156 — the worn pins (an array, two at most)
+    let uCtx = ULT_ON ? _ultUnlockCtx() : null;   // W1169 — what the hunter has earned (kills by rank, shadows, the summit)
+    S.ult = ULT_ON ? getEquippedUltimate(uCtx) : 'signature';
+    const ulSeen0 = ULT_ON ? ultSeenList() : [];   // seen before this visit: the NEW chips stay up while the tab is open
     let tabAnims = [], dragPct = null, suppress = false, ringA = 0, pages = [], cur = -1, raf = 0, kindNow = 'sk';
     _wxTint(el, 'rk', WX_RK[me.rank] || WX_RK.E);
 
@@ -59321,6 +59580,53 @@
       };
     };
 
+    /* ---------- W1169 · ULTIMATES (earned, then chosen; the battle fires the chosen one at full Surge) ---------- */
+    const ulInfo = function (id) {
+      const u = ASCENT_ULTIMATES[id === 'signature' ? ultSignatureId() : id] || ASCENT_ULTIMATES.verdict;
+      return id === 'signature' ? { n: u.name, kind: u.kind, tint: u.tint, eff: 'One huge blow.', how: 'Changes with your weapon.' }
+        : { n: u.name, kind: u.kind, tint: u.tint, eff: u.eff, how: u.how };
+    };
+    const ulState = function (id) { return S.ult === id ? 'worn' : ultUnlocked(id, uCtx) ? 'earned' : 'locked'; };
+    const ulTile = function (id) {
+      const state = ulState(id), I = ulInfo(id), fresh = id !== 'signature' && state !== 'locked' && ulSeen0.indexOf(id) === -1;
+      const tx = state === 'worn' ? 'EQUIPPED' : state === 'earned' ? (id === 'signature' ? 'DEFAULT' : 'EARNED') : ultCondShort(id);
+      const seal = state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : state === 'worn' ? '<span class="wx-seal ok">' + WX_IC.check + '</span>' : '';
+      return '<button type="button" class="wx-bt wx-sl wx-sl-ult is-' + state + '" data-ul="' + id + '" style="' + _wxTintStyle('rc', I.tint) + '">' +
+        '<span class="wx-sl-prev">' + ultEmblem(id, 44) + '</span><span class="wx-bt-tx"><span class="wx-bt-nm">' + esc(I.n) + '</span><span class="wx-bt-st">' + esc(tx) + '</span></span>' + seal +
+        (fresh ? '<span class="wx-chip-new">NEW</span>' : '') + '</button>';
+    };
+    const ulHero = function () {
+      const I = ulInfo(S.ult);
+      return '<div class="wx-hl wx-hl-ult" style="' + _wxTintStyle('mc', I.tint) + '"><div class="wx-ult-hero">' + ultEmblem(S.ult, 132) + '</div>' +
+        '<div class="wx-hl-nm">' + esc(I.n) + '</div><div class="wx-hl-sub"><span class="wx-rar" style="' + _wxTintStyle('c', I.tint) + '">' + esc(I.kind) + '</span></div>' +
+        '<div class="wx-hl-how">' + esc(I.eff) + '</div></div>';
+    };
+    function renderUlts() {
+      if (!pU) return;
+      const earned = ULT_ORDER.filter(function (id) { return ultUnlocked(id, uCtx); });
+      pU.innerHTML = ulHero() + '<div class="wx-sec-h"><span>The Ultimates</span><i></i><b><em>' + earned.length + '</em> / ' + ULT_ORDER.length + '</b></div>' +
+        '<div class="wx-slgrid wx-ulgrid">' + ULT_ORDER.map(ulTile).join('') + '</div>';
+      ultMarkSeen(earned.filter(function (id) { return id !== 'signature'; }));   // seen now; the chips stay up until the next visit
+    }
+    function wearUlt(id) {
+      if (S.ult === id) { bump($(pU, '.wx-ult-hero')); return; }
+      if (!setEquippedUltimate(id)) return;
+      S.ult = id;
+      renderUlts(); flashTile($(pU, '[data-ul="' + id + '"]'));
+      try { _hapticTick('MEDIUM'); } catch (_) {}
+    }
+    // every tile opens its page (the effect and the use matter before you choose); an earned one has EQUIP there
+    const ulPage = function (it) {
+      const id = it.id, state = ulState(id), I = ulInfo(id);
+      const foot = state === 'locked' ? '<div class="wx-ult-cond">' + WX_IC.lock + esc(ultCondText(id)) + '</div>'
+        : state === 'worn' ? '<div class="wx-ult-on">' + WX_IC.check + 'EQUIPPED</div>'
+        : '<button type="button" class="wx-ult-eq" data-ulequip="' + id + '">EQUIP</button>';
+      return '<article class="wx-pg wx-pg-sl wx-pg-ult is-' + state + '" data-p="' + (state === 'locked' ? 0 : 100) + '" style="' + _wxTintStyle('rc', I.tint) + '"><div class="wx-ps">' + ultEmblem(id, 120) +
+        (state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : '') + '</div>' +
+        '<div class="wx-pg-rar"><span class="wx-rar" style="' + _wxTintStyle('c', I.tint) + '">' + esc(I.kind) + '</span></div><h3 class="wx-pg-nm">' + esc(I.n) + '</h3>' +
+        '<div class="wx-ms"><div class="wx-ms-c">' + esc(I.eff) + '</div><div class="wx-ult-how">' + esc(I.how) + '</div>' + foot + '</div></article>';
+    };
+
     /* ---------- feedback ---------- */
     function swapText(n, t, mid) {
       if (!n) return;
@@ -59425,9 +59731,10 @@
       const clean = function () { d.remove(); f.src.style.visibility = ''; f.dst.style.visibility = ''; };
       an.onfinish = function () { clean(); f.dst.animate([{ filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }], { duration: 440 }); }; an.oncancel = clean; return an;
     }
-    const doneR = {}; const ensure = function (t) { if (doneR[t]) return; doneR[t] = 1; if (t === 'looks') renderLooks(); else if (t === 'bgs') renderBgs(); else renderSlot(TAB_SLOT[t]); };
+    const doneR = {}; const ensure = function (t) { if (doneR[t]) return; doneR[t] = 1; if (t === 'looks') renderLooks(); else if (t === 'bgs') renderBgs(); else if (t === 'ults') renderUlts(); else renderSlot(TAB_SLOT[t]); };   // W1169 — the Ultimates
     function setTab(t, o) {
       o = o || {};
+      if (TABS.indexOf(t) === -1) return;   // W1169 — e.g. the Ultimates while the roster is dark
       if (t === S.tab && !o.force && !o.instant) return;
       ensure(t);
       const from = S.tab, pair = (from === 'looks' && t === 'bgs') || (from === 'bgs' && t === 'looks');   // W1143 — five panes; the portrait flies only between Looks and Backgrounds
@@ -59549,9 +59856,9 @@
     function openDetail(kind, id, o) {
       o = o || {}; kindNow = kind;
       const slot = kind.indexOf('sl:') === 0 ? kind.slice(3) : null;   // W1143
-      pages = kind === 'sk' ? EARN_SKINS.filter(function (s) { return skState(s) === 'locked'; }) : kind === 'bg' ? WX_BGS.filter(function (b) { return bgState(b.id) === 'locked'; }) : WX_SLOTS[slot].list.filter(function (it) { return slState(slot, it) === 'locked'; });
+      pages = kind === 'ul' ? ULT_ORDER.map(function (id) { return { id: id }; }) : kind === 'sk' ? EARN_SKINS.filter(function (s) { return skState(s) === 'locked'; }) : kind === 'bg' ? WX_BGS.filter(function (b) { return bgState(b.id) === 'locked'; }) : WX_SLOTS[slot].list.filter(function (it) { return slState(slot, it) === 'locked'; });
       const idx = Math.max(0, pages.findIndex(function (x) { return (kind === 'sk' ? x.key : x.id) === id; }));
-      pgt.innerHTML = pages.map(kind === 'sk' ? skPage : kind === 'bg' ? bgPage : slPage(slot)).join(''); cur = -1;
+      pgt.innerHTML = pages.map(kind === 'ul' ? ulPage : kind === 'sk' ? skPage : kind === 'bg' ? bgPage : slPage(slot)).join(''); cur = -1;
       if (o.instant) dt.classList.add('noanim');
       pager.classList.add('dragging'); pgt.style.transform = 'translateX(' + (-idx * 100) + '%)'; void pgt.offsetWidth; pager.classList.remove('dragging');
       dt.classList.add('open'); panel.style.transform = ''; setPage(idx, o.instant);
@@ -59588,6 +59895,7 @@
       const t = e.target;
       if (t.closest('.wx-dt')) {
         if (t.closest('.wx-dt-x') || t.classList.contains('wx-dt-back')) closeDetail();
+        const ue = t.closest('[data-ulequip]'); if (ue) { closeDetail(); wearUlt(ue.dataset.ulequip); return; }   // W1169 — EQUIP on an ultimate's page
         const nb = t.closest('.wx-dots [data-i]'); if (nb && !nb.disabled) goPage(+nb.dataset.i);
         return;
       }
@@ -59597,6 +59905,7 @@
       const l = t.closest('[data-lk]'); if (l) { wearLook(l.dataset.lk); return; }
       const pr = t.closest('[data-pinrm]'); if (pr) { wearSlot('pin', pr.dataset.pinrm); return; }   // W1161 — the × on a worn pin takes it off
       const sl = t.closest('[data-sl]'); if (sl) { onSlot(sl.dataset.sl, sl.dataset.id); return; }   // W1143
+      const ul = t.closest('[data-ul]'); if (ul) { openDetail('ul', ul.dataset.ul); return; }   // W1169 — every ultimate opens its page
       const b = t.closest('[data-bg]'); if (b) onBg(b.dataset.bg);
     };
     el.addEventListener('click', el._wxClick);
@@ -59611,8 +59920,9 @@
         const bg = _cardBgEquipped() || 'basic'; if (bg !== S.bg) { S.bg = bg; if (doneR.bgs) renderBgs(); } else if (doneR.bgs) renderBgTiles();
         ['frame', 'ink', 'aura'].forEach(function (s) { S[s] = _wxSlotWorn(s); if (doneR[SLOT_TAB[s]]) renderSlot(s); });   // W1143 — fresh numbers, fresh states
         S.pin = _pinsWorn(st); if (doneR.pins) renderSlot('pin');   // W1156
+        if (ULT_ON) { uCtx = _ultUnlockCtx(); S.ult = getEquippedUltimate(uCtx); if (doneR.ults) renderUlts(); }   // W1169
       },
-      state: function () { return { tab: S.tab, look: S.look, bg: S.bg, frame: S.frame, ink: S.ink, aura: S.aura, pins: S.pin.slice(), detail: dt.classList.contains('open') ? kindNow : null, pages: pages.length }; },
+      state: function () { return { tab: S.tab, look: S.look, bg: S.bg, frame: S.frame, ink: S.ink, aura: S.aura, pins: S.pin.slice(), ult: S.ult, tabs: TABS.slice(), detail: dt.classList.contains('open') ? kindNow : null, pages: pages.length }; },
     };
   }
   // Re-paint the open Wardrobe after ownership / equips change elsewhere (no-op when closed).
@@ -77078,6 +77388,9 @@
       'hb_daily_insight_last_shown',
       'hb_bodyweight',
       'hb_cardio_renamed',
+      // W1169 — the chosen ultimate and the ones already seen in the Wardrobe (the unlocks themselves are derived)
+      'hb_ult_choice',
+      'hb_ult_seen',
       // Cloud-sync metadata itself (so the destination device knows
       // when the snapshot was authored / when it last synced)
       LS_KEY_LAST_BACKUP,
