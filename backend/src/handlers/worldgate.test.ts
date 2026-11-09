@@ -118,6 +118,7 @@ interface WgState {
   friends: string[];        // accepted friends of 'u-me'
   gate: { hp: number; status: string; kill_json?: string | null; slain_at?: number | null };
   claims?: Set<string>;     // W975 — user ids that claimed this week
+  days?: number;            // W1134 — my app days this week (default 7: an active hunter, so the rule never hides a strike)
   rallies: Set<string>;     // `${user}|${day}`
   calls: { sql: string; binds: unknown[] }[];
 }
@@ -143,6 +144,9 @@ function wgEnv(st: WgState): Env {
               return { hunters: st.merged.length, guild_steps: g.reduce((a, r) => a + r.steps, 0), guild_hunters: g.length, above: st.merged.filter((r) => r.steps > mine).length, wall_count: st.merged.filter((r) => r.steps >= floor).length };
             }
             if (/SELECT sent FROM world_gate_rallies/.test(sql)) return st.rallies.has(`${binds[0]}|${binds[1]}`) ? { sent: 1 } : null;
+            // W1134 — the two-day rule's count. Without this the mock said 0 days, and every read-side test broke the
+            // moment the real clock reached the week of 2026-11-08 (CI red on 2026-11-08).
+            if (/FROM app_open_counts WHERE user_id = \?1/.test(sql)) return { n: st.days == null ? 7 : st.days };
             return null;
           },
           all: async () => {
@@ -225,13 +229,24 @@ describe('W1134 — the two-day rule', () => {
   it('under two days a hunter strikes nothing: their steps wait as pending_steps', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-10T20:00:00Z'));   // the week of 2026-11-08
     try {
-      const st = wgFresh();
-      const j = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), meS)).json()) as Record<string, any>;
+      const st = wgFresh(); st.days = 0;
+      const j =(await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), meS)).json()) as Record<string, any>;
       expect(j.days_needed).toBe(2);
       expect(j.my_days).toBe(0);
       expect(j.my_damage).toBe(0);
       expect(j.pending_steps).toBe(4000);
       expect(j.my_rank).toBeNull();
+    } finally { vi.useRealTimers(); }
+  });
+  it('two days in the app and the steps strike (one day still waits)', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-10T20:00:00Z'));   // the week of 2026-11-08
+    try {
+      const two = wgFresh(); two.days = 2;
+      const j2 = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(two), meS)).json()) as Record<string, any>;
+      expect(j2.my_days).toBe(2); expect(j2.my_damage).toBe(4000); expect(j2.pending_steps).toBe(0);
+      const one = wgFresh(); one.days = 1;
+      const j1 = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(one), meS)).json()) as Record<string, any>;
+      expect(j1.my_damage).toBe(0); expect(j1.pending_steps).toBe(4000);
     } finally { vi.useRealTimers(); }
   });
   it('weeks before the rule are untouched: no days needed, nothing pending', async () => {
