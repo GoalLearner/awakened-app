@@ -86,16 +86,26 @@ async function intoFight(page: Page, floor: number) {
 test.use({ viewport: { width: 390, height: 844 } });
 
 test.describe('W1168/W1169 — earned ultimates', () => {
-  test('dark by default: six Wardrobe tabs and every fight on the Signature, whatever is stored', async ({ page }) => {
+  test('live (W1171): seven Wardrobe tabs without the preview switch, and the fight fires the chosen one', async ({ page }) => {
     await boot(page, 37, Object.assign({}, EARNED, { hb_dev_ults: '0', hb_ult_choice: 'feast' }));
-    expect(await page.evaluate(() => (window as any).Arena._battle.ultsLive())).toBe(false);
+    expect(await page.evaluate(() => (window as any).Arena._battle.ultsLive())).toBe(true);
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);
-    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveCount(0);
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(7);
+    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveCount(1);
     await page.evaluate(() => { const b = document.getElementById('wd-close'); if (b) (b as HTMLElement).click(); });
     await intoFight(page, 37);
-    expect(await page.evaluate(() => (window as any).Arena._live.sess()._ultId)).toBe('signature');
-    expect(['verdict', 'starfall', 'rain']).toContain(await page.evaluate(() => (window as any).Arena._battle.ultimate((window as any).Arena._live.sess()).ultId));
+    expect(await page.evaluate(() => (window as any).Arena._live.sess()._ultId)).toBe('feast');
+  });
+  test('an earned ultimate that misses plays its own ending, not the plain whiff', async ({ page }) => {
+    await boot(page, 37, Object.assign({}, EARNED, { hb_ult_choice: 'hellfire' }));
+    await intoFight(page, 37);
+    // force the miss: a perfect dodge on the foe for this turn (the Hellfire blow has no pierce)
+    await page.evaluate(() => { const s = (window as any).Arena._live.sess(); s._surge = 1; s.bS.mods.push({ k: 'dodge', kind: 'evade', mag: 0.5, dur: 2 }); s.rng = () => 0.001; (window as any).Arena._live.paint(); });
+    await page.locator('#pkb-surge').click();
+    await expect(page.locator('#arena-body .pkb2-cutin')).toBeVisible();
+    await expect(page.locator('#arena-body .pkb2-cutin')).toHaveCount(0, { timeout: 4000 });
+    // its miss ending mounts the rift and the fissure on the stage (the plain whiff draws neither)
+    await expect(page.locator('#pkb-stage .pkb-mvfxd .u-fis')).toHaveCount(1, { timeout: 3000 });
   });
 
   test('the Ultimates tab: earned from kills and a shadow, locked ones name their condition, EQUIP wears one, NEW clears', async ({ page }) => {

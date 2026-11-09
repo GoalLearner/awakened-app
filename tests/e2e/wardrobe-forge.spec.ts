@@ -59,7 +59,7 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
   test('five tabs; each slot opens on its default; floor 50 earns Runebound, Frost and Gold Motes, which wear in one tap', async ({ page }) => {
     await boot(page, 50);
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);   // W1156 — Pins joined
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(7);   // W1156 — Pins joined · W1171 — Ultimates
     await expect(sheet(page).locator('.wx-tab').nth(2)).toHaveText(/Frames/);
     // FRAMES
     await tab(page, 'frames').click();

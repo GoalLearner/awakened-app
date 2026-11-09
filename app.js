@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1170'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1171'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -14717,7 +14717,7 @@
   //  • scale      — Arise: + per × marching shadows (capped).
   // The move id stays 'ultimate' (the turn API is unchanged); the move carries ultId. Battle start never reads the
   // user's choice: the real fight's call site fills m.ultId (only while ultsLive()), the sim fills it from opts.ult.
-  const ULTS_EARNED_LIVE = false;   // flips with the Claude Design sequences (the handoff port); hb_dev_ults = '1' previews it
+  const ULTS_EARNED_LIVE = true;    // W1171 — live with the Claude Design sequences (handoff 9); was false through W1168-W1170
   const ASCENT_ULTIMATES = {
     verdict:  { name: 'Sundering Verdict', kind: 'MELEE', tint: '#f5b842',  style: 'melee',  gl: 'sword',  power: 2.6, acc: 0.99, cd: 0, desc: 'Everything the climb taught you, in one blow.' },
     starfall: { name: 'Starfall',          kind: 'MAGIC', tint: '#7dd3fc',  style: 'magic',  gl: 'magic',  power: 2.6, acc: 0.99, cd: 0, desc: 'The sky comes down on one foe.' },
@@ -14834,26 +14834,39 @@
     try { localStorage.setItem(ULT_SEEN_KEY, JSON.stringify(have.concat(add))); } catch (_) {}
     _w2Sync('ult-seen');
   }
-  // Placeholder emblems until the Claude Design set lands (the handoff port): one glyph per kind on the ult's tint.
-  const _ULT_GLYPH = {
-    MELEE: '<path d="M20 6l3 11 11 3-11 3-3 11-3-11-11-3 11-3z"/>',
-    MAGIC: '<path d="M20 7l2.6 8 8.4.2-6.7 5 2.4 8.1L20 23.4l-6.7 4.9 2.4-8.1-6.7-5 8.4-.2z"/>',
-    RANGED: '<path d="M9 31L29 11M29 11l-7 1M29 11l-1 7M9 31l4-1M9 31l1-4" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
-    DRAIN: '<path d="M24 8a12 12 0 1 0 8 19 10 10 0 1 1-8-19z"/><path d="M20 20c0 3 2 5 2 7a2 2 0 0 1-4 0c0-2 2-4 2-7z"/>',
-    SWIFT: '<path d="M8 12l9 8-9 8M18 12l9 8-9 8" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
-    FIRE: '<path d="M20 6c1 6 8 9 8 17a8 8 0 0 1-16 0c0-4 2-6 3-8 1 3 3 4 3 4 0-5 1-9 2-13z"/>',
-    BLADES: '<path d="M20 5l2 11-2 2-2-2zM35 20l-11 2-2-2 2-2zM20 35l-2-11 2-2 2 2zM5 20l11-2 2 2-2 2z"/>',
-    QUAKE: '<path d="M6 26h28M12 26l3-6 3 4 3-9 3 7 3-3 3 7" fill="none" stroke-width="2.4" stroke-linejoin="round"/>',
-    EXECUTE: '<path d="M10 33L24 11M24 11c4-3 9-3 11 1-5-1-8 0-11 3" fill="none" stroke-width="2.6" stroke-linecap="round"/>',
-    SHADOWS: '<circle cx="13" cy="15" r="3.4"/><circle cx="27" cy="15" r="3.4"/><circle cx="20" cy="13" r="4"/><path d="M7 31c0-6 3-9 6-9s6 3 6 9zM21 31c0-6 3-9 6-9s6 3 6 9zM13 32c0-7 3-11 7-11s7 4 7 11z"/>',
-    WARD: '<path d="M6 27h28"/><path d="M11 27a9 9 0 0 1 18 0z"/><path d="M20 7v4M9 12l3 3M31 12l-3 3" fill="none" stroke-width="2.2" stroke-linecap="round"/>',
+  // W1171 — the eleven emblems from the Claude Design handoff (ult-emblems.jsx): one family — a dark well, a tinted ring
+  // with four diamond mounts (the frames' language), one stroked glyph. Locked: the same disc dimmed to slate and
+  // sealed with the Wardrobe's hex lock. Keyed by the handoff's ids; ULT_EM_ID maps ours onto them.
+  const _uEmStar = (x, y, s) => 'M' + x + ' ' + (y - s) + ' L' + (x + s * 0.22) + ' ' + (y - s * 0.22) + ' L' + (x + s) + ' ' + y + ' L' + (x + s * 0.22) + ' ' + (y + s * 0.22) + ' L' + x + ' ' + (y + s) + ' L' + (x - s * 0.22) + ' ' + (y + s * 0.22) + ' L' + (x - s) + ' ' + y + ' L' + (x - s * 0.22) + ' ' + (y - s * 0.22) + ' Z';
+  const _uP2 = (d, stroke, fill, extra) => '<path d="' + d + '"' + (stroke ? ' stroke="' + stroke + '"' : '') + (fill != null ? ' fill="' + fill + '"' : '') + (extra || '') + '/>';
+  const _uFl = (gl, col) => (gl ? 'none' : col);
+  const ULT_EM = {
+    verdict: { c: '#f5b842', a: '#a78bfa', w: '#2b1b4d', g: (c, a, gl) => _uP2('M32 16.5V52', c) + _uP2('M28.5 19A13.5 13.5 0 0 0 28.5 46', c) + _uP2('M35.5 17A13.5 13.5 0 0 1 35.5 44', a) + _uP2('M32 10.5l3 3-3 3-3-3Z', c, _uFl(gl, c)) },
+    starfall: { c: '#7dd3fc', a: '#c084fc', w: '#0f2440', g: (c, a, gl) => _uP2(_uEmStar(38, 24, 9), c, _uFl(gl, c), ' stroke-width="1"') + _uP2('M32 31L19 44M36.5 34L27 43.5M29 28.5L22.5 35', a) + '<circle cx="16.5" cy="46.5" r="1.4" fill="' + _uFl(gl, a) + '" stroke="' + a + '"/>' },
+    heartpiercer: { c: '#ffffff', a: '#f5b842', w: '#2a2410', g: (c, a, gl) => _uP2('M32 33L39.5 41 32 49 24.5 41Z', c, _uFl(gl, a), ' fill-opacity=".3"') + _uP2('M45 14L34.5 35.5M37.5 12.5L29.5 29M51 21L40.5 38', c) + _uP2('M45 14l-4.2-.6M45 14l.6 4.2M37.5 12.5l-4.2-.6M37.5 12.5l.6 4.2M51 21l-4.2-.6M51 21l.6 4.2', a) },
+    feast: { c: '#ef4444', a: '#ff9a9a', w: '#3a0a10', g: (c, a, gl) => '<circle cx="32" cy="25" r="9" fill="' + _uFl(gl, c) + '" stroke="' + c + '"/><circle cx="29" cy="23" r="2.4" fill="' + _uFl(gl, '#450a0a') + '" fill-opacity=".55" stroke="none"/>' + _uP2('M19.5 30A13.5 13.5 0 0 0 44.5 30', a) + _uP2('M32 39.5C29 43.5 27.2 46 27.2 48.4A4.8 4.8 0 0 0 36.8 48.4C36.8 46 35 43.5 32 39.5Z', a, _uFl(gl, a)) },
+    quick: { c: '#e2e8f0', a: '#5eead4', w: '#1f2733', g: (c, a, gl) => _uP2('M23 14.5H41M23 49.5H41', c) + _uP2('M25.5 14.5C25.5 25 30 28 32 32C34 28 38.5 25 38.5 14.5M25.5 49.5C25.5 39 30 36 32 32C34 36 38.5 39 38.5 49.5', c) + _uP2('M28.5 47.5H35.5L32 42Z', 'none', _uFl(gl, c), ' fill-opacity=".7"') + _uP2('M13.5 39L50.5 25', a, null, ' stroke-width="1.6"') },
+    hell: { c: '#dc2626', a: '#f0904a', w: '#2a0606', g: (c, a, gl) => _uP2('M12 47L19.5 44.5 23.5 48.5 30.5 44.5 35.5 48 42.5 44 52 47', a) + _uP2('M32 42.5C24.5 37 25 29 30 22.5C30.4 27.5 33 28.6 34.4 25.4C38.6 30.5 40.2 37 32 42.5Z', c, _uFl(gl, c)) + _uP2('M32 40.4C29.6 37.8 29.4 34 31.2 31C32 33.6 33.8 34.4 34.2 36.6C34.4 38.4 33.4 39.6 32 40.4Z', 'none', _uFl(gl, '#1a0202')) },
+    blades: { c: '#7dd3fc', a: '#3b82f6', w: '#0d1f3d', g: (c, a, gl) => { let h = ''; for (let i = 0; i < 8; i++) { const r = (i * 45 - 90) * Math.PI / 180; h += _uP2('M' + (32 + Math.cos(r) * 20).toFixed(1) + ' ' + (32 + Math.sin(r) * 20).toFixed(1) + 'L' + (32 + Math.cos(r) * 10.5).toFixed(1) + ' ' + (32 + Math.sin(r) * 10.5).toFixed(1), i % 2 ? a : c); } return h + _uP2('M32 28L36 32 32 36 28 32Z', c, _uFl(gl, c), ' stroke-width="1"'); } },
+    quake: { c: '#f5b842', a: '#a8a29e', w: '#2a2214', g: (c, a, gl) => _uP2('M24.5 13.5H39.5L32 29Z', c, _uFl(gl, c)) + _uP2('M12 35.5H52', a) + _uP2('M32 35.5L28 43.5 31 50.5M32 35.5L37.5 42.5 35.5 51M23.5 35.5L18.5 41.5M40.5 35.5L46 40.5', c, null, ' stroke-width="1.6"') + _uP2('M18 27.5l2 2-2 2-2-2ZM46 26.5l2 2-2 2-2-2Z', a, _uFl(gl, a), ' stroke-width="1"') },
+    reaper: { c: '#e7e5e4', a: '#9090a8', w: '#1e1e24', g: (c, a, gl) => _uP2('M44.5 52.5L36.5 13.5', a) + _uP2('M36.5 13.5C28 9.5 18 13.5 13.5 26C19.5 19.5 28 18.5 36.8 21Z', c, _uFl(gl, c)) },
+    arise: { c: '#a78bfa', a: '#7c3aed', w: '#1c0f3a', g: (c, a, gl) => '<ellipse cx="32" cy="48.5" rx="17" ry="3.6" fill="' + _uFl(gl, a) + '" fill-opacity=".3" stroke="' + a + '"/>' + _uP2('M20.5 48C20.5 41 22 36.5 24.5 33.5C27 36.5 28.5 41 28.5 48M35.5 48C35.5 41 37 36.5 39.5 33.5C42 36.5 43.5 41 43.5 48', c) + _uP2('M27 48C27 36 29.5 27 32 22.5C34.5 27 37 36 37 48Z', c, _uFl(gl, '#0b0716')) + '<circle cx="30.4" cy="31" r="1" fill="' + _uFl(gl, '#ede9fe') + '" stroke="none"/><circle cx="33.6" cy="31" r="1" fill="' + _uFl(gl, '#ede9fe') + '" stroke="none"/>' },
+    dawn: { c: '#ffd574', a: '#fb7185', w: '#3a2a12', g: (c, a, gl) => { let h = _uP2('M12 43.5H52', a) + _uP2('M21.5 43.5A10.5 10.5 0 0 1 42.5 43.5', c, _uFl(gl, c), ' fill-opacity=".28"'); [180, 210, 240, 270, 300, 330, 360].forEach((d, i) => { const r = d * Math.PI / 180, R = i % 2 ? 18 : 21; h += _uP2('M' + (32 + Math.cos(r) * 14).toFixed(1) + ' ' + (43.5 + Math.sin(r) * 14).toFixed(1) + 'L' + (32 + Math.cos(r) * R).toFixed(1) + ' ' + (43.5 + Math.sin(r) * R).toFixed(1), c); }); return h; } },
   };
-  function ultEmblem(id, size) {
-    const u = ASCENT_ULTIMATES[id === 'signature' ? ultSignatureId() : id]; if (!u) return '';
-    const g = _ULT_GLYPH[u.kind] || _ULT_GLYPH.MELEE, z = size || 40;
-    return '<svg class="ult-em" width="' + z + '" height="' + z + '" viewBox="0 0 40 40" aria-hidden="true" style="--ult-c:' + u.tint + '">' +
-      '<circle cx="20" cy="20" r="18.5" fill="#0e0b1f" stroke="' + u.tint + '" stroke-opacity=".55" stroke-width="1.2"/>' +
-      '<g fill="' + u.tint + '" stroke="' + u.tint + '">' + g + '</g></svg>';
+  const ULT_EM_ID = { verdict: 'verdict', starfall: 'starfall', rain: 'heartpiercer', feast: 'feast', quicksilver: 'quick', hellfire: 'hell', storm: 'blades', worldbreaker: 'quake', reaper: 'reaper', arise: 'arise', dawnbreaker: 'dawn' };
+  let _uEmN = 0;
+  function ultEmblem(id, size, locked) {
+    const uid = id === 'signature' ? ultSignatureId() : id, e = ULT_EM[ULT_EM_ID[uid]]; if (!e) return '';
+    const z = size || 64, gid = 'uw' + (++_uEmN), c = locked ? '#5d5d78' : e.c, a = locked ? '#4a4a63' : e.a, ring = locked ? '#34344c' : e.c;
+    let h = '<svg class="ult-em" width="' + z + '" height="' + z + '" viewBox="0 0 64 64" style="display:block;flex:none;overflow:visible" aria-hidden="true">' +
+      '<defs><radialGradient id="' + gid + '" cx="50%" cy="36%" r="70%"><stop offset="0" stop-color="' + (locked ? '#15152a' : e.w) + '"/><stop offset="1" stop-color="#06061a"/></radialGradient></defs>';
+    if (!locked) h += '<circle cx="32" cy="32" r="30.5" fill="none" stroke="' + e.c + '" stroke-opacity=".22" stroke-width="3"/>';
+    h += '<circle cx="32" cy="32" r="27" fill="url(#' + gid + ')"/><circle cx="32" cy="32" r="27" fill="none" stroke="' + ring + '" stroke-width="1.6"/><circle cx="32" cy="32" r="23.5" fill="none" stroke="' + ring + '" stroke-opacity=".35" stroke-width=".6"/>';
+    [[32, 5], [59, 32], [32, 59], [5, 32]].forEach(([x, y]) => { h += '<rect x="' + (x - 2.4) + '" y="' + (y - 2.4) + '" width="4.8" height="4.8" transform="rotate(45 ' + x + ' ' + y + ')" fill="' + ring + '" stroke="#07071a" stroke-width="1"/>'; });
+    h += '<g opacity="' + (locked ? 0.6 : 1) + '">' + (locked ? '' : '<g stroke-opacity=".26" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round">' + e.g(e.c, e.c, true) + '</g>') +
+      '<g stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">' + e.g(c, a, false) + '</g></g>';
+    if (locked) h += '<g transform="translate(22.9 44.2) scale(.7)"><path d="M13 1.5 24.5 8 24.5 20 13 26.5 1.5 20 1.5 8Z" fill="rgba(8,8,20,.95)" stroke="rgba(255,255,255,.38)" stroke-width="1.2"/><rect x="8.5" y="12.5" width="9" height="7" rx="1.4" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.6"/><path d="M10.4 12.5v-2a2.6 2.6 0 0 1 5.2 0v2" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.6" stroke-linecap="round"/></g>';
+    return h + '</svg>';
   }
   function _arPrimeIntent(sess) {
     if (!sess || sess.done || sess._pvp) return null;
@@ -17801,6 +17814,7 @@
     const el = document.createElement('div');
     el.className = 'pkb2-ovl pkb2-cutin' + (ult.tint && ASCENT_ULTIMATES[ult.ultId] && !ASCENT_ULTIMATES[ult.ultId].style ? ' has-tint' : '');
     if (ult.tint) el.style.setProperty('--ult-c', ult.tint);   // W1169
+    try { const ct = _PKB_ULT_CT[ult.ultId]; if (ct) Object.keys(ct).forEach((k) => el.style.setProperty('--' + k, ct[k])); } catch (_) {}   // W1171 — the handoff's palette per ultimate
     el.innerHTML = '<div class="lines"></div><div class="slab"></div>' +
       '<div class="por">' + (avatar ? '<img src="' + esc(avatar) + '" alt="">' : '') + '</div>' +
       '<div class="name"><div class="k">ULTIMATE' + (style ? ' · ' + style : '') + '</div><div class="n">' + nmHtml + '</div></div>' +
@@ -18303,12 +18317,19 @@
       svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'pkb-mvfx'); svg.setAttribute('aria-hidden', 'true'); stage.appendChild(svg);
       dom = document.createElement('div'); dom.className = 'pkb-mvfxd'; dom.setAttribute('aria-hidden', 'true'); stage.appendChild(dom);
     }
+    let bsvg = stage.querySelector('.pkb-mvfxb'), bdom = stage.querySelector('.pkb-mvfxbd');   // W1171 — the back layer (over the foe, behind the hunter)
+    if (!bsvg) {
+      const you = _pkbEl('pkb-spot-p');
+      bsvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); bsvg.setAttribute('class', 'pkb-mvfxb'); bsvg.setAttribute('aria-hidden', 'true');
+      bdom = document.createElement('div'); bdom.className = 'pkb-mvfxbd'; bdom.setAttribute('aria-hidden', 'true');
+      if (you && you.parentNode === stage) { stage.insertBefore(bsvg, you); stage.insertBefore(bdom, you); } else { stage.appendChild(bsvg); stage.appendChild(bdom); }
+    }
     if (c) {
-      svg.setAttribute('viewBox', '0 0 ' + c.W.toFixed(1) + ' ' + c.H.toFixed(1));
-      dom.style.width = c.W.toFixed(1) + 'px'; dom.style.height = c.H.toFixed(1) + 'px'; dom.style.transform = 'scale(' + c.K.toFixed(4) + ')';
+      [svg, bsvg].forEach((g) => g.setAttribute('viewBox', '0 0 ' + c.W.toFixed(1) + ' ' + c.H.toFixed(1)));
+      [dom, bdom].forEach((d) => { d.style.width = c.W.toFixed(1) + 'px'; d.style.height = c.H.toFixed(1) + 'px'; d.style.transform = 'scale(' + c.K.toFixed(4) + ')'; });
       ['p', 'b'].forEach((sd) => { const sp = _pkbEl('pkb-spot-' + sd); if (sp) { sp.style.setProperty('--amp', c.K.toFixed(3)); sp.style.setProperty('--far', Math.round(c.far) + 'px'); } });
     }
-    return { stage, svg, dom };
+    return { stage, svg, dom, bsvg, bdom };
   }
   function _pkbSpdSync() { try { const root = _pkb2Root(); if (root) root.style.setProperty('--spd', _pkbFF ? '0.5' : '1'); } catch (_) {} }
   const _PKB_MSVG = { slash: 1, line: 1, star: 1, ring: 1, crack: 1, scar: 1, bolt: 1, rune: 1, fly: 1, fan: 1, orbit: 1, sag: 1, threads: 1, dome: 1, kite: 1, pin: 1, glyphs: 1 };
@@ -18357,7 +18378,7 @@
         [-70, -42, -14, 14, 42, 70].forEach((oy, i) => { const t = oy / 90, gx = v.x + Math.sqrt(Math.max(0, 1 - t * t)) * 52 * f; h += '<rect class="glyph" style="--d:' + _mms(((v.d || 0) + 80 + i * 40) * sp) + '" x="' + (gx - 3).toFixed(1) + '" y="' + (v.y + oy - 3) + '" width="6" height="6" transform="rotate(45 ' + gx.toFixed(1) + ' ' + (v.y + oy) + ')"/>'; });
         return h + '</g>'; }
     }
-    return '';
+    return _PKB_MEXT_SVG[v.k] ? _PKB_MEXT_SVG[v.k](v, sp, st) : '';   // W1171 — the ultimates' kinds
   }
   function _pkbMDom(v, sp) {
     const st = _mSt(v, sp), pos = 'left:' + v.x + 'px;top:' + v.y + 'px;';
@@ -18382,10 +18403,11 @@
       case 'dust': { const n = v.n || 5; let h = '<div class="dust" style="' + st + pos + '">'; for (let i = 0; i < n; i++) h += '<i style="--ox:' + ((i - (n - 1) / 2) * 26).toFixed(0) + 'px;--d:' + _mms(((v.d || 0) + (i % 2) * 40) * sp) + '"></i>'; return h + '</div>'; }
       case 'tens': return '<div class="tens" style="' + st + 'top:' + v.y + 'px"></div>';
     }
-    return '';
+    return _PKB_MEXT_DOM[v.k] ? _PKB_MEXT_DOM[v.k](v, sp, st) : '';   // W1171
   }
   // how long a mounted item lives (design ms; the scheduler scales it under 2×) — generous, the next sequence sweeps anyway
   function _pkbMLife(v) {
+    if (_PKB_MEXT_LIFE[v.k]) return _PKB_MEXT_LIFE[v.k](v);   // W1171
     const d = v.d || 0, life = v.life != null ? v.life : 0;
     switch (v.k) {
       case 'slash': case 'line': return d + (v.slow ? 1100 : v.keep ? 1500 : 560);
@@ -18398,10 +18420,12 @@
     }
     return d + 1200;
   }
-  function _pkbMvMount(v, L) {
+  function _pkbMvMount(v, L, back) {
     if (!L) return;
     const sp = _pkbFF ? 0.5 : 1, svgK = !!_PKB_MSVG[v.k];
-    const host = svgK ? L.svg : L.dom, html = svgK ? _pkbMSvg(v, sp) : _pkbMDom(v, sp);
+    const host = back ? (svgK ? L.bsvg : L.bdom) : (svgK ? L.svg : L.dom);   // W1171 — the back layer: over the foe, behind the hunter
+    if (!host) return;
+    const html = svgK ? _pkbMSvg(v, sp) : _pkbMDom(v, sp);
     if (!html) return;
     try { host.insertAdjacentHTML('beforeend', html); } catch (_) { return; }
     const node = host.lastElementChild; if (!node) return;
@@ -18454,6 +18478,7 @@
     _pkbMvStrip(spot, 'mp-');
     String(poses || '').split(/\s+/).forEach((tok) => { if (tok) spot.classList.add('mp-' + tok.replace(/^p-/, '')); });
   }
+  let _pkbGt = null;   // W1171 — the current afterimage tint (gtint), cleared by _pkbMvReset
   function _pkbMvGhosts(spot, arr, c) {
     let box = spot.querySelector('.pkb-ghosts');
     if (!arr || !arr.length) { if (box) box.innerHTML = ''; return; }
@@ -18465,6 +18490,7 @@
       const flip = (you ? -1 : 1) * (g.f ? -1 : 1);
       h += '<div class="pkb-ghost" style="--d:' + Math.round(i * 40 * sp) + 'ms;transform:translate(' + (g.x * K).toFixed(1) + 'px,' + ((g.y || 0) * K).toFixed(1) + 'px) scaleX(' + flip + ')">' + src.outerHTML.replace(/\sid="[^"]*"/g, '').replace(/\sonerror="[^"]*"/g, '') + '</div>';
     });
+    box.className = 'pkb-ghosts' + (_pkbGt ? ' gt-' + _pkbGt : '');   // W1171
     box.innerHTML = h;
   }
   function _pkbMvFlash(spot, tint) {
@@ -18477,6 +18503,7 @@
   }
   function _pkbMvApply(p, c, L) {
     const stage = _pkbEl('pkb-stage'); if (!stage || (!_arSess && !_ultPv)) return;
+    if (p.gtint !== undefined) _pkbGt = p.gtint || null;   // W1171 — the afterimages' tint (set before this step's ghosts)
     [['You', 'p'], ['Foe', 'b']].forEach(([who, side]) => {
       const spot = _pkbEl('pkb-spot-' + side); if (!spot) return;
       if (p['pose' + who] != null) _pkbMvPose(spot, p['pose' + who]);
@@ -18487,6 +18514,9 @@
     });
     if (p.vfxClear) _pkbMvClearFx(L);
     if (p.vfxAdd) p.vfxAdd.forEach((v) => _pkbMvMount(v, L));
+    if (p.vfxbClear && L && L.bsvg) { try { L.bsvg.innerHTML = ''; L.bdom.innerHTML = ''; } catch (_) {} }   // W1171
+    if (p.vfxbAdd) p.vfxbAdd.forEach((v) => _pkbMvMount(v, L, true));
+    if (p.grade !== undefined) { _pkbMvStrip(stage, 'gr-'); if (p.grade) stage.classList.add('gr-' + p.grade); }   // W1171 — qs: time stops (the foe greys) · mono: the reaper's window
     if (p.cam !== undefined) _pkbMvCam(stage, p.cam);
     if (p.wash) { const w = stage.querySelector('.pkb-mwash'); if (w) { w.classList.remove('go'); w.style.background = p.wash; void w.offsetWidth; w.classList.add('go'); } }
     if (p.light !== undefined) { const dm = stage.querySelector('.pkb-mdim'); if (dm) dm.className = 'pkb-mdim' + (p.light ? ' ' + p.light : ''); }
@@ -18505,6 +18535,8 @@
       const gh = spot.querySelector('.pkb-ghosts'); if (gh) gh.innerHTML = '';
     });
     _pkbMvStrip(stage, 'mc-'); stage.classList.remove('m-freeze', 'm-charging');
+    _pkbMvStrip(stage, 'gr-'); _pkbGt = null;   // W1171
+    try { const bs = stage.querySelector('.pkb-mvfxb'), bd = stage.querySelector('.pkb-mvfxbd'); if (bs) bs.innerHTML = ''; if (bd) bd.innerHTML = ''; } catch (_) {}
     const dm = stage.querySelector('.pkb-mdim'); if (dm) dm.className = 'pkb-mdim';
     const b = stage.querySelector('.pkb-mbars'); if (b) b.classList.remove('on');
     const r = stage.querySelector('.pkb-mredvig'); if (r) r.className = 'pkb-mredvig';
@@ -18715,9 +18747,19 @@
   const _PKB_ULT_SEQ = {};
   const _PKB_ULT_STYLE = { verdict: 'melee', starfall: 'magic', rain: 'ranged' };
   const _PKB_ULT_BUFF = { dawnbreaker: 'bulwark', quicksilver: 'evade' };
-  function _pkbUltSeqFor(e, s, c) {
+  // W1171 — what the sequence needs to know: landed / dodged / crit / the KO, the army size, Reaper's ending, the foe's stance
+  function _pkbUltOpts(e, s, extra) {
+    const bS = s && s.bS, mods = (bS && bS.mods) || [];
+    const ward = mods.some((x) => x.k === 'def' && x.mag < 0 && /ward/i.test(String(x.kind || '')));
+    const stance = ward ? 'ward' : (bS && (bS.guard > 0 || mods.some((x) => x.k === 'def' && x.mag < 0))) ? 'guard' : null;
+    let low = false; try { low = !!(s && s.bMax && _pkbHPm && _pkbHPm.b / s.bMax <= 0.35); } catch (_) {}
+    const hit = !!e && e.t === 'hit';
+    return Object.assign({ land: hit, dodge: !!e && e.t === 'dodge', crit: !!(e && e.crit), kill: false, army: (s && s._ultShadows) | 0,
+      reaper: (hit ? !!e.exe : low) ? 'window' : 'normal', stance }, extra || {});
+  }
+  function _pkbUltSeqFor(e, s, c, extra) {
     const id = e && e.ultId, fn = id && _PKB_ULT_SEQ[id];
-    if (fn) return fn(c);
+    if (fn) return fn(c, _pkbUltOpts(e, s, extra));
     return _pkbUltSeq(_PKB_ULT_STYLE[id] || _arUltStyle(s), c);
   }
   // W1170 — PREVIEW (owner 2026-11-09: "can you put previews" → a button on each ultimate's Wardrobe page): the real
@@ -18757,7 +18799,8 @@
     _pkbCutin(mv, function () {
       if (!_ultPv || _ultPv !== P || P.gen !== g) return;
       const ctx = _pkbMvCtx('p'); if (!ctx) return;
-      let seq = null; try { seq = _pkbUltSeqFor({ ultId: P.id }, { pMoves: _arenaPlayerKit() }, ctx); } catch (_) {}
+      let army = 1; try { army = Math.max(1, _shadowActiveCount() | 0); } catch (_) {}
+      let seq = null; try { seq = _pkbUltSeqFor({ ultId: P.id, t: 'hit' }, { pMoves: _arenaPlayerKit() }, ctx, { land: true, army: army, reaper: 'window' }); } catch (_) {}
       if (seq) _pkbMvPlay(seq, ctx, { ult: true });
     });
   }
@@ -18809,6 +18852,311 @@
     S.push([2450, Object.assign(_mPO(f, ''), _mPO(a, ''))], [2500, { bars: false }]);
     return { steps: S, T: 1990, dur: 3000, extra: () => { const x = f.x - 80 + rnd(160), y = f.y - 70 + rnd(100); return [_MV.proj(x + 30, -60, x, y, { kind: 'arrow', dur: 140 }), _MV.star(x, y, { s: 12, c: 'white', d: 140 })]; } };
   }
+  // ══ W1171 — THE EIGHT EARNED ULTIMATES, ported from the Claude Design handoff "The Ascent - Ultimates" (handoff 9:
+  //    battle/ult-engine.jsx, ult-fx.jsx, ult.css, ult-emblems.jsx). Presentation only: the engine has already decided
+  //    hit / miss / dodge, crit, the number and every effect. The handoff's display keys (dmgAdd, _hp, toast, KO) are
+  //    the director's job here; the sequences keep only the motion. Its stage coordinates are converted to offsets from
+  //    the hunter (its hunter stood at x 112, feet 118 / 338). New patch keys: vfxbAdd / vfxbClear (a back layer: over
+  //    the foe, behind the hunter), grade ('qs' | 'mono'), gtint (afterimage tint). ══
+  Object.assign(_PKB_MT, { silver: '#e2e8f0', bone: '#e7e5e4', hell: '#dc2626', shadow: '#8b5cf6', dawn: '#ffe7a3', steel: '#cbd5e1', blood: '#b91c1c' });
+  Object.assign(_PKB_MSVG, { snap: 1, rift: 1, barrier: 1, scythe: 1, halo: 1 });
+  Object.assign(_MV, {
+    snap: (x1, y1, x2, y2, o = {}) => ({ k: 'snap', x1, y1, x2, y2, col: _mCol(o.c || 'red'), d: o.d || 0 }),
+    rift: (x1, y1, x2, y2, o = {}) => ({ k: 'rift', x1, y1, x2, y2, w: o.w || 3, dur: o.dur || 300, col: _mCol(o.c || 'hell'), d: o.d || 0, life: o.life || 900 }),
+    barrier: (x, y, o = {}) => ({ k: 'barrier', x, y, kind: o.kind || 'kite', f: o.f || -1, col: _mCol(o.c || 'teal'), d: o.d || 0, brk: o.brk, cracks: o.cracks || [], life: o.life || 1200 }),
+    scythe: (x, y, o = {}) => ({ k: 'scythe', x, y, col: _mCol(o.c || 'bone'), d: o.d || 0, swing: o.swing || 1000 }),
+    halo: (x, y, o = {}) => ({ k: 'halo', x, y, r: o.r || 28, col: _mCol(o.c || 'gold'), d: o.d || 0 }),
+    plates: (x, y, o = {}) => ({ k: 'plates', x, y, n: o.n || 6, col: _mCol(o.c || 'steel'), d: o.d || 0 }),
+    moon: (x, y, o = {}) => ({ k: 'moon', x, y, r: o.r || 28, col: _mCol(o.c || 'blood'), d: o.d || 0, life: o.life || 1800 }),
+    stream: (x1, y1, x2, y2, o = {}) => ({ k: 'stream', x1, y1, x2, y2, n: o.n || 8, dur: o.dur || 520, gap: o.gap || 70, col: _mCol(o.c || 'red'), d: o.d || 0 }),
+    fissure: (x, y, o = {}) => ({ k: 'fissure', x, y, rx: o.rx || 70, col: _mCol(o.c || 'hell'), d: o.d || 0, life: o.life || 1200 }),
+    hellpillar: (x, y, o = {}) => ({ k: 'hellpillar', x, y, w: o.w || 110, h: o.h || 250, col: _mCol('hell'), d: o.d || 0 }),
+    tongue: (x, y, o = {}) => ({ k: 'tongue', x, y, h: o.h || 80, col: _mCol('hell'), d: o.d || 0 }),
+    slabs: (x, y, o = {}) => ({ k: 'slabs', x, y, n: o.n || 5, spread: o.spread || 120, small: o.small, col: '#9b93ab', d: o.d || 0 }),
+    bladering: (x, y, o = {}) => ({ k: 'bladering', x, y, n: o.n || 8, rx: o.rx || 92, ry: o.ry || 30, gap: o.gap || 45, cuts: o.cuts || [], col: _mCol(o.c || 'frost'), d: o.d || 0 }),
+    sblade: (x, y, o = {}) => ({ k: 'sblade', x, y, col: _mCol(o.c || 'frost'), d: o.d || 0 }),
+    pool: (x, y, o = {}) => ({ k: 'pool', x, y, rx: o.rx || 120, ry: o.ry || 22, col: _mCol(o.c || 'shadow'), d: o.d || 0, life: o.life || 2000 }),
+    army: (n, tx, ty, o = {}) => ({ k: 'army', n, tx, ty, ax: o.ax || 118, ay: o.ay || 338, rise: o.rise || 60, gapR: o.gapR || 0, charge: o.charge || 1100, gapC: o.gapC || 30, travel: o.travel || 300, land: o.land !== false, col: _mCol(o.c || 'shadow'), d: 0 }),
+    eyes: (x, y, o = {}) => ({ k: 'eyes', x, y, col: _mCol(o.c || 'violet'), d: o.d || 0, life: o.life || 900 }),
+    sunrise: (x, y, o = {}) => ({ k: 'sunrise', x, y, r: o.r || 170, col: _mCol('gold'), d: o.d || 0, life: o.life || 2000 }),
+  });
+  // shadow-army slots behind the hunter, as offsets from its feet: [dx, dy, scale] — the first slots are the most visible
+  const _U_SLOTS = [[-54, 6, .8], [38, -38, .58], [-100, -8, .72], [-6, -46, .55], [-18, 14, .84], [78, -32, .54], [-80, -40, .6], [-42, -50, .5]];
+  const _U_SOL_CLIP = 'polygon(46% 0,60% 4%,68% 13%,66% 21%,60% 25%,74% 30%,92% 40%,96% 46%,90% 48%,72% 42%,68% 60%,80% 80%,88% 100%,74% 100%,62% 78%,52% 70%,44% 78%,32% 100%,18% 100%,34% 74%,30% 54%,14% 62%,22% 44%,26% 30%,32% 10%,38% 3%)';
+  const _uF = (n) => (Math.round(n * 10) / 10);
+  const _PKB_MEXT_SVG = {
+    snap: (v, sp, st) => {
+      const mx = (v.x1 + v.x2) / 2, my = (v.y1 + v.y2) / 2, L = Math.hypot(mx - v.x1, my - v.y1).toFixed(1) + 'px';
+      return '<g style="' + st + '">' + [[v.x1, v.y1], [v.x2, v.y2]].map(([ax, ay]) => '<path class="u-snap" style="--L:' + L + ';stroke-dasharray:' + L + ' ' + L + '" d="M' + ax + ' ' + ay + ' L' + mx + ' ' + my + '"/>').join('') +
+        '<path class="u-snapk" style="--d:' + _mms(((v.d || 0) + 300) * sp) + '" d="' + _mStar(mx, my, 12) + '"/></g>';
+    },
+    rift: (v, sp, st) => {
+      const n = Math.max(4, Math.round(Math.hypot(v.x2 - v.x1, v.y2 - v.y1) / 16)); let L = 0, px = v.x1, py = v.y1; const pts = [];
+      for (let i = 0; i <= n; i++) { const f = i / n, x = v.x1 + (v.x2 - v.x1) * f, y = v.y1 + (v.y2 - v.y1) * f + (i === 0 || i === n ? 0 : (i % 2 ? -3.5 : 3) * (1 + (i % 3) * 0.3)); if (i) L += Math.hypot(x - px, y - py); px = x; py = y; pts.push(x.toFixed(1) + ',' + y.toFixed(1)); }
+      const P = pts.join(' '), Ls = Math.ceil(L) + 'px';
+      return '<g style="' + st + '--L:' + Ls + ';--dur:' + _mms(v.dur * sp) + '"><polyline class="u-rift" style="stroke-width:' + (v.w + 3) + ';stroke-dasharray:' + Ls + ' ' + Ls + '" points="' + P + '"/>' +
+        '<polyline class="u-rift core" style="stroke-width:' + Math.max(1, v.w - 1.5) + ';stroke-dasharray:' + Ls + ' ' + Ls + '" points="' + P + '"/></g>';
+    },
+    barrier: (v, sp, st) => {
+      const f = v.f, x = v.x, y = v.y, dome = v.kind === 'dome', sw = f > 0 ? 1 : 0, brk = v.brk != null;
+      const crk = (i) => { const cx = dome ? x - 40 : x, cy = y - 44 + i * 26, s = i % 2 ? 1 : -1; return (cx - 13) + ',' + (cy - 7 * s) + ' ' + (cx - 4) + ',' + (cy + 3 * s) + ' ' + (cx + 3) + ',' + (cy - 5 * s) + ' ' + (cx + 13) + ',' + (cy + 6 * s); };
+      const shape = dome ? '<path class="u-bar" d="M' + x + ' ' + (y - 96) + ' A 52 96 0 0 ' + sw + ' ' + x + ' ' + (y + 96) + '"/>'
+        : '<polygon class="u-bar" points="' + (x - 22 * f) + ',' + (y - 70) + ' ' + (x + 22 * f) + ',' + (y - 70) + ' ' + (x + 26 * f) + ',' + (y - 10) + ' ' + x + ',' + (y + 46) + ' ' + (x - 26 * f) + ',' + (y - 10) + '"/>';
+      return '<g class="u-barg' + (brk ? ' brk' : '') + '" style="' + st + '--cf:' + v.col + '1a;--bk:' + _mms(((v.d || 0) + (brk ? v.brk : 0)) * sp) + '">' + shape +
+        v.cracks.map((t, i) => '<polyline class="u-crk" style="--d:' + _mms(((v.d || 0) + t) * sp) + '" points="' + crk(i) + '"/>').join('') + '</g>';
+    },
+    scythe: (v, sp, st) => {
+      const x = v.x, y = v.y, px = x + 70, py = y + 160, tx = x - 10, ty = y - 170, o = 'transform-origin:' + px + 'px ' + py + 'px';
+      const edge = 'M' + tx + ' ' + ty + ' C ' + (tx - 60) + ' ' + (ty - 34) + ' ' + (tx - 150) + ' ' + (ty - 14) + ' ' + (tx - 178) + ' ' + (ty + 74);
+      return '<g class="u-scy" style="' + st + '--sw:' + _mms(v.swing * sp) + '"><g class="u-scy-sway" style="' + o + '"><g class="u-scy-swing" style="' + o + '">' +
+        '<path class="u-scy-shaft" d="M' + px + ' ' + py + ' L' + tx + ' ' + ty + '"/>' +
+        '<path class="u-scy-blade" d="' + edge + ' C ' + (tx - 134) + ' ' + (ty + 22) + ' ' + (tx - 64) + ' ' + (ty + 12) + ' ' + (tx + 2) + ' ' + (ty + 20) + ' Z"/>' +
+        '<path class="u-scy-edge" d="' + edge + '"/></g></g></g>';
+    },
+    halo: (v, sp, st) => {
+      const r = v.r; let h = '<g class="u-halo" style="' + st + '"><circle class="u-halo-c" cx="' + v.x + '" cy="' + v.y + '" r="' + r + '"/>';
+      for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, r2 = r + (i % 2 ? 12 : 20); h += '<line class="u-halo-r" style="--d:' + _mms(((v.d || 0) + 120 + (i % 4) * 30) * sp) + '" x1="' + (v.x + Math.cos(a) * (r + 4)).toFixed(1) + '" y1="' + (v.y + Math.sin(a) * (r + 4)).toFixed(1) + '" x2="' + (v.x + Math.cos(a) * r2).toFixed(1) + '" y2="' + (v.y + Math.sin(a) * r2).toFixed(1) + '"/>'; }
+      return h + '</g>';
+    },
+  };
+  const _PKB_MEXT_DOM = {
+    plates: (v, sp, st) => {
+      let h = '<div class="u-plates" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px">';
+      for (let i = 0; i < v.n; i++) { const a = (i / v.n) * Math.PI * 2 + 0.4, R = 60 + (i % 3) * 26; h += '<i style="--tx:' + (Math.cos(a) * R).toFixed(0) + 'px;--d:' + _mms(((v.d || 0) + i * 18) * sp) + '"><b style="--ty:' + (-30 - (i % 3) * 22) + 'px;--rz:' + (i % 2 ? 260 : -220) + 'deg;width:' + (14 + (i % 3) * 5) + 'px;height:' + (10 + (i % 2) * 6) + 'px"></b></i>'; }
+      return h + '</div>';
+    },
+    moon: (v, sp, st) => '<div class="u-moon" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;width:' + (v.r * 2) + 'px;height:' + (v.r * 2) + 'px"></div>',
+    stream: (v, sp, st) => {
+      const dx = v.x2 - v.x1, dy = v.y2 - v.y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+      let h = '<div class="u-stream" style="' + st + 'left:' + v.x1 + 'px;top:' + v.y1 + 'px;--dx:' + dx.toFixed(0) + 'px;--dy:' + dy.toFixed(0) + 'px;--du:' + _mms(v.dur * sp) + '">';
+      for (let i = 0; i < v.n; i++) { const w = (i % 2 ? 1 : -1) * (10 + (i % 3) * 6); h += '<i style="--px:' + (nx * w).toFixed(1) + 'px;--py:' + (ny * w).toFixed(1) + 'px;--d:' + _mms(((v.d || 0) + i * v.gap) * sp) + '"></i>'; }
+      return h + '</div>';
+    },
+    fissure: (v, sp, st) => '<div class="u-fis" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;width:' + (v.rx * 2) + 'px"><i></i></div>',
+    hellpillar: (v, sp, st) => '<div class="u-hp" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;width:' + v.w + 'px;height:' + v.h + 'px"><i class="g"></i><i class="k"></i>' +
+      [-0.28, 0, 0.3].map((o, i) => '<b style="left:' + (50 + o * 100) + '%;height:' + Math.round(v.h * (i === 1 ? 0.5 : 0.36)) + 'px;--d:' + _mms(((v.d || 0) + 60 + i * 70) * sp) + '"></b>').join('') + '</div>',
+    tongue: (v, sp, st) => '<div class="u-tg" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;height:' + v.h + 'px"><i></i></div>',
+    slabs: (v, sp, st) => {
+      let h = '<div class="u-slabs" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px">';
+      for (let i = 0; i < v.n; i++) { const f = v.n === 1 ? 0 : i / (v.n - 1) - 0.5, w = (v.small ? 16 : 26) + (i % 3) * 8, hh = (v.small ? 22 : 40) + ((i * 7) % 3) * 14; h += '<i style="left:' + Math.round(f * v.spread - w / 2) + 'px;width:' + w + 'px;height:' + hh + 'px;--r:' + ((i % 2 ? 1 : -1) * (6 + i * 3)) + 'deg;--d:' + _mms(((v.d || 0) + Math.abs(f) * 90) * sp) + '"></i>'; }
+      return h + '</div>';
+    },
+    bladering: (v, sp, st) => {
+      const P = 1200 * sp; let h = '<div class="u-ring8" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;--rx:' + v.rx + 'px;--ry:' + v.ry + 'px;--P2:' + _mms(P / 2) + '">';
+      for (let i = 0; i < v.n; i++) { const ph = -(i / v.n) * P; h += '<i style="--ph:' + _mms(ph) + ';--cut:' + _mms((v.cuts[i] != null ? v.cuts[i] : 4000) * sp) + '"><b style="--ph2:' + _mms(ph - P / 4) + ';--d:' + _mms(((v.d || 0) + i * v.gap) * sp) + '"><em></em></b></i>'; }
+      return h + '</div>';
+    },
+    sblade: (v, sp, st) => '<div class="u-sbl" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px"></div>',
+    pool: (v, sp, st) => '<div class="u-pool" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;width:' + (v.rx * 2) + 'px;height:' + (v.ry * 2) + 'px"></div>',
+    army: (v, sp, st) => {
+      let h = '<div class="u-army" style="' + st + '">';
+      _U_SLOTS.slice(0, Math.min(8, v.n)).forEach(([ox, oy, s], i) => {
+        const x = v.ax + ox, y = v.ay + oy, rise = v.rise + i * v.gapR, chg = v.charge + i * v.gapC, tx = v.tx + ((i % 3) - 1) * 16, ty = v.ty + (i % 2 ? 8 : -4);
+        h += '<div class="u-sol" style="left:' + _uF(x - 26) + 'px;top:' + _uF(y - 96) + 'px;--s:' + s + ';--dx:' + _uF(tx - x) + 'px;--dy:' + _uF(ty - y) + 'px;--r:' + _mms(rise * sp) + ';--c0:' + _mms(chg * sp) + ';--tv:' + _mms(v.travel * sp) + ';--a:' + _mms((chg + v.travel + (v.land ? 0 : 90)) * sp) + '">' +
+          '<div class="b" style="-webkit-clip-path:' + _U_SOL_CLIP + ';clip-path:' + _U_SOL_CLIP + '"><i></i></div></div>';
+      });
+      for (let i = 0; i < Math.max(0, Math.min(6, v.n - 8)); i++) h += '<span class="u-eyes" style="left:' + _uF(v.ax - 94 + i * 28) + 'px;top:' + _uF(v.ay - 86 + (i % 2) * 14) + 'px;--life:' + _mms(1600 * sp) + ';--d:' + _mms((v.rise + 400 + i * 60) * sp) + '"></span>';
+      return h + '</div>';
+    },
+    eyes: (v, sp, st) => '<span class="u-eyes" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px"></span>',
+    sunrise: (v, sp, st) => '<div class="u-sun" style="' + st + 'left:' + v.x + 'px;top:' + v.y + 'px;width:' + (v.r * 2) + 'px;height:' + (v.r * 2) + 'px"><i></i></div>',
+  };
+  // how long each new kind lives (design ms; the scheduler scales it under 2x)
+  const _PKB_MEXT_LIFE = {
+    snap: (v) => (v.d || 0) + 940, rift: (v) => (v.d || 0) + (v.dur || 300) + (v.life || 900) + 520, barrier: (v) => (v.d || 0) + (v.brk != null ? v.brk + 200 : (v.life || 1200) + 520),
+    scythe: (v) => (v.d || 0) + (v.swing || 1000) + 460, halo: (v) => (v.d || 0) + 1420, plates: (v) => (v.d || 0) + (v.n || 6) * 18 + 720, moon: (v) => (v.d || 0) + (v.life || 1800) + 520,
+    stream: (v) => (v.d || 0) + (v.n || 8) * (v.gap || 70) + (v.dur || 520) + 40, fissure: (v) => (v.d || 0) + (v.life || 1200) + 300, hellpillar: (v) => (v.d || 0) + 1180, tongue: (v) => (v.d || 0) + 570,
+    slabs: (v) => (v.d || 0) + 1060, bladering: (v) => (v.d || 0) + Math.max(0, ...((v.cuts && v.cuts.length) ? v.cuts : [4000])) + 220, sblade: (v) => (v.d || 0) + 560, pool: (v) => (v.d || 0) + (v.life || 2000) + 520,
+    army: (v) => v.charge + Math.min(8, v.n) * v.gapC + v.travel + 320, eyes: (v) => (v.d || 0) + (v.life || 900) + 20, sunrise: (v) => (v.d || 0) + (v.life || 2000) + 620,
+  };
+
+  // ── the eight sequences (c: atk = hunter; o: land / dodge / crit / kill / army / reaper / stance). T = the blow. ──
+  const _uR = (a, b) => a + Math.random() * (b - a);
+  const _uCut = (x, y, ang, len, o) => { const r = ang * Math.PI / 180, dx = Math.cos(r) * len / 2, dy = Math.sin(r) * len / 2; return _MV.line(Math.round(x - dx), Math.round(y - dy), Math.round(x + dx), Math.round(y + dy), o); };
+  const _uBack = () => ({ x: -31, y: 8 }), _uSide = 31;   // the foe is always painted art in the Ascent
+  const _uP = (...parts) => Object.assign({}, ...parts);
+  function _uBlow(S, c, o, T, opt) {
+    opt = opt || {};
+    const f = c.def, F = Math.max(opt.F || 140, o.kill ? 240 : o.crit ? 180 : 0);
+    const hit = _uP(_mFL(f, opt.tint || 'white'), _mPO(f, opt.react || 'p-recoil2'), { cam: opt.cam || 'c-shake2', freeze: true });
+    const w = o.kill ? 'rgba(255,255,255,.9)' : o.crit ? 'rgba(255,255,255,.55)' : opt.wash; if (w) hit.wash = w;
+    if (opt.clear) hit.vfxClear = true;
+    if (opt.vfx) hit.vfxAdd = opt.vfx;
+    Object.assign(hit, opt.at || {});
+    S.push([T, hit], [T + F, _uP({ freeze: false }, opt.after || {})]);
+    if (!o.kill) S.push([T + F + (opt.hold || 340), _mPO(f, '')]);
+    return T + F;
+  }
+  function _uMiss(S, c, o, T, opt) {
+    opt = opt || {};
+    const f = c.def, t0 = Math.max(0, T - (opt.lead || 160));
+    if (o.dodge) S.push([t0, _uP(_mPO(f, 'p-side'), _mGH(f, [_uBack()]))], [T + 440, _uP(_mPO(f, ''), _mGH(f, null))]);
+    else S.push([t0, _mPO(f, opt.pose || 'p-back')], [T + 440, _mPO(f, '')]);
+  }
+  const _PKB_ULT_SEQ_DEF = {
+    feast(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 860, mx = Math.round((a.x + f.x) / 2 + 8), my = Math.round(a.head.y - 35), fy = f.y - 16, hx = a.hand.x, hy = a.hand.y - 14, bx = o.land ? f.x : f.x - 70;
+      S.push([0, _uP({ bars: true, light: 'dark', wash: 'rgba(185,28,28,.4)' }, _mPO(a, 'p-sink'), _mGL(a, 'red'), { vfxbAdd: [_MV.moon(mx, my, { r: 28, life: o.land ? 1900 : 1200 })] })]);
+      S.push([520, _uP(_mPO(a, 'p-crouch'), { vfxbAdd: [_MV.ring(mx, my, { rx: 46, ry: 46, c: 'red', w: 2 })] })]);
+      S.push([700, _uP(_mPO(a, 'p-dash'), _mGL(a, null), { gtint: 'red' }, _mGH(a, [{ x: 30, y: -2 }, { x: 60, y: -3 }, { x: 88, y: -4 }]))]);
+      S.push([T - 170, { vfxAdd: [_MV.slash(bx - 70, f.y - 62, bx + 34, f.y + 4, { b: -24, w: 5, c: 'red' }), _MV.slash(bx - 70, f.y + 52, bx + 34, f.y - 12, { b: 24, w: 5, c: 'red', d: 50 })] }]);
+      S.push([1000, _uP(_mPO(a, ''), _mGH(a, null))]);
+      if (o.land) {
+        _uBlow(S, c, o, T, { tint: 'red', react: 'p-recoil', cam: 'c-shake', F: 120, hold: 1250, vfx: [_MV.star(f.x - 18, f.y - 4, { s: 30, c: 'red' }), _MV.burst(f.x - 10, f.y - 4, { s: 130, c: 'red' })] });
+        S.push([1080, { vfxAdd: [_MV.beam(f.x - 8, fy, hx, hy, { c: 'red', h: 9, dur: 1050 })] }]);
+        S.push([1140, { vfxAdd: [_MV.stream(f.x - 8, fy, hx - 4, hy, { c: 'red', n: 9, dur: 520, gap: 66 })] }]);
+        if (!o.kill) S.push([1200, _mPO(f, 'p-sag')]);
+        S.push([1420, _mGL(a, 'red')]);
+        S.push([1760, { vfxAdd: [_MV.burst(a.x + 6, a.y - 20, { s: 150, c: 'red' }), _MV.ring(a.feet.x, a.feet.y, { rx: 66, ry: 15, c: 'red', w: 2 })] }]);
+        S.push([2160, _mGL(a, null)]);
+      } else {
+        _uMiss(S, c, o, T);
+        S.push([1120, { vfxAdd: [_MV.snap(hx, hy, f.x - 8 + (o.dodge ? _uSide : 0), fy, { c: 'red' })] }]);
+        S.push([1600, _mGL(a, null)]);
+      }
+      const E = o.land ? 2300 : 1900;
+      S.push([E, { bars: false, light: null }]);
+      return { steps: S, dur: E + 420, T, extra: () => o.land ? [_MV.stream(Math.round(f.x - 8 + _uR(-14, 14)), Math.round(fy + _uR(-24, 24)), hx, hy, { c: 'red', n: 1, dur: 460 })] : [_MV.slash(Math.round(f.x - 100 + _uR(-10, 10)), Math.round(f.y - 30 + _uR(-20, 20)), f.x - 40, f.y + 20, { b: 18, w: 2, c: 'red' })] };
+    },
+    quicksilver(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 1500, L1 = [f.x - 96, f.y + 34, f.x + 74, f.y - 44], L2 = [f.x - 86, f.y - 52, f.x + 66, f.y + 42];
+      S.push([0, _uP(_mPO(f, 'p-wind'), _mPO(a, 'p-crouch'), { light: 'dim' })]);
+      S.push([240, { grade: 'qs', bars: true, wash: 'rgba(226,232,240,.45)', vfxAdd: [_MV.ring(a.x, a.y - 10, { rx: 240, ry: 240, c: 'silver', w: 2 }), _MV.glint(a.head.x + 10, a.head.y + 6)] }]);
+      S.push([440, _uP(_mPO(a, 'p-dash'), { gtint: 'silver' }, _mGH(a, [{ x: 26, y: -2 }, { x: 52, y: -3 }, { x: 80, y: -4 }]), { vfxAdd: [_MV.speed(a.x - 30, a.y - 40, { dir: 1 })] })]);
+      S.push([580, _uP(_mPO(a, 'p-behind'), _mGH(a, [{ x: 110, y: -4 }, { x: 150, y: -4 }, { x: 190, y: -4 }]), { vfxAdd: [_MV.line(L1[0], L1[1], L1[2], L1[3], { w: 3, c: 'silver', keep: true })] })]);
+      S.push([740, _uP(_mGH(a, [{ x: 214, y: -4, f: 1 }]), { vfxAdd: [_MV.line(L2[0], L2[1], L2[2], L2[3], { w: 3, c: 'silver', keep: true })] })]);
+      S.push([900, _uP(_mPO(a, 'p-behind p-vanish'), { vfxAdd: [_MV.puff(f.x + 60, f.y + 14, { c: 'silver' })] })]);
+      S.push([1040, _mPO(a, 'p-vanish')]);
+      S.push([1100, _uP(_mPO(a, ''), _mGH(a, null), { vfxAdd: [_MV.puff(a.x + 10, a.y + 10, { c: 'silver' }), _MV.glint(a.hand.x, a.hand.y - 20, { d: 60 })] })]);
+      if (o.land) _uBlow(S, c, o, T, { tint: 'silver', clear: true, F: 160, at: { grade: null, light: null }, vfx: [_MV.line(L1[0], L1[1], L1[2], L1[3], { w: 5, c: 'white' }), _MV.line(L2[0], L2[1], L2[2], L2[3], { w: 5, c: 'white', d: 30 }), _MV.star(f.x - 6, f.y - 6, { s: 46, c: 'white' }), _MV.burst(f.x, f.y - 6, { s: 210, c: 'silver' }), _MV.fan(f.x - 6, f.y - 6, { c: 'silver', n: 10, len: 64 })] });
+      else { S.push([T, { grade: null, light: null, vfxClear: true, cam: 'c-small', vfxAdd: [_MV.fly(f.x - 10, f.y - 4, { c: 'silver', n: 7 })] }]); _uMiss(S, c, o, T, { lead: 170 }); }
+      S.push([1880, _uP(_mFL(a, 'silver'), { vfxAdd: [_MV.ring(a.x + 4, a.y - 14, { rx: 72, ry: 72, c: 'silver', w: 2 }), _MV.glint(a.x - 26, a.y - 60), _MV.glint(a.x + 30, a.y - 30, { d: 90 }), _MV.glint(a.x - 10, a.y + 20, { d: 180 })] })]);
+      S.push([2250, { bars: false }]);
+      return { steps: S, dur: 2900, T, extra: () => [_uCut(f.x + _uR(-20, 20), f.y - 6 + _uR(-30, 30), _uR(0, 180), 90, { w: 2, c: 'silver' })] };
+    },
+    hellfire(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 1260;
+      S.push([0, _uP({ bars: true, light: 'dark', wash: 'rgba(127,29,29,.4)' }, _mPO(a, 'p-sink'), _mGL(a, 'hell'), { vfxAdd: [_MV.dots(a.feet.x, a.feet.y - 16, { c: 'hell', n: 7, du: 800, spread: 70, gap: 60 })] })]);
+      S.push([520, _uP(_mPO(a, 'p-stomp'), { cam: 'c-small', vfxAdd: [_MV.crack(a.feet.x + 16, a.feet.y, { s: 0.8, c: 'hell' }), _MV.dust(a.feet.x + 16, a.feet.y, { n: 4 })] })]);
+      S.push([560, { vfxAdd: [_MV.rift(a.feet.x + 34, a.feet.y - 1, f.feet.x - 24, f.feet.y, { c: 'hell', dur: 400, w: 3, life: 1300 })] }]);
+      S.push([980, { cam: 'c-rumble', vfxAdd: [_MV.fissure(f.feet.x, f.feet.y - 2, { rx: 74, life: o.land ? 900 : 360 }), _MV.dots(f.feet.x, f.feet.y - 6, { c: 'hell', n: 6, du: 500, spread: 90, gap: 30 })] }]);
+      S.push([1080, _mPO(a, '')]);
+      if (o.land) {
+        _uBlow(S, c, o, T, { tint: 'hell', react: 'p-launch', F: 150, hold: 460, at: { light: 'dim' }, vfx: [_MV.hellpillar(f.feet.x, f.feet.y + 4, { w: 112, h: 270 }), _MV.burst(f.x, f.y + 30, { s: 220, c: 'hell' }), _MV.star(f.x, f.y - 10, { s: 40, c: 'fire' })] });
+        S.push([T + 520, { vfxAdd: [_MV.tongue(f.feet.x - 30, f.feet.y, { h: 70 }), _MV.tongue(f.feet.x + 26, f.feet.y, { h: 90, d: 90 })] }]);
+      } else {
+        S.push([T, { cam: null, vfxAdd: [_MV.tongue(f.feet.x, f.feet.y, { h: 46 }), _MV.puff(f.feet.x, f.feet.y - 14, { c: 'hell' })] }]);
+        _uMiss(S, c, o, T);
+      }
+      S.push([2150, _mGL(a, null)], [2300, { bars: false, light: null }]);
+      return { steps: S, dur: 2900, T, extra: () => o.land ? [_MV.tongue(Math.round(f.feet.x + _uR(-44, 44)), f.feet.y, { h: Math.round(_uR(50, 100)) })] : [_MV.puff(Math.round(f.feet.x + _uR(-40, 40)), f.feet.y - 10, { c: 'hell' })] };
+    },
+    storm(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 1940, land = o.land || o.dodge, shift = o.dodge ? _uSide : 0, cx = f.x + shift + (land ? 0 : -74), cy = f.y - 6;
+      const cuts = [1040, 1170, 1290, 1400, 1500, 1590, 1670], angs = [20, 152, 284, 64, 196, 328, 108], rad = (d) => d * Math.PI / 180;
+      S.push([0, _uP({ bars: true, light: 'dark', wash: 'rgba(59,130,246,.35)' }, _mPO(a, 'p-sky'), _mGL(a, 'frost'))]);
+      if (o.dodge) S.push([120, _uP(_mPO(f, 'p-side'), _mGH(f, [_uBack()]))], [700, _mGH(f, null)]);
+      if (o.stance === 'guard') S.push([200, { vfxAdd: [_MV.barrier(cx - 54, cy, { kind: 'kite', f: -1, c: 'teal', brk: land ? T - 200 : undefined, cracks: land ? [1090, 1300, 1470] : [], life: 2100 })] }]);
+      if (o.stance === 'ward') S.push([200, { vfxbAdd: [_MV.barrier(cx + 6, cy, { kind: 'dome', f: -1, c: 'blue', life: T + 300 })] }]);
+      S.push([300, { vfxAdd: [_MV.bladering(cx, cy, { n: 8, rx: 94, ry: 30, gap: 50, cuts: cuts.map((t) => t - 300).concat(T - 520) })] }]);
+      S.push([420, _mPO(a, 'p-raise')]);
+      if (land && !o.dodge) S.push([820, _mPO(f, 'p-plant')]);
+      cuts.forEach((t, i) => S.push([t, _uP({ cam: 'c-small' }, land ? _mFL(f, 'frost') : {}, { vfxAdd: [_uCut(cx, cy, angs[i], 200, { w: 3, c: 'frost', keep: land })].concat(land ? [_MV.star(Math.round(cx + Math.cos(rad(angs[i])) * 18), Math.round(cy + Math.sin(rad(angs[i])) * 18), { s: 16, c: 'white' })] : []) })]));
+      S.push([T - 220, _uP(_mPO(a, 'p-castf'), { vfxAdd: [_MV.sblade(cx, cy + 56, { c: 'frost' })] })]);
+      if (land) _uBlow(S, c, o, T, { tint: 'frost', clear: true, F: 180, wash: 'rgba(125,211,252,.45)', at: { light: null }, vfx: [_MV.burst(cx, cy, { s: 280, c: 'frost' }), _MV.star(cx, cy - 6, { s: 64, c: 'white' }), _MV.ring(f.feet.x + shift, f.feet.y, { rx: 116, ry: 28, c: 'frost', w: 3 })].concat(angs.map((g) => _uCut(cx, cy, g, 230, { w: 2, c: 'white' })), [_uCut(cx, cy, 90, 300, { w: 6, c: 'white' })], o.stance === 'guard' ? [_MV.fly(cx - 54, cy - 10, { c: 'teal', n: 9 })] : [], o.stance === 'ward' ? [_MV.ring(cx - 26, cy, { rx: 30, ry: 92, c: 'blue', w: 2 })] : []) });
+      else { S.push([T, { cam: 'c-shake', light: null, vfxAdd: [_MV.crack(cx, f.feet.y, { s: 1, c: 'frost' }), _MV.dust(cx, f.feet.y, { n: 5 })] }]); _uMiss(S, c, Object.assign({}, o, { dodge: false }), T, { lead: 1120 }); }
+      S.push([T + 520, _uP(_mPO(a, ''), _mGL(a, null))], [T + 700, { bars: false }]);
+      return { steps: S, dur: T + 1150, T, extra: () => [_uCut(cx + _uR(-10, 10), cy + _uR(-16, 16), _uR(0, 180), 170, { w: 2, c: 'frost' })] };
+    },
+    worldbreaker(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 1320, lx = a.feet.x + 92, gy = a.feet.y;
+      S.push([0, _uP({ bars: true, light: 'dim' }, _mPO(a, 'p-crouch'), _mGL(a, 'gold'), { vfxAdd: [_MV.dust(a.feet.x, gy, { n: 3 })] })]);
+      S.push([260, _uP(_mPO(a, 'p-soar'), { cam: 'c-small', vfxAdd: [_MV.dust(a.feet.x, gy, { n: 6 }), _MV.ring(a.feet.x, gy, { rx: 64, ry: 15, c: 'gold', w: 2 }), _MV.crack(a.feet.x, gy, { s: 0.7, c: 'gold' })] })]);
+      S.push([760, { vfxAdd: [_MV.rune(lx, gy - 2, { r: 58, c: 'gold', life: 420, flat: true }), _MV.glint(a.x + 50, a.y - 128)] }]);
+      S.push([T - 130, _mPO(a, 'p-slam')]);
+      const sx = o.land || o.dodge ? f.feet.x : f.feet.x + 44;
+      const ground = [_MV.crack(lx, gy, { s: 1.7, c: 'gold' }), _MV.dust(lx, gy, { n: 7 }), _MV.ring(lx, gy, { rx: 150, ry: 32, c: 'gold', w: 4 }), _MV.burst(lx, gy - 20, { s: 230, c: 'gold' }),
+        _MV.rift(lx + 12, gy - 1, o.land ? f.feet.x + 50 : Math.round(c.W + 6), f.feet.y + (o.land ? 0 : 6), { c: 'gold', dur: o.land ? 140 : 260, w: 4, life: 900 }), _MV.slabs(sx, f.feet.y + 2, { n: 5, spread: o.land ? 130 : 160, d: o.land ? 40 : 140 })];
+      if (o.land) {
+        _uBlow(S, c, o, T, { tint: 'gold', react: 'p-reel', cam: 'c-heave', F: 160, hold: 700, vfx: ground.concat([_MV.star(f.x, f.y - 10, { s: 44, c: 'gold2' })]) });
+        S.push([T + 60, { vfxAdd: [_MV.plates(f.x - 6, f.y - 14, { n: 6 }), _MV.fly(f.x, f.y - 20, { c: 'steel', n: 5 })] }]);
+      } else { S.push([T, { cam: 'c-heave', vfxAdd: ground }]); _uMiss(S, c, o, T, { lead: o.dodge ? 260 : 70, pose: 'p-launch' }); }
+      S.push([1780, _uP(_mPO(a, ''), _mGL(a, null))], [2250, { bars: false, light: null }]);
+      return { steps: S, dur: 2850, T, extra: () => { const x = Math.round(f.feet.x + _uR(-70, 60)); return [_MV.slabs(x, f.feet.y + 2, { n: 1, small: true }), _MV.dust(x, f.feet.y, { n: 2 })]; } };
+    },
+    reaper(c, o) {
+      const a = c.atk, f = c.def, S = [], win = o.reaper === 'window', T = win ? 2240 : 1240, ox = o.land ? 0 : -60;
+      const extra = () => [_MV.dots(Math.round(f.x + _uR(-30, 30)), Math.round(f.y + _uR(0, 40)), { c: 'bone', n: 1, du: 900 })];
+      S.push([0, _uP({ bars: true, light: 'dark', wash: 'rgba(231,229,228,.2)' }, _mPO(a, 'p-sink'), _mGL(a, 'bone'), { vfxAdd: [_MV.dots(f.x, f.y + 40, { c: 'bone', n: 7, du: 1000, spread: 80, gap: 80, k: 1.6 })] })]);
+      S.push([280, { vfxAdd: [0, 260, 520].map((d) => _MV.ring(f.feet.x, f.feet.y, { rx: 84, ry: 20, c: 'bone', w: 1.5, d })) }]);
+      S.push([640, _uP(_mPO(a, 'p-vanish'), _mGL(a, null), { vfxAdd: [_MV.puff(a.x + 10, a.y + 10, { c: 'bone' })] })]);
+      if (!win) {
+        S.push([900, _uP(_mPO(a, 'p-lunge'), { vfxAdd: [_MV.puff(a.x + 72, a.y + 4, { c: 'bone' })] })]);
+        S.push([T - 200, { vfxAdd: [_MV.slash(f.x + 84 + ox, f.y - 92, f.x - 96 + ox, f.y + 58, { b: -64, w: 6, c: 'bone' }), _MV.slash(f.x + 70 + ox, f.y - 96, f.x - 100 + ox, f.y + 40, { b: -70, w: 2, c: 'white', d: 50 })] }]);
+        if (o.land) _uBlow(S, c, o, T, { tint: 'bone', react: 'p-recoil', cam: 'c-shake', F: 120, vfx: [_MV.star(f.x - 10, f.y - 10, { s: 30, c: 'white' })] }); else _uMiss(S, c, o, T);
+        S.push([T + 360, _mPO(a, '')], [T + 900, { bars: false, light: null }]);
+        return { steps: S, dur: T + 1320, T, extra };
+      }
+      S.push([860, { grade: 'mono' }]);
+      S.push([960, { vfxAdd: [_MV.scythe(f.x + 20, f.y, { swing: T - 960 })] }]);
+      S.push([1240, { vfxAdd: [_MV.dots(f.x, f.y + 20, { c: 'bone', n: 5, du: 900, spread: 60, gap: 90 })] }]);
+      S.push([1500, { freeze: true }], [2100, { freeze: false }]);
+      S.push([2120, _uP(_mPO(a, 'p-behind'), { vfxAdd: [_MV.puff(f.x + 60, f.y + 14, { c: 'bone' })] })]);
+      const big = [_MV.slash(f.x + 150 + ox, f.y - 190, f.x - 150 + ox, f.y + 110, { b: -90, w: 10, c: 'white' }), _MV.slash(f.x + 130 + ox, f.y - 200, f.x - 160 + ox, f.y + 90, { b: -96, w: 3, c: 'bone', d: 40 })];
+      if (o.land) _uBlow(S, c, o, T, { tint: 'white', react: 'p-crush', F: 260, at: { wash: '#fff' }, after: { grade: null }, vfx: big.concat([_MV.star(f.x, f.y - 10, { s: 72, c: 'white' }), _MV.ring(f.feet.x, f.feet.y, { rx: 124, ry: 30, c: 'white', w: 3 })]) });
+      else { S.push([T, { cam: 'c-shake', vfxAdd: big }], [T + 220, { grade: null }]); _uMiss(S, c, o, T, { lead: 300 }); }
+      S.push([T + 420, _uP(_mPO(a, 'p-behind p-vanish'), { vfxAdd: [_MV.puff(f.x + 60, f.y + 14, { c: 'bone' })] })], [T + 560, _mPO(a, 'p-vanish')], [T + 620, _uP(_mPO(a, ''), { vfxAdd: [_MV.puff(a.x + 10, a.y + 10, { c: 'bone' })] })]);
+      S.push([T + 720, { bars: false, light: null }]);
+      return { steps: S, dur: T + 960, T, extra };
+    },
+    arise(c, o) {
+      const a = c.atk, f = c.def, S = [], n = Math.max(0, o.army | 0), vis = Math.min(8, n), T = n ? 1900 : 1320, px = a.x - 16, py = a.feet.y - 10;
+      const extra = () => [_MV.eyes(Math.round(a.x + _uR(-98, 78)), Math.round(a.feet.y + _uR(-88, -18)))];
+      S.push([0, _uP({ bars: true, light: 'dark', wash: 'rgba(109,40,217,.4)' }, _mPO(a, 'p-sky'), _mGL(a, 'shadow'))]);
+      S.push([120, { vfxbAdd: [_MV.pool(px, py, { rx: n ? 150 : 90, ry: n ? 30 : 20, life: T + 200 })] }]);
+      if (!n) {
+        S.push([560, { vfxbAdd: [_MV.ring(px, py, { rx: 80, ry: 18, c: 'shadow', w: 2 })] }], [820, _mPO(a, 'p-crouch')]);
+        S.push([1000, _uP(_mPO(a, 'p-dash'), { gtint: 'shadow' }, _mGH(a, [{ x: 26, y: -2 }, { x: 54, y: -3 }, { x: 82, y: -4 }]))]);
+        S.push([T - 150, { vfxAdd: [_MV.slash(f.x - 70, f.y - 60, f.x + 40, f.y + 60, { b: 26, w: 5, c: 'violet' })] }]);
+        if (o.land) _uBlow(S, c, o, T, { tint: 'shadow', react: 'p-recoil', cam: 'c-shake', F: 120, vfx: [_MV.star(f.x - 10, f.y, { s: 26, c: 'violet' })] }); else _uMiss(S, c, o, T);
+        S.push([T + 260, _uP(_mPO(a, ''), _mGH(a, null), _mGL(a, null))], [T + 800, { bars: false, light: null }]);
+        return { steps: S, dur: T + 1200, T, extra };
+      }
+      S.push([200, { vfxbAdd: [_MV.army(n, o.land ? f.x - 20 : f.x + 70, f.feet.y - 6, { ax: a.feet.x, ay: a.feet.y, rise: 60, gapR: n > 4 ? 80 : n > 1 ? 130 : 0, charge: 1150, gapC: 30, travel: 300, land: o.land })] }]);
+      S.push([1300, _uP(_mPO(a, 'p-castf'), { vfxAdd: [_MV.speed(a.x + 70, a.y - 10, { dir: 1 })] })]);
+      if (o.land) for (let i = 0; i < vis; i++) { const g = [[-60, -50, 40, 50, 24], [50, -56, -50, 46, -24], [-70, 10, 70, -10, 10]][i % 3]; S.push([1650 + 30 * i, _uP(i % 2 ? {} : _mFL(f, 'shadow'), { vfxAdd: [_MV.slash(f.x + g[0], f.y + g[1], f.x + g[2], f.y + g[3], { b: g[4], w: 4, c: 'violet' })] })]); }
+      if (o.land) _uBlow(S, c, o, T, { tint: 'shadow', F: 180, wash: 'rgba(139,92,246,.5)', vfx: [_MV.burst(f.x, f.y - 10, { s: 280, c: 'shadow' }), _MV.burst(f.x, f.y - 10, { s: 180, c: 'violet', d: 60 }), _MV.star(f.x - 6, f.y - 10, { s: 58, c: 'violet' }), _MV.ring(f.feet.x, f.feet.y, { rx: 120, ry: 30, c: 'violet', w: 3 }), _MV.puff(f.x - 30, f.y + 20, { c: 'shadow' }), _MV.puff(f.x + 20, f.y - 30, { c: 'shadow' })] });
+      else _uMiss(S, c, o, T, { lead: 400 });
+      S.push([T + 300, _uP(_mPO(a, ''), _mGL(a, null))], [T + 700, { bars: false, light: null }]);
+      return { steps: S, dur: T + 1100, T, extra };
+    },
+    dawnbreaker(c, o) {
+      const a = c.atk, f = c.def, S = [], T = 1300, ox = o.land ? 0 : -64;
+      S.push([0, _uP({ bars: true, light: 'dark' }, _mPO(a, 'p-sink'), { vfxbAdd: [_MV.sunrise(a.x - 20, a.feet.y + 14, { r: 180, life: 2100 })] })]);
+      S.push([120, { vfxAdd: [_MV.dots(a.feet.x - 10, a.feet.y - 8, { c: 'gold2', n: 10, du: 1000, spread: 130, gap: 55, k: 2 })] }]);
+      S.push([620, _uP(_mPO(a, 'p-rise'), _mGL(a, 'gold'), { light: 'dim', wash: 'rgba(255,213,116,.3)' })]);
+      S.push([980, _uP(_mPO(a, 'p-dash'), { gtint: 'gold' }, _mGH(a, [{ x: 28, y: -2 }, { x: 56, y: -3 }, { x: 84, y: -4 }]))]);
+      S.push([T - 170, { vfxAdd: [_MV.slash(f.x - 104 + ox, f.y + 56, f.x + 80 + ox, f.y - 76, { b: -42, w: 8, c: 'gold' })] }]);
+      if (o.land) _uBlow(S, c, o, T, { tint: 'gold', F: 160, wash: 'rgba(255,213,116,.45)', vfx: [_MV.burst(f.x, f.y - 10, { s: 250, c: 'gold' }), _MV.star(f.x - 6, f.y - 12, { s: 54, c: 'gold2' }), _MV.fan(f.x - 6, f.y - 12, { c: 'gold2', n: 12, len: 74 })] });
+      else _uMiss(S, c, o, T);
+      S.push([T + 280, _uP(_mPO(a, ''), _mGH(a, null))]);
+      S.push([T + 560, _uP(_mPO(a, 'p-plant'), _mFL(a, 'gold'), { vfxAdd: [_MV.halo(a.x, a.head.y - 7, { r: 28, c: 'gold' }), _MV.ring(a.feet.x, a.feet.y, { rx: 76, ry: 18, c: 'gold', w: 2 }), _MV.dots(a.feet.x, a.feet.y - 10, { c: 'gold2', n: 8, du: 700, spread: 90, k: 1.6, gap: 40 })] })]);
+      S.push([T + 1000, _uP(_mPO(a, ''), _mGL(a, null))], [T + 1180, { bars: false, light: null }]);
+      return { steps: S, dur: T + 1600, T, extra: () => [_MV.glint(Math.round(a.x + _uR(-80, 30)), Math.round(a.y + _uR(-90, 60)))] };
+    },
+  };
+  Object.keys(_PKB_ULT_SEQ_DEF).forEach((id) => { _PKB_ULT_SEQ[id] = _PKB_ULT_SEQ_DEF[id]; });
+  // the cut-in's palette per ultimate (the handoff's tinted cut-in; the three Signatures keep the default)
+  const _PKB_ULT_CT = {
+    feast: { sl: 'rgba(239,68,68,.09)', s0: 'rgba(69,10,10,0)', s1: 'rgba(127,29,29,.88)', s2: 'rgba(220,38,38,.9)', s3: 'rgba(255,154,154,.85)', sp: 'rgba(153,27,27,.55)', sg: 'rgba(239,68,68,.8)', ck: '#ffc4c4', ci: '#ff9a9a' },
+    quicksilver: { sl: 'rgba(226,232,240,.08)', s0: 'rgba(51,65,85,0)', s1: 'rgba(51,65,85,.9)', s2: 'rgba(148,163,184,.9)', s3: 'rgba(94,234,212,.85)', sp: 'rgba(148,163,184,.45)', sg: 'rgba(226,232,240,.75)', ck: '#eef2f7', ci: '#b5f5e8' },
+    hellfire: { sl: 'rgba(220,38,38,.08)', s0: 'rgba(10,2,2,0)', s1: 'rgba(26,4,4,.92)', s2: 'rgba(185,28,28,.9)', s3: 'rgba(240,144,74,.88)', sp: 'rgba(127,29,29,.6)', sg: 'rgba(240,144,74,.8)', ck: '#ffc49a', ci: '#f0904a' },
+    storm: { sl: 'rgba(125,211,252,.08)', s0: 'rgba(23,37,84,0)', s1: 'rgba(30,58,138,.88)', s2: 'rgba(59,130,246,.9)', s3: 'rgba(125,211,252,.88)', sp: 'rgba(37,99,235,.45)', sg: 'rgba(125,211,252,.8)', ck: '#d6ecff', ci: '#7dd3fc' },
+    worldbreaker: { sl: 'rgba(245,184,66,.07)', s0: 'rgba(28,26,36,0)', s1: 'rgba(68,64,60,.9)', s2: 'rgba(120,113,108,.9)', s3: 'rgba(245,184,66,.9)', sp: 'rgba(146,104,30,.45)', sg: 'rgba(245,184,66,.65)', ck: '#f5e2b8', ci: '#f5b842' },
+    reaper: { sl: 'rgba(255,255,255,.06)', s0: 'rgba(10,10,14,0)', s1: 'rgba(24,24,30,.92)', s2: 'rgba(113,113,122,.9)', s3: 'rgba(231,229,228,.92)', sp: 'rgba(82,82,91,.5)', sg: 'rgba(231,229,228,.55)', ck: '#e7e5e4', ci: '#d6d3d1' },
+    arise: { sl: 'rgba(167,139,250,.1)', s0: 'rgba(8,4,20,0)', s1: 'rgba(20,10,40,.94)', s2: 'rgba(91,33,182,.9)', s3: 'rgba(167,139,250,.9)', sp: 'rgba(76,29,149,.6)', sg: 'rgba(139,92,246,.9)', ck: '#ddd6fe', ci: '#c4b5fd' },
+    dawnbreaker: { sl: 'rgba(255,213,116,.08)', s0: 'rgba(251,113,133,0)', s1: 'rgba(190,70,90,.8)', s2: 'rgba(245,184,66,.9)', s3: 'rgba(255,226,150,.92)', sp: 'rgba(245,184,66,.45)', sg: 'rgba(255,213,116,.85)', ck: '#fff1cc', ci: '#ffd574' },
+  };
   // ── press-and-hold on a HEAVY card: after 180 ms the stage darkens, an aura swells at the weapon hand, a tension
   //    line hums and the hunter holds the wind-up. Release swings (the wind-up is spent, the strike comes 120 ms
   //    later). Nothing but the picture changes — the number was decided before the card was touched. ──
@@ -18844,10 +19192,37 @@
     return true;
   }
   // ── ambient status loops: the body carries the state the chip names (3–5 nodes each, transform/opacity only) ──
+  // W1171 — the handoff's four ambient loops (ult-fx.jsx M_LOOP_EXT), in the loops box at the figure's anchor (screen px)
+  function _pkbUltLoopsHtml(spot, side, has) {
+    let b = null; try { b = _pkbFigBox(side); } catch (_) {}
+    const fh = b ? b.h : 290, fw = b ? b.w : 290, feet = Math.round(fh * 0.42), head = Math.round(-fh * 0.3);
+    let h = '';
+    if (has('qsilver')) {
+      let src = ''; try { const im = spot.querySelector('.spr img'); src = im ? im.getAttribute('src') || '' : ''; } catch (_) {}
+      const mask = src ? '-webkit-mask-image:url("' + src.replace(/"/g, '') + '");mask-image:url("' + src.replace(/"/g, '') + '");' : '';
+      h += '<div class="lp-qs" style="left:' + Math.round(-fw / 2) + 'px;top:' + Math.round(-fh * 0.46) + 'px;width:' + Math.round(fw) + 'px;height:' + Math.round(fh) + 'px;' + mask + '"><i></i></div>' +
+        '<div class="lp-qsg">' + [[-34, -70], [32, -40], [-22, 12], [40, 34]].map(([ox, oy], i) => '<i style="left:' + ox + 'px;top:' + oy + 'px;--d:' + (i * 410) + 'ms"></i>').join('') + '</div>' +
+        '<div class="lp-qst">' + [0, 1].map((i) => '<i style="top:' + (feet - 13 + i * 10) + 'px;--d:' + (i * 700) + 'ms"></i>').join('') + '</div>';
+    }
+    if (has('hellfire')) {
+      h += '<div class="lp-hfc" style="left:-50px;top:' + (feet - 6) + 'px;width:100px"></div><div class="lp-hf">' +
+        [[-32, 0.7], [-15, 1], [2, 0.85], [18, 1.1], [33, 0.7]].map(([ox, k], i) => '<i style="left:' + Math.round(ox - 7 * k) + 'px;top:' + Math.round(feet - 44 * k) + 'px;width:' + Math.round(14 * k) + 'px;height:' + Math.round(44 * k) + 'px;--d:' + (i * 230) + 'ms"></i>').join('') + '</div>' +
+        '<div class="lp-hfa">' + [-18, 6, 24].map((ox, i) => '<i style="left:' + ox + 'px;top:' + (feet - 26) + 'px;--d:' + (i * 600) + 'ms"></i>').join('') + '</div>';
+    }
+    if (has('stagger')) h += '<div class="lp-stg">' + [[-50, -24, 1], [48, -12, -1], [-44, 14, 1], [44, 26, -1]].map(([ox, oy, k], i) => '<i style="left:' + ox + 'px;top:' + oy + 'px;--sx:' + k + ';--d:' + (i % 2 ? 300 : 0) + 'ms"></i>').join('') + '</div>';
+    if (has('dawn')) h += '<div class="lp-dng" style="left:-72px;top:' + (feet - 13) + 'px;width:144px"></div><div class="lp-dn" style="left:-42px;top:' + (head - 42) + 'px"><i class="r"></i><i class="c"></i></div>';
+    return h;
+  }
   function _pkbLoopsPaint(side, S) {
     const spot = _pkbEl('pkb-spot-' + side); if (!spot || !S) return;
     const st = [];
-    (S.mods || []).forEach((x) => { if (x.k === 'dot') st.push(x.kind === 'bleed' ? 'bleed' : 'burn'); else if (x.k === 'atk') st.push(x.mag > 0 ? 'atkup' : 'atkdown'); else if (x.k === 'shred') st.push('shred'); else if (x.k === 'dodge') st.push('evade'); });
+    (S.mods || []).forEach((x) => {   // W1171 — an ultimate's lasting effects wear their own loops (hellfire, Quicksilver's shimmer, the stagger, the dawn)
+      if (x.k === 'dot') st.push(x.kind === 'bleed' ? 'bleed' : x.kind === 'hellfire' ? 'hellfire' : 'burn');
+      else if (x.k === 'atk') { if (x.kind !== 'dawn') st.push(x.mag > 0 ? 'atkup' : x.kind === 'worldbreak' ? 'stagger' : 'atkdown'); }
+      else if (x.k === 'shred') st.push('shred');
+      else if (x.k === 'dodge') st.push(x.kind === 'quicksilver' ? 'qsilver' : 'evade');
+      else if (x.k === 'def' && x.kind === 'dawn') st.push('dawn');
+    });
     if (S.stun > 0) st.push('stun');
     const key = st.slice().sort().join(',');
     let box = spot.querySelector('.pkb-loops');
@@ -18864,8 +19239,10 @@
     if (has('shred')) h += '<div class="lp-shred">' + [[-18, -30, -35], [10, -12, 40], [-6, 14, -20], [16, 28, 30]].map(([ox, oy, r], i) => '<i style="--x:' + ox + 'px;--y:' + oy + 'px;--r:' + r + 'deg;--d:' + (i * 300) + 'ms"></i>').join('') + '</div>';
     if (has('atkup')) h += '<div class="lp-atkup">' + [-16, -2, 12, 26].map((ox, i) => '<i style="--x:' + ox + 'px;--y:' + (-40 + (i % 2) * 20) + 'px;--d:' + (i * 320) + 'ms"></i>').join('') + '</div>';
     if (has('atkdown')) h += '<div class="lp-atkup lp-atkdown">' + [-14, 2, 18].map((ox, i) => '<i style="--x:' + ox + 'px;--y:' + (-30 + (i % 2) * 20) + 'px;--d:' + (i * 400) + 'ms"></i>').join('') + '</div>';
+    h += _pkbUltLoopsHtml(spot, side, has);   // W1171
     box.innerHTML = h;
     spot.classList.toggle('s-burn', has('burn')); spot.classList.toggle('s-evade', has('evade')); spot.classList.toggle('s-atkup', has('atkup'));
+    spot.classList.toggle('s-qsilver', has('qsilver')); spot.classList.toggle('s-hellfire', has('hellfire')); spot.classList.toggle('s-dawn', has('dawn'));
   }
   function _pkbImpactFx(e, defSide, dmgShown, row, stop) {
     // W1141 — row = the move's motion row (its layers drew the strike; the knockback waits out the hit-stop)
@@ -19043,7 +19420,7 @@
         if (ctx) {
           const held = e.side === 'p' && _pkbHeldMv && _pkbHeldMv === _pkbMvId(e);
           if (e.side === 'p') _pkbHeldMv = null;
-          seq = e.ult ? _pkbUltSeqFor(e, s, ctx) : _pkbCompose(row, ctx, { land: true, crit: !!e.crit, kill: willKO, held: !!held });
+          seq = e.ult ? _pkbUltSeqFor(e, s, ctx, { kill: willKO }) : _pkbCompose(row, ctx, { land: true, crit: !!e.crit, kill: willKO, held: !!held });
           _pkbMvPlay(seq, ctx, { keepPose: !!held, ult: !!e.ult });
           windup = seq.T;
           if (atk) atk.classList.remove('telegraph');
@@ -19148,10 +19525,11 @@
       // leaving an afterimage), then the toast. Without a measurable stage: the W429 dodge react + the toast.
       const dodge = e.t === 'dodge';
       _pkbSay(used, _PKB_T.announceHold, () => {
-        const row = _pkbMvRow(e), ctx = row ? _pkbMvCtx(e.side) : null;
+        const ultMiss = !!(e.ultId && _PKB_ULT_SEQ[e.ultId]);   // W1171 — an earned ultimate's own miss ending
+        const row = ultMiss ? null : _pkbMvRow(e), ctx = (row || ultMiss) ? _pkbMvCtx(e.side) : null;
         if (e.side === 'p') _pkbHeldMv = null;
         let at = 0;
-        if (ctx) { const seq = _pkbCompose(row, ctx, { land: false, dodge }); _pkbMvPlay(seq, ctx, {}); at = seq.T; }
+        if (ctx) { const seq = ultMiss ? _pkbUltSeqFor(e, s, ctx) : _pkbCompose(row, ctx, { land: false, dodge }); _pkbMvPlay(seq, ctx, ultMiss ? { ult: true } : {}); at = seq.T; }
         _pkbAfter(at, () => {
           try { _audCue('miss_dodge'); } catch (_) {}
           if (dodge && !ctx) { try { _pkbReactFx(e.side === 'p' ? 'b' : 'p', 'dodge'); } catch (_) {} }
@@ -29949,6 +30327,18 @@
     // W1122 — memberships gone for now; it leads because every hunter feels it.
     // W1134 — 3.0.23: the Worldgate's two-day rule (owner 2026-11-06).
     // W1136 — the Ascent battle redesign leads (owner 2026-11-06: "Everything at once").
+    // W1171 — 3.0.24: the earned ultimates lead (owner 2026-11-09); then the automatic Patient Flame, the matched partners
+    // (server, live since 2026-11-07) and Add as friend, and the late-steps board fix.
+    '3.0.24': {
+      subtitle: 'Eight new ultimates.',
+      items: [
+        { emoji: '', title: 'Eight new ultimates', description: "Earn them from boss kills, your shadows and the summit, then choose one in the Wardrobe. Each hits differently and has its own moment." },
+        { emoji: '', title: 'Watch before you choose', description: "Every ultimate in the Wardrobe has a Preview." },
+        { emoji: '', title: 'The Patient Flame falls by itself', description: "Walk 10,000 steps two days in a row and it is yours. No tap needed." },
+        { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt. After a win, add them as a friend in one tap." },
+        { emoji: '', title: 'Every step on the board', description: "Steps that arrive right after an upload now reach the Steps board." },
+      ],
+    },
     '3.0.23': {
       subtitle: 'Ascent battles, rebuilt.',
       items: [
@@ -59644,7 +60034,7 @@
       const tx = state === 'worn' ? 'EQUIPPED' : state === 'earned' ? (id === 'signature' ? 'DEFAULT' : 'EARNED') : ultCondShort(id);
       const seal = state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : state === 'worn' ? '<span class="wx-seal ok">' + WX_IC.check + '</span>' : '';
       return '<button type="button" class="wx-bt wx-sl wx-sl-ult is-' + state + '" data-ul="' + id + '" style="' + _wxTintStyle('rc', I.tint) + '">' +
-        '<span class="wx-sl-prev">' + ultEmblem(id, 44) + '</span><span class="wx-bt-tx"><span class="wx-bt-nm">' + esc(I.n) + '</span><span class="wx-bt-st">' + esc(tx) + '</span></span>' + seal +
+        '<span class="wx-sl-prev">' + ultEmblem(id, 58, state === 'locked') + '</span><span class="wx-bt-tx"><span class="wx-bt-nm">' + esc(I.n) + '</span><span class="wx-bt-st">' + esc(tx) + '</span></span>' + seal +
         (fresh ? '<span class="wx-chip-new">NEW</span>' : '') + '</button>';
     };
     const ulHero = function () {
@@ -59673,7 +60063,7 @@
       const foot = state === 'locked' ? '<div class="wx-ult-cond">' + WX_IC.lock + esc(ultCondText(id)) + '</div>'
         : state === 'worn' ? '<div class="wx-ult-on">' + WX_IC.check + 'EQUIPPED</div>'
         : '<button type="button" class="wx-ult-eq" data-ulequip="' + id + '">EQUIP</button>';
-      return '<article class="wx-pg wx-pg-sl wx-pg-ult is-' + state + '" data-p="' + (state === 'locked' ? 0 : 100) + '" style="' + _wxTintStyle('rc', I.tint) + '"><div class="wx-ps">' + ultEmblem(id, 120) +
+      return '<article class="wx-pg wx-pg-sl wx-pg-ult is-' + state + '" data-p="' + (state === 'locked' ? 0 : 100) + '" style="' + _wxTintStyle('rc', I.tint) + '"><div class="wx-ps">' + ultEmblem(id, 132, state === 'locked') +
         (state === 'locked' ? '<span class="wx-seal">' + WX_IC.lock + '</span>' : '') + '</div>' +
         '<div class="wx-pg-rar"><span class="wx-rar" style="' + _wxTintStyle('c', I.tint) + '">' + esc(I.kind) + '</span></div><h3 class="wx-pg-nm">' + esc(I.n) + '</h3>' +
         '<div class="wx-ms"><div class="wx-ms-c">' + esc(I.eff) + '</div><div class="wx-ult-how">' + esc(I.how) + '</div>' + foot + '</div>' +

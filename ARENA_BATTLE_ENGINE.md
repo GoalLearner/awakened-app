@@ -61,6 +61,12 @@
 > Sim: `opts.ult` (incl. `'none'`), `opts.ultFire` `'smart'` (use() + patience from the first full turn) or `'full'`;
 > the sim never Surge-parries at full (the screen offers UNLEASH there). ULT TABLE: `node tools/sim-ascent.js --ults`.
 > selfTest → 67 (T55–T65). Flag-off bit-identity gate: 34 seeded sim rows identical before and after.
+> **W1171 (2026-11-09) — LIVE** (`ULTS_EARNED_LIVE = true`) with the Claude Design sequences (handoff 9, "The Ascent -
+> Ultimates") ported onto the W1141 layers: `_PKB_ULT_SEQ[ultId](c, o)` (o = land / dodge / crit / kill / army /
+> reaper ending / foe stance, from `_pkbUltOpts`), 18 new kinds (`_PKB_MEXT_SVG/DOM/LIFE`), a back layer (`vfxbAdd`: over the
+> foe, behind the hunter), grades (`gr-qs`, `gr-mono`), afterimage tints, four status loops (hellfire, Quicksilver's
+> shimmer, the stagger, the dawn halo), tinted cut-ins (`_PKB_ULT_CT`), the eleven Wardrobe emblems, and an earned
+> ultimate's own miss / dodge ending. The engine is untouched (the 34-row gate still identical).
 > **v2.7 changelog (W260 — the FIRST sanctioned engine change since the v2.6 freeze;
 > strictly ADDITIVE):** endgame AI tiers F51+ (§7.2: INSTINCT/TACTICIAN/STRATEGIST/APEX,
 > fair-play charter, sanitized no-RNG decision state, v2-fallback safety) + down-to-the-wire
