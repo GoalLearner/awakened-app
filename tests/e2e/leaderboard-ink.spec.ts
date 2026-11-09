@@ -71,4 +71,17 @@ test.describe('W1147 — the name in its ink on the Steps board', () => {
     await expect(sheet.locator('.lb-rank-row').filter({ hasText: 'Delta' }).locator('.lb-ink')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: SHOTS + '/board-ink.png' });
   });
+
+  // W1172 — owner 2026-11-09 (Galilea's row, iPhone): her name looked cut off by the 100-kill stamp under it. The name
+  // clips its overflow for the ellipsis, and at line-height 1.05 the iPhone font's descenders (the g) hung below the
+  // line box and were sliced flat. The line box must hold a descender: at least 1.2 em.
+  test("a row name's line box holds its descenders (Galilea's g under her kill stamp)", async ({ page }) => {
+    await boot(page);
+    await openBoard(page, { ok: true, final: false, week: null, top: [row(1, 'justin', 14223), Object.assign(row(2, 'galilea', 9028, 'violet'), { bosses_slain: 102 }), row(3, 'giorgio', 14)], me: null });
+    const m = await page.evaluate(() => Array.from(document.querySelectorAll('#lb-rank-sheet .lb-rank-row .lb-rank-id .lb-rank-name')).map((el) => { const cs = getComputedStyle(el); return { t: (el.textContent || '').trim(), lh: parseFloat(cs.lineHeight), fs: parseFloat(cs.fontSize), h: el.getBoundingClientRect().height }; }));
+    const gal = m.find((x) => /galilea/i.test(x.t));
+    expect(gal).toBeTruthy();
+    for (const x of m) { expect(x.lh / x.fs).toBeGreaterThanOrEqual(1.2); expect(x.h).toBeGreaterThanOrEqual(x.fs * 1.2 - 0.5); }
+    await expect(page.locator('#lb-rank-sheet .lb-rank-row').filter({ hasText: 'galilea' }).locator('.lb-rank-boss100')).toHaveCount(1);
+  });
 });

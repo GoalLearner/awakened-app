@@ -29299,7 +29299,9 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 }
 /* W709 — no medal recolor: #2/#3 numbers stay their rank-tier color (.lb-rankno --rc). */
 #lb-rank-sheet .lb-rank-id > .lb-rank-name-row > .lb-rank-name {
-  font-size: 16px; font-weight: 600; line-height: 1.05; color: #f5f3fb;
+  /* W1172 — 1.25, not 1.05: the name clips its overflow (for the ellipsis), and at 1.05 the iPhone font's descenders
+     (g, j, p, q, y) hung below the line box and were sliced flat — Galilea's g under her kill stamp, Giorgio's too. */
+  font-size: 16px; font-weight: 600; line-height: 1.25; color: #f5f3fb;
 }
 #lb-rank-sheet .lb-rank-value {
   font-family: "JetBrains Mono", monospace; font-size: 16px; font-weight: 800;
