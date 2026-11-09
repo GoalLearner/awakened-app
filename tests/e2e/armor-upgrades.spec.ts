@@ -110,3 +110,40 @@ test.describe('Armor upgrades worth the souls (W1110)', () => {
     await expect(pwr).toHaveText('70');
   });
 });
+
+// W1174 — owner 2026-11-09: "rare items can't be upgraded at all. Only ultra rares." → "Actually just reset and refund
+// them". Rares no longer upgrade (ultra rare and mythic still do); a rare still above level 0 goes back to 0 and pays
+// back what its levels cost, once — the refund is keyed to the levels, which it clears in the same save.
+test.describe('Rares no longer upgrade (W1174)', () => {
+  test('an upgraded rare resets to 0 and refunds its levels once; the history names it', async ({ page }) => {
+    // Hammerfall Warmaul: rare, tier B (1,600 then 3,200 souls) — level 2 paid 4,800
+    await boot(page, { hammerfall_warmaul: owned(2), mantle_of_the_sovereign: owned(1) }, 1000);
+    await page.waitForFunction(() => { const c = (JSON.parse(localStorage.getItem('hb_inventory') || '{}').cards || {}).hammerfall_warmaul; return !!c && c.upgrade_level === 0; }, null, { timeout: 10_000 });
+    const r = await page.evaluate(() => {
+      const inv = JSON.parse(localStorage.getItem('hb_inventory') || '{}').cards || {};
+      const led = JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]');
+      const rows = (Array.isArray(led) ? led : (led.entries || [])).filter((e: any) => e && e.ref_id === 'hammerfall_warmaul' && e.type === 'relic_refund');
+      const again = (window as any).__rareUpgradeRefund();
+      return { rare: inv.hammerfall_warmaul.upgrade_level, ultra: inv.mantle_of_the_sovereign.upgrade_level, rows: rows.length, label: rows[0] && rows[0].label, amount: rows[0] && rows[0].delta, again };
+    });
+    expect(r.rare).toBe(0);
+    expect(r.ultra).toBe(1);            // an ultra rare keeps its level
+    expect(r.rows).toBe(1);
+    expect(r.label).toBe('Upgrade refunded');
+    expect(r.again).toBe(0);            // nothing left to refund: never twice
+    expect(r.amount).toBe(4800);      // 1,600 + 3,200 (the daily bonus may land too, so the row, not the balance)
+  });
+
+  test('a rare cannot be upgraded and shows no upgrade row; an ultra rare still can', async ({ page }) => {
+    await boot(page, { hammerfall_warmaul: owned(0), mantle_of_the_sovereign: owned(0) }, 100000);
+    const r = await page.evaluate(() => ({ rare: (window as any).canUpgradeRelic('hammerfall_warmaul'), ultra: (window as any).canUpgradeRelic('mantle_of_the_sovereign') }));
+    expect(r.rare.ok).toBe(false);
+    expect(r.rare.reason).toBe('rarity');
+    expect(r.ultra.ok).toBe(true);
+    await page.evaluate(() => document.getElementById('tab-items')!.click());
+    const card = page.locator('.pokedex-card[data-card-id="hammerfall_warmaul"]');
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    await card.click();
+    await expect(page.locator('#carddetail-upgrade')).toBeHidden();
+  });
+});

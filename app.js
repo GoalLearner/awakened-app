@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1173'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1174'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -5860,6 +5860,12 @@
       const rid = h.slice(11);
       const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
       return { type: 'relic_sell', label: 'Relic sold', detail: rcard ? rcard.name : null, ref_id: rid || null };
+    }
+    // W1174 — a rare's upgrade levels paid back. Hint: 'relic_refund_<id>'.
+    if (h.indexOf('relic_refund_') === 0) {
+      const rid = h.slice(13);
+      const rcard = (typeof CARDS !== 'undefined') ? CARDS[rid] : null;
+      return { type: 'relic_refund', label: 'Upgrade refunded', detail: rcard ? rcard.name : null, ref_id: rid || null };
     }
     // W494 — Relic Upgrade sink. Hint: 'relic_upgrade_<id>'.
     if (h.indexOf('relic_upgrade_') === 0) {
@@ -13682,7 +13688,7 @@
     if (invest === 'max') {
       ids.forEach((id) => {
         const c = CARDS[id];
-        if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null) return;   // commons / unpriced tiers are not upgradeable
+        if (!c || RELIC_UPGRADE_BASE_COST[c.tier] == null || !RELIC_UPGRADE_RARITIES[c.rarity]) return;   // commons / unpriced tiers / rares (W1174) are not upgradeable
         const g = relicUpgradeGain(c, RELIC_UPGRADE_MAX);   // W1110 — armor +10% a level on every stat
         Object.keys(g).forEach((k) => { if (Object.prototype.hasOwnProperty.call(gear, k)) gear[k] += g[k]; });
       });
@@ -23273,6 +23279,9 @@
   // early E-rank rare. TIER_BASE includes A/S so future content prices
   // itself automatically. All knobs are tunable here.
   const RELIC_TRADEABLE_RARITIES = { rare: true, ultra_rare: true, mythic: true };
+  // W1174 — owner 2026-11-09: "rare items can't be upgraded at all. Only ultra rares." Mythics sit above ultra rare and
+  // keep upgrading (their max level unlocks the special attack, W757). Rares still trade on the market.
+  const RELIC_UPGRADE_RARITIES = { ultra_rare: true, mythic: true };
   // W290 — GRIND-BASED pricing table. base = (expected defeats to drop a specific
   // item) x (that boss's gross kill reward), tier-monotonic (D floored > E, S > A).
   // Final buy = base + RELIC_STAT_WEIGHT * stats. Buying always costs ~2x the net
@@ -23378,6 +23387,32 @@
     const n = e && +e.upgrade_level;
     return (isFinite(n) && n > 0) ? Math.min(RELIC_UPGRADE_MAX, Math.trunc(n)) : 0;
   }
+  // W1174 — owner 2026-11-09: rares stop upgrading → "Actually just reset and refund them". Every rare still above
+  // level 0 goes back to 0 and pays back what its levels cost (at today's prices). Keyed to the STATE, not a flag: the
+  // levels and the souls live in the same save and the same cloud snapshot, the levels are cleared and persisted before
+  // the souls land, and a rare at level 0 has nothing left to refund, so it can never pay twice; a restored older
+  // snapshot (levels and its own pre-refund balance together) refunds once more, correctly. A corrupt inventory is left
+  // alone (W494: writing the stub would wipe it).
+  function _rareUpgradeRefund() {
+    if (_inventoryCorrupt) return 0;
+    const inv = getInventory(); if (!inv || !inv.cards) return 0;
+    const paid = [];
+    Object.keys(inv.cards).forEach((id) => {
+      const card = CARDS[id], e = inv.cards[id];
+      if (!card || !e || RELIC_UPGRADE_RARITIES[card.rarity] || !RELIC_TRADEABLE_RARITIES[card.rarity]) return;
+      const lvl = getRelicLevel(id); if (lvl <= 0) return;
+      let souls = 0; for (let k = 0; k < lvl; k++) souls += relicUpgradeCost(id, k) || 0;
+      e.upgrade_level = 0;
+      paid.push({ id, souls });
+    });
+    if (!paid.length) return 0;
+    persistInventory();   // the levels go first
+    let total = 0;
+    paid.forEach((p) => { if (p.souls > 0) { earnSouls(p.souls, 'relic_refund_' + p.id); total += p.souls; } });
+    if (total > 0) setTimeout(() => { try { showHabitToast('Rare relics no longer upgrade. ' + total.toLocaleString('en-US') + ' souls refunded.'); } catch (_) {} }, 4500);
+    return total;
+  }
+  try { window.__rareUpgradeRefund = _rareUpgradeRefund; } catch (_) {}   // QA
   function setRelicLevel(cardId, n) {
     const inv = getInventory();
     if (!inv || !inv.cards) return;
@@ -23558,6 +23593,7 @@
     // keep and makes the 'untradeable' reason accurate). All such relics have a
     // priced tier, so the BASE_COST guard below is defense-in-depth.
     if (!_relicIsTradeable(cardId)) return { ok: false, reason: 'untradeable' };
+    if (!RELIC_UPGRADE_RARITIES[card.rarity]) return { ok: false, reason: 'rarity' };   // W1174 — ultra rare and mythic only
     if (RELIC_UPGRADE_BASE_COST[card.tier] == null) return { ok: false, reason: 'untradeable' };
     if (!_relicDominantStatKey(card)) return { ok: false, reason: 'no_stat' };
     const entry = getInventory().cards[cardId] || _stubCard();
@@ -27902,7 +27938,7 @@
     if (!box) return;
     const owned = !!(entry && (entry.count || 0) > 0);
     const dom = _relicDominantStatKey(card);
-    const upgradeable = owned && dom && _relicIsTradeable(card.id) && RELIC_UPGRADE_BASE_COST[card.tier] != null;
+    const upgradeable = owned && dom && _relicIsTradeable(card.id) && !!RELIC_UPGRADE_RARITIES[card.rarity] && RELIC_UPGRADE_BASE_COST[card.tier] != null;   // W1174
     if (!upgradeable) { box.classList.add('hidden'); box.innerHTML = ''; return; }
     const level = getRelicLevel(card.id);
     const atMax = level >= RELIC_UPGRADE_MAX;
@@ -30352,6 +30388,7 @@
         { emoji: '', title: 'The Patient Flame falls by itself', description: "Walk 10,000 steps two days in a row and it is yours. No tap needed." },
         { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt. After a win, add them as a friend in one tap." },
         { emoji: '', title: 'Every step on the board', description: "Steps that arrive right after an upload now reach the Steps board." },
+        { emoji: '', title: 'Upgrades for ultra rares and mythics', description: "Rare relics no longer upgrade. Every soul spent upgrading a rare has been refunded." },   // W1174
       ],
     },
     '3.0.23': {
@@ -79271,6 +79308,7 @@
       // wiped tower is rebuilt before floor_best is announced (stamp devices);
       // stampless devices heal from the submit response's server best instead.
       try { _ascentSelfHealFromStamps(); } catch (_) {}
+      try { _rareUpgradeRefund(); } catch (_) {}   // W1174 — rares no longer upgrade: reset + refund
       // W819 — EMPTY-TOWER boot heal, throttle-proof. The W818 server-best heal
       // rides lbSubmitAllMetrics, which the 5-min debounce (and the SW's
       // stale-first-launch) can skip — the owner's first 480 boot submitted 0
